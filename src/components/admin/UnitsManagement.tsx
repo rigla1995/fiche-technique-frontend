@@ -11,6 +11,7 @@ export default function UnitsManagement() {
   const [name, setName] = useState('');
   const [editId, setEditId] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
+  const [search, setSearch] = useState('');
 
   const fetchUnits = () => {
     setLoading(true);
@@ -45,6 +46,8 @@ export default function UnitsManagement() {
     fetchUnits();
   };
 
+  const filtered = units.filter((u) => u.name.toLowerCase().includes(search.toLowerCase()));
+
   return (
     <div className="page">
       <div className="page-header">
@@ -52,19 +55,31 @@ export default function UnitsManagement() {
         <button className="btn btn-primary" onClick={openAdd}>+ {t('admin.units.add')}</button>
       </div>
 
+      <div className="search-bar">
+        <input
+          type="text"
+          placeholder={t('common.search') + '...'}
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="input"
+        />
+      </div>
+
       {loading ? (
         <div className="loading-text">{t('common.loading')}</div>
       ) : (
         <div className="card">
           <div className="chips-grid">
-            {units.map((u) => (
+            {filtered.map((u) => (
               <div key={u.id} className="chip">
                 <span className="chip-label">{u.name}</span>
                 <button className="chip-action" onClick={() => openEdit(u)}>✏️</button>
                 <button className="chip-action chip-delete" onClick={() => handleDelete(u.id)}>🗑️</button>
               </div>
             ))}
-            {units.length === 0 && <p className="empty-text">Aucune unité définie.</p>}
+            {filtered.length === 0 && (
+              <p className="empty-text">{units.length === 0 ? 'Aucune unité définie.' : 'Aucun résultat.'}</p>
+            )}
           </div>
         </div>
       )}

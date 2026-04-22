@@ -62,9 +62,14 @@ export default function IngredientsManagement() {
     fetchData();
   };
 
-  const filtered = ingredients.filter((i) =>
-    i.name.toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = ingredients.filter((i) => {
+    const q = search.toLowerCase();
+    return (
+      i.name.toLowerCase().includes(q) ||
+      String(i.price).includes(q) ||
+      (i.unit?.name || '').toLowerCase().includes(q)
+    );
+  });
 
   return (
     <div className="page">

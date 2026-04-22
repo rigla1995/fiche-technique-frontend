@@ -61,7 +61,8 @@ export default function ClientsManagement() {
   const filtered = clients.filter(
     (c) =>
       c.name.toLowerCase().includes(search.toLowerCase()) ||
-      c.email.toLowerCase().includes(search.toLowerCase())
+      c.email.toLowerCase().includes(search.toLowerCase()) ||
+      (c.phone || '').toLowerCase().includes(search.toLowerCase())
   );
 
   return (
