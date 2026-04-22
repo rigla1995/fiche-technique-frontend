@@ -15,6 +15,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
     { to: '/admin', label: t('nav.dashboard'), icon: '📊', end: true },
     { to: '/admin/clients', label: t('nav.clients'), icon: '👥' },
     { to: '/admin/units', label: t('nav.units'), icon: '📏' },
+    { to: '/admin/categories', label: t('nav.categories'), icon: '🏷️' },
     { to: '/admin/ingredients', label: t('nav.ingredients'), icon: '🧂' },
   ];
 

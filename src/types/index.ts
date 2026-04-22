@@ -16,12 +16,19 @@ export interface Unit {
   name: string;
 }
 
+export interface Category {
+  id: number;
+  name: string;
+}
+
 export interface Ingredient {
   id: number;
   name: string;
   price: number;
   unit: Unit;
   unitId: number;
+  categorieId?: number | null;
+  categorieName?: string | null;
 }
 
 export interface ProductIngredient {

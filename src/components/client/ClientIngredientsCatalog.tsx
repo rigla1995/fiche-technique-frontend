@@ -50,6 +50,7 @@ export default function ClientIngredientsCatalog() {
                 <th>{t('common.name')}</th>
                 <th>{t('common.price')}</th>
                 <th>{t('common.unit')}</th>
+                <th>{t('admin.ingredients.category')}</th>
               </tr>
             </thead>
             <tbody>
@@ -58,11 +59,12 @@ export default function ClientIngredientsCatalog() {
                   <td>{i.name}</td>
                   <td><span className="price-badge">{i.price.toFixed(3)} {t('currency')}</span></td>
                   <td><span className="unit-badge">{i.unit?.name}</span></td>
+                  <td>{i.categorieName ? <span className="unit-badge">{i.categorieName}</span> : <span className="text-muted">—</span>}</td>
                 </tr>
               ))}
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={3} className="empty-cell">
+                  <td colSpan={4} className="empty-cell">
                     {t('client.ingredients_catalog.no_results')}
                   </td>
                 </tr>

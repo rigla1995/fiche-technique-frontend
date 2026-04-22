@@ -38,7 +38,8 @@
     "ingredients": "Ingredients",
     "ingredients_catalog": "Ingredients catalog",
     "products": "Products",
-    "settings": "Settings"
+    "settings": "Settings",
+    "categories": "Categories"
   },
   "admin": {
     "title": "Super Administration",
@@ -70,7 +71,16 @@
       "delete_confirm": "Delete this ingredient?",
       "name": "Ingredient name",
       "price": "Price (TND)",
-      "unit": "Unit"
+      "unit": "Unit",
+      "category": "Category"
+    },
+    "categories": {
+      "title": "Category Management",
+      "add": "Add category",
+      "edit": "Edit category",
+      "delete_confirm": "Delete this category?",
+      "name": "Category name",
+      "examples": "e.g.: Vegetables, Meats, Spices..."
     }
   },
   "client": {

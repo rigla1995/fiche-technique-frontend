@@ -38,7 +38,8 @@
     "ingredients": "Ingrédients",
     "ingredients_catalog": "Catalogue ingrédients",
     "products": "Produits",
-    "settings": "Paramètres"
+    "settings": "Paramètres",
+    "categories": "Catégories"
   },
   "admin": {
     "title": "Super Administration",
@@ -70,7 +71,16 @@
       "delete_confirm": "Supprimer cet ingrédient ?",
       "name": "Nom de l'ingrédient",
       "price": "Prix (DT)",
-      "unit": "Unité"
+      "unit": "Unité",
+      "category": "Catégorie"
+    },
+    "categories": {
+      "title": "Gestion des catégories",
+      "add": "Ajouter une catégorie",
+      "edit": "Modifier la catégorie",
+      "delete_confirm": "Supprimer cette catégorie ?",
+      "name": "Nom de la catégorie",
+      "examples": "ex: Légumes, Viandes, Épices..."
     }
   },
   "client": {

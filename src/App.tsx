@@ -6,6 +6,7 @@ import AdminDashboard from './components/admin/AdminDashboard';
 import ClientsManagement from './components/admin/ClientsManagement';
 import UnitsManagement from './components/admin/UnitsManagement';
 import IngredientsManagement from './components/admin/IngredientsManagement';
+import CategoriesManagement from './components/admin/CategoriesManagement';
 import ClientDashboard from './components/client/ClientDashboard';
 import ProductList from './components/client/ProductList';
 import ProductForm from './components/client/ProductForm';
@@ -34,6 +35,7 @@ export default function App() {
             <Route path="/admin/clients" element={<ClientsManagement />} />
             <Route path="/admin/units" element={<UnitsManagement />} />
             <Route path="/admin/ingredients" element={<IngredientsManagement />} />
+            <Route path="/admin/categories" element={<CategoriesManagement />} />
           </Route>
 
           {/* Client routes */}
