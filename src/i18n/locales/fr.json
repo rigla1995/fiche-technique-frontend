@@ -1,0 +1,97 @@
+{
+  "common": {
+    "save": "Enregistrer",
+    "cancel": "Annuler",
+    "delete": "Supprimer",
+    "edit": "Modifier",
+    "add": "Ajouter",
+    "search": "Rechercher",
+    "loading": "Chargement...",
+    "confirm_delete": "Êtes-vous sûr de vouloir supprimer cet élément ?",
+    "yes": "Oui",
+    "no": "Non",
+    "actions": "Actions",
+    "name": "Nom",
+    "email": "Email",
+    "phone": "Téléphone",
+    "price": "Prix",
+    "unit": "Unité",
+    "portion": "Portion",
+    "cost": "Coût",
+    "total_cost": "Coût total",
+    "success": "Succès",
+    "error": "Erreur"
+  },
+  "auth": {
+    "login": "Connexion",
+    "logout": "Déconnexion",
+    "email": "Adresse email",
+    "password": "Mot de passe",
+    "login_button": "Se connecter",
+    "login_error": "Email ou mot de passe incorrect",
+    "welcome": "Bienvenue"
+  },
+  "nav": {
+    "dashboard": "Tableau de bord",
+    "clients": "Clients",
+    "units": "Unités",
+    "ingredients": "Ingrédients",
+    "products": "Produits",
+    "settings": "Paramètres"
+  },
+  "admin": {
+    "title": "Super Administration",
+    "clients": {
+      "title": "Gestion des clients",
+      "add": "Ajouter un client",
+      "edit": "Modifier le client",
+      "delete_confirm": "Supprimer ce client ?",
+      "name": "Nom du client",
+      "email": "Email",
+      "phone": "Téléphone",
+      "created_at": "Date de création",
+      "temp_password_title": "Mot de passe temporaire",
+      "temp_password_message": "Le compte client a été créé avec succès. Voici le mot de passe temporaire généré automatiquement :",
+      "temp_password_note": "Veuillez communiquer ce mot de passe au client. Il sera invité à le modifier lors de sa première connexion."
+    },
+    "units": {
+      "title": "Gestion des unités",
+      "add": "Ajouter une unité",
+      "edit": "Modifier l'unité",
+      "delete_confirm": "Supprimer cette unité ?",
+      "name": "Nom de l'unité",
+      "examples": "ex: grammes, kg, pièces..."
+    },
+    "ingredients": {
+      "title": "Gestion des ingrédients",
+      "add": "Ajouter un ingrédient",
+      "edit": "Modifier l'ingrédient",
+      "delete_confirm": "Supprimer cet ingrédient ?",
+      "name": "Nom de l'ingrédient",
+      "price": "Prix (DT)",
+      "unit": "Unité"
+    }
+  },
+  "client": {
+    "title": "Espace Client",
+    "products": {
+      "title": "Mes produits",
+      "add": "Nouveau produit",
+      "edit": "Modifier le produit",
+      "delete_confirm": "Supprimer ce produit ?",
+      "name": "Nom du produit",
+      "ingredients_section": "Ingrédients",
+      "subproducts_section": "Sous-produits",
+      "add_ingredient": "Ajouter un ingrédient",
+      "add_subproduct": "Ajouter un sous-produit",
+      "select_ingredient": "Sélectionner un ingrédient",
+      "select_product": "Sélectionner un produit",
+      "portion_pieces": "Portion (pièces)",
+      "portion_grams": "Portion (unité)",
+      "export_excel": "Exporter fiche technique",
+      "real_time_cost": "Coût en temps réel",
+      "no_products": "Aucun produit pour l'instant. Créez votre premier produit !"
+    }
+  },
+  "currency": "DT"
+}

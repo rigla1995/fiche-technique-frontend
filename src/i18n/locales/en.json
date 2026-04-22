@@ -1,0 +1,97 @@
+{
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "add": "Add",
+    "search": "Search",
+    "loading": "Loading...",
+    "confirm_delete": "Are you sure you want to delete this item?",
+    "yes": "Yes",
+    "no": "No",
+    "actions": "Actions",
+    "name": "Name",
+    "email": "Email",
+    "phone": "Phone",
+    "price": "Price",
+    "unit": "Unit",
+    "portion": "Portion",
+    "cost": "Cost",
+    "total_cost": "Total cost",
+    "success": "Success",
+    "error": "Error"
+  },
+  "auth": {
+    "login": "Login",
+    "logout": "Logout",
+    "email": "Email address",
+    "password": "Password",
+    "login_button": "Sign in",
+    "login_error": "Invalid email or password",
+    "welcome": "Welcome"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "clients": "Clients",
+    "units": "Units",
+    "ingredients": "Ingredients",
+    "products": "Products",
+    "settings": "Settings"
+  },
+  "admin": {
+    "title": "Super Administration",
+    "clients": {
+      "title": "Client Management",
+      "add": "Add client",
+      "edit": "Edit client",
+      "delete_confirm": "Delete this client?",
+      "name": "Client name",
+      "email": "Email",
+      "phone": "Phone",
+      "created_at": "Created at",
+      "temp_password_title": "Temporary Password",
+      "temp_password_message": "The client account has been created successfully. Here is the automatically generated temporary password:",
+      "temp_password_note": "Please share this password with the client. They will be prompted to change it on first login."
+    },
+    "units": {
+      "title": "Unit Management",
+      "add": "Add unit",
+      "edit": "Edit unit",
+      "delete_confirm": "Delete this unit?",
+      "name": "Unit name",
+      "examples": "e.g.: grams, kg, pieces..."
+    },
+    "ingredients": {
+      "title": "Ingredient Management",
+      "add": "Add ingredient",
+      "edit": "Edit ingredient",
+      "delete_confirm": "Delete this ingredient?",
+      "name": "Ingredient name",
+      "price": "Price (TND)",
+      "unit": "Unit"
+    }
+  },
+  "client": {
+    "title": "Client Space",
+    "products": {
+      "title": "My products",
+      "add": "New product",
+      "edit": "Edit product",
+      "delete_confirm": "Delete this product?",
+      "name": "Product name",
+      "ingredients_section": "Ingredients",
+      "subproducts_section": "Sub-products",
+      "add_ingredient": "Add ingredient",
+      "add_subproduct": "Add sub-product",
+      "select_ingredient": "Select an ingredient",
+      "select_product": "Select a product",
+      "portion_pieces": "Portion (pieces)",
+      "portion_grams": "Portion (unit)",
+      "export_excel": "Export technical sheet",
+      "real_time_cost": "Real-time cost",
+      "no_products": "No products yet. Create your first product!"
+    }
+  },
+  "currency": "TND"
+}
