@@ -68,19 +68,29 @@ export default function UnitsManagement() {
       {loading ? (
         <div className="loading-text">{t('common.loading')}</div>
       ) : (
-        <div className="card">
-          <div className="chips-grid">
-            {filtered.map((u) => (
-              <div key={u.id} className="chip">
-                <span className="chip-label">{u.name}</span>
-                <button className="chip-action" onClick={() => openEdit(u)}>✏️</button>
-                <button className="chip-action chip-delete" onClick={() => handleDelete(u.id)}>🗑️</button>
-              </div>
-            ))}
-            {filtered.length === 0 && (
-              <p className="empty-text">{units.length === 0 ? 'Aucune unité définie.' : 'Aucun résultat.'}</p>
-            )}
-          </div>
+        <div className="table-responsive card">
+          <table className="table">
+            <thead>
+              <tr>
+                <th>{t('common.name')}</th>
+                <th>{t('common.actions')}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((u) => (
+                <tr key={u.id}>
+                  <td>{u.name}</td>
+                  <td className="actions-cell">
+                    <button className="btn btn-ghost btn-sm" onClick={() => openEdit(u)}>{t('common.edit')}</button>
+                    <button className="btn btn-danger btn-sm" onClick={() => handleDelete(u.id)}>{t('common.delete')}</button>
+                  </td>
+                </tr>
+              ))}
+              {filtered.length === 0 && (
+                <tr><td colSpan={2} className="empty-cell">{units.length === 0 ? 'Aucune unité définie.' : 'Aucun résultat.'}</td></tr>
+              )}
+            </tbody>
+          </table>
         </div>
       )}
 
