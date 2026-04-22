@@ -36,6 +36,7 @@
     "clients": "Clients",
     "units": "Unités",
     "ingredients": "Ingrédients",
+    "ingredients_catalog": "Catalogue ingrédients",
     "products": "Produits",
     "settings": "Paramètres"
   },
@@ -74,6 +75,10 @@
   },
   "client": {
     "title": "Espace Client",
+    "ingredients_catalog": {
+      "title": "Catalogue des ingrédients",
+      "no_results": "Aucun ingrédient trouvé"
+    },
     "products": {
       "title": "Mes produits",
       "add": "Nouveau produit",

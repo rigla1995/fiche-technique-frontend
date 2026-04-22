@@ -21,6 +21,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const clientLinks = [
     { to: '/client', label: t('nav.dashboard'), icon: '📊', end: true },
     { to: '/client/products', label: t('nav.products'), icon: '🍔' },
+    { to: '/client/ingredients', label: t('nav.ingredients_catalog'), icon: '🧂' },
   ];
 
   const links = user?.role === 'super_admin' ? adminLinks : clientLinks;

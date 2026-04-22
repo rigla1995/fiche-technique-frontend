@@ -36,6 +36,7 @@
     "clients": "Clients",
     "units": "Units",
     "ingredients": "Ingredients",
+    "ingredients_catalog": "Ingredients catalog",
     "products": "Products",
     "settings": "Settings"
   },
@@ -74,6 +75,10 @@
   },
   "client": {
     "title": "Client Space",
+    "ingredients_catalog": {
+      "title": "Ingredients catalog",
+      "no_results": "No ingredients found"
+    },
     "products": {
       "title": "My products",
       "add": "New product",

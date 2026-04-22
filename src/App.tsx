@@ -9,6 +9,7 @@ import IngredientsManagement from './components/admin/IngredientsManagement';
 import ClientDashboard from './components/client/ClientDashboard';
 import ProductList from './components/client/ProductList';
 import ProductForm from './components/client/ProductForm';
+import ClientIngredientsCatalog from './components/client/ClientIngredientsCatalog';
 import './i18n';
 import './index.css';
 
@@ -41,6 +42,7 @@ export default function App() {
             <Route path="/client/products" element={<ProductList />} />
             <Route path="/client/products/new" element={<ProductForm />} />
             <Route path="/client/products/:id/edit" element={<ProductForm />} />
+            <Route path="/client/ingredients" element={<ClientIngredientsCatalog />} />
           </Route>
 
           <Route path="*" element={<Navigate to="/" replace />} />
