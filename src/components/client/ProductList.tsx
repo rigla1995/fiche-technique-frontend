@@ -88,7 +88,7 @@ export default function ProductList() {
       ) : filtered.length === 0 ? (
         <div className="empty-state">
           <span className="empty-icon">🍔</span>
-          <p>{products.length === 0 ? t('client.products.no_products') : 'Aucun résultat.'}</p>
+          <p>{products.length === 0 ? t('client.products.no_products') : t('common.no_result')}</p>
           {products.length === 0 && (
             <Link to="/client/products/new" className="btn btn-primary">{t('client.products.add')}</Link>
           )}
@@ -100,7 +100,7 @@ export default function ProductList() {
               <tr>
                 <th>{t('common.name')}</th>
                 <th style={{ textAlign: 'center' }}>{t('nav.ingredients')}</th>
-                <th style={{ textAlign: 'center' }}>Sous-produits</th>
+                <th style={{ textAlign: 'center' }}>{t('client.products.subproducts_section')}</th>
                 <th style={{ textAlign: 'right' }}>{t('common.total_cost')}</th>
                 <th>{t('common.actions')}</th>
               </tr>
@@ -137,7 +137,7 @@ export default function ProductList() {
                       onClick={() => handleExport(p.id, p.name)}
                       disabled={exporting === p.id}
                     >
-                      📥 {exporting === p.id ? '...' : 'Excel'}
+                      📥 {exporting === p.id ? t('common.loading') : 'Excel'}
                     </button>
                     <button className="btn btn-danger btn-sm" onClick={() => handleDelete(p.id)}>
                       {t('common.delete')}
@@ -155,7 +155,9 @@ export default function ProductList() {
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h2>
-                {popup.type === 'ingredients' ? 'Ingrédients' : 'Sous-produits'} — {popup.productName}
+                {popup.type === 'ingredients'
+                  ? t('client.products.popup_ingredients_title')
+                  : t('client.products.popup_subproducts_title')} — {popup.productName}
               </h2>
               <button className="modal-close" onClick={closePopup}>×</button>
             </div>
@@ -167,10 +169,10 @@ export default function ProductList() {
                   <table className="table">
                     <thead>
                       <tr>
-                        <th>Ingrédient</th>
-                        <th style={{ textAlign: 'right' }}>Portion</th>
-                        <th>Unité</th>
-                        <th style={{ textAlign: 'right' }}>Prix unit.</th>
+                        <th>{t('client.products.popup_col_ingredient')}</th>
+                        <th style={{ textAlign: 'right' }}>{t('client.products.popup_col_portion')}</th>
+                        <th>{t('client.products.popup_col_unit')}</th>
+                        <th style={{ textAlign: 'right' }}>{t('client.products.popup_col_unit_price')}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -185,15 +187,17 @@ export default function ProductList() {
                     </tbody>
                   </table>
                 ) : (
-                  <p style={{ color: '#888', textAlign: 'center', padding: '16px 0' }}>Aucun ingrédient assigné.</p>
+                  <p style={{ color: '#888', textAlign: 'center', padding: '16px 0' }}>
+                    {t('client.products.popup_no_ingredients')}
+                  </p>
                 )
               ) : (
                 detail?.subProducts && detail.subProducts.length > 0 ? (
                   <table className="table">
                     <thead>
                       <tr>
-                        <th>Sous-produit</th>
-                        <th style={{ textAlign: 'right' }}>Portion</th>
+                        <th>{t('client.products.popup_col_subproduct')}</th>
+                        <th style={{ textAlign: 'right' }}>{t('client.products.popup_col_portion')}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -206,12 +210,14 @@ export default function ProductList() {
                     </tbody>
                   </table>
                 ) : (
-                  <p style={{ color: '#888', textAlign: 'center', padding: '16px 0' }}>Aucun sous-produit assigné.</p>
+                  <p style={{ color: '#888', textAlign: 'center', padding: '16px 0' }}>
+                    {t('client.products.popup_no_subproducts')}
+                  </p>
                 )
               )}
             </div>
             <div className="modal-footer">
-              <button className="btn btn-ghost" onClick={closePopup}>Fermer</button>
+              <button className="btn btn-ghost" onClick={closePopup}>{t('common.close')}</button>
             </div>
           </div>
         </div>

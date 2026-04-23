@@ -11,18 +11,19 @@ interface ClientForm {
 }
 
 const emptyForm: ClientForm = { name: '', email: '', phone: '', password: '' };
-
 const TUNISIAN_PHONE = /^(\+216[\s-]?)?[2579]\d{7}$/;
-const PASSWORD_RULES = [
-  { test: (v: string) => v.length >= 8, label: '8 caractères minimum' },
-  { test: (v: string) => /[A-Z]/.test(v), label: 'Majuscule requise' },
-  { test: (v: string) => /[a-z]/.test(v), label: 'Minuscule requise' },
-  { test: (v: string) => /[0-9]/.test(v), label: 'Chiffre requis' },
-  { test: (v: string) => /[@$!%*?&_\-#]/.test(v), label: 'Caractère spécial requis (@$!%*?&)' },
-];
 
 export default function ClientsManagement() {
   const { t } = useTranslation();
+
+  const PASSWORD_RULES = [
+    { test: (v: string) => v.length >= 8, label: t('validation.password_min') },
+    { test: (v: string) => /[A-Z]/.test(v), label: t('validation.password_upper') },
+    { test: (v: string) => /[a-z]/.test(v), label: t('validation.password_lower') },
+    { test: (v: string) => /[0-9]/.test(v), label: t('validation.password_digit') },
+    { test: (v: string) => /[@$!%*?&_\-#]/.test(v), label: t('validation.password_special') },
+  ];
+
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -51,11 +52,11 @@ export default function ClientsManagement() {
 
   const validate = (): Record<string, string> => {
     const errs: Record<string, string> = {};
-    if (!form.name.trim()) errs.name = 'Nom requis';
-    if (!form.email.trim()) errs.email = 'Email requis';
-    else if (!/\S+@\S+\.\S+/.test(form.email)) errs.email = 'Format email invalide';
+    if (!form.name.trim()) errs.name = t('validation.name_required');
+    if (!form.email.trim()) errs.email = t('validation.email_required');
+    else if (!/\S+@\S+\.\S+/.test(form.email)) errs.email = t('validation.email_invalid');
     if (form.phone && !TUNISIAN_PHONE.test(form.phone.replace(/\s/g, ''))) {
-      errs.phone = 'Numéro tunisien invalide (ex: +216 XX XXX XXX)';
+      errs.phone = t('validation.phone_invalid');
     }
     if (form.password) {
       for (const rule of PASSWORD_RULES) {
@@ -80,14 +81,12 @@ export default function ClientsManagement() {
         await api.put(`/admin/clients/${editId}`, payload);
       } else {
         const { data } = await api.post('/admin/clients', payload);
-        if (data?.temporaryPassword) {
-          setTempPassword(data.temporaryPassword);
-        }
+        if (data?.temporaryPassword) setTempPassword(data.temporaryPassword);
       }
       closeModal();
       fetchClients();
     } catch (err: any) {
-      const msg = err?.response?.data?.message || err?.response?.data?.errors?.[0]?.msg || 'Erreur';
+      const msg = err?.response?.data?.message || err?.response?.data?.errors?.[0]?.msg || t('common.error');
       setFormErrors({ global: msg });
     } finally {
       setSaving(false);
@@ -150,7 +149,7 @@ export default function ClientsManagement() {
                 </tr>
               ))}
               {filtered.length === 0 && (
-                <tr><td colSpan={4} className="empty-cell">Aucun résultat</td></tr>
+                <tr><td colSpan={4} className="empty-cell">{t('common.no_result')}</td></tr>
               )}
             </tbody>
           </table>
@@ -211,22 +210,25 @@ export default function ClientsManagement() {
                 {formErrors.email && <span className="field-error">{formErrors.email}</span>}
               </div>
               <div className="form-group">
-                <label>{t('common.phone')} <span style={{ fontSize: '0.8em', color: '#888' }}>(ex: +216 XX XXX XXX)</span></label>
+                <label>{t('common.phone')} <span style={{ fontSize: '0.8em', color: '#888' }}>{t('validation.phone_hint')}</span></label>
                 <input
                   className={`input${formErrors.phone ? ' input-error' : ''}`}
                   value={form.phone}
-                  placeholder="+216 XX XXX XXX"
+                  placeholder={t('validation.phone_placeholder')}
                   onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
                 />
                 {formErrors.phone && <span className="field-error">{formErrors.phone}</span>}
               </div>
               <div className="form-group">
-                <label>Mot de passe {editId ? '(laisser vide pour ne pas modifier)' : ''}</label>
+                <label>
+                  {t('admin.clients.password_label')}{' '}
+                  {editId && <span style={{ fontSize: '0.8em', color: '#888' }}>{t('admin.clients.password_edit_hint')}</span>}
+                </label>
                 <input
                   className={`input${formErrors.password ? ' input-error' : ''}`}
                   type="password"
                   value={form.password}
-                  placeholder={editId ? 'Nouveau mot de passe (optionnel)' : 'Mot de passe (optionnel — généré si vide)'}
+                  placeholder={editId ? t('admin.clients.password_new_placeholder') : t('admin.clients.password_create_placeholder')}
                   onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
                 />
                 {form.password && (

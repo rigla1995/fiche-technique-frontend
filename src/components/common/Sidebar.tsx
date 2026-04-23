@@ -23,7 +23,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
     { to: '/client', label: t('nav.dashboard'), icon: '📊', end: true },
     { to: '/client/products', label: t('nav.products'), icon: '🍔' },
     { to: '/client/ingredients', label: t('nav.ingredients_catalog'), icon: '🧂' },
-    { to: '/client/profile', label: 'Mon profil', icon: '👤' },
+    { to: '/client/profile', label: t('nav.profile'), icon: '👤' },
   ];
 
   const links = user?.role === 'super_admin' ? adminLinks : clientLinks;

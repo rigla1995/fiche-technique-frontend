@@ -13,17 +13,19 @@ interface ProfileForm {
 }
 
 const TUNISIAN_PHONE = /^(\+216[\s-]?)?[2579]\d{7}$/;
-const PASSWORD_RULES = [
-  { test: (v: string) => v.length >= 8, label: '8 caractères minimum' },
-  { test: (v: string) => /[A-Z]/.test(v), label: 'Au moins une majuscule' },
-  { test: (v: string) => /[a-z]/.test(v), label: 'Au moins une minuscule' },
-  { test: (v: string) => /[0-9]/.test(v), label: 'Au moins un chiffre' },
-  { test: (v: string) => /[@$!%*?&_\-#]/.test(v), label: 'Au moins un caractère spécial (@$!%*?&)' },
-];
 
 export default function Profile() {
   const { t } = useTranslation();
   const { updateUser } = useAuth();
+
+  const PASSWORD_RULES = [
+    { test: (v: string) => v.length >= 8, label: t('validation.password_min') },
+    { test: (v: string) => /[A-Z]/.test(v), label: t('validation.password_upper') },
+    { test: (v: string) => /[a-z]/.test(v), label: t('validation.password_lower') },
+    { test: (v: string) => /[0-9]/.test(v), label: t('validation.password_digit') },
+    { test: (v: string) => /[@$!%*?&_\-#]/.test(v), label: t('validation.password_special') },
+  ];
+
   const [form, setForm] = useState<ProfileForm>({
     name: '', email: '', phone: '', currentPassword: '', password: '', confirmPassword: '',
   });
@@ -40,20 +42,20 @@ export default function Profile() {
 
   const validate = (): Record<string, string> => {
     const errs: Record<string, string> = {};
-    if (!form.name.trim()) errs.name = 'Nom requis';
-    if (!form.email.trim()) errs.email = 'Email requis';
-    else if (!/\S+@\S+\.\S+/.test(form.email)) errs.email = 'Format email invalide';
+    if (!form.name.trim()) errs.name = t('validation.name_required');
+    if (!form.email.trim()) errs.email = t('validation.email_required');
+    else if (!/\S+@\S+\.\S+/.test(form.email)) errs.email = t('validation.email_invalid');
     if (form.phone && !TUNISIAN_PHONE.test(form.phone.replace(/\s/g, ''))) {
-      errs.phone = 'Numéro tunisien invalide (ex: +216 XX XXX XXX ou 2X XXX XXX)';
+      errs.phone = t('validation.phone_invalid');
     }
     if (form.password) {
       for (const rule of PASSWORD_RULES) {
         if (!rule.test(form.password)) { errs.password = rule.label; break; }
       }
       if (!errs.password && form.password !== form.confirmPassword) {
-        errs.confirmPassword = 'Les mots de passe ne correspondent pas';
+        errs.confirmPassword = t('validation.passwords_mismatch');
       }
-      if (!form.currentPassword) errs.currentPassword = 'Mot de passe actuel requis';
+      if (!form.currentPassword) errs.currentPassword = t('validation.current_password_required');
     }
     return errs;
   };
@@ -81,7 +83,7 @@ export default function Profile() {
       setForm((f) => ({ ...f, currentPassword: '', password: '', confirmPassword: '' }));
       setSuccess(true);
     } catch (err: any) {
-      const msg = err?.response?.data?.message || err?.response?.data?.errors?.[0]?.msg || 'Erreur lors de la sauvegarde';
+      const msg = err?.response?.data?.message || err?.response?.data?.errors?.[0]?.msg || t('common.error');
       setErrors({ global: msg });
     } finally {
       setSaving(false);
@@ -93,12 +95,12 @@ export default function Profile() {
   return (
     <div className="page" style={{ maxWidth: 560 }}>
       <div className="page-header">
-        <h1>Mon profil</h1>
+        <h1>{t('client.profile.title')}</h1>
       </div>
       <div className="card" style={{ padding: '24px' }}>
         {success && (
           <div style={{ background: '#e6f9ee', color: '#1a7a40', border: '1px solid #b2dfc5', borderRadius: 8, padding: '10px 16px', marginBottom: 16 }}>
-            Profil mis à jour avec succès.
+            {t('client.profile.success')}
           </div>
         )}
         {errors.global && (
@@ -127,11 +129,11 @@ export default function Profile() {
             {errors.email && <span className="field-error">{errors.email}</span>}
           </div>
           <div className="form-group">
-            <label>{t('common.phone')} <span style={{ fontSize: '0.8em', color: '#888' }}>(optionnel — format: +216 XX XXX XXX)</span></label>
+            <label>{t('common.phone')} <span style={{ fontSize: '0.8em', color: '#888' }}>{t('validation.phone_hint')}</span></label>
             <input
               className={`input${errors.phone ? ' input-error' : ''}`}
               value={form.phone}
-              placeholder="+216 XX XXX XXX"
+              placeholder={t('validation.phone_placeholder')}
               onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
             />
             {errors.phone && <span className="field-error">{errors.phone}</span>}
@@ -139,11 +141,11 @@ export default function Profile() {
 
           <hr style={{ margin: '20px 0', borderColor: '#eee' }} />
           <p style={{ fontSize: '0.875rem', color: '#666', marginBottom: 12 }}>
-            Laissez vide pour conserver votre mot de passe actuel.
+            {t('client.profile.password_section_hint')}
           </p>
 
           <div className="form-group">
-            <label>Mot de passe actuel</label>
+            <label>{t('client.profile.current_password')}</label>
             <input
               className={`input${errors.currentPassword ? ' input-error' : ''}`}
               type="password"
@@ -153,7 +155,7 @@ export default function Profile() {
             {errors.currentPassword && <span className="field-error">{errors.currentPassword}</span>}
           </div>
           <div className="form-group">
-            <label>Nouveau mot de passe</label>
+            <label>{t('client.profile.new_password')}</label>
             <input
               className={`input${errors.password ? ' input-error' : ''}`}
               type="password"
@@ -172,7 +174,7 @@ export default function Profile() {
             {errors.password && <span className="field-error">{errors.password}</span>}
           </div>
           <div className="form-group">
-            <label>Confirmer le nouveau mot de passe</label>
+            <label>{t('client.profile.confirm_password')}</label>
             <input
               className={`input${errors.confirmPassword ? ' input-error' : ''}`}
               type="password"
@@ -184,7 +186,7 @@ export default function Profile() {
 
           <div style={{ marginTop: 24 }}>
             <button type="submit" className="btn btn-primary" disabled={saving} style={{ width: '100%' }}>
-              {saving ? t('common.loading') : 'Enregistrer les modifications'}
+              {saving ? t('common.loading') : t('client.profile.save')}
             </button>
           </div>
         </form>

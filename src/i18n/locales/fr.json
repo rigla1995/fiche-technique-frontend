@@ -20,7 +20,9 @@
     "cost": "Coût",
     "total_cost": "Coût total",
     "success": "Succès",
-    "error": "Erreur"
+    "error": "Erreur",
+    "close": "Fermer",
+    "no_result": "Aucun résultat"
   },
   "auth": {
     "login": "Connexion",
@@ -39,7 +41,23 @@
     "ingredients_catalog": "Catalogue ingrédients",
     "products": "Produits",
     "settings": "Paramètres",
-    "categories": "Catégories"
+    "categories": "Catégories",
+    "profile": "Mon profil"
+  },
+  "validation": {
+    "name_required": "Nom requis",
+    "email_required": "Email requis",
+    "email_invalid": "Format email invalide",
+    "phone_invalid": "Numéro tunisien invalide (ex: +216 XX XXX XXX)",
+    "phone_hint": "(optionnel — format: +216 XX XXX XXX)",
+    "phone_placeholder": "+216 XX XXX XXX",
+    "password_min": "8 caractères minimum",
+    "password_upper": "Au moins une majuscule",
+    "password_lower": "Au moins une minuscule",
+    "password_digit": "Au moins un chiffre",
+    "password_special": "Au moins un caractère spécial (@$!%*?&)",
+    "passwords_mismatch": "Les mots de passe ne correspondent pas",
+    "current_password_required": "Mot de passe actuel requis"
   },
   "admin": {
     "title": "Super Administration",
@@ -54,7 +72,11 @@
       "created_at": "Date de création",
       "temp_password_title": "Mot de passe temporaire",
       "temp_password_message": "Le compte client a été créé avec succès. Voici le mot de passe temporaire généré automatiquement :",
-      "temp_password_note": "Veuillez communiquer ce mot de passe au client. Il sera invité à le modifier lors de sa première connexion."
+      "temp_password_note": "Veuillez communiquer ce mot de passe au client. Il sera invité à le modifier lors de sa première connexion.",
+      "password_label": "Mot de passe",
+      "password_edit_hint": "(laisser vide pour ne pas modifier)",
+      "password_new_placeholder": "Nouveau mot de passe (optionnel)",
+      "password_create_placeholder": "Mot de passe (optionnel — généré si vide)"
     },
     "units": {
       "title": "Gestion des unités",
@@ -105,7 +127,25 @@
       "portion_grams": "Portion (unité)",
       "export_excel": "Exporter fiche technique",
       "real_time_cost": "Coût en temps réel",
-      "no_products": "Aucun produit pour l'instant. Créez votre premier produit !"
+      "no_products": "Aucun produit pour l'instant. Créez votre premier produit !",
+      "popup_ingredients_title": "Ingrédients",
+      "popup_subproducts_title": "Sous-produits",
+      "popup_col_ingredient": "Ingrédient",
+      "popup_col_portion": "Portion",
+      "popup_col_unit": "Unité",
+      "popup_col_unit_price": "Prix unit.",
+      "popup_col_subproduct": "Sous-produit",
+      "popup_no_ingredients": "Aucun ingrédient assigné.",
+      "popup_no_subproducts": "Aucun sous-produit assigné."
+    },
+    "profile": {
+      "title": "Mon profil",
+      "success": "Profil mis à jour avec succès.",
+      "save": "Enregistrer les modifications",
+      "password_section_hint": "Laissez vide pour conserver votre mot de passe actuel.",
+      "current_password": "Mot de passe actuel",
+      "new_password": "Nouveau mot de passe",
+      "confirm_password": "Confirmer le nouveau mot de passe"
     }
   },
   "currency": "DT"

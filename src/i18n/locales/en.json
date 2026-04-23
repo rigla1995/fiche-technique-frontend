@@ -20,7 +20,9 @@
     "cost": "Cost",
     "total_cost": "Total cost",
     "success": "Success",
-    "error": "Error"
+    "error": "Error",
+    "close": "Close",
+    "no_result": "No results"
   },
   "auth": {
     "login": "Login",
@@ -39,7 +41,23 @@
     "ingredients_catalog": "Ingredients catalog",
     "products": "Products",
     "settings": "Settings",
-    "categories": "Categories"
+    "categories": "Categories",
+    "profile": "My profile"
+  },
+  "validation": {
+    "name_required": "Name is required",
+    "email_required": "Email is required",
+    "email_invalid": "Invalid email format",
+    "phone_invalid": "Invalid Tunisian number (e.g. +216 XX XXX XXX)",
+    "phone_hint": "(optional — format: +216 XX XXX XXX)",
+    "phone_placeholder": "+216 XX XXX XXX",
+    "password_min": "At least 8 characters",
+    "password_upper": "At least one uppercase letter",
+    "password_lower": "At least one lowercase letter",
+    "password_digit": "At least one digit",
+    "password_special": "At least one special character (@$!%*?&)",
+    "passwords_mismatch": "Passwords do not match",
+    "current_password_required": "Current password is required"
   },
   "admin": {
     "title": "Super Administration",
@@ -54,7 +72,11 @@
       "created_at": "Created at",
       "temp_password_title": "Temporary Password",
       "temp_password_message": "The client account has been created successfully. Here is the automatically generated temporary password:",
-      "temp_password_note": "Please share this password with the client. They will be prompted to change it on first login."
+      "temp_password_note": "Please share this password with the client. They will be prompted to change it on first login.",
+      "password_label": "Password",
+      "password_edit_hint": "(leave blank to keep unchanged)",
+      "password_new_placeholder": "New password (optional)",
+      "password_create_placeholder": "Password (optional — auto-generated if blank)"
     },
     "units": {
       "title": "Unit Management",
@@ -105,7 +127,25 @@
       "portion_grams": "Portion (unit)",
       "export_excel": "Export technical sheet",
       "real_time_cost": "Real-time cost",
-      "no_products": "No products yet. Create your first product!"
+      "no_products": "No products yet. Create your first product!",
+      "popup_ingredients_title": "Ingredients",
+      "popup_subproducts_title": "Sub-products",
+      "popup_col_ingredient": "Ingredient",
+      "popup_col_portion": "Portion",
+      "popup_col_unit": "Unit",
+      "popup_col_unit_price": "Unit price",
+      "popup_col_subproduct": "Sub-product",
+      "popup_no_ingredients": "No ingredients assigned.",
+      "popup_no_subproducts": "No sub-products assigned."
+    },
+    "profile": {
+      "title": "My profile",
+      "success": "Profile updated successfully.",
+      "save": "Save changes",
+      "password_section_hint": "Leave blank to keep your current password.",
+      "current_password": "Current password",
+      "new_password": "New password",
+      "confirm_password": "Confirm new password"
     }
   },
   "currency": "TND"
