@@ -5,6 +5,8 @@ import type { Client, DomaineActivite } from '../../types';
 
 type CompteType = 'independant' | 'entreprise';
 
+const TUNISIAN_PHONE = /^(\+216[\s-]?)?[2579]\d{7}$/;
+
 interface IndependantForm {
   nomActivite: string;
   domaineId: string;
@@ -86,9 +88,11 @@ export default function ClientsManagement() {
     if (selectedType === 'independant') {
       if (!indForm.nomActivite.trim()) errs.nom = t('validation.name_required');
       if (!indForm.email.trim()) errs.email = t('validation.email_required');
+      if (indForm.telephone && !TUNISIAN_PHONE.test(indForm.telephone.replace(/\s/g, ''))) errs.telephone = t('validation.phone_invalid');
     } else {
       if (!entForm.nomEntreprise.trim()) errs.nom = t('validation.name_required');
       if (!entForm.email.trim()) errs.email = t('validation.email_required');
+      if (entForm.telephone && !TUNISIAN_PHONE.test(entForm.telephone.replace(/\s/g, ''))) errs.telephone = t('validation.phone_invalid');
     }
 
     setFormErrors(errs);
@@ -312,12 +316,14 @@ export default function ClientsManagement() {
                       {formErrors.email && <span className="field-error">{formErrors.email}</span>}
                     </div>
                     <div className="form-group">
-                      <label>{t('common.phone')}</label>
+                      <label>{t('common.phone')} <span style={{ fontSize: '0.8em', color: '#888' }}>{t('validation.phone_hint')}</span></label>
                       <input
-                        className="input"
+                        className={`input${formErrors.telephone ? ' input-error' : ''}`}
+                        placeholder={t('validation.phone_placeholder')}
                         value={indForm.telephone}
                         onChange={(e) => setIndForm((f) => ({ ...f, telephone: e.target.value }))}
                       />
+                      {formErrors.telephone && <span className="field-error">{formErrors.telephone}</span>}
                     </div>
                     <div className="form-group">
                       <label>Adresse</label>
@@ -353,12 +359,14 @@ export default function ClientsManagement() {
                       {formErrors.email && <span className="field-error">{formErrors.email}</span>}
                     </div>
                     <div className="form-group">
-                      <label>{t('common.phone')}</label>
+                      <label>{t('common.phone')} <span style={{ fontSize: '0.8em', color: '#888' }}>{t('validation.phone_hint')}</span></label>
                       <input
-                        className="input"
+                        className={`input${formErrors.telephone ? ' input-error' : ''}`}
+                        placeholder={t('validation.phone_placeholder')}
                         value={entForm.telephone}
                         onChange={(e) => setEntForm((f) => ({ ...f, telephone: e.target.value }))}
                       />
+                      {formErrors.telephone && <span className="field-error">{formErrors.telephone}</span>}
                     </div>
                     <div className="form-group">
                       <label>Adresse</label>

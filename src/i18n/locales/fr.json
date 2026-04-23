@@ -47,7 +47,8 @@
     "entreprise": "Mon entreprise",
     "activites": "Mes activités",
     "stock": "Stock",
-    "stock_locked": "Stock (sélectionnez vos ingrédients d'abord)"
+    "stock_locked": "Stock (sélectionnez vos ingrédients d'abord)",
+    "domaines": "Domaines d'activité"
   },
   "validation": {
     "name_required": "Nom requis",
@@ -111,6 +112,14 @@
       "delete_confirm": "Supprimer cette catégorie ?",
       "name": "Nom de la catégorie",
       "examples": "ex: Légumes, Viandes, Épices..."
+    },
+    "domaines": {
+      "title": "Domaines d'activité",
+      "add": "Ajouter un domaine",
+      "edit": "Modifier le domaine",
+      "delete_confirm": "Supprimer ce domaine ?",
+      "name": "Nom du domaine",
+      "examples": "ex: Restauration, Café, Pâtisserie..."
     }
   },
   "client": {
@@ -221,7 +230,7 @@
       "tab_client": "Stock personnel",
       "tab_entreprise": "Stock entreprise",
       "no_selections": "Sélectionnez d'abord vos ingrédients de travail.",
-      "no_activities": "Créez au moins une activité dans « Mon entreprise » pour gérer le stock entreprise.",
+      "no_activities": "Créez au moins une activité dans « Mes activités » pour gérer le stock entreprise.",
       "ingredient": "Ingrédient",
       "quantity": "Quantité",
       "date_achat": "Date d'achat",

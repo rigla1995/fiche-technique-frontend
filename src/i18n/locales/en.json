@@ -47,7 +47,8 @@
     "entreprise": "My company",
     "activites": "My activities",
     "stock": "Stock",
-    "stock_locked": "Stock (select your ingredients first)"
+    "stock_locked": "Stock (select your ingredients first)",
+    "domaines": "Activity domains"
   },
   "validation": {
     "name_required": "Name is required",
@@ -111,6 +112,14 @@
       "delete_confirm": "Delete this category?",
       "name": "Category name",
       "examples": "e.g.: Vegetables, Meats, Spices..."
+    },
+    "domaines": {
+      "title": "Activity Domains",
+      "add": "Add domain",
+      "edit": "Edit domain",
+      "delete_confirm": "Delete this domain?",
+      "name": "Domain name",
+      "examples": "e.g.: Catering, Café, Bakery..."
     }
   },
   "client": {
@@ -221,7 +230,7 @@
       "tab_client": "Personal stock",
       "tab_entreprise": "Enterprise stock",
       "no_selections": "Please select your working ingredients first.",
-      "no_activities": "Create at least one activity in 'My Company' to manage enterprise stock.",
+      "no_activities": "Create at least one activity in 'My Activities' to manage enterprise stock.",
       "ingredient": "Ingredient",
       "quantity": "Quantity",
       "date_achat": "Purchase date",

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
+import { useAuth } from '../../context/AuthContext';
 import type { Activite } from '../../types';
 
 type ActiviteForm = { nom: string; adresse: string; telephone: string; email: string };
@@ -11,8 +12,11 @@ interface Props {
   minimal?: boolean;
 }
 
+const TUNISIAN_PHONE = /^(\+216[\s-]?)?[2579]\d{7}$/;
+
 export default function ActivitesPage({ onCreated, minimal }: Props) {
   const { t } = useTranslation();
+  const { user, advanceOnboarding } = useAuth();
 
   const [activites, setActivites] = useState<Activite[]>([]);
   const [loading, setLoading] = useState(true);
@@ -69,6 +73,10 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.nom.trim()) { setError(t('validation.name_required')); return; }
+    if (form.telephone && !TUNISIAN_PHONE.test(form.telephone.replace(/\s/g, ''))) {
+      setError(t('validation.phone_invalid'));
+      return;
+    }
     setSaving(true);
     setError('');
     try {
@@ -76,11 +84,16 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
         await api.put(`/api/entreprise/activites/${editingId}`, form);
         setMsg(t('client.entreprise.activity_updated'));
       } else {
+        const isFirst = activites.length === 0;
         const payload: Record<string, unknown> = { ...form };
-        if (activites.length === 0 && memeActivite !== null) payload.memeActivite = memeActivite;
+        if (isFirst && memeActivite !== null) payload.memeActivite = memeActivite;
         await api.post('/api/entreprise/activites', payload);
         setMsg(t('client.entreprise.activity_created'));
         if (onCreated) onCreated();
+        // Advance onboarding: step 2 (activites) → step 3 (catalogue)
+        if (isFirst && user?.onboardingStep === 2) {
+          await advanceOnboarding(3);
+        }
       }
       setTimeout(() => setMsg(''), 3000);
       closeForm();

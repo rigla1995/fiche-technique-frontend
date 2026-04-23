@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
 import { useSelection } from '../../context/SelectionContext';
+import { useAuth } from '../../context/AuthContext';
 import type { Ingredient } from '../../types';
 
 interface Props {
@@ -12,6 +13,7 @@ interface Props {
 export default function ClientIngredientsCatalog({ embedded, onSelectionDone }: Props = {}) {
   const { t } = useTranslation();
   const { refreshSelections } = useSelection();
+  const { user, advanceOnboarding } = useAuth();
   const [ingredients, setIngredients] = useState<Ingredient[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -32,6 +34,10 @@ export default function ClientIngredientsCatalog({ embedded, onSelectionDone }: 
       const { data } = await api.post(`/ingredients/${ing.id}/select`);
       setIngredients((list) => list.map((i) => (i.id === ing.id ? { ...i, selected: data.selected } : i)));
       refreshSelections();
+      // Advance onboarding: step 3 (catalogue) → step 0 (done) on first selection
+      if (data.selected && user?.onboardingStep === 3) {
+        await advanceOnboarding(0);
+      }
     } finally {
       setTogglingId(null);
     }

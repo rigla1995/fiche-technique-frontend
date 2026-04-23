@@ -5,12 +5,11 @@ import type { Category, Ingredient, Unit } from '../../types';
 
 interface IngredientForm {
   name: string;
-  price: string;
   unitId: string;
   categorieId: string;
 }
 
-const emptyForm: IngredientForm = { name: '', price: '', unitId: '', categorieId: '' };
+const emptyForm: IngredientForm = { name: '', unitId: '', categorieId: '' };
 
 export default function IngredientsManagement() {
   const { t } = useTranslation();
@@ -37,7 +36,6 @@ export default function IngredientsManagement() {
   const openEdit = (i: Ingredient) => {
     setForm({
       name: i.name,
-      price: i.price !== null ? String(i.price) : '',
       unitId: String(i.unitId),
       categorieId: i.categorieId ? String(i.categorieId) : '',
     });
@@ -52,7 +50,6 @@ export default function IngredientsManagement() {
     try {
       const payload = {
         name: form.name,
-        price: form.price !== '' ? parseFloat(form.price) : null,
         unitId: parseInt(form.unitId),
         categorieId: form.categorieId ? parseInt(form.categorieId) : null,
       };
@@ -133,7 +130,6 @@ export default function IngredientsManagement() {
                 <thead>
                   <tr>
                     <th>{t('common.name')}</th>
-                    <th>{t('admin.ingredients.price_optional')}</th>
                     <th>{t('common.unit')}</th>
                     <th>{t('common.actions')}</th>
                   </tr>
@@ -142,11 +138,6 @@ export default function IngredientsManagement() {
                   {items.map((i) => (
                     <tr key={i.id}>
                       <td>{i.name}</td>
-                      <td>
-                        {i.price !== null
-                          ? <span className="price-badge">{i.price.toFixed(3)} {t('currency')}</span>
-                          : <span className="text-muted">—</span>}
-                      </td>
                       <td><span className="unit-badge">{i.unit?.name}</span></td>
                       <td className="actions-cell">
                         <button className="btn btn-ghost btn-sm" onClick={() => openEdit(i)}>{t('common.edit')}</button>
@@ -173,26 +164,12 @@ export default function IngredientsManagement() {
                 <label>{t('admin.ingredients.name')}</label>
                 <input className="input" required value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} />
               </div>
-              <div className="form-row">
-                <div className="form-group">
-                  <label>{t('admin.ingredients.price_optional')}</label>
-                  <input
-                    className="input"
-                    type="number"
-                    step="0.001"
-                    min="0"
-                    placeholder={t('admin.ingredients.price_placeholder')}
-                    value={form.price}
-                    onChange={(e) => setForm((f) => ({ ...f, price: e.target.value }))}
-                  />
-                </div>
-                <div className="form-group">
-                  <label>{t('admin.ingredients.unit')}</label>
-                  <select className="input" required value={form.unitId} onChange={(e) => setForm((f) => ({ ...f, unitId: e.target.value }))}>
-                    <option value="">— {t('common.unit')} —</option>
-                    {units.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
-                  </select>
-                </div>
+              <div className="form-group">
+                <label>{t('admin.ingredients.unit')}</label>
+                <select className="input" required value={form.unitId} onChange={(e) => setForm((f) => ({ ...f, unitId: e.target.value }))}>
+                  <option value="">— {t('common.unit')} —</option>
+                  {units.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
+                </select>
               </div>
               <div className="form-group">
                 <label>{t('admin.ingredients.category')}</label>

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
@@ -16,7 +17,8 @@ const TUNISIAN_PHONE = /^(\+216[\s-]?)?[2579]\d{7}$/;
 
 export default function Profile() {
   const { t } = useTranslation();
-  const { user, updateUser } = useAuth();
+  const { user, updateUser, advanceOnboarding } = useAuth();
+  const navigate = useNavigate();
   const [upgrading, setUpgrading] = useState(false);
   const [upgradeMsg, setUpgradeMsg] = useState('');
 
@@ -83,6 +85,12 @@ export default function Profile() {
       const { data } = await api.put('/auth/profile', payload);
       updateUser({ name: data.name, email: data.email, phone: data.phone });
       setForm((f) => ({ ...f, currentPassword: '', password: '', confirmPassword: '' }));
+      // Advance onboarding: step 1 (password change) → step 2 (activites)
+      if (form.password && user?.onboardingStep === 1) {
+        await advanceOnboarding(2);
+        navigate('/client/activites', { replace: true });
+        return;
+      }
       setSuccess(true);
     } catch (err: any) {
       const msg = err?.response?.data?.message || err?.response?.data?.errors?.[0]?.msg || t('common.error');
@@ -113,6 +121,12 @@ export default function Profile() {
       <div className="page-header">
         <h1>{t('client.profile.title')}</h1>
       </div>
+
+      {user?.onboardingStep === 1 && (
+        <div className="alert alert-warning" style={{ marginBottom: 16 }}>
+          🔒 Bienvenue ! Veuillez définir un nouveau mot de passe pour accéder à votre espace.
+        </div>
+      )}
 
       {/* Account type + upgrade */}
       <div className="card" style={{ padding: '16px 24px', marginBottom: 16, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>

@@ -7,6 +7,7 @@ import ClientsManagement from './components/admin/ClientsManagement';
 import UnitsManagement from './components/admin/UnitsManagement';
 import IngredientsManagement from './components/admin/IngredientsManagement';
 import CategoriesManagement from './components/admin/CategoriesManagement';
+import DomainesManagement from './components/admin/DomainesManagement';
 import ClientDashboard from './components/client/ClientDashboard';
 import ProductList from './components/client/ProductList';
 import ProductForm from './components/client/ProductForm';
@@ -14,7 +15,6 @@ import ClientIngredientsCatalog from './components/client/ClientIngredientsCatal
 import Profile from './components/client/Profile';
 import ActivitesPage from './components/client/ActivitesPage';
 import StockPage from './components/client/StockPage';
-import OnboardingWizard from './components/client/OnboardingWizard';
 import './i18n';
 import './index.css';
 
@@ -23,9 +23,12 @@ function RootRedirect() {
   if (isLoading) return <div className="page-loading"><div className="spinner" /></div>;
   if (!user) return <Navigate to="/login" replace />;
   if (user.role === 'super_admin') return <Navigate to="/admin" replace />;
-  // Entreprise user with pending onboarding
-  if (user.compteType === 'entreprise' && (user.onboardingStep ?? 0) > 0) {
-    return <Navigate to="/client/onboarding" replace />;
+  // Entreprise user with pending onboarding → send to profile to change password
+  if (user.compteType === 'entreprise' && (user.onboardingStep ?? 0) === 1) {
+    return <Navigate to="/client/profile" replace />;
+  }
+  if (user.compteType === 'entreprise' && (user.onboardingStep ?? 0) === 2) {
+    return <Navigate to="/client/activites" replace />;
   }
   return <Navigate to="/client" replace />;
 }
@@ -45,6 +48,7 @@ export default function App() {
             <Route path="/admin/units" element={<UnitsManagement />} />
             <Route path="/admin/ingredients" element={<IngredientsManagement />} />
             <Route path="/admin/categories" element={<CategoriesManagement />} />
+            <Route path="/admin/domaines" element={<DomainesManagement />} />
           </Route>
 
           {/* Client routes */}
@@ -57,7 +61,6 @@ export default function App() {
             <Route path="/client/profile" element={<Profile />} />
             <Route path="/client/activites" element={<ActivitesPage />} />
             <Route path="/client/stock" element={<StockPage />} />
-            <Route path="/client/onboarding" element={<OnboardingWizard />} />
           </Route>
 
           <Route path="*" element={<Navigate to="/" replace />} />
