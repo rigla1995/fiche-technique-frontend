@@ -6,7 +6,7 @@ import type { Product } from '../../types';
 
 interface ProductDetail {
   ingredients: { ingredientName: string; portion: number; unitName: string; unitPrice: number }[];
-  subProducts: { subProductName: string; portion: number }[];
+  subProducts: { subProductName: string; portion: number; unitCost: number; totalLineCost: number }[];
 }
 
 type PopupType = 'ingredients' | 'subProducts' | null;
@@ -101,7 +101,7 @@ export default function ProductList() {
                 <th>{t('common.name')}</th>
                 <th>{t('client.products.type_label')}</th>
                 <th style={{ textAlign: 'center' }}>{t('nav.ingredients')}</th>
-                <th style={{ textAlign: 'center' }}>{t('client.products.subproducts_section')}</th>
+                <th style={{ textAlign: 'center' }}>{t('client.products.usable_products_col')}</th>
                 <th style={{ textAlign: 'right' }}>{t('common.total_cost')}</th>
                 <th>{t('common.actions')}</th>
               </tr>
@@ -204,6 +204,8 @@ export default function ProductList() {
                       <tr>
                         <th>{t('client.products.popup_col_subproduct')}</th>
                         <th style={{ textAlign: 'right' }}>{t('client.products.popup_col_portion')}</th>
+                        <th style={{ textAlign: 'right' }}>{t('client.products.popup_col_unit_cost')}</th>
+                        <th style={{ textAlign: 'right' }}>{t('client.products.popup_col_line_total')}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -211,6 +213,8 @@ export default function ProductList() {
                         <tr key={i}>
                           <td>{sp.subProductName}</td>
                           <td style={{ textAlign: 'right' }}>{sp.portion}</td>
+                          <td style={{ textAlign: 'right' }}>{sp.unitCost?.toFixed(3)} {t('currency')}</td>
+                          <td style={{ textAlign: 'right' }}><strong>{sp.totalLineCost?.toFixed(3)} {t('currency')}</strong></td>
                         </tr>
                       ))}
                     </tbody>

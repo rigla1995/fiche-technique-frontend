@@ -15,8 +15,6 @@ interface SubProductLine {
   portion: string;
 }
 
-const emptyIngredientLine = (): IngredientLine => ({ ingredientId: '', portion: '', categoryFilter: '' });
-
 export default function ProductForm() {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -29,6 +27,7 @@ export default function ProductForm() {
   const [subProductLines, setSubProductLines] = useState<SubProductLine[]>([]);
   const [ingredients, setIngredients] = useState<Ingredient[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [newCatSelect, setNewCatSelect] = useState('');
   const [products, setProducts] = useState<Product[]>([]);
   const [totalCost, setTotalCost] = useState(0);
   const [saving, setSaving] = useState(false);
@@ -36,28 +35,37 @@ export default function ProductForm() {
   const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
-    const fetches = [api.get('/ingredients'), api.get('/products'), api.get('/categories')];
-    Promise.all(fetches).then(([ing, prod, cat]) => {
-      setIngredients(ing.data);
-      // Sub-products list: only "utilisable" products, excluding current product
-      setProducts(prod.data.filter((p: Product) => p.type === 'utilisable' && (!id || String(p.id) !== id)));
-      setCategories(cat.data);
-    });
+    Promise.all([api.get('/ingredients'), api.get('/products'), api.get('/categories')]).then(
+      ([ing, prod, cat]) => {
+        setIngredients(ing.data);
+        setProducts(
+          prod.data.filter((p: Product) => p.type === 'utilisable' && (!id || String(p.id) !== id))
+        );
+        setCategories(cat.data);
+      }
+    );
 
     if (isEdit && id) {
-      api.get(`/products/${id}`).then(({ data }) => {
-        setName(data.name);
-        setProductType(data.type === 'utilisable' ? 'utilisable' : 'vendable');
-        setIngredientLines(data.ingredients.map((i: { ingredientId: number; portion: number }) => ({
-          ingredientId: String(i.ingredientId),
-          portion: String(i.portion),
-          categoryFilter: '',
-        })));
-        setSubProductLines(data.subProducts.map((s: { subProductId: number; portion: number }) => ({
-          subProductId: String(s.subProductId),
-          portion: String(s.portion),
-        })));
-      }).finally(() => setLoading(false));
+      api
+        .get(`/products/${id}`)
+        .then(({ data }) => {
+          setName(data.name);
+          setProductType(data.type === 'utilisable' ? 'utilisable' : 'vendable');
+          setIngredientLines(
+            data.ingredients.map((i: { ingredientId: number; portion: number }) => ({
+              ingredientId: String(i.ingredientId),
+              portion: String(i.portion),
+              categoryFilter: '',
+            }))
+          );
+          setSubProductLines(
+            data.subProducts.map((s: { subProductId: number; portion: number }) => ({
+              subProductId: String(s.subProductId),
+              portion: String(s.portion),
+            }))
+          );
+        })
+        .finally(() => setLoading(false));
     } else {
       setLoading(false);
     }
@@ -67,43 +75,59 @@ export default function ProductForm() {
     let cost = 0;
     for (const line of ingredientLines) {
       const ing = ingredients.find((i) => String(i.id) === line.ingredientId);
-      if (ing && line.portion) {
-        cost += (ing.effectivePrice ?? 0) * parseFloat(line.portion);
-      }
+      if (ing && line.portion) cost += (ing.effectivePrice ?? 0) * parseFloat(line.portion);
     }
     for (const line of subProductLines) {
       const prod = products.find((p) => String(p.id) === line.subProductId);
-      if (prod && line.portion) {
-        cost += (prod.totalCost || 0) * parseFloat(line.portion);
-      }
+      if (prod && line.portion) cost += (prod.totalCost || 0) * parseFloat(line.portion);
     }
     setTotalCost(cost);
   }, [ingredientLines, subProductLines, ingredients, products]);
 
   useEffect(() => { recalcCost(); }, [recalcCost]);
 
-  const addIngredientLine = () => setIngredientLines((l) => [...l, emptyIngredientLine()]);
-  const removeIngredientLine = (i: number) => setIngredientLines((l) => l.filter((_, idx) => idx !== i));
+  // --- Ingredient line helpers ---
+  const addIngredientLineInCategory = (catId: string) =>
+    setIngredientLines((l) => [...l, { ingredientId: '', portion: '', categoryFilter: catId }]);
+
+  const removeIngredientLine = (i: number) =>
+    setIngredientLines((l) => l.filter((_, idx) => idx !== i));
 
   const updateIngredientLine = (i: number, field: 'ingredientId' | 'portion', value: string) =>
     setIngredientLines((l) => l.map((line, idx) => (idx === i ? { ...line, [field]: value } : line)));
 
-  const updateIngredientLineCategory = (i: number, catId: string) =>
-    setIngredientLines((l) => l.map((line, idx) =>
-      idx === i ? { ...line, categoryFilter: catId, ingredientId: '' } : line
-    ));
+  const addNewCategory = (catId: string) => {
+    if (!catId) return;
+    setIngredientLines((l) => [...l, { ingredientId: '', portion: '', categoryFilter: catId }]);
+    setNewCatSelect('');
+  };
 
+  // --- Sub-product helpers ---
   const addSubProductLine = () => setSubProductLines((l) => [...l, { subProductId: '', portion: '' }]);
   const removeSubProductLine = (i: number) => setSubProductLines((l) => l.filter((_, idx) => idx !== i));
   const updateSubProductLine = (i: number, field: keyof SubProductLine, value: string) =>
     setSubProductLines((l) => l.map((line, idx) => (idx === i ? { ...line, [field]: value } : line)));
 
-  const getIngredientUnit = (ingredientId: string) => {
-    return ingredients.find((i) => String(i.id) === ingredientId)?.unit?.name || '';
-  };
-
-  // Per-line availability: filter by that line's category + exclude already-selected in other lines
+  // --- Grouping logic ---
   const selectedIngredientIds = new Set(ingredientLines.map((l) => l.ingredientId).filter(Boolean));
+
+  // Ordered unique category IDs (in order of first appearance)
+  const orderedCatIds = ingredientLines.reduce<string[]>((acc, line) => {
+    if (!acc.includes(line.categoryFilter)) acc.push(line.categoryFilter);
+    return acc;
+  }, []);
+
+  const groups = orderedCatIds.map((catId) => ({
+    catId,
+    catName: catId
+      ? (categories.find((c) => String(c.id) === catId)?.name ?? catId)
+      : t('client.ingredients_catalog.no_category'),
+    entries: ingredientLines.map((line, idx) => ({ line, idx })).filter(({ line }) => line.categoryFilter === catId),
+  }));
+
+  // Categories not yet used in any group (for "add new category" select)
+  const usedCatIds = new Set(orderedCatIds.filter(Boolean));
+  const availableNewCategories = categories.filter((c) => !usedCatIds.has(String(c.id)));
 
   const availableForLine = (idx: number) => {
     const line = ingredientLines[idx];
@@ -192,23 +216,11 @@ export default function ProductForm() {
             <label className="form-label">{t('client.products.type_label')}</label>
             <div style={{ display: 'flex', gap: 24, marginTop: 6 }}>
               <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
-                <input
-                  type="radio"
-                  name="productType"
-                  value="vendable"
-                  checked={productType === 'vendable'}
-                  onChange={() => setProductType('vendable')}
-                />
+                <input type="radio" name="productType" value="vendable" checked={productType === 'vendable'} onChange={() => setProductType('vendable')} />
                 {t('client.products.type_vendable')}
               </label>
               <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
-                <input
-                  type="radio"
-                  name="productType"
-                  value="utilisable"
-                  checked={productType === 'utilisable'}
-                  onChange={() => setProductType('utilisable')}
-                />
+                <input type="radio" name="productType" value="utilisable" checked={productType === 'utilisable'} onChange={() => setProductType('utilisable')} />
                 {t('client.products.type_utilisable')}
               </label>
             </div>
@@ -221,78 +233,99 @@ export default function ProductForm() {
           <div className="cost-value">{totalCost.toFixed(3)} <span className="cost-currency">{t('currency')}</span></div>
         </div>
 
-        {/* Ingredients section */}
+        {/* Ingredients grouped by category */}
         <div className="card">
           <div className="section-header">
             <h2>{t('client.products.ingredients_section')}</h2>
-            <button type="button" className="btn btn-ghost btn-sm" onClick={addIngredientLine}>
-              + {t('client.products.add_ingredient')}
-            </button>
           </div>
-          {ingredientLines.length === 0 && (
+
+          {groups.length === 0 && (
             <p className="empty-text">{t('client.products.ingredients_empty')}</p>
           )}
-          {ingredientLines.map((line, idx) => {
-            const unit = getIngredientUnit(line.ingredientId);
-            const available = availableForLine(idx);
-            const effectivePrice = ingredients.find((i) => String(i.id) === line.ingredientId)?.effectivePrice ?? 0;
-            return (
-              <div key={idx} className="line-row" style={{ flexWrap: 'wrap', gap: 8 }}>
-                {/* Per-line category filter */}
-                {categories.length > 0 && (
-                  <select
-                    className="input"
-                    style={{ minWidth: 150, flex: '0 0 auto' }}
-                    value={line.categoryFilter}
-                    onChange={(e) => updateIngredientLineCategory(idx, e.target.value)}
-                  >
-                    <option value="">{t('client.products.filter_by_category')}</option>
-                    {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-                  </select>
-                )}
-                {/* Ingredient select */}
-                <select
-                  className="input flex-grow"
-                  value={line.ingredientId}
-                  onChange={(e) => updateIngredientLine(idx, 'ingredientId', e.target.value)}
+
+          {groups.map(({ catId, catName, entries }) => (
+            <div key={catId} style={{ marginBottom: 20 }}>
+              {/* Category group header */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8, padding: '6px 0', borderBottom: '1px solid var(--border)' }}>
+                <span style={{ fontWeight: 700, color: 'var(--primary)', fontSize: '0.95rem' }}>🏷️ {catName}</span>
+                <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>({entries.length})</span>
+                <button
+                  type="button"
+                  className="btn btn-ghost btn-sm"
+                  style={{ marginLeft: 'auto' }}
+                  onClick={() => addIngredientLineInCategory(catId)}
                 >
-                  <option value="">— {t('client.products.select_ingredient')} —</option>
-                  {available.map((i) => (
-                    <option key={i.id} value={i.id}>
-                      {i.name}
-                      {i.effectivePrice !== null
-                        ? ` (${i.effectivePrice.toFixed(3)} ${t('currency')}/${i.unit?.name})`
-                        : ` (— ${t('currency')}/${i.unit?.name})`}
-                    </option>
-                  ))}
-                </select>
-                {/* Portion */}
-                <div className="portion-input">
-                  <input
-                    className="input"
-                    type="number"
-                    step="0.001"
-                    min="0"
-                    placeholder={unit === 'pièces' || unit === 'pieces'
-                      ? t('client.products.portion_pieces')
-                      : t('client.products.portion_grams')}
-                    value={line.portion}
-                    onChange={(e) => updateIngredientLine(idx, 'portion', e.target.value)}
-                  />
-                  {unit && <span className="unit-label">{unit}</span>}
-                </div>
-                {line.ingredientId && line.portion && (
-                  <span className="line-cost">
-                    {(effectivePrice * parseFloat(line.portion || '0')).toFixed(3)} {t('currency')}
-                  </span>
-                )}
-                <button type="button" className="btn-icon btn-remove" onClick={() => removeIngredientLine(idx)}>×</button>
+                  + {t('client.products.add_ingredient')}
+                </button>
               </div>
-            );
-          })}
+
+              {/* Ingredient lines within this group */}
+              {entries.map(({ line, idx }) => {
+                const unit = ingredients.find((i) => String(i.id) === line.ingredientId)?.unit?.name || '';
+                const available = availableForLine(idx);
+                const effectivePrice = ingredients.find((i) => String(i.id) === line.ingredientId)?.effectivePrice ?? 0;
+                return (
+                  <div key={idx} className="line-row">
+                    <select
+                      className="input flex-grow"
+                      value={line.ingredientId}
+                      onChange={(e) => updateIngredientLine(idx, 'ingredientId', e.target.value)}
+                    >
+                      <option value="">— {t('client.products.select_ingredient')} —</option>
+                      {available.map((i) => (
+                        <option key={i.id} value={i.id}>
+                          {i.name}
+                          {i.effectivePrice !== null
+                            ? ` (${i.effectivePrice.toFixed(3)} ${t('currency')}/${i.unit?.name})`
+                            : ` (— ${t('currency')}/${i.unit?.name})`}
+                        </option>
+                      ))}
+                    </select>
+                    <div className="portion-input">
+                      <input
+                        className="input"
+                        type="number"
+                        step="0.001"
+                        min="0"
+                        placeholder={unit === 'pièces' || unit === 'pieces'
+                          ? t('client.products.portion_pieces')
+                          : t('client.products.portion_grams')}
+                        value={line.portion}
+                        onChange={(e) => updateIngredientLine(idx, 'portion', e.target.value)}
+                      />
+                      {unit && <span className="unit-label">{unit}</span>}
+                    </div>
+                    {line.ingredientId && line.portion && (
+                      <span className="line-cost">
+                        {(effectivePrice * parseFloat(line.portion || '0')).toFixed(3)} {t('currency')}
+                      </span>
+                    )}
+                    <button type="button" className="btn-icon btn-remove" onClick={() => removeIngredientLine(idx)}>×</button>
+                  </div>
+                );
+              })}
+            </div>
+          ))}
+
+          {/* Add a new category group */}
+          {availableNewCategories.length > 0 && (
+            <div style={{ marginTop: 8 }}>
+              <select
+                className="input"
+                style={{ maxWidth: 300 }}
+                value={newCatSelect}
+                onChange={(e) => addNewCategory(e.target.value)}
+              >
+                <option value="">+ {t('client.products.add_new_category')}</option>
+                {availableNewCategories.map((c) => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
         </div>
 
-        {/* Sub-products section — only "utilisable" products */}
+        {/* Sub-products (produits utilisables) */}
         <div className="card">
           <div className="section-header">
             <h2>{t('client.products.subproducts_section')}</h2>
@@ -300,9 +333,13 @@ export default function ProductForm() {
               + {t('client.products.add_subproduct')}
             </button>
           </div>
-          {subProductLines.length === 0 && (
+          {subProductLines.length === 0 && products.length === 0 ? (
+            <p className="empty-text" style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+              {t('client.products.no_utilisable_products')}
+            </p>
+          ) : subProductLines.length === 0 ? (
             <p className="empty-text">{t('client.products.subproducts_empty')}</p>
-          )}
+          ) : null}
           {subProductLines.map((line, idx) => (
             <div key={idx} className="line-row">
               <select
@@ -327,7 +364,7 @@ export default function ProductForm() {
                   value={line.portion}
                   onChange={(e) => updateSubProductLine(idx, 'portion', e.target.value)}
                 />
-                <span className="unit-label">portion</span>
+                <span className="unit-label">×</span>
               </div>
               {line.subProductId && line.portion && (
                 <span className="line-cost">
@@ -337,11 +374,6 @@ export default function ProductForm() {
               <button type="button" className="btn-icon btn-remove" onClick={() => removeSubProductLine(idx)}>×</button>
             </div>
           ))}
-          {products.length === 0 && (
-            <p className="empty-text" style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-              {t('client.products.no_utilisable_products')}
-            </p>
-          )}
         </div>
 
         <div className="form-actions">
