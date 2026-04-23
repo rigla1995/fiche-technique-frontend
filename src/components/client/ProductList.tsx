@@ -4,16 +4,40 @@ import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
 import type { Product } from '../../types';
 
+interface ProductDetail {
+  ingredients: { ingredientName: string; portion: number; unitName: string; unitPrice: number }[];
+  subProducts: { subProductName: string; portion: number }[];
+}
+
+type PopupType = 'ingredients' | 'subProducts' | null;
+
 export default function ProductList() {
   const { t } = useTranslation();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [exporting, setExporting] = useState<number | null>(null);
+  const [popup, setPopup] = useState<{ type: PopupType; productId: number; productName: string } | null>(null);
+  const [detail, setDetail] = useState<ProductDetail | null>(null);
+  const [loadingDetail, setLoadingDetail] = useState(false);
 
   useEffect(() => {
     api.get('/products').then(({ data }) => setProducts(data)).finally(() => setLoading(false));
   }, []);
+
+  const openPopup = async (type: PopupType, product: Product) => {
+    setPopup({ type, productId: product.id, productName: product.name });
+    setDetail(null);
+    setLoadingDetail(true);
+    try {
+      const { data } = await api.get(`/products/${product.id}`);
+      setDetail(data);
+    } finally {
+      setLoadingDetail(false);
+    }
+  };
+
+  const closePopup = () => { setPopup(null); setDetail(null); };
 
   const handleDelete = async (id: number) => {
     if (!window.confirm(t('client.products.delete_confirm'))) return;
@@ -75,9 +99,9 @@ export default function ProductList() {
             <thead>
               <tr>
                 <th>{t('common.name')}</th>
-                <th>{t('nav.ingredients')}</th>
-                <th>Sous-produits</th>
-                <th>{t('common.total_cost')}</th>
+                <th style={{ textAlign: 'center' }}>{t('nav.ingredients')}</th>
+                <th style={{ textAlign: 'center' }}>Sous-produits</th>
+                <th style={{ textAlign: 'right' }}>{t('common.total_cost')}</th>
                 <th>{t('common.actions')}</th>
               </tr>
             </thead>
@@ -85,9 +109,27 @@ export default function ProductList() {
               {filtered.map((p) => (
                 <tr key={p.id}>
                   <td>{p.name}</td>
-                  <td>{p.ingredients?.length || 0}</td>
-                  <td>{p.subProducts?.length || 0}</td>
-                  <td><span className="cost-badge">{(p.totalCost || 0).toFixed(3)} {t('currency')}</span></td>
+                  <td style={{ textAlign: 'center' }}>
+                    <button
+                      className="btn btn-ghost btn-sm"
+                      style={{ minWidth: 36 }}
+                      onClick={() => openPopup('ingredients', p)}
+                    >
+                      {p.ingredientsCount ?? 0}
+                    </button>
+                  </td>
+                  <td style={{ textAlign: 'center' }}>
+                    <button
+                      className="btn btn-ghost btn-sm"
+                      style={{ minWidth: 36 }}
+                      onClick={() => openPopup('subProducts', p)}
+                    >
+                      {p.subProductsCount ?? 0}
+                    </button>
+                  </td>
+                  <td style={{ textAlign: 'right' }}>
+                    <span className="cost-badge">{(p.totalCost || 0).toFixed(3)} {t('currency')}</span>
+                  </td>
                   <td className="actions-cell">
                     <Link to={`/client/products/${p.id}/edit`} className="btn btn-ghost btn-sm">{t('common.edit')}</Link>
                     <button
@@ -105,6 +147,73 @@ export default function ProductList() {
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {popup && (
+        <div className="modal-overlay" onClick={closePopup}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>
+                {popup.type === 'ingredients' ? 'Ingrédients' : 'Sous-produits'} — {popup.productName}
+              </h2>
+              <button className="modal-close" onClick={closePopup}>×</button>
+            </div>
+            <div className="modal-body">
+              {loadingDetail ? (
+                <div className="loading-text">{t('common.loading')}</div>
+              ) : popup.type === 'ingredients' ? (
+                detail?.ingredients && detail.ingredients.length > 0 ? (
+                  <table className="table">
+                    <thead>
+                      <tr>
+                        <th>Ingrédient</th>
+                        <th style={{ textAlign: 'right' }}>Portion</th>
+                        <th>Unité</th>
+                        <th style={{ textAlign: 'right' }}>Prix unit.</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {detail.ingredients.map((ing, i) => (
+                        <tr key={i}>
+                          <td>{ing.ingredientName}</td>
+                          <td style={{ textAlign: 'right' }}>{ing.portion}</td>
+                          <td>{ing.unitName}</td>
+                          <td style={{ textAlign: 'right' }}>{ing.unitPrice?.toFixed(3)} {t('currency')}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                ) : (
+                  <p style={{ color: '#888', textAlign: 'center', padding: '16px 0' }}>Aucun ingrédient assigné.</p>
+                )
+              ) : (
+                detail?.subProducts && detail.subProducts.length > 0 ? (
+                  <table className="table">
+                    <thead>
+                      <tr>
+                        <th>Sous-produit</th>
+                        <th style={{ textAlign: 'right' }}>Portion</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {detail.subProducts.map((sp, i) => (
+                        <tr key={i}>
+                          <td>{sp.subProductName}</td>
+                          <td style={{ textAlign: 'right' }}>{sp.portion}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                ) : (
+                  <p style={{ color: '#888', textAlign: 'center', padding: '16px 0' }}>Aucun sous-produit assigné.</p>
+                )
+              )}
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-ghost" onClick={closePopup}>Fermer</button>
+            </div>
+          </div>
         </div>
       )}
     </div>

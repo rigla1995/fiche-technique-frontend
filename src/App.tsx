@@ -11,6 +11,7 @@ import ClientDashboard from './components/client/ClientDashboard';
 import ProductList from './components/client/ProductList';
 import ProductForm from './components/client/ProductForm';
 import ClientIngredientsCatalog from './components/client/ClientIngredientsCatalog';
+import Profile from './components/client/Profile';
 import './i18n';
 import './index.css';
 
@@ -45,6 +46,7 @@ export default function App() {
             <Route path="/client/products/new" element={<ProductForm />} />
             <Route path="/client/products/:id/edit" element={<ProductForm />} />
             <Route path="/client/ingredients" element={<ClientIngredientsCatalog />} />
+            <Route path="/client/profile" element={<Profile />} />
           </Route>
 
           <Route path="*" element={<Navigate to="/" replace />} />

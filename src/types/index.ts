@@ -53,6 +53,8 @@ export interface Product {
   ingredients: ProductIngredient[];
   subProducts: ProductComponent[];
   totalCost: number;
+  ingredientsCount?: number;
+  subProductsCount?: number;
   userId: number;
 }
 

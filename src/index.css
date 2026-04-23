@@ -238,3 +238,8 @@ select.input { cursor: pointer; }
   .flex-grow { min-width: 0; }
   .portion-input .input { width: 100%; }
 }
+
+
+/* ===== FORM VALIDATION ===== */
+.input-error { border-color: #e53e3e !important; }
+.field-error { display: block; font-size: 0.78rem; color: #e53e3e; margin-top: 4px; }
