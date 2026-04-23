@@ -70,6 +70,37 @@ export interface Client {
   createdAt?: string;
 }
 
+export interface Entreprise {
+  id: number;
+  clientId: number;
+  nom: string;
+  email: string;
+  telephone?: string;
+  adresse?: string;
+  memeActivite?: boolean | null;
+  createdAt?: string;
+}
+
+export interface Activite {
+  id: number;
+  entrepriseId: number;
+  nom: string;
+  adresse?: string;
+  telephone?: string;
+  email?: string;
+  createdAt?: string;
+}
+
+export interface StockEntry {
+  ingredientId: number;
+  nom: string;
+  unite: string;
+  prixUnitaire: number | null;
+  quantite: number | null;
+  dateAchat: string | null;
+  updatedAt: string | null;
+}
+
 export interface ApiError {
   message: string;
   statusCode?: number;

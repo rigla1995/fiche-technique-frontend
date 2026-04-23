@@ -43,7 +43,10 @@
     "settings": "Settings",
     "categories": "Categories",
     "profile": "My profile",
-    "products_locked": "Products (select your ingredients first)"
+    "products_locked": "Products (select your ingredients first)",
+    "entreprise": "My company",
+    "stock": "Stock",
+    "stock_locked": "Stock (select your ingredients first)"
   },
   "validation": {
     "name_required": "Name is required",
@@ -177,6 +180,49 @@
       "current_password": "Current password",
       "new_password": "New password",
       "confirm_password": "Confirm new password"
+    },
+    "entreprise": {
+      "title": "My company",
+      "profile_section": "Company profile",
+      "activities_section": "My activities",
+      "nom": "Company name",
+      "email": "Company email",
+      "telephone": "Phone",
+      "adresse": "Address",
+      "save_profile": "Save profile",
+      "profile_saved": "Company profile updated.",
+      "no_activities": "No activities yet.",
+      "add_activity": "Add activity",
+      "edit_activity": "Edit activity",
+      "delete_activity_confirm": "Delete this activity?",
+      "duplicate_activity": "Duplicate",
+      "activity_nom": "Activity name (e.g.: Restaurant A)",
+      "activity_adresse": "Address",
+      "activity_telephone": "Phone",
+      "activity_email": "Email",
+      "franchise_question": "Do all your activities share the same activity (franchise)?",
+      "franchise_yes": "Yes, it's a franchise",
+      "franchise_no": "No, distinct activities",
+      "duplicate_from_last": "Duplicate from last activity",
+      "activity_created": "Activity created.",
+      "activity_updated": "Activity updated.",
+      "activity_deleted": "Activity deleted."
+    },
+    "stock": {
+      "title": "Stock",
+      "tab_client": "Personal stock",
+      "tab_entreprise": "Enterprise stock",
+      "no_selections": "Please select your working ingredients first.",
+      "no_activities": "Create at least one activity in 'My Company' to manage enterprise stock.",
+      "ingredient": "Ingredient",
+      "quantity": "Quantity",
+      "date_achat": "Purchase date",
+      "unit_price": "Unit price",
+      "save": "Save",
+      "saved": "Saved",
+      "date_required_if_qty": "Date is required when a quantity is set.",
+      "empty_stock": "No ingredients selected.",
+      "updated_at": "Updated"
     }
   },
   "currency": "TND"

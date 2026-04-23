@@ -12,6 +12,8 @@ import ProductList from './components/client/ProductList';
 import ProductForm from './components/client/ProductForm';
 import ClientIngredientsCatalog from './components/client/ClientIngredientsCatalog';
 import Profile from './components/client/Profile';
+import EntrepriseProfile from './components/client/EntrepriseProfile';
+import StockPage from './components/client/StockPage';
 import './i18n';
 import './index.css';
 
@@ -47,6 +49,8 @@ export default function App() {
             <Route path="/client/products/:id/edit" element={<ProductForm />} />
             <Route path="/client/ingredients" element={<ClientIngredientsCatalog />} />
             <Route path="/client/profile" element={<Profile />} />
+            <Route path="/client/entreprise" element={<EntrepriseProfile />} />
+            <Route path="/client/stock" element={<StockPage />} />
           </Route>
 
           <Route path="*" element={<Navigate to="/" replace />} />
