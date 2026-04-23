@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
 import type { Category, Ingredient, Product } from '../../types';
@@ -19,10 +19,14 @@ export default function ProductForm() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { id } = useParams();
+  const [searchParams] = useSearchParams();
   const isEdit = Boolean(id);
 
+  // In edit mode, type comes from the fetched product. In new mode, from ?type= query param.
   const [name, setName] = useState('');
-  const [productType, setProductType] = useState<'vendable' | 'utilisable'>('vendable');
+  const [productType, setProductType] = useState<'vendable' | 'utilisable'>(
+    (searchParams.get('type') as 'vendable' | 'utilisable') || 'vendable'
+  );
   const [ingredientLines, setIngredientLines] = useState<IngredientLine[]>([]);
   const [subProductLines, setSubProductLines] = useState<SubProductLine[]>([]);
   const [ingredients, setIngredients] = useState<Ingredient[]>([]);
@@ -123,7 +127,6 @@ export default function ProductForm() {
   // --- Grouping logic ---
   const selectedIngredientIds = new Set(ingredientLines.map((l) => l.ingredientId).filter(Boolean));
 
-  // Ordered unique category IDs (in order of first appearance)
   const orderedCatIds = ingredientLines.reduce<string[]>((acc, line) => {
     if (!acc.includes(line.categoryFilter)) acc.push(line.categoryFilter);
     return acc;
@@ -137,7 +140,6 @@ export default function ProductForm() {
     entries: ingredientLines.map((line, idx) => ({ line, idx })).filter(({ line }) => line.categoryFilter === catId),
   }));
 
-  // Categories not yet used in any group (for "add new category" select)
   const usedCatIds = new Set(orderedCatIds.filter(Boolean));
   const availableNewCategories = categories.filter((c) => !usedCatIds.has(String(c.id)));
 
@@ -170,7 +172,7 @@ export default function ProductForm() {
       } else {
         await api.post('/products', payload);
       }
-      navigate('/client/products');
+      navigate(`/client/products?tab=${productType}`);
     } finally {
       setSaving(false);
     }
@@ -179,7 +181,7 @@ export default function ProductForm() {
   const handleDelete = async () => {
     if (!window.confirm(t('client.products.delete_confirm'))) return;
     await api.delete(`/products/${id}`);
-    navigate('/client/products');
+    navigate(`/client/products?tab=${productType}`);
   };
 
   const handleExport = async () => {
@@ -204,38 +206,36 @@ export default function ProductForm() {
   return (
     <div className="page">
       <div className="page-header">
-        <h1>{isEdit ? t('client.products.edit') : t('client.products.add')}</h1>
+        <h1>
+          {isEdit ? t('client.products.edit') : (
+            productType === 'vendable'
+              ? t('client.products.add_vendable')
+              : t('client.products.add_utilisable')
+          )}
+          <span className={`unit-badge badge-${productType}`} style={{ marginLeft: 10, fontSize: '0.85rem' }}>
+            {productType === 'vendable' ? t('client.products.type_vendable') : t('client.products.type_utilisable')}
+          </span>
+        </h1>
         <div className="page-header-actions">
-          {isEdit && (
+          {isEdit && productType === 'vendable' && (
             <>
               <button className="btn btn-success" onClick={handleExport} disabled={exporting}>
                 📥 {exporting ? t('common.loading') : t('client.products.export_excel')}
               </button>
-              <button className="btn btn-danger btn-sm" onClick={handleDelete}>{t('common.delete')}</button>
             </>
+          )}
+          {isEdit && (
+            <button className="btn btn-danger btn-sm" onClick={handleDelete}>{t('common.delete')}</button>
           )}
         </div>
       </div>
 
       <form onSubmit={handleSubmit} className="product-form">
-        {/* Product info */}
+        {/* Product name */}
         <div className="card">
           <div className="form-group">
             <label className="form-label">{t('client.products.name')}</label>
             <input className="input" required value={name} onChange={(e) => setName(e.target.value)} />
-          </div>
-          <div className="form-group">
-            <label className="form-label">{t('client.products.type_label')}</label>
-            <div style={{ display: 'flex', gap: 24, marginTop: 6 }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
-                <input type="radio" name="productType" value="vendable" checked={productType === 'vendable'} onChange={() => setProductType('vendable')} />
-                {t('client.products.type_vendable')}
-              </label>
-              <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
-                <input type="radio" name="productType" value="utilisable" checked={productType === 'utilisable'} onChange={() => setProductType('utilisable')} />
-                {t('client.products.type_utilisable')}
-              </label>
-            </div>
           </div>
         </div>
 
@@ -257,7 +257,6 @@ export default function ProductForm() {
 
           {groups.map(({ catId, catName, entries }) => (
             <div key={catId} style={{ marginBottom: 20 }}>
-              {/* Category group header */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8, padding: '6px 0', borderBottom: '1px solid var(--border)' }}>
                 <span style={{ fontWeight: 700, color: 'var(--primary)', fontSize: '0.95rem' }}>🏷️ {catName}</span>
                 <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>({entries.length})</span>
@@ -271,7 +270,6 @@ export default function ProductForm() {
                 </button>
               </div>
 
-              {/* Ingredient lines within this group */}
               {entries.map(({ line, idx }) => {
                 const unit = ingredients.find((i) => String(i.id) === line.ingredientId)?.unit?.name || '';
                 const available = availableForLine(idx);
@@ -319,7 +317,6 @@ export default function ProductForm() {
             </div>
           ))}
 
-          {/* Add a new category group */}
           {availableNewCategories.length > 0 && (
             <div style={{ marginTop: 8 }}>
               <select
@@ -337,59 +334,61 @@ export default function ProductForm() {
           )}
         </div>
 
-        {/* Sub-products (produits utilisables) */}
-        <div className="card">
-          <div className="section-header">
-            <h2>{t('client.products.subproducts_section')}</h2>
-            <button type="button" className="btn btn-ghost btn-sm" onClick={addSubProductLine}>
-              + {t('client.products.add_subproduct')}
-            </button>
-          </div>
-          {subProductLines.length === 0 && products.length === 0 ? (
-            <p className="empty-text" style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-              {t('client.products.no_utilisable_products')}
-            </p>
-          ) : subProductLines.length === 0 ? (
-            <p className="empty-text">{t('client.products.subproducts_empty')}</p>
-          ) : null}
-          {subProductLines.map((line, idx) => (
-            <div key={idx} className="line-row">
-              <select
-                className="input flex-grow"
-                value={line.subProductId}
-                onChange={(e) => updateSubProductLine(idx, 'subProductId', e.target.value)}
-              >
-                <option value="">— {t('client.products.select_product')} —</option>
-                {products.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name} ({(p.totalCost || 0).toFixed(3)} {t('currency')})
-                  </option>
-                ))}
-              </select>
-              <div className="portion-input">
-                <input
-                  className="input"
-                  type="number"
-                  step="0.001"
-                  min="0"
-                  placeholder={t('common.portion')}
-                  value={line.portion}
-                  onChange={(e) => updateSubProductLine(idx, 'portion', e.target.value)}
-                />
-                <span className="unit-label">×</span>
-              </div>
-              {line.subProductId && line.portion && (
-                <span className="line-cost">
-                  {((products.find((p) => String(p.id) === line.subProductId)?.totalCost || 0) * parseFloat(line.portion || '0')).toFixed(3)} {t('currency')}
-                </span>
-              )}
-              <button type="button" className="btn-icon btn-remove" onClick={() => removeSubProductLine(idx)}>×</button>
+        {/* Sub-products — only for vendable */}
+        {productType === 'vendable' && (
+          <div className="card">
+            <div className="section-header">
+              <h2>{t('client.products.subproducts_section')}</h2>
+              <button type="button" className="btn btn-ghost btn-sm" onClick={addSubProductLine}>
+                + {t('client.products.add_subproduct')}
+              </button>
             </div>
-          ))}
-        </div>
+            {subProductLines.length === 0 && products.length === 0 ? (
+              <p className="empty-text" style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+                {t('client.products.no_utilisable_products')}
+              </p>
+            ) : subProductLines.length === 0 ? (
+              <p className="empty-text">{t('client.products.subproducts_empty')}</p>
+            ) : null}
+            {subProductLines.map((line, idx) => (
+              <div key={idx} className="line-row">
+                <select
+                  className="input flex-grow"
+                  value={line.subProductId}
+                  onChange={(e) => updateSubProductLine(idx, 'subProductId', e.target.value)}
+                >
+                  <option value="">— {t('client.products.select_product')} —</option>
+                  {products.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name} ({(p.totalCost || 0).toFixed(3)} {t('currency')})
+                    </option>
+                  ))}
+                </select>
+                <div className="portion-input">
+                  <input
+                    className="input"
+                    type="number"
+                    step="0.001"
+                    min="0"
+                    placeholder={t('common.portion')}
+                    value={line.portion}
+                    onChange={(e) => updateSubProductLine(idx, 'portion', e.target.value)}
+                  />
+                  <span className="unit-label">×</span>
+                </div>
+                {line.subProductId && line.portion && (
+                  <span className="line-cost">
+                    {((products.find((p) => String(p.id) === line.subProductId)?.totalCost || 0) * parseFloat(line.portion || '0')).toFixed(3)} {t('currency')}
+                  </span>
+                )}
+                <button type="button" className="btn-icon btn-remove" onClick={() => removeSubProductLine(idx)}>×</button>
+              </div>
+            ))}
+          </div>
+        )}
 
         <div className="form-actions">
-          <button type="button" className="btn btn-ghost" onClick={() => navigate('/client/products')}>
+          <button type="button" className="btn btn-ghost" onClick={() => navigate(`/client/products?tab=${productType}`)}>
             {t('common.cancel')}
           </button>
           <button type="submit" className="btn btn-primary" disabled={saving}>

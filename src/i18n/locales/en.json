@@ -154,6 +154,12 @@
       "type_label": "Product type",
       "type_vendable": "Sellable",
       "type_utilisable": "Usable",
+      "tab_vendable": "Sellable products",
+      "tab_utilisable": "Usable products",
+      "add_vendable": "New sellable product",
+      "add_utilisable": "New usable product",
+      "no_vendable_products": "No sellable products yet. Create your first product!",
+      "no_utilisable_products_tab": "No usable products yet. Create your first product!",
       "no_utilisable_products": "No products of type \"Usable\" available."
     },
     "profile": {

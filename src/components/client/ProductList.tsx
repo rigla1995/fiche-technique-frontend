@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
 import type { Product } from '../../types';
@@ -10,9 +10,13 @@ interface ProductDetail {
 }
 
 type PopupType = 'ingredients' | 'subProducts' | null;
+type TabType = 'vendable' | 'utilisable';
 
 export default function ProductList() {
   const { t } = useTranslation();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tab = (searchParams.get('tab') as TabType) || 'vendable';
+
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -62,15 +66,36 @@ export default function ProductList() {
     }
   };
 
-  const filtered = products.filter((p) => p.name.toLowerCase().includes(search.toLowerCase()));
+  const byTab = products.filter((p) => p.type === tab);
+  const filtered = byTab.filter((p) => p.name.toLowerCase().includes(search.toLowerCase()));
+  const isVendable = tab === 'vendable';
+
+  const emptyKey = isVendable ? 'client.products.no_vendable_products' : 'client.products.no_utilisable_products_tab';
+  const addKey = isVendable ? 'client.products.add_vendable' : 'client.products.add_utilisable';
+  const addPath = isVendable ? '/client/products/new?type=vendable' : '/client/products/new?type=utilisable';
 
   return (
     <div className="page">
       <div className="page-header">
         <h1>{t('client.products.title')}</h1>
-        <Link to="/client/products/new" className="btn btn-primary">
-          + {t('client.products.add')}
+        <Link to={addPath} className="btn btn-primary">
+          + {t(addKey)}
         </Link>
+      </div>
+
+      <div className="tabs">
+        <button
+          className={`tab-btn${tab === 'vendable' ? ' active' : ''}`}
+          onClick={() => setSearchParams({ tab: 'vendable' })}
+        >
+          {t('client.products.tab_vendable')}
+        </button>
+        <button
+          className={`tab-btn${tab === 'utilisable' ? ' active' : ''}`}
+          onClick={() => setSearchParams({ tab: 'utilisable' })}
+        >
+          {t('client.products.tab_utilisable')}
+        </button>
       </div>
 
       <div className="search-bar">
@@ -87,10 +112,10 @@ export default function ProductList() {
         <div className="loading-text">{t('common.loading')}</div>
       ) : filtered.length === 0 ? (
         <div className="empty-state">
-          <span className="empty-icon">🍔</span>
-          <p>{products.length === 0 ? t('client.products.no_products') : t('common.no_result')}</p>
-          {products.length === 0 && (
-            <Link to="/client/products/new" className="btn btn-primary">{t('client.products.add')}</Link>
+          <span className="empty-icon">{isVendable ? '🍔' : '🧪'}</span>
+          <p>{byTab.length === 0 ? t(emptyKey) : t('common.no_result')}</p>
+          {byTab.length === 0 && (
+            <Link to={addPath} className="btn btn-primary">{t(addKey)}</Link>
           )}
         </div>
       ) : (
@@ -99,9 +124,10 @@ export default function ProductList() {
             <thead>
               <tr>
                 <th>{t('common.name')}</th>
-                <th>{t('client.products.type_label')}</th>
                 <th style={{ textAlign: 'center' }}>{t('nav.ingredients')}</th>
-                <th style={{ textAlign: 'center' }}>{t('client.products.usable_products_col')}</th>
+                {isVendable && (
+                  <th style={{ textAlign: 'center' }}>{t('client.products.usable_products_col')}</th>
+                )}
                 <th style={{ textAlign: 'right' }}>{t('common.total_cost')}</th>
                 <th>{t('common.actions')}</th>
               </tr>
@@ -110,11 +136,6 @@ export default function ProductList() {
               {filtered.map((p) => (
                 <tr key={p.id}>
                   <td>{p.name}</td>
-                  <td>
-                    <span className={`unit-badge ${p.type === 'utilisable' ? 'badge-utilisable' : 'badge-vendable'}`}>
-                      {p.type === 'utilisable' ? t('client.products.type_utilisable') : t('client.products.type_vendable')}
-                    </span>
-                  </td>
                   <td style={{ textAlign: 'center' }}>
                     <button
                       className="btn btn-ghost btn-sm"
@@ -124,27 +145,31 @@ export default function ProductList() {
                       {p.ingredientsCount ?? 0}
                     </button>
                   </td>
-                  <td style={{ textAlign: 'center' }}>
-                    <button
-                      className="btn btn-ghost btn-sm"
-                      style={{ minWidth: 36 }}
-                      onClick={() => openPopup('subProducts', p)}
-                    >
-                      {p.subProductsCount ?? 0}
-                    </button>
-                  </td>
+                  {isVendable && (
+                    <td style={{ textAlign: 'center' }}>
+                      <button
+                        className="btn btn-ghost btn-sm"
+                        style={{ minWidth: 36 }}
+                        onClick={() => openPopup('subProducts', p)}
+                      >
+                        {p.subProductsCount ?? 0}
+                      </button>
+                    </td>
+                  )}
                   <td style={{ textAlign: 'right' }}>
                     <span className="cost-badge">{(p.totalCost || 0).toFixed(3)} {t('currency')}</span>
                   </td>
                   <td className="actions-cell">
                     <Link to={`/client/products/${p.id}/edit`} className="btn btn-ghost btn-sm">{t('common.edit')}</Link>
-                    <button
-                      className="btn btn-success btn-sm"
-                      onClick={() => handleExport(p.id, p.name)}
-                      disabled={exporting === p.id}
-                    >
-                      📥 {exporting === p.id ? t('common.loading') : 'Excel'}
-                    </button>
+                    {isVendable && (
+                      <button
+                        className="btn btn-success btn-sm"
+                        onClick={() => handleExport(p.id, p.name)}
+                        disabled={exporting === p.id}
+                      >
+                        📥 {exporting === p.id ? t('common.loading') : 'Excel'}
+                      </button>
+                    )}
                     <button className="btn btn-danger btn-sm" onClick={() => handleDelete(p.id)}>
                       {t('common.delete')}
                     </button>
