@@ -1,8 +1,7 @@
-import { useEffect, useState } from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
+import { NavLink } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../context/AuthContext';
-import api from '../../api/client';
+import { useSelection } from '../../context/SelectionContext';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -12,16 +11,7 @@ interface SidebarProps {
 export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const { t } = useTranslation();
   const { user } = useAuth();
-  const location = useLocation();
-  const [hasSelections, setHasSelections] = useState<boolean | null>(null);
-
-  useEffect(() => {
-    if (user?.role === 'client') {
-      api.get('/ingredients/has-selections')
-        .then(({ data }) => setHasSelections(data.hasSelections))
-        .catch(() => setHasSelections(false));
-    }
-  }, [user, location.pathname]);
+  const { hasSelections } = useSelection();
 
   const adminLinks = [
     { to: '/admin', label: t('nav.dashboard'), icon: '📊', end: true },

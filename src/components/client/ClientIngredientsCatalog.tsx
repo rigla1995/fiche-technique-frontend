@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
+import { useSelection } from '../../context/SelectionContext';
 import type { Ingredient } from '../../types';
 
 export default function ClientIngredientsCatalog() {
   const { t } = useTranslation();
+  const { refreshSelections } = useSelection();
   const [ingredients, setIngredients] = useState<Ingredient[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -24,6 +26,7 @@ export default function ClientIngredientsCatalog() {
     try {
       const { data } = await api.post(`/ingredients/${ing.id}/select`);
       setIngredients((list) => list.map((i) => (i.id === ing.id ? { ...i, selected: data.selected } : i)));
+      refreshSelections();
     } finally {
       setTogglingId(null);
     }

@@ -3,6 +3,7 @@ import { Outlet, Navigate } from 'react-router-dom';
 import Header from './Header';
 import Sidebar from './Sidebar';
 import { useAuth } from '../../context/AuthContext';
+import { SelectionProvider } from '../../context/SelectionContext';
 
 interface LayoutProps {
   requireRole?: 'super_admin' | 'client';
@@ -22,6 +23,7 @@ export default function Layout({ requireRole }: LayoutProps) {
   }
 
   return (
+    <SelectionProvider>
     <div className="app-layout">
       <Header onMenuToggle={() => setSidebarOpen((v) => !v)} />
       <div className="layout-body">
@@ -31,5 +33,6 @@ export default function Layout({ requireRole }: LayoutProps) {
         </main>
       </div>
     </div>
+    </SelectionProvider>
   );
 }
