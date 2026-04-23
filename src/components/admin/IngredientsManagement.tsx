@@ -35,7 +35,12 @@ export default function IngredientsManagement() {
 
   const openAdd = () => { setForm(emptyForm); setEditId(null); setShowModal(true); };
   const openEdit = (i: Ingredient) => {
-    setForm({ name: i.name, price: String(i.price), unitId: String(i.unitId), categorieId: i.categorieId ? String(i.categorieId) : '' });
+    setForm({
+      name: i.name,
+      price: i.price !== null ? String(i.price) : '',
+      unitId: String(i.unitId),
+      categorieId: i.categorieId ? String(i.categorieId) : '',
+    });
     setEditId(i.id);
     setShowModal(true);
   };
@@ -47,7 +52,7 @@ export default function IngredientsManagement() {
     try {
       const payload = {
         name: form.name,
-        price: parseFloat(form.price),
+        price: form.price !== '' ? parseFloat(form.price) : null,
         unitId: parseInt(form.unitId),
         categorieId: form.categorieId ? parseInt(form.categorieId) : null,
       };
@@ -73,9 +78,23 @@ export default function IngredientsManagement() {
     const q = search.toLowerCase();
     return (
       i.name.toLowerCase().includes(q) ||
-      String(i.price).includes(q) ||
+      (i.categorieName || '').toLowerCase().includes(q) ||
       (i.unit?.name || '').toLowerCase().includes(q)
     );
+  });
+
+  // Group by category
+  const noCategory = t('client.ingredients_catalog.no_category');
+  const groups: Record<string, Ingredient[]> = {};
+  for (const ing of filtered) {
+    const cat = ing.categorieName || noCategory;
+    if (!groups[cat]) groups[cat] = [];
+    groups[cat].push(ing);
+  }
+  const sortedGroups = Object.entries(groups).sort(([a], [b]) => {
+    if (a === noCategory) return 1;
+    if (b === noCategory) return -1;
+    return a.localeCompare(b);
   });
 
   return (
@@ -97,37 +116,49 @@ export default function IngredientsManagement() {
 
       {loading ? (
         <div className="loading-text">{t('common.loading')}</div>
-      ) : (
-        <div className="table-responsive card">
-          <table className="table">
-            <thead>
-              <tr>
-                <th>{t('common.name')}</th>
-                <th>{t('common.price')}</th>
-                <th>{t('common.unit')}</th>
-                <th>{t('admin.ingredients.category')}</th>
-                <th>{t('common.actions')}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((i) => (
-                <tr key={i.id}>
-                  <td>{i.name}</td>
-                  <td><span className="price-badge">{i.price.toFixed(3)} {t('currency')}</span></td>
-                  <td><span className="unit-badge">{i.unit?.name}</span></td>
-                  <td>{i.categorieName ? <span className="unit-badge">{i.categorieName}</span> : <span className="text-muted">—</span>}</td>
-                  <td className="actions-cell">
-                    <button className="btn btn-ghost btn-sm" onClick={() => openEdit(i)}>{t('common.edit')}</button>
-                    <button className="btn btn-danger btn-sm" onClick={() => handleDelete(i.id)}>{t('common.delete')}</button>
-                  </td>
-                </tr>
-              ))}
-              {filtered.length === 0 && (
-                <tr><td colSpan={5} className="empty-cell">Aucun résultat</td></tr>
-              )}
-            </tbody>
-          </table>
+      ) : filtered.length === 0 ? (
+        <div className="empty-state">
+          <span className="empty-icon">🧂</span>
+          <p>{t('common.no_result')}</p>
         </div>
+      ) : (
+        sortedGroups.map(([cat, items]) => (
+          <div key={cat} style={{ marginBottom: 24 }}>
+            <h2 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--primary)', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
+              🏷️ {cat}
+              <span style={{ fontSize: '0.78rem', fontWeight: 400, color: 'var(--text-muted)' }}>({items.length})</span>
+            </h2>
+            <div className="table-responsive card">
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th>{t('common.name')}</th>
+                    <th>{t('admin.ingredients.price_optional')}</th>
+                    <th>{t('common.unit')}</th>
+                    <th>{t('common.actions')}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {items.map((i) => (
+                    <tr key={i.id}>
+                      <td>{i.name}</td>
+                      <td>
+                        {i.price !== null
+                          ? <span className="price-badge">{i.price.toFixed(3)} {t('currency')}</span>
+                          : <span className="text-muted">—</span>}
+                      </td>
+                      <td><span className="unit-badge">{i.unit?.name}</span></td>
+                      <td className="actions-cell">
+                        <button className="btn btn-ghost btn-sm" onClick={() => openEdit(i)}>{t('common.edit')}</button>
+                        <button className="btn btn-danger btn-sm" onClick={() => handleDelete(i.id)}>{t('common.delete')}</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        ))
       )}
 
       {showModal && (
@@ -144,9 +175,16 @@ export default function IngredientsManagement() {
               </div>
               <div className="form-row">
                 <div className="form-group">
-                  <label>{t('admin.ingredients.price')}</label>
-                  <input className="input" type="number" step="0.001" min="0" required value={form.price}
-                    onChange={(e) => setForm((f) => ({ ...f, price: e.target.value }))} />
+                  <label>{t('admin.ingredients.price_optional')}</label>
+                  <input
+                    className="input"
+                    type="number"
+                    step="0.001"
+                    min="0"
+                    placeholder={t('admin.ingredients.price_placeholder')}
+                    value={form.price}
+                    onChange={(e) => setForm((f) => ({ ...f, price: e.target.value }))}
+                  />
                 </div>
                 <div className="form-group">
                   <label>{t('admin.ingredients.unit')}</label>

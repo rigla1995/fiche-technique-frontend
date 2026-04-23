@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
-import type { Ingredient, Product } from '../../types';
+import type { Category, Ingredient, Product } from '../../types';
 
 interface IngredientLine {
   ingredientId: string;
@@ -24,6 +24,8 @@ export default function ProductForm() {
   const [ingredientLines, setIngredientLines] = useState<IngredientLine[]>([]);
   const [subProductLines, setSubProductLines] = useState<SubProductLine[]>([]);
   const [ingredients, setIngredients] = useState<Ingredient[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [categoryFilter, setCategoryFilter] = useState('');
   const [products, setProducts] = useState<Product[]>([]);
   const [totalCost, setTotalCost] = useState(0);
   const [saving, setSaving] = useState(false);
@@ -31,10 +33,11 @@ export default function ProductForm() {
   const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
-    const fetches = [api.get('/ingredients'), api.get('/products')];
-    Promise.all(fetches).then(([ing, prod]) => {
+    const fetches = [api.get('/ingredients'), api.get('/products'), api.get('/categories')];
+    Promise.all(fetches).then(([ing, prod, cat]) => {
       setIngredients(ing.data);
       setProducts(prod.data.filter((p: Product) => !id || String(p.id) !== id));
+      setCategories(cat.data);
     });
 
     if (isEdit && id) {
@@ -59,7 +62,7 @@ export default function ProductForm() {
     for (const line of ingredientLines) {
       const ing = ingredients.find((i) => String(i.id) === line.ingredientId);
       if (ing && line.portion) {
-        cost += ing.price * parseFloat(line.portion);
+        cost += (ing.effectivePrice ?? 0) * parseFloat(line.portion);
       }
     }
     for (const line of subProductLines) {
@@ -87,6 +90,17 @@ export default function ProductForm() {
     const ing = ingredients.find((i) => String(i.id) === ingredientId);
     return ing?.unit?.name || '';
   };
+
+  // Ingredients available for each line: filtered by category + not already selected in another line
+  const selectedIngredientIds = new Set(ingredientLines.map((l) => l.ingredientId).filter(Boolean));
+  const filteredByCategory = categoryFilter
+    ? ingredients.filter((i) => String(i.categorieId) === categoryFilter)
+    : ingredients;
+
+  const availableForLine = (idx: number) =>
+    filteredByCategory.filter(
+      (i) => !selectedIngredientIds.has(String(i.id)) || ingredientLines[idx].ingredientId === String(i.id)
+    );
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -175,11 +189,29 @@ export default function ProductForm() {
               + {t('client.products.add_ingredient')}
             </button>
           </div>
+
+          {/* Category filter for ingredient selection */}
+          {categories.length > 0 && (
+            <div style={{ marginBottom: 12 }}>
+              <select
+                className="input"
+                style={{ maxWidth: 280 }}
+                value={categoryFilter}
+                onChange={(e) => setCategoryFilter(e.target.value)}
+              >
+                <option value="">{t('client.products.filter_by_category')}</option>
+                {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+            </div>
+          )}
+
           {ingredientLines.length === 0 && (
-            <p className="empty-text">Cliquez sur "Ajouter un ingrédient" pour commencer.</p>
+            <p className="empty-text">{t('client.products.ingredients_empty')}</p>
           )}
           {ingredientLines.map((line, idx) => {
             const unit = getIngredientUnit(line.ingredientId);
+            const available = availableForLine(idx);
+            const effectivePrice = ingredients.find((i) => String(i.id) === line.ingredientId)?.effectivePrice ?? 0;
             return (
               <div key={idx} className="line-row">
                 <select
@@ -188,9 +220,10 @@ export default function ProductForm() {
                   onChange={(e) => updateIngredientLine(idx, 'ingredientId', e.target.value)}
                 >
                   <option value="">— {t('client.products.select_ingredient')} —</option>
-                  {ingredients.map((i) => (
+                  {available.map((i) => (
                     <option key={i.id} value={i.id}>
-                      {i.name} ({i.price.toFixed(3)} {t('currency')}/{i.unit?.name})
+                      {i.name}
+                      {i.effectivePrice !== null ? ` (${i.effectivePrice.toFixed(3)} ${t('currency')}/${i.unit?.name})` : ` (— ${t('currency')}/${i.unit?.name})`}
                     </option>
                   ))}
                 </select>
@@ -208,7 +241,7 @@ export default function ProductForm() {
                 </div>
                 {line.ingredientId && line.portion && (
                   <span className="line-cost">
-                    {((ingredients.find((i) => String(i.id) === line.ingredientId)?.price || 0) * parseFloat(line.portion || '0')).toFixed(3)} {t('currency')}
+                    {(effectivePrice * parseFloat(line.portion || '0')).toFixed(3)} {t('currency')}
                   </span>
                 )}
                 <button type="button" className="btn-icon btn-remove" onClick={() => removeIngredientLine(idx)}>×</button>
@@ -226,7 +259,7 @@ export default function ProductForm() {
             </button>
           </div>
           {subProductLines.length === 0 && (
-            <p className="empty-text">Aucun sous-produit ajouté.</p>
+            <p className="empty-text">{t('client.products.subproducts_empty')}</p>
           )}
           {subProductLines.map((line, idx) => (
             <div key={idx} className="line-row">

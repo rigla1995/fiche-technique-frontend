@@ -24,7 +24,9 @@ export interface Category {
 export interface Ingredient {
   id: number;
   name: string;
-  price: number;
+  price: number | null;
+  clientPrice: number | null;
+  effectivePrice: number | null;
   unit: Unit;
   unitId: number;
   categorieId?: number | null;

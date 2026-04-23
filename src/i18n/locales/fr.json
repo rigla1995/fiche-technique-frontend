@@ -93,6 +93,8 @@
       "delete_confirm": "Supprimer cet ingrédient ?",
       "name": "Nom de l'ingrédient",
       "price": "Prix (DT)",
+      "price_optional": "Prix (DT) — optionnel",
+      "price_placeholder": "Laissez vide — le client définit son prix",
       "unit": "Unité",
       "category": "Catégorie"
     },
@@ -109,7 +111,12 @@
     "title": "Espace Client",
     "ingredients_catalog": {
       "title": "Catalogue des ingrédients",
-      "no_results": "Aucun ingrédient trouvé"
+      "no_results": "Aucun ingrédient trouvé",
+      "my_price": "Mon prix d'achat",
+      "set_price": "Définir mon prix",
+      "edit_price": "Modifier mon prix",
+      "no_category": "Sans catégorie",
+      "my_price_set": "Prix personnalisé défini"
     },
     "products": {
       "title": "Mes produits",
@@ -136,7 +143,10 @@
       "popup_col_unit_price": "Prix unit.",
       "popup_col_subproduct": "Sous-produit",
       "popup_no_ingredients": "Aucun ingrédient assigné.",
-      "popup_no_subproducts": "Aucun sous-produit assigné."
+      "popup_no_subproducts": "Aucun sous-produit assigné.",
+      "filter_by_category": "Toutes les catégories",
+      "ingredients_empty": "Cliquez sur \"Ajouter un ingrédient\" pour commencer.",
+      "subproducts_empty": "Aucun sous-produit ajouté."
     },
     "profile": {
       "title": "Mon profil",

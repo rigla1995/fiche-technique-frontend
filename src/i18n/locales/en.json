@@ -93,6 +93,8 @@
       "delete_confirm": "Delete this ingredient?",
       "name": "Ingredient name",
       "price": "Price (TND)",
+      "price_optional": "Price (TND) — optional",
+      "price_placeholder": "Leave blank — client sets their own price",
       "unit": "Unit",
       "category": "Category"
     },
@@ -109,7 +111,12 @@
     "title": "Client Space",
     "ingredients_catalog": {
       "title": "Ingredients catalog",
-      "no_results": "No ingredients found"
+      "no_results": "No ingredients found",
+      "my_price": "My purchase price",
+      "set_price": "Set my price",
+      "edit_price": "Edit my price",
+      "no_category": "No category",
+      "my_price_set": "Custom price set"
     },
     "products": {
       "title": "My products",
@@ -136,7 +143,10 @@
       "popup_col_unit_price": "Unit price",
       "popup_col_subproduct": "Sub-product",
       "popup_no_ingredients": "No ingredients assigned.",
-      "popup_no_subproducts": "No sub-products assigned."
+      "popup_no_subproducts": "No sub-products assigned.",
+      "filter_by_category": "All categories",
+      "ingredients_empty": "Click \"Add ingredient\" to start.",
+      "subproducts_empty": "No sub-products added."
     },
     "profile": {
       "title": "My profile",

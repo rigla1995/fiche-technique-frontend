@@ -19,14 +19,15 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
     { to: '/admin/ingredients', label: t('nav.ingredients'), icon: '🧂' },
   ];
 
-  const clientLinks = [
+  const clientMainLinks = [
     { to: '/client', label: t('nav.dashboard'), icon: '📊', end: true },
     { to: '/client/products', label: t('nav.products'), icon: '🍔' },
     { to: '/client/ingredients', label: t('nav.ingredients_catalog'), icon: '🧂' },
-    { to: '/client/profile', label: t('nav.profile'), icon: '👤' },
   ];
 
-  const links = user?.role === 'super_admin' ? adminLinks : clientLinks;
+  const profileLink = { to: '/client/profile', label: t('nav.profile'), icon: '👤' };
+
+  const links = user?.role === 'super_admin' ? adminLinks : clientMainLinks;
 
   return (
     <>
@@ -37,7 +38,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
             {user?.role === 'super_admin' ? t('admin.title') : t('client.title')}
           </span>
         </div>
-        <ul className="sidebar-nav">
+        <ul className="sidebar-nav" style={{ flex: 1 }}>
           {links.map((link) => (
             <li key={link.to}>
               <NavLink
@@ -52,6 +53,20 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
             </li>
           ))}
         </ul>
+        {user?.role === 'client' && (
+          <ul className="sidebar-nav" style={{ borderTop: '1px solid var(--border)', paddingTop: 4 }}>
+            <li>
+              <NavLink
+                to={profileLink.to}
+                className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
+                onClick={onClose}
+              >
+                <span className="link-icon">{profileLink.icon}</span>
+                <span className="link-label">{profileLink.label}</span>
+              </NavLink>
+            </li>
+          </ul>
+        )}
       </nav>
     </>
   );
