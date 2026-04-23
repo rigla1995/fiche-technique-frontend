@@ -3,6 +3,7 @@ export interface User {
   name: string;
   email: string;
   role: 'super_admin' | 'client';
+  compteType?: 'client' | 'entreprise';
   phone?: string;
 }
 
@@ -67,6 +68,7 @@ export interface Client {
   name: string;
   email: string;
   phone?: string;
+  compteType?: 'client' | 'entreprise';
   createdAt?: string;
 }
 

@@ -16,7 +16,9 @@ const TUNISIAN_PHONE = /^(\+216[\s-]?)?[2579]\d{7}$/;
 
 export default function Profile() {
   const { t } = useTranslation();
-  const { updateUser } = useAuth();
+  const { user, updateUser } = useAuth();
+  const [upgrading, setUpgrading] = useState(false);
+  const [upgradeMsg, setUpgradeMsg] = useState('');
 
   const PASSWORD_RULES = [
     { test: (v: string) => v.length >= 8, label: t('validation.password_min') },
@@ -90,6 +92,20 @@ export default function Profile() {
     }
   };
 
+  const handleUpgrade = async () => {
+    if (!window.confirm(t('client.profile.upgrade_confirm'))) return;
+    setUpgrading(true);
+    setUpgradeMsg('');
+    try {
+      await api.post('/auth/upgrade');
+      updateUser({ compteType: 'entreprise' });
+      setUpgradeMsg(t('client.profile.upgrade_success'));
+    } catch {
+      setUpgradeMsg(t('common.error'));
+    }
+    setUpgrading(false);
+  };
+
   if (loading) return <div className="loading-text">{t('common.loading')}</div>;
 
   return (
@@ -97,6 +113,29 @@ export default function Profile() {
       <div className="page-header">
         <h1>{t('client.profile.title')}</h1>
       </div>
+
+      {/* Account type + upgrade */}
+      <div className="card" style={{ padding: '16px 24px', marginBottom: 16, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+        <div>
+          <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 700 }}>{t('client.profile.account_type')}</span>
+          <div style={{ marginTop: 4 }}>
+            {user?.compteType === 'entreprise' ? (
+              <span className="role-badge" style={{ background: '#fef9c3', color: '#854d0e', borderRadius: 20, padding: '3px 12px', fontSize: '0.8rem', fontWeight: 700 }}>🏢 {t('client.profile.type_entreprise')}</span>
+            ) : (
+              <span className="role-badge" style={{ background: 'var(--primary-light)', color: 'var(--primary)', borderRadius: 20, padding: '3px 12px', fontSize: '0.8rem', fontWeight: 700 }}>👤 {t('client.profile.type_client')}</span>
+            )}
+          </div>
+        </div>
+        {user?.compteType !== 'entreprise' && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            {upgradeMsg && <span style={{ fontSize: '0.875rem', color: upgradeMsg === t('common.error') ? 'var(--danger)' : 'var(--success)' }}>{upgradeMsg}</span>}
+            <button className="btn btn-primary btn-sm" onClick={handleUpgrade} disabled={upgrading}>
+              {upgrading ? t('common.loading') : `🏢 ${t('client.profile.upgrade_btn')}`}
+            </button>
+          </div>
+        )}
+      </div>
+
       <div className="card" style={{ padding: '24px' }}>
         {success && (
           <div style={{ background: '#e6f9ee', color: '#1a7a40', border: '1px solid #b2dfc5', borderRadius: 8, padding: '10px 16px', marginBottom: 16 }}>

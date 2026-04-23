@@ -8,9 +8,10 @@ interface ClientForm {
   email: string;
   phone: string;
   password: string;
+  compteType: 'client' | 'entreprise';
 }
 
-const emptyForm: ClientForm = { name: '', email: '', phone: '', password: '' };
+const emptyForm: ClientForm = { name: '', email: '', phone: '', password: '', compteType: 'client' };
 const TUNISIAN_PHONE = /^(\+216[\s-]?)?[2579]\d{7}$/;
 
 export default function ClientsManagement() {
@@ -43,7 +44,7 @@ export default function ClientsManagement() {
 
   const openAdd = () => { setForm(emptyForm); setEditId(null); setFormErrors({}); setShowModal(true); };
   const openEdit = (c: Client) => {
-    setForm({ name: c.name, email: c.email, phone: c.phone || '', password: '' });
+    setForm({ name: c.name, email: c.email, phone: c.phone || '', password: '', compteType: c.compteType || 'client' });
     setEditId(c.id);
     setFormErrors({});
     setShowModal(true);
@@ -74,7 +75,7 @@ export default function ClientsManagement() {
 
     setSaving(true);
     try {
-      const payload: Record<string, string> = { name: form.name, email: form.email, phone: form.phone };
+      const payload: Record<string, string> = { name: form.name, email: form.email, phone: form.phone, compteType: form.compteType };
       if (form.password) payload.password = form.password;
 
       if (editId) {
@@ -133,6 +134,7 @@ export default function ClientsManagement() {
                 <th>{t('common.name')}</th>
                 <th>{t('common.email')}</th>
                 <th>{t('common.phone')}</th>
+                <th>{t('admin.clients.compte_type')}</th>
                 <th>{t('common.actions')}</th>
               </tr>
             </thead>
@@ -142,6 +144,13 @@ export default function ClientsManagement() {
                   <td>{c.name}</td>
                   <td>{c.email}</td>
                   <td>{c.phone || '—'}</td>
+                  <td>
+                    {c.compteType === 'entreprise' ? (
+                      <span style={{ background: '#fef9c3', color: '#854d0e', padding: '2px 10px', borderRadius: 20, fontSize: '0.75rem', fontWeight: 700 }}>🏢 Entreprise</span>
+                    ) : (
+                      <span style={{ background: 'var(--primary-light)', color: 'var(--primary)', padding: '2px 10px', borderRadius: 20, fontSize: '0.75rem', fontWeight: 700 }}>👤 Client</span>
+                    )}
+                  </td>
                   <td className="actions-cell">
                     <button className="btn btn-ghost btn-sm" onClick={() => openEdit(c)}>{t('common.edit')}</button>
                     <button className="btn btn-danger btn-sm" onClick={() => handleDelete(c.id)}>{t('common.delete')}</button>
@@ -218,6 +227,17 @@ export default function ClientsManagement() {
                   onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
                 />
                 {formErrors.phone && <span className="field-error">{formErrors.phone}</span>}
+              </div>
+              <div className="form-group">
+                <label>{t('admin.clients.compte_type')}</label>
+                <select
+                  className="input"
+                  value={form.compteType}
+                  onChange={(e) => setForm((f) => ({ ...f, compteType: e.target.value as 'client' | 'entreprise' }))}
+                >
+                  <option value="client">👤 Client</option>
+                  <option value="entreprise">🏢 Entreprise</option>
+                </select>
               </div>
               <div className="form-group">
                 <label>

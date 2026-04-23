@@ -80,7 +80,8 @@
       "password_label": "Password",
       "password_edit_hint": "(leave blank to keep unchanged)",
       "password_new_placeholder": "New password (optional)",
-      "password_create_placeholder": "Password (optional — auto-generated if blank)"
+      "password_create_placeholder": "Password (optional — auto-generated if blank)",
+      "compte_type": "Account type"
     },
     "units": {
       "title": "Unit Management",
@@ -179,7 +180,13 @@
       "password_section_hint": "Leave blank to keep your current password.",
       "current_password": "Current password",
       "new_password": "New password",
-      "confirm_password": "Confirm new password"
+      "confirm_password": "Confirm new password",
+      "account_type": "Account type",
+      "type_client": "Client",
+      "type_entreprise": "Enterprise",
+      "upgrade_btn": "Switch to Enterprise",
+      "upgrade_confirm": "Switch your account to Enterprise mode? This enables activity management and enterprise stock features.",
+      "upgrade_success": "Account upgraded to Enterprise. Reload the page to see the new features."
     },
     "entreprise": {
       "title": "My company",

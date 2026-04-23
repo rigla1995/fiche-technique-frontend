@@ -91,37 +91,41 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                   </span>
                 )}
               </li>
-              <li>
-                <NavLink
-                  to="/client/entreprise"
-                  className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
-                  onClick={onClose}
-                >
-                  <span className="link-icon">🏢</span>
-                  <span className="link-label">{t('nav.entreprise')}</span>
-                </NavLink>
-              </li>
-              <li>
-                {hasSelections ? (
-                  <NavLink
-                    to="/client/stock"
-                    className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
-                    onClick={onClose}
-                  >
-                    <span className="link-icon">📦</span>
-                    <span className="link-label">{t('nav.stock')}</span>
-                  </NavLink>
-                ) : (
-                  <span
-                    className="sidebar-link"
-                    style={{ opacity: 0.4, cursor: 'not-allowed', userSelect: 'none' }}
-                    title={t('nav.stock_locked')}
-                  >
-                    <span className="link-icon">🔒</span>
-                    <span className="link-label">{t('nav.stock')}</span>
-                  </span>
-                )}
-              </li>
+              {user?.compteType === 'entreprise' && (
+                <>
+                  <li>
+                    <NavLink
+                      to="/client/entreprise"
+                      className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
+                      onClick={onClose}
+                    >
+                      <span className="link-icon">🏢</span>
+                      <span className="link-label">{t('nav.entreprise')}</span>
+                    </NavLink>
+                  </li>
+                  <li>
+                    {hasSelections ? (
+                      <NavLink
+                        to="/client/stock"
+                        className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
+                        onClick={onClose}
+                      >
+                        <span className="link-icon">📦</span>
+                        <span className="link-label">{t('nav.stock')}</span>
+                      </NavLink>
+                    ) : (
+                      <span
+                        className="sidebar-link"
+                        style={{ opacity: 0.4, cursor: 'not-allowed', userSelect: 'none' }}
+                        title={t('nav.stock_locked')}
+                      >
+                        <span className="link-icon">🔒</span>
+                        <span className="link-label">{t('nav.stock')}</span>
+                      </span>
+                    )}
+                  </li>
+                </>
+              )}
             </>
           )}
         </ul>
