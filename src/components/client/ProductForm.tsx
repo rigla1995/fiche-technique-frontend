@@ -48,7 +48,7 @@ export default function ProductForm() {
 
     Promise.all(fetches)
       .then(([ing, prod, cat, productRes]) => {
-        const ingData = ing.data as Ingredient[];
+        const ingData = (ing.data as Ingredient[]).filter((i) => i.selected);
         setIngredients(ingData);
         setProducts(
           (prod.data as Product[]).filter(

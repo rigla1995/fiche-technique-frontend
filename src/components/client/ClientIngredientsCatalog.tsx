@@ -10,6 +10,7 @@ export default function ClientIngredientsCatalog() {
   const [search, setSearch] = useState('');
   const [editingPrice, setEditingPrice] = useState<{ id: number; value: string } | null>(null);
   const [savingPrice, setSavingPrice] = useState<number | null>(null);
+  const [togglingId, setTogglingId] = useState<number | null>(null);
 
   const fetchIngredients = () => {
     setLoading(true);
@@ -17,6 +18,16 @@ export default function ClientIngredientsCatalog() {
   };
 
   useEffect(() => { fetchIngredients(); }, []);
+
+  const toggleSelection = async (ing: Ingredient) => {
+    setTogglingId(ing.id);
+    try {
+      const { data } = await api.post(`/ingredients/${ing.id}/select`);
+      setIngredients((list) => list.map((i) => (i.id === ing.id ? { ...i, selected: data.selected } : i)));
+    } finally {
+      setTogglingId(null);
+    }
+  };
 
   const startEditPrice = (ing: Ingredient) => {
     setEditingPrice({ id: ing.id, value: String(ing.clientPrice ?? ing.effectivePrice ?? '') });
@@ -36,6 +47,8 @@ export default function ClientIngredientsCatalog() {
     }
   };
 
+  const selectedCount = ingredients.filter((i) => i.selected).length;
+
   const filtered = ingredients.filter(
     (i) =>
       i.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -54,7 +67,19 @@ export default function ClientIngredientsCatalog() {
     <div className="page">
       <div className="page-header">
         <h1>{t('client.ingredients_catalog.title')}</h1>
+        {selectedCount > 0 && (
+          <span style={{ fontSize: '0.85rem', color: 'var(--success)', fontWeight: 600 }}>
+            ✓ {t('client.ingredients_catalog.selection_count', { count: selectedCount })}
+          </span>
+        )}
       </div>
+
+      {selectedCount === 0 && !loading && (
+        <div className="alert alert-error" style={{ background: '#fff7ed', color: '#c05621', borderColor: '#fbd38d', marginBottom: 16 }}>
+          ⚠️ {t('client.ingredients_catalog.selection_hint')}
+        </div>
+      )}
+
       <div className="search-bar">
         <input
           type="text"
@@ -83,6 +108,7 @@ export default function ClientIngredientsCatalog() {
               <table className="table">
                 <thead>
                   <tr>
+                    <th style={{ width: 40 }}></th>
                     <th>{t('common.name')}</th>
                     <th>{t('common.unit')}</th>
                     <th style={{ textAlign: 'right' }}>{t('client.ingredients_catalog.my_price')}</th>
@@ -91,8 +117,25 @@ export default function ClientIngredientsCatalog() {
                 </thead>
                 <tbody>
                   {items.map((ing) => (
-                    <tr key={ing.id}>
-                      <td>{ing.name}</td>
+                    <tr key={ing.id} style={{ background: ing.selected ? 'var(--primary-light)' : undefined }}>
+                      <td style={{ textAlign: 'center' }}>
+                        <button
+                          className="btn btn-ghost btn-sm"
+                          style={{
+                            fontSize: '1.1rem',
+                            padding: '2px 6px',
+                            color: ing.selected ? 'var(--success)' : 'var(--text-muted)',
+                          }}
+                          disabled={togglingId === ing.id}
+                          onClick={() => toggleSelection(ing)}
+                          title={ing.selected ? t('client.ingredients_catalog.deselect') : t('client.ingredients_catalog.select')}
+                        >
+                          {togglingId === ing.id ? '…' : ing.selected ? '✓' : '○'}
+                        </button>
+                      </td>
+                      <td>
+                        <span style={{ fontWeight: ing.selected ? 600 : undefined }}>{ing.name}</span>
+                      </td>
                       <td>{ing.unit?.name || '—'}</td>
                       <td style={{ textAlign: 'right' }}>
                         {editingPrice?.id === ing.id ? (

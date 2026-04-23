@@ -1,6 +1,8 @@
-import { NavLink } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { NavLink, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../context/AuthContext';
+import api from '../../api/client';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -10,6 +12,16 @@ interface SidebarProps {
 export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const { t } = useTranslation();
   const { user } = useAuth();
+  const location = useLocation();
+  const [hasSelections, setHasSelections] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    if (user?.role === 'client') {
+      api.get('/ingredients/has-selections')
+        .then(({ data }) => setHasSelections(data.hasSelections))
+        .catch(() => setHasSelections(false));
+    }
+  }, [user, location.pathname]);
 
   const adminLinks = [
     { to: '/admin', label: t('nav.dashboard'), icon: '📊', end: true },
@@ -19,15 +31,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
     { to: '/admin/ingredients', label: t('nav.ingredients'), icon: '🧂' },
   ];
 
-  const clientMainLinks = [
-    { to: '/client', label: t('nav.dashboard'), icon: '📊', end: true },
-    { to: '/client/products', label: t('nav.products'), icon: '🍔' },
-    { to: '/client/ingredients', label: t('nav.ingredients_catalog'), icon: '🧂' },
-  ];
-
   const profileLink = { to: '/client/profile', label: t('nav.profile'), icon: '👤' };
-
-  const links = user?.role === 'super_admin' ? adminLinks : clientMainLinks;
 
   return (
     <>
@@ -39,19 +43,66 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
           </span>
         </div>
         <ul className="sidebar-nav" style={{ flex: 1 }}>
-          {links.map((link) => (
-            <li key={link.to}>
-              <NavLink
-                to={link.to}
-                end={link.end}
-                className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
-                onClick={onClose}
-              >
-                <span className="link-icon">{link.icon}</span>
-                <span className="link-label">{link.label}</span>
-              </NavLink>
-            </li>
-          ))}
+          {user?.role === 'super_admin' ? (
+            adminLinks.map((link) => (
+              <li key={link.to}>
+                <NavLink
+                  to={link.to}
+                  end={link.end}
+                  className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
+                  onClick={onClose}
+                >
+                  <span className="link-icon">{link.icon}</span>
+                  <span className="link-label">{link.label}</span>
+                </NavLink>
+              </li>
+            ))
+          ) : (
+            <>
+              <li>
+                <NavLink
+                  to="/client"
+                  end
+                  className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
+                  onClick={onClose}
+                >
+                  <span className="link-icon">📊</span>
+                  <span className="link-label">{t('nav.dashboard')}</span>
+                </NavLink>
+              </li>
+              <li>
+                <NavLink
+                  to="/client/ingredients"
+                  className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
+                  onClick={onClose}
+                >
+                  <span className="link-icon">🧂</span>
+                  <span className="link-label">{t('nav.ingredients_catalog')}</span>
+                </NavLink>
+              </li>
+              <li>
+                {hasSelections ? (
+                  <NavLink
+                    to="/client/products"
+                    className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
+                    onClick={onClose}
+                  >
+                    <span className="link-icon">🍔</span>
+                    <span className="link-label">{t('nav.products')}</span>
+                  </NavLink>
+                ) : (
+                  <span
+                    className="sidebar-link"
+                    style={{ opacity: 0.4, cursor: 'not-allowed', userSelect: 'none' }}
+                    title={t('nav.products_locked')}
+                  >
+                    <span className="link-icon">🔒</span>
+                    <span className="link-label">{t('nav.products')}</span>
+                  </span>
+                )}
+              </li>
+            </>
+          )}
         </ul>
         {user?.role === 'client' && (
           <ul className="sidebar-nav" style={{ borderTop: '1px solid var(--border)', paddingTop: 4 }}>

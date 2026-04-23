@@ -27,6 +27,7 @@ export interface Ingredient {
   price: number | null;
   clientPrice: number | null;
   effectivePrice: number | null;
+  selected?: boolean;
   unit: Unit;
   unitId: number;
   categorieId?: number | null;

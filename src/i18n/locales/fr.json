@@ -42,7 +42,8 @@
     "products": "Produits",
     "settings": "Paramètres",
     "categories": "Catégories",
-    "profile": "Mon profil"
+    "profile": "Mon profil",
+    "products_locked": "Produits (sélectionnez vos ingrédients d'abord)"
   },
   "validation": {
     "name_required": "Nom requis",
@@ -116,7 +117,13 @@
       "set_price": "Définir mon prix",
       "edit_price": "Modifier mon prix",
       "no_category": "Sans catégorie",
-      "my_price_set": "Prix personnalisé défini"
+      "my_price_set": "Prix personnalisé défini",
+      "select": "Ajouter à ma liste",
+      "deselect": "Retirer de ma liste",
+      "selected_indicator": "Sélectionné",
+      "selection_hint": "Sélectionnez d'abord vos ingrédients de travail pour accéder aux produits.",
+      "selection_count": "{{count}} ingrédient(s) sélectionné(s)",
+      "no_ingredients_selected": "Vous n'avez pas encore sélectionné d'ingrédients."
     },
     "products": {
       "title": "Mes produits",

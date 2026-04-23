@@ -42,7 +42,8 @@
     "products": "Products",
     "settings": "Settings",
     "categories": "Categories",
-    "profile": "My profile"
+    "profile": "My profile",
+    "products_locked": "Products (select your ingredients first)"
   },
   "validation": {
     "name_required": "Name is required",
@@ -116,7 +117,13 @@
       "set_price": "Set my price",
       "edit_price": "Edit my price",
       "no_category": "No category",
-      "my_price_set": "Custom price set"
+      "my_price_set": "Custom price set",
+      "select": "Add to my list",
+      "deselect": "Remove from my list",
+      "selected_indicator": "Selected",
+      "selection_hint": "Select your working ingredients first to access products.",
+      "selection_count": "{{count}} ingredient(s) selected",
+      "no_ingredients_selected": "You have not selected any ingredients yet."
     },
     "products": {
       "title": "My products",
