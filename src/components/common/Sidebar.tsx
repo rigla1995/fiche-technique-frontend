@@ -95,12 +95,12 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                 <>
                   <li>
                     <NavLink
-                      to="/client/entreprise"
+                      to="/client/activites"
                       className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
                       onClick={onClose}
                     >
                       <span className="link-icon">🏢</span>
-                      <span className="link-label">{t('nav.entreprise')}</span>
+                      <span className="link-label">{t('nav.activites')}</span>
                     </NavLink>
                   </li>
                   <li>

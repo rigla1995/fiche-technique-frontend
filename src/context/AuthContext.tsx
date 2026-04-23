@@ -8,6 +8,7 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
   updateUser: (patch: Partial<User>) => void;
+  advanceOnboarding: (step: number) => Promise<void>;
   isLoading: boolean;
 }
 
@@ -52,8 +53,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
   };
 
+  const advanceOnboarding = async (step: number) => {
+    await api.post('/auth/onboarding-step', { step });
+    updateUser({ onboardingStep: step });
+  };
+
   return (
-    <AuthContext.Provider value={{ user, token, login, logout, updateUser, isLoading }}>
+    <AuthContext.Provider value={{ user, token, login, logout, updateUser, advanceOnboarding, isLoading }}>
       {children}
     </AuthContext.Provider>
   );

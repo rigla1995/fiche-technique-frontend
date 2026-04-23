@@ -4,7 +4,12 @@ import api from '../../api/client';
 import { useSelection } from '../../context/SelectionContext';
 import type { Ingredient } from '../../types';
 
-export default function ClientIngredientsCatalog() {
+interface Props {
+  embedded?: boolean;
+  onSelectionDone?: () => void;
+}
+
+export default function ClientIngredientsCatalog({ embedded, onSelectionDone }: Props = {}) {
   const { t } = useTranslation();
   const { refreshSelections } = useSelection();
   const [ingredients, setIngredients] = useState<Ingredient[]>([]);
@@ -67,13 +72,18 @@ export default function ClientIngredientsCatalog() {
   }
 
   return (
-    <div className="page">
+    <div className={embedded ? '' : 'page'}>
       <div className="page-header">
-        <h1>{t('client.ingredients_catalog.title')}</h1>
+        {!embedded && <h1>{t('client.ingredients_catalog.title')}</h1>}
         {selectedCount > 0 && (
           <span style={{ fontSize: '0.85rem', color: 'var(--success)', fontWeight: 600 }}>
             ✓ {t('client.ingredients_catalog.selection_count', { count: selectedCount })}
           </span>
+        )}
+        {embedded && onSelectionDone && selectedCount > 0 && (
+          <button className="btn btn-primary" onClick={onSelectionDone}>
+            Continuer → ({selectedCount} ingrédient{selectedCount > 1 ? 's' : ''})
+          </button>
         )}
       </div>
 

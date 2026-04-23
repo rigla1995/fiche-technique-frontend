@@ -3,7 +3,8 @@ export interface User {
   name: string;
   email: string;
   role: 'super_admin' | 'client';
-  compteType?: 'client' | 'entreprise';
+  compteType?: 'independant' | 'entreprise';
+  onboardingStep?: number;
   phone?: string;
 }
 
@@ -68,8 +69,14 @@ export interface Client {
   name: string;
   email: string;
   phone?: string;
-  compteType?: 'client' | 'entreprise';
+  compteType?: 'independant' | 'entreprise';
+  onboardingStep?: number;
   createdAt?: string;
+}
+
+export interface DomaineActivite {
+  id: number;
+  nom: string;
 }
 
 export interface Entreprise {

@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 import api from '../../api/client';
 import { useSelection } from '../../context/SelectionContext';
+import { useAuth } from '../../context/AuthContext';
 import type { Activite, StockEntry } from '../../types';
 
 type Tab = 'client' | 'entreprise';
@@ -126,7 +127,9 @@ export default function StockPage() {
   const { t } = useTranslation();
   const [searchParams, setSearchParams] = useSearchParams();
   const { hasSelections } = useSelection();
-  const tab = (searchParams.get('tab') as Tab) || 'client';
+  const { user } = useAuth();
+  const isEntreprise = user?.compteType === 'entreprise';
+  const tab = (searchParams.get('tab') as Tab) || (isEntreprise ? 'entreprise' : 'client');
 
   const [clientEntries, setClientEntries] = useState<StockEntry[]>([]);
   const [clientLoading, setClientLoading] = useState(false);
@@ -197,16 +200,18 @@ export default function StockPage() {
     <div className="page-content">
       <h1>{t('client.stock.title')}</h1>
 
-      <div className="tabs" style={{ marginTop: 20, marginBottom: 24 }}>
-        <button className={`tab-btn ${tab === 'client' ? 'active' : ''}`} onClick={() => setTab('client')}>
-          {t('client.stock.tab_client')}
-        </button>
-        <button className={`tab-btn ${tab === 'entreprise' ? 'active' : ''}`} onClick={() => setTab('entreprise')}>
-          {t('client.stock.tab_entreprise')}
-        </button>
-      </div>
+      {!isEntreprise && (
+        <div className="tabs" style={{ marginTop: 20, marginBottom: 24 }}>
+          <button className={`tab-btn ${tab === 'client' ? 'active' : ''}`} onClick={() => setTab('client')}>
+            {t('client.stock.tab_client')}
+          </button>
+          <button className={`tab-btn ${tab === 'entreprise' ? 'active' : ''}`} onClick={() => setTab('entreprise')}>
+            {t('client.stock.tab_entreprise')}
+          </button>
+        </div>
+      )}
 
-      {tab === 'client' && (
+      {tab === 'client' && !isEntreprise && (
         <>
           {!hasSelections ? (
             <div className="alert alert-warning">{t('client.stock.no_selections')}</div>

@@ -1,93 +1,132 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
-import type { Client } from '../../types';
+import type { Client, DomaineActivite } from '../../types';
 
-interface ClientForm {
-  name: string;
+type CompteType = 'independant' | 'entreprise';
+
+interface IndependantForm {
+  nomActivite: string;
+  domaineId: string;
   email: string;
-  phone: string;
-  password: string;
-  compteType: 'client' | 'entreprise';
+  telephone: string;
+  adresse: string;
 }
 
-const emptyForm: ClientForm = { name: '', email: '', phone: '', password: '', compteType: 'client' };
-const TUNISIAN_PHONE = /^(\+216[\s-]?)?[2579]\d{7}$/;
+interface EntrepriseForm {
+  nomEntreprise: string;
+  email: string;
+  telephone: string;
+  adresse: string;
+}
+
+const emptyIndependant = (): IndependantForm => ({ nomActivite: '', domaineId: '', email: '', telephone: '', adresse: '' });
+const emptyEntreprise = (): EntrepriseForm => ({ nomEntreprise: '', email: '', telephone: '', adresse: '' });
 
 export default function ClientsManagement() {
   const { t } = useTranslation();
 
-  const PASSWORD_RULES = [
-    { test: (v: string) => v.length >= 8, label: t('validation.password_min') },
-    { test: (v: string) => /[A-Z]/.test(v), label: t('validation.password_upper') },
-    { test: (v: string) => /[a-z]/.test(v), label: t('validation.password_lower') },
-    { test: (v: string) => /[0-9]/.test(v), label: t('validation.password_digit') },
-    { test: (v: string) => /[@$!%*?&_\-#]/.test(v), label: t('validation.password_special') },
-  ];
-
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
+  const [domaines, setDomaines] = useState<DomaineActivite[]>([]);
+
+  // Modal state
   const [showModal, setShowModal] = useState(false);
-  const [form, setForm] = useState<ClientForm>(emptyForm);
+  const [modalStep, setModalStep] = useState<'type' | 'form'>('type');
+  const [selectedType, setSelectedType] = useState<CompteType | null>(null);
+  const [indForm, setIndForm] = useState<IndependantForm>(emptyIndependant());
+  const [entForm, setEntForm] = useState<EntrepriseForm>(emptyEntreprise());
   const [editId, setEditId] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
-  const [search, setSearch] = useState('');
-  const [tempPassword, setTempPassword] = useState<string | null>(null);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+  const [tempPassword, setTempPassword] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
 
   const fetchClients = () => {
     setLoading(true);
     api.get('/admin/clients').then(({ data }) => setClients(data)).finally(() => setLoading(false));
   };
 
-  useEffect(() => { fetchClients(); }, []);
+  useEffect(() => {
+    fetchClients();
+    api.get('/api/domaines').then(({ data }) => setDomaines(data)).catch(() => {});
+  }, []);
 
-  const openAdd = () => { setForm(emptyForm); setEditId(null); setFormErrors({}); setShowModal(true); };
-  const openEdit = (c: Client) => {
-    setForm({ name: c.name, email: c.email, phone: c.phone || '', password: '', compteType: c.compteType || 'client' });
-    setEditId(c.id);
+  const openAdd = () => {
+    setEditId(null);
+    setSelectedType(null);
+    setModalStep('type');
+    setIndForm(emptyIndependant());
+    setEntForm(emptyEntreprise());
     setFormErrors({});
     setShowModal(true);
   };
+
+  const openEdit = (c: Client) => {
+    setEditId(c.id);
+    setSelectedType(c.compteType === 'entreprise' ? 'entreprise' : 'independant');
+    setModalStep('form');
+    setIndForm({ nomActivite: c.name, domaineId: '', email: c.email, telephone: c.phone || '', adresse: '' });
+    setEntForm({ nomEntreprise: c.name, email: c.email, telephone: c.phone || '', adresse: '' });
+    setFormErrors({});
+    setShowModal(true);
+  };
+
   const closeModal = () => { setShowModal(false); setFormErrors({}); };
 
-  const validate = (): Record<string, string> => {
-    const errs: Record<string, string> = {};
-    if (!form.name.trim()) errs.name = t('validation.name_required');
-    if (!form.email.trim()) errs.email = t('validation.email_required');
-    else if (!/\S+@\S+\.\S+/.test(form.email)) errs.email = t('validation.email_invalid');
-    if (form.phone && !TUNISIAN_PHONE.test(form.phone.replace(/\s/g, ''))) {
-      errs.phone = t('validation.phone_invalid');
-    }
-    if (form.password) {
-      for (const rule of PASSWORD_RULES) {
-        if (!rule.test(form.password)) { errs.password = rule.label; break; }
-      }
-    }
-    return errs;
+  const selectType = (type: CompteType) => {
+    setSelectedType(type);
+    setModalStep('form');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const errs = validate();
+    const errs: Record<string, string> = {};
+
+    if (selectedType === 'independant') {
+      if (!indForm.nomActivite.trim()) errs.nom = t('validation.name_required');
+      if (!indForm.email.trim()) errs.email = t('validation.email_required');
+    } else {
+      if (!entForm.nomEntreprise.trim()) errs.nom = t('validation.name_required');
+      if (!entForm.email.trim()) errs.email = t('validation.email_required');
+    }
+
     setFormErrors(errs);
     if (Object.keys(errs).length > 0) return;
 
     setSaving(true);
     try {
-      const payload: Record<string, string> = { name: form.name, email: form.email, phone: form.phone, compteType: form.compteType };
-      if (form.password) payload.password = form.password;
-
       if (editId) {
+        const payload = selectedType === 'independant'
+          ? { name: indForm.nomActivite, email: indForm.email, phone: indForm.telephone, compteType: 'independant' }
+          : { name: entForm.nomEntreprise, email: entForm.email, phone: entForm.telephone, compteType: 'entreprise' };
         await api.put(`/admin/clients/${editId}`, payload);
+        closeModal();
+        fetchClients();
       } else {
+        const payload = selectedType === 'independant'
+          ? {
+              name: indForm.nomActivite,
+              email: indForm.email,
+              telephone: indForm.telephone,
+              adresse: indForm.adresse,
+              domaineId: indForm.domaineId ? parseInt(indForm.domaineId) : undefined,
+              compteType: 'independant',
+            }
+          : {
+              name: entForm.nomEntreprise,
+              email: entForm.email,
+              telephone: entForm.telephone,
+              adresse: entForm.adresse,
+              compteType: 'entreprise',
+            };
         const { data } = await api.post('/admin/clients', payload);
         if (data?.temporaryPassword) setTempPassword(data.temporaryPassword);
+        closeModal();
+        fetchClients();
       }
-      closeModal();
-      fetchClients();
-    } catch (err: any) {
-      const msg = err?.response?.data?.message || err?.response?.data?.errors?.[0]?.msg || t('common.error');
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || t('common.error');
       setFormErrors({ global: msg });
     } finally {
       setSaving(false);
@@ -148,7 +187,7 @@ export default function ClientsManagement() {
                     {c.compteType === 'entreprise' ? (
                       <span style={{ background: '#fef9c3', color: '#854d0e', padding: '2px 10px', borderRadius: 20, fontSize: '0.75rem', fontWeight: 700 }}>🏢 Entreprise</span>
                     ) : (
-                      <span style={{ background: 'var(--primary-light)', color: 'var(--primary)', padding: '2px 10px', borderRadius: 20, fontSize: '0.75rem', fontWeight: 700 }}>👤 Client</span>
+                      <span style={{ background: 'var(--primary-light)', color: 'var(--primary)', padding: '2px 10px', borderRadius: 20, fontSize: '0.75rem', fontWeight: 700 }}>👤 Indépendant</span>
                     )}
                   </td>
                   <td className="actions-cell">
@@ -158,13 +197,14 @@ export default function ClientsManagement() {
                 </tr>
               ))}
               {filtered.length === 0 && (
-                <tr><td colSpan={4} className="empty-cell">{t('common.no_result')}</td></tr>
+                <tr><td colSpan={5} className="empty-cell">{t('common.no_result')}</td></tr>
               )}
             </tbody>
           </table>
         </div>
       )}
 
+      {/* Temp password modal */}
       {tempPassword && (
         <div className="modal-overlay" onClick={() => setTempPassword(null)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
@@ -180,12 +220,13 @@ export default function ClientsManagement() {
               <p style={{ fontSize: '0.875rem', color: '#666' }}>{t('admin.clients.temp_password_note')}</p>
             </div>
             <div className="modal-footer">
-              <button className="btn btn-primary" onClick={() => setTempPassword(null)}>{t('common.yes')}</button>
+              <button className="btn btn-primary" onClick={() => setTempPassword(null)}>{t('common.close')}</button>
             </div>
           </div>
         </div>
       )}
 
+      {/* Create/Edit modal */}
       {showModal && (
         <div className="modal-overlay" onClick={closeModal}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
@@ -193,82 +234,161 @@ export default function ClientsManagement() {
               <h2>{editId ? t('admin.clients.edit') : t('admin.clients.add')}</h2>
               <button className="modal-close" onClick={closeModal}>×</button>
             </div>
-            <form onSubmit={handleSubmit} className="modal-body">
-              {formErrors.global && (
-                <div style={{ background: '#fff0f0', color: '#c00', border: '1px solid #fbb', borderRadius: 6, padding: '8px 12px', marginBottom: 12 }}>
-                  {formErrors.global}
+
+            {/* Step 1: type selection */}
+            {modalStep === 'type' && (
+              <div className="modal-body">
+                <p style={{ marginBottom: 20, color: 'var(--text-muted)' }}>
+                  Choisissez le type de compte à créer :
+                </p>
+                <div style={{ display: 'flex', gap: 16 }}>
+                  <button
+                    type="button"
+                    className="compte-type-card"
+                    onClick={() => selectType('independant')}
+                  >
+                    <span style={{ fontSize: '2rem' }}>👤</span>
+                    <strong>Indépendant</strong>
+                    <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                      Gérant unique d'une activité
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    className="compte-type-card"
+                    onClick={() => selectType('entreprise')}
+                  >
+                    <span style={{ fontSize: '2rem' }}>🏢</span>
+                    <strong>Entreprise</strong>
+                    <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                      Plusieurs activités / restaurants
+                    </span>
+                  </button>
                 </div>
-              )}
-              <div className="form-group">
-                <label>{t('common.name')} *</label>
-                <input
-                  className={`input${formErrors.name ? ' input-error' : ''}`}
-                  value={form.name}
-                  onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-                />
-                {formErrors.name && <span className="field-error">{formErrors.name}</span>}
               </div>
-              <div className="form-group">
-                <label>{t('common.email')} *</label>
-                <input
-                  className={`input${formErrors.email ? ' input-error' : ''}`}
-                  type="email"
-                  value={form.email}
-                  onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
-                />
-                {formErrors.email && <span className="field-error">{formErrors.email}</span>}
-              </div>
-              <div className="form-group">
-                <label>{t('common.phone')} <span style={{ fontSize: '0.8em', color: '#888' }}>{t('validation.phone_hint')}</span></label>
-                <input
-                  className={`input${formErrors.phone ? ' input-error' : ''}`}
-                  value={form.phone}
-                  placeholder={t('validation.phone_placeholder')}
-                  onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
-                />
-                {formErrors.phone && <span className="field-error">{formErrors.phone}</span>}
-              </div>
-              <div className="form-group">
-                <label>{t('admin.clients.compte_type')}</label>
-                <select
-                  className="input"
-                  value={form.compteType}
-                  onChange={(e) => setForm((f) => ({ ...f, compteType: e.target.value as 'client' | 'entreprise' }))}
-                >
-                  <option value="client">👤 Client</option>
-                  <option value="entreprise">🏢 Entreprise</option>
-                </select>
-              </div>
-              <div className="form-group">
-                <label>
-                  {t('admin.clients.password_label')}{' '}
-                  {editId && <span style={{ fontSize: '0.8em', color: '#888' }}>{t('admin.clients.password_edit_hint')}</span>}
-                </label>
-                <input
-                  className={`input${formErrors.password ? ' input-error' : ''}`}
-                  type="password"
-                  value={form.password}
-                  placeholder={editId ? t('admin.clients.password_new_placeholder') : t('admin.clients.password_create_placeholder')}
-                  onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
-                />
-                {form.password && (
-                  <ul style={{ margin: '4px 0 0 4px', padding: 0, listStyle: 'none', fontSize: '0.78rem' }}>
-                    {PASSWORD_RULES.map((r) => (
-                      <li key={r.label} style={{ color: r.test(form.password) ? '#1a7a40' : '#c00' }}>
-                        {r.test(form.password) ? '✓' : '✗'} {r.label}
-                      </li>
-                    ))}
-                  </ul>
+            )}
+
+            {/* Step 2: form */}
+            {modalStep === 'form' && (
+              <form onSubmit={handleSubmit} className="modal-body">
+                {formErrors.global && (
+                  <div style={{ background: '#fff0f0', color: '#c00', border: '1px solid #fbb', borderRadius: 6, padding: '8px 12px', marginBottom: 12 }}>
+                    {formErrors.global}
+                  </div>
                 )}
-                {formErrors.password && <span className="field-error">{formErrors.password}</span>}
-              </div>
-              <div className="modal-footer">
-                <button type="button" className="btn btn-ghost" onClick={closeModal}>{t('common.cancel')}</button>
-                <button type="submit" className="btn btn-primary" disabled={saving}>
-                  {saving ? t('common.loading') : t('common.save')}
-                </button>
-              </div>
-            </form>
+
+                {selectedType === 'independant' && (
+                  <>
+                    <div className="form-group">
+                      <label>Nom de l'activité *</label>
+                      <input
+                        className={`input${formErrors.nom ? ' input-error' : ''}`}
+                        value={indForm.nomActivite}
+                        onChange={(e) => setIndForm((f) => ({ ...f, nomActivite: e.target.value }))}
+                      />
+                      {formErrors.nom && <span className="field-error">{formErrors.nom}</span>}
+                    </div>
+                    <div className="form-group">
+                      <label>Domaine d'activité</label>
+                      <select
+                        className="input"
+                        value={indForm.domaineId}
+                        onChange={(e) => setIndForm((f) => ({ ...f, domaineId: e.target.value }))}
+                      >
+                        <option value="">— Choisir un domaine —</option>
+                        {domaines.map((d) => (
+                          <option key={d.id} value={d.id}>{d.nom}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="form-group">
+                      <label>{t('common.email')} *</label>
+                      <input
+                        className={`input${formErrors.email ? ' input-error' : ''}`}
+                        type="email"
+                        value={indForm.email}
+                        onChange={(e) => setIndForm((f) => ({ ...f, email: e.target.value }))}
+                      />
+                      {formErrors.email && <span className="field-error">{formErrors.email}</span>}
+                    </div>
+                    <div className="form-group">
+                      <label>{t('common.phone')}</label>
+                      <input
+                        className="input"
+                        value={indForm.telephone}
+                        onChange={(e) => setIndForm((f) => ({ ...f, telephone: e.target.value }))}
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>Adresse</label>
+                      <textarea
+                        className="input"
+                        rows={2}
+                        value={indForm.adresse}
+                        onChange={(e) => setIndForm((f) => ({ ...f, adresse: e.target.value }))}
+                      />
+                    </div>
+                  </>
+                )}
+
+                {selectedType === 'entreprise' && (
+                  <>
+                    <div className="form-group">
+                      <label>Nom de l'entreprise *</label>
+                      <input
+                        className={`input${formErrors.nom ? ' input-error' : ''}`}
+                        value={entForm.nomEntreprise}
+                        onChange={(e) => setEntForm((f) => ({ ...f, nomEntreprise: e.target.value }))}
+                      />
+                      {formErrors.nom && <span className="field-error">{formErrors.nom}</span>}
+                    </div>
+                    <div className="form-group">
+                      <label>{t('common.email')} *</label>
+                      <input
+                        className={`input${formErrors.email ? ' input-error' : ''}`}
+                        type="email"
+                        value={entForm.email}
+                        onChange={(e) => setEntForm((f) => ({ ...f, email: e.target.value }))}
+                      />
+                      {formErrors.email && <span className="field-error">{formErrors.email}</span>}
+                    </div>
+                    <div className="form-group">
+                      <label>{t('common.phone')}</label>
+                      <input
+                        className="input"
+                        value={entForm.telephone}
+                        onChange={(e) => setEntForm((f) => ({ ...f, telephone: e.target.value }))}
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>Adresse</label>
+                      <textarea
+                        className="input"
+                        rows={2}
+                        value={entForm.adresse}
+                        onChange={(e) => setEntForm((f) => ({ ...f, adresse: e.target.value }))}
+                      />
+                    </div>
+                  </>
+                )}
+
+                <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: 12 }}>
+                  🔑 Un mot de passe temporaire sera généré automatiquement.
+                </p>
+
+                <div className="modal-footer">
+                  {!editId && (
+                    <button type="button" className="btn btn-secondary" onClick={() => setModalStep('type')}>
+                      ← Retour
+                    </button>
+                  )}
+                  <button type="button" className="btn btn-ghost" onClick={closeModal}>{t('common.cancel')}</button>
+                  <button type="submit" className="btn btn-primary" disabled={saving}>
+                    {saving ? t('common.loading') : t('common.save')}
+                  </button>
+                </div>
+              </form>
+            )}
           </div>
         </div>
       )}
