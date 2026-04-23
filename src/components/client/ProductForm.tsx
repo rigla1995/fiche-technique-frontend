@@ -217,15 +217,13 @@ export default function ProductForm() {
           </span>
         </h1>
         <div className="page-header-actions">
-          {isEdit && productType === 'vendable' && (
+          {isEdit && (
             <>
               <button className="btn btn-success" onClick={handleExport} disabled={exporting}>
                 📥 {exporting ? t('common.loading') : t('client.products.export_excel')}
               </button>
+              <button className="btn btn-danger btn-sm" onClick={handleDelete}>{t('common.delete')}</button>
             </>
-          )}
-          {isEdit && (
-            <button className="btn btn-danger btn-sm" onClick={handleDelete}>{t('common.delete')}</button>
           )}
         </div>
       </div>

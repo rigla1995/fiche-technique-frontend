@@ -161,15 +161,13 @@ export default function ProductList() {
                   </td>
                   <td className="actions-cell">
                     <Link to={`/client/products/${p.id}/edit`} className="btn btn-ghost btn-sm">{t('common.edit')}</Link>
-                    {isVendable && (
-                      <button
-                        className="btn btn-success btn-sm"
-                        onClick={() => handleExport(p.id, p.name)}
-                        disabled={exporting === p.id}
-                      >
-                        📥 {exporting === p.id ? t('common.loading') : 'Excel'}
-                      </button>
-                    )}
+                    <button
+                      className="btn btn-success btn-sm"
+                      onClick={() => handleExport(p.id, p.name)}
+                      disabled={exporting === p.id}
+                    >
+                      📥 {exporting === p.id ? t('common.loading') : 'Excel'}
+                    </button>
                     <button className="btn btn-danger btn-sm" onClick={() => handleDelete(p.id)}>
                       {t('common.delete')}
                     </button>
