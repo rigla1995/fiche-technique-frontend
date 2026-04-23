@@ -99,6 +99,7 @@ export default function ProductList() {
             <thead>
               <tr>
                 <th>{t('common.name')}</th>
+                <th>{t('client.products.type_label')}</th>
                 <th style={{ textAlign: 'center' }}>{t('nav.ingredients')}</th>
                 <th style={{ textAlign: 'center' }}>{t('client.products.subproducts_section')}</th>
                 <th style={{ textAlign: 'right' }}>{t('common.total_cost')}</th>
@@ -109,6 +110,11 @@ export default function ProductList() {
               {filtered.map((p) => (
                 <tr key={p.id}>
                   <td>{p.name}</td>
+                  <td>
+                    <span className={`unit-badge ${p.type === 'utilisable' ? 'badge-utilisable' : 'badge-vendable'}`}>
+                      {p.type === 'utilisable' ? t('client.products.type_utilisable') : t('client.products.type_vendable')}
+                    </span>
+                  </td>
                   <td style={{ textAlign: 'center' }}>
                     <button
                       className="btn btn-ghost btn-sm"

@@ -52,6 +52,7 @@ export interface ProductComponent {
 export interface Product {
   id: number;
   name: string;
+  type: 'utilisable' | 'vendable';
   ingredients: ProductIngredient[];
   subProducts: ProductComponent[];
   totalCost: number;

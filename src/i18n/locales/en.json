@@ -146,7 +146,11 @@
       "popup_no_subproducts": "No sub-products assigned.",
       "filter_by_category": "All categories",
       "ingredients_empty": "Click \"Add ingredient\" to start.",
-      "subproducts_empty": "No sub-products added."
+      "subproducts_empty": "No sub-products added.",
+      "type_label": "Product type",
+      "type_vendable": "Sellable",
+      "type_utilisable": "Usable",
+      "no_utilisable_products": "No products of type \"Usable\" available."
     },
     "profile": {
       "title": "My profile",

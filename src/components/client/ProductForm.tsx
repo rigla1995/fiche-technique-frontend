@@ -7,12 +7,15 @@ import type { Category, Ingredient, Product } from '../../types';
 interface IngredientLine {
   ingredientId: string;
   portion: string;
+  categoryFilter: string;
 }
 
 interface SubProductLine {
   subProductId: string;
   portion: string;
 }
+
+const emptyIngredientLine = (): IngredientLine => ({ ingredientId: '', portion: '', categoryFilter: '' });
 
 export default function ProductForm() {
   const { t } = useTranslation();
@@ -21,11 +24,11 @@ export default function ProductForm() {
   const isEdit = Boolean(id);
 
   const [name, setName] = useState('');
+  const [productType, setProductType] = useState<'vendable' | 'utilisable'>('vendable');
   const [ingredientLines, setIngredientLines] = useState<IngredientLine[]>([]);
   const [subProductLines, setSubProductLines] = useState<SubProductLine[]>([]);
   const [ingredients, setIngredients] = useState<Ingredient[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [categoryFilter, setCategoryFilter] = useState('');
   const [products, setProducts] = useState<Product[]>([]);
   const [totalCost, setTotalCost] = useState(0);
   const [saving, setSaving] = useState(false);
@@ -36,16 +39,19 @@ export default function ProductForm() {
     const fetches = [api.get('/ingredients'), api.get('/products'), api.get('/categories')];
     Promise.all(fetches).then(([ing, prod, cat]) => {
       setIngredients(ing.data);
-      setProducts(prod.data.filter((p: Product) => !id || String(p.id) !== id));
+      // Sub-products list: only "utilisable" products, excluding current product
+      setProducts(prod.data.filter((p: Product) => p.type === 'utilisable' && (!id || String(p.id) !== id)));
       setCategories(cat.data);
     });
 
     if (isEdit && id) {
       api.get(`/products/${id}`).then(({ data }) => {
         setName(data.name);
+        setProductType(data.type === 'utilisable' ? 'utilisable' : 'vendable');
         setIngredientLines(data.ingredients.map((i: { ingredientId: number; portion: number }) => ({
           ingredientId: String(i.ingredientId),
           portion: String(i.portion),
+          categoryFilter: '',
         })));
         setSubProductLines(data.subProducts.map((s: { subProductId: number; portion: number }) => ({
           subProductId: String(s.subProductId),
@@ -76,10 +82,16 @@ export default function ProductForm() {
 
   useEffect(() => { recalcCost(); }, [recalcCost]);
 
-  const addIngredientLine = () => setIngredientLines((l) => [...l, { ingredientId: '', portion: '' }]);
+  const addIngredientLine = () => setIngredientLines((l) => [...l, emptyIngredientLine()]);
   const removeIngredientLine = (i: number) => setIngredientLines((l) => l.filter((_, idx) => idx !== i));
-  const updateIngredientLine = (i: number, field: keyof IngredientLine, value: string) =>
+
+  const updateIngredientLine = (i: number, field: 'ingredientId' | 'portion', value: string) =>
     setIngredientLines((l) => l.map((line, idx) => (idx === i ? { ...line, [field]: value } : line)));
+
+  const updateIngredientLineCategory = (i: number, catId: string) =>
+    setIngredientLines((l) => l.map((line, idx) =>
+      idx === i ? { ...line, categoryFilter: catId, ingredientId: '' } : line
+    ));
 
   const addSubProductLine = () => setSubProductLines((l) => [...l, { subProductId: '', portion: '' }]);
   const removeSubProductLine = (i: number) => setSubProductLines((l) => l.filter((_, idx) => idx !== i));
@@ -87,20 +99,21 @@ export default function ProductForm() {
     setSubProductLines((l) => l.map((line, idx) => (idx === i ? { ...line, [field]: value } : line)));
 
   const getIngredientUnit = (ingredientId: string) => {
-    const ing = ingredients.find((i) => String(i.id) === ingredientId);
-    return ing?.unit?.name || '';
+    return ingredients.find((i) => String(i.id) === ingredientId)?.unit?.name || '';
   };
 
-  // Ingredients available for each line: filtered by category + not already selected in another line
+  // Per-line availability: filter by that line's category + exclude already-selected in other lines
   const selectedIngredientIds = new Set(ingredientLines.map((l) => l.ingredientId).filter(Boolean));
-  const filteredByCategory = categoryFilter
-    ? ingredients.filter((i) => String(i.categorieId) === categoryFilter)
-    : ingredients;
 
-  const availableForLine = (idx: number) =>
-    filteredByCategory.filter(
-      (i) => !selectedIngredientIds.has(String(i.id)) || ingredientLines[idx].ingredientId === String(i.id)
+  const availableForLine = (idx: number) => {
+    const line = ingredientLines[idx];
+    const byCategory = line.categoryFilter
+      ? ingredients.filter((i) => String(i.categorieId) === line.categoryFilter)
+      : ingredients;
+    return byCategory.filter(
+      (i) => !selectedIngredientIds.has(String(i.id)) || line.ingredientId === String(i.id)
     );
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -108,6 +121,7 @@ export default function ProductForm() {
     try {
       const payload = {
         name,
+        type: productType,
         ingredients: ingredientLines
           .filter((l) => l.ingredientId && l.portion)
           .map((l) => ({ ingredientId: parseInt(l.ingredientId), portion: parseFloat(l.portion) })),
@@ -168,10 +182,36 @@ export default function ProductForm() {
       </div>
 
       <form onSubmit={handleSubmit} className="product-form">
+        {/* Product info */}
         <div className="card">
           <div className="form-group">
             <label className="form-label">{t('client.products.name')}</label>
             <input className="input" required value={name} onChange={(e) => setName(e.target.value)} />
+          </div>
+          <div className="form-group">
+            <label className="form-label">{t('client.products.type_label')}</label>
+            <div style={{ display: 'flex', gap: 24, marginTop: 6 }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+                <input
+                  type="radio"
+                  name="productType"
+                  value="vendable"
+                  checked={productType === 'vendable'}
+                  onChange={() => setProductType('vendable')}
+                />
+                {t('client.products.type_vendable')}
+              </label>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+                <input
+                  type="radio"
+                  name="productType"
+                  value="utilisable"
+                  checked={productType === 'utilisable'}
+                  onChange={() => setProductType('utilisable')}
+                />
+                {t('client.products.type_utilisable')}
+              </label>
+            </div>
           </div>
         </div>
 
@@ -189,22 +229,6 @@ export default function ProductForm() {
               + {t('client.products.add_ingredient')}
             </button>
           </div>
-
-          {/* Category filter for ingredient selection */}
-          {categories.length > 0 && (
-            <div style={{ marginBottom: 12 }}>
-              <select
-                className="input"
-                style={{ maxWidth: 280 }}
-                value={categoryFilter}
-                onChange={(e) => setCategoryFilter(e.target.value)}
-              >
-                <option value="">{t('client.products.filter_by_category')}</option>
-                {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-              </select>
-            </div>
-          )}
-
           {ingredientLines.length === 0 && (
             <p className="empty-text">{t('client.products.ingredients_empty')}</p>
           )}
@@ -213,7 +237,20 @@ export default function ProductForm() {
             const available = availableForLine(idx);
             const effectivePrice = ingredients.find((i) => String(i.id) === line.ingredientId)?.effectivePrice ?? 0;
             return (
-              <div key={idx} className="line-row">
+              <div key={idx} className="line-row" style={{ flexWrap: 'wrap', gap: 8 }}>
+                {/* Per-line category filter */}
+                {categories.length > 0 && (
+                  <select
+                    className="input"
+                    style={{ minWidth: 150, flex: '0 0 auto' }}
+                    value={line.categoryFilter}
+                    onChange={(e) => updateIngredientLineCategory(idx, e.target.value)}
+                  >
+                    <option value="">{t('client.products.filter_by_category')}</option>
+                    {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  </select>
+                )}
+                {/* Ingredient select */}
                 <select
                   className="input flex-grow"
                   value={line.ingredientId}
@@ -223,17 +260,22 @@ export default function ProductForm() {
                   {available.map((i) => (
                     <option key={i.id} value={i.id}>
                       {i.name}
-                      {i.effectivePrice !== null ? ` (${i.effectivePrice.toFixed(3)} ${t('currency')}/${i.unit?.name})` : ` (— ${t('currency')}/${i.unit?.name})`}
+                      {i.effectivePrice !== null
+                        ? ` (${i.effectivePrice.toFixed(3)} ${t('currency')}/${i.unit?.name})`
+                        : ` (— ${t('currency')}/${i.unit?.name})`}
                     </option>
                   ))}
                 </select>
+                {/* Portion */}
                 <div className="portion-input">
                   <input
                     className="input"
                     type="number"
                     step="0.001"
                     min="0"
-                    placeholder={unit === 'pièces' || unit === 'pieces' ? t('client.products.portion_pieces') : t('client.products.portion_grams')}
+                    placeholder={unit === 'pièces' || unit === 'pieces'
+                      ? t('client.products.portion_pieces')
+                      : t('client.products.portion_grams')}
                     value={line.portion}
                     onChange={(e) => updateIngredientLine(idx, 'portion', e.target.value)}
                   />
@@ -250,7 +292,7 @@ export default function ProductForm() {
           })}
         </div>
 
-        {/* Sub-products section */}
+        {/* Sub-products section — only "utilisable" products */}
         <div className="card">
           <div className="section-header">
             <h2>{t('client.products.subproducts_section')}</h2>
@@ -295,6 +337,11 @@ export default function ProductForm() {
               <button type="button" className="btn-icon btn-remove" onClick={() => removeSubProductLine(idx)}>×</button>
             </div>
           ))}
+          {products.length === 0 && (
+            <p className="empty-text" style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+              {t('client.products.no_utilisable_products')}
+            </p>
+          )}
         </div>
 
         <div className="form-actions">
