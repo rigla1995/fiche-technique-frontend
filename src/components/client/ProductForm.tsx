@@ -35,40 +35,52 @@ export default function ProductForm() {
   const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
-    Promise.all([api.get('/ingredients'), api.get('/products'), api.get('/categories')]).then(
-      ([ing, prod, cat]) => {
-        setIngredients(ing.data);
-        setProducts(
-          prod.data.filter((p: Product) => p.type === 'utilisable' && (!id || String(p.id) !== id))
-        );
-        setCategories(cat.data);
-      }
-    );
+    const fetches: Promise<{ data: unknown }>[] = [
+      api.get('/ingredients'),
+      api.get('/products'),
+      api.get('/categories'),
+    ];
+    if (isEdit && id) fetches.push(api.get(`/products/${id}`));
 
-    if (isEdit && id) {
-      api
-        .get(`/products/${id}`)
-        .then(({ data }) => {
+    Promise.all(fetches)
+      .then(([ing, prod, cat, productRes]) => {
+        const ingData = ing.data as Ingredient[];
+        setIngredients(ingData);
+        setProducts(
+          (prod.data as Product[]).filter(
+            (p) => p.type === 'utilisable' && (!id || String(p.id) !== id)
+          )
+        );
+        setCategories(cat.data as import('../../types').Category[]);
+
+        if (isEdit && productRes) {
+          const data = productRes.data as {
+            name: string;
+            type: string;
+            ingredients: { ingredientId: number; portion: number }[];
+            subProducts: { subProductId: number; portion: number }[];
+          };
           setName(data.name);
           setProductType(data.type === 'utilisable' ? 'utilisable' : 'vendable');
           setIngredientLines(
-            data.ingredients.map((i: { ingredientId: number; portion: number }) => ({
-              ingredientId: String(i.ingredientId),
-              portion: String(i.portion),
-              categoryFilter: '',
-            }))
+            data.ingredients.map((i) => {
+              const found = ingData.find((x) => x.id === i.ingredientId);
+              return {
+                ingredientId: String(i.ingredientId),
+                portion: String(i.portion),
+                categoryFilter: found?.categorieId ? String(found.categorieId) : '',
+              };
+            })
           );
           setSubProductLines(
-            data.subProducts.map((s: { subProductId: number; portion: number }) => ({
+            data.subProducts.map((s) => ({
               subProductId: String(s.subProductId),
               portion: String(s.portion),
             }))
           );
-        })
-        .finally(() => setLoading(false));
-    } else {
-      setLoading(false);
-    }
+        }
+      })
+      .finally(() => setLoading(false));
   }, [id, isEdit]);
 
   const recalcCost = useCallback(() => {
