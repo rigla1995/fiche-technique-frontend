@@ -318,7 +318,6 @@ export default function ProductForm() {
               {entries.map(({ line, idx }) => {
                 const unit = ingredients.find((i) => String(i.id) === line.ingredientId)?.unit?.name || '';
                 const available = availableForLine(idx);
-                const effectivePrice = ingredients.find((i) => String(i.id) === line.ingredientId)?.effectivePrice ?? 0;
                 return (
                   <div key={idx} className="line-row">
                     <select
@@ -328,12 +327,7 @@ export default function ProductForm() {
                     >
                       <option value="">— {t('client.products.select_ingredient')} —</option>
                       {available.map((i) => (
-                        <option key={i.id} value={i.id}>
-                          {i.name}
-                          {i.effectivePrice !== null
-                            ? ` (${i.effectivePrice.toFixed(3)} ${t('currency')}/${i.unit?.name})`
-                            : ` (— ${t('currency')}/${i.unit?.name})`}
-                        </option>
+                        <option key={i.id} value={i.id}>{i.name}</option>
                       ))}
                     </select>
                     <div className="portion-input">
@@ -350,11 +344,6 @@ export default function ProductForm() {
                       />
                       {unit && <span className="unit-label">{unit}</span>}
                     </div>
-                    {line.ingredientId && line.portion && (
-                      <span className="line-cost">
-                        {(effectivePrice * parseFloat(line.portion || '0')).toFixed(3)} {t('currency')}
-                      </span>
-                    )}
                     <button type="button" className="btn-icon btn-remove" onClick={() => removeIngredientLine(idx)}>×</button>
                   </div>
                 );

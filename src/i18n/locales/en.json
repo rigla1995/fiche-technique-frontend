@@ -189,6 +189,7 @@
       "type_utilisable": "Usable",
       "tab_vendable": "Sellable products",
       "tab_utilisable": "Usable products",
+      "tab_fiche_technique": "Recipe Sheet",
       "add_vendable": "New sellable product",
       "add_utilisable": "New usable product",
       "no_vendable_products": "No sellable products yet. Create your first product!",
@@ -197,6 +198,21 @@
       "all_franchise": "Franchise (all activities)",
       "franchise_scope_hint": "These products will be shared by all franchise activities.",
       "distinct_scope_hint": "These products belong to the activity {{name}}."
+    },
+    "fiche_technique": {
+      "select_product": "Select a product",
+      "choose_product": "Choose a product",
+      "select_activity": "Select an activity",
+      "choose_franchise_group": "Choose franchise group",
+      "choose_activity": "Choose activity",
+      "choose_mode": "Pricing mode",
+      "no_stock_dates": "No stock prices this month",
+      "no_ingredients": "This product has no ingredients",
+      "select_date": "Select a stock date",
+      "edit_manual_prices": "Enter manual prices",
+      "last_updated": "Last updated",
+      "generate": "Generate Recipe Sheet",
+      "manual_prices_title": "Manual ingredient prices"
     },
     "profile": {
       "title": "My profile",

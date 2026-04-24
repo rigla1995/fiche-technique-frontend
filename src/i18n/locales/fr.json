@@ -189,6 +189,7 @@
       "type_utilisable": "Utilisable",
       "tab_vendable": "Produits vendables",
       "tab_utilisable": "Produits utilisables",
+      "tab_fiche_technique": "Fiche Technique",
       "add_vendable": "Nouveau produit vendable",
       "add_utilisable": "Nouveau produit utilisable",
       "no_vendable_products": "Aucun produit vendable. Créez votre premier produit !",
@@ -197,6 +198,21 @@
       "all_franchise": "Franchise (toutes activités)",
       "franchise_scope_hint": "Ces produits seront partagés par toutes les activités franchise.",
       "distinct_scope_hint": "Ces produits appartiennent à l'activité {{name}}."
+    },
+    "fiche_technique": {
+      "select_product": "Sélectionnez un produit",
+      "choose_product": "Choisir un produit",
+      "select_activity": "Sélectionnez une activité",
+      "choose_franchise_group": "Choisir le groupe franchise",
+      "choose_activity": "Choisir l'activité",
+      "choose_mode": "Mode de tarification",
+      "no_stock_dates": "Aucun prix en stock ce mois-ci",
+      "no_ingredients": "Ce produit n'a pas d'ingrédients",
+      "select_date": "Sélectionnez une date de stock",
+      "edit_manual_prices": "Saisir les prix manuels",
+      "last_updated": "Dernière mise à jour",
+      "generate": "Générer FT Excel",
+      "manual_prices_title": "Prix manuels des ingrédients"
     },
     "profile": {
       "title": "Mon profil",

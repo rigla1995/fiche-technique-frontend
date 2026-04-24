@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 import type { Product, Activite, ActiviteTypesSummary } from '../../types';
+import FicheTechniqueTab from './FicheTechniqueTab';
 
 interface ProductDetail {
   ingredients: { ingredientName: string; portion: number; unitName: string; unitPrice: number }[];
@@ -11,7 +12,7 @@ interface ProductDetail {
 }
 
 type PopupType = 'ingredients' | 'subProducts' | null;
-type TabType = 'vendable' | 'utilisable';
+type TabType = 'vendable' | 'utilisable' | 'fiche-technique';
 
 export default function ProductList() {
   const { t } = useTranslation();
@@ -215,8 +216,22 @@ export default function ProductList() {
         >
           {t('client.products.tab_utilisable')}
         </button>
+        <button
+          className={`tab-btn${tab === 'fiche-technique' ? ' active' : ''}`}
+          onClick={() => setSearchParams({ tab: 'fiche-technique' })}
+        >
+          {t('client.products.tab_fiche_technique')}
+        </button>
       </div>
 
+      {tab === 'fiche-technique' ? (
+        <FicheTechniqueTab
+          isEntreprise={isEntreprise}
+          franchiseActivities={_franchiseActivities}
+          distinctActivities={distinctActivities}
+          typesSummary={typesSummary}
+        />
+      ) : (<>
       <div className="search-bar">
         <input
           type="text"
@@ -362,6 +377,7 @@ export default function ProductList() {
           </div>
         </div>
       )}
+      </>)}
     </div>
   );
 }
