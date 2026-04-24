@@ -2,10 +2,13 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
+import { useAuth } from '../../context/AuthContext';
 import type { Product } from '../../types';
 
 export default function ClientDashboard() {
   const { t } = useTranslation();
+  const { user } = useAuth();
+  const isEntreprise = user?.compteType === 'entreprise';
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -15,11 +18,16 @@ export default function ClientDashboard() {
 
   const totalCost = products.reduce((sum, p) => sum + (p.totalCost || 0), 0);
 
+  // Entreprise users must go through the ProductList activity picker to add/edit
+  const addProductTo = isEntreprise ? '/client/products' : '/client/products/new';
+  const editProductTo = (p: Product) =>
+    isEntreprise ? '/client/products' : `/client/products/${p.id}/edit`;
+
   return (
     <div className="page">
       <div className="page-header">
         <h1>{t('client.title')}</h1>
-        <Link to="/client/products/new" className="btn btn-primary">
+        <Link to={addProductTo} className="btn btn-primary">
           + {t('client.products.add')}
         </Link>
       </div>
@@ -43,7 +51,7 @@ export default function ClientDashboard() {
             <div className="empty-state">
               <span className="empty-icon">🍽️</span>
               <p>{t('client.products.no_products')}</p>
-              <Link to="/client/products/new" className="btn btn-primary">{t('client.products.add')}</Link>
+              <Link to={addProductTo} className="btn btn-primary">{t('client.products.add')}</Link>
             </div>
           )}
           {products.map((p) => (
@@ -58,7 +66,7 @@ export default function ClientDashboard() {
                 </p>
               </div>
               <div className="product-card-footer">
-                <Link to={`/client/products/${p.id}/edit`} className="btn btn-ghost btn-sm">{t('common.edit')}</Link>
+                <Link to={editProductTo(p)} className="btn btn-ghost btn-sm">{t('common.edit')}</Link>
               </div>
             </div>
           ))}
