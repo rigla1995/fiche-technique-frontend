@@ -1,10 +1,12 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
+import { useAuth } from '../../context/AuthContext';
 import type { Activite, ActiviteIngredient } from '../../types';
 
 export default function FranchiseCatalogPage() {
   const { t } = useTranslation();
+  const { user, advanceOnboarding } = useAuth();
   const [activites, setActivites] = useState<Activite[]>([]);
   const [ingredientsMap, setIngredientsMap] = useState<Record<number, ActiviteIngredient[]>>({});
   const [loading, setLoading] = useState(true);
@@ -40,6 +42,9 @@ export default function FranchiseCatalogPage() {
         ...prev,
         [actId]: (prev[actId] || []).map((i) => (i.id === ingId ? { ...i, selected: data.selected } : i)),
       }));
+      if (data.selected && user?.onboardingStep === 3) {
+        await advanceOnboarding(0);
+      }
     } finally {
       setToggling(null);
     }

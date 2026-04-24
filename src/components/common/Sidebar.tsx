@@ -34,13 +34,15 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const step = user?.onboardingStep ?? 0;
   const isOnboarding = user?.compteType === 'entreprise' && step > 0;
 
+  // Fetch catalogue tab visibility: always when onboarding complete (step 0),
+  // AND at step 3 so F/D tabs appear for ingredient assignment before products unlock.
   useEffect(() => {
-    if (user?.compteType === 'entreprise' && !isOnboarding) {
+    if (user?.compteType === 'entreprise' && (step === 0 || step === 3)) {
       api.get('/api/entreprise/activites/types-summary')
         .then(({ data }) => setTypesSummary(data))
         .catch(() => setTypesSummary(null));
     }
-  }, [user?.compteType, isOnboarding, location.pathname]);
+  }, [user?.compteType, step, location.pathname]);
 
   const adminLinks = [
     { to: '/admin', label: t('nav.dashboard'), icon: '📊', end: true },
@@ -58,7 +60,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
     <div style={{ background: '#fef9c3', borderRadius: 8, padding: '10px 12px', margin: '8px 12px', fontSize: '0.78rem', color: '#854d0e', lineHeight: 1.5 }}>
       {step === 1 && '🔒 Changez votre mot de passe pour continuer.'}
       {step === 2 && '🏢 Créez votre première activité pour continuer.'}
-      {step === 3 && '🧂 Sélectionnez vos ingrédients pour débloquer le stock.'}
+      {step === 3 && '🧂 Assignez des ingrédients à vos activités dans le Catalogue pour débloquer les produits et le stock.'}
     </div>
   ) : null;
 

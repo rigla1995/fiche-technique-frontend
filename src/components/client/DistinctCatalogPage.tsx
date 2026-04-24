@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
+import { useAuth } from '../../context/AuthContext';
 import type { Activite, ActiviteIngredient } from '../../types';
 
 export default function DistinctCatalogPage() {
   const { t } = useTranslation();
+  const { user, advanceOnboarding } = useAuth();
   const [activites, setActivites] = useState<Activite[]>([]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [ingredients, setIngredients] = useState<ActiviteIngredient[]>([]);
@@ -36,6 +38,9 @@ export default function DistinctCatalogPage() {
     try {
       const { data } = await api.post(`/api/entreprise/activites/${selectedId}/ingredients/${ingId}/select`);
       setIngredients((prev) => prev.map((i) => (i.id === ingId ? { ...i, selected: data.selected } : i)));
+      if (data.selected && user?.onboardingStep === 3) {
+        await advanceOnboarding(0);
+      }
     } finally {
       setToggling(null);
     }
