@@ -1,12 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useSearchParams } from 'react-router-dom';
 import api from '../../api/client';
 import { useSelection } from '../../context/SelectionContext';
 import { useAuth } from '../../context/AuthContext';
 import type { Activite, StockEntry } from '../../types';
-
-type Tab = 'client' | 'entreprise';
 
 interface StockRowState {
   quantite: string;
@@ -66,70 +63,85 @@ function StockMatrix({ entries, onSave }: StockMatrixProps) {
 
   if (entries.length === 0) return <p className="text-muted">{t('client.stock.empty_stock')}</p>;
 
+  // Group by category
+  const groups: Record<string, StockEntry[]> = {};
+  for (const entry of entries) {
+    const cat = entry.categorie || t('client.ingredients_catalog.no_category');
+    if (!groups[cat]) groups[cat] = [];
+    groups[cat].push(entry);
+  }
+
   return (
-    <div className="stock-grid">
-      {entries.map((entry) => {
-        const row = rows[entry.ingredientId] ?? { quantite: '', dateAchat: '', saving: false, saved: false, error: '' };
-        return (
-          <div key={entry.ingredientId} className="stock-card">
-            <div className="stock-card-header">
-              <span className="stock-ingredient-name">{entry.nom}</span>
-              <span className="stock-unit-badge">{entry.unite}</span>
-            </div>
-            {entry.prixUnitaire !== null && (
-              <div className="stock-price">
-                {t('client.stock.unit_price')}: <strong>{entry.prixUnitaire.toFixed(3)} DT</strong>
-              </div>
-            )}
-            <div className="stock-fields">
-              <div className="stock-field">
-                <label>{t('client.stock.quantity')}</label>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.001"
-                  placeholder="0"
-                  value={row.quantite}
-                  onChange={(e) => updateRow(entry.ingredientId, 'quantite', e.target.value)}
-                />
-              </div>
-              <div className="stock-field">
-                <label>{t('client.stock.date_achat')}</label>
-                <input
-                  type="date"
-                  value={row.dateAchat}
-                  onChange={(e) => updateRow(entry.ingredientId, 'dateAchat', e.target.value)}
-                />
-              </div>
-            </div>
-            {row.error && <p className="form-error" style={{ fontSize: '0.75rem', marginTop: 4 }}>{row.error}</p>}
-            <div className="stock-card-footer">
-              {row.saved ? (
-                <span className="stock-saved-badge">✓ {t('client.stock.saved')}</span>
-              ) : (
-                <button
-                  className="btn btn-primary btn-sm"
-                  onClick={() => saveRow(entry.ingredientId)}
-                  disabled={row.saving}
-                >
-                  {row.saving ? '...' : t('client.stock.save')}
-                </button>
-              )}
-            </div>
+    <div>
+      {Object.entries(groups).sort(([a], [b]) => a.localeCompare(b)).map(([cat, items]) => (
+        <div key={cat} style={{ marginBottom: 28 }}>
+          <h3 style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--primary)', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
+            🏷️ {cat} <span style={{ fontSize: '0.75rem', fontWeight: 400, color: 'var(--text-muted)' }}>({items.length})</span>
+          </h3>
+          <div className="stock-grid">
+            {items.map((entry) => {
+              const row = rows[entry.ingredientId] ?? { quantite: '', dateAchat: '', saving: false, saved: false, error: '' };
+              return (
+                <div key={entry.ingredientId} className="stock-card">
+                  <div className="stock-card-header">
+                    <span className="stock-ingredient-name">{entry.nom}</span>
+                    <span className="stock-unit-badge">{entry.unite}</span>
+                  </div>
+                  {entry.prixUnitaire !== null && (
+                    <div className="stock-price">
+                      {t('client.stock.unit_price')}: <strong>{entry.prixUnitaire.toFixed(3)} {t('currency')}</strong>
+                    </div>
+                  )}
+                  <div className="stock-fields">
+                    <div className="stock-field">
+                      <label>{t('client.stock.quantity')}</label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.001"
+                        placeholder="0"
+                        value={row.quantite}
+                        onChange={(e) => updateRow(entry.ingredientId, 'quantite', e.target.value)}
+                      />
+                    </div>
+                    <div className="stock-field">
+                      <label>{t('client.stock.date_achat')}</label>
+                      <input
+                        type="date"
+                        value={row.dateAchat}
+                        onChange={(e) => updateRow(entry.ingredientId, 'dateAchat', e.target.value)}
+                      />
+                    </div>
+                  </div>
+                  {row.error && <p className="form-error" style={{ fontSize: '0.75rem', marginTop: 4 }}>{row.error}</p>}
+                  <div className="stock-card-footer">
+                    {row.saved ? (
+                      <span className="stock-saved-badge">✓ {t('client.stock.saved')}</span>
+                    ) : (
+                      <button
+                        className="btn btn-primary btn-sm"
+                        onClick={() => saveRow(entry.ingredientId)}
+                        disabled={row.saving}
+                      >
+                        {row.saving ? '...' : t('client.stock.save')}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
           </div>
-        );
-      })}
+        </div>
+      ))}
     </div>
   );
 }
 
 export default function StockPage() {
   const { t } = useTranslation();
-  const [searchParams, setSearchParams] = useSearchParams();
   const { hasSelections } = useSelection();
   const { user } = useAuth();
   const isEntreprise = user?.compteType === 'entreprise';
-  const tab = (searchParams.get('tab') as Tab) || (isEntreprise ? 'entreprise' : 'client');
 
   const [clientEntries, setClientEntries] = useState<StockEntry[]>([]);
   const [clientLoading, setClientLoading] = useState(false);
@@ -168,16 +180,16 @@ export default function StockPage() {
   }, []);
 
   useEffect(() => {
-    if (tab === 'client' && hasSelections) loadClientStock();
-  }, [tab, hasSelections, loadClientStock]);
+    if (!isEntreprise && hasSelections) loadClientStock();
+  }, [isEntreprise, hasSelections, loadClientStock]);
 
   useEffect(() => {
-    if (tab === 'entreprise') loadActivites();
-  }, [tab, loadActivites]);
+    if (isEntreprise) loadActivites();
+  }, [isEntreprise, loadActivites]);
 
   useEffect(() => {
-    if (tab === 'entreprise' && activeActiviteId !== null) loadEntrepriseStock(activeActiviteId);
-  }, [tab, activeActiviteId, loadEntrepriseStock]);
+    if (isEntreprise && activeActiviteId !== null) loadEntrepriseStock(activeActiviteId);
+  }, [isEntreprise, activeActiviteId, loadEntrepriseStock]);
 
   const saveClientStock = async (ingredientId: number, quantite: string, dateAchat: string) => {
     await api.put(`/api/stock/client/${ingredientId}`, {
@@ -194,25 +206,13 @@ export default function StockPage() {
     });
   };
 
-  const setTab = (t: Tab) => setSearchParams({ tab: t });
-
   return (
     <div className="page-content">
       <h1>{t('client.stock.title')}</h1>
 
+      {/* Independant: personal stock */}
       {!isEntreprise && (
-        <div className="tabs" style={{ marginTop: 20, marginBottom: 24 }}>
-          <button className={`tab-btn ${tab === 'client' ? 'active' : ''}`} onClick={() => setTab('client')}>
-            {t('client.stock.tab_client')}
-          </button>
-          <button className={`tab-btn ${tab === 'entreprise' ? 'active' : ''}`} onClick={() => setTab('entreprise')}>
-            {t('client.stock.tab_entreprise')}
-          </button>
-        </div>
-      )}
-
-      {tab === 'client' && !isEntreprise && (
-        <>
+        <div style={{ marginTop: 20 }}>
           {!hasSelections ? (
             <div className="alert alert-warning">{t('client.stock.no_selections')}</div>
           ) : clientLoading ? (
@@ -220,36 +220,45 @@ export default function StockPage() {
           ) : (
             <StockMatrix entries={clientEntries} onSave={saveClientStock} />
           )}
-        </>
+        </div>
       )}
 
-      {tab === 'entreprise' && (
-        <>
+      {/* Entreprise: activity selector + stock */}
+      {isEntreprise && (
+        <div style={{ marginTop: 20 }}>
           {activitesLoading ? (
             <p className="text-muted">{t('common.loading')}</p>
           ) : activites.length === 0 ? (
             <div className="alert alert-warning">{t('client.stock.no_activities')}</div>
           ) : (
             <>
-              <div className="activite-tabs">
-                {activites.map((act) => (
-                  <button
-                    key={act.id}
-                    className={`activite-tab-btn ${act.id === activeActiviteId ? 'active' : ''}`}
-                    onClick={() => setActiveActiviteId(act.id)}
-                  >
-                    {act.nom}
-                  </button>
-                ))}
+              <div style={{ marginBottom: 20 }}>
+                <label style={{ display: 'block', fontWeight: 600, marginBottom: 6, fontSize: '0.875rem' }}>
+                  {t('nav.activites')}
+                </label>
+                <select
+                  className="input"
+                  style={{ maxWidth: 320 }}
+                  value={activeActiviteId ?? ''}
+                  onChange={(e) => setActiveActiviteId(Number(e.target.value))}
+                >
+                  {activites.map((act) => (
+                    <option key={act.id} value={act.id}>{act.nom}</option>
+                  ))}
+                </select>
               </div>
               {entrepriseLoading ? (
                 <p className="text-muted">{t('common.loading')}</p>
+              ) : entrepriseEntries.length === 0 ? (
+                <div className="alert alert-warning">
+                  Aucun ingrédient assigné à cette activité. Gérez les ingrédients depuis <strong>Mes activités</strong>.
+                </div>
               ) : (
                 <StockMatrix key={activeActiviteId} entries={entrepriseEntries} onSave={saveEntrepriseStock} />
               )}
             </>
           )}
-        </>
+        </div>
       )}
     </div>
   );
