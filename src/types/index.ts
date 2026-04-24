@@ -125,6 +125,7 @@ export interface ActiviteIngredient {
   nom: string;
   unite: string;
   categorie: string;
+  categorieId: number | null;
   prix: number | null;
   prixUnitaire: number | null;
   selected: boolean;

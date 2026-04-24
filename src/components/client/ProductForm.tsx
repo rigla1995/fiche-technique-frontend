@@ -105,21 +105,18 @@ export default function ProductForm() {
         if (resolvedActCtx) {
           ingData = (ing.data as import('../../types').ActiviteIngredient[])
             .filter((i) => i.selected)
-            .map((i) => {
-              const foundCat = catData.find((c) => c.name === i.categorie);
-              return {
-                id: i.id,
-                name: i.nom,
-                price: i.prix,
-                clientPrice: i.prixUnitaire,
-                effectivePrice: i.prixUnitaire ?? i.prix,
-                selected: true,
-                unit: { id: 0, name: i.unite },
-                unitId: 0,
-                categorieId: foundCat?.id ?? null,
-                categorieName: i.categorie,
-              } as Ingredient;
-            });
+            .map((i) => ({
+              id: i.id,
+              name: i.nom,
+              price: i.prix,
+              clientPrice: i.prixUnitaire,
+              effectivePrice: i.prixUnitaire ?? i.prix,
+              selected: true,
+              unit: { id: 0, name: i.unite },
+              unitId: 0,
+              categorieId: i.categorieId,
+              categorieName: i.categorie,
+            } as Ingredient));
         } else {
           ingData = (ing.data as Ingredient[]).filter((i) => i.selected);
         }
@@ -129,7 +126,6 @@ export default function ProductForm() {
             (p) => p.type === 'utilisable' && (!id || String(p.id) !== id)
           )
         );
-        if (!resolvedActCtx) setCategories(catData);
 
         if (isEdit && productRes) {
           const data = productRes.data as {
@@ -202,7 +198,11 @@ export default function ProductForm() {
   }));
 
   const usedCatIds = new Set(orderedCatIds.filter(Boolean));
-  const availableNewCategories = categories.filter((c) => !usedCatIds.has(String(c.id)));
+  // Only show categories that actually have at least one loaded ingredient
+  const catIdsWithIngredients = new Set(ingredients.map((i) => String(i.categorieId)).filter((v) => v && v !== 'null'));
+  const availableNewCategories = categories.filter(
+    (c) => !usedCatIds.has(String(c.id)) && catIdsWithIngredients.has(String(c.id))
+  );
 
   const availableForLine = (idx: number) => {
     const line = ingredientLines[idx];
