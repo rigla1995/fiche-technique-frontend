@@ -112,15 +112,17 @@ export default function FicheTechniqueTab({
     try {
       const params = resolvedActId ? `?activiteId=${resolvedActId}` : '';
       const { data } = await api.get(`/products/${selectedProductId}/manual-prices${params}`);
-      const rows = data as { ingredientId: number; nom: string; unite: string; prixUnitaire: number | null; updatedAt: string | null }[];
-      setManualPrices(rows.map((r) => ({
+      const { prices, updatedAt } = data as {
+        prices: { ingredientId: number; nom: string; unite: string; prixUnitaire: number | null }[];
+        updatedAt: string | null;
+      };
+      setManualPrices(prices.map((r) => ({
         ingredientId: r.ingredientId,
         nom: r.nom,
         unite: r.unite,
         prixUnitaire: r.prixUnitaire !== null ? String(r.prixUnitaire) : '',
       })));
-      const latest = rows.find((r) => r.updatedAt)?.updatedAt ?? null;
-      setManualUpdatedAt(latest ? latest.slice(0, 10) : null);
+      setManualUpdatedAt(updatedAt ? updatedAt.slice(0, 10) : null);
     } finally {
       setManualLoading(false);
     }
