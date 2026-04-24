@@ -22,7 +22,11 @@ export default function ProductForm() {
   const [searchParams] = useSearchParams();
   const isEdit = Boolean(id);
 
-  // In edit mode, type comes from the fetched product. In new mode, from ?type= query param.
+  // Activity context from URL: 'franchise' | 'distinct-{id}' | ''
+  const actCtx = searchParams.get('actCtx') || '';
+  const isFranchiseCtx = actCtx === 'franchise';
+  const distinctActId = actCtx.startsWith('distinct-') ? parseInt(actCtx.replace('distinct-', '')) : null;
+
   const [name, setName] = useState('');
   const [productType, setProductType] = useState<'vendable' | 'utilisable'>(
     (searchParams.get('type') as 'vendable' | 'utilisable') || 'vendable'
@@ -39,23 +43,57 @@ export default function ProductForm() {
   const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
-    const fetches: Promise<{ data: unknown }>[] = [
-      api.get('/ingredients'),
-      api.get('/products'),
-      api.get('/categories'),
-    ];
+    // For enterprise with activity context, load ingredients from that activity
+    const ingredientsFetch: Promise<{ data: unknown }> = actCtx
+      ? (isFranchiseCtx
+          ? api.get('/api/entreprise/activites').then(({ data }) => {
+              const first = (data as import('../../types').Activite[]).find((a) => a.type === 'franchise');
+              return first
+                ? api.get(`/api/entreprise/activites/${first.id}/ingredients`)
+                : api.get('/ingredients');
+            })
+          : api.get(`/api/entreprise/activites/${distinctActId}/ingredients`))
+      : api.get('/ingredients');
+
+    const productsFetch = api.get('/products');
+    const categoriesFetch = api.get('/categories');
+    const fetches: Promise<{ data: unknown }>[] = [ingredientsFetch, productsFetch, categoriesFetch];
     if (isEdit && id) fetches.push(api.get(`/products/${id}`));
 
     Promise.all(fetches)
       .then(([ing, prod, cat, productRes]) => {
-        const ingData = (ing.data as Ingredient[]).filter((i) => i.selected);
+        // Activity ingredients come as ActiviteIngredient[] (selected field), global comes as Ingredient[]
+        const catData = cat.data as Category[];
+        setCategories(catData);
+        let ingData: Ingredient[];
+        if (actCtx) {
+          ingData = (ing.data as import('../../types').ActiviteIngredient[])
+            .filter((i) => i.selected)
+            .map((i) => {
+              const foundCat = catData.find((c) => c.name === i.categorie);
+              return {
+                id: i.id,
+                name: i.nom,
+                price: i.prix,
+                clientPrice: i.prixUnitaire,
+                effectivePrice: i.prixUnitaire ?? i.prix,
+                selected: true,
+                unit: { id: 0, name: i.unite },
+                unitId: 0,
+                categorieId: foundCat?.id ?? null,
+                categorieName: i.categorie,
+              } as Ingredient;
+            });
+        } else {
+          ingData = (ing.data as Ingredient[]).filter((i) => i.selected);
+        }
         setIngredients(ingData);
         setProducts(
           (prod.data as Product[]).filter(
             (p) => p.type === 'utilisable' && (!id || String(p.id) !== id)
           )
         );
-        setCategories(cat.data as import('../../types').Category[]);
+        if (!actCtx) setCategories(catData);
 
         if (isEdit && productRes) {
           const data = productRes.data as {
@@ -157,7 +195,7 @@ export default function ProductForm() {
     e.preventDefault();
     setSaving(true);
     try {
-      const payload = {
+      const payload: Record<string, unknown> = {
         name,
         type: productType,
         ingredients: ingredientLines
@@ -167,12 +205,21 @@ export default function ProductForm() {
           .filter((l) => l.subProductId && l.portion)
           .map((l) => ({ subProductId: parseInt(l.subProductId), portion: parseFloat(l.portion) })),
       };
+      if (actCtx && !isEdit) {
+        if (isFranchiseCtx) {
+          payload.activiteType = 'franchise';
+        } else if (distinctActId) {
+          payload.activiteId = distinctActId;
+          payload.activiteType = 'distincte';
+        }
+      }
       if (isEdit) {
         await api.put(`/products/${id}`, payload);
       } else {
         await api.post('/products', payload);
       }
-      navigate(`/client/products?tab=${productType}`);
+      const actCtxQuery = actCtx ? `&actCtx=${encodeURIComponent(actCtx)}` : '';
+      navigate(`/client/products?tab=${productType}${actCtxQuery}`);
     } finally {
       setSaving(false);
     }

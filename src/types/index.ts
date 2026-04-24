@@ -62,6 +62,8 @@ export interface Product {
   ingredientsCount?: number;
   subProductsCount?: number;
   userId: number;
+  activiteId?: number | null;
+  activiteType?: 'franchise' | 'distincte' | null;
 }
 
 export interface Client {

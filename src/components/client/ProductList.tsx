@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
-import type { Product } from '../../types';
+import { useAuth } from '../../context/AuthContext';
+import type { Product, Activite, ActiviteTypesSummary } from '../../types';
 
 interface ProductDetail {
   ingredients: { ingredientName: string; portion: number; unitName: string; unitPrice: number }[];
@@ -14,6 +15,9 @@ type TabType = 'vendable' | 'utilisable';
 
 export default function ProductList() {
   const { t } = useTranslation();
+  const { user } = useAuth();
+  const isEntreprise = user?.compteType === 'entreprise';
+
   const [searchParams, setSearchParams] = useSearchParams();
   const tab = (searchParams.get('tab') as TabType) || 'vendable';
 
@@ -25,9 +29,56 @@ export default function ProductList() {
   const [detail, setDetail] = useState<ProductDetail | null>(null);
   const [loadingDetail, setLoadingDetail] = useState(false);
 
+  // Entreprise activity state
+  const [typesSummary, setTypesSummary] = useState<ActiviteTypesSummary | null>(null);
+  const [_franchiseActivities, setFranchiseActivities] = useState<Activite[]>([]);
+  const [distinctActivities, setDistinctActivities] = useState<Activite[]>([]);
+  const [activitesLoading, setActivitesLoading] = useState(false);
+  // selectedActCtx: 'franchise' | `distinct-${id}`
+  const [selectedActCtx, setSelectedActCtx] = useState<string>('');
+
   useEffect(() => {
-    api.get('/products').then(({ data }) => setProducts(data)).finally(() => setLoading(false));
-  }, []);
+    if (!isEntreprise) return;
+    setActivitesLoading(true);
+    Promise.all([
+      api.get('/api/entreprise/activites/types-summary'),
+      api.get('/api/entreprise/activites'),
+    ]).then(([summaryRes, actsRes]) => {
+      const summary = summaryRes.data as ActiviteTypesSummary;
+      setTypesSummary(summary);
+      const all = actsRes.data as Activite[];
+      const franchise = all.filter((a) => a.type === 'franchise');
+      const distinct = all.filter((a) => a.type === 'distincte' || a.type == null);
+      setFranchiseActivities(franchise);
+      setDistinctActivities(distinct);
+      // Set default context
+      if (summary.hasFranchise && franchise.length > 0) setSelectedActCtx('franchise');
+      else if (summary.hasDistinct && distinct.length > 0) setSelectedActCtx(`distinct-${distinct[0].id}`);
+    }).finally(() => setActivitesLoading(false));
+  }, [isEntreprise]);
+
+  // Derive query params from activity context
+  const getActivityQuery = (): { activiteType?: string; activiteId?: string } => {
+    if (!selectedActCtx) return {};
+    if (selectedActCtx === 'franchise') return { activiteType: 'franchise' };
+    const id = selectedActCtx.replace('distinct-', '');
+    return { activiteId: id };
+  };
+
+  const loadProducts = () => {
+    setLoading(true);
+    const query = isEntreprise ? getActivityQuery() : {};
+    const params = new URLSearchParams(query as Record<string, string>).toString();
+    api.get(`/products${params ? `?${params}` : ''}`)
+      .then(({ data }) => setProducts(data))
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    if (isEntreprise && !selectedActCtx) return; // wait for activity context
+    loadProducts();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isEntreprise, selectedActCtx]);
 
   const openPopup = async (type: PopupType, product: Product) => {
     setPopup({ type, productId: product.id, productName: product.name });
@@ -66,22 +117,90 @@ export default function ProductList() {
     }
   };
 
+  // Build the URL for add/edit that includes activity context
+  const actCtxParam = selectedActCtx
+    ? `&actCtx=${encodeURIComponent(selectedActCtx)}`
+    : '';
+
   const byTab = products.filter((p) => p.type === tab);
   const filtered = byTab.filter((p) => p.name.toLowerCase().includes(search.toLowerCase()));
   const isVendable = tab === 'vendable';
-
   const emptyKey = isVendable ? 'client.products.no_vendable_products' : 'client.products.no_utilisable_products_tab';
   const addKey = isVendable ? 'client.products.add_vendable' : 'client.products.add_utilisable';
-  const addPath = isVendable ? '/client/products/new?type=vendable' : '/client/products/new?type=utilisable';
+  const addPath = isVendable
+    ? `/client/products/new?type=vendable${actCtxParam}`
+    : `/client/products/new?type=utilisable${actCtxParam}`;
+
+  // Activity selector label
+  const getSelectedLabel = () => {
+    if (selectedActCtx === 'franchise') return t('client.products.all_franchise');
+    const id = parseInt(selectedActCtx.replace('distinct-', ''));
+    const found = distinctActivities.find((a) => a.id === id);
+    return found ? `D · ${found.nom}` : '';
+  };
 
   return (
     <div className="page">
       <div className="page-header">
         <h1>{t('client.products.title')}</h1>
-        <Link to={addPath} className="btn btn-primary">
-          + {t(addKey)}
-        </Link>
+        {(!isEntreprise || selectedActCtx) && (
+          <Link to={addPath} className="btn btn-primary">
+            + {t(addKey)}
+          </Link>
+        )}
       </div>
+
+      {/* Entreprise: activity context selector */}
+      {isEntreprise && (
+        activitesLoading ? (
+          <p className="text-muted">{t('common.loading')}</p>
+        ) : (
+          <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', borderBottom: '2px solid var(--border)', marginBottom: 20 }}>
+            {typesSummary?.hasFranchise && (
+              <button
+                onClick={() => setSelectedActCtx('franchise')}
+                style={{
+                  padding: '8px 16px', fontWeight: 600, fontSize: '0.85rem',
+                  border: 'none', borderRadius: '6px 6px 0 0', cursor: 'pointer',
+                  background: selectedActCtx === 'franchise' ? 'var(--primary)' : 'var(--surface)',
+                  color: selectedActCtx === 'franchise' ? '#fff' : 'var(--text)',
+                  borderBottom: selectedActCtx === 'franchise' ? '2px solid var(--primary)' : '2px solid transparent',
+                  marginBottom: -2,
+                }}
+              >
+                F · {t('client.products.all_franchise')}
+              </button>
+            )}
+            {typesSummary?.hasDistinct && distinctActivities.map((a) => {
+              const ctx = `distinct-${a.id}`;
+              return (
+                <button
+                  key={a.id}
+                  onClick={() => setSelectedActCtx(ctx)}
+                  style={{
+                    padding: '8px 16px', fontWeight: 600, fontSize: '0.85rem',
+                    border: 'none', borderRadius: '6px 6px 0 0', cursor: 'pointer',
+                    background: selectedActCtx === ctx ? 'var(--primary)' : 'var(--surface)',
+                    color: selectedActCtx === ctx ? '#fff' : 'var(--text)',
+                    borderBottom: selectedActCtx === ctx ? '2px solid var(--primary)' : '2px solid transparent',
+                    marginBottom: -2,
+                  }}
+                >
+                  D · {a.nom}
+                </button>
+              );
+            })}
+          </div>
+        )
+      )}
+
+      {isEntreprise && selectedActCtx && (
+        <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: 12 }}>
+          {selectedActCtx === 'franchise'
+            ? t('client.products.franchise_scope_hint')
+            : t('client.products.distinct_scope_hint', { name: getSelectedLabel() })}
+        </p>
+      )}
 
       <div className="tabs">
         <button
@@ -114,7 +233,7 @@ export default function ProductList() {
         <div className="empty-state">
           <span className="empty-icon">{isVendable ? '🍔' : '🧪'}</span>
           <p>{byTab.length === 0 ? t(emptyKey) : t('common.no_result')}</p>
-          {byTab.length === 0 && (
+          {byTab.length === 0 && (!isEntreprise || selectedActCtx) && (
             <Link to={addPath} className="btn btn-primary">{t(addKey)}</Link>
           )}
         </div>
@@ -137,21 +256,13 @@ export default function ProductList() {
                 <tr key={p.id}>
                   <td>{p.name}</td>
                   <td style={{ textAlign: 'center' }}>
-                    <button
-                      className="btn btn-ghost btn-sm"
-                      style={{ minWidth: 36 }}
-                      onClick={() => openPopup('ingredients', p)}
-                    >
+                    <button className="btn btn-ghost btn-sm" style={{ minWidth: 36 }} onClick={() => openPopup('ingredients', p)}>
                       {p.ingredientsCount ?? 0}
                     </button>
                   </td>
                   {isVendable && (
                     <td style={{ textAlign: 'center' }}>
-                      <button
-                        className="btn btn-ghost btn-sm"
-                        style={{ minWidth: 36 }}
-                        onClick={() => openPopup('subProducts', p)}
-                      >
+                      <button className="btn btn-ghost btn-sm" style={{ minWidth: 36 }} onClick={() => openPopup('subProducts', p)}>
                         {p.subProductsCount ?? 0}
                       </button>
                     </td>
@@ -160,7 +271,7 @@ export default function ProductList() {
                     <span className="cost-badge">{(p.totalCost || 0).toFixed(3)} {t('currency')}</span>
                   </td>
                   <td className="actions-cell">
-                    <Link to={`/client/products/${p.id}/edit`} className="btn btn-ghost btn-sm">{t('common.edit')}</Link>
+                    <Link to={`/client/products/${p.id}/edit?${actCtxParam}`} className="btn btn-ghost btn-sm">{t('common.edit')}</Link>
                     <button
                       className="btn btn-success btn-sm"
                       onClick={() => handleExport(p.id, p.name)}
@@ -216,9 +327,7 @@ export default function ProductList() {
                     </tbody>
                   </table>
                 ) : (
-                  <p style={{ color: '#888', textAlign: 'center', padding: '16px 0' }}>
-                    {t('client.products.popup_no_ingredients')}
-                  </p>
+                  <p style={{ color: '#888', textAlign: 'center', padding: '16px 0' }}>{t('client.products.popup_no_ingredients')}</p>
                 )
               ) : (
                 detail?.subProducts && detail.subProducts.length > 0 ? (
@@ -243,9 +352,7 @@ export default function ProductList() {
                     </tbody>
                   </table>
                 ) : (
-                  <p style={{ color: '#888', textAlign: 'center', padding: '16px 0' }}>
-                    {t('client.products.popup_no_subproducts')}
-                  </p>
+                  <p style={{ color: '#888', textAlign: 'center', padding: '16px 0' }}>{t('client.products.popup_no_subproducts')}</p>
                 )
               )}
             </div>

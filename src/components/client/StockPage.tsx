@@ -16,12 +16,7 @@ interface StockRowState {
 function buildInitialRowState(entries: StockEntry[]): Record<number, StockRowState> {
   const state: Record<number, StockRowState> = {};
   for (const e of entries) {
-    state[e.ingredientId] = {
-      quantite: e.quantite !== null ? String(e.quantite) : '',
-      saving: false,
-      saved: false,
-      error: '',
-    };
+    state[e.ingredientId] = { quantite: e.quantite !== null ? String(e.quantite) : '', saving: false, saved: false, error: '' };
   }
   return state;
 }
@@ -29,20 +24,18 @@ function buildInitialRowState(entries: StockEntry[]): Record<number, StockRowSta
 interface StockMatrixProps {
   entries: StockEntry[];
   dateStock: string;
+  categoryFilter: string;
   onSave: (ingredientId: number, quantite: string, dateStock: string) => Promise<void>;
 }
 
-function StockMatrix({ entries, dateStock, onSave }: StockMatrixProps) {
+function StockMatrix({ entries, dateStock, categoryFilter, onSave }: StockMatrixProps) {
   const { t } = useTranslation();
   const [rows, setRows] = useState<Record<number, StockRowState>>(() => buildInitialRowState(entries));
 
-  useEffect(() => {
-    setRows(buildInitialRowState(entries));
-  }, [entries]);
+  useEffect(() => { setRows(buildInitialRowState(entries)); }, [entries]);
 
-  const updateRow = (id: number, value: string) => {
+  const updateRow = (id: number, value: string) =>
     setRows((prev) => ({ ...prev, [id]: { ...prev[id], quantite: value, saved: false, error: '' } }));
-  };
 
   const saveRow = async (id: number) => {
     const row = rows[id];
@@ -57,10 +50,14 @@ function StockMatrix({ entries, dateStock, onSave }: StockMatrixProps) {
     }
   };
 
-  if (entries.length === 0) return <p className="text-muted">{t('client.stock.empty_stock')}</p>;
+  const filtered = categoryFilter
+    ? entries.filter((e) => (e.categorie || t('client.ingredients_catalog.no_category')) === categoryFilter)
+    : entries;
+
+  if (filtered.length === 0) return <p className="text-muted">{t('common.no_result')}</p>;
 
   const groups: Record<string, StockEntry[]> = {};
-  for (const entry of entries) {
+  for (const entry of filtered) {
     const cat = entry.categorie || t('client.ingredients_catalog.no_category');
     if (!groups[cat]) groups[cat] = [];
     groups[cat].push(entry);
@@ -91,10 +88,7 @@ function StockMatrix({ entries, dateStock, onSave }: StockMatrixProps) {
                     <div className="stock-field">
                       <label>{t('client.stock.quantity')}</label>
                       <input
-                        type="number"
-                        min="0"
-                        step="0.001"
-                        placeholder="0"
+                        type="number" min="0" step="0.001" placeholder="0"
                         value={row.quantite}
                         onChange={(e) => updateRow(entry.ingredientId, e.target.value)}
                       />
@@ -105,11 +99,7 @@ function StockMatrix({ entries, dateStock, onSave }: StockMatrixProps) {
                     {row.saved ? (
                       <span className="stock-saved-badge">✓ {t('client.stock.saved')}</span>
                     ) : (
-                      <button
-                        className="btn btn-primary btn-sm"
-                        onClick={() => saveRow(entry.ingredientId)}
-                        disabled={row.saving}
-                      >
+                      <button className="btn btn-primary btn-sm" onClick={() => saveRow(entry.ingredientId)} disabled={row.saving}>
                         {row.saving ? '...' : t('client.stock.save')}
                       </button>
                     )}
@@ -128,19 +118,24 @@ interface ActivityStockSectionProps {
   label: string;
   activities: Activite[];
   dateStock: string;
-  prefix: string; // 'F' | 'D'
+  prefix: string;
+  isFranchise?: boolean;
   onSave: (activiteId: number, ingredientId: number, quantite: string, dateStock: string) => Promise<void>;
 }
 
-function ActivityStockSection({ label, activities, dateStock, prefix, onSave }: ActivityStockSectionProps) {
+function ActivityStockSection({ label, activities, dateStock, prefix, isFranchise, onSave }: ActivityStockSectionProps) {
   const { t } = useTranslation();
   const [selectedId, setSelectedId] = useState<number>(activities[0]?.id ?? 0);
   const [entries, setEntries] = useState<StockEntry[]>([]);
   const [loading, setLoading] = useState(false);
+  const [categoryFilter, setCategoryFilter] = useState('');
+  const [duplicating, setDuplicating] = useState(false);
+  const [dupMsg, setDupMsg] = useState('');
 
   const loadStock = useCallback(async (actId: number, date: string) => {
     setLoading(true);
     setEntries([]);
+    setCategoryFilter('');
     try {
       const { data } = await api.get(`/api/stock/entreprise/${actId}?date=${date}`);
       setEntries(data);
@@ -156,13 +151,34 @@ function ActivityStockSection({ label, activities, dateStock, prefix, onSave }: 
     await onSave(selectedId, ingredientId, quantite, ds);
   };
 
+  const handleDuplicate = async () => {
+    if (!window.confirm(t('client.stock.duplicate_confirm'))) return;
+    setDuplicating(true);
+    setDupMsg('');
+    try {
+      const { data } = await api.post(`/api/stock/entreprise/${selectedId}/duplicate-franchise?date=${dateStock}`);
+      setDupMsg(t('client.stock.duplicate_done', { count: data.duplicatedTo }));
+      setTimeout(() => setDupMsg(''), 4000);
+    } catch {
+      setDupMsg(t('common.error'));
+    }
+    setDuplicating(false);
+  };
+
+  // Categories that have at least one entry
+  const allCategories = Array.from(new Set(
+    entries.map((e) => e.categorie || t('client.ingredients_catalog.no_category'))
+  )).sort();
+
   return (
     <div style={{ marginBottom: 36 }}>
       <h2 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--primary)', marginBottom: 12 }}>{label}</h2>
-      <div style={{ marginBottom: 16 }}>
+
+      {/* Activity selector + category filter on same row */}
+      <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
         <select
           className="input"
-          style={{ maxWidth: 320 }}
+          style={{ maxWidth: 280 }}
           value={selectedId}
           onChange={(e) => setSelectedId(Number(e.target.value))}
         >
@@ -170,13 +186,47 @@ function ActivityStockSection({ label, activities, dateStock, prefix, onSave }: 
             <option key={a.id} value={a.id}>{prefix} · {a.nom}</option>
           ))}
         </select>
+
+        {allCategories.length > 1 && (
+          <select
+            className="input"
+            style={{ maxWidth: 220 }}
+            value={categoryFilter}
+            onChange={(e) => setCategoryFilter(e.target.value)}
+          >
+            <option value="">{t('client.catalogue_franchise.all_categories')}</option>
+            {allCategories.map((c) => <option key={c} value={c}>{c}</option>)}
+          </select>
+        )}
       </div>
+
       {loading ? (
         <p className="text-muted">{t('common.loading')}</p>
       ) : entries.length === 0 ? (
         <p className="text-muted">{t('client.stock.empty_stock')}</p>
       ) : (
-        <StockMatrix key={`${selectedId}-${dateStock}`} entries={entries} dateStock={dateStock} onSave={handleSave} />
+        <>
+          <StockMatrix
+            key={`${selectedId}-${dateStock}`}
+            entries={entries}
+            dateStock={dateStock}
+            categoryFilter={categoryFilter}
+            onSave={handleSave}
+          />
+          {isFranchise && activities.length > 1 && (
+            <div style={{ marginTop: 16, display: 'flex', alignItems: 'center', gap: 12 }}>
+              <button
+                className="btn btn-ghost btn-sm"
+                onClick={handleDuplicate}
+                disabled={duplicating}
+                style={{ border: '1px dashed var(--border)' }}
+              >
+                {duplicating ? '...' : `📋 ${t('client.stock.duplicate_franchise')}`}
+              </button>
+              {dupMsg && <span style={{ fontSize: '0.8rem', color: 'var(--success)' }}>{dupMsg}</span>}
+            </div>
+          )}
+        </>
       )}
     </div>
   );
@@ -190,11 +240,10 @@ export default function StockPage() {
   const today = todayStr();
   const [dateStock, setDateStock] = useState(today);
 
-  // Independant
   const [clientEntries, setClientEntries] = useState<StockEntry[]>([]);
   const [clientLoading, setClientLoading] = useState(false);
+  const [clientCategoryFilter, setClientCategoryFilter] = useState('');
 
-  // Entreprise
   const [typesSummary, setTypesSummary] = useState<ActiviteTypesSummary | null>(null);
   const [franchiseActivities, setFranchiseActivities] = useState<Activite[]>([]);
   const [distinctActivities, setDistinctActivities] = useState<Activite[]>([]);
@@ -202,6 +251,7 @@ export default function StockPage() {
 
   const loadClientStock = useCallback(async (date: string) => {
     setClientLoading(true);
+    setClientCategoryFilter('');
     try {
       const { data } = await api.get(`/api/stock/client?date=${date}`);
       setClientEntries(data);
@@ -224,7 +274,7 @@ export default function StockPage() {
       const all = activitesRes.data as Activite[];
       setFranchiseActivities(all.filter((a) => a.type === 'franchise'));
       setDistinctActivities(all.filter((a) => a.type === 'distincte' || a.type == null));
-    }).catch(() => { /* ignore */ }).finally(() => setActivitesLoading(false));
+    }).catch(() => {}).finally(() => setActivitesLoading(false));
   }, [isEntreprise]);
 
   const saveClientStock = async (ingredientId: number, quantite: string, ds: string) => {
@@ -240,6 +290,10 @@ export default function StockPage() {
       dateStock: ds,
     });
   };
+
+  const clientCategories = Array.from(new Set(
+    clientEntries.map((e) => e.categorie || t('client.ingredients_catalog.no_category'))
+  )).sort();
 
   return (
     <div className="page-content">
@@ -262,8 +316,31 @@ export default function StockPage() {
       {!isEntreprise && (
         clientLoading ? (
           <p className="text-muted">{t('common.loading')}</p>
+        ) : clientEntries.length === 0 ? (
+          <p className="text-muted">{t('client.stock.empty_stock')}</p>
         ) : (
-          <StockMatrix key={dateStock} entries={clientEntries} dateStock={dateStock} onSave={saveClientStock} />
+          <>
+            {clientCategories.length > 1 && (
+              <div style={{ marginBottom: 16 }}>
+                <select
+                  className="input"
+                  style={{ maxWidth: 220 }}
+                  value={clientCategoryFilter}
+                  onChange={(e) => setClientCategoryFilter(e.target.value)}
+                >
+                  <option value="">{t('client.catalogue_franchise.all_categories')}</option>
+                  {clientCategories.map((c) => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
+            )}
+            <StockMatrix
+              key={dateStock}
+              entries={clientEntries}
+              dateStock={dateStock}
+              categoryFilter={clientCategoryFilter}
+              onSave={saveClientStock}
+            />
+          </>
         )
       )}
 
@@ -279,6 +356,7 @@ export default function StockPage() {
                 activities={franchiseActivities}
                 dateStock={dateStock}
                 prefix="F"
+                isFranchise={true}
                 onSave={saveEntrepriseStock}
               />
             )}

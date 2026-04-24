@@ -183,7 +183,10 @@
       "add_utilisable": "Nouveau produit utilisable",
       "no_vendable_products": "Aucun produit vendable. Créez votre premier produit !",
       "no_utilisable_products_tab": "Aucun produit utilisable. Créez votre premier produit !",
-      "no_utilisable_products": "Aucun produit de type \"Utilisable\" disponible."
+      "no_utilisable_products": "Aucun produit de type \"Utilisable\" disponible.",
+      "all_franchise": "Franchise (toutes activités)",
+      "franchise_scope_hint": "Ces produits seront partagés par toutes les activités franchise.",
+      "distinct_scope_hint": "Ces produits appartiennent à l'activité {{name}}."
     },
     "profile": {
       "title": "Mon profil",
@@ -263,7 +266,10 @@
       "updated_at": "Mis à jour",
       "date_label": "Date du stock",
       "franchise_section": "Stock — Activités Franchise",
-      "distinct_section": "Stock — Activités Distinctes"
+      "distinct_section": "Stock — Activités Distinctes",
+      "duplicate_franchise": "Dupliquer vers toutes les activités franchise",
+      "duplicate_confirm": "Appliquer ces valeurs à toutes les autres activités franchise pour cette date ?",
+      "duplicate_done": "Dupliqué vers {{count}} activité(s)."
     }
   },
   "currency": "DT"

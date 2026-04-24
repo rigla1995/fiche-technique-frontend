@@ -183,7 +183,10 @@
       "add_utilisable": "New usable product",
       "no_vendable_products": "No sellable products yet. Create your first product!",
       "no_utilisable_products_tab": "No usable products yet. Create your first product!",
-      "no_utilisable_products": "No products of type \"Usable\" available."
+      "no_utilisable_products": "No products of type \"Usable\" available.",
+      "all_franchise": "Franchise (all activities)",
+      "franchise_scope_hint": "These products will be shared by all franchise activities.",
+      "distinct_scope_hint": "These products belong to the activity {{name}}."
     },
     "profile": {
       "title": "My profile",
@@ -263,7 +266,10 @@
       "updated_at": "Updated",
       "date_label": "Stock date",
       "franchise_section": "Stock — Franchise Activities",
-      "distinct_section": "Stock — Distinct Activities"
+      "distinct_section": "Stock — Distinct Activities",
+      "duplicate_franchise": "Duplicate to all franchise activities",
+      "duplicate_confirm": "Apply these values to all other franchise activities for this date?",
+      "duplicate_done": "Duplicated to {{count}} activity/activities."
     }
   },
   "currency": "TND"
