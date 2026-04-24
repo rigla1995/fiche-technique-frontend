@@ -13,7 +13,6 @@ export default function DistinctCatalogPage() {
   const [loadingActivites, setLoadingActivites] = useState(true);
   const [loadingIngredients, setLoadingIngredients] = useState(false);
   const [toggling, setToggling] = useState<number | null>(null);
-  const [priceEdits, setPriceEdits] = useState<Record<number, string>>({});
   const [filterCategory, setFilterCategory] = useState('');
   const [filterName, setFilterName] = useState('');
 
@@ -32,11 +31,6 @@ export default function DistinctCatalogPage() {
     try {
       const { data } = await api.get(`/api/entreprise/activites/${actId}/ingredients`);
       setIngredients(data);
-      const edits: Record<number, string> = {};
-      for (const ing of data as ActiviteIngredient[]) {
-        if (ing.prixUnitaire !== null) edits[ing.id] = String(ing.prixUnitaire);
-      }
-      setPriceEdits(edits);
     } catch { /* ignore */ }
     setLoadingIngredients(false);
   }, []);
@@ -55,16 +49,6 @@ export default function DistinctCatalogPage() {
     } finally {
       setToggling(null);
     }
-  };
-
-  const savePrice = async (ingId: number) => {
-    if (selectedId === null) return;
-    const raw = priceEdits[ingId];
-    const prixUnitaire = raw !== undefined && raw !== '' ? parseFloat(raw) : null;
-    try {
-      await api.put(`/api/entreprise/activites/${selectedId}/ingredients/${ingId}/price`, { prixUnitaire });
-      setIngredients((prev) => prev.map((i) => (i.id === ingId ? { ...i, prixUnitaire } : i)));
-    } catch { /* ignore */ }
   };
 
   const allCategories = Array.from(new Set(
@@ -155,7 +139,6 @@ export default function DistinctCatalogPage() {
                         <th style={{ width: 40 }}></th>
                         <th>{t('common.name')}</th>
                         <th>{t('common.unit')}</th>
-                        <th style={{ width: 180 }}>{t('client.catalogue_distinct.price_per_unit')} ({t('currency')})</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -173,18 +156,6 @@ export default function DistinctCatalogPage() {
                           </td>
                           <td><span style={{ fontWeight: ing.selected ? 600 : undefined }}>{ing.nom}</span></td>
                           <td style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{ing.unite}</td>
-                          <td>
-                            <input
-                              type="number"
-                              min="0"
-                              step="0.001"
-                              placeholder={ing.prix !== null ? String(ing.prix) : '0.000'}
-                              value={priceEdits[ing.id] ?? ''}
-                              onChange={(e) => setPriceEdits((p) => ({ ...p, [ing.id]: e.target.value }))}
-                              onBlur={() => savePrice(ing.id)}
-                              style={{ width: 110, padding: '4px 6px', border: '1px solid var(--border)', borderRadius: 4, fontSize: '0.85rem' }}
-                            />
-                          </td>
                         </tr>
                       ))}
                     </tbody>

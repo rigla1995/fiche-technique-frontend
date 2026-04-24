@@ -4,8 +4,8 @@ import api from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 import type { Activite, ActiviteIngredient } from '../../types';
 
-// ingId → actId → { selected, prixUnitaire }
-type SelectionMap = Record<number, Record<number, { selected: boolean; prixUnitaire: number | null }>>;
+// ingId → actId → { selected }
+type SelectionMap = Record<number, Record<number, { selected: boolean }>>;
 
 export default function FranchiseCatalogPage() {
   const { t } = useTranslation();
@@ -14,7 +14,6 @@ export default function FranchiseCatalogPage() {
   const [activites, setActivites] = useState<Activite[]>([]);
   const [allIngredients, setAllIngredients] = useState<ActiviteIngredient[]>([]); // full list from first activity
   const [selectionMap, setSelectionMap] = useState<SelectionMap>({});
-  const [priceEdits, setPriceEdits] = useState<Record<number, string>>({});
   const [loading, setLoading] = useState(true);
   const [toggling, setToggling] = useState<string | null>(null); // `${ingId}-${actId}`
   const [filterCategory, setFilterCategory] = useState('');
@@ -44,24 +43,10 @@ export default function FranchiseCatalogPage() {
       for (const { actId, data } of results) {
         for (const ing of data) {
           if (!map[ing.id]) map[ing.id] = {};
-          map[ing.id][actId] = { selected: ing.selected, prixUnitaire: ing.prixUnitaire };
+          map[ing.id][actId] = { selected: ing.selected };
         }
       }
       setSelectionMap(map);
-
-      // Init price edits: use prix_unitaire from first selected activity, or base price
-      const edits: Record<number, string> = {};
-      for (const ing of results[0].data) {
-        // Find the first activity that has a prix_unitaire for this ingredient
-        for (const { data } of results) {
-          const match = data.find((i) => i.id === ing.id);
-          if (match?.prixUnitaire !== null && match?.prixUnitaire !== undefined) {
-            edits[ing.id] = String(match.prixUnitaire);
-            break;
-          }
-        }
-      }
-      setPriceEdits(edits);
     } catch { /* ignore */ }
     setLoading(false);
   }, []);
@@ -72,37 +57,15 @@ export default function FranchiseCatalogPage() {
     const key = `${ingId}-${actId}`;
     setToggling(key);
     try {
-      const prixUnitaire = priceEdits[ingId] ? parseFloat(priceEdits[ingId]) : null;
-      const { data } = await api.post(`/api/entreprise/activites/${actId}/ingredients/${ingId}/select`, { prixUnitaire });
+      const { data } = await api.post(`/api/entreprise/activites/${actId}/ingredients/${ingId}/select`);
       setSelectionMap((prev) => ({
         ...prev,
-        [ingId]: { ...(prev[ingId] || {}), [actId]: { selected: data.selected, prixUnitaire } },
+        [ingId]: { ...(prev[ingId] || {}), [actId]: { selected: data.selected } },
       }));
       if (data.selected && user?.onboardingStep === 3) await advanceOnboarding(0);
     } finally {
       setToggling(null);
     }
-  };
-
-  const savePrice = async (ingId: number) => {
-    const raw = priceEdits[ingId];
-    const prixUnitaire = raw !== undefined && raw !== '' ? parseFloat(raw) : null;
-    // Save to all currently selected activities for this ingredient
-    const selectedActIds = activites
-      .filter((a) => selectionMap[ingId]?.[a.id]?.selected)
-      .map((a) => a.id);
-    for (const actId of selectedActIds) {
-      try {
-        await api.put(`/api/entreprise/activites/${actId}/ingredients/${ingId}/price`, { prixUnitaire });
-      } catch { /* ignore */ }
-    }
-    setSelectionMap((prev) => {
-      const updated = { ...prev[ingId] };
-      for (const actId of selectedActIds) {
-        updated[actId] = { ...updated[actId], prixUnitaire };
-      }
-      return { ...prev, [ingId]: updated };
-    });
   };
 
   const allCategories = Array.from(new Set(
@@ -158,12 +121,11 @@ export default function FranchiseCatalogPage() {
                 🏷️ {cat} <span style={{ fontWeight: 400, color: 'var(--text-muted)', fontSize: '0.78rem' }}>({items.length})</span>
               </h2>
               <div style={{ overflowX: 'auto' }}>
-                <table className="table card" style={{ minWidth: 400 + activites.length * 120 }}>
+                <table className="table card" style={{ minWidth: 280 + activites.length * 120 }}>
                   <thead>
                     <tr>
                       <th>{t('common.name')}</th>
                       <th>{t('common.unit')}</th>
-                      <th style={{ width: 160 }}>{t('common.price')} ({t('currency')})</th>
                       {activites.map((a) => (
                         <th key={a.id} style={{ width: 110, textAlign: 'center', fontSize: '0.78rem' }}>
                           {a.nom}
@@ -179,30 +141,19 @@ export default function FranchiseCatalogPage() {
                         <tr key={ing.id} style={{ background: anySelected ? 'var(--primary-light, #eef2ff)' : undefined }}>
                           <td><span style={{ fontWeight: anySelected ? 600 : undefined }}>{ing.nom}</span></td>
                           <td style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{ing.unite}</td>
-                          <td>
-                            <input
-                              type="number"
-                              min="0"
-                              step="0.001"
-                              placeholder={ing.prix !== null ? String(ing.prix) : '0.000'}
-                              value={priceEdits[ing.id] ?? ''}
-                              onChange={(e) => setPriceEdits((p) => ({ ...p, [ing.id]: e.target.value }))}
-                              onBlur={() => savePrice(ing.id)}
-                              style={{ width: 100, padding: '4px 6px', border: '1px solid var(--border)', borderRadius: 4, fontSize: '0.85rem' }}
-                            />
-                          </td>
                           {activites.map((a) => {
                             const sel = ingSelections[a.id];
                             const key = `${ing.id}-${a.id}`;
                             return (
                               <td key={a.id} style={{ textAlign: 'center' }}>
-                                <input
-                                  type="checkbox"
-                                  checked={sel?.selected ?? false}
+                                <button
+                                  className="btn btn-ghost btn-sm"
+                                  style={{ fontSize: '1.1rem', padding: '2px 6px', color: sel?.selected ? 'var(--success)' : 'var(--text-muted)' }}
                                   disabled={toggling === key}
-                                  onChange={() => toggleIngredient(ing.id, a.id)}
-                                  style={{ width: 18, height: 18, cursor: 'pointer', accentColor: 'var(--primary)' }}
-                                />
+                                  onClick={() => toggleIngredient(ing.id, a.id)}
+                                >
+                                  {toggling === key ? '…' : sel?.selected ? '✓' : '○'}
+                                </button>
                               </td>
                             );
                           })}

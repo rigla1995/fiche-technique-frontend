@@ -9,6 +9,7 @@ const todayStr = () => new Date().toISOString().split('T')[0];
 
 interface StockRowState {
   quantite: string;
+  prixUnitaire: string;
   saving: boolean;
   saved: boolean;
   error: string;
@@ -17,7 +18,11 @@ interface StockRowState {
 function buildInitialRowState(entries: StockEntry[]): Record<number, StockRowState> {
   const state: Record<number, StockRowState> = {};
   for (const e of entries) {
-    state[e.ingredientId] = { quantite: e.quantite !== null ? String(e.quantite) : '', saving: false, saved: false, error: '' };
+    state[e.ingredientId] = {
+      quantite: e.quantite !== null ? String(e.quantite) : '',
+      prixUnitaire: e.prixUnitaire !== null ? String(e.prixUnitaire) : '',
+      saving: false, saved: false, error: '',
+    };
   }
   return state;
 }
@@ -26,7 +31,7 @@ interface StockMatrixProps {
   entries: StockEntry[];
   dateStock: string;
   categoryFilter: string;
-  onSave: (ingredientId: number, quantite: string, dateStock: string) => Promise<void>;
+  onSave: (ingredientId: number, quantite: string, prixUnitaire: string, dateStock: string) => Promise<void>;
 }
 
 function StockMatrix({ entries, dateStock, categoryFilter, onSave }: StockMatrixProps) {
@@ -35,15 +40,15 @@ function StockMatrix({ entries, dateStock, categoryFilter, onSave }: StockMatrix
 
   useEffect(() => { setRows(buildInitialRowState(entries)); }, [entries]);
 
-  const updateRow = (id: number, value: string) =>
-    setRows((prev) => ({ ...prev, [id]: { ...prev[id], quantite: value, saved: false, error: '' } }));
+  const updateRow = (id: number, field: 'quantite' | 'prixUnitaire', value: string) =>
+    setRows((prev) => ({ ...prev, [id]: { ...prev[id], [field]: value, saved: false, error: '' } }));
 
   const saveRow = async (id: number) => {
     const row = rows[id];
     if (!row) return;
     setRows((prev) => ({ ...prev, [id]: { ...prev[id], saving: true, error: '' } }));
     try {
-      await onSave(id, row.quantite, dateStock);
+      await onSave(id, row.quantite, row.prixUnitaire, dateStock);
       setRows((prev) => ({ ...prev, [id]: { ...prev[id], saving: false, saved: true } }));
       setTimeout(() => setRows((prev) => ({ ...prev, [id]: { ...prev[id], saved: false } })), 2000);
     } catch {
@@ -73,25 +78,28 @@ function StockMatrix({ entries, dateStock, categoryFilter, onSave }: StockMatrix
           </h3>
           <div className="stock-grid">
             {items.map((entry) => {
-              const row = rows[entry.ingredientId] ?? { quantite: '', saving: false, saved: false, error: '' };
+              const row = rows[entry.ingredientId] ?? { quantite: '', prixUnitaire: '', saving: false, saved: false, error: '' };
               return (
                 <div key={entry.ingredientId} className="stock-card">
                   <div className="stock-card-header">
                     <span className="stock-ingredient-name">{entry.nom}</span>
                     <span className="stock-unit-badge">{entry.unite}</span>
                   </div>
-                  {entry.prixUnitaire !== null && (
-                    <div className="stock-price">
-                      {t('client.stock.unit_price')}: <strong>{entry.prixUnitaire.toFixed(3)} {t('currency')}</strong>
-                    </div>
-                  )}
                   <div className="stock-fields">
                     <div className="stock-field">
                       <label>{t('client.stock.quantity')}</label>
                       <input
                         type="number" min="0" step="0.001" placeholder="0"
                         value={row.quantite}
-                        onChange={(e) => updateRow(entry.ingredientId, e.target.value)}
+                        onChange={(e) => updateRow(entry.ingredientId, 'quantite', e.target.value)}
+                      />
+                    </div>
+                    <div className="stock-field">
+                      <label>{t('client.stock.unit_price')} ({t('currency')})</label>
+                      <input
+                        type="number" min="0" step="0.001" placeholder="0.000"
+                        value={row.prixUnitaire}
+                        onChange={(e) => updateRow(entry.ingredientId, 'prixUnitaire', e.target.value)}
                       />
                     </div>
                   </div>
@@ -121,7 +129,7 @@ interface ActivityStockSectionProps {
   dateStock: string;
   prefix: string;
   isFranchise?: boolean;
-  onSave: (activiteId: number, ingredientId: number, quantite: string, dateStock: string) => Promise<void>;
+  onSave: (activiteId: number, ingredientId: number, quantite: string, prixUnitaire: string, dateStock: string) => Promise<void>;
 }
 
 function ActivityStockSection({ label, activities, dateStock, prefix, isFranchise, onSave }: ActivityStockSectionProps) {
@@ -148,8 +156,8 @@ function ActivityStockSection({ label, activities, dateStock, prefix, isFranchis
     if (selectedId) loadStock(selectedId, dateStock);
   }, [selectedId, dateStock, loadStock]);
 
-  const handleSave = async (ingredientId: number, quantite: string, ds: string) => {
-    await onSave(selectedId, ingredientId, quantite, ds);
+  const handleSave = async (ingredientId: number, quantite: string, prixUnitaire: string, ds: string) => {
+    await onSave(selectedId, ingredientId, quantite, prixUnitaire, ds);
   };
 
   const handleDuplicate = async () => {
@@ -281,16 +289,18 @@ export default function StockPage() {
     }).catch(() => {}).finally(() => setActivitesLoading(false));
   }, [isEntreprise]);
 
-  const saveClientStock = async (ingredientId: number, quantite: string, ds: string) => {
+  const saveClientStock = async (ingredientId: number, quantite: string, prixUnitaire: string, ds: string) => {
     await api.put(`/api/stock/client/${ingredientId}`, {
       quantite: quantite ? parseFloat(quantite) : null,
+      prixUnitaire: prixUnitaire ? parseFloat(prixUnitaire) : null,
       dateStock: ds,
     });
   };
 
-  const saveEntrepriseStock = async (activiteId: number, ingredientId: number, quantite: string, ds: string) => {
+  const saveEntrepriseStock = async (activiteId: number, ingredientId: number, quantite: string, prixUnitaire: string, ds: string) => {
     await api.put(`/api/stock/entreprise/${activiteId}/${ingredientId}`, {
       quantite: quantite ? parseFloat(quantite) : null,
+      prixUnitaire: prixUnitaire ? parseFloat(prixUnitaire) : null,
       dateStock: ds,
     });
   };
