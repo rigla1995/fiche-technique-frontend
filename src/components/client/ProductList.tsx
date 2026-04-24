@@ -118,10 +118,10 @@ export default function ProductList() {
     }
   };
 
-  // Build the URL for add/edit that includes activity context
-  const actCtxParam = selectedActCtx
-    ? `&actCtx=${encodeURIComponent(selectedActCtx)}`
-    : '';
+  // Query param fragment for activity context (includes leading & for appending to existing params)
+  const actCtxQs = selectedActCtx ? `&actCtx=${encodeURIComponent(selectedActCtx)}` : '';
+  // Standalone query string for edit links (no other params before it)
+  const actCtxParam = selectedActCtx ? `?actCtx=${encodeURIComponent(selectedActCtx)}` : '';
 
   const byTab = products.filter((p) => p.type === tab);
   const filtered = byTab.filter((p) => p.name.toLowerCase().includes(search.toLowerCase()));
@@ -129,8 +129,8 @@ export default function ProductList() {
   const emptyKey = isVendable ? 'client.products.no_vendable_products' : 'client.products.no_utilisable_products_tab';
   const addKey = isVendable ? 'client.products.add_vendable' : 'client.products.add_utilisable';
   const addPath = isVendable
-    ? `/client/products/new?type=vendable${actCtxParam}`
-    : `/client/products/new?type=utilisable${actCtxParam}`;
+    ? `/client/products/new?type=vendable${actCtxQs}`
+    : `/client/products/new?type=utilisable${actCtxQs}`;
 
   // Activity selector label
   const getSelectedLabel = () => {
@@ -271,7 +271,7 @@ export default function ProductList() {
                     <span className="cost-badge">{(p.totalCost || 0).toFixed(3)} {t('currency')}</span>
                   </td>
                   <td className="actions-cell">
-                    <Link to={`/client/products/${p.id}/edit?${actCtxParam}`} className="btn btn-ghost btn-sm">{t('common.edit')}</Link>
+                    <Link to={`/client/products/${p.id}/edit${actCtxParam}`} className="btn btn-ghost btn-sm">{t('common.edit')}</Link>
                     <button
                       className="btn btn-success btn-sm"
                       onClick={() => handleExport(p.id, p.name)}
