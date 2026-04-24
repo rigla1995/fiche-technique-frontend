@@ -111,7 +111,7 @@ export default function FranchiseCatalogPage() {
 
   return (
     <div className="page-content">
-      <h1>{t('nav.catalogue_franchise')}</h1>
+      <h1 style={{ marginBottom: 20 }}>{t('nav.catalogue_franchise')}</h1>
 
       {activites.length === 0 ? (
         <p className="text-muted">{t('client.catalogue_franchise.no_activities')}</p>

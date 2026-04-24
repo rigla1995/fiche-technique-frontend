@@ -4,8 +4,10 @@ import api from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 import type { Activite, ActiviteIngredient } from '../../types';
 
-type ActiviteForm = { nom: string; franchiseName: string; adresse: string; telephone: string; email: string };
-const emptyForm = (): ActiviteForm => ({ nom: '', franchiseName: '', adresse: '', telephone: '', email: '' });
+type ActiviteForm = { nom: string; adresse: string; telephone: string; email: string };
+const emptyForm = (): ActiviteForm => ({ nom: '', adresse: '', telephone: '', email: '' });
+type FranchiseStepForm = { telephone: string; email: string; adresse: string };
+const emptyFranchiseStep = (): FranchiseStepForm => ({ telephone: '', email: '', adresse: '' });
 
 interface Props {
   onCreated?: () => void;
@@ -29,6 +31,10 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
   const [error, setError] = useState('');
   const [msg, setMsg] = useState('');
   const [isDuplicate, setIsDuplicate] = useState(false);
+  // Franchise wizard state
+  const [franchiseName, setFranchiseName] = useState('');
+  const [franchiseStep, setFranchiseStep] = useState(0);
+  const [franchiseForms, setFranchiseForms] = useState<FranchiseStepForm[]>([]);
   // Ingredient assignment modal
   const [ingredientsActivite, setIngredientsActivite] = useState<Activite | null>(null);
   const [ingredients, setIngredients] = useState<ActiviteIngredient[]>([]);
@@ -52,7 +58,10 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
     setIsDuplicate(false);
     setForm(emptyForm());
     setMemeActivite(null);
-    setNombreActivites('1');
+    setNombreActivites('2');
+    setFranchiseName('');
+    setFranchiseStep(0);
+    setFranchiseForms([emptyFranchiseStep(), emptyFranchiseStep()]);
     setError('');
     setShowForm(true);
   };
@@ -60,7 +69,7 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
   const openEdit = (act: Activite) => {
     setEditingId(act.id);
     setIsDuplicate(false);
-    setForm({ nom: act.nom, franchiseName: '', adresse: act.adresse || '', telephone: act.telephone || '', email: act.email || '' });
+    setForm({ nom: act.nom, adresse: act.adresse || '', telephone: act.telephone || '', email: act.email || '' });
     setMemeActivite(null);
     setNombreActivites('1');
     setError('');
@@ -70,7 +79,7 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
   const openDuplicate = (act: Activite) => {
     setEditingId(null);
     setIsDuplicate(true);
-    setForm({ nom: act.nom, franchiseName: '', adresse: '', telephone: '', email: '' });
+    setForm({ nom: act.nom, adresse: '', telephone: '', email: '' });
     setMemeActivite(null);
     setNombreActivites('1');
     setError('');
@@ -84,43 +93,74 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
     setError('');
   };
 
+  const franchiseCount = Math.max(0, parseInt(nombreActivites) || 0);
+  const franchiseUnlocked = isFranchise && !editingId && !isDuplicate && franchiseName.trim().length > 0 && franchiseCount > 1;
+
+  const handleNombreActivitesChange = (val: string) => {
+    setNombreActivites(val);
+    const n = Math.max(0, parseInt(val) || 0);
+    setFranchiseForms((prev) => {
+      if (n <= prev.length) return prev.slice(0, n);
+      return [...prev, ...Array.from({ length: n - prev.length }, emptyFranchiseStep)];
+    });
+    setFranchiseStep((s) => Math.min(s, Math.max(0, n - 1)));
+  };
+
+  const updateFranchiseForm = (field: keyof FranchiseStepForm, value: string) => {
+    setFranchiseForms((prev) => prev.map((f, i) => i === franchiseStep ? { ...f, [field]: value } : f));
+  };
+
+  const validateFranchiseStep = (f: FranchiseStepForm | undefined): string | null => {
+    if (!f) return t('common.error');
+    if (!f.telephone.trim()) return t('validation.phone_required');
+    if (!TUNISIAN_PHONE.test(f.telephone.replace(/\s/g, ''))) return t('validation.phone_invalid');
+    if (!f.adresse.trim()) return t('validation.address_required');
+    return null;
+  };
+
+  const handleFranchiseNext = () => {
+    const err = validateFranchiseStep(franchiseForms[franchiseStep]);
+    if (err) { setError(err); return; }
+    setError('');
+    setFranchiseStep((s) => s + 1);
+  };
+
+  const handleFranchiseSave = async () => {
+    const err = validateFranchiseStep(franchiseForms[franchiseStep]);
+    if (err) { setError(err); return; }
+    if (!franchiseName.trim()) { setError(t('validation.name_required')); return; }
+    setSaving(true);
+    setError('');
+    try {
+      const isFirst = activites.length === 0;
+      const fn = franchiseName.trim();
+      for (let i = 0; i < franchiseForms.length; i++) {
+        const f = franchiseForms[i];
+        await api.post('/api/entreprise/activites', {
+          nom: `${fn} ${i + 1}`,
+          franchiseName: fn,
+          memeActivite: true,
+          telephone: f.telephone,
+          email: f.email || undefined,
+          adresse: f.adresse,
+        });
+      }
+      setMsg(t('client.entreprise.activity_created'));
+      if (onCreated) onCreated();
+      if (isFirst && user?.onboardingStep === 2) await advanceOnboarding(3);
+      setTimeout(() => setMsg(''), 3000);
+      closeForm();
+      load();
+    } catch (err: unknown) {
+      const errMsg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      setError(errMsg || t('common.error'));
+    }
+    setSaving(false);
+  };
+
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (isFranchise && !editingId && !isDuplicate) {
-      // Franchise batch creation: franchiseName + count
-      if (!form.franchiseName.trim()) { setError(t('validation.name_required')); return; }
-      if (form.telephone && !TUNISIAN_PHONE.test(form.telephone.replace(/\s/g, ''))) {
-        setError(t('validation.phone_invalid'));
-        return;
-      }
-      setSaving(true);
-      setError('');
-      try {
-        const isFirst = activites.length === 0;
-        await api.post('/api/entreprise/activites', {
-          franchiseName: form.franchiseName.trim(),
-          nombreActivites,
-          memeActivite: true,
-          email: form.email || undefined,
-          telephone: form.telephone || undefined,
-          adresse: form.adresse || undefined,
-        });
-        setMsg(t('client.entreprise.activity_created'));
-        if (onCreated) onCreated();
-        if (isFirst && user?.onboardingStep === 2) await advanceOnboarding(3);
-        setTimeout(() => setMsg(''), 3000);
-        closeForm();
-        load();
-      } catch (err: unknown) {
-        const errMsg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
-        setError(errMsg || t('common.error'));
-      }
-      setSaving(false);
-      return;
-    }
-
-    // Single form path (edit, duplicate, or distinct)
+    // Only handles edit, duplicate, and distinct creation (franchise uses handleFranchiseSave)
     if (!form.nom.trim()) { setError(t('validation.name_required')); return; }
     if (form.telephone && !TUNISIAN_PHONE.test(form.telephone.replace(/\s/g, ''))) {
       setError(t('validation.phone_invalid'));
@@ -273,47 +313,87 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                 </div>
               )}
 
-              {/* Franchise creation: name + count */}
+              {/* Franchise creation wizard */}
               {isFranchise && !editingId && !isDuplicate && (
                 <>
+                  {/* Step 1: name + count — always visible once franchise selected */}
                   <div className="form-field" style={{ marginBottom: 12 }}>
                     <label>{t('client.entreprise.franchise_name')} *</label>
                     <input
                       type="text"
                       placeholder={t('client.entreprise.franchise_name_placeholder')}
-                      value={form.franchiseName}
-                      onChange={(e) => setForm((f) => ({ ...f, franchiseName: e.target.value }))}
+                      value={franchiseName}
+                      onChange={(e) => setFranchiseName(e.target.value)}
                     />
                   </div>
-                  <div className="form-field" style={{ marginBottom: 12 }}>
-                    <label>{t('client.entreprise.franchise_count')}</label>
+                  <div className="form-field" style={{ marginBottom: 16 }}>
+                    <label>{t('client.entreprise.franchise_count')} * <span style={{ fontWeight: 400, color: 'var(--text-muted)', fontSize: '0.8rem' }}>(min. 2)</span></label>
                     <input
                       type="number"
-                      min="1"
+                      min="2"
                       max="20"
                       value={nombreActivites}
-                      onChange={(e) => setNombreActivites(e.target.value)}
+                      onChange={(e) => handleNombreActivitesChange(e.target.value)}
                       style={{ width: 80 }}
                     />
                   </div>
+
+                  {/* Per-activity step form — unlocked when franchiseName + count > 1 */}
+                  {franchiseUnlocked && (
+                    <div style={{ borderTop: '1px solid var(--border)', paddingTop: 14, marginTop: 4 }}>
+                      <p style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--primary)', marginBottom: 12 }}>
+                        {t('client.entreprise.step_indicator', { current: franchiseStep + 1, total: franchiseCount })}
+                      </p>
+                      <div className="form-field" style={{ marginBottom: 12 }}>
+                        <label>{t('client.entreprise.activity_nom')}</label>
+                        <input
+                          type="text"
+                          value={`${franchiseName.trim()} ${franchiseStep + 1}`}
+                          disabled
+                          style={{ background: 'var(--surface)', color: 'var(--text-muted)' }}
+                        />
+                      </div>
+                      <div className="form-field" style={{ marginBottom: 12 }}>
+                        <label>{t('client.entreprise.activity_telephone')} * <span style={{ fontWeight: 400, color: 'var(--text-muted)', fontSize: '0.8rem' }}>{t('validation.phone_hint')}</span></label>
+                        <input
+                          type="text"
+                          placeholder={t('validation.phone_placeholder')}
+                          value={franchiseForms[franchiseStep]?.telephone ?? ''}
+                          onChange={(e) => updateFranchiseForm('telephone', e.target.value)}
+                        />
+                      </div>
+                      <div className="form-field" style={{ marginBottom: 12 }}>
+                        <label>{t('client.entreprise.activity_email')}</label>
+                        <input
+                          type="email"
+                          value={franchiseForms[franchiseStep]?.email ?? ''}
+                          onChange={(e) => updateFranchiseForm('email', e.target.value)}
+                        />
+                      </div>
+                      <div className="form-field" style={{ marginBottom: 12 }}>
+                        <label>{t('client.entreprise.activity_adresse')} *</label>
+                        <textarea
+                          value={franchiseForms[franchiseStep]?.adresse ?? ''}
+                          onChange={(e) => updateFranchiseForm('adresse', e.target.value)}
+                          rows={2}
+                        />
+                      </div>
+                    </div>
+                  )}
                 </>
               )}
 
-              {/* Distinct or edit: single name field */}
+              {/* Distinct or edit: single name + contact fields */}
               {(!isFranchise || editingId || isDuplicate) && (memeActivite !== null || editingId || isDuplicate) && (
-                <div className="form-field" style={{ marginBottom: 12 }}>
-                  <label>{t('client.entreprise.activity_nom')} *</label>
-                  <input
-                    type="text"
-                    value={form.nom}
-                    onChange={(e) => setForm((f) => ({ ...f, nom: e.target.value }))}
-                  />
-                </div>
-              )}
-
-              {/* Shared contact fields */}
-              {(memeActivite !== null || editingId || isDuplicate) && (
                 <>
+                  <div className="form-field" style={{ marginBottom: 12 }}>
+                    <label>{t('client.entreprise.activity_nom')} *</label>
+                    <input
+                      type="text"
+                      value={form.nom}
+                      onChange={(e) => setForm((f) => ({ ...f, nom: e.target.value }))}
+                    />
+                  </div>
                   <div className="form-field" style={{ marginBottom: 12 }}>
                     <label>{t('client.entreprise.activity_email')}</label>
                     <input
@@ -345,13 +425,30 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
 
               <div className="modal-footer">
                 <button type="button" className="btn btn-secondary" onClick={closeForm}>{t('common.cancel')}</button>
-                <button
-                  type="submit"
-                  className="btn btn-primary"
-                  disabled={saving || memeActivite === null && !editingId && !isDuplicate}
-                >
-                  {saving ? t('common.loading') : t('common.save')}
-                </button>
+
+                {/* Franchise wizard navigation */}
+                {isFranchise && !editingId && !isDuplicate ? (
+                  <>
+                    {franchiseUnlocked && franchiseStep > 0 && (
+                      <button type="button" className="btn btn-secondary" onClick={() => { setFranchiseStep((s) => s - 1); setError(''); }}>
+                        {t('client.entreprise.previous')}
+                      </button>
+                    )}
+                    {franchiseUnlocked && franchiseStep < franchiseCount - 1 ? (
+                      <button type="button" className="btn btn-primary" onClick={handleFranchiseNext} disabled={saving}>
+                        {t('client.entreprise.next')}
+                      </button>
+                    ) : (
+                      <button type="button" className="btn btn-primary" onClick={franchiseUnlocked ? handleFranchiseSave : undefined} disabled={saving || !franchiseUnlocked}>
+                        {saving ? t('common.loading') : t('common.save')}
+                      </button>
+                    )}
+                  </>
+                ) : (
+                  <button type="submit" className="btn btn-primary" disabled={saving || (memeActivite === null && !editingId && !isDuplicate)}>
+                    {saving ? t('common.loading') : t('common.save')}
+                  </button>
+                )}
               </div>
             </form>
           </div>

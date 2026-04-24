@@ -73,7 +73,9 @@
     "password_digit": "Au moins un chiffre",
     "password_special": "Au moins un caractère spécial (@$!%*?&)",
     "passwords_mismatch": "Les mots de passe ne correspondent pas",
-    "current_password_required": "Mot de passe actuel requis"
+    "current_password_required": "Mot de passe actuel requis",
+    "phone_required": "Le téléphone est obligatoire (format tunisien requis)",
+    "address_required": "L'adresse est obligatoire"
   },
   "admin": {
     "title": "Super Administration",

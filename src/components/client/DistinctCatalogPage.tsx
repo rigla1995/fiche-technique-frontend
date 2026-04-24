@@ -71,7 +71,7 @@ export default function DistinctCatalogPage() {
 
   return (
     <div className="page-content">
-      <h1>{t('nav.catalogue_distinct')}</h1>
+      <h1 style={{ marginBottom: 20 }}>{t('nav.catalogue_distinct')}</h1>
 
       {activites.length === 0 ? (
         <p className="text-muted">{t('client.catalogue_distinct.no_activities')}</p>

@@ -73,7 +73,9 @@
     "password_digit": "At least one digit",
     "password_special": "At least one special character (@$!%*?&)",
     "passwords_mismatch": "Passwords do not match",
-    "current_password_required": "Current password is required"
+    "current_password_required": "Current password is required",
+    "phone_required": "Phone is required (Tunisian format)",
+    "address_required": "Address is required"
   },
   "admin": {
     "title": "Super Administration",
