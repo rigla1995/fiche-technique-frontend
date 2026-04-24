@@ -118,11 +118,11 @@ export default function FranchiseCatalogPage() {
       ) : (
         <>
           {/* Single filter row: franchise group + category + search */}
-          <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap', alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
             {groupNames.length > 1 && (
               <select
                 className="input"
-                style={{ minWidth: 160, flex: '0 0 auto' }}
+                style={{ maxWidth: 200 }}
                 value={selectedGroup}
                 onChange={(e) => { setSelectedGroup(e.target.value); setFilterCategory(''); setFilterName(''); }}
               >
@@ -131,7 +131,7 @@ export default function FranchiseCatalogPage() {
             )}
             <select
               className="input"
-              style={{ minWidth: 160, flex: '0 0 auto' }}
+              style={{ maxWidth: 200 }}
               value={filterCategory}
               onChange={(e) => setFilterCategory(e.target.value)}
             >
@@ -141,7 +141,7 @@ export default function FranchiseCatalogPage() {
             <input
               type="text"
               className="input"
-              style={{ minWidth: 160, flex: '1 1 auto', maxWidth: 280 }}
+              style={{ minWidth: 140, flex: '1 1 auto', maxWidth: 220 }}
               placeholder={t('common.search') + '…'}
               value={filterName}
               onChange={(e) => setFilterName(e.target.value)}

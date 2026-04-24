@@ -78,10 +78,10 @@ export default function DistinctCatalogPage() {
       ) : (
         <>
           {/* Single filter row: activity + category + search */}
-          <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap', alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
             <select
               className="input"
-              style={{ minWidth: 180, flex: '0 0 auto' }}
+              style={{ maxWidth: 220 }}
               value={selectedId ?? ''}
               onChange={(e) => { setSelectedId(Number(e.target.value)); setFilterCategory(''); setFilterName(''); }}
             >
@@ -89,7 +89,7 @@ export default function DistinctCatalogPage() {
             </select>
             <select
               className="input"
-              style={{ minWidth: 160, flex: '0 0 auto' }}
+              style={{ maxWidth: 200 }}
               value={filterCategory}
               onChange={(e) => setFilterCategory(e.target.value)}
             >
@@ -99,7 +99,7 @@ export default function DistinctCatalogPage() {
             <input
               type="text"
               className="input"
-              style={{ minWidth: 160, flex: '1 1 auto', maxWidth: 280 }}
+              style={{ minWidth: 140, flex: '1 1 auto', maxWidth: 220 }}
               placeholder={t('common.search') + '…'}
               value={filterName}
               onChange={(e) => setFilterName(e.target.value)}
