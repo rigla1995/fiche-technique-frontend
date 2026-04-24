@@ -142,9 +142,10 @@ export default function FicheTechniqueTab({
           .filter((p) => p.prixUnitaire !== '' && !isNaN(parseFloat(p.prixUnitaire)))
           .map((p) => ({ ingredientId: p.ingredientId, prixUnitaire: parseFloat(p.prixUnitaire) })),
       };
-      await api.post(`/products/${selectedProductId}/manual-prices`, payload);
+      const { data } = await api.post(`/products/${selectedProductId}/manual-prices`, payload);
       setShowManualPopup(false);
-      setManualUpdatedAt(new Date().toISOString().slice(0, 10));
+      const savedAt = (data as { updatedAt: string | null }).updatedAt;
+      setManualUpdatedAt(savedAt ? savedAt.slice(0, 10) : new Date().toISOString().slice(0, 10));
     } finally {
       setSavingManual(false);
     }
