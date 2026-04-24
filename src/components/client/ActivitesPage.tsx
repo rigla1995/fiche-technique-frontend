@@ -57,11 +57,11 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
 
   const isFranchise = memeActivite === true;
 
-  const openAdd = () => {
+  const openAdd = (preType?: 'franchise' | 'distincte') => {
     setEditingId(null);
     setIsDuplicate(false);
     setForm(emptyForm());
-    setMemeActivite(null);
+    setMemeActivite(preType === 'franchise' ? true : preType === 'distincte' ? false : null);
     setNombreActivites('2');
     setFranchiseName('');
     setFranchiseStep(0);
@@ -253,29 +253,38 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
     <div className={minimal ? '' : 'page-content'}>
       {!minimal && <h1 style={{ marginBottom: 24 }}>{t('nav.activites')}</h1>}
 
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-        <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>
-          {!loading && `${activites.length} ${t('client.entreprise.activities_section').toLowerCase()}`}
-        </span>
-        <button className="btn btn-primary btn-sm" onClick={openAdd}>
-          + {t('client.entreprise.add_activity')}
-        </button>
-      </div>
+      {!loading && (
+        <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)', marginBottom: 16 }}>
+          {activites.length} {t('client.entreprise.activities_section').toLowerCase()}
+        </p>
+      )}
 
       {msg && <div className="alert alert-success">{msg}</div>}
 
       {loading ? (
         <p className="text-muted">{t('common.loading')}</p>
       ) : activites.length === 0 ? (
-        <p className="text-muted">{t('client.entreprise.no_activities')}</p>
+        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 8 }}>
+          <button className="btn btn-primary" onClick={() => openAdd('franchise')}>
+            + {t('client.entreprise.franchise_yes')}
+          </button>
+          <button className="btn btn-secondary" onClick={() => openAdd('distincte')}>
+            + {t('client.entreprise.franchise_no')}
+          </button>
+        </div>
       ) : (
         <>
           {/* Franchise section */}
           {franchiseActivities.length > 0 && (
             <div style={{ marginBottom: 32 }}>
-              <h2 style={{ fontSize: '0.85rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', marginBottom: 10 }}>
-                {t('nav.espace_franchise')} <span style={{ fontWeight: 400 }}>({franchiseActivities.length})</span>
-              </h2>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                <h2 style={{ fontSize: '0.85rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', margin: 0 }}>
+                  {t('nav.espace_franchise')} <span style={{ fontWeight: 400 }}>({franchiseActivities.length})</span>
+                </h2>
+                <button className="btn btn-primary btn-sm" onClick={() => openAdd('franchise')}>
+                  + {t('client.entreprise.add_activity')}
+                </button>
+              </div>
 
               {/* Franchise filters */}
               <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
@@ -339,9 +348,14 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
           {/* Distinct section */}
           {distinctActivities.length > 0 && (
             <div style={{ marginBottom: 32 }}>
-              <h2 style={{ fontSize: '0.85rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', marginBottom: 10 }}>
-                {t('nav.espace_distinct')} <span style={{ fontWeight: 400 }}>({distinctActivities.length})</span>
-              </h2>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                <h2 style={{ fontSize: '0.85rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', margin: 0 }}>
+                  {t('nav.espace_distinct')} <span style={{ fontWeight: 400 }}>({distinctActivities.length})</span>
+                </h2>
+                <button className="btn btn-secondary btn-sm" onClick={() => openAdd('distincte')}>
+                  + {t('client.entreprise.add_activity')}
+                </button>
+              </div>
 
               {/* Distinct filter */}
               <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
