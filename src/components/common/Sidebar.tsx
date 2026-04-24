@@ -38,6 +38,14 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   // Once onboarding is done (step=0) for entreprise, treat selections as present.
   const effectiveHasSelections = isEntreprise ? (step === 0) : hasSelections;
 
+  // Current section param for disambiguating stock NavLink active state
+  const currentSection = new URLSearchParams(location.search).get('section');
+
+  // While typesSummary is still loading (null), optimistically allow — avoids flash of locked state.
+  // Only lock when we know for certain the type is absent (summary loaded, flag is false).
+  const hasFranchise = typesSummary === null ? true : typesSummary.hasFranchise;
+  const hasDistinct = typesSummary === null ? true : typesSummary.hasDistinct;
+
   // Fetch activity types for entreprise users at step 0 or 3 (step 3 = ingredient assignment)
   useEffect(() => {
     if (isEntreprise && (step === 0 || step === 3)) {
@@ -140,7 +148,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                     <>
                       {/* F Catalogue — active if hasFranchise, locked otherwise */}
                       <li>
-                        {typesSummary?.hasFranchise ? (
+                        {hasFranchise ? (
                           <NavLink
                             to="/client/catalogue-franchise"
                             className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
@@ -156,7 +164,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
                       {/* D Catalogue — active if hasDistinct, locked otherwise */}
                       <li>
-                        {typesSummary?.hasDistinct ? (
+                        {hasDistinct ? (
                           <NavLink
                             to="/client/catalogue-distinct"
                             className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
@@ -234,7 +242,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                 <>
                   {/* F Stock */}
                   <li>
-                    {isOnboarding || !effectiveHasSelections || !typesSummary?.hasFranchise ? (
+                    {isOnboarding || !effectiveHasSelections || !hasFranchise ? (
                       <LockedLink
                         label={t('nav.stock_franchise')}
                         reason={
@@ -246,7 +254,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                     ) : (
                       <NavLink
                         to="/client/stock?section=franchise"
-                        className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
+                        className={({ isActive }) => `sidebar-link ${isActive && currentSection === 'franchise' ? 'active' : ''}`}
                         onClick={onClose}
                       >
                         <span className="link-icon">📦</span>
@@ -257,7 +265,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
                   {/* D Stock */}
                   <li>
-                    {isOnboarding || !effectiveHasSelections || !typesSummary?.hasDistinct ? (
+                    {isOnboarding || !effectiveHasSelections || !hasDistinct ? (
                       <LockedLink
                         label={t('nav.stock_distinct')}
                         reason={
@@ -269,7 +277,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                     ) : (
                       <NavLink
                         to="/client/stock?section=distinct"
-                        className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
+                        className={({ isActive }) => `sidebar-link ${isActive && currentSection === 'distinct' ? 'active' : ''}`}
                         onClick={onClose}
                       >
                         <span className="link-icon">📦</span>
