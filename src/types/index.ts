@@ -6,6 +6,7 @@ export interface User {
   compteType?: 'independant' | 'entreprise';
   onboardingStep?: number;
   phone?: string;
+  entrepriseName?: string | null;
 }
 
 export interface AuthResponse {
@@ -100,6 +101,7 @@ export interface Activite {
   telephone?: string;
   email?: string;
   type?: 'franchise' | 'distincte';
+  franchiseGroup?: string | null;
   createdAt?: string;
 }
 

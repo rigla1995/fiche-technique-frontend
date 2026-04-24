@@ -11,7 +11,7 @@ interface SidebarProps {
   onClose: () => void;
 }
 
-function LockedLink({ label, reason }: { icon?: string; label: string; reason?: string }) {
+function LockedLink({ label, reason }: { label: string; reason?: string }) {
   return (
     <span
       className="sidebar-link"
@@ -24,6 +24,29 @@ function LockedLink({ label, reason }: { icon?: string; label: string; reason?: 
   );
 }
 
+function SectionHeader({ label }: { label: string }) {
+  return (
+    <li>
+      <span style={{
+        display: 'block',
+        padding: '8px 16px 2px',
+        fontSize: '0.7rem',
+        fontWeight: 700,
+        letterSpacing: '0.06em',
+        textTransform: 'uppercase',
+        color: 'var(--text-muted)',
+        userSelect: 'none',
+      }}>
+        {label}
+      </span>
+    </li>
+  );
+}
+
+function Divider() {
+  return <li style={{ borderTop: '1px solid var(--border)', margin: '6px 12px' }} />;
+}
+
 export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const { t } = useTranslation();
   const { user } = useAuth();
@@ -34,19 +57,14 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const step = user?.onboardingStep ?? 0;
   const isEntreprise = user?.compteType === 'entreprise';
   const isOnboarding = isEntreprise && step > 0;
-  // Entreprise ingredient selections live in activite_ingredient_selections, not ingredient_prix_client.
-  // Once onboarding is done (step=0) for entreprise, treat selections as present.
   const effectiveHasSelections = isEntreprise ? (step === 0) : hasSelections;
 
-  // Current section param for disambiguating stock NavLink active state
   const currentSection = new URLSearchParams(location.search).get('section');
+  const currentActCtx = new URLSearchParams(location.search).get('actCtx');
 
-  // While typesSummary is still loading (null), optimistically allow — avoids flash of locked state.
-  // Only lock when we know for certain the type is absent (summary loaded, flag is false).
   const hasFranchise = typesSummary === null ? true : typesSummary.hasFranchise;
   const hasDistinct = typesSummary === null ? true : typesSummary.hasDistinct;
 
-  // Fetch activity types for entreprise users at step 0 or 3 (step 3 = ingredient assignment)
   useEffect(() => {
     if (isEntreprise && (step === 0 || step === 3)) {
       api.get('/api/entreprise/activites/types-summary')
@@ -64,9 +82,10 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
     { to: '/admin/ingredients', label: t('nav.ingredients'), icon: '🧂' },
   ];
 
-  const profileLink = { to: '/client/profile', label: t('nav.profile'), icon: '👤' };
+  const sidebarTitle = isEntreprise && user?.entrepriseName
+    ? `Espace ${user.entrepriseName}`
+    : t('client.title');
 
-  // Onboarding banner shown inside sidebar for entreprise users
   const onboardingHint = isOnboarding ? (
     <div style={{ background: '#fef9c3', borderRadius: 8, padding: '10px 12px', margin: '8px 12px', fontSize: '0.78rem', color: '#854d0e', lineHeight: 1.5 }}>
       {step === 1 && '🔒 Changez votre mot de passe pour continuer.'}
@@ -80,9 +99,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
       {isOpen && <div className="sidebar-overlay" onClick={onClose} />}
       <nav className={`sidebar ${isOpen ? 'sidebar-open' : ''}`}>
         <div className="sidebar-header">
-          <span className="sidebar-title">
-            {user?.role === 'super_admin' ? t('admin.title') : t('client.title')}
-          </span>
+          <span className="sidebar-title">{user?.role === 'super_admin' ? t('admin.title') : sidebarTitle}</span>
         </div>
 
         {onboardingHint}
@@ -104,10 +121,10 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
             ))
           ) : (
             <>
-              {/* Dashboard — locked during onboarding */}
+              {/* Dashboard */}
               <li>
                 {isOnboarding ? (
-                  <LockedLink icon="📊" label={t('nav.dashboard')} />
+                  <LockedLink label={t('nav.dashboard')} />
                 ) : (
                   <NavLink
                     to="/client"
@@ -121,170 +138,158 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                 )}
               </li>
 
-              {/* Catalogue ingrédients */}
+              {/* Independant: catalogue, products, stock */}
               {!isEntreprise && (
-                <li>
-                  <NavLink
-                    to="/client/ingredients"
-                    className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
-                    onClick={onClose}
-                  >
-                    <span className="link-icon">🧂</span>
-                    <span className="link-label">{t('nav.ingredients_catalog')}</span>
-                  </NavLink>
-                </li>
-              )}
-
-              {/* Entreprise: F Catalogue + D Catalogue — always shown, locked if no activity of that type */}
-              {isEntreprise && (
                 <>
-                  {isOnboarding && step < 3 ? (
-                    // Before step 3, catalogue is fully locked
-                    <>
-                      <li><LockedLink icon="🧂" label={t('nav.catalogue_franchise')} /></li>
-                      <li><LockedLink icon="🧂" label={t('nav.catalogue_distinct')} /></li>
-                    </>
-                  ) : (
-                    <>
-                      {/* F Catalogue — active if hasFranchise, locked otherwise */}
-                      <li>
-                        {hasFranchise ? (
-                          <NavLink
-                            to="/client/catalogue-franchise"
-                            className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
-                            onClick={onClose}
-                          >
-                            <span className="link-icon">🧂</span>
-                            <span className="link-label">{t('nav.catalogue_franchise')}</span>
-                          </NavLink>
-                        ) : (
-                          <LockedLink label={t('nav.catalogue_franchise')} reason={t('nav.no_franchise_activity')} />
-                        )}
-                      </li>
-
-                      {/* D Catalogue — active if hasDistinct, locked otherwise */}
-                      <li>
-                        {hasDistinct ? (
-                          <NavLink
-                            to="/client/catalogue-distinct"
-                            className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
-                            onClick={onClose}
-                          >
-                            <span className="link-icon">🧂</span>
-                            <span className="link-label">{t('nav.catalogue_distinct')}</span>
-                          </NavLink>
-                        ) : (
-                          <LockedLink label={t('nav.catalogue_distinct')} reason={t('nav.no_distinct_activity')} />
-                        )}
-                      </li>
-                    </>
-                  )}
+                  <li>
+                    <NavLink to="/client/ingredients" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>
+                      <span className="link-icon">🧂</span>
+                      <span className="link-label">{t('nav.ingredients_catalog')}</span>
+                    </NavLink>
+                  </li>
+                  <li>
+                    {!effectiveHasSelections ? (
+                      <LockedLink label={t('nav.products')} reason={t('nav.products_locked')} />
+                    ) : (
+                      <NavLink to="/client/products" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>
+                        <span className="link-icon">🍔</span>
+                        <span className="link-label">{t('nav.products')}</span>
+                      </NavLink>
+                    )}
+                  </li>
+                  <li>
+                    {!effectiveHasSelections ? (
+                      <LockedLink label={t('nav.stock')} reason={t('nav.stock_locked')} />
+                    ) : (
+                      <NavLink to="/client/stock" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>
+                        <span className="link-icon">📦</span>
+                        <span className="link-label">{t('nav.stock')}</span>
+                      </NavLink>
+                    )}
+                  </li>
                 </>
               )}
 
-              {/* Produits — locked during onboarding or without selections */}
-              <li>
-                {isOnboarding || !effectiveHasSelections ? (
-                  <LockedLink
-                    icon="🍔"
-                    label={t('nav.products')}
-                    reason={isOnboarding ? undefined : t('nav.products_locked')}
-                  />
-                ) : (
-                  <NavLink
-                    to="/client/products"
-                    className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
-                    onClick={onClose}
-                  >
-                    <span className="link-icon">🍔</span>
-                    <span className="link-label">{t('nav.products')}</span>
-                  </NavLink>
-                )}
-              </li>
-
-              {/* Mes Activités — entreprise only, unlocks at step 2+ */}
-              {isEntreprise && (
-                <li>
-                  {isOnboarding && step < 2 ? (
-                    <LockedLink icon="🏢" label={t('nav.activites')} />
-                  ) : (
-                    <NavLink
-                      to="/client/activites"
-                      className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
-                      onClick={onClose}
-                    >
-                      <span className="link-icon">🏢</span>
-                      <span className="link-label">{t('nav.activites')}</span>
-                    </NavLink>
-                  )}
-                </li>
-              )}
-
-              {/* Stock — independant: single link; entreprise: F Stock + D Stock */}
-              {!isEntreprise && (
-                <li>
-                  {!effectiveHasSelections ? (
-                    <LockedLink icon="📦" label={t('nav.stock')} reason={t('nav.stock_locked')} />
-                  ) : (
-                    <NavLink
-                      to="/client/stock"
-                      className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
-                      onClick={onClose}
-                    >
-                      <span className="link-icon">📦</span>
-                      <span className="link-label">{t('nav.stock')}</span>
-                    </NavLink>
-                  )}
-                </li>
-              )}
-
+              {/* Entreprise layout */}
               {isEntreprise && (
                 <>
-                  {/* F Stock */}
+                  <Divider />
+
+                  {/* Mes Activités */}
                   <li>
-                    {isOnboarding || !effectiveHasSelections || !hasFranchise ? (
-                      <LockedLink
-                        label={t('nav.stock_franchise')}
-                        reason={
-                          isOnboarding ? undefined
-                          : !effectiveHasSelections ? t('nav.stock_locked')
-                          : t('nav.no_franchise_activity')
-                        }
-                      />
+                    {isOnboarding && step < 2 ? (
+                      <LockedLink label={t('nav.activites')} />
                     ) : (
-                      <NavLink
-                        to="/client/stock?section=franchise"
-                        className={({ isActive }) => `sidebar-link ${isActive && currentSection === 'franchise' ? 'active' : ''}`}
-                        onClick={onClose}
-                      >
-                        <span className="link-icon">📦</span>
-                        <span className="link-label">{t('nav.stock_franchise')}</span>
+                      <NavLink to="/client/activites" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>
+                        <span className="link-icon">🏢</span>
+                        <span className="link-label">{t('nav.activites')}</span>
                       </NavLink>
                     )}
                   </li>
 
-                  {/* D Stock */}
-                  <li>
-                    {isOnboarding || !effectiveHasSelections || !hasDistinct ? (
-                      <LockedLink
-                        label={t('nav.stock_distinct')}
-                        reason={
-                          isOnboarding ? undefined
-                          : !effectiveHasSelections ? t('nav.stock_locked')
-                          : t('nav.no_distinct_activity')
-                        }
-                      />
-                    ) : (
-                      <NavLink
-                        to="/client/stock?section=distinct"
-                        className={({ isActive }) => `sidebar-link ${isActive && currentSection === 'distinct' ? 'active' : ''}`}
-                        onClick={onClose}
-                      >
-                        <span className="link-icon">📦</span>
-                        <span className="link-label">{t('nav.stock_distinct')}</span>
-                      </NavLink>
-                    )}
-                  </li>
+                  {/* Espace Franchise */}
+                  {(isOnboarding || hasFranchise) && (
+                    <>
+                      <Divider />
+                      <SectionHeader label={t('nav.espace_franchise')} />
+
+                      {/* F Catalogue */}
+                      <li>
+                        {isOnboarding || !hasFranchise ? (
+                          <LockedLink label={t('nav.catalogue_franchise')} reason={!isOnboarding ? t('nav.no_franchise_activity') : undefined} />
+                        ) : (
+                          <NavLink to="/client/catalogue-franchise" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>
+                            <span className="link-icon">🧂</span>
+                            <span className="link-label">{t('nav.catalogue_franchise')}</span>
+                          </NavLink>
+                        )}
+                      </li>
+
+                      {/* F Stock */}
+                      <li>
+                        {isOnboarding || !effectiveHasSelections || !hasFranchise ? (
+                          <LockedLink label={t('nav.stock_franchise')} reason={!isOnboarding && !hasFranchise ? t('nav.no_franchise_activity') : undefined} />
+                        ) : (
+                          <NavLink
+                            to="/client/stock?section=franchise"
+                            className={({ isActive }) => `sidebar-link ${isActive && currentSection === 'franchise' ? 'active' : ''}`}
+                            onClick={onClose}
+                          >
+                            <span className="link-icon">📦</span>
+                            <span className="link-label">{t('nav.stock_franchise')}</span>
+                          </NavLink>
+                        )}
+                      </li>
+
+                      {/* F Produits */}
+                      <li>
+                        {isOnboarding || !effectiveHasSelections || !hasFranchise ? (
+                          <LockedLink label={t('nav.products_franchise')} />
+                        ) : (
+                          <NavLink
+                            to="/client/products?actCtx=franchise"
+                            className={({ isActive }) => `sidebar-link ${isActive && currentActCtx === 'franchise' ? 'active' : ''}`}
+                            onClick={onClose}
+                          >
+                            <span className="link-icon">🍔</span>
+                            <span className="link-label">{t('nav.products_franchise')}</span>
+                          </NavLink>
+                        )}
+                      </li>
+                    </>
+                  )}
+
+                  {/* Espace Distinct */}
+                  {(isOnboarding || hasDistinct) && (
+                    <>
+                      <Divider />
+                      <SectionHeader label={t('nav.espace_distinct')} />
+
+                      {/* D Catalogue */}
+                      <li>
+                        {isOnboarding || !hasDistinct ? (
+                          <LockedLink label={t('nav.catalogue_distinct')} reason={!isOnboarding ? t('nav.no_distinct_activity') : undefined} />
+                        ) : (
+                          <NavLink to="/client/catalogue-distinct" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>
+                            <span className="link-icon">🧂</span>
+                            <span className="link-label">{t('nav.catalogue_distinct')}</span>
+                          </NavLink>
+                        )}
+                      </li>
+
+                      {/* D Stock */}
+                      <li>
+                        {isOnboarding || !effectiveHasSelections || !hasDistinct ? (
+                          <LockedLink label={t('nav.stock_distinct')} reason={!isOnboarding && !hasDistinct ? t('nav.no_distinct_activity') : undefined} />
+                        ) : (
+                          <NavLink
+                            to="/client/stock?section=distinct"
+                            className={({ isActive }) => `sidebar-link ${isActive && currentSection === 'distinct' ? 'active' : ''}`}
+                            onClick={onClose}
+                          >
+                            <span className="link-icon">📦</span>
+                            <span className="link-label">{t('nav.stock_distinct')}</span>
+                          </NavLink>
+                        )}
+                      </li>
+
+                      {/* D Produits */}
+                      <li>
+                        {isOnboarding || !effectiveHasSelections || !hasDistinct ? (
+                          <LockedLink label={t('nav.products_distinct')} />
+                        ) : (
+                          <NavLink
+                            to="/client/products?actCtx=distinct"
+                            className={({ isActive }) => `sidebar-link ${isActive && currentActCtx !== null && currentActCtx !== 'franchise' ? 'active' : ''}`}
+                            onClick={onClose}
+                          >
+                            <span className="link-icon">🍔</span>
+                            <span className="link-label">{t('nav.products_distinct')}</span>
+                          </NavLink>
+                        )}
+                      </li>
+                    </>
+                  )}
                 </>
               )}
             </>
@@ -295,12 +300,12 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
           <ul className="sidebar-nav" style={{ borderTop: '1px solid var(--border)', paddingTop: 4 }}>
             <li>
               <NavLink
-                to={profileLink.to}
+                to="/client/profile"
                 className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
                 onClick={onClose}
               >
-                <span className="link-icon">{profileLink.icon}</span>
-                <span className="link-label">{profileLink.label}</span>
+                <span className="link-icon">👤</span>
+                <span className="link-label">{t('nav.profile')}</span>
               </NavLink>
             </li>
           </ul>

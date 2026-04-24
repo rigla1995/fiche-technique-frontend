@@ -77,35 +77,19 @@ export default function DistinctCatalogPage() {
         <p className="text-muted">{t('client.catalogue_distinct.no_activities')}</p>
       ) : (
         <>
-          {/* Activity tabs — D · {nom} */}
-          <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', borderBottom: '2px solid var(--border)', marginBottom: 20 }}>
-            {activites.map((a) => (
-              <button
-                key={a.id}
-                onClick={() => { setSelectedId(a.id); setFilterCategory(''); setFilterName(''); }}
-                style={{
-                  padding: '8px 16px',
-                  fontWeight: 600,
-                  fontSize: '0.85rem',
-                  border: 'none',
-                  borderRadius: '6px 6px 0 0',
-                  cursor: 'pointer',
-                  background: selectedId === a.id ? 'var(--primary)' : 'var(--surface)',
-                  color: selectedId === a.id ? '#fff' : 'var(--text)',
-                  borderBottom: selectedId === a.id ? '2px solid var(--primary)' : '2px solid transparent',
-                  marginBottom: -2,
-                }}
-              >
-                D · {a.nom}
-              </button>
-            ))}
-          </div>
-
-          {/* Inline filters */}
-          <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
+          {/* Single filter row: activity + category + search */}
+          <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap', alignItems: 'center' }}>
             <select
               className="input"
               style={{ minWidth: 180, flex: '0 0 auto' }}
+              value={selectedId ?? ''}
+              onChange={(e) => { setSelectedId(Number(e.target.value)); setFilterCategory(''); setFilterName(''); }}
+            >
+              {activites.map((a) => <option key={a.id} value={a.id}>{a.nom}</option>)}
+            </select>
+            <select
+              className="input"
+              style={{ minWidth: 160, flex: '0 0 auto' }}
               value={filterCategory}
               onChange={(e) => setFilterCategory(e.target.value)}
             >
@@ -115,7 +99,7 @@ export default function DistinctCatalogPage() {
             <input
               type="text"
               className="input"
-              style={{ minWidth: 180, flex: '1 1 auto', maxWidth: 280 }}
+              style={{ minWidth: 160, flex: '1 1 auto', maxWidth: 280 }}
               placeholder={t('common.search') + '…'}
               value={filterName}
               onChange={(e) => setFilterName(e.target.value)}

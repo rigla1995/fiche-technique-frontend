@@ -53,8 +53,12 @@
     "catalogue_distinct": "D Catalogue Ingrédients",
     "stock_franchise": "F Stock",
     "stock_distinct": "D Stock",
+    "products_franchise": "F Produits",
+    "products_distinct": "D Produits",
     "no_franchise_activity": "Aucune activité de type franchise",
-    "no_distinct_activity": "Aucune activité de type distincte"
+    "no_distinct_activity": "Aucune activité de type distincte",
+    "espace_franchise": "Espace Franchise",
+    "espace_distinct": "Espace Distinct"
   },
   "validation": {
     "name_required": "Nom requis",
@@ -229,7 +233,9 @@
       "franchise_question": "Toutes vos activités ont-elles la même activité (franchise) ?",
       "franchise_yes": "Oui, c'est une franchise",
       "franchise_no": "Non, activités distinctes",
-      "franchise_count": "Nombre d'activités à créer",
+      "franchise_name": "Nom de la franchise",
+      "franchise_name_placeholder": "ex: Coco",
+      "franchise_count": "Nombre de franchises",
       "franchise_single_warning": "Une seule activité doit être de type Distincte, pas Franchise.",
       "step_indicator": "Activité {{current}} / {{total}}",
       "next": "Suivant",
@@ -245,7 +251,8 @@
       "duplicate_to_others": "Dupliquer vers les autres activités",
       "filter_category": "Filtrer par nom d'ingrédient",
       "all_categories": "Toutes les catégories",
-      "no_activities": "Aucune activité franchise trouvée."
+      "no_activities": "Aucune activité franchise trouvée.",
+      "select_franchise": "Sélectionner la franchise"
     },
     "catalogue_distinct": {
       "title": "D Catalogue Ingrédients",
@@ -273,7 +280,10 @@
       "distinct_section": "Stock — Activités Distinctes",
       "duplicate_franchise": "Dupliquer vers toutes les activités franchise",
       "duplicate_confirm": "Appliquer ces valeurs à toutes les autres activités franchise pour cette date ?",
-      "duplicate_done": "Dupliqué vers {{count}} activité(s)."
+      "duplicate_done": "Dupliqué vers {{count}} activité(s).",
+      "search_ingredient": "Rechercher un ingrédient...",
+      "select_franchise": "Sélectionner la franchise",
+      "select_activity_in_franchise": "Sélectionner l'activité"
     }
   },
   "currency": "DT"
