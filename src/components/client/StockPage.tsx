@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
@@ -235,7 +236,10 @@ function ActivityStockSection({ label, activities, dateStock, prefix, isFranchis
 export default function StockPage() {
   const { t } = useTranslation();
   const { user } = useAuth();
+  const [searchParams] = useSearchParams();
   const isEntreprise = user?.compteType === 'entreprise';
+  // 'franchise' | 'distinct' | null — set by sidebar nav links
+  const section = searchParams.get('section') as 'franchise' | 'distinct' | null;
 
   const today = todayStr();
   const [dateStock, setDateStock] = useState(today);
@@ -295,9 +299,15 @@ export default function StockPage() {
     clientEntries.map((e) => e.categorie || t('client.ingredients_catalog.no_category'))
   )).sort();
 
+  const pageTitle = isEntreprise && section === 'franchise'
+    ? t('nav.stock_franchise')
+    : isEntreprise && section === 'distinct'
+    ? t('nav.stock_distinct')
+    : t('client.stock.title');
+
   return (
     <div className="page-content">
-      <h1>{t('client.stock.title')}</h1>
+      <h1>{pageTitle}</h1>
 
       {/* Global date picker */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 28 }}>
@@ -350,7 +360,7 @@ export default function StockPage() {
           <p className="text-muted">{t('common.loading')}</p>
         ) : (
           <>
-            {typesSummary?.hasFranchise && franchiseActivities.length > 0 && (
+            {(!section || section === 'franchise') && typesSummary?.hasFranchise && franchiseActivities.length > 0 && (
               <ActivityStockSection
                 label={t('client.stock.franchise_section')}
                 activities={franchiseActivities}
@@ -360,7 +370,7 @@ export default function StockPage() {
                 onSave={saveEntrepriseStock}
               />
             )}
-            {typesSummary?.hasDistinct && distinctActivities.length > 0 && (
+            {(!section || section === 'distinct') && typesSummary?.hasDistinct && distinctActivities.length > 0 && (
               <ActivityStockSection
                 label={t('client.stock.distinct_section')}
                 activities={distinctActivities}

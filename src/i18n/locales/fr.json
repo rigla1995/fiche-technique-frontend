@@ -50,7 +50,11 @@
     "stock_locked": "Stock (sélectionnez vos ingrédients d'abord)",
     "domaines": "Domaines d'activité",
     "catalogue_franchise": "F Catalogue Ingrédients",
-    "catalogue_distinct": "D Catalogue Ingrédients"
+    "catalogue_distinct": "D Catalogue Ingrédients",
+    "stock_franchise": "F Stock",
+    "stock_distinct": "D Stock",
+    "no_franchise_activity": "Aucune activité de type franchise",
+    "no_distinct_activity": "Aucune activité de type distincte"
   },
   "validation": {
     "name_required": "Nom requis",
