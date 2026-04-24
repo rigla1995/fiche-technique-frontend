@@ -196,6 +196,20 @@ export default function ClientsManagement() {
                   </td>
                   <td className="actions-cell">
                     <button className="btn btn-ghost btn-sm" onClick={() => openEdit(c)}>{t('common.edit')}</button>
+                    {c.compteType === 'entreprise' && (c.onboardingStep ?? 0) > 0 && (
+                      <button
+                        className="btn btn-ghost btn-sm"
+                        style={{ color: 'var(--warning, #b45309)', borderColor: 'var(--warning, #b45309)' }}
+                        title="Réinitialiser l'onboarding (débloquer le compte)"
+                        onClick={async () => {
+                          if (!window.confirm(`Réinitialiser l'onboarding de ${c.name} et débloquer son compte ?`)) return;
+                          await api.put(`/admin/clients/${c.id}`, { onboardingStep: 0 });
+                          setClients((prev) => prev.map((x) => x.id === c.id ? { ...x, onboardingStep: 0 } : x));
+                        }}
+                      >
+                        🔓 Reset
+                      </button>
+                    )}
                     <button className="btn btn-danger btn-sm" onClick={() => handleDelete(c.id)}>{t('common.delete')}</button>
                   </td>
                 </tr>
