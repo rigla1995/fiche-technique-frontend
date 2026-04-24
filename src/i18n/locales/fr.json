@@ -22,7 +22,8 @@
     "success": "Succès",
     "error": "Erreur",
     "close": "Fermer",
-    "no_result": "Aucun résultat"
+    "no_result": "Aucun résultat",
+    "continue": "Continuer"
   },
   "auth": {
     "login": "Connexion",
@@ -190,6 +191,11 @@
       "tab_vendable": "Produits vendables",
       "tab_utilisable": "Produits utilisables",
       "tab_fiche_technique": "Fiche Technique",
+      "choose_activity_type": "Type d'activité",
+      "included_activities": "Activités concernées (toutes cochées par défaut)",
+      "saved_success": "Produit enregistré avec succès !",
+      "create_another": "Créer un autre produit",
+      "back_to_list": "Retour à la liste",
       "add_vendable": "Nouveau produit vendable",
       "add_utilisable": "Nouveau produit utilisable",
       "no_vendable_products": "Aucun produit vendable. Créez votre premier produit !",

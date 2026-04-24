@@ -19,7 +19,7 @@ export default function ProductList() {
   const { user } = useAuth();
   const isEntreprise = user?.compteType === 'entreprise';
 
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
   const tab = (searchParams.get('tab') as TabType) || 'vendable';
 
   const [products, setProducts] = useState<Product[]>([]);
@@ -143,8 +143,14 @@ export default function ProductList() {
   return (
     <div className="page">
       <div className="page-header">
-        <h1>{t('client.products.title')}</h1>
-        {(!isEntreprise || selectedActCtx) && (
+        <h1>
+          {tab === 'fiche-technique'
+            ? t('client.products.tab_fiche_technique')
+            : tab === 'utilisable'
+              ? t('client.products.tab_utilisable')
+              : t('client.products.tab_vendable')}
+        </h1>
+        {tab !== 'fiche-technique' && (!isEntreprise || selectedActCtx) && (
           <Link to={addPath} className="btn btn-primary">
             + {t(addKey)}
           </Link>
@@ -202,27 +208,6 @@ export default function ProductList() {
             : t('client.products.distinct_scope_hint', { name: getSelectedLabel() })}
         </p>
       )}
-
-      <div className="tabs">
-        <button
-          className={`tab-btn${tab === 'vendable' ? ' active' : ''}`}
-          onClick={() => setSearchParams({ tab: 'vendable' })}
-        >
-          {t('client.products.tab_vendable')}
-        </button>
-        <button
-          className={`tab-btn${tab === 'utilisable' ? ' active' : ''}`}
-          onClick={() => setSearchParams({ tab: 'utilisable' })}
-        >
-          {t('client.products.tab_utilisable')}
-        </button>
-        <button
-          className={`tab-btn${tab === 'fiche-technique' ? ' active' : ''}`}
-          onClick={() => setSearchParams({ tab: 'fiche-technique' })}
-        >
-          {t('client.products.tab_fiche_technique')}
-        </button>
-      </div>
 
       {tab === 'fiche-technique' ? (
         <FicheTechniqueTab

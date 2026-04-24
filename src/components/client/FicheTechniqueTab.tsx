@@ -50,6 +50,10 @@ export default function FicheTechniqueTab({
   const [showManualPopup, setShowManualPopup] = useState(false);
   const [savingManual, setSavingManual] = useState(false);
 
+  // Real-time cost
+  const [realtimeCost, setRealtimeCost] = useState<number | null>(null);
+  const [costLoading, setCostLoading] = useState(false);
+
   // Generation
   const [generating, setGenerating] = useState(false);
 
@@ -84,6 +88,17 @@ export default function FicheTechniqueTab({
     }
     return false;
   })();
+
+  // Load real-time cost when product + activity are set
+  useEffect(() => {
+    if (!selectedProductId || !actCtxDone) { setRealtimeCost(null); return; }
+    setCostLoading(true);
+    api.get(`/products/${selectedProductId}/cout`)
+      .then(({ data }) => setRealtimeCost((data as { totalCost: number }).totalCost ?? null))
+      .catch(() => setRealtimeCost(null))
+      .finally(() => setCostLoading(false));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedProductId, actCtxDone]);
 
   // Load stock dates when product + activity are set
   useEffect(() => {
@@ -277,6 +292,22 @@ export default function FicheTechniqueTab({
                 <option key={a.id} value={a.id}>{a.nom}</option>
               ))}
             </select>
+          )}
+        </div>
+      )}
+
+      {/* Real-time cost */}
+      {selectedProductId && actCtxDone && (
+        <div style={{ marginBottom: 20, display: 'flex', alignItems: 'center', gap: 12 }}>
+          <span style={{ fontWeight: 600, fontSize: '0.875rem' }}>{t('client.products.real_time_cost')} :</span>
+          {costLoading ? (
+            <span style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>{t('common.loading')}</span>
+          ) : realtimeCost !== null ? (
+            <span className="cost-badge" style={{ fontSize: '1rem' }}>
+              {realtimeCost.toFixed(3)} {t('currency')}
+            </span>
+          ) : (
+            <span style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>—</span>
           )}
         </div>
       )}

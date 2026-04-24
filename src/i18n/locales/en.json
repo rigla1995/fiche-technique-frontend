@@ -22,7 +22,8 @@
     "success": "Success",
     "error": "Error",
     "close": "Close",
-    "no_result": "No results"
+    "no_result": "No results",
+    "continue": "Continue"
   },
   "auth": {
     "login": "Login",
@@ -190,6 +191,11 @@
       "tab_vendable": "Sellable products",
       "tab_utilisable": "Usable products",
       "tab_fiche_technique": "Recipe Sheet",
+      "choose_activity_type": "Activity type",
+      "included_activities": "Included activities (all checked by default)",
+      "saved_success": "Product saved successfully!",
+      "create_another": "Create another product",
+      "back_to_list": "Back to list",
       "add_vendable": "New sellable product",
       "add_utilisable": "New usable product",
       "no_vendable_products": "No sellable products yet. Create your first product!",

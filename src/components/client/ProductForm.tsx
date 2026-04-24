@@ -1,8 +1,9 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
-import type { Category, Ingredient, Product } from '../../types';
+import { useAuth } from '../../context/AuthContext';
+import type { Activite, ActiviteTypesSummary, Category, Ingredient, Product } from '../../types';
 
 interface IngredientLine {
   ingredientId: string;
@@ -17,15 +18,31 @@ interface SubProductLine {
 
 export default function ProductForm() {
   const { t } = useTranslation();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const { id } = useParams();
   const [searchParams] = useSearchParams();
   const isEdit = Boolean(id);
+  const isEntreprise = user?.compteType === 'entreprise';
 
-  // Activity context from URL: 'franchise' | 'distinct-{id}' | ''
-  const actCtx = searchParams.get('actCtx') || '';
-  const isFranchiseCtx = actCtx === 'franchise';
-  const distinctActId = actCtx.startsWith('distinct-') ? parseInt(actCtx.replace('distinct-', '')) : null;
+  // Activity context from URL (used in edit mode or when coming from old links)
+  const urlActCtx = searchParams.get('actCtx') || '';
+
+  // Enterprise pre-step state (new products only)
+  const needsPreStep = isEntreprise && !isEdit;
+  const [preStepDone, setPreStepDone] = useState(!needsPreStep);
+  const [typesSummary, setTypesSummary] = useState<ActiviteTypesSummary | null>(null);
+  const [allActivities, setAllActivities] = useState<Activite[]>([]);
+  const [preActType, setPreActType] = useState<'franchise' | 'distincte' | ''>('');
+  const [preFranchiseGroup, setPreFranchiseGroup] = useState('');
+  const [preCheckedActIds, setPreCheckedActIds] = useState<Set<number>>(new Set());
+  const [preDistinctActId, setPreDistinctActId] = useState<string>('');
+
+  // Resolved activity context after pre-step
+  const [resolvedActCtx, setResolvedActCtx] = useState(urlActCtx);
+
+  const isFranchiseCtx = resolvedActCtx === 'franchise';
+  const distinctActId = resolvedActCtx.startsWith('distinct-') ? parseInt(resolvedActCtx.replace('distinct-', '')) : null;
 
   const [name, setName] = useState('');
   const [productType, setProductType] = useState<'vendable' | 'utilisable'>(
@@ -37,17 +54,36 @@ export default function ProductForm() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [newCatSelect, setNewCatSelect] = useState('');
   const [products, setProducts] = useState<Product[]>([]);
-  const [totalCost, setTotalCost] = useState(0);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
+  const [savedOk, setSavedOk] = useState(false);
+
+  // Load activities for enterprise pre-step
+  useEffect(() => {
+    if (!needsPreStep) return;
+    Promise.all([
+      api.get('/api/entreprise/activites/types-summary'),
+      api.get('/api/entreprise/activites'),
+    ]).then(([summaryRes, actsRes]) => {
+      const summary = summaryRes.data as ActiviteTypesSummary;
+      const acts = actsRes.data as Activite[];
+      setTypesSummary(summary);
+      setAllActivities(acts);
+      // auto-check all franchise activities
+      const franchiseIds = acts.filter((a) => a.type === 'franchise').map((a) => a.id);
+      setPreCheckedActIds(new Set(franchiseIds));
+    });
+  }, [needsPreStep]);
 
   useEffect(() => {
+    if (needsPreStep && !preStepDone) return; // wait for pre-step
+
     // For enterprise with activity context, load ingredients from that activity
-    const ingredientsFetch: Promise<{ data: unknown }> = actCtx
+    const ingredientsFetch: Promise<{ data: unknown }> = resolvedActCtx
       ? (isFranchiseCtx
           ? api.get('/api/entreprise/activites').then(({ data }) => {
-              const first = (data as import('../../types').Activite[]).find((a) => a.type === 'franchise');
+              const first = (data as Activite[]).find((a) => a.type === 'franchise');
               return first
                 ? api.get(`/api/entreprise/activites/${first.id}/ingredients`)
                 : api.get('/ingredients');
@@ -66,7 +102,7 @@ export default function ProductForm() {
         const catData = cat.data as Category[];
         setCategories(catData);
         let ingData: Ingredient[];
-        if (actCtx) {
+        if (resolvedActCtx) {
           ingData = (ing.data as import('../../types').ActiviteIngredient[])
             .filter((i) => i.selected)
             .map((i) => {
@@ -93,7 +129,7 @@ export default function ProductForm() {
             (p) => p.type === 'utilisable' && (!id || String(p.id) !== id)
           )
         );
-        if (!actCtx) setCategories(catData);
+        if (!resolvedActCtx) setCategories(catData);
 
         if (isEdit && productRes) {
           const data = productRes.data as {
@@ -123,22 +159,9 @@ export default function ProductForm() {
         }
       })
       .finally(() => setLoading(false));
-  }, [id, isEdit]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id, isEdit, preStepDone, resolvedActCtx]);
 
-  const recalcCost = useCallback(() => {
-    let cost = 0;
-    for (const line of ingredientLines) {
-      const ing = ingredients.find((i) => String(i.id) === line.ingredientId);
-      if (ing && line.portion) cost += (ing.effectivePrice ?? 0) * parseFloat(line.portion);
-    }
-    for (const line of subProductLines) {
-      const prod = products.find((p) => String(p.id) === line.subProductId);
-      if (prod && line.portion) cost += (prod.totalCost || 0) * parseFloat(line.portion);
-    }
-    setTotalCost(cost);
-  }, [ingredientLines, subProductLines, ingredients, products]);
-
-  useEffect(() => { recalcCost(); }, [recalcCost]);
 
   // --- Ingredient line helpers ---
   const addIngredientLineInCategory = (catId: string) =>
@@ -205,7 +228,7 @@ export default function ProductForm() {
           .filter((l) => l.subProductId && l.portion)
           .map((l) => ({ subProductId: parseInt(l.subProductId), portion: parseFloat(l.portion) })),
       };
-      if (actCtx && !isEdit) {
+      if (resolvedActCtx && !isEdit) {
         if (isFranchiseCtx) {
           payload.activiteType = 'franchise';
         } else if (distinctActId) {
@@ -215,14 +238,21 @@ export default function ProductForm() {
       }
       if (isEdit) {
         await api.put(`/products/${id}`, payload);
+        navigate(`/client/products?tab=${productType}`);
       } else {
         await api.post('/products', payload);
+        setSavedOk(true);
       }
-      const actCtxQuery = actCtx ? `&actCtx=${encodeURIComponent(actCtx)}` : '';
-      navigate(`/client/products?tab=${productType}${actCtxQuery}`);
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleCreateAnother = () => {
+    setName('');
+    setIngredientLines([]);
+    setSubProductLines([]);
+    setSavedOk(false);
   };
 
   const handleDelete = async () => {
@@ -247,6 +277,144 @@ export default function ProductForm() {
       setExporting(false);
     }
   };
+
+  // Enterprise pre-step derived data
+  const franchiseGroups = Array.from(new Set(
+    allActivities.filter((a) => a.type === 'franchise').map((a) => a.franchiseGroup || a.nom)
+  ));
+  const franchiseActivitiesInGroup = allActivities.filter(
+    (a) => a.type === 'franchise' && (!preFranchiseGroup || (a.franchiseGroup || a.nom) === preFranchiseGroup)
+  );
+  const distinctActivities = allActivities.filter((a) => a.type === 'distincte');
+
+  const handlePreStepConfirm = () => {
+    if (preActType === 'franchise') {
+      setResolvedActCtx('franchise');
+    } else if (preActType === 'distincte' && preDistinctActId) {
+      setResolvedActCtx(`distinct-${preDistinctActId}`);
+    }
+    setPreStepDone(true);
+    setLoading(true);
+  };
+
+  // Show pre-step for enterprise new products
+  if (needsPreStep && !preStepDone) {
+    return (
+      <div className="page">
+        <div className="page-header">
+          <h1>{productType === 'vendable' ? t('client.products.add_vendable') : t('client.products.add_utilisable')}</h1>
+        </div>
+        <div className="card" style={{ maxWidth: 520 }}>
+          <h2 style={{ marginBottom: 16, fontSize: '1rem' }}>{t('client.products.choose_activity_type')}</h2>
+
+          {/* Type selector */}
+          <div style={{ display: 'flex', gap: 10, marginBottom: 20 }}>
+            {typesSummary?.hasFranchise && (
+              <button
+                type="button"
+                className={`btn btn-sm ${preActType === 'franchise' ? 'btn-primary' : 'btn-ghost'}`}
+                onClick={() => { setPreActType('franchise'); setPreDistinctActId(''); }}
+              >
+                Franchise
+              </button>
+            )}
+            {typesSummary?.hasDistinct && (
+              <button
+                type="button"
+                className={`btn btn-sm ${preActType === 'distincte' ? 'btn-primary' : 'btn-ghost'}`}
+                onClick={() => { setPreActType('distincte'); setPreFranchiseGroup(''); }}
+              >
+                Distinct
+              </button>
+            )}
+          </div>
+
+          {/* Franchise: group + activities checkboxes */}
+          {preActType === 'franchise' && (
+            <>
+              {franchiseGroups.length > 1 && (
+                <div style={{ marginBottom: 14 }}>
+                  <label style={{ display: 'block', fontWeight: 600, marginBottom: 6, fontSize: '0.875rem' }}>
+                    {t('client.fiche_technique.choose_franchise_group')}
+                  </label>
+                  <select className="input" style={{ maxWidth: 280 }} value={preFranchiseGroup} onChange={(e) => setPreFranchiseGroup(e.target.value)}>
+                    <option value="">— tous les groupes —</option>
+                    {franchiseGroups.map((g) => <option key={g} value={g}>{g}</option>)}
+                  </select>
+                </div>
+              )}
+              <div>
+                <label style={{ display: 'block', fontWeight: 600, marginBottom: 8, fontSize: '0.875rem' }}>
+                  {t('client.products.included_activities')}
+                </label>
+                {franchiseActivitiesInGroup.map((a) => (
+                  <label key={a.id} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6, cursor: 'pointer' }}>
+                    <input
+                      type="checkbox"
+                      checked={preCheckedActIds.has(a.id)}
+                      onChange={(e) => {
+                        const next = new Set(preCheckedActIds);
+                        if (e.target.checked) next.add(a.id); else next.delete(a.id);
+                        setPreCheckedActIds(next);
+                      }}
+                    />
+                    <span>{a.nom}</span>
+                  </label>
+                ))}
+              </div>
+            </>
+          )}
+
+          {/* Distinct: activity selector */}
+          {preActType === 'distincte' && (
+            <div style={{ marginBottom: 14 }}>
+              <label style={{ display: 'block', fontWeight: 600, marginBottom: 6, fontSize: '0.875rem' }}>
+                {t('client.fiche_technique.choose_activity')}
+              </label>
+              <select className="input" style={{ maxWidth: 280 }} value={preDistinctActId} onChange={(e) => setPreDistinctActId(e.target.value)}>
+                <option value="">— {t('client.fiche_technique.choose_activity')} —</option>
+                {distinctActivities.map((a) => <option key={a.id} value={a.id}>{a.nom}</option>)}
+              </select>
+            </div>
+          )}
+
+          <div style={{ marginTop: 24 }}>
+            <button
+              type="button"
+              className="btn btn-primary"
+              disabled={!preActType || (preActType === 'distincte' && !preDistinctActId)}
+              onClick={handlePreStepConfirm}
+            >
+              {t('common.continue')} →
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // "Créer un autre" screen
+  if (savedOk) {
+    return (
+      <div className="page">
+        <div className="page-header">
+          <h1>{productType === 'vendable' ? t('client.products.add_vendable') : t('client.products.add_utilisable')}</h1>
+        </div>
+        <div className="card" style={{ maxWidth: 480, textAlign: 'center', padding: 32 }}>
+          <div style={{ fontSize: '2rem', marginBottom: 12 }}>✅</div>
+          <p style={{ fontWeight: 600, marginBottom: 20 }}>{t('client.products.saved_success')}</p>
+          <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
+            <button className="btn btn-primary" onClick={handleCreateAnother}>
+              + {t('client.products.create_another')}
+            </button>
+            <button className="btn btn-ghost" onClick={() => navigate(`/client/products?tab=${productType}`)}>
+              {t('client.products.back_to_list')}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (loading) return <div className="page"><div className="loading-text">{t('common.loading')}</div></div>;
 
@@ -282,12 +450,6 @@ export default function ProductForm() {
             <label className="form-label">{t('client.products.name')}</label>
             <input className="input" required value={name} onChange={(e) => setName(e.target.value)} />
           </div>
-        </div>
-
-        {/* Cost display */}
-        <div className="cost-display card">
-          <div className="cost-label">{t('client.products.real_time_cost')}</div>
-          <div className="cost-value">{totalCost.toFixed(3)} <span className="cost-currency">{t('currency')}</span></div>
         </div>
 
         {/* Ingredients grouped by category */}
@@ -422,10 +584,8 @@ export default function ProductForm() {
         )}
 
         <div className="form-actions">
-          <button type="button" className="btn btn-ghost" onClick={() => {
-            const actCtxQuery = actCtx ? `&actCtx=${encodeURIComponent(actCtx)}` : '';
-            navigate(`/client/products?tab=${productType}${actCtxQuery}`);
-          }}>
+          <button type="button" className="btn btn-ghost" onClick={() => navigate(`/client/products?tab=${productType}`)}>
+
             {t('common.cancel')}
           </button>
           <button type="submit" className="btn btn-primary" disabled={saving}>

@@ -1,4 +1,4 @@
-import { NavLink, useLocation } from 'react-router-dom';
+import { NavLink, Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useEffect, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
@@ -47,6 +47,79 @@ function Divider() {
   return <li style={{ borderTop: '1px solid var(--border)', margin: '6px 12px' }} />;
 }
 
+function ProductSubLinks({
+  locked,
+  actCtx,
+  onClick,
+}: {
+  locked: boolean;
+  actCtx?: string;
+  onClick: () => void;
+}) {
+  const { t } = useTranslation();
+  const location = useLocation();
+  const currentTab = new URLSearchParams(location.search).get('tab') || 'vendable';
+  const currentActCtx = new URLSearchParams(location.search).get('actCtx') || '';
+  const onProducts = location.pathname === '/client/products';
+
+  const subStyle = {
+    display: 'flex', alignItems: 'center', gap: 8,
+    padding: '5px 12px 5px 32px',
+    fontSize: '0.82rem',
+    borderRadius: 6,
+    margin: '1px 8px',
+    textDecoration: 'none',
+    color: 'var(--text)',
+    cursor: locked ? 'not-allowed' : 'pointer',
+    opacity: locked ? 0.4 : 1,
+  };
+
+  const activeSubStyle = { ...subStyle, background: 'var(--primary-light, #e8f0fe)', color: 'var(--primary)', fontWeight: 600 };
+
+  const mkHref = (tab: string) => {
+    const params = new URLSearchParams({ tab });
+    if (actCtx) params.set('actCtx', actCtx);
+    return `/client/products?${params}`;
+  };
+
+  if (locked) {
+    return (
+      <>
+        {['vendable', 'utilisable', 'fiche-technique'].map((tab) => (
+          <li key={tab}><span style={subStyle}>{tab === 'fiche-technique' ? '📋' : tab === 'vendable' ? '🍔' : '🧪'} {tab === 'fiche-technique' ? t('client.products.tab_fiche_technique') : tab === 'vendable' ? t('client.products.tab_vendable') : t('client.products.tab_utilisable')}</span></li>
+        ))}
+      </>
+    );
+  }
+
+  const isTabActive = (tab: string) => {
+    if (!onProducts) return false;
+    if (tab === 'fiche-technique') return currentTab === 'fiche-technique';
+    return currentTab === tab && (!actCtx || currentActCtx === actCtx);
+  };
+
+  return (
+    <>
+      {[
+        { tab: 'vendable', icon: '🍔', label: t('client.products.tab_vendable') },
+        { tab: 'utilisable', icon: '🧪', label: t('client.products.tab_utilisable') },
+        { tab: 'fiche-technique', icon: '📋', label: t('client.products.tab_fiche_technique') },
+      ].map(({ tab, icon, label }) => (
+        <li key={tab}>
+          <Link
+            to={tab === 'fiche-technique' ? '/client/products?tab=fiche-technique' : mkHref(tab)}
+            style={isTabActive(tab) ? activeSubStyle : subStyle}
+            onClick={onClick}
+          >
+            <span style={{ fontSize: '0.85rem' }}>{icon}</span>
+            <span>{label}</span>
+          </Link>
+        </li>
+      ))}
+    </>
+  );
+}
+
 export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const { t } = useTranslation();
   const { user } = useAuth();
@@ -60,7 +133,6 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const effectiveHasSelections = isEntreprise ? (step === 0) : hasSelections;
 
   const currentSection = new URLSearchParams(location.search).get('section');
-  const currentActCtx = new URLSearchParams(location.search).get('actCtx');
 
   const hasFranchise = typesSummary === null ? true : typesSummary.hasFranchise;
   const hasDistinct = typesSummary === null ? true : typesSummary.hasDistinct;
@@ -148,15 +220,12 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                     </NavLink>
                   </li>
                   <li>
-                    {!effectiveHasSelections ? (
-                      <LockedLink label={t('nav.products')} reason={t('nav.products_locked')} />
-                    ) : (
-                      <NavLink to="/client/products" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>
-                        <span className="link-icon">🍔</span>
-                        <span className="link-label">{t('nav.products')}</span>
-                      </NavLink>
-                    )}
+                    <span className="sidebar-link" style={{ opacity: !effectiveHasSelections ? 0.35 : 1, cursor: 'default' }} title={!effectiveHasSelections ? t('nav.products_locked') : undefined}>
+                      <span className="link-icon">🍔</span>
+                      <span className="link-label">{t('nav.products')}</span>
+                    </span>
                   </li>
+                  <ProductSubLinks locked={!effectiveHasSelections} onClick={onClose} />
                   <li>
                     {!effectiveHasSelections ? (
                       <LockedLink label={t('nav.stock')} reason={t('nav.stock_locked')} />
@@ -223,19 +292,12 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
                       {/* F Produits */}
                       <li>
-                        {isOnboarding || !effectiveHasSelections || !hasFranchise ? (
-                          <LockedLink label={t('nav.products_franchise')} />
-                        ) : (
-                          <NavLink
-                            to="/client/products?actCtx=franchise"
-                            className={({ isActive }) => `sidebar-link ${isActive && currentActCtx === 'franchise' ? 'active' : ''}`}
-                            onClick={onClose}
-                          >
-                            <span className="link-icon">🍔</span>
-                            <span className="link-label">{t('nav.products_franchise')}</span>
-                          </NavLink>
-                        )}
+                        <span className="sidebar-link" style={{ opacity: (isOnboarding || !effectiveHasSelections || !hasFranchise) ? 0.35 : 1, cursor: 'default' }}>
+                          <span className="link-icon">🍔</span>
+                          <span className="link-label">{t('nav.products_franchise')}</span>
+                        </span>
                       </li>
+                      <ProductSubLinks locked={isOnboarding || !effectiveHasSelections || !hasFranchise} actCtx="franchise" onClick={onClose} />
                     </>
                   )}
 
@@ -275,19 +337,12 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
                       {/* D Produits */}
                       <li>
-                        {isOnboarding || !effectiveHasSelections || !hasDistinct ? (
-                          <LockedLink label={t('nav.products_distinct')} />
-                        ) : (
-                          <NavLink
-                            to="/client/products?actCtx=distinct"
-                            className={({ isActive }) => `sidebar-link ${isActive && currentActCtx !== null && currentActCtx !== 'franchise' ? 'active' : ''}`}
-                            onClick={onClose}
-                          >
-                            <span className="link-icon">🍔</span>
-                            <span className="link-label">{t('nav.products_distinct')}</span>
-                          </NavLink>
-                        )}
+                        <span className="sidebar-link" style={{ opacity: (isOnboarding || !effectiveHasSelections || !hasDistinct) ? 0.35 : 1, cursor: 'default' }}>
+                          <span className="link-icon">🍔</span>
+                          <span className="link-label">{t('nav.products_distinct')}</span>
+                        </span>
                       </li>
+                      <ProductSubLinks locked={isOnboarding || !effectiveHasSelections || !hasDistinct} onClick={onClose} />
                     </>
                   )}
                 </>
