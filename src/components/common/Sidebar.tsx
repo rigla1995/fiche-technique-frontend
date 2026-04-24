@@ -1,7 +1,10 @@
 import { NavLink } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { useEffect, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useSelection } from '../../context/SelectionContext';
+import api from '../../api/client';
+import type { ActiviteTypesSummary } from '../../types';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -25,9 +28,18 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const { t } = useTranslation();
   const { user } = useAuth();
   const { hasSelections } = useSelection();
+  const [typesSummary, setTypesSummary] = useState<ActiviteTypesSummary | null>(null);
 
   const step = user?.onboardingStep ?? 0;
   const isOnboarding = user?.compteType === 'entreprise' && step > 0;
+
+  useEffect(() => {
+    if (user?.compteType === 'entreprise' && !isOnboarding) {
+      api.get('/api/entreprise/activites/types-summary')
+        .then(({ data }) => setTypesSummary(data))
+        .catch(() => setTypesSummary(null));
+    }
+  }, [user?.compteType, isOnboarding]);
 
   const adminLinks = [
     { to: '/admin', label: t('nav.dashboard'), icon: '📊', end: true },
@@ -95,11 +107,9 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                 )}
               </li>
 
-              {/* Catalogue ingrédients — unlocks at step 3+ */}
-              <li>
-                {isOnboarding && step < 3 ? (
-                  <LockedLink icon="🧂" label={t('nav.ingredients_catalog')} />
-                ) : (
+              {/* Catalogue ingrédients — entreprise users get dual tabs based on activity types */}
+              {user?.compteType !== 'entreprise' && (
+                <li>
                   <NavLink
                     to="/client/ingredients"
                     className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
@@ -108,8 +118,54 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                     <span className="link-icon">🧂</span>
                     <span className="link-label">{t('nav.ingredients_catalog')}</span>
                   </NavLink>
-                )}
-              </li>
+                </li>
+              )}
+              {user?.compteType === 'entreprise' && (
+                <>
+                  {isOnboarding && step < 3 ? (
+                    <li><LockedLink icon="🧂" label={t('nav.ingredients_catalog')} /></li>
+                  ) : (
+                    <>
+                      {typesSummary?.hasFranchise && (
+                        <li>
+                          <NavLink
+                            to="/client/catalogue-franchise"
+                            className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
+                            onClick={onClose}
+                          >
+                            <span className="link-icon">🧂</span>
+                            <span className="link-label">{t('nav.catalogue_franchise')}</span>
+                          </NavLink>
+                        </li>
+                      )}
+                      {typesSummary?.hasDistinct && (
+                        <li>
+                          <NavLink
+                            to="/client/catalogue-distinct"
+                            className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
+                            onClick={onClose}
+                          >
+                            <span className="link-icon">🧂</span>
+                            <span className="link-label">{t('nav.catalogue_distinct')}</span>
+                          </NavLink>
+                        </li>
+                      )}
+                      {typesSummary && !typesSummary.hasFranchise && !typesSummary.hasDistinct && (
+                        <li>
+                          <NavLink
+                            to="/client/ingredients"
+                            className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
+                            onClick={onClose}
+                          >
+                            <span className="link-icon">🧂</span>
+                            <span className="link-label">{t('nav.ingredients_catalog')}</span>
+                          </NavLink>
+                        </li>
+                      )}
+                    </>
+                  )}
+                </>
+              )}
 
               {/* Produits — locked during onboarding or without selections */}
               <li>

@@ -48,7 +48,9 @@
     "activites": "Mes activités",
     "stock": "Stock",
     "stock_locked": "Stock (sélectionnez vos ingrédients d'abord)",
-    "domaines": "Domaines d'activité"
+    "domaines": "Domaines d'activité",
+    "catalogue_franchise": "F Catalogue Ingrédients",
+    "catalogue_distinct": "D Catalogue Ingrédients"
   },
   "validation": {
     "name_required": "Nom requis",
@@ -230,6 +232,18 @@
       "activity_created": "Activité créée.",
       "activity_updated": "Activité mise à jour.",
       "activity_deleted": "Activité supprimée."
+    },
+    "catalogue_franchise": {
+      "title": "F Catalogue Ingrédients",
+      "duplicate_to_others": "Dupliquer vers les autres activités",
+      "filter_category": "Filtrer par nom d'ingrédient",
+      "all_categories": "Toutes les catégories",
+      "no_activities": "Aucune activité franchise trouvée."
+    },
+    "catalogue_distinct": {
+      "title": "D Catalogue Ingrédients",
+      "select_activity": "Sélectionner une activité",
+      "no_activities": "Aucune activité distincte trouvée."
     },
     "stock": {
       "title": "Stock",

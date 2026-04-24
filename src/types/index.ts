@@ -97,17 +97,33 @@ export interface Activite {
   adresse?: string;
   telephone?: string;
   email?: string;
+  type?: 'franchise' | 'distincte';
   createdAt?: string;
+}
+
+export interface ActiviteTypesSummary {
+  hasFranchise: boolean;
+  hasDistinct: boolean;
 }
 
 export interface StockEntry {
   ingredientId: number;
   nom: string;
   unite: string;
+  categorie: string;
   prixUnitaire: number | null;
   quantite: number | null;
   dateAchat: string | null;
   updatedAt: string | null;
+}
+
+export interface ActiviteIngredient {
+  id: number;
+  nom: string;
+  unite: string;
+  categorie: string;
+  prix: number | null;
+  selected: boolean;
 }
 
 export interface ApiError {

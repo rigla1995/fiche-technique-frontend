@@ -48,7 +48,9 @@
     "activites": "My activities",
     "stock": "Stock",
     "stock_locked": "Stock (select your ingredients first)",
-    "domaines": "Activity domains"
+    "domaines": "Activity domains",
+    "catalogue_franchise": "F Ingredients Catalogue",
+    "catalogue_distinct": "D Ingredients Catalogue"
   },
   "validation": {
     "name_required": "Name is required",
@@ -230,6 +232,18 @@
       "activity_created": "Activity created.",
       "activity_updated": "Activity updated.",
       "activity_deleted": "Activity deleted."
+    },
+    "catalogue_franchise": {
+      "title": "F Ingredients Catalogue",
+      "duplicate_to_others": "Duplicate to other activities",
+      "filter_category": "Filter by ingredient name",
+      "all_categories": "All categories",
+      "no_activities": "No franchise activities found."
+    },
+    "catalogue_distinct": {
+      "title": "D Ingredients Catalogue",
+      "select_activity": "Select an activity",
+      "no_activities": "No distinct activities found."
     },
     "stock": {
       "title": "Stock",
