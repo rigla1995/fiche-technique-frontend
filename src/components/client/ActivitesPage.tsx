@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
-import type { Activite } from '../../types';
+import type { Activite, ActiviteIngredient } from '../../types';
 
 type ActiviteForm = { nom: string; adresse: string; telephone: string; email: string };
 const emptyForm = (): ActiviteForm => ({ nom: '', adresse: '', telephone: '', email: '' });
@@ -24,10 +24,16 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState<ActiviteForm>(emptyForm());
   const [memeActivite, setMemeActivite] = useState<boolean | null>(null);
+  const [nombreActivites, setNombreActivites] = useState('1');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [msg, setMsg] = useState('');
   const [isDuplicate, setIsDuplicate] = useState(false);
+
+  // Ingredient assignment modal
+  const [ingredientsActivite, setIngredientsActivite] = useState<Activite | null>(null);
+  const [ingredients, setIngredients] = useState<ActiviteIngredient[]>([]);
+  const [ingredientsLoading, setIngredientsLoading] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -45,6 +51,7 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
     setIsDuplicate(false);
     setForm(emptyForm());
     setMemeActivite(null);
+    setNombreActivites('1');
     setError('');
     setShowForm(true);
   };
@@ -54,6 +61,7 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
     setIsDuplicate(false);
     setForm({ nom: act.nom, adresse: act.adresse || '', telephone: act.telephone || '', email: act.email || '' });
     setMemeActivite(null);
+    setNombreActivites('1');
     setError('');
     setShowForm(true);
   };
@@ -61,9 +69,9 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
   const openDuplicate = (act: Activite) => {
     setEditingId(null);
     setIsDuplicate(true);
-    // Pre-fill only the name, user must complete the rest
     setForm({ nom: act.nom, adresse: '', telephone: '', email: '' });
     setMemeActivite(null);
+    setNombreActivites('1');
     setError('');
     setShowForm(true);
   };
@@ -86,11 +94,11 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
       } else {
         const isFirst = activites.length === 0;
         const payload: Record<string, unknown> = { ...form };
-        if (isFirst && memeActivite !== null) payload.memeActivite = memeActivite;
+        if (memeActivite !== null) payload.memeActivite = memeActivite;
+        if (memeActivite === true) payload.nombreActivites = parseInt(nombreActivites) || 1;
         await api.post('/api/entreprise/activites', payload);
         setMsg(t('client.entreprise.activity_created'));
         if (onCreated) onCreated();
-        // Advance onboarding: step 2 (activites) → step 3 (catalogue)
         if (isFirst && user?.onboardingStep === 2) {
           await advanceOnboarding(3);
         }
@@ -113,7 +121,34 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
     } catch { /* ignore */ }
   };
 
-  const isFirst = activites.length === 0 && !editingId && !isDuplicate;
+  const openIngredients = async (act: Activite) => {
+    setIngredientsActivite(act);
+    setIngredientsLoading(true);
+    setIngredients([]);
+    try {
+      const { data } = await api.get(`/api/entreprise/activites/${act.id}/ingredients`);
+      setIngredients(data);
+    } catch { /* ignore */ }
+    setIngredientsLoading(false);
+  };
+
+  const closeIngredients = () => { setIngredientsActivite(null); setIngredients([]); };
+
+  const toggleIngredient = async (ingredientId: number) => {
+    if (!ingredientsActivite) return;
+    try {
+      const { data } = await api.post(`/api/entreprise/activites/${ingredientsActivite.id}/ingredients/${ingredientId}/select`);
+      setIngredients((prev) => prev.map((i) => i.id === ingredientId ? { ...i, selected: data.selected } : i));
+    } catch { /* ignore */ }
+  };
+
+  // Group ingredients by category for the modal
+  const ingredientGroups: Record<string, ActiviteIngredient[]> = {};
+  for (const ing of ingredients) {
+    const cat = ing.categorie || t('client.ingredients_catalog.no_category');
+    if (!ingredientGroups[cat]) ingredientGroups[cat] = [];
+    ingredientGroups[cat].push(ing);
+  }
 
   return (
     <div className={minimal ? '' : 'page-content'}>
@@ -141,6 +176,7 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
               <div className="activite-card-header">
                 <span className="activite-nom">{act.nom}</span>
                 <div className="activite-actions">
+                  <button className="btn btn-ghost btn-sm" onClick={() => openIngredients(act)}>{t('client.entreprise.manage_ingredients')}</button>
                   <button className="btn btn-ghost btn-sm" onClick={() => openEdit(act)}>{t('common.edit')}</button>
                   <button className="btn btn-ghost btn-sm" onClick={() => openDuplicate(act)} title={t('client.entreprise.duplicate_activity')}>⧉</button>
                   <button className="btn btn-danger-ghost btn-sm" onClick={() => deleteActivite(act.id)}>{t('common.delete')}</button>
@@ -156,6 +192,7 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
         </div>
       )}
 
+      {/* Add / Edit form modal */}
       {showForm && (
         <div className="modal-overlay" onClick={closeForm}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
@@ -168,8 +205,8 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
               <button className="modal-close" onClick={closeForm}>✕</button>
             </div>
             <form onSubmit={submit} className="modal-body">
-              {/* Franchise question only on very first activity */}
-              {isFirst && (
+              {/* Franchise question — shown whenever adding (not editing, not duplicating) */}
+              {!editingId && !isDuplicate && (
                 <div className="franchise-question" style={{ marginBottom: 16 }}>
                   <p style={{ fontWeight: 600, marginBottom: 8 }}>{t('client.entreprise.franchise_question')}</p>
                   <div style={{ display: 'flex', gap: 12 }}>
@@ -182,6 +219,19 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                       {t('client.entreprise.franchise_no')}
                     </label>
                   </div>
+                  {memeActivite === true && (
+                    <div className="form-field" style={{ marginTop: 12 }}>
+                      <label>{t('client.entreprise.franchise_count')}</label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="20"
+                        value={nombreActivites}
+                        onChange={(e) => setNombreActivites(e.target.value)}
+                        style={{ width: 80 }}
+                      />
+                    </div>
+                  )}
                 </div>
               )}
               <div className="form-field" style={{ marginBottom: 12 }}>
@@ -208,6 +258,52 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Ingredient assignment modal */}
+      {ingredientsActivite && (
+        <div className="modal-overlay" onClick={closeIngredients}>
+          <div className="modal modal-lg" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>{t('client.entreprise.manage_ingredients')} — {ingredientsActivite.nom}</h2>
+              <button className="modal-close" onClick={closeIngredients}>✕</button>
+            </div>
+            <div className="modal-body" style={{ maxHeight: '60vh', overflowY: 'auto' }}>
+              {ingredientsLoading ? (
+                <p className="text-muted">{t('common.loading')}</p>
+              ) : ingredients.length === 0 ? (
+                <p className="text-muted">{t('client.stock.empty_stock')}</p>
+              ) : (
+                Object.entries(ingredientGroups).sort(([a], [b]) => a.localeCompare(b)).map(([cat, items]) => (
+                  <div key={cat} style={{ marginBottom: 20 }}>
+                    <h3 style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--primary)', marginBottom: 8 }}>
+                      🏷️ {cat} <span style={{ fontWeight: 400, color: 'var(--text-muted)', fontSize: '0.75rem' }}>({items.length})</span>
+                    </h3>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                      {items.map((ing) => (
+                        <label key={ing.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 8px', borderRadius: 6, cursor: 'pointer', background: ing.selected ? 'var(--primary-light, #eef2ff)' : 'transparent' }}>
+                          <input
+                            type="checkbox"
+                            checked={ing.selected}
+                            onChange={() => toggleIngredient(ing.id)}
+                          />
+                          <span style={{ flex: 1 }}>{ing.nom}</span>
+                          <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{ing.unite}</span>
+                          {ing.prix !== null && (
+                            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{ing.prix.toFixed(3)} {t('currency')}</span>
+                          )}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-primary" onClick={closeIngredients}>{t('common.close')}</button>
+            </div>
           </div>
         </div>
       )}

@@ -220,6 +220,8 @@
       "franchise_question": "Do all your activities share the same activity (franchise)?",
       "franchise_yes": "Yes, it's a franchise",
       "franchise_no": "No, distinct activities",
+      "franchise_count": "Number of activities to create",
+      "manage_ingredients": "Ingredients",
       "duplicate_from_last": "Duplicate from last activity",
       "activity_created": "Activity created.",
       "activity_updated": "Activity updated.",
