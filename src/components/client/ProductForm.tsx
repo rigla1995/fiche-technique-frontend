@@ -79,18 +79,48 @@ export default function ProductForm() {
   useEffect(() => {
     if (needsPreStep && !preStepDone) return; // wait for pre-step
 
-    // For enterprise with activity context, load ingredients from that activity
-    const ingredientsFetch: Promise<{ data: unknown }> = resolvedActCtx
-      ? (isFranchiseCtx
-          ? api.get('/api/entreprise/activites').then(({ data }) => {
-              const first = (data as Activite[]).find((a) => a.type === 'franchise');
-              return first
-                ? api.get(`/api/entreprise/activites/${first.id}/ingredients`)
-                : api.get('/ingredients');
-            })
-          : api.get(`/api/entreprise/activites/${distinctActId}/ingredients`))
-      : api.get('/ingredients');
+    const mapActiviteIngredient = (i: import('../../types').ActiviteIngredient): Ingredient => ({
+      id: i.id,
+      name: i.nom,
+      price: i.prix,
+      clientPrice: i.prixUnitaire,
+      effectivePrice: i.prixUnitaire ?? i.prix,
+      selected: true,
+      unit: { id: 0, name: i.unite },
+      unitId: 0,
+      categorieId: i.categorieId,
+      categorieName: i.categorie,
+    } as Ingredient);
 
+    // For franchise: union selected ingredients across ALL franchise activities (not just the first)
+    const buildIngredientsFetch = (): Promise<{ data: unknown }> => {
+      if (!resolvedActCtx) return api.get('/ingredients');
+      if (isFranchiseCtx) {
+        const franchiseActs = allActivities.filter((a) => a.type === 'franchise');
+        if (franchiseActs.length === 0) return api.get('/ingredients');
+        return Promise.all(
+          franchiseActs.map((a) =>
+            api.get(`/api/entreprise/activites/${a.id}/ingredients`).then(({ data }) => data as import('../../types').ActiviteIngredient[])
+          )
+        ).then((results) => {
+          // Union: an ingredient is included if selected in at least one franchise activity
+          const seenIds = new Set<number>();
+          const union: import('../../types').ActiviteIngredient[] = [];
+          for (const list of results) {
+            for (const ing of list) {
+              if (ing.selected && !seenIds.has(ing.id)) {
+                seenIds.add(ing.id);
+                union.push(ing);
+              }
+            }
+          }
+          return { data: union };
+        });
+      }
+      return api.get(`/api/entreprise/activites/${distinctActId}/ingredients`);
+    };
+
+    const ingredientsFetch = buildIngredientsFetch();
     const productsFetch = api.get('/products');
     const categoriesFetch = api.get('/categories');
     const fetches: Promise<{ data: unknown }>[] = [ingredientsFetch, productsFetch, categoriesFetch];
@@ -98,25 +128,13 @@ export default function ProductForm() {
 
     Promise.all(fetches)
       .then(([ing, prod, cat, productRes]) => {
-        // Activity ingredients come as ActiviteIngredient[] (selected field), global comes as Ingredient[]
         const catData = cat.data as Category[];
         setCategories(catData);
         let ingData: Ingredient[];
         if (resolvedActCtx) {
           ingData = (ing.data as import('../../types').ActiviteIngredient[])
             .filter((i) => i.selected)
-            .map((i) => ({
-              id: i.id,
-              name: i.nom,
-              price: i.prix,
-              clientPrice: i.prixUnitaire,
-              effectivePrice: i.prixUnitaire ?? i.prix,
-              selected: true,
-              unit: { id: 0, name: i.unite },
-              unitId: 0,
-              categorieId: i.categorieId,
-              categorieName: i.categorie,
-            } as Ingredient));
+            .map(mapActiviteIngredient);
         } else {
           ingData = (ing.data as Ingredient[]).filter((i) => i.selected);
         }
@@ -156,7 +174,7 @@ export default function ProductForm() {
       })
       .finally(() => setLoading(false));
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id, isEdit, preStepDone, resolvedActCtx]);
+  }, [id, isEdit, preStepDone, resolvedActCtx, allActivities.length]);
 
 
   // --- Ingredient line helpers ---
