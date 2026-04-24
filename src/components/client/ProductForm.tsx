@@ -433,7 +433,10 @@ export default function ProductForm() {
         )}
 
         <div className="form-actions">
-          <button type="button" className="btn btn-ghost" onClick={() => navigate(`/client/products?tab=${productType}`)}>
+          <button type="button" className="btn btn-ghost" onClick={() => {
+            const actCtxQuery = actCtx ? `&actCtx=${encodeURIComponent(actCtx)}` : '';
+            navigate(`/client/products?tab=${productType}${actCtxQuery}`);
+          }}>
             {t('common.cancel')}
           </button>
           <button type="submit" className="btn btn-primary" disabled={saving}>
