@@ -243,7 +243,8 @@
     "catalogue_distinct": {
       "title": "D Ingredients Catalogue",
       "select_activity": "Select an activity",
-      "no_activities": "No distinct activities found."
+      "no_activities": "No distinct activities found.",
+      "price_per_unit": "Unit price"
     },
     "stock": {
       "title": "Stock",
@@ -259,7 +260,10 @@
       "saved": "Saved",
       "date_required_if_qty": "Date is required when a quantity is set.",
       "empty_stock": "No ingredients selected.",
-      "updated_at": "Updated"
+      "updated_at": "Updated",
+      "date_label": "Stock date",
+      "franchise_section": "Stock — Franchise Activities",
+      "distinct_section": "Stock — Distinct Activities"
     }
   },
   "currency": "TND"

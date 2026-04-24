@@ -243,7 +243,8 @@
     "catalogue_distinct": {
       "title": "D Catalogue Ingrédients",
       "select_activity": "Sélectionner une activité",
-      "no_activities": "Aucune activité distincte trouvée."
+      "no_activities": "Aucune activité distincte trouvée.",
+      "price_per_unit": "Prix unitaire"
     },
     "stock": {
       "title": "Stock",
@@ -259,7 +260,10 @@
       "saved": "Sauvegardé",
       "date_required_if_qty": "La date est requise si une quantité est renseignée.",
       "empty_stock": "Aucun ingrédient sélectionné.",
-      "updated_at": "Mis à jour"
+      "updated_at": "Mis à jour",
+      "date_label": "Date du stock",
+      "franchise_section": "Stock — Activités Franchise",
+      "distinct_section": "Stock — Activités Distinctes"
     }
   },
   "currency": "DT"

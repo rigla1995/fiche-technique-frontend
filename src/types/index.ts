@@ -113,7 +113,6 @@ export interface StockEntry {
   categorie: string;
   prixUnitaire: number | null;
   quantite: number | null;
-  dateAchat: string | null;
   updatedAt: string | null;
 }
 
@@ -123,6 +122,7 @@ export interface ActiviteIngredient {
   unite: string;
   categorie: string;
   prix: number | null;
+  prixUnitaire: number | null;
   selected: boolean;
 }
 
