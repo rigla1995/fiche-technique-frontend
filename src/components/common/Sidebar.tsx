@@ -1,4 +1,4 @@
-import { NavLink } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useEffect, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
@@ -30,6 +30,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const { hasSelections } = useSelection();
   const [typesSummary, setTypesSummary] = useState<ActiviteTypesSummary | null>(null);
 
+  const location = useLocation();
   const step = user?.onboardingStep ?? 0;
   const isOnboarding = user?.compteType === 'entreprise' && step > 0;
 
@@ -39,7 +40,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
         .then(({ data }) => setTypesSummary(data))
         .catch(() => setTypesSummary(null));
     }
-  }, [user?.compteType, isOnboarding]);
+  }, [user?.compteType, isOnboarding, location.pathname]);
 
   const adminLinks = [
     { to: '/admin', label: t('nav.dashboard'), icon: '📊', end: true },
