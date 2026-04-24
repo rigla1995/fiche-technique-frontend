@@ -208,9 +208,24 @@ function ActivityStockSection({ label, activities, dateStock, isFranchise, onSav
 
   return (
     <div style={{ marginBottom: 36 }}>
-      <h2 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--primary)', marginBottom: 12 }}>{label}</h2>
+      {/* Header row: label + duplicate button */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+        <h2 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--primary)', margin: 0 }}>{label}</h2>
+        {canDuplicate && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            {dupMsg && <span style={{ fontSize: '0.8rem', color: 'var(--success)' }}>{dupMsg}</span>}
+            <button
+              className="btn btn-primary btn-sm"
+              onClick={handleDuplicate}
+              disabled={duplicating}
+            >
+              {duplicating ? '...' : `📋 ${t('client.stock.duplicate_franchise')}`}
+            </button>
+          </div>
+        )}
+      </div>
 
-      {/* Single filter row: [group?] [activity] [category] [search] [duplicate button right] */}
+      {/* Filter row: [group?] [activity] [category] [search] */}
       <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
         {isFranchise && hasMultipleGroups && (
           <select
@@ -252,20 +267,6 @@ function ActivityStockSection({ label, activities, dateStock, isFranchise, onSav
           value={nameFilter}
           onChange={(e) => setNameFilter(e.target.value)}
         />
-
-        {/* Duplicate button pinned to the right */}
-        {canDuplicate && (
-          <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10 }}>
-            {dupMsg && <span style={{ fontSize: '0.8rem', color: 'var(--success)' }}>{dupMsg}</span>}
-            <button
-              className="btn btn-primary btn-sm"
-              onClick={handleDuplicate}
-              disabled={duplicating}
-            >
-              {duplicating ? '...' : `📋 ${t('client.stock.duplicate_franchise')}`}
-            </button>
-          </div>
-        )}
       </div>
 
       {loading ? (
