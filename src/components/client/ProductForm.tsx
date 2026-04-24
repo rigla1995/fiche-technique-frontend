@@ -92,30 +92,36 @@ export default function ProductForm() {
       categorieName: i.categorie,
     } as Ingredient);
 
-    // For franchise: union selected ingredients across ALL franchise activities (not just the first)
-    const buildIngredientsFetch = (): Promise<{ data: unknown }> => {
+    // For franchise: union selected ingredients across ALL franchise activities
+    const buildIngredientsFetch = async (): Promise<{ data: unknown }> => {
       if (!resolvedActCtx) return api.get('/ingredients');
       if (isFranchiseCtx) {
-        const franchiseActs = allActivities.filter((a) => a.type === 'franchise');
-        if (franchiseActs.length === 0) return api.get('/ingredients');
-        return Promise.all(
+        // Use allActivities if already loaded, otherwise fetch
+        let franchiseActs = allActivities.filter((a) => a.type === 'franchise');
+        if (franchiseActs.length === 0) {
+          try {
+            const { data: allActs } = await api.get('/api/entreprise/activites');
+            franchiseActs = (allActs as Activite[]).filter((a) => a.type === 'franchise');
+          } catch { /* fall through to empty */ }
+        }
+        if (franchiseActs.length === 0) return { data: [] };
+        const results = await Promise.all(
           franchiseActs.map((a) =>
             api.get(`/api/entreprise/activites/${a.id}/ingredients`).then(({ data }) => data as import('../../types').ActiviteIngredient[])
           )
-        ).then((results) => {
-          // Union: an ingredient is included if selected in at least one franchise activity
-          const seenIds = new Set<number>();
-          const union: import('../../types').ActiviteIngredient[] = [];
-          for (const list of results) {
-            for (const ing of list) {
-              if (ing.selected && !seenIds.has(ing.id)) {
-                seenIds.add(ing.id);
-                union.push(ing);
-              }
+        );
+        // Union: ingredient included if selected in at least one franchise activity
+        const seenIds = new Set<number>();
+        const union: import('../../types').ActiviteIngredient[] = [];
+        for (const list of results) {
+          for (const ing of list) {
+            if (ing.selected && !seenIds.has(ing.id)) {
+              seenIds.add(ing.id);
+              union.push(ing);
             }
           }
-          return { data: union };
-        });
+        }
+        return { data: union };
       }
       return api.get(`/api/entreprise/activites/${distinctActId}/ingredients`);
     };
@@ -488,7 +494,16 @@ export default function ProductForm() {
             <h2>{t('client.products.ingredients_section')}</h2>
           </div>
 
-          {groups.length === 0 && (
+          {groups.length === 0 && ingredients.length === 0 && (
+            <p className="empty-text" style={{ color: 'var(--warning, #d97706)' }}>
+              {isFranchiseCtx
+                ? '⚠️ Aucun ingrédient sélectionné pour cette franchise. Rendez-vous dans « F Catalogue Ingrédients » pour sélectionner vos ingrédients.'
+                : resolvedActCtx
+                  ? '⚠️ Aucun ingrédient sélectionné pour cette activité. Rendez-vous dans le catalogue pour sélectionner vos ingrédients.'
+                  : t('client.products.ingredients_empty')}
+            </p>
+          )}
+          {groups.length === 0 && ingredients.length > 0 && (
             <p className="empty-text">{t('client.products.ingredients_empty')}</p>
           )}
 
