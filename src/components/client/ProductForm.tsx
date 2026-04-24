@@ -171,7 +171,9 @@ export default function ProductForm() {
 
   const addNewCategory = (catId: string) => {
     if (!catId) return;
-    setIngredientLines((l) => [...l, { ingredientId: '', portion: '', categoryFilter: catId }]);
+    // '__none__' sentinel means ingredients without a category
+    const filter = catId === '__none__' ? '' : catId;
+    setIngredientLines((l) => [...l, { ingredientId: '', portion: '', categoryFilter: filter }]);
     setNewCatSelect('');
   };
 
@@ -198,17 +200,27 @@ export default function ProductForm() {
   }));
 
   const usedCatIds = new Set(orderedCatIds.filter(Boolean));
-  // Only show categories that actually have at least one loaded ingredient
-  const catIdsWithIngredients = new Set(ingredients.map((i) => String(i.categorieId)).filter((v) => v && v !== 'null'));
+  const usedHasNone = orderedCatIds.includes(''); // '' = uncategorized group already added
+  const catIdsWithIngredients = new Set(
+    ingredients.filter((i) => i.categorieId !== null && i.categorieId !== undefined)
+      .map((i) => String(i.categorieId))
+  );
+  const hasUncategorized = ingredients.some((i) => i.categorieId === null || i.categorieId === undefined);
   const availableNewCategories = categories.filter(
     (c) => !usedCatIds.has(String(c.id)) && catIdsWithIngredients.has(String(c.id))
   );
 
   const availableForLine = (idx: number) => {
     const line = ingredientLines[idx];
-    const byCategory = line.categoryFilter
-      ? ingredients.filter((i) => String(i.categorieId) === line.categoryFilter)
-      : ingredients;
+    let byCategory: typeof ingredients;
+    if (line.categoryFilter === '') {
+      // uncategorized group — show only ingredients without a category
+      byCategory = ingredients.filter((i) => i.categorieId === null || i.categorieId === undefined);
+    } else if (line.categoryFilter) {
+      byCategory = ingredients.filter((i) => String(i.categorieId) === line.categoryFilter);
+    } else {
+      byCategory = ingredients;
+    }
     return byCategory.filter(
       (i) => !selectedIngredientIds.has(String(i.id)) || line.ingredientId === String(i.id)
     );
@@ -513,7 +525,7 @@ export default function ProductForm() {
             </div>
           ))}
 
-          {availableNewCategories.length > 0 && (
+          {(availableNewCategories.length > 0 || (hasUncategorized && !usedHasNone)) && (
             <div style={{ marginTop: 8 }}>
               <select
                 className="input"
@@ -525,6 +537,9 @@ export default function ProductForm() {
                 {availableNewCategories.map((c) => (
                   <option key={c.id} value={c.id}>{c.name}</option>
                 ))}
+                {hasUncategorized && !usedHasNone && (
+                  <option value="__none__">{t('client.ingredients_catalog.no_category')}</option>
+                )}
               </select>
             </div>
           )}

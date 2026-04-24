@@ -140,6 +140,9 @@ export default function ProductList() {
     return found ? `D · ${found.nom}` : '';
   };
 
+  const actCtxCount = (typesSummary?.hasFranchise ? 1 : 0) + (typesSummary?.hasDistinct ? distinctActivities.length : 0);
+  const showActSelector = isEntreprise && actCtxCount > 1;
+
   return (
     <div className="page">
       <div className="page-header">
@@ -157,8 +160,8 @@ export default function ProductList() {
         )}
       </div>
 
-      {/* Entreprise: activity context selector */}
-      {isEntreprise && (
+      {/* Entreprise: activity context selector — only shown when multiple contexts exist */}
+      {showActSelector && (
         activitesLoading ? (
           <p className="text-muted">{t('common.loading')}</p>
         ) : (
@@ -201,7 +204,7 @@ export default function ProductList() {
         )
       )}
 
-      {isEntreprise && selectedActCtx && (
+      {showActSelector && selectedActCtx && (
         <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: 12 }}>
           {selectedActCtx === 'franchise'
             ? t('client.products.franchise_scope_hint')
