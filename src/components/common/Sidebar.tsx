@@ -32,7 +32,11 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
   const location = useLocation();
   const step = user?.onboardingStep ?? 0;
-  const isOnboarding = user?.compteType === 'entreprise' && step > 0;
+  const isEntreprise = user?.compteType === 'entreprise';
+  const isOnboarding = isEntreprise && step > 0;
+  // Entreprise ingredient selections live in activite_ingredient_selections, not ingredient_prix_client.
+  // Once onboarding is done (step=0) for entreprise, treat selections as present.
+  const effectiveHasSelections = isEntreprise ? (step === 0) : hasSelections;
 
   // Fetch catalogue tab visibility: always when onboarding complete (step 0),
   // AND at step 3 so F/D tabs appear for ingredient assignment before products unlock.
@@ -172,7 +176,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
               {/* Produits — locked during onboarding or without selections */}
               <li>
-                {isOnboarding || !hasSelections ? (
+                {isOnboarding || !effectiveHasSelections ? (
                   <LockedLink
                     icon="🍔"
                     label={t('nav.products')}
@@ -191,7 +195,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
               </li>
 
               {/* Mes Activités — entreprise only, unlocks at step 2+ */}
-              {user?.compteType === 'entreprise' && (
+              {isEntreprise && (
                 <li>
                   {isOnboarding && step < 2 ? (
                     <LockedLink icon="🏢" label={t('nav.activites')} />
@@ -209,9 +213,9 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
               )}
 
               {/* Stock — entreprise only, locked during onboarding or without selections */}
-              {user?.compteType === 'entreprise' && (
+              {isEntreprise && (
                 <li>
-                  {isOnboarding || !hasSelections ? (
+                  {isOnboarding || !effectiveHasSelections ? (
                     <LockedLink
                       icon="📦"
                       label={t('nav.stock')}
