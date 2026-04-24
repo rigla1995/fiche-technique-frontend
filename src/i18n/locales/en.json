@@ -246,7 +246,8 @@
       "duplicate_from_last": "Duplicate from last activity",
       "activity_created": "Activity created.",
       "activity_updated": "Activity updated.",
-      "activity_deleted": "Activity deleted."
+      "activity_deleted": "Activity deleted.",
+      "all_groups": "All groups"
     },
     "catalogue_franchise": {
       "title": "F Ingredients Catalogue",

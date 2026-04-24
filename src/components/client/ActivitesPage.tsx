@@ -35,6 +35,10 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
   const [franchiseName, setFranchiseName] = useState('');
   const [franchiseStep, setFranchiseStep] = useState(0);
   const [franchiseForms, setFranchiseForms] = useState<FranchiseStepForm[]>([]);
+  // List filters
+  const [filterFranchiseGroup, setFilterFranchiseGroup] = useState('');
+  const [filterFranchiseName, setFilterFranchiseName] = useState('');
+  const [filterDistinctName, setFilterDistinctName] = useState('');
   // Ingredient assignment modal
   const [ingredientsActivite, setIngredientsActivite] = useState<Activite | null>(null);
   const [ingredients, setIngredients] = useState<ActiviteIngredient[]>([]);
@@ -227,6 +231,24 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
     ingredientGroups[cat].push(ing);
   }
 
+  const franchiseActivities = activites.filter((a) => a.type === 'franchise');
+  const distinctActivities = activites.filter((a) => a.type !== 'franchise');
+  const franchiseGroupNames = Array.from(new Set(franchiseActivities.map((a) => a.franchiseGroup || a.nom))).sort();
+  const filteredFranchise = franchiseActivities.filter((a) => {
+    const g = a.franchiseGroup || a.nom;
+    return (!filterFranchiseGroup || g === filterFranchiseGroup) &&
+      (!filterFranchiseName || a.nom.toLowerCase().includes(filterFranchiseName.toLowerCase()));
+  });
+  const franchiseGrouped: Record<string, Activite[]> = {};
+  for (const a of filteredFranchise) {
+    const g = a.franchiseGroup || a.nom;
+    if (!franchiseGrouped[g]) franchiseGrouped[g] = [];
+    franchiseGrouped[g].push(a);
+  }
+  const filteredDistinct = distinctActivities.filter((a) =>
+    !filterDistinctName || a.nom.toLowerCase().includes(filterDistinctName.toLowerCase())
+  );
+
   return (
     <div className={minimal ? '' : 'page-content'}>
       {!minimal && <h1 style={{ marginBottom: 24 }}>{t('nav.activites')}</h1>}
@@ -248,17 +270,96 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
         <p className="text-muted">{t('client.entreprise.no_activities')}</p>
       ) : (
         <>
-          {(['franchise', 'distincte'] as const).map((type) => {
-            const list = activites.filter((a) => type === 'franchise' ? a.type === 'franchise' : a.type !== 'franchise');
-            if (list.length === 0) return null;
-            return (
-              <div key={type} style={{ marginBottom: 32 }}>
-                <h2 style={{ fontSize: '0.85rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', marginBottom: 12 }}>
-                  {type === 'franchise' ? t('nav.espace_franchise') : t('nav.espace_distinct')}
-                  <span style={{ fontWeight: 400, marginLeft: 6 }}>({list.length})</span>
-                </h2>
+          {/* Franchise section */}
+          {franchiseActivities.length > 0 && (
+            <div style={{ marginBottom: 32 }}>
+              <h2 style={{ fontSize: '0.85rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', marginBottom: 10 }}>
+                {t('nav.espace_franchise')} <span style={{ fontWeight: 400 }}>({franchiseActivities.length})</span>
+              </h2>
+
+              {/* Franchise filters */}
+              <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
+                {franchiseGroupNames.length > 1 && (
+                  <select
+                    className="input"
+                    style={{ maxWidth: 200 }}
+                    value={filterFranchiseGroup}
+                    onChange={(e) => setFilterFranchiseGroup(e.target.value)}
+                  >
+                    <option value="">{t('client.entreprise.all_groups')}</option>
+                    {franchiseGroupNames.map((g) => <option key={g} value={g}>{g}</option>)}
+                  </select>
+                )}
+                <input
+                  type="text"
+                  className="input"
+                  style={{ minWidth: 140, flex: '1 1 auto', maxWidth: 220 }}
+                  placeholder={t('common.search') + '…'}
+                  value={filterFranchiseName}
+                  onChange={(e) => setFilterFranchiseName(e.target.value)}
+                />
+              </div>
+
+              {filteredFranchise.length === 0 ? (
+                <p className="text-muted">{t('common.no_result')}</p>
+              ) : (
+                Object.entries(franchiseGrouped).sort(([a], [b]) => a.localeCompare(b)).map(([group, acts]) => (
+                  <div key={group} style={{ marginBottom: 20 }}>
+                    {franchiseGroupNames.length > 0 && (
+                      <h3 style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--primary)', marginBottom: 8 }}>
+                        {group} <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}>({acts.length})</span>
+                      </h3>
+                    )}
+                    <div className="activites-grid">
+                      {acts.map((act) => (
+                        <div key={act.id} className="activite-card">
+                          <div className="activite-card-header">
+                            <span className="activite-nom">{act.nom}</span>
+                            <div className="activite-actions">
+                              <button className="btn btn-ghost btn-sm" onClick={() => openIngredients(act)}>{t('client.entreprise.manage_ingredients')}</button>
+                              <button className="btn btn-ghost btn-sm" onClick={() => openEdit(act)}>{t('common.edit')}</button>
+                              <button className="btn btn-ghost btn-sm" onClick={() => openDuplicate(act)} title={t('client.entreprise.duplicate_activity')}>⧉</button>
+                              <button className="btn btn-danger-ghost btn-sm" onClick={() => deleteActivite(act.id)}>{t('common.delete')}</button>
+                            </div>
+                          </div>
+                          <div className="activite-details">
+                            {act.email && <span>✉ {act.email}</span>}
+                            {act.telephone && <span>☎ {act.telephone}</span>}
+                            {act.adresse && <span>📍 {act.adresse}</span>}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+
+          {/* Distinct section */}
+          {distinctActivities.length > 0 && (
+            <div style={{ marginBottom: 32 }}>
+              <h2 style={{ fontSize: '0.85rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', marginBottom: 10 }}>
+                {t('nav.espace_distinct')} <span style={{ fontWeight: 400 }}>({distinctActivities.length})</span>
+              </h2>
+
+              {/* Distinct filter */}
+              <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
+                <input
+                  type="text"
+                  className="input"
+                  style={{ minWidth: 140, flex: '1 1 auto', maxWidth: 220 }}
+                  placeholder={t('common.search') + '…'}
+                  value={filterDistinctName}
+                  onChange={(e) => setFilterDistinctName(e.target.value)}
+                />
+              </div>
+
+              {filteredDistinct.length === 0 ? (
+                <p className="text-muted">{t('common.no_result')}</p>
+              ) : (
                 <div className="activites-grid">
-                  {list.map((act) => (
+                  {filteredDistinct.map((act) => (
                     <div key={act.id} className="activite-card">
                       <div className="activite-card-header">
                         <span className="activite-nom">{act.nom}</span>
@@ -277,9 +378,9 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                     </div>
                   ))}
                 </div>
-              </div>
-            );
-          })}
+              )}
+            </div>
+          )}
         </>
       )}
 

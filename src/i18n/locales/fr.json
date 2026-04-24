@@ -246,7 +246,8 @@
       "duplicate_from_last": "Dupliquer depuis la dernière activité",
       "activity_created": "Activité créée.",
       "activity_updated": "Activité mise à jour.",
-      "activity_deleted": "Activité supprimée."
+      "activity_deleted": "Activité supprimée.",
+      "all_groups": "Tous les groupes"
     },
     "catalogue_franchise": {
       "title": "F Catalogue Ingrédients",
