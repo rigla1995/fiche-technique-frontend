@@ -293,6 +293,7 @@ export default function ProductForm() {
       if (resolvedActCtx && !isEdit) {
         if (isFranchiseCtx) {
           payload.activiteType = 'franchise';
+          payload.franchiseGroup = preFranchiseGroup || undefined;
           if (franchiseSpecificActId) {
             payload.activiteId = franchiseSpecificActId;
           }

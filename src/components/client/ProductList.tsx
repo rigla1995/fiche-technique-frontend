@@ -74,6 +74,7 @@ export default function ProductList() {
     const params = new URLSearchParams();
     if (isFranchiseCtx) {
       params.set('activiteType', 'franchise');
+      if (filterFranchiseGroup) params.set('franchiseGroup', filterFranchiseGroup);
     } else if (selectedActivityId) {
       params.set('activiteId', selectedActivityId);
     }
@@ -82,7 +83,7 @@ export default function ProductList() {
       .then(({ data }) => setProducts(data as Product[]))
       .finally(() => setLoading(false));
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isEntreprise, isFranchiseCtx, isDistinctCtx, selectedActivityId]);
+  }, [isEntreprise, isFranchiseCtx, isDistinctCtx, selectedActivityId, filterFranchiseGroup]);
 
   const openPopup = async (type: PopupType, product: Product) => {
     setPopup({ type, productId: product.id, productName: product.name });
@@ -122,16 +123,7 @@ export default function ProductList() {
     new Set(franchiseActivities.map((a) => a.franchiseGroup || a.nom))
   ).sort();
 
-  // Filter franchise products by group (products without activiteId belong to all groups)
-  const byCtxAndGroup = isFranchiseCtx && filterFranchiseGroup
-    ? products.filter((p) => {
-        if (!p.activiteId) return true;
-        const act = franchiseActivities.find((a) => a.id === p.activiteId);
-        return act && (act.franchiseGroup || act.nom) === filterFranchiseGroup;
-      })
-    : products;
-
-  const byTab = byCtxAndGroup.filter((p) => p.type === tab);
+  const byTab = products.filter((p) => p.type === tab);
   const searched = byTab.filter((p) => p.name.toLowerCase().includes(search.toLowerCase()));
   const totalPages = Math.max(1, Math.ceil(searched.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
