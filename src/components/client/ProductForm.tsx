@@ -25,21 +25,32 @@ export default function ProductForm() {
   const isEdit = Boolean(id);
   const isEntreprise = user?.compteType === 'entreprise';
 
-  // Activity context from URL (used in edit mode or when coming from old links)
+  // Activity context from URL
   const urlActCtx = searchParams.get('actCtx') || '';
+  const isFranchiseFromUrl = urlActCtx === 'franchise';
+  const isDistinctGenericFromUrl = urlActCtx === 'distinct';
+  const isDistinctSpecificFromUrl = urlActCtx.startsWith('distinct-');
 
-  // Enterprise pre-step state (new products only)
-  const needsPreStep = isEntreprise && !isEdit;
+  // Pre-step needed when: enterprise + new + context not fully resolved from URL
+  // franchise → auto-resolved; distinct-{id} → auto-resolved; distinct/'' → need to pick activity
+  const needsPreStep = isEntreprise && !isEdit && (urlActCtx === '' || isDistinctGenericFromUrl);
+
   const [preStepDone, setPreStepDone] = useState(!needsPreStep);
   const [typesSummary, setTypesSummary] = useState<ActiviteTypesSummary | null>(null);
   const [allActivities, setAllActivities] = useState<Activite[]>([]);
-  const [preActType, setPreActType] = useState<'franchise' | 'distincte' | ''>('');
+  const [preActType, setPreActType] = useState<'franchise' | 'distincte' | ''>(
+    isDistinctGenericFromUrl ? 'distincte' : ''
+  );
   const [preFranchiseGroup, setPreFranchiseGroup] = useState('');
   const [preCheckedActIds, setPreCheckedActIds] = useState<Set<number>>(new Set());
   const [preDistinctActId, setPreDistinctActId] = useState<string>('');
 
-  // Resolved activity context after pre-step
-  const [resolvedActCtx, setResolvedActCtx] = useState(urlActCtx);
+  // Resolved activity context after pre-step (or from URL if already known)
+  const [resolvedActCtx, setResolvedActCtx] = useState(
+    isFranchiseFromUrl ? 'franchise'
+    : isDistinctSpecificFromUrl ? urlActCtx
+    : urlActCtx
+  );
 
   const isFranchiseCtx = resolvedActCtx === 'franchise';
   const distinctActId = resolvedActCtx.startsWith('distinct-') ? parseInt(resolvedActCtx.replace('distinct-', '')) : null;
@@ -341,29 +352,36 @@ export default function ProductForm() {
           <h1>{productType === 'vendable' ? t('client.products.add_vendable') : t('client.products.add_utilisable')}</h1>
         </div>
         <div className="card" style={{ maxWidth: 520 }}>
-          <h2 style={{ marginBottom: 16, fontSize: '1rem' }}>{t('client.products.choose_activity_type')}</h2>
+          {/* Type selector — only when context is completely unknown */}
+          {!isDistinctGenericFromUrl && (
+            <>
+              <h2 style={{ marginBottom: 16, fontSize: '1rem' }}>{t('client.products.choose_activity_type')}</h2>
+              <div style={{ display: 'flex', gap: 10, marginBottom: 20 }}>
+                {typesSummary?.hasFranchise && (
+                  <button
+                    type="button"
+                    className={`btn btn-sm ${preActType === 'franchise' ? 'btn-primary' : 'btn-ghost'}`}
+                    onClick={() => { setPreActType('franchise'); setPreDistinctActId(''); }}
+                  >
+                    Franchise
+                  </button>
+                )}
+                {typesSummary?.hasDistinct && (
+                  <button
+                    type="button"
+                    className={`btn btn-sm ${preActType === 'distincte' ? 'btn-primary' : 'btn-ghost'}`}
+                    onClick={() => { setPreActType('distincte'); setPreFranchiseGroup(''); }}
+                  >
+                    Distinct
+                  </button>
+                )}
+              </div>
+            </>
+          )}
 
-          {/* Type selector */}
-          <div style={{ display: 'flex', gap: 10, marginBottom: 20 }}>
-            {typesSummary?.hasFranchise && (
-              <button
-                type="button"
-                className={`btn btn-sm ${preActType === 'franchise' ? 'btn-primary' : 'btn-ghost'}`}
-                onClick={() => { setPreActType('franchise'); setPreDistinctActId(''); }}
-              >
-                Franchise
-              </button>
-            )}
-            {typesSummary?.hasDistinct && (
-              <button
-                type="button"
-                className={`btn btn-sm ${preActType === 'distincte' ? 'btn-primary' : 'btn-ghost'}`}
-                onClick={() => { setPreActType('distincte'); setPreFranchiseGroup(''); }}
-              >
-                Distinct
-              </button>
-            )}
-          </div>
+          {isDistinctGenericFromUrl && (
+            <h2 style={{ marginBottom: 16, fontSize: '1rem' }}>{t('client.fiche_technique.choose_activity')}</h2>
+          )}
 
           {/* Franchise: group + activities checkboxes */}
           {preActType === 'franchise' && (
