@@ -513,72 +513,12 @@ export default function FicheTechniqueTab({ isEntreprise, franchiseActivities, d
         </div>
       )}
 
-      {/* Zero-price warning popup */}
-      {showZeroWarning && (
-        <div className="modal-overlay" onClick={() => setShowZeroWarning(false)}>
-          <div className="modal" style={{ maxWidth: 520 }} onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h2>⚠ Prix incomplets</h2>
-              <button className="modal-close" onClick={() => setShowZeroWarning(false)}>×</button>
-            </div>
-            <div className="modal-body">
-              <p style={{ marginBottom: 14, fontSize: '0.875rem', color: 'var(--text-muted)' }}>
-                Les ingrédients suivants ont un prix à 0. Corrigez-les pour pouvoir enregistrer.
-              </p>
-              <table className="table">
-                <thead>
-                  <tr>
-                    <th>{t('client.products.popup_col_ingredient')}</th>
-                    <th>{t('client.products.popup_col_unit')}</th>
-                    <th style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>{t('client.products.popup_col_unit_price')} (DT)</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {zeroWarningPrices.map((p, i) => (
-                    <tr key={p.ingredientId}>
-                      <td>{p.nom}</td>
-                      <td>{p.unite}</td>
-                      <td style={{ textAlign: 'right' }}>
-                        <input
-                          type="number"
-                          className="input"
-                          style={{ textAlign: 'right', width: 110, display: 'block', marginLeft: 'auto' }}
-                          step="0.001"
-                          min="0.001"
-                          placeholder="0.000"
-                          value={p.prixUnitaire}
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            setZeroWarningPrices((prev) => prev.map((x, j) => j === i ? { ...x, prixUnitaire: val } : x));
-                            setManualPrices((prev) => prev.map((x) => x.ingredientId === p.ingredientId ? { ...x, prixUnitaire: val } : x));
-                          }}
-                        />
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <div className="modal-footer">
-              <button className="btn btn-ghost" onClick={() => setShowZeroWarning(false)}>{t('common.cancel')}</button>
-              <button
-                className="btn btn-primary"
-                disabled={savingManual || zeroWarningPrices.some((p) => { const v = parseFloat(p.prixUnitaire); return isNaN(v) || v <= 0; })}
-                onClick={doSaveManualPrices}
-              >
-                {savingManual ? t('common.loading') : t('common.save')}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Manual prices popup */}
       {showManualPopup && (
         <div className="modal-overlay" onClick={() => setShowManualPopup(false)}>
           <div className="modal" style={{ maxWidth: 560 }} onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h2>{t('client.fiche_technique.manual_prices_title')}</h2>
+              <h2>Prix Ingrédients — {products.find((p) => p.id === parseInt(selectedProductId))?.nom ?? ''}</h2>
               <button className="modal-close" onClick={() => setShowManualPopup(false)}>×</button>
             </div>
             <div className="modal-body">
@@ -598,8 +538,8 @@ export default function FicheTechniqueTab({ isEntreprise, franchiseActivities, d
                   <tbody>
                     {(manualPriceGroups.length > 0 ? manualPriceGroups : [{ label: '', depth: 0, ingredients: manualPrices.map(p => ({ ingredientId: p.ingredientId, nom: p.nom, unite: p.unite })) }]).map((group, gi) => (
                       <>
-                        {/* Group header — only when multiple groups exist */}
-                        {manualPriceGroups.length > 1 && (
+                        {/* Group header — only for sub-product levels (depth > 0); depth 0 name is in the popup title */}
+                        {manualPriceGroups.length > 1 && group.depth > 0 && (
                           <tr key={`gh-${gi}`}>
                             <td colSpan={3} style={{
                               paddingLeft: 8 + group.depth * 16,
@@ -655,6 +595,85 @@ export default function FicheTechniqueTab({ isEntreprise, franchiseActivities, d
               <button className="btn btn-ghost" onClick={() => setShowManualPopup(false)}>{t('common.cancel')}</button>
               <button className="btn btn-primary" onClick={saveManualPrices} disabled={savingManual || manualLoading}>
                 {savingManual ? t('common.loading') : t('common.save')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Zero-price warning popup — rendered after main popup so it stacks on top */}
+      {showZeroWarning && (
+        <div className="modal-overlay" style={{ zIndex: 1100 }} onClick={() => setShowZeroWarning(false)}>
+          <div className="modal" style={{ maxWidth: 500, borderRadius: 16, overflow: 'hidden', padding: 0 }} onClick={(e) => e.stopPropagation()}>
+            {/* Coloured header band */}
+            <div style={{
+              background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+              padding: '20px 24px 16px',
+              display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12,
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <span style={{ fontSize: '1.6rem', lineHeight: 1 }}>⚠️</span>
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: '1rem', color: '#fff' }}>Prix incomplets</div>
+                  <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.85)', marginTop: 2 }}>
+                    Ces ingrédients ont un prix à 0 — corrigez-les avant d'enregistrer.
+                  </div>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowZeroWarning(false)}
+                style={{ background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: 8, color: '#fff', fontWeight: 700, fontSize: '1rem', padding: '2px 8px', cursor: 'pointer', lineHeight: 1.4 }}
+              >×</button>
+            </div>
+
+            {/* Body */}
+            <div style={{ padding: '16px 24px' }}>
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th>{t('client.products.popup_col_ingredient')}</th>
+                    <th style={{ width: 80 }}>{t('client.products.popup_col_unit')}</th>
+                    <th style={{ textAlign: 'right', whiteSpace: 'nowrap', width: 130 }}>{t('client.products.popup_col_unit_price')} (DT)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {zeroWarningPrices.map((p, i) => (
+                    <tr key={p.ingredientId}>
+                      <td style={{ fontWeight: 500 }}>{p.nom}</td>
+                      <td style={{ color: 'var(--text-muted)' }}>{p.unite}</td>
+                      <td style={{ textAlign: 'right' }}>
+                        <input
+                          type="number"
+                          className="input"
+                          style={{ textAlign: 'right', width: 110, display: 'block', marginLeft: 'auto', borderColor: '#f59e0b' }}
+                          step="0.001"
+                          min="0.001"
+                          placeholder="0.000"
+                          autoFocus={i === 0}
+                          value={p.prixUnitaire}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setZeroWarningPrices((prev) => prev.map((x, j) => j === i ? { ...x, prixUnitaire: val } : x));
+                            setManualPrices((prev) => prev.map((x) => x.ingredientId === p.ingredientId ? { ...x, prixUnitaire: val } : x));
+                          }}
+                        />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Footer */}
+            <div style={{ padding: '12px 24px 20px', display: 'flex', justifyContent: 'flex-end', gap: 10, borderTop: '1px solid var(--border)' }}>
+              <button className="btn btn-ghost" onClick={() => setShowZeroWarning(false)}>{t('common.cancel')}</button>
+              <button
+                className="btn btn-primary"
+                style={{ background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', borderColor: 'transparent' }}
+                disabled={savingManual || zeroWarningPrices.some((p) => { const v = parseFloat(p.prixUnitaire); return isNaN(v) || v <= 0; })}
+                onClick={doSaveManualPrices}
+              >
+                {savingManual ? t('common.loading') : 'Confirmer et enregistrer'}
               </button>
             </div>
           </div>
