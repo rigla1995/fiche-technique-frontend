@@ -118,30 +118,36 @@ export default function FranchiseCatalogPage() {
       ) : (
         <>
           {/* Single filter row: franchise group + category + search */}
-          <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap', alignItems: 'flex-end' }}>
             {groupNames.length > 1 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Groupe</span>
+                <select
+                  className="input"
+                  style={{ maxWidth: 200 }}
+                  value={selectedGroup}
+                  onChange={(e) => { setSelectedGroup(e.target.value); setFilterCategory(''); setFilterName(''); }}
+                >
+                  {groupNames.map((g) => <option key={g} value={g}>{g}</option>)}
+                </select>
+              </div>
+            )}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+              <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Catégorie</span>
               <select
                 className="input"
                 style={{ maxWidth: 200 }}
-                value={selectedGroup}
-                onChange={(e) => { setSelectedGroup(e.target.value); setFilterCategory(''); setFilterName(''); }}
+                value={filterCategory}
+                onChange={(e) => setFilterCategory(e.target.value)}
               >
-                {groupNames.map((g) => <option key={g} value={g}>{g}</option>)}
+                <option value="">{t('client.catalogue_franchise.all_categories')}</option>
+                {allCategories.map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
-            )}
-            <select
-              className="input"
-              style={{ maxWidth: 200 }}
-              value={filterCategory}
-              onChange={(e) => setFilterCategory(e.target.value)}
-            >
-              <option value="">{t('client.catalogue_franchise.all_categories')}</option>
-              {allCategories.map((c) => <option key={c} value={c}>{c}</option>)}
-            </select>
+            </div>
             <input
               type="text"
               className="input"
-              style={{ minWidth: 140, flex: '1 1 auto', maxWidth: 220 }}
+              style={{ minWidth: 140, flex: '1 1 auto', maxWidth: 220, alignSelf: 'flex-end' }}
               placeholder={t('common.search') + '…'}
               value={filterName}
               onChange={(e) => setFilterName(e.target.value)}

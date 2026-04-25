@@ -1,14 +1,8 @@
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
-import type { Activite, ActiviteTypesSummary, Product } from '../../types';
-
-interface Props {
-  isEntreprise: boolean;
-  franchiseActivities: Activite[];
-  distinctActivities: Activite[];
-  typesSummary: ActiviteTypesSummary | null;
-}
+import type { Activite, Product } from '../../types';
 
 interface ManualPriceEntry {
   ingredientId: number;
@@ -17,31 +11,40 @@ interface ManualPriceEntry {
   prixUnitaire: string;
 }
 
-export default function FicheTechniqueTab({
-  isEntreprise,
-  franchiseActivities,
-  distinctActivities,
-  typesSummary,
-}: Props) {
-  const { t } = useTranslation();
+interface Props {
+  isEntreprise: boolean;
+  franchiseActivities: Activite[];
+  distinctActivities: Activite[];
+}
 
-  // Product selection
+export default function FicheTechniqueTab({ isEntreprise, franchiseActivities, distinctActivities }: Props) {
+  const { t } = useTranslation();
+  const [searchParams] = useSearchParams();
+  const actCtx = searchParams.get('actCtx') || '';
+  const isFranchiseCtx = actCtx === 'franchise';
+  const isDistinctCtx = actCtx === 'distinct' || actCtx.startsWith('distinct-');
+  const specificDistinctId = actCtx.startsWith('distinct-') ? actCtx.replace('distinct-', '') : '';
+
+  // Step 1: franchise activity picker (when multiple franchise activities exist)
+  const [selectedFranchiseActId, setSelectedFranchiseActId] = useState<string>('');
+  // Step 1b: distinct activity picker (when actCtx='distinct' without specific ID)
+  const [selectedDistinctActId, setSelectedDistinctActId] = useState<string>(specificDistinctId);
+
+  // Step 2: product type
+  const [productType, setProductType] = useState<'vendable' | 'utilisable' | ''>('');
+
+  // Step 3: products
   const [products, setProducts] = useState<Product[]>([]);
+  const [productsLoading, setProductsLoading] = useState(false);
   const [selectedProductId, setSelectedProductId] = useState<string>('');
 
-  // Enterprise activity drill-down
-  const [actType, setActType] = useState<'franchise' | 'distincte' | ''>('');
-  const [franchiseGroup, setFranchiseGroup] = useState<string>('');
-  const [selectedActId, setSelectedActId] = useState<string>('');
-
-  // Mode
+  // Step 4: mode
   const [mode, setMode] = useState<'stock' | 'manual' | null>(null);
 
   // FP Stock
   const [stockDates, setStockDates] = useState<string[]>([]);
   const [stockDatesLoading, setStockDatesLoading] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string>('');
-  const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
 
   // FP Manuel
   const [manualPrices, setManualPrices] = useState<ManualPriceEntry[]>([]);
@@ -50,83 +53,92 @@ export default function FicheTechniqueTab({
   const [showManualPopup, setShowManualPopup] = useState(false);
   const [savingManual, setSavingManual] = useState(false);
 
-  // Real-time cost
+  // Cost after mode selection
   const [realtimeCost, setRealtimeCost] = useState<number | null>(null);
   const [costLoading, setCostLoading] = useState(false);
-
-  // Generation
   const [generating, setGenerating] = useState(false);
 
-  // Load all products (vendable + utilisable)
-  useEffect(() => {
-    api.get('/products').then(({ data }) => setProducts(data as Product[]));
-  }, []);
-
-  const selectedProduct = products.find((p) => String(p.id) === selectedProductId) ?? null;
-
-  // Derived: franchise groups from franchiseActivities
-  const franchiseGroups = Array.from(
-    new Set(franchiseActivities.map((a) => a.franchiseGroup || a.nom).filter(Boolean))
-  );
-
-  // Resolved activiteId for API calls
+  // Resolved activity ID for API calls
   const resolvedActId = (() => {
     if (!isEntreprise) return 0;
-    if (actType === 'distincte' && selectedActId) return parseInt(selectedActId);
-    if (actType === 'franchise' && selectedActId) return parseInt(selectedActId);
+    if (isFranchiseCtx && selectedFranchiseActId) return parseInt(selectedFranchiseActId);
+    if (isDistinctCtx) {
+      const id = specificDistinctId || selectedDistinctActId;
+      return id ? parseInt(id) : 0;
+    }
     return 0;
   })();
 
-  // Activity context is complete
-  const actCtxDone = (() => {
+  // Whether the activity step is complete
+  const actStepDone = (() => {
     if (!isEntreprise) return true;
-    if (!actType) return false;
-    if (actType === 'distincte') return !!selectedActId;
-    if (actType === 'franchise') {
-      if (franchiseGroups.length > 1 && !franchiseGroup) return false;
-      return !!selectedActId;
-    }
+    if (isFranchiseCtx) return franchiseActivities.length <= 1 || !!selectedFranchiseActId;
+    if (isDistinctCtx) return !!(specificDistinctId || selectedDistinctActId);
     return false;
   })();
 
-  // Load real-time cost when product + activity are set
+  // Auto-select franchise activity if only one
   useEffect(() => {
-    if (!selectedProductId || !actCtxDone) { setRealtimeCost(null); return; }
-    setCostLoading(true);
-    api.get(`/products/${selectedProductId}/cout`)
-      .then(({ data }) => setRealtimeCost((data as { totalCost: number }).totalCost ?? null))
-      .catch(() => setRealtimeCost(null))
-      .finally(() => setCostLoading(false));
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedProductId, actCtxDone]);
-
-  // Load stock dates when product + activity are set
-  useEffect(() => {
-    if (!selectedProductId || !actCtxDone) {
-      setStockDates([]);
-      setSelectedDate('');
-      return;
+    if (isFranchiseCtx && franchiseActivities.length === 1) {
+      setSelectedFranchiseActId(String(franchiseActivities[0].id));
     }
+  }, [isFranchiseCtx, franchiseActivities]);
+
+  // Load products when productType + activity are ready
+  useEffect(() => {
+    if (!productType || !actStepDone) { setProducts([]); setSelectedProductId(''); return; }
+    setProductsLoading(true);
+    const params = new URLSearchParams({ type: productType });
+    if (isFranchiseCtx) params.set('activiteType', 'franchise');
+    else if (resolvedActId) params.set('activiteId', String(resolvedActId));
+    api.get(`/products?${params}`)
+      .then(({ data }) => setProducts(data as Product[]))
+      .finally(() => setProductsLoading(false));
+    setSelectedProductId('');
+    setMode(null);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [productType, resolvedActId, actStepDone, isFranchiseCtx]);
+
+  // Load stock dates when product selected (all dates, not limited to current month)
+  useEffect(() => {
+    if (!selectedProductId) { setStockDates([]); setSelectedDate(''); return; }
     setStockDatesLoading(true);
-    const params = new URLSearchParams({ month: currentMonth });
+    const params = new URLSearchParams();
     if (resolvedActId) params.set('activiteId', String(resolvedActId));
     api.get(`/products/${selectedProductId}/stock-dates?${params}`)
       .then(({ data }) => {
-        setStockDates(data as string[]);
+        const d = data as { dates?: string[] } | string[];
+        setStockDates(Array.isArray(d) ? d : (d.dates ?? []));
         setSelectedDate('');
       })
       .catch(() => setStockDates([]))
       .finally(() => setStockDatesLoading(false));
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedProductId, resolvedActId, actCtxDone]);
+  }, [selectedProductId, resolvedActId]);
 
-  // Load manual prices when product + activity are set and popup opens
+  // Auto-load manual prices when FP Manuel is selected
+  useEffect(() => {
+    if (mode !== 'manual' || !selectedProductId) return;
+    loadManualPrices();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, selectedProductId]);
+
+  // Load real-time cost after mode is selected
+  useEffect(() => {
+    if (!selectedProductId || !mode) { setRealtimeCost(null); return; }
+    setCostLoading(true);
+    api.get(`/products/${selectedProductId}/cout`)
+      .then(({ data }) => setRealtimeCost((data as { totalCost: number }).totalCost ?? null))
+      .catch(() => setRealtimeCost(null))
+      .finally(() => setCostLoading(false));
+  }, [selectedProductId, mode]);
+
   const loadManualPrices = async () => {
-    if (!selectedProductId || !actCtxDone) return;
+    if (!selectedProductId) return;
     setManualLoading(true);
     try {
-      const params = resolvedActId ? `?activiteId=${resolvedActId}` : '';
-      const { data } = await api.get(`/products/${selectedProductId}/manual-prices${params}`);
+      const qs = resolvedActId ? `?activiteId=${resolvedActId}` : '';
+      const { data } = await api.get(`/products/${selectedProductId}/manual-prices${qs}`);
       const { prices, updatedAt } = data as {
         prices: { ingredientId: number; nom: string; unite: string; prixUnitaire: number | null }[];
         updatedAt: string | null;
@@ -143,11 +155,6 @@ export default function FicheTechniqueTab({
     }
   };
 
-  const openManualPopup = async () => {
-    await loadManualPrices();
-    setShowManualPopup(true);
-  };
-
   const saveManualPrices = async () => {
     setSavingManual(true);
     try {
@@ -161,6 +168,8 @@ export default function FicheTechniqueTab({
       setShowManualPopup(false);
       const savedAt = (data as { updatedAt: string | null }).updatedAt;
       setManualUpdatedAt(savedAt ? savedAt.slice(0, 10) : new Date().toISOString().slice(0, 10));
+      // Reload to refresh allManualPricesFilled
+      await loadManualPrices();
     } finally {
       setSavingManual(false);
     }
@@ -174,6 +183,7 @@ export default function FicheTechniqueTab({
       if (resolvedActId) params.set('activiteId', String(resolvedActId));
       if (mode === 'stock' && selectedDate) params.set('date', selectedDate);
       const response = await api.get(`/products/${selectedProductId}/export?${params}`, { responseType: 'blob' });
+      const selectedProduct = products.find((p) => String(p.id) === selectedProductId);
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
       link.href = url;
@@ -187,211 +197,290 @@ export default function FicheTechniqueTab({
     }
   };
 
+  const selectedProduct = products.find((p) => String(p.id) === selectedProductId) ?? null;
   const hasIngredients = (selectedProduct?.ingredientsCount ?? 0) > 0;
-  const hasStockDates = stockDates.length > 0;
+
+  const allManualPricesFilled =
+    manualPrices.length > 0 &&
+    manualPrices.every((p) => {
+      const v = parseFloat(p.prixUnitaire);
+      return !isNaN(v) && v > 0;
+    });
+
   const canGenerateStock = mode === 'stock' && !!selectedDate;
-  const canGenerateManual = mode === 'manual';
+  const canGenerateManual = mode === 'manual' && allManualPricesFilled;
+  const canGenerate = canGenerateStock || canGenerateManual;
+
+  const distinctActivity = specificDistinctId
+    ? distinctActivities.find((a) => String(a.id) === specificDistinctId)
+    : distinctActivities.find((a) => String(a.id) === selectedDistinctActId);
+
+  const cardStyle: React.CSSProperties = {
+    background: 'var(--surface)',
+    border: '1px solid var(--border)',
+    borderRadius: 10,
+    padding: '16px 20px',
+    marginBottom: 14,
+  };
+
+  const stepLabel: React.CSSProperties = {
+    display: 'block',
+    fontSize: '0.7rem',
+    fontWeight: 700,
+    letterSpacing: '0.07em',
+    textTransform: 'uppercase',
+    color: 'var(--text-muted)',
+    marginBottom: 10,
+  };
+
+  const chipBtn = (active: boolean, disabled = false): React.CSSProperties => ({
+    padding: '7px 14px',
+    borderRadius: 6,
+    border: '2px solid',
+    borderColor: active ? 'var(--primary)' : 'var(--border)',
+    background: active ? 'var(--primary)' : 'transparent',
+    color: active ? '#fff' : disabled ? 'var(--text-muted)' : 'var(--text)',
+    fontWeight: active ? 700 : 400,
+    cursor: disabled ? 'not-allowed' : 'pointer',
+    opacity: disabled ? 0.45 : 1,
+    fontSize: '0.875rem',
+    transition: 'all 0.12s',
+  });
 
   return (
-    <div style={{ padding: '24px 0' }}>
-      {/* Product selector */}
-      <div style={{ marginBottom: 24 }}>
-        <label style={{ display: 'block', fontWeight: 600, marginBottom: 8 }}>
-          {t('client.fiche_technique.select_product')}
-        </label>
-        <select
-          className="input"
-          style={{ maxWidth: 360 }}
-          value={selectedProductId}
-          onChange={(e) => {
-            setSelectedProductId(e.target.value);
-            setMode(null);
-            setSelectedDate('');
-          }}
-        >
-          <option value="">— {t('client.fiche_technique.choose_product')} —</option>
-          {products.map((p) => (
-            <option key={p.id} value={p.id}>{p.name} ({p.type})</option>
-          ))}
-        </select>
-      </div>
+    <div style={{ maxWidth: 700 }}>
 
-      {/* Entreprise: activity drill-down */}
-      {isEntreprise && selectedProductId && (
-        <div style={{ marginBottom: 24, padding: 16, background: 'var(--surface)', borderRadius: 8, border: '1px solid var(--border)' }}>
-          <p style={{ fontWeight: 600, marginBottom: 12 }}>{t('client.fiche_technique.select_activity')}</p>
-
-          {/* Type */}
-          <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
-            {typesSummary?.hasFranchise && (
-              <button
-                className={`btn btn-sm ${actType === 'franchise' ? 'btn-primary' : 'btn-ghost'}`}
-                onClick={() => { setActType('franchise'); setFranchiseGroup(''); setSelectedActId(''); }}
-              >
-                Franchise
-              </button>
-            )}
-            {typesSummary?.hasDistinct && (
-              <button
-                className={`btn btn-sm ${actType === 'distincte' ? 'btn-primary' : 'btn-ghost'}`}
-                onClick={() => { setActType('distincte'); setFranchiseGroup(''); setSelectedActId(''); }}
-              >
-                Distinct
-              </button>
-            )}
-          </div>
-
-          {/* Franchise: group then activity */}
-          {actType === 'franchise' && (
-            <>
-              {franchiseGroups.length > 1 && (
-                <div style={{ marginBottom: 10 }}>
-                  <select
-                    className="input"
-                    style={{ maxWidth: 260 }}
-                    value={franchiseGroup}
-                    onChange={(e) => { setFranchiseGroup(e.target.value); setSelectedActId(''); }}
-                  >
-                    <option value="">— {t('client.fiche_technique.choose_franchise_group')} —</option>
-                    {franchiseGroups.map((g) => (
-                      <option key={g} value={g}>{g}</option>
-                    ))}
-                  </select>
-                </div>
-              )}
-              {(franchiseGroups.length <= 1 || franchiseGroup) && (
-                <div>
-                  <select
-                    className="input"
-                    style={{ maxWidth: 260 }}
-                    value={selectedActId}
-                    onChange={(e) => setSelectedActId(e.target.value)}
-                  >
-                    <option value="">— {t('client.fiche_technique.choose_activity')} —</option>
-                    {franchiseActivities
-                      .filter((a) => !franchiseGroup || (a.franchiseGroup || a.nom) === franchiseGroup)
-                      .map((a) => (
-                        <option key={a.id} value={a.id}>{a.nom}</option>
-                      ))}
-                  </select>
-                </div>
-              )}
-            </>
-          )}
-
-          {/* Distinct: activity */}
-          {actType === 'distincte' && (
-            <select
-              className="input"
-              style={{ maxWidth: 260 }}
-              value={selectedActId}
-              onChange={(e) => setSelectedActId(e.target.value)}
-            >
-              <option value="">— {t('client.fiche_technique.choose_activity')} —</option>
-              {distinctActivities.map((a) => (
-                <option key={a.id} value={a.id}>{a.nom}</option>
-              ))}
-            </select>
-          )}
-        </div>
-      )}
-
-      {/* Real-time cost */}
-      {selectedProductId && actCtxDone && (
-        <div style={{ marginBottom: 20, display: 'flex', alignItems: 'center', gap: 12 }}>
-          <span style={{ fontWeight: 600, fontSize: '0.875rem' }}>{t('client.products.real_time_cost')} :</span>
-          {costLoading ? (
-            <span style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>{t('common.loading')}</span>
-          ) : realtimeCost !== null ? (
-            <span className="cost-badge" style={{ fontSize: '1rem' }}>
-              {realtimeCost.toFixed(3)} {t('currency')}
-            </span>
-          ) : (
-            <span style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>—</span>
-          )}
-        </div>
-      )}
-
-      {/* Mode buttons */}
-      {selectedProductId && actCtxDone && (
-        <div style={{ marginBottom: 24 }}>
-          <p style={{ fontWeight: 600, marginBottom: 12 }}>{t('client.fiche_technique.choose_mode')}</p>
-          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
-            <button
-              className={`btn btn-sm ${mode === 'stock' ? 'btn-primary' : 'btn-ghost'}`}
-              disabled={stockDatesLoading || !hasStockDates}
-              onClick={() => setMode('stock')}
-              title={!hasStockDates ? t('client.fiche_technique.no_stock_dates') : ''}
-            >
-              FP Stock
-              {stockDatesLoading && ' ...'}
-              {!stockDatesLoading && !hasStockDates && ' (—)'}
-            </button>
-            <button
-              className={`btn btn-sm ${mode === 'manual' ? 'btn-primary' : 'btn-ghost'}`}
-              disabled={!hasIngredients}
-              onClick={() => setMode('manual')}
-              title={!hasIngredients ? t('client.fiche_technique.no_ingredients') : ''}
-            >
-              FP Manuel
-              {!hasIngredients && ' (—)'}
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* FP Stock: date chips */}
-      {mode === 'stock' && stockDates.length > 0 && (
-        <div style={{ marginBottom: 24 }}>
-          <p style={{ fontWeight: 600, marginBottom: 10 }}>{t('client.fiche_technique.select_date')}</p>
+      {/* Step 1: Activity selection for franchise (multiple activities) */}
+      {isEntreprise && isFranchiseCtx && franchiseActivities.length > 1 && (
+        <div style={cardStyle}>
+          <span style={stepLabel}>Activité franchise</span>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            {stockDates.map((d) => (
+            {franchiseActivities.map((a) => (
               <button
-                key={d}
-                onClick={() => setSelectedDate(d)}
-                style={{
-                  padding: '6px 14px',
-                  borderRadius: 20,
-                  border: selectedDate === d ? '2px solid var(--primary)' : '1px solid var(--border)',
-                  background: selectedDate === d ? 'var(--primary)' : 'var(--surface)',
-                  color: selectedDate === d ? '#fff' : 'var(--text)',
-                  cursor: 'pointer',
-                  fontWeight: selectedDate === d ? 700 : 400,
-                  fontSize: '0.85rem',
-                }}
+                key={a.id}
+                style={chipBtn(selectedFranchiseActId === String(a.id))}
+                onClick={() => { setSelectedFranchiseActId(String(a.id)); setMode(null); setSelectedProductId(''); }}
               >
-                {d}
+                {a.nom}
               </button>
             ))}
           </div>
         </div>
       )}
 
-      {/* FP Manuel: open price popup */}
-      {mode === 'manual' && (
-        <div style={{ marginBottom: 24 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <button className="btn btn-ghost btn-sm" onClick={openManualPopup}>
-              ✏️ {t('client.fiche_technique.edit_manual_prices')}
-            </button>
-            {manualUpdatedAt && (
-              <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                {t('client.fiche_technique.last_updated')} : {manualUpdatedAt}
-              </span>
-            )}
+      {/* Step 1: Activity selection for generic distinct (no specific ID in URL) */}
+      {isEntreprise && actCtx === 'distinct' && (
+        <div style={cardStyle}>
+          <span style={stepLabel}>Activité distincte</span>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            {distinctActivities.map((a) => (
+              <button
+                key={a.id}
+                style={chipBtn(selectedDistinctActId === String(a.id))}
+                onClick={() => { setSelectedDistinctActId(String(a.id)); setMode(null); setSelectedProductId(''); }}
+              >
+                {a.nom}
+              </button>
+            ))}
           </div>
         </div>
       )}
 
-      {/* Générer FT button */}
-      {(canGenerateStock || canGenerateManual) && (
-        <button
-          className="btn btn-primary"
-          disabled={generating}
-          onClick={generateExcel}
-        >
-          📥 {generating ? t('common.loading') : t('client.fiche_technique.generate')}
-        </button>
+      {/* Activity badge (when specific distinct ID in URL) */}
+      {isEntreprise && specificDistinctId && distinctActivity && (
+        <div style={{ ...cardStyle, display: 'flex', alignItems: 'center', gap: 12, padding: '12px 18px' }}>
+          <span style={{ ...stepLabel, margin: 0 }}>Activité</span>
+          <span style={{ fontWeight: 700, color: 'var(--primary)' }}>D · {distinctActivity.nom}</span>
+        </div>
+      )}
+
+      {/* Step 2: Product type */}
+      {actStepDone && (
+        <div style={cardStyle}>
+          <span style={stepLabel}>Type de produit</span>
+          <div style={{ display: 'flex', gap: 10 }}>
+            {[
+              { key: 'vendable', icon: '🍔', label: t('client.products.tab_vendable') },
+              { key: 'utilisable', icon: '🧪', label: t('client.products.tab_utilisable') },
+            ].map(({ key, icon, label }) => (
+              <button
+                key={key}
+                style={{
+                  flex: 1,
+                  padding: '11px 16px',
+                  borderRadius: 8,
+                  border: '2px solid',
+                  borderColor: productType === key ? 'var(--primary)' : 'var(--border)',
+                  background: productType === key ? 'var(--primary)' : 'transparent',
+                  color: productType === key ? '#fff' : 'var(--text)',
+                  cursor: 'pointer',
+                  fontWeight: 600,
+                  fontSize: '0.9rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 8,
+                  transition: 'all 0.12s',
+                }}
+                onClick={() => { setProductType(key as 'vendable' | 'utilisable'); setMode(null); setSelectedProductId(''); }}
+              >
+                {icon} {label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Step 3: Product */}
+      {productType && actStepDone && (
+        <div style={cardStyle}>
+          <span style={stepLabel}>Produit</span>
+          {productsLoading ? (
+            <span style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>{t('common.loading')}</span>
+          ) : products.length === 0 ? (
+            <span style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>Aucun produit trouvé</span>
+          ) : (
+            <select
+              className="input"
+              style={{ maxWidth: 420 }}
+              value={selectedProductId}
+              onChange={(e) => { setSelectedProductId(e.target.value); setMode(null); setSelectedDate(''); }}
+            >
+              <option value="">— {t('client.fiche_technique.choose_product')} —</option>
+              {products.map((p) => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </select>
+          )}
+        </div>
+      )}
+
+      {/* Step 4: Mode */}
+      {selectedProductId && (
+        <div style={cardStyle}>
+          <span style={stepLabel}>{t('client.fiche_technique.choose_mode')}</span>
+          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+
+            {/* FP Stock card */}
+            <div
+              style={{
+                flex: 1, minWidth: 220, padding: 16, borderRadius: 10,
+                border: '2px solid',
+                borderColor: mode === 'stock' ? 'var(--primary)' : 'var(--border)',
+                background: mode === 'stock' ? '#eef2ff' : 'var(--bg)',
+                cursor: stockDates.length > 0 && !stockDatesLoading ? 'pointer' : 'not-allowed',
+                opacity: stockDates.length === 0 && !stockDatesLoading ? 0.45 : 1,
+                transition: 'all 0.15s',
+              }}
+              onClick={() => { if (!stockDatesLoading && stockDates.length > 0) setMode('stock'); }}
+            >
+              <div style={{ fontWeight: 700, marginBottom: 4, color: mode === 'stock' ? 'var(--primary)' : 'var(--text)' }}>
+                📦 FP Stock
+              </div>
+              <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: mode === 'stock' && stockDates.length > 0 ? 10 : 0 }}>
+                {stockDatesLoading
+                  ? t('common.loading')
+                  : stockDates.length === 0
+                    ? 'Aucun stock disponible'
+                    : `${stockDates.length} date(s) disponible(s)`}
+              </div>
+              {mode === 'stock' && stockDates.length > 0 && (
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                  {stockDates.map((d) => (
+                    <button
+                      key={d}
+                      style={{
+                        padding: '4px 10px', borderRadius: 20, border: '1.5px solid',
+                        borderColor: selectedDate === d ? 'var(--primary)' : 'var(--border)',
+                        background: selectedDate === d ? 'var(--primary)' : '#fff',
+                        color: selectedDate === d ? '#fff' : 'var(--text)',
+                        cursor: 'pointer', fontWeight: selectedDate === d ? 700 : 400,
+                        fontSize: '0.78rem',
+                      }}
+                      onClick={(e) => { e.stopPropagation(); setSelectedDate(d); }}
+                    >
+                      {d}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* FP Manuel card */}
+            <div
+              style={{
+                flex: 1, minWidth: 220, padding: 16, borderRadius: 10,
+                border: '2px solid',
+                borderColor: mode === 'manual' ? 'var(--primary)' : 'var(--border)',
+                background: mode === 'manual' ? '#eef2ff' : 'var(--bg)',
+                cursor: hasIngredients ? 'pointer' : 'not-allowed',
+                opacity: !hasIngredients ? 0.45 : 1,
+                transition: 'all 0.15s',
+              }}
+              onClick={() => { if (hasIngredients) setMode('manual'); }}
+            >
+              <div style={{ fontWeight: 700, marginBottom: 4, color: mode === 'manual' ? 'var(--primary)' : 'var(--text)' }}>
+                ✏️ FP Manuel
+              </div>
+              <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: mode === 'manual' ? 10 : 0 }}>
+                {!hasIngredients ? 'Aucun ingrédient' : 'Saisissez vos prix manuellement'}
+              </div>
+              {mode === 'manual' && (
+                <div>
+                  <button
+                    className="btn btn-ghost btn-sm"
+                    style={{ fontSize: '0.8rem' }}
+                    onClick={(e) => { e.stopPropagation(); setShowManualPopup(true); }}
+                  >
+                    ✏️ {t('client.fiche_technique.edit_manual_prices')}
+                  </button>
+                  {manualUpdatedAt && (
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: 6 }}>
+                      {t('client.fiche_technique.last_updated')} : {manualUpdatedAt}
+                    </div>
+                  )}
+                  {!allManualPricesFilled && manualPrices.length > 0 && !manualLoading && (
+                    <div style={{ fontSize: '0.75rem', color: '#dc2626', marginTop: 6 }}>
+                      ⚠ Saisissez tous les prix pour générer la FT
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Cost + Generate */}
+      {mode && selectedProductId && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap', marginTop: 4 }}>
+          <div>
+            <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{t('client.products.real_time_cost')} : </span>
+            {costLoading ? (
+              <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>...</span>
+            ) : realtimeCost !== null ? (
+              <span className="cost-badge" style={{ fontSize: '1rem' }}>
+                {realtimeCost.toFixed(3)} {t('currency')}
+              </span>
+            ) : (
+              <span style={{ color: 'var(--text-muted)' }}>—</span>
+            )}
+          </div>
+          <button
+            className="btn btn-primary"
+            disabled={!canGenerate || generating}
+            onClick={generateExcel}
+            title={
+              mode === 'manual' && !canGenerateManual
+                ? 'Saisissez tous les prix manuels d\'abord'
+                : mode === 'stock' && !canGenerateStock
+                  ? 'Sélectionnez une date de stock'
+                  : ''
+            }
+          >
+            📥 {generating ? t('common.loading') : t('client.fiche_technique.generate')}
+          </button>
+        </div>
       )}
 
       {/* Manual prices popup */}
@@ -413,7 +502,7 @@ export default function FicheTechniqueTab({
                     <tr>
                       <th>{t('client.products.popup_col_ingredient')}</th>
                       <th>{t('client.products.popup_col_unit')}</th>
-                      <th style={{ textAlign: 'right' }}>{t('client.products.popup_col_unit_price')} (DT)</th>
+                      <th style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>{t('client.products.popup_col_unit_price')} (DT)</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -421,11 +510,11 @@ export default function FicheTechniqueTab({
                       <tr key={p.ingredientId}>
                         <td>{p.nom}</td>
                         <td>{p.unite}</td>
-                        <td>
+                        <td style={{ textAlign: 'right' }}>
                           <input
                             type="number"
                             className="input"
-                            style={{ textAlign: 'right', width: 110 }}
+                            style={{ textAlign: 'right', width: 110, display: 'block', marginLeft: 'auto' }}
                             step="0.001"
                             min="0"
                             placeholder="0.000"

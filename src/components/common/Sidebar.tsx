@@ -50,10 +50,12 @@ function Divider() {
 function ProductSubLinks({
   locked,
   actCtx,
+  ftActCtx,
   onClick,
 }: {
   locked: boolean;
   actCtx?: string;
+  ftActCtx?: string;
   onClick: () => void;
 }) {
   const { t } = useTranslation();
@@ -76,38 +78,58 @@ function ProductSubLinks({
 
   const activeSubStyle = { ...subStyle, background: 'var(--primary-light, #e8f0fe)', color: 'var(--primary)', fontWeight: 600 };
 
+  const resolvedFtCtx = ftActCtx ?? actCtx;
+
   const mkHref = (tab: string) => {
     const params = new URLSearchParams({ tab });
-    if (actCtx) params.set('actCtx', actCtx);
+    const ctx = tab === 'fiche-technique' ? resolvedFtCtx : actCtx;
+    if (ctx) params.set('actCtx', ctx);
     return `/client/products?${params}`;
+  };
+
+  const ftLabel = resolvedFtCtx === 'franchise'
+    ? `F ${t('client.products.tab_fiche_technique')}`
+    : resolvedFtCtx === 'distinct'
+      ? `D ${t('client.products.tab_fiche_technique')}`
+      : t('client.products.tab_fiche_technique');
+
+  const isTabActive = (tab: string) => {
+    if (!onProducts) return false;
+    if (tab === 'fiche-technique') {
+      if (currentTab !== 'fiche-technique') return false;
+      if (resolvedFtCtx === 'franchise') return currentActCtx === 'franchise';
+      if (resolvedFtCtx === 'distinct') return currentActCtx === 'distinct' || currentActCtx.startsWith('distinct-');
+      return !currentActCtx;
+    }
+    return currentTab === tab && (!actCtx || currentActCtx === actCtx);
   };
 
   if (locked) {
     return (
       <>
         {['vendable', 'utilisable', 'fiche-technique'].map((tab) => (
-          <li key={tab}><span style={subStyle}>{tab === 'fiche-technique' ? '📋' : tab === 'vendable' ? '🍔' : '🧪'} {tab === 'fiche-technique' ? t('client.products.tab_fiche_technique') : tab === 'vendable' ? t('client.products.tab_vendable') : t('client.products.tab_utilisable')}</span></li>
+          <li key={tab}>
+            <span style={subStyle}>
+              {tab === 'fiche-technique' ? '📋' : tab === 'vendable' ? '🍔' : '🧪'}
+              {' '}
+              {tab === 'fiche-technique' ? ftLabel : tab === 'vendable' ? t('client.products.tab_vendable') : t('client.products.tab_utilisable')}
+            </span>
+          </li>
         ))}
       </>
     );
   }
-
-  const isTabActive = (tab: string) => {
-    if (!onProducts) return false;
-    if (tab === 'fiche-technique') return currentTab === 'fiche-technique';
-    return currentTab === tab && (!actCtx || currentActCtx === actCtx);
-  };
 
   return (
     <>
       {[
         { tab: 'vendable', icon: '🍔', label: t('client.products.tab_vendable') },
         { tab: 'utilisable', icon: '🧪', label: t('client.products.tab_utilisable') },
-        { tab: 'fiche-technique', icon: '📋', label: t('client.products.tab_fiche_technique') },
+        { tab: 'fiche-technique', icon: '📋', label: ftLabel },
       ].map(({ tab, icon, label }) => (
         <li key={tab}>
           <Link
-            to={tab === 'fiche-technique' ? '/client/products?tab=fiche-technique' : mkHref(tab)}
+            to={mkHref(tab)}
             style={isTabActive(tab) ? activeSubStyle : subStyle}
             onClick={onClick}
           >
@@ -297,7 +319,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                           <span className="link-label">{t('nav.products_franchise')}</span>
                         </span>
                       </li>
-                      <ProductSubLinks locked={isOnboarding || !effectiveHasSelections || !hasFranchise} actCtx="franchise" onClick={onClose} />
+                      <ProductSubLinks locked={isOnboarding || !effectiveHasSelections || !hasFranchise} actCtx="franchise" ftActCtx="franchise" onClick={onClose} />
                     </>
                   )}
 
@@ -342,7 +364,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                           <span className="link-label">{t('nav.products_distinct')}</span>
                         </span>
                       </li>
-                      <ProductSubLinks locked={isOnboarding || !effectiveHasSelections || !hasDistinct} onClick={onClose} />
+                      <ProductSubLinks locked={isOnboarding || !effectiveHasSelections || !hasDistinct} ftActCtx="distinct" onClick={onClose} />
                     </>
                   )}
                 </>

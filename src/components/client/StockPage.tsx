@@ -226,43 +226,52 @@ function ActivityStockSection({ label, activities, dateStock, isFranchise, onSav
       </div>
 
       {/* Filter row: [group?] [activity] [category] [search] */}
-      <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
+      <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap', alignItems: 'flex-end' }}>
         {isFranchise && hasMultipleGroups && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+            <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Groupe</span>
+            <select
+              className="input"
+              style={{ maxWidth: 200 }}
+              value={selectedGroup}
+              onChange={(e) => setSelectedGroup(e.target.value)}
+            >
+              {groupNames.map((g) => <option key={g} value={g}>{g}</option>)}
+            </select>
+          </div>
+        )}
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+          <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Activité</span>
+          <select
+            className="input"
+            style={{ maxWidth: 220 }}
+            value={selectedId}
+            onChange={(e) => setSelectedId(Number(e.target.value))}
+          >
+            {groupActivities.map((a) => (
+              <option key={a.id} value={a.id}>{a.nom}</option>
+            ))}
+          </select>
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+          <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Catégorie</span>
           <select
             className="input"
             style={{ maxWidth: 200 }}
-            value={selectedGroup}
-            onChange={(e) => setSelectedGroup(e.target.value)}
+            value={categoryFilter}
+            onChange={(e) => setCategoryFilter(e.target.value)}
           >
-            {groupNames.map((g) => <option key={g} value={g}>{g}</option>)}
+            <option value="">{t('client.catalogue_franchise.all_categories')}</option>
+            {allCategories.map((c) => <option key={c} value={c}>{c}</option>)}
           </select>
-        )}
-
-        <select
-          className="input"
-          style={{ maxWidth: 220 }}
-          value={selectedId}
-          onChange={(e) => setSelectedId(Number(e.target.value))}
-        >
-          {groupActivities.map((a) => (
-            <option key={a.id} value={a.id}>{a.nom}</option>
-          ))}
-        </select>
-
-        <select
-          className="input"
-          style={{ maxWidth: 200 }}
-          value={categoryFilter}
-          onChange={(e) => setCategoryFilter(e.target.value)}
-        >
-          <option value="">{t('client.catalogue_franchise.all_categories')}</option>
-          {allCategories.map((c) => <option key={c} value={c}>{c}</option>)}
-        </select>
+        </div>
 
         <input
           type="text"
           className="input"
-          style={{ minWidth: 140, flex: '1 1 auto', maxWidth: 220 }}
+          style={{ minWidth: 140, flex: '1 1 auto', maxWidth: 220, alignSelf: 'flex-end' }}
           placeholder={t('client.stock.search_ingredient')}
           value={nameFilter}
           onChange={(e) => setNameFilter(e.target.value)}
