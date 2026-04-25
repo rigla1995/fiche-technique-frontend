@@ -158,6 +158,8 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
   const hasFranchise = typesSummary === null ? true : typesSummary.hasFranchise;
   const hasDistinct = typesSummary === null ? true : typesSummary.hasDistinct;
+  const hasFranchiseSelections = typesSummary === null ? true : typesSummary.hasFranchiseSelections;
+  const hasDistinctSelections = typesSummary === null ? true : typesSummary.hasDistinctSelections;
 
   useEffect(() => {
     if (isEntreprise && (step === 0 || step === 3)) {
@@ -306,7 +308,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
                       {/* F Stock */}
                       <li>
-                        {isOnboarding || !effectiveHasSelections || !hasFranchise ? (
+                        {isOnboarding || !hasFranchiseSelections || !hasFranchise ? (
                           <LockedLink label={t('nav.stock_franchise')} reason={!isOnboarding && !hasFranchise ? t('nav.no_franchise_activity') : undefined} />
                         ) : (
                           <NavLink
@@ -322,12 +324,12 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
                       {/* F Produits */}
                       <li>
-                        <span className="sidebar-link" style={{ opacity: (isOnboarding || !effectiveHasSelections || !hasFranchise) ? 0.35 : 1, cursor: 'default' }}>
+                        <span className="sidebar-link" style={{ opacity: (isOnboarding || !hasFranchiseSelections || !hasFranchise) ? 0.35 : 1, cursor: 'default' }}>
                           <span className="link-icon">🍔</span>
                           <span className="link-label">{t('nav.products_franchise')}</span>
                         </span>
                       </li>
-                      <ProductSubLinks locked={isOnboarding || !effectiveHasSelections || !hasFranchise} actCtx="franchise" ftActCtx="franchise" onClick={onClose} />
+                      <ProductSubLinks locked={isOnboarding || !hasFranchiseSelections || !hasFranchise} actCtx="franchise" ftActCtx="franchise" onClick={onClose} />
                     </>
                   )}
 
@@ -351,7 +353,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
                       {/* D Stock */}
                       <li>
-                        {isOnboarding || !effectiveHasSelections || !hasDistinct ? (
+                        {isOnboarding || !hasDistinctSelections || !hasDistinct ? (
                           <LockedLink label={t('nav.stock_distinct')} reason={!isOnboarding && !hasDistinct ? t('nav.no_distinct_activity') : undefined} />
                         ) : (
                           <NavLink
@@ -367,12 +369,12 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
                       {/* D Produits */}
                       <li>
-                        <span className="sidebar-link" style={{ opacity: (isOnboarding || !effectiveHasSelections || !hasDistinct) ? 0.35 : 1, cursor: 'default' }}>
+                        <span className="sidebar-link" style={{ opacity: (isOnboarding || !hasDistinctSelections || !hasDistinct) ? 0.35 : 1, cursor: 'default' }}>
                           <span className="link-icon">🍔</span>
                           <span className="link-label">{t('nav.products_distinct')}</span>
                         </span>
                       </li>
-                      <ProductSubLinks locked={isOnboarding || !effectiveHasSelections || !hasDistinct} actCtx="distinct" ftActCtx="distinct" onClick={onClose} />
+                      <ProductSubLinks locked={isOnboarding || !hasDistinctSelections || !hasDistinct} actCtx="distinct" ftActCtx="distinct" onClick={onClose} />
                     </>
                   )}
                 </>

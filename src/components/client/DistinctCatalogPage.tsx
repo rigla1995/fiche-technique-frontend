@@ -128,7 +128,7 @@ export default function DistinctCatalogPage() {
                       <tr>
                         <th style={{ width: 40 }}></th>
                         <th>{t('common.name')}</th>
-                        <th>{t('common.unit')}</th>
+                        <th style={{ width: 140 }}>{t('common.unit')}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -145,7 +145,7 @@ export default function DistinctCatalogPage() {
                             </button>
                           </td>
                           <td><span style={{ fontWeight: ing.selected ? 600 : undefined }}>{ing.nom}</span></td>
-                          <td style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{ing.unite}</td>
+                          <td style={{ width: 140, color: 'var(--text-muted)', fontSize: '0.85rem' }}>{ing.unite}</td>
                         </tr>
                       ))}
                     </tbody>
