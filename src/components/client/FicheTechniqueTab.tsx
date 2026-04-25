@@ -123,15 +123,20 @@ export default function FicheTechniqueTab({ isEntreprise, franchiseActivities, d
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode, selectedProductId]);
 
-  // Load real-time cost after mode is selected
+  // Load real-time cost after mode is selected.
+  // FP Manuel uses saved manual prices; FP Stock uses stock/catalogue prices.
   useEffect(() => {
     if (!selectedProductId || !mode) { setRealtimeCost(null); return; }
     setCostLoading(true);
-    api.get(`/products/${selectedProductId}/cout`)
+    const params = new URLSearchParams({ mode });
+    if (mode === 'manual' && resolvedActId) params.set('activiteId', String(resolvedActId));
+    api.get(`/products/${selectedProductId}/cout?${params}`)
       .then(({ data }) => setRealtimeCost((data as { totalCost: number }).totalCost ?? null))
       .catch(() => setRealtimeCost(null))
       .finally(() => setCostLoading(false));
-  }, [selectedProductId, mode]);
+  // manualUpdatedAt is included so cost refreshes after manual prices are saved
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedProductId, mode, manualUpdatedAt, resolvedActId]);
 
   const loadManualPrices = async () => {
     if (!selectedProductId) return;
@@ -441,7 +446,7 @@ export default function FicheTechniqueTab({ isEntreprise, franchiseActivities, d
                   )}
                   {!allManualPricesFilled && manualPrices.length > 0 && !manualLoading && (
                     <div style={{ fontSize: '0.75rem', color: '#dc2626', marginTop: 6 }}>
-                      ⚠ Saisissez tous les prix pour générer la FT
+                      ⚠ Saisissez tous les prix pour générer la Fiche technique
                     </div>
                   )}
                 </div>

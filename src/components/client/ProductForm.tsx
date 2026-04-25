@@ -686,7 +686,7 @@ export default function ProductForm() {
                   <option value="">— {t('client.products.select_product')} —</option>
                   {products.map((p) => (
                     <option key={p.id} value={p.id}>
-                      {p.name} ({(p.totalCost || 0).toFixed(3)} {t('currency')})
+                      {p.name}
                     </option>
                   ))}
                 </select>
@@ -702,11 +702,6 @@ export default function ProductForm() {
                   />
                   <span className="unit-label">×</span>
                 </div>
-                {line.subProductId && line.portion && (
-                  <span className="line-cost">
-                    {((products.find((p) => String(p.id) === line.subProductId)?.totalCost || 0) * parseFloat(line.portion || '0')).toFixed(3)} {t('currency')}
-                  </span>
-                )}
                 <button type="button" className="btn-icon btn-remove" onClick={() => removeSubProductLine(idx)}>×</button>
               </div>
             ))}

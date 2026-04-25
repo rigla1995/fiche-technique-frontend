@@ -17,8 +17,6 @@ export default function ClientIngredientsCatalog({ embedded, onSelectionDone }: 
   const [ingredients, setIngredients] = useState<Ingredient[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [editingPrice, setEditingPrice] = useState<{ id: number; value: string } | null>(null);
-  const [savingPrice, setSavingPrice] = useState<number | null>(null);
   const [togglingId, setTogglingId] = useState<number | null>(null);
 
   const fetchIngredients = () => {
@@ -40,24 +38,6 @@ export default function ClientIngredientsCatalog({ embedded, onSelectionDone }: 
       }
     } finally {
       setTogglingId(null);
-    }
-  };
-
-  const startEditPrice = (ing: Ingredient) => {
-    setEditingPrice({ id: ing.id, value: String(ing.clientPrice ?? ing.effectivePrice ?? '') });
-  };
-
-  const savePrice = async (id: number) => {
-    if (!editingPrice || editingPrice.id !== id) return;
-    const val = parseFloat(editingPrice.value);
-    if (isNaN(val) || val < 0) return;
-    setSavingPrice(id);
-    try {
-      const { data } = await api.put(`/ingredients/${id}/price`, { price: val });
-      setIngredients((list) => list.map((i) => (i.id === id ? { ...i, clientPrice: data.clientPrice, effectivePrice: data.effectivePrice } : i)));
-      setEditingPrice(null);
-    } finally {
-      setSavingPrice(null);
     }
   };
 
@@ -130,8 +110,6 @@ export default function ClientIngredientsCatalog({ embedded, onSelectionDone }: 
                     <th style={{ width: 40 }}></th>
                     <th>{t('common.name')}</th>
                     <th>{t('common.unit')}</th>
-                    <th style={{ textAlign: 'right' }}>{t('client.ingredients_catalog.my_price')}</th>
-                    <th style={{ textAlign: 'right' }}>{t('common.actions')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -156,43 +134,6 @@ export default function ClientIngredientsCatalog({ embedded, onSelectionDone }: 
                         <span style={{ fontWeight: ing.selected ? 600 : undefined }}>{ing.name}</span>
                       </td>
                       <td>{ing.unit?.name || '—'}</td>
-                      <td style={{ textAlign: 'right' }}>
-                        {editingPrice?.id === ing.id ? (
-                          <span style={{ display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'flex-end' }}>
-                            <input
-                              type="number"
-                              step="0.001"
-                              min="0"
-                              className="input"
-                              style={{ width: 100, textAlign: 'right' }}
-                              value={editingPrice.value}
-                              autoFocus
-                              onChange={(e) => setEditingPrice({ id: ing.id, value: e.target.value })}
-                              onKeyDown={(e) => { if (e.key === 'Enter') savePrice(ing.id); if (e.key === 'Escape') setEditingPrice(null); }}
-                            />
-                            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{t('currency')}</span>
-                          </span>
-                        ) : (
-                          <span className={ing.clientPrice !== null ? 'cost-badge' : ''} style={{ color: ing.clientPrice === null ? 'var(--text-muted)' : undefined }}>
-                            {ing.effectivePrice !== null ? `${ing.effectivePrice.toFixed(3)} ${t('currency')}` : '—'}
-                            {ing.clientPrice !== null && <span title={t('client.ingredients_catalog.my_price_set')} style={{ marginLeft: 4 }}>✓</span>}
-                          </span>
-                        )}
-                      </td>
-                      <td style={{ textAlign: 'right' }}>
-                        {editingPrice?.id === ing.id ? (
-                          <span className="actions-cell">
-                            <button className="btn btn-primary btn-sm" disabled={savingPrice === ing.id} onClick={() => savePrice(ing.id)}>
-                              {savingPrice === ing.id ? '...' : t('common.save')}
-                            </button>
-                            <button className="btn btn-ghost btn-sm" onClick={() => setEditingPrice(null)}>{t('common.cancel')}</button>
-                          </span>
-                        ) : (
-                          <button className="btn btn-ghost btn-sm" onClick={() => startEditPrice(ing)}>
-                            {ing.clientPrice !== null ? t('client.ingredients_catalog.edit_price') : t('client.ingredients_catalog.set_price')}
-                          </button>
-                        )}
-                      </td>
                     </tr>
                   ))}
                 </tbody>
