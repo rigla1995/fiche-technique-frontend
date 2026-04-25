@@ -32,30 +32,32 @@ export default function ProductList() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
+  const [filterFranchiseGroup, setFilterFranchiseGroup] = useState('');
   const [page, setPage] = useState(1);
 
   const [popup, setPopup] = useState<{ type: PopupType; productId: number; productName: string } | null>(null);
   const [detail, setDetail] = useState<ProductDetail | null>(null);
   const [loadingDetail, setLoadingDetail] = useState(false);
 
+  const [franchiseActivities, setFranchiseActivities] = useState<Activite[]>([]);
   const [distinctActivities, setDistinctActivities] = useState<Activite[]>([]);
   const [activitesLoading, setActivitesLoading] = useState(false);
 
   // Selected distinct activity ID (only relevant for distinct context)
   const [selectedActivityId, setSelectedActivityId] = useState<string>(preSelectedDistinctId);
 
-  // Load activities for enterprise users (distinct only — franchise products are queried by type)
+  // Load all activities for enterprise users
   useEffect(() => {
-    if (!isEntreprise || !isDistinctCtx) return;
+    if (!isEntreprise) return;
     setActivitesLoading(true);
     api.get('/api/entreprise/activites')
       .then(({ data }) => {
         const all = data as Activite[];
-        const distinct = all.filter((a) => a.type === 'distincte' || a.type == null);
-        setDistinctActivities(distinct);
+        setFranchiseActivities(all.filter((a) => a.type === 'franchise'));
+        setDistinctActivities(all.filter((a) => a.type === 'distincte' || a.type == null));
       })
       .finally(() => setActivitesLoading(false));
-  }, [isEntreprise, isDistinctCtx]);
+  }, [isEntreprise]);
 
   // Auto-select first distinct activity when none pre-selected
   useEffect(() => {
@@ -115,7 +117,21 @@ export default function ProductList() {
     return found ? found.nom : '—';
   };
 
-  const byTab = products.filter((p) => p.type === tab);
+  // Franchise groups derived from franchise activities
+  const franchiseGroups = Array.from(
+    new Set(franchiseActivities.map((a) => a.franchiseGroup || a.nom))
+  ).sort();
+
+  // Filter franchise products by group (products without activiteId belong to all groups)
+  const byCtxAndGroup = isFranchiseCtx && filterFranchiseGroup
+    ? products.filter((p) => {
+        if (!p.activiteId) return true;
+        const act = franchiseActivities.find((a) => a.id === p.activiteId);
+        return act && (act.franchiseGroup || act.nom) === filterFranchiseGroup;
+      })
+    : products;
+
+  const byTab = byCtxAndGroup.filter((p) => p.type === tab);
   const searched = byTab.filter((p) => p.name.toLowerCase().includes(search.toLowerCase()));
   const totalPages = Math.max(1, Math.ceil(searched.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
@@ -160,7 +176,42 @@ export default function ProductList() {
         />
       ) : (
         <>
-          {/* Activity filter for distinct context */}
+          {/* Franchise filters: group + name */}
+          {isEntreprise && isFranchiseCtx && tab !== 'fiche-technique' && (
+            <div style={{ display: 'flex', gap: 12, marginBottom: 18, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+              {activitesLoading ? (
+                <span style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>{t('common.loading')}</span>
+              ) : franchiseGroups.length > 1 && (
+                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                  <span style={labelStyle}>Franchise</span>
+                  <select
+                    className="input"
+                    style={{ maxWidth: 220 }}
+                    value={filterFranchiseGroup}
+                    onChange={(e) => { setFilterFranchiseGroup(e.target.value); setPage(1); }}
+                  >
+                    <option value="">Toutes les franchises</option>
+                    {franchiseGroups.map((g) => (
+                      <option key={g} value={g}>{g}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+              <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+                <span style={labelStyle}>{t('common.search')}</span>
+                <input
+                  type="text"
+                  placeholder={t('common.search') + '...'}
+                  value={search}
+                  onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+                  className="input"
+                  style={{ maxWidth: 300 }}
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Distinct filters: activity + name */}
           {isEntreprise && isDistinctCtx && tab !== 'fiche-technique' && (
             <div style={{ display: 'flex', gap: 12, marginBottom: 18, flexWrap: 'wrap', alignItems: 'flex-end' }}>
               {activitesLoading ? (
@@ -180,24 +231,6 @@ export default function ProductList() {
                   </select>
                 </div>
               )}
-
-              <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
-                <span style={labelStyle}>{t('common.search')}</span>
-                <input
-                  type="text"
-                  placeholder={t('common.search') + '...'}
-                  value={search}
-                  onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-                  className="input"
-                  style={{ maxWidth: 300 }}
-                />
-              </div>
-            </div>
-          )}
-
-          {/* Search bar for franchise context */}
-          {isEntreprise && isFranchiseCtx && tab !== 'fiche-technique' && (
-            <div style={{ display: 'flex', gap: 12, marginBottom: 18, flexWrap: 'wrap', alignItems: 'flex-end' }}>
               <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
                 <span style={labelStyle}>{t('common.search')}</span>
                 <input

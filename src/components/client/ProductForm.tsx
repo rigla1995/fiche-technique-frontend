@@ -32,14 +32,14 @@ export default function ProductForm() {
   const isDistinctSpecificFromUrl = urlActCtx.startsWith('distinct-');
 
   // Pre-step needed when: enterprise + new + context not fully resolved from URL
-  // franchise → auto-resolved; distinct-{id} → auto-resolved; distinct/'' → need to pick activity
-  const needsPreStep = isEntreprise && !isEdit && (urlActCtx === '' || isDistinctGenericFromUrl);
+  // distinct-{id} → auto-resolved; everything else needs pre-step
+  const needsPreStep = isEntreprise && !isEdit && !isDistinctSpecificFromUrl;
 
   const [preStepDone, setPreStepDone] = useState(!needsPreStep);
   const [typesSummary, setTypesSummary] = useState<ActiviteTypesSummary | null>(null);
   const [allActivities, setAllActivities] = useState<Activite[]>([]);
   const [preActType, setPreActType] = useState<'franchise' | 'distincte' | ''>(
-    isDistinctGenericFromUrl ? 'distincte' : ''
+    isFranchiseFromUrl ? 'franchise' : isDistinctGenericFromUrl ? 'distincte' : ''
   );
   const [preFranchiseGroup, setPreFranchiseGroup] = useState('');
   const [preCheckedActIds, setPreCheckedActIds] = useState<Set<number>>(new Set());
@@ -47,12 +47,11 @@ export default function ProductForm() {
 
   // Resolved activity context after pre-step (or from URL if already known)
   const [resolvedActCtx, setResolvedActCtx] = useState(
-    isFranchiseFromUrl ? 'franchise'
-    : isDistinctSpecificFromUrl ? urlActCtx
-    : urlActCtx
+    isDistinctSpecificFromUrl ? urlActCtx : ''
   );
 
-  const isFranchiseCtx = resolvedActCtx === 'franchise';
+  const isFranchiseCtx = resolvedActCtx === 'franchise' || resolvedActCtx.startsWith('franchise-specific-');
+  const franchiseSpecificActId = resolvedActCtx.startsWith('franchise-specific-') ? parseInt(resolvedActCtx.replace('franchise-specific-', '')) : null;
   const distinctActId = resolvedActCtx.startsWith('distinct-') ? parseInt(resolvedActCtx.replace('distinct-', '')) : null;
 
   const [name, setName] = useState('');
@@ -81,10 +80,22 @@ export default function ProductForm() {
       const acts = actsRes.data as Activite[];
       setTypesSummary(summary);
       setAllActivities(acts);
-      // auto-check all franchise activities
-      const franchiseIds = acts.filter((a) => a.type === 'franchise').map((a) => a.id);
-      setPreCheckedActIds(new Set(franchiseIds));
+
+      if (isFranchiseFromUrl) {
+        // For franchise context: auto-select the group if only one exists
+        const franchiseActs = acts.filter((a) => a.type === 'franchise');
+        const groups = Array.from(new Set(franchiseActs.map((a) => a.franchiseGroup || a.nom)));
+        if (groups.length === 1) {
+          setPreFranchiseGroup(groups[0]);
+          setPreCheckedActIds(new Set(franchiseActs.map((a) => a.id)));
+        }
+      } else if (!isFranchiseFromUrl && !isDistinctGenericFromUrl) {
+        // Generic enterprise: pre-check all franchise activities
+        const franchiseIds = acts.filter((a) => a.type === 'franchise').map((a) => a.id);
+        setPreCheckedActIds(new Set(franchiseIds));
+      }
     });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [needsPreStep]);
 
   useEffect(() => {
@@ -103,11 +114,15 @@ export default function ProductForm() {
       categorieName: i.categorie,
     } as Ingredient);
 
-    // For franchise: union selected ingredients across ALL franchise activities
+    // For franchise: union selected ingredients across franchise activities
     const buildIngredientsFetch = async (): Promise<{ data: unknown }> => {
       if (!resolvedActCtx) return api.get('/ingredients');
       if (isFranchiseCtx) {
-        // Use allActivities if already loaded, otherwise fetch
+        if (franchiseSpecificActId) {
+          // Single franchise activity: load only that activity's ingredients
+          return api.get(`/api/entreprise/activites/${franchiseSpecificActId}/ingredients`);
+        }
+        // All franchise activities: union of selected ingredients
         let franchiseActs = allActivities.filter((a) => a.type === 'franchise');
         if (franchiseActs.length === 0) {
           try {
@@ -278,6 +293,9 @@ export default function ProductForm() {
       if (resolvedActCtx && !isEdit) {
         if (isFranchiseCtx) {
           payload.activiteType = 'franchise';
+          if (franchiseSpecificActId) {
+            payload.activiteId = franchiseSpecificActId;
+          }
         } else if (distinctActId) {
           payload.activiteId = distinctActId;
           payload.activiteType = 'distincte';
@@ -335,8 +353,18 @@ export default function ProductForm() {
   const distinctActivities = allActivities.filter((a) => a.type === 'distincte');
 
   const handlePreStepConfirm = () => {
-    if (preActType === 'franchise') {
-      setResolvedActCtx('franchise');
+    const isFranchiseType = isFranchiseFromUrl || preActType === 'franchise';
+    if (isFranchiseType) {
+      // If only one specific activity is checked, assign to that activity; otherwise franchise-wide
+      const checkedArr = Array.from(preCheckedActIds);
+      const allFranchiseInGroup = allActivities.filter(
+        (a) => a.type === 'franchise' && (!preFranchiseGroup || (a.franchiseGroup || a.nom) === preFranchiseGroup)
+      );
+      if (checkedArr.length === 1 && allFranchiseInGroup.length > 1) {
+        setResolvedActCtx(`franchise-specific-${checkedArr[0]}`);
+      } else {
+        setResolvedActCtx('franchise');
+      }
     } else if (preActType === 'distincte' && preDistinctActId) {
       setResolvedActCtx(`distinct-${preDistinctActId}`);
     }
@@ -346,14 +374,23 @@ export default function ProductForm() {
 
   // Show pre-step for enterprise new products
   if (needsPreStep && !preStepDone) {
+    const franchiseOnly = isFranchiseFromUrl;
+    const distinctOnly = isDistinctGenericFromUrl;
+    const canConfirm = franchiseOnly
+      ? (preCheckedActIds.size > 0)
+      : distinctOnly
+        ? !!preDistinctActId
+        : (preActType === 'franchise' ? preCheckedActIds.size > 0 : (preActType === 'distincte' && !!preDistinctActId));
+
     return (
       <div className="page">
         <div className="page-header">
           <h1>{productType === 'vendable' ? t('client.products.add_vendable') : t('client.products.add_utilisable')}</h1>
         </div>
         <div className="card" style={{ maxWidth: 520 }}>
+
           {/* Type selector — only when context is completely unknown */}
-          {!isDistinctGenericFromUrl && (
+          {!franchiseOnly && !distinctOnly && (
             <>
               <h2 style={{ marginBottom: 16, fontSize: '1rem' }}>{t('client.products.choose_activity_type')}</h2>
               <div style={{ display: 'flex', gap: 10, marginBottom: 20 }}>
@@ -379,48 +416,66 @@ export default function ProductForm() {
             </>
           )}
 
-          {isDistinctGenericFromUrl && (
+          {distinctOnly && (
             <h2 style={{ marginBottom: 16, fontSize: '1rem' }}>{t('client.fiche_technique.choose_activity')}</h2>
           )}
 
-          {/* Franchise: group + activities checkboxes */}
-          {preActType === 'franchise' && (
+          {franchiseOnly && (
+            <h2 style={{ marginBottom: 16, fontSize: '1rem' }}>Sélectionner la franchise</h2>
+          )}
+
+          {/* Franchise: group picker + activity checkboxes */}
+          {(franchiseOnly || preActType === 'franchise') && (
             <>
               {franchiseGroups.length > 1 && (
                 <div style={{ marginBottom: 14 }}>
                   <label style={{ display: 'block', fontWeight: 600, marginBottom: 6, fontSize: '0.875rem' }}>
                     {t('client.fiche_technique.choose_franchise_group')}
                   </label>
-                  <select className="input" style={{ maxWidth: 280 }} value={preFranchiseGroup} onChange={(e) => setPreFranchiseGroup(e.target.value)}>
-                    <option value="">— tous les groupes —</option>
+                  <select
+                    className="input"
+                    style={{ maxWidth: 280 }}
+                    value={preFranchiseGroup}
+                    onChange={(e) => {
+                      const g = e.target.value;
+                      setPreFranchiseGroup(g);
+                      const inGroup = allActivities.filter(
+                        (a) => a.type === 'franchise' && (a.franchiseGroup || a.nom) === g
+                      );
+                      setPreCheckedActIds(new Set(inGroup.map((a) => a.id)));
+                    }}
+                  >
+                    <option value="">— choisir une franchise —</option>
                     {franchiseGroups.map((g) => <option key={g} value={g}>{g}</option>)}
                   </select>
                 </div>
               )}
-              <div>
-                <label style={{ display: 'block', fontWeight: 600, marginBottom: 8, fontSize: '0.875rem' }}>
-                  {t('client.products.included_activities')}
-                </label>
-                {franchiseActivitiesInGroup.map((a) => (
-                  <label key={a.id} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6, cursor: 'pointer' }}>
-                    <input
-                      type="checkbox"
-                      checked={preCheckedActIds.has(a.id)}
-                      onChange={(e) => {
-                        const next = new Set(preCheckedActIds);
-                        if (e.target.checked) next.add(a.id); else next.delete(a.id);
-                        setPreCheckedActIds(next);
-                      }}
-                    />
-                    <span>{a.nom}</span>
+              {franchiseActivitiesInGroup.length > 0 && (
+                <div>
+                  <label style={{ display: 'block', fontWeight: 600, marginBottom: 8, fontSize: '0.875rem' }}>
+                    {t('client.products.included_activities')}
                   </label>
-                ))}
-              </div>
+                  {franchiseActivitiesInGroup.map((a) => (
+                    <label key={a.id} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6, cursor: 'pointer' }}>
+                      <input
+                        type="checkbox"
+                        checked={preCheckedActIds.has(a.id)}
+                        onChange={(e) => {
+                          const next = new Set(preCheckedActIds);
+                          if (e.target.checked) next.add(a.id); else next.delete(a.id);
+                          setPreCheckedActIds(next);
+                        }}
+                      />
+                      <span>{a.nom}</span>
+                    </label>
+                  ))}
+                </div>
+              )}
             </>
           )}
 
           {/* Distinct: activity selector */}
-          {preActType === 'distincte' && (
+          {(distinctOnly || preActType === 'distincte') && (
             <div style={{ marginBottom: 14 }}>
               <label style={{ display: 'block', fontWeight: 600, marginBottom: 6, fontSize: '0.875rem' }}>
                 {t('client.fiche_technique.choose_activity')}
@@ -436,7 +491,7 @@ export default function ProductForm() {
             <button
               type="button"
               className="btn btn-primary"
-              disabled={!preActType || (preActType === 'distincte' && !preDistinctActId)}
+              disabled={!canConfirm}
               onClick={handlePreStepConfirm}
             >
               {t('common.continue')} →
