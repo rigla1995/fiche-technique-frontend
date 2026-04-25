@@ -59,7 +59,8 @@
     "no_franchise_activity": "Aucune activité de type franchise",
     "no_distinct_activity": "Aucune activité de type distincte",
     "espace_franchise": "Espace Franchise",
-    "espace_distinct": "Espace Distinct"
+    "espace_distinct": "Espace Distinct",
+    "mon_espace": "Mon Espace"
   },
   "validation": {
     "name_required": "Nom requis",

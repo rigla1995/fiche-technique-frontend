@@ -235,19 +235,18 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
               {/* Independant: catalogue, products, stock */}
               {!isEntreprise && (
                 <>
+                  <Divider />
+                  <SectionHeader label={t('nav.mon_espace')} />
+
+                  {/* Catalogue */}
                   <li>
                     <NavLink to="/client/ingredients" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>
                       <span className="link-icon">🧂</span>
                       <span className="link-label">{t('nav.ingredients_catalog')}</span>
                     </NavLink>
                   </li>
-                  <li>
-                    <span className="sidebar-link" style={{ opacity: !effectiveHasSelections ? 0.35 : 1, cursor: 'default' }} title={!effectiveHasSelections ? t('nav.products_locked') : undefined}>
-                      <span className="link-icon">🍔</span>
-                      <span className="link-label">{t('nav.products')}</span>
-                    </span>
-                  </li>
-                  <ProductSubLinks locked={!effectiveHasSelections} onClick={onClose} />
+
+                  {/* Stock */}
                   <li>
                     {!effectiveHasSelections ? (
                       <LockedLink label={t('nav.stock')} reason={t('nav.stock_locked')} />
@@ -258,6 +257,15 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                       </NavLink>
                     )}
                   </li>
+
+                  {/* Produits */}
+                  <li>
+                    <span className="sidebar-link" style={{ opacity: !effectiveHasSelections ? 0.35 : 1, cursor: 'default' }} title={!effectiveHasSelections ? t('nav.products_locked') : undefined}>
+                      <span className="link-icon">🍔</span>
+                      <span className="link-label">{t('nav.products')}</span>
+                    </span>
+                  </li>
+                  <ProductSubLinks locked={!effectiveHasSelections} onClick={onClose} />
                 </>
               )}
 

@@ -52,6 +52,9 @@ export default function FicheTechniqueTab({ isEntreprise, franchiseActivities, d
   const [manualUpdatedAt, setManualUpdatedAt] = useState<string | null>(null);
   const [showManualPopup, setShowManualPopup] = useState(false);
   const [savingManual, setSavingManual] = useState(false);
+  // Zero-price warning popup
+  const [showZeroWarning, setShowZeroWarning] = useState(false);
+  const [zeroWarningPrices, setZeroWarningPrices] = useState<ManualPriceEntry[]>([]);
 
   // Cost after mode selection
   const [realtimeCost, setRealtimeCost] = useState<number | null>(null);
@@ -160,7 +163,7 @@ export default function FicheTechniqueTab({ isEntreprise, franchiseActivities, d
     }
   };
 
-  const saveManualPrices = async () => {
+  const doSaveManualPrices = async () => {
     setSavingManual(true);
     try {
       const payload = {
@@ -171,13 +174,26 @@ export default function FicheTechniqueTab({ isEntreprise, franchiseActivities, d
       };
       const { data } = await api.post(`/products/${selectedProductId}/manual-prices`, payload);
       setShowManualPopup(false);
+      setShowZeroWarning(false);
       const savedAt = (data as { updatedAt: string | null }).updatedAt;
       setManualUpdatedAt(savedAt ? savedAt.slice(0, 10) : new Date().toISOString().slice(0, 10));
-      // Reload to refresh allManualPricesFilled
       await loadManualPrices();
     } finally {
       setSavingManual(false);
     }
+  };
+
+  const saveManualPrices = async () => {
+    const zeros = manualPrices.filter((p) => {
+      const v = parseFloat(p.prixUnitaire);
+      return isNaN(v) || v <= 0;
+    });
+    if (zeros.length > 0) {
+      setZeroWarningPrices(zeros.map((p) => ({ ...p })));
+      setShowZeroWarning(true);
+      return;
+    }
+    await doSaveManualPrices();
   };
 
   const generateExcel = async () => {
@@ -485,6 +501,66 @@ export default function FicheTechniqueTab({ isEntreprise, franchiseActivities, d
           >
             📥 {generating ? t('common.loading') : t('client.fiche_technique.generate')}
           </button>
+        </div>
+      )}
+
+      {/* Zero-price warning popup */}
+      {showZeroWarning && (
+        <div className="modal-overlay" onClick={() => setShowZeroWarning(false)}>
+          <div className="modal" style={{ maxWidth: 520 }} onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>⚠ Prix incomplets</h2>
+              <button className="modal-close" onClick={() => setShowZeroWarning(false)}>×</button>
+            </div>
+            <div className="modal-body">
+              <p style={{ marginBottom: 14, fontSize: '0.875rem', color: 'var(--text-muted)' }}>
+                Les ingrédients suivants ont un prix à 0. Corrigez-les pour pouvoir enregistrer.
+              </p>
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th>{t('client.products.popup_col_ingredient')}</th>
+                    <th>{t('client.products.popup_col_unit')}</th>
+                    <th style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>{t('client.products.popup_col_unit_price')} (DT)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {zeroWarningPrices.map((p, i) => (
+                    <tr key={p.ingredientId}>
+                      <td>{p.nom}</td>
+                      <td>{p.unite}</td>
+                      <td style={{ textAlign: 'right' }}>
+                        <input
+                          type="number"
+                          className="input"
+                          style={{ textAlign: 'right', width: 110, display: 'block', marginLeft: 'auto' }}
+                          step="0.001"
+                          min="0.001"
+                          placeholder="0.000"
+                          value={p.prixUnitaire}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setZeroWarningPrices((prev) => prev.map((x, j) => j === i ? { ...x, prixUnitaire: val } : x));
+                            setManualPrices((prev) => prev.map((x) => x.ingredientId === p.ingredientId ? { ...x, prixUnitaire: val } : x));
+                          }}
+                        />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-ghost" onClick={() => setShowZeroWarning(false)}>{t('common.cancel')}</button>
+              <button
+                className="btn btn-primary"
+                disabled={savingManual || zeroWarningPrices.some((p) => { const v = parseFloat(p.prixUnitaire); return isNaN(v) || v <= 0; })}
+                onClick={doSaveManualPrices}
+              >
+                {savingManual ? t('common.loading') : t('common.save')}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
