@@ -286,7 +286,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
                       {/* F Catalogue */}
                       <li>
-                        {isOnboarding || !hasFranchise ? (
+                        {(isOnboarding && step < 3) || !hasFranchise ? (
                           <LockedLink label={t('nav.catalogue_franchise')} reason={!isOnboarding ? t('nav.no_franchise_activity') : undefined} />
                         ) : (
                           <NavLink to="/client/catalogue-franchise" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>
@@ -331,7 +331,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
                       {/* D Catalogue */}
                       <li>
-                        {isOnboarding || !hasDistinct ? (
+                        {(isOnboarding && step < 3) || !hasDistinct ? (
                           <LockedLink label={t('nav.catalogue_distinct')} reason={!isOnboarding ? t('nav.no_distinct_activity') : undefined} />
                         ) : (
                           <NavLink to="/client/catalogue-distinct" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>

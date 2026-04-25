@@ -345,8 +345,8 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
             </div>
           )}
 
-          {/* Distinct section */}
-          {distinctActivities.length > 0 && (
+          {/* Distinct section — always visible when any activities exist so user can add a distinct activity */}
+          {(distinctActivities.length > 0 || franchiseActivities.length > 0) && (
             <div style={{ marginBottom: 32 }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
                 <h2 style={{ fontSize: '0.85rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', margin: 0 }}>
@@ -357,41 +357,47 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                 </button>
               </div>
 
-              {/* Distinct filter */}
-              <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
-                <input
-                  type="text"
-                  className="input"
-                  style={{ minWidth: 140, flex: '1 1 auto', maxWidth: 220 }}
-                  placeholder={t('common.search') + '…'}
-                  value={filterDistinctName}
-                  onChange={(e) => setFilterDistinctName(e.target.value)}
-                />
-              </div>
-
-              {filteredDistinct.length === 0 ? (
-                <p className="text-muted">{t('common.no_result')}</p>
+              {distinctActivities.length === 0 ? (
+                <p className="text-muted" style={{ fontSize: '0.85rem' }}>{t('nav.no_distinct_activity')}</p>
               ) : (
-                <div className="activites-grid">
-                  {filteredDistinct.map((act) => (
-                    <div key={act.id} className="activite-card">
-                      <div className="activite-card-header">
-                        <span className="activite-nom">{act.nom}</span>
-                        <div className="activite-actions">
-                          <button className="btn btn-ghost btn-sm" onClick={() => openIngredients(act)}>{t('client.entreprise.manage_ingredients')}</button>
-                          <button className="btn btn-ghost btn-sm" onClick={() => openEdit(act)}>{t('common.edit')}</button>
-                          <button className="btn btn-ghost btn-sm" onClick={() => openDuplicate(act)} title={t('client.entreprise.duplicate_activity')}>⧉</button>
-                          <button className="btn btn-danger-ghost btn-sm" onClick={() => deleteActivite(act.id)}>{t('common.delete')}</button>
+                <>
+                  {/* Distinct filter */}
+                  <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
+                    <input
+                      type="text"
+                      className="input"
+                      style={{ minWidth: 140, flex: '1 1 auto', maxWidth: 220 }}
+                      placeholder={t('common.search') + '…'}
+                      value={filterDistinctName}
+                      onChange={(e) => setFilterDistinctName(e.target.value)}
+                    />
+                  </div>
+
+                  {filteredDistinct.length === 0 ? (
+                    <p className="text-muted">{t('common.no_result')}</p>
+                  ) : (
+                    <div className="activites-grid">
+                      {filteredDistinct.map((act) => (
+                        <div key={act.id} className="activite-card">
+                          <div className="activite-card-header">
+                            <span className="activite-nom">{act.nom}</span>
+                            <div className="activite-actions">
+                              <button className="btn btn-ghost btn-sm" onClick={() => openIngredients(act)}>{t('client.entreprise.manage_ingredients')}</button>
+                              <button className="btn btn-ghost btn-sm" onClick={() => openEdit(act)}>{t('common.edit')}</button>
+                              <button className="btn btn-ghost btn-sm" onClick={() => openDuplicate(act)} title={t('client.entreprise.duplicate_activity')}>⧉</button>
+                              <button className="btn btn-danger-ghost btn-sm" onClick={() => deleteActivite(act.id)}>{t('common.delete')}</button>
+                            </div>
+                          </div>
+                          <div className="activite-details">
+                            {act.email && <span>✉ {act.email}</span>}
+                            {act.telephone && <span>☎ {act.telephone}</span>}
+                            {act.adresse && <span>📍 {act.adresse}</span>}
+                          </div>
                         </div>
-                      </div>
-                      <div className="activite-details">
-                        {act.email && <span>✉ {act.email}</span>}
-                        {act.telephone && <span>☎ {act.telephone}</span>}
-                        {act.adresse && <span>📍 {act.adresse}</span>}
-                      </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
+                  )}
+                </>
               )}
             </div>
           )}
