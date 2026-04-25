@@ -11,6 +11,12 @@ interface ManualPriceEntry {
   prixUnitaire: string;
 }
 
+interface ManualPriceGroup {
+  label: string;
+  depth: number;
+  ingredients: { ingredientId: number; nom: string; unite: string }[];
+}
+
 interface Props {
   isEntreprise: boolean;
   franchiseActivities: Activite[];
@@ -48,6 +54,7 @@ export default function FicheTechniqueTab({ isEntreprise, franchiseActivities, d
 
   // FP Manuel
   const [manualPrices, setManualPrices] = useState<ManualPriceEntry[]>([]);
+  const [manualPriceGroups, setManualPriceGroups] = useState<ManualPriceGroup[]>([]);
   const [manualLoading, setManualLoading] = useState(false);
   const [manualUpdatedAt, setManualUpdatedAt] = useState<string | null>(null);
   const [showManualPopup, setShowManualPopup] = useState(false);
@@ -147,8 +154,9 @@ export default function FicheTechniqueTab({ isEntreprise, franchiseActivities, d
     try {
       const qs = resolvedActId ? `?activiteId=${resolvedActId}` : '';
       const { data } = await api.get(`/products/${selectedProductId}/manual-prices${qs}`);
-      const { prices, updatedAt } = data as {
+      const { prices, groups, updatedAt } = data as {
         prices: { ingredientId: number; nom: string; unite: string; prixUnitaire: number | null }[];
+        groups: ManualPriceGroup[];
         updatedAt: string | null;
       };
       setManualPrices(prices.map((r) => ({
@@ -157,6 +165,7 @@ export default function FicheTechniqueTab({ isEntreprise, franchiseActivities, d
         unite: r.unite,
         prixUnitaire: r.prixUnitaire !== null ? String(r.prixUnitaire) : '',
       })));
+      setManualPriceGroups(groups || []);
       setManualUpdatedAt(updatedAt ? updatedAt.slice(0, 10) : null);
     } finally {
       setManualLoading(false);
@@ -582,32 +591,61 @@ export default function FicheTechniqueTab({ isEntreprise, franchiseActivities, d
                   <thead>
                     <tr>
                       <th>{t('client.products.popup_col_ingredient')}</th>
-                      <th>{t('client.products.popup_col_unit')}</th>
-                      <th style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>{t('client.products.popup_col_unit_price')} (DT)</th>
+                      <th style={{ width: 80 }}>{t('client.products.popup_col_unit')}</th>
+                      <th style={{ textAlign: 'right', whiteSpace: 'nowrap', width: 130 }}>{t('client.products.popup_col_unit_price')} (DT)</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {manualPrices.map((p, i) => (
-                      <tr key={p.ingredientId}>
-                        <td>{p.nom}</td>
-                        <td>{p.unite}</td>
-                        <td style={{ textAlign: 'right' }}>
-                          <input
-                            type="number"
-                            className="input"
-                            style={{ textAlign: 'right', width: 110, display: 'block', marginLeft: 'auto' }}
-                            step="0.001"
-                            min="0"
-                            placeholder="0.000"
-                            value={p.prixUnitaire}
-                            onChange={(e) => {
-                              const updated = [...manualPrices];
-                              updated[i] = { ...updated[i], prixUnitaire: e.target.value };
-                              setManualPrices(updated);
-                            }}
-                          />
-                        </td>
-                      </tr>
+                    {(manualPriceGroups.length > 0 ? manualPriceGroups : [{ label: '', depth: 0, ingredients: manualPrices.map(p => ({ ingredientId: p.ingredientId, nom: p.nom, unite: p.unite })) }]).map((group, gi) => (
+                      <>
+                        {/* Group header — only when multiple groups exist */}
+                        {manualPriceGroups.length > 1 && (
+                          <tr key={`gh-${gi}`}>
+                            <td colSpan={3} style={{
+                              paddingLeft: 8 + group.depth * 16,
+                              paddingTop: gi === 0 ? 4 : 10,
+                              paddingBottom: 2,
+                              fontSize: '0.75rem',
+                              fontWeight: 700,
+                              letterSpacing: '0.04em',
+                              textTransform: 'uppercase',
+                              color: group.depth === 0 ? 'var(--primary)' : 'var(--text-muted)',
+                              borderTop: gi === 0 ? undefined : '1px solid var(--border)',
+                            }}>
+                              {group.depth > 0 ? '↳ ' : ''}{group.label}
+                            </td>
+                          </tr>
+                        )}
+                        {group.ingredients.map((ing) => {
+                          const idx = manualPrices.findIndex((p) => p.ingredientId === ing.ingredientId);
+                          if (idx === -1) return null;
+                          const p = manualPrices[idx];
+                          return (
+                            <tr key={p.ingredientId}>
+                              <td style={{ paddingLeft: manualPriceGroups.length > 1 ? 8 + group.depth * 16 + 8 : undefined }}>
+                                {p.nom}
+                              </td>
+                              <td>{p.unite}</td>
+                              <td style={{ textAlign: 'right' }}>
+                                <input
+                                  type="number"
+                                  className="input"
+                                  style={{ textAlign: 'right', width: 110, display: 'block', marginLeft: 'auto' }}
+                                  step="0.001"
+                                  min="0"
+                                  placeholder="0.000"
+                                  value={p.prixUnitaire}
+                                  onChange={(e) => {
+                                    const updated = [...manualPrices];
+                                    updated[idx] = { ...updated[idx], prixUnitaire: e.target.value };
+                                    setManualPrices(updated);
+                                  }}
+                                />
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </>
                     ))}
                   </tbody>
                 </table>
