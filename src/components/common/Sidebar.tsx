@@ -364,7 +364,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                           <span className="link-label">{t('nav.products_distinct')}</span>
                         </span>
                       </li>
-                      <ProductSubLinks locked={isOnboarding || !effectiveHasSelections || !hasDistinct} ftActCtx="distinct" onClick={onClose} />
+                      <ProductSubLinks locked={isOnboarding || !effectiveHasSelections || !hasDistinct} actCtx="distinct" ftActCtx="distinct" onClick={onClose} />
                     </>
                   )}
                 </>

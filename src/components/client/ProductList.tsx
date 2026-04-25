@@ -3,9 +3,8 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
-import type { Product, Activite, ActiviteTypesSummary } from '../../types';
+import type { Product, Activite } from '../../types';
 import FicheTechniqueTab from './FicheTechniqueTab';
-
 
 interface ProductDetail {
   ingredients: { ingredientName: string; portion: number; unitName: string; unitPrice: number }[];
@@ -15,6 +14,8 @@ interface ProductDetail {
 type PopupType = 'ingredients' | 'subProducts' | null;
 type TabType = 'vendable' | 'utilisable' | 'fiche-technique';
 
+const PAGE_SIZE = 10;
+
 export default function ProductList() {
   const { t } = useTranslation();
   const { user } = useAuth();
@@ -22,64 +23,65 @@ export default function ProductList() {
 
   const [searchParams] = useSearchParams();
   const tab = (searchParams.get('tab') as TabType) || 'vendable';
+  const actCtx = searchParams.get('actCtx') || '';
+
+  const isFranchiseCtx = actCtx === 'franchise';
+  const isDistinctCtx = actCtx === 'distinct' || actCtx.startsWith('distinct-');
+  const preSelectedDistinctId = actCtx.startsWith('distinct-') ? actCtx.replace('distinct-', '') : '';
 
   const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
+  const [page, setPage] = useState(1);
+
   const [popup, setPopup] = useState<{ type: PopupType; productId: number; productName: string } | null>(null);
   const [detail, setDetail] = useState<ProductDetail | null>(null);
   const [loadingDetail, setLoadingDetail] = useState(false);
 
-  // Entreprise activity state
-  const [typesSummary, setTypesSummary] = useState<ActiviteTypesSummary | null>(null);
   const [franchiseActivities, setFranchiseActivities] = useState<Activite[]>([]);
   const [distinctActivities, setDistinctActivities] = useState<Activite[]>([]);
   const [activitesLoading, setActivitesLoading] = useState(false);
-  // selectedActCtx: 'franchise' | `distinct-${id}`
-  const [selectedActCtx, setSelectedActCtx] = useState<string>('');
 
+  // Selected activity ID within the current context
+  const [selectedActivityId, setSelectedActivityId] = useState<string>(preSelectedDistinctId);
+
+  // Load activities for enterprise users
   useEffect(() => {
     if (!isEntreprise) return;
     setActivitesLoading(true);
-    Promise.all([
-      api.get('/api/entreprise/activites/types-summary'),
-      api.get('/api/entreprise/activites'),
-    ]).then(([summaryRes, actsRes]) => {
-      const summary = summaryRes.data as ActiviteTypesSummary;
-      setTypesSummary(summary);
-      const all = actsRes.data as Activite[];
-      const franchise = all.filter((a: Activite) => a.type === 'franchise');
-      const distinct = all.filter((a: Activite) => a.type === 'distincte' || a.type == null);
-      setFranchiseActivities(franchise);
-      setDistinctActivities(distinct);
-      // Set default context
-      if (summary.hasFranchise && franchise.length > 0) setSelectedActCtx('franchise');
-      else if (summary.hasDistinct && distinct.length > 0) setSelectedActCtx(`distinct-${distinct[0].id}`);
-    }).finally(() => setActivitesLoading(false));
+    api.get('/api/entreprise/activites')
+      .then(({ data }) => {
+        const all = data as Activite[];
+        const franchise = all.filter((a) => a.type === 'franchise');
+        const distinct = all.filter((a) => a.type === 'distincte' || a.type == null);
+        setFranchiseActivities(franchise);
+        setDistinctActivities(distinct);
+      })
+      .finally(() => setActivitesLoading(false));
   }, [isEntreprise]);
 
-  // Derive query params from activity context
-  const getActivityQuery = (): { activiteType?: string; activiteId?: string } => {
-    if (!selectedActCtx) return {};
-    if (selectedActCtx === 'franchise') return { activiteType: 'franchise' };
-    const id = selectedActCtx.replace('distinct-', '');
-    return { activiteId: id };
-  };
-
-  const loadProducts = () => {
-    setLoading(true);
-    const query = isEntreprise ? getActivityQuery() : {};
-    const params = new URLSearchParams(query as Record<string, string>).toString();
-    api.get(`/products${params ? `?${params}` : ''}`)
-      .then(({ data }) => setProducts(data))
-      .finally(() => setLoading(false));
-  };
-
+  // Auto-select first activity when activities load and none selected
   useEffect(() => {
-    if (isEntreprise && !selectedActCtx) return; // wait for activity context
-    loadProducts();
+    if (isFranchiseCtx && franchiseActivities.length > 0 && !selectedActivityId) {
+      setSelectedActivityId(String(franchiseActivities[0].id));
+    }
+    if (isDistinctCtx && !preSelectedDistinctId && distinctActivities.length > 0 && !selectedActivityId) {
+      setSelectedActivityId(String(distinctActivities[0].id));
+    }
+  }, [isFranchiseCtx, isDistinctCtx, franchiseActivities, distinctActivities, preSelectedDistinctId, selectedActivityId]);
+
+  // Load products when activity selection changes
+  useEffect(() => {
+    if (isEntreprise && !selectedActivityId) return;
+    setLoading(true);
+    setPage(1);
+    const params = new URLSearchParams();
+    if (selectedActivityId) params.set('activiteId', selectedActivityId);
+    api.get(`/products${selectedActivityId ? `?${params}` : ''}`)
+      .then(({ data }) => setProducts(data as Product[]))
+      .finally(() => setLoading(false));
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isEntreprise, selectedActCtx]);
+  }, [isEntreprise, selectedActivityId]);
 
   const openPopup = async (type: PopupType, product: Product) => {
     setPopup({ type, productId: product.id, productName: product.name });
@@ -101,13 +103,27 @@ export default function ProductList() {
     setProducts((p) => p.filter((x) => x.id !== id));
   };
 
-  // Query param fragment for activity context (includes leading & for appending to existing params)
-  const actCtxQs = selectedActCtx ? `&actCtx=${encodeURIComponent(selectedActCtx)}` : '';
-  // Standalone query string for edit links (no other params before it)
-  const actCtxParam = selectedActCtx ? `?actCtx=${encodeURIComponent(selectedActCtx)}` : '';
+  // Build actCtx query string for links
+  const linkActCtx = isFranchiseCtx ? 'franchise'
+    : selectedActivityId ? `distinct-${selectedActivityId}`
+    : '';
+  const actCtxQs = linkActCtx ? `&actCtx=${encodeURIComponent(linkActCtx)}` : '';
+  const actCtxParam = linkActCtx ? `?actCtx=${encodeURIComponent(linkActCtx)}` : '';
+
+  const allActivitiesForCtx = isFranchiseCtx ? franchiseActivities : isDistinctCtx ? distinctActivities : [];
+
+  const getActivityName = (activiteId: number | null | undefined): string => {
+    if (!activiteId) return '—';
+    const found = [...franchiseActivities, ...distinctActivities].find((a) => a.id === activiteId);
+    return found ? found.nom : '—';
+  };
 
   const byTab = products.filter((p) => p.type === tab);
-  const filtered = byTab.filter((p) => p.name.toLowerCase().includes(search.toLowerCase()));
+  const searched = byTab.filter((p) => p.name.toLowerCase().includes(search.toLowerCase()));
+  const totalPages = Math.max(1, Math.ceil(searched.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+  const paginated = searched.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+
   const isVendable = tab === 'vendable';
   const emptyKey = isVendable ? 'client.products.no_vendable_products' : 'client.products.no_utilisable_products_tab';
   const addKey = isVendable ? 'client.products.add_vendable' : 'client.products.add_utilisable';
@@ -115,16 +131,12 @@ export default function ProductList() {
     ? `/client/products/new?type=vendable${actCtxQs}`
     : `/client/products/new?type=utilisable${actCtxQs}`;
 
-  // Activity selector label
-  const getSelectedLabel = () => {
-    if (selectedActCtx === 'franchise') return t('client.products.all_franchise');
-    const id = parseInt(selectedActCtx.replace('distinct-', ''));
-    const found = distinctActivities.find((a) => a.id === id);
-    return found ? `D · ${found.nom}` : '';
-  };
+  const showActivityCol = isEntreprise && !!selectedActivityId;
 
-  const actCtxCount = (typesSummary?.hasFranchise ? 1 : 0) + (typesSummary?.hasDistinct ? distinctActivities.length : 0);
-  const showActSelector = isEntreprise && actCtxCount > 1;
+  const labelStyle: React.CSSProperties = {
+    fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)',
+    textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 3,
+  };
 
   return (
     <div className="page">
@@ -136,64 +148,12 @@ export default function ProductList() {
               ? t('client.products.tab_utilisable')
               : t('client.products.tab_vendable')}
         </h1>
-        {tab !== 'fiche-technique' && (!isEntreprise || selectedActCtx) && (
+        {tab !== 'fiche-technique' && (!isEntreprise || selectedActivityId) && (
           <Link to={addPath} className="btn btn-primary">
             + {t(addKey)}
           </Link>
         )}
       </div>
-
-      {/* Entreprise: activity context selector — only shown when multiple contexts exist */}
-      {showActSelector && (
-        activitesLoading ? (
-          <p className="text-muted">{t('common.loading')}</p>
-        ) : (
-          <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', borderBottom: '2px solid var(--border)', marginBottom: 20 }}>
-            {typesSummary?.hasFranchise && (
-              <button
-                onClick={() => setSelectedActCtx('franchise')}
-                style={{
-                  padding: '8px 16px', fontWeight: 600, fontSize: '0.85rem',
-                  border: 'none', borderRadius: '6px 6px 0 0', cursor: 'pointer',
-                  background: selectedActCtx === 'franchise' ? 'var(--primary)' : 'var(--surface)',
-                  color: selectedActCtx === 'franchise' ? '#fff' : 'var(--text)',
-                  borderBottom: selectedActCtx === 'franchise' ? '2px solid var(--primary)' : '2px solid transparent',
-                  marginBottom: -2,
-                }}
-              >
-                F · {t('client.products.all_franchise')}
-              </button>
-            )}
-            {typesSummary?.hasDistinct && distinctActivities.map((a) => {
-              const ctx = `distinct-${a.id}`;
-              return (
-                <button
-                  key={a.id}
-                  onClick={() => setSelectedActCtx(ctx)}
-                  style={{
-                    padding: '8px 16px', fontWeight: 600, fontSize: '0.85rem',
-                    border: 'none', borderRadius: '6px 6px 0 0', cursor: 'pointer',
-                    background: selectedActCtx === ctx ? 'var(--primary)' : 'var(--surface)',
-                    color: selectedActCtx === ctx ? '#fff' : 'var(--text)',
-                    borderBottom: selectedActCtx === ctx ? '2px solid var(--primary)' : '2px solid transparent',
-                    marginBottom: -2,
-                  }}
-                >
-                  D · {a.nom}
-                </button>
-              );
-            })}
-          </div>
-        )
-      )}
-
-      {showActSelector && selectedActCtx && (
-        <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: 12 }}>
-          {selectedActCtx === 'franchise'
-            ? t('client.products.franchise_scope_hint')
-            : t('client.products.distinct_scope_hint', { name: getSelectedLabel() })}
-        </p>
-      )}
 
       {tab === 'fiche-technique' ? (
         <FicheTechniqueTab
@@ -201,136 +161,219 @@ export default function ProductList() {
           franchiseActivities={franchiseActivities}
           distinctActivities={distinctActivities}
         />
-      ) : (<>
-      <div className="search-bar">
-        <input
-          type="text"
-          placeholder={t('common.search') + '...'}
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="input"
-        />
-      </div>
-
-      {loading ? (
-        <div className="loading-text">{t('common.loading')}</div>
-      ) : filtered.length === 0 ? (
-        <div className="empty-state">
-          <span className="empty-icon">{isVendable ? '🍔' : '🧪'}</span>
-          <p>{byTab.length === 0 ? t(emptyKey) : t('common.no_result')}</p>
-          {byTab.length === 0 && (!isEntreprise || selectedActCtx) && (
-            <Link to={addPath} className="btn btn-primary">{t(addKey)}</Link>
-          )}
-        </div>
       ) : (
-        <div className="table-responsive card">
-          <table className="table">
-            <thead>
-              <tr>
-                <th>{t('common.name')}</th>
-                <th style={{ textAlign: 'center' }}>{t('nav.ingredients')}</th>
-                {isVendable && (
-                  <th style={{ textAlign: 'center' }}>{t('client.products.usable_products_col')}</th>
-                )}
-                <th>{t('common.actions')}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((p) => (
-                <tr key={p.id}>
-                  <td>{p.name}</td>
-                  <td style={{ textAlign: 'center' }}>
-                    <button className="btn btn-ghost btn-sm" style={{ minWidth: 36 }} onClick={() => openPopup('ingredients', p)}>
-                      {p.ingredientsCount ?? 0}
-                    </button>
-                  </td>
-                  {isVendable && (
-                    <td style={{ textAlign: 'center' }}>
-                      <button className="btn btn-ghost btn-sm" style={{ minWidth: 36 }} onClick={() => openPopup('subProducts', p)}>
-                        {p.subProductsCount ?? 0}
-                      </button>
-                    </td>
-                  )}
-                  <td className="actions-cell">
-                    <Link to={`/client/products/${p.id}/edit${actCtxParam}`} className="btn btn-ghost btn-sm">{t('common.edit')}</Link>
-                    <button className="btn btn-danger btn-sm" onClick={() => handleDelete(p.id)}>
-                      {t('common.delete')}
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      {popup && (
-        <div className="modal-overlay" onClick={closePopup}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h2>
-                {popup.type === 'ingredients'
-                  ? t('client.products.popup_ingredients_title')
-                  : t('client.products.popup_subproducts_title')} — {popup.productName}
-              </h2>
-              <button className="modal-close" onClick={closePopup}>×</button>
-            </div>
-            <div className="modal-body">
-              {loadingDetail ? (
-                <div className="loading-text">{t('common.loading')}</div>
-              ) : popup.type === 'ingredients' ? (
-                detail?.ingredients && detail.ingredients.length > 0 ? (
-                  <table className="table">
-                    <thead>
-                      <tr>
-                        <th>{t('client.products.popup_col_ingredient')}</th>
-                        <th style={{ textAlign: 'right' }}>{t('client.products.popup_col_portion')}</th>
-                        <th>{t('client.products.popup_col_unit')}</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {detail.ingredients.map((ing, i) => (
-                        <tr key={i}>
-                          <td>{ing.ingredientName}</td>
-                          <td style={{ textAlign: 'right' }}>{ing.portion}</td>
-                          <td>{ing.unitName}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                ) : (
-                  <p style={{ color: '#888', textAlign: 'center', padding: '16px 0' }}>{t('client.products.popup_no_ingredients')}</p>
-                )
+        <>
+          {/* Activity filter for enterprise */}
+          {isEntreprise && allActivitiesForCtx.length > 0 && tab !== 'fiche-technique' && (
+            <div style={{ display: 'flex', gap: 12, marginBottom: 18, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+              {activitesLoading ? (
+                <span style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>{t('common.loading')}</span>
               ) : (
-                detail?.subProducts && detail.subProducts.length > 0 ? (
-                  <table className="table">
-                    <thead>
-                      <tr>
-                        <th>{t('client.products.popup_col_subproduct')}</th>
-                        <th style={{ textAlign: 'right' }}>{t('client.products.popup_col_portion')}</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {detail.subProducts.map((sp, i) => (
-                        <tr key={i}>
-                          <td>{sp.subProductName}</td>
-                          <td style={{ textAlign: 'right' }}>{sp.portion}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                ) : (
-                  <p style={{ color: '#888', textAlign: 'center', padding: '16px 0' }}>{t('client.products.popup_no_subproducts')}</p>
-                )
+                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                  <span style={labelStyle}>Activité</span>
+                  <select
+                    className="input"
+                    style={{ maxWidth: 260 }}
+                    value={selectedActivityId}
+                    onChange={(e) => { setSelectedActivityId(e.target.value); setPage(1); }}
+                  >
+                    {allActivitiesForCtx.map((a) => (
+                      <option key={a.id} value={a.id}>{a.nom}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+                <span style={labelStyle}>{t('common.search')}</span>
+                <input
+                  type="text"
+                  placeholder={t('common.search') + '...'}
+                  value={search}
+                  onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+                  className="input"
+                  style={{ maxWidth: 300 }}
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Search bar for non-enterprise */}
+          {!isEntreprise && (
+            <div className="search-bar">
+              <input
+                type="text"
+                placeholder={t('common.search') + '...'}
+                value={search}
+                onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+                className="input"
+              />
+            </div>
+          )}
+
+          {loading ? (
+            <div className="loading-text">{t('common.loading')}</div>
+          ) : searched.length === 0 ? (
+            <div className="empty-state">
+              <span className="empty-icon">{isVendable ? '🍔' : '🧪'}</span>
+              <p>{byTab.length === 0 ? t(emptyKey) : t('common.no_result')}</p>
+              {byTab.length === 0 && (!isEntreprise || selectedActivityId) && (
+                <Link to={addPath} className="btn btn-primary">{t(addKey)}</Link>
               )}
             </div>
-            <div className="modal-footer">
-              <button className="btn btn-ghost" onClick={closePopup}>{t('common.close')}</button>
+          ) : (
+            <>
+              <div className="table-responsive card">
+                <table className="table">
+                  <thead>
+                    <tr>
+                      <th>{t('common.name')}</th>
+                      {showActivityCol && <th>Activité</th>}
+                      <th style={{ textAlign: 'center' }}>{t('nav.ingredients')}</th>
+                      {isVendable && (
+                        <th style={{ textAlign: 'center' }}>{t('client.products.usable_products_col')}</th>
+                      )}
+                      <th>{t('common.actions')}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {paginated.map((p) => (
+                      <tr key={p.id}>
+                        <td>{p.name}</td>
+                        {showActivityCol && (
+                          <td style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                            {getActivityName(p.activiteId)}
+                          </td>
+                        )}
+                        <td style={{ textAlign: 'center' }}>
+                          <button className="btn btn-ghost btn-sm" style={{ minWidth: 36 }} onClick={() => openPopup('ingredients', p)}>
+                            {p.ingredientsCount ?? 0}
+                          </button>
+                        </td>
+                        {isVendable && (
+                          <td style={{ textAlign: 'center' }}>
+                            <button className="btn btn-ghost btn-sm" style={{ minWidth: 36 }} onClick={() => openPopup('subProducts', p)}>
+                              {p.subProductsCount ?? 0}
+                            </button>
+                          </td>
+                        )}
+                        <td className="actions-cell">
+                          <Link to={`/client/products/${p.id}/edit${actCtxParam}`} className="btn btn-ghost btn-sm">{t('common.edit')}</Link>
+                          <button className="btn btn-danger btn-sm" onClick={() => handleDelete(p.id)}>
+                            {t('common.delete')}
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 14, flexWrap: 'wrap', gap: 8 }}>
+                  <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+                    {(safePage - 1) * PAGE_SIZE + 1}–{Math.min(safePage * PAGE_SIZE, searched.length)} / {searched.length}
+                  </span>
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    <button
+                      className="btn btn-ghost btn-sm"
+                      disabled={safePage <= 1}
+                      onClick={() => setPage(safePage - 1)}
+                    >
+                      ← Préc.
+                    </button>
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+                      <button
+                        key={p}
+                        className={`btn btn-sm ${p === safePage ? 'btn-primary' : 'btn-ghost'}`}
+                        onClick={() => setPage(p)}
+                        style={{ minWidth: 32 }}
+                      >
+                        {p}
+                      </button>
+                    ))}
+                    <button
+                      className="btn btn-ghost btn-sm"
+                      disabled={safePage >= totalPages}
+                      onClick={() => setPage(safePage + 1)}
+                    >
+                      Suiv. →
+                    </button>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+
+          {popup && (
+            <div className="modal-overlay" onClick={closePopup}>
+              <div className="modal" onClick={(e) => e.stopPropagation()}>
+                <div className="modal-header">
+                  <h2>
+                    {popup.type === 'ingredients'
+                      ? t('client.products.popup_ingredients_title')
+                      : t('client.products.popup_subproducts_title')} — {popup.productName}
+                  </h2>
+                  <button className="modal-close" onClick={closePopup}>×</button>
+                </div>
+                <div className="modal-body">
+                  {loadingDetail ? (
+                    <div className="loading-text">{t('common.loading')}</div>
+                  ) : popup.type === 'ingredients' ? (
+                    detail?.ingredients && detail.ingredients.length > 0 ? (
+                      <table className="table">
+                        <thead>
+                          <tr>
+                            <th>{t('client.products.popup_col_ingredient')}</th>
+                            <th style={{ textAlign: 'right' }}>{t('client.products.popup_col_portion')}</th>
+                            <th>{t('client.products.popup_col_unit')}</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {detail.ingredients.map((ing, i) => (
+                            <tr key={i}>
+                              <td>{ing.ingredientName}</td>
+                              <td style={{ textAlign: 'right' }}>{ing.portion}</td>
+                              <td>{ing.unitName}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    ) : (
+                      <p style={{ color: '#888', textAlign: 'center', padding: '16px 0' }}>{t('client.products.popup_no_ingredients')}</p>
+                    )
+                  ) : (
+                    detail?.subProducts && detail.subProducts.length > 0 ? (
+                      <table className="table">
+                        <thead>
+                          <tr>
+                            <th>{t('client.products.popup_col_subproduct')}</th>
+                            <th style={{ textAlign: 'right' }}>{t('client.products.popup_col_portion')}</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {detail.subProducts.map((sp, i) => (
+                            <tr key={i}>
+                              <td>{sp.subProductName}</td>
+                              <td style={{ textAlign: 'right' }}>{sp.portion}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    ) : (
+                      <p style={{ color: '#888', textAlign: 'center', padding: '16px 0' }}>{t('client.products.popup_no_subproducts')}</p>
+                    )
+                  )}
+                </div>
+                <div className="modal-footer">
+                  <button className="btn btn-ghost" onClick={closePopup}>{t('common.close')}</button>
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
+          )}
+        </>
       )}
-      </>)}
     </div>
   );
 }

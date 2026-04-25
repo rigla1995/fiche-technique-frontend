@@ -65,6 +65,7 @@ export interface Product {
   userId: number;
   activiteId?: number | null;
   activiteType?: 'franchise' | 'distincte' | null;
+  createdAt?: string;
 }
 
 export interface Client {
