@@ -332,7 +332,10 @@ export default function ProductList() {
                           <td style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
                             {p.activiteId
                               ? (franchiseActivities.find((a) => a.id === p.activiteId)?.nom ?? '—')
-                              : <span style={{ fontStyle: 'italic' }}>Toutes</span>}
+                              : (() => {
+                                  const cnt = franchiseActivities.filter((a) => !filterFranchiseGroup || (a.franchiseGroup || a.nom) === filterFranchiseGroup).length;
+                                  return <span style={{ fontStyle: 'italic' }}>{cnt} activité{cnt > 1 ? 's' : ''}</span>;
+                                })()}
                           </td>
                         )}
                         <td style={{ textAlign: 'center' }}>
