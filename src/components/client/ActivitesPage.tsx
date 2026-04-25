@@ -411,8 +411,8 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
               <button className="modal-close" onClick={closeForm}>✕</button>
             </div>
             <form onSubmit={submit} className="modal-body">
-              {/* Franchise/Distinct question — shown when adding (not editing, not duplicating) */}
-              {!editingId && !isDuplicate && (
+              {/* Franchise/Distinct question — only when type isn't already determined */}
+              {!editingId && !isDuplicate && memeActivite === null && (
                 <div className="franchise-question" style={{ marginBottom: 16 }}>
                   <p style={{ fontWeight: 600, marginBottom: 8 }}>{t('client.entreprise.franchise_question')}</p>
                   <div style={{ display: 'flex', gap: 12 }}>

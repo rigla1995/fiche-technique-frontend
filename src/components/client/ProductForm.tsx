@@ -260,6 +260,16 @@ export default function ProductForm() {
     (c) => !usedCatIds.has(String(c.id)) && catIdsWithIngredients.has(String(c.id))
   );
 
+  const availableForCategory = (catId: string) => {
+    let byCategory: typeof ingredients;
+    if (catId === '') {
+      byCategory = ingredients.filter((i) => i.categorieId === null || i.categorieId === undefined);
+    } else {
+      byCategory = ingredients.filter((i) => String(i.categorieId) === catId);
+    }
+    return byCategory.filter((i) => !selectedIngredientIds.has(String(i.id)));
+  };
+
   const availableForLine = (idx: number) => {
     const line = ingredientLines[idx];
     let byCategory: typeof ingredients;
@@ -586,14 +596,16 @@ export default function ProductForm() {
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8, padding: '6px 0', borderBottom: '1px solid var(--border)' }}>
                 <span style={{ fontWeight: 700, color: 'var(--primary)', fontSize: '0.95rem' }}>🏷️ {catName}</span>
                 <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>({entries.length})</span>
-                <button
-                  type="button"
-                  className="btn btn-ghost btn-sm"
-                  style={{ marginLeft: 'auto' }}
-                  onClick={() => addIngredientLineInCategory(catId)}
-                >
-                  + {t('client.products.add_ingredient')}
-                </button>
+                {availableForCategory(catId).length > 0 && (
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-sm"
+                    style={{ marginLeft: 'auto' }}
+                    onClick={() => addIngredientLineInCategory(catId)}
+                  >
+                    + {t('client.products.add_ingredient')}
+                  </button>
+                )}
               </div>
 
               {entries.map(({ line, idx }) => {
@@ -652,8 +664,8 @@ export default function ProductForm() {
           )}
         </div>
 
-        {/* Sub-products — only for vendable */}
-        {productType === 'vendable' && (
+        {/* Sub-products — for vendable and utilisable, hidden when no utilisable products exist */}
+        {(productType === 'vendable' || productType === 'utilisable') && (products.length > 0 || subProductLines.length > 0) && (
           <div className="card">
             <div className="section-header">
               <h2>{t('client.products.subproducts_section')}</h2>
@@ -661,11 +673,7 @@ export default function ProductForm() {
                 + {t('client.products.add_subproduct')}
               </button>
             </div>
-            {subProductLines.length === 0 && products.length === 0 ? (
-              <p className="empty-text" style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-                {t('client.products.no_utilisable_products')}
-              </p>
-            ) : subProductLines.length === 0 ? (
+            {subProductLines.length === 0 ? (
               <p className="empty-text">{t('client.products.subproducts_empty')}</p>
             ) : null}
             {subProductLines.map((line, idx) => (
