@@ -637,29 +637,66 @@ export default function FicheTechniqueTab({ isEntreprise, franchiseActivities, d
                   </tr>
                 </thead>
                 <tbody>
-                  {zeroWarningPrices.map((p, i) => (
-                    <tr key={p.ingredientId}>
-                      <td style={{ fontWeight: 500 }}>{p.nom}</td>
-                      <td style={{ color: 'var(--text-muted)' }}>{p.unite}</td>
-                      <td style={{ textAlign: 'right' }}>
-                        <input
-                          type="number"
-                          className="input"
-                          style={{ textAlign: 'right', width: 110, display: 'block', marginLeft: 'auto', borderColor: '#f59e0b' }}
-                          step="0.001"
-                          min="0.001"
-                          placeholder="0.000"
-                          autoFocus={i === 0}
-                          value={p.prixUnitaire}
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            setZeroWarningPrices((prev) => prev.map((x, j) => j === i ? { ...x, prixUnitaire: val } : x));
-                            setManualPrices((prev) => prev.map((x) => x.ingredientId === p.ingredientId ? { ...x, prixUnitaire: val } : x));
-                          }}
-                        />
-                      </td>
-                    </tr>
-                  ))}
+                  {(() => {
+                    const zeroIds = new Set(zeroWarningPrices.map((p) => p.ingredientId));
+                    // Build cascade: groups that have at least one zero-price ingredient
+                    const warningGroups = manualPriceGroups
+                      .map((g) => ({ ...g, ingredients: g.ingredients.filter((ing) => zeroIds.has(ing.ingredientId)) }))
+                      .filter((g) => g.ingredients.length > 0);
+                    const hasGroups = warningGroups.length > 1 || (warningGroups.length === 1 && warningGroups[0].depth > 0);
+                    let firstInput = true;
+                    return warningGroups.map((group, gi) => (
+                      <>
+                        {hasGroups && group.depth > 0 && (
+                          <tr key={`wgh-${gi}`}>
+                            <td colSpan={3} style={{
+                              paddingLeft: 8 + group.depth * 16,
+                              paddingTop: gi === 0 ? 4 : 10,
+                              paddingBottom: 2,
+                              fontSize: '0.75rem',
+                              fontWeight: 700,
+                              letterSpacing: '0.04em',
+                              textTransform: 'uppercase',
+                              color: 'var(--text-muted)',
+                              borderTop: gi === 0 ? undefined : '1px solid var(--border)',
+                            }}>
+                              ↳ {group.label}
+                            </td>
+                          </tr>
+                        )}
+                        {group.ingredients.map((ing) => {
+                          const wi = zeroWarningPrices.findIndex((x) => x.ingredientId === ing.ingredientId);
+                          if (wi === -1) return null;
+                          const p = zeroWarningPrices[wi];
+                          const isFirst = firstInput;
+                          if (firstInput) firstInput = false;
+                          return (
+                            <tr key={p.ingredientId}>
+                              <td style={{ fontWeight: 500, paddingLeft: hasGroups ? 8 + group.depth * 16 + 8 : undefined }}>{p.nom}</td>
+                              <td style={{ color: 'var(--text-muted)' }}>{p.unite}</td>
+                              <td style={{ textAlign: 'right' }}>
+                                <input
+                                  type="number"
+                                  className="input"
+                                  style={{ textAlign: 'right', width: 110, display: 'block', marginLeft: 'auto', borderColor: '#f59e0b' }}
+                                  step="0.001"
+                                  min="0.001"
+                                  placeholder="0.000"
+                                  autoFocus={isFirst}
+                                  value={p.prixUnitaire}
+                                  onChange={(e) => {
+                                    const val = e.target.value;
+                                    setZeroWarningPrices((prev) => prev.map((x, j) => j === wi ? { ...x, prixUnitaire: val } : x));
+                                    setManualPrices((prev) => prev.map((x) => x.ingredientId === p.ingredientId ? { ...x, prixUnitaire: val } : x));
+                                  }}
+                                />
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </>
+                    ));
+                  })()}
                 </tbody>
               </table>
             </div>
