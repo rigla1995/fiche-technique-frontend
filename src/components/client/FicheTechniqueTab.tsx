@@ -88,9 +88,9 @@ export default function FicheTechniqueTab({ isEntreprise, franchiseActivities, d
   useEffect(() => {
     if (!productType || !actStepDone) { setProducts([]); setSelectedProductId(''); return; }
     setProductsLoading(true);
+    // Only filter by product type (vendable/utilisable); the activity context only
+    // matters for ingredient/price lookups, not which products are selectable here.
     const params = new URLSearchParams({ type: productType });
-    if (isFranchiseCtx) params.set('activiteType', 'franchise');
-    else if (resolvedActId) params.set('activiteId', String(resolvedActId));
     api.get(`/products?${params}`)
       .then(({ data }) => setProducts(data as Product[]))
       .finally(() => setProductsLoading(false));

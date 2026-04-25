@@ -21,7 +21,7 @@ export default function ProductList() {
   const { user } = useAuth();
   const isEntreprise = user?.compteType === 'entreprise';
 
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const tab = (searchParams.get('tab') as TabType) || 'vendable';
   const actCtx = searchParams.get('actCtx') || '';
 
@@ -29,10 +29,19 @@ export default function ProductList() {
   const isDistinctCtx = actCtx === 'distinct' || actCtx.startsWith('distinct-');
   const preSelectedDistinctId = actCtx.startsWith('distinct-') ? actCtx.replace('distinct-', '') : '';
 
+  // Filters stored in URL params so they survive navigation (add → cancel → back)
+  const filterFranchiseGroup = searchParams.get('fg') || '';
+  const filterFranchiseActId = searchParams.get('fact') || '';
+
+  const setFilterFranchiseGroup = (val: string) =>
+    setSearchParams((prev) => { const next = new URLSearchParams(prev); val ? next.set('fg', val) : next.delete('fg'); next.delete('fact'); return next; }, { replace: true });
+
+  const setFilterFranchiseActId = (val: string) =>
+    setSearchParams((prev) => { const next = new URLSearchParams(prev); val ? next.set('fact', val) : next.delete('fact'); return next; }, { replace: true });
+
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
-  const [filterFranchiseGroup, setFilterFranchiseGroup] = useState('');
   const [page, setPage] = useState(1);
 
   const [popup, setPopup] = useState<{ type: PopupType; productId: number; productName: string } | null>(null);
@@ -83,7 +92,7 @@ export default function ProductList() {
       .then(({ data }) => setProducts(data as Product[]))
       .finally(() => setLoading(false));
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isEntreprise, isFranchiseCtx, isDistinctCtx, selectedActivityId, filterFranchiseGroup]);
+  }, [isEntreprise, isFranchiseCtx, isDistinctCtx, selectedActivityId, filterFranchiseGroup, filterFranchiseActId]);
 
   const openPopup = async (type: PopupType, product: Product) => {
     setPopup({ type, productId: product.id, productName: product.name });
@@ -124,7 +133,11 @@ export default function ProductList() {
   ).sort();
 
   const byTab = products.filter((p) => p.type === tab);
-  const searched = byTab.filter((p) => p.name.toLowerCase().includes(search.toLowerCase()));
+  // Client-side filter by franchise activity: franchise-wide products (activiteId=null) always shown
+  const byActivity = (isFranchiseCtx && filterFranchiseActId)
+    ? byTab.filter((p) => p.activiteId === parseInt(filterFranchiseActId) || p.activiteId === null)
+    : byTab;
+  const searched = byActivity.filter((p) => p.name.toLowerCase().includes(search.toLowerCase()));
   const totalPages = Math.max(1, Math.ceil(searched.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
   const paginated = searched.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
@@ -132,11 +145,19 @@ export default function ProductList() {
   const isVendable = tab === 'vendable';
   const emptyKey = isVendable ? 'client.products.no_vendable_products' : 'client.products.no_utilisable_products_tab';
   const addKey = isVendable ? 'client.products.add_vendable' : 'client.products.add_utilisable';
+
+  // Preserve current filters in add-product link so coming back from cancel restores them
+  const filterQs = [
+    actCtxQs ? actCtxQs.slice(1) : '',  // strip leading '&' from actCtxQs
+    filterFranchiseGroup ? `fg=${encodeURIComponent(filterFranchiseGroup)}` : '',
+    filterFranchiseActId ? `fact=${encodeURIComponent(filterFranchiseActId)}` : '',
+  ].filter(Boolean).join('&');
   const addPath = isVendable
-    ? `/client/products/new?type=vendable${actCtxQs}`
-    : `/client/products/new?type=utilisable${actCtxQs}`;
+    ? `/client/products/new?type=vendable${filterQs ? `&${filterQs}` : ''}`
+    : `/client/products/new?type=utilisable${filterQs ? `&${filterQs}` : ''}`;
 
   const showActivityCol = isEntreprise && isDistinctCtx && !!selectedActivityId;
+  const showFranchiseActCol = isEntreprise && isFranchiseCtx && franchiseActivities.length > 1;
 
   const labelStyle: React.CSSProperties = {
     fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)',
@@ -168,26 +189,48 @@ export default function ProductList() {
         />
       ) : (
         <>
-          {/* Franchise filters: group + name */}
+          {/* Franchise filters: group + activity + search */}
           {isEntreprise && isFranchiseCtx && tab !== 'fiche-technique' && (
             <div style={{ display: 'flex', gap: 12, marginBottom: 18, flexWrap: 'wrap', alignItems: 'flex-end' }}>
               {activitesLoading ? (
                 <span style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>{t('common.loading')}</span>
-              ) : franchiseGroups.length > 1 && (
-                <div style={{ display: 'flex', flexDirection: 'column' }}>
-                  <span style={labelStyle}>Franchise</span>
-                  <select
-                    className="input"
-                    style={{ maxWidth: 220 }}
-                    value={filterFranchiseGroup}
-                    onChange={(e) => { setFilterFranchiseGroup(e.target.value); setPage(1); }}
-                  >
-                    <option value="">Toutes les franchises</option>
-                    {franchiseGroups.map((g) => (
-                      <option key={g} value={g}>{g}</option>
-                    ))}
-                  </select>
-                </div>
+              ) : (
+                <>
+                  {franchiseGroups.length > 1 && (
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                      <span style={labelStyle}>Franchise</span>
+                      <select
+                        className="input"
+                        style={{ maxWidth: 220 }}
+                        value={filterFranchiseGroup}
+                        onChange={(e) => { setFilterFranchiseGroup(e.target.value); setPage(1); }}
+                      >
+                        <option value="">Toutes les franchises</option>
+                        {franchiseGroups.map((g) => (
+                          <option key={g} value={g}>{g}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                  {franchiseActivities.length > 1 && (
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                      <span style={labelStyle}>Activité</span>
+                      <select
+                        className="input"
+                        style={{ maxWidth: 220 }}
+                        value={filterFranchiseActId}
+                        onChange={(e) => { setFilterFranchiseActId(e.target.value); setPage(1); }}
+                      >
+                        <option value="">Toutes les activités</option>
+                        {franchiseActivities
+                          .filter((a) => !filterFranchiseGroup || (a.franchiseGroup || a.nom) === filterFranchiseGroup)
+                          .map((a) => (
+                            <option key={a.id} value={a.id}>{a.nom}</option>
+                          ))}
+                      </select>
+                    </div>
+                  )}
+                </>
               )}
               <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
                 <span style={labelStyle}>{t('common.search')}</span>
@@ -268,6 +311,7 @@ export default function ProductList() {
                     <tr>
                       <th>{t('common.name')}</th>
                       {showActivityCol && <th>Activité</th>}
+                      {showFranchiseActCol && <th>Activité</th>}
                       <th style={{ textAlign: 'center' }}>{t('nav.ingredients')}</th>
                       {isVendable && (
                         <th style={{ textAlign: 'center' }}>{t('client.products.usable_products_col')}</th>
@@ -282,6 +326,13 @@ export default function ProductList() {
                         {showActivityCol && (
                           <td style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
                             {getActivityName(p.activiteId)}
+                          </td>
+                        )}
+                        {showFranchiseActCol && (
+                          <td style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                            {p.activiteId
+                              ? (franchiseActivities.find((a) => a.id === p.activiteId)?.nom ?? '—')
+                              : <span style={{ fontStyle: 'italic' }}>Toutes</span>}
                           </td>
                         )}
                         <td style={{ textAlign: 'center' }}>

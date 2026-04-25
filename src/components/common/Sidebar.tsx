@@ -323,8 +323,8 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                     </>
                   )}
 
-                  {/* Espace Distinct */}
-                  {(isOnboarding || hasDistinct) && (
+                  {/* Espace Distinct — always visible when Espace Franchise is shown */}
+                  {(isOnboarding || hasFranchise || hasDistinct) && (
                     <>
                       <Divider />
                       <SectionHeader label={t('nav.espace_distinct')} />

@@ -464,22 +464,28 @@ export default function ProductForm() {
               {franchiseActivitiesInGroup.length > 0 && (
                 <div>
                   <label style={{ display: 'block', fontWeight: 600, marginBottom: 8, fontSize: '0.875rem' }}>
-                    {t('client.products.included_activities')}
+                    {franchiseActivitiesInGroup.length === 1
+                      ? t('client.products.included_activities')
+                      : t('client.products.included_activities')}
                   </label>
-                  {franchiseActivitiesInGroup.map((a) => (
-                    <label key={a.id} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6, cursor: 'pointer' }}>
-                      <input
-                        type="checkbox"
-                        checked={preCheckedActIds.has(a.id)}
-                        onChange={(e) => {
-                          const next = new Set(preCheckedActIds);
-                          if (e.target.checked) next.add(a.id); else next.delete(a.id);
-                          setPreCheckedActIds(next);
-                        }}
-                      />
-                      <span>{a.nom}</span>
-                    </label>
-                  ))}
+                  {franchiseActivitiesInGroup.map((a) => {
+                    const singleActivity = franchiseActivitiesInGroup.length === 1;
+                    return (
+                      <label key={a.id} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6, cursor: singleActivity ? 'default' : 'pointer', opacity: singleActivity ? 0.65 : 1 }}>
+                        <input
+                          type="checkbox"
+                          checked={preCheckedActIds.has(a.id)}
+                          disabled={singleActivity}
+                          onChange={singleActivity ? undefined : (e) => {
+                            const next = new Set(preCheckedActIds);
+                            if (e.target.checked) next.add(a.id); else next.delete(a.id);
+                            setPreCheckedActIds(next);
+                          }}
+                        />
+                        <span>{a.nom}</span>
+                      </label>
+                    );
+                  })}
                 </div>
               )}
             </>
