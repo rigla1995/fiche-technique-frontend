@@ -11,6 +11,12 @@ const yearEnd = `${currentYear}-12-31`;
 
 const PAGE_SIZE = 10;
 
+const fmtDate = (iso: string | null | undefined) => {
+  if (!iso || iso.length < 10) return iso ?? '—';
+  const [y, m, d] = iso.split('-');
+  return `${d}/${m}/${y}`;
+};
+
 interface Ingredient {
   id: number;
   name: string;
@@ -288,7 +294,7 @@ export default function HistoriqueApproPage() {
             <tbody>
               {pagedResults.map((r, i) => (
                 <tr key={i}>
-                  <td style={{ fontWeight: 600, color: 'var(--primary)' }}>{r.dateAppro}</td>
+                  <td style={{ fontWeight: 600, color: 'var(--primary)' }}>{fmtDate(r.dateAppro)}</td>
                   <td>{r.ingredientNom}</td>
                   <td style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{r.categorieNom}</td>
                   <td style={{ textAlign: 'right' }}>{r.quantite ?? '—'} <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>{r.uniteNom}</span></td>

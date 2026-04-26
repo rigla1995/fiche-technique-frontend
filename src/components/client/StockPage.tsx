@@ -9,6 +9,11 @@ const currentYear = new Date().getFullYear();
 const yearStart = `${currentYear}-01-01`;
 const yearEnd = `${currentYear}-12-31`;
 const todayStr = () => new Date().toISOString().split('T')[0];
+const fmtDate = (iso: string | null | undefined) => {
+  if (!iso || iso.length < 10) return iso ?? '—';
+  const [y, m, d] = iso.split('-');
+  return `${d}/${m}/${y}`;
+};
 
 interface StockRowState {
   quantite: string;
@@ -89,7 +94,7 @@ function HistoryPopup({ ingredientId, nom, activiteId, isEntreprise, onClose }: 
               <tbody>
                 {entries.map((e, i) => (
                   <tr key={i}>
-                    <td>{e.dateAppro}</td>
+                    <td>{fmtDate(e.dateAppro)}</td>
                     <td style={{ textAlign: 'right' }}>{e.quantite ?? '—'}</td>
                     <td style={{ textAlign: 'right' }}>{e.prixUnitaire !== null ? e.prixUnitaire.toFixed(3) : '—'}</td>
                   </tr>
