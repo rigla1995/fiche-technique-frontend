@@ -155,6 +155,8 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const effectiveHasSelections = isEntreprise ? (step === 0) : hasSelections;
 
   const currentSection = new URLSearchParams(location.search).get('section');
+  const currentHistType = new URLSearchParams(location.search).get('type');
+  const isHistoriquePage = location.pathname === '/client/stock/historique';
 
   const hasFranchise = typesSummary === null ? true : typesSummary.hasFranchise;
   const hasDistinct = typesSummary === null ? true : typesSummary.hasDistinct;
@@ -260,6 +262,22 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                     )}
                   </li>
 
+                  {/* Historique Approvisionnement */}
+                  <li>
+                    {!effectiveHasSelections ? (
+                      <LockedLink label={t('nav.historique_appro')} reason={t('nav.stock_locked')} />
+                    ) : (
+                      <NavLink
+                        to="/client/stock/historique"
+                        className={`sidebar-link ${isHistoriquePage && !currentHistType ? 'active' : ''}`}
+                        onClick={onClose}
+                      >
+                        <span className="link-icon">📋</span>
+                        <span className="link-label">{t('nav.historique_appro')}</span>
+                      </NavLink>
+                    )}
+                  </li>
+
                   {/* Produits */}
                   <li>
                     <span className="sidebar-link" style={{ opacity: !effectiveHasSelections ? 0.35 : 1, cursor: 'default' }} title={!effectiveHasSelections ? t('nav.products_locked') : undefined}>
@@ -322,6 +340,22 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                         )}
                       </li>
 
+                      {/* F Historique Approvisionnement */}
+                      <li>
+                        {isOnboarding || !hasFranchiseSelections || !hasFranchise ? (
+                          <LockedLink label={t('nav.historique_franchise')} reason={!isOnboarding && !hasFranchise ? t('nav.no_franchise_activity') : undefined} />
+                        ) : (
+                          <NavLink
+                            to="/client/stock/historique?type=franchise"
+                            className={`sidebar-link ${isHistoriquePage && currentHistType === 'franchise' ? 'active' : ''}`}
+                            onClick={onClose}
+                          >
+                            <span className="link-icon">📋</span>
+                            <span className="link-label">{t('nav.historique_franchise')}</span>
+                          </NavLink>
+                        )}
+                      </li>
+
                       {/* F Produits */}
                       <li>
                         <span className="sidebar-link" style={{ opacity: (isOnboarding || !hasFranchiseSelections || !hasFranchise) ? 0.35 : 1, cursor: 'default' }}>
@@ -363,6 +397,22 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                           >
                             <span className="link-icon">📦</span>
                             <span className="link-label">{t('nav.stock_distinct')}</span>
+                          </NavLink>
+                        )}
+                      </li>
+
+                      {/* D Historique Approvisionnement */}
+                      <li>
+                        {isOnboarding || !hasDistinctSelections || !hasDistinct ? (
+                          <LockedLink label={t('nav.historique_distinct')} reason={!isOnboarding && !hasDistinct ? t('nav.no_distinct_activity') : undefined} />
+                        ) : (
+                          <NavLink
+                            to="/client/stock/historique?type=distinct"
+                            className={`sidebar-link ${isHistoriquePage && currentHistType === 'distinct' ? 'active' : ''}`}
+                            onClick={onClose}
+                          >
+                            <span className="link-icon">📋</span>
+                            <span className="link-label">{t('nav.historique_distinct')}</span>
                           </NavLink>
                         )}
                       </li>

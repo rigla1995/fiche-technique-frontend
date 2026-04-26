@@ -9,6 +9,8 @@ const currentYear = new Date().getFullYear();
 const yearStart = `${currentYear}-01-01`;
 const yearEnd = `${currentYear}-12-31`;
 
+const PAGE_SIZE = 10;
+
 interface Ingredient {
   id: number;
   nom: string;
@@ -27,12 +29,14 @@ export default function HistoriqueApproPage() {
   const [searchParams] = useSearchParams();
   const isEntreprise = user?.compteType === 'entreprise';
 
-  // Pre-selected from URL (coming from history popup "voir tout")
+  // Pre-selected from URL
   const initIngredientId = searchParams.get('ingredientId') || '';
   const initActiviteId = searchParams.get('activiteId') || '';
+  // Type locked from sidebar nav: 'franchise' | 'distinct' | null (show toggle)
+  const lockedType = searchParams.get('type') as 'franchise' | 'distinct' | null;
 
   // Entreprise type filter
-  const [entType, setEntType] = useState<'franchise' | 'distinct'>('franchise');
+  const [entType, setEntType] = useState<'franchise' | 'distinct'>(lockedType ?? 'franchise');
   const [franchiseActivities, setFranchiseActivities] = useState<Activite[]>([]);
   const [distinctActivities, setDistinctActivities] = useState<Activite[]>([]);
   const [activitesLoading, setActivitesLoading] = useState(false);
@@ -49,14 +53,18 @@ export default function HistoriqueApproPage() {
   const [ingredientsLoading, setIngredientsLoading] = useState(false);
   const [selectedIngredientId, setSelectedIngredientId] = useState(initIngredientId);
 
-  // Date range (current year only)
+  // Date range
   const [startDate, setStartDate] = useState(yearStart);
   const [endDate, setEndDate] = useState(yearEnd);
 
-  // Results
+  // Results + pagination
   const [results, setResults] = useState<HistoriqueApproEntry[]>([]);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
+  const [page, setPage] = useState(1);
+
+  const totalPages = Math.max(1, Math.ceil(results.length / PAGE_SIZE));
+  const pagedResults = results.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   // Load categories
   useEffect(() => {
@@ -77,7 +85,7 @@ export default function HistoriqueApproPage() {
         const groups = Array.from(new Set(franchise.map((a) => a.franchiseGroup || a.nom))).sort();
         setFranchiseGroups(groups);
         if (groups.length > 0 && !selectedFranchiseGroup) setSelectedFranchiseGroup(groups[0]);
-        // If pre-selected activiteId, find its type
+        // If pre-selected activiteId, determine its type
         if (initActiviteId) {
           const act = all.find((a) => String(a.id) === initActiviteId);
           if (act?.type === 'distincte' || act?.type == null) setEntType('distinct');
@@ -102,21 +110,19 @@ export default function HistoriqueApproPage() {
       : distinctActivities
     : [];
 
-  // Load ingredients by category (and optional activite for enterprise)
+  // Load ingredients by category (fixed: now uses categorieId param)
   useEffect(() => {
     setIngredients([]);
-    setSelectedIngredientId(initIngredientId);
+    setSelectedIngredientId('');
     if (!selectedCategoryId) return;
     setIngredientsLoading(true);
-    const params = new URLSearchParams({ categorieId: selectedCategoryId });
-    api.get(`/ingredients?${params}`)
+    api.get(`/ingredients?categorieId=${selectedCategoryId}`)
       .then(({ data }) => setIngredients(data as Ingredient[]))
       .catch(() => {})
       .finally(() => setIngredientsLoading(false));
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedCategoryId]);
 
-  // Auto-search when all criteria are ready (and ingredient is pre-selected via URL)
+  // Auto-search when pre-selected via URL
   useEffect(() => {
     if (initIngredientId && (selectedActiviteId || !isEntreprise)) {
       fetchResults();
@@ -127,10 +133,12 @@ export default function HistoriqueApproPage() {
   const fetchResults = useCallback(async () => {
     setLoading(true);
     setSearched(true);
+    setPage(1);
     try {
       const params = new URLSearchParams();
       if (isEntreprise && selectedActiviteId) params.set('activiteId', selectedActiviteId);
       if (selectedIngredientId) params.set('ingredientId', selectedIngredientId);
+      else if (selectedCategoryId) params.set('categorieId', selectedCategoryId);
       if (startDate) params.set('startDate', startDate);
       if (endDate) params.set('endDate', endDate);
       const { data } = await api.get(`/api/stock/historique?${params}`);
@@ -139,24 +147,32 @@ export default function HistoriqueApproPage() {
       setResults([]);
     }
     setLoading(false);
-  }, [isEntreprise, selectedActiviteId, selectedIngredientId, startDate, endDate]);
+  }, [isEntreprise, selectedActiviteId, selectedIngredientId, selectedCategoryId, startDate, endDate]);
 
   const labelStyle: React.CSSProperties = {
     fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)',
     textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 4,
   };
 
+  const showTypeToggle = isEntreprise && !lockedType;
+
+  const pageTitle = lockedType === 'franchise'
+    ? `${t('nav.historique_franchise')} — ${currentYear}`
+    : lockedType === 'distinct'
+      ? `${t('nav.historique_distinct')} — ${currentYear}`
+      : `${t('client.historique_appro.title')} — ${currentYear}`;
+
   return (
     <div className="page">
       <div className="page-header">
-        <h1>{t('client.historique_appro.title')} — {currentYear}</h1>
+        <h1>{pageTitle}</h1>
       </div>
 
       {/* Filter panel */}
       <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: '20px 24px', marginBottom: 24, boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
 
-        {/* Entreprise: type selector */}
-        {isEntreprise && (
+        {/* Entreprise: type selector (only when not locked from sidebar) */}
+        {showTypeToggle && (
           <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
             {(['franchise', 'distinct'] as const).map((tp) => (
               <button
@@ -222,7 +238,7 @@ export default function HistoriqueApproPage() {
               className="input" style={{ maxWidth: 240 }}
               value={selectedIngredientId}
               onChange={(e) => setSelectedIngredientId(e.target.value)}
-              disabled={ingredientsLoading}
+              disabled={ingredientsLoading || !selectedCategoryId}
             >
               <option value="">{t('client.historique_appro.all_ingredients')}</option>
               {ingredients.map((i) => <option key={i.id} value={i.id}>{i.nom}</option>)}
@@ -270,7 +286,7 @@ export default function HistoriqueApproPage() {
               </tr>
             </thead>
             <tbody>
-              {results.map((r, i) => (
+              {pagedResults.map((r, i) => (
                 <tr key={i}>
                   <td style={{ fontWeight: 600, color: 'var(--primary)' }}>{r.dateAppro}</td>
                   <td>{r.ingredientNom}</td>
@@ -281,8 +297,27 @@ export default function HistoriqueApproPage() {
               ))}
             </tbody>
           </table>
-          <div style={{ padding: '8px 14px', fontSize: '0.78rem', color: 'var(--text-muted)', borderTop: '1px solid var(--border)' }}>
-            {results.length} enregistrement{results.length > 1 ? 's' : ''}
+
+          {/* Footer: count + pagination */}
+          <div style={{ padding: '8px 14px', fontSize: '0.78rem', color: 'var(--text-muted)', borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span>{results.length} enregistrement{results.length > 1 ? 's' : ''}</span>
+            {totalPages > 1 && (
+              <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                <button
+                  className="btn btn-ghost btn-sm"
+                  disabled={page === 1}
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  style={{ padding: '3px 10px', fontWeight: 700 }}
+                >‹</button>
+                <span style={{ fontWeight: 600, color: 'var(--text)' }}>{page} / {totalPages}</span>
+                <button
+                  className="btn btn-ghost btn-sm"
+                  disabled={page === totalPages}
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  style={{ padding: '3px 10px', fontWeight: 700 }}
+                >›</button>
+              </div>
+            )}
           </div>
         </div>
       )}
