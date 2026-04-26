@@ -57,6 +57,7 @@ export default function FicheTechniqueTab({ isEntreprise, franchiseActivities, d
   const [manualPriceGroups, setManualPriceGroups] = useState<ManualPriceGroup[]>([]);
   const [manualLoading, setManualLoading] = useState(false);
   const [manualUpdatedAt, setManualUpdatedAt] = useState<string | null>(null);
+  const [costRefreshKey, setCostRefreshKey] = useState(0);
   const [showManualPopup, setShowManualPopup] = useState(false);
   const [savingManual, setSavingManual] = useState(false);
   // Zero-price warning popup
@@ -144,9 +145,9 @@ export default function FicheTechniqueTab({ isEntreprise, franchiseActivities, d
       .then(({ data }) => setRealtimeCost((data as { totalCost: number }).totalCost ?? null))
       .catch(() => setRealtimeCost(null))
       .finally(() => setCostLoading(false));
-  // manualUpdatedAt is included so cost refreshes after manual prices are saved
+  // costRefreshKey increments on every save so the effect always re-runs even when the date is unchanged
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedProductId, mode, manualUpdatedAt, resolvedActId]);
+  }, [selectedProductId, mode, costRefreshKey, resolvedActId]);
 
   const loadManualPrices = async () => {
     if (!selectedProductId) return;
@@ -186,6 +187,7 @@ export default function FicheTechniqueTab({ isEntreprise, franchiseActivities, d
       setShowZeroWarning(false);
       const savedAt = (data as { updatedAt: string | null }).updatedAt;
       setManualUpdatedAt(savedAt ? savedAt.slice(0, 10) : new Date().toISOString().slice(0, 10));
+      setCostRefreshKey((k) => k + 1);
       await loadManualPrices();
     } finally {
       setSavingManual(false);
@@ -483,33 +485,59 @@ export default function FicheTechniqueTab({ isEntreprise, franchiseActivities, d
 
       {/* Cost + Generate */}
       {mode && selectedProductId && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap', marginTop: 4 }}>
-          <div>
-            <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{t('client.products.real_time_cost')} : </span>
-            {costLoading ? (
-              <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>...</span>
-            ) : realtimeCost !== null ? (
-              <span className="cost-badge" style={{ fontSize: '1rem' }}>
-                {realtimeCost.toFixed(3)} {t('currency')}
-              </span>
-            ) : (
-              <span style={{ color: 'var(--text-muted)' }}>—</span>
-            )}
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 0, flexWrap: 'wrap',
+          background: 'var(--surface)', borderRadius: 14,
+          border: '1px solid var(--border)', boxShadow: '0 2px 8px rgba(0,0,0,0.07)',
+          marginTop: 8, overflow: 'hidden',
+        }}>
+          {/* Cost section */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 22px', flex: 1, minWidth: 200 }}>
+            <div style={{
+              width: 40, height: 40, borderRadius: 10, flexShrink: 0,
+              background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem',
+            }}>💰</div>
+            <div>
+              <div style={{ fontSize: '0.68rem', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 2 }}>
+                {t('client.products.real_time_cost')}
+              </div>
+              {costLoading ? (
+                <div style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>…</div>
+              ) : realtimeCost !== null ? (
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 5 }}>
+                  <span style={{ fontWeight: 800, fontSize: '1.5rem', color: 'var(--primary)', letterSpacing: '-0.02em', lineHeight: 1 }}>
+                    {realtimeCost.toFixed(3)}
+                  </span>
+                  <span style={{ fontWeight: 600, fontSize: '0.8rem', color: 'var(--text-muted)' }}>{t('currency')}</span>
+                </div>
+              ) : (
+                <div style={{ fontSize: '1.1rem', color: 'var(--text-muted)' }}>—</div>
+              )}
+            </div>
           </div>
-          <button
-            className="btn btn-primary"
-            disabled={!canGenerate || generating}
-            onClick={generateExcel}
-            title={
-              mode === 'manual' && !canGenerateManual
-                ? 'Saisissez tous les prix manuels d\'abord'
-                : mode === 'stock' && !canGenerateStock
-                  ? 'Sélectionnez une date de stock'
-                  : ''
-            }
-          >
-            📥 {generating ? t('common.loading') : t('client.fiche_technique.generate')}
-          </button>
+
+          {/* Separator */}
+          <div style={{ width: 1, alignSelf: 'stretch', background: 'var(--border)', flexShrink: 0 }} />
+
+          {/* Generate button */}
+          <div style={{ padding: '14px 20px', flexShrink: 0 }}>
+            <button
+              className="btn btn-primary"
+              style={{ paddingLeft: 22, paddingRight: 22, height: 40, fontSize: '0.9rem', fontWeight: 600, gap: 8 }}
+              disabled={!canGenerate || generating}
+              onClick={generateExcel}
+              title={
+                mode === 'manual' && !canGenerateManual
+                  ? 'Saisissez tous les prix manuels d\'abord'
+                  : mode === 'stock' && !canGenerateStock
+                    ? 'Sélectionnez une date de stock'
+                    : ''
+              }
+            >
+              📥 {generating ? t('common.loading') : t('client.fiche_technique.generate')}
+            </button>
+          </div>
         </div>
       )}
 
