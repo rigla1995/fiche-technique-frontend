@@ -300,6 +300,7 @@
       "no_activities": "Create at least one activity in 'My Activities' to manage enterprise stock.",
       "ingredient": "Ingredient",
       "quantity": "Quantity",
+      "prix_unitaire": "Stock Unit Price (TND)",
       "date_achat": "Purchase date",
       "date_appro": "Delivery date",
       "unit_price": "Unit price",

@@ -30,10 +30,10 @@ function SectionHeader({ label }: { label: string }) {
     <li>
       <span style={{
         display: 'block',
-        padding: '8px 16px 2px',
-        fontSize: '0.7rem',
-        fontWeight: 700,
-        letterSpacing: '0.06em',
+        padding: '10px 19px 4px',
+        fontSize: '0.65rem',
+        fontWeight: 800,
+        letterSpacing: '0.08em',
         textTransform: 'uppercase',
         color: 'var(--text-muted)',
         userSelect: 'none',
@@ -45,7 +45,7 @@ function SectionHeader({ label }: { label: string }) {
 }
 
 function Divider() {
-  return <li style={{ borderTop: '1px solid var(--border)', margin: '6px 12px' }} />;
+  return <li style={{ borderTop: '1px solid var(--border)', margin: '8px 16px 4px' }} />;
 }
 
 function ProductSubLinks({
@@ -369,6 +369,38 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                         </span>
                       </li>
                       <ProductSubLinks locked={isOnboarding || !hasFranchiseSelections || !hasFranchise} actCtx="franchise" ftActCtx="franchise" onClick={onClose} />
+
+                      {/* Labo sections — one per labo, nested under franchise */}
+                      {!isOnboarding && labos.map((labo) => {
+                        const laboParam = `laboId=${labo.id}`;
+                        const isLaboStock = location.pathname === '/client/labo/stock' && location.search.includes(laboParam);
+                        const isLaboTransfer = location.pathname === '/client/labo/transfer' && location.search.includes(laboParam);
+                        const isLaboHistorique = location.pathname === '/client/labo/historique-transferts' && location.search.includes(laboParam);
+                        return (
+                          <React.Fragment key={labo.id}>
+                            <Divider />
+                            <SectionHeader label={`🏭 ${labo.nom}`} />
+                            <li>
+                              <Link to={`/client/labo/stock?laboId=${labo.id}`} className={`sidebar-link ${isLaboStock ? 'active' : ''}`} onClick={onClose}>
+                                <span className="link-icon">📦</span>
+                                <span className="link-label">{t('nav.labo_stock')}</span>
+                              </Link>
+                            </li>
+                            <li>
+                              <Link to={`/client/labo/transfer?laboId=${labo.id}`} className={`sidebar-link ${isLaboTransfer ? 'active' : ''}`} onClick={onClose}>
+                                <span className="link-icon">↗</span>
+                                <span className="link-label">{t('nav.labo_transfer')}</span>
+                              </Link>
+                            </li>
+                            <li>
+                              <Link to={`/client/labo/historique-transferts?laboId=${labo.id}`} className={`sidebar-link ${isLaboHistorique ? 'active' : ''}`} onClick={onClose}>
+                                <span className="link-icon">📋</span>
+                                <span className="link-label">{t('nav.labo_historique')}</span>
+                              </Link>
+                            </li>
+                          </React.Fragment>
+                        );
+                      })}
                     </>
                   )}
 
@@ -433,49 +465,6 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                     </>
                   )}
 
-                  {/* Labo sections — one per labo */}
-                  {!isOnboarding && labos.map((labo) => {
-                    const laboParam = `laboId=${labo.id}`;
-                    const isLaboStock = location.pathname === '/client/labo/stock' && location.search.includes(laboParam);
-                    const isLaboTransfer = location.pathname === '/client/labo/transfer' && location.search.includes(laboParam);
-                    const isLaboHistorique = location.pathname === '/client/labo/historique-transferts' && location.search.includes(laboParam);
-                    return (
-                      <React.Fragment key={labo.id}>
-                        <Divider />
-                        <SectionHeader label={`🏭 ${labo.nom}`} />
-                        <li>
-                          <Link
-                            to={`/client/labo/stock?laboId=${labo.id}`}
-                            className={`sidebar-link ${isLaboStock ? 'active' : ''}`}
-                            onClick={onClose}
-                          >
-                            <span className="link-icon">📦</span>
-                            <span className="link-label">{t('nav.labo_stock')}</span>
-                          </Link>
-                        </li>
-                        <li>
-                          <Link
-                            to={`/client/labo/transfer?laboId=${labo.id}`}
-                            className={`sidebar-link ${isLaboTransfer ? 'active' : ''}`}
-                            onClick={onClose}
-                          >
-                            <span className="link-icon">↗</span>
-                            <span className="link-label">{t('nav.labo_transfer')}</span>
-                          </Link>
-                        </li>
-                        <li>
-                          <Link
-                            to={`/client/labo/historique-transferts?laboId=${labo.id}`}
-                            className={`sidebar-link ${isLaboHistorique ? 'active' : ''}`}
-                            onClick={onClose}
-                          >
-                            <span className="link-icon">📋</span>
-                            <span className="link-label">{t('nav.labo_historique')}</span>
-                          </Link>
-                        </li>
-                      </React.Fragment>
-                    );
-                  })}
                 </>
               )}
             </>

@@ -112,6 +112,12 @@ function HistoryPopup({ ingredientId, nom, activiteId, isEntreprise, onClose }: 
   );
 }
 
+const qtyColor = (q: number | null) => {
+  if (q === null || q === 0) return 'var(--danger, #ef4444)';
+  if (q < 5) return 'var(--warning, #f59e0b)';
+  return 'var(--success, #10b981)';
+};
+
 interface StockMatrixProps {
   entries: StockEntry[];
   categoryFilter: string;
@@ -123,8 +129,10 @@ interface StockMatrixProps {
 
 function StockMatrix({ entries, categoryFilter, nameFilter, activiteId, isEntreprise, onSave }: StockMatrixProps) {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const [rows, setRows] = useState<Record<number, StockRowState>>(() => buildInitialRowState(entries));
-  const [historyFor, setHistoryFor] = useState<{ id: number; nom: string } | null>(null);
+  const [historyOpen, setHistoryOpen] = useState<Record<number, boolean>>({});
+  const [historyData, setHistoryData] = useState<Record<number, StockHistoryEntry[]>>({});
 
   useEffect(() => { setRows(buildInitialRowState(entries)); }, [entries]);
 
@@ -141,6 +149,20 @@ function StockMatrix({ entries, categoryFilter, nameFilter, activiteId, isEntrep
       setTimeout(() => setRows((prev) => ({ ...prev, [id]: { ...prev[id], saved: false } })), 2500);
     } catch {
       setRows((prev) => ({ ...prev, [id]: { ...prev[id], saving: false, error: t('common.error') } }));
+    }
+  };
+
+  const toggleHistory = async (id: number, nom: string) => {
+    const isOpen = historyOpen[id];
+    setHistoryOpen((prev) => ({ ...prev, [id]: !isOpen }));
+    if (!isOpen && !historyData[id]) {
+      const url = isEntreprise && activiteId
+        ? `/api/stock/entreprise/${activiteId}/${id}/history`
+        : `/api/stock/client/${id}/history`;
+      try {
+        const { data } = await api.get(url);
+        setHistoryData((prev) => ({ ...prev, [id]: data as StockHistoryEntry[] }));
+      } catch { setHistoryData((prev) => ({ ...prev, [id]: [] })); }
     }
   };
 
@@ -161,89 +183,135 @@ function StockMatrix({ entries, categoryFilter, nameFilter, activiteId, isEntrep
     <div>
       {Object.entries(groups).sort(([a], [b]) => a.localeCompare(b)).map(([cat, items]) => (
         <div key={cat} style={{ marginBottom: 28 }}>
-          <h3 style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--primary)', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
-            🏷️ {cat} <span style={{ fontSize: '0.75rem', fontWeight: 400, color: 'var(--text-muted)' }}>({items.length})</span>
-          </h3>
-          <div className="stock-grid">
-            {items.map((entry) => {
-              const row = rows[entry.ingredientId] ?? { quantite: '', prixUnitaire: '', dateAppro: todayStr(), saving: false, saved: false, error: '' };
-              return (
-                <div key={entry.ingredientId} className="stock-card">
-                  <div className="stock-card-header">
-                    <span className="stock-ingredient-name">{entry.nom}</span>
-                    <span className="stock-unit-badge">{entry.unite}</span>
-                  </div>
-                  <div className="stock-fields">
-                    <div className="stock-field">
-                      <label>{t('client.stock.date_appro')}</label>
-                      <input
-                        type="date"
-                        min={yearStart}
-                        max={yearEnd}
-                        value={row.dateAppro}
-                        onChange={(e) => updateRow(entry.ingredientId, 'dateAppro', e.target.value)}
-                      />
-                    </div>
-                    <div className="stock-field">
-                      <label>{t('client.stock.quantity')}</label>
-                      <input
-                        type="number" min="0" step="0.001" placeholder="0"
-                        value={row.quantite}
-                        onChange={(e) => updateRow(entry.ingredientId, 'quantite', e.target.value)}
-                      />
-                    </div>
-                    <div className="stock-field">
-                      <label>{t('client.stock.unit_price')} ({t('currency')})</label>
-                      <input
-                        type="number" min="0" step="0.001" placeholder="0.000"
-                        value={row.prixUnitaire}
-                        onChange={(e) => updateRow(entry.ingredientId, 'prixUnitaire', e.target.value)}
-                      />
-                    </div>
-                  </div>
-                  {row.error && <p className="form-error" style={{ fontSize: '0.75rem', margin: '4px 14px 0' }}>{row.error}</p>}
-                  <div className="stock-card-footer">
-                    {row.saved ? (
-                      <span className="stock-saved-badge">{t('client.stock.saved')}</span>
-                    ) : (
-                      <button className="btn btn-primary btn-sm" onClick={() => saveRow(entry.ingredientId)} disabled={row.saving}>
-                        {row.saving ? '...' : t('client.stock.save')}
-                      </button>
-                    )}
-                  </div>
-                  {/* History + Alert buttons */}
-                  <div style={{ display: 'flex', gap: 6, padding: '0 14px 14px', borderTop: '1px solid var(--border)', paddingTop: 10, marginTop: 2 }}>
-                    <button
-                      className="btn btn-ghost btn-sm"
-                      style={{ flex: 1, fontSize: '0.75rem' }}
-                      onClick={() => setHistoryFor({ id: entry.ingredientId, nom: entry.nom })}
-                    >
-                      📋 {t('client.stock.history')}
-                    </button>
-                    <button
-                      className="btn btn-ghost btn-sm"
-                      style={{ flex: 1, fontSize: '0.75rem', opacity: 0.45, cursor: 'not-allowed' }}
-                      disabled
-                      title="Fonctionnalité à venir"
-                    >
-                      🔔 {t('client.stock.alert')}
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
+          <h2 style={{ fontSize: '0.82rem', fontWeight: 800, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10 }}>
+            🏷️ {cat}
+          </h2>
+          <div className="table-responsive card" style={{ marginBottom: 0 }}>
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>{t('client.stock.ingredient')}</th>
+                  <th style={{ textAlign: 'right' }}>{t('client.stock.quantity')}</th>
+                  <th style={{ textAlign: 'right' }}>{t('client.stock.prix_unitaire')}</th>
+                  <th>{t('client.stock.date_appro')}</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {items.map((entry) => {
+                  const row = rows[entry.ingredientId] ?? { quantite: '', prixUnitaire: '', dateAppro: todayStr(), saving: false, saved: false, error: '' };
+                  const isHistOpen = historyOpen[entry.ingredientId] ?? false;
+                  const hist = historyData[entry.ingredientId];
+                  return (
+                    <>
+                      <tr key={entry.ingredientId}>
+                        <td>
+                          <div style={{ fontWeight: 600 }}>{entry.nom}</div>
+                          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{entry.unite}</div>
+                        </td>
+                        <td style={{ textAlign: 'right' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'flex-end' }}>
+                            <span style={{ fontWeight: 700, color: qtyColor(entry.quantite), fontSize: '0.95rem', minWidth: 44, textAlign: 'right' }}>
+                              {entry.quantite !== null ? entry.quantite : '—'}
+                            </span>
+                            <input
+                              type="number" min="0" step="0.001" placeholder="0"
+                              value={row.quantite}
+                              onChange={(e) => updateRow(entry.ingredientId, 'quantite', e.target.value)}
+                              style={{ width: 90, textAlign: 'right' }}
+                              className="input"
+                            />
+                          </div>
+                        </td>
+                        <td style={{ textAlign: 'right' }}>
+                          <input
+                            type="number" min="0" step="0.001" placeholder="0.000"
+                            value={row.prixUnitaire}
+                            onChange={(e) => updateRow(entry.ingredientId, 'prixUnitaire', e.target.value)}
+                            style={{ width: 100, textAlign: 'right' }}
+                            className="input"
+                          />
+                        </td>
+                        <td>
+                          <input
+                            type="date"
+                            className="input"
+                            style={{ maxWidth: 150 }}
+                            min={yearStart} max={yearEnd}
+                            value={row.dateAppro}
+                            onChange={(e) => updateRow(entry.ingredientId, 'dateAppro', e.target.value)}
+                          />
+                        </td>
+                        <td style={{ whiteSpace: 'nowrap' }}>
+                          {row.error && <span style={{ color: 'var(--danger, #ef4444)', fontSize: '0.75rem', marginRight: 6 }}>!</span>}
+                          <button
+                            className={`btn btn-sm ${row.saved ? 'btn-success' : 'btn-primary'}`}
+                            onClick={() => saveRow(entry.ingredientId)}
+                            disabled={row.saving}
+                            style={{ marginRight: 6 }}
+                          >
+                            {row.saving ? '…' : row.saved ? '✓' : t('client.stock.save')}
+                          </button>
+                          <button
+                            className="btn btn-ghost btn-sm"
+                            onClick={() => toggleHistory(entry.ingredientId, entry.nom)}
+                            title={t('client.stock.history')}
+                          >
+                            {isHistOpen ? '▲' : '▼'}
+                          </button>
+                        </td>
+                      </tr>
+                      {isHistOpen && (
+                        <tr key={`${entry.ingredientId}-hist`}>
+                          <td colSpan={5} style={{ background: 'var(--surface)', padding: '8px 16px' }}>
+                            {!hist ? (
+                              <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{t('common.loading')}</span>
+                            ) : hist.length === 0 ? (
+                              <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{t('client.stock.no_history')}</span>
+                            ) : (
+                              <>
+                                <table style={{ fontSize: '0.8rem', width: '100%', marginBottom: 6 }}>
+                                  <thead>
+                                    <tr>
+                                      <th style={{ textAlign: 'left', color: 'var(--text-muted)', fontWeight: 600, paddingBottom: 4 }}>{t('client.stock.date_appro')}</th>
+                                      <th style={{ textAlign: 'right', color: 'var(--text-muted)', fontWeight: 600, paddingBottom: 4 }}>{t('client.stock.quantity')}</th>
+                                      <th style={{ textAlign: 'right', color: 'var(--text-muted)', fontWeight: 600, paddingBottom: 4 }}>{t('client.stock.prix_unitaire')}</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {hist.map((h, i) => (
+                                      <tr key={i}>
+                                        <td style={{ color: 'var(--primary)', fontWeight: 600 }}>{fmtDate(h.dateAppro)}</td>
+                                        <td style={{ textAlign: 'right' }}>{h.quantite ?? '—'}</td>
+                                        <td style={{ textAlign: 'right' }}>{h.prixUnitaire !== null ? h.prixUnitaire.toFixed(3) : '—'}</td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                                <button
+                                  className="btn btn-ghost btn-sm"
+                                  style={{ fontSize: '0.75rem' }}
+                                  onClick={() => {
+                                    const params = new URLSearchParams({ ingredientId: String(entry.ingredientId) });
+                                    if (isEntreprise && activiteId) params.set('activiteId', String(activiteId));
+                                    navigate(`/client/stock/historique?${params}`);
+                                  }}
+                                >
+                                  📋 {t('client.stock.see_all_history')}
+                                </button>
+                              </>
+                            )}
+                          </td>
+                        </tr>
+                      )}
+                    </>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         </div>
       ))}
-      {historyFor && (
-        <HistoryPopup
-          ingredientId={historyFor.id}
-          nom={historyFor.nom}
-          activiteId={activiteId}
-          isEntreprise={isEntreprise}
-          onClose={() => setHistoryFor(null)}
-        />
-      )}
     </div>
   );
 }
