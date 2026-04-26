@@ -5,6 +5,9 @@ import api from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 import type { Activite, StockEntry, StockHistoryEntry, ActiviteTypesSummary } from '../../types';
 
+const currentYear = new Date().getFullYear();
+const yearStart = `${currentYear}-01-01`;
+const yearEnd = `${currentYear}-12-31`;
 const todayStr = () => new Date().toISOString().split('T')[0];
 
 interface StockRowState {
@@ -20,10 +23,11 @@ function buildInitialRowState(entries: StockEntry[]): Record<number, StockRowSta
   const state: Record<number, StockRowState> = {};
   const today = todayStr();
   for (const e of entries) {
+    const hasValues = (e.quantite !== null && e.quantite > 0) || (e.prixUnitaire !== null && e.prixUnitaire > 0);
     state[e.ingredientId] = {
       quantite: e.quantite !== null ? String(e.quantite) : '',
       prixUnitaire: e.prixUnitaire !== null ? String(e.prixUnitaire) : '',
-      dateAppro: e.dateAppro ?? today,
+      dateAppro: hasValues && e.dateAppro ? e.dateAppro : today,
       saving: false, saved: false, error: '',
     };
   }
@@ -169,7 +173,8 @@ function StockMatrix({ entries, categoryFilter, nameFilter, activiteId, isEntrep
                       <label>{t('client.stock.date_appro')}</label>
                       <input
                         type="date"
-                        max={todayStr()}
+                        min={yearStart}
+                        max={yearEnd}
                         value={row.dateAppro}
                         onChange={(e) => updateRow(entry.ingredientId, 'dateAppro', e.target.value)}
                       />
