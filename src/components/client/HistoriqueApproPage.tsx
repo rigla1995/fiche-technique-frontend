@@ -20,7 +20,7 @@ interface Ingredient {
 
 interface Category {
   id: number;
-  nom: string;
+  name: string;
 }
 
 export default function HistoriqueApproPage() {
@@ -66,9 +66,9 @@ export default function HistoriqueApproPage() {
   const totalPages = Math.max(1, Math.ceil(results.length / PAGE_SIZE));
   const pagedResults = results.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
-  // Load categories
+  // Load categories that have at least one ingredient
   useEffect(() => {
-    api.get('/categories').then(({ data }) => setCategories(data as Category[])).catch(() => {});
+    api.get('/categories?onlyWithIngredients=true').then(({ data }) => setCategories(data as Category[])).catch(() => {});
   }, []);
 
   // Load activities for enterprise
@@ -227,7 +227,7 @@ export default function HistoriqueApproPage() {
               onChange={(e) => { setSelectedCategoryId(e.target.value); setSelectedIngredientId(''); }}
             >
               <option value="">{t('client.historique_appro.all_categories')}</option>
-              {categories.map((c) => <option key={c.id} value={c.id}>{c.nom}</option>)}
+              {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
           </div>
 
