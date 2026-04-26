@@ -63,7 +63,10 @@
     "no_distinct_activity": "No distinct activity",
     "espace_franchise": "Franchise Space",
     "espace_distinct": "Distinct Space",
-    "mon_espace": "My Space"
+    "mon_espace": "My Space",
+    "labo_stock": "Lab Stock",
+    "labo_transfer": "Transfers",
+    "labo_historique": "Transfer History"
   },
   "validation": {
     "name_required": "Name is required",
@@ -344,6 +347,38 @@
       "col_category": "Category",
       "total_qty": "Total quantity",
       "total_cost": "Total price (TND)"
+    },
+    "labo": {
+      "labo_choice_label": "Stock management",
+      "avec_labo": "With Lab",
+      "gestion_separee": "Separate Management",
+      "labo_info": "Lab Information",
+      "labo_nom": "Lab Name",
+      "labo_nom_placeholder": "E.g. Central Lab",
+      "labo_tel": "Referent phone",
+      "labo_adresse": "Address (optional)",
+      "labo_fields_required": "Lab name and phone are required.",
+      "stock_title": "Lab Stock",
+      "manage_ingredients": "Manage ingredients",
+      "btn_transfer": "Transfer",
+      "btn_confirm_transfer": "Confirm transfer",
+      "transfer_title": "Transfer to activities",
+      "transfer_date": "Transfer date",
+      "transfer_note": "Note",
+      "transfer_note_placeholder": "E.g. Week 18 delivery",
+      "transfer_empty": "No quantity entered.",
+      "transfer_overstock": "Insufficient stock for {{nom}} (available: {{disponible}})",
+      "transfer_success": "Transfer completed successfully.",
+      "transfers_history": "Transfer History",
+      "labo_stock": "Lab Stock",
+      "empty_stock": "No ingredients selected for this lab.",
+      "no_activites": "No activities linked to this lab.",
+      "total_transferts": "Total transfers",
+      "filter_activite": "Activity",
+      "all_activites": "All activities",
+      "col_date": "Transfer date",
+      "col_activite": "Activity",
+      "col_note": "Note"
     }
   },
   "currency": "TND"

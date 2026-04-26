@@ -63,7 +63,10 @@
     "no_distinct_activity": "Aucune activité de type distincte",
     "espace_franchise": "Espace Franchise",
     "espace_distinct": "Espace Distinct",
-    "mon_espace": "Mon Espace"
+    "mon_espace": "Mon Espace",
+    "labo_stock": "Stock Labo",
+    "labo_transfer": "Transferts",
+    "labo_historique": "Historique Transferts"
   },
   "validation": {
     "name_required": "Nom requis",
@@ -344,6 +347,38 @@
       "col_category": "Catégorie",
       "total_qty": "Quantité totale",
       "total_cost": "Prix total (DT)"
+    },
+    "labo": {
+      "labo_choice_label": "Gestion du stock",
+      "avec_labo": "Avec Labo",
+      "gestion_separee": "Gestion Séparée",
+      "labo_info": "Informations du Labo",
+      "labo_nom": "Nom du Labo",
+      "labo_nom_placeholder": "Ex: Labo Central",
+      "labo_tel": "Tél. référent",
+      "labo_adresse": "Adresse (optionnel)",
+      "labo_fields_required": "Le nom et le téléphone du labo sont requis.",
+      "stock_title": "Stock Labo",
+      "manage_ingredients": "Gérer les ingrédients",
+      "btn_transfer": "Transférer",
+      "btn_confirm_transfer": "Confirmer le transfert",
+      "transfer_title": "Transfert vers activités",
+      "transfer_date": "Date de transfert",
+      "transfer_note": "Remarque",
+      "transfer_note_placeholder": "Ex: Livraison semaine 18",
+      "transfer_empty": "Aucune quantité saisie.",
+      "transfer_overstock": "Stock insuffisant pour {{nom}} (disponible: {{disponible}})",
+      "transfer_success": "Transfert effectué avec succès.",
+      "transfers_history": "Historique Transferts",
+      "labo_stock": "Stock Labo",
+      "empty_stock": "Aucun ingrédient sélectionné pour ce labo.",
+      "no_activites": "Aucune activité liée à ce labo.",
+      "total_transferts": "Total transferts",
+      "filter_activite": "Activité",
+      "all_activites": "Toutes les activités",
+      "col_date": "Date transfert",
+      "col_activite": "Activité",
+      "col_note": "Remarque"
     }
   },
   "currency": "DT"

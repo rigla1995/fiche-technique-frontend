@@ -35,6 +35,12 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
   const [franchiseName, setFranchiseName] = useState('');
   const [franchiseStep, setFranchiseStep] = useState(0);
   const [franchiseForms, setFranchiseForms] = useState<FranchiseStepForm[]>([]);
+  // Labo wizard state
+  const [hasLabo, setHasLabo] = useState<boolean | null>(null);
+  const [laboNom, setLaboNom] = useState('');
+  const [laboTel, setLaboTel] = useState('');
+  const [laboAdresse, setLaboAdresse] = useState('');
+  const [laboWizardStep, setLaboWizardStep] = useState<'choice' | 'labo-form' | 'activities'>('choice');
   // List filters
   const [filterFranchiseGroup, setFilterFranchiseGroup] = useState('');
   const [filterFranchiseName, setFilterFranchiseName] = useState('');
@@ -66,6 +72,11 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
     setFranchiseName('');
     setFranchiseStep(0);
     setFranchiseForms([emptyFranchiseStep(), emptyFranchiseStep()]);
+    setHasLabo(null);
+    setLaboNom('');
+    setLaboTel('');
+    setLaboAdresse('');
+    setLaboWizardStep('choice');
     setError('');
     setShowForm(true);
   };
@@ -133,11 +144,27 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
     const err = validateFranchiseStep(franchiseForms[franchiseStep]);
     if (err) { setError(err); return; }
     if (!franchiseName.trim()) { setError(t('validation.name_required')); return; }
+    if (hasLabo && (!laboNom.trim() || !laboTel.trim())) {
+      setError(t('client.labo.labo_fields_required')); return;
+    }
     setSaving(true);
     setError('');
     try {
       const isFirst = activites.length === 0;
       const fn = franchiseName.trim();
+
+      // Create labo first if needed
+      let laboId: number | null = null;
+      if (hasLabo) {
+        const { data: labo } = await api.post('/api/labo', {
+          franchiseGroup: fn,
+          nom: laboNom.trim(),
+          referentTel: laboTel.trim(),
+          adresse: laboAdresse.trim() || undefined,
+        });
+        laboId = labo.id;
+      }
+
       for (let i = 0; i < franchiseForms.length; i++) {
         const f = franchiseForms[i];
         await api.post('/api/entreprise/activites', {
@@ -147,6 +174,7 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
           telephone: f.telephone,
           email: f.email || undefined,
           adresse: f.adresse,
+          ...(laboId ? { laboId } : {}),
         });
       }
       setMsg(t('client.entreprise.activity_created'));
@@ -467,8 +495,48 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                     />
                   </div>
 
-                  {/* Per-activity step form — unlocked when franchiseName + count > 1 */}
+                  {/* Labo choice — shown once name + count are set */}
                   {franchiseUnlocked && (
+                    <div style={{ borderTop: '1px solid var(--border)', paddingTop: 14, marginTop: 4 }}>
+                      <p style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                        {t('client.labo.labo_choice_label')}
+                      </p>
+                      <div style={{ display: 'flex', gap: 10, marginBottom: hasLabo === false ? 0 : 14 }}>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 16px', borderRadius: 10, border: `2px solid ${hasLabo === true ? 'var(--primary)' : 'var(--border)'}`, background: hasLabo === true ? 'var(--primary-light, #eef2ff)' : 'var(--surface)', cursor: 'pointer', flex: 1, fontWeight: 600, fontSize: '0.9rem' }}>
+                          <input type="radio" name="hasLabo" checked={hasLabo === true} onChange={() => setHasLabo(true)} style={{ accentColor: 'var(--primary)' }} />
+                          🏭 {t('client.labo.avec_labo')}
+                        </label>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 16px', borderRadius: 10, border: `2px solid ${hasLabo === false ? 'var(--primary)' : 'var(--border)'}`, background: hasLabo === false ? 'var(--primary-light, #eef2ff)' : 'var(--surface)', cursor: 'pointer', flex: 1, fontWeight: 600, fontSize: '0.9rem' }}>
+                          <input type="radio" name="hasLabo" checked={hasLabo === false} onChange={() => setHasLabo(false)} style={{ accentColor: 'var(--primary)' }} />
+                          📋 {t('client.labo.gestion_separee')}
+                        </label>
+                      </div>
+
+                      {/* Labo details form */}
+                      {hasLabo === true && (
+                        <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, padding: '14px 16px', marginBottom: 14 }}>
+                          <p style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--primary)', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                            🏭 {t('client.labo.labo_info')}
+                          </p>
+                          <div className="form-field" style={{ marginBottom: 10 }}>
+                            <label>{t('client.labo.labo_nom')} *</label>
+                            <input type="text" value={laboNom} onChange={(e) => setLaboNom(e.target.value)} placeholder={t('client.labo.labo_nom_placeholder')} />
+                          </div>
+                          <div className="form-field" style={{ marginBottom: 10 }}>
+                            <label>{t('client.labo.labo_tel')} * <span style={{ fontWeight: 400, color: 'var(--text-muted)', fontSize: '0.8rem' }}>{t('validation.phone_hint')}</span></label>
+                            <input type="text" value={laboTel} onChange={(e) => setLaboTel(e.target.value)} placeholder={t('validation.phone_placeholder')} />
+                          </div>
+                          <div className="form-field" style={{ marginBottom: 0 }}>
+                            <label>{t('client.labo.labo_adresse')}</label>
+                            <textarea value={laboAdresse} onChange={(e) => setLaboAdresse(e.target.value)} rows={2} />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Per-activity step form — unlocked when franchiseName + count > 1 */}
+                  {franchiseUnlocked && hasLabo !== null && (
                     <div style={{ borderTop: '1px solid var(--border)', paddingTop: 14, marginTop: 4 }}>
                       <p style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--primary)', marginBottom: 12 }}>
                         {t('client.entreprise.step_indicator', { current: franchiseStep + 1, total: franchiseCount })}
@@ -568,7 +636,7 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                         {t('client.entreprise.next')}
                       </button>
                     ) : (
-                      <button type="button" className="btn btn-primary" onClick={franchiseUnlocked ? handleFranchiseSave : undefined} disabled={saving || !franchiseUnlocked}>
+                      <button type="button" className="btn btn-primary" onClick={franchiseUnlocked && hasLabo !== null ? handleFranchiseSave : undefined} disabled={saving || !franchiseUnlocked || hasLabo === null}>
                         {saving ? t('common.loading') : t('common.save')}
                       </button>
                     )}

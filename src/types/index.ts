@@ -104,6 +104,17 @@ export interface Activite {
   email?: string;
   type?: 'franchise' | 'distincte';
   franchiseGroup?: string | null;
+  laboId?: number | null;
+  createdAt?: string;
+}
+
+export interface Labo {
+  id: number;
+  entrepriseId: number;
+  franchiseGroup: string;
+  nom: string;
+  referentTel: string;
+  adresse?: string | null;
   createdAt?: string;
 }
 

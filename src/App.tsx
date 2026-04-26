@@ -18,6 +18,9 @@ import Profile from './components/client/Profile';
 import ActivitesPage from './components/client/ActivitesPage';
 import StockPage from './components/client/StockPage';
 import HistoriqueApproPage from './components/client/HistoriqueApproPage';
+import StockLaboPage from './components/client/StockLaboPage';
+import TransferPage from './components/client/TransferPage';
+import TransferHistoriquePage from './components/client/TransferHistoriquePage';
 import './i18n';
 import './index.css';
 
@@ -67,6 +70,9 @@ export default function App() {
             <Route path="/client/activites" element={<ActivitesPage />} />
             <Route path="/client/stock" element={<StockPage />} />
             <Route path="/client/stock/historique" element={<HistoriqueApproPage />} />
+            <Route path="/client/labo/stock" element={<StockLaboPage />} />
+            <Route path="/client/labo/transfer" element={<TransferPage />} />
+            <Route path="/client/labo/historique-transferts" element={<TransferHistoriquePage />} />
           </Route>
 
           <Route path="*" element={<Navigate to="/" replace />} />

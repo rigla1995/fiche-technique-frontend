@@ -1,10 +1,11 @@
+import React from 'react';
 import { NavLink, Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useEffect, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useSelection } from '../../context/SelectionContext';
 import api from '../../api/client';
-import type { ActiviteTypesSummary } from '../../types';
+import type { ActiviteTypesSummary, Labo } from '../../types';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -147,6 +148,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const { user } = useAuth();
   const { hasSelections } = useSelection();
   const [typesSummary, setTypesSummary] = useState<ActiviteTypesSummary | null>(null);
+  const [labos, setLabos] = useState<Labo[]>([]);
 
   const location = useLocation();
   const step = user?.onboardingStep ?? 0;
@@ -168,6 +170,9 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
       api.get('/api/entreprise/activites/types-summary')
         .then(({ data }) => setTypesSummary(data))
         .catch(() => setTypesSummary(null));
+      api.get('/api/labo')
+        .then(({ data }) => setLabos(data))
+        .catch(() => setLabos([]));
     }
   }, [isEntreprise, step, location.pathname]);
 
@@ -427,6 +432,50 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                       <ProductSubLinks locked={isOnboarding || !hasDistinctSelections || !hasDistinct} actCtx="distinct" ftActCtx="distinct" onClick={onClose} />
                     </>
                   )}
+
+                  {/* Labo sections — one per labo */}
+                  {!isOnboarding && labos.map((labo) => {
+                    const laboParam = `laboId=${labo.id}`;
+                    const isLaboStock = location.pathname === '/client/labo/stock' && location.search.includes(laboParam);
+                    const isLaboTransfer = location.pathname === '/client/labo/transfer' && location.search.includes(laboParam);
+                    const isLaboHistorique = location.pathname === '/client/labo/historique-transferts' && location.search.includes(laboParam);
+                    return (
+                      <React.Fragment key={labo.id}>
+                        <Divider />
+                        <SectionHeader label={`🏭 ${labo.nom}`} />
+                        <li>
+                          <Link
+                            to={`/client/labo/stock?laboId=${labo.id}`}
+                            className={`sidebar-link ${isLaboStock ? 'active' : ''}`}
+                            onClick={onClose}
+                          >
+                            <span className="link-icon">📦</span>
+                            <span className="link-label">{t('nav.labo_stock')}</span>
+                          </Link>
+                        </li>
+                        <li>
+                          <Link
+                            to={`/client/labo/transfer?laboId=${labo.id}`}
+                            className={`sidebar-link ${isLaboTransfer ? 'active' : ''}`}
+                            onClick={onClose}
+                          >
+                            <span className="link-icon">↗</span>
+                            <span className="link-label">{t('nav.labo_transfer')}</span>
+                          </Link>
+                        </li>
+                        <li>
+                          <Link
+                            to={`/client/labo/historique-transferts?laboId=${labo.id}`}
+                            className={`sidebar-link ${isLaboHistorique ? 'active' : ''}`}
+                            onClick={onClose}
+                          >
+                            <span className="link-icon">📋</span>
+                            <span className="link-label">{t('nav.labo_historique')}</span>
+                          </Link>
+                        </li>
+                      </React.Fragment>
+                    );
+                  })}
                 </>
               )}
             </>
