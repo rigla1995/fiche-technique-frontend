@@ -267,14 +267,14 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                     {!effectiveHasSelections ? (
                       <LockedLink label={t('nav.historique_appro')} reason={t('nav.stock_locked')} />
                     ) : (
-                      <NavLink
+                      <Link
                         to="/client/stock/historique"
                         className={`sidebar-link ${isHistoriquePage && !currentHistType ? 'active' : ''}`}
                         onClick={onClose}
                       >
                         <span className="link-icon">📋</span>
                         <span className="link-label">{t('nav.historique_appro')}</span>
-                      </NavLink>
+                      </Link>
                     )}
                   </li>
 
@@ -345,14 +345,14 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                         {isOnboarding || !hasFranchiseSelections || !hasFranchise ? (
                           <LockedLink label={t('nav.historique_franchise')} reason={!isOnboarding && !hasFranchise ? t('nav.no_franchise_activity') : undefined} />
                         ) : (
-                          <NavLink
+                          <Link
                             to="/client/stock/historique?type=franchise"
                             className={`sidebar-link ${isHistoriquePage && currentHistType === 'franchise' ? 'active' : ''}`}
                             onClick={onClose}
                           >
                             <span className="link-icon">📋</span>
                             <span className="link-label">{t('nav.historique_franchise')}</span>
-                          </NavLink>
+                          </Link>
                         )}
                       </li>
 
@@ -406,14 +406,14 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                         {isOnboarding || !hasDistinctSelections || !hasDistinct ? (
                           <LockedLink label={t('nav.historique_distinct')} reason={!isOnboarding && !hasDistinct ? t('nav.no_distinct_activity') : undefined} />
                         ) : (
-                          <NavLink
+                          <Link
                             to="/client/stock/historique?type=distinct"
                             className={`sidebar-link ${isHistoriquePage && currentHistType === 'distinct' ? 'active' : ''}`}
                             onClick={onClose}
                           >
                             <span className="link-icon">📋</span>
                             <span className="link-label">{t('nav.historique_distinct')}</span>
-                          </NavLink>
+                          </Link>
                         )}
                       </li>
 
