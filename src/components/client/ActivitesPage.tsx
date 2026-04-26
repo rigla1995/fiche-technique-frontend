@@ -277,10 +277,14 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
           {/* Franchise section */}
           {franchiseActivities.length > 0 && (
             <div style={{ marginBottom: 32 }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-                <h2 style={{ fontSize: '0.85rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', margin: 0 }}>
-                  {t('nav.espace_franchise')} <span style={{ fontWeight: 400 }}>({franchiseActivities.length})</span>
-                </h2>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14, paddingBottom: 10, borderBottom: '2px solid var(--border)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <span style={{ width: 4, height: 22, borderRadius: 4, background: 'linear-gradient(180deg, #2563eb 0%, #0ea5e9 100%)', display: 'inline-block', flexShrink: 0 }} />
+                  <h2 style={{ fontSize: '0.9rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--text)', margin: 0 }}>
+                    {t('nav.espace_franchise')}
+                  </h2>
+                  <span style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--primary)', background: 'var(--primary-light)', border: '1px solid #bfdbfe', borderRadius: 20, padding: '2px 10px' }}>{franchiseActivities.length}</span>
+                </div>
                 <button className="btn btn-primary btn-sm" onClick={() => openAdd('franchise')}>
                   + {t('client.entreprise.add_activity')}
                 </button>
@@ -348,10 +352,14 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
           {/* Distinct section — always visible when any activities exist so user can add a distinct activity */}
           {(distinctActivities.length > 0 || franchiseActivities.length > 0) && (
             <div style={{ marginBottom: 32 }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-                <h2 style={{ fontSize: '0.85rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', margin: 0 }}>
-                  {t('nav.espace_distinct')} <span style={{ fontWeight: 400 }}>({distinctActivities.length})</span>
-                </h2>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14, paddingBottom: 10, borderBottom: '2px solid var(--border)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <span style={{ width: 4, height: 22, borderRadius: 4, background: 'linear-gradient(180deg, #10b981 0%, #059669 100%)', display: 'inline-block', flexShrink: 0 }} />
+                  <h2 style={{ fontSize: '0.9rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--text)', margin: 0 }}>
+                    {t('nav.espace_distinct')}
+                  </h2>
+                  <span style={{ fontSize: '0.78rem', fontWeight: 600, color: '#059669', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 20, padding: '2px 10px' }}>{distinctActivities.length}</span>
+                </div>
                 <button className="btn btn-secondary btn-sm" onClick={() => openAdd('distincte')}>
                   + {t('client.entreprise.add_activity')}
                 </button>

@@ -209,8 +209,11 @@ function ActivityStockSection({ label, activities, dateStock, isFranchise, onSav
   return (
     <div style={{ marginBottom: 36 }}>
       {/* Header row: label + duplicate button */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-        <h2 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--primary)', margin: 0 }}>{label}</h2>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14, paddingBottom: 10, borderBottom: '2px solid var(--border)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span style={{ width: 4, height: 22, borderRadius: 4, background: 'linear-gradient(180deg, #2563eb 0%, #0ea5e9 100%)', display: 'inline-block', flexShrink: 0 }} />
+          <h2 style={{ fontSize: '0.9rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--text)', margin: 0 }}>{label}</h2>
+        </div>
         {canDuplicate && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             {dupMsg && <span style={{ fontSize: '0.8rem', color: 'var(--success)' }}>{dupMsg}</span>}
@@ -376,12 +379,13 @@ export default function StockPage() {
       <h1>{pageTitle}</h1>
 
       {/* Global date picker */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 28 }}>
-        <label style={{ fontWeight: 600, fontSize: '0.875rem' }}>{t('client.stock.date_label')}</label>
+      <div style={{ display: 'inline-flex', alignItems: 'center', gap: 12, marginBottom: 28, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, padding: '10px 16px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
+        <span style={{ fontSize: '1rem' }}>📅</span>
+        <label style={{ fontWeight: 700, fontSize: '0.82rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em', whiteSpace: 'nowrap' }}>{t('client.stock.date_label')}</label>
         <input
           type="date"
           className="input"
-          style={{ maxWidth: 180 }}
+          style={{ maxWidth: 180, border: 'none', background: 'transparent', padding: '0', fontWeight: 700, fontSize: '0.95rem', color: 'var(--primary)' }}
           max={today}
           value={dateStock}
           onChange={(e) => setDateStock(e.target.value)}

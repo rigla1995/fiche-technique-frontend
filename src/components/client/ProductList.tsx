@@ -339,13 +339,13 @@ export default function ProductList() {
                           </td>
                         )}
                         <td style={{ textAlign: 'center' }}>
-                          <button className="btn btn-ghost btn-sm" style={{ minWidth: 36 }} onClick={() => openPopup('ingredients', p)}>
+                          <button className="count-badge" onClick={() => openPopup('ingredients', p)}>
                             {p.ingredientsCount ?? 0}
                           </button>
                         </td>
                         {isVendable && (
                           <td style={{ textAlign: 'center' }}>
-                            <button className="btn btn-ghost btn-sm" style={{ minWidth: 36 }} onClick={() => openPopup('subProducts', p)}>
+                            <button className="count-badge" onClick={() => openPopup('subProducts', p)}>
                               {p.subProductsCount ?? 0}
                             </button>
                           </td>
