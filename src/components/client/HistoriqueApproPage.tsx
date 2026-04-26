@@ -72,6 +72,9 @@ export default function HistoriqueApproPage() {
   const totalPages = Math.max(1, Math.ceil(results.length / PAGE_SIZE));
   const pagedResults = results.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
+  const totalQty = results.reduce((s, r) => s + (r.quantite ?? 0), 0);
+  const totalCost = results.reduce((s, r) => s + (r.quantite != null && r.prixUnitaire != null ? r.quantite * r.prixUnitaire : 0), 0);
+
   // Load categories that have at least one ingredient
   useEffect(() => {
     api.get('/categories?onlyWithIngredients=true').then(({ data }) => setCategories(data as Category[])).catch(() => {});
@@ -287,6 +290,18 @@ export default function HistoriqueApproPage() {
           <p>{t('client.historique_appro.no_results')}</p>
         </div>
       ) : (
+        <>
+        {/* Totals summary */}
+        <div style={{ display: 'flex', gap: 16, marginBottom: 12, flexWrap: 'wrap' }}>
+          <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, padding: '10px 18px', display: 'flex', flexDirection: 'column', gap: 2, minWidth: 160 }}>
+            <span style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)' }}>{t('client.historique_appro.total_qty')}</span>
+            <span style={{ fontSize: '1.15rem', fontWeight: 700, color: 'var(--text)' }}>{totalQty.toFixed(3)}</span>
+          </div>
+          <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, padding: '10px 18px', display: 'flex', flexDirection: 'column', gap: 2, minWidth: 160 }}>
+            <span style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)' }}>{t('client.historique_appro.total_cost')}</span>
+            <span style={{ fontSize: '1.15rem', fontWeight: 700, color: 'var(--primary)' }}>{totalCost.toFixed(3)}</span>
+          </div>
+        </div>
         <div className="table-responsive card">
           <table className="table">
             <thead>
@@ -333,6 +348,7 @@ export default function HistoriqueApproPage() {
             )}
           </div>
         </div>
+        </>
       )}
     </div>
   );

@@ -341,7 +341,9 @@
       "col_qty": "Quantité",
       "col_price": "Prix U (DT)",
       "col_ingredient": "Ingrédient",
-      "col_category": "Catégorie"
+      "col_category": "Catégorie",
+      "total_qty": "Quantité totale",
+      "total_cost": "Prix total (DT)"
     }
   },
   "currency": "DT"

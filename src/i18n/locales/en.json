@@ -341,7 +341,9 @@
       "col_qty": "Quantity",
       "col_price": "Unit price (TND)",
       "col_ingredient": "Ingredient",
-      "col_category": "Category"
+      "col_category": "Category",
+      "total_qty": "Total quantity",
+      "total_cost": "Total price (TND)"
     }
   },
   "currency": "TND"
