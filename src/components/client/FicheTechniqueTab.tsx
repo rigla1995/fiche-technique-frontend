@@ -517,7 +517,7 @@ export default function FicheTechniqueTab({ isEntreprise, franchiseActivities, d
       {showManualPopup && (
         <div className="modal-overlay" onClick={() => setShowManualPopup(false)}>
           <div className="modal" style={{ maxWidth: 560 }} onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
+            <div className="modal-header modal-header--primary">
               <h2>Prix Ingrédients — {products.find((p) => p.id === parseInt(selectedProductId))?.nom ?? ''}</h2>
               <button className="modal-close" onClick={() => setShowManualPopup(false)}>×</button>
             </div>

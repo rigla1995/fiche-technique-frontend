@@ -155,7 +155,7 @@ export default function IngredientsManagement() {
       {showModal && (
         <div className="modal-overlay" onClick={closeModal}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
+            <div className="modal-header modal-header--primary">
               <h2>{editId ? t('admin.ingredients.edit') : t('admin.ingredients.add')}</h2>
               <button className="modal-close" onClick={closeModal}>×</button>
             </div>

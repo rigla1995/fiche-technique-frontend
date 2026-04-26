@@ -97,7 +97,7 @@ export default function UnitsManagement() {
       {showModal && (
         <div className="modal-overlay" onClick={closeModal}>
           <div className="modal modal-sm" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
+            <div className="modal-header modal-header--primary">
               <h2>{editId ? t('admin.units.edit') : t('admin.units.add')}</h2>
               <button className="modal-close" onClick={closeModal}>×</button>
             </div>

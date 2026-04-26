@@ -226,7 +226,7 @@ export default function ClientsManagement() {
       {tempPassword && (
         <div className="modal-overlay" onClick={() => setTempPassword(null)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
+            <div className="modal-header modal-header--success">
               <h2>{t('admin.clients.temp_password_title')}</h2>
               <button className="modal-close" onClick={() => setTempPassword(null)}>×</button>
             </div>
@@ -248,7 +248,7 @@ export default function ClientsManagement() {
       {showModal && (
         <div className="modal-overlay" onClick={closeModal}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
+            <div className="modal-header modal-header--primary">
               <h2>{editId ? t('admin.clients.edit') : t('admin.clients.add')}</h2>
               <button className="modal-close" onClick={closeModal}>×</button>
             </div>

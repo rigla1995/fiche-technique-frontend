@@ -402,7 +402,7 @@ export default function ProductList() {
           {popup && (
             <div className="modal-overlay" onClick={closePopup}>
               <div className="modal" onClick={(e) => e.stopPropagation()}>
-                <div className="modal-header">
+                <div className="modal-header modal-header--info">
                   <h2>
                     {popup.type === 'ingredients'
                       ? t('client.products.popup_ingredients_title')

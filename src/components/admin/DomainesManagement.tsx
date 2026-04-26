@@ -90,7 +90,7 @@ export default function DomainesManagement() {
       {showModal && (
         <div className="modal-overlay" onClick={closeModal}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
+            <div className="modal-header modal-header--primary">
               <h2>{editId ? t('admin.domaines.edit') : t('admin.domaines.add')}</h2>
               <button className="modal-close" onClick={closeModal}>×</button>
             </div>

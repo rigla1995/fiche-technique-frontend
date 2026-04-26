@@ -229,7 +229,7 @@ export default function EntrepriseProfile() {
       {showForm && (
         <div className="modal-overlay" onClick={closeForm}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
+            <div className="modal-header modal-header--primary">
               <h2>{editingId ? t('client.entreprise.edit_activity') : t('client.entreprise.add_activity')}</h2>
               <button className="modal-close" onClick={closeForm}>✕</button>
             </div>

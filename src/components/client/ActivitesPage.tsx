@@ -408,7 +408,7 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
       {showForm && (
         <div className="modal-overlay" onClick={closeForm}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
+            <div className="modal-header modal-header--primary">
               <h2>
                 {isDuplicate ? `${t('client.entreprise.duplicate_activity')} — ${t('client.entreprise.add_activity')}`
                   : editingId ? t('client.entreprise.edit_activity')
@@ -580,7 +580,7 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
       {ingredientsActivite && (
         <div className="modal-overlay" onClick={closeIngredients}>
           <div className="modal modal-lg" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
+            <div className="modal-header modal-header--info">
               <h2>{t('client.entreprise.manage_ingredients')} — {ingredientsActivite.nom}</h2>
               <button className="modal-close" onClick={closeIngredients}>✕</button>
             </div>
