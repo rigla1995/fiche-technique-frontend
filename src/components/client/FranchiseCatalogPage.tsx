@@ -158,12 +158,12 @@ export default function FranchiseCatalogPage() {
             <p className="text-muted">{t('client.catalogue_franchise.no_activities')}</p>
           ) : (
             Object.entries(ingredientGroups).sort(([a], [b]) => a.localeCompare(b)).map(([cat, items]) => (
-              <div key={cat} style={{ marginBottom: 32 }}>
-                <h2 style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--primary)', marginBottom: 8 }}>
-                  🏷️ {cat} <span style={{ fontWeight: 400, color: 'var(--text-muted)', fontSize: '0.78rem' }}>({items.length})</span>
+              <div key={cat} style={{ marginBottom: 28 }}>
+                <h2 style={{ fontSize: '0.82rem', fontWeight: 800, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10 }}>
+                  🏷️ {cat} <span style={{ fontWeight: 400, fontSize: '0.75rem', opacity: 0.7 }}>({items.length})</span>
                 </h2>
-                <div style={{ overflowX: 'auto' }}>
-                  <table className="table card" style={{ minWidth: 280 + groupActivities.length * 120 }}>
+                <div className="table-responsive card" style={{ marginBottom: 0 }}>
+                  <table className="table" style={{ minWidth: 280 + groupActivities.length * 120 }}>
                     <thead>
                       <tr>
                         <th>{t('common.name')}</th>
@@ -181,8 +181,10 @@ export default function FranchiseCatalogPage() {
                         const anySelected = groupActivities.some((a) => ingSelections[a.id]?.selected);
                         return (
                           <tr key={ing.id} style={{ background: anySelected ? 'var(--primary-light, #eef2ff)' : undefined }}>
-                            <td><span style={{ fontWeight: anySelected ? 600 : undefined }}>{ing.nom}</span></td>
-                            <td style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{ing.unite}</td>
+                            <td>
+                              <span style={{ fontWeight: anySelected ? 700 : undefined }}>{ing.nom}</span>
+                            </td>
+                            <td style={{ color: 'var(--text-muted)', fontSize: '0.82rem' }}>{ing.unite}</td>
                             {groupActivities.map((a) => {
                               const sel = ingSelections[a.id];
                               const key = `${ing.id}-${a.id}`;
@@ -190,7 +192,16 @@ export default function FranchiseCatalogPage() {
                                 <td key={a.id} style={{ textAlign: 'center' }}>
                                   <button
                                     className="btn btn-ghost btn-sm"
-                                    style={{ fontSize: '1.1rem', padding: '2px 6px', color: sel?.selected ? 'var(--success)' : 'var(--text-muted)' }}
+                                    style={{
+                                      fontSize: '1rem',
+                                      padding: '3px 10px',
+                                      borderRadius: 20,
+                                      background: sel?.selected ? 'var(--success, #10b981)' : 'transparent',
+                                      color: sel?.selected ? '#fff' : 'var(--text-muted)',
+                                      border: sel?.selected ? 'none' : '1px solid var(--border)',
+                                      fontWeight: sel?.selected ? 700 : undefined,
+                                      minWidth: 36,
+                                    }}
                                     disabled={toggling === key}
                                     onClick={() => toggleIngredient(ing.id, a.id)}
                                   >
@@ -213,3 +224,4 @@ export default function FranchiseCatalogPage() {
     </div>
   );
 }
+

@@ -118,34 +118,45 @@ export default function DistinctCatalogPage() {
             <p className="text-muted">{t('common.no_result')}</p>
           ) : (
             Object.entries(groups).sort(([a], [b]) => a.localeCompare(b)).map(([cat, items]) => (
-              <div key={cat} style={{ marginBottom: 24 }}>
-                <h2 style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--primary)', marginBottom: 8 }}>
-                  🏷️ {cat} <span style={{ fontWeight: 400, color: 'var(--text-muted)', fontSize: '0.78rem' }}>({items.length})</span>
+              <div key={cat} style={{ marginBottom: 28 }}>
+                <h2 style={{ fontSize: '0.82rem', fontWeight: 800, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10 }}>
+                  🏷️ {cat} <span style={{ fontWeight: 400, fontSize: '0.75rem', opacity: 0.7 }}>({items.length})</span>
                 </h2>
-                <div className="table-responsive card">
+                <div className="table-responsive card" style={{ marginBottom: 0 }}>
                   <table className="table">
                     <thead>
                       <tr>
-                        <th style={{ width: 40 }}></th>
                         <th>{t('common.name')}</th>
-                        <th style={{ width: 140 }}>{t('common.unit')}</th>
+                        <th style={{ width: 120 }}>{t('common.unit')}</th>
+                        <th style={{ width: 80, textAlign: 'center' }}></th>
                       </tr>
                     </thead>
                     <tbody>
                       {items.map((ing) => (
                         <tr key={ing.id} style={{ background: ing.selected ? 'var(--primary-light, #eef2ff)' : undefined }}>
+                          <td>
+                            <span style={{ fontWeight: ing.selected ? 700 : undefined }}>{ing.nom}</span>
+                          </td>
+                          <td style={{ color: 'var(--text-muted)', fontSize: '0.82rem' }}>{ing.unite}</td>
                           <td style={{ textAlign: 'center' }}>
                             <button
                               className="btn btn-ghost btn-sm"
-                              style={{ fontSize: '1.1rem', padding: '2px 6px', color: ing.selected ? 'var(--success)' : 'var(--text-muted)' }}
+                              style={{
+                                fontSize: '1rem',
+                                padding: '3px 10px',
+                                borderRadius: 20,
+                                background: ing.selected ? 'var(--success, #10b981)' : 'transparent',
+                                color: ing.selected ? '#fff' : 'var(--text-muted)',
+                                border: ing.selected ? 'none' : '1px solid var(--border)',
+                                fontWeight: ing.selected ? 700 : undefined,
+                                minWidth: 36,
+                              }}
                               disabled={toggling === ing.id}
                               onClick={() => toggleIngredient(ing.id)}
                             >
                               {toggling === ing.id ? '…' : ing.selected ? '✓' : '○'}
                             </button>
                           </td>
-                          <td><span style={{ fontWeight: ing.selected ? 600 : undefined }}>{ing.nom}</span></td>
-                          <td style={{ width: 140, color: 'var(--text-muted)', fontSize: '0.85rem' }}>{ing.unite}</td>
                         </tr>
                       ))}
                     </tbody>
