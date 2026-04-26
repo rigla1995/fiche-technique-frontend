@@ -13,9 +13,9 @@ const PAGE_SIZE = 10;
 
 interface Ingredient {
   id: number;
-  nom: string;
-  unite: string;
-  categorie: string | null;
+  name: string;
+  unitName: string;
+  categorieName: string | null;
 }
 
 interface Category {
@@ -241,7 +241,7 @@ export default function HistoriqueApproPage() {
               disabled={ingredientsLoading || !selectedCategoryId}
             >
               <option value="">{t('client.historique_appro.all_ingredients')}</option>
-              {ingredients.map((i) => <option key={i.id} value={i.id}>{i.nom}</option>)}
+              {ingredients.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
             </select>
           </div>
 
