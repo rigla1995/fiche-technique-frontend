@@ -47,10 +47,17 @@ export default function FicheTechniqueTab({ isEntreprise, franchiseActivities, d
   // Step 4: mode
   const [mode, setMode] = useState<'stock' | 'manual' | null>(null);
 
-  // FP Stock
-  const [stockDates, setStockDates] = useState<string[]>([]);
-  const [stockDatesLoading, setStockDatesLoading] = useState(false);
-  const [selectedDate, setSelectedDate] = useState<string>('');
+  // FP Stock check (replaces date selection)
+  interface StockCheckResult {
+    complete: boolean;
+    missing: { ingredientId: number; nom: string; unite: string; lastQty: number | null; lastPrice: number | null; lastDate: string | null }[];
+    groups: { label: string; depth: number; ingredients: { ingredientId: number; nom: string; unite: string }[] }[];
+  }
+  const [stockCheckResult, setStockCheckResult] = useState<StockCheckResult | null>(null);
+  const [stockCheckLoading, setStockCheckLoading] = useState(false);
+  const [showMissingPopup, setShowMissingPopup] = useState(false);
+  const [missingFillData, setMissingFillData] = useState<Record<number, { qty: string; price: string; date: string }>>({});
+  const [savingMissing, setSavingMissing] = useState(false);
 
   // FP Manuel
   const [manualPrices, setManualPrices] = useState<ManualPriceEntry[]>([]);
@@ -110,22 +117,31 @@ export default function FicheTechniqueTab({ isEntreprise, franchiseActivities, d
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [productType, resolvedActId, actStepDone, isFranchiseCtx]);
 
-  // Load stock dates when product selected (all dates, not limited to current month)
+  // Load stock check when mode='stock' and product selected
   useEffect(() => {
-    if (!selectedProductId) { setStockDates([]); setSelectedDate(''); return; }
-    setStockDatesLoading(true);
+    if (mode !== 'stock' || !selectedProductId) { setStockCheckResult(null); return; }
+    setStockCheckLoading(true);
     const params = new URLSearchParams();
     if (resolvedActId) params.set('activiteId', String(resolvedActId));
-    api.get(`/products/${selectedProductId}/stock-dates?${params}`)
+    api.get(`/products/${selectedProductId}/stock-check?${params}`)
       .then(({ data }) => {
-        const d = data as { dates?: string[] } | string[];
-        setStockDates(Array.isArray(d) ? d : (d.dates ?? []));
-        setSelectedDate('');
+        const result = data as StockCheckResult;
+        setStockCheckResult(result);
+        const fillData: Record<number, { qty: string; price: string; date: string }> = {};
+        const today = new Date().toISOString().slice(0, 10);
+        for (const ing of result.missing) {
+          fillData[ing.ingredientId] = {
+            qty: ing.lastQty !== null ? String(ing.lastQty) : '',
+            price: ing.lastPrice !== null ? String(ing.lastPrice) : '',
+            date: ing.lastDate || today,
+          };
+        }
+        setMissingFillData(fillData);
       })
-      .catch(() => setStockDates([]))
-      .finally(() => setStockDatesLoading(false));
+      .catch(() => setStockCheckResult(null))
+      .finally(() => setStockCheckLoading(false));
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedProductId, resolvedActId]);
+  }, [mode, selectedProductId, resolvedActId]);
 
   // Auto-load manual prices when FP Manuel is selected
   useEffect(() => {
@@ -194,6 +210,50 @@ export default function FicheTechniqueTab({ isEntreprise, franchiseActivities, d
     }
   };
 
+  const saveMissingStock = async () => {
+    if (!stockCheckResult) return;
+    setSavingMissing(true);
+    const today = new Date().toISOString().slice(0, 10);
+    try {
+      for (const ing of stockCheckResult.missing) {
+        const fill = missingFillData[ing.ingredientId];
+        if (!fill || !fill.qty || !fill.price) continue;
+        const payload = {
+          quantite: parseFloat(fill.qty),
+          prixUnitaire: parseFloat(fill.price),
+          dateAppro: fill.date || today,
+        };
+        if (resolvedActId) {
+          await api.put(`/api/stock/entreprise/${resolvedActId}/${ing.ingredientId}`, payload);
+        } else {
+          await api.put(`/api/stock/client/${ing.ingredientId}`, payload);
+        }
+      }
+      // Re-check stock
+      const params = new URLSearchParams();
+      if (resolvedActId) params.set('activiteId', String(resolvedActId));
+      const { data } = await api.get(`/products/${selectedProductId}/stock-check?${params}`);
+      const result = data as StockCheckResult;
+      setStockCheckResult(result);
+      if (result.complete) {
+        setShowMissingPopup(false);
+        setCostRefreshKey((k) => k + 1);
+      } else {
+        const fillData: Record<number, { qty: string; price: string; date: string }> = {};
+        for (const ing of result.missing) {
+          fillData[ing.ingredientId] = missingFillData[ing.ingredientId] || {
+            qty: ing.lastQty !== null ? String(ing.lastQty) : '',
+            price: ing.lastPrice !== null ? String(ing.lastPrice) : '',
+            date: ing.lastDate || today,
+          };
+        }
+        setMissingFillData(fillData);
+      }
+    } finally {
+      setSavingMissing(false);
+    }
+  };
+
   const saveManualPrices = async () => {
     const zeros = manualPrices.filter((p) => {
       const v = parseFloat(p.prixUnitaire);
@@ -213,7 +273,7 @@ export default function FicheTechniqueTab({ isEntreprise, franchiseActivities, d
     try {
       const params = new URLSearchParams({ mode });
       if (resolvedActId) params.set('activiteId', String(resolvedActId));
-      if (mode === 'stock' && selectedDate) params.set('date', selectedDate);
+      // FP Stock: always uses latest appro — no date param needed
       const response = await api.get(`/products/${selectedProductId}/export?${params}`, { responseType: 'blob' });
       const selectedProduct = products.find((p) => String(p.id) === selectedProductId);
       const url = window.URL.createObjectURL(new Blob([response.data]));
@@ -239,7 +299,7 @@ export default function FicheTechniqueTab({ isEntreprise, franchiseActivities, d
       return !isNaN(v) && v > 0;
     });
 
-  const canGenerateStock = mode === 'stock' && !!selectedDate;
+  const canGenerateStock = mode === 'stock' && stockCheckResult?.complete === true;
   const canGenerateManual = mode === 'manual' && allManualPricesFilled;
   const canGenerate = canGenerateStock || canGenerateManual;
 
@@ -376,7 +436,7 @@ export default function FicheTechniqueTab({ isEntreprise, franchiseActivities, d
               className="input"
               style={{ maxWidth: 420 }}
               value={selectedProductId}
-              onChange={(e) => { setSelectedProductId(e.target.value); setMode(null); setSelectedDate(''); }}
+              onChange={(e) => { setSelectedProductId(e.target.value); setMode(null); setStockCheckResult(null); }}
             >
               <option value="">— {t('client.fiche_technique.choose_product')} —</option>
               {products.map((p) => (
@@ -400,40 +460,44 @@ export default function FicheTechniqueTab({ isEntreprise, franchiseActivities, d
                 border: '2px solid',
                 borderColor: mode === 'stock' ? 'var(--primary)' : 'var(--border)',
                 background: mode === 'stock' ? '#eef2ff' : 'var(--bg)',
-                cursor: stockDates.length > 0 && !stockDatesLoading ? 'pointer' : 'not-allowed',
-                opacity: stockDates.length === 0 && !stockDatesLoading ? 0.45 : 1,
+                cursor: hasIngredients ? 'pointer' : 'not-allowed',
+                opacity: !hasIngredients ? 0.45 : 1,
                 transition: 'all 0.15s',
               }}
-              onClick={() => { if (!stockDatesLoading && stockDates.length > 0) setMode('stock'); }}
+              onClick={() => { if (hasIngredients) setMode('stock'); }}
             >
               <div style={{ fontWeight: 700, marginBottom: 4, color: mode === 'stock' ? 'var(--primary)' : 'var(--text)' }}>
                 📦 FP Stock
               </div>
-              <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: mode === 'stock' && stockDates.length > 0 ? 10 : 0 }}>
-                {stockDatesLoading
-                  ? t('common.loading')
-                  : stockDates.length === 0
-                    ? 'Aucun stock disponible'
-                    : `${stockDates.length} date(s) disponible(s)`}
+              <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: mode === 'stock' ? 8 : 0 }}>
+                {!hasIngredients ? 'Aucun ingrédient' : 'Utilise les derniers prix d\'appro'}
               </div>
-              {mode === 'stock' && stockDates.length > 0 && (
-                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                  {stockDates.map((d) => (
-                    <button
-                      key={d}
-                      style={{
-                        padding: '4px 10px', borderRadius: 20, border: '1.5px solid',
-                        borderColor: selectedDate === d ? 'var(--primary)' : 'var(--border)',
-                        background: selectedDate === d ? 'var(--primary)' : '#fff',
-                        color: selectedDate === d ? '#fff' : 'var(--text)',
-                        cursor: 'pointer', fontWeight: selectedDate === d ? 700 : 400,
-                        fontSize: '0.78rem',
-                      }}
-                      onClick={(e) => { e.stopPropagation(); setSelectedDate(d); }}
-                    >
-                      {d}
-                    </button>
-                  ))}
+              {mode === 'stock' && (
+                <div style={{ marginTop: 4 }}>
+                  {stockCheckLoading ? (
+                    <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>{t('common.loading')}</span>
+                  ) : stockCheckResult?.complete ? (
+                    <span style={{
+                      display: 'inline-flex', alignItems: 'center', gap: 5,
+                      fontSize: '0.78rem', fontWeight: 600, color: '#16a34a',
+                      background: '#dcfce7', borderRadius: 20, padding: '3px 10px',
+                    }}>✓ {t('client.stock.stock_complete')}</span>
+                  ) : stockCheckResult && !stockCheckResult.complete ? (
+                    <div>
+                      <span style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 5,
+                        fontSize: '0.78rem', fontWeight: 600, color: '#b45309',
+                        background: '#fef3c7', borderRadius: 20, padding: '3px 10px', marginBottom: 6,
+                      }}>⚠ {stockCheckResult.missing.length} ingrédient(s) manquant(s)</span>
+                      <button
+                        className="btn btn-sm"
+                        style={{ display: 'block', fontSize: '0.78rem', background: '#f59e0b', color: '#fff', borderColor: 'transparent', marginTop: 4 }}
+                        onClick={(e) => { e.stopPropagation(); setShowMissingPopup(true); }}
+                      >
+                        {t('client.stock.complete_stock')}
+                      </button>
+                    </div>
+                  ) : null}
                 </div>
               )}
             </div>
@@ -504,6 +568,10 @@ export default function FicheTechniqueTab({ isEntreprise, franchiseActivities, d
               </div>
               {costLoading ? (
                 <div style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>…</div>
+              ) : mode === 'stock' && !stockCheckLoading && stockCheckResult && !stockCheckResult.complete ? (
+                <div style={{ fontSize: '0.8rem', color: '#b45309', fontWeight: 600 }}>
+                  ⚠ {t('client.stock.missing_stock_msg').split('.')[0]}
+                </div>
               ) : realtimeCost !== null ? (
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: 5 }}>
                   <span style={{ fontWeight: 800, fontSize: '1.5rem', color: 'var(--primary)', letterSpacing: '-0.02em', lineHeight: 1 }}>
@@ -531,7 +599,7 @@ export default function FicheTechniqueTab({ isEntreprise, franchiseActivities, d
                 mode === 'manual' && !canGenerateManual
                   ? 'Saisissez tous les prix manuels d\'abord'
                   : mode === 'stock' && !canGenerateStock
-                    ? 'Sélectionnez une date de stock'
+                    ? 'Complétez le stock pour tous les ingrédients d\'abord'
                     : ''
               }
             >
@@ -623,6 +691,117 @@ export default function FicheTechniqueTab({ isEntreprise, franchiseActivities, d
               <button className="btn btn-ghost" onClick={() => setShowManualPopup(false)}>{t('common.cancel')}</button>
               <button className="btn btn-primary" onClick={saveManualPrices} disabled={savingManual || manualLoading}>
                 {savingManual ? t('common.loading') : t('common.save')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Missing stock popup */}
+      {showMissingPopup && stockCheckResult && (
+        <div className="modal-overlay" onClick={() => setShowMissingPopup(false)}>
+          <div className="modal" style={{ maxWidth: 580 }} onClick={(e) => e.stopPropagation()}>
+            <div style={{
+              background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+              padding: '20px 24px 16px',
+              display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12,
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <span style={{ fontSize: '1.6rem', lineHeight: 1 }}>⚠️</span>
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: '1rem', color: '#fff' }}>{t('client.stock.missing_stock_title')}</div>
+                  <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.85)', marginTop: 2 }}>
+                    {t('client.stock.missing_stock_msg')}
+                  </div>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowMissingPopup(false)}
+                style={{ background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: 8, color: '#fff', fontWeight: 700, fontSize: '1rem', padding: '2px 8px', cursor: 'pointer', lineHeight: 1.4 }}
+              >×</button>
+            </div>
+            <div style={{ padding: '16px 24px', maxHeight: '60vh', overflowY: 'auto' }}>
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th>{t('client.historique_appro.ingredient')}</th>
+                    <th style={{ width: 60 }}>{t('common.unit')}</th>
+                    <th style={{ width: 110, textAlign: 'right' }}>Qté</th>
+                    <th style={{ width: 110, textAlign: 'right' }}>{t('common.price')} (DT)</th>
+                    <th style={{ width: 140 }}>{t('client.stock.date_appro')}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(stockCheckResult.groups.length > 0 ? stockCheckResult.groups : [{ label: '', depth: 0, ingredients: stockCheckResult.missing.map(m => ({ ingredientId: m.ingredientId, nom: m.nom, unite: m.unite })) }]).map((group, gi) => {
+                    const missingIds = new Set(stockCheckResult.missing.map(m => m.ingredientId));
+                    const visibleIngs = group.ingredients.filter(ing => missingIds.has(ing.ingredientId));
+                    if (visibleIngs.length === 0) return null;
+                    return (
+                      <>
+                        {stockCheckResult.groups.length > 1 && group.depth > 0 && (
+                          <tr key={`mg-${gi}`}>
+                            <td colSpan={5} style={{
+                              paddingLeft: 8 + group.depth * 16,
+                              paddingTop: gi === 0 ? 4 : 10,
+                              paddingBottom: 2,
+                              fontSize: '0.75rem',
+                              fontWeight: 700,
+                              textTransform: 'uppercase',
+                              color: 'var(--text-muted)',
+                              borderTop: gi === 0 ? undefined : '1px solid var(--border)',
+                            }}>↳ {group.label}</td>
+                          </tr>
+                        )}
+                        {visibleIngs.map((ing) => {
+                          const fill = missingFillData[ing.ingredientId] || { qty: '', price: '', date: new Date().toISOString().slice(0, 10) };
+                          return (
+                            <tr key={ing.ingredientId}>
+                              <td style={{ fontWeight: 500 }}>{ing.nom}</td>
+                              <td style={{ color: 'var(--text-muted)' }}>{ing.unite}</td>
+                              <td style={{ textAlign: 'right' }}>
+                                <input
+                                  type="number" className="input"
+                                  style={{ width: 90, textAlign: 'right', display: 'block', marginLeft: 'auto' }}
+                                  step="0.001" min="0" placeholder="0"
+                                  value={fill.qty}
+                                  onChange={(e) => setMissingFillData(prev => ({ ...prev, [ing.ingredientId]: { ...fill, qty: e.target.value } }))}
+                                />
+                              </td>
+                              <td style={{ textAlign: 'right' }}>
+                                <input
+                                  type="number" className="input"
+                                  style={{ width: 90, textAlign: 'right', display: 'block', marginLeft: 'auto', borderColor: !fill.price ? '#f59e0b' : undefined }}
+                                  step="0.001" min="0.001" placeholder="0.000"
+                                  value={fill.price}
+                                  onChange={(e) => setMissingFillData(prev => ({ ...prev, [ing.ingredientId]: { ...fill, price: e.target.value } }))}
+                                />
+                              </td>
+                              <td>
+                                <input
+                                  type="date" className="input"
+                                  style={{ width: 130 }}
+                                  value={fill.date}
+                                  onChange={(e) => setMissingFillData(prev => ({ ...prev, [ing.ingredientId]: { ...fill, date: e.target.value } }))}
+                                />
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+            <div style={{ padding: '12px 24px 20px', display: 'flex', justifyContent: 'flex-end', gap: 10, borderTop: '1px solid var(--border)' }}>
+              <button className="btn btn-ghost" onClick={() => setShowMissingPopup(false)}>{t('common.cancel')}</button>
+              <button
+                className="btn btn-primary"
+                style={{ background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', borderColor: 'transparent' }}
+                disabled={savingMissing}
+                onClick={saveMissingStock}
+              >
+                {savingMissing ? t('common.loading') : t('common.save')}
               </button>
             </div>
           </div>

@@ -17,6 +17,7 @@ import DistinctCatalogPage from './components/client/DistinctCatalogPage';
 import Profile from './components/client/Profile';
 import ActivitesPage from './components/client/ActivitesPage';
 import StockPage from './components/client/StockPage';
+import HistoriqueApproPage from './components/client/HistoriqueApproPage';
 import './i18n';
 import './index.css';
 
@@ -65,6 +66,7 @@ export default function App() {
             <Route path="/client/profile" element={<Profile />} />
             <Route path="/client/activites" element={<ActivitesPage />} />
             <Route path="/client/stock" element={<StockPage />} />
+            <Route path="/client/stock/historique" element={<HistoriqueApproPage />} />
           </Route>
 
           <Route path="*" element={<Navigate to="/" replace />} />

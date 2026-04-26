@@ -121,7 +121,26 @@ export interface StockEntry {
   categorie: string;
   prixUnitaire: number | null;
   quantite: number | null;
+  dateAppro: string | null;
   updatedAt: string | null;
+}
+
+export interface StockHistoryEntry {
+  dateAppro: string;
+  quantite: number | null;
+  prixUnitaire: number | null;
+  updatedAt: string | null;
+}
+
+export interface HistoriqueApproEntry {
+  dateAppro: string;
+  quantite: number | null;
+  prixUnitaire: number | null;
+  updatedAt: string | null;
+  ingredientId: number;
+  ingredientNom: string;
+  uniteNom: string;
+  categorieNom: string;
 }
 
 export interface ActiviteIngredient {
