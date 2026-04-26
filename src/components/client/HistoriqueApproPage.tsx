@@ -101,13 +101,20 @@ export default function HistoriqueApproPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isEntreprise]);
 
-  // Update selectedActiviteId when group changes
+  // Auto-select activiteId when franchise group changes
   useEffect(() => {
     if (!isEntreprise || entType !== 'franchise') return;
     const grouped = franchiseActivities.filter((a) => (a.franchiseGroup || a.nom) === selectedFranchiseGroup);
     if (grouped.length > 0 && !initActiviteId) setSelectedActiviteId(String(grouped[0].id));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedFranchiseGroup, entType, franchiseActivities]);
+
+  // Auto-select first distinct activiteId when distinct activities load
+  useEffect(() => {
+    if (!isEntreprise || entType !== 'distinct') return;
+    if (distinctActivities.length > 0 && !initActiviteId) setSelectedActiviteId(String(distinctActivities[0].id));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [distinctActivities, entType]);
 
   // Activities shown in the activity dropdown
   const activitiesForDropdown = isEntreprise
