@@ -379,7 +379,8 @@
       "all_activites": "Toutes les activités",
       "col_date": "Date transfert",
       "col_activite": "Activité",
-      "col_note": "Remarque"
+      "col_note": "Remarque",
+      "assign_to_activities": "Assigner aux activités"
     }
   },
   "currency": "DT"

@@ -144,7 +144,8 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
     const err = validateFranchiseStep(franchiseForms[franchiseStep]);
     if (err) { setError(err); return; }
     if (!franchiseName.trim()) { setError(t('validation.name_required')); return; }
-    if (hasLabo && (!laboNom.trim() || !laboTel.trim())) {
+    const autoLaboNom = `Labo_${fn}`;
+    if (hasLabo && !laboTel.trim()) {
       setError(t('client.labo.labo_fields_required')); return;
     }
     setSaving(true);
@@ -158,7 +159,7 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
       if (hasLabo) {
         const { data: labo } = await api.post('/api/labo', {
           franchiseGroup: fn,
-          nom: laboNom.trim(),
+          nom: autoLaboNom,
           referentTel: laboTel.trim(),
           adresse: laboAdresse.trim() || undefined,
         });
@@ -538,8 +539,13 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                             🏭 {t('client.labo.labo_info')}
                           </p>
                           <div className="form-field" style={{ marginBottom: 10 }}>
-                            <label>{t('client.labo.labo_nom')} *</label>
-                            <input type="text" value={laboNom} onChange={(e) => setLaboNom(e.target.value)} placeholder={t('client.labo.labo_nom_placeholder')} />
+                            <label>{t('client.labo.labo_nom')}</label>
+                            <input
+                              type="text"
+                              value={franchiseName.trim() ? `Labo_${franchiseName.trim()}` : ''}
+                              readOnly
+                              style={{ background: 'var(--surface)', color: 'var(--text-muted)', cursor: 'not-allowed' }}
+                            />
                           </div>
                           <div className="form-field" style={{ marginBottom: 10 }}>
                             <label>{t('client.labo.labo_tel')} * <span style={{ fontWeight: 400, color: 'var(--text-muted)', fontSize: '0.8rem' }}>{t('validation.phone_hint')}</span></label>

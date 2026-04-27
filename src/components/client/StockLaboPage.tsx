@@ -51,7 +51,7 @@ export default function StockLaboPage() {
   const [searchParams] = useSearchParams();
   const laboId = searchParams.get('laboId') || '';
 
-  const [labo, setLabo] = useState<{ nom: string; franchiseGroup: string; referentTel: string; adresse?: string } | null>(null);
+  const [labo, setLabo] = useState<{ nom: string; franchiseGroup: string; referentTel: string; adresse?: string; activites?: { id: number; nom: string }[] } | null>(null);
   const [stock, setStock] = useState<LaboStockRow[]>([]);
   const [rowState, setRowState] = useState<Record<number, RowState>>({});
   const [loading, setLoading] = useState(true);
@@ -64,6 +64,17 @@ export default function StockLaboPage() {
   const [showIngModal, setShowIngModal] = useState(false);
   const [ingredients, setIngredients] = useState<LaboIngredient[]>([]);
   const [ingLoading, setIngLoading] = useState(false);
+
+  // Activity assignment modal
+  interface AssignIngredient {
+    ingredientId: number; nom: string; unite: string; categorie: string;
+    activities: { activiteId: number; nom: string; assigned: boolean }[];
+  }
+  interface AssignActivite { id: number; nom: string }
+  const [showAssignModal, setShowAssignModal] = useState(false);
+  const [assignLoading, setAssignLoading] = useState(false);
+  const [assignIngredients, setAssignIngredients] = useState<AssignIngredient[]>([]);
+  const [assignActivites, setAssignActivites] = useState<AssignActivite[]>([]);
 
   const today = todayStr();
 
@@ -179,6 +190,30 @@ export default function StockLaboPage() {
 
   const closeIngModal = () => { setShowIngModal(false); loadStock(); };
 
+  const openAssignModal = async () => {
+    setShowAssignModal(true);
+    setAssignLoading(true);
+    try {
+      const { data } = await api.get(`/api/labo/${laboId}/activity-assignments`);
+      setAssignIngredients(data.ingredients);
+      setAssignActivites(data.activites);
+    } catch { /* ignore */ }
+    setAssignLoading(false);
+  };
+
+  const toggleAssignment = async (ingredientId: number, activiteId: number) => {
+    try {
+      const { data } = await api.post(`/api/labo/${laboId}/ingredients/${ingredientId}/assign-to-activity`, { activiteId });
+      setAssignIngredients((prev) => prev.map((ing) =>
+        ing.ingredientId === ingredientId
+          ? { ...ing, activities: ing.activities.map((a) => a.activiteId === activiteId ? { ...a, assigned: data.assigned } : a) }
+          : ing
+      ));
+    } catch { /* ignore */ }
+  };
+
+  const closeAssignModal = () => setShowAssignModal(false);
+
   // Filter + group by category
   const allCategories = Array.from(new Set(stock.map((r) => r.categorie))).sort();
   const filtered = stock.filter((r) => {
@@ -211,10 +246,15 @@ export default function StockLaboPage() {
             </p>
           )}
         </div>
-        <div style={{ display: 'flex', gap: 10 }}>
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
           <button className="btn btn-secondary btn-sm" onClick={openIngModal}>
             ⚙️ {t('client.labo.manage_ingredients')}
           </button>
+          {(labo?.activites?.length ?? 0) > 0 && (
+            <button className="btn btn-secondary btn-sm" onClick={openAssignModal}>
+              🔗 {t('client.labo.assign_to_activities')}
+            </button>
+          )}
           <Link to={`/client/labo/transfer?laboId=${laboId}`} className="btn btn-primary btn-sm">
             ↗ {t('client.labo.btn_transfer')}
           </Link>
@@ -379,6 +419,75 @@ export default function StockLaboPage() {
           </div>
         ))}
         </>
+      )}
+
+      {/* Activity assignment modal */}
+      {showAssignModal && (
+        <div className="modal-overlay" onClick={closeAssignModal}>
+          <div className="modal modal-lg" style={{ maxWidth: 800 }} onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header modal-header--primary">
+              <h2>🔗 {t('client.labo.assign_to_activities')} — {labo?.nom}</h2>
+              <button className="modal-close" onClick={closeAssignModal}>✕</button>
+            </div>
+            <div className="modal-body" style={{ maxHeight: '65vh', overflowY: 'auto' }}>
+              {assignLoading ? (
+                <p className="text-muted">{t('common.loading')}</p>
+              ) : assignIngredients.length === 0 ? (
+                <p className="text-muted">{t('client.labo.empty_stock')}</p>
+              ) : assignActivites.length === 0 ? (
+                <p className="text-muted">{t('client.labo.no_activites')}</p>
+              ) : (() => {
+                const cats: Record<string, typeof assignIngredients> = {};
+                for (const ing of assignIngredients) {
+                  if (!cats[ing.categorie]) cats[ing.categorie] = [];
+                  cats[ing.categorie].push(ing);
+                }
+                return Object.entries(cats).sort(([a], [b]) => a.localeCompare(b)).map(([cat, items]) => (
+                  <div key={cat} style={{ marginBottom: 24 }}>
+                    <h3 style={{ fontSize: '0.82rem', fontWeight: 800, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>
+                      🏷️ {cat}
+                    </h3>
+                    <div className="table-responsive" style={{ overflowX: 'auto' }}>
+                      <table className="table" style={{ minWidth: 400 }}>
+                        <thead>
+                          <tr>
+                            <th style={{ minWidth: 160 }}>{t('client.stock.ingredient')}</th>
+                            {assignActivites.map((act) => (
+                              <th key={act.id} style={{ textAlign: 'center', minWidth: 110, color: 'var(--primary)' }}>{act.nom}</th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {items.map((ing) => (
+                            <tr key={ing.ingredientId}>
+                              <td>
+                                <div style={{ fontWeight: 600 }}>{ing.nom}</div>
+                                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{ing.unite}</div>
+                              </td>
+                              {ing.activities.map((a) => (
+                                <td key={a.activiteId} style={{ textAlign: 'center' }}>
+                                  <input
+                                    type="checkbox"
+                                    checked={a.assigned}
+                                    onChange={() => toggleAssignment(ing.ingredientId, a.activiteId)}
+                                    style={{ width: 18, height: 18, accentColor: 'var(--primary)', cursor: 'pointer' }}
+                                  />
+                                </td>
+                              ))}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                ));
+              })()}
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-primary" onClick={closeAssignModal}>{t('common.close')}</button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Ingredient selector modal */}

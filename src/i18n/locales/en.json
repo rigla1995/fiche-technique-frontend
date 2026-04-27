@@ -379,7 +379,8 @@
       "all_activites": "All activities",
       "col_date": "Transfer date",
       "col_activite": "Activity",
-      "col_note": "Note"
+      "col_note": "Note",
+      "assign_to_activities": "Assign to activities"
     }
   },
   "currency": "TND"
