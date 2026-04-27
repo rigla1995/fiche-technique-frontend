@@ -144,6 +144,7 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
     const err = validateFranchiseStep(franchiseForms[franchiseStep]);
     if (err) { setError(err); return; }
     if (!franchiseName.trim()) { setError(t('validation.name_required')); return; }
+    const fn = franchiseName.trim();
     const autoLaboNom = `Labo_${fn}`;
     if (hasLabo && !laboTel.trim()) {
       setError(t('client.labo.labo_fields_required')); return;
@@ -152,7 +153,6 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
     setError('');
     try {
       const isFirst = activites.length === 0;
-      const fn = franchiseName.trim();
 
       // Create labo first if needed
       let laboId: number | null = null;
@@ -462,7 +462,7 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
 
       {/* Add / Edit form modal */}
       {showForm && (
-        <div className="modal-overlay" onClick={closeForm}>
+        <div className="modal-overlay">
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header modal-header--primary">
               <h2>
@@ -679,7 +679,7 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
 
       {/* Ingredient assignment modal */}
       {ingredientsActivite && (
-        <div className="modal-overlay" onClick={closeIngredients}>
+        <div className="modal-overlay">
           <div className="modal modal-lg" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header modal-header--info">
               <h2>{t('client.entreprise.manage_ingredients')} — {ingredientsActivite.nom}</h2>
