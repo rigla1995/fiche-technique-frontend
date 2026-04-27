@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
@@ -19,6 +20,7 @@ const TUNISIAN_PHONE = /^(\+216[\s-]?)?[2579]\d{7}$/;
 export default function ActivitesPage({ onCreated, minimal }: Props) {
   const { t } = useTranslation();
   const { user, advanceOnboarding } = useAuth();
+  const navigate = useNavigate();
 
   const [activites, setActivites] = useState<Activite[]>([]);
   const [loading, setLoading] = useState(true);
@@ -178,11 +180,15 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
           ...(laboId ? { laboId } : {}),
         });
       }
-      setMsg(t('client.entreprise.activity_created'));
       if (onCreated) onCreated();
       if (isFirst && user?.onboardingStep === 2) await advanceOnboarding(3);
-      setTimeout(() => setMsg(''), 3000);
       closeForm();
+      if (isFirst) {
+        navigate('/client/catalogue-franchise?created=1');
+        return;
+      }
+      setMsg(t('client.entreprise.activity_created'));
+      setTimeout(() => setMsg(''), 3000);
       load();
     } catch (err: unknown) {
       const errMsg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
@@ -210,9 +216,17 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
         const payload: Record<string, unknown> = { nom: form.nom, adresse: form.adresse, telephone: form.telephone, email: form.email };
         if (memeActivite !== null) payload.memeActivite = memeActivite;
         await api.post('/api/entreprise/activites', payload);
-        setMsg(t('client.entreprise.activity_created'));
         if (onCreated) onCreated();
         if (isFirst && user?.onboardingStep === 2) await advanceOnboarding(3);
+        closeForm();
+        if (isFirst) {
+          navigate('/client/catalogue-distinct?created=1');
+          return;
+        }
+        setMsg(t('client.entreprise.activity_created'));
+        setTimeout(() => setMsg(''), 3000);
+        load();
+        return;
       }
       setTimeout(() => setMsg(''), 3000);
       closeForm();

@@ -311,9 +311,8 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                     )}
                   </li>
 
-                  {/* Espace Franchise */}
-                  {(isOnboarding || hasFranchise) && (
-                    <>
+                  {/* Espace Franchise — always visible, items locked when no franchise activity */}
+                  <>
                       <Divider />
                       <SectionHeader label={t('nav.espace_franchise')} />
 
@@ -401,12 +400,10 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                           </React.Fragment>
                         );
                       })}
-                    </>
-                  )}
+                  </>
 
-                  {/* Espace Distinct — always visible when Espace Franchise is shown */}
-                  {(isOnboarding || hasFranchise || hasDistinct) && (
-                    <>
+                  {/* Espace Distinct — always visible, items locked when no distinct activity */}
+                  <>
                       <Divider />
                       <SectionHeader label={t('nav.espace_distinct')} />
 
@@ -462,8 +459,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                         </span>
                       </li>
                       <ProductSubLinks locked={isOnboarding || !hasDistinctSelections || !hasDistinct} actCtx="distinct" ftActCtx="distinct" onClick={onClose} />
-                    </>
-                  )}
+                  </>
 
                 </>
               )}

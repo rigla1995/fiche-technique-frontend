@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
@@ -7,6 +8,9 @@ import type { Activite, ActiviteIngredient } from '../../types';
 export default function DistinctCatalogPage() {
   const { t } = useTranslation();
   const { user, advanceOnboarding } = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const justCreated = new URLSearchParams(location.search).get('created') === '1';
   const [activites, setActivites] = useState<Activite[]>([]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [ingredients, setIngredients] = useState<ActiviteIngredient[]>([]);
@@ -72,6 +76,15 @@ export default function DistinctCatalogPage() {
   return (
     <div className="page-content">
       <h1 style={{ marginBottom: 20 }}>{t('nav.catalogue_distinct')}</h1>
+
+      {justCreated && (
+        <div style={{ background: '#dcfce7', border: '1px solid #86efac', borderRadius: 8, padding: '12px 16px', marginBottom: 20, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+          <span style={{ color: '#15803d', fontWeight: 600 }}>
+            ✅ {t('client.entreprise.activity_created')} — {t('client.catalogue.assign_ingredients_hint', 'Assignez maintenant les ingrédients à vos activités.')}
+          </span>
+          <button onClick={() => navigate('/client/catalogue-distinct', { replace: true })} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1rem', color: '#15803d' }}>✕</button>
+        </div>
+      )}
 
       {activites.length === 0 ? (
         <p className="text-muted">{t('client.catalogue_distinct.no_activities')}</p>
