@@ -19,6 +19,10 @@ interface StockRowState {
   quantite: string;
   prixUnitaire: string;
   dateAppro: string;
+  origQuantite: string;
+  origPrixUnitaire: string;
+  origDateAppro: string;
+  hasExisting: boolean;
   saving: boolean;
   saved: boolean;
   error: string;
@@ -28,15 +32,30 @@ function buildInitialRowState(entries: StockEntry[]): Record<number, StockRowSta
   const state: Record<number, StockRowState> = {};
   const today = todayStr();
   for (const e of entries) {
-    const hasValues = (e.quantite !== null && e.quantite > 0) || (e.prixUnitaire !== null && e.prixUnitaire > 0);
+    const hasExisting = e.quantite !== null;
+    const qStr = e.quantite !== null ? String(e.quantite) : '';
+    const pStr = e.prixUnitaire !== null ? String(e.prixUnitaire) : '';
+    const dStr = hasExisting && e.dateAppro ? e.dateAppro : today;
     state[e.ingredientId] = {
-      quantite: e.quantite !== null ? String(e.quantite) : '',
-      prixUnitaire: e.prixUnitaire !== null ? String(e.prixUnitaire) : '',
-      dateAppro: hasValues && e.dateAppro ? e.dateAppro : today,
+      quantite: qStr,
+      prixUnitaire: pStr,
+      dateAppro: dStr,
+      origQuantite: qStr,
+      origPrixUnitaire: pStr,
+      origDateAppro: dStr,
+      hasExisting,
       saving: false, saved: false, error: '',
     };
   }
   return state;
+}
+
+function canSaveStockRow(row: StockRowState): boolean {
+  if (row.saving) return false;
+  if (!row.hasExisting) {
+    return row.quantite.trim() !== '' && row.prixUnitaire.trim() !== '' && row.dateAppro.trim() !== '';
+  }
+  return row.quantite !== row.origQuantite || row.prixUnitaire !== row.origPrixUnitaire || row.dateAppro !== row.origDateAppro;
 }
 
 interface HistoryPopupProps {
@@ -141,11 +160,22 @@ function StockMatrix({ entries, categoryFilter, nameFilter, activiteId, isEntrep
 
   const saveRow = async (id: number) => {
     const row = rows[id];
-    if (!row) return;
+    if (!row || !canSaveStockRow(row)) return;
     setRows((prev) => ({ ...prev, [id]: { ...prev[id], saving: true, error: '' } }));
     try {
       await onSave(id, row.quantite, row.prixUnitaire, row.dateAppro);
-      setRows((prev) => ({ ...prev, [id]: { ...prev[id], saving: false, saved: true } }));
+      setRows((prev) => ({
+        ...prev,
+        [id]: {
+          ...prev[id],
+          saving: false,
+          saved: true,
+          hasExisting: true,
+          origQuantite: row.quantite,
+          origPrixUnitaire: row.prixUnitaire,
+          origDateAppro: row.dateAppro,
+        },
+      }));
       setTimeout(() => setRows((prev) => ({ ...prev, [id]: { ...prev[id], saved: false } })), 2500);
     } catch {
       setRows((prev) => ({ ...prev, [id]: { ...prev[id], saving: false, error: t('common.error') } }));
@@ -247,7 +277,8 @@ function StockMatrix({ entries, categoryFilter, nameFilter, activiteId, isEntrep
                           <button
                             className={`btn btn-sm ${row.saved ? 'btn-success' : 'btn-primary'}`}
                             onClick={() => saveRow(entry.ingredientId)}
-                            disabled={row.saving}
+                            disabled={!canSaveStockRow(row)}
+                            title={!row.hasExisting && (!row.quantite || !row.prixUnitaire || !row.dateAppro) ? 'Renseignez quantité, prix et date' : undefined}
                             style={{ marginRight: 6 }}
                           >
                             {row.saving ? '…' : row.saved ? '✓' : t('client.stock.save')}

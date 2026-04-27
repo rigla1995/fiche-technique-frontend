@@ -34,6 +34,10 @@ interface RowState {
   quantite: string;
   prixUnitaire: string;
   dateAppro: string;
+  origQuantite: string;
+  origPrixUnitaire: string;
+  origDateAppro: string;
+  hasExisting: boolean;
   saving: boolean;
   saved: boolean;
   historyOpen: boolean;
@@ -51,6 +55,10 @@ export default function StockLaboPage() {
   const [stock, setStock] = useState<LaboStockRow[]>([]);
   const [rowState, setRowState] = useState<Record<number, RowState>>({});
   const [loading, setLoading] = useState(true);
+
+  // Filters
+  const [filterCategorie, setFilterCategorie] = useState('');
+  const [filterNom, setFilterNom] = useState('');
 
   // Ingredient selector modal
   const [showIngModal, setShowIngModal] = useState(false);
@@ -76,11 +84,18 @@ export default function StockLaboPage() {
       setStock(rows);
       const init: Record<number, RowState> = {};
       for (const r of rows) {
-        const hasValues = (r.quantite !== null && r.quantite > 0) || (r.prixUnitaire !== null && r.prixUnitaire > 0);
+        const hasExisting = r.quantite !== null;
+        const qStr = r.quantite !== null ? String(r.quantite) : '';
+        const pStr = r.prixUnitaire !== null ? String(r.prixUnitaire) : '';
+        const dStr = hasExisting && r.dateAppro ? r.dateAppro : today;
         init[r.ingredientId] = {
-          quantite: r.quantite !== null ? String(r.quantite) : '',
-          prixUnitaire: r.prixUnitaire !== null ? String(r.prixUnitaire) : '',
-          dateAppro: hasValues && r.dateAppro ? r.dateAppro : today,
+          quantite: qStr,
+          prixUnitaire: pStr,
+          dateAppro: dStr,
+          origQuantite: qStr,
+          origPrixUnitaire: pStr,
+          origDateAppro: dStr,
+          hasExisting,
           saving: false,
           saved: false,
           historyOpen: false,
@@ -98,9 +113,17 @@ export default function StockLaboPage() {
     setRowState((prev) => ({ ...prev, [ingredientId]: { ...prev[ingredientId], [field]: value } }));
   };
 
+  const canSaveRow = (rs: RowState | undefined): boolean => {
+    if (!rs || rs.saving) return false;
+    if (!rs.hasExisting) {
+      return rs.quantite.trim() !== '' && rs.prixUnitaire.trim() !== '' && rs.dateAppro.trim() !== '';
+    }
+    return rs.quantite !== rs.origQuantite || rs.prixUnitaire !== rs.origPrixUnitaire || rs.dateAppro !== rs.origDateAppro;
+  };
+
   const saveRow = async (ingredientId: number) => {
     const rs = rowState[ingredientId];
-    if (!rs) return;
+    if (!rs || !canSaveRow(rs)) return;
     setField(ingredientId, 'saving', true);
     try {
       await api.put(`/api/labo/${laboId}/stock/${ingredientId}`, {
@@ -108,10 +131,22 @@ export default function StockLaboPage() {
         prixUnitaire: rs.prixUnitaire !== '' ? parseFloat(rs.prixUnitaire) : null,
         dateAppro: rs.dateAppro || today,
       });
-      setField(ingredientId, 'saved', true);
+      setRowState((prev) => ({
+        ...prev,
+        [ingredientId]: {
+          ...prev[ingredientId],
+          saving: false,
+          saved: true,
+          hasExisting: true,
+          origQuantite: rs.quantite,
+          origPrixUnitaire: rs.prixUnitaire,
+          origDateAppro: rs.dateAppro,
+        },
+      }));
       setTimeout(() => setField(ingredientId, 'saved', false), 2000);
-    } catch { /* ignore */ }
-    setField(ingredientId, 'saving', false);
+    } catch {
+      setField(ingredientId, 'saving', false);
+    }
   };
 
   const toggleHistory = async (ingredientId: number) => {
@@ -144,9 +179,15 @@ export default function StockLaboPage() {
 
   const closeIngModal = () => { setShowIngModal(false); loadStock(); };
 
-  // Group by category
+  // Filter + group by category
+  const allCategories = Array.from(new Set(stock.map((r) => r.categorie))).sort();
+  const filtered = stock.filter((r) => {
+    const catOk = !filterCategorie || r.categorie === filterCategorie;
+    const nomOk = !filterNom || r.nom.toLowerCase().includes(filterNom.toLowerCase());
+    return catOk && nomOk;
+  });
   const groups: Record<string, LaboStockRow[]> = {};
-  for (const r of stock) {
+  for (const r of filtered) {
     if (!groups[r.categorie]) groups[r.categorie] = [];
     groups[r.categorie].push(r);
   }
@@ -189,7 +230,35 @@ export default function StockLaboPage() {
           <button className="btn btn-primary" onClick={openIngModal}>⚙️ {t('client.labo.manage_ingredients')}</button>
         </div>
       ) : (
-        Object.entries(groups).sort(([a], [b]) => a.localeCompare(b)).map(([cat, rows]) => (
+        <>
+          {/* Filters */}
+          <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+              <span style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('historique_appro.category', 'Catégorie')}</span>
+              <select className="input" style={{ maxWidth: 200 }} value={filterCategorie} onChange={(e) => setFilterCategorie(e.target.value)}>
+                <option value="">{t('client.catalogue_franchise.all_categories')}</option>
+                {allCategories.map((c) => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+              <span style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('client.stock.ingredient')}</span>
+              <input
+                type="text"
+                className="input"
+                style={{ minWidth: 160, maxWidth: 240 }}
+                placeholder={t('client.stock.search_ingredient')}
+                value={filterNom}
+                onChange={(e) => setFilterNom(e.target.value)}
+              />
+            </div>
+            {(filterCategorie || filterNom) && (
+              <button className="btn btn-ghost btn-sm" style={{ alignSelf: 'flex-end' }} onClick={() => { setFilterCategorie(''); setFilterNom(''); }}>✕</button>
+            )}
+          </div>
+
+          {Object.keys(groups).length === 0 ? (
+            <p className="text-muted">{t('common.no_result')}</p>
+          ) : Object.entries(groups).sort(([a], [b]) => a.localeCompare(b)).map(([cat, rows]) => (
           <div key={cat} style={{ marginBottom: 28 }}>
             <h2 style={{ fontSize: '0.82rem', fontWeight: 800, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10 }}>
               🏷️ {cat}
@@ -258,8 +327,9 @@ export default function StockLaboPage() {
                             <button
                               className={`btn btn-sm ${rs.saved ? 'btn-success' : 'btn-primary'}`}
                               onClick={() => saveRow(r.ingredientId)}
-                              disabled={rs.saving}
+                              disabled={!canSaveRow(rs)}
                               style={{ marginRight: 6 }}
+                              title={!rs.hasExisting && (!rs.quantite || !rs.prixUnitaire || !rs.dateAppro) ? 'Renseignez quantité, prix et date' : undefined}
                             >
                               {rs.saving ? '…' : rs.saved ? '✓' : t('common.save')}
                             </button>
@@ -307,7 +377,8 @@ export default function StockLaboPage() {
               </table>
             </div>
           </div>
-        ))
+        ))}
+        </>
       )}
 
       {/* Ingredient selector modal */}
