@@ -47,6 +47,10 @@ export default function TransferPage() {
   const [successMsg, setSuccessMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
 
+  // Filters
+  const [filterCategorie, setFilterCategorie] = useState('');
+  const [filterNom, setFilterNom] = useState('');
+
   const load = useCallback(async () => {
     if (!laboId) return;
     setLoading(true);
@@ -128,9 +132,15 @@ export default function TransferPage() {
 
   const activites: Activite[] = labo?.activites || [];
 
-  // Group stock by category
+  // Filter + group by category
+  const allCategories = Array.from(new Set(stock.map((r) => r.categorie))).sort();
+  const filtered = stock.filter((r) => {
+    const catOk = !filterCategorie || r.categorie === filterCategorie;
+    const nomOk = !filterNom || r.nom.toLowerCase().includes(filterNom.toLowerCase());
+    return catOk && nomOk;
+  });
   const groups: Record<string, LaboStockRow[]> = {};
-  for (const r of stock) {
+  for (const r of filtered) {
     if (!groups[r.categorie]) groups[r.categorie] = [];
     groups[r.categorie].push(r);
   }
@@ -183,6 +193,33 @@ export default function TransferPage() {
       {successMsg && <div style={{ background: 'var(--success, #10b981)', color: '#fff', borderRadius: 10, padding: '10px 18px', marginBottom: 16, fontWeight: 600 }}>✓ {successMsg}</div>}
       {errorMsg && <div style={{ background: 'var(--danger, #ef4444)', color: '#fff', borderRadius: 10, padding: '10px 18px', marginBottom: 16, fontWeight: 600 }}>{errorMsg}</div>}
 
+      {/* Filters */}
+      {!loading && stock.length > 0 && (
+        <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+            <span style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Catégorie</span>
+            <select className="input" style={{ maxWidth: 200 }} value={filterCategorie} onChange={(e) => setFilterCategorie(e.target.value)}>
+              <option value="">{t('client.catalogue_franchise.all_categories')}</option>
+              {allCategories.map((c) => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+            <span style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('client.stock.ingredient')}</span>
+            <input
+              type="text"
+              className="input"
+              style={{ minWidth: 160, maxWidth: 240 }}
+              placeholder={t('client.stock.search_ingredient')}
+              value={filterNom}
+              onChange={(e) => setFilterNom(e.target.value)}
+            />
+          </div>
+          {(filterCategorie || filterNom) && (
+            <button className="btn btn-ghost btn-sm" style={{ alignSelf: 'flex-end' }} onClick={() => { setFilterCategorie(''); setFilterNom(''); }}>✕</button>
+          )}
+        </div>
+      )}
+
       {loading ? (
         <p className="text-muted">{t('common.loading')}</p>
       ) : stock.length === 0 ? (
@@ -197,9 +234,11 @@ export default function TransferPage() {
         </div>
       ) : (
         <>
-          {Object.entries(groups).sort(([a], [b]) => a.localeCompare(b)).map(([cat, rows]) => (
+          {Object.keys(groups).length === 0 ? (
+            <p className="text-muted">{t('common.no_result')}</p>
+          ) : Object.entries(groups).sort(([a], [b]) => a.localeCompare(b)).map(([cat, rows]) => (
             <div key={cat} style={{ marginBottom: 28 }}>
-              <h2 style={{ fontSize: '0.82rem', fontWeight: 800, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10 }}>
+              <h2 style={{ fontSize: '0.82rem', fontWeight: 800, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10, marginTop: 0 }}>
                 🏷️ {cat}
               </h2>
               <div className="table-responsive card" style={{ marginBottom: 0 }}>
