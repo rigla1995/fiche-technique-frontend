@@ -281,8 +281,8 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
     <div className={minimal ? '' : 'page-content'}>
       {!minimal && <h1 style={{ marginBottom: 24 }}>{t('nav.activites')}</h1>}
 
-      {!loading && (
-        <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)', marginBottom: 16 }}>
+      {!loading && activites.length > 0 && (
+        <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginBottom: 20 }}>
           {activites.length} {t('client.entreprise.activities_section').toLowerCase()}
         </p>
       )}
@@ -292,26 +292,30 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
       {loading ? (
         <p className="text-muted">{t('common.loading')}</p>
       ) : activites.length === 0 ? (
-        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 8 }}>
-          <button className="btn btn-primary" onClick={() => openAdd('franchise')}>
-            + {t('client.entreprise.franchise_yes')}
-          </button>
-          <button className="btn btn-secondary" onClick={() => openAdd('distincte')}>
-            + {t('client.entreprise.franchise_no')}
-          </button>
+        <div className="empty-state">
+          <span className="empty-icon">🏢</span>
+          <p style={{ marginBottom: 16 }}>{t('client.entreprise.no_activities')}</p>
+          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center' }}>
+            <button className="btn btn-primary" onClick={() => openAdd('franchise')}>
+              🔗 {t('client.entreprise.franchise_yes')}
+            </button>
+            <button className="btn btn-secondary" onClick={() => openAdd('distincte')}>
+              📍 {t('client.entreprise.franchise_no')}
+            </button>
+          </div>
         </div>
       ) : (
         <>
           {/* Franchise section */}
           {franchiseActivities.length > 0 && (
-            <div style={{ marginBottom: 32 }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14, paddingBottom: 10, borderBottom: '2px solid var(--border)' }}>
+            <div style={{ marginBottom: 36 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                   <span style={{ width: 4, height: 22, borderRadius: 4, background: 'linear-gradient(180deg, #2563eb 0%, #0ea5e9 100%)', display: 'inline-block', flexShrink: 0 }} />
-                  <h2 style={{ fontSize: '0.9rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--text)', margin: 0 }}>
+                  <h2 style={{ fontSize: '0.82rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text)', margin: 0 }}>
                     {t('nav.espace_franchise')}
                   </h2>
-                  <span style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--primary)', background: 'var(--primary-light)', border: '1px solid #bfdbfe', borderRadius: 20, padding: '2px 10px' }}>{franchiseActivities.length}</span>
+                  <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--primary)', background: 'var(--primary-light)', border: '1px solid #bfdbfe', borderRadius: 20, padding: '2px 10px' }}>{franchiseActivities.length}</span>
                 </div>
                 <button className="btn btn-primary btn-sm" onClick={() => openAdd('franchise')}>
                   + {t('client.entreprise.add_activity')}
@@ -319,8 +323,8 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
               </div>
 
               {/* Franchise filters */}
-              <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
-                {franchiseGroupNames.length > 1 && (
+              {franchiseGroupNames.length > 1 && (
+                <div style={{ display: 'flex', gap: 10, marginBottom: 14, flexWrap: 'wrap', alignItems: 'center' }}>
                   <select
                     className="input"
                     style={{ maxWidth: 200 }}
@@ -330,46 +334,53 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                     <option value="">{t('client.entreprise.all_groups')}</option>
                     {franchiseGroupNames.map((g) => <option key={g} value={g}>{g}</option>)}
                   </select>
-                )}
-                <input
-                  type="text"
-                  className="input"
-                  style={{ minWidth: 140, flex: '1 1 auto', maxWidth: 220 }}
-                  placeholder={t('common.search') + '…'}
-                  value={filterFranchiseName}
-                  onChange={(e) => setFilterFranchiseName(e.target.value)}
-                />
-              </div>
+                  <input
+                    type="text"
+                    className="input"
+                    style={{ minWidth: 140, flex: '1 1 auto', maxWidth: 220 }}
+                    placeholder={t('common.search') + '…'}
+                    value={filterFranchiseName}
+                    onChange={(e) => setFilterFranchiseName(e.target.value)}
+                  />
+                </div>
+              )}
 
               {filteredFranchise.length === 0 ? (
                 <p className="text-muted">{t('common.no_result')}</p>
               ) : (
                 Object.entries(franchiseGrouped).sort(([a], [b]) => a.localeCompare(b)).map(([group, acts]) => (
-                  <div key={group} style={{ marginBottom: 20 }}>
-                    {franchiseGroupNames.length > 0 && (
-                      <h3 style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--primary)', marginBottom: 8 }}>
-                        {group} <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}>({acts.length})</span>
-                      </h3>
-                    )}
-                    <div className="activites-grid">
-                      {acts.map((act) => (
-                        <div key={act.id} className="activite-card">
-                          <div className="activite-card-header">
-                            <span className="activite-nom">{act.nom}</span>
-                            <div className="activite-actions">
-                              <button className="btn btn-ghost btn-sm" onClick={() => openIngredients(act)}>{t('client.entreprise.manage_ingredients')}</button>
-                              <button className="btn btn-ghost btn-sm" onClick={() => openEdit(act)}>{t('common.edit')}</button>
-                              <button className="btn btn-ghost btn-sm" onClick={() => openDuplicate(act)} title={t('client.entreprise.duplicate_activity')}>⧉</button>
-                              <button className="btn btn-danger-ghost btn-sm" onClick={() => deleteActivite(act.id)}>{t('common.delete')}</button>
-                            </div>
-                          </div>
-                          <div className="activite-details">
-                            {act.email && <span>✉ {act.email}</span>}
-                            {act.telephone && <span>☎ {act.telephone}</span>}
-                            {act.adresse && <span>📍 {act.adresse}</span>}
-                          </div>
-                        </div>
-                      ))}
+                  <div key={group} style={{ marginBottom: 24 }}>
+                    <h3 style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>
+                      🏢 {group} <span style={{ fontWeight: 400, fontSize: '0.72rem', opacity: 0.7 }}>({acts.length})</span>
+                    </h3>
+                    <div className="table-responsive card" style={{ marginBottom: 0 }}>
+                      <table className="table">
+                        <thead>
+                          <tr>
+                            <th>{t('common.name')}</th>
+                            <th style={{ width: 150 }}>{t('client.entreprise.activity_telephone')}</th>
+                            <th style={{ width: 190 }}>{t('client.entreprise.activity_email')}</th>
+                            <th>{t('client.entreprise.activity_adresse')}</th>
+                            <th style={{ width: 140, textAlign: 'right' }}></th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {acts.map((act) => (
+                            <tr key={act.id}>
+                              <td style={{ fontWeight: 700 }}>{act.nom}</td>
+                              <td style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{act.telephone || '—'}</td>
+                              <td style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{act.email || '—'}</td>
+                              <td style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{act.adresse || '—'}</td>
+                              <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+                                <button className="btn btn-ghost btn-sm" title={t('client.entreprise.manage_ingredients')} onClick={() => openIngredients(act)}>🧂</button>
+                                <button className="btn btn-ghost btn-sm" title={t('common.edit')} onClick={() => openEdit(act)}>✏️</button>
+                                <button className="btn btn-ghost btn-sm" title={t('client.entreprise.duplicate_activity')} onClick={() => openDuplicate(act)}>⧉</button>
+                                <button className="btn btn-danger-ghost btn-sm" title={t('common.delete')} onClick={() => deleteActivite(act.id)}>🗑</button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
                     </div>
                   </div>
                 ))
@@ -379,14 +390,14 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
 
           {/* Distinct section — always visible when any activities exist so user can add a distinct activity */}
           {(distinctActivities.length > 0 || franchiseActivities.length > 0) && (
-            <div style={{ marginBottom: 32 }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14, paddingBottom: 10, borderBottom: '2px solid var(--border)' }}>
+            <div style={{ marginBottom: 36 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                   <span style={{ width: 4, height: 22, borderRadius: 4, background: 'linear-gradient(180deg, #10b981 0%, #059669 100%)', display: 'inline-block', flexShrink: 0 }} />
-                  <h2 style={{ fontSize: '0.9rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--text)', margin: 0 }}>
+                  <h2 style={{ fontSize: '0.82rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text)', margin: 0 }}>
                     {t('nav.espace_distinct')}
                   </h2>
-                  <span style={{ fontSize: '0.78rem', fontWeight: 600, color: '#059669', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 20, padding: '2px 10px' }}>{distinctActivities.length}</span>
+                  <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#059669', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 20, padding: '2px 10px' }}>{distinctActivities.length}</span>
                 </div>
                 <button className="btn btn-secondary btn-sm" onClick={() => openAdd('distincte')}>
                   + {t('client.entreprise.add_activity')}
@@ -397,12 +408,11 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                 <p className="text-muted" style={{ fontSize: '0.85rem' }}>{t('nav.no_distinct_activity')}</p>
               ) : (
                 <>
-                  {/* Distinct filter */}
-                  <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', gap: 10, marginBottom: 14, flexWrap: 'wrap' }}>
                     <input
                       type="text"
                       className="input"
-                      style={{ minWidth: 140, flex: '1 1 auto', maxWidth: 220 }}
+                      style={{ minWidth: 140, flex: '1 1 auto', maxWidth: 260 }}
                       placeholder={t('common.search') + '…'}
                       value={filterDistinctName}
                       onChange={(e) => setFilterDistinctName(e.target.value)}
@@ -412,25 +422,34 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                   {filteredDistinct.length === 0 ? (
                     <p className="text-muted">{t('common.no_result')}</p>
                   ) : (
-                    <div className="activites-grid">
-                      {filteredDistinct.map((act) => (
-                        <div key={act.id} className="activite-card">
-                          <div className="activite-card-header">
-                            <span className="activite-nom">{act.nom}</span>
-                            <div className="activite-actions">
-                              <button className="btn btn-ghost btn-sm" onClick={() => openIngredients(act)}>{t('client.entreprise.manage_ingredients')}</button>
-                              <button className="btn btn-ghost btn-sm" onClick={() => openEdit(act)}>{t('common.edit')}</button>
-                              <button className="btn btn-ghost btn-sm" onClick={() => openDuplicate(act)} title={t('client.entreprise.duplicate_activity')}>⧉</button>
-                              <button className="btn btn-danger-ghost btn-sm" onClick={() => deleteActivite(act.id)}>{t('common.delete')}</button>
-                            </div>
-                          </div>
-                          <div className="activite-details">
-                            {act.email && <span>✉ {act.email}</span>}
-                            {act.telephone && <span>☎ {act.telephone}</span>}
-                            {act.adresse && <span>📍 {act.adresse}</span>}
-                          </div>
-                        </div>
-                      ))}
+                    <div className="table-responsive card" style={{ marginBottom: 0 }}>
+                      <table className="table">
+                        <thead>
+                          <tr>
+                            <th>{t('common.name')}</th>
+                            <th style={{ width: 150 }}>{t('client.entreprise.activity_telephone')}</th>
+                            <th style={{ width: 190 }}>{t('client.entreprise.activity_email')}</th>
+                            <th>{t('client.entreprise.activity_adresse')}</th>
+                            <th style={{ width: 140, textAlign: 'right' }}></th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {filteredDistinct.map((act) => (
+                            <tr key={act.id}>
+                              <td style={{ fontWeight: 700 }}>{act.nom}</td>
+                              <td style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{act.telephone || '—'}</td>
+                              <td style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{act.email || '—'}</td>
+                              <td style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{act.adresse || '—'}</td>
+                              <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+                                <button className="btn btn-ghost btn-sm" title={t('client.entreprise.manage_ingredients')} onClick={() => openIngredients(act)}>🧂</button>
+                                <button className="btn btn-ghost btn-sm" title={t('common.edit')} onClick={() => openEdit(act)}>✏️</button>
+                                <button className="btn btn-ghost btn-sm" title={t('client.entreprise.duplicate_activity')} onClick={() => openDuplicate(act)}>⧉</button>
+                                <button className="btn btn-danger-ghost btn-sm" title={t('common.delete')} onClick={() => deleteActivite(act.id)}>🗑</button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
                     </div>
                   )}
                 </>
