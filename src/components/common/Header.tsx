@@ -7,13 +7,9 @@ interface HeaderProps {
 }
 
 export default function Header({ onMenuToggle }: HeaderProps) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-
-  const toggleLanguage = () => {
-    i18n.changeLanguage(i18n.language === 'fr' ? 'en' : 'fr');
-  };
 
   const handleLogout = () => {
     logout();
@@ -32,9 +28,6 @@ export default function Header({ onMenuToggle }: HeaderProps) {
         </div>
       </div>
       <div className="header-right">
-        <button className="lang-toggle" onClick={toggleLanguage} title="Switch language">
-          {i18n.language === 'fr' ? '🇬🇧 EN' : '🇫🇷 FR'}
-        </button>
         <div className="user-info">
           <span className="user-name">{user?.name}</span>
           <span className={`role-badge role-${user?.role}`}>
