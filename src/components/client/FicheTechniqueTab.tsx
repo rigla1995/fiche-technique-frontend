@@ -34,12 +34,18 @@ export default function FicheTechniqueTab({ isEntreprise, franchiseActivities, d
   // Step 1a: franchise group picker
   const franchiseGroups = Array.from(new Set(franchiseActivities.map((a) => a.franchiseGroup || a.nom))).sort();
   const [selectedFranchiseGroup, setSelectedFranchiseGroup] = useState<string>('');
-  const activitiesInGroup = franchiseActivities.filter((a) => (a.franchiseGroup || a.nom) === selectedFranchiseGroup);
+  // Step 2: only activities with ingredients assigned
+  const allActivitiesInGroup = franchiseActivities.filter((a) => (a.franchiseGroup || a.nom) === selectedFranchiseGroup);
+  const activitiesInGroup = allActivitiesInGroup.filter((a) => (a.ingredientCount ?? 0) > 0);
 
   // Step 1b: franchise activity picker within selected group
   const [selectedFranchiseActId, setSelectedFranchiseActId] = useState<string>('');
   // Step 1b: distinct activity picker (when actCtx='distinct' without specific ID)
   const [selectedDistinctActId, setSelectedDistinctActId] = useState<string>(specificDistinctId);
+
+  // Product type availability (pre-fetched when activity step is done)
+  const [vendableCount, setVendableCount] = useState<number | null>(null);
+  const [utilisableCount, setUtilisableCount] = useState<number | null>(null);
 
   // Step 2: product type
   const [productType, setProductType] = useState<'vendable' | 'utilisable' | ''>('');
@@ -120,6 +126,13 @@ export default function FicheTechniqueTab({ isEntreprise, franchiseActivities, d
     setMode(null);
     setSelectedProductId('');
   }, [selectedFranchiseGroup]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Pre-fetch product type counts when activity step is done
+  useEffect(() => {
+    if (!actStepDone) { setVendableCount(null); setUtilisableCount(null); return; }
+    api.get('/products?type=vendable').then(({ data }) => setVendableCount((data as unknown[]).length)).catch(() => setVendableCount(0));
+    api.get('/products?type=utilisable').then(({ data }) => setUtilisableCount((data as unknown[]).length)).catch(() => setUtilisableCount(0));
+  }, [actStepDone, resolvedActId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Load products when productType + activity are ready
   useEffect(() => {
@@ -361,8 +374,8 @@ export default function FicheTechniqueTab({ isEntreprise, franchiseActivities, d
   return (
     <div style={{ maxWidth: 700 }}>
 
-      {/* Step 1a: Franchise group picker */}
-      {isEntreprise && isFranchiseCtx && franchiseGroups.length > 1 && (
+      {/* Step 1a: Franchise group picker — always shown */}
+      {isEntreprise && isFranchiseCtx && franchiseGroups.length >= 1 && (
         <div style={{ ...cardStyle, borderLeft: '4px solid var(--primary)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
             <span style={{ width: 22, height: 22, borderRadius: '50%', background: 'var(--primary)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.72rem', fontWeight: 800, flexShrink: 0 }}>1</span>
@@ -379,6 +392,15 @@ export default function FicheTechniqueTab({ isEntreprise, franchiseActivities, d
               </button>
             ))}
           </div>
+        </div>
+      )}
+
+      {/* Step 1b: Block message when group has no activities with ingredients */}
+      {isEntreprise && isFranchiseCtx && selectedFranchiseGroup && allActivitiesInGroup.length > 0 && activitiesInGroup.length === 0 && (
+        <div style={{ ...cardStyle, borderLeft: '4px solid var(--primary)', background: '#fff7ed' }}>
+          <p style={{ margin: 0, color: '#c05621', fontSize: '0.88rem' }}>
+            ⚠️ Aucune activité de ce groupe n'a encore d'ingrédients assignés. Rendez-vous dans le <strong>Catalogue Global</strong> pour en assigner.
+          </p>
         </div>
       )}
 
@@ -439,34 +461,36 @@ export default function FicheTechniqueTab({ isEntreprise, franchiseActivities, d
             <span style={stepLabel}>Type de produit</span>
           </div>
           <div style={{ display: 'flex', gap: 10 }}>
-            {[
-              { key: 'vendable', icon: '🍔', label: t('client.products.tab_vendable') },
-              { key: 'utilisable', icon: '🧪', label: t('client.products.tab_utilisable') },
-            ].map(({ key, icon, label }) => (
-              <button
-                key={key}
-                style={{
-                  flex: 1,
-                  padding: '11px 16px',
-                  borderRadius: 8,
-                  border: '2px solid',
-                  borderColor: productType === key ? 'var(--primary)' : 'var(--border)',
-                  background: productType === key ? 'var(--primary)' : 'transparent',
-                  color: productType === key ? '#fff' : 'var(--text)',
-                  cursor: 'pointer',
-                  fontWeight: 600,
-                  fontSize: '0.9rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 8,
-                  transition: 'all 0.12s',
-                }}
-                onClick={() => { setProductType(key as 'vendable' | 'utilisable'); setMode(null); setSelectedProductId(''); }}
-              >
-                {icon} {label}
-              </button>
-            ))}
+            {([
+              { key: 'vendable', icon: '🍔', label: t('client.products.tab_vendable'), count: vendableCount },
+              { key: 'utilisable', icon: '🧪', label: t('client.products.tab_utilisable'), count: utilisableCount },
+            ] as { key: string; icon: string; label: string; count: number | null }[])
+              .filter(({ count }) => count === null || count > 0)
+              .map(({ key, icon, label }) => (
+                <button
+                  key={key}
+                  style={{
+                    flex: 1,
+                    padding: '11px 16px',
+                    borderRadius: 8,
+                    border: '2px solid',
+                    borderColor: productType === key ? 'var(--primary)' : 'var(--border)',
+                    background: productType === key ? 'var(--primary)' : 'transparent',
+                    color: productType === key ? '#fff' : 'var(--text)',
+                    cursor: 'pointer',
+                    fontWeight: 600,
+                    fontSize: '0.9rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 8,
+                    transition: 'all 0.12s',
+                  }}
+                  onClick={() => { setProductType(key as 'vendable' | 'utilisable'); setMode(null); setSelectedProductId(''); }}
+                >
+                  {icon} {label}
+                </button>
+              ))}
           </div>
         </div>
       )}

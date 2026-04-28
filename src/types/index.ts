@@ -108,6 +108,7 @@ export interface Activite {
   laboNom?: string | null;
   laboTel?: string | null;
   laboAdresse?: string | null;
+  ingredientCount?: number;
   createdAt?: string;
 }
 

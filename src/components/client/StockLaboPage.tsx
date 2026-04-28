@@ -247,9 +247,6 @@ export default function StockLaboPage() {
           )}
         </div>
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-          <button className="btn btn-secondary btn-sm" onClick={openIngModal}>
-            ⚙️ {t('client.labo.manage_ingredients')}
-          </button>
           {(labo?.activites?.length ?? 0) > 0 && (
             <button className="btn btn-secondary btn-sm" onClick={openAssignModal}>
               🔗 {t('client.labo.assign_to_activities')}
@@ -267,7 +264,7 @@ export default function StockLaboPage() {
         <div className="empty-state">
           <span className="empty-icon">🏭</span>
           <p>{t('client.labo.empty_stock')}</p>
-          <button className="btn btn-primary" onClick={openIngModal}>⚙️ {t('client.labo.manage_ingredients')}</button>
+          <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{t('client.labo.use_catalogue_global', 'Assignez des ingrédients via le Catalogue Global.')}</p>
         </div>
       ) : (
         <>
@@ -275,24 +272,24 @@ export default function StockLaboPage() {
           <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap', alignItems: 'flex-end' }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
               <span style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('historique_appro.category', 'Catégorie')}</span>
-              <select className="input" style={{ maxWidth: 200 }} value={filterCategorie} onChange={(e) => setFilterCategorie(e.target.value)}>
-                <option value="">{t('client.catalogue_franchise.all_categories')}</option>
+              <select className="input" style={{ maxWidth: 200 }} value={filterCategorie} onChange={(e) => { setFilterCategorie(e.target.value); setFilterNom(''); }}>
+                <option value="" disabled>{t('historique_appro.category', 'Catégorie')}…</option>
                 {allCategories.map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-              <span style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('client.stock.ingredient')}</span>
-              <input
-                type="text"
-                className="input"
-                style={{ minWidth: 160, maxWidth: 240 }}
-                placeholder={t('client.stock.search_ingredient')}
-                value={filterNom}
-                onChange={(e) => setFilterNom(e.target.value)}
-              />
-            </div>
+            {filterCategorie && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                <span style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('common.ingredient_name', "Nom de l'ingrédient")}</span>
+                <select className="input" style={{ minWidth: 180, maxWidth: 260 }} value={filterNom} onChange={(e) => setFilterNom(e.target.value)}>
+                  <option value="">— {t('common.all', 'Tous')} —</option>
+                  {stock.filter((r) => r.categorie === filterCategorie).map((r) => (
+                    <option key={r.ingredientId} value={r.nom}>{r.nom}</option>
+                  ))}
+                </select>
+              </div>
+            )}
             {(filterCategorie || filterNom) && (
-              <button className="btn btn-ghost btn-sm" style={{ alignSelf: 'flex-end' }} onClick={() => { setFilterCategorie(''); setFilterNom(''); }}>✕</button>
+              <button className="btn btn-ghost btn-sm" style={{ alignSelf: 'flex-end' }} onClick={() => { setFilterCategorie(''); setFilterNom(''); }}>✕ {t('common.reset', 'Réinitialiser')}</button>
             )}
           </div>
 
