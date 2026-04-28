@@ -110,6 +110,19 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
     setError('');
   };
 
+  // Derived from activites — needed before franchiseUnlocked to avoid TDZ
+  const franchiseActivitiesEarly = activites.filter((a) => a.type === 'franchise');
+  const distinctActivitiesEarly = activites.filter((a) => a.type !== 'franchise');
+  const franchiseGroupNamesEarly = Array.from(new Set(franchiseActivitiesEarly.map((a) => a.franchiseGroup || a.nom))).sort();
+  const distinctNamesEarly = Array.from(new Set(distinctActivitiesEarly.map((a) => a.nom.toLowerCase())));
+
+  const franchiseNameConflict = !editingId && franchiseName.trim()
+    ? franchiseGroupNamesEarly.some((g) => g.toLowerCase() === franchiseName.trim().toLowerCase())
+    : false;
+  const distinctNameConflict = !editingId && !isDuplicate && form.nom.trim()
+    ? distinctNamesEarly.includes(form.nom.trim().toLowerCase())
+    : false;
+
   const franchiseCount = Math.max(0, parseInt(nombreActivites) || 0);
   const franchiseUnlocked = isFranchise && !editingId && !isDuplicate && franchiseName.trim().length > 0 && franchiseCount > 1 && !franchiseNameConflict;
 
@@ -274,18 +287,9 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
     ingredientGroups[cat].push(ing);
   }
 
-  const franchiseActivities = activites.filter((a) => a.type === 'franchise');
-  const distinctActivities = activites.filter((a) => a.type !== 'franchise');
-  const franchiseGroupNames = Array.from(new Set(franchiseActivities.map((a) => a.franchiseGroup || a.nom))).sort();
-  const distinctNames = Array.from(new Set(distinctActivities.map((a) => a.nom.toLowerCase())));
-
-  // Inline duplicate checks — used to block the wizard/form before any API call
-  const franchiseNameConflict = !editingId && franchiseName.trim()
-    ? franchiseGroupNames.some((g) => g.toLowerCase() === franchiseName.trim().toLowerCase())
-    : false;
-  const distinctNameConflict = !editingId && !isDuplicate && form.nom.trim()
-    ? distinctNames.includes(form.nom.trim().toLowerCase())
-    : false;
+  const franchiseActivities = franchiseActivitiesEarly;
+  const distinctActivities = distinctActivitiesEarly;
+  const franchiseGroupNames = franchiseGroupNamesEarly;
   const filteredFranchise = franchiseActivities.filter((a) => {
     const g = a.franchiseGroup || a.nom;
     return (!filterFranchiseGroup || g === filterFranchiseGroup) &&
