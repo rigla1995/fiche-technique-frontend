@@ -176,6 +176,16 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
     }
   }, [isEntreprise, step, location.pathname]);
 
+  // Re-fetch labos immediately when a franchise group is deleted
+  useEffect(() => {
+    if (!isEntreprise) return;
+    const handler = () => {
+      api.get('/api/labo').then(({ data }) => setLabos(data)).catch(() => setLabos([]));
+    };
+    window.addEventListener('labos-changed', handler);
+    return () => window.removeEventListener('labos-changed', handler);
+  }, [isEntreprise]);
+
   const adminLinks = [
     { to: '/admin', label: t('nav.dashboard'), icon: '📊', end: true },
     { to: '/admin/clients', label: t('nav.clients'), icon: '👥' },

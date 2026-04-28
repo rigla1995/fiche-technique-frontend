@@ -31,7 +31,12 @@ export default function FicheTechniqueTab({ isEntreprise, franchiseActivities, d
   const isDistinctCtx = actCtx === 'distinct' || actCtx.startsWith('distinct-');
   const specificDistinctId = actCtx.startsWith('distinct-') ? actCtx.replace('distinct-', '') : '';
 
-  // Step 1: franchise activity picker (when multiple franchise activities exist)
+  // Step 1a: franchise group picker
+  const franchiseGroups = Array.from(new Set(franchiseActivities.map((a) => a.franchiseGroup || a.nom))).sort();
+  const [selectedFranchiseGroup, setSelectedFranchiseGroup] = useState<string>('');
+  const activitiesInGroup = franchiseActivities.filter((a) => (a.franchiseGroup || a.nom) === selectedFranchiseGroup);
+
+  // Step 1b: franchise activity picker within selected group
   const [selectedFranchiseActId, setSelectedFranchiseActId] = useState<string>('');
   // Step 1b: distinct activity picker (when actCtx='distinct' without specific ID)
   const [selectedDistinctActId, setSelectedDistinctActId] = useState<string>(specificDistinctId);
@@ -90,17 +95,31 @@ export default function FicheTechniqueTab({ isEntreprise, franchiseActivities, d
   // Whether the activity step is complete
   const actStepDone = (() => {
     if (!isEntreprise) return true;
-    if (isFranchiseCtx) return franchiseActivities.length <= 1 || !!selectedFranchiseActId;
+    if (isFranchiseCtx) {
+      if (!selectedFranchiseGroup) return false;
+      return activitiesInGroup.length <= 1 || !!selectedFranchiseActId;
+    }
     if (isDistinctCtx) return !!(specificDistinctId || selectedDistinctActId);
     return false;
   })();
 
-  // Auto-select franchise activity if only one
+  // Auto-select franchise group if only one
   useEffect(() => {
-    if (isFranchiseCtx && franchiseActivities.length === 1) {
-      setSelectedFranchiseActId(String(franchiseActivities[0].id));
+    if (isFranchiseCtx && franchiseGroups.length === 1 && !selectedFranchiseGroup) {
+      setSelectedFranchiseGroup(franchiseGroups[0]);
     }
-  }, [isFranchiseCtx, franchiseActivities]);
+  }, [isFranchiseCtx, franchiseGroups.length]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Auto-select activity if only one in the selected group
+  useEffect(() => {
+    if (activitiesInGroup.length === 1) {
+      setSelectedFranchiseActId(String(activitiesInGroup[0].id));
+    } else {
+      setSelectedFranchiseActId('');
+    }
+    setMode(null);
+    setSelectedProductId('');
+  }, [selectedFranchiseGroup]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Load products when productType + activity are ready
   useEffect(() => {
@@ -342,12 +361,36 @@ export default function FicheTechniqueTab({ isEntreprise, franchiseActivities, d
   return (
     <div style={{ maxWidth: 700 }}>
 
-      {/* Step 1: Activity selection for franchise (multiple activities) */}
-      {isEntreprise && isFranchiseCtx && franchiseActivities.length > 1 && (
-        <div style={cardStyle}>
-          <span style={stepLabel}>Activité franchise</span>
+      {/* Step 1a: Franchise group picker */}
+      {isEntreprise && isFranchiseCtx && franchiseGroups.length > 1 && (
+        <div style={{ ...cardStyle, borderLeft: '4px solid var(--primary)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+            <span style={{ width: 22, height: 22, borderRadius: '50%', background: 'var(--primary)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.72rem', fontWeight: 800, flexShrink: 0 }}>1</span>
+            <span style={stepLabel}>Franchise</span>
+          </div>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            {franchiseActivities.map((a) => (
+            {franchiseGroups.map((g) => (
+              <button
+                key={g}
+                style={chipBtn(selectedFranchiseGroup === g)}
+                onClick={() => setSelectedFranchiseGroup(g)}
+              >
+                🏢 {g}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Step 1b: Activity within the selected franchise group */}
+      {isEntreprise && isFranchiseCtx && selectedFranchiseGroup && activitiesInGroup.length > 1 && (
+        <div style={{ ...cardStyle, borderLeft: '4px solid var(--primary)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+            <span style={{ width: 22, height: 22, borderRadius: '50%', background: 'var(--primary)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.72rem', fontWeight: 800, flexShrink: 0 }}>{franchiseGroups.length > 1 ? '2' : '1'}</span>
+            <span style={stepLabel}>Activité — {selectedFranchiseGroup}</span>
+          </div>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            {activitiesInGroup.map((a) => (
               <button
                 key={a.id}
                 style={chipBtn(selectedFranchiseActId === String(a.id))}
@@ -388,8 +431,13 @@ export default function FicheTechniqueTab({ isEntreprise, franchiseActivities, d
 
       {/* Step 2: Product type */}
       {actStepDone && (
-        <div style={cardStyle}>
-          <span style={stepLabel}>Type de produit</span>
+        <div style={{ ...cardStyle, borderLeft: '4px solid #10b981' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+            <span style={{ width: 22, height: 22, borderRadius: '50%', background: '#10b981', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.72rem', fontWeight: 800, flexShrink: 0 }}>
+              {isFranchiseCtx ? (franchiseGroups.length > 1 ? (activitiesInGroup.length > 1 ? '3' : '2') : activitiesInGroup.length > 1 ? '2' : '1') : isDistinctCtx && !specificDistinctId ? '2' : '1'}
+            </span>
+            <span style={stepLabel}>Type de produit</span>
+          </div>
           <div style={{ display: 'flex', gap: 10 }}>
             {[
               { key: 'vendable', icon: '🍔', label: t('client.products.tab_vendable') },
@@ -425,8 +473,13 @@ export default function FicheTechniqueTab({ isEntreprise, franchiseActivities, d
 
       {/* Step 3: Product */}
       {productType && actStepDone && (
-        <div style={cardStyle}>
-          <span style={stepLabel}>Produit</span>
+        <div style={{ ...cardStyle, borderLeft: '4px solid #f59e0b' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+            <span style={{ width: 22, height: 22, borderRadius: '50%', background: '#f59e0b', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.72rem', fontWeight: 800, flexShrink: 0 }}>
+              {isFranchiseCtx ? (franchiseGroups.length > 1 ? (activitiesInGroup.length > 1 ? '4' : '3') : activitiesInGroup.length > 1 ? '3' : '2') : isDistinctCtx && !specificDistinctId ? '3' : '2'}
+            </span>
+            <span style={stepLabel}>Produit</span>
+          </div>
           {productsLoading ? (
             <span style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>{t('common.loading')}</span>
           ) : products.length === 0 ? (
@@ -449,8 +502,13 @@ export default function FicheTechniqueTab({ isEntreprise, franchiseActivities, d
 
       {/* Step 4: Mode */}
       {selectedProductId && (
-        <div style={cardStyle}>
-          <span style={stepLabel}>{t('client.fiche_technique.choose_mode')}</span>
+        <div style={{ ...cardStyle, borderLeft: '4px solid #8b5cf6' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+            <span style={{ width: 22, height: 22, borderRadius: '50%', background: '#8b5cf6', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.72rem', fontWeight: 800, flexShrink: 0 }}>
+              {isFranchiseCtx ? (franchiseGroups.length > 1 ? (activitiesInGroup.length > 1 ? '5' : '4') : activitiesInGroup.length > 1 ? '4' : '3') : isDistinctCtx && !specificDistinctId ? '4' : '3'}
+            </span>
+            <span style={stepLabel}>{t('client.fiche_technique.choose_mode')}</span>
+          </div>
           <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
 
             {/* FP Stock card */}

@@ -273,6 +273,7 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
     try {
       if (deleteTarget.kind === 'franchise-group') {
         await api.delete(`/api/entreprise/franchise-groups/${encodeURIComponent(deleteTarget.group)}`);
+        window.dispatchEvent(new Event('labos-changed'));
       } else {
         await api.delete(`/api/entreprise/activites/${deleteTarget.act.id}`);
       }
