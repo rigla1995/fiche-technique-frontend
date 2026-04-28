@@ -103,6 +103,7 @@ export default function TransferPage() {
 
   const handleTransfer = async () => {
     setErrorMsg('');
+    if (!refFacture.trim()) { setErrorMsg('Le N° de BL (Réf. Facture) est obligatoire.'); return; }
     // Build transfer list
     const transfers: { activiteId: number; ingredientId: number; quantite: number }[] = [];
     for (const [ingId, actMap] of Object.entries(qtys)) {
@@ -206,7 +207,7 @@ export default function TransferPage() {
         </div>
         <div style={{ flex: 1, minWidth: 160 }}>
           <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 4 }}>
-            Réf. Facture / BL
+            Réf. Facture / BL <span style={{ color: 'var(--danger, #ef4444)' }}>*</span>
           </label>
           <input
             type="text"
