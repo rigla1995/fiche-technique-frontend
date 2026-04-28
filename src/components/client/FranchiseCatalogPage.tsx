@@ -22,6 +22,8 @@ export default function FranchiseCatalogPage() {
   const [filterCategory, setFilterCategory] = useState('');
   const [filterIngId, setFilterIngId] = useState<number | ''>('');
   const [filterName, setFilterName] = useState('');
+  const [openCats, setOpenCats] = useState<Set<string>>(new Set());
+  const toggleCat = (cat: string) => setOpenCats((prev) => { const n = new Set(prev); if (n.has(cat)) n.delete(cat); else n.add(cat); return n; });
 
   // Derive franchise groups from activites
   const groups = useMemo(() => {
@@ -188,11 +190,16 @@ export default function FranchiseCatalogPage() {
           {groupActivities.length === 0 ? (
             <p className="text-muted">{t('client.catalogue_franchise.no_activities')}</p>
           ) : (
-            Object.entries(ingredientGroups).sort(([a], [b]) => a.localeCompare(b)).map(([cat, items]) => (
-              <div key={cat} style={{ marginBottom: 28 }}>
-                <h2 style={{ fontSize: '0.82rem', fontWeight: 800, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10 }}>
-                  🏷️ {cat} <span style={{ fontWeight: 400, fontSize: '0.75rem', opacity: 0.7 }}>({items.length})</span>
-                </h2>
+            Object.entries(ingredientGroups).sort(([a], [b]) => a.localeCompare(b)).map(([cat, items]) => {
+              const isOpen = openCats.has(cat);
+              return (
+              <div key={cat} style={{ marginBottom: 8 }}>
+                <button onClick={() => toggleCat(cat)} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0', width: '100%', textAlign: 'left', borderBottom: '2px solid var(--border)', marginBottom: isOpen ? 10 : 0 }}>
+                  <span style={{ fontSize: '0.82rem', fontWeight: 800, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>🏷️ {cat}</span>
+                  <span style={{ fontWeight: 400, fontSize: '0.75rem', color: 'var(--text-muted)' }}>({items.length})</span>
+                  <span style={{ marginLeft: 'auto', fontSize: '0.8rem', color: 'var(--text-muted)' }}>{isOpen ? '▼' : '▶'}</span>
+                </button>
+                {isOpen && (
                 <div className="table-responsive card" style={{ marginBottom: 0 }}>
                   <table className="table" style={{ minWidth: 280 + groupActivities.length * 120 }}>
                     <thead>
@@ -242,8 +249,10 @@ export default function FranchiseCatalogPage() {
                     </tbody>
                   </table>
                 </div>
+                )}
               </div>
-            ))
+              );
+            })
           )}
         </>
       )}

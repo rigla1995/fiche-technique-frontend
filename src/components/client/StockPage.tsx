@@ -153,6 +153,8 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, ac
   const [rows, setRows] = useState<Record<number, StockRowState>>(() => buildInitialRowState(entries));
   const [historyOpen, setHistoryOpen] = useState<Record<number, boolean>>({});
   const [historyData, setHistoryData] = useState<Record<number, StockHistoryEntry[]>>({});
+  const [openCats, setOpenCats] = useState<Set<string>>(new Set());
+  const toggleCat = (cat: string) => setOpenCats((prev) => { const n = new Set(prev); if (n.has(cat)) n.delete(cat); else n.add(cat); return n; });
 
   useEffect(() => { setRows(buildInitialRowState(entries)); }, [entries]);
 
@@ -213,11 +215,16 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, ac
 
   return (
     <div>
-      {Object.entries(groups).sort(([a], [b]) => a.localeCompare(b)).map(([cat, items]) => (
-        <div key={cat} style={{ marginBottom: 28 }}>
-          <h2 style={{ fontSize: '0.82rem', fontWeight: 800, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10 }}>
-            🏷️ {cat}
-          </h2>
+      {Object.entries(groups).sort(([a], [b]) => a.localeCompare(b)).map(([cat, items]) => {
+        const isOpen = openCats.has(cat);
+        return (
+        <div key={cat} style={{ marginBottom: 8 }}>
+          <button onClick={() => toggleCat(cat)} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0', width: '100%', textAlign: 'left', borderBottom: '2px solid var(--border)', marginBottom: isOpen ? 10 : 0 }}>
+            <span style={{ fontSize: '0.82rem', fontWeight: 800, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>🏷️ {cat}</span>
+            <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 400 }}>({items.length})</span>
+            <span style={{ marginLeft: 'auto', fontSize: '0.8rem', color: 'var(--text-muted)' }}>{isOpen ? '▼' : '▶'}</span>
+          </button>
+          {isOpen && (
           <div className="table-responsive card" style={{ marginBottom: 0 }}>
             <table className="table">
               <thead>
@@ -343,8 +350,10 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, ac
               </tbody>
             </table>
           </div>
+          )}
         </div>
-      ))}
+        );
+      })}
     </div>
   );
 }

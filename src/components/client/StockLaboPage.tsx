@@ -80,8 +80,10 @@ export default function StockLaboPage() {
   const [assignFilterCat, setAssignFilterCat] = useState('');
   const [assignFilterIngId, setAssignFilterIngId] = useState<number | ''>('');
   const [assignFilterNom, setAssignFilterNom] = useState('');
-  // Collapsible categories (set of collapsed cat names)
-  const [collapsedCats, setCollapsedCats] = useState<Set<string>>(new Set());
+  // Collapsible categories in assign modal (set of OPEN cat names — default empty = all closed)
+  const [openAssignCats, setOpenAssignCats] = useState<Set<string>>(new Set());
+  // Collapsible categories in main stock view
+  const [openStockCats, setOpenStockCats] = useState<Set<string>>(new Set());
 
   const today = todayStr();
 
@@ -202,7 +204,7 @@ export default function StockLaboPage() {
     setAssignFilterCat('');
     setAssignFilterIngId('');
     setAssignFilterNom('');
-    setCollapsedCats(new Set());
+    setOpenAssignCats(new Set());
     setAssignLoading(true);
     try {
       const { data } = await api.get(`/api/labo/${laboId}/activity-assignments`);
@@ -323,11 +325,17 @@ export default function StockLaboPage() {
 
           {Object.keys(groups).length === 0 ? (
             <p className="text-muted">{t('common.no_result')}</p>
-          ) : Object.entries(groups).sort(([a], [b]) => a.localeCompare(b)).map(([cat, rows]) => (
-          <div key={cat} style={{ marginBottom: 28 }}>
-            <h2 style={{ fontSize: '0.82rem', fontWeight: 800, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10 }}>
-              🏷️ {cat}
-            </h2>
+          ) : Object.entries(groups).sort(([a], [b]) => a.localeCompare(b)).map(([cat, rows]) => {
+            const isCatOpen = openStockCats.has(cat);
+            const toggleStockCat = () => setOpenStockCats((prev) => { const n = new Set(prev); if (n.has(cat)) n.delete(cat); else n.add(cat); return n; });
+            return (
+          <div key={cat} style={{ marginBottom: 12 }}>
+            <button onClick={toggleStockCat} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0', width: '100%', textAlign: 'left', borderBottom: '2px solid var(--border)', marginBottom: isCatOpen ? 10 : 0 }}>
+              <span style={{ fontSize: '0.82rem', fontWeight: 800, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>🏷️ {cat}</span>
+              <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 400 }}>({rows.length})</span>
+              <span style={{ marginLeft: 'auto', fontSize: '0.8rem', color: 'var(--text-muted)' }}>{isCatOpen ? '▼' : '▶'}</span>
+            </button>
+            {isCatOpen && (
             <div className="table-responsive card" style={{ marginBottom: 0 }}>
               <table className="table">
                 <thead>
@@ -441,8 +449,10 @@ export default function StockLaboPage() {
                 </tbody>
               </table>
             </div>
+            )}
           </div>
-        ))}
+            );
+          })}
         </>
       )}
 
@@ -519,8 +529,8 @@ export default function StockLaboPage() {
 
                     {/* Category sections (collapsible) */}
                     {Object.entries(cats).sort(([a], [b]) => a.localeCompare(b)).map(([cat, items]) => {
-                      const isCollapsed = collapsedCats.has(cat);
-                      const toggleCat = () => setCollapsedCats((prev) => {
+                      const isOpen = openAssignCats.has(cat);
+                      const toggleCat = () => setOpenAssignCats((prev) => {
                         const next = new Set(prev);
                         if (next.has(cat)) next.delete(cat); else next.add(cat);
                         return next;
@@ -535,9 +545,9 @@ export default function StockLaboPage() {
                               🏷️ {cat}
                             </span>
                             <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 400 }}>({items.length})</span>
-                            <span style={{ marginLeft: 'auto', fontSize: '0.8rem', color: 'var(--text-muted)' }}>{isCollapsed ? '▶' : '▼'}</span>
+                            <span style={{ marginLeft: 'auto', fontSize: '0.8rem', color: 'var(--text-muted)' }}>{isOpen ? '▼' : '▶'}</span>
                           </button>
-                          {!isCollapsed && (
+                          {isOpen && (
                             <div className="table-responsive" style={{ overflowX: 'auto' }}>
                               <table className="table" style={{ minWidth: 400 }}>
                                 <thead>
