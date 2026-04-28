@@ -549,6 +549,8 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                     <ProductSubLinks locked={false} actCtx="distinct" ftActCtx="distinct" onClick={onClose} />
                   )}
 
+                  <Divider />
+
                   {/* Fournisseurs — locked if no activities yet */}
                   {!isOnboarding && (
                     <li>

@@ -50,15 +50,7 @@ function buildInitialRowState(entries: StockEntry[]): Record<number, StockRowSta
 
 function canSaveStockRow(row: StockRowState): boolean {
   if (row.saving) return false;
-  if (!row.hasExisting) {
-    return row.quantite.trim() !== '' && row.prixUnitaire.trim() !== '' && row.dateAppro.trim() !== '';
-  }
-  return (
-    row.quantite !== row.origQuantite ||
-    row.prixUnitaire !== row.origPrixUnitaire ||
-    row.dateAppro !== row.origDateAppro ||
-    row.fournisseurId !== ''
-  );
+  return row.quantite.trim() !== '' && row.prixUnitaire.trim() !== '' && row.dateAppro.trim() !== '';
 }
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -323,6 +315,8 @@ interface StockMatrixProps {
   categoryFilter: string;
   ingredientFilter?: number | '';
   nameFilter: string;
+  fournisseurFilter?: string;
+  refFactureFilter?: string;
   activiteId?: number;
   isEntreprise: boolean;
   fournisseurs?: Fournisseur[];
@@ -331,7 +325,7 @@ interface StockMatrixProps {
   onSavePerte?: (ingredientId: number, quantite: number, typePerte: string, datePerte: string) => Promise<void>;
 }
 
-function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, activiteId, isEntreprise, fournisseurs = [], onSave, onSaveSeuilMin }: StockMatrixProps) {
+function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fournisseurFilter, refFactureFilter, activiteId, isEntreprise, fournisseurs = [], onSave, onSaveSeuilMin }: StockMatrixProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [rows, setRows] = useState<Record<number, StockRowState>>(() => buildInitialRowState(entries));
@@ -406,6 +400,8 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, ac
   if (categoryFilter) filtered = filtered.filter((e) => (e.categorie || t('client.ingredients_catalog.no_category')) === categoryFilter);
   if (ingredientFilter) filtered = filtered.filter((e) => e.ingredientId === ingredientFilter);
   if (nameFilter) filtered = filtered.filter((e) => e.nom.toLowerCase().includes(nameFilter.toLowerCase()));
+  if (fournisseurFilter) filtered = filtered.filter((e) => String(e.lastFournisseurId ?? '') === fournisseurFilter);
+  if (refFactureFilter) filtered = filtered.filter((e) => (e.lastRefFacture ?? '').toLowerCase().includes(refFactureFilter.toLowerCase()));
 
   if (filtered.length === 0) return <p className="text-muted">{t('common.no_result')}</p>;
 
@@ -532,14 +528,6 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, ac
                             </td>
                             <td style={{ whiteSpace: 'nowrap' }}>
                               {row.error && <span style={{ color: 'var(--danger)', fontSize: '0.75rem', marginRight: 4 }}>!</span>}
-                              <button
-                                className={`btn btn-sm ${row.saved ? 'btn-success' : 'btn-primary'}`}
-                                onClick={() => saveRow(entry.ingredientId)}
-                                disabled={!canSaveStockRow(row)}
-                                style={{ marginRight: 4 }}
-                              >
-                                {row.saving ? '…' : row.saved ? '✓' : t('client.stock.save')}
-                              </button>
                               {hasFournisseurs && (
                                 <button
                                   className="btn btn-sm"
@@ -570,6 +558,14 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, ac
                                   📉
                                 </button>
                               )}
+                              <button
+                                className={`btn btn-sm ${row.saved ? 'btn-success' : 'btn-primary'}`}
+                                onClick={() => saveRow(entry.ingredientId)}
+                                disabled={!canSaveStockRow(row)}
+                                style={{ marginRight: 4 }}
+                              >
+                                {row.saving ? '…' : row.saved ? '✓' : t('client.stock.save')}
+                              </button>
                               <button
                                 className="btn btn-ghost btn-sm"
                                 onClick={() => toggleHistory(entry.ingredientId)}
@@ -679,6 +675,8 @@ function ActivityStockSection({ label, activities, isFranchise, onSave }: Activi
   const [categoryFilter, setCategoryFilter] = useState('');
   const [ingredientFilter, setIngredientFilter] = useState<number | ''>('');
   const [nameFilter, setNameFilter] = useState('');
+  const [fournisseurFilter, setFournisseurFilter] = useState('');
+  const [refFactureFilter, setRefFactureFilter] = useState('');
   const [duplicating, setDuplicating] = useState(false);
   const [dupMsg, setDupMsg] = useState('');
 
@@ -692,6 +690,8 @@ function ActivityStockSection({ label, activities, isFranchise, onSave }: Activi
     setEntries([]);
     setCategoryFilter('');
     setNameFilter('');
+    setFournisseurFilter('');
+    setRefFactureFilter('');
     try {
       const [stockRes, foRes] = await Promise.all([
         api.get(`/api/stock/entreprise/${actId}`),
@@ -794,8 +794,29 @@ function ActivityStockSection({ label, activities, isFranchise, onSave }: Activi
           value={nameFilter}
           onChange={(e) => setNameFilter(e.target.value)}
         />
-        {(categoryFilter || ingredientFilter !== '' || nameFilter) && (
-          <button className="btn btn-ghost btn-sm" style={{ alignSelf: 'flex-end' }} onClick={() => { setCategoryFilter(''); setIngredientFilter(''); setNameFilter(''); }}>✕</button>
+        {fournisseurs.length > 0 && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+            <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Fournisseur</span>
+            <select className="input" style={{ maxWidth: 200 }} value={fournisseurFilter} onChange={(e) => setFournisseurFilter(e.target.value)}>
+              <option value="">— Tous —</option>
+              {fournisseurs.map((f) => (
+                <option key={f.id} value={f.id}>{f.isLabo ? '🏭 ' : '🚚 '}{f.nom}</option>
+              ))}
+            </select>
+          </div>
+        )}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+          <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Réf. Facture</span>
+          <input
+            type="text" className="input"
+            style={{ minWidth: 120, maxWidth: 180 }}
+            placeholder="Réf. facture…"
+            value={refFactureFilter}
+            onChange={(e) => setRefFactureFilter(e.target.value)}
+          />
+        </div>
+        {(categoryFilter || ingredientFilter !== '' || nameFilter || fournisseurFilter || refFactureFilter) && (
+          <button className="btn btn-ghost btn-sm" style={{ alignSelf: 'flex-end' }} onClick={() => { setCategoryFilter(''); setIngredientFilter(''); setNameFilter(''); setFournisseurFilter(''); setRefFactureFilter(''); }}>✕</button>
         )}
       </div>
 
@@ -810,6 +831,8 @@ function ActivityStockSection({ label, activities, isFranchise, onSave }: Activi
           categoryFilter={categoryFilter}
           ingredientFilter={ingredientFilter}
           nameFilter={nameFilter}
+          fournisseurFilter={fournisseurFilter}
+          refFactureFilter={refFactureFilter}
           activiteId={selectedId}
           isEntreprise={true}
           fournisseurs={fournisseurs}

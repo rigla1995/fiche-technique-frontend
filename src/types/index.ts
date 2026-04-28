@@ -142,6 +142,8 @@ export interface StockEntry {
   dateAppro: string | null;
   updatedAt: string | null;
   seuilMin: number | null;
+  lastFournisseurId?: number | null;
+  lastRefFacture?: string | null;
 }
 
 export interface StockHistoryEntry {
