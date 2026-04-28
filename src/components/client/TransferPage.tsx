@@ -52,6 +52,9 @@ export default function TransferPage() {
   const [filterCategorie, setFilterCategorie] = useState('');
   const [filterNom, setFilterNom] = useState('');
   const [filterIngredientId, setFilterIngredientId] = useState<number | ''>('');
+  // Collapsible categories (open = expanded)
+  const [openCats, setOpenCats] = useState<Set<string>>(new Set());
+  const toggleCat = (cat: string) => setOpenCats((prev) => { const n = new Set(prev); if (n.has(cat)) n.delete(cat); else n.add(cat); return n; });
 
   const load = useCallback(async () => {
     if (!laboId) return;
@@ -266,11 +269,16 @@ export default function TransferPage() {
         <>
           {Object.keys(groups).length === 0 ? (
             <p className="text-muted">{t('common.no_result')}</p>
-          ) : Object.entries(groups).sort(([a], [b]) => a.localeCompare(b)).map(([cat, rows]) => (
-            <div key={cat} style={{ marginBottom: 28 }}>
-              <h2 style={{ fontSize: '0.82rem', fontWeight: 800, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10, marginTop: 0 }}>
-                🏷️ {cat}
-              </h2>
+          ) : Object.entries(groups).sort(([a], [b]) => a.localeCompare(b)).map(([cat, rows]) => {
+            const isOpen = openCats.has(cat);
+            return (
+            <div key={cat} style={{ marginBottom: 8 }}>
+              <button onClick={() => toggleCat(cat)} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0', width: '100%', textAlign: 'left', borderBottom: '2px solid var(--border)', marginBottom: isOpen ? 10 : 0 }}>
+                <span style={{ fontSize: '0.82rem', fontWeight: 800, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>🏷️ {cat}</span>
+                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 400 }}>({rows.length})</span>
+                <span style={{ marginLeft: 'auto', fontSize: '0.8rem', color: 'var(--text-muted)' }}>{isOpen ? '▼' : '▶'}</span>
+              </button>
+              {isOpen && (
               <div className="table-responsive card" style={{ marginBottom: 0 }}>
                 <table className="table">
                   <thead>
@@ -327,8 +335,10 @@ export default function TransferPage() {
                   </tbody>
                 </table>
               </div>
+              )}
             </div>
-          ))}
+            );
+          })}
 
           <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 8 }}>
             <button
