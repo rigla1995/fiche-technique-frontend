@@ -40,6 +40,7 @@ export default function TransferPage() {
   const [stock, setStock] = useState<LaboStockRow[]>([]);
   const [assignedSet, setAssignedSet] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
+  const [hasTransfers, setHasTransfers] = useState(false);
 
   const [dateTransfert, setDateTransfert] = useState(todayStr());
   const [note, setNote] = useState('');
@@ -61,13 +62,15 @@ export default function TransferPage() {
     if (!laboId) return;
     setLoading(true);
     try {
-      const [laboRes, stockRes, assignRes] = await Promise.all([
+      const [laboRes, stockRes, assignRes, transfersRes] = await Promise.all([
         api.get(`/api/labo/${laboId}`),
         api.get(`/api/labo/${laboId}/stock?assignedOnly=true`),
         api.get(`/api/labo/${laboId}/activity-assignments`),
+        api.get(`/api/labo/${laboId}/transfers`),
       ]);
       setLabo(laboRes.data);
       setStock(stockRes.data);
+      setHasTransfers(Array.isArray(transfersRes.data) && transfersRes.data.length > 0);
       // Build assigned set: "ingId-actId"
       const assigned = new Set<string>();
       for (const ing of (assignRes.data.ingredients || []) as { ingredientId: number; activities: { activiteId: number; assigned: boolean }[] }[]) {
@@ -76,12 +79,12 @@ export default function TransferPage() {
         }
       }
       setAssignedSet(assigned);
-      // Init qtys
+      // Init qtys to '0'
       const init: TransferQtys = {};
       for (const r of stockRes.data as LaboStockRow[]) {
         init[r.ingredientId] = {};
         for (const act of (laboRes.data.activites || []) as Activite[]) {
-          init[r.ingredientId][act.id] = '';
+          init[r.ingredientId][act.id] = '0';
         }
       }
       setQtys(init);
@@ -100,6 +103,7 @@ export default function TransferPage() {
 
   const handleTransfer = async () => {
     setErrorMsg('');
+    if (!refFacture.trim()) { setErrorMsg('Le N° de BL (Réf. Facture) est obligatoire.'); return; }
     // Build transfer list
     const transfers: { activiteId: number; ingredientId: number; quantite: number }[] = [];
     for (const [ingId, actMap] of Object.entries(qtys)) {
@@ -125,12 +129,13 @@ export default function TransferPage() {
     try {
       await api.post(`/api/labo/${laboId}/transfer`, { dateTransfert, note: note || undefined, refFacture: refFacture.trim() || undefined, transfers });
       setSuccessMsg(t('client.labo.transfer_success'));
+      setHasTransfers(true);
       setTimeout(() => setSuccessMsg(''), 3000);
-      // Reset qtys
+      // Reset qtys to '0'
       setQtys((prev) => {
         const next = { ...prev };
         for (const ingId of Object.keys(next)) {
-          next[Number(ingId)] = Object.fromEntries(Object.keys(next[Number(ingId)]).map((a) => [a, '']));
+          next[Number(ingId)] = Object.fromEntries(Object.keys(next[Number(ingId)]).map((a) => [a, '0']));
         }
         return next;
       });
@@ -176,7 +181,11 @@ export default function TransferPage() {
         </div>
         <div style={{ display: 'flex', gap: 10 }}>
           <Link to={`/client/labo/stock?laboId=${laboId}`} className="btn btn-ghost btn-sm">← {t('client.labo.stock_title')}</Link>
-          <Link to={`/client/labo/historique-transferts?laboId=${laboId}`} className="btn btn-secondary btn-sm">📋 {t('client.labo.transfers_history')}</Link>
+          {hasTransfers ? (
+            <Link to={`/client/labo/historique-transferts?laboId=${laboId}`} className="btn btn-secondary btn-sm">📋 {t('client.labo.transfers_history')}</Link>
+          ) : (
+            <span className="btn btn-secondary btn-sm" style={{ opacity: 0.4, cursor: 'not-allowed', pointerEvents: 'none' }} title="Aucun transfert enregistré">📋 {t('client.labo.transfers_history')}</span>
+          )}
         </div>
       </div>
 
@@ -198,7 +207,7 @@ export default function TransferPage() {
         </div>
         <div style={{ flex: 1, minWidth: 160 }}>
           <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 4 }}>
-            Réf. Facture / BL
+            Réf. Facture / BL <span style={{ color: 'var(--danger, #ef4444)' }}>*</span>
           </label>
           <input
             type="text"
@@ -206,6 +215,7 @@ export default function TransferPage() {
             value={refFacture}
             onChange={(e) => setRefFacture(e.target.value)}
             placeholder="N° bon de livraison…"
+            style={{ borderColor: !refFacture.trim() ? 'var(--danger, #ef4444)' : undefined }}
           />
         </div>
         <div style={{ flex: 1, minWidth: 160 }}>
@@ -297,11 +307,11 @@ export default function TransferPage() {
                 <table className="table">
                   <thead>
                     <tr>
-                      <th style={{ minWidth: 140 }}>{t('client.stock.ingredient')}</th>
+                      <th style={{ minWidth: 140, textAlign: 'center' }}>{t('client.stock.ingredient')}</th>
                       <th style={{ textAlign: 'right', minWidth: 100 }}>{t('client.labo.labo_stock')}</th>
                       {activites.map((act) => (
-                        <th key={act.id} style={{ textAlign: 'center', minWidth: 120, color: 'var(--primary)' }}>
-                          ↗ {act.nom}
+                        <th key={act.id} style={{ textAlign: 'center', minWidth: 120, color: 'var(--text-muted)', fontStyle: 'italic', opacity: 0.7 }}>
+                          {act.nom}
                         </th>
                       ))}
                     </tr>
@@ -309,14 +319,15 @@ export default function TransferPage() {
                   <tbody>
                     {rows.map((r) => (
                       <tr key={r.ingredientId}>
-                        <td>
-                          <div style={{ fontWeight: 600 }}>{r.nom}</div>
+                        <td style={{ textAlign: 'center' }}>
+                          <div style={{ fontWeight: 700, fontSize: '0.95rem' }}>{r.nom}</div>
                           <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{r.unite}</div>
                         </td>
                         <td style={{ textAlign: 'right' }}>
                           <span style={{ fontWeight: 700, color: qtyColor(r.quantite), fontSize: '1rem' }}>
                             {r.quantite !== null ? r.quantite : '—'}
                           </span>
+                          <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginLeft: 3 }}>{r.unite}</span>
                           {r.prixUnitaire !== null && (
                             <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
                               {r.prixUnitaire.toFixed(3)} DT
@@ -334,9 +345,8 @@ export default function TransferPage() {
                                   step="0.001"
                                   className="input"
                                   style={{ width: 100, textAlign: 'right' }}
-                                  value={qtys[r.ingredientId]?.[act.id] ?? ''}
+                                  value={qtys[r.ingredientId]?.[act.id] ?? '0'}
                                   onChange={(e) => setQty(r.ingredientId, act.id, e.target.value)}
-                                  placeholder="0"
                                 />
                               ) : (
                                 <span style={{ color: 'var(--danger, #ef4444)', fontWeight: 700, fontSize: '1.1rem' }}>—</span>
