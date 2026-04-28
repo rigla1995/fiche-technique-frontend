@@ -47,6 +47,9 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
   const [filterFranchiseGroup, setFilterFranchiseGroup] = useState('');
   const [filterFranchiseName, setFilterFranchiseName] = useState('');
   const [filterDistinctName, setFilterDistinctName] = useState('');
+  // Labo detail popup (click on labo badge in row)
+  const [laboPopup, setLaboPopup] = useState<{ nom: string; tel: string | null; adresse: string | null } | null>(null);
+
   // Delete confirmation modal
   type DeleteTarget =
     | { kind: 'franchise-group'; group: string; laboNom: string | null; acts: Activite[] }
@@ -103,7 +106,13 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
   const openDuplicate = (act: Activite) => {
     setEditingId(null);
     setIsDuplicate(true);
-    setForm({ nom: act.nom, adresse: '', telephone: '', email: '' });
+    // For franchise activities, auto-suggest next name: "<group> <count+1>"
+    let suggestedNom = act.nom;
+    if (act.type === 'franchise' && act.franchiseGroup) {
+      const groupCount = activites.filter((a) => a.franchiseGroup === act.franchiseGroup).length;
+      suggestedNom = `${act.franchiseGroup} ${groupCount + 1}`;
+    }
+    setForm({ nom: suggestedNom, adresse: '', telephone: '', email: '' });
     setMemeActivite(null);
     setNombreActivites('1');
     setError('');
@@ -404,11 +413,6 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
                             <h3 style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.06em', margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
                               🏢 {group} <span style={{ fontWeight: 400, fontSize: '0.72rem', opacity: 0.7 }}>({acts.length})</span>
-                              {groupLabo && (
-                                <span style={{ fontWeight: 600, fontSize: '0.72rem', color: '#7c3aed', background: '#ede9fe', border: '1px solid #c4b5fd', borderRadius: 20, padding: '2px 10px', textTransform: 'none', letterSpacing: 0 }}>
-                                  🏭 {groupLabo}
-                                </span>
-                              )}
                             </h3>
                             <button
                               className="btn btn-danger-ghost btn-sm"
@@ -442,16 +446,21 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                                     {acts.some((a) => a.laboId) && (
                                       <td>
                                         {act.laboNom ? (
-                                          <span style={{ fontSize: '0.78rem', fontWeight: 600, color: '#7c3aed', background: '#ede9fe', border: '1px solid #c4b5fd', borderRadius: 20, padding: '2px 8px' }}>
+                                          <button
+                                            style={{ fontSize: '0.78rem', fontWeight: 600, color: '#7c3aed', background: '#ede9fe', border: '1px solid #c4b5fd', borderRadius: 20, padding: '2px 8px', cursor: 'pointer' }}
+                                            onClick={() => setLaboPopup({ nom: act.laboNom!, tel: act.laboTel ?? null, adresse: act.laboAdresse ?? null })}
+                                          >
                                             🏭 {act.laboNom}
-                                          </span>
+                                          </button>
                                         ) : (
                                           <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>—</span>
                                         )}
                                       </td>
                                     )}
                                     <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
-                                      <button className="btn btn-ghost btn-sm" title={t('client.entreprise.manage_ingredients')} onClick={() => openIngredients(act)}>🧂</button>
+                                      {!act.laboId && (
+                                        <button className="btn btn-ghost btn-sm" title={t('client.entreprise.manage_ingredients')} onClick={() => openIngredients(act)}>🧂</button>
+                                      )}
                                       <button className="btn btn-ghost btn-sm" title={t('common.edit')} onClick={() => openEdit(act)}>✏️</button>
                                       <button className="btn btn-ghost btn-sm" title={t('client.entreprise.duplicate_activity')} onClick={() => openDuplicate(act)}>⧉</button>
                                     </td>
@@ -800,9 +809,6 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                           />
                           <span style={{ flex: 1 }}>{ing.nom}</span>
                           <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{ing.unite}</span>
-                          {ing.prix !== null && (
-                            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{ing.prix.toFixed(3)} {t('currency')}</span>
-                          )}
                         </label>
                       ))}
                     </div>
@@ -812,6 +818,31 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
             </div>
             <div className="modal-footer">
               <button className="btn btn-primary" onClick={closeIngredients}>{t('common.close')}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Labo detail popup */}
+      {laboPopup && (
+        <div className="modal-overlay" onClick={() => setLaboPopup(null)}>
+          <div className="modal" style={{ maxWidth: 360 }} onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2 style={{ margin: 0 }}>🏭 {laboPopup.nom}</h2>
+              <button className="btn btn-ghost btn-sm" onClick={() => setLaboPopup(null)}>✕</button>
+            </div>
+            <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <div>
+                <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('client.entreprise.activity_telephone')}</span>
+                <p style={{ margin: '2px 0 0', fontWeight: 600 }}>{laboPopup.tel || '—'}</p>
+              </div>
+              <div>
+                <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('client.entreprise.activity_adresse')}</span>
+                <p style={{ margin: '2px 0 0', fontWeight: 600 }}>{laboPopup.adresse || '—'}</p>
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-primary" onClick={() => setLaboPopup(null)}>{t('common.close')}</button>
             </div>
           </div>
         </div>

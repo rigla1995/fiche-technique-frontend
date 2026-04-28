@@ -106,6 +106,8 @@ export interface Activite {
   franchiseGroup?: string | null;
   laboId?: number | null;
   laboNom?: string | null;
+  laboTel?: string | null;
+  laboAdresse?: string | null;
   createdAt?: string;
 }
 

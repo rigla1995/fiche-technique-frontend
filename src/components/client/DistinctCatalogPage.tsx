@@ -2,12 +2,10 @@ import { useEffect, useState, useCallback } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
-import { useAuth } from '../../context/AuthContext';
 import type { Activite, ActiviteIngredient } from '../../types';
 
 export default function DistinctCatalogPage() {
   const { t } = useTranslation();
-  const { user, advanceOnboarding } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const justCreated = new URLSearchParams(location.search).get('created') === '1';
@@ -16,7 +14,6 @@ export default function DistinctCatalogPage() {
   const [ingredients, setIngredients] = useState<ActiviteIngredient[]>([]);
   const [loadingActivites, setLoadingActivites] = useState(true);
   const [loadingIngredients, setLoadingIngredients] = useState(false);
-  const [toggling, setToggling] = useState<number | null>(null);
   const [filterCategory, setFilterCategory] = useState('');
   const [filterName, setFilterName] = useState('');
 
@@ -42,18 +39,6 @@ export default function DistinctCatalogPage() {
   useEffect(() => {
     if (selectedId !== null) loadIngredients(selectedId);
   }, [selectedId, loadIngredients]);
-
-  const toggleIngredient = async (ingId: number) => {
-    if (selectedId === null) return;
-    setToggling(ingId);
-    try {
-      const { data } = await api.post(`/api/entreprise/activites/${selectedId}/ingredients/${ingId}/select`);
-      setIngredients((prev) => prev.map((i) => (i.id === ingId ? { ...i, selected: data.selected } : i)));
-      if (data.selected && user?.onboardingStep === 3) await advanceOnboarding(0);
-    } finally {
-      setToggling(null);
-    }
-  };
 
   const allCategories = Array.from(new Set(
     ingredients.map((i) => i.categorie || t('client.ingredients_catalog.no_category'))
@@ -153,7 +138,6 @@ export default function DistinctCatalogPage() {
                       <tr>
                         <th>{t('common.name')}</th>
                         <th style={{ width: 120 }}>{t('common.unit')}</th>
-                        <th style={{ width: 80, textAlign: 'center' }}></th>
                       </tr>
                     </thead>
                     <tbody>
@@ -163,25 +147,6 @@ export default function DistinctCatalogPage() {
                             <span style={{ fontWeight: ing.selected ? 700 : undefined }}>{ing.nom}</span>
                           </td>
                           <td style={{ color: 'var(--text-muted)', fontSize: '0.82rem' }}>{ing.unite}</td>
-                          <td style={{ textAlign: 'center' }}>
-                            <button
-                              className="btn btn-ghost btn-sm"
-                              style={{
-                                fontSize: '1rem',
-                                padding: '3px 10px',
-                                borderRadius: 20,
-                                background: ing.selected ? 'var(--success, #10b981)' : 'transparent',
-                                color: ing.selected ? '#fff' : 'var(--text-muted)',
-                                border: ing.selected ? 'none' : '1px solid var(--border)',
-                                fontWeight: ing.selected ? 700 : undefined,
-                                minWidth: 36,
-                              }}
-                              disabled={toggling === ing.id}
-                              onClick={() => toggleIngredient(ing.id)}
-                            >
-                              {toggling === ing.id ? '…' : ing.selected ? '✓' : '○'}
-                            </button>
-                          </td>
                         </tr>
                       ))}
                     </tbody>
