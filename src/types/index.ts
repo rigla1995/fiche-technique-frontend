@@ -105,6 +105,7 @@ export interface Activite {
   type?: 'franchise' | 'distincte';
   franchiseGroup?: string | null;
   laboId?: number | null;
+  laboNom?: string | null;
   createdAt?: string;
 }
 

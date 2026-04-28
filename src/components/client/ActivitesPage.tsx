@@ -353,9 +353,10 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                 <p className="text-muted" style={{ fontSize: '0.85rem' }}>{t('nav.no_franchise_activity')}</p>
               ) : (
                 <>
-                  {/* Franchise filters */}
-                  {franchiseGroupNames.length > 1 && (
-                    <div style={{ display: 'flex', gap: 10, marginBottom: 14, flexWrap: 'wrap', alignItems: 'center' }}>
+                  {/* Franchise filters — always visible */}
+                  <div style={{ display: 'flex', gap: 10, marginBottom: 14, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                      <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('client.entreprise.group_label', 'Groupe')}</span>
                       <select
                         className="input"
                         style={{ maxWidth: 200 }}
@@ -365,56 +366,81 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                         <option value="">{t('client.entreprise.all_groups')}</option>
                         {franchiseGroupNames.map((g) => <option key={g} value={g}>{g}</option>)}
                       </select>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 3, flex: '1 1 auto', maxWidth: 260 }}>
+                      <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('common.search')}</span>
                       <input
                         type="text"
                         className="input"
-                        style={{ minWidth: 140, flex: '1 1 auto', maxWidth: 220 }}
+                        style={{ minWidth: 140 }}
                         placeholder={t('common.search') + '…'}
                         value={filterFranchiseName}
                         onChange={(e) => setFilterFranchiseName(e.target.value)}
                       />
                     </div>
-                  )}
+                  </div>
 
                   {filteredFranchise.length === 0 ? (
                     <p className="text-muted">{t('common.no_result')}</p>
                   ) : (
-                    Object.entries(franchiseGrouped).sort(([a], [b]) => a.localeCompare(b)).map(([group, acts]) => (
-                      <div key={group} style={{ marginBottom: 24 }}>
-                        <h3 style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>
-                          🏢 {group} <span style={{ fontWeight: 400, fontSize: '0.72rem', opacity: 0.7 }}>({acts.length})</span>
-                        </h3>
-                        <div className="table-responsive card" style={{ marginBottom: 0 }}>
-                          <table className="table">
-                            <thead>
-                              <tr>
-                                <th>{t('common.name')}</th>
-                                <th style={{ width: 150 }}>{t('client.entreprise.activity_telephone')}</th>
-                                <th style={{ width: 190 }}>{t('client.entreprise.activity_email')}</th>
-                                <th>{t('client.entreprise.activity_adresse')}</th>
-                                <th style={{ width: 140, textAlign: 'right' }}></th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {acts.map((act) => (
-                                <tr key={act.id}>
-                                  <td style={{ fontWeight: 700 }}>{act.nom}</td>
-                                  <td style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{act.telephone || '—'}</td>
-                                  <td style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{act.email || '—'}</td>
-                                  <td style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{act.adresse || '—'}</td>
-                                  <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
-                                    <button className="btn btn-ghost btn-sm" title={t('client.entreprise.manage_ingredients')} onClick={() => openIngredients(act)}>🧂</button>
-                                    <button className="btn btn-ghost btn-sm" title={t('common.edit')} onClick={() => openEdit(act)}>✏️</button>
-                                    <button className="btn btn-ghost btn-sm" title={t('client.entreprise.duplicate_activity')} onClick={() => openDuplicate(act)}>⧉</button>
-                                    <button className="btn btn-danger-ghost btn-sm" title={t('common.delete')} onClick={() => deleteActivite(act.id)}>🗑</button>
-                                  </td>
+                    Object.entries(franchiseGrouped).sort(([a], [b]) => a.localeCompare(b)).map(([group, acts]) => {
+                      const groupLabo = acts.find((a) => a.laboNom)?.laboNom ?? null;
+                      return (
+                        <div key={group} style={{ marginBottom: 24 }}>
+                          <h3 style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
+                            🏢 {group} <span style={{ fontWeight: 400, fontSize: '0.72rem', opacity: 0.7 }}>({acts.length})</span>
+                            {groupLabo && (
+                              <span style={{ fontWeight: 600, fontSize: '0.72rem', color: '#7c3aed', background: '#ede9fe', border: '1px solid #c4b5fd', borderRadius: 20, padding: '2px 10px', textTransform: 'none', letterSpacing: 0 }}>
+                                🏭 {groupLabo}
+                              </span>
+                            )}
+                          </h3>
+                          <div className="table-responsive card" style={{ marginBottom: 0 }}>
+                            <table className="table">
+                              <thead>
+                                <tr>
+                                  <th>{t('common.name')}</th>
+                                  <th style={{ width: 120 }}>{t('client.entreprise.activity_telephone')}</th>
+                                  <th style={{ width: 170 }}>{t('client.entreprise.activity_email')}</th>
+                                  <th>{t('client.entreprise.activity_adresse')}</th>
+                                  {acts.some((a) => a.laboId) && (
+                                    <th style={{ width: 130 }}>{t('client.entreprise.labo', 'Labo')}</th>
+                                  )}
+                                  <th style={{ width: 140, textAlign: 'right' }}></th>
                                 </tr>
-                              ))}
-                            </tbody>
-                          </table>
+                              </thead>
+                              <tbody>
+                                {acts.map((act) => (
+                                  <tr key={act.id}>
+                                    <td style={{ fontWeight: 700 }}>{act.nom}</td>
+                                    <td style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{act.telephone || '—'}</td>
+                                    <td style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{act.email || '—'}</td>
+                                    <td style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{act.adresse || '—'}</td>
+                                    {acts.some((a) => a.laboId) && (
+                                      <td>
+                                        {act.laboNom ? (
+                                          <span style={{ fontSize: '0.78rem', fontWeight: 600, color: '#7c3aed', background: '#ede9fe', border: '1px solid #c4b5fd', borderRadius: 20, padding: '2px 8px' }}>
+                                            🏭 {act.laboNom}
+                                          </span>
+                                        ) : (
+                                          <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>—</span>
+                                        )}
+                                      </td>
+                                    )}
+                                    <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+                                      <button className="btn btn-ghost btn-sm" title={t('client.entreprise.manage_ingredients')} onClick={() => openIngredients(act)}>🧂</button>
+                                      <button className="btn btn-ghost btn-sm" title={t('common.edit')} onClick={() => openEdit(act)}>✏️</button>
+                                      <button className="btn btn-ghost btn-sm" title={t('client.entreprise.duplicate_activity')} onClick={() => openDuplicate(act)}>⧉</button>
+                                      <button className="btn btn-danger-ghost btn-sm" title={t('common.delete')} onClick={() => deleteActivite(act.id)}>🗑</button>
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
                         </div>
-                      </div>
-                    ))
+                      );
+                    })
                   )}
                 </>
               )}
@@ -440,15 +466,18 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                 <p className="text-muted" style={{ fontSize: '0.85rem' }}>{t('nav.no_distinct_activity')}</p>
               ) : (
                 <>
-                  <div style={{ display: 'flex', gap: 10, marginBottom: 14, flexWrap: 'wrap' }}>
-                    <input
-                      type="text"
-                      className="input"
-                      style={{ minWidth: 140, flex: '1 1 auto', maxWidth: 260 }}
-                      placeholder={t('common.search') + '…'}
-                      value={filterDistinctName}
-                      onChange={(e) => setFilterDistinctName(e.target.value)}
-                    />
+                  <div style={{ display: 'flex', gap: 10, marginBottom: 14, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 3, flex: '1 1 auto', maxWidth: 260 }}>
+                      <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('common.search')}</span>
+                      <input
+                        type="text"
+                        className="input"
+                        style={{ minWidth: 140 }}
+                        placeholder={t('common.search') + '…'}
+                        value={filterDistinctName}
+                        onChange={(e) => setFilterDistinctName(e.target.value)}
+                      />
+                    </div>
                   </div>
 
                   {filteredDistinct.length === 0 ? (
