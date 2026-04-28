@@ -120,19 +120,25 @@ function FiltersBar({
 }) {
   const { t } = useTranslation();
   return (
-    <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
-      <select className="input" style={{ maxWidth: 200 }} value={filterCategory} onChange={(e) => onCatChange(e.target.value)}>
-        <option value="">{t('common.all_categories', 'Toutes catégories')}</option>
-        {categories.map((c) => <option key={c} value={c}>{c}</option>)}
-      </select>
-      <input
-        type="text"
-        className="input"
-        style={{ minWidth: 140, flex: '1 1 auto', maxWidth: 260 }}
-        placeholder={t('common.search') + '…'}
-        value={filterName}
-        onChange={(e) => onNameChange(e.target.value)}
-      />
+    <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+        <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Catégorie</span>
+        <select className="input" style={{ maxWidth: 200 }} value={filterCategory} onChange={(e) => onCatChange(e.target.value)}>
+          <option value="">{t('common.all_categories', 'Toutes catégories')}</option>
+          {categories.map((c) => <option key={c} value={c}>{c}</option>)}
+        </select>
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 3, flex: '1 1 auto', maxWidth: 260 }}>
+        <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('common.ingredient_name', "Nom de l'ingrédient")}</span>
+        <input
+          type="text"
+          className="input"
+          style={{ minWidth: 140 }}
+          placeholder={t('common.ingredient_name', "Nom de l'ingrédient") + '…'}
+          value={filterName}
+          onChange={(e) => onNameChange(e.target.value)}
+        />
+      </div>
     </div>
   );
 }

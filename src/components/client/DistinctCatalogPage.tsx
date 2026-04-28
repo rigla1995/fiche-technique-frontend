@@ -124,14 +124,17 @@ export default function DistinctCatalogPage() {
                 {allCategories.map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>
-            <input
-              type="text"
-              className="input"
-              style={{ minWidth: 140, flex: '1 1 auto', maxWidth: 220, alignSelf: 'flex-end' }}
-              placeholder={t('common.search') + '…'}
-              value={filterName}
-              onChange={(e) => setFilterName(e.target.value)}
-            />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 3, flex: '1 1 auto', maxWidth: 220 }}>
+              <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('common.ingredient_name', "Nom de l'ingrédient")}</span>
+              <input
+                type="text"
+                className="input"
+                style={{ minWidth: 140 }}
+                placeholder={t('common.ingredient_name', "Nom de l'ingrédient") + '…'}
+                value={filterName}
+                onChange={(e) => setFilterName(e.target.value)}
+              />
+            </div>
           </div>
 
           {loadingIngredients ? (

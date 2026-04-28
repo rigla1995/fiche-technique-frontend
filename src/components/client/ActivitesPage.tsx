@@ -368,12 +368,12 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                       </select>
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 3, flex: '1 1 auto', maxWidth: 260 }}>
-                      <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('common.search')}</span>
+                      <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('common.activity_name', "Nom de l'activité")}</span>
                       <input
                         type="text"
                         className="input"
                         style={{ minWidth: 140 }}
-                        placeholder={t('common.search') + '…'}
+                        placeholder={t('common.activity_name', "Nom de l'activité") + '…'}
                         value={filterFranchiseName}
                         onChange={(e) => setFilterFranchiseName(e.target.value)}
                       />
@@ -468,12 +468,12 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                 <>
                   <div style={{ display: 'flex', gap: 10, marginBottom: 14, flexWrap: 'wrap', alignItems: 'flex-end' }}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 3, flex: '1 1 auto', maxWidth: 260 }}>
-                      <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('common.search')}</span>
+                      <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('common.activity_name', "Nom de l'activité")}</span>
                       <input
                         type="text"
                         className="input"
                         style={{ minWidth: 140 }}
-                        placeholder={t('common.search') + '…'}
+                        placeholder={t('common.activity_name', "Nom de l'activité") + '…'}
                         value={filterDistinctName}
                         onChange={(e) => setFilterDistinctName(e.target.value)}
                       />
