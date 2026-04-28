@@ -321,9 +321,8 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
         </div>
       ) : (
         <>
-          {/* Franchise section */}
-          {franchiseActivities.length > 0 && (
-            <div style={{ marginBottom: 36 }}>
+          {/* Franchise section — always visible so user can add a franchise activity */}
+          <div style={{ marginBottom: 36 }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                   <span style={{ width: 4, height: 22, borderRadius: 4, background: 'linear-gradient(180deg, #2563eb 0%, #0ea5e9 100%)', display: 'inline-block', flexShrink: 0 }} />
@@ -337,71 +336,76 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                 </button>
               </div>
 
-              {/* Franchise filters */}
-              {franchiseGroupNames.length > 1 && (
-                <div style={{ display: 'flex', gap: 10, marginBottom: 14, flexWrap: 'wrap', alignItems: 'center' }}>
-                  <select
-                    className="input"
-                    style={{ maxWidth: 200 }}
-                    value={filterFranchiseGroup}
-                    onChange={(e) => setFilterFranchiseGroup(e.target.value)}
-                  >
-                    <option value="">{t('client.entreprise.all_groups')}</option>
-                    {franchiseGroupNames.map((g) => <option key={g} value={g}>{g}</option>)}
-                  </select>
-                  <input
-                    type="text"
-                    className="input"
-                    style={{ minWidth: 140, flex: '1 1 auto', maxWidth: 220 }}
-                    placeholder={t('common.search') + '…'}
-                    value={filterFranchiseName}
-                    onChange={(e) => setFilterFranchiseName(e.target.value)}
-                  />
-                </div>
-              )}
-
-              {filteredFranchise.length === 0 ? (
-                <p className="text-muted">{t('common.no_result')}</p>
+              {franchiseActivities.length === 0 ? (
+                <p className="text-muted" style={{ fontSize: '0.85rem' }}>{t('nav.no_franchise_activity')}</p>
               ) : (
-                Object.entries(franchiseGrouped).sort(([a], [b]) => a.localeCompare(b)).map(([group, acts]) => (
-                  <div key={group} style={{ marginBottom: 24 }}>
-                    <h3 style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>
-                      🏢 {group} <span style={{ fontWeight: 400, fontSize: '0.72rem', opacity: 0.7 }}>({acts.length})</span>
-                    </h3>
-                    <div className="table-responsive card" style={{ marginBottom: 0 }}>
-                      <table className="table">
-                        <thead>
-                          <tr>
-                            <th>{t('common.name')}</th>
-                            <th style={{ width: 150 }}>{t('client.entreprise.activity_telephone')}</th>
-                            <th style={{ width: 190 }}>{t('client.entreprise.activity_email')}</th>
-                            <th>{t('client.entreprise.activity_adresse')}</th>
-                            <th style={{ width: 140, textAlign: 'right' }}></th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {acts.map((act) => (
-                            <tr key={act.id}>
-                              <td style={{ fontWeight: 700 }}>{act.nom}</td>
-                              <td style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{act.telephone || '—'}</td>
-                              <td style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{act.email || '—'}</td>
-                              <td style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{act.adresse || '—'}</td>
-                              <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
-                                <button className="btn btn-ghost btn-sm" title={t('client.entreprise.manage_ingredients')} onClick={() => openIngredients(act)}>🧂</button>
-                                <button className="btn btn-ghost btn-sm" title={t('common.edit')} onClick={() => openEdit(act)}>✏️</button>
-                                <button className="btn btn-ghost btn-sm" title={t('client.entreprise.duplicate_activity')} onClick={() => openDuplicate(act)}>⧉</button>
-                                <button className="btn btn-danger-ghost btn-sm" title={t('common.delete')} onClick={() => deleteActivite(act.id)}>🗑</button>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                <>
+                  {/* Franchise filters */}
+                  {franchiseGroupNames.length > 1 && (
+                    <div style={{ display: 'flex', gap: 10, marginBottom: 14, flexWrap: 'wrap', alignItems: 'center' }}>
+                      <select
+                        className="input"
+                        style={{ maxWidth: 200 }}
+                        value={filterFranchiseGroup}
+                        onChange={(e) => setFilterFranchiseGroup(e.target.value)}
+                      >
+                        <option value="">{t('client.entreprise.all_groups')}</option>
+                        {franchiseGroupNames.map((g) => <option key={g} value={g}>{g}</option>)}
+                      </select>
+                      <input
+                        type="text"
+                        className="input"
+                        style={{ minWidth: 140, flex: '1 1 auto', maxWidth: 220 }}
+                        placeholder={t('common.search') + '…'}
+                        value={filterFranchiseName}
+                        onChange={(e) => setFilterFranchiseName(e.target.value)}
+                      />
                     </div>
-                  </div>
-                ))
+                  )}
+
+                  {filteredFranchise.length === 0 ? (
+                    <p className="text-muted">{t('common.no_result')}</p>
+                  ) : (
+                    Object.entries(franchiseGrouped).sort(([a], [b]) => a.localeCompare(b)).map(([group, acts]) => (
+                      <div key={group} style={{ marginBottom: 24 }}>
+                        <h3 style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>
+                          🏢 {group} <span style={{ fontWeight: 400, fontSize: '0.72rem', opacity: 0.7 }}>({acts.length})</span>
+                        </h3>
+                        <div className="table-responsive card" style={{ marginBottom: 0 }}>
+                          <table className="table">
+                            <thead>
+                              <tr>
+                                <th>{t('common.name')}</th>
+                                <th style={{ width: 150 }}>{t('client.entreprise.activity_telephone')}</th>
+                                <th style={{ width: 190 }}>{t('client.entreprise.activity_email')}</th>
+                                <th>{t('client.entreprise.activity_adresse')}</th>
+                                <th style={{ width: 140, textAlign: 'right' }}></th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {acts.map((act) => (
+                                <tr key={act.id}>
+                                  <td style={{ fontWeight: 700 }}>{act.nom}</td>
+                                  <td style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{act.telephone || '—'}</td>
+                                  <td style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{act.email || '—'}</td>
+                                  <td style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{act.adresse || '—'}</td>
+                                  <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+                                    <button className="btn btn-ghost btn-sm" title={t('client.entreprise.manage_ingredients')} onClick={() => openIngredients(act)}>🧂</button>
+                                    <button className="btn btn-ghost btn-sm" title={t('common.edit')} onClick={() => openEdit(act)}>✏️</button>
+                                    <button className="btn btn-ghost btn-sm" title={t('client.entreprise.duplicate_activity')} onClick={() => openDuplicate(act)}>⧉</button>
+                                    <button className="btn btn-danger-ghost btn-sm" title={t('common.delete')} onClick={() => deleteActivite(act.id)}>🗑</button>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </>
               )}
             </div>
-          )}
 
           {/* Distinct section — always visible when any activities exist so user can add a distinct activity */}
           {(distinctActivities.length > 0 || franchiseActivities.length > 0) && (
