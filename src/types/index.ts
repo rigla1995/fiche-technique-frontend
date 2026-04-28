@@ -173,8 +173,21 @@ export interface Fournisseur {
   nom: string;
   adresse: string | null;
   telephone: string | null;
+  isLabo?: boolean;
   activiteIds: number[];
   createdAt?: string;
+}
+
+export interface LaboStockRow {
+  ingredientId: number;
+  nom: string;
+  unite: string;
+  categorie: string;
+  quantite: number | null;
+  prixUnitaire: number | null;
+  dateAppro: string | null;
+  seuilMin: number | null;
+  totalTransfere: number;
 }
 
 export interface Perte {

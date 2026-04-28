@@ -229,6 +229,82 @@ function HistoryPopup({ ingredientId, nom, activiteId, isEntreprise, onClose }: 
 
 // ────────────────────────────────────────────────────────────────────────────
 
+interface FournisseurAffectationModalProps {
+  ingredientNom: string;
+  fournisseurs: Fournisseur[];
+  initialFournisseurId: string;
+  initialRefFacture: string;
+  onValidate: (fournisseurId: string, refFacture: string) => void;
+  onClose: () => void;
+}
+
+function FournisseurAffectationModal({ ingredientNom, fournisseurs, initialFournisseurId, initialRefFacture, onValidate, onClose }: FournisseurAffectationModalProps) {
+  const [fournisseurId, setFournisseurId] = useState(initialFournisseurId);
+  const [refFacture, setRefFacture] = useState(initialRefFacture);
+
+  const handleValidate = () => {
+    onValidate(fournisseurId, refFacture);
+    onClose();
+  };
+
+  const selectedFournisseur = fournisseurs.find((f) => String(f.id) === fournisseurId);
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal" style={{ maxWidth: 420 }} onClick={(e) => e.stopPropagation()}>
+        <div className="modal-header" style={{ background: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)', borderBottom: '1px solid #bfdbfe' }}>
+          <div>
+            <h2 style={{ color: '#1e40af', margin: 0 }}>🚚 Affectation Fournisseur</h2>
+            <p style={{ margin: '4px 0 0', fontSize: '0.82rem', color: '#3b82f6' }}>{ingredientNom}</p>
+          </div>
+          <button className="modal-close" onClick={onClose}>×</button>
+        </div>
+        <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 18, padding: '20px 24px' }}>
+          <div>
+            <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 6 }}>Fournisseur</label>
+            <select
+              className="input" style={{ width: '100%', fontSize: '0.9rem' }}
+              value={fournisseurId}
+              onChange={(e) => setFournisseurId(e.target.value)}
+            >
+              <option value="">— Aucun fournisseur —</option>
+              {fournisseurs.map((f) => (
+                <option key={f.id} value={f.id}>
+                  {f.isLabo ? '🏭 ' : '🚚 '}{f.nom}
+                </option>
+              ))}
+            </select>
+            {selectedFournisseur?.telephone && (
+              <p style={{ margin: '4px 0 0', fontSize: '0.78rem', color: 'var(--text-muted)' }}>📞 {selectedFournisseur.telephone}</p>
+            )}
+          </div>
+          <div>
+            <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 6 }}>Réf. Facture</label>
+            <input
+              type="text" className="input" style={{ width: '100%' }}
+              placeholder="N° facture ou bon de livraison"
+              value={refFacture}
+              onChange={(e) => setRefFacture(e.target.value)}
+            />
+          </div>
+        </div>
+        <div className="modal-footer" style={{ borderTop: '1px solid var(--border)', padding: '12px 20px', display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+          <button className="btn btn-ghost" onClick={onClose}>Annuler</button>
+          <button
+            className="btn btn-primary"
+            onClick={handleValidate}
+            style={{ background: '#2563eb', color: '#fff', minWidth: 120 }}
+          >
+            ✓ Valider
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+
 function seuilClass(total: number | null, seuil: number | null): string {
   if (total === null) return '';
   if (seuil === null) return total === 0 ? 'stock-alert' : 'stock-ok';
@@ -258,6 +334,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, ac
   const [historyData, setHistoryData] = useState<Record<number, StockHistoryEntry[]>>({});
   const [openCats, setOpenCats] = useState<Set<string>>(new Set());
   const [pertesModal, setPertesModal] = useState<{ ingredientId: number; nom: string } | null>(null);
+  const [affectationModal, setAffectationModal] = useState<{ ingredientId: number; nom: string } | null>(null);
   const [seuilEdits, setSeuilEdits] = useState<Record<number, string>>({});
   const [seuilSaving, setSeuilSaving] = useState<Record<number, boolean>>({});
 
@@ -347,6 +424,27 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, ac
         />
       )}
 
+      {affectationModal && hasFournisseurs && (
+        <FournisseurAffectationModal
+          ingredientNom={affectationModal.nom}
+          fournisseurs={fournisseurs}
+          initialFournisseurId={rows[affectationModal.ingredientId]?.fournisseurId ?? ''}
+          initialRefFacture={rows[affectationModal.ingredientId]?.refFacture ?? ''}
+          onValidate={(fId, ref) => {
+            setRows((prev) => ({
+              ...prev,
+              [affectationModal.ingredientId]: {
+                ...prev[affectationModal.ingredientId],
+                fournisseurId: fId,
+                refFacture: ref,
+                saved: false,
+              },
+            }));
+          }}
+          onClose={() => setAffectationModal(null)}
+        />
+      )}
+
       {Object.entries(groups).sort(([a], [b]) => a.localeCompare(b)).map(([cat, items]) => {
         const isOpen = openCats.has(cat);
         return (
@@ -367,8 +465,6 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, ac
                       <th style={{ textAlign: 'right' }}>Nouvelle Qté</th>
                       <th style={{ textAlign: 'right' }}>Stock Prix (U/DT)</th>
                       <th>{t('client.stock.date_appro')}</th>
-                      {hasFournisseurs && <th>Fournisseur</th>}
-                      {hasFournisseurs && <th>Réf Facture</th>}
                       <th></th>
                     </tr>
                   </thead>
@@ -379,7 +475,9 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, ac
                       const hist = historyData[entry.ingredientId];
                       const cls = seuilClass(entry.totalQuantite ?? null, entry.seuilMin ?? null);
                       const totalDisplay = entry.totalQuantite !== null ? entry.totalQuantite.toFixed(3) : '—';
-                      const colSpan = 6 + (hasFournisseurs ? 2 : 0) + 1;
+                      const assignedFournisseur = hasFournisseurs && row.fournisseurId
+                        ? fournisseurs.find((f) => String(f.id) === row.fournisseurId)
+                        : null;
                       return (
                         <>
                           <tr key={entry.ingredientId}>
@@ -427,30 +525,6 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, ac
                                 onChange={(e) => updateRow(entry.ingredientId, 'dateAppro', e.target.value)}
                               />
                             </td>
-                            {hasFournisseurs && (
-                              <td>
-                                <select
-                                  className="input" style={{ maxWidth: 160, fontSize: '0.82rem' }}
-                                  value={row.fournisseurId}
-                                  onChange={(e) => updateRow(entry.ingredientId, 'fournisseurId', e.target.value)}
-                                >
-                                  <option value="">— Fournisseur —</option>
-                                  {fournisseurs.map((f) => (
-                                    <option key={f.id} value={f.id}>{f.nom}</option>
-                                  ))}
-                                </select>
-                              </td>
-                            )}
-                            {hasFournisseurs && (
-                              <td>
-                                <input
-                                  type="text" className="input" style={{ maxWidth: 120, fontSize: '0.82rem' }}
-                                  placeholder="Réf facture"
-                                  value={row.refFacture}
-                                  onChange={(e) => updateRow(entry.ingredientId, 'refFacture', e.target.value)}
-                                />
-                              </td>
-                            )}
                             <td style={{ whiteSpace: 'nowrap' }}>
                               {row.error && <span style={{ color: 'var(--danger)', fontSize: '0.75rem', marginRight: 4 }}>!</span>}
                               <button
@@ -461,6 +535,26 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, ac
                               >
                                 {row.saving ? '…' : row.saved ? '✓' : t('client.stock.save')}
                               </button>
+                              {hasFournisseurs && (
+                                <button
+                                  className="btn btn-sm"
+                                  onClick={() => setAffectationModal({ ingredientId: entry.ingredientId, nom: entry.nom })}
+                                  title="Affecter un fournisseur"
+                                  style={{
+                                    marginRight: 4,
+                                    background: assignedFournisseur ? '#dcfce7' : '#eff6ff',
+                                    color: assignedFournisseur ? '#15803d' : '#2563eb',
+                                    border: `1px solid ${assignedFournisseur ? '#86efac' : '#bfdbfe'}`,
+                                    fontSize: '0.78rem',
+                                    whiteSpace: 'nowrap',
+                                    maxWidth: 130,
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                  }}
+                                >
+                                  {assignedFournisseur ? `✓ ${assignedFournisseur.nom}` : '🚚 Fournisseur'}
+                                </button>
+                              )}
                               {isEntreprise && activiteId && (
                                 <button
                                   className="perte-btn"
@@ -482,7 +576,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, ac
                           </tr>
                           {isHistOpen && (
                             <tr key={`${entry.ingredientId}-hist`}>
-                              <td colSpan={colSpan} style={{ background: '#f8faff', padding: '8px 16px' }}>
+                              <td colSpan={7} style={{ background: '#f8faff', padding: '8px 16px' }}>
                                 {!hist ? (
                                   <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{t('common.loading')}</span>
                                 ) : hist.length === 0 ? (

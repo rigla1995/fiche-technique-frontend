@@ -43,6 +43,7 @@ export default function TransferPage() {
 
   const [dateTransfert, setDateTransfert] = useState(todayStr());
   const [note, setNote] = useState('');
+  const [refFacture, setRefFacture] = useState('');
   const [qtys, setQtys] = useState<TransferQtys>({});
   const [saving, setSaving] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
@@ -122,7 +123,7 @@ export default function TransferPage() {
 
     setSaving(true);
     try {
-      await api.post(`/api/labo/${laboId}/transfer`, { dateTransfert, note: note || undefined, transfers });
+      await api.post(`/api/labo/${laboId}/transfer`, { dateTransfert, note: note || undefined, refFacture: refFacture.trim() || undefined, transfers });
       setSuccessMsg(t('client.labo.transfer_success'));
       setTimeout(() => setSuccessMsg(''), 3000);
       // Reset qtys
@@ -134,6 +135,7 @@ export default function TransferPage() {
         return next;
       });
       setNote('');
+      setRefFacture('');
       // Reload stock
       const { data } = await api.get(`/api/labo/${laboId}/stock?assignedOnly=true`);
       setStock(data);
@@ -194,7 +196,19 @@ export default function TransferPage() {
             onChange={(e) => setDateTransfert(e.target.value)}
           />
         </div>
-        <div style={{ flex: 1, minWidth: 200 }}>
+        <div style={{ flex: 1, minWidth: 160 }}>
+          <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 4 }}>
+            Réf. Facture / BL
+          </label>
+          <input
+            type="text"
+            className="input"
+            value={refFacture}
+            onChange={(e) => setRefFacture(e.target.value)}
+            placeholder="N° bon de livraison…"
+          />
+        </div>
+        <div style={{ flex: 1, minWidth: 160 }}>
           <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 4 }}>
             {t('client.labo.transfer_note')}
           </label>

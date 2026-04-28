@@ -38,7 +38,7 @@ export default function FournisseursPage() {
   useEffect(() => { load(); }, []);
 
   const openCreate = () => {
-    setForm(empty);
+    setForm({ ...empty, activiteIds: activites.map((a) => a.id) });
     setError('');
     setModal({ mode: 'create' });
   };
@@ -126,8 +126,11 @@ export default function FournisseursPage() {
             </thead>
             <tbody>
               {fournisseurs.map((f) => (
-                <tr key={f.id}>
-                  <td style={{ fontWeight: 700 }}>{f.nom}</td>
+                <tr key={f.id} style={f.isLabo ? { background: 'var(--primary-light, #e8f0fe)', opacity: 0.85 } : undefined}>
+                  <td style={{ fontWeight: 700 }}>
+                    {f.isLabo && <span title="Fournisseur labo (automatique)" style={{ marginRight: 6 }}>🏭</span>}
+                    {f.nom}
+                  </td>
                   <td style={{ color: 'var(--text-muted)' }}>{f.telephone ?? '—'}</td>
                   <td style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{f.adresse ?? '—'}</td>
                   <td>
@@ -140,8 +143,14 @@ export default function FournisseursPage() {
                     </div>
                   </td>
                   <td style={{ whiteSpace: 'nowrap' }}>
-                    <button className="btn btn-ghost btn-sm" style={{ marginRight: 6 }} onClick={() => openEdit(f)}>✏️</button>
-                    <button className="btn btn-ghost btn-sm" style={{ color: 'var(--danger)' }} onClick={() => deleteFournisseur(f)}>🗑️</button>
+                    {f.isLabo ? (
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>Auto-géré</span>
+                    ) : (
+                      <>
+                        <button className="btn btn-ghost btn-sm" style={{ marginRight: 6 }} onClick={() => openEdit(f)}>✏️</button>
+                        <button className="btn btn-ghost btn-sm" style={{ color: 'var(--danger)' }} onClick={() => deleteFournisseur(f)}>🗑️</button>
+                      </>
+                    )}
                   </td>
                 </tr>
               ))}

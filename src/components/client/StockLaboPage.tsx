@@ -14,10 +14,12 @@ const fmtDate = (iso: string | null | undefined) => {
   return `${d}/${m}/${y}`;
 };
 
-const qtyColor = (q: number | null) => {
-  if (q === null || q === 0) return 'var(--danger, #ef4444)';
-  if (q < 5) return 'var(--warning, #f59e0b)';
-  return 'var(--success, #10b981)';
+const seuilLabelClass = (restante: number | null, seuil: number | null): string => {
+  if (restante === null) return '';
+  if (seuil === null) return restante <= 0 ? 'stock-alert' : 'stock-ok';
+  if (restante <= 0) return 'stock-alert';
+  if (restante <= seuil) return 'stock-warn';
+  return 'stock-ok';
 };
 
 interface LaboStockRow {
@@ -28,6 +30,8 @@ interface LaboStockRow {
   quantite: number | null;
   prixUnitaire: number | null;
   dateAppro: string | null;
+  seuilMin: number | null;
+  totalTransfere: number;
 }
 
 interface RowState {
@@ -54,6 +58,8 @@ export default function StockLaboPage() {
   const [labo, setLabo] = useState<{ nom: string; franchiseGroup: string; referentTel: string; adresse?: string; activites?: { id: number; nom: string }[] } | null>(null);
   const [stock, setStock] = useState<LaboStockRow[]>([]);
   const [rowState, setRowState] = useState<Record<number, RowState>>({});
+  const [seuilMinEdits, setSeuilMinEdits] = useState<Record<number, string>>({});
+  const [seuilMinSaving, setSeuilMinSaving] = useState<Record<number, boolean>>({});
   const [loading, setLoading] = useState(true);
 
   // Filters
@@ -103,6 +109,7 @@ export default function StockLaboPage() {
       const rows = data as LaboStockRow[];
       setStock(rows);
       const init: Record<number, RowState> = {};
+      const seuilInit: Record<number, string> = {};
       for (const r of rows) {
         const hasExisting = r.quantite !== null;
         const qStr = r.quantite !== null ? String(r.quantite) : '';
@@ -121,8 +128,10 @@ export default function StockLaboPage() {
           historyOpen: false,
           history: [],
         };
+        seuilInit[r.ingredientId] = r.seuilMin !== null ? String(r.seuilMin) : '';
       }
       setRowState(init);
+      setSeuilMinEdits(seuilInit);
     } catch { /* ignore */ }
     setLoading(false);
   }, [laboId, today]);
@@ -178,6 +187,17 @@ export default function StockLaboPage() {
       const { data } = await api.get(`/api/labo/${laboId}/stock/${ingredientId}/history`);
       setField(ingredientId, 'history', data);
     } catch { /* ignore */ }
+  };
+
+  const saveSeuilMin = async (ingredientId: number) => {
+    const raw = seuilMinEdits[ingredientId]?.trim();
+    const val = raw ? parseFloat(raw) : null;
+    setSeuilMinSaving((p) => ({ ...p, [ingredientId]: true }));
+    try {
+      await api.put(`/api/labo/${laboId}/ingredients/${ingredientId}/seuil-min`, { seuilMin: val });
+      setStock((prev) => prev.map((r) => r.ingredientId === ingredientId ? { ...r, seuilMin: val } : r));
+    } catch { /* ignore */ }
+    setSeuilMinSaving((p) => ({ ...p, [ingredientId]: false }));
   };
 
   const openIngModal = async () => {
@@ -336,12 +356,15 @@ export default function StockLaboPage() {
               <span style={{ marginLeft: 'auto', fontSize: '0.8rem', color: 'var(--text-muted)' }}>{isCatOpen ? '▼' : '▶'}</span>
             </button>
             {isCatOpen && (
-            <div className="table-responsive card" style={{ marginBottom: 0 }}>
+            <div className="table-responsive card th-indigo" style={{ marginBottom: 0 }}>
               <table className="table">
                 <thead>
                   <tr>
                     <th>{t('client.stock.ingredient')}</th>
-                    <th style={{ textAlign: 'right' }}>{t('client.stock.quantity')}</th>
+                    <th style={{ textAlign: 'right' }}>Stock actuel</th>
+                    <th style={{ textAlign: 'right' }}>Qté transférée</th>
+                    <th style={{ textAlign: 'center' }}>Seuil min</th>
+                    <th style={{ textAlign: 'right' }}>Nouvelle Qté</th>
                     <th style={{ textAlign: 'right' }}>{t('client.stock.prix_unitaire')}</th>
                     <th>{t('client.stock.date_appro')}</th>
                     <th></th>
@@ -351,6 +374,7 @@ export default function StockLaboPage() {
                   {rows.map((r) => {
                     const rs = rowState[r.ingredientId];
                     if (!rs) return null;
+                    const cls = seuilLabelClass(r.quantite, r.seuilMin);
                     return (
                       <>
                         <tr key={r.ingredientId}>
@@ -359,20 +383,36 @@ export default function StockLaboPage() {
                             <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{r.unite}</div>
                           </td>
                           <td style={{ textAlign: 'right' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'flex-end' }}>
-                              <span style={{ fontWeight: 700, color: qtyColor(r.quantite), fontSize: '0.95rem', minWidth: 48, textAlign: 'right' }}>
-                                {r.quantite !== null ? r.quantite : '—'}
-                              </span>
-                              <input
-                                type="number"
-                                min="0"
-                                step="0.001"
-                                value={rs.quantite}
-                                onChange={(e) => setField(r.ingredientId, 'quantite', e.target.value)}
-                                style={{ width: 90, textAlign: 'right' }}
-                                className="input"
-                              />
-                            </div>
+                            <span className={cls} style={{ fontSize: '1rem', fontWeight: 700 }}>
+                              {r.quantite !== null ? r.quantite.toFixed(3) : '—'}
+                            </span>
+                          </td>
+                          <td style={{ textAlign: 'right', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+                            {r.totalTransfere > 0 ? (
+                              <span style={{ color: '#7c3aed', fontWeight: 600 }}>↗ {r.totalTransfere.toFixed(3)}</span>
+                            ) : '—'}
+                          </td>
+                          <td style={{ textAlign: 'center' }}>
+                            <input
+                              type="number" min="0" step="0.001" placeholder="—"
+                              value={seuilMinEdits[r.ingredientId] ?? ''}
+                              onChange={(e) => setSeuilMinEdits((p) => ({ ...p, [r.ingredientId]: e.target.value }))}
+                              onBlur={() => saveSeuilMin(r.ingredientId)}
+                              style={{ width: 72, textAlign: 'right', fontSize: '0.82rem' }}
+                              className="input"
+                              title={seuilMinSaving[r.ingredientId] ? 'Enregistrement…' : 'Seuil minimum — auto-save'}
+                            />
+                          </td>
+                          <td style={{ textAlign: 'right' }}>
+                            <input
+                              type="number"
+                              min="0"
+                              step="0.001"
+                              value={rs.quantite}
+                              onChange={(e) => setField(r.ingredientId, 'quantite', e.target.value)}
+                              style={{ width: 90, textAlign: 'right' }}
+                              className="input"
+                            />
                           </td>
                           <td style={{ textAlign: 'right' }}>
                             <input
@@ -417,7 +457,7 @@ export default function StockLaboPage() {
                         </tr>
                         {rs.historyOpen && (
                           <tr key={`${r.ingredientId}-hist`}>
-                            <td colSpan={5} style={{ background: 'var(--surface)', padding: '8px 16px' }}>
+                            <td colSpan={8} style={{ background: 'var(--surface)', padding: '8px 16px' }}>
                               {rs.history.length === 0 ? (
                                 <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{t('client.stock.no_history')}</span>
                               ) : (

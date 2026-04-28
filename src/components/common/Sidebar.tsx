@@ -488,20 +488,6 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                     <ProductSubLinks locked={false} actCtx="franchise" ftActCtx="franchise" onClick={onClose} />
                   )}
 
-                  {/* Fournisseurs — locked if no activities yet */}
-                  {!isOnboarding && (
-                    <li>
-                      {!hasFranchise && !hasDistinct ? (
-                        <LockedLink label="Fournisseurs" reason="Créez d'abord une activité" />
-                      ) : (
-                        <NavLink to="/client/fournisseurs" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>
-                          <span className="link-icon">🚚</span>
-                          <span className="link-label">Fournisseurs</span>
-                        </NavLink>
-                      )}
-                    </li>
-                  )}
-
                   <Divider />
 
                   {/* Espace Distinct */}
@@ -561,6 +547,20 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                   />
                   {openSections.has('produits-distinct') && !isOnboarding && hasDistinct && hasDistinctSelections && (
                     <ProductSubLinks locked={false} actCtx="distinct" ftActCtx="distinct" onClick={onClose} />
+                  )}
+
+                  {/* Fournisseurs — locked if no activities yet */}
+                  {!isOnboarding && (
+                    <li>
+                      {!hasFranchise && !hasDistinct ? (
+                        <LockedLink label="Fournisseurs" reason="Créez d'abord une activité" />
+                      ) : (
+                        <NavLink to="/client/fournisseurs" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>
+                          <span className="link-icon">🚚</span>
+                          <span className="link-label">Fournisseurs</span>
+                        </NavLink>
+                      )}
+                    </li>
                   )}
 
                   <Divider />
