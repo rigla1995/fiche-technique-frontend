@@ -47,6 +47,13 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
   const [filterFranchiseGroup, setFilterFranchiseGroup] = useState('');
   const [filterFranchiseName, setFilterFranchiseName] = useState('');
   const [filterDistinctName, setFilterDistinctName] = useState('');
+  // Delete confirmation modal
+  type DeleteTarget =
+    | { kind: 'franchise-group'; group: string; laboNom: string | null; acts: Activite[] }
+    | { kind: 'activite'; act: Activite };
+  const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
   // Ingredient assignment modal
   const [ingredientsActivite, setIngredientsActivite] = useState<Activite | null>(null);
   const [ingredients, setIngredients] = useState<ActiviteIngredient[]>([]);
@@ -251,12 +258,19 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
     setSaving(false);
   };
 
-  const deleteActivite = async (id: number) => {
-    if (!window.confirm(t('client.entreprise.delete_activity_confirm'))) return;
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
     try {
-      await api.delete(`/api/entreprise/activites/${id}`);
+      if (deleteTarget.kind === 'franchise-group') {
+        await api.delete(`/api/entreprise/franchise-groups/${encodeURIComponent(deleteTarget.group)}`);
+      } else {
+        await api.delete(`/api/entreprise/activites/${deleteTarget.act.id}`);
+      }
+      setDeleteTarget(null);
       load();
     } catch { /* ignore */ }
+    setDeleting(false);
   };
 
   const openIngredients = async (act: Activite) => {
@@ -387,14 +401,23 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                       const groupLabo = acts.find((a) => a.laboNom)?.laboNom ?? null;
                       return (
                         <div key={group} style={{ marginBottom: 24 }}>
-                          <h3 style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
-                            🏢 {group} <span style={{ fontWeight: 400, fontSize: '0.72rem', opacity: 0.7 }}>({acts.length})</span>
-                            {groupLabo && (
-                              <span style={{ fontWeight: 600, fontSize: '0.72rem', color: '#7c3aed', background: '#ede9fe', border: '1px solid #c4b5fd', borderRadius: 20, padding: '2px 10px', textTransform: 'none', letterSpacing: 0 }}>
-                                🏭 {groupLabo}
-                              </span>
-                            )}
-                          </h3>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                            <h3 style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.06em', margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+                              🏢 {group} <span style={{ fontWeight: 400, fontSize: '0.72rem', opacity: 0.7 }}>({acts.length})</span>
+                              {groupLabo && (
+                                <span style={{ fontWeight: 600, fontSize: '0.72rem', color: '#7c3aed', background: '#ede9fe', border: '1px solid #c4b5fd', borderRadius: 20, padding: '2px 10px', textTransform: 'none', letterSpacing: 0 }}>
+                                  🏭 {groupLabo}
+                                </span>
+                              )}
+                            </h3>
+                            <button
+                              className="btn btn-danger-ghost btn-sm"
+                              title={t('client.entreprise.delete_group', 'Supprimer le groupe')}
+                              onClick={() => setDeleteTarget({ kind: 'franchise-group', group, laboNom: groupLabo, acts })}
+                            >
+                              🗑 {t('client.entreprise.delete_group', 'Supprimer le groupe')}
+                            </button>
+                          </div>
                           <div className="table-responsive card" style={{ marginBottom: 0 }}>
                             <table className="table">
                               <thead>
@@ -431,7 +454,6 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                                       <button className="btn btn-ghost btn-sm" title={t('client.entreprise.manage_ingredients')} onClick={() => openIngredients(act)}>🧂</button>
                                       <button className="btn btn-ghost btn-sm" title={t('common.edit')} onClick={() => openEdit(act)}>✏️</button>
                                       <button className="btn btn-ghost btn-sm" title={t('client.entreprise.duplicate_activity')} onClick={() => openDuplicate(act)}>⧉</button>
-                                      <button className="btn btn-danger-ghost btn-sm" title={t('common.delete')} onClick={() => deleteActivite(act.id)}>🗑</button>
                                     </td>
                                   </tr>
                                 ))}
@@ -505,7 +527,7 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                                 <button className="btn btn-ghost btn-sm" title={t('client.entreprise.manage_ingredients')} onClick={() => openIngredients(act)}>🧂</button>
                                 <button className="btn btn-ghost btn-sm" title={t('common.edit')} onClick={() => openEdit(act)}>✏️</button>
                                 <button className="btn btn-ghost btn-sm" title={t('client.entreprise.duplicate_activity')} onClick={() => openDuplicate(act)}>⧉</button>
-                                <button className="btn btn-danger-ghost btn-sm" title={t('common.delete')} onClick={() => deleteActivite(act.id)}>🗑</button>
+                                <button className="btn btn-danger-ghost btn-sm" title={t('common.delete')} onClick={() => setDeleteTarget({ kind: 'activite', act })}>🗑</button>
                               </td>
                             </tr>
                           ))}
@@ -790,6 +812,53 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
             </div>
             <div className="modal-footer">
               <button className="btn btn-primary" onClick={closeIngredients}>{t('common.close')}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete confirmation modal */}
+      {deleteTarget && (
+        <div className="modal-overlay">
+          <div className="modal" style={{ maxWidth: 480 }}>
+            <div className="modal-header">
+              <h2 style={{ color: '#dc2626', margin: 0 }}>⚠️ {t('client.entreprise.confirm_delete_title', 'Confirmer la suppression')}</h2>
+            </div>
+            <div className="modal-body">
+              {deleteTarget.kind === 'franchise-group' ? (
+                <>
+                  <p style={{ marginBottom: 12 }}>
+                    {t('client.entreprise.delete_group_warning', 'Cette action va supprimer définitivement le groupe franchise et toutes ses dépendances :')}
+                  </p>
+                  <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    <li style={{ fontWeight: 700, fontSize: '1rem' }}>🏢 {deleteTarget.group}</li>
+                    {deleteTarget.laboNom && (
+                      <li style={{ color: '#7c3aed', fontWeight: 600 }}>🏭 {t('client.entreprise.labo', 'Labo')} : {deleteTarget.laboNom}</li>
+                    )}
+                    <li style={{ marginTop: 4, fontWeight: 600, color: 'var(--text-muted)', fontSize: '0.82rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                      {t('client.entreprise.activities_section', 'Activités')} ({deleteTarget.acts.length})
+                    </li>
+                    {deleteTarget.acts.map((a) => (
+                      <li key={a.id} style={{ paddingLeft: 12, color: 'var(--text-muted)', fontSize: '0.88rem' }}>• {a.nom}</li>
+                    ))}
+                  </ul>
+                </>
+              ) : (
+                <p>
+                  {t('client.entreprise.delete_activity_warning', 'Supprimer l\'activité')} <strong>{deleteTarget.act.nom}</strong> ?
+                </p>
+              )}
+              <p style={{ marginTop: 16, color: '#dc2626', fontSize: '0.85rem', fontWeight: 600 }}>
+                {t('client.entreprise.irreversible', 'Cette action est irréversible.')}
+              </p>
+            </div>
+            <div className="modal-footer" style={{ gap: 10 }}>
+              <button className="btn btn-secondary" onClick={() => setDeleteTarget(null)} disabled={deleting}>
+                {t('common.cancel')}
+              </button>
+              <button className="btn btn-danger" onClick={confirmDelete} disabled={deleting}>
+                {deleting ? '…' : t('common.delete')}
+              </button>
             </div>
           </div>
         </div>
