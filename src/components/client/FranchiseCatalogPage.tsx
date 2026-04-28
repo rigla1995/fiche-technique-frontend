@@ -80,15 +80,19 @@ export default function FranchiseCatalogPage() {
     if (groupNames.length > 0 && !selectedGroup) setSelectedGroup(groupNames[0]);
   }, [groupNames, selectedGroup]);
 
+  const assignedIngredients = allIngredients.filter((ing) =>
+    groupActivities.some((a) => selectionMap[ing.id]?.[a.id]?.selected)
+  );
+
   const allCategories = Array.from(new Set(
-    allIngredients.map((i) => i.categorie || t('client.ingredients_catalog.no_category'))
+    assignedIngredients.map((i) => i.categorie || t('client.ingredients_catalog.no_category'))
   )).sort();
 
   const ingredientsInCategory = filterCategory
-    ? allIngredients.filter((i) => (i.categorie || t('client.ingredients_catalog.no_category')) === filterCategory)
-    : allIngredients;
+    ? assignedIngredients.filter((i) => (i.categorie || t('client.ingredients_catalog.no_category')) === filterCategory)
+    : assignedIngredients;
 
-  const filtered = allIngredients.filter((i) => {
+  const filtered = assignedIngredients.filter((i) => {
     const cat = i.categorie || t('client.ingredients_catalog.no_category');
     const catOk = !filterCategory || cat === filterCategory;
     const ingOk = !filterIngId || i.id === filterIngId;

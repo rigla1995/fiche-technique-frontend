@@ -43,15 +43,18 @@ export default function DistinctCatalogPage() {
     if (selectedId !== null) loadIngredients(selectedId);
   }, [selectedId, loadIngredients]);
 
+  const assignedIngredients = ingredients.filter((i) => i.selected);
+
   const allCategories = Array.from(new Set(
-    ingredients.map((i) => i.categorie || t('client.ingredients_catalog.no_category'))
+    assignedIngredients.map((i) => i.categorie || t('client.ingredients_catalog.no_category'))
   )).sort();
 
   const ingredientsInCategory = filterCategory
-    ? ingredients.filter((i) => (i.categorie || t('client.ingredients_catalog.no_category')) === filterCategory)
-    : ingredients;
+    ? assignedIngredients.filter((i) => (i.categorie || t('client.ingredients_catalog.no_category')) === filterCategory)
+    : assignedIngredients;
 
   const filtered = ingredients.filter((i) => {
+    if (!i.selected) return false;
     const cat = i.categorie || t('client.ingredients_catalog.no_category');
     const catOk = !filterCategory || cat === filterCategory;
     const ingOk = !filterIngId || i.id === filterIngId;
