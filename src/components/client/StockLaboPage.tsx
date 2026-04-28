@@ -76,6 +76,12 @@ export default function StockLaboPage() {
   const [assignLoading, setAssignLoading] = useState(false);
   const [assignIngredients, setAssignIngredients] = useState<AssignIngredient[]>([]);
   const [assignActivites, setAssignActivites] = useState<AssignActivite[]>([]);
+  // Modal filters
+  const [assignFilterCat, setAssignFilterCat] = useState('');
+  const [assignFilterIngId, setAssignFilterIngId] = useState<number | ''>('');
+  const [assignFilterNom, setAssignFilterNom] = useState('');
+  // Collapsible categories (set of collapsed cat names)
+  const [collapsedCats, setCollapsedCats] = useState<Set<string>>(new Set());
 
   const today = todayStr();
 
@@ -193,6 +199,10 @@ export default function StockLaboPage() {
 
   const openAssignModal = async () => {
     setShowAssignModal(true);
+    setAssignFilterCat('');
+    setAssignFilterIngId('');
+    setAssignFilterNom('');
+    setCollapsedCats(new Set());
     setAssignLoading(true);
     try {
       const { data } = await api.get(`/api/labo/${laboId}/activity-assignments`);
@@ -444,7 +454,7 @@ export default function StockLaboPage() {
               <h2>🔗 {t('client.labo.assign_to_activities')} — {labo?.nom}</h2>
               <button className="modal-close" onClick={closeAssignModal}>✕</button>
             </div>
-            <div className="modal-body" style={{ maxHeight: '65vh', overflowY: 'auto' }}>
+            <div className="modal-body" style={{ maxHeight: '70vh', overflowY: 'auto' }}>
               {assignLoading ? (
                 <p className="text-muted">{t('common.loading')}</p>
               ) : assignIngredients.length === 0 ? (
@@ -452,50 +462,123 @@ export default function StockLaboPage() {
               ) : assignActivites.length === 0 ? (
                 <p className="text-muted">{t('client.labo.no_activites')}</p>
               ) : (() => {
-                const cats: Record<string, typeof assignIngredients> = {};
-                for (const ing of assignIngredients) {
+                // Apply filters
+                const allAssignCats = Array.from(new Set(assignIngredients.map((i) => i.categorie))).sort();
+                const inAssignCat = assignFilterCat ? assignIngredients.filter((i) => i.categorie === assignFilterCat) : assignIngredients;
+                const filteredAssign = assignIngredients.filter((i) => {
+                  const catOk = !assignFilterCat || i.categorie === assignFilterCat;
+                  const ingOk = !assignFilterIngId || i.ingredientId === assignFilterIngId;
+                  const nomOk = !assignFilterNom || i.nom.toLowerCase().includes(assignFilterNom.toLowerCase());
+                  return catOk && ingOk && nomOk;
+                });
+                // Group by category
+                const cats: Record<string, typeof filteredAssign> = {};
+                for (const ing of filteredAssign) {
                   if (!cats[ing.categorie]) cats[ing.categorie] = [];
                   cats[ing.categorie].push(ing);
                 }
-                return Object.entries(cats).sort(([a], [b]) => a.localeCompare(b)).map(([cat, items]) => (
-                  <div key={cat} style={{ marginBottom: 24 }}>
-                    <h3 style={{ fontSize: '0.82rem', fontWeight: 800, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>
-                      🏷️ {cat}
-                    </h3>
-                    <div className="table-responsive" style={{ overflowX: 'auto' }}>
-                      <table className="table" style={{ minWidth: 400 }}>
-                        <thead>
-                          <tr>
-                            <th style={{ minWidth: 160 }}>{t('client.stock.ingredient')}</th>
-                            {assignActivites.map((act) => (
-                              <th key={act.id} style={{ textAlign: 'center', minWidth: 110, color: 'var(--primary)' }}>{act.nom}</th>
-                            ))}
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {items.map((ing) => (
-                            <tr key={ing.ingredientId}>
-                              <td>
-                                <div style={{ fontWeight: 600 }}>{ing.nom}</div>
-                                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{ing.unite}</div>
-                              </td>
-                              {ing.activities.map((a) => (
-                                <td key={a.activiteId} style={{ textAlign: 'center' }}>
-                                  <input
-                                    type="checkbox"
-                                    checked={a.assigned}
-                                    onChange={() => toggleAssignment(ing.ingredientId, a.activiteId)}
-                                    style={{ width: 18, height: 18, accentColor: 'var(--primary)', cursor: 'pointer' }}
-                                  />
-                                </td>
-                              ))}
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                return (
+                  <>
+                    {/* Filter bar */}
+                    <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap', alignItems: 'flex-end', position: 'sticky', top: 0, background: 'var(--surface, #fff)', zIndex: 2, paddingBottom: 10, borderBottom: '1px solid var(--border)' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                        <span style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Catégorie</span>
+                        <select className="input" style={{ maxWidth: 180 }} value={assignFilterCat} onChange={(e) => { setAssignFilterCat(e.target.value); setAssignFilterIngId(''); }}>
+                          <option value="">Toutes</option>
+                          {allAssignCats.map((c) => <option key={c} value={c}>{c}</option>)}
+                        </select>
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                        <span style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Ingrédient</span>
+                        <select
+                          className="input"
+                          style={{ maxWidth: 200 }}
+                          value={assignFilterIngId}
+                          disabled={!assignFilterCat}
+                          onChange={(e) => setAssignFilterIngId(e.target.value === '' ? '' : Number(e.target.value))}
+                        >
+                          <option value="">— Tous —</option>
+                          {inAssignCat.map((i) => <option key={i.ingredientId} value={i.ingredientId}>{i.nom}</option>)}
+                        </select>
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 3, flex: '1 1 auto', maxWidth: 180 }}>
+                        <span style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Nom</span>
+                        <input
+                          type="text"
+                          className="input"
+                          style={{ minWidth: 100 }}
+                          placeholder="Rechercher…"
+                          value={assignFilterNom}
+                          onChange={(e) => setAssignFilterNom(e.target.value)}
+                        />
+                      </div>
+                      {(assignFilterCat || assignFilterIngId !== '' || assignFilterNom) && (
+                        <button className="btn btn-ghost btn-sm" style={{ alignSelf: 'flex-end' }} onClick={() => { setAssignFilterCat(''); setAssignFilterIngId(''); setAssignFilterNom(''); }}>✕</button>
+                      )}
                     </div>
-                  </div>
-                ));
+
+                    {/* Category sections (collapsible) */}
+                    {Object.entries(cats).sort(([a], [b]) => a.localeCompare(b)).map(([cat, items]) => {
+                      const isCollapsed = collapsedCats.has(cat);
+                      const toggleCat = () => setCollapsedCats((prev) => {
+                        const next = new Set(prev);
+                        if (next.has(cat)) next.delete(cat); else next.add(cat);
+                        return next;
+                      });
+                      return (
+                        <div key={cat} style={{ marginBottom: 16 }}>
+                          <button
+                            onClick={toggleCat}
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0', width: '100%', textAlign: 'left' }}
+                          >
+                            <span style={{ fontSize: '0.82rem', fontWeight: 800, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                              🏷️ {cat}
+                            </span>
+                            <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 400 }}>({items.length})</span>
+                            <span style={{ marginLeft: 'auto', fontSize: '0.8rem', color: 'var(--text-muted)' }}>{isCollapsed ? '▶' : '▼'}</span>
+                          </button>
+                          {!isCollapsed && (
+                            <div className="table-responsive" style={{ overflowX: 'auto' }}>
+                              <table className="table" style={{ minWidth: 400 }}>
+                                <thead>
+                                  <tr>
+                                    <th style={{ minWidth: 160 }}>{t('client.stock.ingredient')}</th>
+                                    {assignActivites.map((act) => (
+                                      <th key={act.id} style={{ textAlign: 'center', minWidth: 110, color: 'var(--primary)' }}>{act.nom}</th>
+                                    ))}
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {items.map((ing) => (
+                                    <tr key={ing.ingredientId}>
+                                      <td>
+                                        <div style={{ fontWeight: 600 }}>{ing.nom}</div>
+                                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{ing.unite}</div>
+                                      </td>
+                                      {ing.activities.map((a) => (
+                                        <td key={a.activiteId} style={{ textAlign: 'center' }}>
+                                          <input
+                                            type="checkbox"
+                                            checked={a.assigned}
+                                            onChange={() => toggleAssignment(ing.ingredientId, a.activiteId)}
+                                            style={{ width: 18, height: 18, accentColor: 'var(--primary)', cursor: 'pointer' }}
+                                          />
+                                        </td>
+                                      ))}
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                    {Object.keys(cats).length === 0 && (
+                      <p className="text-muted">{t('common.no_result')}</p>
+                    )}
+                  </>
+                );
               })()}
             </div>
             <div className="modal-footer">
