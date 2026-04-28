@@ -266,6 +266,8 @@
       "franchise_no": "Non, activités distinctes",
       "franchise_name": "Nom de la franchise",
       "franchise_name_placeholder": "ex: Coco",
+      "franchise_name_exists": "Une franchise \"{{name}}\" existe déjà.",
+      "activity_name_exists": "Une activité distincte \"{{name}}\" existe déjà.",
       "franchise_count": "Nombre de franchises",
       "franchise_single_warning": "Une seule activité doit être de type Distincte, pas Franchise.",
       "step_indicator": "Activité {{current}} / {{total}}",

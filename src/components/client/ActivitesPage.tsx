@@ -111,7 +111,7 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
   };
 
   const franchiseCount = Math.max(0, parseInt(nombreActivites) || 0);
-  const franchiseUnlocked = isFranchise && !editingId && !isDuplicate && franchiseName.trim().length > 0 && franchiseCount > 1;
+  const franchiseUnlocked = isFranchise && !editingId && !isDuplicate && franchiseName.trim().length > 0 && franchiseCount > 1 && !franchiseNameConflict;
 
   const handleNombreActivitesChange = (val: string) => {
     setNombreActivites(val);
@@ -277,6 +277,15 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
   const franchiseActivities = activites.filter((a) => a.type === 'franchise');
   const distinctActivities = activites.filter((a) => a.type !== 'franchise');
   const franchiseGroupNames = Array.from(new Set(franchiseActivities.map((a) => a.franchiseGroup || a.nom))).sort();
+  const distinctNames = Array.from(new Set(distinctActivities.map((a) => a.nom.toLowerCase())));
+
+  // Inline duplicate checks — used to block the wizard/form before any API call
+  const franchiseNameConflict = !editingId && franchiseName.trim()
+    ? franchiseGroupNames.some((g) => g.toLowerCase() === franchiseName.trim().toLowerCase())
+    : false;
+  const distinctNameConflict = !editingId && !isDuplicate && form.nom.trim()
+    ? distinctNames.includes(form.nom.trim().toLowerCase())
+    : false;
   const filteredFranchise = franchiseActivities.filter((a) => {
     const g = a.franchiseGroup || a.nom;
     return (!filterFranchiseGroup || g === filterFranchiseGroup) &&
@@ -519,7 +528,13 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                       placeholder={t('client.entreprise.franchise_name_placeholder')}
                       value={franchiseName}
                       onChange={(e) => setFranchiseName(e.target.value)}
+                      style={franchiseNameConflict ? { borderColor: 'var(--danger, #ef4444)' } : undefined}
                     />
+                    {franchiseNameConflict && (
+                      <p style={{ color: 'var(--danger, #ef4444)', fontSize: '0.8rem', marginTop: 4 }}>
+                        {t('client.entreprise.franchise_name_exists', { name: franchiseName.trim() })}
+                      </p>
+                    )}
                   </div>
                   <div className="form-field" style={{ marginBottom: 16 }}>
                     <label>{t('client.entreprise.franchise_count')} * <span style={{ fontWeight: 400, color: 'var(--text-muted)', fontSize: '0.8rem' }}>(min. 2)</span></label>
@@ -632,7 +647,13 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                       type="text"
                       value={form.nom}
                       onChange={(e) => setForm((f) => ({ ...f, nom: e.target.value }))}
+                      style={distinctNameConflict ? { borderColor: 'var(--danger, #ef4444)' } : undefined}
                     />
+                    {distinctNameConflict && (
+                      <p style={{ color: 'var(--danger, #ef4444)', fontSize: '0.8rem', marginTop: 4 }}>
+                        {t('client.entreprise.activity_name_exists', { name: form.nom.trim() })}
+                      </p>
+                    )}
                   </div>
                   <div className="form-field" style={{ marginBottom: 12 }}>
                     <label>{t('client.entreprise.activity_email')}</label>
@@ -685,7 +706,7 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                     )}
                   </>
                 ) : (
-                  <button type="submit" className="btn btn-primary" disabled={saving || (memeActivite === null && !editingId && !isDuplicate)}>
+                  <button type="submit" className="btn btn-primary" disabled={saving || (memeActivite === null && !editingId && !isDuplicate) || distinctNameConflict}>
                     {saving ? t('common.loading') : t('common.save')}
                   </button>
                 )}
