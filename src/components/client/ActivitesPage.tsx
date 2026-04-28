@@ -334,8 +334,10 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
       {!minimal && <h1 style={{ marginBottom: 24 }}>{t('nav.activites')}</h1>}
 
       {!loading && activites.length > 0 && (
-        <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginBottom: 20 }}>
-          {activites.length} {t('client.entreprise.activities_section').toLowerCase()}
+        <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 12 }}>
+          <span>🏭 {new Set(activites.filter((a) => a.laboId).map((a) => a.laboId)).size} labo(s)</span>
+          <span style={{ color: 'var(--border)' }}>·</span>
+          <span>🏢 {activites.length} {t('client.entreprise.activities_section').toLowerCase()}</span>
         </p>
       )}
 
@@ -366,7 +368,12 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                   <h2 style={{ fontSize: '0.82rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text)', margin: 0 }}>
                     {t('nav.espace_franchise')}
                   </h2>
-                  <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--primary)', background: 'var(--primary-light)', border: '1px solid #bfdbfe', borderRadius: 20, padding: '2px 10px' }}>{franchiseActivities.length}</span>
+                  <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#7c3aed', background: '#ede9fe', border: '1px solid #c4b5fd', borderRadius: 20, padding: '2px 10px' }}>
+                    🏭 {new Set(franchiseActivities.filter((a) => a.laboId).map((a) => a.laboId)).size}
+                  </span>
+                  <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--primary)', background: 'var(--primary-light)', border: '1px solid #bfdbfe', borderRadius: 20, padding: '2px 10px' }}>
+                    🏢 {franchiseActivities.length}
+                  </span>
                 </div>
                 <button className="btn btn-primary btn-sm" onClick={() => openAdd('franchise')}>
                   + {t('client.entreprise.add_activity')}
@@ -487,7 +494,9 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                   <h2 style={{ fontSize: '0.82rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text)', margin: 0 }}>
                     {t('nav.espace_distinct')}
                   </h2>
-                  <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#059669', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 20, padding: '2px 10px' }}>{distinctActivities.length}</span>
+                  <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#059669', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 20, padding: '2px 10px' }}>
+                    🏢 {distinctActivities.length}
+                  </span>
                 </div>
                 <button className="btn btn-secondary btn-sm" onClick={() => openAdd('distincte')}>
                   + {t('client.entreprise.add_activity')}
