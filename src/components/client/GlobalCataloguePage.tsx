@@ -172,6 +172,9 @@ function FiltersBar({
           onChange={(e) => onNameChange(e.target.value)}
         />
       </div>
+      {(filterCategory || filterIngId !== '' || filterName) && (
+        <button className="btn btn-ghost btn-sm" style={{ alignSelf: 'flex-end' }} onClick={() => { onCatChange(''); onIngChange(''); onNameChange(''); }}>✕</button>
+      )}
     </div>
   );
 }

@@ -502,6 +502,9 @@ function ActivityStockSection({ label, activities, isFranchise, onSave }: Activi
           value={nameFilter}
           onChange={(e) => setNameFilter(e.target.value)}
         />
+        {(categoryFilter || ingredientFilter !== '' || nameFilter) && (
+          <button className="btn btn-ghost btn-sm" style={{ alignSelf: 'flex-end' }} onClick={() => { setCategoryFilter(''); setIngredientFilter(''); setNameFilter(''); }}>✕</button>
+        )}
       </div>
 
       {loading ? (
