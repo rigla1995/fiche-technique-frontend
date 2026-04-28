@@ -59,6 +59,11 @@ export default function HistoriqueApproPage() {
   const [ingredientsLoading, setIngredientsLoading] = useState(false);
   const [selectedIngredientId, setSelectedIngredientId] = useState(initIngredientId);
 
+  // Fournisseur + ref filters (entreprise only)
+  const [fournisseurs, setFournisseurs] = useState<{ id: number; nom: string }[]>([]);
+  const [selectedFournisseurId, setSelectedFournisseurId] = useState('');
+  const [refFactureFilter, setRefFactureFilter] = useState('');
+
   // Date range
   const [startDate, setStartDate] = useState(yearStart);
   const [endDate, setEndDate] = useState(yearEnd);
@@ -79,6 +84,14 @@ export default function HistoriqueApproPage() {
   useEffect(() => {
     api.get('/categories?onlyWithIngredients=true').then(({ data }) => setCategories(data as Category[])).catch(() => {});
   }, []);
+
+  // Load fournisseurs for entreprise
+  useEffect(() => {
+    if (!isEntreprise) return;
+    api.get('/api/entreprise/fournisseurs')
+      .then(({ data }) => setFournisseurs((data as { id: number; nom: string }[]).map((f) => ({ id: f.id, nom: f.nom }))))
+      .catch(() => {});
+  }, [isEntreprise]);
 
   // Load activities for enterprise
   useEffect(() => {
@@ -157,13 +170,15 @@ export default function HistoriqueApproPage() {
       else if (selectedCategoryId) params.set('categorieId', selectedCategoryId);
       if (startDate) params.set('startDate', startDate);
       if (endDate) params.set('endDate', endDate);
+      if (isEntreprise && selectedFournisseurId) params.set('fournisseurId', selectedFournisseurId);
+      if (isEntreprise && refFactureFilter.trim()) params.set('refFacture', refFactureFilter.trim());
       const { data } = await api.get(`/api/stock/historique?${params}`);
       setResults(data as HistoriqueApproEntry[]);
     } catch {
       setResults([]);
     }
     setLoading(false);
-  }, [isEntreprise, selectedActiviteId, selectedIngredientId, selectedCategoryId, startDate, endDate]);
+  }, [isEntreprise, selectedActiviteId, selectedIngredientId, selectedCategoryId, startDate, endDate, selectedFournisseurId, refFactureFilter]);
 
   const labelStyle: React.CSSProperties = {
     fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)',
@@ -275,6 +290,34 @@ export default function HistoriqueApproPage() {
               value={endDate} onChange={(e) => setEndDate(e.target.value)} />
           </div>
 
+          {/* Fournisseur (entreprise) */}
+          {isEntreprise && fournisseurs.length > 0 && (
+            <div>
+              <label style={labelStyle}>Fournisseur</label>
+              <select
+                className="input" style={{ maxWidth: 200 }}
+                value={selectedFournisseurId}
+                onChange={(e) => setSelectedFournisseurId(e.target.value)}
+              >
+                <option value="">— Tous —</option>
+                {fournisseurs.map((f) => <option key={f.id} value={f.id}>{f.nom}</option>)}
+              </select>
+            </div>
+          )}
+
+          {/* Réf Facture (entreprise) */}
+          {isEntreprise && (
+            <div>
+              <label style={labelStyle}>Réf Facture</label>
+              <input
+                type="text" className="input" style={{ maxWidth: 160 }}
+                placeholder="Rechercher réf…"
+                value={refFactureFilter}
+                onChange={(e) => setRefFactureFilter(e.target.value)}
+              />
+            </div>
+          )}
+
           <button className="btn btn-primary" style={{ alignSelf: 'flex-end' }} onClick={fetchResults} disabled={loading}>
             {loading ? t('common.loading') : '🔍 Rechercher'}
           </button>
@@ -302,25 +345,37 @@ export default function HistoriqueApproPage() {
             <span style={{ fontSize: '1.15rem', fontWeight: 700, color: 'var(--primary)' }}>{totalCost.toFixed(3)}</span>
           </div>
         </div>
-        <div className="table-responsive card">
+        <div className="table-responsive card th-teal">
           <table className="table">
             <thead>
               <tr>
                 <th>{t('client.historique_appro.col_date')}</th>
+                {isEntreprise && <th>Type</th>}
                 <th>{t('client.historique_appro.col_ingredient')}</th>
                 <th>{t('client.historique_appro.col_category')}</th>
                 <th style={{ textAlign: 'right' }}>{t('client.historique_appro.col_qty')}</th>
-                <th style={{ textAlign: 'right' }}>{t('client.historique_appro.col_price')}</th>
+                <th style={{ textAlign: 'right' }}>Prix (U/DT)</th>
+                {isEntreprise && <th>Fournisseur</th>}
+                {isEntreprise && <th>Réf Facture</th>}
               </tr>
             </thead>
             <tbody>
               {pagedResults.map((r, i) => (
                 <tr key={i}>
                   <td style={{ fontWeight: 600, color: 'var(--primary)' }}>{fmtDate(r.dateAppro)}</td>
+                  {isEntreprise && (
+                    <td>
+                      <span className={`badge-appro ${r.typeAppro ?? 'manuel'}`}>
+                        {r.typeAppro === 'transfert' ? 'Transfert' : 'Manuel'}
+                      </span>
+                    </td>
+                  )}
                   <td>{r.ingredientNom}</td>
                   <td style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{r.categorieNom}</td>
                   <td style={{ textAlign: 'right' }}>{r.quantite ?? '—'} <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>{r.uniteNom}</span></td>
                   <td style={{ textAlign: 'right', fontWeight: 600 }}>{r.prixUnitaire !== null ? r.prixUnitaire.toFixed(3) : '—'}</td>
+                  {isEntreprise && <td style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>{r.fournisseurNom ?? '—'}</td>}
+                  {isEntreprise && <td style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>{r.refFacture ?? '—'}</td>}
                 </tr>
               ))}
             </tbody>

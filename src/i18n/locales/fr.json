@@ -304,7 +304,7 @@
       "no_activities": "Créez au moins une activité dans « Mes activités » pour gérer le stock entreprise.",
       "ingredient": "Ingrédient",
       "quantity": "Quantité",
-      "prix_unitaire": "Stock Prix Unitaire (DT)",
+      "prix_unitaire": "Stock Prix (U/DT)",
       "date_achat": "Date d'achat",
       "date_appro": "Date d'appro",
       "unit_price": "Prix unit.",

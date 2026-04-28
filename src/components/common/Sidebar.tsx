@@ -488,6 +488,16 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                     <ProductSubLinks locked={false} actCtx="franchise" ftActCtx="franchise" onClick={onClose} />
                   )}
 
+                  {/* Fournisseurs — always accessible for entreprise */}
+                  {!isOnboarding && (
+                    <li>
+                      <NavLink to="/client/fournisseurs" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>
+                        <span className="link-icon">🚚</span>
+                        <span className="link-label">Fournisseurs</span>
+                      </NavLink>
+                    </li>
+                  )}
+
                   <Divider />
 
                   {/* Espace Distinct */}

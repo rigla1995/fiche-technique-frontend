@@ -340,3 +340,120 @@ select.input { cursor: pointer; }
 .activite-tab-btn { padding: 7px 16px; border: 1.5px solid var(--border); border-radius: 20px; background: var(--surface); color: var(--text-muted); font-size: 0.875rem; font-weight: 500; cursor: pointer; transition: all 0.15s; }
 .activite-tab-btn:hover { border-color: var(--primary); color: var(--primary); }
 .activite-tab-btn.active { background: var(--primary); border-color: var(--primary); color: #fff; font-weight: 600; }
+
+/* ===== TABLE HEADER COLOR THEMES ===== */
+/* Each page section gets a distinct calming blue-grey tone */
+
+/* Ingredients / Catalogue — indigo */
+.th-indigo thead th {
+  background: #eef2ff;
+  color: #3730a3;
+  border-bottom: 2px solid #c7d2fe;
+}
+
+/* Stock — blue */
+.th-blue thead th {
+  background: #eff6ff;
+  color: #1e40af;
+  border-bottom: 2px solid #bfdbfe;
+}
+
+/* Historique Appro — teal */
+.th-teal thead th {
+  background: #f0fdfa;
+  color: #0f766e;
+  border-bottom: 2px solid #99f6e4;
+}
+
+/* Labo Stock — purple */
+.th-purple thead th {
+  background: #faf5ff;
+  color: #6b21a8;
+  border-bottom: 2px solid #e9d5ff;
+}
+
+/* Labo Transferts — orange */
+.th-orange thead th {
+  background: #fff7ed;
+  color: #9a3412;
+  border-bottom: 2px solid #fed7aa;
+}
+
+/* Produits / Recettes — pink */
+.th-pink thead th {
+  background: #fdf4ff;
+  color: #86198f;
+  border-bottom: 2px solid #f5d0fe;
+}
+
+/* Fournisseurs — cyan */
+.th-cyan thead th {
+  background: #ecfeff;
+  color: #155e75;
+  border-bottom: 2px solid #a5f3fc;
+}
+
+/* Pertes — rose */
+.th-rose thead th {
+  background: #fff1f2;
+  color: #9f1239;
+  border-bottom: 2px solid #fecdd3;
+}
+
+/* ===== BADGE: type_appro ===== */
+.badge-appro {
+  display: inline-block; font-size: 0.68rem; font-weight: 700;
+  padding: 2px 8px; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.4px;
+}
+.badge-appro.manuel { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
+.badge-appro.transfert { background: #faf5ff; color: #6b21a8; border: 1px solid #e9d5ff; }
+
+/* ===== SEUIL MIN color coding ===== */
+.stock-ok    { color: #16a34a; font-weight: 700; }
+.stock-warn  { color: #d97706; font-weight: 700; }
+.stock-alert { color: #dc2626; font-weight: 700; }
+
+/* ===== PERTES modal / inline ===== */
+.perte-btn {
+  padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: 600;
+  background: #fff1f2; color: #9f1239; border: 1px solid #fecdd3; cursor: pointer;
+  transition: background 0.15s;
+}
+.perte-btn:hover { background: #ffe4e6; }
+
+/* ===== FOURNISSEURS page ===== */
+.fournisseur-card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+  padding: 16px; display: flex; flex-direction: column; gap: 8px;
+  box-shadow: var(--shadow); transition: box-shadow 0.2s;
+}
+.fournisseur-card:hover { box-shadow: var(--shadow-md); }
+.fournisseur-card-name { font-weight: 700; font-size: 0.95rem; }
+.fournisseur-card-meta { font-size: 0.8rem; color: var(--text-muted); display: flex; flex-direction: column; gap: 2px; }
+.fournisseur-card-acts { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+.act-chip {
+  background: #ecfeff; color: #155e75; border: 1px solid #a5f3fc;
+  font-size: 0.68rem; font-weight: 600; padding: 2px 8px; border-radius: 20px;
+}
+
+/* ===== SIDEBAR collapsible sub-nav ===== */
+.sidebar-section-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 7px 16px; cursor: pointer; font-size: 0.82rem; font-weight: 700;
+  color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.6px;
+  border-left: 3px solid transparent; margin: 1px 8px; border-radius: 8px;
+  background: none; border-top: none; border-right: none; border-bottom: none;
+  width: calc(100% - 16px); text-align: left; transition: background 0.15s;
+}
+.sidebar-section-header:hover { background: var(--bg); color: var(--text); }
+.sidebar-section-header.locked { cursor: default; opacity: 0.45; }
+.sidebar-section-header.locked:hover { background: none; }
+.sub-nav-link {
+  display: flex; align-items: center; gap: 8px;
+  padding: 7px 16px 7px 36px; color: var(--text-muted); text-decoration: none;
+  font-size: 0.84rem; font-weight: 500; transition: background 0.15s, color 0.15s;
+  border-radius: 8px; margin: 1px 8px;
+}
+.sub-nav-link:hover { background: var(--primary-light); color: var(--primary); }
+.sub-nav-link.active { background: var(--primary-light); color: var(--primary); font-weight: 700; }
+.sidebar-divider { height: 1px; background: var(--border); margin: 6px 12px; }

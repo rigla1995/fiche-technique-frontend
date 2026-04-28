@@ -138,8 +138,10 @@ export interface StockEntry {
   categorie: string;
   prixUnitaire: number | null;
   quantite: number | null;
+  totalQuantite: number | null;
   dateAppro: string | null;
   updatedAt: string | null;
+  seuilMin: number | null;
 }
 
 export interface StockHistoryEntry {
@@ -147,6 +149,9 @@ export interface StockHistoryEntry {
   quantite: number | null;
   prixUnitaire: number | null;
   updatedAt: string | null;
+  typeAppro: string;
+  fournisseurNom: string | null;
+  refFacture: string | null;
 }
 
 export interface HistoriqueApproEntry {
@@ -158,6 +163,29 @@ export interface HistoriqueApproEntry {
   ingredientNom: string;
   uniteNom: string;
   categorieNom: string;
+  typeAppro: string;
+  fournisseurNom: string | null;
+  refFacture: string | null;
+}
+
+export interface Fournisseur {
+  id: number;
+  nom: string;
+  adresse: string | null;
+  telephone: string | null;
+  activiteIds: number[];
+  createdAt?: string;
+}
+
+export interface Perte {
+  id: number;
+  ingredientId: number;
+  ingredientNom: string;
+  uniteNom: string;
+  quantite: number;
+  typePerte: 'avarie' | 'dechet';
+  datePerte: string;
+  createdAt: string;
 }
 
 export interface ActiviteIngredient {
