@@ -53,7 +53,12 @@ function canSaveStockRow(row: StockRowState): boolean {
   if (!row.hasExisting) {
     return row.quantite.trim() !== '' && row.prixUnitaire.trim() !== '' && row.dateAppro.trim() !== '';
   }
-  return row.quantite !== row.origQuantite || row.prixUnitaire !== row.origPrixUnitaire || row.dateAppro !== row.origDateAppro;
+  return (
+    row.quantite !== row.origQuantite ||
+    row.prixUnitaire !== row.origPrixUnitaire ||
+    row.dateAppro !== row.origDateAppro ||
+    row.fournisseurId !== ''
+  );
 }
 
 // ────────────────────────────────────────────────────────────────────────────
