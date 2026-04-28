@@ -50,6 +50,7 @@ export default function TransferPage() {
   // Filters
   const [filterCategorie, setFilterCategorie] = useState('');
   const [filterNom, setFilterNom] = useState('');
+  const [filterIngredientId, setFilterIngredientId] = useState<number | ''>('');
 
   const load = useCallback(async () => {
     if (!laboId) return;
@@ -57,7 +58,7 @@ export default function TransferPage() {
     try {
       const [laboRes, stockRes] = await Promise.all([
         api.get(`/api/labo/${laboId}`),
-        api.get(`/api/labo/${laboId}/stock`),
+        api.get(`/api/labo/${laboId}/stock?assignedOnly=true`),
       ]);
       setLabo(laboRes.data);
       setStock(stockRes.data);
@@ -121,7 +122,7 @@ export default function TransferPage() {
       });
       setNote('');
       // Reload stock
-      const { data } = await api.get(`/api/labo/${laboId}/stock`);
+      const { data } = await api.get(`/api/labo/${laboId}/stock?assignedOnly=true`);
       setStock(data);
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
@@ -134,10 +135,14 @@ export default function TransferPage() {
 
   // Filter + group by category
   const allCategories = Array.from(new Set(stock.map((r) => r.categorie))).sort();
+  const ingredientsInCategory = filterCategorie
+    ? stock.filter((r) => r.categorie === filterCategorie)
+    : stock;
   const filtered = stock.filter((r) => {
     const catOk = !filterCategorie || r.categorie === filterCategorie;
+    const ingOk = !filterIngredientId || r.ingredientId === filterIngredientId;
     const nomOk = !filterNom || r.nom.toLowerCase().includes(filterNom.toLowerCase());
-    return catOk && nomOk;
+    return catOk && ingOk && nomOk;
   });
   const groups: Record<string, LaboStockRow[]> = {};
   for (const r of filtered) {
@@ -198,24 +203,29 @@ export default function TransferPage() {
         <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap', alignItems: 'flex-end' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
             <span style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Catégorie</span>
-            <select className="input" style={{ maxWidth: 200 }} value={filterCategorie} onChange={(e) => setFilterCategorie(e.target.value)}>
+            <select className="input" style={{ maxWidth: 200 }} value={filterCategorie} onChange={(e) => { setFilterCategorie(e.target.value); setFilterIngredientId(''); }}>
               <option value="">{t('client.catalogue_franchise.all_categories')}</option>
               {allCategories.map((c) => <option key={c} value={c}>{c}</option>)}
             </select>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-            <span style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('client.stock.ingredient')}</span>
-            <input
-              type="text"
-              className="input"
-              style={{ minWidth: 160, maxWidth: 240 }}
-              placeholder={t('client.stock.search_ingredient')}
-              value={filterNom}
-              onChange={(e) => setFilterNom(e.target.value)}
-            />
-          </div>
-          {(filterCategorie || filterNom) && (
-            <button className="btn btn-ghost btn-sm" style={{ alignSelf: 'flex-end' }} onClick={() => { setFilterCategorie(''); setFilterNom(''); }}>✕</button>
+          {filterCategorie && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+              <span style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('client.stock.ingredient')}</span>
+              <select
+                className="input"
+                style={{ minWidth: 160, maxWidth: 260 }}
+                value={filterIngredientId}
+                onChange={(e) => setFilterIngredientId(e.target.value === '' ? '' : Number(e.target.value))}
+              >
+                <option value="">— {t('common.all', 'Tous')} —</option>
+                {ingredientsInCategory.map((r) => (
+                  <option key={r.ingredientId} value={r.ingredientId}>{r.nom}</option>
+                ))}
+              </select>
+            </div>
+          )}
+          {(filterCategorie || filterIngredientId !== '' || filterNom) && (
+            <button className="btn btn-ghost btn-sm" style={{ alignSelf: 'flex-end' }} onClick={() => { setFilterCategorie(''); setFilterIngredientId(''); setFilterNom(''); }}>✕</button>
           )}
         </div>
       )}

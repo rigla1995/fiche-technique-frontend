@@ -2,7 +2,6 @@ import { useEffect, useState, useCallback, useMemo } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
-import { useAuth } from '../../context/AuthContext';
 import type { Activite, ActiviteIngredient } from '../../types';
 
 // ingId → actId → { selected }
@@ -10,7 +9,6 @@ type SelectionMap = Record<number, Record<number, { selected: boolean }>>;
 
 export default function FranchiseCatalogPage() {
   const { t } = useTranslation();
-  const { user, advanceOnboarding } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const justCreated = new URLSearchParams(location.search).get('created') === '1';
@@ -19,7 +17,6 @@ export default function FranchiseCatalogPage() {
   const [selectionMap, setSelectionMap] = useState<SelectionMap>({});
   const [allIngredients, setAllIngredients] = useState<ActiviteIngredient[]>([]);
   const [loading, setLoading] = useState(true);
-  const [toggling, setToggling] = useState<string | null>(null);
 
   const [selectedGroup, setSelectedGroup] = useState<string>('');
   const [filterCategory, setFilterCategory] = useState('');
@@ -79,21 +76,6 @@ export default function FranchiseCatalogPage() {
   useEffect(() => {
     if (groupNames.length > 0 && !selectedGroup) setSelectedGroup(groupNames[0]);
   }, [groupNames, selectedGroup]);
-
-  const toggleIngredient = async (ingId: number, actId: number) => {
-    const key = `${ingId}-${actId}`;
-    setToggling(key);
-    try {
-      const { data } = await api.post(`/api/entreprise/activites/${actId}/ingredients/${ingId}/select`);
-      setSelectionMap((prev) => ({
-        ...prev,
-        [ingId]: { ...(prev[ingId] || {}), [actId]: { selected: data.selected } },
-      }));
-      if (data.selected && user?.onboardingStep === 3) await advanceOnboarding(0);
-    } finally {
-      setToggling(null);
-    }
-  };
 
   const allCategories = Array.from(new Set(
     allIngredients.map((i) => i.categorie || t('client.ingredients_catalog.no_category'))
@@ -212,26 +194,21 @@ export default function FranchiseCatalogPage() {
                             <td style={{ color: 'var(--text-muted)', fontSize: '0.82rem' }}>{ing.unite}</td>
                             {groupActivities.map((a) => {
                               const sel = ingSelections[a.id];
-                              const key = `${ing.id}-${a.id}`;
                               return (
                                 <td key={a.id} style={{ textAlign: 'center' }}>
-                                  <button
-                                    className="btn btn-ghost btn-sm"
-                                    style={{
-                                      fontSize: '1rem',
-                                      padding: '3px 10px',
-                                      borderRadius: 20,
-                                      background: sel?.selected ? 'var(--success, #10b981)' : 'transparent',
-                                      color: sel?.selected ? '#fff' : 'var(--text-muted)',
-                                      border: sel?.selected ? 'none' : '1px solid var(--border)',
-                                      fontWeight: sel?.selected ? 700 : undefined,
-                                      minWidth: 36,
-                                    }}
-                                    disabled={toggling === key}
-                                    onClick={() => toggleIngredient(ing.id, a.id)}
-                                  >
-                                    {toggling === key ? '…' : sel?.selected ? '✓' : '○'}
-                                  </button>
+                                  <span style={{
+                                    display: 'inline-block',
+                                    fontSize: '1rem',
+                                    padding: '3px 10px',
+                                    borderRadius: 20,
+                                    background: sel?.selected ? 'var(--success, #10b981)' : 'transparent',
+                                    color: sel?.selected ? '#fff' : 'var(--text-muted)',
+                                    border: sel?.selected ? 'none' : '1px solid var(--border)',
+                                    fontWeight: sel?.selected ? 700 : undefined,
+                                    minWidth: 36,
+                                  }}>
+                                    {sel?.selected ? '✓' : '○'}
+                                  </span>
                                 </td>
                               );
                             })}

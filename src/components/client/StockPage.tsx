@@ -424,7 +424,8 @@ function ActivityStockSection({ label, activities, isFranchise, onSave }: Activi
     entries.map((e) => e.categorie || t('client.ingredients_catalog.no_category'))
   )).sort();
 
-  const canDuplicate = isFranchise && groupActivities.length > 1;
+  const groupHasLabo = groupActivities.some((a) => !!a.laboId);
+  const canDuplicate = isFranchise && groupActivities.length > 1 && !groupHasLabo;
 
   return (
     <div style={{ marginBottom: 36 }}>
