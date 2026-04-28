@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
 import { useSelection } from '../../context/SelectionContext';
@@ -43,7 +44,9 @@ export default function ClientIngredientsCatalog({ embedded, onSelectionDone }: 
 
   const selectedCount = ingredients.filter((i) => i.selected).length;
 
-  const filtered = ingredients.filter(
+  // Only show selected ingredients — modifications must go through Catalogue Global
+  const selectedOnly = ingredients.filter((i) => i.selected);
+  const filtered = selectedOnly.filter(
     (i) =>
       i.name.toLowerCase().includes(search.toLowerCase()) ||
       (i.categorieName || '').toLowerCase().includes(search.toLowerCase())
@@ -73,9 +76,24 @@ export default function ClientIngredientsCatalog({ embedded, onSelectionDone }: 
         )}
       </div>
 
+      {/* Banner pointing to Catalogue Global for modifications */}
+      {!embedded && (
+        <div style={{ background: '#eef2ff', border: '1px solid #c7d2fe', borderRadius: 8, padding: '10px 14px', marginBottom: 16, fontSize: '0.85rem', color: '#3730a3' }}>
+          🌐 {t('client.ingredients_catalog.readonly_hint', 'Ce catalogue affiche uniquement les ingrédients sélectionnés dans le')} {' '}
+          <Link to="/client/catalogue-global" style={{ color: '#2563eb', fontWeight: 600, textDecoration: 'underline' }}>
+            {t('nav.catalogue_global', 'Catalogue Global')}
+          </Link>.
+          {' '}{t('client.ingredients_catalog.modify_hint', 'Pour ajouter ou retirer des ingrédients, rendez-vous dans le Catalogue Global.')}
+        </div>
+      )}
+
       {selectedCount === 0 && !loading && (
         <div className="alert alert-error" style={{ background: '#fff7ed', color: '#c05621', borderColor: '#fbd38d', marginBottom: 16 }}>
-          ⚠️ {t('client.ingredients_catalog.selection_hint')}
+          ⚠️ {t('client.ingredients_catalog.no_selection_hint', 'Aucun ingrédient sélectionné. Rendez-vous dans le')}{' '}
+          <Link to="/client/catalogue-global" style={{ color: '#c05621', fontWeight: 600, textDecoration: 'underline' }}>
+            {t('nav.catalogue_global', 'Catalogue Global')}
+          </Link>{' '}
+          {t('client.ingredients_catalog.to_select', 'pour sélectionner vos ingrédients.')}
         </div>
       )}
 

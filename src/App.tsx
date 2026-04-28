@@ -21,6 +21,7 @@ import HistoriqueApproPage from './components/client/HistoriqueApproPage';
 import StockLaboPage from './components/client/StockLaboPage';
 import TransferPage from './components/client/TransferPage';
 import TransferHistoriquePage from './components/client/TransferHistoriquePage';
+import GlobalCataloguePage from './components/client/GlobalCataloguePage';
 import './i18n';
 import './index.css';
 
@@ -63,6 +64,7 @@ export default function App() {
             <Route path="/client/products" element={<ProductList />} />
             <Route path="/client/products/new" element={<ProductForm />} />
             <Route path="/client/products/:id/edit" element={<ProductForm />} />
+            <Route path="/client/catalogue-global" element={<GlobalCataloguePage />} />
             <Route path="/client/ingredients" element={<ClientIngredientsCatalog />} />
             <Route path="/client/catalogue-franchise" element={<FranchiseCatalogPage />} />
             <Route path="/client/catalogue-distinct" element={<DistinctCatalogPage />} />

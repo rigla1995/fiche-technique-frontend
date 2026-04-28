@@ -36,6 +36,7 @@
   },
   "nav": {
     "dashboard": "Tableau de bord",
+    "catalogue_global": "Catalogue Global",
     "clients": "Clients",
     "units": "Unités",
     "ingredients": "Ingrédients",

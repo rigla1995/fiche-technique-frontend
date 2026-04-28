@@ -241,6 +241,18 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                 )}
               </li>
 
+              {/* Catalogue Global — visible to all clients */}
+              <li>
+                {isOnboarding && step < 3 ? (
+                  <LockedLink label={t('nav.catalogue_global', 'Catalogue Global')} />
+                ) : (
+                  <NavLink to="/client/catalogue-global" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>
+                    <span className="link-icon">🌐</span>
+                    <span className="link-label">{t('nav.catalogue_global', 'Catalogue Global')}</span>
+                  </NavLink>
+                )}
+              </li>
+
               {/* Independant: catalogue, products, stock */}
               {!isEntreprise && (
                 <>

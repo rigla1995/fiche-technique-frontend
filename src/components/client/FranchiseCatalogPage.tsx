@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
@@ -118,13 +118,22 @@ export default function FranchiseCatalogPage() {
       <h1 style={{ marginBottom: 20 }}>{t('nav.catalogue_franchise')}</h1>
 
       {justCreated && (
-        <div style={{ background: '#dcfce7', border: '1px solid #86efac', borderRadius: 8, padding: '12px 16px', marginBottom: 20, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+        <div style={{ background: '#dcfce7', border: '1px solid #86efac', borderRadius: 8, padding: '12px 16px', marginBottom: 16, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
           <span style={{ color: '#15803d', fontWeight: 600 }}>
             ✅ {t('client.entreprise.activity_created')} — {t('client.catalogue.assign_ingredients_hint', 'Assignez maintenant les ingrédients à vos activités.')}
           </span>
           <button onClick={() => navigate('/client/catalogue-franchise', { replace: true })} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1rem', color: '#15803d' }}>✕</button>
         </div>
       )}
+
+      {/* Catalogue Global banner */}
+      <div style={{ background: '#eef2ff', border: '1px solid #c7d2fe', borderRadius: 8, padding: '10px 14px', marginBottom: 16, fontSize: '0.85rem', color: '#3730a3' }}>
+        🌐 {t('client.catalogue_franchise.global_hint', 'Ce catalogue affiche les ingrédients assignés via le')}{' '}
+        <Link to="/client/catalogue-global" style={{ color: '#2563eb', fontWeight: 600, textDecoration: 'underline' }}>
+          {t('nav.catalogue_global', 'Catalogue Global')}
+        </Link>.
+        {' '}{t('client.catalogue_franchise.global_hint2', 'Pour modifier votre sélection (labo ou activité), rendez-vous dans le Catalogue Global.')}
+      </div>
 
       {activites.length === 0 ? (
         <p className="text-muted">{t('client.catalogue_franchise.no_activities')}</p>
