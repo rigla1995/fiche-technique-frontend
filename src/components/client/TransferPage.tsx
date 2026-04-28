@@ -40,6 +40,7 @@ export default function TransferPage() {
   const [stock, setStock] = useState<LaboStockRow[]>([]);
   const [assignedSet, setAssignedSet] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
+  const [hasTransfers, setHasTransfers] = useState(false);
 
   const [dateTransfert, setDateTransfert] = useState(todayStr());
   const [note, setNote] = useState('');
@@ -61,13 +62,15 @@ export default function TransferPage() {
     if (!laboId) return;
     setLoading(true);
     try {
-      const [laboRes, stockRes, assignRes] = await Promise.all([
+      const [laboRes, stockRes, assignRes, transfersRes] = await Promise.all([
         api.get(`/api/labo/${laboId}`),
         api.get(`/api/labo/${laboId}/stock?assignedOnly=true`),
         api.get(`/api/labo/${laboId}/activity-assignments`),
+        api.get(`/api/labo/${laboId}/transfers`),
       ]);
       setLabo(laboRes.data);
       setStock(stockRes.data);
+      setHasTransfers(Array.isArray(transfersRes.data) && transfersRes.data.length > 0);
       // Build assigned set: "ingId-actId"
       const assigned = new Set<string>();
       for (const ing of (assignRes.data.ingredients || []) as { ingredientId: number; activities: { activiteId: number; assigned: boolean }[] }[]) {
@@ -125,6 +128,7 @@ export default function TransferPage() {
     try {
       await api.post(`/api/labo/${laboId}/transfer`, { dateTransfert, note: note || undefined, refFacture: refFacture.trim() || undefined, transfers });
       setSuccessMsg(t('client.labo.transfer_success'));
+      setHasTransfers(true);
       setTimeout(() => setSuccessMsg(''), 3000);
       // Reset qtys
       setQtys((prev) => {
@@ -176,7 +180,11 @@ export default function TransferPage() {
         </div>
         <div style={{ display: 'flex', gap: 10 }}>
           <Link to={`/client/labo/stock?laboId=${laboId}`} className="btn btn-ghost btn-sm">← {t('client.labo.stock_title')}</Link>
-          <Link to={`/client/labo/historique-transferts?laboId=${laboId}`} className="btn btn-secondary btn-sm">📋 {t('client.labo.transfers_history')}</Link>
+          {hasTransfers ? (
+            <Link to={`/client/labo/historique-transferts?laboId=${laboId}`} className="btn btn-secondary btn-sm">📋 {t('client.labo.transfers_history')}</Link>
+          ) : (
+            <span className="btn btn-secondary btn-sm" style={{ opacity: 0.4, cursor: 'not-allowed', pointerEvents: 'none' }} title="Aucun transfert enregistré">📋 {t('client.labo.transfers_history')}</span>
+          )}
         </div>
       </div>
 
