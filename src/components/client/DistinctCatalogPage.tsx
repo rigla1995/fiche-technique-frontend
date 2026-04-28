@@ -15,6 +15,7 @@ export default function DistinctCatalogPage() {
   const [loadingActivites, setLoadingActivites] = useState(true);
   const [loadingIngredients, setLoadingIngredients] = useState(false);
   const [filterCategory, setFilterCategory] = useState('');
+  const [filterIngId, setFilterIngId] = useState<number | ''>('');
   const [filterName, setFilterName] = useState('');
 
   useEffect(() => {
@@ -44,9 +45,16 @@ export default function DistinctCatalogPage() {
     ingredients.map((i) => i.categorie || t('client.ingredients_catalog.no_category'))
   )).sort();
 
+  const ingredientsInCategory = filterCategory
+    ? ingredients.filter((i) => (i.categorie || t('client.ingredients_catalog.no_category')) === filterCategory)
+    : ingredients;
+
   const filtered = ingredients.filter((i) => {
     const cat = i.categorie || t('client.ingredients_catalog.no_category');
-    return (!filterCategory || cat === filterCategory) && (!filterName || i.nom.toLowerCase().includes(filterName.toLowerCase()));
+    const catOk = !filterCategory || cat === filterCategory;
+    const ingOk = !filterIngId || i.id === filterIngId;
+    const nomOk = !filterName || i.nom.toLowerCase().includes(filterName.toLowerCase());
+    return catOk && ingOk && nomOk;
   });
 
   const groups: Record<string, ActiviteIngredient[]> = {};
@@ -84,7 +92,7 @@ export default function DistinctCatalogPage() {
         <p className="text-muted">{t('client.catalogue_distinct.no_activities')}</p>
       ) : (
         <>
-          {/* Single filter row: activity + category + search */}
+          {/* Single filter row: activity + category + ingredient + search */}
           <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap', alignItems: 'flex-end' }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
               <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Activité</span>
@@ -92,7 +100,7 @@ export default function DistinctCatalogPage() {
                 className="input"
                 style={{ maxWidth: 220 }}
                 value={selectedId ?? ''}
-                onChange={(e) => { setSelectedId(Number(e.target.value)); setFilterCategory(''); setFilterName(''); }}
+                onChange={(e) => { setSelectedId(Number(e.target.value)); setFilterCategory(''); setFilterIngId(''); setFilterName(''); }}
               >
                 {activites.map((a) => <option key={a.id} value={a.id}>{a.nom}</option>)}
               </select>
@@ -103,23 +111,39 @@ export default function DistinctCatalogPage() {
                 className="input"
                 style={{ maxWidth: 200 }}
                 value={filterCategory}
-                onChange={(e) => setFilterCategory(e.target.value)}
+                onChange={(e) => { setFilterCategory(e.target.value); setFilterIngId(''); }}
               >
                 <option value="">{t('client.catalogue_franchise.all_categories')}</option>
                 {allCategories.map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+              <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Ingrédient</span>
+              <select
+                className="input"
+                style={{ maxWidth: 220 }}
+                value={filterIngId}
+                disabled={!filterCategory}
+                onChange={(e) => setFilterIngId(e.target.value === '' ? '' : Number(e.target.value))}
+              >
+                <option value="">— Tous —</option>
+                {ingredientsInCategory.map((i) => <option key={i.id} value={i.id}>{i.nom}</option>)}
+              </select>
+            </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 3, flex: '1 1 auto', maxWidth: 220 }}>
-              <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('common.ingredient_name', "Nom de l'ingrédient")}</span>
+              <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Nom</span>
               <input
                 type="text"
                 className="input"
-                style={{ minWidth: 140 }}
-                placeholder={t('common.ingredient_name', "Nom de l'ingrédient") + '…'}
+                style={{ minWidth: 120 }}
+                placeholder="Rechercher…"
                 value={filterName}
                 onChange={(e) => setFilterName(e.target.value)}
               />
             </div>
+            {(filterCategory || filterIngId !== '' || filterName) && (
+              <button className="btn btn-ghost btn-sm" style={{ alignSelf: 'flex-end' }} onClick={() => { setFilterCategory(''); setFilterIngId(''); setFilterName(''); }}>✕</button>
+            )}
           </div>
 
           {loadingIngredients ? (

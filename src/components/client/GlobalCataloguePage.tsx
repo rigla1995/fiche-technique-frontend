@@ -21,6 +21,7 @@ function IngredientList({
   ingredients,
   toggling,
   filterCategory,
+  filterIngId,
   filterName,
   onToggle,
   readOnly,
@@ -28,6 +29,7 @@ function IngredientList({
   ingredients: GlobalIngredient[];
   toggling: number | null;
   filterCategory: string;
+  filterIngId: number | '';
   filterName: string;
   onToggle: (id: number) => void;
   readOnly?: boolean;
@@ -36,8 +38,9 @@ function IngredientList({
 
   const filtered = ingredients.filter((i) => {
     const catOk = !filterCategory || i.categorie === filterCategory;
+    const ingOk = !filterIngId || i.id === filterIngId;
     const nameOk = !filterName || i.nom.toLowerCase().includes(filterName.toLowerCase());
-    return catOk && nameOk;
+    return catOk && ingOk && nameOk;
   });
 
   const groups: Record<string, GlobalIngredient[]> = {};
@@ -107,34 +110,54 @@ function IngredientList({
 
 function FiltersBar({
   categories,
+  ingredients,
   filterCategory,
+  filterIngId,
   filterName,
   onCatChange,
+  onIngChange,
   onNameChange,
 }: {
   categories: string[];
+  ingredients: GlobalIngredient[];
   filterCategory: string;
+  filterIngId: number | '';
   filterName: string;
   onCatChange: (v: string) => void;
+  onIngChange: (v: number | '') => void;
   onNameChange: (v: string) => void;
 }) {
   const { t } = useTranslation();
+  const ingredientsInCat = filterCategory ? ingredients.filter((i) => i.categorie === filterCategory) : ingredients;
   return (
     <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap', alignItems: 'flex-end' }}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
         <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Catégorie</span>
-        <select className="input" style={{ maxWidth: 200 }} value={filterCategory} onChange={(e) => onCatChange(e.target.value)}>
+        <select className="input" style={{ maxWidth: 200 }} value={filterCategory} onChange={(e) => { onCatChange(e.target.value); onIngChange(''); }}>
           <option value="">{t('common.all_categories', 'Toutes catégories')}</option>
           {categories.map((c) => <option key={c} value={c}>{c}</option>)}
         </select>
       </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 3, flex: '1 1 auto', maxWidth: 260 }}>
-        <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('common.ingredient_name', "Nom de l'ingrédient")}</span>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+        <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Ingrédient</span>
+        <select
+          className="input"
+          style={{ maxWidth: 220 }}
+          value={filterIngId}
+          disabled={!filterCategory}
+          onChange={(e) => onIngChange(e.target.value === '' ? '' : Number(e.target.value))}
+        >
+          <option value="">— Tous —</option>
+          {ingredientsInCat.map((i) => <option key={i.id} value={i.id}>{i.nom}</option>)}
+        </select>
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 3, flex: '1 1 auto', maxWidth: 220 }}>
+        <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Nom</span>
         <input
           type="text"
           className="input"
-          style={{ minWidth: 140 }}
-          placeholder={t('common.ingredient_name', "Nom de l'ingrédient") + '…'}
+          style={{ minWidth: 120 }}
+          placeholder="Rechercher…"
           value={filterName}
           onChange={(e) => onNameChange(e.target.value)}
         />
@@ -157,6 +180,7 @@ export default function GlobalCataloguePage() {
   const [loading, setLoading] = useState(false);
   const [toggling, setToggling] = useState<number | null>(null);
   const [filterCategory, setFilterCategory] = useState('');
+  const [filterIngId, setFilterIngId] = useState<number | ''>('');
   const [filterName, setFilterName] = useState('');
 
   // Entreprise-only state
@@ -207,6 +231,7 @@ export default function GlobalCataloguePage() {
   const load = useCallback(async () => {
     setIngredients([]);
     setFilterCategory('');
+    setFilterIngId('');
     setFilterName('');
 
     if (!isEntreprise) {
@@ -372,9 +397,12 @@ export default function GlobalCataloguePage() {
       {ingredients.length > 0 && (
         <FiltersBar
           categories={categories}
+          ingredients={ingredients}
           filterCategory={filterCategory}
+          filterIngId={filterIngId}
           filterName={filterName}
           onCatChange={setFilterCategory}
+          onIngChange={setFilterIngId}
           onNameChange={setFilterName}
         />
       )}
@@ -392,6 +420,7 @@ export default function GlobalCataloguePage() {
           ingredients={ingredients}
           toggling={toggling}
           filterCategory={filterCategory}
+          filterIngId={filterIngId}
           filterName={filterName}
           onToggle={toggle}
         />

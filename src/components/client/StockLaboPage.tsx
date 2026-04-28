@@ -59,6 +59,7 @@ export default function StockLaboPage() {
   // Filters
   const [filterCategorie, setFilterCategorie] = useState('');
   const [filterNom, setFilterNom] = useState('');
+  const [filterText, setFilterText] = useState('');
 
   // Ingredient selector modal
   const [showIngModal, setShowIngModal] = useState(false);
@@ -216,10 +217,12 @@ export default function StockLaboPage() {
 
   // Filter + group by category
   const allCategories = Array.from(new Set(stock.map((r) => r.categorie))).sort();
+  const stockInCategory = filterCategorie ? stock.filter((r) => r.categorie === filterCategorie) : stock;
   const filtered = stock.filter((r) => {
     const catOk = !filterCategorie || r.categorie === filterCategorie;
-    const nomOk = !filterNom || r.nom.toLowerCase().includes(filterNom.toLowerCase());
-    return catOk && nomOk;
+    const ingOk = !filterNom || r.nom === filterNom;
+    const textOk = !filterText || r.nom.toLowerCase().includes(filterText.toLowerCase());
+    return catOk && ingOk && textOk;
   });
   const groups: Record<string, LaboStockRow[]> = {};
   for (const r of filtered) {
@@ -271,25 +274,40 @@ export default function StockLaboPage() {
           {/* Filters */}
           <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap', alignItems: 'flex-end' }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-              <span style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('historique_appro.category', 'Catégorie')}</span>
+              <span style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Catégorie</span>
               <select className="input" style={{ maxWidth: 200 }} value={filterCategorie} onChange={(e) => { setFilterCategorie(e.target.value); setFilterNom(''); }}>
-                <option value="" disabled>{t('historique_appro.category', 'Catégorie')}…</option>
+                <option value="">{t('client.catalogue_franchise.all_categories')}</option>
                 {allCategories.map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>
-            {filterCategorie && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                <span style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('common.ingredient_name', "Nom de l'ingrédient")}</span>
-                <select className="input" style={{ minWidth: 180, maxWidth: 260 }} value={filterNom} onChange={(e) => setFilterNom(e.target.value)}>
-                  <option value="">— {t('common.all', 'Tous')} —</option>
-                  {stock.filter((r) => r.categorie === filterCategorie).map((r) => (
-                    <option key={r.ingredientId} value={r.nom}>{r.nom}</option>
-                  ))}
-                </select>
-              </div>
-            )}
-            {(filterCategorie || filterNom) && (
-              <button className="btn btn-ghost btn-sm" style={{ alignSelf: 'flex-end' }} onClick={() => { setFilterCategorie(''); setFilterNom(''); }}>✕ {t('common.reset', 'Réinitialiser')}</button>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+              <span style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Ingrédient</span>
+              <select
+                className="input"
+                style={{ minWidth: 180, maxWidth: 260 }}
+                value={filterNom}
+                disabled={!filterCategorie}
+                onChange={(e) => setFilterNom(e.target.value)}
+              >
+                <option value="">— Tous —</option>
+                {stockInCategory.map((r) => (
+                  <option key={r.ingredientId} value={r.nom}>{r.nom}</option>
+                ))}
+              </select>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 3, flex: '1 1 auto', maxWidth: 200 }}>
+              <span style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Nom</span>
+              <input
+                type="text"
+                className="input"
+                style={{ minWidth: 120 }}
+                placeholder="Rechercher…"
+                value={filterText}
+                onChange={(e) => setFilterText(e.target.value)}
+              />
+            </div>
+            {(filterCategorie || filterNom || filterText) && (
+              <button className="btn btn-ghost btn-sm" style={{ alignSelf: 'flex-end' }} onClick={() => { setFilterCategorie(''); setFilterNom(''); setFilterText(''); }}>✕</button>
             )}
           </div>
 

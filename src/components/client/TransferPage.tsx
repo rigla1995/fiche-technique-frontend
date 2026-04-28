@@ -38,6 +38,7 @@ export default function TransferPage() {
 
   const [labo, setLabo] = useState<{ nom: string; franchiseGroup: string; activites: Activite[] } | null>(null);
   const [stock, setStock] = useState<LaboStockRow[]>([]);
+  const [assignedSet, setAssignedSet] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
 
   const [dateTransfert, setDateTransfert] = useState(todayStr());
@@ -56,12 +57,21 @@ export default function TransferPage() {
     if (!laboId) return;
     setLoading(true);
     try {
-      const [laboRes, stockRes] = await Promise.all([
+      const [laboRes, stockRes, assignRes] = await Promise.all([
         api.get(`/api/labo/${laboId}`),
         api.get(`/api/labo/${laboId}/stock?assignedOnly=true`),
+        api.get(`/api/labo/${laboId}/activity-assignments`),
       ]);
       setLabo(laboRes.data);
       setStock(stockRes.data);
+      // Build assigned set: "ingId-actId"
+      const assigned = new Set<string>();
+      for (const ing of (assignRes.data.ingredients || []) as { ingredientId: number; activities: { activiteId: number; assigned: boolean }[] }[]) {
+        for (const act of ing.activities) {
+          if (act.assigned) assigned.add(`${ing.ingredientId}-${act.activiteId}`);
+        }
+      }
+      setAssignedSet(assigned);
       // Init qtys
       const init: TransferQtys = {};
       for (const r of stockRes.data as LaboStockRow[]) {
@@ -208,22 +218,32 @@ export default function TransferPage() {
               {allCategories.map((c) => <option key={c} value={c}>{c}</option>)}
             </select>
           </div>
-          {filterCategorie && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-              <span style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('client.stock.ingredient')}</span>
-              <select
-                className="input"
-                style={{ minWidth: 160, maxWidth: 260 }}
-                value={filterIngredientId}
-                onChange={(e) => setFilterIngredientId(e.target.value === '' ? '' : Number(e.target.value))}
-              >
-                <option value="">— {t('common.all', 'Tous')} —</option>
-                {ingredientsInCategory.map((r) => (
-                  <option key={r.ingredientId} value={r.ingredientId}>{r.nom}</option>
-                ))}
-              </select>
-            </div>
-          )}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+            <span style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Ingrédient</span>
+            <select
+              className="input"
+              style={{ minWidth: 160, maxWidth: 260 }}
+              value={filterIngredientId}
+              disabled={!filterCategorie}
+              onChange={(e) => setFilterIngredientId(e.target.value === '' ? '' : Number(e.target.value))}
+            >
+              <option value="">— Tous —</option>
+              {ingredientsInCategory.map((r) => (
+                <option key={r.ingredientId} value={r.ingredientId}>{r.nom}</option>
+              ))}
+            </select>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 3, flex: '1 1 auto', maxWidth: 200 }}>
+            <span style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Nom</span>
+            <input
+              type="text"
+              className="input"
+              style={{ minWidth: 120 }}
+              placeholder="Rechercher…"
+              value={filterNom}
+              onChange={(e) => setFilterNom(e.target.value)}
+            />
+          </div>
           {(filterCategorie || filterIngredientId !== '' || filterNom) && (
             <button className="btn btn-ghost btn-sm" style={{ alignSelf: 'flex-end' }} onClick={() => { setFilterCategorie(''); setFilterIngredientId(''); setFilterNom(''); }}>✕</button>
           )}
@@ -281,20 +301,27 @@ export default function TransferPage() {
                             </div>
                           )}
                         </td>
-                        {activites.map((act) => (
-                          <td key={act.id} style={{ textAlign: 'center' }}>
-                            <input
-                              type="number"
-                              min="0"
-                              step="0.001"
-                              className="input"
-                              style={{ width: 100, textAlign: 'right' }}
-                              value={qtys[r.ingredientId]?.[act.id] ?? ''}
-                              onChange={(e) => setQty(r.ingredientId, act.id, e.target.value)}
-                              placeholder="0"
-                            />
-                          </td>
-                        ))}
+                        {activites.map((act) => {
+                          const isAssigned = assignedSet.has(`${r.ingredientId}-${act.id}`);
+                          return (
+                            <td key={act.id} style={{ textAlign: 'center' }}>
+                              {isAssigned ? (
+                                <input
+                                  type="number"
+                                  min="0"
+                                  step="0.001"
+                                  className="input"
+                                  style={{ width: 100, textAlign: 'right' }}
+                                  value={qtys[r.ingredientId]?.[act.id] ?? ''}
+                                  onChange={(e) => setQty(r.ingredientId, act.id, e.target.value)}
+                                  placeholder="0"
+                                />
+                              ) : (
+                                <span style={{ color: 'var(--danger, #ef4444)', fontWeight: 700, fontSize: '1.1rem' }}>—</span>
+                              )}
+                            </td>
+                          );
+                        })}
                       </tr>
                     ))}
                   </tbody>

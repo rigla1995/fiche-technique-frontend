@@ -20,6 +20,7 @@ export default function FranchiseCatalogPage() {
 
   const [selectedGroup, setSelectedGroup] = useState<string>('');
   const [filterCategory, setFilterCategory] = useState('');
+  const [filterIngId, setFilterIngId] = useState<number | ''>('');
   const [filterName, setFilterName] = useState('');
 
   // Derive franchise groups from activites
@@ -81,9 +82,16 @@ export default function FranchiseCatalogPage() {
     allIngredients.map((i) => i.categorie || t('client.ingredients_catalog.no_category'))
   )).sort();
 
+  const ingredientsInCategory = filterCategory
+    ? allIngredients.filter((i) => (i.categorie || t('client.ingredients_catalog.no_category')) === filterCategory)
+    : allIngredients;
+
   const filtered = allIngredients.filter((i) => {
     const cat = i.categorie || t('client.ingredients_catalog.no_category');
-    return (!filterCategory || cat === filterCategory) && (!filterName || i.nom.toLowerCase().includes(filterName.toLowerCase()));
+    const catOk = !filterCategory || cat === filterCategory;
+    const ingOk = !filterIngId || i.id === filterIngId;
+    const nomOk = !filterName || i.nom.toLowerCase().includes(filterName.toLowerCase());
+    return catOk && ingOk && nomOk;
   });
 
   const ingredientGroups: Record<string, ActiviteIngredient[]> = {};
@@ -121,7 +129,7 @@ export default function FranchiseCatalogPage() {
         <p className="text-muted">{t('client.catalogue_franchise.no_activities')}</p>
       ) : (
         <>
-          {/* Single filter row: franchise group + category + search */}
+          {/* Single filter row: franchise group + category + ingredient + search */}
           <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap', alignItems: 'flex-end' }}>
             {groupNames.length > 1 && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
@@ -130,7 +138,7 @@ export default function FranchiseCatalogPage() {
                   className="input"
                   style={{ maxWidth: 200 }}
                   value={selectedGroup}
-                  onChange={(e) => { setSelectedGroup(e.target.value); setFilterCategory(''); setFilterName(''); }}
+                  onChange={(e) => { setSelectedGroup(e.target.value); setFilterCategory(''); setFilterIngId(''); setFilterName(''); }}
                 >
                   {groupNames.map((g) => <option key={g} value={g}>{g}</option>)}
                 </select>
@@ -142,23 +150,39 @@ export default function FranchiseCatalogPage() {
                 className="input"
                 style={{ maxWidth: 200 }}
                 value={filterCategory}
-                onChange={(e) => setFilterCategory(e.target.value)}
+                onChange={(e) => { setFilterCategory(e.target.value); setFilterIngId(''); }}
               >
                 <option value="">{t('client.catalogue_franchise.all_categories')}</option>
                 {allCategories.map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 3, flex: '1 1 auto', maxWidth: 220 }}>
-              <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('common.ingredient_name', "Nom de l'ingrédient")}</span>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+              <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Ingrédient</span>
+              <select
+                className="input"
+                style={{ maxWidth: 220 }}
+                value={filterIngId}
+                disabled={!filterCategory}
+                onChange={(e) => setFilterIngId(e.target.value === '' ? '' : Number(e.target.value))}
+              >
+                <option value="">— Tous —</option>
+                {ingredientsInCategory.map((i) => <option key={i.id} value={i.id}>{i.nom}</option>)}
+              </select>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 3, flex: '1 1 auto', maxWidth: 200 }}>
+              <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Nom</span>
               <input
                 type="text"
                 className="input"
-                style={{ minWidth: 140 }}
-                placeholder={t('common.ingredient_name', "Nom de l'ingrédient") + '…'}
+                style={{ minWidth: 120 }}
+                placeholder="Rechercher…"
                 value={filterName}
                 onChange={(e) => setFilterName(e.target.value)}
               />
             </div>
+            {(filterCategory || filterIngId !== '' || filterName) && (
+              <button className="btn btn-ghost btn-sm" style={{ alignSelf: 'flex-end' }} onClick={() => { setFilterCategory(''); setFilterIngId(''); setFilterName(''); }}>✕</button>
+            )}
           </div>
 
           {groupActivities.length === 0 ? (

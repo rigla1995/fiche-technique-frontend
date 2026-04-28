@@ -140,13 +140,14 @@ const qtyColor = (q: number | null) => {
 interface StockMatrixProps {
   entries: StockEntry[];
   categoryFilter: string;
+  ingredientFilter?: number | '';
   nameFilter: string;
   activiteId?: number;
   isEntreprise: boolean;
   onSave: (ingredientId: number, quantite: string, prixUnitaire: string, dateAppro: string) => Promise<void>;
 }
 
-function StockMatrix({ entries, categoryFilter, nameFilter, activiteId, isEntreprise, onSave }: StockMatrixProps) {
+function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, activiteId, isEntreprise, onSave }: StockMatrixProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [rows, setRows] = useState<Record<number, StockRowState>>(() => buildInitialRowState(entries));
@@ -198,6 +199,7 @@ function StockMatrix({ entries, categoryFilter, nameFilter, activiteId, isEntrep
 
   let filtered = entries;
   if (categoryFilter) filtered = filtered.filter((e) => (e.categorie || t('client.ingredients_catalog.no_category')) === categoryFilter);
+  if (ingredientFilter) filtered = filtered.filter((e) => e.ingredientId === ingredientFilter);
   if (nameFilter) filtered = filtered.filter((e) => e.nom.toLowerCase().includes(nameFilter.toLowerCase()));
 
   if (filtered.length === 0) return <p className="text-muted">{t('common.no_result')}</p>;
@@ -377,6 +379,7 @@ function ActivityStockSection({ label, activities, isFranchise, onSave }: Activi
   const [entries, setEntries] = useState<StockEntry[]>([]);
   const [loading, setLoading] = useState(false);
   const [categoryFilter, setCategoryFilter] = useState('');
+  const [ingredientFilter, setIngredientFilter] = useState<number | ''>('');
   const [nameFilter, setNameFilter] = useState('');
   const [duplicating, setDuplicating] = useState(false);
   const [dupMsg, setDupMsg] = useState('');
@@ -463,14 +466,29 @@ function ActivityStockSection({ label, activities, isFranchise, onSave }: Activi
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
           <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Catégorie</span>
-          <select className="input" style={{ maxWidth: 200 }} value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)}>
+          <select className="input" style={{ maxWidth: 200 }} value={categoryFilter} onChange={(e) => { setCategoryFilter(e.target.value); setIngredientFilter(''); }}>
             <option value="">{t('client.catalogue_franchise.all_categories')}</option>
             {allCategories.map((c) => <option key={c} value={c}>{c}</option>)}
           </select>
         </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+          <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Ingrédient</span>
+          <select
+            className="input"
+            style={{ maxWidth: 220 }}
+            value={ingredientFilter}
+            disabled={!categoryFilter}
+            onChange={(e) => setIngredientFilter(e.target.value === '' ? '' : Number(e.target.value))}
+          >
+            <option value="">— Tous —</option>
+            {entries.filter((e) => e.categorie === categoryFilter).map((e) => (
+              <option key={e.ingredientId} value={e.ingredientId}>{e.nom}</option>
+            ))}
+          </select>
+        </div>
         <input
           type="text" className="input"
-          style={{ minWidth: 140, flex: '1 1 auto', maxWidth: 220, alignSelf: 'flex-end' }}
+          style={{ minWidth: 120, flex: '1 1 auto', maxWidth: 200, alignSelf: 'flex-end' }}
           placeholder={t('client.stock.search_ingredient')}
           value={nameFilter}
           onChange={(e) => setNameFilter(e.target.value)}
@@ -486,6 +504,7 @@ function ActivityStockSection({ label, activities, isFranchise, onSave }: Activi
           key={selectedId}
           entries={entries}
           categoryFilter={categoryFilter}
+          ingredientFilter={ingredientFilter}
           nameFilter={nameFilter}
           activiteId={selectedId}
           isEntreprise={true}
