@@ -36,6 +36,7 @@
   },
   "nav": {
     "dashboard": "Tableau de bord",
+    "rapports": "Rapports",
     "catalogue_global": "Catalogue Global",
     "clients": "Clients",
     "units": "Unités",

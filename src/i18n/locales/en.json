@@ -36,6 +36,7 @@
   },
   "nav": {
     "dashboard": "Dashboard",
+    "rapports": "Reports",
     "clients": "Clients",
     "units": "Units",
     "ingredients": "Ingredients",

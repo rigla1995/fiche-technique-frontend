@@ -127,6 +127,8 @@ export interface ActiviteTypesSummary {
   hasDistinct: boolean;
   hasFranchiseSelections: boolean;
   hasDistinctSelections: boolean;
+  hasFranchiseAppro: boolean;
+  hasDistinctAppro: boolean;
 }
 
 export interface StockEntry {
