@@ -216,9 +216,15 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const isOnboarding = isEntreprise && step > 0;
   const effectiveHasSelections = isEntreprise ? (step === 0) : hasSelections;
 
-  const currentSection = new URLSearchParams(location.search).get('section');
-  const currentHistType = new URLSearchParams(location.search).get('type');
+  const currentSearch = new URLSearchParams(location.search);
+  const currentSection = currentSearch.get('section');
+  const currentHistType = currentSearch.get('type');
+  const currentProductTab = currentSearch.get('tab');
+  const currentActCtx = currentSearch.get('actCtx');
   const isHistoriquePage = location.pathname === '/client/stock/historique';
+  const isProductsPage = location.pathname === '/client/products';
+  const isProductActive = (tab: string, actCtx: string) =>
+    isProductsPage && currentProductTab === tab && currentActCtx === actCtx;
 
   const hasFranchise = typesSummary === null ? true : typesSummary.hasFranchise;
   const hasDistinct = typesSummary === null ? true : typesSummary.hasDistinct;
@@ -556,56 +562,56 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                     {isOnboarding || !hasFranchiseSelections ? (
                       <LockedLink label="Produits Vendables (F)" />
                     ) : (
-                      <NavLink
+                      <Link
                         to="/client/products?tab=vendable&actCtx=franchise"
-                        className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
+                        className={`sidebar-link ${isProductActive('vendable', 'franchise') ? 'active' : ''}`}
                         onClick={onClose}
                       >
                         <span className="link-icon">🍔</span>
                         <span className="link-label">Produits Vendables (F)</span>
-                      </NavLink>
+                      </Link>
                     )}
                   </li>
                   <li>
                     {isOnboarding || !hasFranchiseSelections ? (
                       <LockedLink label="Produits Utilisables (F)" />
                     ) : (
-                      <NavLink
+                      <Link
                         to="/client/products?tab=utilisable&actCtx=franchise"
-                        className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
+                        className={`sidebar-link ${isProductActive('utilisable', 'franchise') ? 'active' : ''}`}
                         onClick={onClose}
                       >
                         <span className="link-icon">🧪</span>
                         <span className="link-label">Produits Utilisables (F)</span>
-                      </NavLink>
+                      </Link>
                     )}
                   </li>
                   <li>
                     {isOnboarding || !hasDistinctSelections ? (
                       <LockedLink label="Produits Vendables (D)" />
                     ) : (
-                      <NavLink
+                      <Link
                         to="/client/products?tab=vendable&actCtx=distinct"
-                        className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
+                        className={`sidebar-link ${isProductActive('vendable', 'distinct') ? 'active' : ''}`}
                         onClick={onClose}
                       >
                         <span className="link-icon">🍔</span>
                         <span className="link-label">Produits Vendables (D)</span>
-                      </NavLink>
+                      </Link>
                     )}
                   </li>
                   <li>
                     {isOnboarding || !hasDistinctSelections ? (
                       <LockedLink label="Produits Utilisables (D)" />
                     ) : (
-                      <NavLink
+                      <Link
                         to="/client/products?tab=utilisable&actCtx=distinct"
-                        className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
+                        className={`sidebar-link ${isProductActive('utilisable', 'distinct') ? 'active' : ''}`}
                         onClick={onClose}
                       >
                         <span className="link-icon">🧪</span>
                         <span className="link-label">Produits Utilisables (D)</span>
-                      </NavLink>
+                      </Link>
                     )}
                   </li>
 
