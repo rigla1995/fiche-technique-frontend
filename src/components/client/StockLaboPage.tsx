@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
@@ -412,8 +412,8 @@ export default function StockLaboPage() {
                     const hasDateConflict = (r.quantite !== null && rs.dateAppro === r.dateAppro) || histDates.has(rs.dateAppro);
                     const warnStyle = hasDateConflict ? { borderColor: '#f59e0b', boxShadow: '0 0 0 2px #fef3c7' } : {};
                     return (
-                      <>
-                        <tr key={r.ingredientId}>
+                      <React.Fragment key={r.ingredientId}>
+                        <tr>
                           <td>
                             <div style={{ fontWeight: 600 }}>{r.nom}</div>
                             <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{r.unite}</div>
@@ -517,7 +517,7 @@ export default function StockLaboPage() {
                           </td>
                         </tr>
                         {rs.historyOpen && (
-                          <tr key={`${r.ingredientId}-hist`}>
+                          <tr>
                             <td colSpan={8} style={{ background: 'var(--surface)', padding: '8px 16px' }}>
                               {rs.history.length === 0 ? (
                                 <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{t('client.stock.no_history')}</span>
@@ -548,7 +548,7 @@ export default function StockLaboPage() {
                             </td>
                           </tr>
                         )}
-                      </>
+                      </React.Fragment>
                     );
                   })}
                 </tbody>
