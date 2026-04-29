@@ -22,7 +22,7 @@ const seuilLabelClass = (restante: number | null, seuil: number | null): string 
   return 'stock-ok';
 };
 
-const LABEL_STYLE: React.CSSProperties = {
+const LABEL: React.CSSProperties = {
   fontSize: '0.68rem', fontWeight: 700, color: 'var(--text-muted)',
   textTransform: 'uppercase', letterSpacing: '0.05em',
 };
@@ -34,7 +34,7 @@ interface LaboStockRow {
   nom: string;
   unite: string;
   categorie: string;
-  quantite: number | null;
+  quantite: number | null;        // net stock = total appros - total transféré
   prixUnitaire: number | null;
   dateAppro: string | null;
   seuilMin: number | null;
@@ -63,162 +63,15 @@ interface AssignIngredient {
 
 interface Fournisseur { id: number; nom: string }
 
-// ─── Shared filter bar ────────────────────────────────────────────────────────
-function FilterBar({
-  activites, fournisseurs, showFournisseur,
-  stockRows,
-  assignIngredients,
-  filterActType, setFilterActType,
-  filterGroupe, setFilterGroupe,
-  filterActiviteId, setFilterActiviteId,
-  filterCat, setFilterCat,
-  filterIngId, setFilterIngId,
-  filterNom, setFilterNom,
-  filterFournisseur, setFilterFournisseur,
-  filterRefFacture, setFilterRefFacture,
-}: {
-  activites: LaboActivite[];
-  fournisseurs: Fournisseur[];
-  showFournisseur: boolean;
-  stockRows: LaboStockRow[];
-  assignIngredients: AssignIngredient[];
-  filterActType: string; setFilterActType: (v: string) => void;
-  filterGroupe: string; setFilterGroupe: (v: string) => void;
-  filterActiviteId: string; setFilterActiviteId: (v: string) => void;
-  filterCat: string; setFilterCat: (v: string) => void;
-  filterIngId: string; setFilterIngId: (v: string) => void;
-  filterNom: string; setFilterNom: (v: string) => void;
-  filterFournisseur: string; setFilterFournisseur: (v: string) => void;
-  filterRefFacture: string; setFilterRefFacture: (v: string) => void;
-}) {
-  const typeActivites = filterActType ? activites.filter((a) => a.type === filterActType || (filterActType === 'distincte' && a.type !== 'franchise')) : activites;
-  const franchiseGroups = Array.from(new Set(activites.filter((a) => a.type === 'franchise' && a.franchiseGroup).map((a) => a.franchiseGroup!))).sort();
-  const filteredActivites = filterActType === 'franchise'
-    ? (filterGroupe ? typeActivites.filter((a) => a.franchiseGroup === filterGroupe) : typeActivites)
-    : typeActivites;
-
-  // Ingredient IDs that are assigned to the filtered activités
-  const filteredActIds = new Set(filteredActivites.map((a) => a.id));
-  const filteredActIdSelected = filterActiviteId ? new Set([Number(filterActiviteId)]) : filteredActIds;
-
-  // Categories/ingredients available after act filter
-  const availableCats = Array.from(new Set(
-    assignIngredients
-      .filter((ing) => !filterActType || ing.activities.some((a) => filteredActIdSelected.has(a.activiteId) && a.assigned))
-      .map((ing) => ing.categorie)
-  )).sort();
-  const availableIngs = assignIngredients.filter((ing) => {
-    if (filterActType && !ing.activities.some((a) => filteredActIdSelected.has(a.activiteId) && a.assigned)) return false;
-    if (filterCat && ing.categorie !== filterCat) return false;
-    return true;
-  });
-
-  const hasAny = filterActType || filterGroupe || filterActiviteId || filterCat || filterIngId || filterNom || filterFournisseur || filterRefFacture;
-
-  const reset = () => {
-    setFilterActType(''); setFilterGroupe(''); setFilterActiviteId('');
-    setFilterCat(''); setFilterIngId(''); setFilterNom('');
-    setFilterFournisseur(''); setFilterRefFacture('');
-  };
-
-  return (
-    <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap', alignItems: 'flex-end', background: 'var(--surface)', borderRadius: 10, padding: '12px 14px', border: '1px solid var(--border)' }}>
-      {/* Type activité */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-        <span style={LABEL_STYLE}>Type Activité</span>
-        <select className="input" style={{ maxWidth: 170 }} value={filterActType} onChange={(e) => {
-          setFilterActType(e.target.value);
-          setFilterGroupe(''); setFilterActiviteId(''); setFilterCat(''); setFilterIngId('');
-        }}>
-          <option value="">— Tous —</option>
-          <option value="franchise">F - Franchise</option>
-          <option value="distincte">D - Distinct</option>
-        </select>
-      </div>
-
-      {filterActType && (
-        <>
-          {/* Groupe (franchise only) */}
-          {filterActType === 'franchise' && franchiseGroups.length > 1 && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-              <span style={LABEL_STYLE}>Groupe</span>
-              <select className="input" style={{ maxWidth: 180 }} value={filterGroupe} onChange={(e) => {
-                setFilterGroupe(e.target.value); setFilterActiviteId(''); setFilterCat(''); setFilterIngId('');
-              }}>
-                <option value="">— Tous —</option>
-                {franchiseGroups.map((g) => <option key={g} value={g}>{g}</option>)}
-              </select>
-            </div>
-          )}
-
-          {/* Activité */}
-          {filteredActivites.length > 0 && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-              <span style={LABEL_STYLE}>Activité</span>
-              <select className="input" style={{ maxWidth: 200 }} value={filterActiviteId} onChange={(e) => {
-                setFilterActiviteId(e.target.value); setFilterCat(''); setFilterIngId('');
-              }}>
-                <option value="">— Toutes —</option>
-                {filteredActivites.map((a) => <option key={a.id} value={String(a.id)}>{a.nom}</option>)}
-              </select>
-            </div>
-          )}
-
-          {/* Catégorie */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-            <span style={LABEL_STYLE}>Catégorie</span>
-            <select className="input" style={{ maxWidth: 190 }} value={filterCat} onChange={(e) => {
-              setFilterCat(e.target.value); setFilterIngId('');
-            }}>
-              <option value="">— Toutes —</option>
-              {availableCats.map((c) => <option key={c} value={c}>{c}</option>)}
-            </select>
-          </div>
-
-          {/* Ingrédient */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-            <span style={LABEL_STYLE}>Ingrédient</span>
-            <select className="input" style={{ maxWidth: 200 }} value={filterIngId} disabled={!filterCat} onChange={(e) => setFilterIngId(e.target.value)}>
-              <option value="">— Tous —</option>
-              {availableIngs.map((i) => <option key={i.ingredientId} value={String(i.ingredientId)}>{i.nom}</option>)}
-            </select>
-          </div>
-
-          {/* Nom (text search) */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-            <span style={LABEL_STYLE}>Nom Ingrédient</span>
-            <input type="text" className="input" style={{ maxWidth: 180 }} placeholder="Rechercher…" value={filterNom} onChange={(e) => setFilterNom(e.target.value)} />
-          </div>
-
-          {/* Fournisseur (stock tab only) */}
-          {showFournisseur && fournisseurs.length > 0 && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-              <span style={LABEL_STYLE}>Fournisseur</span>
-              <select className="input" style={{ maxWidth: 200 }} value={filterFournisseur} onChange={(e) => setFilterFournisseur(e.target.value)}>
-                <option value="">— Tous —</option>
-                {fournisseurs.map((f) => <option key={f.id} value={String(f.id)}>{f.nom}</option>)}
-              </select>
-            </div>
-          )}
-
-          {/* Réf Facture (stock tab only) */}
-          {showFournisseur && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-              <span style={LABEL_STYLE}>Réf Facture</span>
-              <input type="text" className="input" style={{ maxWidth: 160 }} placeholder="N° facture…" value={filterRefFacture} onChange={(e) => setFilterRefFacture(e.target.value)} />
-            </div>
-          )}
-        </>
-      )}
-
-      {hasAny && (
-        <button className="btn btn-ghost btn-sm" style={{ alignSelf: 'flex-end' }} onClick={reset}>✕ Effacer</button>
-      )}
-    </div>
-  );
+interface TransferRecord {
+  id: number;
+  quantite: number;
+  dateTransfert: string;
+  activiteId: number;
+  activiteNom: string;
+  note: string | null;
 }
 
-// ─── Main component ────────────────────────────────────────────────────────────
 export default function StockLaboPage() {
   const { t } = useTranslation();
   const [searchParams] = useSearchParams();
@@ -234,11 +87,11 @@ export default function StockLaboPage() {
   const [fournisseurs, setFournisseurs] = useState<Fournisseur[]>([]);
   const [fournisseurModal, setFournisseurModal] = useState<{ ingredientId: number; nom: string } | null>(null);
 
-  // Assignment data (ingredients + activités with type info)
+  // Assignment data
   const [assignments, setAssignments] = useState<{ activites: LaboActivite[]; ingredients: AssignIngredient[] } | null>(null);
   const [assignLoading, setAssignLoading] = useState(true);
 
-  // Collapsible categories in main stock view
+  // Collapsible categories
   const [openStockCats, setOpenStockCats] = useState<Set<string>>(new Set());
   const [openIngCats, setOpenIngCats] = useState<Set<string>>(new Set());
 
@@ -249,9 +102,6 @@ export default function StockLaboPage() {
   const ING_CAT_PAGE_SIZE = 10;
 
   // ── Stock tab filters
-  const [sFilterActType, setSFilterActType] = useState('');
-  const [sFilterGroupe, setSFilterGroupe] = useState('');
-  const [sFilterActiviteId, setSFilterActiviteId] = useState('');
   const [sFilterCat, setSFilterCat] = useState('');
   const [sFilterIngId, setSFilterIngId] = useState('');
   const [sFilterNom, setSFilterNom] = useState('');
@@ -259,12 +109,21 @@ export default function StockLaboPage() {
   const [sFilterRefFacture, setSFilterRefFacture] = useState('');
 
   // ── Ingredients tab filters
-  const [iFilterActType, setIFilterActType] = useState('');
-  const [iFilterGroupe, setIFilterGroupe] = useState('');
-  const [iFilterActiviteId, setIFilterActiviteId] = useState('');
   const [iFilterCat, setIFilterCat] = useState('');
   const [iFilterIngId, setIFilterIngId] = useState('');
   const [iFilterNom, setIFilterNom] = useState('');
+
+  // ── Activity popup (Stock tab)
+  const [activityPopup, setActivityPopup] = useState<{
+    activite: LaboActivite;
+    unitTotals: { unite: string; qty: number; value: number }[];
+    anchor: { x: number; y: number };
+  } | null>(null);
+
+  // ── Transfer collapse per ingredient
+  const [openTransfers, setOpenTransfers] = useState<Set<number>>(new Set());
+  const [transferHistory, setTransferHistory] = useState<Record<number, TransferRecord[]>>({});
+  const [transferLoading, setTransferLoading] = useState<Set<number>>(new Set());
 
   const today = todayStr();
 
@@ -372,7 +231,6 @@ export default function StockLaboPage() {
         },
       }));
       setTimeout(() => setField(ingredientId, 'saved', false), 2000);
-      // refresh stock so lastFournisseurId/lastRefFacture update
       loadStock();
     } catch {
       setField(ingredientId, 'saving', false);
@@ -415,32 +273,50 @@ export default function StockLaboPage() {
     } catch { /* ignore */ }
   };
 
-  const activites: LaboActivite[] = assignments?.activites ?? [];
-
-  // ── Stock tab: apply filters ────────────────────────────────────────────────
-  // Build map: ingredientId → Set of assigned activité IDs
-  const ingActMap = new Map<number, Set<number>>();
-  for (const ing of assignments?.ingredients ?? []) {
-    const assignedIds = new Set(ing.activities.filter((a) => a.assigned).map((a) => a.activiteId));
-    ingActMap.set(ing.ingredientId, assignedIds);
-  }
-
-  const getFilteredActIds = (actType: string, groupe: string, activiteId: string): Set<number> | null => {
-    if (!actType) return null; // no filter
-    let acts = activites.filter((a) => a.type === actType || (actType === 'distincte' && a.type !== 'franchise'));
-    if (actType === 'franchise' && groupe) acts = acts.filter((a) => a.franchiseGroup === groupe);
-    if (activiteId) acts = acts.filter((a) => String(a.id) === activiteId);
-    return new Set(acts.map((a) => a.id));
+  const toggleTransfers = async (ingredientId: number) => {
+    if (openTransfers.has(ingredientId)) {
+      setOpenTransfers((prev) => { const n = new Set(prev); n.delete(ingredientId); return n; });
+      return;
+    }
+    setOpenTransfers((prev) => new Set([...prev, ingredientId]));
+    if (transferHistory[ingredientId]) return; // already loaded
+    setTransferLoading((prev) => new Set([...prev, ingredientId]));
+    try {
+      const { data } = await api.get(`/api/labo/${laboId}/transfers?ingredientId=${ingredientId}&limit=5`);
+      setTransferHistory((prev) => ({ ...prev, [ingredientId]: data }));
+    } catch { /* ignore */ }
+    setTransferLoading((prev) => { const n = new Set(prev); n.delete(ingredientId); return n; });
   };
 
-  const stockFilteredActIds = getFilteredActIds(sFilterActType, sFilterGroupe, sFilterActiviteId);
-
-  const filteredStock = stock.filter((r) => {
-    if (stockFilteredActIds !== null) {
-      const ingActs = ingActMap.get(r.ingredientId) ?? new Set();
-      const hasMatch = [...ingActs].some((id) => stockFilteredActIds.has(id));
-      if (!hasMatch) return false;
+  // Activity popup: compute unit totals for an activity
+  const openActivityPopup = (e: React.MouseEvent, act: LaboActivite) => {
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const assignedIngIds = new Set(
+      (assignments?.ingredients ?? [])
+        .filter((ing) => ing.activities.some((a) => a.activiteId === act.id && a.assigned))
+        .map((ing) => ing.ingredientId)
+    );
+    // Aggregate by unit from stock data
+    const unitMap = new Map<string, { qty: number; value: number }>();
+    for (const row of stock) {
+      if (!assignedIngIds.has(row.ingredientId)) continue;
+      if (row.quantite === null || row.quantite <= 0) continue;
+      const key = row.unite;
+      const existing = unitMap.get(key) ?? { qty: 0, value: 0 };
+      existing.qty += row.quantite;
+      existing.value += row.quantite * (row.prixUnitaire ?? 0);
+      unitMap.set(key, existing);
     }
+    const unitTotals = Array.from(unitMap.entries()).map(([unite, v]) => ({ unite, qty: v.qty, value: v.value }));
+    setActivityPopup({ activite: act, unitTotals, anchor: { x: rect.left + rect.width / 2, y: rect.bottom + window.scrollY + 8 } });
+  };
+
+  const activites: LaboActivite[] = assignments?.activites ?? [];
+
+  // ── Stock tab filters
+  const allStockCats = Array.from(new Set(stock.map((r) => r.categorie))).sort();
+  const stockInCat = sFilterCat ? stock.filter((r) => r.categorie === sFilterCat) : stock;
+  const filteredStock = stock.filter((r) => {
     if (sFilterCat && r.categorie !== sFilterCat) return false;
     if (sFilterIngId && String(r.ingredientId) !== sFilterIngId) return false;
     if (sFilterNom && !r.nom.toLowerCase().includes(sFilterNom.toLowerCase())) return false;
@@ -448,27 +324,21 @@ export default function StockLaboPage() {
     if (sFilterRefFacture && !(r.lastRefFacture ?? '').toLowerCase().includes(sFilterRefFacture.toLowerCase())) return false;
     return true;
   });
-
   const stockGroups: Record<string, LaboStockRow[]> = {};
   for (const r of filteredStock) {
     if (!stockGroups[r.categorie]) stockGroups[r.categorie] = [];
     stockGroups[r.categorie].push(r);
   }
 
-  // ── Ingredients tab: apply filters ─────────────────────────────────────────
-  const ingFilteredActIds = getFilteredActIds(iFilterActType, iFilterGroupe, iFilterActiviteId);
-
+  // ── Ingredients tab filters
+  const allIngCats = Array.from(new Set((assignments?.ingredients ?? []).map((i) => i.categorie))).sort();
+  const ingInCat = iFilterCat ? (assignments?.ingredients ?? []).filter((i) => i.categorie === iFilterCat) : (assignments?.ingredients ?? []);
   const filteredIngredients = (assignments?.ingredients ?? []).filter((ing) => {
-    if (ingFilteredActIds !== null) {
-      const hasMatch = ing.activities.some((a) => ingFilteredActIds.has(a.activiteId) && a.assigned);
-      if (!hasMatch) return false;
-    }
     if (iFilterCat && ing.categorie !== iFilterCat) return false;
     if (iFilterIngId && String(ing.ingredientId) !== iFilterIngId) return false;
     if (iFilterNom && !ing.nom.toLowerCase().includes(iFilterNom.toLowerCase())) return false;
     return true;
   });
-
   const ingGroups: Record<string, AssignIngredient[]> = {};
   for (const ing of filteredIngredients) {
     if (!ingGroups[ing.categorie]) ingGroups[ing.categorie] = [];
@@ -477,36 +347,8 @@ export default function StockLaboPage() {
 
   if (!laboId) return <div className="page"><p className="text-muted">Labo introuvable.</p></div>;
 
-  // ── Tab nav ─────────────────────────────────────────────────────────────────
-  const tabNav = (
-    <div style={{ display: 'flex', gap: 0, marginBottom: 20, borderBottom: '2px solid var(--border)' }}>
-      <Link
-        to={`/client/labo/stock?laboId=${laboId}`}
-        style={{
-          padding: '8px 18px', fontWeight: 600, fontSize: '0.88rem',
-          borderBottom: tab === 'stock' ? '2px solid var(--primary)' : '2px solid transparent',
-          color: tab === 'stock' ? 'var(--primary)' : 'var(--text-muted)',
-          textDecoration: 'none', marginBottom: -2,
-        }}
-      >
-        📦 Stock {labo?.nom ?? ''}
-      </Link>
-      <Link
-        to={`/client/labo/stock?laboId=${laboId}&tab=ingredients`}
-        style={{
-          padding: '8px 18px', fontWeight: 600, fontSize: '0.88rem',
-          borderBottom: tab === 'ingredients' ? '2px solid var(--primary)' : '2px solid transparent',
-          color: tab === 'ingredients' ? 'var(--primary)' : 'var(--text-muted)',
-          textDecoration: 'none', marginBottom: -2,
-        }}
-      >
-        🧂 Ingrédients Stock
-      </Link>
-    </div>
-  );
-
   return (
-    <div className="page">
+    <div className="page" onClick={() => activityPopup && setActivityPopup(null)}>
       <div className="page-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
         <div>
           <h1>🏭 {labo ? labo.nom : t('common.loading')} — {tab === 'stock' ? t('client.labo.stock_title') : 'Ingrédients Stock'}</h1>
@@ -523,26 +365,98 @@ export default function StockLaboPage() {
         )}
       </div>
 
-      {tabNav}
-
       {/* ══ STOCK TAB ══ */}
       {tab === 'stock' && (
         <>
-          <FilterBar
-            activites={activites}
-            fournisseurs={fournisseurs}
-            showFournisseur={true}
-            stockRows={stock}
-            assignIngredients={assignments?.ingredients ?? []}
-            filterActType={sFilterActType} setFilterActType={setSFilterActType}
-            filterGroupe={sFilterGroupe} setFilterGroupe={setSFilterGroupe}
-            filterActiviteId={sFilterActiviteId} setFilterActiviteId={setSFilterActiviteId}
-            filterCat={sFilterCat} setFilterCat={setSFilterCat}
-            filterIngId={sFilterIngId} setFilterIngId={setSFilterIngId}
-            filterNom={sFilterNom} setFilterNom={setSFilterNom}
-            filterFournisseur={sFilterFournisseur} setFilterFournisseur={setSFilterFournisseur}
-            filterRefFacture={sFilterRefFacture} setFilterRefFacture={setSFilterRefFacture}
-          />
+          {/* Activity pills row */}
+          {activites.length > 0 && (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16, padding: '10px 14px', background: 'var(--primary-light, #eef2ff)', borderRadius: 10, border: '1px solid #c7d2fe' }}>
+              {activites.map((act) => (
+                <button
+                  key={act.id}
+                  onClick={(e) => { e.stopPropagation(); openActivityPopup(e, act); }}
+                  style={{
+                    padding: '4px 12px', borderRadius: 20, border: '1px solid var(--primary)',
+                    background: 'white', color: 'var(--primary)', fontWeight: 600,
+                    fontSize: '0.82rem', cursor: 'pointer',
+                  }}
+                >
+                  {act.nom}
+                  {act.type && <span style={{ fontSize: '0.65rem', marginLeft: 4, opacity: 0.7 }}>{act.type === 'franchise' ? 'F' : 'D'}</span>}
+                </button>
+              ))}
+              <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', alignSelf: 'center', marginLeft: 4 }}>← cliquer pour les détails</span>
+            </div>
+          )}
+
+          {/* Activity popup */}
+          {activityPopup && (
+            <div
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                position: 'fixed',
+                top: Math.min(activityPopup.anchor.y - window.scrollY, window.innerHeight - 200),
+                left: Math.min(activityPopup.anchor.x, window.innerWidth - 200),
+                transform: 'translateX(-50%)',
+                background: 'white', border: '1px solid var(--border)',
+                borderRadius: 10, boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
+                padding: '14px 18px', zIndex: 1000, minWidth: 180,
+              }}
+            >
+              <div style={{ fontWeight: 700, fontSize: '0.82rem', color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10 }}>
+                {activityPopup.activite.nom}
+              </div>
+              {activityPopup.unitTotals.length === 0 ? (
+                <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>Aucun stock disponible</p>
+              ) : (
+                activityPopup.unitTotals.map(({ unite, qty, value }) => (
+                  <div key={unite} style={{ marginBottom: 8, padding: '6px 10px', background: 'var(--surface)', borderRadius: 8, border: '1px solid var(--border)' }}>
+                    <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{unite}</div>
+                    <div style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--primary)' }}>{qty.toFixed(3)} {unite}</div>
+                    <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>{value.toFixed(3)} DT</div>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+
+          {/* Filters */}
+          <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+              <span style={LABEL}>Catégorie</span>
+              <select className="input" style={{ maxWidth: 200 }} value={sFilterCat} onChange={(e) => { setSFilterCat(e.target.value); setSFilterIngId(''); }}>
+                <option value="">{t('client.catalogue_franchise.all_categories')}</option>
+                {allStockCats.map((c) => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+              <span style={LABEL}>Ingrédient</span>
+              <select className="input" style={{ minWidth: 180, maxWidth: 260 }} value={sFilterIngId} disabled={!sFilterCat} onChange={(e) => setSFilterIngId(e.target.value)}>
+                <option value="">— Tous —</option>
+                {stockInCat.map((r) => <option key={r.ingredientId} value={String(r.ingredientId)}>{r.nom}</option>)}
+              </select>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+              <span style={LABEL}>Nom ingrédient</span>
+              <input type="text" className="input" style={{ maxWidth: 180 }} placeholder="Rechercher…" value={sFilterNom} onChange={(e) => setSFilterNom(e.target.value)} />
+            </div>
+            {fournisseurs.length > 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                <span style={LABEL}>Fournisseur</span>
+                <select className="input" style={{ maxWidth: 200 }} value={sFilterFournisseur} onChange={(e) => setSFilterFournisseur(e.target.value)}>
+                  <option value="">— Tous —</option>
+                  {fournisseurs.map((f) => <option key={f.id} value={String(f.id)}>{f.nom}</option>)}
+                </select>
+              </div>
+            )}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+              <span style={LABEL}>Réf Facture</span>
+              <input type="text" className="input" style={{ maxWidth: 160 }} placeholder="N° facture…" value={sFilterRefFacture} onChange={(e) => setSFilterRefFacture(e.target.value)} />
+            </div>
+            {(sFilterCat || sFilterIngId || sFilterNom || sFilterFournisseur || sFilterRefFacture) && (
+              <button className="btn btn-ghost btn-sm" style={{ alignSelf: 'flex-end' }} onClick={() => { setSFilterCat(''); setSFilterIngId(''); setSFilterNom(''); setSFilterFournisseur(''); setSFilterRefFacture(''); }}>✕</button>
+            )}
+          </div>
 
           {loading ? (
             <p className="text-muted">{t('common.loading')}</p>
@@ -550,7 +464,6 @@ export default function StockLaboPage() {
             <div className="empty-state">
               <span className="empty-icon">🏭</span>
               <p>{t('client.labo.empty_stock')}</p>
-              <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{t('client.labo.use_catalogue_global', 'Assignez des ingrédients via le Catalogue Global.')}</p>
             </div>
           ) : Object.keys(stockGroups).length === 0 ? (
             <p className="text-muted">{t('common.no_result')}</p>
@@ -593,6 +506,9 @@ export default function StockLaboPage() {
                                 const histDates = new Set<string>((rs.history || []).map((h) => h.dateAppro).filter(Boolean) as string[]);
                                 const hasDateConflict = (r.quantite !== null && rs.dateAppro === r.dateAppro) || histDates.has(rs.dateAppro);
                                 const warnStyle = hasDateConflict ? { borderColor: '#f59e0b', boxShadow: '0 0 0 2px #fef3c7' } : {};
+                                const isTransferOpen = openTransfers.has(r.ingredientId);
+                                const isTransferLoading = transferLoading.has(r.ingredientId);
+                                const transfers = transferHistory[r.ingredientId] ?? [];
                                 return (
                                   <React.Fragment key={r.ingredientId}>
                                     <tr>
@@ -643,28 +559,27 @@ export default function StockLaboPage() {
                                                   color: validated ? '#15803d' : assignedF ? '#92400e' : '#2563eb',
                                                   border: `1px solid ${validated ? '#86efac' : assignedF ? '#fde68a' : '#bfdbfe'}`,
                                                 }}
-                                                title={assignedF ? assignedF.nom : 'Assigner fournisseur'}
                                               >
                                                 {validated ? `✓ ${assignedF!.nom}` : assignedF ? `${assignedF.nom}…` : 'Fournisseur'}
                                               </button>
                                             );
                                           })()}
                                           <div style={{ display: 'flex', gap: 4 }}>
-                                            <button
-                                              className={`btn btn-sm ${rs.saved ? 'btn-success' : 'btn-primary'}`}
-                                              onClick={() => saveRow(r.ingredientId)}
-                                              disabled={!canSaveRow(rs)}
-                                              style={{ flex: 1 }}
-                                            >
+                                            <button className={`btn btn-sm ${rs.saved ? 'btn-success' : 'btn-primary'}`} onClick={() => saveRow(r.ingredientId)} disabled={!canSaveRow(rs)} style={{ flex: 1 }}>
                                               {rs.saving ? '…' : rs.saved ? '✓' : t('common.save')}
                                             </button>
-                                            <button className="btn btn-ghost btn-sm" onClick={() => toggleHistory(r.ingredientId)} title={t('client.stock.history')}>
-                                              {rs.historyOpen ? '▲' : '▼'}
+                                            <button className="btn btn-ghost btn-sm" onClick={() => toggleHistory(r.ingredientId)} title="Historique appro">
+                                              {rs.historyOpen ? '📋▲' : '📋'}
+                                            </button>
+                                            <button className="btn btn-ghost btn-sm" onClick={() => toggleTransfers(r.ingredientId)} title="5 derniers transferts" style={{ color: '#7c3aed' }}>
+                                              {isTransferOpen ? '↗▲' : '↗'}
                                             </button>
                                           </div>
                                         </div>
                                       </td>
                                     </tr>
+
+                                    {/* Appro history collapse */}
                                     {rs.historyOpen && (
                                       <tr>
                                         <td colSpan={8} style={{ background: 'var(--surface)', padding: '8px 16px' }}>
@@ -697,6 +612,71 @@ export default function StockLaboPage() {
                                         </td>
                                       </tr>
                                     )}
+
+                                    {/* Transfer history collapse */}
+                                    {isTransferOpen && (
+                                      <tr>
+                                        <td colSpan={8} style={{ background: '#faf5ff', padding: '8px 16px', borderTop: '1px solid #e9d5ff' }}>
+                                          <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>
+                                            ↗ 5 derniers transferts — {r.nom}
+                                          </div>
+                                          {isTransferLoading ? (
+                                            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Chargement…</span>
+                                          ) : transfers.length === 0 ? (
+                                            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Aucun transfert enregistré</span>
+                                          ) : (() => {
+                                            // Pivot: per-activite totals
+                                            const actNames = Array.from(new Set(transfers.map((t) => t.activiteNom))).sort();
+                                            const actTotals: Record<string, number> = {};
+                                            for (const t of transfers) actTotals[t.activiteNom] = (actTotals[t.activiteNom] ?? 0) + t.quantite;
+                                            return (
+                                              <div style={{ overflowX: 'auto' }}>
+                                                <table style={{ fontSize: '0.8rem', width: '100%', minWidth: 400 }}>
+                                                  <thead>
+                                                    <tr style={{ background: '#ede9fe' }}>
+                                                      <th style={{ textAlign: 'left', color: '#7c3aed', fontWeight: 700, padding: '4px 8px' }}>Ingrédient</th>
+                                                      <th style={{ textAlign: 'right', color: '#7c3aed', fontWeight: 700, padding: '4px 8px' }}>Stock Labo</th>
+                                                      {actNames.map((an) => (
+                                                        <th key={an} style={{ textAlign: 'right', color: '#7c3aed', fontWeight: 700, padding: '4px 8px' }}>↗ {an}</th>
+                                                      ))}
+                                                    </tr>
+                                                  </thead>
+                                                  <tbody>
+                                                    <tr>
+                                                      <td style={{ fontWeight: 600, padding: '4px 8px' }}>
+                                                        {r.nom}<br />
+                                                        <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{r.unite}</span>
+                                                      </td>
+                                                      <td style={{ textAlign: 'right', fontWeight: 700, color: r.quantite !== null && r.quantite > 0 ? 'var(--success)' : 'var(--text-muted)', padding: '4px 8px' }}>
+                                                        {r.quantite !== null ? r.quantite.toFixed(3) : '—'}
+                                                        {r.prixUnitaire ? <span style={{ display: 'block', fontSize: '0.72rem', fontWeight: 400, color: 'var(--text-muted)' }}>{(r.quantite! * r.prixUnitaire).toFixed(3)} DT</span> : null}
+                                                      </td>
+                                                      {actNames.map((an) => (
+                                                        <td key={an} style={{ textAlign: 'right', padding: '4px 8px', color: actTotals[an] > 0 ? '#7c3aed' : 'var(--text-muted)' }}>
+                                                          {actTotals[an]?.toFixed(3) ?? '0.000'}
+                                                        </td>
+                                                      ))}
+                                                    </tr>
+                                                    {/* Last 5 individual records */}
+                                                    {transfers.map((tr, i) => (
+                                                      <tr key={i} style={{ borderTop: '1px solid #f3e8ff', fontSize: '0.75rem' }}>
+                                                        <td style={{ color: 'var(--text-muted)', padding: '2px 8px' }}>{fmtDate(tr.dateTransfert)}</td>
+                                                        <td style={{ textAlign: 'right', color: 'var(--text-muted)', padding: '2px 8px' }}>—</td>
+                                                        {actNames.map((an) => (
+                                                          <td key={an} style={{ textAlign: 'right', padding: '2px 8px', color: tr.activiteNom === an ? '#7c3aed' : 'var(--text-muted)' }}>
+                                                            {tr.activiteNom === an ? tr.quantite.toFixed(3) : '—'}
+                                                          </td>
+                                                        ))}
+                                                      </tr>
+                                                    ))}
+                                                  </tbody>
+                                                </table>
+                                              </div>
+                                            );
+                                          })()}
+                                        </td>
+                                      </tr>
+                                    )}
                                   </React.Fragment>
                                 );
                               })}
@@ -723,21 +703,30 @@ export default function StockLaboPage() {
       {/* ══ INGREDIENTS TAB ══ */}
       {tab === 'ingredients' && (
         <>
-          <FilterBar
-            activites={activites}
-            fournisseurs={fournisseurs}
-            showFournisseur={false}
-            stockRows={stock}
-            assignIngredients={assignments?.ingredients ?? []}
-            filterActType={iFilterActType} setFilterActType={setIFilterActType}
-            filterGroupe={iFilterGroupe} setFilterGroupe={setIFilterGroupe}
-            filterActiviteId={iFilterActiviteId} setFilterActiviteId={setIFilterActiviteId}
-            filterCat={iFilterCat} setFilterCat={setIFilterCat}
-            filterIngId={iFilterIngId} setFilterIngId={setIFilterIngId}
-            filterNom={iFilterNom} setFilterNom={setIFilterNom}
-            filterFournisseur="" setFilterFournisseur={() => {}}
-            filterRefFacture="" setFilterRefFacture={() => {}}
-          />
+          {/* Simple filters */}
+          <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+              <span style={LABEL}>Catégorie</span>
+              <select className="input" style={{ maxWidth: 200 }} value={iFilterCat} onChange={(e) => { setIFilterCat(e.target.value); setIFilterIngId(''); }}>
+                <option value="">{t('client.catalogue_franchise.all_categories')}</option>
+                {allIngCats.map((c) => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+              <span style={LABEL}>Ingrédient</span>
+              <select className="input" style={{ minWidth: 180, maxWidth: 260 }} value={iFilterIngId} disabled={!iFilterCat} onChange={(e) => setIFilterIngId(e.target.value)}>
+                <option value="">— Tous —</option>
+                {ingInCat.map((i) => <option key={i.ingredientId} value={String(i.ingredientId)}>{i.nom}</option>)}
+              </select>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+              <span style={LABEL}>Nom ingrédient</span>
+              <input type="text" className="input" style={{ maxWidth: 180 }} placeholder="Rechercher…" value={iFilterNom} onChange={(e) => setIFilterNom(e.target.value)} />
+            </div>
+            {(iFilterCat || iFilterIngId || iFilterNom) && (
+              <button className="btn btn-ghost btn-sm" style={{ alignSelf: 'flex-end' }} onClick={() => { setIFilterCat(''); setIFilterIngId(''); setIFilterNom(''); }}>✕</button>
+            )}
+          </div>
 
           {assignLoading ? (
             <p className="text-muted">{t('common.loading')}</p>
@@ -749,22 +738,12 @@ export default function StockLaboPage() {
           ) : activites.length === 0 ? (
             <div className="empty-state">
               <span className="empty-icon">🔗</span>
-              <p>Aucune activité liée à ce labo. Configurez les activités dans les paramètres de l'entreprise.</p>
+              <p>Aucune activité liée à ce labo.</p>
             </div>
           ) : (() => {
-            // Filter activites to show in columns based on filters
-            const colActivites = (() => {
-              if (!iFilterActType) return activites;
-              let acts = activites.filter((a) => a.type === iFilterActType || (iFilterActType === 'distincte' && a.type !== 'franchise'));
-              if (iFilterActType === 'franchise' && iFilterGroupe) acts = acts.filter((a) => a.franchiseGroup === iFilterGroupe);
-              if (iFilterActiviteId) acts = acts.filter((a) => String(a.id) === iFilterActiviteId);
-              return acts;
-            })();
-
             const sorted = Object.entries(ingGroups).sort(([a], [b]) => a.localeCompare(b));
             const totalPages = Math.max(1, Math.ceil(sorted.length / ING_CAT_PAGE_SIZE));
             const paged = sorted.slice((ingCatPage - 1) * ING_CAT_PAGE_SIZE, ingCatPage * ING_CAT_PAGE_SIZE);
-
             return (
               <>
                 {paged.map(([cat, items]) => {
@@ -783,10 +762,10 @@ export default function StockLaboPage() {
                             <thead>
                               <tr>
                                 <th style={{ minWidth: 160 }}>{t('client.stock.ingredient')}</th>
-                                {colActivites.map((act) => (
-                                  <th key={act.id} style={{ textAlign: 'center', minWidth: 110, color: 'var(--primary)' }}>
+                                {activites.map((act) => (
+                                  <th key={act.id} style={{ textAlign: 'center', minWidth: 100, color: 'var(--primary)' }}>
                                     <div>{act.nom}</div>
-                                    {act.type && <div style={{ fontSize: '0.65rem', fontWeight: 400, color: 'var(--text-muted)', textTransform: 'uppercase' }}>{act.type === 'franchise' ? 'F' : 'D'}{act.franchiseGroup ? ` · ${act.franchiseGroup}` : ''}</div>}
+                                    {act.type && <div style={{ fontSize: '0.65rem', fontWeight: 400, color: 'var(--text-muted)', textTransform: 'uppercase' }}>{act.type === 'franchise' ? 'F' : 'D'}</div>}
                                   </th>
                                 ))}
                               </tr>
@@ -798,7 +777,7 @@ export default function StockLaboPage() {
                                     <div style={{ fontWeight: 600 }}>{ing.nom}</div>
                                     <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{ing.unite}</div>
                                   </td>
-                                  {colActivites.map((act) => {
+                                  {activites.map((act) => {
                                     const a = ing.activities.find((x) => x.activiteId === act.id);
                                     return (
                                       <td key={act.id} style={{ textAlign: 'center' }}>
@@ -842,12 +821,12 @@ export default function StockLaboPage() {
               <button className="modal-close" onClick={() => setFournisseurModal(null)}>✕</button>
             </div>
             <div className="modal-body">
-              <label style={{ ...LABEL_STYLE, display: 'block', marginBottom: 6 }}>Fournisseur</label>
+              <label style={{ ...LABEL, display: 'block', marginBottom: 6 }}>Fournisseur</label>
               <select className="input" style={{ width: '100%', fontSize: '0.9rem', marginBottom: 16 }} value={rowState[fournisseurModal.ingredientId]?.fournisseurId ?? ''} onChange={(e) => setField(fournisseurModal.ingredientId, 'fournisseurId', e.target.value)}>
                 <option value="">— Aucun fournisseur —</option>
                 {fournisseurs.map((f) => <option key={f.id} value={String(f.id)}>{f.nom}</option>)}
               </select>
-              <label style={{ ...LABEL_STYLE, display: 'block', marginBottom: 6 }}>Réf. Facture / BL</label>
+              <label style={{ ...LABEL, display: 'block', marginBottom: 6 }}>Réf. Facture / BL</label>
               <input className="input" style={{ width: '100%', fontSize: '0.9rem', marginBottom: 16 }} type="text" value={rowState[fournisseurModal.ingredientId]?.refFacture ?? ''} onChange={(e) => setField(fournisseurModal.ingredientId, 'refFacture', e.target.value)} placeholder="N° facture ou BL" />
               <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
                 <button className="btn btn-ghost" onClick={() => setFournisseurModal(null)}>Annuler</button>
