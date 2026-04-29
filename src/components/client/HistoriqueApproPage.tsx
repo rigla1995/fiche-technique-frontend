@@ -229,6 +229,18 @@ export default function HistoriqueApproPage() {
   const lockedType = searchParams.get('type') as 'franchise' | 'distinct' | null;
 
   const [entType, setEntType] = useState<'franchise' | 'distinct'>(lockedType ?? 'franchise');
+
+  // Reset state when switching between franchise/distinct spaces via sidebar
+  useEffect(() => {
+    if (lockedType) {
+      setEntType(lockedType);
+      setSelectedActiviteId('');
+      setSelectedFranchiseGroup('');
+      setResults([]);
+      setSearched(false);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lockedType]);
   const [franchiseActivities, setFranchiseActivities] = useState<Activite[]>([]);
   const [distinctActivities, setDistinctActivities] = useState<Activite[]>([]);
   const [activitesLoading, setActivitesLoading] = useState(false);
@@ -335,8 +347,14 @@ export default function HistoriqueApproPage() {
     try {
       const params = new URLSearchParams();
       if (isEntreprise) {
-        if (selectedActiviteId) params.set('activiteId', selectedActiviteId);
-        else if (selectedFranchiseGroup && entType === 'franchise') params.set('franchiseGroup', selectedFranchiseGroup);
+        if (selectedActiviteId) {
+          params.set('activiteId', selectedActiviteId);
+        } else if (selectedFranchiseGroup && entType === 'franchise') {
+          params.set('franchiseGroup', selectedFranchiseGroup);
+        } else {
+          // All activities of the current type
+          params.set('entType', entType);
+        }
       }
       if (selectedIngredientId) params.set('ingredientId', selectedIngredientId);
       else if (selectedCategoryId) params.set('categorieId', selectedCategoryId);
@@ -350,6 +368,7 @@ export default function HistoriqueApproPage() {
       setResults([]);
     }
     setLoading(false);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isEntreprise, selectedActiviteId, selectedFranchiseGroup, entType, selectedIngredientId, selectedCategoryId, startDate, endDate, selectedFournisseurId, refFactureFilter]);
 
   const handleEdit = async (id: number, data: { quantite: number | null; prixUnitaire: number | null; fournisseurId: number | null; refFacture: string | null }) => {
@@ -377,9 +396,9 @@ export default function HistoriqueApproPage() {
   const showTypeToggle = isEntreprise && !lockedType;
 
   const pageTitle = lockedType === 'franchise'
-    ? `${t('nav.historique_franchise')} — ${currentYear}`
+    ? `Historique Appro Franchise — ${currentYear}`
     : lockedType === 'distinct'
-      ? `${t('nav.historique_distinct')} — ${currentYear}`
+      ? `Historique Appro Distinct — ${currentYear}`
       : `${t('client.historique_appro.title')} — ${currentYear}`;
 
   // Color coding helpers
