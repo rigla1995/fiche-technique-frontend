@@ -80,15 +80,26 @@ function EditModal({ entry, fournisseurs, isEntreprise, onSave, onClose }: EditM
                 onChange={(e) => setPrix(e.target.value)} style={{ width: '100%' }} />
             </div>
           </div>
-          {isEntreprise && nonLaboFournisseurs.length > 0 && (
+          {isEntreprise && (
             <div style={{ marginBottom: 12 }}>
               <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 4 }}>
                 Fournisseur
               </label>
-              <select className="input" style={{ width: '100%' }} value={fId} onChange={(e) => setFId(e.target.value)}>
-                <option value="">— Aucun —</option>
-                {nonLaboFournisseurs.map((f) => <option key={f.id} value={f.id}>{f.nom}</option>)}
-              </select>
+              {entry.typeAppro === 'transfert' ? (
+                <input
+                  className="input"
+                  style={{ width: '100%', background: 'var(--bg-secondary, #f3f4f6)', color: 'var(--text-muted)', cursor: 'not-allowed' }}
+                  value={entry.fournisseurNom ?? '—'}
+                  disabled
+                />
+              ) : nonLaboFournisseurs.length > 0 ? (
+                <select className="input" style={{ width: '100%' }} value={fId} onChange={(e) => setFId(e.target.value)}>
+                  <option value="">— Aucun —</option>
+                  {nonLaboFournisseurs.map((f) => <option key={f.id} value={f.id}>{f.nom}</option>)}
+                </select>
+              ) : (
+                <input className="input" style={{ width: '100%', color: 'var(--text-muted)' }} value="— Aucun fournisseur disponible —" disabled />
+              )}
             </div>
           )}
           {isEntreprise && (
