@@ -112,16 +112,13 @@ export default function StockLaboPage() {
       const seuilInit: Record<number, string> = {};
       for (const r of rows) {
         const hasExisting = r.quantite !== null;
-        const qStr = r.quantite !== null ? String(r.quantite) : '';
-        const pStr = r.prixUnitaire !== null ? String(r.prixUnitaire) : '';
-        const dStr = hasExisting && r.dateAppro ? r.dateAppro : today;
         init[r.ingredientId] = {
-          quantite: qStr,
-          prixUnitaire: pStr,
-          dateAppro: dStr,
-          origQuantite: qStr,
-          origPrixUnitaire: pStr,
-          origDateAppro: dStr,
+          quantite: '0',
+          prixUnitaire: '0',
+          dateAppro: today,
+          origQuantite: '0',
+          origPrixUnitaire: '0',
+          origDateAppro: today,
           hasExisting,
           saving: false,
           saved: false,
@@ -142,12 +139,27 @@ export default function StockLaboPage() {
     setRowState((prev) => ({ ...prev, [ingredientId]: { ...prev[ingredientId], [field]: value } }));
   };
 
+  const setDateApproField = (ingredientId: number, newDate: string) => {
+    const r = stock.find((s) => s.ingredientId === ingredientId);
+    const rs = rowState[ingredientId];
+    if (!r || !rs) return;
+    const histDates = new Set<string>((rs.history || []).map((h) => h.dateAppro).filter(Boolean) as string[]);
+    const hasExisting = r.quantite !== null;
+    const hasConflict = (hasExisting && newDate === r.dateAppro) || histDates.has(newDate);
+    setRowState((prev) => ({
+      ...prev,
+      [ingredientId]: {
+        ...prev[ingredientId],
+        dateAppro: newDate,
+        quantite: hasConflict ? '0' : prev[ingredientId].quantite,
+        prixUnitaire: hasConflict ? '0' : prev[ingredientId].prixUnitaire,
+      },
+    }));
+  };
+
   const canSaveRow = (rs: RowState | undefined): boolean => {
     if (!rs || rs.saving) return false;
-    if (!rs.hasExisting) {
-      return rs.quantite.trim() !== '' && rs.prixUnitaire.trim() !== '' && rs.dateAppro.trim() !== '';
-    }
-    return rs.quantite !== rs.origQuantite || rs.prixUnitaire !== rs.origPrixUnitaire || rs.dateAppro !== rs.origDateAppro;
+    return rs.quantite.trim() !== '' && rs.prixUnitaire.trim() !== '' && rs.dateAppro.trim() !== '';
   };
 
   const saveRow = async (ingredientId: number) => {
@@ -164,12 +176,10 @@ export default function StockLaboPage() {
         ...prev,
         [ingredientId]: {
           ...prev[ingredientId],
-          saving: false,
-          saved: true,
-          hasExisting: true,
-          origQuantite: rs.quantite,
-          origPrixUnitaire: rs.prixUnitaire,
-          origDateAppro: rs.dateAppro,
+          saving: false, saved: true, hasExisting: true,
+          quantite: '0', prixUnitaire: '0', dateAppro: today,
+          origQuantite: '0', origPrixUnitaire: '0', origDateAppro: today,
+          historyOpen: false, history: [],
         },
       }));
       setTimeout(() => setField(ingredientId, 'saved', false), 2000);
@@ -375,6 +385,9 @@ export default function StockLaboPage() {
                     const rs = rowState[r.ingredientId];
                     if (!rs) return null;
                     const cls = seuilLabelClass(r.quantite, r.seuilMin);
+                    const histDates = new Set<string>((rs.history || []).map((h) => h.dateAppro).filter(Boolean) as string[]);
+                    const hasDateConflict = (r.quantite !== null && rs.dateAppro === r.dateAppro) || histDates.has(rs.dateAppro);
+                    const warnStyle = hasDateConflict ? { borderColor: '#f59e0b', boxShadow: '0 0 0 2px #fef3c7' } : {};
                     return (
                       <>
                         <tr key={r.ingredientId}>
@@ -410,7 +423,7 @@ export default function StockLaboPage() {
                               step="0.001"
                               value={rs.quantite}
                               onChange={(e) => setField(r.ingredientId, 'quantite', e.target.value)}
-                              style={{ width: 90, textAlign: 'right' }}
+                              style={{ width: 90, textAlign: 'right', ...warnStyle }}
                               className="input"
                             />
                           </td>
@@ -421,7 +434,7 @@ export default function StockLaboPage() {
                               step="0.001"
                               value={rs.prixUnitaire}
                               onChange={(e) => setField(r.ingredientId, 'prixUnitaire', e.target.value)}
-                              style={{ width: 100, textAlign: 'right' }}
+                              style={{ width: 100, textAlign: 'right', ...warnStyle }}
                               className="input"
                             />
                           </td>
@@ -429,11 +442,11 @@ export default function StockLaboPage() {
                             <input
                               type="date"
                               className="input"
-                              style={{ maxWidth: 150 }}
+                              style={{ maxWidth: 150, ...warnStyle }}
                               min={yearStart}
                               max={yearEnd}
                               value={rs.dateAppro}
-                              onChange={(e) => setField(r.ingredientId, 'dateAppro', e.target.value)}
+                              onChange={(e) => setDateApproField(r.ingredientId, e.target.value)}
                             />
                           </td>
                           <td style={{ whiteSpace: 'nowrap' }}>
