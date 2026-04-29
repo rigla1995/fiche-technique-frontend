@@ -29,16 +29,179 @@ interface HistEntry {
   fournisseurNom: string | null;
 }
 
+interface LaboFournisseur { id: number; nom: string; telephone: string | null }
+
 const labelStyle: React.CSSProperties = {
   fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)',
   textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 4,
 };
 
+const warningBanner = (
+  <div style={{ background: '#fef3c7', border: '1px solid #fde68a', borderRadius: 8, padding: '8px 12px', marginBottom: 12, fontSize: '0.82rem', color: '#92400e', display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+    <span>⚠️</span>
+    <span>Cette action modifiera les valeurs du <strong>stock labo</strong>. Assurez-vous que les données sont correctes avant de confirmer.</span>
+  </div>
+);
+
+// ── Edit modal ─────────────────────────────────────────────────────────────────
+function EditModal({
+  entry,
+  fournisseurs,
+  laboId,
+  onSaved,
+  onClose,
+}: {
+  entry: HistEntry;
+  fournisseurs: LaboFournisseur[];
+  laboId: string;
+  onSaved: (updated: Partial<HistEntry>) => void;
+  onClose: () => void;
+}) {
+  const [qty, setQty] = useState(entry.quantite !== null ? String(entry.quantite) : '');
+  const [prix, setPrix] = useState(entry.prixUnitaire !== null ? String(entry.prixUnitaire) : '');
+  const [fId, setFId] = useState(entry.fournisseurId ? String(entry.fournisseurId) : '');
+  const [ref, setRef] = useState(entry.refFacture ?? '');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleSave = async () => {
+    setSaving(true);
+    setError('');
+    try {
+      const { data } = await api.put(`/api/labo/${laboId}/historique/${entry.id}`, {
+        quantite: qty ? parseFloat(qty) : null,
+        prixUnitaire: prix ? parseFloat(prix) : null,
+        fournisseurId: fId ? Number(fId) : null,
+        refFacture: ref.trim() || null,
+      });
+      onSaved({
+        quantite: data.quantite,
+        prixUnitaire: data.prixUnitaire,
+        fournisseurId: data.fournisseurId,
+        fournisseurNom: fournisseurs.find((f) => f.id === data.fournisseurId)?.nom ?? null,
+        refFacture: data.refFacture,
+      });
+      onClose();
+    } catch {
+      setError('Erreur lors de la sauvegarde');
+    }
+    setSaving(false);
+  };
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-header modal-header--primary">
+          <h2>Modifier — {entry.ingredientNom}</h2>
+          <button className="modal-close" onClick={onClose}>✕</button>
+        </div>
+        <div className="modal-body">
+          {warningBanner}
+          <div style={{ marginBottom: 10, fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+            Date : <strong>{fmtDate(entry.dateAppro)}</strong> — {entry.uniteNom}
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
+            <div>
+              <label style={labelStyle}>Quantité ({entry.uniteNom})</label>
+              <input className="input" type="number" min="0" step="0.001" value={qty}
+                onChange={(e) => setQty(e.target.value)} style={{ width: '100%' }} />
+            </div>
+            <div>
+              <label style={labelStyle}>Prix unitaire (DT)</label>
+              <input className="input" type="number" min="0" step="0.001" value={prix}
+                onChange={(e) => setPrix(e.target.value)} style={{ width: '100%' }} />
+            </div>
+          </div>
+          <div style={{ marginBottom: 12 }}>
+            <label style={labelStyle}>Fournisseur</label>
+            <select className="input" style={{ width: '100%' }} value={fId} onChange={(e) => setFId(e.target.value)}>
+              <option value="">— Aucun —</option>
+              {fournisseurs.map((f) => <option key={f.id} value={f.id}>{f.nom}</option>)}
+            </select>
+          </div>
+          <div style={{ marginBottom: 16 }}>
+            <label style={labelStyle}>Réf. Facture / BL</label>
+            <input className="input" type="text" value={ref} onChange={(e) => setRef(e.target.value)}
+              placeholder="N° facture ou BL" style={{ width: '100%' }} />
+          </div>
+          {error && <p style={{ color: 'var(--danger)', fontSize: '0.85rem', marginBottom: 8 }}>{error}</p>}
+          <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+            <button className="btn btn-ghost" onClick={onClose} disabled={saving}>Annuler</button>
+            <button className="btn btn-primary" onClick={handleSave} disabled={saving}>
+              {saving ? '…' : 'Enregistrer'}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Delete modal ───────────────────────────────────────────────────────────────
+function DeleteModal({
+  entry,
+  laboId,
+  onDeleted,
+  onClose,
+}: {
+  entry: HistEntry;
+  laboId: string;
+  onDeleted: (id: number) => void;
+  onClose: () => void;
+}) {
+  const [deleting, setDeleting] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleDelete = async () => {
+    setDeleting(true);
+    setError('');
+    try {
+      await api.delete(`/api/labo/${laboId}/historique/${entry.id}`);
+      onDeleted(entry.id);
+      onClose();
+    } catch {
+      setError('Erreur lors de la suppression');
+    }
+    setDeleting(false);
+  };
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-header" style={{ background: '#fee2e2', borderBottom: '1px solid #fecaca' }}>
+          <h2 style={{ color: '#991b1b' }}>Supprimer l'appro</h2>
+          <button className="modal-close" onClick={onClose}>✕</button>
+        </div>
+        <div className="modal-body">
+          {warningBanner}
+          <p style={{ marginBottom: 12 }}>
+            Supprimer l'appro du <strong>{fmtDate(entry.dateAppro)}</strong> pour <strong>{entry.ingredientNom}</strong>{' '}
+            ({entry.quantite} {entry.uniteNom}) ?
+          </p>
+          <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginBottom: 16 }}>
+            Cette entrée sera définitivement supprimée et le stock labo sera recalculé en conséquence.
+          </p>
+          {error && <p style={{ color: 'var(--danger)', fontSize: '0.85rem', marginBottom: 8 }}>{error}</p>}
+          <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+            <button className="btn btn-ghost" onClick={onClose} disabled={deleting}>Annuler</button>
+            <button className="btn btn-danger" onClick={handleDelete} disabled={deleting}
+              style={{ background: '#dc2626', color: '#fff', border: 'none' }}>
+              {deleting ? '…' : 'Supprimer'}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Main page ──────────────────────────────────────────────────────────────────
 export default function LaboHistoriqueApproPage() {
   const [searchParams] = useSearchParams();
   const laboId = searchParams.get('laboId');
 
   const [labo, setLabo] = useState<Labo | null>(null);
+  const [fournisseurs, setFournisseurs] = useState<LaboFournisseur[]>([]);
   const [results, setResults] = useState<HistEntry[]>([]);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
@@ -48,9 +211,13 @@ export default function LaboHistoriqueApproPage() {
   const [endDate, setEndDate] = useState(yearEnd);
   const [filterIngredient, setFilterIngredient] = useState('');
 
+  const [editEntry, setEditEntry] = useState<HistEntry | null>(null);
+  const [deleteEntry, setDeleteEntry] = useState<HistEntry | null>(null);
+
   useEffect(() => {
     if (!laboId) return;
     api.get(`/api/labo/${laboId}`).then(({ data }) => setLabo(data)).catch(() => {});
+    api.get(`/api/labo/${laboId}/fournisseurs`).then(({ data }) => setFournisseurs(data)).catch(() => {});
   }, [laboId]);
 
   const fetchResults = useCallback(async () => {
@@ -70,6 +237,14 @@ export default function LaboHistoriqueApproPage() {
     setLoading(false);
   }, [laboId, startDate, endDate]);
 
+  const handleSaved = (id: number, updated: Partial<HistEntry>) => {
+    setResults((prev) => prev.map((r) => r.id === id ? { ...r, ...updated } : r));
+  };
+
+  const handleDeleted = (id: number) => {
+    setResults((prev) => prev.filter((r) => r.id !== id));
+  };
+
   const filtered = filterIngredient
     ? results.filter((r) => r.ingredientNom.toLowerCase().includes(filterIngredient.toLowerCase()))
     : results;
@@ -77,7 +252,6 @@ export default function LaboHistoriqueApproPage() {
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const pagedResults = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
-  // Unit totals
   const unitTotals: Record<string, { qty: number; cost: number }> = {};
   for (const r of filtered) {
     if (!unitTotals[r.uniteNom]) unitTotals[r.uniteNom] = { qty: 0, cost: 0 };
@@ -154,7 +328,7 @@ export default function LaboHistoriqueApproPage() {
                 <col style={{ width: '100px' }} />
                 <col style={{ width: '85px' }} />
                 <col style={{ width: '130px' }} />
-                <col style={{ width: '50px' }} />
+                <col style={{ width: '66px' }} />
               </colgroup>
               <thead>
                 <tr>
@@ -187,7 +361,20 @@ export default function LaboHistoriqueApproPage() {
                       <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.fournisseurNom ?? '—'}</div>
                       <div style={{ color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.refFacture ?? '—'}</div>
                     </td>
-                    <td></td>
+                    <td style={{ whiteSpace: 'nowrap', textAlign: 'right' }}>
+                      <button
+                        className="btn btn-ghost btn-sm"
+                        onClick={() => setEditEntry(r)}
+                        title="Modifier"
+                        style={{ marginRight: 2, fontSize: '0.8rem', padding: '2px 6px' }}
+                      >✏️</button>
+                      <button
+                        className="btn btn-ghost btn-sm"
+                        onClick={() => setDeleteEntry(r)}
+                        title="Supprimer"
+                        style={{ fontSize: '0.8rem', color: '#dc2626', padding: '2px 6px' }}
+                      >🗑️</button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -207,6 +394,25 @@ export default function LaboHistoriqueApproPage() {
             </div>
           </div>
         </>
+      )}
+
+      {/* Modals */}
+      {editEntry && laboId && (
+        <EditModal
+          entry={editEntry}
+          fournisseurs={fournisseurs}
+          laboId={laboId}
+          onSaved={(updated) => handleSaved(editEntry.id, updated)}
+          onClose={() => setEditEntry(null)}
+        />
+      )}
+      {deleteEntry && laboId && (
+        <DeleteModal
+          entry={deleteEntry}
+          laboId={laboId}
+          onDeleted={handleDeleted}
+          onClose={() => setDeleteEntry(null)}
+        />
       )}
     </div>
   );
