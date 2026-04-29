@@ -35,13 +35,10 @@ function buildInitialRowState(entries: StockEntry[]): Record<number, StockRowSta
   const today = todayStr();
   for (const e of entries) {
     const hasExisting = e.quantite !== null;
-    const qStr = e.quantite !== null ? String(e.quantite) : '';
-    const pStr = e.prixUnitaire !== null ? String(e.prixUnitaire) : '';
-    const dStr = hasExisting && e.dateAppro ? e.dateAppro : today;
     state[e.ingredientId] = {
-      quantite: qStr, prixUnitaire: pStr, dateAppro: dStr,
+      quantite: '0', prixUnitaire: '0', dateAppro: today,
       fournisseurId: '', refFacture: '',
-      origQuantite: qStr, origPrixUnitaire: pStr, origDateAppro: dStr,
+      origQuantite: '0', origPrixUnitaire: '0', origDateAppro: today,
       hasExisting, saving: false, saved: false, error: '',
     };
   }
