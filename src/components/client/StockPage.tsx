@@ -420,14 +420,19 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
       const fId = row.fournisseurId ? Number(row.fournisseurId) : null;
       const ref = row.refFacture.trim() || null;
       await onSave(id, row.quantite, row.prixUnitaire, row.dateAppro, fId, ref);
+      const today = todayStr();
       setRows((prev) => ({
         ...prev,
         [id]: {
           ...prev[id],
           saving: false, saved: true, hasExisting: true,
-          origQuantite: row.quantite, origPrixUnitaire: row.prixUnitaire, origDateAppro: row.dateAppro,
+          quantite: '0', prixUnitaire: '0', dateAppro: today,
+          fournisseurId: '', refFacture: '',
+          origQuantite: '0', origPrixUnitaire: '0', origDateAppro: today,
         },
       }));
+      setHistoryData((prev) => { const n = { ...prev }; delete n[id]; return n; });
+      setHistoryOpen((prev) => ({ ...prev, [id]: false }));
       setTimeout(() => setRows((prev) => ({ ...prev, [id]: { ...prev[id], saved: false } })), 2500);
     } catch {
       setRows((prev) => ({ ...prev, [id]: { ...prev[id], saving: false, error: t('common.error') } }));
@@ -607,9 +612,6 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                                 value={row.dateAppro}
                                 onChange={(e) => updateRow(entry.ingredientId, 'dateAppro', e.target.value)}
                               />
-                              {hasDateConflict && (
-                                <div style={{ fontSize: '0.68rem', color: '#d97706', marginTop: 2 }}>⚠ Date déjà saisie</div>
-                              )}
                             </td>
                             <td style={{ whiteSpace: 'nowrap' }}>
                               {row.error && <span style={{ color: 'var(--danger)', fontSize: '0.75rem', marginRight: 4 }}>!</span>}
@@ -698,6 +700,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                                           <th style={{ textAlign: 'right', color: 'var(--text-muted)', fontWeight: 600, paddingBottom: 4 }}>{t('client.stock.quantity')}</th>
                                           <th style={{ textAlign: 'right', color: 'var(--text-muted)', fontWeight: 600, paddingBottom: 4 }}>Prix (U/DT)</th>
                                           <th style={{ color: 'var(--text-muted)', fontWeight: 600, paddingBottom: 4 }}>Fournisseur</th>
+                                          <th style={{ color: 'var(--text-muted)', fontWeight: 600, paddingBottom: 4 }}>Réf. Facture</th>
                                         </tr>
                                       </thead>
                                       <tbody>
@@ -712,6 +715,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                                             <td style={{ textAlign: 'right' }}>{h.quantite ?? '—'}</td>
                                             <td style={{ textAlign: 'right' }}>{h.prixUnitaire !== null ? h.prixUnitaire.toFixed(3) : '—'}</td>
                                             <td style={{ color: 'var(--text-muted)' }}>{h.fournisseurNom ?? '—'}</td>
+                                            <td style={{ color: 'var(--text-muted)' }}>{h.refFacture ?? '—'}</td>
                                           </tr>
                                         ))}
                                       </tbody>
