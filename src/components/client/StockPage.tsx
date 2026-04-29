@@ -45,9 +45,11 @@ function buildInitialRowState(entries: StockEntry[]): Record<number, StockRowSta
   return state;
 }
 
-function canSaveStockRow(row: StockRowState): boolean {
+function canSaveStockRow(row: StockRowState, requireFournisseur = false): boolean {
   if (row.saving) return false;
-  return row.quantite.trim() !== '' && row.prixUnitaire.trim() !== '' && row.dateAppro.trim() !== '';
+  if (!row.quantite.trim() || !row.prixUnitaire.trim() || !row.dateAppro.trim()) return false;
+  if (requireFournisseur && (!row.fournisseurId.trim() || !row.refFacture.trim())) return false;
+  return true;
 }
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -411,7 +413,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
 
   const saveRow = async (id: number) => {
     const row = rows[id];
-    if (!row || !canSaveStockRow(row)) return;
+    if (!row || !canSaveStockRow(row, hasFournisseurs)) return;
     setRows((prev) => ({ ...prev, [id]: { ...prev[id], saving: true, error: '' } }));
     try {
       const fId = row.fournisseurId ? Number(row.fournisseurId) : null;
@@ -555,6 +557,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                       const assignedFournisseur = hasFournisseurs && row.fournisseurId
                         ? fournisseurs.find((f) => String(f.id) === row.fournisseurId)
                         : null;
+                      const fournisseurValidated = !!assignedFournisseur && row.refFacture.trim() !== '';
                       // Date conflict warning
                       const histDatesSet = new Set<string>((hist || []).map((h) => h.dateAppro).filter(Boolean) as string[]);
                       const hasExisting = entry.quantite !== null;
@@ -640,9 +643,9 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                                     title="Affecter un fournisseur"
                                     style={{
                                       marginRight: 4,
-                                      background: assignedFournisseur ? '#dcfce7' : '#eff6ff',
-                                      color: assignedFournisseur ? '#15803d' : '#2563eb',
-                                      border: `1px solid ${assignedFournisseur ? '#86efac' : '#bfdbfe'}`,
+                                      background: fournisseurValidated ? '#dcfce7' : assignedFournisseur ? '#fef9c3' : '#eff6ff',
+                                      color: fournisseurValidated ? '#15803d' : assignedFournisseur ? '#92400e' : '#2563eb',
+                                      border: `1px solid ${fournisseurValidated ? '#86efac' : assignedFournisseur ? '#fde68a' : '#bfdbfe'}`,
                                       fontSize: '0.78rem',
                                       whiteSpace: 'nowrap',
                                       maxWidth: 130,
@@ -650,7 +653,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                                       textOverflow: 'ellipsis',
                                     }}
                                   >
-                                    {assignedFournisseur ? `✓ ${assignedFournisseur.nom}` : '🚚 Fournisseur'}
+                                    {fournisseurValidated ? `✓ ${assignedFournisseur!.nom}` : assignedFournisseur ? `${assignedFournisseur.nom}…` : '🚚 Fournisseur'}
                                   </button>
                                 )
                               )}
@@ -667,7 +670,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                               <button
                                 className={`btn btn-sm ${row.saved ? 'btn-success' : 'btn-primary'}`}
                                 onClick={() => saveRow(entry.ingredientId)}
-                                disabled={!canSaveStockRow(row)}
+                                disabled={!canSaveStockRow(row, hasFournisseurs)}
                                 style={{ marginRight: 4 }}
                               >
                                 {row.saving ? '…' : row.saved ? '✓' : t('client.stock.save')}

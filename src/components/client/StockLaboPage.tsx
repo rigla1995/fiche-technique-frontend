@@ -169,9 +169,13 @@ export default function StockLaboPage() {
     }));
   };
 
+  const hasFournisseurs = fournisseurs.length > 0;
+
   const canSaveRow = (rs: RowState | undefined): boolean => {
     if (!rs || rs.saving) return false;
-    return rs.quantite.trim() !== '' && rs.prixUnitaire.trim() !== '' && rs.dateAppro.trim() !== '';
+    if (!rs.quantite.trim() || !rs.prixUnitaire.trim() || !rs.dateAppro.trim()) return false;
+    if (hasFournisseurs && (!rs.fournisseurId.trim() || !rs.refFacture.trim())) return false;
+    return true;
   };
 
   const saveRow = async (ingredientId: number) => {
@@ -469,14 +473,20 @@ export default function StockLaboPage() {
                               const assignedF = rs.fournisseurId
                                 ? fournisseurs.find((f) => String(f.id) === rs.fournisseurId)
                                 : null;
+                              const validated = !!assignedF && rs.refFacture.trim() !== '';
                               return (
                                 <button
-                                  className={`btn btn-sm ${assignedF ? 'btn-success' : 'btn-secondary'}`}
+                                  className="btn btn-sm"
                                   onClick={() => setFournisseurModal({ ingredientId: r.ingredientId, nom: r.nom })}
-                                  style={{ marginRight: 6, maxWidth: 110, overflow: 'hidden', textOverflow: 'ellipsis' }}
+                                  style={{
+                                    marginRight: 6, maxWidth: 110, overflow: 'hidden', textOverflow: 'ellipsis',
+                                    background: validated ? '#dcfce7' : assignedF ? '#fef9c3' : '#eff6ff',
+                                    color: validated ? '#15803d' : assignedF ? '#92400e' : '#2563eb',
+                                    border: `1px solid ${validated ? '#86efac' : assignedF ? '#fde68a' : '#bfdbfe'}`,
+                                  }}
                                   title={assignedF ? assignedF.nom : 'Assigner fournisseur'}
                                 >
-                                  {assignedF ? `✓ ${assignedF.nom}` : 'Fournisseur'}
+                                  {validated ? `✓ ${assignedF!.nom}` : assignedF ? `${assignedF.nom}…` : 'Fournisseur'}
                                 </button>
                               );
                             })()}
