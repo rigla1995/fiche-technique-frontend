@@ -565,53 +565,65 @@ export default function HistoriqueApproPage() {
           </div>
 
           <div className="table-responsive card th-teal">
-            <table className="table">
+            <table className="table" style={{ tableLayout: 'fixed', minWidth: 0 }}>
+              <colgroup>
+                <col style={{ width: isEntreprise ? '120px' : '110px' }} />
+                <col />
+                <col style={{ width: '110px' }} />
+                <col style={{ width: '90px' }} />
+                {isEntreprise && <col style={{ width: '140px' }} />}
+                <col style={{ width: '72px' }} />
+              </colgroup>
               <thead>
                 <tr>
                   <th>{t('client.historique_appro.col_date')}</th>
-                  {isEntreprise && <th>Type</th>}
                   <th>{t('client.historique_appro.col_ingredient')}</th>
-                  <th>{t('client.historique_appro.col_category')}</th>
                   <th style={{ textAlign: 'right' }}>{t('client.historique_appro.col_qty')}</th>
-                  <th style={{ textAlign: 'right' }}>Prix (U/DT)</th>
-                  {isEntreprise && <th>Fournisseur</th>}
-                  {isEntreprise && <th>Réf Facture</th>}
+                  <th style={{ textAlign: 'right' }}>Prix/DT</th>
+                  {isEntreprise && <th>Fourn. / Réf</th>}
                   <th></th>
                 </tr>
               </thead>
               <tbody>
                 {pagedResults.map((r) => (
                   <tr key={r.id}>
-                    <td style={{ fontWeight: 600, color: 'var(--primary)' }}>{fmtDate(r.dateAppro)}</td>
-                    {isEntreprise && (
-                      <td>
-                        <span className={`badge-appro ${r.typeAppro ?? 'manuel'}`}>
+                    <td>
+                      <div style={{ fontWeight: 600, color: 'var(--primary)', fontSize: '0.85rem' }}>{fmtDate(r.dateAppro)}</div>
+                      {isEntreprise && (
+                        <span className={`badge-appro ${r.typeAppro ?? 'manuel'}`} style={{ fontSize: '0.68rem' }}>
                           {r.typeAppro === 'transfert' ? 'Transfert' : 'Manuel'}
                         </span>
-                      </td>
-                    )}
-                    <td>{r.ingredientNom}</td>
-                    <td style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{r.categorieNom}</td>
-                    <td style={{ textAlign: 'right', fontWeight: 700, color: qtyColor(r.quantite) }}>
-                      {r.quantite ?? '—'} <span style={{ color: 'var(--text-muted)', fontSize: '0.78rem', fontWeight: 400 }}>{r.uniteNom}</span>
+                      )}
                     </td>
-                    <td style={{ textAlign: 'right', fontWeight: 600, color: prixColor(r.prixUnitaire) }}>
+                    <td>
+                      <div style={{ fontWeight: 600, fontSize: '0.88rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.ingredientNom}</div>
+                      <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.categorieNom}</div>
+                    </td>
+                    <td style={{ textAlign: 'right', fontWeight: 700, color: qtyColor(r.quantite) }}>
+                      <div>{r.quantite ?? '—'}</div>
+                      <div style={{ color: 'var(--text-muted)', fontSize: '0.72rem', fontWeight: 400 }}>{r.uniteNom}</div>
+                    </td>
+                    <td style={{ textAlign: 'right', fontWeight: 600, color: prixColor(r.prixUnitaire), fontSize: '0.88rem' }}>
                       {r.prixUnitaire !== null ? r.prixUnitaire.toFixed(3) : '—'}
                     </td>
-                    {isEntreprise && <td style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>{r.fournisseurNom ?? '—'}</td>}
-                    {isEntreprise && <td style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>{r.refFacture ?? '—'}</td>}
-                    <td style={{ whiteSpace: 'nowrap' }}>
+                    {isEntreprise && (
+                      <td style={{ fontSize: '0.78rem' }}>
+                        <div style={{ color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.fournisseurNom ?? '—'}</div>
+                        <div style={{ color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.refFacture ?? '—'}</div>
+                      </td>
+                    )}
+                    <td style={{ whiteSpace: 'nowrap', textAlign: 'right' }}>
                       <button
                         className="btn btn-ghost btn-sm"
                         onClick={() => setEditEntry(r)}
                         title="Modifier"
-                        style={{ marginRight: 4, fontSize: '0.8rem' }}
+                        style={{ marginRight: 2, fontSize: '0.8rem', padding: '2px 6px' }}
                       >✏️</button>
                       <button
                         className="btn btn-ghost btn-sm"
                         onClick={() => setDeleteEntry(r)}
                         title="Supprimer"
-                        style={{ fontSize: '0.8rem', color: '#dc2626' }}
+                        style={{ fontSize: '0.8rem', color: '#dc2626', padding: '2px 6px' }}
                       >🗑️</button>
                     </td>
                   </tr>

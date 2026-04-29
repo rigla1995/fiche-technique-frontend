@@ -47,7 +47,7 @@ interface RowState {
   saving: boolean;
   saved: boolean;
   historyOpen: boolean;
-  history: { dateAppro: string; quantite: number | null; prixUnitaire: number | null }[];
+  history: { dateAppro: string; quantite: number | null; prixUnitaire: number | null; fournisseurNom: string | null; refFacture: string | null }[];
 }
 
 interface LaboIngredient { id: number; nom: string; unite: string; categorie: string; categorieId: number | null; selected: boolean }
@@ -69,8 +69,8 @@ export default function StockLaboPage() {
   const [filterNom, setFilterNom] = useState('');
   const [filterText, setFilterText] = useState('');
 
-  // Fournisseurs
-  const [fournisseurs, setFournisseurs] = useState<{ id: number; nom: string; isLabo?: boolean }[]>([]);
+  // Fournisseurs (non-labo fournisseurs assigned to this labo)
+  const [fournisseurs, setFournisseurs] = useState<{ id: number; nom: string }[]>([]);
   const [fournisseurModal, setFournisseurModal] = useState<{ ingredientId: number; nom: string } | null>(null);
 
   // Ingredient selector modal
@@ -144,8 +144,12 @@ export default function StockLaboPage() {
   useEffect(() => {
     loadLabo();
     loadStock();
-    api.get('/api/entreprise/fournisseurs').then(({ data }) => setFournisseurs(data)).catch(() => {});
-  }, [loadLabo, loadStock]);
+    if (laboId) {
+      api.get(`/api/labo/${laboId}/fournisseurs`)
+        .then(({ data }) => setFournisseurs(data))
+        .catch(() => {});
+    }
+  }, [loadLabo, loadStock, laboId]);
 
   const setField = (ingredientId: number, field: keyof RowState, value: unknown) => {
     setRowState((prev) => ({ ...prev, [ingredientId]: { ...prev[ingredientId], [field]: value } }));
@@ -520,6 +524,8 @@ export default function StockLaboPage() {
                                       <th style={{ textAlign: 'left', color: 'var(--text-muted)', fontWeight: 600, paddingBottom: 4 }}>{t('client.stock.date_appro')}</th>
                                       <th style={{ textAlign: 'right', color: 'var(--text-muted)', fontWeight: 600, paddingBottom: 4 }}>{t('client.stock.quantity')}</th>
                                       <th style={{ textAlign: 'right', color: 'var(--text-muted)', fontWeight: 600, paddingBottom: 4 }}>{t('client.stock.prix_unitaire')}</th>
+                                      <th style={{ textAlign: 'left', color: 'var(--text-muted)', fontWeight: 600, paddingBottom: 4 }}>Fournisseur</th>
+                                      <th style={{ textAlign: 'left', color: 'var(--text-muted)', fontWeight: 600, paddingBottom: 4 }}>Réf Facture</th>
                                     </tr>
                                   </thead>
                                   <tbody>
@@ -528,6 +534,8 @@ export default function StockLaboPage() {
                                         <td style={{ color: 'var(--primary)', fontWeight: 600 }}>{fmtDate(h.dateAppro)}</td>
                                         <td style={{ textAlign: 'right' }}>{h.quantite ?? '—'}</td>
                                         <td style={{ textAlign: 'right' }}>{h.prixUnitaire !== null ? h.prixUnitaire.toFixed(3) : '—'}</td>
+                                        <td style={{ color: 'var(--text-muted)' }}>{h.fournisseurNom ?? '—'}</td>
+                                        <td style={{ color: 'var(--text-muted)' }}>{h.refFacture ?? '—'}</td>
                                       </tr>
                                     ))}
                                   </tbody>
@@ -566,6 +574,7 @@ export default function StockLaboPage() {
               >
                 <option value="">— Aucun fournisseur —</option>
                 {fournisseurs.map((f) => <option key={f.id} value={String(f.id)}>{f.nom}</option>)}
+                {fournisseurs.length === 0 && <option disabled>Aucun fournisseur assigné à ce labo</option>}
               </select>
               <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 6 }}>Réf. Facture / BL</label>
               <input

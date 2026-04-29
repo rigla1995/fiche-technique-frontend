@@ -115,8 +115,9 @@ export interface Activite {
 export interface Labo {
   id: number;
   entrepriseId: number;
-  franchiseGroup: string;
+  franchiseGroup: string | null;
   nom: string;
+  refLabo: string | null;
   referentTel: string;
   adresse?: string | null;
   createdAt?: string;
@@ -181,6 +182,7 @@ export interface Fournisseur {
   telephone: string | null;
   isLabo?: boolean;
   activiteIds: number[];
+  laboIds: number[];
   createdAt?: string;
 }
 
