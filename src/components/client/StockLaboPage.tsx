@@ -38,6 +38,8 @@ interface RowState {
   quantite: string;
   prixUnitaire: string;
   dateAppro: string;
+  fournisseurId: string;
+  refFacture: string;
   origQuantite: string;
   origPrixUnitaire: string;
   origDateAppro: string;
@@ -66,6 +68,10 @@ export default function StockLaboPage() {
   const [filterCategorie, setFilterCategorie] = useState('');
   const [filterNom, setFilterNom] = useState('');
   const [filterText, setFilterText] = useState('');
+
+  // Fournisseurs
+  const [fournisseurs, setFournisseurs] = useState<{ id: number; nom: string; isLabo?: boolean }[]>([]);
+  const [fournisseurModal, setFournisseurModal] = useState<{ ingredientId: number; nom: string } | null>(null);
 
   // Ingredient selector modal
   const [showIngModal, setShowIngModal] = useState(false);
@@ -116,6 +122,8 @@ export default function StockLaboPage() {
           quantite: '0',
           prixUnitaire: '0',
           dateAppro: today,
+          fournisseurId: '',
+          refFacture: '',
           origQuantite: '0',
           origPrixUnitaire: '0',
           origDateAppro: today,
@@ -133,7 +141,11 @@ export default function StockLaboPage() {
     setLoading(false);
   }, [laboId, today]);
 
-  useEffect(() => { loadLabo(); loadStock(); }, [loadLabo, loadStock]);
+  useEffect(() => {
+    loadLabo();
+    loadStock();
+    api.get('/api/entreprise/fournisseurs').then(({ data }) => setFournisseurs(data)).catch(() => {});
+  }, [loadLabo, loadStock]);
 
   const setField = (ingredientId: number, field: keyof RowState, value: unknown) => {
     setRowState((prev) => ({ ...prev, [ingredientId]: { ...prev[ingredientId], [field]: value } }));
@@ -171,6 +183,8 @@ export default function StockLaboPage() {
         quantite: rs.quantite !== '' ? parseFloat(rs.quantite) : null,
         prixUnitaire: rs.prixUnitaire !== '' ? parseFloat(rs.prixUnitaire) : null,
         dateAppro: rs.dateAppro || today,
+        fournisseurId: rs.fournisseurId ? Number(rs.fournisseurId) : null,
+        refFacture: rs.refFacture.trim() || null,
       });
       setRowState((prev) => ({
         ...prev,
@@ -178,6 +192,7 @@ export default function StockLaboPage() {
           ...prev[ingredientId],
           saving: false, saved: true, hasExisting: true,
           quantite: '0', prixUnitaire: '0', dateAppro: today,
+          fournisseurId: '', refFacture: '',
           origQuantite: '0', origPrixUnitaire: '0', origDateAppro: today,
           historyOpen: false, history: [],
         },
@@ -450,6 +465,21 @@ export default function StockLaboPage() {
                             />
                           </td>
                           <td style={{ whiteSpace: 'nowrap' }}>
+                            {fournisseurs.length > 0 && (() => {
+                              const assignedF = rs.fournisseurId
+                                ? fournisseurs.find((f) => String(f.id) === rs.fournisseurId)
+                                : null;
+                              return (
+                                <button
+                                  className={`btn btn-sm ${assignedF ? 'btn-success' : 'btn-secondary'}`}
+                                  onClick={() => setFournisseurModal({ ingredientId: r.ingredientId, nom: r.nom })}
+                                  style={{ marginRight: 6, maxWidth: 110, overflow: 'hidden', textOverflow: 'ellipsis' }}
+                                  title={assignedF ? assignedF.nom : 'Assigner fournisseur'}
+                                >
+                                  {assignedF ? `✓ ${assignedF.nom}` : 'Fournisseur'}
+                                </button>
+                              );
+                            })()}
                             <button
                               className={`btn btn-sm ${rs.saved ? 'btn-success' : 'btn-primary'}`}
                               onClick={() => saveRow(r.ingredientId)}
@@ -507,6 +537,41 @@ export default function StockLaboPage() {
             );
           })}
         </>
+      )}
+
+      {/* Fournisseur affectation modal */}
+      {fournisseurModal && (
+        <div className="modal-overlay" onClick={() => setFournisseurModal(null)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header modal-header--primary">
+              <h2>Fournisseur — {fournisseurModal.nom}</h2>
+              <button className="modal-close" onClick={() => setFournisseurModal(null)}>✕</button>
+            </div>
+            <div className="modal-body">
+              <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 6 }}>Fournisseur</label>
+              <select
+                className="input" style={{ width: '100%', fontSize: '0.9rem', marginBottom: 16 }}
+                value={rowState[fournisseurModal.ingredientId]?.fournisseurId ?? ''}
+                onChange={(e) => setField(fournisseurModal.ingredientId, 'fournisseurId', e.target.value)}
+              >
+                <option value="">— Aucun fournisseur —</option>
+                {fournisseurs.map((f) => <option key={f.id} value={String(f.id)}>{f.nom}</option>)}
+              </select>
+              <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 6 }}>Réf. Facture / BL</label>
+              <input
+                className="input" style={{ width: '100%', fontSize: '0.9rem', marginBottom: 16 }}
+                type="text"
+                value={rowState[fournisseurModal.ingredientId]?.refFacture ?? ''}
+                onChange={(e) => setField(fournisseurModal.ingredientId, 'refFacture', e.target.value)}
+                placeholder="N° facture ou BL"
+              />
+              <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+                <button className="btn btn-ghost" onClick={() => setFournisseurModal(null)}>Annuler</button>
+                <button className="btn btn-primary" onClick={() => setFournisseurModal(null)}>Valider</button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Activity assignment modal */}

@@ -560,9 +560,10 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                       const hasExisting = entry.quantite !== null;
                       const hasDateConflict = (hasExisting && row.dateAppro === entry.dateAppro) || histDatesSet.has(row.dateAppro);
                       const warnStyle = hasDateConflict ? { borderColor: '#f59e0b', boxShadow: '0 0 0 2px #fef3c7' } : {};
-                      // Transfert labo fournisseur (read-only)
-                      const isLastTransfert = entry.lastTypeAppro === 'transfert' && !row.fournisseurId;
-                      const laboFournisseur = isLastTransfert ? fournisseurs.find((f) => f.id === entry.lastFournisseurId) ?? null : null;
+                      // Show green read-only button only when user picked a labo fournisseur in this session
+                      const laboFournisseur = row.fournisseurId
+                        ? (fournisseurs.find((f) => String(f.id) === row.fournisseurId && f.isLabo) ?? null)
+                        : null;
                       return (
                         <>
                           <tr key={entry.ingredientId}>
@@ -616,8 +617,8 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                                 laboFournisseur ? (
                                   <button
                                     className="btn btn-sm"
-                                    onClick={() => setTransfertInfoModal({ ingredientId: entry.ingredientId, nom: entry.nom })}
-                                    title="Voir le fournisseur labo"
+                                    onClick={() => setAffectationModal({ ingredientId: entry.ingredientId, nom: entry.nom })}
+                                    title="Fournisseur labo — cliquer pour modifier"
                                     style={{
                                       marginRight: 4,
                                       background: '#dcfce7',
