@@ -60,6 +60,12 @@ export default function ClientIngredientsCatalog({ embedded, onSelectionDone }: 
     groups[cat].push(ing);
   }
 
+  const CAT_PAGE_SIZE = 10;
+  const [catPage, setCatPage] = useState(1);
+  const sortedCatEntries = Object.entries(groups).sort(([a], [b]) => a.localeCompare(b));
+  const catTotalPages = Math.max(1, Math.ceil(sortedCatEntries.length / CAT_PAGE_SIZE));
+  const pagedCatEntries = sortedCatEntries.slice((catPage - 1) * CAT_PAGE_SIZE, catPage * CAT_PAGE_SIZE);
+
   return (
     <div className={embedded ? '' : 'page'}>
       <div className="page-header">
@@ -115,7 +121,8 @@ export default function ClientIngredientsCatalog({ embedded, onSelectionDone }: 
           <p>{t('client.ingredients_catalog.no_results')}</p>
         </div>
       ) : (
-        Object.entries(groups).sort(([a], [b]) => a.localeCompare(b)).map(([cat, items]) => (
+        <>
+        {pagedCatEntries.map(([cat, items]) => (
           <div key={cat} style={{ marginBottom: 24 }}>
             <h2 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--primary)', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
               🏷️ {cat}
@@ -158,7 +165,15 @@ export default function ClientIngredientsCatalog({ embedded, onSelectionDone }: 
               </table>
             </div>
           </div>
-        ))
+        ))}
+        {catTotalPages > 1 && (
+          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 10, marginTop: 8, fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+            <button className="btn btn-ghost btn-sm" disabled={catPage === 1} onClick={() => setCatPage((p) => Math.max(1, p - 1))} style={{ padding: '3px 10px', fontWeight: 700 }}>‹</button>
+            <span style={{ fontWeight: 600, color: 'var(--text)' }}>{catPage} / {catTotalPages}</span>
+            <button className="btn btn-ghost btn-sm" disabled={catPage === catTotalPages} onClick={() => setCatPage((p) => Math.min(catTotalPages, p + 1))} style={{ padding: '3px 10px', fontWeight: 700 }}>›</button>
+          </div>
+        )}
+        </>
       )}
     </div>
   );

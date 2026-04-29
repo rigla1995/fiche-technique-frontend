@@ -97,6 +97,10 @@ export default function StockLaboPage() {
   // Collapsible categories in main stock view
   const [openStockCats, setOpenStockCats] = useState<Set<string>>(new Set());
 
+  // Pagination for category groups
+  const [stockCatPage, setStockCatPage] = useState(1);
+  const STOCK_CAT_PAGE_SIZE = 10;
+
   const today = todayStr();
 
   const loadLabo = useCallback(async () => {
@@ -378,7 +382,12 @@ export default function StockLaboPage() {
 
           {Object.keys(groups).length === 0 ? (
             <p className="text-muted">{t('common.no_result')}</p>
-          ) : Object.entries(groups).sort(([a], [b]) => a.localeCompare(b)).map(([cat, rows]) => {
+          ) : (() => {
+            const sortedGroups = Object.entries(groups).sort(([a], [b]) => a.localeCompare(b));
+            const stockCatTotalPages = Math.max(1, Math.ceil(sortedGroups.length / STOCK_CAT_PAGE_SIZE));
+            const pagedGroups = sortedGroups.slice((stockCatPage - 1) * STOCK_CAT_PAGE_SIZE, stockCatPage * STOCK_CAT_PAGE_SIZE);
+            return (<>
+            {pagedGroups.map(([cat, rows]) => {
             const isCatOpen = openStockCats.has(cat);
             const toggleStockCat = () => setOpenStockCats((prev) => { const n = new Set(prev); if (n.has(cat)) n.delete(cat); else n.add(cat); return n; });
             return (
@@ -558,6 +567,14 @@ export default function StockLaboPage() {
           </div>
             );
           })}
+          {stockCatTotalPages > 1 && (
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 10, marginTop: 8, fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+              <button className="btn btn-ghost btn-sm" disabled={stockCatPage === 1} onClick={() => setStockCatPage((p) => Math.max(1, p - 1))} style={{ padding: '3px 10px', fontWeight: 700 }}>‹</button>
+              <span style={{ fontWeight: 600, color: 'var(--text)' }}>{stockCatPage} / {stockCatTotalPages}</span>
+              <button className="btn btn-ghost btn-sm" disabled={stockCatPage === stockCatTotalPages} onClick={() => setStockCatPage((p) => Math.min(stockCatTotalPages, p + 1))} style={{ padding: '3px 10px', fontWeight: 700 }}>›</button>
+            </div>
+          )}
+          </>);})()}
         </>
       )}
 

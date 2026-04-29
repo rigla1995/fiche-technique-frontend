@@ -36,6 +36,8 @@ function IngredientList({
 }) {
   const { t } = useTranslation();
   const [openCats, setOpenCats] = useState<Set<string>>(new Set());
+  const [catPage, setCatPage] = useState(1);
+  const CAT_PAGE_SIZE = 10;
 
   const filtered = ingredients.filter((i) => {
     const catOk = !filterCategory || i.categorie === filterCategory;
@@ -61,57 +63,69 @@ function IngredientList({
       </p>
       {filtered.length === 0 ? (
         <p className="text-muted">{t('common.no_result')}</p>
-      ) : (
-        Object.entries(groups).sort(([a], [b]) => a.localeCompare(b)).map(([cat, items]) => {
-          const isOpen = openCats.has(cat);
-          return (
-          <div key={cat} style={{ marginBottom: 8 }}>
-            <button onClick={() => toggleCat(cat)} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0', width: '100%', textAlign: 'left', borderBottom: '2px solid var(--border)', marginBottom: isOpen ? 8 : 0 }}>
-              <span style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>🏷️ {cat}</span>
-              <span style={{ fontWeight: 400, fontSize: '0.72rem', color: 'var(--text-muted)' }}>({items.filter((i) => i.selected).length}/{items.length})</span>
-              <span style={{ marginLeft: 'auto', fontSize: '0.8rem', color: 'var(--text-muted)' }}>{isOpen ? '▼' : '▶'}</span>
-            </button>
-            {isOpen && (
-            <div className="table-responsive card" style={{ marginBottom: 0 }}>
-              <table className="table">
-                <thead>
-                  <tr>
-                    <th style={{ width: 40 }}></th>
-                    <th>{t('common.name')}</th>
-                    <th style={{ width: 100 }}>{t('common.unit')}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {items.map((ing) => (
-                    <tr key={ing.id} style={{ background: ing.selected ? 'var(--primary-light)' : undefined }}>
-                      <td style={{ textAlign: 'center' }}>
-                        {readOnly ? (
-                          <span style={{ fontSize: '1.1rem', color: ing.selected ? 'var(--success)' : 'var(--text-muted)' }}>
-                            {ing.selected ? '✅' : '○'}
-                          </span>
-                        ) : (
-                          <button
-                            className="btn btn-ghost btn-sm"
-                            style={{ fontSize: '1.1rem', padding: '2px 6px', color: ing.selected ? 'var(--success)' : 'var(--text-muted)' }}
-                            disabled={toggling === ing.id}
-                            onClick={() => onToggle(ing.id)}
-                          >
-                            {toggling === ing.id ? '…' : ing.selected ? '✅' : '○'}
-                          </button>
-                        )}
-                      </td>
-                      <td style={{ fontWeight: ing.selected ? 600 : 400 }}>{ing.nom}</td>
-                      <td style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{ing.unite}</td>
+      ) : (() => {
+        const sortedGroups = Object.entries(groups).sort(([a], [b]) => a.localeCompare(b));
+        const totalCatPages = Math.max(1, Math.ceil(sortedGroups.length / CAT_PAGE_SIZE));
+        const pagedGroups = sortedGroups.slice((catPage - 1) * CAT_PAGE_SIZE, catPage * CAT_PAGE_SIZE);
+        return (<>
+          {pagedGroups.map(([cat, items]) => {
+            const isOpen = openCats.has(cat);
+            return (
+            <div key={cat} style={{ marginBottom: 8 }}>
+              <button onClick={() => toggleCat(cat)} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0', width: '100%', textAlign: 'left', borderBottom: '2px solid var(--border)', marginBottom: isOpen ? 8 : 0 }}>
+                <span style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>🏷️ {cat}</span>
+                <span style={{ fontWeight: 400, fontSize: '0.72rem', color: 'var(--text-muted)' }}>({items.filter((i) => i.selected).length}/{items.length})</span>
+                <span style={{ marginLeft: 'auto', fontSize: '0.8rem', color: 'var(--text-muted)' }}>{isOpen ? '▼' : '▶'}</span>
+              </button>
+              {isOpen && (
+              <div className="table-responsive card" style={{ marginBottom: 0 }}>
+                <table className="table">
+                  <thead>
+                    <tr>
+                      <th style={{ width: 40 }}></th>
+                      <th>{t('common.name')}</th>
+                      <th style={{ width: 100 }}>{t('common.unit')}</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {items.map((ing) => (
+                      <tr key={ing.id} style={{ background: ing.selected ? 'var(--primary-light)' : undefined }}>
+                        <td style={{ textAlign: 'center' }}>
+                          {readOnly ? (
+                            <span style={{ fontSize: '1.1rem', color: ing.selected ? 'var(--success)' : 'var(--text-muted)' }}>
+                              {ing.selected ? '✅' : '○'}
+                            </span>
+                          ) : (
+                            <button
+                              className="btn btn-ghost btn-sm"
+                              style={{ fontSize: '1.1rem', padding: '2px 6px', color: ing.selected ? 'var(--success)' : 'var(--text-muted)' }}
+                              disabled={toggling === ing.id}
+                              onClick={() => onToggle(ing.id)}
+                            >
+                              {toggling === ing.id ? '…' : ing.selected ? '✅' : '○'}
+                            </button>
+                          )}
+                        </td>
+                        <td style={{ fontWeight: ing.selected ? 600 : 400 }}>{ing.nom}</td>
+                        <td style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{ing.unite}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              )}
             </div>
-            )}
-          </div>
-          );
-        })
-      )}
+            );
+          })}
+          {totalCatPages > 1 && (
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 10, marginTop: 8, fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+              <button className="btn btn-ghost btn-sm" disabled={catPage === 1} onClick={() => setCatPage((p) => Math.max(1, p - 1))} style={{ padding: '3px 10px', fontWeight: 700 }}>‹</button>
+              <span style={{ fontWeight: 600, color: 'var(--text)' }}>{catPage} / {totalCatPages}</span>
+              <button className="btn btn-ghost btn-sm" disabled={catPage === totalCatPages} onClick={() => setCatPage((p) => Math.min(totalCatPages, p + 1))} style={{ padding: '3px 10px', fontWeight: 700 }}>›</button>
+            </div>
+          )}
+        </>);
+      })()}
     </>
   );
 }

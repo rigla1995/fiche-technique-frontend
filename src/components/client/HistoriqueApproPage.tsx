@@ -9,7 +9,7 @@ const currentYear = new Date().getFullYear();
 const yearStart = `${currentYear}-01-01`;
 const yearEnd = `${currentYear}-12-31`;
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 10;
 
 const fmtDate = (iso: string | null | undefined) => {
   if (!iso || iso.length < 10) return iso ?? '—';

@@ -116,6 +116,11 @@ export default function FournisseursPage() {
   const nonLaboFournisseurs = fournisseurs.filter((f) => !f.isLabo);
   const laboFournisseurs = fournisseurs.filter((f) => f.isLabo);
 
+  const FOURN_PAGE_SIZE = 10;
+  const [foPage, setFoPage] = useState(1);
+  const foTotalPages = Math.max(1, Math.ceil(nonLaboFournisseurs.length / FOURN_PAGE_SIZE));
+  const pagedFournisseurs = nonLaboFournisseurs.slice((foPage - 1) * FOURN_PAGE_SIZE, foPage * FOURN_PAGE_SIZE);
+
   return (
     <div className="page">
       <div className="page-header">
@@ -183,7 +188,7 @@ export default function FournisseursPage() {
                 </tr>
               </thead>
               <tbody>
-                {nonLaboFournisseurs.map((f) => (
+                {pagedFournisseurs.map((f) => (
                   <tr key={f.id}>
                     <td style={{ fontWeight: 700 }}>{f.nom}</td>
                     <td style={{ color: 'var(--text-muted)' }}>{f.telephone ?? '—'}</td>
@@ -221,6 +226,16 @@ export default function FournisseursPage() {
                 )}
               </tbody>
             </table>
+            {foTotalPages > 1 && (
+              <div style={{ padding: '8px 14px', fontSize: '0.78rem', color: 'var(--text-muted)', borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span>{nonLaboFournisseurs.length} fournisseur{nonLaboFournisseurs.length > 1 ? 's' : ''}</span>
+                <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                  <button className="btn btn-ghost btn-sm" disabled={foPage === 1} onClick={() => setFoPage((p) => Math.max(1, p - 1))} style={{ padding: '3px 10px', fontWeight: 700 }}>‹</button>
+                  <span style={{ fontWeight: 600, color: 'var(--text)' }}>{foPage} / {foTotalPages}</span>
+                  <button className="btn btn-ghost btn-sm" disabled={foPage === foTotalPages} onClick={() => setFoPage((p) => Math.min(foTotalPages, p + 1))} style={{ padding: '3px 10px', fontWeight: 700 }}>›</button>
+                </div>
+              </div>
+            )}
           </div>
         </>
       )}
