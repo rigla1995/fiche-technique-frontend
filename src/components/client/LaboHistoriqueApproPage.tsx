@@ -30,6 +30,7 @@ interface HistEntry {
 }
 
 interface LaboFournisseur { id: number; nom: string; telephone: string | null }
+interface LaboIngredient { id: number; nom: string; unite: string; categorie: string; categorieId: number | null }
 
 const labelStyle: React.CSSProperties = {
   fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)',
@@ -202,14 +203,20 @@ export default function LaboHistoriqueApproPage() {
 
   const [labo, setLabo] = useState<Labo | null>(null);
   const [fournisseurs, setFournisseurs] = useState<LaboFournisseur[]>([]);
+  const [laboIngredients, setLaboIngredients] = useState<LaboIngredient[]>([]);
+
   const [results, setResults] = useState<HistEntry[]>([]);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
   const [page, setPage] = useState(1);
 
+  // Filters
   const [startDate, setStartDate] = useState(yearStart);
   const [endDate, setEndDate] = useState(yearEnd);
-  const [filterIngredient, setFilterIngredient] = useState('');
+  const [filterCategorieId, setFilterCategorieId] = useState('');
+  const [filterIngredientId, setFilterIngredientId] = useState('');
+  const [filterFournisseurId, setFilterFournisseurId] = useState('');
+  const [filterRefFacture, setFilterRefFacture] = useState('');
 
   const [editEntry, setEditEntry] = useState<HistEntry | null>(null);
   const [deleteEntry, setDeleteEntry] = useState<HistEntry | null>(null);
@@ -218,7 +225,24 @@ export default function LaboHistoriqueApproPage() {
     if (!laboId) return;
     api.get(`/api/labo/${laboId}`).then(({ data }) => setLabo(data)).catch(() => {});
     api.get(`/api/labo/${laboId}/fournisseurs`).then(({ data }) => setFournisseurs(data)).catch(() => {});
+    api.get(`/api/labo/${laboId}/ingredients`).then(({ data }) => setLaboIngredients(
+      (data as LaboIngredient[]).filter((i) => i.categorie !== undefined)
+    )).catch(() => {});
   }, [laboId]);
+
+  // Derived: unique categories from labo ingredients
+  const categories = Array.from(
+    new Map(
+      laboIngredients
+        .filter((i) => i.categorieId !== null)
+        .map((i) => [i.categorieId, { id: i.categorieId as number, nom: i.categorie }])
+    ).values()
+  ).sort((a, b) => a.nom.localeCompare(b.nom));
+
+  // Ingredients filtered by selected category
+  const ingredientsInCat = filterCategorieId
+    ? laboIngredients.filter((i) => String(i.categorieId) === filterCategorieId)
+    : laboIngredients;
 
   const fetchResults = useCallback(async () => {
     if (!laboId) return;
@@ -229,13 +253,17 @@ export default function LaboHistoriqueApproPage() {
       const params = new URLSearchParams();
       if (startDate) params.set('startDate', startDate);
       if (endDate) params.set('endDate', endDate);
+      if (filterIngredientId) params.set('ingredientId', filterIngredientId);
+      else if (filterCategorieId) params.set('categorieId', filterCategorieId);
+      if (filterFournisseurId) params.set('fournisseurId', filterFournisseurId);
+      if (filterRefFacture.trim()) params.set('refFacture', filterRefFacture.trim());
       const { data } = await api.get(`/api/labo/${laboId}/historique?${params}`);
       setResults(data as HistEntry[]);
     } catch {
       setResults([]);
     }
     setLoading(false);
-  }, [laboId, startDate, endDate]);
+  }, [laboId, startDate, endDate, filterIngredientId, filterCategorieId, filterFournisseurId, filterRefFacture]);
 
   const handleSaved = (id: number, updated: Partial<HistEntry>) => {
     setResults((prev) => prev.map((r) => r.id === id ? { ...r, ...updated } : r));
@@ -245,19 +273,17 @@ export default function LaboHistoriqueApproPage() {
     setResults((prev) => prev.filter((r) => r.id !== id));
   };
 
-  const filtered = filterIngredient
-    ? results.filter((r) => r.ingredientNom.toLowerCase().includes(filterIngredient.toLowerCase()))
-    : results;
-
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  const pagedResults = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const totalPages = Math.max(1, Math.ceil(results.length / PAGE_SIZE));
+  const pagedResults = results.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   const unitTotals: Record<string, { qty: number; cost: number }> = {};
-  for (const r of filtered) {
+  for (const r of results) {
     if (!unitTotals[r.uniteNom]) unitTotals[r.uniteNom] = { qty: 0, cost: 0 };
     unitTotals[r.uniteNom].qty += r.quantite ?? 0;
     unitTotals[r.uniteNom].cost += (r.quantite ?? 0) * (r.prixUnitaire ?? 0);
   }
+
+  const hasFilters = filterCategorieId || filterIngredientId || filterFournisseurId || filterRefFacture;
 
   if (!laboId) return <div className="page"><p className="text-muted">Labo non spécifié.</p></div>;
 
@@ -267,28 +293,79 @@ export default function LaboHistoriqueApproPage() {
         <h1>📋 Historique Appro — {labo?.nom ?? '…'} ({currentYear})</h1>
       </div>
 
+      {/* Franchise group context badge */}
+      {labo?.franchiseGroup && (
+        <div style={{ background: '#eef2ff', border: '1px solid #c7d2fe', borderRadius: 8, padding: '8px 14px', marginBottom: 16, fontSize: '0.82rem', color: '#3730a3', display: 'inline-flex', gap: 6, alignItems: 'center' }}>
+          🔗 <strong>Franchise :</strong> {labo.franchiseGroup}
+        </div>
+      )}
+
       {/* Filter panel */}
       <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: '20px 24px', marginBottom: 24, boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
-        <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+        <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+
+          {/* Date range */}
           <div>
             <label style={labelStyle}>Date début</label>
-            <input type="date" className="input" style={{ maxWidth: 160 }} min={yearStart} max={yearEnd}
+            <input type="date" className="input" style={{ maxWidth: 150 }} min={yearStart} max={yearEnd}
               value={startDate} onChange={(e) => setStartDate(e.target.value)} />
           </div>
           <div>
             <label style={labelStyle}>Date fin</label>
-            <input type="date" className="input" style={{ maxWidth: 160 }} min={yearStart} max={yearEnd}
+            <input type="date" className="input" style={{ maxWidth: 150 }} min={yearStart} max={yearEnd}
               value={endDate} onChange={(e) => setEndDate(e.target.value)} />
           </div>
+
+          {/* Catégorie */}
           <div>
-            <label style={labelStyle}>Recherche ingrédient</label>
-            <input type="text" className="input" style={{ maxWidth: 200 }}
-              placeholder="Nom ingrédient…"
-              value={filterIngredient} onChange={(e) => { setFilterIngredient(e.target.value); setPage(1); }} />
+            <label style={labelStyle}>Catégorie</label>
+            <select className="input" style={{ maxWidth: 180 }} value={filterCategorieId}
+              onChange={(e) => { setFilterCategorieId(e.target.value); setFilterIngredientId(''); }}>
+              <option value="">— Toutes —</option>
+              {categories.map((c) => <option key={c.id} value={c.id}>{c.nom}</option>)}
+            </select>
           </div>
+
+          {/* Ingrédient */}
+          <div>
+            <label style={labelStyle}>Ingrédient</label>
+            <select className="input" style={{ maxWidth: 210 }} value={filterIngredientId}
+              disabled={!filterCategorieId}
+              onChange={(e) => setFilterIngredientId(e.target.value)}>
+              <option value="">— Tous —</option>
+              {ingredientsInCat.map((i) => <option key={i.id} value={i.id}>{i.nom}</option>)}
+            </select>
+          </div>
+
+          {/* Fournisseur */}
+          {fournisseurs.length > 0 && (
+            <div>
+              <label style={labelStyle}>Fournisseur</label>
+              <select className="input" style={{ maxWidth: 190 }} value={filterFournisseurId}
+                onChange={(e) => setFilterFournisseurId(e.target.value)}>
+                <option value="">— Tous —</option>
+                {fournisseurs.map((f) => <option key={f.id} value={f.id}>{f.nom}</option>)}
+              </select>
+            </div>
+          )}
+
+          {/* Réf Facture */}
+          <div>
+            <label style={labelStyle}>Réf Facture</label>
+            <input type="text" className="input" style={{ maxWidth: 150 }}
+              placeholder="Rechercher réf…"
+              value={filterRefFacture} onChange={(e) => setFilterRefFacture(e.target.value)} />
+          </div>
+
           <button className="btn btn-primary" style={{ alignSelf: 'flex-end' }} onClick={fetchResults} disabled={loading}>
             {loading ? 'Chargement…' : '🔍 Rechercher'}
           </button>
+          {hasFilters && (
+            <button className="btn btn-ghost btn-sm" style={{ alignSelf: 'flex-end' }}
+              onClick={() => { setFilterCategorieId(''); setFilterIngredientId(''); setFilterFournisseurId(''); setFilterRefFacture(''); }}>
+              ✕ Réinitialiser
+            </button>
+          )}
         </div>
       </div>
 
@@ -297,7 +374,7 @@ export default function LaboHistoriqueApproPage() {
         <p className="text-muted" style={{ textAlign: 'center', marginTop: 40 }}>Cliquez sur Rechercher pour afficher les approvisionnements.</p>
       ) : loading ? (
         <p className="text-muted">Chargement…</p>
-      ) : filtered.length === 0 ? (
+      ) : results.length === 0 ? (
         <div className="empty-state">
           <span className="empty-icon">📦</span>
           <p>Aucun approvisionnement trouvé pour cette période.</p>
@@ -381,7 +458,7 @@ export default function LaboHistoriqueApproPage() {
             </table>
 
             <div style={{ padding: '8px 14px', fontSize: '0.78rem', color: 'var(--text-muted)', borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span>{filtered.length} enregistrement{filtered.length > 1 ? 's' : ''}</span>
+              <span>{results.length} enregistrement{results.length > 1 ? 's' : ''}</span>
               {totalPages > 1 && (
                 <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                   <button className="btn btn-ghost btn-sm" disabled={page === 1}
