@@ -456,6 +456,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                     const isLaboStock = location.pathname === '/client/labo/stock' && location.search.includes(laboParam);
                     const isLaboTransfer = location.pathname === '/client/labo/transfer' && location.search.includes(laboParam);
                     const isLaboHistorique = location.pathname === '/client/labo/historique-transferts' && location.search.includes(laboParam);
+                    const stockLocked = (labo.fournisseurCount ?? 0) === 0;
                     return (
                       <React.Fragment key={labo.id}>
                         <CollapsibleHeader
@@ -467,7 +468,11 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                         />
                         {isLaboOpen && (
                           <>
-                            <SubNavLink to={`/client/labo/stock?laboId=${labo.id}`} icon="📦" label={t('nav.labo_stock')} isActive={isLaboStock} onClick={onClose} />
+                            {stockLocked ? (
+                              <LockedLink label={t('nav.labo_stock')} reason="Assignez d'abord un fournisseur à ce labo" />
+                            ) : (
+                              <SubNavLink to={`/client/labo/stock?laboId=${labo.id}`} icon="📦" label={t('nav.labo_stock')} isActive={isLaboStock} onClick={onClose} />
+                            )}
                             <SubNavLink to={`/client/labo/transfer?laboId=${labo.id}`} icon="↗" label={t('nav.labo_transfer')} isActive={isLaboTransfer} onClick={onClose} />
                             <SubNavLink to={`/client/labo/historique-transferts?laboId=${labo.id}`} icon="📋" label={t('nav.labo_historique')} isActive={isLaboHistorique} onClick={onClose} />
                           </>

@@ -446,7 +446,7 @@ export default function StockLaboPage() {
                               step="0.001"
                               value={rs.quantite}
                               onChange={(e) => setField(r.ingredientId, 'quantite', e.target.value)}
-                              style={{ width: 90, textAlign: 'right', ...warnStyle }}
+                              style={{ width: 76, textAlign: 'right', ...warnStyle }}
                               className="input"
                             />
                           </td>
@@ -457,7 +457,7 @@ export default function StockLaboPage() {
                               step="0.001"
                               value={rs.prixUnitaire}
                               onChange={(e) => setField(r.ingredientId, 'prixUnitaire', e.target.value)}
-                              style={{ width: 100, textAlign: 'right', ...warnStyle }}
+                              style={{ width: 84, textAlign: 'right', ...warnStyle }}
                               className="input"
                             />
                           </td>
@@ -465,51 +465,55 @@ export default function StockLaboPage() {
                             <input
                               type="date"
                               className="input"
-                              style={{ maxWidth: 150, ...warnStyle }}
+                              style={{ maxWidth: 138, ...warnStyle }}
                               min={yearStart}
                               max={yearEnd}
                               value={rs.dateAppro}
                               onChange={(e) => setDateApproField(r.ingredientId, e.target.value)}
                             />
                           </td>
-                          <td style={{ whiteSpace: 'nowrap' }}>
-                            {fournisseurs.length > 0 && (() => {
-                              const assignedF = rs.fournisseurId
-                                ? fournisseurs.find((f) => String(f.id) === rs.fournisseurId)
-                                : null;
-                              const validated = !!assignedF && rs.refFacture.trim() !== '';
-                              return (
+                          <td>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'stretch' }}>
+                              {fournisseurs.length > 0 && (() => {
+                                const assignedF = rs.fournisseurId
+                                  ? fournisseurs.find((f) => String(f.id) === rs.fournisseurId)
+                                  : null;
+                                const validated = !!assignedF && rs.refFacture.trim() !== '';
+                                return (
+                                  <button
+                                    className="btn btn-sm"
+                                    onClick={() => setFournisseurModal({ ingredientId: r.ingredientId, nom: r.nom })}
+                                    style={{
+                                      width: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                                      background: validated ? '#dcfce7' : assignedF ? '#fef9c3' : '#eff6ff',
+                                      color: validated ? '#15803d' : assignedF ? '#92400e' : '#2563eb',
+                                      border: `1px solid ${validated ? '#86efac' : assignedF ? '#fde68a' : '#bfdbfe'}`,
+                                    }}
+                                    title={assignedF ? assignedF.nom : 'Assigner fournisseur'}
+                                  >
+                                    {validated ? `✓ ${assignedF!.nom}` : assignedF ? `${assignedF.nom}…` : 'Fournisseur'}
+                                  </button>
+                                );
+                              })()}
+                              <div style={{ display: 'flex', gap: 4 }}>
                                 <button
-                                  className="btn btn-sm"
-                                  onClick={() => setFournisseurModal({ ingredientId: r.ingredientId, nom: r.nom })}
-                                  style={{
-                                    marginRight: 6, maxWidth: 110, overflow: 'hidden', textOverflow: 'ellipsis',
-                                    background: validated ? '#dcfce7' : assignedF ? '#fef9c3' : '#eff6ff',
-                                    color: validated ? '#15803d' : assignedF ? '#92400e' : '#2563eb',
-                                    border: `1px solid ${validated ? '#86efac' : assignedF ? '#fde68a' : '#bfdbfe'}`,
-                                  }}
-                                  title={assignedF ? assignedF.nom : 'Assigner fournisseur'}
+                                  className={`btn btn-sm ${rs.saved ? 'btn-success' : 'btn-primary'}`}
+                                  onClick={() => saveRow(r.ingredientId)}
+                                  disabled={!canSaveRow(rs)}
+                                  style={{ flex: 1 }}
+                                  title={!rs.hasExisting && (!rs.quantite || !rs.prixUnitaire || !rs.dateAppro) ? 'Renseignez quantité, prix et date' : undefined}
                                 >
-                                  {validated ? `✓ ${assignedF!.nom}` : assignedF ? `${assignedF.nom}…` : 'Fournisseur'}
+                                  {rs.saving ? '…' : rs.saved ? '✓' : t('common.save')}
                                 </button>
-                              );
-                            })()}
-                            <button
-                              className={`btn btn-sm ${rs.saved ? 'btn-success' : 'btn-primary'}`}
-                              onClick={() => saveRow(r.ingredientId)}
-                              disabled={!canSaveRow(rs)}
-                              style={{ marginRight: 6 }}
-                              title={!rs.hasExisting && (!rs.quantite || !rs.prixUnitaire || !rs.dateAppro) ? 'Renseignez quantité, prix et date' : undefined}
-                            >
-                              {rs.saving ? '…' : rs.saved ? '✓' : t('common.save')}
-                            </button>
-                            <button
-                              className="btn btn-ghost btn-sm"
-                              onClick={() => toggleHistory(r.ingredientId)}
-                              title={t('client.stock.history')}
-                            >
-                              {rs.historyOpen ? '▲' : '▼'}
-                            </button>
+                                <button
+                                  className="btn btn-ghost btn-sm"
+                                  onClick={() => toggleHistory(r.ingredientId)}
+                                  title={t('client.stock.history')}
+                                >
+                                  {rs.historyOpen ? '▲' : '▼'}
+                                </button>
+                              </div>
+                            </div>
                           </td>
                         </tr>
                         {rs.historyOpen && (

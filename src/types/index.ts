@@ -121,6 +121,7 @@ export interface Labo {
   referentTel: string;
   adresse?: string | null;
   createdAt?: string;
+  fournisseurCount?: number;
 }
 
 export interface ActiviteTypesSummary {
