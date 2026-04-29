@@ -493,6 +493,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                         const isLaboStock = location.pathname === '/client/labo/stock' && location.search.includes(laboParam);
                         const isLaboTransfer = location.pathname === '/client/labo/transfer' && location.search.includes(laboParam);
                         const isLaboHistorique = location.pathname === '/client/labo/historique-transferts' && location.search.includes(laboParam);
+                        const isLaboHistoriqueAppro = location.pathname === '/client/labo/historique-appro' && location.search.includes(laboParam);
                         const stockLocked = (labo.fournisseurCount ?? 0) === 0;
                         return (
                           <React.Fragment key={labo.id}>
@@ -534,7 +535,17 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                                     onClick={onClose}
                                   />
                                 )}
-                                <li><LockedLink label="Historique Appro" reason="Disponible prochainement" /></li>
+                                {stockLocked ? (
+                                  <li><LockedLink label="Historique Appro" reason="Assignez d'abord un fournisseur" /></li>
+                                ) : (
+                                  <SubNavLink
+                                    to={`/client/labo/historique-appro?laboId=${labo.id}`}
+                                    icon="📋"
+                                    label="Historique Appro"
+                                    isActive={isLaboHistoriqueAppro}
+                                    onClick={onClose}
+                                  />
+                                )}
                                 {stockLocked ? (
                                   <li><LockedLink label="Historiques Transferts" reason="Assignez d'abord un fournisseur" /></li>
                                 ) : (

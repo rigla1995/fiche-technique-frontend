@@ -24,6 +24,7 @@ import TransferHistoriquePage from './components/client/TransferHistoriquePage';
 import GlobalCataloguePage from './components/client/GlobalCataloguePage';
 import FournisseursPage from './components/client/FournisseursPage';
 import FournisseursLaboPage from './components/client/FournisseursLaboPage';
+import LaboHistoriqueApproPage from './components/client/LaboHistoriqueApproPage';
 import './i18n';
 import './index.css';
 
@@ -77,6 +78,7 @@ export default function App() {
             <Route path="/client/labo/stock" element={<StockLaboPage />} />
             <Route path="/client/labo/transfer" element={<TransferPage />} />
             <Route path="/client/labo/historique-transferts" element={<TransferHistoriquePage />} />
+            <Route path="/client/labo/historique-appro" element={<LaboHistoriqueApproPage />} />
             <Route path="/client/fournisseurs" element={<FournisseursPage />} />
             <Route path="/client/fournisseurs-labo" element={<FournisseursLaboPage />} />
           </Route>
