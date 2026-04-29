@@ -158,6 +158,8 @@ export interface StockHistoryEntry {
 }
 
 export interface HistoriqueApproEntry {
+  id: number;
+  activiteId?: number | null;
   dateAppro: string;
   quantite: number | null;
   prixUnitaire: number | null;
@@ -167,6 +169,7 @@ export interface HistoriqueApproEntry {
   uniteNom: string;
   categorieNom: string;
   typeAppro: string;
+  fournisseurId?: number | null;
   fournisseurNom: string | null;
   refFacture: string | null;
 }

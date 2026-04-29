@@ -477,7 +477,8 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
     groups[cat].push(entry);
   }
 
-  const hasFournisseurs = isEntreprise && fournisseurs.length > 0;
+  const nonLaboFournisseurs = fournisseurs.filter((f) => !f.isLabo);
+  const hasFournisseurs = isEntreprise && nonLaboFournisseurs.length > 0;
 
   return (
     <div>
@@ -506,7 +507,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
       {affectationModal && hasFournisseurs && (
         <FournisseurAffectationModal
           ingredientNom={affectationModal.nom}
-          fournisseurs={fournisseurs}
+          fournisseurs={nonLaboFournisseurs}
           initialFournisseurId={rows[affectationModal.ingredientId]?.fournisseurId ?? ''}
           initialRefFacture={rows[affectationModal.ingredientId]?.refFacture ?? ''}
           onValidate={(fId, ref) => {
