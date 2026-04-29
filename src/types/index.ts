@@ -144,6 +144,7 @@ export interface StockEntry {
   seuilMin: number | null;
   lastFournisseurId?: number | null;
   lastRefFacture?: string | null;
+  lastTypeAppro?: string | null;
 }
 
 export interface StockHistoryEntry {

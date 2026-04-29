@@ -302,7 +302,7 @@ export default function TransferPage() {
                 <span style={{ marginLeft: 'auto', fontSize: '0.8rem', color: 'var(--text-muted)' }}>{isOpen ? '▼' : '▶'}</span>
               </button>
               {isOpen && (
-              <div className="table-responsive card" style={{ marginBottom: 0 }}>
+              <div className="table-responsive card th-orange" style={{ marginBottom: 0 }}>
                 <table className="table">
                   <thead>
                     <tr>

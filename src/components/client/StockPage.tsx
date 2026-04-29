@@ -302,6 +302,45 @@ function FournisseurAffectationModal({ ingredientNom, fournisseurs, initialFourn
 
 // ────────────────────────────────────────────────────────────────────────────
 
+interface FournisseurInfoModalProps {
+  ingredientNom: string;
+  fournisseurNom: string;
+  refFacture: string | null;
+  onClose: () => void;
+}
+
+function FournisseurInfoModal({ ingredientNom, fournisseurNom, refFacture, onClose }: FournisseurInfoModalProps) {
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal" style={{ maxWidth: 380 }} onClick={(e) => e.stopPropagation()}>
+        <div className="modal-header" style={{ background: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)', borderBottom: '1px solid #bfdbfe' }}>
+          <div>
+            <h2 style={{ color: '#1e40af', margin: 0 }}>🏭 Fournisseur Labo</h2>
+            <p style={{ margin: '4px 0 0', fontSize: '0.82rem', color: '#3b82f6' }}>{ingredientNom}</p>
+          </div>
+          <button className="modal-close" onClick={onClose}>×</button>
+        </div>
+        <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 14, padding: '20px 24px' }}>
+          <div>
+            <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 4 }}>Fournisseur</label>
+            <p style={{ fontWeight: 600, margin: 0 }}>{fournisseurNom}</p>
+          </div>
+          <div>
+            <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 4 }}>Réf. Facture</label>
+            <p style={{ margin: 0, color: refFacture ? 'var(--text)' : 'var(--text-muted)', fontStyle: refFacture ? 'normal' : 'italic' }}>{refFacture ?? '—'}</p>
+          </div>
+          <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: 0, fontStyle: 'italic' }}>Géré automatiquement par le labo — non modifiable.</p>
+        </div>
+        <div className="modal-footer">
+          <button className="btn btn-primary" onClick={onClose}>Fermer</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+
 function seuilClass(total: number | null, seuil: number | null): string {
   if (total === null) return '';
   if (seuil === null) return total === 0 ? 'stock-alert' : 'stock-ok';
@@ -334,6 +373,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
   const [openCats, setOpenCats] = useState<Set<string>>(new Set());
   const [pertesModal, setPertesModal] = useState<{ ingredientId: number; nom: string } | null>(null);
   const [affectationModal, setAffectationModal] = useState<{ ingredientId: number; nom: string } | null>(null);
+  const [transfertInfoModal, setTransfertInfoModal] = useState<{ ingredientId: number; nom: string } | null>(null);
   const [seuilEdits, setSeuilEdits] = useState<Record<number, string>>({});
   const [seuilSaving, setSeuilSaving] = useState<Record<number, boolean>>({});
 
@@ -348,8 +388,29 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
     setSeuilEdits(initial);
   }, [entries]);
 
-  const updateRow = (id: number, field: keyof StockRowState, value: string) =>
-    setRows((prev) => ({ ...prev, [id]: { ...prev[id], [field]: value, saved: false, error: '' } }));
+  const updateRow = (id: number, field: keyof StockRowState, value: string) => {
+    if (field === 'dateAppro') {
+      const entry = entries.find((e) => e.ingredientId === id);
+      const hist = historyData[id] || [];
+      const histDates = new Set(hist.map((h) => h.dateAppro).filter(Boolean) as string[]);
+      const hasExisting = entry ? entry.quantite !== null : false;
+      const conflictsLast = hasExisting && value === entry?.dateAppro;
+      const conflictsHistory = histDates.has(value);
+      const hasConflict = conflictsLast || conflictsHistory;
+      setRows((prev) => ({
+        ...prev,
+        [id]: {
+          ...prev[id],
+          dateAppro: value,
+          quantite: hasConflict ? '0' : prev[id].quantite,
+          prixUnitaire: hasConflict ? '0' : prev[id].prixUnitaire,
+          saved: false, error: '',
+        },
+      }));
+    } else {
+      setRows((prev) => ({ ...prev, [id]: { ...prev[id], [field]: value, saved: false, error: '' } }));
+    }
+  };
 
   const saveRow = async (id: number) => {
     const row = rows[id];
@@ -425,6 +486,19 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
         />
       )}
 
+      {transfertInfoModal && (() => {
+        const entry = entries.find((e) => e.ingredientId === transfertInfoModal.ingredientId);
+        const f = fournisseurs.find((f) => f.id === entry?.lastFournisseurId);
+        return f ? (
+          <FournisseurInfoModal
+            ingredientNom={transfertInfoModal.nom}
+            fournisseurNom={f.nom}
+            refFacture={entry?.lastRefFacture ?? null}
+            onClose={() => setTransfertInfoModal(null)}
+          />
+        ) : null;
+      })()}
+
       {affectationModal && hasFournisseurs && (
         <FournisseurAffectationModal
           ingredientNom={affectationModal.nom}
@@ -479,6 +553,14 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                       const assignedFournisseur = hasFournisseurs && row.fournisseurId
                         ? fournisseurs.find((f) => String(f.id) === row.fournisseurId)
                         : null;
+                      // Date conflict warning
+                      const histDatesSet = new Set<string>((hist || []).map((h) => h.dateAppro).filter(Boolean) as string[]);
+                      const hasExisting = entry.quantite !== null;
+                      const hasDateConflict = (hasExisting && row.dateAppro === entry.dateAppro) || histDatesSet.has(row.dateAppro);
+                      const warnStyle = hasDateConflict ? { borderColor: '#f59e0b', boxShadow: '0 0 0 2px #fef3c7' } : {};
+                      // Transfert labo fournisseur (read-only)
+                      const isLastTransfert = entry.lastTypeAppro === 'transfert' && !row.fournisseurId;
+                      const laboFournisseur = isLastTransfert ? fournisseurs.find((f) => f.id === entry.lastFournisseurId) ?? null : null;
                       return (
                         <>
                           <tr key={entry.ingredientId}>
@@ -505,7 +587,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                                 type="number" min="0" step="0.001" placeholder="0"
                                 value={row.quantite}
                                 onChange={(e) => updateRow(entry.ingredientId, 'quantite', e.target.value)}
-                                style={{ width: 90, textAlign: 'right' }}
+                                style={{ width: 90, textAlign: 'right', ...warnStyle }}
                                 className="input"
                               />
                             </td>
@@ -514,39 +596,63 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                                 type="number" min="0" step="0.001" placeholder="0.000"
                                 value={row.prixUnitaire}
                                 onChange={(e) => updateRow(entry.ingredientId, 'prixUnitaire', e.target.value)}
-                                style={{ width: 100, textAlign: 'right' }}
+                                style={{ width: 100, textAlign: 'right', ...warnStyle }}
                                 className="input"
                               />
                             </td>
                             <td>
                               <input
-                                type="date" className="input" style={{ maxWidth: 150 }}
+                                type="date" className="input" style={{ maxWidth: 150, ...warnStyle }}
                                 min={yearStart} max={yearEnd}
                                 value={row.dateAppro}
                                 onChange={(e) => updateRow(entry.ingredientId, 'dateAppro', e.target.value)}
                               />
+                              {hasDateConflict && (
+                                <div style={{ fontSize: '0.68rem', color: '#d97706', marginTop: 2 }}>⚠ Date déjà saisie</div>
+                              )}
                             </td>
                             <td style={{ whiteSpace: 'nowrap' }}>
                               {row.error && <span style={{ color: 'var(--danger)', fontSize: '0.75rem', marginRight: 4 }}>!</span>}
                               {hasFournisseurs && (
-                                <button
-                                  className="btn btn-sm"
-                                  onClick={() => setAffectationModal({ ingredientId: entry.ingredientId, nom: entry.nom })}
-                                  title="Affecter un fournisseur"
-                                  style={{
-                                    marginRight: 4,
-                                    background: assignedFournisseur ? '#dcfce7' : '#eff6ff',
-                                    color: assignedFournisseur ? '#15803d' : '#2563eb',
-                                    border: `1px solid ${assignedFournisseur ? '#86efac' : '#bfdbfe'}`,
-                                    fontSize: '0.78rem',
-                                    whiteSpace: 'nowrap',
-                                    maxWidth: 130,
-                                    overflow: 'hidden',
-                                    textOverflow: 'ellipsis',
-                                  }}
-                                >
-                                  {assignedFournisseur ? `✓ ${assignedFournisseur.nom}` : '🚚 Fournisseur'}
-                                </button>
+                                laboFournisseur ? (
+                                  <button
+                                    className="btn btn-sm"
+                                    onClick={() => setTransfertInfoModal({ ingredientId: entry.ingredientId, nom: entry.nom })}
+                                    title="Voir le fournisseur labo"
+                                    style={{
+                                      marginRight: 4,
+                                      background: '#dcfce7',
+                                      color: '#15803d',
+                                      border: '1px solid #86efac',
+                                      fontSize: '0.78rem',
+                                      whiteSpace: 'nowrap',
+                                      maxWidth: 130,
+                                      overflow: 'hidden',
+                                      textOverflow: 'ellipsis',
+                                    }}
+                                  >
+                                    ✓ {laboFournisseur.nom}
+                                  </button>
+                                ) : (
+                                  <button
+                                    className="btn btn-sm"
+                                    onClick={() => setAffectationModal({ ingredientId: entry.ingredientId, nom: entry.nom })}
+                                    title="Affecter un fournisseur"
+                                    style={{
+                                      marginRight: 4,
+                                      background: assignedFournisseur ? '#dcfce7' : '#eff6ff',
+                                      color: assignedFournisseur ? '#15803d' : '#2563eb',
+                                      border: `1px solid ${assignedFournisseur ? '#86efac' : '#bfdbfe'}`,
+                                      fontSize: '0.78rem',
+                                      whiteSpace: 'nowrap',
+                                      maxWidth: 130,
+                                      overflow: 'hidden',
+                                      textOverflow: 'ellipsis',
+                                    }}
+                                  >
+                                    {assignedFournisseur ? `✓ ${assignedFournisseur.nom}` : '🚚 Fournisseur'}
+                                  </button>
+                                )
                               )}
                               {isEntreprise && activiteId && (
                                 <button
