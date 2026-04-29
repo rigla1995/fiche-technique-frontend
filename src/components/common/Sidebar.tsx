@@ -496,7 +496,9 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                       <Divider />
                       {labos.map((labo) => {
                         const laboParam = `laboId=${labo.id}`;
-                        const isLaboStock = location.pathname === '/client/labo/stock' && location.search.includes(laboParam);
+                        const currentTab = new URLSearchParams(location.search).get('tab');
+                        const isLaboIngredients = location.pathname === '/client/labo/stock' && location.search.includes(laboParam) && currentTab === 'ingredients';
+                        const isLaboStock = location.pathname === '/client/labo/stock' && location.search.includes(laboParam) && currentTab !== 'ingredients';
                         const isLaboTransfer = location.pathname === '/client/labo/transfer' && location.search.includes(laboParam);
                         const isLaboHistorique = location.pathname === '/client/labo/historique-transferts' && location.search.includes(laboParam);
                         const isLaboHistoriqueAppro = location.pathname === '/client/labo/historique-appro' && location.search.includes(laboParam);
@@ -508,8 +510,8 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                               <>
                                 <li>
                                   <Link
-                                    to={`/client/labo/stock?laboId=${labo.id}`}
-                                    className={`sidebar-link ${isLaboStock ? 'active' : ''}`}
+                                    to={`/client/labo/stock?laboId=${labo.id}&tab=ingredients`}
+                                    className={`sidebar-link ${isLaboIngredients ? 'active' : ''}`}
                                     onClick={onClose}
                                   >
                                     <span className="link-icon">🧂</span>
