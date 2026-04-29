@@ -564,15 +564,15 @@ export default function HistoriqueApproPage() {
             ))}
           </div>
 
-          <div className="table-responsive card th-teal">
-            <table className="table" style={{ tableLayout: 'fixed', minWidth: 0 }}>
+          <div className="card th-teal" style={{ overflowX: 'hidden' }}>
+            <table className="table" style={{ tableLayout: 'fixed', width: '100%' }}>
               <colgroup>
-                <col style={{ width: isEntreprise ? '120px' : '110px' }} />
+                <col style={{ width: isEntreprise ? '115px' : '105px' }} />
                 <col />
-                <col style={{ width: '110px' }} />
-                <col style={{ width: '90px' }} />
-                {isEntreprise && <col style={{ width: '140px' }} />}
-                <col style={{ width: '72px' }} />
+                <col style={{ width: '100px' }} />
+                <col style={{ width: '85px' }} />
+                {isEntreprise && <col style={{ width: '130px' }} />}
+                <col style={{ width: '66px' }} />
               </colgroup>
               <thead>
                 <tr>
