@@ -487,8 +487,6 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                     <>
                       <Divider />
                       {labos.map((labo) => {
-                        const key = `labo-${labo.id}`;
-                        const isLaboOpen = openSections.has(key);
                         const laboParam = `laboId=${labo.id}`;
                         const isLaboStock = location.pathname === '/client/labo/stock' && location.search.includes(laboParam);
                         const isLaboTransfer = location.pathname === '/client/labo/transfer' && location.search.includes(laboParam);
@@ -497,68 +495,73 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                         const stockLocked = (labo.fournisseurCount ?? 0) === 0;
                         return (
                           <React.Fragment key={labo.id}>
-                            <CollapsibleHeader
-                              label={`Espace ${labo.nom}`}
-                              icon="🏭"
-                              isOpen={isLaboOpen}
-                              locked={false}
-                              onToggle={() => toggleSection(key)}
-                            />
-                            {isLaboOpen && (
-                              <>
-                                <SubNavLink
+                            <SectionHeader label={`Espace ${labo.nom}`} />
+                            <li>
+                              <Link
+                                to={`/client/labo/stock?laboId=${labo.id}`}
+                                className={`sidebar-link ${isLaboStock ? 'active' : ''}`}
+                                onClick={onClose}
+                              >
+                                <span className="link-icon">🧂</span>
+                                <span className="link-label">Ingrédients Stock</span>
+                              </Link>
+                            </li>
+                            <li>
+                              {stockLocked ? (
+                                <LockedLink label={`Stock ${labo.nom}`} reason="Assignez d'abord un fournisseur à ce labo" />
+                              ) : (
+                                <Link
                                   to={`/client/labo/stock?laboId=${labo.id}`}
-                                  icon="🧂"
-                                  label="Ingrédients Stock"
-                                  isActive={isLaboStock}
+                                  className={`sidebar-link ${isLaboStock ? 'active' : ''}`}
                                   onClick={onClose}
-                                />
-                                {stockLocked ? (
-                                  <li><LockedLink label={`Stock ${labo.nom}`} reason="Assignez d'abord un fournisseur à ce labo" /></li>
-                                ) : (
-                                  <SubNavLink
-                                    to={`/client/labo/stock?laboId=${labo.id}`}
-                                    icon="📦"
-                                    label={`Stock ${labo.nom}`}
-                                    isActive={false}
-                                    onClick={onClose}
-                                  />
-                                )}
-                                {stockLocked ? (
-                                  <li><LockedLink label={`Transferts ${labo.nom}`} reason="Assignez d'abord un fournisseur" /></li>
-                                ) : (
-                                  <SubNavLink
-                                    to={`/client/labo/transfer?laboId=${labo.id}`}
-                                    icon="↗"
-                                    label={`Transferts ${labo.nom}`}
-                                    isActive={isLaboTransfer}
-                                    onClick={onClose}
-                                  />
-                                )}
-                                {stockLocked ? (
-                                  <li><LockedLink label="Historique Appro" reason="Assignez d'abord un fournisseur" /></li>
-                                ) : (
-                                  <SubNavLink
-                                    to={`/client/labo/historique-appro?laboId=${labo.id}`}
-                                    icon="📋"
-                                    label="Historique Appro"
-                                    isActive={isLaboHistoriqueAppro}
-                                    onClick={onClose}
-                                  />
-                                )}
-                                {stockLocked ? (
-                                  <li><LockedLink label="Historiques Transferts" reason="Assignez d'abord un fournisseur" /></li>
-                                ) : (
-                                  <SubNavLink
-                                    to={`/client/labo/historique-transferts?laboId=${labo.id}`}
-                                    icon="📋"
-                                    label="Historiques Transferts"
-                                    isActive={isLaboHistorique}
-                                    onClick={onClose}
-                                  />
-                                )}
-                              </>
-                            )}
+                                >
+                                  <span className="link-icon">📦</span>
+                                  <span className="link-label">Stock {labo.nom}</span>
+                                </Link>
+                              )}
+                            </li>
+                            <li>
+                              {stockLocked ? (
+                                <LockedLink label={`Transferts ${labo.nom}`} reason="Assignez d'abord un fournisseur" />
+                              ) : (
+                                <Link
+                                  to={`/client/labo/transfer?laboId=${labo.id}`}
+                                  className={`sidebar-link ${isLaboTransfer ? 'active' : ''}`}
+                                  onClick={onClose}
+                                >
+                                  <span className="link-icon">↗</span>
+                                  <span className="link-label">Transferts {labo.nom}</span>
+                                </Link>
+                              )}
+                            </li>
+                            <li>
+                              {stockLocked ? (
+                                <LockedLink label="Historique Appro" reason="Assignez d'abord un fournisseur" />
+                              ) : (
+                                <Link
+                                  to={`/client/labo/historique-appro?laboId=${labo.id}`}
+                                  className={`sidebar-link ${isLaboHistoriqueAppro ? 'active' : ''}`}
+                                  onClick={onClose}
+                                >
+                                  <span className="link-icon">📋</span>
+                                  <span className="link-label">Historique Appro</span>
+                                </Link>
+                              )}
+                            </li>
+                            <li>
+                              {stockLocked ? (
+                                <LockedLink label="Historiques Transferts" reason="Assignez d'abord un fournisseur" />
+                              ) : (
+                                <Link
+                                  to={`/client/labo/historique-transferts?laboId=${labo.id}`}
+                                  className={`sidebar-link ${isLaboHistorique ? 'active' : ''}`}
+                                  onClick={onClose}
+                                >
+                                  <span className="link-icon">📋</span>
+                                  <span className="link-label">Historiques Transferts</span>
+                                </Link>
+                              )}
+                            </li>
                           </React.Fragment>
                         );
                       })}
