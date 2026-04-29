@@ -392,25 +392,21 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                 <>
                   <Divider />
 
-                  {/* Espace Franchise */}
-                  <SectionHeader label={t('nav.espace_franchise')} locked={isOnboarding || !hasFranchise} />
-
-                  {/* F Catalogue */}
+                  {/* ══ ESPACE FRANCHISE ══ */}
+                  <SectionHeader label="Espace Franchise" locked={isOnboarding || !hasFranchise} />
                   <li>
                     {(isOnboarding && step < 3) || !hasFranchise || !hasFranchiseSelections ? (
-                      <LockedLink label={t('nav.ingredients_catalog')} />
+                      <LockedLink label="Ingrédients Franchises" />
                     ) : (
                       <NavLink to="/client/catalogue-franchise" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>
                         <span className="link-icon">🧂</span>
-                        <span className="link-label">{t('nav.ingredients_catalog')}</span>
+                        <span className="link-label">Ingrédients Franchises</span>
                       </NavLink>
                     )}
                   </li>
-
-                  {/* F Stock */}
                   <li>
                     {isOnboarding || !hasFranchise || !hasFranchiseSelections ? (
-                      <LockedLink label={t('nav.stock')} />
+                      <LockedLink label="Stocks Franchises" />
                     ) : (
                       <NavLink
                         to="/client/stock?section=franchise"
@@ -418,15 +414,13 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                         onClick={onClose}
                       >
                         <span className="link-icon">📦</span>
-                        <span className="link-label">{t('nav.stock')}</span>
+                        <span className="link-label">Stocks Franchises</span>
                       </NavLink>
                     )}
                   </li>
-
-                  {/* F Historique Appro */}
                   <li>
                     {isOnboarding || !hasFranchise || !hasFranchiseAppro ? (
-                      <LockedLink label={t('nav.historique_appro')} />
+                      <LockedLink label="Historique Appro" />
                     ) : (
                       <Link
                         to="/client/stock/historique?type=franchise"
@@ -434,86 +428,28 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                         onClick={onClose}
                       >
                         <span className="link-icon">📋</span>
-                        <span className="link-label">{t('nav.historique_appro')}</span>
+                        <span className="link-label">Historique Appro</span>
                       </Link>
                     )}
                   </li>
 
-                  {/* Labo sections — collapsible per labo */}
-                  {!isOnboarding && labos.length === 0 && (
-                    <CollapsibleHeader
-                      label="Labo"
-                      icon="🏭"
-                      isOpen={false}
-                      locked={true}
-                      onToggle={() => {}}
-                    />
-                  )}
-                  {!isOnboarding && labos.map((labo) => {
-                    const key = `labo-${labo.id}`;
-                    const isLaboOpen = openSections.has(key);
-                    const laboParam = `laboId=${labo.id}`;
-                    const isLaboStock = location.pathname === '/client/labo/stock' && location.search.includes(laboParam);
-                    const isLaboTransfer = location.pathname === '/client/labo/transfer' && location.search.includes(laboParam);
-                    const isLaboHistorique = location.pathname === '/client/labo/historique-transferts' && location.search.includes(laboParam);
-                    const stockLocked = (labo.fournisseurCount ?? 0) === 0;
-                    return (
-                      <React.Fragment key={labo.id}>
-                        <CollapsibleHeader
-                          label={labo.nom}
-                          icon="🏭"
-                          isOpen={isLaboOpen}
-                          locked={false}
-                          onToggle={() => toggleSection(key)}
-                        />
-                        {isLaboOpen && (
-                          <>
-                            {stockLocked ? (
-                              <LockedLink label={t('nav.labo_stock')} reason="Assignez d'abord un fournisseur à ce labo" />
-                            ) : (
-                              <SubNavLink to={`/client/labo/stock?laboId=${labo.id}`} icon="📦" label={t('nav.labo_stock')} isActive={isLaboStock} onClick={onClose} />
-                            )}
-                            <SubNavLink to={`/client/labo/transfer?laboId=${labo.id}`} icon="↗" label={t('nav.labo_transfer')} isActive={isLaboTransfer} onClick={onClose} />
-                            <SubNavLink to={`/client/labo/historique-transferts?laboId=${labo.id}`} icon="📋" label={t('nav.labo_historique')} isActive={isLaboHistorique} onClick={onClose} />
-                          </>
-                        )}
-                      </React.Fragment>
-                    );
-                  })}
-
-                  {/* F Produits — collapsible */}
-                  <CollapsibleHeader
-                    label={t('nav.products')}
-                    icon="🍔"
-                    isOpen={openSections.has('produits-franchise')}
-                    locked={isOnboarding || !hasFranchise || !hasFranchiseSelections}
-                    onToggle={() => toggleSection('produits-franchise')}
-                  />
-                  {openSections.has('produits-franchise') && !isOnboarding && hasFranchise && hasFranchiseSelections && (
-                    <ProductSubLinks locked={false} actCtx="franchise" ftActCtx="franchise" onClick={onClose} />
-                  )}
-
                   <Divider />
 
-                  {/* Espace Distinct */}
-                  <SectionHeader label={t('nav.espace_distinct')} locked={isOnboarding || !hasDistinct} />
-
-                  {/* D Catalogue */}
+                  {/* ══ ESPACE DISTINCT ══ */}
+                  <SectionHeader label="Espace Distinct" locked={isOnboarding || !hasDistinct} />
                   <li>
                     {(isOnboarding && step < 3) || !hasDistinct || !hasDistinctSelections ? (
-                      <LockedLink label={t('nav.ingredients_catalog')} />
+                      <LockedLink label="Ingrédients Distinct" />
                     ) : (
                       <NavLink to="/client/catalogue-distinct" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>
                         <span className="link-icon">🧂</span>
-                        <span className="link-label">{t('nav.ingredients_catalog')}</span>
+                        <span className="link-label">Ingrédients Distinct</span>
                       </NavLink>
                     )}
                   </li>
-
-                  {/* D Stock */}
                   <li>
                     {isOnboarding || !hasDistinct || !hasDistinctSelections ? (
-                      <LockedLink label={t('nav.stock')} />
+                      <LockedLink label="Stocks Distinct" />
                     ) : (
                       <NavLink
                         to="/client/stock?section=distinct"
@@ -521,15 +457,13 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                         onClick={onClose}
                       >
                         <span className="link-icon">📦</span>
-                        <span className="link-label">{t('nav.stock')}</span>
+                        <span className="link-label">Stocks Distinct</span>
                       </NavLink>
                     )}
                   </li>
-
-                  {/* D Historique Appro */}
                   <li>
                     {isOnboarding || !hasDistinct || !hasDistinctAppro ? (
-                      <LockedLink label={t('nav.historique_appro')} />
+                      <LockedLink label="Historique Appro" />
                     ) : (
                       <Link
                         to="/client/stock/historique?type=distinct"
@@ -537,61 +471,190 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                         onClick={onClose}
                       >
                         <span className="link-icon">📋</span>
-                        <span className="link-label">{t('nav.historique_appro')}</span>
+                        <span className="link-label">Historique Appro</span>
                       </Link>
                     )}
                   </li>
 
-                  {/* D Produits — collapsible */}
-                  <CollapsibleHeader
-                    label={t('nav.products')}
-                    icon="🍔"
-                    isOpen={openSections.has('produits-distinct')}
-                    locked={isOnboarding || !hasDistinct || !hasDistinctSelections}
-                    onToggle={() => toggleSection('produits-distinct')}
-                  />
-                  {openSections.has('produits-distinct') && !isOnboarding && hasDistinct && hasDistinctSelections && (
-                    <ProductSubLinks locked={false} actCtx="distinct" ftActCtx="distinct" onClick={onClose} />
-                  )}
-
-                  <Divider />
-
-                  {/* Fournisseurs — locked if no activities yet */}
-                  {!isOnboarding && (
-                    <li>
-                      {!hasFranchise && !hasDistinct ? (
-                        <LockedLink label="Fournisseurs" reason="Créez d'abord une activité" />
-                      ) : (
-                        <NavLink to="/client/fournisseurs" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>
-                          <span className="link-icon">🚚</span>
-                          <span className="link-label">Fournisseurs</span>
-                        </NavLink>
-                      )}
-                    </li>
-                  )}
-
-                  {/* Fournisseurs Labo — visible only when enterprise has at least one labo */}
+                  {/* ══ ESPACE LABO(S) ══ — hidden if no labos */}
                   {!isOnboarding && labos.length > 0 && (
-                    <li>
-                      <NavLink to="/client/fournisseurs-labo" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>
-                        <span className="link-icon">🏭</span>
-                        <span className="link-label">Fournisseurs Labo</span>
-                      </NavLink>
-                    </li>
+                    <>
+                      <Divider />
+                      {labos.map((labo) => {
+                        const key = `labo-${labo.id}`;
+                        const isLaboOpen = openSections.has(key);
+                        const laboParam = `laboId=${labo.id}`;
+                        const isLaboStock = location.pathname === '/client/labo/stock' && location.search.includes(laboParam);
+                        const isLaboTransfer = location.pathname === '/client/labo/transfer' && location.search.includes(laboParam);
+                        const isLaboHistorique = location.pathname === '/client/labo/historique-transferts' && location.search.includes(laboParam);
+                        const stockLocked = (labo.fournisseurCount ?? 0) === 0;
+                        return (
+                          <React.Fragment key={labo.id}>
+                            <CollapsibleHeader
+                              label={`Espace ${labo.nom}`}
+                              icon="🏭"
+                              isOpen={isLaboOpen}
+                              locked={false}
+                              onToggle={() => toggleSection(key)}
+                            />
+                            {isLaboOpen && (
+                              <>
+                                <SubNavLink
+                                  to={`/client/labo/stock?laboId=${labo.id}`}
+                                  icon="🧂"
+                                  label="Ingrédients Stock"
+                                  isActive={isLaboStock}
+                                  onClick={onClose}
+                                />
+                                {stockLocked ? (
+                                  <li><LockedLink label={`Stock ${labo.nom}`} reason="Assignez d'abord un fournisseur à ce labo" /></li>
+                                ) : (
+                                  <SubNavLink
+                                    to={`/client/labo/stock?laboId=${labo.id}`}
+                                    icon="📦"
+                                    label={`Stock ${labo.nom}`}
+                                    isActive={false}
+                                    onClick={onClose}
+                                  />
+                                )}
+                                {stockLocked ? (
+                                  <li><LockedLink label={`Transferts ${labo.nom}`} reason="Assignez d'abord un fournisseur" /></li>
+                                ) : (
+                                  <SubNavLink
+                                    to={`/client/labo/transfer?laboId=${labo.id}`}
+                                    icon="↗"
+                                    label={`Transferts ${labo.nom}`}
+                                    isActive={isLaboTransfer}
+                                    onClick={onClose}
+                                  />
+                                )}
+                                <li><LockedLink label="Historique Appro" reason="Disponible prochainement" /></li>
+                                {stockLocked ? (
+                                  <li><LockedLink label="Historiques Transferts" reason="Assignez d'abord un fournisseur" /></li>
+                                ) : (
+                                  <SubNavLink
+                                    to={`/client/labo/historique-transferts?laboId=${labo.id}`}
+                                    icon="📋"
+                                    label="Historiques Transferts"
+                                    isActive={isLaboHistorique}
+                                    onClick={onClose}
+                                  />
+                                )}
+                              </>
+                            )}
+                          </React.Fragment>
+                        );
+                      })}
+                    </>
                   )}
 
                   <Divider />
 
-                  {/* Catalogue Global */}
+                  {/* ══ ESPACE PRODUITS ══ */}
+                  <SectionHeader label="Espace Produits" locked={isOnboarding || (!hasFranchiseSelections && !hasDistinctSelections)} />
+                  <li>
+                    {isOnboarding || !hasFranchiseSelections ? (
+                      <LockedLink label="Produits Vendables (F)" />
+                    ) : (
+                      <NavLink
+                        to="/client/products?tab=vendable&actCtx=franchise"
+                        className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
+                        onClick={onClose}
+                      >
+                        <span className="link-icon">🍔</span>
+                        <span className="link-label">Produits Vendables (F)</span>
+                      </NavLink>
+                    )}
+                  </li>
+                  <li>
+                    {isOnboarding || !hasFranchiseSelections ? (
+                      <LockedLink label="Produits Utilisables (F)" />
+                    ) : (
+                      <NavLink
+                        to="/client/products?tab=utilisable&actCtx=franchise"
+                        className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
+                        onClick={onClose}
+                      >
+                        <span className="link-icon">🧪</span>
+                        <span className="link-label">Produits Utilisables (F)</span>
+                      </NavLink>
+                    )}
+                  </li>
+                  <li>
+                    {isOnboarding || !hasDistinctSelections ? (
+                      <LockedLink label="Produits Vendables (D)" />
+                    ) : (
+                      <NavLink
+                        to="/client/products?tab=vendable&actCtx=distinct"
+                        className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
+                        onClick={onClose}
+                      >
+                        <span className="link-icon">🍔</span>
+                        <span className="link-label">Produits Vendables (D)</span>
+                      </NavLink>
+                    )}
+                  </li>
+                  <li>
+                    {isOnboarding || !hasDistinctSelections ? (
+                      <LockedLink label="Produits Utilisables (D)" />
+                    ) : (
+                      <NavLink
+                        to="/client/products?tab=utilisable&actCtx=distinct"
+                        className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
+                        onClick={onClose}
+                      >
+                        <span className="link-icon">🧪</span>
+                        <span className="link-label">Produits Utilisables (D)</span>
+                      </NavLink>
+                    )}
+                  </li>
+
+                  <Divider />
+
+                  {/* ══ ESPACE FOURNISSEURS ══ */}
+                  <SectionHeader label="Espace Fournisseurs" locked={isOnboarding || (!hasFranchise && !hasDistinct)} />
+                  {!isOnboarding && (
+                    <>
+                      <li>
+                        {!hasFranchise && !hasDistinct ? (
+                          <LockedLink label="Fournisseurs" reason="Créez d'abord une activité" />
+                        ) : (
+                          <NavLink to="/client/fournisseurs" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>
+                            <span className="link-icon">🚚</span>
+                            <span className="link-label">Fournisseurs</span>
+                          </NavLink>
+                        )}
+                      </li>
+                      <li>
+                        {labos.length === 0 ? (
+                          <LockedLink label="Fournisseurs Labos" reason="Aucun labo configuré" />
+                        ) : (
+                          <NavLink to="/client/fournisseurs-labo" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>
+                            <span className="link-icon">🏭</span>
+                            <span className="link-label">Fournisseurs Labos</span>
+                          </NavLink>
+                        )}
+                      </li>
+                    </>
+                  )}
+
+                  <Divider />
+
+                  {/* ══ CATALOGUE GLOBAL ══ */}
                   <li>
                     {isOnboarding && step < 3 ? (
-                      <LockedLink label={t('nav.catalogue_global', 'Catalogue Global')} />
+                      <LockedLink label="Catalogue Global" />
                     ) : (
                       <NavLink to="/client/catalogue-global" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>
                         <span className="link-icon">🌐</span>
-                        <span className="link-label">{t('nav.catalogue_global', 'Catalogue Global')}</span>
+                        <span className="link-label">Catalogue Global</span>
                       </NavLink>
                     )}
+                  </li>
+                  <li>
+                    <span style={{ display: 'block', padding: '2px 18px 8px', fontSize: '0.71rem', color: 'var(--text-muted)', lineHeight: 1.45 }}>
+                      Sélection des ingrédients pour les labos et les activités de type gestion séparée
+                    </span>
                   </li>
                 </>
               )}
