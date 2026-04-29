@@ -399,88 +399,96 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                   <Divider />
 
                   {/* ══ ESPACE FRANCHISE ══ */}
-                  <SectionHeader label="Espace Franchise" locked={isOnboarding || !hasFranchise} />
-                  <li>
-                    {(isOnboarding && step < 3) || !hasFranchise || !hasFranchiseSelections ? (
-                      <LockedLink label="Ingrédients Franchises" />
-                    ) : (
-                      <NavLink to="/client/catalogue-franchise" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>
-                        <span className="link-icon">🧂</span>
-                        <span className="link-label">Ingrédients Franchises</span>
-                      </NavLink>
-                    )}
-                  </li>
-                  <li>
-                    {isOnboarding || !hasFranchise || !hasFranchiseSelections ? (
-                      <LockedLink label="Stocks Franchises" />
-                    ) : (
-                      <NavLink
-                        to="/client/stock?section=franchise"
-                        className={({ isActive }) => `sidebar-link ${isActive && currentSection === 'franchise' ? 'active' : ''}`}
-                        onClick={onClose}
-                      >
-                        <span className="link-icon">📦</span>
-                        <span className="link-label">Stocks Franchises</span>
-                      </NavLink>
-                    )}
-                  </li>
-                  <li>
-                    {isOnboarding || !hasFranchise || !hasFranchiseAppro ? (
-                      <LockedLink label="Historique Appro" />
-                    ) : (
-                      <Link
-                        to="/client/stock/historique?type=franchise"
-                        className={`sidebar-link ${isHistoriquePage && currentHistType === 'franchise' ? 'active' : ''}`}
-                        onClick={onClose}
-                      >
-                        <span className="link-icon">📋</span>
-                        <span className="link-label">Historique Appro</span>
-                      </Link>
-                    )}
-                  </li>
+                  <CollapsibleHeader label="Espace Franchise" icon="🔗" isOpen={openSections.has('franchise')} locked={isOnboarding || !hasFranchise} onToggle={() => toggleSection('franchise')} />
+                  {openSections.has('franchise') && (
+                    <>
+                      <li>
+                        {(isOnboarding && step < 3) || !hasFranchise || !hasFranchiseSelections ? (
+                          <LockedLink label="Ingrédients Franchises" />
+                        ) : (
+                          <NavLink to="/client/catalogue-franchise" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>
+                            <span className="link-icon">🧂</span>
+                            <span className="link-label">Ingrédients Franchises</span>
+                          </NavLink>
+                        )}
+                      </li>
+                      <li>
+                        {isOnboarding || !hasFranchise || !hasFranchiseSelections ? (
+                          <LockedLink label="Stocks Franchises" />
+                        ) : (
+                          <NavLink
+                            to="/client/stock?section=franchise"
+                            className={({ isActive }) => `sidebar-link ${isActive && currentSection === 'franchise' ? 'active' : ''}`}
+                            onClick={onClose}
+                          >
+                            <span className="link-icon">📦</span>
+                            <span className="link-label">Stocks Franchises</span>
+                          </NavLink>
+                        )}
+                      </li>
+                      <li>
+                        {isOnboarding || !hasFranchise || !hasFranchiseAppro ? (
+                          <LockedLink label="Historique Appro" />
+                        ) : (
+                          <Link
+                            to="/client/stock/historique?type=franchise"
+                            className={`sidebar-link ${isHistoriquePage && currentHistType === 'franchise' ? 'active' : ''}`}
+                            onClick={onClose}
+                          >
+                            <span className="link-icon">📋</span>
+                            <span className="link-label">Historique Appro</span>
+                          </Link>
+                        )}
+                      </li>
+                    </>
+                  )}
 
                   <Divider />
 
                   {/* ══ ESPACE DISTINCT ══ */}
-                  <SectionHeader label="Espace Distinct" locked={isOnboarding || !hasDistinct} />
-                  <li>
-                    {(isOnboarding && step < 3) || !hasDistinct || !hasDistinctSelections ? (
-                      <LockedLink label="Ingrédients Distinct" />
-                    ) : (
-                      <NavLink to="/client/catalogue-distinct" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>
-                        <span className="link-icon">🧂</span>
-                        <span className="link-label">Ingrédients Distinct</span>
-                      </NavLink>
-                    )}
-                  </li>
-                  <li>
-                    {isOnboarding || !hasDistinct || !hasDistinctSelections ? (
-                      <LockedLink label="Stocks Distinct" />
-                    ) : (
-                      <NavLink
-                        to="/client/stock?section=distinct"
-                        className={({ isActive }) => `sidebar-link ${isActive && currentSection === 'distinct' ? 'active' : ''}`}
-                        onClick={onClose}
-                      >
-                        <span className="link-icon">📦</span>
-                        <span className="link-label">Stocks Distinct</span>
-                      </NavLink>
-                    )}
-                  </li>
-                  <li>
-                    {isOnboarding || !hasDistinct || !hasDistinctAppro ? (
-                      <LockedLink label="Historique Appro" />
-                    ) : (
-                      <Link
-                        to="/client/stock/historique?type=distinct"
-                        className={`sidebar-link ${isHistoriquePage && currentHistType === 'distinct' ? 'active' : ''}`}
-                        onClick={onClose}
-                      >
-                        <span className="link-icon">📋</span>
-                        <span className="link-label">Historique Appro</span>
-                      </Link>
-                    )}
-                  </li>
+                  <CollapsibleHeader label="Espace Distinct" icon="📍" isOpen={openSections.has('distinct')} locked={isOnboarding || !hasDistinct} onToggle={() => toggleSection('distinct')} />
+                  {openSections.has('distinct') && (
+                    <>
+                      <li>
+                        {(isOnboarding && step < 3) || !hasDistinct || !hasDistinctSelections ? (
+                          <LockedLink label="Ingrédients Distinct" />
+                        ) : (
+                          <NavLink to="/client/catalogue-distinct" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>
+                            <span className="link-icon">🧂</span>
+                            <span className="link-label">Ingrédients Distinct</span>
+                          </NavLink>
+                        )}
+                      </li>
+                      <li>
+                        {isOnboarding || !hasDistinct || !hasDistinctSelections ? (
+                          <LockedLink label="Stocks Distinct" />
+                        ) : (
+                          <NavLink
+                            to="/client/stock?section=distinct"
+                            className={({ isActive }) => `sidebar-link ${isActive && currentSection === 'distinct' ? 'active' : ''}`}
+                            onClick={onClose}
+                          >
+                            <span className="link-icon">📦</span>
+                            <span className="link-label">Stocks Distinct</span>
+                          </NavLink>
+                        )}
+                      </li>
+                      <li>
+                        {isOnboarding || !hasDistinct || !hasDistinctAppro ? (
+                          <LockedLink label="Historique Appro" />
+                        ) : (
+                          <Link
+                            to="/client/stock/historique?type=distinct"
+                            className={`sidebar-link ${isHistoriquePage && currentHistType === 'distinct' ? 'active' : ''}`}
+                            onClick={onClose}
+                          >
+                            <span className="link-icon">📋</span>
+                            <span className="link-label">Historique Appro</span>
+                          </Link>
+                        )}
+                      </li>
+                    </>
+                  )}
 
                   {/* ══ ESPACE LABO(S) ══ — hidden if no labos */}
                   {!isOnboarding && labos.length > 0 && (
@@ -495,73 +503,77 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                         const stockLocked = (labo.fournisseurCount ?? 0) === 0;
                         return (
                           <React.Fragment key={labo.id}>
-                            <SectionHeader label={`Espace ${labo.nom}`} />
-                            <li>
-                              <Link
-                                to={`/client/labo/stock?laboId=${labo.id}`}
-                                className={`sidebar-link ${isLaboStock ? 'active' : ''}`}
-                                onClick={onClose}
-                              >
-                                <span className="link-icon">🧂</span>
-                                <span className="link-label">Ingrédients Stock</span>
-                              </Link>
-                            </li>
-                            <li>
-                              {stockLocked ? (
-                                <LockedLink label={`Stock ${labo.nom}`} reason="Assignez d'abord un fournisseur à ce labo" />
-                              ) : (
-                                <Link
-                                  to={`/client/labo/stock?laboId=${labo.id}`}
-                                  className={`sidebar-link ${isLaboStock ? 'active' : ''}`}
-                                  onClick={onClose}
-                                >
-                                  <span className="link-icon">📦</span>
-                                  <span className="link-label">Stock {labo.nom}</span>
-                                </Link>
-                              )}
-                            </li>
-                            <li>
-                              {stockLocked ? (
-                                <LockedLink label={`Transferts ${labo.nom}`} reason="Assignez d'abord un fournisseur" />
-                              ) : (
-                                <Link
-                                  to={`/client/labo/transfer?laboId=${labo.id}`}
-                                  className={`sidebar-link ${isLaboTransfer ? 'active' : ''}`}
-                                  onClick={onClose}
-                                >
-                                  <span className="link-icon">↗</span>
-                                  <span className="link-label">Transferts {labo.nom}</span>
-                                </Link>
-                              )}
-                            </li>
-                            <li>
-                              {stockLocked ? (
-                                <LockedLink label="Historique Appro" reason="Assignez d'abord un fournisseur" />
-                              ) : (
-                                <Link
-                                  to={`/client/labo/historique-appro?laboId=${labo.id}`}
-                                  className={`sidebar-link ${isLaboHistoriqueAppro ? 'active' : ''}`}
-                                  onClick={onClose}
-                                >
-                                  <span className="link-icon">📋</span>
-                                  <span className="link-label">Historique Appro</span>
-                                </Link>
-                              )}
-                            </li>
-                            <li>
-                              {stockLocked ? (
-                                <LockedLink label="Historiques Transferts" reason="Assignez d'abord un fournisseur" />
-                              ) : (
-                                <Link
-                                  to={`/client/labo/historique-transferts?laboId=${labo.id}`}
-                                  className={`sidebar-link ${isLaboHistorique ? 'active' : ''}`}
-                                  onClick={onClose}
-                                >
-                                  <span className="link-icon">📋</span>
-                                  <span className="link-label">Historiques Transferts</span>
-                                </Link>
-                              )}
-                            </li>
+                            <CollapsibleHeader label={`Espace ${labo.nom}`} icon="🏭" isOpen={openSections.has(`labo-${labo.id}`)} locked={false} onToggle={() => toggleSection(`labo-${labo.id}`)} />
+                            {openSections.has(`labo-${labo.id}`) && (
+                              <>
+                                <li>
+                                  <Link
+                                    to={`/client/labo/stock?laboId=${labo.id}`}
+                                    className={`sidebar-link ${isLaboStock ? 'active' : ''}`}
+                                    onClick={onClose}
+                                  >
+                                    <span className="link-icon">🧂</span>
+                                    <span className="link-label">Ingrédients Stock</span>
+                                  </Link>
+                                </li>
+                                <li>
+                                  {stockLocked ? (
+                                    <LockedLink label={`Stock ${labo.nom}`} reason="Assignez d'abord un fournisseur à ce labo" />
+                                  ) : (
+                                    <Link
+                                      to={`/client/labo/stock?laboId=${labo.id}`}
+                                      className={`sidebar-link ${isLaboStock ? 'active' : ''}`}
+                                      onClick={onClose}
+                                    >
+                                      <span className="link-icon">📦</span>
+                                      <span className="link-label">Stock {labo.nom}</span>
+                                    </Link>
+                                  )}
+                                </li>
+                                <li>
+                                  {stockLocked ? (
+                                    <LockedLink label={`Transferts ${labo.nom}`} reason="Assignez d'abord un fournisseur" />
+                                  ) : (
+                                    <Link
+                                      to={`/client/labo/transfer?laboId=${labo.id}`}
+                                      className={`sidebar-link ${isLaboTransfer ? 'active' : ''}`}
+                                      onClick={onClose}
+                                    >
+                                      <span className="link-icon">↗</span>
+                                      <span className="link-label">Transferts {labo.nom}</span>
+                                    </Link>
+                                  )}
+                                </li>
+                                <li>
+                                  {stockLocked ? (
+                                    <LockedLink label="Historique Appro" reason="Assignez d'abord un fournisseur" />
+                                  ) : (
+                                    <Link
+                                      to={`/client/labo/historique-appro?laboId=${labo.id}`}
+                                      className={`sidebar-link ${isLaboHistoriqueAppro ? 'active' : ''}`}
+                                      onClick={onClose}
+                                    >
+                                      <span className="link-icon">📋</span>
+                                      <span className="link-label">Historique Appro</span>
+                                    </Link>
+                                  )}
+                                </li>
+                                <li>
+                                  {stockLocked ? (
+                                    <LockedLink label="Historiques Transferts" reason="Assignez d'abord un fournisseur" />
+                                  ) : (
+                                    <Link
+                                      to={`/client/labo/historique-transferts?laboId=${labo.id}`}
+                                      className={`sidebar-link ${isLaboHistorique ? 'active' : ''}`}
+                                      onClick={onClose}
+                                    >
+                                      <span className="link-icon">📋</span>
+                                      <span className="link-label">Historiques Transferts</span>
+                                    </Link>
+                                  )}
+                                </li>
+                              </>
+                            )}
                           </React.Fragment>
                         );
                       })}
@@ -571,69 +583,73 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                   <Divider />
 
                   {/* ══ ESPACE PRODUITS ══ */}
-                  <SectionHeader label="Espace Produits" locked={isOnboarding || (!hasFranchiseSelections && !hasDistinctSelections)} />
-                  <li>
-                    {isOnboarding || !hasFranchiseSelections ? (
-                      <LockedLink label="Produits Vendables (F)" />
-                    ) : (
-                      <Link
-                        to="/client/products?tab=vendable&actCtx=franchise"
-                        className={`sidebar-link ${isProductActive('vendable', 'franchise') ? 'active' : ''}`}
-                        onClick={onClose}
-                      >
-                        <span className="link-icon">🍔</span>
-                        <span className="link-label">Produits Vendables (F)</span>
-                      </Link>
-                    )}
-                  </li>
-                  <li>
-                    {isOnboarding || !hasFranchiseSelections ? (
-                      <LockedLink label="Produits Utilisables (F)" />
-                    ) : (
-                      <Link
-                        to="/client/products?tab=utilisable&actCtx=franchise"
-                        className={`sidebar-link ${isProductActive('utilisable', 'franchise') ? 'active' : ''}`}
-                        onClick={onClose}
-                      >
-                        <span className="link-icon">🧪</span>
-                        <span className="link-label">Produits Utilisables (F)</span>
-                      </Link>
-                    )}
-                  </li>
-                  <li>
-                    {isOnboarding || !hasDistinctSelections ? (
-                      <LockedLink label="Produits Vendables (D)" />
-                    ) : (
-                      <Link
-                        to="/client/products?tab=vendable&actCtx=distinct"
-                        className={`sidebar-link ${isProductActive('vendable', 'distinct') ? 'active' : ''}`}
-                        onClick={onClose}
-                      >
-                        <span className="link-icon">🍔</span>
-                        <span className="link-label">Produits Vendables (D)</span>
-                      </Link>
-                    )}
-                  </li>
-                  <li>
-                    {isOnboarding || !hasDistinctSelections ? (
-                      <LockedLink label="Produits Utilisables (D)" />
-                    ) : (
-                      <Link
-                        to="/client/products?tab=utilisable&actCtx=distinct"
-                        className={`sidebar-link ${isProductActive('utilisable', 'distinct') ? 'active' : ''}`}
-                        onClick={onClose}
-                      >
-                        <span className="link-icon">🧪</span>
-                        <span className="link-label">Produits Utilisables (D)</span>
-                      </Link>
-                    )}
-                  </li>
+                  <CollapsibleHeader label="Espace Produits" icon="🍔" isOpen={openSections.has('produits')} locked={isOnboarding || (!hasFranchiseSelections && !hasDistinctSelections)} onToggle={() => toggleSection('produits')} />
+                  {openSections.has('produits') && (
+                    <>
+                      <li>
+                        {isOnboarding || !hasFranchiseSelections ? (
+                          <LockedLink label="Produits Vendables (F)" />
+                        ) : (
+                          <Link
+                            to="/client/products?tab=vendable&actCtx=franchise"
+                            className={`sidebar-link ${isProductActive('vendable', 'franchise') ? 'active' : ''}`}
+                            onClick={onClose}
+                          >
+                            <span className="link-icon">🍔</span>
+                            <span className="link-label">Produits Vendables (F)</span>
+                          </Link>
+                        )}
+                      </li>
+                      <li>
+                        {isOnboarding || !hasFranchiseSelections ? (
+                          <LockedLink label="Produits Utilisables (F)" />
+                        ) : (
+                          <Link
+                            to="/client/products?tab=utilisable&actCtx=franchise"
+                            className={`sidebar-link ${isProductActive('utilisable', 'franchise') ? 'active' : ''}`}
+                            onClick={onClose}
+                          >
+                            <span className="link-icon">🧪</span>
+                            <span className="link-label">Produits Utilisables (F)</span>
+                          </Link>
+                        )}
+                      </li>
+                      <li>
+                        {isOnboarding || !hasDistinctSelections ? (
+                          <LockedLink label="Produits Vendables (D)" />
+                        ) : (
+                          <Link
+                            to="/client/products?tab=vendable&actCtx=distinct"
+                            className={`sidebar-link ${isProductActive('vendable', 'distinct') ? 'active' : ''}`}
+                            onClick={onClose}
+                          >
+                            <span className="link-icon">🍔</span>
+                            <span className="link-label">Produits Vendables (D)</span>
+                          </Link>
+                        )}
+                      </li>
+                      <li>
+                        {isOnboarding || !hasDistinctSelections ? (
+                          <LockedLink label="Produits Utilisables (D)" />
+                        ) : (
+                          <Link
+                            to="/client/products?tab=utilisable&actCtx=distinct"
+                            className={`sidebar-link ${isProductActive('utilisable', 'distinct') ? 'active' : ''}`}
+                            onClick={onClose}
+                          >
+                            <span className="link-icon">🧪</span>
+                            <span className="link-label">Produits Utilisables (D)</span>
+                          </Link>
+                        )}
+                      </li>
+                    </>
+                  )}
 
                   <Divider />
 
                   {/* ══ ESPACE FOURNISSEURS ══ */}
-                  <SectionHeader label="Espace Fournisseurs" locked={isOnboarding || (!hasFranchise && !hasDistinct)} />
-                  {!isOnboarding && (
+                  <CollapsibleHeader label="Espace Fournisseurs" icon="🚚" isOpen={openSections.has('fournisseurs')} locked={isOnboarding || (!hasFranchise && !hasDistinct)} onToggle={() => toggleSection('fournisseurs')} />
+                  {openSections.has('fournisseurs') && !isOnboarding && (
                     <>
                       <li>
                         {!hasFranchise && !hasDistinct ? (
