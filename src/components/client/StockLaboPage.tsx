@@ -125,6 +125,13 @@ export default function StockLaboPage() {
   const [transferHistory, setTransferHistory] = useState<Record<number, TransferRecord[]>>({});
   const [transferLoading, setTransferLoading] = useState<Set<number>>(new Set());
 
+  // ── Bulk appro selection
+  const [selectedIngIds, setSelectedIngIds] = useState<Set<number>>(new Set());
+  const [bulkDate, setBulkDate] = useState(todayStr());
+  const [bulkFournisseurId, setBulkFournisseurId] = useState('');
+  const [bulkRefFacture, setBulkRefFacture] = useState('');
+  const [bulkSaving, setBulkSaving] = useState(false);
+
   const today = todayStr();
 
   const loadLabo = useCallback(async () => {
@@ -288,6 +295,47 @@ export default function StockLaboPage() {
     setTransferLoading((prev) => { const n = new Set(prev); n.delete(ingredientId); return n; });
   };
 
+  const toggleBulkSelect = (ingredientId: number) => {
+    if (selectedIngIds.has(ingredientId)) {
+      setSelectedIngIds((prev) => { const n = new Set(prev); n.delete(ingredientId); return n; });
+      return;
+    }
+    // Guard: all currently selected must have qty > 0 AND prix > 0
+    const allValid = [...selectedIngIds].every((id) => {
+      const rs = rowState[id];
+      if (!rs) return false;
+      const qty = parseFloat(rs.quantite);
+      const prix = parseFloat(rs.prixUnitaire);
+      return !isNaN(qty) && qty > 0 && !isNaN(prix) && prix > 0;
+    });
+    if (selectedIngIds.size > 0 && !allValid) return;
+    setSelectedIngIds((prev) => new Set([...prev, ingredientId]));
+  };
+
+  const saveBulk = async () => {
+    if (selectedIngIds.size === 0 || !bulkDate) return;
+    setBulkSaving(true);
+    try {
+      for (const ingId of selectedIngIds) {
+        const rs = rowState[ingId];
+        if (!rs) continue;
+        await api.put(`/api/labo/${laboId}/stock/${ingId}`, {
+          quantite: parseFloat(rs.quantite),
+          prixUnitaire: parseFloat(rs.prixUnitaire),
+          dateAppro: bulkDate,
+          fournisseurId: bulkFournisseurId ? Number(bulkFournisseurId) : null,
+          refFacture: bulkRefFacture.trim() || null,
+        });
+      }
+      setSelectedIngIds(new Set());
+      setBulkDate(todayStr());
+      setBulkFournisseurId('');
+      setBulkRefFacture('');
+      loadStock();
+    } catch { /* ignore */ }
+    setBulkSaving(false);
+  };
+
   // Activity popup: compute unit totals for an activity
   const openActivityPopup = (e: React.MouseEvent, act: LaboActivite) => {
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
@@ -344,6 +392,16 @@ export default function StockLaboPage() {
     if (!ingGroups[ing.categorie]) ingGroups[ing.categorie] = [];
     ingGroups[ing.categorie].push(ing);
   }
+
+  const bulkAllValid = [...selectedIngIds].every((id) => {
+    const rs = rowState[id];
+    if (!rs) return false;
+    const qty = parseFloat(rs.quantite);
+    const prix = parseFloat(rs.prixUnitaire);
+    return !isNaN(qty) && qty > 0 && !isNaN(prix) && prix > 0;
+  });
+  const canSaveBulk = selectedIngIds.size > 0 && !!bulkDate.trim() && bulkAllValid
+    && (!hasFournisseurs || (!!bulkFournisseurId && !!bulkRefFacture.trim()));
 
   if (!laboId) return <div className="page"><p className="text-muted">Labo introuvable.</p></div>;
 
@@ -458,6 +516,42 @@ export default function StockLaboPage() {
             )}
           </div>
 
+          {/* Bulk appro form */}
+          {selectedIngIds.size > 0 && (
+            <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end', flexWrap: 'wrap', marginBottom: 16, padding: '12px 16px', background: '#f0fdf4', border: '1px solid #86efac', borderRadius: 10 }}>
+              <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#15803d', textTransform: 'uppercase', letterSpacing: '0.05em', alignSelf: 'center', marginRight: 4 }}>
+                ✓ {selectedIngIds.size} sélectionné{selectedIngIds.size > 1 ? 's' : ''}
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                <span style={LABEL}>Date d'appro</span>
+                <input type="date" className="input" style={{ maxWidth: 150 }} min={yearStart} max={yearEnd} value={bulkDate} onChange={(e) => setBulkDate(e.target.value)} />
+              </div>
+              {hasFournisseurs && (
+                <>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                    <span style={LABEL}>Fournisseur</span>
+                    <select className="input" style={{ maxWidth: 200 }} value={bulkFournisseurId} onChange={(e) => setBulkFournisseurId(e.target.value)}>
+                      <option value="">— Sélectionner —</option>
+                      {fournisseurs.map((f) => <option key={f.id} value={String(f.id)}>{f.nom}</option>)}
+                    </select>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                    <span style={LABEL}>Réf Facture</span>
+                    <input type="text" className="input" style={{ maxWidth: 160 }} placeholder="N° facture…" value={bulkRefFacture} onChange={(e) => setBulkRefFacture(e.target.value)} />
+                  </div>
+                </>
+              )}
+              <div style={{ display: 'flex', gap: 8, alignSelf: 'flex-end' }}>
+                <button className="btn btn-primary btn-sm" onClick={saveBulk} disabled={!canSaveBulk || bulkSaving}>
+                  {bulkSaving ? '…' : `Enregistrer (${selectedIngIds.size})`}
+                </button>
+                <button className="btn btn-ghost btn-sm" onClick={() => { setSelectedIngIds(new Set()); setBulkDate(todayStr()); setBulkFournisseurId(''); setBulkRefFacture(''); }}>
+                  Annuler
+                </button>
+              </div>
+            </div>
+          )}
+
           {loading ? (
             <p className="text-muted">{t('common.loading')}</p>
           ) : stock.length === 0 ? (
@@ -488,6 +582,7 @@ export default function StockLaboPage() {
                           <table className="table">
                             <thead>
                               <tr>
+                                <th style={{ width: 32 }}></th>
                                 <th>{t('client.stock.ingredient')}</th>
                                 <th style={{ textAlign: 'right' }}>Stock actuel</th>
                                 <th style={{ textAlign: 'right' }}>Qté transférée</th>
@@ -509,9 +604,21 @@ export default function StockLaboPage() {
                                 const isTransferOpen = openTransfers.has(r.ingredientId);
                                 const isTransferLoading = transferLoading.has(r.ingredientId);
                                 const transfers = transferHistory[r.ingredientId] ?? [];
+                                const isSelected = selectedIngIds.has(r.ingredientId);
+                                const canSelect = isSelected || bulkAllValid || selectedIngIds.size === 0;
                                 return (
                                   <React.Fragment key={r.ingredientId}>
-                                    <tr>
+                                    <tr style={isSelected ? { background: '#f0fdf4' } : undefined}>
+                                      <td style={{ textAlign: 'center' }}>
+                                        <input
+                                          type="checkbox"
+                                          checked={isSelected}
+                                          disabled={!canSelect}
+                                          onChange={() => toggleBulkSelect(r.ingredientId)}
+                                          style={{ width: 16, height: 16, cursor: canSelect ? 'pointer' : 'not-allowed', accentColor: 'var(--primary)' }}
+                                          title={!canSelect ? 'Remplissez la qté et prix des ingrédients sélectionnés avant d\'en ajouter un autre' : undefined}
+                                        />
+                                      </td>
                                       <td>
                                         <div style={{ fontWeight: 600 }}>{r.nom}</div>
                                         <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{r.unite}</div>
@@ -542,7 +649,7 @@ export default function StockLaboPage() {
                                         <input type="number" min="0" step="0.001" value={rs.prixUnitaire} onChange={(e) => setField(r.ingredientId, 'prixUnitaire', e.target.value)} style={{ width: 84, textAlign: 'right', ...warnStyle }} className="input" />
                                       </td>
                                       <td>
-                                        <input type="date" className="input" style={{ maxWidth: 138, ...warnStyle }} min={yearStart} max={yearEnd} value={rs.dateAppro} onChange={(e) => setDateApproField(r.ingredientId, e.target.value)} />
+                                        <input type="date" className="input" style={{ maxWidth: 138, ...warnStyle }} min={yearStart} max={yearEnd} value={rs.dateAppro} onChange={(e) => setDateApproField(r.ingredientId, e.target.value)} disabled={isSelected} title={isSelected ? 'Date définie par le formulaire ci-dessus' : undefined} />
                                       </td>
                                       <td>
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'stretch' }}>
@@ -552,15 +659,17 @@ export default function StockLaboPage() {
                                             return (
                                               <button
                                                 className="btn btn-sm"
-                                                onClick={() => setFournisseurModal({ ingredientId: r.ingredientId, nom: r.nom })}
+                                                onClick={() => !isSelected && setFournisseurModal({ ingredientId: r.ingredientId, nom: r.nom })}
+                                                disabled={isSelected}
+                                                title={isSelected ? 'Fournisseur défini par le formulaire ci-dessus' : undefined}
                                                 style={{
                                                   width: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                                                  background: validated ? '#dcfce7' : assignedF ? '#fef9c3' : '#eff6ff',
-                                                  color: validated ? '#15803d' : assignedF ? '#92400e' : '#2563eb',
-                                                  border: `1px solid ${validated ? '#86efac' : assignedF ? '#fde68a' : '#bfdbfe'}`,
+                                                  background: isSelected ? '#e5e7eb' : validated ? '#dcfce7' : assignedF ? '#fef9c3' : '#eff6ff',
+                                                  color: isSelected ? '#9ca3af' : validated ? '#15803d' : assignedF ? '#92400e' : '#2563eb',
+                                                  border: `1px solid ${isSelected ? '#d1d5db' : validated ? '#86efac' : assignedF ? '#fde68a' : '#bfdbfe'}`,
                                                 }}
                                               >
-                                                {validated ? `✓ ${assignedF!.nom}` : assignedF ? `${assignedF.nom}…` : 'Fournisseur'}
+                                                {isSelected ? 'Fournisseur (bulk)' : validated ? `✓ ${assignedF!.nom}` : assignedF ? `${assignedF.nom}…` : 'Fournisseur'}
                                               </button>
                                             );
                                           })()}
@@ -582,7 +691,7 @@ export default function StockLaboPage() {
                                     {/* Appro history collapse */}
                                     {rs.historyOpen && (
                                       <tr>
-                                        <td colSpan={8} style={{ background: 'var(--surface)', padding: '8px 16px' }}>
+                                        <td colSpan={9} style={{ background: 'var(--surface)', padding: '8px 16px' }}>
                                           {rs.history.length === 0 ? (
                                             <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{t('client.stock.no_history')}</span>
                                           ) : (
@@ -616,7 +725,7 @@ export default function StockLaboPage() {
                                     {/* Transfer history collapse */}
                                     {isTransferOpen && (
                                       <tr>
-                                        <td colSpan={8} style={{ background: '#faf5ff', padding: '8px 16px', borderTop: '1px solid #e9d5ff' }}>
+                                        <td colSpan={9} style={{ background: '#faf5ff', padding: '8px 16px', borderTop: '1px solid #e9d5ff' }}>
                                           <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>
                                             ↗ 5 derniers transferts — {r.nom}
                                           </div>

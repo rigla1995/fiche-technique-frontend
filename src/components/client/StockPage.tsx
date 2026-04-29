@@ -376,10 +376,18 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
   const [seuilEdits, setSeuilEdits] = useState<Record<number, string>>({});
   const [seuilSaving, setSeuilSaving] = useState<Record<number, boolean>>({});
 
+  // ── Bulk appro selection
+  const [selectedIngIds, setSelectedIngIds] = useState<Set<number>>(new Set());
+  const [bulkDate, setBulkDate] = useState(todayStr());
+  const [bulkFournisseurId, setBulkFournisseurId] = useState('');
+  const [bulkRefFacture, setBulkRefFacture] = useState('');
+  const [bulkSaving, setBulkSaving] = useState(false);
+
   const toggleCat = (cat: string) => setOpenCats((prev) => { const n = new Set(prev); if (n.has(cat)) n.delete(cat); else n.add(cat); return n; });
 
   useEffect(() => {
     setRows(buildInitialRowState(entries));
+    setSelectedIngIds(new Set());
     const initial: Record<number, string> = {};
     for (const e of entries) {
       initial[e.ingredientId] = e.seuilMin !== null ? String(e.seuilMin) : '';
@@ -461,6 +469,41 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
     }
   };
 
+  const toggleBulkSelect = (ingredientId: number) => {
+    if (selectedIngIds.has(ingredientId)) {
+      setSelectedIngIds((prev) => { const n = new Set(prev); n.delete(ingredientId); return n; });
+      return;
+    }
+    const allValid = [...selectedIngIds].every((id) => {
+      const rs = rows[id];
+      if (!rs) return false;
+      const qty = parseFloat(rs.quantite);
+      const prix = parseFloat(rs.prixUnitaire);
+      return !isNaN(qty) && qty > 0 && !isNaN(prix) && prix > 0;
+    });
+    if (selectedIngIds.size > 0 && !allValid) return;
+    setSelectedIngIds((prev) => new Set([...prev, ingredientId]));
+  };
+
+  const saveBulkMatrix = async () => {
+    if (selectedIngIds.size === 0 || !bulkDate) return;
+    setBulkSaving(true);
+    try {
+      for (const ingId of selectedIngIds) {
+        const row = rows[ingId];
+        if (!row) continue;
+        await onSave(ingId, row.quantite, row.prixUnitaire, bulkDate,
+          bulkFournisseurId ? Number(bulkFournisseurId) : null,
+          bulkRefFacture.trim() || null);
+      }
+      setSelectedIngIds(new Set());
+      setBulkDate(todayStr());
+      setBulkFournisseurId('');
+      setBulkRefFacture('');
+    } catch { /* ignore */ }
+    setBulkSaving(false);
+  };
+
   let filtered = entries;
   if (categoryFilter) filtered = filtered.filter((e) => (e.categorie || t('client.ingredients_catalog.no_category')) === categoryFilter);
   if (ingredientFilter) filtered = filtered.filter((e) => e.ingredientId === ingredientFilter);
@@ -479,6 +522,16 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
 
   const nonLaboFournisseurs = fournisseurs.filter((f) => !f.isLabo);
   const hasFournisseurs = isEntreprise && nonLaboFournisseurs.length > 0;
+
+  const bulkAllValid = [...selectedIngIds].every((id) => {
+    const rs = rows[id];
+    if (!rs) return false;
+    const qty = parseFloat(rs.quantite);
+    const prix = parseFloat(rs.prixUnitaire);
+    return !isNaN(qty) && qty > 0 && !isNaN(prix) && prix > 0;
+  });
+  const canSaveBulk = selectedIngIds.size > 0 && !!bulkDate.trim() && bulkAllValid
+    && (!hasFournisseurs || (!!bulkFournisseurId && !!bulkRefFacture.trim()));
 
   return (
     <div>
@@ -525,6 +578,42 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
         />
       )}
 
+      {/* Bulk appro form */}
+      {selectedIngIds.size > 0 && (
+        <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end', flexWrap: 'wrap', marginBottom: 16, padding: '12px 16px', background: '#f0fdf4', border: '1px solid #86efac', borderRadius: 10 }}>
+          <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#15803d', textTransform: 'uppercase', letterSpacing: '0.05em', alignSelf: 'center', marginRight: 4 }}>
+            ✓ {selectedIngIds.size} sélectionné{selectedIngIds.size > 1 ? 's' : ''}
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+            <span style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Date d'appro</span>
+            <input type="date" className="input" style={{ maxWidth: 150 }} min={yearStart} max={yearEnd} value={bulkDate} onChange={(e) => setBulkDate(e.target.value)} />
+          </div>
+          {hasFournisseurs && (
+            <>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                <span style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Fournisseur</span>
+                <select className="input" style={{ maxWidth: 200 }} value={bulkFournisseurId} onChange={(e) => setBulkFournisseurId(e.target.value)}>
+                  <option value="">— Sélectionner —</option>
+                  {nonLaboFournisseurs.map((f) => <option key={f.id} value={String(f.id)}>{f.nom}</option>)}
+                </select>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                <span style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Réf Facture</span>
+                <input type="text" className="input" style={{ maxWidth: 160 }} placeholder="N° facture…" value={bulkRefFacture} onChange={(e) => setBulkRefFacture(e.target.value)} />
+              </div>
+            </>
+          )}
+          <div style={{ display: 'flex', gap: 8, alignSelf: 'flex-end' }}>
+            <button className="btn btn-primary btn-sm" onClick={saveBulkMatrix} disabled={!canSaveBulk || bulkSaving}>
+              {bulkSaving ? '…' : `Enregistrer (${selectedIngIds.size})`}
+            </button>
+            <button className="btn btn-ghost btn-sm" onClick={() => { setSelectedIngIds(new Set()); setBulkDate(todayStr()); setBulkFournisseurId(''); setBulkRefFacture(''); }}>
+              Annuler
+            </button>
+          </div>
+        </div>
+      )}
+
       {Object.entries(groups).sort(([a], [b]) => a.localeCompare(b)).map(([cat, items]) => {
         const isOpen = openCats.has(cat);
         return (
@@ -539,6 +628,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                 <table className="table">
                   <thead>
                     <tr>
+                      <th style={{ width: 32 }}></th>
                       <th>{t('client.stock.ingredient')}</th>
                       <th style={{ textAlign: 'right' }}>Total Stock</th>
                       <th style={{ textAlign: 'center' }}>Seuil min</th>
@@ -568,9 +658,21 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                       const laboFournisseur = row.fournisseurId
                         ? (fournisseurs.find((f) => String(f.id) === row.fournisseurId && f.isLabo) ?? null)
                         : null;
+                      const isSelected = selectedIngIds.has(entry.ingredientId);
+                      const canSelect = isSelected || bulkAllValid || selectedIngIds.size === 0;
                       return (
                         <>
-                          <tr key={entry.ingredientId}>
+                          <tr key={entry.ingredientId} style={isSelected ? { background: '#f0fdf4' } : undefined}>
+                            <td style={{ textAlign: 'center' }}>
+                              <input
+                                type="checkbox"
+                                checked={isSelected}
+                                disabled={!canSelect}
+                                onChange={() => toggleBulkSelect(entry.ingredientId)}
+                                style={{ width: 16, height: 16, cursor: canSelect ? 'pointer' : 'not-allowed', accentColor: 'var(--primary)' }}
+                                title={!canSelect ? 'Remplissez la qté et prix des ingrédients sélectionnés avant d\'en ajouter un autre' : undefined}
+                              />
+                            </td>
                             <td>
                               <div style={{ fontWeight: 600 }}>{entry.nom}</div>
                               <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{entry.unite}</div>
@@ -613,12 +715,27 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                                 min={yearStart} max={yearEnd}
                                 value={row.dateAppro}
                                 onChange={(e) => updateRow(entry.ingredientId, 'dateAppro', e.target.value)}
+                                disabled={isSelected}
+                                title={isSelected ? 'Date définie par le formulaire ci-dessus' : undefined}
                               />
                             </td>
                             <td style={{ whiteSpace: 'nowrap' }}>
                               {row.error && <span style={{ color: 'var(--danger)', fontSize: '0.75rem', marginRight: 4 }}>!</span>}
                               {hasFournisseurs && (
-                                laboFournisseur ? (
+                                isSelected ? (
+                                  <button
+                                    className="btn btn-sm"
+                                    disabled
+                                    title="Fournisseur défini par le formulaire ci-dessus"
+                                    style={{
+                                      marginRight: 4, background: '#e5e7eb', color: '#9ca3af',
+                                      border: '1px solid #d1d5db', fontSize: '0.78rem',
+                                      whiteSpace: 'nowrap', maxWidth: 130, overflow: 'hidden', textOverflow: 'ellipsis',
+                                    }}
+                                  >
+                                    Fournisseur (bulk)
+                                  </button>
+                                ) : laboFournisseur ? (
                                   <button
                                     className="btn btn-sm"
                                     onClick={() => setAffectationModal({ ingredientId: entry.ingredientId, nom: entry.nom })}
@@ -687,7 +804,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                           </tr>
                           {isHistOpen && (
                             <tr key={`${entry.ingredientId}-hist`}>
-                              <td colSpan={7} style={{ background: '#f8faff', padding: '8px 16px' }}>
+                              <td colSpan={8} style={{ background: '#f8faff', padding: '8px 16px' }}>
                                 {!hist ? (
                                   <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{t('common.loading')}</span>
                                 ) : hist.length === 0 ? (
