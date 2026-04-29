@@ -68,6 +68,7 @@ export default function FournisseursLaboPage() {
         fournisseurIds: [...(assignments[laboId] ?? [])],
       });
       await load();
+      window.dispatchEvent(new Event('labos-changed'));
     } catch { /* ignore */ }
     setSaving((p) => ({ ...p, [laboId]: false }));
   };
@@ -100,6 +101,7 @@ export default function FournisseursLaboPage() {
       });
       setShowNewForm((p) => ({ ...p, [laboId]: false }));
       await load();
+      window.dispatchEvent(new Event('labos-changed'));
     } catch (e: unknown) {
       const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message;
       setNewError((p) => ({ ...p, [laboId]: msg ?? 'Erreur serveur' }));
