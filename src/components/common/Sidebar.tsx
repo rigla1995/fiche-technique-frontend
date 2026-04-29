@@ -565,6 +565,16 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                     </li>
                   )}
 
+                  {/* Fournisseurs Labo — visible only when enterprise has at least one labo */}
+                  {!isOnboarding && labos.length > 0 && (
+                    <li>
+                      <NavLink to="/client/fournisseurs-labo" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>
+                        <span className="link-icon">🏭</span>
+                        <span className="link-label">Fournisseurs Labo</span>
+                      </NavLink>
+                    </li>
+                  )}
+
                   <Divider />
 
                   {/* Catalogue Global */}
