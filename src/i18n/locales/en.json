@@ -51,15 +51,15 @@
     "stock": "Stock",
     "stock_locked": "Stock (select your ingredients first)",
     "domaines": "Activity domains",
-    "catalogue_franchise": "F Ingredients Catalogue",
-    "catalogue_distinct": "D Ingredients Catalogue",
-    "stock_franchise": "F Stock",
-    "historique_franchise": "F Supply History",
-    "stock_distinct": "D Stock",
-    "historique_distinct": "D Supply History",
+    "catalogue_franchise": "Ingredients Catalogue",
+    "catalogue_distinct": "Ingredients Catalogue",
+    "stock_franchise": "Stock",
+    "historique_franchise": "Supply History",
+    "stock_distinct": "Stock",
+    "historique_distinct": "Supply History",
     "historique_appro": "Supply History",
-    "products_franchise": "F Products",
-    "products_distinct": "D Products",
+    "products_franchise": "Products",
+    "products_distinct": "Products",
     "no_franchise_activity": "No franchise activity",
     "no_distinct_activity": "No distinct activity",
     "espace_franchise": "Franchise Space",
@@ -280,7 +280,7 @@
       "all_groups": "All groups"
     },
     "catalogue_franchise": {
-      "title": "F Ingredients Catalogue",
+      "title": "Ingredients Catalogue",
       "duplicate_to_others": "Duplicate to other activities",
       "filter_category": "Filter by ingredient name",
       "all_categories": "All categories",
@@ -288,7 +288,7 @@
       "select_franchise": "Select franchise"
     },
     "catalogue_distinct": {
-      "title": "D Ingredients Catalogue",
+      "title": "Ingredients Catalogue",
       "select_activity": "Select an activity",
       "no_activities": "No distinct activities found.",
       "price_per_unit": "Unit price"

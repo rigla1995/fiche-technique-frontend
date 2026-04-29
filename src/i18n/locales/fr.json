@@ -52,15 +52,15 @@
     "stock": "Stock",
     "stock_locked": "Stock (sélectionnez vos ingrédients d'abord)",
     "domaines": "Domaines d'activité",
-    "catalogue_franchise": "F Catalogue Ingrédients",
-    "catalogue_distinct": "D Catalogue Ingrédients",
-    "stock_franchise": "F Stock",
-    "historique_franchise": "F Historique Appro",
-    "stock_distinct": "D Stock",
-    "historique_distinct": "D Historique Appro",
+    "catalogue_franchise": "Catalogue Ingrédients",
+    "catalogue_distinct": "Catalogue Ingrédients",
+    "stock_franchise": "Stock",
+    "historique_franchise": "Historique Appro",
+    "stock_distinct": "Stock",
+    "historique_distinct": "Historique Appro",
     "historique_appro": "Historique Appro",
-    "products_franchise": "F Produits",
-    "products_distinct": "D Produits",
+    "products_franchise": "Produits",
+    "products_distinct": "Produits",
     "no_franchise_activity": "Aucune activité de type franchise",
     "no_distinct_activity": "Aucune activité de type distincte",
     "espace_franchise": "Espace Franchise",
@@ -283,7 +283,7 @@
       "all_groups": "Tous les groupes"
     },
     "catalogue_franchise": {
-      "title": "F Catalogue Ingrédients",
+      "title": "Catalogue Ingrédients",
       "duplicate_to_others": "Dupliquer vers les autres activités",
       "filter_category": "Filtrer par nom d'ingrédient",
       "all_categories": "Toutes les catégories",
@@ -291,7 +291,7 @@
       "select_franchise": "Sélectionner la franchise"
     },
     "catalogue_distinct": {
-      "title": "D Catalogue Ingrédients",
+      "title": "Catalogue Ingrédients",
       "select_activity": "Sélectionner une activité",
       "no_activities": "Aucune activité distincte trouvée.",
       "price_per_unit": "Prix unitaire"
