@@ -613,8 +613,9 @@ export default function FicheTechniqueTab({ isEntreprise, franchiseActivities, d
                     ✏️ {t('client.fiche_technique.edit_manual_prices')}
                   </button>
                   {manualUpdatedAt && (
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: 6 }}>
-                      {t('client.fiche_technique.last_updated')} : {manualUpdatedAt}
+                    <div style={{ fontSize: '0.75rem', marginTop: 6, color: 'var(--text-muted)' }}>
+                      {t('client.fiche_technique.last_updated')} :{' '}
+                      <span style={{ fontWeight: 700, color: '#d97706', background: '#fef3c7', borderRadius: 4, padding: '1px 6px' }}>{manualUpdatedAt}</span>
                     </div>
                   )}
                   {!allManualPricesFilled && manualPrices.length > 0 && !manualLoading && (
