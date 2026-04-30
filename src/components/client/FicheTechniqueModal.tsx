@@ -61,10 +61,6 @@ export default function FicheTechniqueModal({ productId, productName, hasIngredi
   const [showMissingPopup, setShowMissingPopup] = useState(false);
   const [missingFillData, setMissingFillData] = useState<Record<number, { qty: string; price: string; date: string }>>({});
   const [savingMissing, setSavingMissing] = useState(false);
-  const [selectedIngredientIds, setSelectedIngredientIds] = useState<Set<number>>(new Set());
-  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
-  const [missingFilterName, setMissingFilterName] = useState('');
-  const [missingFilterCategory, setMissingFilterCategory] = useState('');
 
   // FP Manuel
   const [manualPrices, setManualPrices] = useState<ManualPriceEntry[]>([]);
@@ -109,10 +105,6 @@ export default function FicheTechniqueModal({ productId, productName, hasIngredi
           };
         }
         setMissingFillData(fillData);
-        setSelectedIngredientIds(new Set(result.missing.map((m) => m.ingredientId)));
-        setExpandedCategories(new Set());
-        setMissingFilterName('');
-        setMissingFilterCategory('');
       })
       .catch(() => setStockCheckResult(null))
       .finally(() => setStockCheckLoading(false));
@@ -196,7 +188,6 @@ export default function FicheTechniqueModal({ productId, productName, hasIngredi
     const today = new Date().toISOString().slice(0, 10);
     try {
       for (const ing of stockCheckResult.missing) {
-        if (!selectedIngredientIds.has(ing.ingredientId)) continue;
         const fill = missingFillData[ing.ingredientId];
         if (!fill || !fill.qty || !fill.price) continue;
         const payload: Record<string, unknown> = {
@@ -524,156 +515,107 @@ export default function FicheTechniqueModal({ productId, productName, hasIngredi
       )}
 
       {/* Missing stock popup */}
-      {showMissingPopup && stockCheckResult && (() => {
-        const SANS_CAT = 'Sans catégorie';
-        const catMap: Record<string, StockCheckResult['missing']> = {};
-        for (const ing of stockCheckResult.missing) {
-          const cat = ing.categorie || SANS_CAT;
-          if (!catMap[cat]) catMap[cat] = [];
-          catMap[cat].push(ing);
-        }
-        const allCategories = Object.keys(catMap).sort((a, b) => {
-          if (a === SANS_CAT) return 1;
-          if (b === SANS_CAT) return -1;
-          return a.localeCompare(b, 'fr');
-        });
-        const filteredCats = allCategories.filter((cat) =>
-          (!missingFilterCategory || cat === missingFilterCategory) &&
-          catMap[cat].some((ing) => !missingFilterName || ing.nom.toLowerCase().includes(missingFilterName.toLowerCase()))
-        );
-        const visibleByCat = Object.fromEntries(
-          filteredCats.map((cat) => [
-            cat,
-            catMap[cat].filter((ing) => !missingFilterName || ing.nom.toLowerCase().includes(missingFilterName.toLowerCase())),
-          ])
-        );
-        const colW = ['4%', '27%', '14%', '14%', '19%', '22%'];
-        const renderIngRow = (ing: StockCheckResult['missing'][0]) => {
-          const fill = missingFillData[ing.ingredientId] || { qty: '', price: '', date: new Date().toISOString().slice(0, 10) };
-          const isSelected = selectedIngredientIds.has(ing.ingredientId);
-          const isFOpen = openFournisseurFor === ing.ingredientId;
-          const hasFournisseur = !!(missingFournisseurById[ing.ingredientId] || missingRefFactureById[ing.ingredientId]);
-          const unitLetter = ing.unite ? ing.unite.charAt(0).toUpperCase() : '';
-          return (
-            <>
-              <tr key={ing.ingredientId} style={{ opacity: isSelected ? 1 : 0.45 }}>
-                <td style={{ textAlign: 'center', paddingLeft: 4, paddingRight: 0 }}>
-                  <input type="checkbox" checked={isSelected} onChange={() => setSelectedIngredientIds((prev) => { const next = new Set(prev); isSelected ? next.delete(ing.ingredientId) : next.add(ing.ingredientId); return next; })} />
-                </td>
-                <td style={{ fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={`${ing.nom} (${ing.unite})`}>
-                  {ing.nom}{unitLetter && <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}> ({unitLetter})</span>}
-                </td>
-                <td><input type="number" className="input" style={{ width: '100%', textAlign: 'right' }} step="0.001" min="0" placeholder="0" disabled={!isSelected} value={fill.qty} onChange={(e) => setMissingFillData((prev) => ({ ...prev, [ing.ingredientId]: { ...fill, qty: e.target.value } }))} /></td>
-                <td><input type="number" className="input" style={{ width: '100%', textAlign: 'right', borderColor: isSelected && !fill.price ? '#f59e0b' : undefined }} step="0.001" min="0.001" placeholder="0.000" disabled={!isSelected} value={fill.price} onChange={(e) => setMissingFillData((prev) => ({ ...prev, [ing.ingredientId]: { ...fill, price: e.target.value } }))} /></td>
-                <td><input type="date" className="input" style={{ width: '100%' }} disabled={!isSelected} value={fill.date} onChange={(e) => setMissingFillData((prev) => ({ ...prev, [ing.ingredientId]: { ...fill, date: e.target.value } }))} /></td>
-                <td style={{ textAlign: 'center' }}>
-                  <button className="btn btn-ghost btn-sm" disabled={!isSelected} style={{ fontSize: '0.72rem', padding: '3px 7px', borderColor: hasFournisseur ? '#d97706' : undefined, color: hasFournisseur ? '#d97706' : undefined, whiteSpace: 'nowrap' }} onClick={(e) => { e.stopPropagation(); setOpenFournisseurFor(isFOpen ? null : ing.ingredientId); }}>
-                    🚚 {hasFournisseur ? '✓' : '+'}
-                  </button>
-                </td>
-              </tr>
-              {isFOpen && isSelected && (
-                <tr key={`f-${ing.ingredientId}`} style={{ background: '#fffbeb' }}>
-                  <td colSpan={6} style={{ padding: '10px 12px', borderTop: '1px dashed #fde68a' }}>
-                    <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'flex-end' }}>
-                      {fournisseurs.length > 0 && (
-                        <div style={{ flex: '1 1 180px' }}>
-                          <label style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 3 }}>Fournisseur</label>
-                          <select className="input" style={{ width: '100%' }} value={missingFournisseurById[ing.ingredientId] || ''} onChange={(e) => setMissingFournisseurById((prev) => ({ ...prev, [ing.ingredientId]: e.target.value }))}>
-                            <option value="">— Aucun —</option>
-                            {fournisseurs.map((f) => <option key={f.id} value={f.id}>{f.nom}</option>)}
-                          </select>
-                        </div>
-                      )}
-                      <div style={{ flex: '1 1 160px' }}>
-                        <label style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 3 }}>Réf. Facture / BL</label>
-                        <input type="text" className="input" style={{ width: '100%' }} value={missingRefFactureById[ing.ingredientId] || ''} onChange={(e) => setMissingRefFactureById((prev) => ({ ...prev, [ing.ingredientId]: e.target.value }))} placeholder="N° bon de livraison…" />
-                      </div>
-                      <button className="btn btn-ghost btn-sm" style={{ fontSize: '0.75rem', height: 36 }} onClick={() => setOpenFournisseurFor(null)}>Fermer</button>
-                    </div>
-                  </td>
-                </tr>
-              )}
-            </>
-          );
-        };
-        return (
-          <div className="modal-overlay" style={{ zIndex: 1050 }} onClick={() => setShowMissingPopup(false)}>
-            <div className="modal" style={{ maxWidth: 860, width: '96vw' }} onClick={(e) => e.stopPropagation()}>
-              {/* Header */}
-              <div style={{ background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', padding: '16px 24px', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <span style={{ fontSize: '1.5rem', lineHeight: 1 }}>⚠️</span>
-                  <div>
-                    <div style={{ fontWeight: 700, fontSize: '1rem', color: '#fff' }}>{t('client.stock.missing_stock_title')}</div>
-                    <div style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.85)', marginTop: 2 }}>{t('client.stock.missing_stock_msg')}</div>
+      {showMissingPopup && stockCheckResult && (
+        <div className="modal-overlay" style={{ zIndex: 1050 }} onClick={() => setShowMissingPopup(false)}>
+          <div className="modal" style={{ maxWidth: 820, width: '96vw' }} onClick={(e) => e.stopPropagation()}>
+            {/* Header */}
+            <div style={{ background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', padding: '16px 24px', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <span style={{ fontSize: '1.5rem', lineHeight: 1 }}>⚠️</span>
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: '1rem', color: '#fff' }}>{t('client.stock.missing_stock_title')}</div>
+                  <div style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.85)', marginTop: 2 }}>
+                    {stockCheckResult.missing.length} ingrédient{stockCheckResult.missing.length > 1 ? 's' : ''} sans appro — renseignez les valeurs puis enregistrez.
                   </div>
                 </div>
-                <button onClick={() => setShowMissingPopup(false)} style={{ background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: 8, color: '#fff', fontWeight: 700, fontSize: '1rem', padding: '2px 8px', cursor: 'pointer', lineHeight: 1.4 }}>×</button>
               </div>
-              {/* Filters bar */}
-              <div style={{ padding: '10px 20px', borderBottom: '1px solid var(--border)', background: 'var(--surface)', display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
-                <input type="text" className="input" placeholder="🔍 Nom ingrédient…" style={{ flex: '1 1 180px', minWidth: 140 }} value={missingFilterName} onChange={(e) => setMissingFilterName(e.target.value)} />
-                <select className="input" style={{ flex: '1 1 160px', minWidth: 140 }} value={missingFilterCategory} onChange={(e) => setMissingFilterCategory(e.target.value)}>
-                  <option value="">Toutes les catégories</option>
-                  {allCategories.map((cat) => <option key={cat} value={cat}>{cat}</option>)}
-                </select>
-                <button className="btn btn-ghost btn-sm" style={{ whiteSpace: 'nowrap' }} onClick={() => setSelectedIngredientIds(new Set(stockCheckResult.missing.map((m) => m.ingredientId)))}>✓ Tout</button>
-                <button className="btn btn-ghost btn-sm" style={{ whiteSpace: 'nowrap' }} onClick={() => setSelectedIngredientIds(new Set())}>✗ Aucun</button>
-              </div>
-              {/* Collapsible categories */}
-              <div style={{ padding: '12px 20px', maxHeight: '58vh', overflowY: 'auto', overflowX: 'hidden' }}>
-                {filteredCats.length === 0 ? (
-                  <p style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '20px 0' }}>Aucun résultat</p>
-                ) : filteredCats.map((cat) => {
-                  const ings = visibleByCat[cat];
-                  const isExpanded = expandedCategories.has(cat);
-                  const selCount = ings.filter((ing) => selectedIngredientIds.has(ing.ingredientId)).length;
-                  const allSel = selCount === ings.length;
-                  return (
-                    <div key={cat} style={{ marginBottom: 8, borderRadius: 10, border: '1px solid var(--border)', overflow: 'hidden' }}>
-                      {/* Category header */}
-                      <div
-                        style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 14px', background: '#eef2ff', cursor: 'pointer', borderBottom: isExpanded ? '1px solid var(--border)' : 'none', userSelect: 'none' }}
-                        onClick={() => setExpandedCategories((prev) => { const next = new Set(prev); isExpanded ? next.delete(cat) : next.add(cat); return next; })}
-                      >
-                        <input type="checkbox" checked={allSel} onChange={(e) => { e.stopPropagation(); setSelectedIngredientIds((prev) => { const next = new Set(prev); ings.forEach((ing) => (allSel ? next.delete(ing.ingredientId) : next.add(ing.ingredientId))); return next; }); }} onClick={(e) => e.stopPropagation()} style={{ accentColor: '#4f46e5' }} />
-                        <span style={{ fontWeight: 700, fontSize: '0.88rem', color: '#3730a3', flex: 1 }}>{cat}</span>
-                        <span style={{ fontSize: '0.72rem', color: '#6b7280', fontWeight: 500 }}>{selCount}/{ings.length}</span>
-                        <span style={{ fontSize: '0.75rem', color: '#6b7280' }}>{isExpanded ? '▲' : '▼'}</span>
-                      </div>
-                      {/* Ingredient table (expanded only) */}
-                      {isExpanded && (
-                        <table className="table" style={{ tableLayout: 'fixed', width: '100%', marginBottom: 0 }}>
-                          <colgroup>{colW.map((w, i) => <col key={i} style={{ width: w }} />)}</colgroup>
-                          <thead>
-                            <tr>
-                              <th style={{ textAlign: 'center', padding: '6px 4px' }}></th>
-                              <th style={{ padding: '6px 8px' }}>{t('client.historique_appro.ingredient')}</th>
-                              <th style={{ textAlign: 'right', padding: '6px 8px' }}>Qté</th>
-                              <th style={{ textAlign: 'right', padding: '6px 8px' }}>{t('common.price')} (DT)</th>
-                              <th style={{ padding: '6px 8px' }}>{t('client.stock.date_appro')}</th>
-                              <th style={{ textAlign: 'center', padding: '6px 8px' }}>🚚</th>
-                            </tr>
-                          </thead>
-                          <tbody>{ings.map(renderIngRow)}</tbody>
-                        </table>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-              {/* Footer */}
-              <div style={{ padding: '12px 24px 18px', display: 'flex', justifyContent: 'flex-end', gap: 10, borderTop: '1px solid var(--border)' }}>
-                <button className="btn btn-ghost" onClick={() => setShowMissingPopup(false)}>{t('common.cancel')}</button>
-                <button className="btn btn-primary" style={{ background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', borderColor: 'transparent' }} disabled={savingMissing} onClick={saveMissingStock}>
-                  {savingMissing ? t('common.loading') : t('common.save')}
-                </button>
-              </div>
+              <button onClick={() => setShowMissingPopup(false)} style={{ background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: 8, color: '#fff', fontWeight: 700, fontSize: '1rem', padding: '2px 8px', cursor: 'pointer', lineHeight: 1.4 }}>×</button>
+            </div>
+            {/* Table */}
+            <div style={{ padding: '16px 24px', maxHeight: '62vh', overflowY: 'auto', overflowX: 'hidden' }}>
+              <table className="table" style={{ tableLayout: 'fixed', width: '100%' }}>
+                <colgroup>
+                  <col style={{ width: '30%' }} />
+                  <col style={{ width: '15%' }} />
+                  <col style={{ width: '15%' }} />
+                  <col style={{ width: '18%' }} />
+                  <col style={{ width: '22%' }} />
+                </colgroup>
+                <thead>
+                  <tr>
+                    <th>{t('client.historique_appro.ingredient')}</th>
+                    <th style={{ textAlign: 'right' }}>Qté</th>
+                    <th style={{ textAlign: 'right' }}>{t('common.price')} (DT)</th>
+                    <th>{t('client.stock.date_appro')}</th>
+                    <th style={{ textAlign: 'center' }}>🚚 Fournisseur</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {stockCheckResult.missing.map((ing) => {
+                    const fill = missingFillData[ing.ingredientId] || { qty: '', price: '', date: new Date().toISOString().slice(0, 10) };
+                    const isFOpen = openFournisseurFor === ing.ingredientId;
+                    const hasFournisseur = !!(missingFournisseurById[ing.ingredientId] || missingRefFactureById[ing.ingredientId]);
+                    const unitLetter = ing.unite ? ing.unite.charAt(0).toUpperCase() : '';
+                    return (
+                      <>
+                        <tr key={ing.ingredientId}>
+                          <td style={{ fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={`${ing.nom} (${ing.unite})`}>
+                            {ing.nom}{unitLetter && <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}> ({unitLetter})</span>}
+                            {ing.categorie && <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', fontWeight: 400 }}>{ing.categorie}</div>}
+                          </td>
+                          <td>
+                            <input type="number" className="input" style={{ width: '100%', textAlign: 'right' }} step="0.001" min="0" placeholder="0" value={fill.qty} onChange={(e) => setMissingFillData((prev) => ({ ...prev, [ing.ingredientId]: { ...fill, qty: e.target.value } }))} />
+                          </td>
+                          <td>
+                            <input type="number" className="input" style={{ width: '100%', textAlign: 'right', borderColor: !fill.price ? '#f59e0b' : undefined }} step="0.001" min="0.001" placeholder="0.000" value={fill.price} onChange={(e) => setMissingFillData((prev) => ({ ...prev, [ing.ingredientId]: { ...fill, price: e.target.value } }))} />
+                          </td>
+                          <td>
+                            <input type="date" className="input" style={{ width: '100%' }} value={fill.date} onChange={(e) => setMissingFillData((prev) => ({ ...prev, [ing.ingredientId]: { ...fill, date: e.target.value } }))} />
+                          </td>
+                          <td style={{ textAlign: 'center' }}>
+                            <button className="btn btn-ghost btn-sm" style={{ fontSize: '0.72rem', padding: '3px 7px', borderColor: hasFournisseur ? '#d97706' : undefined, color: hasFournisseur ? '#d97706' : undefined, whiteSpace: 'nowrap' }} onClick={(e) => { e.stopPropagation(); setOpenFournisseurFor(isFOpen ? null : ing.ingredientId); }}>
+                              🚚 {hasFournisseur ? '✓' : '+'}
+                            </button>
+                          </td>
+                        </tr>
+                        {isFOpen && (
+                          <tr key={`f-${ing.ingredientId}`} style={{ background: '#fffbeb' }}>
+                            <td colSpan={5} style={{ padding: '10px 12px', borderTop: '1px dashed #fde68a' }}>
+                              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+                                {fournisseurs.length > 0 && (
+                                  <div style={{ flex: '1 1 180px' }}>
+                                    <label style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 3 }}>Fournisseur</label>
+                                    <select className="input" style={{ width: '100%' }} value={missingFournisseurById[ing.ingredientId] || ''} onChange={(e) => setMissingFournisseurById((prev) => ({ ...prev, [ing.ingredientId]: e.target.value }))}>
+                                      <option value="">— Aucun —</option>
+                                      {fournisseurs.map((f) => <option key={f.id} value={f.id}>{f.nom}</option>)}
+                                    </select>
+                                  </div>
+                                )}
+                                <div style={{ flex: '1 1 160px' }}>
+                                  <label style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 3 }}>Réf. Facture / BL</label>
+                                  <input type="text" className="input" style={{ width: '100%' }} value={missingRefFactureById[ing.ingredientId] || ''} onChange={(e) => setMissingRefFactureById((prev) => ({ ...prev, [ing.ingredientId]: e.target.value }))} placeholder="N° bon de livraison…" />
+                                </div>
+                                <button className="btn btn-ghost btn-sm" style={{ fontSize: '0.75rem', height: 36 }} onClick={() => setOpenFournisseurFor(null)}>Fermer</button>
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+            {/* Footer */}
+            <div style={{ padding: '12px 24px 18px', display: 'flex', justifyContent: 'flex-end', gap: 10, borderTop: '1px solid var(--border)' }}>
+              <button className="btn btn-ghost" onClick={() => setShowMissingPopup(false)}>{t('common.cancel')}</button>
+              <button className="btn btn-primary" style={{ background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', borderColor: 'transparent' }} disabled={savingMissing} onClick={saveMissingStock}>
+                {savingMissing ? t('common.loading') : t('common.save')}
+              </button>
             </div>
           </div>
-        );
-      })()}
+        </div>
+      )}
 
       {/* Zero-price warning popup */}
       {showZeroWarning && (
