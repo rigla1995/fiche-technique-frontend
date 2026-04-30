@@ -673,16 +673,24 @@ export default function HistoriqueApproPage() {
           <button className="btn btn-primary" onClick={fetchResults} disabled={loading}>
             {loading ? t('common.loading') : '🔍 Rechercher'}
           </button>
-          {results.length > 0 && (
-            <button
-              className="btn btn-ghost"
-              onClick={exportCsv}
-              title="Exporter les résultats en CSV"
-              style={{ display: 'flex', alignItems: 'center', gap: 6 }}
-            >
-              📥 Exporter CSV
-            </button>
-          )}
+          <button
+            onClick={exportCsv}
+            disabled={results.length === 0}
+            title={results.length === 0 ? 'Lancez une recherche pour exporter' : 'Générer le fichier CSV'}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 8,
+              padding: '9px 18px', borderRadius: 10, border: 'none', cursor: results.length === 0 ? 'not-allowed' : 'pointer',
+              background: results.length > 0 ? 'linear-gradient(135deg, #059669 0%, #10b981 100%)' : 'var(--bg-secondary, #f3f4f6)',
+              color: results.length > 0 ? '#fff' : 'var(--text-muted)',
+              fontWeight: 700, fontSize: '0.88rem',
+              opacity: results.length === 0 ? 0.55 : 1,
+              boxShadow: results.length > 0 ? '0 2px 8px rgba(16,185,129,0.30)' : 'none',
+              transition: 'all 0.15s',
+            }}
+          >
+            <span style={{ fontSize: '1rem' }}>📊</span>
+            Générer Hist. Appro
+          </button>
         </div>
       </div>
 
