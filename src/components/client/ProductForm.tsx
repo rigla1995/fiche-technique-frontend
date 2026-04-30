@@ -27,9 +27,21 @@ export default function ProductForm() {
 
   // Activity context from URL
   const urlActCtx = searchParams.get('actCtx') || '';
+  const urlFg = searchParams.get('fg') || '';
+  const urlFact = searchParams.get('fact') || '';
   const isFranchiseFromUrl = urlActCtx === 'franchise';
   const isDistinctGenericFromUrl = urlActCtx === 'distinct';
   const isDistinctSpecificFromUrl = urlActCtx.startsWith('distinct-');
+
+  // Back URL preserving all filter params so the list restores its filters
+  const buildBackUrl = (tab: string) => {
+    const params = new URLSearchParams();
+    params.set('tab', tab);
+    if (urlActCtx) params.set('actCtx', urlActCtx);
+    if (urlFg) params.set('fg', urlFg);
+    if (urlFact) params.set('fact', urlFact);
+    return `/client/products?${params.toString()}`;
+  };
 
   // Pre-step needed when: enterprise + new + context not fully resolved from URL
   // distinct-{id} → auto-resolved; everything else needs pre-step
@@ -314,7 +326,7 @@ export default function ProductForm() {
       }
       if (isEdit) {
         await api.put(`/products/${id}`, payload);
-        navigate(`/client/products?tab=${productType}`);
+        navigate(buildBackUrl(productType));
       } else {
         await api.post('/products', payload);
         setSavedOk(true);
@@ -334,7 +346,7 @@ export default function ProductForm() {
   const handleDelete = async () => {
     if (!window.confirm(t('client.products.delete_confirm'))) return;
     await api.delete(`/products/${id}`);
-    navigate(`/client/products?tab=${productType}`);
+    navigate(buildBackUrl(productType));
   };
 
   const handleExport = async () => {
@@ -533,7 +545,7 @@ export default function ProductForm() {
             <button className="btn btn-primary" onClick={handleCreateAnother}>
               + {t('client.products.create_another')}
             </button>
-            <button className="btn btn-ghost" onClick={() => navigate(`/client/products?tab=${productType}`)}>
+            <button className="btn btn-ghost" onClick={() => navigate(buildBackUrl(productType))}>
               {t('client.products.back_to_list')}
             </button>
           </div>
@@ -715,7 +727,7 @@ export default function ProductForm() {
         )}
 
         <div className="form-actions">
-          <button type="button" className="btn btn-ghost" onClick={() => navigate(`/client/products?tab=${productType}`)}>
+          <button type="button" className="btn btn-ghost" onClick={() => navigate(buildBackUrl(productType))}>
 
             {t('common.cancel')}
           </button>
