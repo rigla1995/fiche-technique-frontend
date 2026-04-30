@@ -128,7 +128,6 @@ export default function ProductList() {
   // Build actCtx query string for links
   const linkActCtx = isFranchiseCtx ? 'franchise' : isDistinctCtx ? 'distinct' : '';
   const actCtxQs = linkActCtx ? `&actCtx=${encodeURIComponent(linkActCtx)}` : '';
-  const actCtxParam = linkActCtx ? `?actCtx=${encodeURIComponent(linkActCtx)}` : '';
 
   // Franchise groups derived from franchise activities
   const franchiseGroups = Array.from(
@@ -701,6 +700,3 @@ export default function ProductList() {
     </div>
   );
 }
-
-// Suppress unused import warning for actCtxParam
-void (actCtxParam as unknown);
