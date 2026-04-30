@@ -225,7 +225,7 @@ export default function TransferPage() {
       </div>
 
       {/* Date + note */}
-      <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: '16px 20px', marginBottom: 20, display: 'flex', gap: 16, alignItems: 'flex-end', flexWrap: 'wrap' }}>
+      <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: '16px 20px', marginBottom: 20, display: 'flex', gap: 16, alignItems: 'flex-start', flexWrap: 'wrap' }}>
         <div>
           <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 4 }}>
             {t('client.labo.transfer_date')} *
@@ -248,7 +248,7 @@ export default function TransferPage() {
             type="text"
             className="input"
             value={refFacture}
-            onChange={(e) => setRefFacture(e.target.value)}
+            onChange={(e) => { setRefFacture(e.target.value); if (errorMsg) setErrorMsg(''); }}
             placeholder="N° bon de livraison…"
           />
         </div>
