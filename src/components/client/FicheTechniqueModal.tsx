@@ -19,6 +19,7 @@ interface StockCheckResult {
   complete: boolean;
   missing: { ingredientId: number; nom: string; unite: string; categorie: string | null; lastQty: number | null; lastPrice: number | null; lastDate: string | null }[];
   groups: { label: string; depth: number; ingredients: { ingredientId: number; nom: string; unite: string }[] }[];
+  _debug?: { productId: number; productName: string; allIngredients: { id: number; nom: string }[] };
 }
 
 interface Fournisseur {
@@ -574,6 +575,12 @@ export default function FicheTechniqueModal({ productId, productName, hasIngredi
               </div>
               <button onClick={() => setShowMissingPopup(false)} style={{ background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: 8, color: '#fff', fontWeight: 700, fontSize: '1rem', padding: '2px 8px', cursor: 'pointer', lineHeight: 1.4 }}>×</button>
             </div>
+            {/* Debug info */}
+            {stockCheckResult._debug && (
+              <div style={{ background: '#f0f9ff', borderBottom: '1px solid #bae6fd', padding: '8px 24px', fontSize: '0.75rem', color: '#0369a1' }}>
+                <strong>Produit vérifié :</strong> {stockCheckResult._debug.productName} (ID {stockCheckResult._debug.productId}) &mdash; {stockCheckResult._debug.allIngredients.length} ingrédient(s) trouvé(s) dans la BD : {stockCheckResult._debug.allIngredients.map(i => i.nom).join(', ')}
+              </div>
+            )}
             {/* Table */}
             <div style={{ padding: '16px 24px', maxHeight: '62vh', overflowY: 'auto', overflowX: 'hidden' }}>
               <table className="table" style={{ tableLayout: 'fixed', width: '100%' }}>
