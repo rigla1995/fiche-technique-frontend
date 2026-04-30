@@ -363,7 +363,8 @@ export default function ProductList() {
                     <tr>
                       <th>{t('common.name')}</th>
                       {showActivityCol && <th>Activité</th>}
-                      {showFranchiseActCol && <th>Franchise / Activité</th>}
+                      {showFranchiseActCol && <th>Franchise</th>}
+                      {showFranchiseActCol && <th>Activité</th>}
                       <th style={{ textAlign: 'center' }}>🧂 {t('nav.ingredients')}</th>
                       {isVendable && (
                         <th style={{ textAlign: 'center' }}>📦 P.Utilisables</th>
@@ -384,43 +385,44 @@ export default function ProductList() {
                             </span>
                           </td>
                         )}
-                        {showFranchiseActCol && (
-                          <td>
-                            {(() => {
-                              const act = franchiseActivities.find((a) => a.id === p.activiteId);
-                              const group = act
-                                ? (act.franchiseGroup || act.nom)
-                                : (p.franchiseGroup || filterFranchiseGroup || null);
-                              if (act) {
-                                return (
-                                  <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                                    {group && (
-                                      <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 600 }}>🏢 {group}</span>
-                                    )}
-                                    <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)', background: 'var(--surface)', padding: '2px 8px', borderRadius: 12, border: '1px solid var(--border)', width: 'fit-content' }}>
-                                      {act.nom}
-                                    </span>
-                                  </div>
-                                );
-                              }
-                              const acts = franchiseActivities.filter((a) => !group || (a.franchiseGroup || a.nom) === group);
-                              const cnt = acts.length;
-                              return (
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                                  {group && <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 600 }}>🏢 {group}</span>}
+                        {showFranchiseActCol && (() => {
+                          const act = franchiseActivities.find((a) => a.id === p.activiteId);
+                          const group = act
+                            ? (act.franchiseGroup || act.nom)
+                            : (p.franchiseGroup || filterFranchiseGroup || null);
+                          const acts = !act
+                            ? franchiseActivities.filter((a) => !group || (a.franchiseGroup || a.nom) === group)
+                            : [];
+                          return (
+                            <>
+                              {/* Franchise column */}
+                              <td>
+                                {group ? (
+                                  <span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-muted)' }}>🏢 {group}</span>
+                                ) : (
+                                  <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>—</span>
+                                )}
+                              </td>
+                              {/* Activité column */}
+                              <td>
+                                {act ? (
+                                  <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)', background: 'var(--surface)', padding: '2px 8px', borderRadius: 12, border: '1px solid var(--border)' }}>
+                                    {act.nom}
+                                  </span>
+                                ) : (
                                   <button
                                     className="count-badge"
                                     onClick={() => setFranchiseActsPopup({ productName: p.name, group: group || '', activities: acts })}
-                                    style={{ cursor: 'pointer', width: 'fit-content', fontSize: '0.78rem' }}
+                                    style={{ cursor: 'pointer', fontSize: '0.78rem' }}
                                     title="Voir les activités"
                                   >
-                                    {cnt} activité{cnt > 1 ? 's' : ''}
+                                    {acts.length} activité{acts.length > 1 ? 's' : ''}
                                   </button>
-                                </div>
-                              );
-                            })()}
-                          </td>
-                        )}
+                                )}
+                              </td>
+                            </>
+                          );
+                        })()}
                         <td style={{ textAlign: 'center' }}>
                           <button
                             className="count-badge"
