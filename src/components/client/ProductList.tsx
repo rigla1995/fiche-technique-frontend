@@ -534,7 +534,7 @@ export default function ProductList() {
                         <li key={a.id} style={{ padding: '8px 12px', background: 'var(--surface)', borderRadius: 8, border: '1px solid var(--border)' }}>
                           <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>{a.nom}</div>
                           {a.adresse && (
-                            <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: 2 }}>📍 {a.adresse}</div>
+                            <div style={{ fontSize: '0.8rem', color: 'var(--text)', marginTop: 3 }}>📍 {a.adresse}</div>
                           )}
                         </li>
                       ))}
