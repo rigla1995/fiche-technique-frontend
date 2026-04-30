@@ -426,7 +426,22 @@ export default function HistoriqueApproPage() {
       return cells.map(escCell).join(sep);
     });
 
-    const csv = '﻿' + [headers.map(escCell).join(sep), ...rows].join('\n');
+    // Total row — uses same accumulation as on-screen unitTotals (no intermediate rounding)
+    const totalQty = results.reduce((s, r) => s + (r.quantite ?? 0), 0);
+    const totalCost = results.reduce((s, r) => s + (r.quantite ?? 0) * (r.prixUnitaire ?? 0), 0);
+    const totalCells = [
+      'TOTAL',
+      '',
+      '',
+      totalQty.toFixed(3).replace('.', ','),
+      '',
+      '',
+      totalCost.toFixed(3).replace('.', ','),
+    ];
+    if (isEntreprise) totalCells.push('', '', '', '');
+    const totalRow = totalCells.map(escCell).join(sep);
+
+    const csv = '﻿' + [headers.map(escCell).join(sep), ...rows, totalRow].join('\n');
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');

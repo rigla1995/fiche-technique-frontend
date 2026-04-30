@@ -280,7 +280,10 @@ export default function LaboHistoriqueApproPage() {
       r.fournisseurNom ?? '',
       r.refFacture ?? '',
     ].map(escCell).join(sep));
-    const csv = '﻿' + [headers.map(escCell).join(sep), ...rows].join('\n');
+    const totalQty = results.reduce((s, r) => s + (r.quantite ?? 0), 0);
+    const totalCost = results.reduce((s, r) => s + (r.quantite ?? 0) * (r.prixUnitaire ?? 0), 0);
+    const totalRow = ['TOTAL', '', '', totalQty.toFixed(3).replace('.', ','), '', '', totalCost.toFixed(3).replace('.', ','), '', ''].map(escCell).join(sep);
+    const csv = '﻿' + [headers.map(escCell).join(sep), ...rows, totalRow].join('\n');
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
