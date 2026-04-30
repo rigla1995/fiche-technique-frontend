@@ -21,18 +21,30 @@ interface StockCheckResult {
   groups: { label: string; depth: number; ingredients: { ingredientId: number; nom: string; unite: string }[] }[];
 }
 
+interface Fournisseur {
+  id: number;
+  nom: string;
+}
+
 interface Props {
   productId: number;
   productName: string;
   hasIngredients: boolean;
   resolvedActId: number;
+  contextLabel: string;
+  activityName: string;
   onClose: () => void;
 }
 
-export default function FicheTechniqueModal({ productId, productName, hasIngredients, resolvedActId, onClose }: Props) {
+export default function FicheTechniqueModal({ productId, productName, hasIngredients, resolvedActId, contextLabel, activityName, onClose }: Props) {
   const { t } = useTranslation();
 
   const [mode, setMode] = useState<'stock' | 'manual' | null>(null);
+
+  // Fournisseurs (for missing stock form)
+  const [fournisseurs, setFournisseurs] = useState<Fournisseur[]>([]);
+  const [missingFournisseurId, setMissingFournisseurId] = useState('');
+  const [missingRefFacture, setMissingRefFacture] = useState('');
 
   // FP Stock
   const [stockCheckResult, setStockCheckResult] = useState<StockCheckResult | null>(null);
@@ -56,6 +68,14 @@ export default function FicheTechniqueModal({ productId, productName, hasIngredi
   const [costLoading, setCostLoading] = useState(false);
   const [costRefreshKey, setCostRefreshKey] = useState(0);
   const [generating, setGenerating] = useState(false);
+
+  useEffect(() => {
+    if (mode !== 'stock' || !resolvedActId) return;
+    api.get(`/api/entreprise/activites/${resolvedActId}/fournisseurs`)
+      .then(({ data }) => setFournisseurs(data as Fournisseur[]))
+      .catch(() => { /* no fournisseurs */ });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode]);
 
   useEffect(() => {
     if (mode !== 'stock') { setStockCheckResult(null); return; }
@@ -161,7 +181,13 @@ export default function FicheTechniqueModal({ productId, productName, hasIngredi
       for (const ing of stockCheckResult.missing) {
         const fill = missingFillData[ing.ingredientId];
         if (!fill || !fill.qty || !fill.price) continue;
-        const payload = { quantite: parseFloat(fill.qty), prixUnitaire: parseFloat(fill.price), dateAppro: fill.date || today };
+        const payload: Record<string, unknown> = {
+          quantite: parseFloat(fill.qty),
+          prixUnitaire: parseFloat(fill.price),
+          dateAppro: fill.date || today,
+        };
+        if (missingFournisseurId) payload.fournisseurId = parseInt(missingFournisseurId);
+        if (missingRefFacture.trim()) payload.refFacture = missingRefFacture.trim();
         if (resolvedActId) {
           await api.put(`/api/stock/entreprise/${resolvedActId}/${ing.ingredientId}`, payload);
         } else {
@@ -202,7 +228,8 @@ export default function FicheTechniqueModal({ productId, productName, hasIngredi
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', `fiche-technique-${productName}.xlsx`);
+      const dlName = activityName ? `FT-${activityName}-${productName}.xlsx` : `FT-${productName}.xlsx`;
+      link.setAttribute('download', dlName);
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -232,7 +259,14 @@ export default function FicheTechniqueModal({ productId, productName, hasIngredi
       <div className="modal-overlay" onClick={onClose}>
         <div className="modal" style={{ maxWidth: 640 }} onClick={(e) => e.stopPropagation()}>
           <div className="modal-header modal-header--primary">
-            <h2>📄 Fiche Technique — {productName}</h2>
+            <div>
+              <h2 style={{ margin: 0 }}>📄 Fiche Technique — {productName}</h2>
+              {contextLabel && (
+                <div style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.85)', marginTop: 4, fontWeight: 500 }}>
+                  {contextLabel}
+                </div>
+              )}
+            </div>
             <button className="modal-close" onClick={onClose}>×</button>
           </div>
 
@@ -444,6 +478,38 @@ export default function FicheTechniqueModal({ productId, productName, hasIngredi
               <button onClick={() => setShowMissingPopup(false)} style={{ background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: 8, color: '#fff', fontWeight: 700, fontSize: '1rem', padding: '2px 8px', cursor: 'pointer', lineHeight: 1.4 }}>×</button>
             </div>
             <div style={{ padding: '16px 24px', maxHeight: '60vh', overflowY: 'auto' }}>
+              {/* Fournisseur + Réf. Facture shared fields */}
+              {fournisseurs.length > 0 && (
+                <div style={{ display: 'flex', gap: 12, marginBottom: 16, flexWrap: 'wrap', alignItems: 'flex-start' }}>
+                  <div style={{ flex: 1, minWidth: 200 }}>
+                    <label style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 4 }}>
+                      🚚 Fournisseur
+                    </label>
+                    <select
+                      className="input"
+                      value={missingFournisseurId}
+                      onChange={(e) => setMissingFournisseurId(e.target.value)}
+                    >
+                      <option value="">— Aucun —</option>
+                      {fournisseurs.map((f) => (
+                        <option key={f.id} value={f.id}>{f.nom}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div style={{ flex: 1, minWidth: 160 }}>
+                    <label style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 4 }}>
+                      Réf. Facture / BL
+                    </label>
+                    <input
+                      type="text"
+                      className="input"
+                      value={missingRefFacture}
+                      onChange={(e) => setMissingRefFacture(e.target.value)}
+                      placeholder="N° bon de livraison…"
+                    />
+                  </div>
+                </div>
+              )}
               <table className="table">
                 <thead>
                   <tr>

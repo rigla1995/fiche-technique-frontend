@@ -45,7 +45,7 @@ export default function ProductList() {
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
 
-  const [ftPopup, setFtPopup] = useState<{ productId: number; productName: string; hasIngredients: boolean; resolvedActId: number } | null>(null);
+  const [ftPopup, setFtPopup] = useState<{ productId: number; productName: string; hasIngredients: boolean; resolvedActId: number; contextLabel: string; activityName: string } | null>(null);
 
   const [popup, setPopup] = useState<{ type: PopupType; productId: number; productName: string } | null>(null);
   const [detail, setDetail] = useState<ProductDetail | null>(null);
@@ -167,6 +167,24 @@ export default function ProductList() {
     if (p.activiteId) return p.activiteId;
     if (isDistinctCtx && selectedActivityId) return parseInt(selectedActivityId);
     return 0;
+  };
+
+  const getProductFtContext = (p: Product): { contextLabel: string; activityName: string } => {
+    if (!isEntreprise) return { contextLabel: '', activityName: '' };
+    if (isFranchiseCtx) {
+      const act = franchiseActivities.find((a) => a.id === p.activiteId);
+      const group = act ? (act.franchiseGroup || act.nom) : (p.franchiseGroup || null);
+      const parts: string[] = [];
+      if (group) parts.push(`Franchise : ${group}`);
+      if (act && act.nom !== group) parts.push(`Activité : ${act.nom}`);
+      return { contextLabel: parts.join(' / '), activityName: act?.nom || group || '' };
+    }
+    if (isDistinctCtx) {
+      const actId = p.activiteId || (selectedActivityId ? parseInt(selectedActivityId) : null);
+      const act = distinctActivities.find((a) => a.id === actId);
+      return act ? { contextLabel: `Activité : ${act.nom}`, activityName: act.nom } : { contextLabel: '', activityName: '' };
+    }
+    return { contextLabel: '', activityName: '' };
   };
 
   const labelStyle: React.CSSProperties = {
@@ -417,7 +435,7 @@ export default function ProductList() {
                               className="btn btn-ghost btn-sm"
                               style={{ fontWeight: 600, color: 'var(--primary)' }}
                               title="Générer la Fiche Technique"
-                              onClick={() => setFtPopup({ productId: p.id, productName: p.name, hasIngredients: !!(p.ingredientsCount && p.ingredientsCount > 0), resolvedActId: getProductResolvedActId(p) })}
+                              onClick={() => { const ctx = getProductFtContext(p); setFtPopup({ productId: p.id, productName: p.name, hasIngredients: !!(p.ingredientsCount && p.ingredientsCount > 0), resolvedActId: getProductResolvedActId(p), ...ctx }); }}
                             >
                               📄 FT
                             </button>
@@ -478,6 +496,8 @@ export default function ProductList() {
               productName={ftPopup.productName}
               hasIngredients={ftPopup.hasIngredients}
               resolvedActId={ftPopup.resolvedActId}
+              contextLabel={ftPopup.contextLabel}
+              activityName={ftPopup.activityName}
               onClose={() => setFtPopup(null)}
             />
           )}
