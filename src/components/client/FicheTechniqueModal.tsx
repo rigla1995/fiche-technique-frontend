@@ -56,6 +56,7 @@ export default function FicheTechniqueModal({ productId, productName, hasIngredi
   const [openFournisseurFor, setOpenFournisseurFor] = useState<number | null>(null);
 
   // FP Stock
+  const [stockActId, setStockActId] = useState<number | null>(null); // activity chosen for stock mode (franchise products)
   const [stockCheckResult, setStockCheckResult] = useState<StockCheckResult | null>(null);
   const [stockCheckLoading, setStockCheckLoading] = useState(false);
   const [showMissingPopup, setShowMissingPopup] = useState(false);
@@ -79,18 +80,23 @@ export default function FicheTechniqueModal({ productId, productName, hasIngredi
   const [generating, setGenerating] = useState(false);
 
   useEffect(() => {
-    if (mode !== 'stock' || !resolvedActId) return;
-    api.get(`/api/entreprise/activites/${resolvedActId}/fournisseurs`)
+    if (mode !== 'stock') return;
+    const effectiveActId = resolvedActId || stockActId;
+    if (!effectiveActId) return;
+    api.get(`/api/entreprise/activites/${effectiveActId}/fournisseurs`)
       .then(({ data }) => setFournisseurs(data as Fournisseur[]))
       .catch(() => { /* no fournisseurs */ });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode]);
+  }, [mode, stockActId]);
 
   useEffect(() => {
     if (mode !== 'stock') { setStockCheckResult(null); return; }
+    const effectiveActId = resolvedActId || stockActId;
+    // For franchise-wide products, wait until user has chosen an activity
+    if (!resolvedActId && !stockActId) { setStockCheckResult(null); return; }
     setStockCheckLoading(true);
     const params = new URLSearchParams();
-    if (resolvedActId) params.set('activiteId', String(resolvedActId));
+    if (effectiveActId) params.set('activiteId', String(effectiveActId));
     api.get(`/products/${productId}/stock-check?${params}`)
       .then(({ data }) => {
         const result = data as StockCheckResult;
@@ -109,7 +115,7 @@ export default function FicheTechniqueModal({ productId, productName, hasIngredi
       .catch(() => setStockCheckResult(null))
       .finally(() => setStockCheckLoading(false));
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode]);
+  }, [mode, stockActId]);
 
   useEffect(() => {
     if (mode !== 'manual') return;
@@ -185,6 +191,7 @@ export default function FicheTechniqueModal({ productId, productName, hasIngredi
   const saveMissingStock = async () => {
     if (!stockCheckResult) return;
     setSavingMissing(true);
+    const effectiveActId = resolvedActId || stockActId;
     const today = new Date().toISOString().slice(0, 10);
     try {
       for (const ing of stockCheckResult.missing) {
@@ -199,14 +206,14 @@ export default function FicheTechniqueModal({ productId, productName, hasIngredi
         const ref = missingRefFactureById[ing.ingredientId];
         if (fId) payload.fournisseurId = parseInt(fId);
         if (ref?.trim()) payload.refFacture = ref.trim();
-        if (resolvedActId) {
-          await api.put(`/api/stock/entreprise/${resolvedActId}/${ing.ingredientId}`, payload);
+        if (effectiveActId) {
+          await api.put(`/api/stock/entreprise/${effectiveActId}/${ing.ingredientId}`, payload);
         } else {
           await api.put(`/api/stock/client/${ing.ingredientId}`, payload);
         }
       }
       const params = new URLSearchParams();
-      if (resolvedActId) params.set('activiteId', String(resolvedActId));
+      if (effectiveActId) params.set('activiteId', String(effectiveActId));
       const { data } = await api.get(`/products/${productId}/stock-check?${params}`);
       const result = data as StockCheckResult;
       setStockCheckResult(result);
@@ -234,8 +241,9 @@ export default function FicheTechniqueModal({ productId, productName, hasIngredi
     setGenerating(true);
     try {
       const params = new URLSearchParams({ mode });
-      if (resolvedActId) params.set('activiteId', String(resolvedActId));
-      if (!resolvedActId && franchiseGroup) params.set('fg', franchiseGroup);
+      const effectiveActId = resolvedActId || (mode === 'stock' ? stockActId : null);
+      if (effectiveActId) params.set('activiteId', String(effectiveActId));
+      if (!effectiveActId && franchiseGroup) params.set('fg', franchiseGroup);
       const response = await api.get(`/products/${productId}/export?${params}`, { responseType: 'blob' });
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
@@ -328,7 +336,7 @@ export default function FicheTechniqueModal({ productId, productName, hasIngredi
             <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 20 }}>
 
               {/* FP Stock */}
-              <div style={chipBtn(mode === 'stock', !hasIngredients)} onClick={() => { if (hasIngredients) setMode('stock'); }}>
+              <div style={chipBtn(mode === 'stock', !hasIngredients)} onClick={() => { if (hasIngredients) { setMode('stock'); setStockActId(null); setStockCheckResult(null); } }}>
                 <div style={{ fontWeight: 700, marginBottom: 4, color: mode === 'stock' ? 'var(--primary)' : 'var(--text)' }}>
                   📦 FP Stock
                 </div>
@@ -336,27 +344,62 @@ export default function FicheTechniqueModal({ productId, productName, hasIngredi
                   {!hasIngredients ? 'Aucun ingrédient' : 'Utilise les derniers prix d\'appro'}
                 </div>
                 {mode === 'stock' && (
-                  <div style={{ marginTop: 4 }}>
-                    {stockCheckLoading ? (
-                      <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>{t('common.loading')}</span>
-                    ) : stockCheckResult?.complete ? (
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: '0.78rem', fontWeight: 600, color: '#16a34a', background: '#dcfce7', borderRadius: 20, padding: '3px 10px' }}>
-                        ✓ {t('client.stock.stock_complete')}
-                      </span>
-                    ) : stockCheckResult && !stockCheckResult.complete ? (
+                  <div style={{ marginTop: 4 }} onClick={(e) => e.stopPropagation()}>
+                    {/* Franchise-wide: show activity picker first */}
+                    {!resolvedActId && activities && activities.length > 0 && !stockActId ? (
                       <div>
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: '0.78rem', fontWeight: 600, color: '#b45309', background: '#fef3c7', borderRadius: 20, padding: '3px 10px', marginBottom: 6 }}>
-                          ⚠ {stockCheckResult.missing.length} ingrédient(s) manquant(s)
-                        </span>
-                        <button
-                          className="btn btn-sm"
-                          style={{ display: 'block', fontSize: '0.78rem', background: '#f59e0b', color: '#fff', borderColor: 'transparent', marginTop: 4 }}
-                          onClick={(e) => { e.stopPropagation(); setShowMissingPopup(true); }}
-                        >
-                          {t('client.stock.complete_stock')}
-                        </button>
+                        <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>
+                          Choisissez l'activité :
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                          {activities.map((act) => (
+                            <button key={act.id} className="btn btn-ghost btn-sm"
+                              style={{ textAlign: 'left', justifyContent: 'flex-start', fontSize: '0.82rem', padding: '5px 10px' }}
+                              onClick={() => setStockActId(act.id)}>
+                              🏪 {act.nom}
+                            </button>
+                          ))}
+                        </div>
                       </div>
-                    ) : null}
+                    ) : (
+                      <div>
+                        {/* Show selected activity for franchise products */}
+                        {!resolvedActId && stockActId && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+                            <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#1e40af' }}>
+                              🏪 {activities?.find((a) => a.id === stockActId)?.nom}
+                            </span>
+                            <button
+                              style={{ fontSize: '0.68rem', color: '#6b7280', background: 'none', border: '1px solid #d1d5db', borderRadius: 4, padding: '1px 6px', cursor: 'pointer' }}
+                              onClick={() => { setStockActId(null); setStockCheckResult(null); }}
+                            >
+                              changer
+                            </button>
+                          </div>
+                        )}
+                        {/* Stock check status */}
+                        {stockCheckLoading ? (
+                          <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>{t('common.loading')}</span>
+                        ) : stockCheckResult?.complete ? (
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: '0.78rem', fontWeight: 600, color: '#16a34a', background: '#dcfce7', borderRadius: 20, padding: '3px 10px' }}>
+                            ✓ {t('client.stock.stock_complete')}
+                          </span>
+                        ) : stockCheckResult && !stockCheckResult.complete ? (
+                          <div>
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: '0.78rem', fontWeight: 600, color: '#b45309', background: '#fef3c7', borderRadius: 20, padding: '3px 10px', marginBottom: 6 }}>
+                              ⚠ {stockCheckResult.missing.length} ingrédient(s) manquant(s)
+                            </span>
+                            <button
+                              className="btn btn-sm"
+                              style={{ display: 'block', fontSize: '0.78rem', background: '#f59e0b', color: '#fff', borderColor: 'transparent', marginTop: 4 }}
+                              onClick={() => setShowMissingPopup(true)}
+                            >
+                              {t('client.stock.complete_stock')}
+                            </button>
+                          </div>
+                        ) : null}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
