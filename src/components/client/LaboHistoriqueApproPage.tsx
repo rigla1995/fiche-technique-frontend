@@ -286,10 +286,10 @@ export default function LaboHistoriqueApproPage() {
     else if (filterCategorieId) params.set('categorieId', filterCategorieId);
     if (filterFournisseurId) params.set('fournisseurId', filterFournisseurId);
     if (filterRefFacture.trim()) params.set('refFacture', filterRefFacture.trim());
+    if (selectedIds.size > 0) params.set('selectedIds', [...selectedIds].join(','));
 
-    const { data } = await api.post(
+    const { data } = await api.get(
       `/api/labo/${laboId}/historique/export-excel?${params}`,
-      { selectedIds: [...selectedIds] },
       { responseType: 'blob' },
     );
     const url = URL.createObjectURL(new Blob([data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));

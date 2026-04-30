@@ -420,10 +420,10 @@ export default function HistoriqueApproPage() {
     if (endDate) params.set('endDate', endDate);
     if (isEntreprise && selectedFournisseurId) params.set('fournisseurId', selectedFournisseurId);
     if (isEntreprise && refFactureFilter.trim()) params.set('refFacture', refFactureFilter.trim());
+    if (selectedIds.size > 0) params.set('selectedIds', [...selectedIds].join(','));
 
-    const { data } = await api.post(
+    const { data } = await api.get(
       `/api/stock/historique/export-excel?${params}`,
-      { selectedIds: [...selectedIds] },
       { responseType: 'blob' },
     );
     const url = URL.createObjectURL(new Blob([data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
