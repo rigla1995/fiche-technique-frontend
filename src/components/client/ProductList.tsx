@@ -192,7 +192,8 @@ export default function ProductList() {
     if (!isEntreprise || !isFranchiseCtx) return [];
     if (p.activiteId) return [];
     const group = p.franchiseGroup || filterFranchiseGroup || null;
-    return franchiseActivities.filter((a) => !group || (a.franchiseGroup || a.nom) === group);
+    if (!group) return []; // no franchise group determined — don't show a picker with all activities
+    return franchiseActivities.filter((a) => (a.franchiseGroup || a.nom) === group);
   };
 
   const labelStyle: React.CSSProperties = {
