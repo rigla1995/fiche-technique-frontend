@@ -585,6 +585,7 @@ export default function ProductList() {
 
           {ftPopup && (
             <FicheTechniqueModal
+              key={ftPopup.productId}
               productId={ftPopup.productId}
               productName={ftPopup.productName}
               hasIngredients={ftPopup.hasIngredients}
