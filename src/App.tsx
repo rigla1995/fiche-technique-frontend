@@ -25,6 +25,7 @@ import GlobalCataloguePage from './components/client/GlobalCataloguePage';
 import FournisseursPage from './components/client/FournisseursPage';
 import FournisseursLaboPage from './components/client/FournisseursLaboPage';
 import LaboHistoriqueApproPage from './components/client/LaboHistoriqueApproPage';
+import ErrorPage from './components/common/ErrorPage';
 import './i18n';
 import './index.css';
 
@@ -83,7 +84,9 @@ export default function App() {
             <Route path="/client/fournisseurs-labo" element={<FournisseursLaboPage />} />
           </Route>
 
-          <Route path="*" element={<Navigate to="/" replace />} />
+          {/* Error pages */}
+          <Route path="/error/:code" element={<ErrorPage />} />
+          <Route path="*" element={<ErrorPage code={404} />} />
         </Routes>
       </AuthProvider>
     </BrowserRouter>

@@ -16,10 +16,20 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
+    const status = error.response?.status;
+    if (status === 401) {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       window.location.href = '/login';
+      return Promise.reject(error);
+    }
+    if (status === 403) {
+      window.location.href = '/error/403';
+      return Promise.reject(error);
+    }
+    if (status === 500 || status === 503) {
+      window.location.href = `/error/${status}`;
+      return Promise.reject(error);
     }
     return Promise.reject(error);
   }
