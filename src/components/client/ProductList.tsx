@@ -531,8 +531,11 @@ export default function ProductList() {
                   ) : (
                     <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 6 }}>
                       {franchiseActsPopup.activities.map((a) => (
-                        <li key={a.id} style={{ padding: '6px 10px', background: 'var(--surface)', borderRadius: 8, border: '1px solid var(--border)', fontSize: '0.9rem', fontWeight: 500 }}>
-                          {a.nom}
+                        <li key={a.id} style={{ padding: '8px 12px', background: 'var(--surface)', borderRadius: 8, border: '1px solid var(--border)' }}>
+                          <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>{a.nom}</div>
+                          {a.adresse && (
+                            <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: 2 }}>📍 {a.adresse}</div>
+                          )}
                         </li>
                       ))}
                     </ul>
