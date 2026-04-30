@@ -5,6 +5,7 @@ import api from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 import type { Product, Activite } from '../../types';
 import FicheTechniqueTab from './FicheTechniqueTab';
+import FicheTechniqueModal from './FicheTechniqueModal';
 
 interface ProductDetail {
   ingredients: { ingredientName: string; portion: number; unitName: string; unitPrice: number }[];
@@ -43,6 +44,8 @@ export default function ProductList() {
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
+
+  const [ftPopup, setFtPopup] = useState<{ productId: number; productName: string; hasIngredients: boolean; resolvedActId: number } | null>(null);
 
   const [popup, setPopup] = useState<{ type: PopupType; productId: number; productName: string } | null>(null);
   const [detail, setDetail] = useState<ProductDetail | null>(null);
@@ -157,7 +160,14 @@ export default function ProductList() {
     : `/client/products/new?type=utilisable${filterQs ? `&${filterQs}` : ''}`;
 
   const showActivityCol = isEntreprise && isDistinctCtx && !!selectedActivityId;
-  const showFranchiseActCol = isEntreprise && isFranchiseCtx && franchiseActivities.length > 1;
+  const showFranchiseActCol = isEntreprise && isFranchiseCtx;
+
+  const getProductResolvedActId = (p: Product): number => {
+    if (!isEntreprise) return 0;
+    if (p.activiteId) return p.activiteId;
+    if (isDistinctCtx && selectedActivityId) return parseInt(selectedActivityId);
+    return 0;
+  };
 
   const labelStyle: React.CSSProperties = {
     fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)',
@@ -334,7 +344,7 @@ export default function ProductList() {
                     <tr>
                       <th>{t('common.name')}</th>
                       {showActivityCol && <th>Activité</th>}
-                      {showFranchiseActCol && <th>Activité</th>}
+                      {showFranchiseActCol && <th>Franchise / Activité</th>}
                       <th style={{ textAlign: 'center' }}>🧂 {t('nav.ingredients')}</th>
                       {isVendable && (
                         <th style={{ textAlign: 'center' }}>📦 {t('client.products.usable_products_col')}</th>
@@ -357,11 +367,21 @@ export default function ProductList() {
                         )}
                         {showFranchiseActCol && (
                           <td>
-                            {p.activiteId ? (
-                              <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)', background: 'var(--surface)', padding: '2px 8px', borderRadius: 12, border: '1px solid var(--border)' }}>
-                                {franchiseActivities.find((a) => a.id === p.activiteId)?.nom ?? '—'}
-                              </span>
-                            ) : (() => {
+                            {(() => {
+                              const act = franchiseActivities.find((a) => a.id === p.activiteId);
+                              const group = act ? (act.franchiseGroup || act.nom) : (p.franchiseGroup || null);
+                              if (act) {
+                                return (
+                                  <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                                    {group && (
+                                      <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 600 }}>🏢 {group}</span>
+                                    )}
+                                    <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)', background: 'var(--surface)', padding: '2px 8px', borderRadius: 12, border: '1px solid var(--border)', width: 'fit-content' }}>
+                                      {act.nom}
+                                    </span>
+                                  </div>
+                                );
+                              }
                               const cnt = franchiseActivities.filter((a) => !filterFranchiseGroup || (a.franchiseGroup || a.nom) === filterFranchiseGroup).length;
                               return <span style={{ fontSize: '0.82rem', fontStyle: 'italic', color: 'var(--text-muted)' }}>{cnt} activité{cnt > 1 ? 's' : ''}</span>;
                             })()}
@@ -393,6 +413,14 @@ export default function ProductList() {
                         )}
                         <td style={{ textAlign: 'right' }}>
                           <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
+                            <button
+                              className="btn btn-ghost btn-sm"
+                              style={{ fontWeight: 600, color: 'var(--primary)' }}
+                              title="Générer la Fiche Technique"
+                              onClick={() => setFtPopup({ productId: p.id, productName: p.name, hasIngredients: !!(p.ingredientsCount && p.ingredientsCount > 0), resolvedActId: getProductResolvedActId(p) })}
+                            >
+                              📄 FT
+                            </button>
                             <Link to={`/client/products/${p.id}/edit${filterQs ? `?${filterQs}` : ''}`} className="btn btn-ghost btn-sm" style={{ fontWeight: 600 }}>✏️ {t('common.edit')}</Link>
                             <button className="btn btn-danger btn-sm" onClick={() => handleDelete(p.id)} style={{ fontWeight: 600 }}>
                               🗑 {t('common.delete')}
@@ -442,6 +470,16 @@ export default function ProductList() {
                 </div>
               )}
             </>
+          )}
+
+          {ftPopup && (
+            <FicheTechniqueModal
+              productId={ftPopup.productId}
+              productName={ftPopup.productName}
+              hasIngredients={ftPopup.hasIngredients}
+              resolvedActId={ftPopup.resolvedActId}
+              onClose={() => setFtPopup(null)}
+            />
           )}
 
           {popup && (
