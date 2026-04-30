@@ -272,28 +272,49 @@ export default function FicheTechniqueModal({ productId, productName, hasIngredi
 
           <div className="modal-body" style={{ padding: '20px 24px' }}>
             {/* Context info */}
-            {contextLabel && (
-              <div style={{ marginBottom: 18, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, padding: '12px 16px' }}>
-                <div style={{ fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 8 }}>
-                  Contexte
-                </div>
-                <div style={{ fontWeight: 600, fontSize: '0.9rem', color: 'var(--text)', marginBottom: activities && activities.length > 0 ? 10 : 0 }}>
-                  {contextLabel}
-                </div>
-                {activities && activities.length > 0 && (
-                  <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 5 }}>
-                    {activities.map((a) => (
-                      <li key={a.id} style={{ padding: '6px 10px', background: 'var(--bg)', borderRadius: 7, border: '1px solid var(--border)', fontSize: '0.85rem' }}>
-                        <span style={{ fontWeight: 600 }}>{a.nom}</span>
-                        {a.adresse && (
-                          <span style={{ color: 'var(--text-muted)', marginLeft: 8, fontSize: '0.8rem' }}>📍 {a.adresse}</span>
-                        )}
-                      </li>
+            {contextLabel && (() => {
+              const parts = contextLabel.split(' / ').map((s) => {
+                const idx = s.indexOf(' : ');
+                return idx !== -1 ? { key: s.slice(0, idx), value: s.slice(idx + 3) } : { key: s, value: '' };
+              });
+              const iconFor = (key: string) => key === 'Franchise' ? '🏢' : '🏪';
+              const hasActs = activities && activities.length > 0;
+              return (
+                <div style={{ marginBottom: 18, borderRadius: 12, overflow: 'hidden', border: '1px solid #dbeafe', background: 'linear-gradient(135deg, #eff6ff 0%, #f8faff 100%)' }}>
+                  <div style={{ padding: '12px 16px', display: 'flex', gap: 20, flexWrap: 'wrap', alignItems: 'center', borderBottom: hasActs ? '1px solid #dbeafe' : 'none' }}>
+                    {parts.map(({ key, value }) => (
+                      <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <div style={{ width: 34, height: 34, borderRadius: 9, background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem', flexShrink: 0 }}>
+                          {iconFor(key)}
+                        </div>
+                        <div>
+                          <div style={{ fontSize: '0.62rem', fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase', color: '#6b7280', marginBottom: 1 }}>{key}</div>
+                          <div style={{ fontWeight: 700, fontSize: '0.92rem', color: '#1e40af' }}>{value}</div>
+                        </div>
+                      </div>
                     ))}
-                  </ul>
-                )}
-              </div>
-            )}
+                  </div>
+                  {hasActs && (
+                    <div style={{ padding: '10px 16px 12px' }}>
+                      <div style={{ fontSize: '0.62rem', fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase', color: '#6b7280', marginBottom: 7 }}>
+                        Activités ({activities!.length})
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                        {activities!.map((a) => (
+                          <div key={a.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 10px', background: '#fff', borderRadius: 8, border: '1px solid #dbeafe' }}>
+                            <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#3b82f6', flexShrink: 0 }} />
+                            <span style={{ fontWeight: 600, fontSize: '0.85rem', color: '#1e3a8a' }}>{a.nom}</span>
+                            {a.adresse && (
+                              <span style={{ color: '#6b7280', fontSize: '0.78rem', marginLeft: 'auto' }}>📍 {a.adresse}</span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
 
             {/* Mode selection */}
             <div style={{ fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 10 }}>
