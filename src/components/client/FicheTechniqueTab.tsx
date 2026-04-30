@@ -188,7 +188,7 @@ export default function FicheTechniqueTab({ isEntreprise, franchiseActivities, d
     if (!selectedProductId || !mode) { setRealtimeCost(null); return; }
     setCostLoading(true);
     const params = new URLSearchParams({ mode });
-    if (mode === 'manual' && resolvedActId) params.set('activiteId', String(resolvedActId));
+    if (resolvedActId) params.set('activiteId', String(resolvedActId));
     api.get(`/products/${selectedProductId}/cout?${params}`)
       .then(({ data }) => setRealtimeCost((data as { totalCost: number }).totalCost ?? null))
       .catch(() => setRealtimeCost(null))

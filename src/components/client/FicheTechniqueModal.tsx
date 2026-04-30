@@ -144,7 +144,7 @@ export default function FicheTechniqueModal({ productId, productName, hasIngredi
     if (!mode) { setRealtimeCost(null); return; }
     setCostLoading(true);
     const params = new URLSearchParams({ mode });
-    if (mode === 'manual' && resolvedActId) params.set('activiteId', String(resolvedActId));
+    if (resolvedActId) params.set('activiteId', String(resolvedActId));
     api.get(`/products/${productId}/cout?${params}`)
       .then(({ data }) => setRealtimeCost((data as { totalCost: number }).totalCost ?? null))
       .catch(() => setRealtimeCost(null))
