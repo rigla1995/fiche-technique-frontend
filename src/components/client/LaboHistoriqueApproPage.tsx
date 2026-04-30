@@ -209,6 +209,7 @@ export default function LaboHistoriqueApproPage() {
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
   const [page, setPage] = useState(1);
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
 
   // Filters
   const [startDate, setStartDate] = useState(yearStart);
@@ -220,6 +221,16 @@ export default function LaboHistoriqueApproPage() {
 
   const [editEntry, setEditEntry] = useState<HistEntry | null>(null);
   const [deleteEntry, setDeleteEntry] = useState<HistEntry | null>(null);
+
+  const toggleSelect = (id: number) => setSelectedIds((prev) => {
+    const next = new Set(prev);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    return next;
+  });
+  const toggleSelectAll = () => {
+    if (selectedIds.size === results.length) setSelectedIds(new Set());
+    else setSelectedIds(new Set(results.map((r) => r.id)));
+  };
 
   useEffect(() => {
     if (!laboId) return;
@@ -249,6 +260,7 @@ export default function LaboHistoriqueApproPage() {
     setLoading(true);
     setSearched(true);
     setPage(1);
+    setSelectedIds(new Set());
     try {
       const params = new URLSearchParams();
       if (startDate) params.set('startDate', startDate);
@@ -265,30 +277,25 @@ export default function LaboHistoriqueApproPage() {
     setLoading(false);
   }, [laboId, startDate, endDate, filterIngredientId, filterCategorieId, filterFournisseurId, filterRefFacture]);
 
-  const exportCsv = () => {
-    const sep = ';';
-    const escCell = (v: string) => `"${v.replace(/"/g, '""')}"`;
-    const headers = ['Date', 'Ingrédient', 'Catégorie', 'Quantité', 'Unité', 'Prix/DT', 'Coût total DT', 'Fournisseur', 'Réf. Facture'];
-    const rows = results.map((r) => [
-      fmtDate(r.dateAppro),
-      r.ingredientNom,
-      r.categorieNom ?? '',
-      r.quantite !== null ? String(r.quantite).replace('.', ',') : '',
-      r.uniteNom,
-      r.prixUnitaire !== null ? String(r.prixUnitaire).replace('.', ',') : '',
-      ((r.quantite ?? 0) * (r.prixUnitaire ?? 0)).toFixed(3).replace('.', ','),
-      r.fournisseurNom ?? '',
-      r.refFacture ?? '',
-    ].map(escCell).join(sep));
-    const totalQty = results.reduce((s, r) => s + (r.quantite ?? 0), 0);
-    const totalCost = results.reduce((s, r) => s + (r.quantite ?? 0) * (r.prixUnitaire ?? 0), 0);
-    const totalRow = ['TOTAL', '', '', totalQty.toFixed(3).replace('.', ','), '', '', totalCost.toFixed(3).replace('.', ','), '', ''].map(escCell).join(sep);
-    const csv = '﻿' + [headers.map(escCell).join(sep), ...rows, totalRow].join('\n');
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
+  const exportExcel = async () => {
+    if (!laboId) return;
+    const params = new URLSearchParams();
+    if (startDate) params.set('startDate', startDate);
+    if (endDate) params.set('endDate', endDate);
+    if (filterIngredientId) params.set('ingredientId', filterIngredientId);
+    else if (filterCategorieId) params.set('categorieId', filterCategorieId);
+    if (filterFournisseurId) params.set('fournisseurId', filterFournisseurId);
+    if (filterRefFacture.trim()) params.set('refFacture', filterRefFacture.trim());
+
+    const { data } = await api.post(
+      `/api/labo/${laboId}/historique/export-excel?${params}`,
+      { selectedIds: [...selectedIds] },
+      { responseType: 'blob' },
+    );
+    const url = URL.createObjectURL(new Blob([data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
     const a = document.createElement('a');
     a.href = url;
-    a.download = `historique-labo-${labo?.nom ?? 'appro'}-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.download = `historique-labo-${labo?.nom ?? 'appro'}-${new Date().toISOString().slice(0, 10)}.xlsx`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -413,7 +420,7 @@ export default function LaboHistoriqueApproPage() {
             {loading ? 'Chargement…' : '🔍 Rechercher'}
           </button>
           <button
-            onClick={exportCsv}
+            onClick={exportExcel}
             disabled={results.length === 0}
             style={{
               display: 'flex', alignItems: 'center', gap: 8,
@@ -429,7 +436,7 @@ export default function LaboHistoriqueApproPage() {
             }}
           >
             <span style={{ fontSize: '1rem' }}>📊</span>
-            Générer Hist. Appro
+            {selectedIds.size > 0 ? `Générer (${selectedIds.size} sél.)` : 'Générer Hist. Appro'}
           </button>
         </div>
       </div>
@@ -465,6 +472,7 @@ export default function LaboHistoriqueApproPage() {
           <div className="card th-teal" style={{ overflowX: 'hidden' }}>
             <table className="table" style={{ tableLayout: 'fixed', width: '100%' }}>
               <colgroup>
+                <col style={{ width: '36px' }} />
                 <col style={{ width: '110px' }} />
                 <col />
                 <col style={{ width: '100px' }} />
@@ -474,6 +482,15 @@ export default function LaboHistoriqueApproPage() {
               </colgroup>
               <thead>
                 <tr>
+                  <th style={{ textAlign: 'center', padding: '0 4px' }}>
+                    <input
+                      type="checkbox"
+                      checked={results.length > 0 && selectedIds.size === results.length}
+                      onChange={toggleSelectAll}
+                      title="Tout sélectionner"
+                      style={{ cursor: 'pointer', accentColor: 'var(--primary)' }}
+                    />
+                  </th>
                   <th>Date</th>
                   <th>Ingrédient</th>
                   <th style={{ textAlign: 'right' }}>Quantité</th>
@@ -483,8 +500,18 @@ export default function LaboHistoriqueApproPage() {
                 </tr>
               </thead>
               <tbody>
-                {pagedResults.map((r) => (
-                  <tr key={r.id}>
+                {pagedResults.map((r) => {
+                  const isSelected = selectedIds.has(r.id);
+                  return (
+                  <tr key={r.id} style={isSelected ? { background: 'rgba(234,88,12,0.08)', outline: '1px solid rgba(234,88,12,0.3)' } : undefined}>
+                    <td style={{ textAlign: 'center', padding: '0 4px' }}>
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => toggleSelect(r.id)}
+                        style={{ cursor: 'pointer', accentColor: '#ea580c' }}
+                      />
+                    </td>
                     <td>
                       <div style={{ fontWeight: 600, color: 'var(--primary)', fontSize: '0.85rem' }}>{fmtDate(r.dateAppro)}</div>
                     </td>
@@ -518,12 +545,20 @@ export default function LaboHistoriqueApproPage() {
                       >🗑️</button>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
 
             <div style={{ padding: '8px 14px', fontSize: '0.78rem', color: 'var(--text-muted)', borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span>{results.length} enregistrement{results.length > 1 ? 's' : ''}</span>
+              <span>
+                {results.length} enregistrement{results.length > 1 ? 's' : ''}
+                {selectedIds.size > 0 && (
+                  <span style={{ marginLeft: 8, color: '#ea580c', fontWeight: 700 }}>
+                    · {selectedIds.size} sélectionné{selectedIds.size > 1 ? 's' : ''}
+                  </span>
+                )}
+              </span>
               {totalPages > 1 && (
                 <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                   <button className="btn btn-ghost btn-sm" disabled={page === 1}

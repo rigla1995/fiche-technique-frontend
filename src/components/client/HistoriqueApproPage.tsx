@@ -281,6 +281,17 @@ export default function HistoriqueApproPage() {
   const [editEntry, setEditEntry] = useState<HistoriqueApproEntry | null>(null);
   const [deleteEntry, setDeleteEntry] = useState<HistoriqueApproEntry | null>(null);
   const [unitPopup, setUnitPopup] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+
+  const toggleSelect = (id: number) => setSelectedIds((prev) => {
+    const next = new Set(prev);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    return next;
+  });
+  const toggleSelectAll = () => {
+    if (selectedIds.size === results.length) setSelectedIds(new Set());
+    else setSelectedIds(new Set(results.map((r) => r.id)));
+  };
 
   const totalPages = Math.max(1, Math.ceil(results.length / PAGE_SIZE));
   const pagedResults = results.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
@@ -352,6 +363,7 @@ export default function HistoriqueApproPage() {
     setLoading(true);
     setSearched(true);
     setPage(1);
+    setSelectedIds(new Set());
     try {
       const params = new URLSearchParams();
       if (isEntreprise) {
@@ -395,58 +407,29 @@ export default function HistoriqueApproPage() {
     setResults((prev) => prev.filter((r) => r.id !== id));
   };
 
-  const exportCsv = () => {
-    const sep = ';';
-    const actMap: Record<number, string> = {};
-    [...franchiseActivities, ...distinctActivities].forEach((a) => { actMap[a.id] = a.nom; });
+  const exportExcel = async () => {
+    const params = new URLSearchParams();
+    if (isEntreprise) {
+      if (selectedActiviteId) params.set('activiteId', selectedActiviteId);
+      else if (selectedFranchiseGroup && entType === 'franchise') params.set('franchiseGroup', selectedFranchiseGroup);
+      else params.set('entType', entType);
+    }
+    if (selectedIngredientId) params.set('ingredientId', selectedIngredientId);
+    else if (selectedCategoryId) params.set('categorieId', selectedCategoryId);
+    if (startDate) params.set('startDate', startDate);
+    if (endDate) params.set('endDate', endDate);
+    if (isEntreprise && selectedFournisseurId) params.set('fournisseurId', selectedFournisseurId);
+    if (isEntreprise && refFactureFilter.trim()) params.set('refFacture', refFactureFilter.trim());
 
-    const headers = ['Date', 'Ingrédient', 'Catégorie', 'Quantité', 'Unité', 'Prix/DT', 'Coût total DT'];
-    if (isEntreprise) headers.push('Activité', 'Fournisseur', 'Réf. Facture', 'Type');
-
-    const escCell = (v: string) => `"${v.replace(/"/g, '""')}"`;
-
-    const rows = results.map((r) => {
-      const cells = [
-        fmtDate(r.dateAppro),
-        r.ingredientNom,
-        r.categorieNom ?? '',
-        r.quantite !== null ? String(r.quantite).replace('.', ',') : '',
-        r.uniteNom,
-        r.prixUnitaire !== null ? String(r.prixUnitaire).replace('.', ',') : '',
-        ((r.quantite ?? 0) * (r.prixUnitaire ?? 0)).toFixed(3).replace('.', ','),
-      ];
-      if (isEntreprise) {
-        cells.push(
-          r.activiteId ? (actMap[r.activiteId] ?? '') : '',
-          r.fournisseurNom ?? '',
-          r.refFacture ?? '',
-          r.typeAppro ?? '',
-        );
-      }
-      return cells.map(escCell).join(sep);
-    });
-
-    // Total row — uses same accumulation as on-screen unitTotals (no intermediate rounding)
-    const totalQty = results.reduce((s, r) => s + (r.quantite ?? 0), 0);
-    const totalCost = results.reduce((s, r) => s + (r.quantite ?? 0) * (r.prixUnitaire ?? 0), 0);
-    const totalCells = [
-      'TOTAL',
-      '',
-      '',
-      totalQty.toFixed(3).replace('.', ','),
-      '',
-      '',
-      totalCost.toFixed(3).replace('.', ','),
-    ];
-    if (isEntreprise) totalCells.push('', '', '', '');
-    const totalRow = totalCells.map(escCell).join(sep);
-
-    const csv = '﻿' + [headers.map(escCell).join(sep), ...rows, totalRow].join('\n');
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
+    const { data } = await api.post(
+      `/api/stock/historique/export-excel?${params}`,
+      { selectedIds: [...selectedIds] },
+      { responseType: 'blob' },
+    );
+    const url = URL.createObjectURL(new Blob([data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
     const a = document.createElement('a');
     a.href = url;
-    a.download = `historique-appro-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.download = `historique-appro-${new Date().toISOString().slice(0, 10)}.xlsx`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -674,7 +657,7 @@ export default function HistoriqueApproPage() {
             {loading ? t('common.loading') : '🔍 Rechercher'}
           </button>
           <button
-            onClick={exportCsv}
+            onClick={exportExcel}
             disabled={results.length === 0}
             style={{
               display: 'flex', alignItems: 'center', gap: 8,
@@ -690,7 +673,7 @@ export default function HistoriqueApproPage() {
             }}
           >
             <span style={{ fontSize: '1rem' }}>📊</span>
-            Générer Hist. Appro
+            {selectedIds.size > 0 ? `Générer (${selectedIds.size} sél.)` : 'Générer Hist. Appro'}
           </button>
         </div>
       </div>
@@ -735,6 +718,7 @@ export default function HistoriqueApproPage() {
           <div className="card th-teal" style={{ overflowX: 'hidden' }}>
             <table className="table" style={{ tableLayout: 'fixed', width: '100%' }}>
               <colgroup>
+                <col style={{ width: '36px' }} />
                 <col style={{ width: isEntreprise ? '115px' : '105px' }} />
                 <col />
                 <col style={{ width: '100px' }} />
@@ -744,6 +728,15 @@ export default function HistoriqueApproPage() {
               </colgroup>
               <thead>
                 <tr>
+                  <th style={{ textAlign: 'center', padding: '0 4px' }}>
+                    <input
+                      type="checkbox"
+                      checked={results.length > 0 && selectedIds.size === results.length}
+                      onChange={toggleSelectAll}
+                      title="Tout sélectionner"
+                      style={{ cursor: 'pointer', accentColor: 'var(--primary)' }}
+                    />
+                  </th>
                   <th>{t('client.historique_appro.col_date')}</th>
                   <th>{t('client.historique_appro.col_ingredient')}</th>
                   <th style={{ textAlign: 'right' }}>{t('client.historique_appro.col_qty')}</th>
@@ -753,8 +746,18 @@ export default function HistoriqueApproPage() {
                 </tr>
               </thead>
               <tbody>
-                {pagedResults.map((r) => (
-                  <tr key={r.id}>
+                {pagedResults.map((r) => {
+                  const isSelected = selectedIds.has(r.id);
+                  return (
+                  <tr key={r.id} style={isSelected ? { background: 'rgba(234,88,12,0.08)', outline: '1px solid rgba(234,88,12,0.3)' } : undefined}>
+                    <td style={{ textAlign: 'center', padding: '0 4px' }}>
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => toggleSelect(r.id)}
+                        style={{ cursor: 'pointer', accentColor: '#ea580c' }}
+                      />
+                    </td>
                     <td>
                       <div style={{ fontWeight: 600, color: 'var(--primary)', fontSize: '0.85rem' }}>{fmtDate(r.dateAppro)}</div>
                       {isEntreprise && (
@@ -795,12 +798,20 @@ export default function HistoriqueApproPage() {
                       >🗑️</button>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
 
             <div style={{ padding: '8px 14px', fontSize: '0.78rem', color: 'var(--text-muted)', borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span>{results.length} enregistrement{results.length > 1 ? 's' : ''}</span>
+              <span>
+                {results.length} enregistrement{results.length > 1 ? 's' : ''}
+                {selectedIds.size > 0 && (
+                  <span style={{ marginLeft: 8, color: '#ea580c', fontWeight: 700 }}>
+                    · {selectedIds.size} sélectionné{selectedIds.size > 1 ? 's' : ''}
+                  </span>
+                )}
+              </span>
               {totalPages > 1 && (
                 <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                   <button className="btn btn-ghost btn-sm" disabled={page === 1}
