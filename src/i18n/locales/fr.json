@@ -329,7 +329,7 @@
       "missing_stock_title": "Ingrédients manquants",
       "missing_stock_msg": "Ces ingrédients n'ont pas de stock saisi pour l'année en cours (quantité et prix > 0). Complétez-les pour générer la Fiche Technique.",
       "complete_stock": "Compléter le stock",
-      "stock_complete": "Stock complet pour cette année ✓"
+      "stock_complete": "Approvisionnement trouvé ✓"
     },
     "historique_appro": {
       "title": "Historique Approvisionnement",
