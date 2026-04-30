@@ -26,6 +26,12 @@ interface Fournisseur {
   nom: string;
 }
 
+interface ActivityInfo {
+  id: number;
+  nom: string;
+  adresse?: string;
+}
+
 interface Props {
   productId: number;
   productName: string;
@@ -33,10 +39,11 @@ interface Props {
   resolvedActId: number;
   contextLabel: string;
   activityName: string;
+  activities?: ActivityInfo[];
   onClose: () => void;
 }
 
-export default function FicheTechniqueModal({ productId, productName, hasIngredients, resolvedActId, contextLabel, activityName, onClose }: Props) {
+export default function FicheTechniqueModal({ productId, productName, hasIngredients, resolvedActId, contextLabel, activityName, activities, onClose }: Props) {
   const { t } = useTranslation();
 
   const [mode, setMode] = useState<'stock' | 'manual' | null>(null);
@@ -259,18 +266,35 @@ export default function FicheTechniqueModal({ productId, productName, hasIngredi
       <div className="modal-overlay" onClick={onClose}>
         <div className="modal" style={{ maxWidth: 640 }} onClick={(e) => e.stopPropagation()}>
           <div className="modal-header modal-header--primary">
-            <div>
-              <h2 style={{ margin: 0 }}>📄 Fiche Technique — {productName}</h2>
-              {contextLabel && (
-                <div style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.85)', marginTop: 4, fontWeight: 500 }}>
-                  {contextLabel}
-                </div>
-              )}
-            </div>
+            <h2 style={{ margin: 0 }}>📄 Fiche Technique — {productName}</h2>
             <button className="modal-close" onClick={onClose}>×</button>
           </div>
 
           <div className="modal-body" style={{ padding: '20px 24px' }}>
+            {/* Context info */}
+            {contextLabel && (
+              <div style={{ marginBottom: 18, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, padding: '12px 16px' }}>
+                <div style={{ fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 8 }}>
+                  Contexte
+                </div>
+                <div style={{ fontWeight: 600, fontSize: '0.9rem', color: 'var(--text)', marginBottom: activities && activities.length > 0 ? 10 : 0 }}>
+                  {contextLabel}
+                </div>
+                {activities && activities.length > 0 && (
+                  <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 5 }}>
+                    {activities.map((a) => (
+                      <li key={a.id} style={{ padding: '6px 10px', background: 'var(--bg)', borderRadius: 7, border: '1px solid var(--border)', fontSize: '0.85rem' }}>
+                        <span style={{ fontWeight: 600 }}>{a.nom}</span>
+                        {a.adresse && (
+                          <span style={{ color: 'var(--text-muted)', marginLeft: 8, fontSize: '0.8rem' }}>📍 {a.adresse}</span>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
+
             {/* Mode selection */}
             <div style={{ fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 10 }}>
               {t('client.fiche_technique.choose_mode')}

@@ -45,7 +45,7 @@ export default function ProductList() {
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
 
-  const [ftPopup, setFtPopup] = useState<{ productId: number; productName: string; hasIngredients: boolean; resolvedActId: number; contextLabel: string; activityName: string } | null>(null);
+  const [ftPopup, setFtPopup] = useState<{ productId: number; productName: string; hasIngredients: boolean; resolvedActId: number; contextLabel: string; activityName: string; activities: Activite[] } | null>(null);
   const [franchiseActsPopup, setFranchiseActsPopup] = useState<{ productName: string; group: string; activities: Activite[] } | null>(null);
 
   const [popup, setPopup] = useState<{ type: PopupType; productId: number; productName: string } | null>(null);
@@ -186,6 +186,13 @@ export default function ProductList() {
       return act ? { contextLabel: `Activité : ${act.nom}`, activityName: act.nom } : { contextLabel: '', activityName: '' };
     }
     return { contextLabel: '', activityName: '' };
+  };
+
+  const getProductFtActivities = (p: Product): Activite[] => {
+    if (!isEntreprise || !isFranchiseCtx) return [];
+    if (p.activiteId) return [];
+    const group = p.franchiseGroup || filterFranchiseGroup || null;
+    return franchiseActivities.filter((a) => !group || (a.franchiseGroup || a.nom) === group);
   };
 
   const labelStyle: React.CSSProperties = {
@@ -453,7 +460,7 @@ export default function ProductList() {
                               className="btn btn-ghost btn-sm"
                               style={{ width: 32, height: 32, padding: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', borderRadius: 7 }}
                               title="Générer la Fiche Technique"
-                              onClick={() => { const ctx = getProductFtContext(p); setFtPopup({ productId: p.id, productName: p.name, hasIngredients: !!(p.ingredientsCount && p.ingredientsCount > 0), resolvedActId: getProductResolvedActId(p), ...ctx }); }}
+                              onClick={() => { const ctx = getProductFtContext(p); setFtPopup({ productId: p.id, productName: p.name, hasIngredients: !!(p.ingredientsCount && p.ingredientsCount > 0), resolvedActId: getProductResolvedActId(p), activities: getProductFtActivities(p), ...ctx }); }}
                             >
                               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                                 <rect width="24" height="24" rx="3" fill="#217346"/>
@@ -576,6 +583,7 @@ export default function ProductList() {
               resolvedActId={ftPopup.resolvedActId}
               contextLabel={ftPopup.contextLabel}
               activityName={ftPopup.activityName}
+              activities={ftPopup.activities}
               onClose={() => setFtPopup(null)}
             />
           )}
