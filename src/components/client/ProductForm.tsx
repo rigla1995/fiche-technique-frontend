@@ -550,8 +550,8 @@ export default function ProductForm() {
           <div style={{ fontWeight: 700, fontSize: '1rem', color: '#92400e', marginBottom: 8 }}>Aucun ingrédient disponible</div>
           <div style={{ fontSize: '0.88rem', color: '#78350f', lineHeight: 1.5 }}>
             {isFranchiseCtx
-              ? 'Aucun ingrédient n'est encore sélectionné pour cette franchise. Rendez-vous dans le Catalogue Ingrédients pour les sélectionner.'
-              : 'Aucun ingrédient n'est encore sélectionné pour cette activité. Rendez-vous dans le Catalogue Ingrédients pour les sélectionner.'}
+              ? `Aucun ingrédient n'est encore sélectionné pour cette franchise. Rendez-vous dans le Catalogue Ingrédients pour les sélectionner.`
+              : `Aucun ingrédient n'est encore sélectionné pour cette activité. Rendez-vous dans le Catalogue Ingrédients pour les sélectionner.`}
           </div>
           <button className="btn btn-ghost" style={{ marginTop: 20 }} onClick={() => navigate(buildBackUrl(productType))}>
             ← Retour à la liste
