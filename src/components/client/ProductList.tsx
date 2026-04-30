@@ -46,6 +46,7 @@ export default function ProductList() {
   const [page, setPage] = useState(1);
 
   const [ftPopup, setFtPopup] = useState<{ productId: number; productName: string; hasIngredients: boolean; resolvedActId: number; contextLabel: string; activityName: string } | null>(null);
+  const [franchiseActsPopup, setFranchiseActsPopup] = useState<{ productName: string; group: string; activities: Activite[] } | null>(null);
 
   const [popup, setPopup] = useState<{ type: PopupType; productId: number; productName: string } | null>(null);
   const [detail, setDetail] = useState<ProductDetail | null>(null);
@@ -365,7 +366,7 @@ export default function ProductList() {
                       {showFranchiseActCol && <th>Franchise / Activité</th>}
                       <th style={{ textAlign: 'center' }}>🧂 {t('nav.ingredients')}</th>
                       {isVendable && (
-                        <th style={{ textAlign: 'center' }}>📦 {t('client.products.usable_products_col')}</th>
+                        <th style={{ textAlign: 'center' }}>📦 P.Utilisables</th>
                       )}
                       <th style={{ textAlign: 'right' }}>{t('common.actions')}</th>
                     </tr>
@@ -400,8 +401,22 @@ export default function ProductList() {
                                   </div>
                                 );
                               }
-                              const cnt = franchiseActivities.filter((a) => !filterFranchiseGroup || (a.franchiseGroup || a.nom) === filterFranchiseGroup).length;
-                              return <span style={{ fontSize: '0.82rem', fontStyle: 'italic', color: 'var(--text-muted)' }}>{cnt} activité{cnt > 1 ? 's' : ''}</span>;
+                              const group = p.franchiseGroup || filterFranchiseGroup || null;
+                              const acts = franchiseActivities.filter((a) => !group || (a.franchiseGroup || a.nom) === group);
+                              const cnt = acts.length;
+                              return (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                                  {group && <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 600 }}>🏢 {group}</span>}
+                                  <button
+                                    className="count-badge"
+                                    onClick={() => setFranchiseActsPopup({ productName: p.name, group: group || '', activities: acts })}
+                                    style={{ cursor: 'pointer', width: 'fit-content', fontSize: '0.78rem' }}
+                                    title="Voir les activités"
+                                  >
+                                    {cnt} activité{cnt > 1 ? 's' : ''}
+                                  </button>
+                                </div>
+                              );
                             })()}
                           </td>
                         )}
@@ -433,11 +448,16 @@ export default function ProductList() {
                           <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
                             <button
                               className="btn btn-ghost btn-sm"
-                              style={{ fontWeight: 600, color: 'var(--primary)' }}
+                              style={{ padding: '3px 7px' }}
                               title="Générer la Fiche Technique"
                               onClick={() => { const ctx = getProductFtContext(p); setFtPopup({ productId: p.id, productName: p.name, hasIngredients: !!(p.ingredientsCount && p.ingredientsCount > 0), resolvedActId: getProductResolvedActId(p), ...ctx }); }}
                             >
-                              📄 FT
+                              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <rect width="24" height="24" rx="3" fill="#217346"/>
+                                <path d="M14 2H6C4.9 2 4 2.9 4 4V20C4 21.1 4.9 22 6 22H18C19.1 22 20 21.1 20 20V8L14 2Z" fill="#185C37"/>
+                                <path d="M14 2V8H20L14 2Z" fill="#107C41"/>
+                                <text x="7" y="18" fill="white" fontSize="9" fontWeight="bold" fontFamily="Calibri,Arial,sans-serif">XLS</text>
+                              </svg>
                             </button>
                             <Link to={`/client/products/${p.id}/edit${filterQs ? `?${filterQs}` : ''}`} className="btn btn-ghost btn-sm" style={{ fontWeight: 600 }}>✏️ {t('common.edit')}</Link>
                             <button className="btn btn-danger btn-sm" onClick={() => handleDelete(p.id)} style={{ fontWeight: 600 }}>
@@ -488,6 +508,38 @@ export default function ProductList() {
                 </div>
               )}
             </>
+          )}
+
+          {franchiseActsPopup && (
+            <div className="modal-overlay" onClick={() => setFranchiseActsPopup(null)}>
+              <div className="modal" style={{ maxWidth: 420 }} onClick={(e) => e.stopPropagation()}>
+                <div className="modal-header modal-header--primary">
+                  <div>
+                    <h2 style={{ margin: 0, fontSize: '1rem' }}>Activités — {franchiseActsPopup.productName}</h2>
+                    {franchiseActsPopup.group && (
+                      <div style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.85)', marginTop: 2 }}>🏢 {franchiseActsPopup.group}</div>
+                    )}
+                  </div>
+                  <button className="modal-close" onClick={() => setFranchiseActsPopup(null)}>×</button>
+                </div>
+                <div className="modal-body">
+                  {franchiseActsPopup.activities.length === 0 ? (
+                    <p style={{ color: '#888', textAlign: 'center' }}>Aucune activité trouvée</p>
+                  ) : (
+                    <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      {franchiseActsPopup.activities.map((a) => (
+                        <li key={a.id} style={{ padding: '6px 10px', background: 'var(--surface)', borderRadius: 8, border: '1px solid var(--border)', fontSize: '0.9rem', fontWeight: 500 }}>
+                          {a.nom}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+                <div className="modal-footer">
+                  <button className="btn btn-ghost" onClick={() => setFranchiseActsPopup(null)}>{t('common.close')}</button>
+                </div>
+              </div>
+            </div>
           )}
 
           {ftPopup && (
