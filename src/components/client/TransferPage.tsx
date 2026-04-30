@@ -269,45 +269,38 @@ export default function TransferPage() {
       {successMsg && <div style={{ background: 'var(--success, #10b981)', color: '#fff', borderRadius: 10, padding: '10px 18px', marginBottom: 16, fontWeight: 600 }}>✓ {successMsg}</div>}
       {errorMsg && <div style={{ background: 'var(--danger, #ef4444)', color: '#fff', borderRadius: 10, padding: '10px 18px', marginBottom: 16, fontWeight: 600 }}>{errorMsg}</div>}
 
-      {/* Filters */}
+      {/* Compact filter card */}
       {!loading && stock.length > 0 && (
-        <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap', alignItems: 'flex-end' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-            <span style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Catégorie</span>
-            <select className="input" style={{ maxWidth: 200 }} value={filterCategorie} onChange={(e) => { setFilterCategorie(e.target.value); setFilterIngredientId(''); }}>
-              <option value="">{t('client.catalogue_franchise.all_categories')}</option>
-              {allCategories.map((c) => <option key={c} value={c}>{c}</option>)}
-            </select>
+        <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, marginBottom: 20, overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
+          <div style={{ padding: '10px 20px', borderBottom: '1px solid var(--border)', background: 'var(--bg-secondary, #f8fafc)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span style={{ fontWeight: 700, fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.09em', color: 'var(--text-muted)' }}>Filtres</span>
+            {(filterCategorie || filterIngredientId !== '' || filterNom) && (
+              <button className="btn btn-ghost btn-sm" style={{ fontSize: '0.78rem' }} onClick={() => { setFilterCategorie(''); setFilterIngredientId(''); setFilterNom(''); }}>✕ Réinitialiser</button>
+            )}
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-            <span style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Ingrédient</span>
-            <select
-              className="input"
-              style={{ minWidth: 160, maxWidth: 260 }}
-              value={filterIngredientId}
-              disabled={!filterCategorie}
-              onChange={(e) => setFilterIngredientId(e.target.value === '' ? '' : Number(e.target.value))}
-            >
-              <option value="">— Tous —</option>
-              {ingredientsInCategory.map((r) => (
-                <option key={r.ingredientId} value={r.ingredientId}>{r.nom}</option>
-              ))}
-            </select>
+          <div style={{ padding: '16px 20px', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '12px 20px' }}>
+            <div>
+              <span style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 5 }}>Catégorie</span>
+              <select className="input" style={{ width: '100%' }} value={filterCategorie} onChange={(e) => { setFilterCategorie(e.target.value); setFilterIngredientId(''); }}>
+                <option value="">{t('client.catalogue_franchise.all_categories')}</option>
+                {allCategories.map((c) => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
+            <div>
+              <span style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 5 }}>Ingrédient</span>
+              <select className="input" style={{ width: '100%' }} value={filterIngredientId}
+                disabled={!filterCategorie}
+                onChange={(e) => setFilterIngredientId(e.target.value === '' ? '' : Number(e.target.value))}>
+                <option value="">— Tous —</option>
+                {ingredientsInCategory.map((r) => <option key={r.ingredientId} value={r.ingredientId}>{r.nom}</option>)}
+              </select>
+            </div>
+            <div>
+              <span style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 5 }}>Nom</span>
+              <input type="text" className="input" style={{ width: '100%' }} placeholder="Rechercher…"
+                value={filterNom} onChange={(e) => setFilterNom(e.target.value)} />
+            </div>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 3, flex: '1 1 auto', maxWidth: 200 }}>
-            <span style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Nom</span>
-            <input
-              type="text"
-              className="input"
-              style={{ minWidth: 120 }}
-              placeholder="Rechercher…"
-              value={filterNom}
-              onChange={(e) => setFilterNom(e.target.value)}
-            />
-          </div>
-          {(filterCategorie || filterIngredientId !== '' || filterNom) && (
-            <button className="btn btn-ghost btn-sm" style={{ alignSelf: 'flex-end' }} onClick={() => { setFilterCategorie(''); setFilterIngredientId(''); setFilterNom(''); }}>✕</button>
-          )}
         </div>
       )}
 

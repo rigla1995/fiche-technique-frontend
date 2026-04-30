@@ -112,32 +112,39 @@ export default function TransferHistoriquePage() {
         </Link>
       </div>
 
-      {/* Search filters */}
-      <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: '16px 20px', marginBottom: 20 }}>
-        <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', alignItems: 'flex-end' }}>
-          {activites.length > 0 && (
+      {/* ── Modern filter panel ─────────────────────────────────────────── */}
+      <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, marginBottom: 20, boxShadow: '0 2px 12px rgba(0,0,0,0.06)', overflow: 'hidden' }}>
+        <div style={{ padding: '12px 20px', borderBottom: '1px solid var(--border)', background: 'var(--bg-secondary, #f8fafc)' }}>
+          <span style={{ fontWeight: 700, fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.09em', color: 'var(--text-muted)' }}>Filtres</span>
+        </div>
+        <div style={{ padding: '18px 24px 0' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(190px, 1fr))', gap: '12px 20px' }}>
+            {activites.length > 0 && (
+              <div>
+                <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 5 }}>
+                  {t('client.labo.filter_activite')}
+                </label>
+                <select className="input" style={{ width: '100%' }} value={filterActiviteId} onChange={(e) => setFilterActiviteId(e.target.value)}>
+                  <option value="">{t('client.labo.all_activites')}</option>
+                  {activites.map((a) => <option key={a.id} value={a.id}>{a.nom}</option>)}
+                </select>
+              </div>
+            )}
             <div>
-              <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 4 }}>
-                {t('client.labo.filter_activite')}
+              <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 5 }}>
+                {t('client.historique_appro.start_date')}
               </label>
-              <select className="input" style={{ maxWidth: 200 }} value={filterActiviteId} onChange={(e) => setFilterActiviteId(e.target.value)}>
-                <option value="">{t('client.labo.all_activites')}</option>
-                {activites.map((a) => <option key={a.id} value={a.id}>{a.nom}</option>)}
-              </select>
+              <input type="date" className="input" style={{ width: '100%' }} min={yearStart} max={yearEnd} value={startDate} onChange={(e) => setStartDate(e.target.value)} />
             </div>
-          )}
-          <div>
-            <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 4 }}>
-              {t('client.historique_appro.start_date')}
-            </label>
-            <input type="date" className="input" style={{ maxWidth: 160 }} min={yearStart} max={yearEnd} value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+            <div>
+              <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 5 }}>
+                {t('client.historique_appro.end_date')}
+              </label>
+              <input type="date" className="input" style={{ width: '100%' }} min={yearStart} max={yearEnd} value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+            </div>
           </div>
-          <div>
-            <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 4 }}>
-              {t('client.historique_appro.end_date')}
-            </label>
-            <input type="date" className="input" style={{ maxWidth: 160 }} min={yearStart} max={yearEnd} value={endDate} onChange={(e) => setEndDate(e.target.value)} />
-          </div>
+        </div>
+        <div style={{ padding: '16px 24px', marginTop: 16, borderTop: '1px solid var(--border)', background: 'var(--bg-secondary, #f8fafc)', display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
           <button className="btn btn-primary" onClick={fetchResults} disabled={loading}>
             {loading ? t('common.loading') : '🔍 Rechercher'}
           </button>
@@ -203,29 +210,34 @@ export default function TransferHistoriquePage() {
             })}
           </div>
 
-          {/* Client-side filters */}
-          <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap', alignItems: 'flex-end' }}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-              <span style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Catégorie</span>
-              <select className="input" style={{ maxWidth: 200 }} value={filterCategorie}
-                onChange={(e) => { setFilterCategorie(e.target.value); setPage(1); }}>
-                <option value="">{t('client.catalogue_franchise.all_categories')}</option>
-                {allCategories.map((c) => <option key={c} value={c}>{c}</option>)}
-              </select>
+          {/* Client-side filters (compact card) */}
+          <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, marginBottom: 16, overflow: 'hidden', boxShadow: '0 1px 6px rgba(0,0,0,0.04)' }}>
+            <div style={{ padding: '10px 18px', borderBottom: '1px solid var(--border)', background: 'var(--bg-secondary, #f8fafc)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span style={{ fontWeight: 700, fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)' }}>Affiner les résultats</span>
+              {(filterCategorie || filterNom) && (
+                <button className="btn btn-ghost btn-sm" style={{ fontSize: '0.75rem' }}
+                  onClick={() => { setFilterCategorie(''); setFilterNom(''); setPage(1); }}>✕ Réinitialiser</button>
+              )}
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-              <span style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('client.stock.ingredient')}</span>
-              <input
-                type="text" className="input" style={{ minWidth: 160, maxWidth: 240 }}
-                placeholder={t('client.stock.search_ingredient')}
-                value={filterNom}
-                onChange={(e) => { setFilterNom(e.target.value); setPage(1); }}
-              />
+            <div style={{ padding: '14px 18px', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '10px 18px' }}>
+              <div>
+                <span style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 5 }}>Catégorie</span>
+                <select className="input" style={{ width: '100%' }} value={filterCategorie}
+                  onChange={(e) => { setFilterCategorie(e.target.value); setPage(1); }}>
+                  <option value="">{t('client.catalogue_franchise.all_categories')}</option>
+                  {allCategories.map((c) => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
+              <div>
+                <span style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 5 }}>{t('client.stock.ingredient')}</span>
+                <input
+                  type="text" className="input" style={{ width: '100%' }}
+                  placeholder={t('client.stock.search_ingredient')}
+                  value={filterNom}
+                  onChange={(e) => { setFilterNom(e.target.value); setPage(1); }}
+                />
+              </div>
             </div>
-            {(filterCategorie || filterNom) && (
-              <button className="btn btn-ghost btn-sm" style={{ alignSelf: 'flex-end' }}
-                onClick={() => { setFilterCategorie(''); setFilterNom(''); setPage(1); }}>✕</button>
-            )}
           </div>
 
           {filteredResults.length === 0 ? (

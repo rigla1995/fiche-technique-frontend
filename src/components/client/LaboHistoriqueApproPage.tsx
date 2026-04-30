@@ -265,6 +265,31 @@ export default function LaboHistoriqueApproPage() {
     setLoading(false);
   }, [laboId, startDate, endDate, filterIngredientId, filterCategorieId, filterFournisseurId, filterRefFacture]);
 
+  const exportCsv = () => {
+    const sep = ';';
+    const escCell = (v: string) => `"${v.replace(/"/g, '""')}"`;
+    const headers = ['Date', 'Ingrédient', 'Catégorie', 'Quantité', 'Unité', 'Prix/DT', 'Coût total DT', 'Fournisseur', 'Réf. Facture'];
+    const rows = results.map((r) => [
+      fmtDate(r.dateAppro),
+      r.ingredientNom,
+      r.categorieNom ?? '',
+      r.quantite !== null ? String(r.quantite).replace('.', ',') : '',
+      r.uniteNom,
+      r.prixUnitaire !== null ? String(r.prixUnitaire).replace('.', ',') : '',
+      ((r.quantite ?? 0) * (r.prixUnitaire ?? 0)).toFixed(3).replace('.', ','),
+      r.fournisseurNom ?? '',
+      r.refFacture ?? '',
+    ].map(escCell).join(sep));
+    const csv = '﻿' + [headers.map(escCell).join(sep), ...rows].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `historique-labo-${labo?.nom ?? 'appro'}-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const handleSaved = (id: number, updated: Partial<HistEntry>) => {
     setResults((prev) => prev.map((r) => r.id === id ? { ...r, ...updated } : r));
   };
@@ -300,70 +325,93 @@ export default function LaboHistoriqueApproPage() {
         </div>
       )}
 
-      {/* Filter panel */}
-      <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: '20px 24px', marginBottom: 24, boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
-        <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+      {/* ── Modern filter panel ─────────────────────────────────────────── */}
+      <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, marginBottom: 24, boxShadow: '0 2px 12px rgba(0,0,0,0.06)', overflow: 'hidden' }}>
+        {/* Header */}
+        <div style={{ padding: '12px 20px', borderBottom: '1px solid var(--border)', background: 'var(--bg-secondary, #f8fafc)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <span style={{ fontWeight: 700, fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.09em', color: 'var(--text-muted)' }}>Filtres</span>
+        </div>
 
-          {/* Date range */}
-          <div>
-            <label style={labelStyle}>Date début</label>
-            <input type="date" className="input" style={{ maxWidth: 150 }} min={yearStart} max={yearEnd}
-              value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+        {/* Section 1: Produit */}
+        <div style={{ padding: '18px 24px 0' }}>
+          <div style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ width: 16, height: 2, background: 'var(--primary)', display: 'inline-block', borderRadius: 2 }} />
+            Produit
           </div>
-          <div>
-            <label style={labelStyle}>Date fin</label>
-            <input type="date" className="input" style={{ maxWidth: 150 }} min={yearStart} max={yearEnd}
-              value={endDate} onChange={(e) => setEndDate(e.target.value)} />
-          </div>
-
-          {/* Catégorie */}
-          <div>
-            <label style={labelStyle}>Catégorie</label>
-            <select className="input" style={{ maxWidth: 180 }} value={filterCategorieId}
-              onChange={(e) => { setFilterCategorieId(e.target.value); setFilterIngredientId(''); }}>
-              <option value="">— Toutes —</option>
-              {categories.map((c) => <option key={c.id} value={c.id}>{c.nom}</option>)}
-            </select>
-          </div>
-
-          {/* Ingrédient */}
-          <div>
-            <label style={labelStyle}>Ingrédient</label>
-            <select className="input" style={{ maxWidth: 210 }} value={filterIngredientId}
-              disabled={!filterCategorieId}
-              onChange={(e) => setFilterIngredientId(e.target.value)}>
-              <option value="">— Tous —</option>
-              {ingredientsInCat.map((i) => <option key={i.id} value={i.id}>{i.nom}</option>)}
-            </select>
-          </div>
-
-          {/* Fournisseur */}
-          {fournisseurs.length > 0 && (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(190px, 1fr))', gap: '12px 20px' }}>
             <div>
-              <label style={labelStyle}>Fournisseur</label>
-              <select className="input" style={{ maxWidth: 190 }} value={filterFournisseurId}
-                onChange={(e) => setFilterFournisseurId(e.target.value)}>
-                <option value="">— Tous —</option>
-                {fournisseurs.map((f) => <option key={f.id} value={f.id}>{f.nom}</option>)}
+              <label style={labelStyle}>Catégorie</label>
+              <select className="input" style={{ width: '100%' }} value={filterCategorieId}
+                onChange={(e) => { setFilterCategorieId(e.target.value); setFilterIngredientId(''); }}>
+                <option value="">— Toutes —</option>
+                {categories.map((c) => <option key={c.id} value={c.id}>{c.nom}</option>)}
               </select>
             </div>
-          )}
-
-          {/* Réf Facture */}
-          <div>
-            <label style={labelStyle}>Réf Facture</label>
-            <input type="text" className="input" style={{ maxWidth: 150 }}
-              placeholder="Rechercher réf…"
-              value={filterRefFacture} onChange={(e) => setFilterRefFacture(e.target.value)} />
+            <div>
+              <label style={labelStyle}>Ingrédient</label>
+              <select className="input" style={{ width: '100%' }} value={filterIngredientId}
+                disabled={!filterCategorieId}
+                onChange={(e) => setFilterIngredientId(e.target.value)}>
+                <option value="">— Tous —</option>
+                {ingredientsInCat.map((i) => <option key={i.id} value={i.id}>{i.nom}</option>)}
+              </select>
+            </div>
           </div>
+        </div>
 
-          <button className="btn btn-primary" style={{ alignSelf: 'flex-end' }} onClick={fetchResults} disabled={loading}>
-            {loading ? 'Chargement…' : '🔍 Rechercher'}
-          </button>
+        {/* Divider */}
+        <div style={{ margin: '16px 24px 0', borderTop: '1px dashed var(--border)' }} />
+
+        {/* Section 2: Période & Fournisseur */}
+        <div style={{ padding: '16px 24px 0' }}>
+          <div style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ width: 16, height: 2, background: '#7c3aed', display: 'inline-block', borderRadius: 2 }} />
+            Période &amp; Fournisseur
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '12px 20px' }}>
+            <div>
+              <label style={labelStyle}>Date début</label>
+              <input type="date" className="input" style={{ width: '100%' }} min={yearStart} max={yearEnd}
+                value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+            </div>
+            <div>
+              <label style={labelStyle}>Date fin</label>
+              <input type="date" className="input" style={{ width: '100%' }} min={yearStart} max={yearEnd}
+                value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+            </div>
+            {fournisseurs.length > 0 && (
+              <div>
+                <label style={labelStyle}>Fournisseur</label>
+                <select className="input" style={{ width: '100%' }} value={filterFournisseurId}
+                  onChange={(e) => setFilterFournisseurId(e.target.value)}>
+                  <option value="">— Tous —</option>
+                  {fournisseurs.map((f) => <option key={f.id} value={f.id}>{f.nom}</option>)}
+                </select>
+              </div>
+            )}
+            <div>
+              <label style={labelStyle}>Réf. Facture</label>
+              <input type="text" className="input" style={{ width: '100%' }}
+                placeholder="Rechercher réf…"
+                value={filterRefFacture} onChange={(e) => setFilterRefFacture(e.target.value)} />
+            </div>
+          </div>
+        </div>
+
+        {/* Actions footer */}
+        <div style={{ padding: '16px 24px', marginTop: 16, borderTop: '1px solid var(--border)', background: 'var(--bg-secondary, #f8fafc)', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 10 }}>
           {hasFilters && (
-            <button className="btn btn-ghost btn-sm" style={{ alignSelf: 'flex-end' }}
+            <button className="btn btn-ghost btn-sm"
               onClick={() => { setFilterCategorieId(''); setFilterIngredientId(''); setFilterFournisseurId(''); setFilterRefFacture(''); }}>
               ✕ Réinitialiser
+            </button>
+          )}
+          <button className="btn btn-primary" onClick={fetchResults} disabled={loading}>
+            {loading ? 'Chargement…' : '🔍 Rechercher'}
+          </button>
+          {results.length > 0 && (
+            <button className="btn btn-ghost" onClick={exportCsv} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              📥 Exporter CSV
             </button>
           )}
         </div>
