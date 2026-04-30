@@ -402,21 +402,35 @@ export default function LaboHistoriqueApproPage() {
         </div>
 
         {/* Actions footer */}
-        <div style={{ padding: '16px 24px', marginTop: 16, borderTop: '1px solid var(--border)', background: 'var(--bg-secondary, #f8fafc)', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 10 }}>
+        <div style={{ padding: '16px 24px', marginTop: 16, borderTop: '1px solid var(--border)', background: 'var(--bg-secondary, #f8fafc)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
           {hasFilters && (
             <button className="btn btn-ghost btn-sm"
               onClick={() => { setFilterCategorieId(''); setFilterIngredientId(''); setFilterFournisseurId(''); setFilterRefFacture(''); }}>
               ✕ Réinitialiser
             </button>
           )}
-          <button className="btn btn-primary" onClick={fetchResults} disabled={loading}>
+          <button className="btn btn-primary" onClick={fetchResults} disabled={loading} style={{ minWidth: 140 }}>
             {loading ? 'Chargement…' : '🔍 Rechercher'}
           </button>
-          {results.length > 0 && (
-            <button className="btn btn-ghost" onClick={exportCsv} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              📥 Exporter CSV
-            </button>
-          )}
+          <button
+            onClick={exportCsv}
+            disabled={results.length === 0}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 8,
+              padding: '9px 20px', borderRadius: 10, border: 'none',
+              cursor: results.length === 0 ? 'not-allowed' : 'pointer',
+              background: results.length > 0 ? 'linear-gradient(135deg, #059669 0%, #10b981 100%)' : 'var(--bg-secondary, #e5e7eb)',
+              color: results.length > 0 ? '#fff' : 'var(--text-muted)',
+              fontWeight: 700, fontSize: '0.88rem',
+              opacity: results.length === 0 ? 0.55 : 1,
+              boxShadow: results.length > 0 ? '0 2px 8px rgba(16,185,129,0.25)' : 'none',
+              transition: 'all 0.15s',
+              minWidth: 180,
+            }}
+          >
+            <span style={{ fontSize: '1rem' }}>📊</span>
+            Générer Hist. Appro
+          </button>
         </div>
       </div>
 
