@@ -281,6 +281,7 @@ export default function HistoriqueApproPage() {
   const [editEntry, setEditEntry] = useState<HistoriqueApproEntry | null>(null);
   const [deleteEntry, setDeleteEntry] = useState<HistoriqueApproEntry | null>(null);
   const [unitPopup, setUnitPopup] = useState<string | null>(null);
+  const [showEmptyExportPopup, setShowEmptyExportPopup] = useState(false);
 
   const totalPages = Math.max(1, Math.ceil(results.length / PAGE_SIZE));
   const pagedResults = results.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
@@ -667,25 +668,22 @@ export default function HistoriqueApproPage() {
           background: 'var(--bg-secondary, #f8fafc)',
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'flex-end',
-          gap: 10,
+          justifyContent: 'center',
+          gap: 12,
         }}>
-          <button className="btn btn-primary" onClick={fetchResults} disabled={loading}>
+          <button className="btn btn-primary" onClick={fetchResults} disabled={loading} style={{ minWidth: 140 }}>
             {loading ? t('common.loading') : '🔍 Rechercher'}
           </button>
           <button
-            onClick={exportCsv}
-            disabled={results.length === 0}
-            title={results.length === 0 ? 'Lancez une recherche pour exporter' : 'Générer le fichier CSV'}
+            onClick={() => results.length === 0 ? setShowEmptyExportPopup(true) : exportCsv()}
             style={{
               display: 'flex', alignItems: 'center', gap: 8,
-              padding: '9px 18px', borderRadius: 10, border: 'none', cursor: results.length === 0 ? 'not-allowed' : 'pointer',
-              background: results.length > 0 ? 'linear-gradient(135deg, #059669 0%, #10b981 100%)' : 'var(--bg-secondary, #f3f4f6)',
-              color: results.length > 0 ? '#fff' : 'var(--text-muted)',
-              fontWeight: 700, fontSize: '0.88rem',
-              opacity: results.length === 0 ? 0.55 : 1,
-              boxShadow: results.length > 0 ? '0 2px 8px rgba(16,185,129,0.30)' : 'none',
-              transition: 'all 0.15s',
+              padding: '9px 20px', borderRadius: 10, border: 'none', cursor: 'pointer',
+              background: 'linear-gradient(135deg, #059669 0%, #10b981 100%)',
+              color: '#fff', fontWeight: 700, fontSize: '0.88rem',
+              boxShadow: '0 2px 8px rgba(16,185,129,0.25)',
+              transition: 'opacity 0.15s',
+              minWidth: 180,
             }}
           >
             <span style={{ fontSize: '1rem' }}>📊</span>
@@ -812,6 +810,22 @@ export default function HistoriqueApproPage() {
             </div>
           </div>
         </>
+      )}
+
+      {/* Empty export popup */}
+      {showEmptyExportPopup && (
+        <div className="modal-overlay" onClick={() => setShowEmptyExportPopup(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 380, textAlign: 'center' }}>
+            <div className="modal-body" style={{ padding: '32px 28px' }}>
+              <div style={{ fontSize: '2.5rem', marginBottom: 12 }}>📊</div>
+              <h2 style={{ margin: '0 0 10px', fontSize: '1.05rem', fontWeight: 700 }}>Aucun résultat à exporter</h2>
+              <p style={{ margin: '0 0 20px', fontSize: '0.88rem', color: 'var(--text-muted)' }}>
+                Effectuez une recherche pour générer l'historique des approvisionnements.
+              </p>
+              <button className="btn btn-primary" onClick={() => setShowEmptyExportPopup(false)}>Compris</button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Modals */}
