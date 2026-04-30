@@ -585,67 +585,44 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                   <Divider />
 
                   {/* ══ ESPACE PRODUITS ══ */}
-                  <CollapsibleHeader label="Espace Produits" icon="🍔" isOpen={openSections.has('produits')} locked={isOnboarding || (!hasFranchiseSelections && !hasDistinctSelections)} onToggle={() => toggleSection('produits')} />
-                  {openSections.has('produits') && (
-                    <>
-                      <li>
+                  <li style={{ listStyle: 'none' }}>
+                    <div style={{ padding: '8px 16px 4px', display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span style={{ fontSize: '0.85rem' }}>🍔</span>
+                      <span style={{ fontSize: '0.68rem', fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>Produits</span>
+                    </div>
+                    {/* Vendables row */}
+                    <div style={{ padding: '3px 12px' }}>
+                      <div style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4, paddingLeft: 4 }}>Vendables</div>
+                      <div style={{ display: 'flex', gap: 6 }}>
                         {isOnboarding || !hasFranchiseSelections ? (
-                          <LockedLink label="Produits Vendables (F)" />
+                          <span style={{ flex: 1, textAlign: 'center', fontSize: '0.75rem', padding: '5px 0', borderRadius: 8, background: 'var(--bg-secondary, #f3f4f6)', color: 'var(--text-muted)', opacity: 0.5, cursor: 'not-allowed', border: '1px solid var(--border)' }}>Franchise</span>
                         ) : (
-                          <Link
-                            to="/client/products?tab=vendable&actCtx=franchise"
-                            className={`sidebar-link ${isProductActive('vendable', 'franchise') ? 'active' : ''}`}
-                            onClick={onClose}
-                          >
-                            <span className="link-icon">🍔</span>
-                            <span className="link-label">Produits Vendables (F)</span>
-                          </Link>
+                          <Link to="/client/products?tab=vendable&actCtx=franchise" onClick={onClose} style={{ flex: 1, textAlign: 'center', fontSize: '0.75rem', fontWeight: isProductActive('vendable', 'franchise') ? 700 : 500, padding: '5px 0', borderRadius: 8, textDecoration: 'none', background: isProductActive('vendable', 'franchise') ? 'var(--primary)' : 'var(--bg-secondary, #f3f4f6)', color: isProductActive('vendable', 'franchise') ? '#fff' : 'var(--text)', border: `1px solid ${isProductActive('vendable', 'franchise') ? 'var(--primary)' : 'var(--border)'}`, transition: 'all 0.15s' }}>Franchise</Link>
                         )}
-                      </li>
-                      <li>
+                        {isOnboarding || !hasDistinctSelections ? (
+                          <span style={{ flex: 1, textAlign: 'center', fontSize: '0.75rem', padding: '5px 0', borderRadius: 8, background: 'var(--bg-secondary, #f3f4f6)', color: 'var(--text-muted)', opacity: 0.5, cursor: 'not-allowed', border: '1px solid var(--border)' }}>Distinct</span>
+                        ) : (
+                          <Link to="/client/products?tab=vendable&actCtx=distinct" onClick={onClose} style={{ flex: 1, textAlign: 'center', fontSize: '0.75rem', fontWeight: isProductActive('vendable', 'distinct') ? 700 : 500, padding: '5px 0', borderRadius: 8, textDecoration: 'none', background: isProductActive('vendable', 'distinct') ? 'var(--primary)' : 'var(--bg-secondary, #f3f4f6)', color: isProductActive('vendable', 'distinct') ? '#fff' : 'var(--text)', border: `1px solid ${isProductActive('vendable', 'distinct') ? 'var(--primary)' : 'var(--border)'}`, transition: 'all 0.15s' }}>Distinct</Link>
+                        )}
+                      </div>
+                    </div>
+                    {/* Utilisables row */}
+                    <div style={{ padding: '6px 12px 4px' }}>
+                      <div style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4, paddingLeft: 4 }}>Utilisables</div>
+                      <div style={{ display: 'flex', gap: 6 }}>
                         {isOnboarding || !hasFranchiseSelections ? (
-                          <LockedLink label="Produits Utilisables (F)" />
+                          <span style={{ flex: 1, textAlign: 'center', fontSize: '0.75rem', padding: '5px 0', borderRadius: 8, background: 'var(--bg-secondary, #f3f4f6)', color: 'var(--text-muted)', opacity: 0.5, cursor: 'not-allowed', border: '1px solid var(--border)' }}>Franchise</span>
                         ) : (
-                          <Link
-                            to="/client/products?tab=utilisable&actCtx=franchise"
-                            className={`sidebar-link ${isProductActive('utilisable', 'franchise') ? 'active' : ''}`}
-                            onClick={onClose}
-                          >
-                            <span className="link-icon">🧪</span>
-                            <span className="link-label">Produits Utilisables (F)</span>
-                          </Link>
+                          <Link to="/client/products?tab=utilisable&actCtx=franchise" onClick={onClose} style={{ flex: 1, textAlign: 'center', fontSize: '0.75rem', fontWeight: isProductActive('utilisable', 'franchise') ? 700 : 500, padding: '5px 0', borderRadius: 8, textDecoration: 'none', background: isProductActive('utilisable', 'franchise') ? '#7c3aed' : 'var(--bg-secondary, #f3f4f6)', color: isProductActive('utilisable', 'franchise') ? '#fff' : 'var(--text)', border: `1px solid ${isProductActive('utilisable', 'franchise') ? '#7c3aed' : 'var(--border)'}`, transition: 'all 0.15s' }}>Franchise</Link>
                         )}
-                      </li>
-                      <li>
                         {isOnboarding || !hasDistinctSelections ? (
-                          <LockedLink label="Produits Vendables (D)" />
+                          <span style={{ flex: 1, textAlign: 'center', fontSize: '0.75rem', padding: '5px 0', borderRadius: 8, background: 'var(--bg-secondary, #f3f4f6)', color: 'var(--text-muted)', opacity: 0.5, cursor: 'not-allowed', border: '1px solid var(--border)' }}>Distinct</span>
                         ) : (
-                          <Link
-                            to="/client/products?tab=vendable&actCtx=distinct"
-                            className={`sidebar-link ${isProductActive('vendable', 'distinct') ? 'active' : ''}`}
-                            onClick={onClose}
-                          >
-                            <span className="link-icon">🍔</span>
-                            <span className="link-label">Produits Vendables (D)</span>
-                          </Link>
+                          <Link to="/client/products?tab=utilisable&actCtx=distinct" onClick={onClose} style={{ flex: 1, textAlign: 'center', fontSize: '0.75rem', fontWeight: isProductActive('utilisable', 'distinct') ? 700 : 500, padding: '5px 0', borderRadius: 8, textDecoration: 'none', background: isProductActive('utilisable', 'distinct') ? '#7c3aed' : 'var(--bg-secondary, #f3f4f6)', color: isProductActive('utilisable', 'distinct') ? '#fff' : 'var(--text)', border: `1px solid ${isProductActive('utilisable', 'distinct') ? '#7c3aed' : 'var(--border)'}`, transition: 'all 0.15s' }}>Distinct</Link>
                         )}
-                      </li>
-                      <li>
-                        {isOnboarding || !hasDistinctSelections ? (
-                          <LockedLink label="Produits Utilisables (D)" />
-                        ) : (
-                          <Link
-                            to="/client/products?tab=utilisable&actCtx=distinct"
-                            className={`sidebar-link ${isProductActive('utilisable', 'distinct') ? 'active' : ''}`}
-                            onClick={onClose}
-                          >
-                            <span className="link-icon">🧪</span>
-                            <span className="link-label">Produits Utilisables (D)</span>
-                          </Link>
-                        )}
-                      </li>
-                    </>
-                  )}
+                      </div>
+                    </div>
+                  </li>
 
                   <Divider />
 
