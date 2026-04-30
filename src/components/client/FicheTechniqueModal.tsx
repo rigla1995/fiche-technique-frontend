@@ -24,6 +24,7 @@ interface StockCheckResult {
 interface Fournisseur {
   id: number;
   nom: string;
+  isLabo?: boolean;
 }
 
 interface ActivityInfo {
@@ -54,6 +55,13 @@ export default function FicheTechniqueModal({ productId, productName, hasIngredi
   const [missingFournisseurById, setMissingFournisseurById] = useState<Record<number, string>>({});
   const [missingRefFactureById, setMissingRefFactureById] = useState<Record<number, string>>({});
   const [openFournisseurFor, setOpenFournisseurFor] = useState<number | null>(null);
+
+  // Bulk selection for missing stock
+  const todayStr = () => new Date().toISOString().slice(0, 10);
+  const [selectedMissingIds, setSelectedMissingIds] = useState<Set<number>>(new Set());
+  const [bulkMissingDate, setBulkMissingDate] = useState(todayStr());
+  const [bulkMissingFournisseurId, setBulkMissingFournisseurId] = useState('');
+  const [bulkMissingRefFacture, setBulkMissingRefFacture] = useState('');
 
   // FP Stock
   const [stockActId, setStockActId] = useState<number | null>(null); // activity chosen for stock mode (franchise products)
@@ -192,18 +200,19 @@ export default function FicheTechniqueModal({ productId, productName, hasIngredi
     if (!stockCheckResult) return;
     setSavingMissing(true);
     const effectiveActId = resolvedActId || stockActId;
-    const today = new Date().toISOString().slice(0, 10);
+    const today = todayStr();
     try {
       for (const ing of stockCheckResult.missing) {
         const fill = missingFillData[ing.ingredientId];
         if (!fill || !fill.qty || !fill.price) continue;
+        const isBulk = selectedMissingIds.has(ing.ingredientId);
         const payload: Record<string, unknown> = {
           quantite: parseFloat(fill.qty),
           prixUnitaire: parseFloat(fill.price),
-          dateAppro: fill.date || today,
+          dateAppro: isBulk ? bulkMissingDate : (fill.date || today),
         };
-        const fId = missingFournisseurById[ing.ingredientId];
-        const ref = missingRefFactureById[ing.ingredientId];
+        const fId = isBulk ? bulkMissingFournisseurId : missingFournisseurById[ing.ingredientId];
+        const ref = isBulk ? bulkMissingRefFacture : missingRefFactureById[ing.ingredientId];
         if (fId) payload.fournisseurId = parseInt(fId);
         if (ref?.trim()) payload.refFacture = ref.trim();
         if (effectiveActId) {
@@ -212,6 +221,10 @@ export default function FicheTechniqueModal({ productId, productName, hasIngredi
           await api.put(`/api/stock/client/${ing.ingredientId}`, payload);
         }
       }
+      setSelectedMissingIds(new Set());
+      setBulkMissingDate(todayStr());
+      setBulkMissingFournisseurId('');
+      setBulkMissingRefFacture('');
       const params = new URLSearchParams();
       if (effectiveActId) params.set('activiteId', String(effectiveActId));
       const { data } = await api.get(`/products/${productId}/stock-check?${params}`);
@@ -558,118 +571,210 @@ export default function FicheTechniqueModal({ productId, productName, hasIngredi
       )}
 
       {/* Missing stock popup */}
-      {showMissingPopup && stockCheckResult && (
-        <div className="modal-overlay" style={{ zIndex: 1050 }} onClick={() => setShowMissingPopup(false)}>
-          <div className="modal" style={{ maxWidth: 820, width: '96vw' }} onClick={(e) => e.stopPropagation()}>
-            {/* Header */}
-            <div style={{ background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', padding: '16px 24px', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <span style={{ fontSize: '1.5rem', lineHeight: 1 }}>⚠️</span>
-                <div>
-                  <div style={{ fontWeight: 700, fontSize: '1rem', color: '#fff' }}>{t('client.stock.missing_stock_title')}</div>
-                  <div style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.85)', marginTop: 2 }}>
-                    {stockCheckResult.missing.length} ingrédient{stockCheckResult.missing.length > 1 ? 's' : ''} sans appro — renseignez les valeurs puis enregistrez.
+      {showMissingPopup && stockCheckResult && (() => {
+        const hasBulk = selectedMissingIds.size > 0;
+        const yearStart = `${new Date().getFullYear()}-01-01`;
+        const yearEnd = `${new Date().getFullYear()}-12-31`;
+        const toggleBulkRow = (id: number) => {
+          setSelectedMissingIds((prev) => {
+            const n = new Set(prev);
+            if (n.has(id)) n.delete(id); else n.add(id);
+            return n;
+          });
+        };
+        const bulkFournisseur = fournisseurs.find((f) => String(f.id) === bulkMissingFournisseurId);
+        return (
+          <div className="modal-overlay" style={{ zIndex: 1050 }} onClick={() => setShowMissingPopup(false)}>
+            <div className="modal" style={{ maxWidth: 860, width: '96vw' }} onClick={(e) => e.stopPropagation()}>
+              {/* Header */}
+              <div style={{ background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', padding: '16px 24px', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <span style={{ fontSize: '1.5rem', lineHeight: 1 }}>⚠️</span>
+                  <div>
+                    <div style={{ fontWeight: 700, fontSize: '1rem', color: '#fff' }}>{t('client.stock.missing_stock_title')}</div>
+                    <div style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.85)', marginTop: 2 }}>
+                      {stockCheckResult.missing.length} ingrédient{stockCheckResult.missing.length > 1 ? 's' : ''} sans appro — renseignez les valeurs puis enregistrez.
+                    </div>
                   </div>
                 </div>
+                <button onClick={() => setShowMissingPopup(false)} style={{ background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: 8, color: '#fff', fontWeight: 700, fontSize: '1rem', padding: '2px 8px', cursor: 'pointer', lineHeight: 1.4 }}>×</button>
               </div>
-              <button onClick={() => setShowMissingPopup(false)} style={{ background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: 8, color: '#fff', fontWeight: 700, fontSize: '1rem', padding: '2px 8px', cursor: 'pointer', lineHeight: 1.4 }}>×</button>
-            </div>
-            {/* Table */}
-            <div style={{ padding: '16px 24px', maxHeight: '62vh', overflowY: 'auto', overflowX: 'hidden' }}>
-              <table className="table" style={{ tableLayout: 'fixed', width: '100%' }}>
-                <colgroup>
-                  <col style={{ width: '30%' }} />
-                  <col style={{ width: '15%' }} />
-                  <col style={{ width: '15%' }} />
-                  <col style={{ width: '18%' }} />
-                  <col style={{ width: '22%' }} />
-                </colgroup>
-                <thead>
-                  <tr>
-                    <th>{t('client.historique_appro.ingredient')}</th>
-                    <th style={{ textAlign: 'right' }}>Qté</th>
-                    <th style={{ textAlign: 'right' }}>{t('common.price')} (DT)</th>
-                    <th>{t('client.stock.date_appro')}</th>
-                    <th style={{ textAlign: 'center' }}>🚚 Fournisseur</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {(stockCheckResult.groups.length > 0 ? stockCheckResult.groups : [{ label: '', depth: 0, ingredients: stockCheckResult.missing }]).map((group, gi) => (
+
+              {/* Bulk bar */}
+              {hasBulk && (
+                <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end', flexWrap: 'wrap', padding: '12px 20px', background: '#f0fdf4', borderBottom: '1px solid #86efac' }}>
+                  <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#15803d', textTransform: 'uppercase', letterSpacing: '0.05em', alignSelf: 'center', marginRight: 4 }}>
+                    ✓ {selectedMissingIds.size} sélectionné{selectedMissingIds.size > 1 ? 's' : ''}
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                    <span style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Date d'appro</span>
+                    <input type="date" className="input" style={{ maxWidth: 150 }} min={yearStart} max={yearEnd} value={bulkMissingDate} onChange={(e) => setBulkMissingDate(e.target.value)} />
+                  </div>
+                  {fournisseurs.length > 0 && (
                     <>
-                      {group.depth > 0 && (
-                        <tr key={`gh-${gi}`}>
-                          <td colSpan={5} style={{ paddingTop: gi === 0 ? 4 : 10, paddingBottom: 2, fontSize: '0.72rem', fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', color: '#6b7280', borderTop: '1px solid var(--border)', background: '#fafafa' }}>
-                            ↳ Sous-produit : {group.label}
-                          </td>
-                        </tr>
-                      )}
-                      {group.ingredients.map((ing) => {
-                    const fill = missingFillData[ing.ingredientId] || { qty: '', price: '', date: new Date().toISOString().slice(0, 10) };
-                    const isFOpen = openFournisseurFor === ing.ingredientId;
-                    const hasFournisseur = !!(missingFournisseurById[ing.ingredientId] || missingRefFactureById[ing.ingredientId]);
-                    const unitLetter = ing.unite ? ing.unite.charAt(0).toUpperCase() : '';
-                    return (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                        <span style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Fournisseur</span>
+                        <select className="input" style={{ maxWidth: 200 }} value={bulkMissingFournisseurId} onChange={(e) => setBulkMissingFournisseurId(e.target.value)}>
+                          <option value="">— Aucun —</option>
+                          {fournisseurs.map((f) => <option key={f.id} value={f.id}>{f.isLabo ? '🏭 ' : '🚚 '}{f.nom}</option>)}
+                        </select>
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                        <span style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Réf. Facture / BL</span>
+                        <input type="text" className="input" style={{ maxWidth: 180 }} placeholder="N° bon de livraison…" value={bulkMissingRefFacture} onChange={(e) => setBulkMissingRefFacture(e.target.value)} />
+                      </div>
+                    </>
+                  )}
+                  <button className="btn btn-ghost btn-sm" style={{ alignSelf: 'flex-end', fontSize: '0.78rem' }}
+                    onClick={() => { setSelectedMissingIds(new Set()); setBulkMissingDate(todayStr()); setBulkMissingFournisseurId(''); setBulkMissingRefFacture(''); }}>
+                    ✕ Désélectionner
+                  </button>
+                  {bulkFournisseur && (
+                    <div style={{ alignSelf: 'center', fontSize: '0.75rem', color: '#15803d', fontWeight: 600, background: '#dcfce7', borderRadius: 6, padding: '2px 8px' }}>
+                      ✓ {bulkFournisseur.nom}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Table */}
+              <div style={{ padding: '16px 20px', maxHeight: '56vh', overflowY: 'auto', overflowX: 'auto' }}>
+                <table className="table" style={{ tableLayout: 'fixed', width: '100%', minWidth: 700 }}>
+                  <colgroup>
+                    <col style={{ width: 36 }} />
+                    <col style={{ width: '26%' }} />
+                    <col style={{ width: '13%' }} />
+                    <col style={{ width: '14%' }} />
+                    <col style={{ width: '18%' }} />
+                    <col />
+                  </colgroup>
+                  <thead>
+                    <tr>
+                      <th style={{ padding: '8px 6px' }}>
+                        <input type="checkbox" style={{ width: 15, height: 15, accentColor: 'var(--primary)' }}
+                          checked={selectedMissingIds.size === stockCheckResult.missing.length && stockCheckResult.missing.length > 0}
+                          onChange={(e) => {
+                            if (e.target.checked) setSelectedMissingIds(new Set(stockCheckResult.missing.map((i) => i.ingredientId)));
+                            else setSelectedMissingIds(new Set());
+                          }}
+                        />
+                      </th>
+                      <th>{t('client.historique_appro.ingredient')}</th>
+                      <th style={{ textAlign: 'right' }}>Qté</th>
+                      <th style={{ textAlign: 'right' }}>{t('common.price')} (DT)</th>
+                      <th>Date d'appro</th>
+                      <th style={{ textAlign: 'center' }}>🚚 Fournisseur</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(stockCheckResult.groups.length > 0 ? stockCheckResult.groups : [{ label: '', depth: 0, ingredients: stockCheckResult.missing }]).map((group, gi) => (
                       <>
-                        <tr key={ing.ingredientId}>
-                          <td style={{ fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={`${ing.nom} (${ing.unite})`}>
-                            {ing.nom}{unitLetter && <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}> ({unitLetter})</span>}
-                            {ing.categorie && <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', fontWeight: 400 }}>{ing.categorie}</div>}
-                          </td>
-                          <td>
-                            <input type="number" className="input" style={{ width: '100%', textAlign: 'right' }} step="0.001" min="0" placeholder="0" value={fill.qty} onChange={(e) => setMissingFillData((prev) => ({ ...prev, [ing.ingredientId]: { ...fill, qty: e.target.value } }))} />
-                          </td>
-                          <td>
-                            <input type="number" className="input" style={{ width: '100%', textAlign: 'right', borderColor: !fill.price ? '#f59e0b' : undefined }} step="0.001" min="0.001" placeholder="0.000" value={fill.price} onChange={(e) => setMissingFillData((prev) => ({ ...prev, [ing.ingredientId]: { ...fill, price: e.target.value } }))} />
-                          </td>
-                          <td>
-                            <input type="date" className="input" style={{ width: '100%' }} value={fill.date} onChange={(e) => setMissingFillData((prev) => ({ ...prev, [ing.ingredientId]: { ...fill, date: e.target.value } }))} />
-                          </td>
-                          <td style={{ textAlign: 'center' }}>
-                            <button className="btn btn-ghost btn-sm" style={{ fontSize: '0.72rem', padding: '3px 7px', borderColor: hasFournisseur ? '#d97706' : undefined, color: hasFournisseur ? '#d97706' : undefined, whiteSpace: 'nowrap' }} onClick={(e) => { e.stopPropagation(); setOpenFournisseurFor(isFOpen ? null : ing.ingredientId); }}>
-                              🚚 {hasFournisseur ? '✓' : '+'}
-                            </button>
-                          </td>
-                        </tr>
-                        {isFOpen && (
-                          <tr key={`f-${ing.ingredientId}`} style={{ background: '#fffbeb' }}>
-                            <td colSpan={5} style={{ padding: '10px 12px', borderTop: '1px dashed #fde68a' }}>
-                              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'flex-end' }}>
-                                {fournisseurs.length > 0 && (
-                                  <div style={{ flex: '1 1 180px' }}>
-                                    <label style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 3 }}>Fournisseur</label>
-                                    <select className="input" style={{ width: '100%' }} value={missingFournisseurById[ing.ingredientId] || ''} onChange={(e) => setMissingFournisseurById((prev) => ({ ...prev, [ing.ingredientId]: e.target.value }))}>
-                                      <option value="">— Aucun —</option>
-                                      {fournisseurs.map((f) => <option key={f.id} value={f.id}>{f.nom}</option>)}
-                                    </select>
-                                  </div>
-                                )}
-                                <div style={{ flex: '1 1 160px' }}>
-                                  <label style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 3 }}>Réf. Facture / BL</label>
-                                  <input type="text" className="input" style={{ width: '100%' }} value={missingRefFactureById[ing.ingredientId] || ''} onChange={(e) => setMissingRefFactureById((prev) => ({ ...prev, [ing.ingredientId]: e.target.value }))} placeholder="N° bon de livraison…" />
-                                </div>
-                                <button className="btn btn-ghost btn-sm" style={{ fontSize: '0.75rem', height: 36 }} onClick={() => setOpenFournisseurFor(null)}>Fermer</button>
-                              </div>
+                        {group.depth > 0 && (
+                          <tr key={`gh-${gi}`}>
+                            <td colSpan={6} style={{ paddingTop: gi === 0 ? 4 : 10, paddingBottom: 2, fontSize: '0.72rem', fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', color: '#6b7280', borderTop: '1px solid var(--border)', background: '#fafafa' }}>
+                              ↳ Sous-produit : {group.label}
                             </td>
                           </tr>
                         )}
+                        {group.ingredients.map((ing) => {
+                          const fill = missingFillData[ing.ingredientId] || { qty: '', price: '', date: todayStr() };
+                          const isFOpen = openFournisseurFor === ing.ingredientId;
+                          const isSelected = selectedMissingIds.has(ing.ingredientId);
+                          const hasFournisseur = !!(missingFournisseurById[ing.ingredientId] || missingRefFactureById[ing.ingredientId]);
+                          const unitLetter = ing.unite ? ing.unite.charAt(0).toUpperCase() : '';
+                          const inputBase: React.CSSProperties = { width: '100%', textAlign: 'right', fontSize: '0.92rem', fontWeight: 600 };
+                          return (
+                            <>
+                              <tr key={ing.ingredientId} style={isSelected ? { background: '#f0fdf4' } : undefined}>
+                                <td style={{ textAlign: 'center', padding: '8px 6px' }}>
+                                  <input type="checkbox" style={{ width: 15, height: 15, cursor: 'pointer', accentColor: 'var(--primary)' }}
+                                    checked={isSelected} onChange={() => toggleBulkRow(ing.ingredientId)} />
+                                </td>
+                                <td style={{ fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={`${ing.nom} (${ing.unite})`}>
+                                  {ing.nom}{unitLetter && <span style={{ color: 'var(--text-muted)', fontWeight: 400, fontSize: '0.8rem' }}> ({unitLetter})</span>}
+                                  {ing.categorie && <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', fontWeight: 400 }}>{ing.categorie}</div>}
+                                </td>
+                                <td>
+                                  <input type="number" className="input"
+                                    style={{ ...inputBase, borderColor: !fill.qty || parseFloat(fill.qty) <= 0 ? '#f59e0b' : '#86efac', boxShadow: !fill.qty || parseFloat(fill.qty) <= 0 ? '0 0 0 2px #fef3c7' : undefined }}
+                                    step="0.001" min="0.001" placeholder="0.000"
+                                    value={fill.qty}
+                                    onChange={(e) => setMissingFillData((prev) => ({ ...prev, [ing.ingredientId]: { ...fill, qty: e.target.value } }))} />
+                                </td>
+                                <td>
+                                  <input type="number" className="input"
+                                    style={{ ...inputBase, borderColor: !fill.price || parseFloat(fill.price) <= 0 ? '#f59e0b' : '#86efac', boxShadow: !fill.price || parseFloat(fill.price) <= 0 ? '0 0 0 2px #fef3c7' : undefined }}
+                                    step="0.001" min="0.001" placeholder="0.000"
+                                    value={fill.price}
+                                    onChange={(e) => setMissingFillData((prev) => ({ ...prev, [ing.ingredientId]: { ...fill, price: e.target.value } }))} />
+                                </td>
+                                <td>
+                                  {isSelected ? (
+                                    <div style={{ fontSize: '0.78rem', color: '#15803d', fontWeight: 600, padding: '6px 4px' }}>
+                                      📅 {bulkMissingDate || '—'}
+                                    </div>
+                                  ) : (
+                                    <input type="date" className="input" style={{ width: '100%', fontSize: '0.85rem' }}
+                                      min={yearStart} max={yearEnd}
+                                      value={fill.date}
+                                      onChange={(e) => setMissingFillData((prev) => ({ ...prev, [ing.ingredientId]: { ...fill, date: e.target.value } }))} />
+                                  )}
+                                </td>
+                                <td style={{ textAlign: 'center' }}>
+                                  {isSelected ? (
+                                    <div style={{ fontSize: '0.72rem', color: '#15803d', fontWeight: 600 }}>
+                                      {bulkFournisseur ? `✓ ${bulkFournisseur.nom}` : '(bulk)'}
+                                    </div>
+                                  ) : (
+                                    <button className="btn btn-ghost btn-sm"
+                                      style={{ fontSize: '0.72rem', padding: '3px 8px', borderColor: hasFournisseur ? '#d97706' : undefined, color: hasFournisseur ? '#d97706' : undefined, whiteSpace: 'nowrap' }}
+                                      onClick={(e) => { e.stopPropagation(); setOpenFournisseurFor(isFOpen ? null : ing.ingredientId); }}>
+                                      🚚 {hasFournisseur ? '✓' : '+'}
+                                    </button>
+                                  )}
+                                </td>
+                              </tr>
+                              {isFOpen && !isSelected && (
+                                <tr key={`f-${ing.ingredientId}`} style={{ background: '#fffbeb' }}>
+                                  <td colSpan={6} style={{ padding: '10px 12px', borderTop: '1px dashed #fde68a' }}>
+                                    <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+                                      {fournisseurs.length > 0 && (
+                                        <div style={{ flex: '1 1 180px' }}>
+                                          <label style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 3 }}>Fournisseur</label>
+                                          <select className="input" style={{ width: '100%' }} value={missingFournisseurById[ing.ingredientId] || ''} onChange={(e) => setMissingFournisseurById((prev) => ({ ...prev, [ing.ingredientId]: e.target.value }))}>
+                                            <option value="">— Aucun —</option>
+                                            {fournisseurs.map((f) => <option key={f.id} value={f.id}>{f.isLabo ? '🏭 ' : '🚚 '}{f.nom}</option>)}
+                                          </select>
+                                        </div>
+                                      )}
+                                      <div style={{ flex: '1 1 160px' }}>
+                                        <label style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 3 }}>Réf. Facture / BL</label>
+                                        <input type="text" className="input" style={{ width: '100%' }} value={missingRefFactureById[ing.ingredientId] || ''} onChange={(e) => setMissingRefFactureById((prev) => ({ ...prev, [ing.ingredientId]: e.target.value }))} placeholder="N° bon de livraison…" />
+                                      </div>
+                                      <button className="btn btn-ghost btn-sm" style={{ fontSize: '0.75rem', height: 36 }} onClick={() => setOpenFournisseurFor(null)}>Fermer</button>
+                                    </div>
+                                  </td>
+                                </tr>
+                              )}
+                            </>
+                          );
+                        })}
                       </>
-                    );
-                  })}
-                    </>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            {/* Footer */}
-            <div style={{ padding: '12px 24px 18px', display: 'flex', justifyContent: 'flex-end', gap: 10, borderTop: '1px solid var(--border)' }}>
-              <button className="btn btn-ghost" onClick={() => setShowMissingPopup(false)}>{t('common.cancel')}</button>
-              <button className="btn btn-primary" style={{ background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', borderColor: 'transparent' }} disabled={savingMissing} onClick={saveMissingStock}>
-                {savingMissing ? t('common.loading') : t('common.save')}
-              </button>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {/* Footer */}
+              <div style={{ padding: '12px 24px 18px', display: 'flex', justifyContent: 'flex-end', gap: 10, borderTop: '1px solid var(--border)' }}>
+                <button className="btn btn-ghost" onClick={() => setShowMissingPopup(false)}>{t('common.cancel')}</button>
+                <button className="btn btn-primary" style={{ background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', borderColor: 'transparent' }} disabled={savingMissing} onClick={saveMissingStock}>
+                  {savingMissing ? t('common.loading') : t('common.save')}
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Zero-price warning popup */}
       {showZeroWarning && (
