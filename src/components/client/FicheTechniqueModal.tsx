@@ -40,10 +40,11 @@ interface Props {
   contextLabel: string;
   activityName: string;
   activities?: ActivityInfo[];
+  franchiseGroup?: string;
   onClose: () => void;
 }
 
-export default function FicheTechniqueModal({ productId, productName, hasIngredients, resolvedActId, contextLabel, activityName, activities, onClose }: Props) {
+export default function FicheTechniqueModal({ productId, productName, hasIngredients, resolvedActId, contextLabel, activityName, activities, franchiseGroup, onClose }: Props) {
   const { t } = useTranslation();
 
   const [mode, setMode] = useState<'stock' | 'manual' | null>(null);
@@ -231,6 +232,7 @@ export default function FicheTechniqueModal({ productId, productName, hasIngredi
     try {
       const params = new URLSearchParams({ mode });
       if (resolvedActId) params.set('activiteId', String(resolvedActId));
+      if (!resolvedActId && franchiseGroup) params.set('fg', franchiseGroup);
       const response = await api.get(`/products/${productId}/export?${params}`, { responseType: 'blob' });
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
