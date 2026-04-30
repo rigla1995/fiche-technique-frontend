@@ -241,7 +241,6 @@ export default function HistoriqueApproPage() {
 
   const [entType, setEntType] = useState<'franchise' | 'distinct'>(lockedType ?? 'franchise');
 
-  // Reset state when switching between franchise/distinct spaces via sidebar
   useEffect(() => {
     if (lockedType) {
       setEntType(lockedType);
@@ -252,6 +251,7 @@ export default function HistoriqueApproPage() {
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lockedType]);
+
   const [franchiseActivities, setFranchiseActivities] = useState<Activite[]>([]);
   const [distinctActivities, setDistinctActivities] = useState<Activite[]>([]);
   const [activitesLoading, setActivitesLoading] = useState(false);
@@ -278,7 +278,6 @@ export default function HistoriqueApproPage() {
   const [searched, setSearched] = useState(false);
   const [page, setPage] = useState(1);
 
-  // Modals
   const [editEntry, setEditEntry] = useState<HistoriqueApproEntry | null>(null);
   const [deleteEntry, setDeleteEntry] = useState<HistoriqueApproEntry | null>(null);
   const [unitPopup, setUnitPopup] = useState<string | null>(null);
@@ -286,7 +285,6 @@ export default function HistoriqueApproPage() {
   const totalPages = Math.max(1, Math.ceil(results.length / PAGE_SIZE));
   const pagedResults = results.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
-  // Totals per unit
   const unitTotals: Record<string, { qty: number; cost: number; entries: HistoriqueApproEntry[] }> = {};
   for (const r of results) {
     if (!unitTotals[r.uniteNom]) unitTotals[r.uniteNom] = { qty: 0, cost: 0, entries: [] };
@@ -344,7 +342,6 @@ export default function HistoriqueApproPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Activities for activity dropdown
   const activitiesForDropdown = isEntreprise
     ? entType === 'franchise'
       ? franchiseActivities.filter((a) => !selectedFranchiseGroup || (a.franchiseGroup || a.nom) === selectedFranchiseGroup)
@@ -363,7 +360,6 @@ export default function HistoriqueApproPage() {
         } else if (selectedFranchiseGroup && entType === 'franchise') {
           params.set('franchiseGroup', selectedFranchiseGroup);
         } else {
-          // All activities of the current type
           params.set('entType', entType);
         }
       }
@@ -399,9 +395,56 @@ export default function HistoriqueApproPage() {
     setResults((prev) => prev.filter((r) => r.id !== id));
   };
 
+  const exportCsv = () => {
+    const sep = ';';
+    const actMap: Record<number, string> = {};
+    [...franchiseActivities, ...distinctActivities].forEach((a) => { actMap[a.id] = a.nom; });
+
+    const headers = ['Date', 'Ingrédient', 'Catégorie', 'Quantité', 'Unité', 'Prix/DT', 'Coût total DT'];
+    if (isEntreprise) headers.push('Activité', 'Fournisseur', 'Réf. Facture', 'Type');
+
+    const escCell = (v: string) => `"${v.replace(/"/g, '""')}"`;
+
+    const rows = results.map((r) => {
+      const cells = [
+        fmtDate(r.dateAppro),
+        r.ingredientNom,
+        r.categorieNom ?? '',
+        r.quantite !== null ? String(r.quantite).replace('.', ',') : '',
+        r.uniteNom,
+        r.prixUnitaire !== null ? String(r.prixUnitaire).replace('.', ',') : '',
+        ((r.quantite ?? 0) * (r.prixUnitaire ?? 0)).toFixed(3).replace('.', ','),
+      ];
+      if (isEntreprise) {
+        cells.push(
+          r.activiteId ? (actMap[r.activiteId] ?? '') : '',
+          r.fournisseurNom ?? '',
+          r.refFacture ?? '',
+          r.typeAppro ?? '',
+        );
+      }
+      return cells.map(escCell).join(sep);
+    });
+
+    const csv = '﻿' + [headers.map(escCell).join(sep), ...rows].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `historique-appro-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const labelStyle: React.CSSProperties = {
     fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)',
-    textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 4,
+    textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 5,
+  };
+
+  const sectionLabelStyle: React.CSSProperties = {
+    fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-muted)',
+    textTransform: 'uppercase', letterSpacing: '0.1em',
+    marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6,
   };
 
   const showTypeToggle = isEntreprise && !lockedType;
@@ -412,7 +455,6 @@ export default function HistoriqueApproPage() {
       ? `Historique Appro Distinct — ${currentYear}`
       : `${t('client.historique_appro.title')} — ${currentYear}`;
 
-  // Color coding helpers
   const qtyColor = (qty: number | null) => {
     if (qty === null) return 'var(--text-muted)';
     if (qty <= 0) return '#dc2626';
@@ -431,114 +473,205 @@ export default function HistoriqueApproPage() {
         <h1>{pageTitle}</h1>
       </div>
 
-      {/* Filter panel */}
-      <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: '20px 24px', marginBottom: 24, boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
-        {showTypeToggle && (
-          <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
-            {(['franchise', 'distinct'] as const).map((tp) => (
-              <button key={tp}
-                className={`btn btn-sm ${entType === tp ? 'btn-primary' : 'btn-ghost'}`}
-                onClick={() => { setEntType(tp); setSelectedActiviteId(''); setResults([]); setSearched(false); }}
+      {/* ── Modern filter panel ─────────────────────────────────────────── */}
+      <div style={{
+        background: 'var(--surface)',
+        border: '1px solid var(--border)',
+        borderRadius: 16,
+        marginBottom: 24,
+        boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
+        overflow: 'hidden',
+      }}>
+        {/* Panel header */}
+        <div style={{
+          padding: '12px 20px',
+          borderBottom: '1px solid var(--border)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          background: 'var(--bg-secondary, #f8fafc)',
+        }}>
+          <span style={{ fontWeight: 700, fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.09em', color: 'var(--text-muted)' }}>
+            Filtres
+          </span>
+          {showTypeToggle && (
+            <div style={{ display: 'flex', gap: 6 }}>
+              {(['franchise', 'distinct'] as const).map((tp) => (
+                <button
+                  key={tp}
+                  className={`btn btn-sm ${entType === tp ? 'btn-primary' : 'btn-ghost'}`}
+                  style={{ padding: '4px 14px', fontSize: '0.8rem' }}
+                  onClick={() => { setEntType(tp); setSelectedActiviteId(''); setResults([]); setSearched(false); }}
+                >
+                  {tp === 'franchise' ? t('client.historique_appro.franchise') : t('client.historique_appro.distinct')}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Section 1: Entity + Product */}
+        <div style={{ padding: '18px 24px 0' }}>
+          <div style={sectionLabelStyle}>
+            <span style={{ width: 16, height: 2, background: 'var(--primary)', display: 'inline-block', borderRadius: 2 }} />
+            Entité &amp; Produit
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(190px, 1fr))', gap: '12px 20px' }}>
+            {isEntreprise && entType === 'franchise' && franchiseGroups.length > 0 && (
+              <div>
+                <label style={labelStyle}>{t('client.historique_appro.franchise_group')}</label>
+                <select
+                  className="input"
+                  style={{ width: '100%' }}
+                  value={selectedFranchiseGroup}
+                  onChange={(e) => { setSelectedFranchiseGroup(e.target.value); setSelectedActiviteId(''); }}
+                >
+                  <option value="">— Tous les groupes —</option>
+                  {franchiseGroups.map((g) => <option key={g} value={g}>{g}</option>)}
+                </select>
+              </div>
+            )}
+
+            {isEntreprise && activitesLoading ? (
+              <div style={{ display: 'flex', alignItems: 'flex-end', paddingBottom: 8 }}>
+                <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>{t('common.loading')}</span>
+              </div>
+            ) : isEntreprise && activitiesForDropdown.length > 0 ? (
+              <div>
+                <label style={labelStyle}>{t('client.historique_appro.activity')}</label>
+                <select
+                  className="input"
+                  style={{ width: '100%' }}
+                  value={selectedActiviteId}
+                  onChange={(e) => setSelectedActiviteId(e.target.value)}
+                >
+                  <option value="">— Toutes les activités —</option>
+                  {activitiesForDropdown.map((a) => <option key={a.id} value={a.id}>{a.nom}</option>)}
+                </select>
+              </div>
+            ) : null}
+
+            <div>
+              <label style={labelStyle}>{t('client.historique_appro.category')}</label>
+              <select
+                className="input"
+                style={{ width: '100%' }}
+                value={selectedCategoryId}
+                onChange={(e) => { setSelectedCategoryId(e.target.value); setSelectedIngredientId(''); }}
               >
-                {tp === 'franchise' ? t('client.historique_appro.franchise') : t('client.historique_appro.distinct')}
-              </button>
-            ))}
-          </div>
-        )}
-
-        <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', alignItems: 'flex-end' }}>
-          {/* Franchise group — with "Tous" option */}
-          {isEntreprise && entType === 'franchise' && franchiseGroups.length > 0 && (
-            <div>
-              <label style={labelStyle}>{t('client.historique_appro.franchise_group')}</label>
-              <select className="input" style={{ maxWidth: 200 }}
-                value={selectedFranchiseGroup}
-                onChange={(e) => { setSelectedFranchiseGroup(e.target.value); setSelectedActiviteId(''); }}>
-                <option value="">— Tous les groupes —</option>
-                {franchiseGroups.map((g) => <option key={g} value={g}>{g}</option>)}
+                <option value="">{t('client.historique_appro.all_categories')}</option>
+                {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
             </div>
-          )}
 
-          {/* Activité — with "Toutes" option */}
-          {isEntreprise && activitesLoading ? (
-            <span style={{ fontSize: '0.875rem', color: 'var(--text-muted)', alignSelf: 'center' }}>{t('common.loading')}</span>
-          ) : isEntreprise && activitiesForDropdown.length > 0 && (
             <div>
-              <label style={labelStyle}>{t('client.historique_appro.activity')}</label>
-              <select className="input" style={{ maxWidth: 240 }}
-                value={selectedActiviteId}
-                onChange={(e) => setSelectedActiviteId(e.target.value)}>
-                <option value="">— Toutes les activités —</option>
-                {activitiesForDropdown.map((a) => <option key={a.id} value={a.id}>{a.nom}</option>)}
+              <label style={labelStyle}>{t('client.historique_appro.ingredient')}</label>
+              <select
+                className="input"
+                style={{ width: '100%' }}
+                value={selectedIngredientId}
+                onChange={(e) => setSelectedIngredientId(e.target.value)}
+                disabled={ingredientsLoading || !selectedCategoryId}
+              >
+                <option value="">{t('client.historique_appro.all_ingredients')}</option>
+                {ingredients.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
               </select>
             </div>
-          )}
-
-          {/* Category */}
-          <div>
-            <label style={labelStyle}>{t('client.historique_appro.category')}</label>
-            <select className="input" style={{ maxWidth: 220 }}
-              value={selectedCategoryId}
-              onChange={(e) => { setSelectedCategoryId(e.target.value); setSelectedIngredientId(''); }}>
-              <option value="">{t('client.historique_appro.all_categories')}</option>
-              {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
           </div>
+        </div>
 
-          {/* Ingredient */}
-          <div>
-            <label style={labelStyle}>{t('client.historique_appro.ingredient')}</label>
-            <select className="input" style={{ maxWidth: 240 }}
-              value={selectedIngredientId}
-              onChange={(e) => setSelectedIngredientId(e.target.value)}
-              disabled={ingredientsLoading || !selectedCategoryId}>
-              <option value="">{t('client.historique_appro.all_ingredients')}</option>
-              {ingredients.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
-            </select>
-          </div>
+        {/* Divider */}
+        <div style={{ margin: '16px 24px 0', borderTop: '1px dashed var(--border)' }} />
 
-          {/* Dates */}
-          <div>
-            <label style={labelStyle}>{t('client.historique_appro.start_date')}</label>
-            <input type="date" className="input" style={{ maxWidth: 160 }} min={yearStart} max={yearEnd}
-              value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+        {/* Section 2: Period + Supplier */}
+        <div style={{ padding: '16px 24px 0' }}>
+          <div style={sectionLabelStyle}>
+            <span style={{ width: 16, height: 2, background: '#7c3aed', display: 'inline-block', borderRadius: 2 }} />
+            Période &amp; Fournisseur
           </div>
-          <div>
-            <label style={labelStyle}>{t('client.historique_appro.end_date')}</label>
-            <input type="date" className="input" style={{ maxWidth: 160 }} min={yearStart} max={yearEnd}
-              value={endDate} onChange={(e) => setEndDate(e.target.value)} />
-          </div>
-
-          {/* Fournisseur */}
-          {isEntreprise && fournisseurs.length > 0 && (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '12px 20px' }}>
             <div>
-              <label style={labelStyle}>Fournisseur</label>
-              <select className="input" style={{ maxWidth: 200 }}
-                value={selectedFournisseurId} onChange={(e) => setSelectedFournisseurId(e.target.value)}>
-                <option value="">— Tous —</option>
-                {fournisseurs.map((f) => <option key={f.id} value={f.id}>{f.nom}</option>)}
-              </select>
+              <label style={labelStyle}>{t('client.historique_appro.start_date')}</label>
+              <input
+                type="date"
+                className="input"
+                style={{ width: '100%' }}
+                min={yearStart}
+                max={yearEnd}
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+              />
             </div>
-          )}
-
-          {/* Réf Facture */}
-          {isEntreprise && (
             <div>
-              <label style={labelStyle}>Réf Facture</label>
-              <input type="text" className="input" style={{ maxWidth: 160 }}
-                placeholder="Rechercher réf…"
-                value={refFactureFilter} onChange={(e) => setRefFactureFilter(e.target.value)} />
+              <label style={labelStyle}>{t('client.historique_appro.end_date')}</label>
+              <input
+                type="date"
+                className="input"
+                style={{ width: '100%' }}
+                min={yearStart}
+                max={yearEnd}
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+              />
             </div>
-          )}
+            {isEntreprise && fournisseurs.length > 0 && (
+              <div>
+                <label style={labelStyle}>Fournisseur</label>
+                <select
+                  className="input"
+                  style={{ width: '100%' }}
+                  value={selectedFournisseurId}
+                  onChange={(e) => setSelectedFournisseurId(e.target.value)}
+                >
+                  <option value="">— Tous —</option>
+                  {fournisseurs.map((f) => <option key={f.id} value={f.id}>{f.nom}</option>)}
+                </select>
+              </div>
+            )}
+            {isEntreprise && (
+              <div>
+                <label style={labelStyle}>Réf. Facture</label>
+                <input
+                  type="text"
+                  className="input"
+                  style={{ width: '100%' }}
+                  placeholder="Rechercher réf…"
+                  value={refFactureFilter}
+                  onChange={(e) => setRefFactureFilter(e.target.value)}
+                />
+              </div>
+            )}
+          </div>
+        </div>
 
-          <button className="btn btn-primary" style={{ alignSelf: 'flex-end' }} onClick={fetchResults} disabled={loading}>
+        {/* Actions footer */}
+        <div style={{
+          padding: '16px 24px',
+          marginTop: 16,
+          borderTop: '1px solid var(--border)',
+          background: 'var(--bg-secondary, #f8fafc)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'flex-end',
+          gap: 10,
+        }}>
+          <button className="btn btn-primary" onClick={fetchResults} disabled={loading}>
             {loading ? t('common.loading') : '🔍 Rechercher'}
           </button>
+          {results.length > 0 && (
+            <button
+              className="btn btn-ghost"
+              onClick={exportCsv}
+              title="Exporter les résultats en CSV"
+              style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+            >
+              📥 Exporter CSV
+            </button>
+          )}
         </div>
       </div>
 
-      {/* Results */}
+      {/* ── Results ────────────────────────────────────────────────────── */}
       {!searched ? null : loading ? (
         <p className="text-muted">{t('common.loading')}</p>
       ) : results.length === 0 ? (
@@ -548,7 +681,7 @@ export default function HistoriqueApproPage() {
         </div>
       ) : (
         <>
-          {/* Totals per unit — clickable */}
+          {/* Totals per unit */}
           <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
             {Object.entries(unitTotals).map(([unit, data]) => (
               <button
