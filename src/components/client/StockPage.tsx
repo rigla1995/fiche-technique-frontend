@@ -642,7 +642,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                     <tr>
                       <th style={{ width: 32 }}></th>
                       <th>{t('client.stock.ingredient')}</th>
-                      <th style={{ textAlign: 'right' }}>Total Stock</th>
+                      <th style={{ textAlign: 'right' }}>Total Stock<br /><span style={{ fontSize: '0.65rem', fontWeight: 400, color: 'var(--text-muted)' }}>mois en cours</span></th>
                       <th style={{ textAlign: 'center' }}>Seuil min</th>
                       <th style={{ textAlign: 'right' }}>Nouvelle Qté</th>
                       <th style={{ textAlign: 'right' }}>Stock Prix (U/DT)</th>
