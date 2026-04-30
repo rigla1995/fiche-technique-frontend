@@ -59,7 +59,9 @@ export default function ProductForm() {
 
   // Resolved activity context after pre-step (or from URL if already known)
   const [resolvedActCtx, setResolvedActCtx] = useState(
-    isDistinctSpecificFromUrl ? urlActCtx : ''
+    isDistinctSpecificFromUrl ? urlActCtx :
+    (isEdit && isFranchiseFromUrl) ? 'franchise' :
+    ''
   );
 
   const isFranchiseCtx = resolvedActCtx === 'franchise' || resolvedActCtx.startsWith('franchise-specific-');
@@ -193,9 +195,30 @@ export default function ProductForm() {
           const data = productRes.data as {
             name: string;
             type: string;
-            ingredients: { ingredientId: number; portion: number }[];
+            ingredients: { ingredientId: number; portion: number; unitId?: number; ingredientName?: string; unitPrice?: number; unitName?: string }[];
             subProducts: { subProductId: number; portion: number }[];
           };
+
+          // Ensure every ingredient already in the product appears in the dropdown list,
+          // even if it is not currently "selected" in the activity catalog.
+          for (const ing of data.ingredients) {
+            if (!ingData.find((x) => x.id === ing.ingredientId)) {
+              ingData.push({
+                id: ing.ingredientId,
+                name: ing.ingredientName || String(ing.ingredientId),
+                price: ing.unitPrice ?? 0,
+                clientPrice: null,
+                effectivePrice: ing.unitPrice ?? 0,
+                selected: true,
+                unit: { id: ing.unitId || 0, name: ing.unitName || '' },
+                unitId: ing.unitId || 0,
+                categorieId: null,
+                categorieName: null,
+              } as Ingredient);
+            }
+          }
+          setIngredients(ingData); // re-set with augmented list
+
           setName(data.name);
           setProductType(data.type === 'utilisable' ? 'utilisable' : 'vendable');
           setIngredientLines(
@@ -571,12 +594,7 @@ export default function ProductForm() {
         </h1>
         <div className="page-header-actions">
           {isEdit && (
-            <>
-              <button className="btn btn-success" onClick={handleExport} disabled={exporting}>
-                📥 {exporting ? t('common.loading') : t('client.products.export_excel')}
-              </button>
-              <button className="btn btn-danger btn-sm" onClick={handleDelete}>{t('common.delete')}</button>
-            </>
+            <button className="btn btn-danger btn-sm" onClick={handleDelete}>{t('common.delete')}</button>
           )}
         </div>
       </div>
