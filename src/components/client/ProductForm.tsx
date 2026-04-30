@@ -25,15 +25,12 @@ export default function ProductForm() {
   const isEdit = Boolean(id);
   const isEntreprise = user?.compteType === 'entreprise';
 
-  // Activity context from URL
   const urlActCtx = searchParams.get('actCtx') || '';
   const urlFg = searchParams.get('fg') || '';
   const urlFact = searchParams.get('fact') || '';
   const isFranchiseFromUrl = urlActCtx === 'franchise';
-  const isDistinctGenericFromUrl = urlActCtx === 'distinct';
   const isDistinctSpecificFromUrl = urlActCtx.startsWith('distinct-');
 
-  // Back URL preserving all filter params so the list restores its filters
   const buildBackUrl = (tab: string) => {
     const params = new URLSearchParams();
     params.set('tab', tab);
@@ -43,49 +40,56 @@ export default function ProductForm() {
     return `/client/products?${params.toString()}`;
   };
 
-  // Pre-step needed when: enterprise + new + context not fully resolved from URL
-  // distinct-{id} → auto-resolved; everything else needs pre-step
-  const needsPreStep = isEntreprise && !isEdit && !isDistinctSpecificFromUrl;
-
-  const [preStepDone, setPreStepDone] = useState(!needsPreStep);
-  const [typesSummary, setTypesSummary] = useState<ActiviteTypesSummary | null>(null);
+  // ── Activity context ─────────────────────────────────────────────────────
   const [allActivities, setAllActivities] = useState<Activite[]>([]);
-  const [preActType, setPreActType] = useState<'franchise' | 'distincte' | ''>(
-    isFranchiseFromUrl ? 'franchise' : isDistinctGenericFromUrl ? 'distincte' : ''
-  );
+  const [typesSummary, setTypesSummary] = useState<ActiviteTypesSummary | null>(null);
+
+  // Pre-step state
   const [preFranchiseGroup, setPreFranchiseGroup] = useState('');
   const [preCheckedActIds, setPreCheckedActIds] = useState<Set<number>>(new Set());
-  const [preDistinctActId, setPreDistinctActId] = useState<string>('');
+  const [preDistinctActId, setPreDistinctActId] = useState<string>(
+    isDistinctSpecificFromUrl ? urlActCtx.replace('distinct-', '') : ''
+  );
 
-  // Resolved activity context after pre-step (or from URL if already known)
-  const [resolvedActCtx, setResolvedActCtx] = useState(
+  // resolvedActCtx drives what ingredients to load
+  const [resolvedActCtx, setResolvedActCtx] = useState<string>(
     isDistinctSpecificFromUrl ? urlActCtx :
     (isEdit && isFranchiseFromUrl) ? 'franchise' :
     ''
   );
+  const [preStepDone, setPreStepDone] = useState(
+    !isEntreprise || isEdit || isDistinctSpecificFromUrl
+  );
 
   const isFranchiseCtx = resolvedActCtx === 'franchise' || resolvedActCtx.startsWith('franchise-specific-');
-  const franchiseSpecificActId = resolvedActCtx.startsWith('franchise-specific-') ? parseInt(resolvedActCtx.replace('franchise-specific-', '')) : null;
-  const distinctActId = resolvedActCtx.startsWith('distinct-') ? parseInt(resolvedActCtx.replace('distinct-', '')) : null;
+  const franchiseSpecificActId = resolvedActCtx.startsWith('franchise-specific-')
+    ? parseInt(resolvedActCtx.replace('franchise-specific-', ''))
+    : null;
+  const distinctActId = resolvedActCtx.startsWith('distinct-')
+    ? parseInt(resolvedActCtx.replace('distinct-', ''))
+    : null;
 
+  // ── Form state ───────────────────────────────────────────────────────────
   const [name, setName] = useState('');
-  const [productType, setProductType] = useState<'vendable' | 'utilisable'>(
+  const [refProduit, setRefProduit] = useState('');
+  const [productType] = useState<'vendable' | 'utilisable'>(
     (searchParams.get('type') as 'vendable' | 'utilisable') || 'vendable'
   );
   const [ingredientLines, setIngredientLines] = useState<IngredientLine[]>([]);
   const [subProductLines, setSubProductLines] = useState<SubProductLine[]>([]);
+
   const [ingredients, setIngredients] = useState<Ingredient[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [newCatSelect, setNewCatSelect] = useState('');
   const [products, setProducts] = useState<Product[]>([]);
+  const [newCatSelect, setNewCatSelect] = useState('');
+
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [exporting, setExporting] = useState(false);
   const [savedOk, setSavedOk] = useState(false);
 
-  // Load activities for enterprise pre-step
+  // ── Load activities (enterprise) ─────────────────────────────────────────
   useEffect(() => {
-    if (!needsPreStep) return;
+    if (!isEntreprise) return;
     Promise.all([
       api.get('/api/entreprise/activites/types-summary'),
       api.get('/api/entreprise/activites'),
@@ -95,25 +99,25 @@ export default function ProductForm() {
       setTypesSummary(summary);
       setAllActivities(acts);
 
-      if (isFranchiseFromUrl) {
-        // For franchise context: auto-select the group if only one exists
-        const franchiseActs = acts.filter((a) => a.type === 'franchise');
-        const groups = Array.from(new Set(franchiseActs.map((a) => a.franchiseGroup || a.nom)));
-        if (groups.length === 1) {
-          setPreFranchiseGroup(groups[0]);
-          setPreCheckedActIds(new Set(franchiseActs.map((a) => a.id)));
+      if (!isEdit) {
+        if (isFranchiseFromUrl) {
+          const franchiseActs = acts.filter((a) => a.type === 'franchise');
+          const groups = Array.from(new Set(franchiseActs.map((a) => a.franchiseGroup || a.nom)));
+          if (groups.length === 1) {
+            // Auto-select the only franchise group
+            const group = groups[0];
+            setPreFranchiseGroup(group);
+            setPreCheckedActIds(new Set(franchiseActs.map((a) => a.id)));
+          }
         }
-      } else if (!isFranchiseFromUrl && !isDistinctGenericFromUrl) {
-        // Generic enterprise: pre-check all franchise activities
-        const franchiseIds = acts.filter((a) => a.type === 'franchise').map((a) => a.id);
-        setPreCheckedActIds(new Set(franchiseIds));
       }
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [needsPreStep]);
+  }, [isEntreprise]);
 
+  // ── Load ingredients + product data ──────────────────────────────────────
   useEffect(() => {
-    if (needsPreStep && !preStepDone) return; // wait for pre-step
+    if (!preStepDone) return;
 
     const mapActiviteIngredient = (i: import('../../types').ActiviteIngredient): Ingredient => ({
       id: i.id,
@@ -128,21 +132,24 @@ export default function ProductForm() {
       categorieName: i.categorie,
     } as Ingredient);
 
-    // For franchise: union selected ingredients across franchise activities
     const buildIngredientsFetch = async (): Promise<{ data: unknown }> => {
       if (!resolvedActCtx) return api.get('/ingredients');
       if (isFranchiseCtx) {
         if (franchiseSpecificActId) {
-          // Single franchise activity: load only that activity's ingredients
           return api.get(`/api/entreprise/activites/${franchiseSpecificActId}/ingredients`);
         }
-        // All franchise activities: union of selected ingredients
         let franchiseActs = allActivities.filter((a) => a.type === 'franchise');
+        if (preFranchiseGroup) {
+          franchiseActs = franchiseActs.filter((a) => (a.franchiseGroup || a.nom) === preFranchiseGroup);
+        }
         if (franchiseActs.length === 0) {
           try {
             const { data: allActs } = await api.get('/api/entreprise/activites');
             franchiseActs = (allActs as Activite[]).filter((a) => a.type === 'franchise');
-          } catch { /* fall through to empty */ }
+            if (preFranchiseGroup) {
+              franchiseActs = franchiseActs.filter((a) => (a.franchiseGroup || a.nom) === preFranchiseGroup);
+            }
+          } catch { /* empty */ }
         }
         if (franchiseActs.length === 0) return { data: [] };
         const results = await Promise.all(
@@ -150,15 +157,11 @@ export default function ProductForm() {
             api.get(`/api/entreprise/activites/${a.id}/ingredients`).then(({ data }) => data as import('../../types').ActiviteIngredient[])
           )
         );
-        // Union: ingredient included if selected in at least one franchise activity
         const seenIds = new Set<number>();
         const union: import('../../types').ActiviteIngredient[] = [];
         for (const list of results) {
           for (const ing of list) {
-            if (ing.selected && !seenIds.has(ing.id)) {
-              seenIds.add(ing.id);
-              union.push(ing);
-            }
+            if (ing.selected && !seenIds.has(ing.id)) { seenIds.add(ing.id); union.push(ing); }
           }
         }
         return { data: union };
@@ -166,41 +169,32 @@ export default function ProductForm() {
       return api.get(`/api/entreprise/activites/${distinctActId}/ingredients`);
     };
 
-    const ingredientsFetch = buildIngredientsFetch();
-    const productsFetch = api.get('/products');
-    const categoriesFetch = api.get('/categories');
-    const fetches: Promise<{ data: unknown }>[] = [ingredientsFetch, productsFetch, categoriesFetch];
+    setLoading(true);
+    const fetches: Promise<{ data: unknown }>[] = [
+      buildIngredientsFetch(),
+      api.get('/products'),
+      api.get('/categories'),
+    ];
     if (isEdit && id) fetches.push(api.get(`/products/${id}`));
 
     Promise.all(fetches)
       .then(([ing, prod, cat, productRes]) => {
-        const catData = cat.data as Category[];
-        setCategories(catData);
+        setCategories(cat.data as Category[]);
         let ingData: Ingredient[];
         if (resolvedActCtx) {
-          ingData = (ing.data as import('../../types').ActiviteIngredient[])
-            .filter((i) => i.selected)
-            .map(mapActiviteIngredient);
+          ingData = (ing.data as import('../../types').ActiviteIngredient[]).filter((i) => i.selected).map(mapActiviteIngredient);
         } else {
           ingData = (ing.data as Ingredient[]).filter((i) => i.selected);
         }
-        setIngredients(ingData);
-        setProducts(
-          (prod.data as Product[]).filter(
-            (p) => p.type === 'utilisable' && (!id || String(p.id) !== id)
-          )
-        );
+        setProducts((prod.data as Product[]).filter((p) => p.type === 'utilisable' && (!id || String(p.id) !== id)));
 
         if (isEdit && productRes) {
           const data = productRes.data as {
-            name: string;
-            type: string;
+            name: string; refProduit?: string; type: string;
             ingredients: { ingredientId: number; portion: number; unitId?: number; ingredientName?: string; unitPrice?: number; unitName?: string }[];
             subProducts: { subProductId: number; portion: number }[];
           };
-
-          // Ensure every ingredient already in the product appears in the dropdown list,
-          // even if it is not currently "selected" in the activity catalog.
+          // Augment ingData with existing product ingredients not in catalog
           for (const ing of data.ingredients) {
             if (!ingData.find((x) => x.id === ing.ingredientId)) {
               ingData.push({
@@ -217,34 +211,23 @@ export default function ProductForm() {
               } as Ingredient);
             }
           }
-          setIngredients(ingData); // re-set with augmented list
-
+          setIngredients(ingData);
           setName(data.name);
-          setProductType(data.type === 'utilisable' ? 'utilisable' : 'vendable');
-          setIngredientLines(
-            data.ingredients.map((i) => {
-              const found = ingData.find((x) => x.id === i.ingredientId);
-              return {
-                ingredientId: String(i.ingredientId),
-                portion: String(i.portion),
-                categoryFilter: found?.categorieId ? String(found.categorieId) : '',
-              };
-            })
-          );
-          setSubProductLines(
-            data.subProducts.map((s) => ({
-              subProductId: String(s.subProductId),
-              portion: String(s.portion),
-            }))
-          );
+          setRefProduit(data.refProduit || '');
+          setIngredientLines(data.ingredients.map((i) => {
+            const found = ingData.find((x) => x.id === i.ingredientId);
+            return { ingredientId: String(i.ingredientId), portion: String(i.portion), categoryFilter: found?.categorieId ? String(found.categorieId) : '' };
+          }));
+          setSubProductLines(data.subProducts.map((s) => ({ subProductId: String(s.subProductId), portion: String(s.portion) })));
+        } else {
+          setIngredients(ingData);
         }
       })
       .finally(() => setLoading(false));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, isEdit, preStepDone, resolvedActCtx, allActivities.length]);
 
-
-  // --- Ingredient line helpers ---
+  // ── Ingredient helpers ───────────────────────────────────────────────────
   const addIngredientLineInCategory = (catId: string) =>
     setIngredientLines((l) => [...l, { ingredientId: '', portion: '', categoryFilter: catId }]);
 
@@ -252,23 +235,22 @@ export default function ProductForm() {
     setIngredientLines((l) => l.filter((_, idx) => idx !== i));
 
   const updateIngredientLine = (i: number, field: 'ingredientId' | 'portion', value: string) =>
-    setIngredientLines((l) => l.map((line, idx) => (idx === i ? { ...line, [field]: value } : line)));
+    setIngredientLines((l) => l.map((line, idx) => idx === i ? { ...line, [field]: value } : line));
 
   const addNewCategory = (catId: string) => {
     if (!catId) return;
-    // '__none__' sentinel means ingredients without a category
     const filter = catId === '__none__' ? '' : catId;
     setIngredientLines((l) => [...l, { ingredientId: '', portion: '', categoryFilter: filter }]);
     setNewCatSelect('');
   };
 
-  // --- Sub-product helpers ---
+  // ── Sub-product helpers ──────────────────────────────────────────────────
   const addSubProductLine = () => setSubProductLines((l) => [...l, { subProductId: '', portion: '' }]);
   const removeSubProductLine = (i: number) => setSubProductLines((l) => l.filter((_, idx) => idx !== i));
   const updateSubProductLine = (i: number, field: keyof SubProductLine, value: string) =>
-    setSubProductLines((l) => l.map((line, idx) => (idx === i ? { ...line, [field]: value } : line)));
+    setSubProductLines((l) => l.map((line, idx) => idx === i ? { ...line, [field]: value } : line));
 
-  // --- Grouping logic ---
+  // ── Grouping ─────────────────────────────────────────────────────────────
   const selectedIngredientIds = new Set(ingredientLines.map((l) => l.ingredientId).filter(Boolean));
 
   const orderedCatIds = ingredientLines.reduce<string[]>((acc, line) => {
@@ -278,55 +260,40 @@ export default function ProductForm() {
 
   const groups = orderedCatIds.map((catId) => ({
     catId,
-    catName: catId
-      ? (categories.find((c) => String(c.id) === catId)?.name ?? catId)
-      : t('client.ingredients_catalog.no_category'),
+    catName: catId ? (categories.find((c) => String(c.id) === catId)?.name ?? catId) : t('client.ingredients_catalog.no_category'),
     entries: ingredientLines.map((line, idx) => ({ line, idx })).filter(({ line }) => line.categoryFilter === catId),
   }));
 
   const usedCatIds = new Set(orderedCatIds.filter(Boolean));
-  const usedHasNone = orderedCatIds.includes(''); // '' = uncategorized group already added
+  const usedHasNone = orderedCatIds.includes('');
   const catIdsWithIngredients = new Set(
-    ingredients.filter((i) => i.categorieId !== null && i.categorieId !== undefined)
-      .map((i) => String(i.categorieId))
+    ingredients.filter((i) => i.categorieId !== null && i.categorieId !== undefined).map((i) => String(i.categorieId))
   );
   const hasUncategorized = ingredients.some((i) => i.categorieId === null || i.categorieId === undefined);
-  const availableNewCategories = categories.filter(
-    (c) => !usedCatIds.has(String(c.id)) && catIdsWithIngredients.has(String(c.id))
-  );
+  const availableNewCategories = categories.filter((c) => !usedCatIds.has(String(c.id)) && catIdsWithIngredients.has(String(c.id)));
 
   const availableForCategory = (catId: string) => {
-    let byCategory: typeof ingredients;
-    if (catId === '') {
-      byCategory = ingredients.filter((i) => i.categorieId === null || i.categorieId === undefined);
-    } else {
-      byCategory = ingredients.filter((i) => String(i.categorieId) === catId);
-    }
+    const byCategory = catId === '' ? ingredients.filter((i) => !i.categorieId) : ingredients.filter((i) => String(i.categorieId) === catId);
     return byCategory.filter((i) => !selectedIngredientIds.has(String(i.id)));
   };
 
   const availableForLine = (idx: number) => {
     const line = ingredientLines[idx];
     let byCategory: typeof ingredients;
-    if (line.categoryFilter === '') {
-      // uncategorized group — show only ingredients without a category
-      byCategory = ingredients.filter((i) => i.categorieId === null || i.categorieId === undefined);
-    } else if (line.categoryFilter) {
-      byCategory = ingredients.filter((i) => String(i.categorieId) === line.categoryFilter);
-    } else {
-      byCategory = ingredients;
-    }
-    return byCategory.filter(
-      (i) => !selectedIngredientIds.has(String(i.id)) || line.ingredientId === String(i.id)
-    );
+    if (line.categoryFilter === '') byCategory = ingredients.filter((i) => !i.categorieId);
+    else if (line.categoryFilter) byCategory = ingredients.filter((i) => String(i.categorieId) === line.categoryFilter);
+    else byCategory = ingredients;
+    return byCategory.filter((i) => !selectedIngredientIds.has(String(i.id)) || line.ingredientId === String(i.id));
   };
 
+  // ── Submit ────────────────────────────────────────────────────────────────
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
     try {
       const payload: Record<string, unknown> = {
         name,
+        refProduit: refProduit.trim() || null,
         type: productType,
         ingredients: ingredientLines
           .filter((l) => l.ingredientId && l.portion)
@@ -339,9 +306,7 @@ export default function ProductForm() {
         if (isFranchiseCtx) {
           payload.activiteType = 'franchise';
           payload.franchiseGroup = preFranchiseGroup || undefined;
-          if (franchiseSpecificActId) {
-            payload.activiteId = franchiseSpecificActId;
-          }
+          if (franchiseSpecificActId) payload.activiteId = franchiseSpecificActId;
         } else if (distinctActId) {
           payload.activiteId = distinctActId;
           payload.activiteType = 'distincte';
@@ -359,37 +324,13 @@ export default function ProductForm() {
     }
   };
 
-  const handleCreateAnother = () => {
-    setName('');
-    setIngredientLines([]);
-    setSubProductLines([]);
-    setSavedOk(false);
-  };
-
   const handleDelete = async () => {
     if (!window.confirm(t('client.products.delete_confirm'))) return;
     await api.delete(`/products/${id}`);
     navigate(buildBackUrl(productType));
   };
 
-  const handleExport = async () => {
-    setExporting(true);
-    try {
-      const response = await api.get(`/products/${id}/export`, { responseType: 'blob' });
-      const url = window.URL.createObjectURL(new Blob([response.data]));
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', `fiche-technique-${name}.xlsx`);
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.URL.revokeObjectURL(url);
-    } finally {
-      setExporting(false);
-    }
-  };
-
-  // Enterprise pre-step derived data
+  // ── Derived data for pre-step ─────────────────────────────────────────────
   const franchiseGroups = Array.from(new Set(
     allActivities.filter((a) => a.type === 'franchise').map((a) => a.franchiseGroup || a.nom)
   ));
@@ -399,173 +340,40 @@ export default function ProductForm() {
   const distinctActivities = allActivities.filter((a) => a.type === 'distincte');
 
   const handlePreStepConfirm = () => {
-    const isFranchiseType = isFranchiseFromUrl || preActType === 'franchise';
-    if (isFranchiseType) {
-      // If only one specific activity is checked, assign to that activity; otherwise franchise-wide
+    if (isFranchiseFromUrl) {
       const checkedArr = Array.from(preCheckedActIds);
-      const allFranchiseInGroup = allActivities.filter(
-        (a) => a.type === 'franchise' && (!preFranchiseGroup || (a.franchiseGroup || a.nom) === preFranchiseGroup)
-      );
-      if (checkedArr.length === 1 && allFranchiseInGroup.length > 1) {
+      const allInGroup = franchiseActivitiesInGroup;
+      if (checkedArr.length === 1 && allInGroup.length > 1) {
         setResolvedActCtx(`franchise-specific-${checkedArr[0]}`);
       } else {
         setResolvedActCtx('franchise');
       }
-    } else if (preActType === 'distincte' && preDistinctActId) {
+    } else if (preDistinctActId) {
       setResolvedActCtx(`distinct-${preDistinctActId}`);
     }
     setPreStepDone(true);
     setLoading(true);
   };
 
-  // Show pre-step for enterprise new products
-  if (needsPreStep && !preStepDone) {
-    const franchiseOnly = isFranchiseFromUrl;
-    const distinctOnly = isDistinctGenericFromUrl;
-    const canConfirm = franchiseOnly
-      ? (preCheckedActIds.size > 0)
-      : distinctOnly
-        ? !!preDistinctActId
-        : (preActType === 'franchise' ? preCheckedActIds.size > 0 : (preActType === 'distincte' && !!preDistinctActId));
+  const canPreConfirm = isFranchiseFromUrl
+    ? preCheckedActIds.size > 0
+    : !!preDistinctActId;
 
-    return (
-      <div className="page">
-        <div className="page-header">
-          <h1>{productType === 'vendable' ? t('client.products.add_vendable') : t('client.products.add_utilisable')}</h1>
-        </div>
-        <div className="card" style={{ maxWidth: 520 }}>
+  // ── Validation ────────────────────────────────────────────────────────────
+  const filledIngredients = ingredientLines.filter((l) => l.ingredientId && l.portion);
+  const canSubmit = name.trim().length > 0 && filledIngredients.length >= 1;
+  const hasNoIngredients = !loading && preStepDone && ingredients.length === 0;
 
-          {/* Type selector — only when context is completely unknown */}
-          {!franchiseOnly && !distinctOnly && (
-            <>
-              <h2 style={{ marginBottom: 16, fontSize: '1rem' }}>{t('client.products.choose_activity_type')}</h2>
-              <div style={{ display: 'flex', gap: 10, marginBottom: 20 }}>
-                {typesSummary?.hasFranchise && (
-                  <button
-                    type="button"
-                    className={`btn btn-sm ${preActType === 'franchise' ? 'btn-primary' : 'btn-ghost'}`}
-                    onClick={() => { setPreActType('franchise'); setPreDistinctActId(''); }}
-                  >
-                    Franchise
-                  </button>
-                )}
-                {typesSummary?.hasDistinct && (
-                  <button
-                    type="button"
-                    className={`btn btn-sm ${preActType === 'distincte' ? 'btn-primary' : 'btn-ghost'}`}
-                    onClick={() => { setPreActType('distincte'); setPreFranchiseGroup(''); }}
-                  >
-                    Distinct
-                  </button>
-                )}
-              </div>
-            </>
-          )}
-
-          {distinctOnly && (
-            <h2 style={{ marginBottom: 16, fontSize: '1rem' }}>{t('client.fiche_technique.choose_activity')}</h2>
-          )}
-
-          {franchiseOnly && (
-            <h2 style={{ marginBottom: 16, fontSize: '1rem' }}>Sélectionner la franchise</h2>
-          )}
-
-          {/* Franchise: group picker + activity checkboxes */}
-          {(franchiseOnly || preActType === 'franchise') && (
-            <>
-              {franchiseGroups.length > 1 && (
-                <div style={{ marginBottom: 14 }}>
-                  <label style={{ display: 'block', fontWeight: 600, marginBottom: 6, fontSize: '0.875rem' }}>
-                    {t('client.fiche_technique.choose_franchise_group')}
-                  </label>
-                  <select
-                    className="input"
-                    style={{ maxWidth: 280 }}
-                    value={preFranchiseGroup}
-                    onChange={(e) => {
-                      const g = e.target.value;
-                      setPreFranchiseGroup(g);
-                      const inGroup = allActivities.filter(
-                        (a) => a.type === 'franchise' && (a.franchiseGroup || a.nom) === g
-                      );
-                      setPreCheckedActIds(new Set(inGroup.map((a) => a.id)));
-                    }}
-                  >
-                    <option value="">— choisir une franchise —</option>
-                    {franchiseGroups.map((g) => <option key={g} value={g}>{g}</option>)}
-                  </select>
-                </div>
-              )}
-              {franchiseActivitiesInGroup.length > 0 && (
-                <div>
-                  <label style={{ display: 'block', fontWeight: 600, marginBottom: 8, fontSize: '0.875rem' }}>
-                    {franchiseActivitiesInGroup.length === 1
-                      ? t('client.products.included_activities')
-                      : t('client.products.included_activities')}
-                  </label>
-                  {franchiseActivitiesInGroup.map((a) => {
-                    const singleActivity = franchiseActivitiesInGroup.length === 1;
-                    return (
-                      <label key={a.id} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6, cursor: singleActivity ? 'default' : 'pointer', opacity: singleActivity ? 0.65 : 1 }}>
-                        <input
-                          type="checkbox"
-                          checked={preCheckedActIds.has(a.id)}
-                          disabled={singleActivity}
-                          onChange={singleActivity ? undefined : (e) => {
-                            const next = new Set(preCheckedActIds);
-                            if (e.target.checked) next.add(a.id); else next.delete(a.id);
-                            setPreCheckedActIds(next);
-                          }}
-                        />
-                        <span>{a.nom}</span>
-                      </label>
-                    );
-                  })}
-                </div>
-              )}
-            </>
-          )}
-
-          {/* Distinct: activity selector */}
-          {(distinctOnly || preActType === 'distincte') && (
-            <div style={{ marginBottom: 14 }}>
-              <label style={{ display: 'block', fontWeight: 600, marginBottom: 6, fontSize: '0.875rem' }}>
-                {t('client.fiche_technique.choose_activity')}
-              </label>
-              <select className="input" style={{ maxWidth: 280 }} value={preDistinctActId} onChange={(e) => setPreDistinctActId(e.target.value)}>
-                <option value="">— {t('client.fiche_technique.choose_activity')} —</option>
-                {distinctActivities.map((a) => <option key={a.id} value={a.id}>{a.nom}</option>)}
-              </select>
-            </div>
-          )}
-
-          <div style={{ marginTop: 24 }}>
-            <button
-              type="button"
-              className="btn btn-primary"
-              disabled={!canConfirm}
-              onClick={handlePreStepConfirm}
-            >
-              {t('common.continue')} →
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // "Créer un autre" screen
+  // ── "Created successfully" screen ─────────────────────────────────────────
   if (savedOk) {
     return (
       <div className="page">
-        <div className="page-header">
-          <h1>{productType === 'vendable' ? t('client.products.add_vendable') : t('client.products.add_utilisable')}</h1>
-        </div>
-        <div className="card" style={{ maxWidth: 480, textAlign: 'center', padding: 32 }}>
-          <div style={{ fontSize: '2rem', marginBottom: 12 }}>✅</div>
-          <p style={{ fontWeight: 600, marginBottom: 20 }}>{t('client.products.saved_success')}</p>
+        <div style={{ maxWidth: 480, margin: '60px auto', textAlign: 'center' }}>
+          <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'linear-gradient(135deg,#22c55e,#16a34a)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.8rem', margin: '0 auto 16px' }}>✓</div>
+          <h2 style={{ marginBottom: 8, color: '#166534', fontWeight: 700 }}>{t('client.products.saved_success')}</h2>
+          <p style={{ color: 'var(--text-muted)', marginBottom: 28 }}>Le produit <strong>{name}</strong> a été créé avec succès.</p>
           <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
-            <button className="btn btn-primary" onClick={handleCreateAnother}>
+            <button className="btn btn-primary" onClick={() => { setName(''); setRefProduit(''); setIngredientLines([]); setSubProductLines([]); setSavedOk(false); }}>
               + {t('client.products.create_another')}
             </button>
             <button className="btn btn-ghost" onClick={() => navigate(buildBackUrl(productType))}>
@@ -577,21 +385,157 @@ export default function ProductForm() {
     );
   }
 
+  // ── Enterprise pre-step ───────────────────────────────────────────────────
+  if (isEntreprise && !isEdit && !preStepDone) {
+    return (
+      <div className="page">
+        <div style={{ maxWidth: 560, margin: '0 auto' }}>
+          {/* Header */}
+          <div style={{ marginBottom: 28 }}>
+            <h1 style={{ margin: 0, fontSize: '1.5rem' }}>
+              {productType === 'vendable' ? t('client.products.add_vendable') : t('client.products.add_utilisable')}
+            </h1>
+            <p style={{ color: 'var(--text-muted)', marginTop: 4, marginBottom: 0 }}>
+              {isFranchiseFromUrl ? 'Configurez le contexte franchise avant de créer le produit.' : 'Sélectionnez l\'activité pour ce produit.'}
+            </p>
+          </div>
+
+          <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, overflow: 'hidden', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
+            {/* Franchise flow */}
+            {isFranchiseFromUrl && (
+              <>
+                <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)', background: 'linear-gradient(135deg,#eff6ff,#f8faff)' }}>
+                  <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#1e40af', marginBottom: 2 }}>🏢 Franchise</div>
+                  <div style={{ fontSize: '0.82rem', color: '#6b7280' }}>
+                    {franchiseGroups.length === 1 ? `Franchise « ${franchiseGroups[0]} » auto-sélectionnée` : 'Choisissez la franchise concernée'}
+                  </div>
+                </div>
+                <div style={{ padding: '20px 24px' }}>
+                  {/* Group selector (only when multiple) */}
+                  {franchiseGroups.length > 1 && (
+                    <div style={{ marginBottom: 20 }}>
+                      <label style={{ display: 'block', fontWeight: 600, fontSize: '0.85rem', marginBottom: 8 }}>Franchise</label>
+                      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                        {franchiseGroups.map((g) => (
+                          <button
+                            key={g} type="button"
+                            onClick={() => {
+                              setPreFranchiseGroup(g);
+                              const inGroup = allActivities.filter((a) => a.type === 'franchise' && (a.franchiseGroup || a.nom) === g);
+                              setPreCheckedActIds(new Set(inGroup.map((a) => a.id)));
+                            }}
+                            style={{ padding: '8px 16px', borderRadius: 10, border: '2px solid', fontWeight: 600, fontSize: '0.88rem', cursor: 'pointer', transition: 'all 0.15s',
+                              borderColor: preFranchiseGroup === g ? '#3b82f6' : 'var(--border)',
+                              background: preFranchiseGroup === g ? '#eff6ff' : 'var(--bg)',
+                              color: preFranchiseGroup === g ? '#1d4ed8' : 'var(--text)',
+                            }}
+                          >
+                            🏢 {g}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Activity checkboxes */}
+                  {franchiseActivitiesInGroup.length > 0 && (
+                    <div>
+                      <label style={{ display: 'block', fontWeight: 600, fontSize: '0.85rem', marginBottom: 10 }}>
+                        Activités concernées
+                        <span style={{ fontWeight: 400, color: '#6b7280', fontSize: '0.78rem', marginLeft: 6 }}>(toutes sélectionnées par défaut)</span>
+                      </label>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                        {franchiseActivitiesInGroup.map((a) => {
+                          const checked = preCheckedActIds.has(a.id);
+                          return (
+                            <label key={a.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', borderRadius: 10, border: '1px solid', cursor: 'pointer', transition: 'all 0.15s',
+                              borderColor: checked ? '#bfdbfe' : 'var(--border)',
+                              background: checked ? '#eff6ff' : 'var(--bg)',
+                            }}>
+                              <input type="checkbox" checked={checked} style={{ width: 16, height: 16, accentColor: '#3b82f6' }}
+                                onChange={(e) => {
+                                  const next = new Set(preCheckedActIds);
+                                  if (e.target.checked) next.add(a.id); else next.delete(a.id);
+                                  setPreCheckedActIds(next);
+                                }}
+                              />
+                              <div style={{ width: 28, height: 28, borderRadius: 8, background: checked ? '#3b82f6' : '#e5e7eb', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.85rem', flexShrink: 0 }}>🏪</div>
+                              <span style={{ fontWeight: checked ? 600 : 400, color: checked ? '#1e3a8a' : 'var(--text)' }}>{a.nom}</span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+
+            {/* Distinct flow */}
+            {!isFranchiseFromUrl && (
+              <>
+                <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)', background: 'linear-gradient(135deg,#fefce8,#fffbeb)' }}>
+                  <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#92400e', marginBottom: 2 }}>🏪 Activité Distincte</div>
+                  <div style={{ fontSize: '0.82rem', color: '#6b7280' }}>Choisissez l'activité pour ce produit</div>
+                </div>
+                <div style={{ padding: '20px 24px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    {distinctActivities.map((a) => (
+                      <label key={a.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', borderRadius: 10, border: '1px solid', cursor: 'pointer', transition: 'all 0.15s',
+                        borderColor: preDistinctActId === String(a.id) ? '#fde68a' : 'var(--border)',
+                        background: preDistinctActId === String(a.id) ? '#fefce8' : 'var(--bg)',
+                      }}>
+                        <input type="radio" name="distinct-act" checked={preDistinctActId === String(a.id)} style={{ accentColor: '#d97706' }}
+                          onChange={() => setPreDistinctActId(String(a.id))}
+                        />
+                        <div style={{ width: 28, height: 28, borderRadius: 8, background: preDistinctActId === String(a.id) ? '#f59e0b' : '#e5e7eb', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.85rem', flexShrink: 0 }}>🏪</div>
+                        <span style={{ fontWeight: preDistinctActId === String(a.id) ? 600 : 400 }}>{a.nom}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* Footer */}
+            <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'flex-end', gap: 10, background: 'var(--surface)' }}>
+              <button className="btn btn-ghost" onClick={() => navigate(buildBackUrl(productType))}>{t('common.cancel')}</button>
+              <button className="btn btn-primary" disabled={!canPreConfirm} onClick={handlePreStepConfirm}>
+                {t('common.continue')} →
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Main form ─────────────────────────────────────────────────────────────
   if (loading) return <div className="page"><div className="loading-text">{t('common.loading')}</div></div>;
 
   return (
     <div className="page">
-      <div className="page-header">
-        <h1>
-          {isEdit ? t('client.products.edit') : (
-            productType === 'vendable'
-              ? t('client.products.add_vendable')
-              : t('client.products.add_utilisable')
+      {/* Page header */}
+      <div className="page-header" style={{ marginBottom: 24 }}>
+        <div>
+          <h1 style={{ margin: 0 }}>
+            {isEdit ? t('client.products.edit') : (
+              productType === 'vendable' ? t('client.products.add_vendable') : t('client.products.add_utilisable')
+            )}
+            <span className={`unit-badge badge-${productType}`} style={{ marginLeft: 10, fontSize: '0.82rem' }}>
+              {productType === 'vendable' ? t('client.products.type_vendable') : t('client.products.type_utilisable')}
+            </span>
+          </h1>
+          {/* Context badge */}
+          {(isFranchiseCtx || distinctActId) && (
+            <div style={{ marginTop: 6, display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.82rem', color: isFranchiseCtx ? '#1e40af' : '#92400e' }}>
+              {isFranchiseCtx ? '🏢' : '🏪'}
+              {isFranchiseCtx
+                ? `Franchise ${preFranchiseGroup ? `— ${preFranchiseGroup}` : ''} · ${preCheckedActIds.size || '?'} activité(s)`
+                : allActivities.find((a) => a.id === distinctActId)?.nom || `Activité #${distinctActId}`}
+            </div>
           )}
-          <span className={`unit-badge badge-${productType}`} style={{ marginLeft: 10, fontSize: '0.85rem' }}>
-            {productType === 'vendable' ? t('client.products.type_vendable') : t('client.products.type_utilisable')}
-          </span>
-        </h1>
+        </div>
         <div className="page-header-actions">
           {isEdit && (
             <button className="btn btn-danger btn-sm" onClick={handleDelete}>{t('common.delete')}</button>
@@ -599,161 +543,174 @@ export default function ProductForm() {
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="product-form">
-        {/* Product name */}
-        <div className="card">
-          <div className="form-group">
-            <label className="form-label">{t('client.products.name')}</label>
-            <input className="input" required value={name} onChange={(e) => setName(e.target.value)} />
+      {/* No ingredients guard */}
+      {hasNoIngredients ? (
+        <div style={{ maxWidth: 540, background: '#fef3c7', border: '1px solid #fde68a', borderRadius: 14, padding: '28px 32px', textAlign: 'center' }}>
+          <div style={{ fontSize: '2rem', marginBottom: 12 }}>⚠️</div>
+          <div style={{ fontWeight: 700, fontSize: '1rem', color: '#92400e', marginBottom: 8 }}>Aucun ingrédient disponible</div>
+          <div style={{ fontSize: '0.88rem', color: '#78350f', lineHeight: 1.5 }}>
+            {isFranchiseCtx
+              ? 'Aucun ingrédient n'est encore sélectionné pour cette franchise. Rendez-vous dans le Catalogue Ingrédients pour les sélectionner.'
+              : 'Aucun ingrédient n'est encore sélectionné pour cette activité. Rendez-vous dans le Catalogue Ingrédients pour les sélectionner.'}
           </div>
+          <button className="btn btn-ghost" style={{ marginTop: 20 }} onClick={() => navigate(buildBackUrl(productType))}>
+            ← Retour à la liste
+          </button>
         </div>
+      ) : (
+        <form onSubmit={handleSubmit} style={{ maxWidth: 760, display: 'flex', flexDirection: 'column', gap: 20 }}>
 
-        {/* Ingredients grouped by category */}
-        <div className="card">
-          <div className="section-header">
-            <h2>{t('client.products.ingredients_section')}</h2>
+          {/* ── Card: Identité produit ── */}
+          <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
+            <div style={{ padding: '14px 24px', borderBottom: '1px solid var(--border)', background: 'linear-gradient(135deg,#f8fafc,#f1f5f9)', display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div style={{ width: 32, height: 32, borderRadius: 9, background: 'linear-gradient(135deg,#3b82f6,#1d4ed8)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem' }}>📝</div>
+              <span style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text)' }}>Identité du produit</span>
+            </div>
+            <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <div>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600, fontSize: '0.85rem', marginBottom: 8, color: 'var(--text)' }}>
+                  {t('client.products.name')}
+                  <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#ef4444', background: '#fee2e2', borderRadius: 4, padding: '1px 5px' }}>obligatoire</span>
+                </label>
+                <input
+                  className="input"
+                  style={{ fontSize: '1rem', fontWeight: 600, maxWidth: 480 }}
+                  required
+                  placeholder="Ex. Burger, Pizza Margherita…"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontWeight: 600, fontSize: '0.85rem', marginBottom: 8, color: 'var(--text)' }}>
+                  Réf. Produit
+                  <span style={{ fontWeight: 400, color: '#6b7280', fontSize: '0.78rem', marginLeft: 6 }}>(optionnel)</span>
+                </label>
+                <input
+                  className="input"
+                  style={{ maxWidth: 300 }}
+                  placeholder="Ex. BRG-001, REF-42…"
+                  value={refProduit}
+                  onChange={(e) => setRefProduit(e.target.value)}
+                />
+              </div>
+            </div>
           </div>
 
-          {groups.length === 0 && ingredients.length === 0 && (
-            <p className="empty-text" style={{ color: 'var(--warning, #d97706)' }}>
-              {isFranchiseCtx
-                ? '⚠️ Aucun ingrédient sélectionné pour cette franchise. Rendez-vous dans « F Catalogue Ingrédients » pour sélectionner vos ingrédients.'
-                : resolvedActCtx
-                  ? '⚠️ Aucun ingrédient sélectionné pour cette activité. Rendez-vous dans le catalogue pour sélectionner vos ingrédients.'
-                  : t('client.products.ingredients_empty')}
-            </p>
-          )}
-          {groups.length === 0 && ingredients.length > 0 && (
-            <p className="empty-text">{t('client.products.ingredients_empty')}</p>
-          )}
+          {/* ── Card: Ingrédients ── */}
+          <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
+            <div style={{ padding: '14px 24px', borderBottom: '1px solid var(--border)', background: 'linear-gradient(135deg,#f0fdf4,#dcfce7)', display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div style={{ width: 32, height: 32, borderRadius: 9, background: 'linear-gradient(135deg,#22c55e,#16a34a)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem' }}>🧂</div>
+              <span style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text)' }}>{t('client.products.ingredients_section')}</span>
+              <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#ef4444', background: '#fee2e2', borderRadius: 4, padding: '1px 5px', marginLeft: 2 }}>min 1</span>
+              {filledIngredients.length > 0 && (
+                <span style={{ marginLeft: 'auto', fontSize: '0.78rem', fontWeight: 600, color: '#15803d', background: '#dcfce7', borderRadius: 12, padding: '2px 10px' }}>
+                  {filledIngredients.length} renseigné{filledIngredients.length > 1 ? 's' : ''}
+                </span>
+              )}
+            </div>
+            <div style={{ padding: '20px 24px' }}>
+              {groups.length === 0 && (
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', margin: 0 }}>{t('client.products.ingredients_empty')}</p>
+              )}
 
-          {groups.map(({ catId, catName, entries }) => (
-            <div key={catId} style={{ marginBottom: 20 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8, padding: '6px 0', borderBottom: '1px solid var(--border)' }}>
-                <span style={{ fontWeight: 700, color: 'var(--primary)', fontSize: '0.95rem' }}>🏷️ {catName}</span>
-                <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>({entries.length})</span>
-                {availableForCategory(catId).length > 0 && (
-                  <button
-                    type="button"
-                    className="btn btn-ghost btn-sm"
-                    style={{ marginLeft: 'auto' }}
-                    onClick={() => addIngredientLineInCategory(catId)}
-                  >
-                    + {t('client.products.add_ingredient')}
-                  </button>
-                )}
+              {groups.map(({ catId, catName, entries }) => (
+                <div key={catId} style={{ marginBottom: 18 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, padding: '5px 0', borderBottom: '1px solid var(--border)' }}>
+                    <span style={{ fontWeight: 700, color: '#16a34a', fontSize: '0.88rem' }}>🏷️ {catName}</span>
+                    <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>({entries.length})</span>
+                    {availableForCategory(catId).length > 0 && (
+                      <button type="button" className="btn btn-ghost btn-sm" style={{ marginLeft: 'auto', fontSize: '0.78rem' }} onClick={() => addIngredientLineInCategory(catId)}>
+                        + {t('client.products.add_ingredient')}
+                      </button>
+                    )}
+                  </div>
+                  {entries.map(({ line, idx }) => {
+                    const unit = ingredients.find((i) => String(i.id) === line.ingredientId)?.unit?.name || '';
+                    const available = availableForLine(idx);
+                    return (
+                      <div key={idx} className="line-row" style={{ marginBottom: 6 }}>
+                        <select
+                          className="input flex-grow"
+                          value={line.ingredientId}
+                          onChange={(e) => updateIngredientLine(idx, 'ingredientId', e.target.value)}
+                        >
+                          <option value="">— {t('client.products.select_ingredient')} —</option>
+                          {available.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
+                        </select>
+                        <div className="portion-input">
+                          <input
+                            className="input"
+                            type="number" step="0.001" min="0"
+                            placeholder={unit === 'pièces' || unit === 'pieces' ? t('client.products.portion_pieces') : t('client.products.portion_grams')}
+                            value={line.portion}
+                            onChange={(e) => updateIngredientLine(idx, 'portion', e.target.value)}
+                          />
+                          {unit && <span className="unit-label">{unit}</span>}
+                        </div>
+                        <button type="button" className="btn-icon btn-remove" onClick={() => removeIngredientLine(idx)}>×</button>
+                      </div>
+                    );
+                  })}
+                </div>
+              ))}
+
+              {(availableNewCategories.length > 0 || (hasUncategorized && !usedHasNone)) && (
+                <div style={{ marginTop: 8 }}>
+                  <select className="input" style={{ maxWidth: 280, fontSize: '0.85rem' }} value={newCatSelect} onChange={(e) => addNewCategory(e.target.value)}>
+                    <option value="">+ {t('client.products.add_new_category')}</option>
+                    {availableNewCategories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                    {hasUncategorized && !usedHasNone && <option value="__none__">{t('client.ingredients_catalog.no_category')}</option>}
+                  </select>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* ── Card: Produits Utilisables (optional) ── */}
+          {(products.length > 0 || subProductLines.length > 0) && (
+            <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
+              <div style={{ padding: '14px 24px', borderBottom: '1px solid var(--border)', background: 'linear-gradient(135deg,#fdf4ff,#f3e8ff)', display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{ width: 32, height: 32, borderRadius: 9, background: 'linear-gradient(135deg,#a855f7,#7c3aed)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem' }}>🔧</div>
+                <span style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text)' }}>{t('client.products.subproducts_section')}</span>
+                <span style={{ fontWeight: 400, color: '#6b7280', fontSize: '0.78rem', marginLeft: 2 }}>(optionnel)</span>
+                <button type="button" className="btn btn-ghost btn-sm" style={{ marginLeft: 'auto', fontSize: '0.78rem' }} onClick={addSubProductLine}>
+                  + {t('client.products.add_subproduct')}
+                </button>
               </div>
-
-              {entries.map(({ line, idx }) => {
-                const unit = ingredients.find((i) => String(i.id) === line.ingredientId)?.unit?.name || '';
-                const available = availableForLine(idx);
-                return (
-                  <div key={idx} className="line-row">
-                    <select
-                      className="input flex-grow"
-                      value={line.ingredientId}
-                      onChange={(e) => updateIngredientLine(idx, 'ingredientId', e.target.value)}
-                    >
-                      <option value="">— {t('client.products.select_ingredient')} —</option>
-                      {available.map((i) => (
-                        <option key={i.id} value={i.id}>{i.name}</option>
-                      ))}
+              <div style={{ padding: '20px 24px' }}>
+                {subProductLines.length === 0 ? (
+                  <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', margin: 0 }}>{t('client.products.subproducts_empty')}</p>
+                ) : subProductLines.map((line, idx) => (
+                  <div key={idx} className="line-row" style={{ marginBottom: 6 }}>
+                    <select className="input flex-grow" value={line.subProductId} onChange={(e) => updateSubProductLine(idx, 'subProductId', e.target.value)}>
+                      <option value="">— {t('client.products.select_product')} —</option>
+                      {products.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
                     </select>
                     <div className="portion-input">
-                      <input
-                        className="input"
-                        type="number"
-                        step="0.001"
-                        min="0"
-                        placeholder={unit === 'pièces' || unit === 'pieces'
-                          ? t('client.products.portion_pieces')
-                          : t('client.products.portion_grams')}
-                        value={line.portion}
-                        onChange={(e) => updateIngredientLine(idx, 'portion', e.target.value)}
-                      />
-                      {unit && <span className="unit-label">{unit}</span>}
+                      <input className="input" type="number" step="0.001" min="0" placeholder={t('common.portion')} value={line.portion} onChange={(e) => updateSubProductLine(idx, 'portion', e.target.value)} />
+                      <span className="unit-label">×</span>
                     </div>
-                    <button type="button" className="btn-icon btn-remove" onClick={() => removeIngredientLine(idx)}>×</button>
+                    <button type="button" className="btn-icon btn-remove" onClick={() => removeSubProductLine(idx)}>×</button>
                   </div>
-                );
-              })}
-            </div>
-          ))}
-
-          {(availableNewCategories.length > 0 || (hasUncategorized && !usedHasNone)) && (
-            <div style={{ marginTop: 8 }}>
-              <select
-                className="input"
-                style={{ maxWidth: 300 }}
-                value={newCatSelect}
-                onChange={(e) => addNewCategory(e.target.value)}
-              >
-                <option value="">+ {t('client.products.add_new_category')}</option>
-                {availableNewCategories.map((c) => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
                 ))}
-                {hasUncategorized && !usedHasNone && (
-                  <option value="__none__">{t('client.ingredients_catalog.no_category')}</option>
-                )}
-              </select>
+              </div>
             </div>
           )}
-        </div>
 
-        {/* Sub-products — for vendable and utilisable, hidden when no utilisable products exist */}
-        {(productType === 'vendable' || productType === 'utilisable') && (products.length > 0 || subProductLines.length > 0) && (
-          <div className="card">
-            <div className="section-header">
-              <h2>{t('client.products.subproducts_section')}</h2>
-              <button type="button" className="btn btn-ghost btn-sm" onClick={addSubProductLine}>
-                + {t('client.products.add_subproduct')}
-              </button>
-            </div>
-            {subProductLines.length === 0 ? (
-              <p className="empty-text">{t('client.products.subproducts_empty')}</p>
-            ) : null}
-            {subProductLines.map((line, idx) => (
-              <div key={idx} className="line-row">
-                <select
-                  className="input flex-grow"
-                  value={line.subProductId}
-                  onChange={(e) => updateSubProductLine(idx, 'subProductId', e.target.value)}
-                >
-                  <option value="">— {t('client.products.select_product')} —</option>
-                  {products.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name}
-                    </option>
-                  ))}
-                </select>
-                <div className="portion-input">
-                  <input
-                    className="input"
-                    type="number"
-                    step="0.001"
-                    min="0"
-                    placeholder={t('common.portion')}
-                    value={line.portion}
-                    onChange={(e) => updateSubProductLine(idx, 'portion', e.target.value)}
-                  />
-                  <span className="unit-label">×</span>
-                </div>
-                <button type="button" className="btn-icon btn-remove" onClick={() => removeSubProductLine(idx)}>×</button>
-              </div>
-            ))}
+          {/* ── Actions ── */}
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, paddingBottom: 40 }}>
+            <button type="button" className="btn btn-ghost" onClick={() => navigate(buildBackUrl(productType))}>
+              {t('common.cancel')}
+            </button>
+            <button type="submit" className="btn btn-primary" disabled={saving || !canSubmit}
+              style={{ paddingLeft: 28, paddingRight: 28 }}
+            >
+              {saving ? t('common.loading') : t('common.save')}
+            </button>
           </div>
-        )}
-
-        <div className="form-actions">
-          <button type="button" className="btn btn-ghost" onClick={() => navigate(buildBackUrl(productType))}>
-
-            {t('common.cancel')}
-          </button>
-          <button type="submit" className="btn btn-primary" disabled={saving}>
-            {saving ? t('common.loading') : t('common.save')}
-          </button>
-        </div>
-      </form>
+        </form>
+      )}
     </div>
   );
 }
