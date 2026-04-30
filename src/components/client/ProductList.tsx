@@ -388,7 +388,9 @@ export default function ProductList() {
                           <td>
                             {(() => {
                               const act = franchiseActivities.find((a) => a.id === p.activiteId);
-                              const group = act ? (act.franchiseGroup || act.nom) : (p.franchiseGroup || null);
+                              const group = act
+                                ? (act.franchiseGroup || act.nom)
+                                : (p.franchiseGroup || filterFranchiseGroup || null);
                               if (act) {
                                 return (
                                   <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -401,7 +403,6 @@ export default function ProductList() {
                                   </div>
                                 );
                               }
-                              const group = p.franchiseGroup || filterFranchiseGroup || null;
                               const acts = franchiseActivities.filter((a) => !group || (a.franchiseGroup || a.nom) === group);
                               const cnt = acts.length;
                               return (
