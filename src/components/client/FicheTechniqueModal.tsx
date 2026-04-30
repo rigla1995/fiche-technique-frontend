@@ -531,17 +531,15 @@ export default function FicheTechniqueModal({ productId, productName, hasIngredi
             <div style={{ padding: '16px 24px', maxHeight: '65vh', overflowY: 'auto', overflowX: 'hidden' }}>
               <table className="table" style={{ tableLayout: 'fixed', width: '100%' }}>
                 <colgroup>
-                  <col style={{ width: '26%' }} />
-                  <col style={{ width: '7%' }} />
-                  <col style={{ width: '13%' }} />
-                  <col style={{ width: '13%' }} />
-                  <col style={{ width: '16%' }} />
-                  <col style={{ width: '25%' }} />
+                  <col style={{ width: '31%' }} />
+                  <col style={{ width: '15%' }} />
+                  <col style={{ width: '15%' }} />
+                  <col style={{ width: '18%' }} />
+                  <col style={{ width: '21%' }} />
                 </colgroup>
                 <thead>
                   <tr>
                     <th>{t('client.historique_appro.ingredient')}</th>
-                    <th>{t('common.unit')}</th>
                     <th style={{ textAlign: 'right' }}>Qté</th>
                     <th style={{ textAlign: 'right' }}>{t('common.price')} (DT)</th>
                     <th>{t('client.stock.date_appro')}</th>
@@ -557,18 +555,20 @@ export default function FicheTechniqueModal({ productId, productName, hasIngredi
                       <>
                         {stockCheckResult.groups.length > 1 && group.depth > 0 && (
                           <tr key={`mg-${gi}`}>
-                            <td colSpan={6} style={{ paddingLeft: 8 + group.depth * 16, paddingTop: gi === 0 ? 4 : 10, paddingBottom: 2, fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', borderTop: gi === 0 ? undefined : '1px solid var(--border)' }}>↳ {group.label}</td>
+                            <td colSpan={5} style={{ paddingLeft: 8 + group.depth * 16, paddingTop: gi === 0 ? 4 : 10, paddingBottom: 2, fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', borderTop: gi === 0 ? undefined : '1px solid var(--border)' }}>↳ {group.label}</td>
                           </tr>
                         )}
                         {visible.map((ing) => {
                           const fill = missingFillData[ing.ingredientId] || { qty: '', price: '', date: new Date().toISOString().slice(0, 10) };
                           const isFOpen = openFournisseurFor === ing.ingredientId;
                           const hasFournisseur = !!(missingFournisseurById[ing.ingredientId] || missingRefFactureById[ing.ingredientId]);
+                          const unitLetter = ing.unite ? ing.unite.charAt(0).toUpperCase() : '';
                           return (
                             <>
                               <tr key={ing.ingredientId}>
-                                <td style={{ fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={ing.nom}>{ing.nom}</td>
-                                <td style={{ color: 'var(--text-muted)' }}>{ing.unite}</td>
+                                <td style={{ fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={`${ing.nom} (${ing.unite})`}>
+                                  {ing.nom}{unitLetter && <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}> ({unitLetter})</span>}
+                                </td>
                                 <td style={{ textAlign: 'right' }}>
                                   <input type="number" className="input" style={{ width: '100%', textAlign: 'right' }} step="0.001" min="0" placeholder="0" value={fill.qty} onChange={(e) => setMissingFillData((prev) => ({ ...prev, [ing.ingredientId]: { ...fill, qty: e.target.value } }))} />
                                 </td>
@@ -590,7 +590,7 @@ export default function FicheTechniqueModal({ productId, productName, hasIngredi
                               </tr>
                               {isFOpen && (
                                 <tr key={`f-${ing.ingredientId}`} style={{ background: '#fffbeb' }}>
-                                  <td colSpan={6} style={{ padding: '10px 12px', borderTop: '1px dashed #fde68a' }}>
+                                  <td colSpan={5} style={{ padding: '10px 12px', borderTop: '1px dashed #fde68a' }}>
                                     <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'flex-end' }}>
                                       {fournisseurs.length > 0 && (
                                         <div style={{ flex: '1 1 180px' }}>
