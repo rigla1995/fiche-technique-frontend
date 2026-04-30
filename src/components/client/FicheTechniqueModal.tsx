@@ -63,6 +63,12 @@ export default function FicheTechniqueModal({ productId, productName, hasIngredi
   const [bulkMissingFournisseurId, setBulkMissingFournisseurId] = useState('');
   const [bulkMissingRefFacture, setBulkMissingRefFacture] = useState('');
 
+  // Missing filters + category accordion
+  const [missingCatFilter, setMissingCatFilter] = useState('');
+  const [missingIngFilter, setMissingIngFilter] = useState<number | ''>('');
+  const [missingNameFilter, setMissingNameFilter] = useState('');
+  const [openMissingCats, setOpenMissingCats] = useState<Set<string>>(new Set());
+
   // FP Stock
   const [stockActId, setStockActId] = useState<number | null>(null); // activity chosen for stock mode (franchise products)
   const [stockCheckResult, setStockCheckResult] = useState<StockCheckResult | null>(null);
@@ -102,6 +108,9 @@ export default function FicheTechniqueModal({ productId, productName, hasIngredi
     const effectiveActId = resolvedActId || stockActId;
     // For franchise-wide products, wait until user has chosen an activity
     if (!resolvedActId && !stockActId) { setStockCheckResult(null); return; }
+    setMissingCatFilter('');
+    setMissingIngFilter('');
+    setMissingNameFilter('');
     setStockCheckLoading(true);
     const params = new URLSearchParams();
     if (effectiveActId) params.set('activiteId', String(effectiveActId));
@@ -405,7 +414,13 @@ export default function FicheTechniqueModal({ productId, productName, hasIngredi
                             <button
                               className="btn btn-sm"
                               style={{ display: 'block', fontSize: '0.78rem', background: '#f59e0b', color: '#fff', borderColor: 'transparent', marginTop: 4 }}
-                              onClick={() => setShowMissingPopup(true)}
+                              onClick={() => {
+                                setShowMissingPopup(true);
+                                if (stockCheckResult) {
+                                  const cats = new Set(stockCheckResult.missing.map((i) => i.categorie || 'Sans catégorie'));
+                                  setOpenMissingCats(cats);
+                                }
+                              }}
                             >
                               {t('client.stock.complete_stock')}
                             </button>
@@ -637,132 +652,213 @@ export default function FicheTechniqueModal({ productId, productName, hasIngredi
                 </div>
               )}
 
-              {/* Table */}
-              <div style={{ padding: '16px 20px', maxHeight: '56vh', overflowY: 'auto', overflowX: 'auto' }}>
-                <table className="table" style={{ tableLayout: 'fixed', width: '100%', minWidth: 700 }}>
-                  <colgroup>
-                    <col style={{ width: 36 }} />
-                    <col style={{ width: '26%' }} />
-                    <col style={{ width: '13%' }} />
-                    <col style={{ width: '14%' }} />
-                    <col style={{ width: '18%' }} />
-                    <col />
-                  </colgroup>
-                  <thead>
-                    <tr>
-                      <th style={{ padding: '8px 6px' }}>
-                        <input type="checkbox" style={{ width: 15, height: 15, accentColor: 'var(--primary)' }}
-                          checked={selectedMissingIds.size === stockCheckResult.missing.length && stockCheckResult.missing.length > 0}
-                          onChange={(e) => {
-                            if (e.target.checked) setSelectedMissingIds(new Set(stockCheckResult.missing.map((i) => i.ingredientId)));
-                            else setSelectedMissingIds(new Set());
-                          }}
-                        />
-                      </th>
-                      <th>{t('client.historique_appro.ingredient')}</th>
-                      <th style={{ textAlign: 'right' }}>Qté</th>
-                      <th style={{ textAlign: 'right' }}>{t('common.price')} (DT)</th>
-                      <th>Date d'appro</th>
-                      <th style={{ textAlign: 'center' }}>🚚 Fournisseur</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(stockCheckResult.groups.length > 0 ? stockCheckResult.groups : [{ label: '', depth: 0, ingredients: stockCheckResult.missing }]).map((group, gi) => (
+              {/* Filters */}
+              {(() => {
+                const allCats = [...new Set(stockCheckResult.missing.map((i) => i.categorie || 'Sans catégorie'))].sort();
+                const catsInFilter = missingCatFilter
+                  ? stockCheckResult.missing.filter((i) => (i.categorie || 'Sans catégorie') === missingCatFilter)
+                  : stockCheckResult.missing;
+                return (
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'flex-end', padding: '12px 20px 0', borderTop: hasBulk ? undefined : '1px solid var(--border)' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                      <span style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Catégorie</span>
+                      <select className="input" style={{ maxWidth: 180, fontSize: '0.85rem' }}
+                        value={missingCatFilter}
+                        onChange={(e) => { setMissingCatFilter(e.target.value); setMissingIngFilter(''); }}>
+                        <option value="">— Toutes —</option>
+                        {allCats.map((c) => <option key={c} value={c}>{c}</option>)}
+                      </select>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                      <span style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Ingrédient (liste)</span>
+                      <select className="input" style={{ maxWidth: 200, fontSize: '0.85rem' }}
+                        value={missingIngFilter}
+                        disabled={!missingCatFilter}
+                        onChange={(e) => setMissingIngFilter(e.target.value === '' ? '' : Number(e.target.value))}>
+                        <option value="">— Tous —</option>
+                        {catsInFilter.map((i) => <option key={i.ingredientId} value={i.ingredientId}>{i.nom}</option>)}
+                      </select>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                      <span style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Recherche</span>
+                      <input type="text" className="input" style={{ maxWidth: 180, fontSize: '0.85rem' }}
+                        placeholder="Nom d'ingrédient…"
+                        value={missingNameFilter}
+                        onChange={(e) => setMissingNameFilter(e.target.value)} />
+                    </div>
+                    {(missingCatFilter || missingIngFilter !== '' || missingNameFilter) && (
+                      <button className="btn btn-ghost btn-sm" style={{ alignSelf: 'flex-end', fontSize: '0.78rem' }}
+                        onClick={() => { setMissingCatFilter(''); setMissingIngFilter(''); setMissingNameFilter(''); }}>
+                        ✕ Effacer
+                      </button>
+                    )}
+                  </div>
+                );
+              })()}
+
+              {/* Table grouped by category */}
+              <div style={{ padding: '12px 20px 4px', maxHeight: '52vh', overflowY: 'auto', overflowX: 'auto' }}>
+                {(() => {
+                  // Build sub-product label lookup
+                  const ingToSubLabel: Record<number, string> = {};
+                  stockCheckResult.groups.forEach((g) => {
+                    if (g.depth > 0) g.ingredients.forEach((i) => { ingToSubLabel[i.ingredientId] = g.label; });
+                  });
+
+                  // Apply filters
+                  let filtered = stockCheckResult.missing;
+                  if (missingCatFilter) filtered = filtered.filter((i) => (i.categorie || 'Sans catégorie') === missingCatFilter);
+                  if (missingIngFilter !== '') filtered = filtered.filter((i) => i.ingredientId === missingIngFilter);
+                  if (missingNameFilter) filtered = filtered.filter((i) => i.nom.toLowerCase().includes(missingNameFilter.toLowerCase()));
+
+                  if (filtered.length === 0) return <p style={{ color: 'var(--text-muted)', textAlign: 'center', padding: 20 }}>Aucun ingrédient trouvé.</p>;
+
+                  // Group by category
+                  const catMap: Record<string, typeof filtered> = {};
+                  for (const ing of filtered) {
+                    const cat = ing.categorie || 'Sans catégorie';
+                    if (!catMap[cat]) catMap[cat] = [];
+                    catMap[cat].push(ing);
+                  }
+
+                  const renderIngRow = (ing: typeof filtered[0]) => {
+                    const fill = missingFillData[ing.ingredientId] || { qty: '', price: '', date: todayStr() };
+                    const isFOpen = openFournisseurFor === ing.ingredientId;
+                    const isSelected = selectedMissingIds.has(ing.ingredientId);
+                    const hasFournisseur = !!(missingFournisseurById[ing.ingredientId] || missingRefFactureById[ing.ingredientId]);
+                    const unitLetter = ing.unite ? ing.unite.charAt(0).toUpperCase() : '';
+                    const inputBase: React.CSSProperties = { width: '100%', textAlign: 'right', fontSize: '0.92rem', fontWeight: 600 };
+                    return (
                       <>
-                        {group.depth > 0 && (
-                          <tr key={`gh-${gi}`}>
-                            <td colSpan={6} style={{ paddingTop: gi === 0 ? 4 : 10, paddingBottom: 2, fontSize: '0.72rem', fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', color: '#6b7280', borderTop: '1px solid var(--border)', background: '#fafafa' }}>
-                              ↳ Sous-produit : {group.label}
+                        <tr key={ing.ingredientId} style={isSelected ? { background: '#f0fdf4' } : undefined}>
+                          <td style={{ textAlign: 'center', padding: '8px 6px' }}>
+                            <input type="checkbox" style={{ width: 15, height: 15, cursor: 'pointer', accentColor: 'var(--primary)' }}
+                              checked={isSelected} onChange={() => toggleBulkRow(ing.ingredientId)} />
+                          </td>
+                          <td style={{ fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={`${ing.nom} (${ing.unite})`}>
+                            {ing.nom}{unitLetter && <span style={{ color: 'var(--text-muted)', fontWeight: 400, fontSize: '0.8rem' }}> ({unitLetter})</span>}
+                            {ingToSubLabel[ing.ingredientId] && (
+                              <div style={{ fontSize: '0.65rem', color: '#6b7280', fontWeight: 400 }}>↳ {ingToSubLabel[ing.ingredientId]}</div>
+                            )}
+                          </td>
+                          <td>
+                            <input type="number" className="input"
+                              style={{ ...inputBase, borderColor: !fill.qty || parseFloat(fill.qty) <= 0 ? '#f59e0b' : '#86efac', boxShadow: !fill.qty || parseFloat(fill.qty) <= 0 ? '0 0 0 2px #fef3c7' : undefined }}
+                              step="0.001" min="0.001" placeholder="0.000"
+                              value={fill.qty}
+                              onChange={(e) => setMissingFillData((prev) => ({ ...prev, [ing.ingredientId]: { ...fill, qty: e.target.value } }))} />
+                          </td>
+                          <td>
+                            <input type="number" className="input"
+                              style={{ ...inputBase, borderColor: !fill.price || parseFloat(fill.price) <= 0 ? '#f59e0b' : '#86efac', boxShadow: !fill.price || parseFloat(fill.price) <= 0 ? '0 0 0 2px #fef3c7' : undefined }}
+                              step="0.001" min="0.001" placeholder="0.000"
+                              value={fill.price}
+                              onChange={(e) => setMissingFillData((prev) => ({ ...prev, [ing.ingredientId]: { ...fill, price: e.target.value } }))} />
+                          </td>
+                          <td>
+                            {isSelected ? (
+                              <div style={{ fontSize: '0.78rem', color: '#15803d', fontWeight: 600, padding: '6px 4px' }}>📅 {bulkMissingDate || '—'}</div>
+                            ) : (
+                              <input type="date" className="input" style={{ width: '100%', fontSize: '0.85rem' }}
+                                min={yearStart} max={yearEnd}
+                                value={fill.date}
+                                onChange={(e) => setMissingFillData((prev) => ({ ...prev, [ing.ingredientId]: { ...fill, date: e.target.value } }))} />
+                            )}
+                          </td>
+                          <td style={{ textAlign: 'center' }}>
+                            {isSelected ? (
+                              <div style={{ fontSize: '0.72rem', color: '#15803d', fontWeight: 600 }}>
+                                {bulkFournisseur ? `✓ ${bulkFournisseur.nom}` : '(bulk)'}
+                              </div>
+                            ) : (
+                              <button className="btn btn-ghost btn-sm"
+                                style={{ fontSize: '0.72rem', padding: '3px 8px', borderColor: hasFournisseur ? '#d97706' : undefined, color: hasFournisseur ? '#d97706' : undefined, whiteSpace: 'nowrap' }}
+                                onClick={(e) => { e.stopPropagation(); setOpenFournisseurFor(isFOpen ? null : ing.ingredientId); }}>
+                                🚚 {hasFournisseur ? '✓' : '+'}
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                        {isFOpen && !isSelected && (
+                          <tr key={`f-${ing.ingredientId}`} style={{ background: '#fffbeb' }}>
+                            <td colSpan={6} style={{ padding: '10px 12px', borderTop: '1px dashed #fde68a' }}>
+                              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+                                {fournisseurs.length > 0 && (
+                                  <div style={{ flex: '1 1 180px' }}>
+                                    <label style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 3 }}>Fournisseur</label>
+                                    <select className="input" style={{ width: '100%' }} value={missingFournisseurById[ing.ingredientId] || ''} onChange={(e) => setMissingFournisseurById((prev) => ({ ...prev, [ing.ingredientId]: e.target.value }))}>
+                                      <option value="">— Aucun —</option>
+                                      {fournisseurs.map((f) => <option key={f.id} value={f.id}>{f.isLabo ? '🏭 ' : '🚚 '}{f.nom}</option>)}
+                                    </select>
+                                  </div>
+                                )}
+                                <div style={{ flex: '1 1 160px' }}>
+                                  <label style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 3 }}>Réf. Facture / BL</label>
+                                  <input type="text" className="input" style={{ width: '100%' }} value={missingRefFactureById[ing.ingredientId] || ''} onChange={(e) => setMissingRefFactureById((prev) => ({ ...prev, [ing.ingredientId]: e.target.value }))} placeholder="N° bon de livraison…" />
+                                </div>
+                                <button className="btn btn-ghost btn-sm" style={{ fontSize: '0.75rem', height: 36 }} onClick={() => setOpenFournisseurFor(null)}>Fermer</button>
+                              </div>
                             </td>
                           </tr>
                         )}
-                        {group.ingredients.map((ing) => {
-                          const fill = missingFillData[ing.ingredientId] || { qty: '', price: '', date: todayStr() };
-                          const isFOpen = openFournisseurFor === ing.ingredientId;
-                          const isSelected = selectedMissingIds.has(ing.ingredientId);
-                          const hasFournisseur = !!(missingFournisseurById[ing.ingredientId] || missingRefFactureById[ing.ingredientId]);
-                          const unitLetter = ing.unite ? ing.unite.charAt(0).toUpperCase() : '';
-                          const inputBase: React.CSSProperties = { width: '100%', textAlign: 'right', fontSize: '0.92rem', fontWeight: 600 };
-                          return (
-                            <>
-                              <tr key={ing.ingredientId} style={isSelected ? { background: '#f0fdf4' } : undefined}>
-                                <td style={{ textAlign: 'center', padding: '8px 6px' }}>
-                                  <input type="checkbox" style={{ width: 15, height: 15, cursor: 'pointer', accentColor: 'var(--primary)' }}
-                                    checked={isSelected} onChange={() => toggleBulkRow(ing.ingredientId)} />
-                                </td>
-                                <td style={{ fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={`${ing.nom} (${ing.unite})`}>
-                                  {ing.nom}{unitLetter && <span style={{ color: 'var(--text-muted)', fontWeight: 400, fontSize: '0.8rem' }}> ({unitLetter})</span>}
-                                  {ing.categorie && <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', fontWeight: 400 }}>{ing.categorie}</div>}
-                                </td>
-                                <td>
-                                  <input type="number" className="input"
-                                    style={{ ...inputBase, borderColor: !fill.qty || parseFloat(fill.qty) <= 0 ? '#f59e0b' : '#86efac', boxShadow: !fill.qty || parseFloat(fill.qty) <= 0 ? '0 0 0 2px #fef3c7' : undefined }}
-                                    step="0.001" min="0.001" placeholder="0.000"
-                                    value={fill.qty}
-                                    onChange={(e) => setMissingFillData((prev) => ({ ...prev, [ing.ingredientId]: { ...fill, qty: e.target.value } }))} />
-                                </td>
-                                <td>
-                                  <input type="number" className="input"
-                                    style={{ ...inputBase, borderColor: !fill.price || parseFloat(fill.price) <= 0 ? '#f59e0b' : '#86efac', boxShadow: !fill.price || parseFloat(fill.price) <= 0 ? '0 0 0 2px #fef3c7' : undefined }}
-                                    step="0.001" min="0.001" placeholder="0.000"
-                                    value={fill.price}
-                                    onChange={(e) => setMissingFillData((prev) => ({ ...prev, [ing.ingredientId]: { ...fill, price: e.target.value } }))} />
-                                </td>
-                                <td>
-                                  {isSelected ? (
-                                    <div style={{ fontSize: '0.78rem', color: '#15803d', fontWeight: 600, padding: '6px 4px' }}>
-                                      📅 {bulkMissingDate || '—'}
-                                    </div>
-                                  ) : (
-                                    <input type="date" className="input" style={{ width: '100%', fontSize: '0.85rem' }}
-                                      min={yearStart} max={yearEnd}
-                                      value={fill.date}
-                                      onChange={(e) => setMissingFillData((prev) => ({ ...prev, [ing.ingredientId]: { ...fill, date: e.target.value } }))} />
-                                  )}
-                                </td>
-                                <td style={{ textAlign: 'center' }}>
-                                  {isSelected ? (
-                                    <div style={{ fontSize: '0.72rem', color: '#15803d', fontWeight: 600 }}>
-                                      {bulkFournisseur ? `✓ ${bulkFournisseur.nom}` : '(bulk)'}
-                                    </div>
-                                  ) : (
-                                    <button className="btn btn-ghost btn-sm"
-                                      style={{ fontSize: '0.72rem', padding: '3px 8px', borderColor: hasFournisseur ? '#d97706' : undefined, color: hasFournisseur ? '#d97706' : undefined, whiteSpace: 'nowrap' }}
-                                      onClick={(e) => { e.stopPropagation(); setOpenFournisseurFor(isFOpen ? null : ing.ingredientId); }}>
-                                      🚚 {hasFournisseur ? '✓' : '+'}
-                                    </button>
-                                  )}
-                                </td>
-                              </tr>
-                              {isFOpen && !isSelected && (
-                                <tr key={`f-${ing.ingredientId}`} style={{ background: '#fffbeb' }}>
-                                  <td colSpan={6} style={{ padding: '10px 12px', borderTop: '1px dashed #fde68a' }}>
-                                    <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'flex-end' }}>
-                                      {fournisseurs.length > 0 && (
-                                        <div style={{ flex: '1 1 180px' }}>
-                                          <label style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 3 }}>Fournisseur</label>
-                                          <select className="input" style={{ width: '100%' }} value={missingFournisseurById[ing.ingredientId] || ''} onChange={(e) => setMissingFournisseurById((prev) => ({ ...prev, [ing.ingredientId]: e.target.value }))}>
-                                            <option value="">— Aucun —</option>
-                                            {fournisseurs.map((f) => <option key={f.id} value={f.id}>{f.isLabo ? '🏭 ' : '🚚 '}{f.nom}</option>)}
-                                          </select>
-                                        </div>
-                                      )}
-                                      <div style={{ flex: '1 1 160px' }}>
-                                        <label style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 3 }}>Réf. Facture / BL</label>
-                                        <input type="text" className="input" style={{ width: '100%' }} value={missingRefFactureById[ing.ingredientId] || ''} onChange={(e) => setMissingRefFactureById((prev) => ({ ...prev, [ing.ingredientId]: e.target.value }))} placeholder="N° bon de livraison…" />
-                                      </div>
-                                      <button className="btn btn-ghost btn-sm" style={{ fontSize: '0.75rem', height: 36 }} onClick={() => setOpenFournisseurFor(null)}>Fermer</button>
-                                    </div>
-                                  </td>
-                                </tr>
-                              )}
-                            </>
-                          );
-                        })}
                       </>
-                    ))}
-                  </tbody>
-                </table>
+                    );
+                  };
+
+                  return Object.entries(catMap).sort(([a], [b]) => a.localeCompare(b)).map(([cat, ings]) => {
+                    const isOpen = openMissingCats.has(cat);
+                    const toggleCat = () => setOpenMissingCats((prev) => {
+                      const n = new Set(prev); if (n.has(cat)) n.delete(cat); else n.add(cat); return n;
+                    });
+                    return (
+                      <div key={cat} style={{ marginBottom: 6 }}>
+                        <button onClick={toggleCat} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, padding: '6px 2px', width: '100%', textAlign: 'left', borderBottom: '2px solid var(--border)', marginBottom: isOpen ? 4 : 0 }}>
+                          <span style={{ fontSize: '0.78rem', fontWeight: 800, color: '#d97706', textTransform: 'uppercase', letterSpacing: '0.06em' }}>🏷️ {cat}</span>
+                          <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 400 }}>({ings.length})</span>
+                          <span style={{ marginLeft: 'auto', fontSize: '0.75rem', color: 'var(--text-muted)' }}>{isOpen ? '▼' : '▶'}</span>
+                        </button>
+                        {isOpen && (
+                          <div className="table-responsive" style={{ marginBottom: 0 }}>
+                            <table className="table" style={{ tableLayout: 'fixed', width: '100%', minWidth: 660 }}>
+                              <colgroup>
+                                <col style={{ width: 36 }} />
+                                <col style={{ width: '26%' }} />
+                                <col style={{ width: '13%' }} />
+                                <col style={{ width: '14%' }} />
+                                <col style={{ width: '18%' }} />
+                                <col />
+                              </colgroup>
+                              <thead>
+                                <tr>
+                                  <th style={{ padding: '6px' }}>
+                                    <input type="checkbox" style={{ width: 14, height: 14, accentColor: 'var(--primary)' }}
+                                      checked={ings.every((i) => selectedMissingIds.has(i.ingredientId))}
+                                      onChange={(e) => {
+                                        setSelectedMissingIds((prev) => {
+                                          const n = new Set(prev);
+                                          ings.forEach((i) => e.target.checked ? n.add(i.ingredientId) : n.delete(i.ingredientId));
+                                          return n;
+                                        });
+                                      }}
+                                    />
+                                  </th>
+                                  <th>Ingrédient</th>
+                                  <th style={{ textAlign: 'right' }}>Qté</th>
+                                  <th style={{ textAlign: 'right' }}>Prix (DT)</th>
+                                  <th>Date d'appro</th>
+                                  <th style={{ textAlign: 'center' }}>🚚 Fournisseur</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {ings.map((ing) => renderIngRow(ing))}
+                              </tbody>
+                            </table>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  });
+                })()}
               </div>
               {/* Footer */}
               <div style={{ padding: '12px 24px 18px', display: 'flex', justifyContent: 'flex-end', gap: 10, borderTop: '1px solid var(--border)' }}>
