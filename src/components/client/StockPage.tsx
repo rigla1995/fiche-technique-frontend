@@ -1018,7 +1018,7 @@ function ActivityStockSection({ label, activities, isFranchise, onSave }: Activi
         <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
           <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Activité</span>
           <select className="input" style={{ maxWidth: 220 }} value={selectedId} onChange={(e) => setSelectedId(Number(e.target.value))}>
-            {groupActivities.map((a) => <option key={a.id} value={a.id}>{a.nom}</option>)}
+            {(isFranchise ? groupActivities : activities).map((a) => <option key={a.id} value={a.id}>{a.nom}</option>)}
           </select>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
