@@ -57,9 +57,11 @@ export default function TransferPage() {
   const [loading, setLoading] = useState(true);
   const [hasTransfers, setHasTransfers] = useState(false);
 
+  const [fournisseurs, setFournisseurs] = useState<{ id: number; nom: string }[]>([]);
   const [dateTransfert, setDateTransfert] = useState(todayStr());
   const [note, setNote] = useState('');
   const [refFacture, setRefFacture] = useState('');
+  const [fournisseurId, setFournisseurId] = useState('');
   const [qtys, setQtys] = useState<TransferQtys>({});
   const [saving, setSaving] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
@@ -97,14 +99,16 @@ export default function TransferPage() {
     if (!laboId) return;
     setLoading(true);
     try {
-      const [laboRes, stockRes, assignRes, transfersRes] = await Promise.all([
+      const [laboRes, stockRes, assignRes, transfersRes, foRes] = await Promise.all([
         api.get(`/api/labo/${laboId}`),
         api.get(`/api/labo/${laboId}/stock?assignedOnly=true`),
         api.get(`/api/labo/${laboId}/activity-assignments`),
         api.get(`/api/labo/${laboId}/transfers`),
+        api.get(`/api/labo/${laboId}/fournisseurs`),
       ]);
       setLabo(laboRes.data);
       setStock(stockRes.data);
+      setFournisseurs(foRes.data as { id: number; nom: string }[]);
       setHasTransfers(Array.isArray(transfersRes.data) && transfersRes.data.length > 0);
       // Build assigned set: "ingId-actId"
       const assigned = new Set<string>();
@@ -162,7 +166,7 @@ export default function TransferPage() {
 
     setSaving(true);
     try {
-      await api.post(`/api/labo/${laboId}/transfer`, { dateTransfert, note: note || undefined, refFacture: refFacture.trim() || undefined, transfers });
+      await api.post(`/api/labo/${laboId}/transfer`, { dateTransfert, note: note || undefined, refFacture: refFacture.trim() || undefined, fournisseurId: fournisseurId ? Number(fournisseurId) : undefined, transfers });
       setSuccessMsg(t('client.labo.transfer_success'));
       setHasTransfers(true);
       setTimeout(() => setSuccessMsg(''), 3000);
@@ -176,6 +180,7 @@ export default function TransferPage() {
       });
       setNote('');
       setRefFacture('');
+      setFournisseurId('');
       // Reload stock
       const { data } = await api.get(`/api/labo/${laboId}/stock?assignedOnly=true`);
       setStock(data);
@@ -251,6 +256,20 @@ export default function TransferPage() {
             onChange={(e) => { setRefFacture(e.target.value); if (errorMsg) setErrorMsg(''); }}
             placeholder="N° bon de livraison…"
           />
+        </div>
+        <div style={{ flex: 1, minWidth: 160 }}>
+          <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 4 }}>
+            Fournisseur
+          </label>
+          <select
+            className="input"
+            value={fournisseurId}
+            onChange={(e) => setFournisseurId(e.target.value)}
+            style={{ width: '100%' }}
+          >
+            <option value="">— Aucun —</option>
+            {fournisseurs.map((f) => <option key={f.id} value={f.id}>{f.nom}</option>)}
+          </select>
         </div>
         <div style={{ flex: 1, minWidth: 160 }}>
           <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 4 }}>
