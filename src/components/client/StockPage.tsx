@@ -421,6 +421,13 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
     }
   };
 
+  const isCurrentMonth = (dateStr: string) => {
+    if (!dateStr || dateStr.length < 7) return false;
+    const now = new Date();
+    const [y, m] = dateStr.split('-');
+    return parseInt(y) === now.getFullYear() && parseInt(m) === now.getMonth() + 1;
+  };
+
   const saveRow = async (id: number) => {
     const row = rows[id];
     if (!row || !canSaveStockRow(row, hasFournisseurs)) return;
@@ -430,11 +437,13 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
       const ref = row.refFacture.trim() || null;
       await onSave(id, row.quantite, row.prixUnitaire, row.dateAppro, fId, ref);
       const today = todayStr();
-      const added = parseFloat(row.quantite) || 0;
-      setTotalOverrides((prev) => {
-        const base = prev[id] ?? (entries.find((e) => e.ingredientId === id)?.totalQuantite ?? 0);
-        return { ...prev, [id]: (base as number) + added };
-      });
+      if (isCurrentMonth(row.dateAppro)) {
+        const added = parseFloat(row.quantite) || 0;
+        setTotalOverrides((prev) => {
+          const base = prev[id] ?? (entries.find((e) => e.ingredientId === id)?.totalQuantite ?? 0);
+          return { ...prev, [id]: (base as number) + added };
+        });
+      }
       setRows((prev) => ({
         ...prev,
         [id]: {
@@ -502,11 +511,13 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
         await onSave(ingId, row.quantite, row.prixUnitaire, bulkDate,
           bulkFournisseurId ? Number(bulkFournisseurId) : null,
           bulkRefFacture.trim() || null);
-        const added = parseFloat(row.quantite) || 0;
-        setTotalOverrides((prev) => {
-          const base = prev[ingId] ?? (entries.find((e) => e.ingredientId === ingId)?.totalQuantite ?? 0);
-          return { ...prev, [ingId]: (base as number) + added };
-        });
+        if (isCurrentMonth(bulkDate)) {
+          const added = parseFloat(row.quantite) || 0;
+          setTotalOverrides((prev) => {
+            const base = prev[ingId] ?? (entries.find((e) => e.ingredientId === ingId)?.totalQuantite ?? 0);
+            return { ...prev, [ingId]: (base as number) + added };
+          });
+        }
       }
       setSelectedIngIds(new Set());
       setBulkDate(todayStr());
