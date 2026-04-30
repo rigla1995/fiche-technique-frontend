@@ -63,14 +63,6 @@ interface AssignIngredient {
 
 interface Fournisseur { id: number; nom: string }
 
-interface TransferRecord {
-  id: number;
-  quantite: number;
-  dateTransfert: string;
-  activiteId: number;
-  activiteNom: string;
-  note: string | null;
-}
 
 export default function StockLaboPage() {
   const { t } = useTranslation();
@@ -119,11 +111,6 @@ export default function StockLaboPage() {
     unitTotals: { unite: string; qty: number; value: number }[];
     anchor: { x: number; y: number };
   } | null>(null);
-
-  // ── Transfer collapse per ingredient
-  const [openTransfers, setOpenTransfers] = useState<Set<number>>(new Set());
-  const [transferHistory, setTransferHistory] = useState<Record<number, TransferRecord[]>>({});
-  const [transferLoading, setTransferLoading] = useState<Set<number>>(new Set());
 
   // ── Bulk appro selection
   const [selectedIngIds, setSelectedIngIds] = useState<Set<number>>(new Set());
@@ -278,21 +265,6 @@ export default function StockLaboPage() {
         ),
       } : prev);
     } catch { /* ignore */ }
-  };
-
-  const toggleTransfers = async (ingredientId: number) => {
-    if (openTransfers.has(ingredientId)) {
-      setOpenTransfers((prev) => { const n = new Set(prev); n.delete(ingredientId); return n; });
-      return;
-    }
-    setOpenTransfers((prev) => new Set([...prev, ingredientId]));
-    if (transferHistory[ingredientId]) return; // already loaded
-    setTransferLoading((prev) => new Set([...prev, ingredientId]));
-    try {
-      const { data } = await api.get(`/api/labo/${laboId}/transfers?ingredientId=${ingredientId}&limit=5`);
-      setTransferHistory((prev) => ({ ...prev, [ingredientId]: data }));
-    } catch { /* ignore */ }
-    setTransferLoading((prev) => { const n = new Set(prev); n.delete(ingredientId); return n; });
   };
 
   const toggleBulkSelect = (ingredientId: number) => {
@@ -601,9 +573,6 @@ export default function StockLaboPage() {
                                 const histDates = new Set<string>((rs.history || []).map((h) => h.dateAppro).filter(Boolean) as string[]);
                                 const hasDateConflict = (r.quantite !== null && rs.dateAppro === r.dateAppro) || histDates.has(rs.dateAppro);
                                 const warnStyle = hasDateConflict ? { borderColor: '#f59e0b', boxShadow: '0 0 0 2px #fef3c7' } : {};
-                                const isTransferOpen = openTransfers.has(r.ingredientId);
-                                const isTransferLoading = transferLoading.has(r.ingredientId);
-                                const transfers = transferHistory[r.ingredientId] ?? [];
                                 const isSelected = selectedIngIds.has(r.ingredientId);
                                 const canSelect = isSelected || bulkAllValid || selectedIngIds.size === 0;
                                 return (
@@ -677,11 +646,8 @@ export default function StockLaboPage() {
                                             <button className={`btn btn-sm ${rs.saved ? 'btn-success' : 'btn-primary'}`} onClick={() => saveRow(r.ingredientId)} disabled={!canSaveRow(rs)} style={{ flex: 1 }}>
                                               {rs.saving ? '…' : rs.saved ? '✓' : t('common.save')}
                                             </button>
-                                            <button className="btn btn-ghost btn-sm" onClick={() => toggleHistory(r.ingredientId)} title="Historique appro">
+                                            <button className="btn btn-ghost btn-sm" onClick={() => toggleHistory(r.ingredientId)} title="5 derniers appros">
                                               {rs.historyOpen ? '📋▲' : '📋'}
-                                            </button>
-                                            <button className="btn btn-ghost btn-sm" onClick={() => toggleTransfers(r.ingredientId)} title="5 derniers transferts" style={{ color: '#7c3aed' }}>
-                                              {isTransferOpen ? '↗▲' : '↗'}
                                             </button>
                                           </div>
                                         </div>
@@ -706,7 +672,7 @@ export default function StockLaboPage() {
                                                 </tr>
                                               </thead>
                                               <tbody>
-                                                {rs.history.map((h, i) => (
+                                                {rs.history.slice(0, 5).map((h, i) => (
                                                   <tr key={i}>
                                                     <td style={{ color: 'var(--primary)', fontWeight: 600 }}>{fmtDate(h.dateAppro)}</td>
                                                     <td style={{ textAlign: 'right' }}>{h.quantite ?? '—'}</td>
@@ -722,70 +688,6 @@ export default function StockLaboPage() {
                                       </tr>
                                     )}
 
-                                    {/* Transfer history collapse */}
-                                    {isTransferOpen && (
-                                      <tr>
-                                        <td colSpan={9} style={{ background: '#faf5ff', padding: '8px 16px', borderTop: '1px solid #e9d5ff' }}>
-                                          <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>
-                                            ↗ 5 derniers transferts — {r.nom}
-                                          </div>
-                                          {isTransferLoading ? (
-                                            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Chargement…</span>
-                                          ) : transfers.length === 0 ? (
-                                            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Aucun transfert enregistré</span>
-                                          ) : (() => {
-                                            // Pivot: per-activite totals
-                                            const actNames = Array.from(new Set(transfers.map((t) => t.activiteNom))).sort();
-                                            const actTotals: Record<string, number> = {};
-                                            for (const t of transfers) actTotals[t.activiteNom] = (actTotals[t.activiteNom] ?? 0) + t.quantite;
-                                            return (
-                                              <div style={{ overflowX: 'auto' }}>
-                                                <table style={{ fontSize: '0.8rem', width: '100%', minWidth: 400 }}>
-                                                  <thead>
-                                                    <tr style={{ background: '#ede9fe' }}>
-                                                      <th style={{ textAlign: 'left', color: '#7c3aed', fontWeight: 700, padding: '4px 8px' }}>Ingrédient</th>
-                                                      <th style={{ textAlign: 'right', color: '#7c3aed', fontWeight: 700, padding: '4px 8px' }}>Stock Labo</th>
-                                                      {actNames.map((an) => (
-                                                        <th key={an} style={{ textAlign: 'right', color: '#7c3aed', fontWeight: 700, padding: '4px 8px' }}>↗ {an}</th>
-                                                      ))}
-                                                    </tr>
-                                                  </thead>
-                                                  <tbody>
-                                                    <tr>
-                                                      <td style={{ fontWeight: 600, padding: '4px 8px' }}>
-                                                        {r.nom}<br />
-                                                        <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{r.unite}</span>
-                                                      </td>
-                                                      <td style={{ textAlign: 'right', fontWeight: 700, color: r.quantite !== null && r.quantite > 0 ? 'var(--success)' : 'var(--text-muted)', padding: '4px 8px' }}>
-                                                        {r.quantite !== null ? r.quantite.toFixed(3) : '—'}
-                                                        {r.prixUnitaire ? <span style={{ display: 'block', fontSize: '0.72rem', fontWeight: 400, color: 'var(--text-muted)' }}>{(r.quantite! * r.prixUnitaire).toFixed(3)} DT</span> : null}
-                                                      </td>
-                                                      {actNames.map((an) => (
-                                                        <td key={an} style={{ textAlign: 'right', padding: '4px 8px', color: actTotals[an] > 0 ? '#7c3aed' : 'var(--text-muted)' }}>
-                                                          {actTotals[an]?.toFixed(3) ?? '0.000'}
-                                                        </td>
-                                                      ))}
-                                                    </tr>
-                                                    {/* Last 5 individual records */}
-                                                    {transfers.map((tr, i) => (
-                                                      <tr key={i} style={{ borderTop: '1px solid #f3e8ff', fontSize: '0.75rem' }}>
-                                                        <td style={{ color: 'var(--text-muted)', padding: '2px 8px' }}>{fmtDate(tr.dateTransfert)}</td>
-                                                        <td style={{ textAlign: 'right', color: 'var(--text-muted)', padding: '2px 8px' }}>—</td>
-                                                        {actNames.map((an) => (
-                                                          <td key={an} style={{ textAlign: 'right', padding: '2px 8px', color: tr.activiteNom === an ? '#7c3aed' : 'var(--text-muted)' }}>
-                                                            {tr.activiteNom === an ? tr.quantite.toFixed(3) : '—'}
-                                                          </td>
-                                                        ))}
-                                                      </tr>
-                                                    ))}
-                                                  </tbody>
-                                                </table>
-                                              </div>
-                                            );
-                                          })()}
-                                        </td>
-                                      </tr>
-                                    )}
                                   </React.Fragment>
                                 );
                               })}

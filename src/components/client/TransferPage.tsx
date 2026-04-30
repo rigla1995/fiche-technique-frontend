@@ -1,7 +1,22 @@
-import { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
+
+const fmtDate = (iso: string | null | undefined) => {
+  if (!iso || iso.length < 10) return iso ?? '—';
+  const [y, m, d] = iso.split('-');
+  return `${d}/${m}/${y}`;
+};
+
+interface TransferRecord {
+  id: number;
+  quantite: number;
+  dateTransfert: string;
+  activiteId: number;
+  activiteNom: string;
+  note: string | null;
+}
 
 const currentYear = new Date().getFullYear();
 const yearStart = `${currentYear}-01-01`;
@@ -57,6 +72,26 @@ export default function TransferPage() {
   // Collapsible categories (open = expanded)
   const [openCats, setOpenCats] = useState<Set<string>>(new Set());
   const toggleCat = (cat: string) => setOpenCats((prev) => { const n = new Set(prev); if (n.has(cat)) n.delete(cat); else n.add(cat); return n; });
+
+  // ── Transfer history collapse per ingredient
+  const [openTransfers, setOpenTransfers] = useState<Set<number>>(new Set());
+  const [transferHistory, setTransferHistory] = useState<Record<number, TransferRecord[]>>({});
+  const [transferLoading, setTransferLoading] = useState<Set<number>>(new Set());
+
+  const toggleTransfers = async (ingredientId: number) => {
+    if (openTransfers.has(ingredientId)) {
+      setOpenTransfers((prev) => { const n = new Set(prev); n.delete(ingredientId); return n; });
+      return;
+    }
+    setOpenTransfers((prev) => new Set([...prev, ingredientId]));
+    if (transferHistory[ingredientId]) return;
+    setTransferLoading((prev) => new Set([...prev, ingredientId]));
+    try {
+      const { data } = await api.get(`/api/labo/${laboId}/transfers?ingredientId=${ingredientId}&limit=5`);
+      setTransferHistory((prev) => ({ ...prev, [ingredientId]: data }));
+    } catch { /* ignore */ }
+    setTransferLoading((prev) => { const n = new Set(prev); n.delete(ingredientId); return n; });
+  };
 
   const load = useCallback(async () => {
     if (!laboId) return;
@@ -316,45 +351,112 @@ export default function TransferPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {rows.map((r) => (
-                      <tr key={r.ingredientId}>
-                        <td>
-                          <div style={{ fontWeight: 600 }}>{r.nom}</div>
-                          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{r.unite}</div>
-                        </td>
-                        <td style={{ textAlign: 'right' }}>
-                          <span style={{ fontWeight: 700, color: qtyColor(r.quantite), fontSize: '1rem' }}>
-                            {r.quantite !== null ? r.quantite : '—'}
-                          </span>
-                          {r.prixUnitaire !== null && (
-                            <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-                              {r.prixUnitaire.toFixed(3)} DT
-                            </div>
-                          )}
-                        </td>
-                        {activites.map((act) => {
-                          const isAssigned = assignedSet.has(`${r.ingredientId}-${act.id}`);
-                          return (
-                            <td key={act.id} style={{ textAlign: 'center' }}>
-                              {isAssigned ? (
-                                <input
-                                  type="number"
-                                  min="0"
-                                  step="0.001"
-                                  className="input"
-                                  style={{ width: 100, textAlign: 'right' }}
-                                  value={qtys[r.ingredientId]?.[act.id] ?? ''}
-                                  onChange={(e) => setQty(r.ingredientId, act.id, e.target.value)}
-                                  placeholder="0"
-                                />
-                              ) : (
-                                <span style={{ color: 'var(--danger, #ef4444)', fontWeight: 700, fontSize: '1.1rem' }}>—</span>
-                              )}
+                    {rows.map((r) => {
+                      const isTransferOpen = openTransfers.has(r.ingredientId);
+                      const isTransferLoading = transferLoading.has(r.ingredientId);
+                      const transfers = transferHistory[r.ingredientId] ?? [];
+                      return (
+                      <React.Fragment key={r.ingredientId}>
+                        <tr>
+                          <td>
+                            <div style={{ fontWeight: 600 }}>{r.nom}</div>
+                            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{r.unite}</div>
+                            <button
+                              className="btn btn-ghost btn-sm"
+                              onClick={() => toggleTransfers(r.ingredientId)}
+                              title="5 derniers transferts"
+                              style={{ fontSize: '0.72rem', color: '#7c3aed', marginTop: 4, padding: '2px 6px' }}
+                            >
+                              {isTransferOpen ? '↗▲' : '↗ historique'}
+                            </button>
+                          </td>
+                          <td style={{ textAlign: 'right' }}>
+                            <span style={{ fontWeight: 700, color: qtyColor(r.quantite), fontSize: '1rem' }}>
+                              {r.quantite !== null ? r.quantite : '—'}
+                            </span>
+                            {r.prixUnitaire !== null && (
+                              <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                                {r.prixUnitaire.toFixed(3)} DT
+                              </div>
+                            )}
+                          </td>
+                          {activites.map((act) => {
+                            const isAssigned = assignedSet.has(`${r.ingredientId}-${act.id}`);
+                            return (
+                              <td key={act.id} style={{ textAlign: 'center' }}>
+                                {isAssigned ? (
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    step="0.001"
+                                    className="input"
+                                    style={{ width: 100, textAlign: 'right' }}
+                                    value={qtys[r.ingredientId]?.[act.id] ?? ''}
+                                    onChange={(e) => setQty(r.ingredientId, act.id, e.target.value)}
+                                    placeholder="0"
+                                  />
+                                ) : (
+                                  <span style={{ color: 'var(--danger, #ef4444)', fontWeight: 700, fontSize: '1.1rem' }}>—</span>
+                                )}
+                              </td>
+                            );
+                          })}
+                        </tr>
+                        {isTransferOpen && (
+                          <tr>
+                            <td colSpan={2 + activites.length} style={{ background: '#faf5ff', padding: '8px 16px', borderTop: '1px solid #e9d5ff' }}>
+                              <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>
+                                ↗ 5 derniers transferts — {r.nom}
+                              </div>
+                              {isTransferLoading ? (
+                                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Chargement…</span>
+                              ) : transfers.length === 0 ? (
+                                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Aucun transfert enregistré</span>
+                              ) : (() => {
+                                const actNames = Array.from(new Set(transfers.map((t) => t.activiteNom))).sort();
+                                const actTotals: Record<string, number> = {};
+                                for (const t of transfers) actTotals[t.activiteNom] = (actTotals[t.activiteNom] ?? 0) + t.quantite;
+                                return (
+                                  <div style={{ overflowX: 'auto' }}>
+                                    <table style={{ fontSize: '0.8rem', width: '100%', minWidth: 400 }}>
+                                      <thead>
+                                        <tr style={{ background: '#ede9fe' }}>
+                                          <th style={{ textAlign: 'left', color: '#7c3aed', fontWeight: 700, padding: '4px 8px' }}>Date</th>
+                                          {actNames.map((an) => (
+                                            <th key={an} style={{ textAlign: 'right', color: '#7c3aed', fontWeight: 700, padding: '4px 8px' }}>↗ {an}</th>
+                                          ))}
+                                        </tr>
+                                      </thead>
+                                      <tbody>
+                                        <tr style={{ fontWeight: 700, background: '#f5f3ff' }}>
+                                          <td style={{ padding: '4px 8px', color: 'var(--text-muted)', fontSize: '0.72rem', textTransform: 'uppercase' }}>Total</td>
+                                          {actNames.map((an) => (
+                                            <td key={an} style={{ textAlign: 'right', padding: '4px 8px', color: '#7c3aed' }}>
+                                              {actTotals[an]?.toFixed(3) ?? '0.000'}
+                                            </td>
+                                          ))}
+                                        </tr>
+                                        {transfers.map((tr, i) => (
+                                          <tr key={i} style={{ borderTop: '1px solid #f3e8ff', fontSize: '0.75rem' }}>
+                                            <td style={{ color: 'var(--text-muted)', padding: '2px 8px' }}>{fmtDate(tr.dateTransfert)}</td>
+                                            {actNames.map((an) => (
+                                              <td key={an} style={{ textAlign: 'right', padding: '2px 8px', color: tr.activiteNom === an ? '#7c3aed' : 'var(--text-muted)' }}>
+                                                {tr.activiteNom === an ? tr.quantite.toFixed(3) : '—'}
+                                              </td>
+                                            ))}
+                                          </tr>
+                                        ))}
+                                      </tbody>
+                                    </table>
+                                  </div>
+                                );
+                              })()}
                             </td>
-                          );
-                        })}
-                      </tr>
-                    ))}
+                          </tr>
+                        )}
+                      </React.Fragment>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
