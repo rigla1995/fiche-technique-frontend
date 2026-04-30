@@ -368,20 +368,32 @@ export default function ProductList() {
                           </td>
                         )}
                         <td style={{ textAlign: 'center' }}>
-                          <button className="count-badge" onClick={() => openPopup('ingredients', p)} title="Voir les ingrédients">
+                          <button
+                            className="count-badge"
+                            onClick={() => openPopup('ingredients', p)}
+                            title={p.ingredientsCount ? 'Voir les ingrédients' : 'Aucun ingrédient'}
+                            disabled={!p.ingredientsCount}
+                            style={{ opacity: p.ingredientsCount ? 1 : 0.4, cursor: p.ingredientsCount ? 'pointer' : 'default' }}
+                          >
                             {p.ingredientsCount ?? 0}
                           </button>
                         </td>
                         {isVendable && (
                           <td style={{ textAlign: 'center' }}>
-                            <button className="count-badge" onClick={() => openPopup('subProducts', p)} title="Voir les produits utilisables">
+                            <button
+                              className="count-badge"
+                              onClick={() => openPopup('subProducts', p)}
+                              title={p.subProductsCount ? 'Voir les produits utilisables' : 'Aucun sous-produit'}
+                              disabled={!p.subProductsCount}
+                              style={{ opacity: p.subProductsCount ? 1 : 0.4, cursor: p.subProductsCount ? 'pointer' : 'default' }}
+                            >
                               {p.subProductsCount ?? 0}
                             </button>
                           </td>
                         )}
                         <td style={{ textAlign: 'right' }}>
                           <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
-                            <Link to={`/client/products/${p.id}/edit${actCtxParam}`} className="btn btn-ghost btn-sm" style={{ fontWeight: 600 }}>✏️ {t('common.edit')}</Link>
+                            <Link to={`/client/products/${p.id}/edit${filterQs ? `?${filterQs}` : ''}`} className="btn btn-ghost btn-sm" style={{ fontWeight: 600 }}>✏️ {t('common.edit')}</Link>
                             <button className="btn btn-danger btn-sm" onClick={() => handleDelete(p.id)} style={{ fontWeight: 600 }}>
                               🗑 {t('common.delete')}
                             </button>
