@@ -484,13 +484,24 @@ export default function ProductList() {
           {loading ? (
             <div className="loading-text">{t('common.loading')}</div>
           ) : searched.length === 0 ? (
-            <div className="empty-state">
-              <span className="empty-icon">{isVendable ? '🍔' : '🧪'}</span>
-              <p>{byTab.length === 0 ? t(emptyKey) : t('common.no_result')}</p>
-              {byTab.length === 0 && (!isEntreprise || isFranchiseCtx || isDistinctCtx) && (
-                <Link to={addPath} className="btn btn-primary">{t(addKey)}</Link>
-              )}
-            </div>
+            byTab.length === 0 ? (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '60px 24px', textAlign: 'center' }}>
+                <div style={{ width: 72, height: 72, borderRadius: 20, background: 'linear-gradient(135deg, var(--primary) 0%, #7c3aed 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem', marginBottom: 20, boxShadow: '0 8px 24px rgba(37,99,235,0.18)' }}>
+                  {isVendable ? '🍔' : '🧪'}
+                </div>
+                <h2 style={{ margin: '0 0 8px', fontSize: '1.15rem', fontWeight: 700, color: 'var(--text)' }}>
+                  {isVendable ? 'Aucun produit vendable' : 'Aucun produit utilisable'}
+                </h2>
+                <p style={{ margin: '0 0 4px', fontSize: '0.88rem', color: 'var(--text-muted)', maxWidth: 340 }}>
+                  {ctxBadge ? `Contexte : ${ctxBadge.label}` : 'Commencez par créer votre premier produit.'}
+                </p>
+              </div>
+            ) : (
+              <div className="empty-state">
+                <span className="empty-icon">{isVendable ? '🍔' : '🧪'}</span>
+                <p>{t('common.no_result')}</p>
+              </div>
+            )
           ) : (
             <>
               {/* ── Franchise accordion ── */}
