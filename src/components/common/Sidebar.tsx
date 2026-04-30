@@ -208,7 +208,10 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const { hasSelections } = useSelection();
   const [typesSummary, setTypesSummary] = useState<ActiviteTypesSummary | null>(null);
   const [labos, setLabos] = useState<Labo[]>([]);
-  const [openSections, setOpenSections] = useState<Set<string>>(new Set());
+  const isAdmin = user?.role === 'super_admin';
+  const [openSections, setOpenSections] = useState<Set<string>>(
+    isAdmin ? new Set(['admin-general', 'admin-ref']) : new Set()
+  );
 
   const location = useLocation();
   const step = user?.onboardingStep ?? 0;
@@ -292,19 +295,29 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
         <ul className="sidebar-nav" style={{ flex: 1 }}>
           {user?.role === 'super_admin' ? (
-            adminLinks.map((link) => (
-              <li key={link.to}>
-                <NavLink
-                  to={link.to}
-                  end={link.end}
-                  className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
-                  onClick={onClose}
-                >
-                  <span className="link-icon">{link.icon}</span>
-                  <span className="link-label">{link.label}</span>
-                </NavLink>
-              </li>
-            ))
+            <>
+              {/* ══ ESPACE ADMINISTRATION ══ */}
+              <CollapsibleHeader label="Espace Administration" icon="📊" isOpen={openSections.has('admin-general')} locked={false} onToggle={() => toggleSection('admin-general')} />
+              {openSections.has('admin-general') && (
+                <>
+                  <SubNavLink to="/admin" icon="📊" label={t('nav.dashboard')} isActive={location.pathname === '/admin'} onClick={onClose} />
+                  <SubNavLink to="/admin/clients" icon="👥" label={t('nav.clients')} isActive={location.pathname === '/admin/clients'} onClick={onClose} />
+                </>
+              )}
+
+              <Divider />
+
+              {/* ══ ESPACE RÉFÉRENTIELS ══ */}
+              <CollapsibleHeader label="Espace Référentiels" icon="🗂️" isOpen={openSections.has('admin-ref')} locked={false} onToggle={() => toggleSection('admin-ref')} />
+              {openSections.has('admin-ref') && (
+                <>
+                  <SubNavLink to="/admin/units" icon="📏" label={t('nav.units')} isActive={location.pathname === '/admin/units'} onClick={onClose} />
+                  <SubNavLink to="/admin/categories" icon="🏷️" label={t('nav.categories')} isActive={location.pathname === '/admin/categories'} onClick={onClose} />
+                  <SubNavLink to="/admin/domaines" icon="🗂️" label={t('nav.domaines')} isActive={location.pathname === '/admin/domaines'} onClick={onClose} />
+                  <SubNavLink to="/admin/ingredients" icon="🧂" label={t('nav.ingredients')} isActive={location.pathname === '/admin/ingredients'} onClick={onClose} />
+                </>
+              )}
+            </>
           ) : (
             <>
               {/* Rapports */}
@@ -340,54 +353,71 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                 </li>
               )}
 
-              {/* Independent: catalogue, stock, historique, produits */}
+              {/* Independent: Espace sections */}
               {!isEntreprise && (
                 <>
-                  <li>
-                    {!effectiveHasSelections ? (
-                      <LockedLink label={t('nav.ingredients_catalog')} reason={t('nav.stock_locked')} />
-                    ) : (
-                      <NavLink to="/client/ingredients" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>
-                        <span className="link-icon">🧂</span>
-                        <span className="link-label">{t('nav.ingredients_catalog')}</span>
-                      </NavLink>
-                    )}
-                  </li>
-                  <li>
-                    {!effectiveHasSelections ? (
-                      <LockedLink label={t('nav.stock')} reason={t('nav.stock_locked')} />
-                    ) : (
-                      <NavLink to="/client/stock" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>
-                        <span className="link-icon">📦</span>
-                        <span className="link-label">{t('nav.stock')}</span>
-                      </NavLink>
-                    )}
-                  </li>
-                  <li>
-                    {!effectiveHasSelections ? (
-                      <LockedLink label={t('nav.historique_appro')} reason={t('nav.stock_locked')} />
-                    ) : (
-                      <Link
-                        to="/client/stock/historique"
-                        className={`sidebar-link ${isHistoriquePage && !currentHistType ? 'active' : ''}`}
-                        onClick={onClose}
-                      >
-                        <span className="link-icon">📋</span>
-                        <span className="link-label">{t('nav.historique_appro')}</span>
-                      </Link>
-                    )}
-                  </li>
+                  <Divider />
+
+                  {/* ══ ESPACE CATALOGUE ══ */}
+                  <CollapsibleHeader label="Espace Catalogue" icon="🌐" isOpen={openSections.has('indep-catalogue')} locked={false} onToggle={() => toggleSection('indep-catalogue')} />
+                  {openSections.has('indep-catalogue') && (
+                    <>
+                      <SubNavLink to="/client/catalogue-global" icon="🌐" label={t('nav.catalogue_global', 'Catalogue Global')} isActive={location.pathname === '/client/catalogue-global'} onClick={onClose} />
+                      {effectiveHasSelections ? (
+                        <SubNavLink to="/client/ingredients" icon="🧂" label={t('nav.ingredients_catalog')} isActive={location.pathname === '/client/ingredients'} onClick={onClose} />
+                      ) : (
+                        <li>
+                          <span style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 12px 6px 36px', fontSize: '0.83rem', borderRadius: 6, margin: '1px 8px', opacity: 0.35, cursor: 'not-allowed' }}>
+                            <span style={{ fontSize: '0.85rem' }}>🔒</span>
+                            <span>{t('nav.ingredients_catalog')}</span>
+                          </span>
+                        </li>
+                      )}
+                    </>
+                  )}
+
+                  <Divider />
+
+                  {/* ══ ESPACE STOCK ══ */}
+                  <CollapsibleHeader label="Espace Stock" icon="📦" isOpen={openSections.has('indep-stock')} locked={!effectiveHasSelections} onToggle={() => toggleSection('indep-stock')} />
+                  {openSections.has('indep-stock') && effectiveHasSelections && (
+                    <>
+                      <SubNavLink to="/client/stock" icon="📦" label={t('nav.stock')} isActive={location.pathname === '/client/stock'} onClick={onClose} />
+                      <li>
+                        <Link
+                          to="/client/stock/historique"
+                          onClick={onClose}
+                          style={{
+                            display: 'flex', alignItems: 'center', gap: 8,
+                            padding: '6px 12px 6px 36px',
+                            fontSize: '0.83rem', borderRadius: 6, margin: '1px 8px',
+                            textDecoration: 'none',
+                            color: isHistoriquePage && !currentHistType ? 'var(--primary)' : 'var(--text)',
+                            background: isHistoriquePage && !currentHistType ? 'var(--primary-light, #e8f0fe)' : undefined,
+                            fontWeight: isHistoriquePage && !currentHistType ? 600 : undefined,
+                          }}
+                        >
+                          <span style={{ fontSize: '0.85rem' }}>📋</span>
+                          <span>{t('nav.historique_appro')}</span>
+                        </Link>
+                      </li>
+                    </>
+                  )}
+
+                  <Divider />
+
+                  {/* ══ ESPACE PRODUITS ══ */}
                   <CollapsibleHeader
-                    label={t('nav.products')}
+                    label="Espace Produits"
                     icon="🍔"
-                    isOpen={openSections.has('produits-indep')}
+                    isOpen={openSections.has('indep-produits')}
                     locked={!effectiveHasSelections}
-                    onToggle={() => toggleSection('produits-indep')}
+                    onToggle={() => toggleSection('indep-produits')}
                   />
-                  {openSections.has('produits-indep') && effectiveHasSelections && (
+                  {openSections.has('indep-produits') && effectiveHasSelections && (
                     <ProductSubLinks locked={false} onClick={onClose} />
                   )}
-                  {!effectiveHasSelections && (
+                  {openSections.has('indep-produits') && !effectiveHasSelections && (
                     <ProductSubLinks locked={true} onClick={onClose} />
                   )}
                 </>
@@ -697,18 +727,6 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                 </>
               )}
 
-              {/* Catalogue Global for independent */}
-              {!isEntreprise && (
-                <>
-                  <Divider />
-                  <li>
-                    <NavLink to="/client/catalogue-global" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>
-                      <span className="link-icon">🌐</span>
-                      <span className="link-label">{t('nav.catalogue_global', 'Catalogue Global')}</span>
-                    </NavLink>
-                  </li>
-                </>
-              )}
             </>
           )}
         </ul>
