@@ -164,18 +164,40 @@ export default function ProductList() {
     textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 3,
   };
 
+  const ctxBadge = isFranchiseCtx
+    ? { label: 'Franchise', bg: '#dbeafe', color: '#1d4ed8', border: '#bfdbfe' }
+    : isDistinctCtx
+    ? { label: 'Distinct', bg: '#fef3c7', color: '#92400e', border: '#fde68a' }
+    : null;
+
   return (
     <div className="page">
-      <div className="page-header">
-        <h1>
-          {tab === 'fiche-technique'
-            ? t('client.products.tab_fiche_technique')
-            : tab === 'utilisable'
-              ? t('client.products.tab_utilisable')
-              : t('client.products.tab_vendable')}
-        </h1>
+      <div className="page-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+          <h1 style={{ margin: 0 }}>
+            {tab === 'fiche-technique'
+              ? t('client.products.tab_fiche_technique')
+              : tab === 'utilisable'
+                ? t('client.products.tab_utilisable')
+                : t('client.products.tab_vendable')}
+          </h1>
+          {ctxBadge && tab !== 'fiche-technique' && (
+            <span style={{
+              fontSize: '0.7rem', fontWeight: 800, padding: '4px 12px', borderRadius: 20,
+              background: ctxBadge.bg, color: ctxBadge.color, border: `1px solid ${ctxBadge.border}`,
+              textTransform: 'uppercase', letterSpacing: '0.07em',
+            }}>
+              {ctxBadge.label}
+            </span>
+          )}
+          {tab !== 'fiche-technique' && byTab.length > 0 && (
+            <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 500 }}>
+              {byTab.length} produit{byTab.length > 1 ? 's' : ''}
+            </span>
+          )}
+        </div>
         {tab !== 'fiche-technique' && (!isEntreprise || isFranchiseCtx || selectedActivityId) && (
-          <Link to={addPath} className="btn btn-primary">
+          <Link to={addPath} className="btn btn-primary" style={{ whiteSpace: 'nowrap' }}>
             + {t(addKey)}
           </Link>
         )}
@@ -190,8 +212,8 @@ export default function ProductList() {
       ) : (
         <>
           {/* Franchise filters: group + activity + search */}
-          {isEntreprise && isFranchiseCtx && tab !== 'fiche-technique' && (
-            <div style={{ display: 'flex', gap: 12, marginBottom: 18, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+          {isEntreprise && isFranchiseCtx && tab !== 'fiche-technique' && byTab.length > 0 && (
+            <div style={{ display: 'flex', gap: 12, marginBottom: 18, flexWrap: 'wrap', alignItems: 'flex-end', background: 'var(--surface)', padding: '14px 16px', borderRadius: 12, border: '1px solid var(--border)' }}>
               {activitesLoading ? (
                 <span style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>{t('common.loading')}</span>
               ) : (
@@ -233,7 +255,7 @@ export default function ProductList() {
                 </>
               )}
               <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
-                <span style={labelStyle}>{t('common.search')}</span>
+                <span style={labelStyle}>🔍 {t('common.search')}</span>
                 <input
                   type="text"
                   placeholder={t('common.search') + '...'}
@@ -247,8 +269,8 @@ export default function ProductList() {
           )}
 
           {/* Distinct filters: activity + name */}
-          {isEntreprise && isDistinctCtx && tab !== 'fiche-technique' && (
-            <div style={{ display: 'flex', gap: 12, marginBottom: 18, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+          {isEntreprise && isDistinctCtx && tab !== 'fiche-technique' && byTab.length > 0 && (
+            <div style={{ display: 'flex', gap: 12, marginBottom: 18, flexWrap: 'wrap', alignItems: 'flex-end', background: 'var(--surface)', padding: '14px 16px', borderRadius: 12, border: '1px solid var(--border)' }}>
               {activitesLoading ? (
                 <span style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>{t('common.loading')}</span>
               ) : distinctActivities.length > 0 && (
@@ -267,7 +289,7 @@ export default function ProductList() {
                 </div>
               )}
               <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
-                <span style={labelStyle}>{t('common.search')}</span>
+                <span style={labelStyle}>🔍 {t('common.search')}</span>
                 <input
                   type="text"
                   placeholder={t('common.search') + '...'}
@@ -281,14 +303,15 @@ export default function ProductList() {
           )}
 
           {/* Search bar for non-enterprise */}
-          {!isEntreprise && (
-            <div className="search-bar">
+          {!isEntreprise && byTab.length > 0 && (
+            <div style={{ marginBottom: 18 }}>
               <input
                 type="text"
-                placeholder={t('common.search') + '...'}
+                placeholder={'🔍 ' + t('common.search') + '...'}
                 value={search}
                 onChange={(e) => { setSearch(e.target.value); setPage(1); }}
                 className="input"
+                style={{ maxWidth: 320 }}
               />
             </div>
           )}
@@ -305,56 +328,64 @@ export default function ProductList() {
             </div>
           ) : (
             <>
-              <div className="table-responsive card">
+              <div className="table-responsive card th-blue" style={{ borderRadius: 14, overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.07)' }}>
                 <table className="table">
                   <thead>
                     <tr>
                       <th>{t('common.name')}</th>
                       {showActivityCol && <th>Activité</th>}
                       {showFranchiseActCol && <th>Activité</th>}
-                      <th style={{ textAlign: 'center' }}>{t('nav.ingredients')}</th>
+                      <th style={{ textAlign: 'center' }}>🧂 {t('nav.ingredients')}</th>
                       {isVendable && (
-                        <th style={{ textAlign: 'center' }}>{t('client.products.usable_products_col')}</th>
+                        <th style={{ textAlign: 'center' }}>📦 {t('client.products.usable_products_col')}</th>
                       )}
-                      <th>{t('common.actions')}</th>
+                      <th style={{ textAlign: 'right' }}>{t('common.actions')}</th>
                     </tr>
                   </thead>
                   <tbody>
                     {paginated.map((p) => (
-                      <tr key={p.id}>
-                        <td>{p.name}</td>
+                      <tr key={p.id} style={{ transition: 'background 0.15s' }}>
+                        <td>
+                          <span style={{ fontWeight: 600, color: 'var(--text)' }}>{p.name}</span>
+                        </td>
                         {showActivityCol && (
-                          <td style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                            {getActivityName(p.activiteId)}
+                          <td>
+                            <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)', background: 'var(--surface)', padding: '2px 8px', borderRadius: 12, border: '1px solid var(--border)' }}>
+                              {getActivityName(p.activiteId)}
+                            </span>
                           </td>
                         )}
                         {showFranchiseActCol && (
-                          <td style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                            {p.activiteId
-                              ? (franchiseActivities.find((a) => a.id === p.activiteId)?.nom ?? '—')
-                              : (() => {
-                                  const cnt = franchiseActivities.filter((a) => !filterFranchiseGroup || (a.franchiseGroup || a.nom) === filterFranchiseGroup).length;
-                                  return <span style={{ fontStyle: 'italic' }}>{cnt} activité{cnt > 1 ? 's' : ''}</span>;
-                                })()}
+                          <td>
+                            {p.activiteId ? (
+                              <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)', background: 'var(--surface)', padding: '2px 8px', borderRadius: 12, border: '1px solid var(--border)' }}>
+                                {franchiseActivities.find((a) => a.id === p.activiteId)?.nom ?? '—'}
+                              </span>
+                            ) : (() => {
+                              const cnt = franchiseActivities.filter((a) => !filterFranchiseGroup || (a.franchiseGroup || a.nom) === filterFranchiseGroup).length;
+                              return <span style={{ fontSize: '0.82rem', fontStyle: 'italic', color: 'var(--text-muted)' }}>{cnt} activité{cnt > 1 ? 's' : ''}</span>;
+                            })()}
                           </td>
                         )}
                         <td style={{ textAlign: 'center' }}>
-                          <button className="count-badge" onClick={() => openPopup('ingredients', p)}>
+                          <button className="count-badge" onClick={() => openPopup('ingredients', p)} title="Voir les ingrédients">
                             {p.ingredientsCount ?? 0}
                           </button>
                         </td>
                         {isVendable && (
                           <td style={{ textAlign: 'center' }}>
-                            <button className="count-badge" onClick={() => openPopup('subProducts', p)}>
+                            <button className="count-badge" onClick={() => openPopup('subProducts', p)} title="Voir les produits utilisables">
                               {p.subProductsCount ?? 0}
                             </button>
                           </td>
                         )}
-                        <td className="actions-cell">
-                          <Link to={`/client/products/${p.id}/edit${actCtxParam}`} className="btn btn-ghost btn-sm">{t('common.edit')}</Link>
-                          <button className="btn btn-danger btn-sm" onClick={() => handleDelete(p.id)}>
-                            {t('common.delete')}
-                          </button>
+                        <td style={{ textAlign: 'right' }}>
+                          <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
+                            <Link to={`/client/products/${p.id}/edit${actCtxParam}`} className="btn btn-ghost btn-sm" style={{ fontWeight: 600 }}>✏️ {t('common.edit')}</Link>
+                            <button className="btn btn-danger btn-sm" onClick={() => handleDelete(p.id)} style={{ fontWeight: 600 }}>
+                              🗑 {t('common.delete')}
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -364,24 +395,25 @@ export default function ProductList() {
 
               {/* Pagination */}
               {totalPages > 1 && (
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 14, flexWrap: 'wrap', gap: 8 }}>
-                  <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
-                    {(safePage - 1) * PAGE_SIZE + 1}–{Math.min(safePage * PAGE_SIZE, searched.length)} / {searched.length}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 16, flexWrap: 'wrap', gap: 8 }}>
+                  <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)', fontWeight: 500 }}>
+                    {(safePage - 1) * PAGE_SIZE + 1}–{Math.min(safePage * PAGE_SIZE, searched.length)} sur {searched.length}
                   </span>
-                  <div style={{ display: 'flex', gap: 6 }}>
+                  <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
                     <button
                       className="btn btn-ghost btn-sm"
                       disabled={safePage <= 1}
                       onClick={() => setPage(safePage - 1)}
+                      style={{ padding: '4px 12px', fontWeight: 700 }}
                     >
-                      ← Préc.
+                      ‹
                     </button>
                     {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
                       <button
                         key={p}
                         className={`btn btn-sm ${p === safePage ? 'btn-primary' : 'btn-ghost'}`}
                         onClick={() => setPage(p)}
-                        style={{ minWidth: 32 }}
+                        style={{ minWidth: 34, padding: '4px 8px', fontWeight: p === safePage ? 800 : 500 }}
                       >
                         {p}
                       </button>
@@ -390,8 +422,9 @@ export default function ProductList() {
                       className="btn btn-ghost btn-sm"
                       disabled={safePage >= totalPages}
                       onClick={() => setPage(safePage + 1)}
+                      style={{ padding: '4px 12px', fontWeight: 700 }}
                     >
-                      Suiv. →
+                      ›
                     </button>
                   </div>
                 </div>
