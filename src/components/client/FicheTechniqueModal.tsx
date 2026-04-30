@@ -594,7 +594,16 @@ export default function FicheTechniqueModal({ productId, productName, hasIngredi
                   </tr>
                 </thead>
                 <tbody>
-                  {stockCheckResult.missing.map((ing) => {
+                  {(stockCheckResult.groups.length > 0 ? stockCheckResult.groups : [{ label: '', depth: 0, ingredients: stockCheckResult.missing }]).map((group, gi) => (
+                    <>
+                      {group.depth > 0 && (
+                        <tr key={`gh-${gi}`}>
+                          <td colSpan={5} style={{ paddingTop: gi === 0 ? 4 : 10, paddingBottom: 2, fontSize: '0.72rem', fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', color: '#6b7280', borderTop: '1px solid var(--border)', background: '#fafafa' }}>
+                            ↳ Sous-produit : {group.label}
+                          </td>
+                        </tr>
+                      )}
+                      {group.ingredients.map((ing) => {
                     const fill = missingFillData[ing.ingredientId] || { qty: '', price: '', date: new Date().toISOString().slice(0, 10) };
                     const isFOpen = openFournisseurFor === ing.ingredientId;
                     const hasFournisseur = !!(missingFournisseurById[ing.ingredientId] || missingRefFactureById[ing.ingredientId]);
@@ -646,6 +655,8 @@ export default function FicheTechniqueModal({ productId, productName, hasIngredi
                       </>
                     );
                   })}
+                    </>
+                  ))}
                 </tbody>
               </table>
             </div>
