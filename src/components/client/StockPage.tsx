@@ -375,6 +375,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
   const [transfertInfoModal, setTransfertInfoModal] = useState<{ ingredientId: number; nom: string } | null>(null);
   const [seuilEdits, setSeuilEdits] = useState<Record<number, string>>({});
   const [seuilSaving, setSeuilSaving] = useState<Record<number, boolean>>({});
+  const [totalOverrides, setTotalOverrides] = useState<Record<number, number>>({});
 
   // ── Bulk appro selection
   const [selectedIngIds, setSelectedIngIds] = useState<Set<number>>(new Set());
@@ -388,6 +389,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
   useEffect(() => {
     setRows(buildInitialRowState(entries));
     setSelectedIngIds(new Set());
+    setTotalOverrides({});
     const initial: Record<number, string> = {};
     for (const e of entries) {
       initial[e.ingredientId] = e.seuilMin !== null ? String(e.seuilMin) : '';
@@ -428,6 +430,11 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
       const ref = row.refFacture.trim() || null;
       await onSave(id, row.quantite, row.prixUnitaire, row.dateAppro, fId, ref);
       const today = todayStr();
+      const added = parseFloat(row.quantite) || 0;
+      setTotalOverrides((prev) => {
+        const base = prev[id] ?? (entries.find((e) => e.ingredientId === id)?.totalQuantite ?? 0);
+        return { ...prev, [id]: (base as number) + added };
+      });
       setRows((prev) => ({
         ...prev,
         [id]: {
@@ -495,6 +502,11 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
         await onSave(ingId, row.quantite, row.prixUnitaire, bulkDate,
           bulkFournisseurId ? Number(bulkFournisseurId) : null,
           bulkRefFacture.trim() || null);
+        const added = parseFloat(row.quantite) || 0;
+        setTotalOverrides((prev) => {
+          const base = prev[ingId] ?? (entries.find((e) => e.ingredientId === ingId)?.totalQuantite ?? 0);
+          return { ...prev, [ingId]: (base as number) + added };
+        });
       }
       setSelectedIngIds(new Set());
       setBulkDate(todayStr());
@@ -643,8 +655,9 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                       const row = rows[entry.ingredientId] ?? { quantite: '', prixUnitaire: '', dateAppro: todayStr(), fournisseurId: '', refFacture: '', saving: false, saved: false, error: '' };
                       const isHistOpen = historyOpen[entry.ingredientId] ?? false;
                       const hist = historyData[entry.ingredientId];
-                      const cls = seuilClass(entry.totalQuantite ?? null, entry.seuilMin ?? null);
-                      const totalDisplay = entry.totalQuantite !== null ? entry.totalQuantite.toFixed(3) : '—';
+                      const totalQty = totalOverrides[entry.ingredientId] ?? entry.totalQuantite ?? null;
+                      const cls = seuilClass(totalQty, entry.seuilMin ?? null);
+                      const totalDisplay = totalQty !== null ? (totalQty as number).toFixed(3) : '—';
                       const assignedFournisseur = hasFournisseurs && row.fournisseurId
                         ? fournisseurs.find((f) => String(f.id) === row.fournisseurId)
                         : null;
