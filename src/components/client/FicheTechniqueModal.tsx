@@ -863,9 +863,21 @@ export default function FicheTechniqueModal({ productId, productName, hasIngredi
               {/* Footer */}
               <div style={{ padding: '12px 24px 18px', display: 'flex', justifyContent: 'flex-end', gap: 10, borderTop: '1px solid var(--border)' }}>
                 <button className="btn btn-ghost" onClick={() => setShowMissingPopup(false)}>{t('common.cancel')}</button>
-                <button className="btn btn-primary" style={{ background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', borderColor: 'transparent' }} disabled={savingMissing} onClick={saveMissingStock}>
-                  {savingMissing ? t('common.loading') : t('common.save')}
-                </button>
+                {(() => {
+                  const allFilled = stockCheckResult.missing.every((ing) => {
+                    const fill = missingFillData[ing.ingredientId];
+                    return fill && parseFloat(fill.qty) > 0 && parseFloat(fill.price) > 0;
+                  });
+                  return (
+                    <button className="btn btn-primary"
+                      style={{ background: allFilled ? 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)' : '#d1d5db', borderColor: 'transparent', cursor: allFilled ? 'pointer' : 'not-allowed' }}
+                      disabled={savingMissing || !allFilled}
+                      title={!allFilled ? 'Renseignez la quantité et le prix (> 0) pour tous les ingrédients' : undefined}
+                      onClick={saveMissingStock}>
+                      {savingMissing ? t('common.loading') : t('common.save')}
+                    </button>
+                  );
+                })()}
               </div>
             </div>
           </div>
