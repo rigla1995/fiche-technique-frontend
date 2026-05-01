@@ -715,93 +715,110 @@ export default function HistoriqueApproPage() {
             ))}
           </div>
 
-          <div className="card th-teal" style={{ overflowX: 'hidden' }}>
-            <table className="table" style={{ tableLayout: 'fixed', width: '100%' }}>
-              <colgroup>
-                <col style={{ width: '36px' }} />
-                <col style={{ width: isEntreprise ? '115px' : '105px' }} />
-                <col />
-                <col style={{ width: '100px' }} />
-                <col style={{ width: '85px' }} />
-                {isEntreprise && <col style={{ width: '130px' }} />}
-                <col style={{ width: '66px' }} />
-              </colgroup>
-              <thead>
-                <tr>
-                  <th style={{ textAlign: 'center', padding: '0 4px' }}>
-                    <input
-                      type="checkbox"
-                      checked={results.length > 0 && selectedIds.size === results.length}
-                      onChange={toggleSelectAll}
-                      title="Tout sélectionner"
-                      style={{ cursor: 'pointer', accentColor: 'var(--primary)' }}
-                    />
-                  </th>
-                  <th>{t('client.historique_appro.col_date')}</th>
-                  <th>{t('client.historique_appro.col_ingredient')}</th>
-                  <th style={{ textAlign: 'right' }}>{t('client.historique_appro.col_qty')}</th>
-                  <th style={{ textAlign: 'right' }}>Prix/DT</th>
-                  {isEntreprise && <th>Fourn. / Réf</th>}
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                {pagedResults.map((r) => {
-                  const isSelected = selectedIds.has(r.id);
-                  return (
-                  <tr key={r.id} style={isSelected ? { background: 'rgba(234,88,12,0.08)', outline: '1px solid rgba(234,88,12,0.3)' } : undefined}>
-                    <td style={{ textAlign: 'center', padding: '0 4px' }}>
+          <div className="card th-teal" style={{ overflowX: 'auto' }}>
+            {(() => {
+              const actMap: Record<number, string> = {};
+              [...franchiseActivities, ...distinctActivities].forEach((a) => { actMap[a.id] = a.nom; });
+              return (
+              <table className="table" style={{ tableLayout: 'fixed', minWidth: 860, width: '100%' }}>
+                <colgroup>
+                  <col style={{ width: '36px' }} />
+                  <col style={{ width: '88px' }} />
+                  <col style={{ width: '100px' }} />
+                  <col />
+                  <col style={{ width: '52px' }} />
+                  <col style={{ width: '82px' }} />
+                  <col style={{ width: '78px' }} />
+                  <col style={{ width: '118px' }} />
+                  <col style={{ width: '120px' }} />
+                  <col style={{ width: '58px' }} />
+                </colgroup>
+                <thead>
+                  <tr>
+                    <th style={{ textAlign: 'center', padding: '0 4px' }}>
                       <input
                         type="checkbox"
-                        checked={isSelected}
-                        onChange={() => toggleSelect(r.id)}
-                        style={{ cursor: 'pointer', accentColor: '#ea580c' }}
+                        checked={results.length > 0 && selectedIds.size === results.length}
+                        onChange={toggleSelectAll}
+                        title="Tout sélectionner"
+                        style={{ cursor: 'pointer', accentColor: 'var(--primary)' }}
                       />
-                    </td>
-                    <td>
-                      <div style={{ fontWeight: 600, color: 'var(--primary)', fontSize: '0.85rem' }}>{fmtDate(r.dateAppro)}</div>
-                      {isEntreprise && (
-                        <span className={`badge-appro ${r.typeAppro ?? 'manuel'}`} style={{ fontSize: '0.68rem' }}>
-                          {r.typeAppro === 'transfert' ? 'Transfert' : 'Manuel'}
-                        </span>
-                      )}
-                    </td>
-                    <td>
-                      <div style={{ fontWeight: 600, fontSize: '0.88rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.ingredientNom}</div>
-                      <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.categorieNom}</div>
-                    </td>
-                    <td style={{ textAlign: 'right', fontWeight: 700, color: qtyColor(r.quantite) }}>
-                      <div>{r.quantite ?? '—'}</div>
-                      <div style={{ color: 'var(--text-muted)', fontSize: '0.72rem', fontWeight: 400 }}>{r.uniteNom}</div>
-                    </td>
-                    <td style={{ textAlign: 'right', fontWeight: 600, color: prixColor(r.prixUnitaire), fontSize: '0.88rem' }}>
-                      {r.prixUnitaire !== null ? r.prixUnitaire.toFixed(3) : '—'}
-                    </td>
-                    {isEntreprise && (
-                      <td style={{ fontSize: '0.78rem' }}>
+                    </th>
+                    <th>{t('client.historique_appro.col_date')}</th>
+                    <th>Catégorie</th>
+                    <th>Ingrédient</th>
+                    <th style={{ textAlign: 'center' }}>Unité</th>
+                    <th style={{ textAlign: 'right' }}>Quantité</th>
+                    <th style={{ textAlign: 'right' }}>Prix/DT</th>
+                    <th>Fourn. / Réf</th>
+                    <th>Activité Stock</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pagedResults.map((r) => {
+                    const isSelected = selectedIds.has(r.id);
+                    return (
+                    <tr key={r.id} style={isSelected ? { background: 'rgba(234,88,12,0.08)', outline: '1px solid rgba(234,88,12,0.3)' } : undefined}>
+                      <td style={{ textAlign: 'center', padding: '0 4px' }}>
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => toggleSelect(r.id)}
+                          style={{ cursor: 'pointer', accentColor: '#ea580c' }}
+                        />
+                      </td>
+                      <td>
+                        <div style={{ fontWeight: 600, color: 'var(--primary)', fontSize: '0.82rem' }}>{fmtDate(r.dateAppro)}</div>
+                        {isEntreprise && r.typeAppro && (
+                          <span className={`badge-appro ${r.typeAppro}`} style={{ fontSize: '0.65rem' }}>
+                            {r.typeAppro === 'transfert' ? 'Transfert' : 'Manuel'}
+                          </span>
+                        )}
+                      </td>
+                      <td style={{ fontSize: '0.8rem', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {r.categorieNom ?? '—'}
+                      </td>
+                      <td style={{ fontWeight: 600, fontSize: '0.85rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {r.ingredientNom}
+                      </td>
+                      <td style={{ textAlign: 'center', fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 500 }}>
+                        {r.uniteNom}
+                      </td>
+                      <td style={{ textAlign: 'right', fontWeight: 700, color: qtyColor(r.quantite), fontSize: '0.88rem' }}>
+                        {r.quantite ?? '—'}
+                      </td>
+                      <td style={{ textAlign: 'right', fontWeight: 600, color: prixColor(r.prixUnitaire), fontSize: '0.85rem' }}>
+                        {r.prixUnitaire !== null ? r.prixUnitaire.toFixed(3) : '—'}
+                      </td>
+                      <td style={{ fontSize: '0.76rem' }}>
                         <div style={{ color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.fournisseurNom ?? '—'}</div>
                         <div style={{ color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.refFacture ?? '—'}</div>
                       </td>
-                    )}
-                    <td style={{ whiteSpace: 'nowrap', textAlign: 'right' }}>
-                      <button
-                        className="btn btn-ghost btn-sm"
-                        onClick={() => setEditEntry(r)}
-                        title="Modifier"
-                        style={{ marginRight: 2, fontSize: '0.8rem', padding: '2px 6px' }}
-                      >✏️</button>
-                      <button
-                        className="btn btn-ghost btn-sm"
-                        onClick={() => setDeleteEntry(r)}
-                        title="Supprimer"
-                        style={{ fontSize: '0.8rem', color: '#dc2626', padding: '2px 6px' }}
-                      >🗑️</button>
-                    </td>
-                  </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                      <td style={{ fontSize: '0.78rem', color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {r.activiteId ? (actMap[r.activiteId] ?? '—') : '—'}
+                      </td>
+                      <td style={{ whiteSpace: 'nowrap', textAlign: 'right' }}>
+                        <button
+                          className="btn btn-ghost btn-sm"
+                          onClick={() => setEditEntry(r)}
+                          title="Modifier"
+                          style={{ marginRight: 2, fontSize: '0.8rem', padding: '2px 6px' }}
+                        >✏️</button>
+                        <button
+                          className="btn btn-ghost btn-sm"
+                          onClick={() => setDeleteEntry(r)}
+                          title="Supprimer"
+                          style={{ fontSize: '0.8rem', color: '#dc2626', padding: '2px 6px' }}
+                        >🗑️</button>
+                      </td>
+                    </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+              );
+            })()}
 
             <div style={{ padding: '8px 14px', fontSize: '0.78rem', color: 'var(--text-muted)', borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <span>

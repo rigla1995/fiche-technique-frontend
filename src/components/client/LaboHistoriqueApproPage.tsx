@@ -469,16 +469,19 @@ export default function LaboHistoriqueApproPage() {
             ))}
           </div>
 
-          <div className="card th-teal" style={{ overflowX: 'hidden' }}>
-            <table className="table" style={{ tableLayout: 'fixed', width: '100%' }}>
+          <div className="card th-teal" style={{ overflowX: 'auto' }}>
+            <table className="table" style={{ tableLayout: 'fixed', minWidth: 800, width: '100%' }}>
               <colgroup>
                 <col style={{ width: '36px' }} />
-                <col style={{ width: '110px' }} />
-                <col />
+                <col style={{ width: '88px' }} />
                 <col style={{ width: '100px' }} />
-                <col style={{ width: '85px' }} />
-                <col style={{ width: '130px' }} />
-                <col style={{ width: '66px' }} />
+                <col />
+                <col style={{ width: '52px' }} />
+                <col style={{ width: '82px' }} />
+                <col style={{ width: '78px' }} />
+                <col style={{ width: '118px' }} />
+                <col style={{ width: '90px' }} />
+                <col style={{ width: '58px' }} />
               </colgroup>
               <thead>
                 <tr>
@@ -492,10 +495,13 @@ export default function LaboHistoriqueApproPage() {
                     />
                   </th>
                   <th>Date</th>
+                  <th>Catégorie</th>
                   <th>Ingrédient</th>
+                  <th style={{ textAlign: 'center' }}>Unité</th>
                   <th style={{ textAlign: 'right' }}>Quantité</th>
                   <th style={{ textAlign: 'right' }}>Prix/DT</th>
                   <th>Fourn. / Réf</th>
+                  <th>Activité Stock</th>
                   <th></th>
                 </tr>
               </thead>
@@ -513,23 +519,28 @@ export default function LaboHistoriqueApproPage() {
                       />
                     </td>
                     <td>
-                      <div style={{ fontWeight: 600, color: 'var(--primary)', fontSize: '0.85rem' }}>{fmtDate(r.dateAppro)}</div>
+                      <div style={{ fontWeight: 600, color: 'var(--primary)', fontSize: '0.82rem' }}>{fmtDate(r.dateAppro)}</div>
                     </td>
-                    <td>
-                      <div style={{ fontWeight: 600, fontSize: '0.88rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.ingredientNom}</div>
-                      <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.categorieNom}</div>
+                    <td style={{ fontSize: '0.8rem', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {r.categorieNom ?? '—'}
                     </td>
-                    <td style={{ textAlign: 'right', fontWeight: 700, color: (r.quantite ?? 0) > 0 ? '#15803d' : '#dc2626' }}>
-                      <div>{r.quantite ?? '—'}</div>
-                      <div style={{ color: 'var(--text-muted)', fontSize: '0.72rem', fontWeight: 400 }}>{r.uniteNom}</div>
+                    <td style={{ fontWeight: 600, fontSize: '0.85rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {r.ingredientNom}
                     </td>
-                    <td style={{ textAlign: 'right', fontWeight: 600, color: r.prixUnitaire ? '#1d4ed8' : 'var(--text-muted)', fontSize: '0.88rem' }}>
+                    <td style={{ textAlign: 'center', fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 500 }}>
+                      {r.uniteNom}
+                    </td>
+                    <td style={{ textAlign: 'right', fontWeight: 700, color: (r.quantite ?? 0) > 0 ? '#15803d' : '#dc2626', fontSize: '0.88rem' }}>
+                      {r.quantite ?? '—'}
+                    </td>
+                    <td style={{ textAlign: 'right', fontWeight: 600, color: r.prixUnitaire ? '#1d4ed8' : 'var(--text-muted)', fontSize: '0.85rem' }}>
                       {r.prixUnitaire !== null ? r.prixUnitaire.toFixed(3) : '—'}
                     </td>
-                    <td style={{ fontSize: '0.78rem' }}>
+                    <td style={{ fontSize: '0.76rem' }}>
                       <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.fournisseurNom ?? '—'}</div>
                       <div style={{ color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.refFacture ?? '—'}</div>
                     </td>
+                    <td style={{ fontSize: '0.78rem', color: 'var(--text-muted)', textAlign: 'center' }}>—</td>
                     <td style={{ whiteSpace: 'nowrap', textAlign: 'right' }}>
                       <button
                         className="btn btn-ghost btn-sm"
