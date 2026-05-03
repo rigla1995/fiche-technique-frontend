@@ -9,8 +9,9 @@ const STATUT_COLORS: Record<string, { bg: string; color: string }> = {
 };
 
 const TYPE_LABELS: Record<string, string> = {
-  gerant_sup: 'Gérant supplémentaire',
-  labo_sup:   'Labo supplémentaire',
+  gerant_sup:          'Gérant supplémentaire',
+  labo_sup:            'Labo supplémentaire',
+  upgrade_entreprise:  'Passage compte Entreprise',
 };
 
 const fmtDate = (d: string) => d ? new Date(d).toLocaleDateString('fr-FR') : '—';
@@ -21,6 +22,7 @@ export default function DemandesManagement() {
   const [filterStatut, setFilterStatut] = useState('en_attente');
   const [traiting, setTraiting] = useState<Record<number, boolean>>({});
   const [notes, setNotes] = useState<Record<number, string>>({});
+  const [montantMigration, setMontantMigration] = useState<Record<number, string>>({});
 
   useEffect(() => { fetchDemandes(); }, [filterStatut]);
 
@@ -35,10 +37,14 @@ export default function DemandesManagement() {
     }
   };
 
-  const traiter = async (id: number, statut: 'validée' | 'refusée') => {
+  const traiter = async (id: number, statut: 'validée' | 'refusée', isUpgrade?: boolean) => {
     setTraiting((t) => ({ ...t, [id]: true }));
     try {
-      await api.put(`/api/abonnements/admin/demandes/${id}`, { statut, notesAdmin: notes[id] || undefined });
+      const payload: Record<string, unknown> = { statut, notesAdmin: notes[id] || undefined };
+      if (isUpgrade && montantMigration[id] !== undefined) {
+        payload.montantMigration = parseFloat(montantMigration[id]) || 0;
+      }
+      await api.put(`/api/abonnements/admin/demandes/${id}`, payload);
       fetchDemandes();
     } finally {
       setTraiting((t) => ({ ...t, [id]: false }));
@@ -87,28 +93,48 @@ export default function DemandesManagement() {
                   </span>
                 </div>
 
-                <div style={{ display: 'flex', gap: 24, fontSize: 13, color: '#374151', marginBottom: 12 }}>
+                <div style={{ display: 'flex', gap: 24, fontSize: 13, color: '#374151', marginBottom: 12, flexWrap: 'wrap' }}>
                   <div><strong>Type :</strong> {TYPE_LABELS[d.typeDemande] || d.typeDemande}</div>
-                  <div><strong>Montant :</strong> {d.montantMensuelDt ? `${d.montantMensuelDt} DT/mois` : '—'}</div>
+                  {d.typeDemande === 'upgrade_entreprise' ? (
+                    <>
+                      <div><strong>Onboarding client payé :</strong> {d.montantOnboardingClient != null ? `${d.montantOnboardingClient} DT` : '—'}</div>
+                      <div><strong>Frais de migration :</strong> {d.montantMensuelDt != null ? `${d.montantMensuelDt} DT` : '—'}</div>
+                    </>
+                  ) : (
+                    <div><strong>Montant :</strong> {d.montantMensuelDt ? `${d.montantMensuelDt} DT/mois` : '—'}</div>
+                  )}
                   {d.notesClient && <div><strong>Note client :</strong> {d.notesClient}</div>}
                 </div>
 
                 {d.statut === 'en_attente' && (
-                  <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                  <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end', flexWrap: 'wrap' }}>
+                    {d.typeDemande === 'upgrade_entreprise' && (
+                      <div>
+                        <label style={{ fontSize: 11, color: '#6b7280', display: 'block', marginBottom: 3 }}>
+                          Frais de migration (DT) — modifiable
+                        </label>
+                        <input
+                          type="number"
+                          value={montantMigration[d.id] ?? (d.montantMensuelDt ?? '')}
+                          onChange={(e) => setMontantMigration((m) => ({ ...m, [d.id]: e.target.value }))}
+                          style={{ width: 110, padding: '7px 10px', borderRadius: 6, border: '1px solid #93c5fd', fontSize: 13, background: '#eff6ff' }}
+                        />
+                      </div>
+                    )}
                     <input
                       placeholder="Note admin (optionnel)"
                       value={notes[d.id] || ''}
                       onChange={(e) => setNotes((n) => ({ ...n, [d.id]: e.target.value }))}
-                      style={{ flex: 1, padding: '7px 10px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: 13 }}
+                      style={{ flex: 1, minWidth: 160, padding: '7px 10px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: 13 }}
                     />
                     <button
-                      onClick={() => traiter(d.id, 'validée')}
+                      onClick={() => traiter(d.id, 'validée', d.typeDemande === 'upgrade_entreprise')}
                       disabled={traiting[d.id]}
                       style={{ padding: '7px 16px', background: '#16a34a', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>
                       {traiting[d.id] ? '...' : 'Valider'}
                     </button>
                     <button
-                      onClick={() => traiter(d.id, 'refusée')}
+                      onClick={() => traiter(d.id, 'refusée', d.typeDemande === 'upgrade_entreprise')}
                       disabled={traiting[d.id]}
                       style={{ padding: '7px 16px', background: '#dc2626', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>
                       Refuser
