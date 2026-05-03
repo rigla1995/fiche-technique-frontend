@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import api from '../../api/client';
-import { TarifsConfig } from '../../types';
+import type { TarifsConfig as TarifsConfigData } from '../../types';
 
 const LABELS: Record<string, string> = {
   indep_mensuel:         'Mensuel Indépendant (DT)',
@@ -12,7 +12,7 @@ const LABELS: Record<string, string> = {
 };
 
 export default function TarifsConfig() {
-  const [tarifs, setTarifs] = useState<TarifsConfig>({});
+  const [tarifs, setTarifs] = useState<TarifsConfigData>({});
   const [editing, setEditing] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState<Record<string, boolean>>({});
   const [saved, setSaved] = useState<Record<string, boolean>>({});
@@ -21,7 +21,7 @@ export default function TarifsConfig() {
     api.get('/api/abonnements/tarifs').then((res) => {
       setTarifs(res.data);
       const init: Record<string, string> = {};
-      Object.entries(res.data as TarifsConfig).forEach(([k, v]) => { init[k] = String(v.valeur); });
+      Object.entries(res.data as TarifsConfigData).forEach(([k, v]) => { init[k] = String(v.valeur); });
       setEditing(init);
     });
   }, []);
