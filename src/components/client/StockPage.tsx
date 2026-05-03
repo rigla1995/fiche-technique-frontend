@@ -365,6 +365,7 @@ interface StockMatrixProps {
 
 function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fournisseurFilter, refFactureFilter, activiteId, isEntreprise, fournisseurs = [], onSave, onSaveSeuilMin }: StockMatrixProps) {
   const { t } = useTranslation();
+  const { canWrite } = useAuth();
   const navigate = useNavigate();
   const [rows, setRows] = useState<Record<number, StockRowState>>(() => buildInitialRowState(entries));
   const [historyOpen, setHistoryOpen] = useState<Record<number, boolean>>({});
@@ -904,6 +905,7 @@ interface ActivityStockSectionProps {
 
 function ActivityStockSection({ label, activities, isFranchise, onSave }: ActivityStockSectionProps) {
   const { t } = useTranslation();
+  const { canWrite } = useAuth();
 
   const groups = useMemo(() => {
     const map: Record<string, Activite[]> = {};
