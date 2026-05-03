@@ -27,7 +27,10 @@ export default function MonAbonnementPage() {
   const [demandes, setDemandes] = useState<Demande[]>([]);
   const [loading, setLoading] = useState(true);
   const [showDemandeForm, setShowDemandeForm] = useState(false);
-  const [demandeType, setDemandeType] = useState<'gerant_sup' | 'labo_sup'>('gerant_sup');
+  const [demandeType, setDemandeType] = useState<'gerant_sup' | 'labo_sup' | 'upgrade_entreprise'>('gerant_sup');
+  const [showUpgradeForm, setShowUpgradeForm] = useState(false);
+  const [upgradeNotes, setUpgradeNotes] = useState('');
+  const [submittingUpgrade, setSubmittingUpgrade] = useState(false);
   const [demandeNotes, setDemandeNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
@@ -54,6 +57,21 @@ export default function MonAbonnementPage() {
     }
   };
 
+  const submitUpgrade = async () => {
+    setSubmittingUpgrade(true);
+    try {
+      await api.post('/api/abonnements/demandes', { typeDemande: 'upgrade_entreprise', notes: upgradeNotes || undefined });
+      const res = await api.get('/api/abonnements/demandes');
+      setDemandes(res.data);
+      setShowUpgradeForm(false);
+      setUpgradeNotes('');
+    } finally {
+      setSubmittingUpgrade(false);
+    }
+  };
+
+  const upgradeDemandeExistante = demandes.find((d) => d.typeDemande === 'upgrade_entreprise');
+
   if (loading) return <div style={{ padding: 32, textAlign: 'center', color: '#9ca3af' }}>Chargement...</div>;
   if (!abo) return <div style={{ padding: 32, textAlign: 'center', color: '#9ca3af' }}>Abonnement introuvable</div>;
 
@@ -62,6 +80,56 @@ export default function MonAbonnementPage() {
   return (
     <div style={{ maxWidth: 800, margin: '0 auto', padding: 24 }}>
       <h1 style={{ fontSize: 22, fontWeight: 700, color: '#111827', marginBottom: 24 }}>Mon abonnement</h1>
+
+      {/* Upgrade banner (indép only) */}
+      {isIndep && (
+        <div style={{
+          background: 'linear-gradient(135deg, #eff6ff, #dbeafe)',
+          border: '1px solid #93c5fd',
+          borderRadius: 14, padding: 20, marginBottom: 20,
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
+            <div>
+              <div style={{ fontSize: 15, fontWeight: 700, color: '#1e40af' }}>Passer en compte Entreprise</div>
+              <div style={{ fontSize: 13, color: '#3b82f6', marginTop: 4 }}>
+                Gérez plusieurs activités, labos et gérants sous un seul compte.
+              </div>
+            </div>
+            {upgradeDemandeExistante ? (
+              <span style={{
+                fontSize: 13, fontWeight: 600, padding: '6px 16px', borderRadius: 10,
+                background: upgradeDemandeExistante.statut === 'validée' ? '#dcfce7' : upgradeDemandeExistante.statut === 'refusée' ? '#fee2e2' : '#fef9c3',
+                color: upgradeDemandeExistante.statut === 'validée' ? '#166534' : upgradeDemandeExistante.statut === 'refusée' ? '#991b1b' : '#854d0e',
+              }}>
+                Demande {upgradeDemandeExistante.statut}
+              </span>
+            ) : (
+              <button onClick={() => setShowUpgradeForm(!showUpgradeForm)}
+                style={{ padding: '8px 18px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                Demander l'upgrade
+              </button>
+            )}
+          </div>
+          {showUpgradeForm && (
+            <div style={{ marginTop: 16, display: 'flex', gap: 10, alignItems: 'flex-end', flexWrap: 'wrap' }}>
+              <div style={{ flex: 1 }}>
+                <label style={{ fontSize: 12, color: '#374151', display: 'block', marginBottom: 4 }}>Message (optionnel)</label>
+                <input value={upgradeNotes} onChange={(e) => setUpgradeNotes(e.target.value)}
+                  placeholder="Décrivez votre activité, vos besoins..."
+                  style={{ width: '100%', padding: '7px 10px', borderRadius: 6, border: '1px solid #93c5fd', fontSize: 13 }} />
+              </div>
+              <button onClick={submitUpgrade} disabled={submittingUpgrade}
+                style={{ padding: '7px 18px', background: '#16a34a', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>
+                {submittingUpgrade ? '...' : 'Envoyer'}
+              </button>
+              <button onClick={() => setShowUpgradeForm(false)}
+                style={{ padding: '7px 12px', background: '#f3f4f6', color: '#374151', border: 'none', borderRadius: 8, fontSize: 13, cursor: 'pointer' }}>
+                Annuler
+              </button>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Status card */}
       <div style={{
@@ -178,7 +246,7 @@ export default function MonAbonnementPage() {
               <div key={d.id} style={{ background: '#f9fafb', borderRadius: 8, padding: '12px 16px', border: '1px solid #e5e7eb', display: 'flex', justifyContent: 'space-between' }}>
                 <div>
                   <div style={{ fontWeight: 600, fontSize: 14, color: '#111827' }}>
-                    {d.typeDemande === 'gerant_sup' ? 'Gérant supplémentaire' : 'Labo supplémentaire'}
+                    {d.typeDemande === 'gerant_sup' ? 'Gérant supplémentaire' : d.typeDemande === 'labo_sup' ? 'Labo supplémentaire' : 'Passage compte Entreprise'}
                   </div>
                   <div style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>
                     {d.montantMensuelDt ? `${d.montantMensuelDt} DT/mois` : ''} — {fmtDate(d.createdAt)}

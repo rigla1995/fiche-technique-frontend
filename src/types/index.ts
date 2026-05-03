@@ -51,7 +51,7 @@ export interface Demande {
   demandeurId: number;
   demandeurNom: string;
   demandeurType: string;
-  typeDemande: 'gerant_sup' | 'labo_sup';
+  typeDemande: 'gerant_sup' | 'labo_sup' | 'upgrade_entreprise';
   statut: 'en_attente' | 'validée' | 'refusée';
   montantMensuelDt: number | null;
   notesClient: string | null;
