@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import api from '../../api/client';
+import { useAuth } from '../../context/AuthContext';
 import type { Labo } from '../../types';
 
 const currentYear = new Date().getFullYear();
@@ -198,6 +199,7 @@ function DeleteModal({
 
 // ── Main page ──────────────────────────────────────────────────────────────────
 export default function LaboHistoriqueApproPage() {
+  const { canWrite } = useAuth();
   const [searchParams] = useSearchParams();
   const laboId = searchParams.get('laboId');
 
@@ -535,13 +537,15 @@ export default function LaboHistoriqueApproPage() {
                         className="btn btn-ghost btn-sm"
                         onClick={() => setEditEntry(r)}
                         title="Modifier"
-                        style={{ marginRight: 2, fontSize: '0.8rem', padding: '2px 6px' }}
+                        disabled={!canWrite}
+                        style={{ marginRight: 2, fontSize: '0.8rem', padding: '2px 6px', opacity: canWrite ? 1 : 0.4 }}
                       >✏️</button>
                       <button
                         className="btn btn-ghost btn-sm"
                         onClick={() => setDeleteEntry(r)}
                         title="Supprimer"
-                        style={{ fontSize: '0.8rem', color: '#dc2626', padding: '2px 6px' }}
+                        disabled={!canWrite}
+                        style={{ fontSize: '0.8rem', color: '#dc2626', padding: '2px 6px', opacity: canWrite ? 1 : 0.4 }}
                       >🗑️</button>
                     </td>
                   </tr>

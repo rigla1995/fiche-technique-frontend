@@ -231,7 +231,7 @@ function UnitTotalsPopup({ unitNom, entries, onClose }: UnitTotalsPopupProps) {
 // ── Main page ─────────────────────────────────────────────────────────────────
 export default function HistoriqueApproPage() {
   const { t } = useTranslation();
-  const { user } = useAuth();
+  const { user, canWrite } = useAuth();
   const [searchParams] = useSearchParams();
   const isEntreprise = user?.compteType === 'entreprise';
 
@@ -658,15 +658,15 @@ export default function HistoriqueApproPage() {
           </button>
           <button
             onClick={exportExcel}
-            disabled={results.length === 0}
+            disabled={results.length === 0 || !canWrite}
             style={{
               display: 'flex', alignItems: 'center', gap: 8,
               padding: '9px 20px', borderRadius: 10, border: 'none',
-              cursor: results.length === 0 ? 'not-allowed' : 'pointer',
-              background: results.length > 0 ? 'linear-gradient(135deg, #059669 0%, #10b981 100%)' : 'var(--bg-secondary, #e5e7eb)',
-              color: results.length > 0 ? '#fff' : 'var(--text-muted)',
+              cursor: (results.length === 0 || !canWrite) ? 'not-allowed' : 'pointer',
+              background: (results.length > 0 && canWrite) ? 'linear-gradient(135deg, #059669 0%, #10b981 100%)' : 'var(--bg-secondary, #e5e7eb)',
+              color: (results.length > 0 && canWrite) ? '#fff' : 'var(--text-muted)',
               fontWeight: 700, fontSize: '0.88rem',
-              opacity: results.length === 0 ? 0.55 : 1,
+              opacity: (results.length === 0 || !canWrite) ? 0.55 : 1,
               boxShadow: results.length > 0 ? '0 2px 8px rgba(16,185,129,0.25)' : 'none',
               transition: 'all 0.15s',
               minWidth: 180,
@@ -788,13 +788,15 @@ export default function HistoriqueApproPage() {
                         className="btn btn-ghost btn-sm"
                         onClick={() => setEditEntry(r)}
                         title="Modifier"
-                        style={{ marginRight: 2, fontSize: '0.8rem', padding: '2px 6px' }}
+                        disabled={!canWrite}
+                        style={{ marginRight: 2, fontSize: '0.8rem', padding: '2px 6px', opacity: canWrite ? 1 : 0.4 }}
                       >✏️</button>
                       <button
                         className="btn btn-ghost btn-sm"
                         onClick={() => setDeleteEntry(r)}
                         title="Supprimer"
-                        style={{ fontSize: '0.8rem', color: '#dc2626', padding: '2px 6px' }}
+                        disabled={!canWrite}
+                        style={{ fontSize: '0.8rem', color: '#dc2626', padding: '2px 6px', opacity: canWrite ? 1 : 0.4 }}
                       >🗑️</button>
                     </td>
                   </tr>

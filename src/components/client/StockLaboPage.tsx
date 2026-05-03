@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
+import { useAuth } from '../../context/AuthContext';
 
 const currentYear = new Date().getFullYear();
 const yearStart = `${currentYear}-01-01`;
@@ -66,6 +67,7 @@ interface Fournisseur { id: number; nom: string }
 
 export default function StockLaboPage() {
   const { t } = useTranslation();
+  const { canWrite } = useAuth();
   const [searchParams] = useSearchParams();
   const laboId = searchParams.get('laboId') || '';
   const tab = searchParams.get('tab') === 'ingredients' ? 'ingredients' : 'stock';
@@ -514,7 +516,7 @@ export default function StockLaboPage() {
                 </>
               )}
               <div style={{ display: 'flex', gap: 8, alignSelf: 'flex-end' }}>
-                <button className="btn btn-primary btn-sm" onClick={saveBulk} disabled={!canSaveBulk || bulkSaving}>
+                <button className="btn btn-primary btn-sm" onClick={saveBulk} disabled={!canSaveBulk || bulkSaving || !canWrite}>
                   {bulkSaving ? '…' : `Enregistrer (${selectedIngIds.size})`}
                 </button>
                 <button className="btn btn-ghost btn-sm" onClick={() => { setSelectedIngIds(new Set()); setBulkDate(todayStr()); setBulkFournisseurId(''); setBulkRefFacture(''); }}>
@@ -643,7 +645,7 @@ export default function StockLaboPage() {
                                             );
                                           })()}
                                           <div style={{ display: 'flex', gap: 4 }}>
-                                            <button className={`btn btn-sm ${rs.saved ? 'btn-success' : 'btn-primary'}`} onClick={() => saveRow(r.ingredientId)} disabled={!canSaveRow(rs)} style={{ flex: 1 }}>
+                                            <button className={`btn btn-sm ${rs.saved ? 'btn-success' : 'btn-primary'}`} onClick={() => saveRow(r.ingredientId)} disabled={!canSaveRow(rs) || !canWrite} style={{ flex: 1 }}>
                                               {rs.saving ? '…' : rs.saved ? '✓' : t('common.save')}
                                             </button>
                                             <button className="btn btn-ghost btn-sm" onClick={() => toggleHistory(r.ingredientId)} title="5 derniers appros">

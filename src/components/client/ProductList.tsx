@@ -202,12 +202,15 @@ export default function ProductList() {
   });
 
   // Reusable action buttons for a product row
+  const disabledStyle = !canWrite ? { opacity: 0.4, cursor: 'not-allowed', pointerEvents: 'none' as const } : {};
+
   const renderActions = (p: Product) => (
     <div style={{ display: 'flex', gap: 4, justifyContent: 'flex-end', alignItems: 'center' }}>
       <button
         className="btn btn-ghost btn-sm"
-        style={{ width: 32, height: 32, padding: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', borderRadius: 7 }}
+        style={{ width: 32, height: 32, padding: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', borderRadius: 7, ...disabledStyle }}
         title="Générer la Fiche Technique"
+        disabled={!canWrite}
         onClick={() => {
           const ctx = getProductFtContext(p);
           const act = franchiseActivities.find((a) => a.id === p.activiteId);
@@ -224,22 +227,39 @@ export default function ProductList() {
           <text x="7" y="18" fill="white" fontSize="9" fontWeight="bold" fontFamily="Calibri,Arial,sans-serif">XLS</text>
         </svg>
       </button>
-      <Link
-        to={`/client/products/${p.id}/edit${filterQs ? `?${filterQs}` : ''}`}
-        className="btn btn-ghost btn-sm"
-        title={t('common.edit')}
-        style={{ width: 32, height: 32, padding: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', borderRadius: 7 }}
-      >
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-        </svg>
-      </Link>
+      {canWrite
+        ? (
+          <Link
+            to={`/client/products/${p.id}/edit${filterQs ? `?${filterQs}` : ''}`}
+            className="btn btn-ghost btn-sm"
+            title={t('common.edit')}
+            style={{ width: 32, height: 32, padding: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', borderRadius: 7 }}
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+            </svg>
+          </Link>
+        ) : (
+          <button
+            className="btn btn-ghost btn-sm"
+            disabled
+            title={t('common.edit')}
+            style={{ width: 32, height: 32, padding: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', borderRadius: 7, ...disabledStyle }}
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+            </svg>
+          </button>
+        )
+      }
       <button
         className="btn btn-danger btn-sm"
         onClick={() => handleDelete(p.id)}
+        disabled={!canWrite}
         title={t('common.delete')}
-        style={{ width: 32, height: 32, padding: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', borderRadius: 7 }}
+        style={{ width: 32, height: 32, padding: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', borderRadius: 7, ...disabledStyle }}
       >
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <polyline points="3 6 5 6 21 6"/>
