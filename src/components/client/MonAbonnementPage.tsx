@@ -1,0 +1,197 @@
+import { useState, useEffect } from 'react';
+import api from '../../api/client';
+import { Abonnement, Demande } from '../../types';
+
+const MODE_INFO: Record<string, { label: string; color: string; desc: string }> = {
+  actif:     { label: 'Actif',         color: '#16a34a', desc: 'Votre compte est pleinement opérationnel.' },
+  read_only: { label: 'Lecture seule', color: '#d97706', desc: 'Paiement en attente — création et modification bloquées.' },
+  desactive: { label: 'Suspendu',      color: '#dc2626', desc: 'Compte suspendu. Contactez l\'administrateur.' },
+  archive:   { label: 'Archivé',       color: '#6b7280', desc: 'Compte archivé suite à non-paiement.' },
+};
+
+const STATUT_COLORS: Record<string, string> = {
+  payé:       '#16a34a',
+  impayé:     '#dc2626',
+  en_attente: '#d97706',
+  remisé:     '#7c3aed',
+};
+
+const fmtDate = (d: string) => d ? new Date(d).toLocaleDateString('fr-FR') : '—';
+const fmtMois = (d: string) => d ? new Date(d).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' }) : '—';
+
+export default function MonAbonnementPage() {
+  const [abo, setAbo] = useState<Abonnement | null>(null);
+  const [demandes, setDemandes] = useState<Demande[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showDemandeForm, setShowDemandeForm] = useState(false);
+  const [demandeType, setDemandeType] = useState<'gerant_sup' | 'labo_sup'>('gerant_sup');
+  const [demandeNotes, setDemandeNotes] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    Promise.all([
+      api.get('/api/abonnements/mon-abonnement'),
+      api.get('/api/abonnements/demandes'),
+    ]).then(([aboRes, demandesRes]) => {
+      setAbo(aboRes.data);
+      setDemandes(demandesRes.data);
+    }).finally(() => setLoading(false));
+  }, []);
+
+  const submitDemande = async () => {
+    setSubmitting(true);
+    try {
+      await api.post('/api/abonnements/demandes', { typeDemande: demandeType, notes: demandeNotes || undefined });
+      const res = await api.get('/api/abonnements/demandes');
+      setDemandes(res.data);
+      setShowDemandeForm(false);
+      setDemandeNotes('');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  if (loading) return <div style={{ padding: 32, textAlign: 'center', color: '#9ca3af' }}>Chargement...</div>;
+  if (!abo) return <div style={{ padding: 32, textAlign: 'center', color: '#9ca3af' }}>Abonnement introuvable</div>;
+
+  const mode = MODE_INFO[abo.modeCompte] || MODE_INFO.actif;
+
+  return (
+    <div style={{ maxWidth: 800, margin: '0 auto', padding: 24 }}>
+      <h1 style={{ fontSize: 22, fontWeight: 700, color: '#111827', marginBottom: 24 }}>Mon abonnement</h1>
+
+      {/* Status card */}
+      <div style={{
+        background: `linear-gradient(135deg, ${mode.color}15, ${mode.color}05)`,
+        border: `1px solid ${mode.color}40`,
+        borderRadius: 14, padding: 24, marginBottom: 20,
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+      }}>
+        <div>
+          <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 4 }}>
+            {abo.compteType === 'entreprise' ? 'Compte Entreprise' : 'Compte Indépendant'} — depuis {fmtDate(abo.dateDebut)}
+          </div>
+          <div style={{ fontSize: 24, fontWeight: 800, color: mode.color }}>{mode.label}</div>
+          <div style={{ fontSize: 13, color: '#6b7280', marginTop: 4 }}>{mode.desc}</div>
+          {abo.prolongationJours > 0 && (
+            <div style={{ fontSize: 12, color: '#7c3aed', marginTop: 6 }}>
+              ✚ Prolongation accordée : {abo.prolongationJours} jour(s)
+            </div>
+          )}
+        </div>
+        <div style={{ textAlign: 'right' }}>
+          <div style={{ fontSize: 12, color: '#9ca3af', marginBottom: 4 }}>Onboarding</div>
+          <span style={{
+            fontSize: 13, fontWeight: 600, padding: '4px 12px', borderRadius: 12,
+            background: abo.statutOnboarding === 'payé' ? '#dcfce7' : abo.statutOnboarding === 'offert' ? '#ede9fe' : '#fee2e2',
+            color: abo.statutOnboarding === 'payé' ? '#166534' : abo.statutOnboarding === 'offert' ? '#6d28d9' : '#991b1b',
+          }}>
+            {abo.statutOnboarding} {abo.montantOnboarding ? `(${abo.montantOnboarding} DT)` : ''}
+          </span>
+        </div>
+      </div>
+
+      {/* Paiements */}
+      <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #e5e7eb', overflow: 'hidden', marginBottom: 20 }}>
+        <div style={{ padding: '14px 20px', borderBottom: '1px solid #e5e7eb', background: '#f9fafb' }}>
+          <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: '#111827' }}>Historique des paiements</h3>
+        </div>
+        {!abo.paiements?.length ? (
+          <div style={{ padding: 24, textAlign: 'center', color: '#9ca3af' }}>Aucun paiement enregistré</div>
+        ) : (
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
+            <thead>
+              <tr style={{ background: '#f9fafb' }}>
+                {['Mois', 'Montant', 'Statut', 'Date'].map((h) => (
+                  <th key={h} style={{ padding: '10px 16px', textAlign: 'left', borderBottom: '1px solid #e5e7eb', fontWeight: 600, color: '#374151', fontSize: 13 }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {abo.paiements.map((p) => (
+                <tr key={p.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
+                  <td style={{ padding: '10px 16px', color: '#111827' }}>{fmtMois(p.mois)}</td>
+                  <td style={{ padding: '10px 16px', color: '#374151' }}>{p.montantDt ? `${p.montantDt} DT` : '—'}</td>
+                  <td style={{ padding: '10px 16px' }}>
+                    <span style={{
+                      fontSize: 12, fontWeight: 600, padding: '3px 10px', borderRadius: 10,
+                      background: (STATUT_COLORS[p.statut] || '#6b7280') + '20',
+                      color: STATUT_COLORS[p.statut] || '#6b7280',
+                    }}>{p.statut}</span>
+                  </td>
+                  <td style={{ padding: '10px 16px', color: '#6b7280' }}>{p.dateSaisie ? fmtDate(p.dateSaisie) : '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+
+      {/* Demandes */}
+      <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #e5e7eb', overflow: 'hidden' }}>
+        <div style={{ padding: '14px 20px', borderBottom: '1px solid #e5e7eb', background: '#f9fafb', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: '#111827' }}>Mes demandes</h3>
+          <button
+            onClick={() => setShowDemandeForm(!showDemandeForm)}
+            style={{ padding: '6px 14px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+            + Nouvelle demande
+          </button>
+        </div>
+
+        {showDemandeForm && (
+          <div style={{ padding: 20, borderBottom: '1px solid #e5e7eb', background: '#f0f9ff' }}>
+            <div style={{ display: 'flex', gap: 12, alignItems: 'flex-end', flexWrap: 'wrap' }}>
+              <div>
+                <label style={{ fontSize: 12, color: '#374151', display: 'block', marginBottom: 4 }}>Type de demande</label>
+                <select value={demandeType} onChange={(e) => setDemandeType(e.target.value as typeof demandeType)}
+                  style={{ padding: '7px 10px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: 13 }}>
+                  <option value="gerant_sup">Gérant supplémentaire (80 DT/mois)</option>
+                  <option value="labo_sup">Labo supplémentaire (150 DT/mois)</option>
+                </select>
+              </div>
+              <div style={{ flex: 1 }}>
+                <label style={{ fontSize: 12, color: '#374151', display: 'block', marginBottom: 4 }}>Message (optionnel)</label>
+                <input value={demandeNotes} onChange={(e) => setDemandeNotes(e.target.value)}
+                  placeholder="Précisions..."
+                  style={{ width: '100%', padding: '7px 10px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: 13 }} />
+              </div>
+              <button onClick={submitDemande} disabled={submitting}
+                style={{ padding: '7px 18px', background: '#16a34a', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>
+                {submitting ? '...' : 'Envoyer'}
+              </button>
+              <button onClick={() => setShowDemandeForm(false)}
+                style={{ padding: '7px 12px', background: '#f3f4f6', color: '#374151', border: 'none', borderRadius: 8, fontSize: 13, cursor: 'pointer' }}>
+                Annuler
+              </button>
+            </div>
+          </div>
+        )}
+
+        {demandes.length === 0 ? (
+          <div style={{ padding: 24, textAlign: 'center', color: '#9ca3af' }}>Aucune demande</div>
+        ) : (
+          <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {demandes.map((d) => (
+              <div key={d.id} style={{ background: '#f9fafb', borderRadius: 8, padding: '12px 16px', border: '1px solid #e5e7eb', display: 'flex', justifyContent: 'space-between' }}>
+                <div>
+                  <div style={{ fontWeight: 600, fontSize: 14, color: '#111827' }}>
+                    {d.typeDemande === 'gerant_sup' ? 'Gérant supplémentaire' : 'Labo supplémentaire'}
+                  </div>
+                  <div style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>
+                    {d.montantMensuelDt ? `${d.montantMensuelDt} DT/mois` : ''} — {fmtDate(d.createdAt)}
+                  </div>
+                  {d.notesAdmin && <div style={{ fontSize: 12, color: '#7c3aed', marginTop: 4 }}>Réponse admin : {d.notesAdmin}</div>}
+                </div>
+                <span style={{
+                  fontSize: 12, fontWeight: 600, padding: '3px 10px', borderRadius: 10, alignSelf: 'flex-start',
+                  background: d.statut === 'validée' ? '#dcfce7' : d.statut === 'refusée' ? '#fee2e2' : '#fef9c3',
+                  color: d.statut === 'validée' ? '#166534' : d.statut === 'refusée' ? '#991b1b' : '#854d0e',
+                }}>{d.statut}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

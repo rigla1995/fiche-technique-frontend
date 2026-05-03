@@ -24,6 +24,11 @@ api.interceptors.response.use(
       return Promise.reject(error);
     }
     if (status === 403) {
+      // READ_ONLY/SUSPENDED get inline errors, not a redirect
+      const code = error.response?.data?.code;
+      if (code === 'READ_ONLY' || code === 'SUSPENDED') {
+        return Promise.reject(error);
+      }
       window.location.href = '/error/403';
       return Promise.reject(error);
     }

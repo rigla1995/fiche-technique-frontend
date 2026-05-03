@@ -2,11 +2,12 @@ import { useState } from 'react';
 import { Outlet, Navigate } from 'react-router-dom';
 import Header from './Header';
 import Sidebar from './Sidebar';
+import ReadOnlyBanner from './ReadOnlyBanner';
 import { useAuth } from '../../context/AuthContext';
 import { SelectionProvider } from '../../context/SelectionContext';
 
 interface LayoutProps {
-  requireRole?: 'super_admin' | 'client';
+  requireRole?: 'super_admin' | 'client' | 'gerant';
 }
 
 export default function Layout({ requireRole }: LayoutProps) {
@@ -18,7 +19,7 @@ export default function Layout({ requireRole }: LayoutProps) {
   }
 
   if (!user) return <Navigate to="/login" replace />;
-  if (requireRole && user.role !== requireRole) {
+  if (requireRole && user.role !== requireRole && !(requireRole === 'client' && user.role === 'gerant')) {
     return <Navigate to={user.role === 'super_admin' ? '/admin' : '/client'} replace />;
   }
 
@@ -26,6 +27,7 @@ export default function Layout({ requireRole }: LayoutProps) {
     <SelectionProvider>
     <div className="app-layout">
       <Header onMenuToggle={() => setSidebarOpen((v) => !v)} />
+      <ReadOnlyBanner />
       <div className="layout-body">
         <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
         <main className="main-content">

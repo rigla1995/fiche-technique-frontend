@@ -317,6 +317,18 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                   <SubNavLink to="/admin/ingredients" icon="🧂" label={t('nav.ingredients')} isActive={location.pathname === '/admin/ingredients'} onClick={onClose} />
                 </>
               )}
+
+              <Divider />
+
+              {/* ══ ESPACE ABONNEMENTS ══ */}
+              <CollapsibleHeader label="Espace Abonnements" icon="💳" isOpen={openSections.has('admin-abo')} locked={false} onToggle={() => toggleSection('admin-abo')} />
+              {openSections.has('admin-abo') && (
+                <>
+                  <SubNavLink to="/admin/abonnements" icon="💳" label="Abonnements" isActive={location.pathname === '/admin/abonnements'} onClick={onClose} />
+                  <SubNavLink to="/admin/tarifs" icon="⚙️" label="Tarifs" isActive={location.pathname === '/admin/tarifs'} onClick={onClose} />
+                  <SubNavLink to="/admin/demandes" icon="📨" label="Demandes" isActive={location.pathname === '/admin/demandes'} onClick={onClose} />
+                </>
+              )}
             </>
           ) : (
             <>
@@ -731,8 +743,24 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
           )}
         </ul>
 
-        {user?.role === 'client' && (
+        {(user?.role === 'client' || user?.role === 'gerant') && (
           <ul className="sidebar-nav" style={{ borderTop: '1px solid var(--border)', paddingTop: 4 }}>
+            {user?.role === 'client' && (
+              <>
+                <li>
+                  <NavLink to="/client/abonnement" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>
+                    <span className="link-icon">💳</span>
+                    <span className="link-label">Mon abonnement</span>
+                  </NavLink>
+                </li>
+                <li>
+                  <NavLink to="/client/gerants" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>
+                    <span className="link-icon">👥</span>
+                    <span className="link-label">Gérants</span>
+                  </NavLink>
+                </li>
+              </>
+            )}
             <li>
               <NavLink
                 to="/client/profile"

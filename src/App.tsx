@@ -26,6 +26,11 @@ import FournisseursPage from './components/client/FournisseursPage';
 import FournisseursLaboPage from './components/client/FournisseursLaboPage';
 import LaboHistoriqueApproPage from './components/client/LaboHistoriqueApproPage';
 import ErrorPage from './components/common/ErrorPage';
+import AbonnementsManagement from './components/admin/AbonnementsManagement';
+import TarifsConfig from './components/admin/TarifsConfig';
+import DemandesManagement from './components/admin/DemandesManagement';
+import MonAbonnementPage from './components/client/MonAbonnementPage';
+import GerantsPage from './components/client/GerantsPage';
 import './i18n';
 import './index.css';
 
@@ -34,6 +39,7 @@ function RootRedirect() {
   if (isLoading) return <div className="page-loading"><div className="spinner" /></div>;
   if (!user) return <Navigate to="/login" replace />;
   if (user.role === 'super_admin') return <Navigate to="/admin" replace />;
+  if (user.role === 'gerant') return <Navigate to="/client" replace />;
   // Entreprise user with pending onboarding → send to profile to change password
   if (user.compteType === 'entreprise' && (user.onboardingStep ?? 0) === 1) {
     return <Navigate to="/client/profile" replace />;
@@ -60,9 +66,12 @@ export default function App() {
             <Route path="/admin/ingredients" element={<IngredientsManagement />} />
             <Route path="/admin/categories" element={<CategoriesManagement />} />
             <Route path="/admin/domaines" element={<DomainesManagement />} />
+            <Route path="/admin/abonnements" element={<AbonnementsManagement />} />
+            <Route path="/admin/tarifs" element={<TarifsConfig />} />
+            <Route path="/admin/demandes" element={<DemandesManagement />} />
           </Route>
 
-          {/* Client routes */}
+          {/* Client + Gérant routes */}
           <Route element={<Layout requireRole="client" />}>
             <Route path="/client" element={<ClientDashboard />} />
             <Route path="/client/products" element={<ProductList />} />
@@ -82,6 +91,8 @@ export default function App() {
             <Route path="/client/labo/historique-appro" element={<LaboHistoriqueApproPage />} />
             <Route path="/client/fournisseurs" element={<FournisseursPage />} />
             <Route path="/client/fournisseurs-labo" element={<FournisseursLaboPage />} />
+            <Route path="/client/abonnement" element={<MonAbonnementPage />} />
+            <Route path="/client/gerants" element={<GerantsPage />} />
           </Route>
 
           {/* Error pages */}

@@ -2,11 +2,78 @@ export interface User {
   id: number;
   name: string;
   email: string;
-  role: 'super_admin' | 'client';
+  role: 'super_admin' | 'client' | 'gerant';
   compteType?: 'independant' | 'entreprise';
   onboardingStep?: number;
   phone?: string;
   entrepriseName?: string | null;
+  modeCompte?: 'actif' | 'read_only' | 'desactive' | 'archive';
+  prolongationJours?: number;
+  gerantParentId?: number;
+  gerantActiviteId?: number;
+  gerantActiviteType?: 'franchise' | 'labo' | 'activite_distincte';
+}
+
+export interface Abonnement {
+  id: number;
+  clientId: number;
+  clientNom: string;
+  clientEmail: string;
+  compteType: 'independant' | 'entreprise';
+  statutOnboarding: 'payé' | 'impayé' | 'offert';
+  montantOnboarding: number;
+  dateDebut: string;
+  modeCompte: 'actif' | 'read_only' | 'desactive' | 'archive';
+  prolongationJours: number;
+  notes: string | null;
+  paiements?: Paiement[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Paiement {
+  id: number;
+  abonnementId: number;
+  mois: string;
+  montantDt: number | null;
+  statut: 'payé' | 'impayé' | 'en_attente' | 'remisé';
+  saisiePar: number | null;
+  dateSaisie: string | null;
+  notes: string | null;
+}
+
+export interface TarifsConfig {
+  [cle: string]: { id: number; valeur: number; description: string };
+}
+
+export interface Demande {
+  id: number;
+  demandeurId: number;
+  demandeurNom: string;
+  demandeurType: string;
+  typeDemande: 'gerant_sup' | 'labo_sup';
+  statut: 'en_attente' | 'validée' | 'refusée';
+  montantMensuelDt: number | null;
+  notesClient: string | null;
+  notesAdmin: string | null;
+  traiteParNom: string | null;
+  traite_le: string | null;
+  createdAt: string;
+}
+
+export interface Gerant {
+  id: number;
+  nom: string;
+  email: string;
+  telephone: string;
+  parentId: number;
+  activiteId: number | null;
+  activiteType: 'franchise' | 'labo' | 'activite_distincte' | null;
+  estGratuit: boolean;
+  montantMensuel: number;
+  actif: boolean;
+  createdAt: string;
+  temporaryPassword?: string;
 }
 
 export interface AuthResponse {
