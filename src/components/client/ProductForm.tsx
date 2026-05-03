@@ -18,7 +18,7 @@ interface SubProductLine {
 
 export default function ProductForm() {
   const { t } = useTranslation();
-  const { user } = useAuth();
+  const { user, canWrite } = useAuth();
   const navigate = useNavigate();
   const { id } = useParams();
   const [searchParams] = useSearchParams();
@@ -703,7 +703,7 @@ export default function ProductForm() {
             <button type="button" className="btn btn-ghost" onClick={() => navigate(buildBackUrl(productType))}>
               {t('common.cancel')}
             </button>
-            <button type="submit" className="btn btn-primary" disabled={saving || !canSubmit}
+            <button type="submit" className="btn btn-primary" disabled={saving || !canSubmit || !canWrite}
               style={{ paddingLeft: 28, paddingRight: 28 }}
             >
               {saving ? t('common.loading') : t('common.save')}

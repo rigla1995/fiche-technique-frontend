@@ -5,6 +5,7 @@ import api from '../api/client';
 interface AuthContextType {
   user: User | null;
   token: string | null;
+  canWrite: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
   updateUser: (patch: Partial<User>) => void;
@@ -69,8 +70,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     updateUser({ onboardingStep: step });
   };
 
+  const canWrite = !user || user.role === 'super_admin' || (user.modeCompte ?? 'actif') === 'actif';
+
   return (
-    <AuthContext.Provider value={{ user, token, login, logout, updateUser, advanceOnboarding, isLoading }}>
+    <AuthContext.Provider value={{ user, token, canWrite, login, logout, updateUser, advanceOnboarding, isLoading }}>
       {children}
     </AuthContext.Provider>
   );

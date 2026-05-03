@@ -627,7 +627,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
             </>
           )}
           <div style={{ display: 'flex', gap: 8, alignSelf: 'flex-end' }}>
-            <button className="btn btn-primary btn-sm" onClick={saveBulkMatrix} disabled={!canSaveBulk || bulkSaving}>
+            <button className="btn btn-primary btn-sm" onClick={saveBulkMatrix} disabled={!canSaveBulk || bulkSaving || !canWrite}>
               {bulkSaving ? '…' : `Enregistrer (${selectedIngIds.size})`}
             </button>
             <button className="btn btn-ghost btn-sm" onClick={() => { setSelectedIngIds(new Set()); setBulkDate(todayStr()); setBulkFournisseurId(''); setBulkRefFacture(''); }}>
@@ -812,7 +812,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                               <button
                                 className={`btn btn-sm ${row.saved ? 'btn-success' : 'btn-primary'}`}
                                 onClick={() => saveRow(entry.ingredientId)}
-                                disabled={!canSaveStockRow(row, hasFournisseurs)}
+                                disabled={!canSaveStockRow(row, hasFournisseurs) || !canWrite}
                                 style={{ marginRight: 4 }}
                               >
                                 {row.saving ? '…' : row.saved ? '✓' : t('client.stock.save')}
@@ -999,7 +999,7 @@ function ActivityStockSection({ label, activities, isFranchise, onSave }: Activi
         {canDuplicate && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             {dupMsg && <span style={{ fontSize: '0.8rem', color: 'var(--success)' }}>{dupMsg}</span>}
-            <button className="btn btn-primary btn-sm" onClick={handleDuplicate} disabled={duplicating}>
+            <button className="btn btn-primary btn-sm" onClick={handleDuplicate} disabled={duplicating || !canWrite}>
               {duplicating ? '...' : `📋 ${t('client.stock.duplicate_franchise')}`}
             </button>
           </div>
@@ -1101,7 +1101,7 @@ function ActivityStockSection({ label, activities, isFranchise, onSave }: Activi
 
 export default function StockPage() {
   const { t } = useTranslation();
-  const { user } = useAuth();
+  const { user, canWrite } = useAuth();
   const [searchParams] = useSearchParams();
   const isEntreprise = user?.compteType === 'entreprise';
   const section = searchParams.get('section') as 'franchise' | 'distinct' | null;

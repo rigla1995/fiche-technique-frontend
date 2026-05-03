@@ -19,7 +19,7 @@ const PAGE_SIZE = 10;
 
 export default function ProductList() {
   const { t } = useTranslation();
-  const { user } = useAuth();
+  const { user, canWrite } = useAuth();
   const isEntreprise = user?.compteType === 'entreprise';
 
   const [searchParams, setSearchParams] = useSearchParams();
@@ -406,9 +406,9 @@ export default function ProductList() {
           )}
         </div>
         {tab !== 'fiche-technique' && (!isEntreprise || isFranchiseCtx || isDistinctCtx) && (
-          <Link to={addPath} className="btn btn-primary" style={{ whiteSpace: 'nowrap' }}>
-            + {t(addKey)}
-          </Link>
+          canWrite
+            ? <Link to={addPath} className="btn btn-primary" style={{ whiteSpace: 'nowrap' }}>+ {t(addKey)}</Link>
+            : <button className="btn btn-primary" disabled style={{ whiteSpace: 'nowrap', opacity: 0.45, cursor: 'not-allowed' }}>+ {t(addKey)}</button>
         )}
       </div>
 
