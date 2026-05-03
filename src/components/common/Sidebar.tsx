@@ -208,6 +208,8 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const { hasSelections } = useSelection();
   const [typesSummary, setTypesSummary] = useState<ActiviteTypesSummary | null>(null);
   const [labos, setLabos] = useState<Labo[]>([]);
+  const [indepHasFournisseurs, setIndepHasFournisseurs] = useState(true);
+  const [indepHasAppros, setIndepHasAppros] = useState(true);
   const isAdmin = user?.role === 'super_admin';
   const [openSections, setOpenSections] = useState<Set<string>>(
     isAdmin ? new Set(['admin-general', 'admin-ref']) : new Set()
@@ -235,6 +237,8 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const hasDistinctSelections = typesSummary === null ? true : typesSummary.hasDistinctSelections;
   const hasFranchiseAppro = typesSummary === null ? true : typesSummary.hasFranchiseAppro;
   const hasDistinctAppro = typesSummary === null ? true : typesSummary.hasDistinctAppro;
+  const hasFranchiseFournisseurs = typesSummary === null ? true : typesSummary.hasFranchiseFournisseurs;
+  const hasDistinctFournisseurs = typesSummary === null ? true : typesSummary.hasDistinctFournisseurs;
 
   const toggleSection = (key: string) => setOpenSections((prev) => {
     const n = new Set(prev);
@@ -251,7 +255,15 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
         .then(({ data }) => setLabos(data))
         .catch(() => setLabos([]));
     }
-  }, [isEntreprise, step, location.pathname]);
+    if (!isEntreprise && user?.role === 'client') {
+      api.get('/api/stock/client/summary')
+        .then(({ data }) => {
+          setIndepHasFournisseurs(data.hasFournisseurs);
+          setIndepHasAppros(data.hasAppros);
+        })
+        .catch(() => {});
+    }
+  }, [isEntreprise, step, location.pathname, user?.role]);
 
   useEffect(() => {
     if (!isEntreprise) return;
@@ -377,12 +389,12 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                       ) : (
                         <LockedLink label="Ingrédients Activité" reason="Sélectionnez d'abord des ingrédients dans le Catalogue Global" />
                       )}
-                      {effectiveHasSelections ? (
+                      {effectiveHasSelections && indepHasFournisseurs ? (
                         <SubNavLink to="/client/stock" icon="📦" label="Stock Activité" isActive={location.pathname === '/client/stock' && !currentSection} onClick={onClose} />
                       ) : (
-                        <LockedLink label="Stock Activité" />
+                        <LockedLink label="Stock Activité" reason={!effectiveHasSelections ? 'Sélectionnez d\'abord des ingrédients' : 'Ajoutez d\'abord un fournisseur'} />
                       )}
-                      {effectiveHasSelections ? (
+                      {effectiveHasSelections && indepHasAppros ? (
                         <SubNavLink
                           to="/client/stock/historique"
                           icon="📋"
@@ -391,7 +403,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                           onClick={onClose}
                         />
                       ) : (
-                        <LockedLink label={t('nav.historique_appro')} />
+                        <LockedLink label={t('nav.historique_appro')} reason={!effectiveHasSelections ? 'Sélectionnez d\'abord des ingrédients' : 'Aucun approvisionnement enregistré'} />
                       )}
                     </>
                   )}
@@ -473,8 +485,8 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                         )}
                       </li>
                       <li>
-                        {isOnboarding || !hasFranchise || !hasFranchiseSelections ? (
-                          <LockedLink label="Stocks Franchises" />
+                        {isOnboarding || !hasFranchise || !hasFranchiseSelections || !hasFranchiseFournisseurs ? (
+                          <LockedLink label="Stocks Franchises" reason={(!hasFranchiseFournisseurs && hasFranchiseSelections) ? 'Ajoutez d\'abord un fournisseur à cette activité' : undefined} />
                         ) : (
                           <NavLink
                             to="/client/stock?section=franchise"
@@ -520,8 +532,8 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                         )}
                       </li>
                       <li>
-                        {isOnboarding || !hasDistinct || !hasDistinctSelections ? (
-                          <LockedLink label="Stocks Distinct" />
+                        {isOnboarding || !hasDistinct || !hasDistinctSelections || !hasDistinctFournisseurs ? (
+                          <LockedLink label="Stocks Distinct" reason={(!hasDistinctFournisseurs && hasDistinctSelections) ? 'Ajoutez d\'abord un fournisseur à cette activité' : undefined} />
                         ) : (
                           <NavLink
                             to="/client/stock?section=distinct"

@@ -198,6 +198,8 @@ export interface ActiviteTypesSummary {
   hasDistinctSelections: boolean;
   hasFranchiseAppro: boolean;
   hasDistinctAppro: boolean;
+  hasFranchiseFournisseurs: boolean;
+  hasDistinctFournisseurs: boolean;
 }
 
 export interface StockEntry {
