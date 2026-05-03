@@ -31,6 +31,7 @@ import TarifsConfig from './components/admin/TarifsConfig';
 import DemandesManagement from './components/admin/DemandesManagement';
 import MonAbonnementPage from './components/client/MonAbonnementPage';
 import GerantsPage from './components/client/GerantsPage';
+import UpgradeWizard from './components/client/UpgradeWizard';
 import './i18n';
 import './index.css';
 
@@ -41,6 +42,9 @@ function RootRedirect() {
   if (user.role === 'super_admin') return <Navigate to="/admin" replace />;
   if (user.role === 'gerant') return <Navigate to="/client" replace />;
   // Entreprise user with pending onboarding → send to profile to change password
+  if (user.compteType === 'entreprise' && (user.onboardingStep ?? 0) === 50) {
+    return <Navigate to="/client/upgrade-wizard" replace />;
+  }
   if (user.compteType === 'entreprise' && (user.onboardingStep ?? 0) === 1) {
     return <Navigate to="/client/profile" replace />;
   }
@@ -93,6 +97,7 @@ export default function App() {
             <Route path="/client/fournisseurs-labo" element={<FournisseursLaboPage />} />
             <Route path="/client/abonnement" element={<MonAbonnementPage />} />
             <Route path="/client/gerants" element={<GerantsPage />} />
+            <Route path="/client/upgrade-wizard" element={<UpgradeWizard />} />
           </Route>
 
           {/* Error pages */}
