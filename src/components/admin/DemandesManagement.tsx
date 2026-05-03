@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import api from '../../api/client';
-import { Demande } from '../../types';
+import type { Demande } from '../../types';
 
 const STATUT_COLORS: Record<string, { bg: string; color: string }> = {
   en_attente: { bg: '#fef9c3', color: '#854d0e' },

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import api from '../../api/client';
-import { Abonnement, Paiement } from '../../types';
+import type { Abonnement, Paiement } from '../../types';
 
 const MODE_LABELS: Record<string, { label: string; color: string }> = {
   actif:     { label: 'Actif',        color: '#16a34a' },

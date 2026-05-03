@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import api from '../../api/client';
-import { Abonnement, Demande } from '../../types';
+import type { Abonnement, Demande } from '../../types';
 
 const MODE_INFO: Record<string, { label: string; color: string; desc: string }> = {
   actif:     { label: 'Actif',         color: '#16a34a', desc: 'Votre compte est pleinement opérationnel.' },

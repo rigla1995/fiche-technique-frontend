@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import api from '../../api/client';
-import { Gerant, Activite, Labo } from '../../types';
+import type { Gerant, Activite, Labo } from '../../types';
 import { useAuth } from '../../context/AuthContext';
 
 interface GerantForm {
