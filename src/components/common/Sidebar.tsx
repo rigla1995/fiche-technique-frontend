@@ -365,54 +365,36 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                 </li>
               )}
 
-              {/* Independent: Espace sections */}
+              {/* Independent: Espace sections — same structure as entreprise "distinct" */}
               {!isEntreprise && (
                 <>
                   <Divider />
 
-                  {/* ══ ESPACE CATALOGUE ══ */}
-                  <CollapsibleHeader label="Espace Catalogue" icon="🌐" isOpen={openSections.has('indep-catalogue')} locked={false} onToggle={() => toggleSection('indep-catalogue')} />
-                  {openSections.has('indep-catalogue') && (
+                  {/* ══ ESPACE ACTIVITÉ ══ */}
+                  <CollapsibleHeader label="Espace Activité" icon="📍" isOpen={openSections.has('indep-activite')} locked={!effectiveHasSelections} onToggle={() => toggleSection('indep-activite')} />
+                  {openSections.has('indep-activite') && (
                     <>
-                      <SubNavLink to="/client/catalogue-global" icon="🌐" label={t('nav.catalogue_global', 'Catalogue Global')} isActive={location.pathname === '/client/catalogue-global'} onClick={onClose} />
                       {effectiveHasSelections ? (
-                        <SubNavLink to="/client/ingredients" icon="🧂" label={t('nav.ingredients_catalog')} isActive={location.pathname === '/client/ingredients'} onClick={onClose} />
+                        <SubNavLink to="/client/ingredients" icon="🧂" label="Ingrédients Activité" isActive={location.pathname === '/client/ingredients'} onClick={onClose} />
                       ) : (
-                        <li>
-                          <span style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 12px 6px 36px', fontSize: '0.83rem', borderRadius: 6, margin: '1px 8px', opacity: 0.35, cursor: 'not-allowed' }}>
-                            <span style={{ fontSize: '0.85rem' }}>🔒</span>
-                            <span>{t('nav.ingredients_catalog')}</span>
-                          </span>
-                        </li>
+                        <LockedLink label="Ingrédients Activité" reason="Sélectionnez d'abord des ingrédients dans le Catalogue Global" />
                       )}
-                    </>
-                  )}
-
-                  <Divider />
-
-                  {/* ══ ESPACE STOCK ══ */}
-                  <CollapsibleHeader label="Espace Stock" icon="📦" isOpen={openSections.has('indep-stock')} locked={!effectiveHasSelections} onToggle={() => toggleSection('indep-stock')} />
-                  {openSections.has('indep-stock') && effectiveHasSelections && (
-                    <>
-                      <SubNavLink to="/client/stock" icon="📦" label={t('nav.stock')} isActive={location.pathname === '/client/stock'} onClick={onClose} />
-                      <li>
-                        <Link
+                      {effectiveHasSelections ? (
+                        <SubNavLink to="/client/stock" icon="📦" label="Stock Activité" isActive={location.pathname === '/client/stock' && !currentSection} onClick={onClose} />
+                      ) : (
+                        <LockedLink label="Stock Activité" />
+                      )}
+                      {effectiveHasSelections ? (
+                        <SubNavLink
                           to="/client/stock/historique"
+                          icon="📋"
+                          label={t('nav.historique_appro')}
+                          isActive={isHistoriquePage && !currentHistType}
                           onClick={onClose}
-                          style={{
-                            display: 'flex', alignItems: 'center', gap: 8,
-                            padding: '6px 12px 6px 36px',
-                            fontSize: '0.83rem', borderRadius: 6, margin: '1px 8px',
-                            textDecoration: 'none',
-                            color: isHistoriquePage && !currentHistType ? 'var(--primary)' : 'var(--text)',
-                            background: isHistoriquePage && !currentHistType ? 'var(--primary-light, #e8f0fe)' : undefined,
-                            fontWeight: isHistoriquePage && !currentHistType ? 600 : undefined,
-                          }}
-                        >
-                          <span style={{ fontSize: '0.85rem' }}>📋</span>
-                          <span>{t('nav.historique_appro')}</span>
-                        </Link>
-                      </li>
+                        />
+                      ) : (
+                        <LockedLink label={t('nav.historique_appro')} />
+                      )}
                     </>
                   )}
 
@@ -426,12 +408,50 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                     locked={!effectiveHasSelections}
                     onToggle={() => toggleSection('indep-produits')}
                   />
-                  {openSections.has('indep-produits') && effectiveHasSelections && (
-                    <ProductSubLinks locked={false} onClick={onClose} />
+                  {openSections.has('indep-produits') && (
+                    <>
+                      {effectiveHasSelections ? (
+                        <>
+                          <SubNavLink to="/client/products?tab=vendable" icon="🍔" label="Produits Vendables" isActive={isProductsPage && currentProductTab === 'vendable'} onClick={onClose} />
+                          <SubNavLink to="/client/products?tab=utilisable" icon="🧪" label="Produits Utilisables" isActive={isProductsPage && currentProductTab === 'utilisable'} onClick={onClose} />
+                        </>
+                      ) : (
+                        <>
+                          <LockedLink label="Produits Vendables" />
+                          <LockedLink label="Produits Utilisables" />
+                        </>
+                      )}
+                    </>
                   )}
-                  {openSections.has('indep-produits') && !effectiveHasSelections && (
-                    <ProductSubLinks locked={true} onClick={onClose} />
+
+                  <Divider />
+
+                  {/* ══ ESPACE FOURNISSEURS ══ */}
+                  <CollapsibleHeader label="Espace Fournisseurs" icon="🚚" isOpen={openSections.has('indep-fournisseurs')} locked={!effectiveHasSelections} onToggle={() => toggleSection('indep-fournisseurs')} />
+                  {openSections.has('indep-fournisseurs') && (
+                    <>
+                      {effectiveHasSelections ? (
+                        <SubNavLink to="/client/fournisseurs" icon="🚚" label="Fournisseurs Activité" isActive={location.pathname === '/client/fournisseurs'} onClick={onClose} />
+                      ) : (
+                        <LockedLink label="Fournisseurs Activité" reason="Sélectionnez d'abord des ingrédients dans le Catalogue Global" />
+                      )}
+                    </>
                   )}
+
+                  <Divider />
+
+                  {/* ══ CATALOGUE GLOBAL ══ */}
+                  <li>
+                    <NavLink to="/client/catalogue-global" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>
+                      <span className="link-icon">🌐</span>
+                      <span className="link-label">Catalogue Global</span>
+                    </NavLink>
+                  </li>
+                  <li>
+                    <span style={{ display: 'block', padding: '2px 18px 8px', fontSize: '0.71rem', color: 'var(--text-muted)', lineHeight: 1.45 }}>
+                      Sélectionnez vos ingrédients pour débloquer les fonctionnalités
+                    </span>
+                  </li>
                 </>
               )}
 

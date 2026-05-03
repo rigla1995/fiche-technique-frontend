@@ -1117,6 +1117,7 @@ export default function StockPage() {
   const [franchiseActivities, setFranchiseActivities] = useState<Activite[]>([]);
   const [distinctActivities, setDistinctActivities] = useState<Activite[]>([]);
   const [activitesLoading, setActivitesLoading] = useState(false);
+  const [indepFournisseurs, setIndepFournisseurs] = useState<Fournisseur[]>([]);
 
   const loadClientStock = useCallback(async () => {
     setClientLoading(true);
@@ -1130,7 +1131,10 @@ export default function StockPage() {
   }, []);
 
   useEffect(() => {
-    if (!isEntreprise) loadClientStock();
+    if (!isEntreprise) {
+      loadClientStock();
+      api.get('/api/fournisseurs').then(({ data }) => setIndepFournisseurs(data)).catch(() => setIndepFournisseurs([]));
+    }
   }, [isEntreprise, loadClientStock]);
 
   useEffect(() => {
@@ -1147,11 +1151,13 @@ export default function StockPage() {
     }).catch(() => {}).finally(() => setActivitesLoading(false));
   }, [isEntreprise]);
 
-  const saveClientStock = async (ingredientId: number, quantite: string, prixUnitaire: string, dateAppro: string) => {
+  const saveClientStock = async (ingredientId: number, quantite: string, prixUnitaire: string, dateAppro: string, fournisseurId?: number | null, refFacture?: string | null) => {
     await api.put(`/api/stock/client/${ingredientId}`, {
       quantite: quantite ? parseFloat(quantite) : null,
       prixUnitaire: prixUnitaire ? parseFloat(prixUnitaire) : null,
       dateAppro,
+      fournisseurId: fournisseurId ?? null,
+      refFacture: refFacture ?? null,
     });
   };
 
@@ -1204,6 +1210,7 @@ export default function StockPage() {
               categoryFilter={clientCategoryFilter}
               nameFilter={clientNameFilter}
               isEntreprise={false}
+              fournisseurs={indepFournisseurs}
               onSave={saveClientStock}
             />
           </>
