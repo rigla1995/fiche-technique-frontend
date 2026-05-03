@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import api from '../../api/client';
 import type { Abonnement, Demande } from '../../types';
+import { useAuth } from '../../context/AuthContext';
 
 const MODE_INFO: Record<string, { label: string; color: string; desc: string }> = {
   actif:     { label: 'Actif',         color: '#16a34a', desc: 'Votre compte est pleinement opérationnel.' },
@@ -20,6 +21,8 @@ const fmtDate = (d: string) => d ? new Date(d).toLocaleDateString('fr-FR') : '�
 const fmtMois = (d: string) => d ? new Date(d).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' }) : '—';
 
 export default function MonAbonnementPage() {
+  const { user } = useAuth();
+  const isIndep = user?.compteType === 'independant';
   const [abo, setAbo] = useState<Abonnement | null>(null);
   const [demandes, setDemandes] = useState<Demande[]>([]);
   const [loading, setLoading] = useState(true);
@@ -146,7 +149,7 @@ export default function MonAbonnementPage() {
                 <select value={demandeType} onChange={(e) => setDemandeType(e.target.value as typeof demandeType)}
                   style={{ padding: '7px 10px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: 13 }}>
                   <option value="gerant_sup">Gérant supplémentaire (80 DT/mois)</option>
-                  <option value="labo_sup">Labo supplémentaire (150 DT/mois)</option>
+                  {!isIndep && <option value="labo_sup">Labo supplémentaire (150 DT/mois)</option>}
                 </select>
               </div>
               <div style={{ flex: 1 }}>
