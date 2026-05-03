@@ -368,8 +368,6 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
               {/* Independent: Espace sections — same structure as entreprise "distinct" */}
               {!isEntreprise && (
                 <>
-                  <Divider />
-
                   {/* ══ ESPACE ACTIVITÉ ══ */}
                   <CollapsibleHeader label="Espace Activité" icon="📍" isOpen={openSections.has('indep-activite')} locked={!effectiveHasSelections} onToggle={() => toggleSection('indep-activite')} />
                   {openSections.has('indep-activite') && (
