@@ -472,18 +472,21 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
     setSeuilSaving((p) => ({ ...p, [id]: false }));
   };
 
+  const fetchHistory = async (id: number) => {
+    if (historyData[id]) return;
+    const url = isEntreprise && activiteId
+      ? `/api/stock/entreprise/${activiteId}/${id}/history`
+      : `/api/stock/client/${id}/history`;
+    try {
+      const { data } = await api.get(url);
+      setHistoryData((prev) => ({ ...prev, [id]: data as StockHistoryEntry[] }));
+    } catch { setHistoryData((prev) => ({ ...prev, [id]: [] })); }
+  };
+
   const toggleHistory = async (id: number) => {
     const isOpen = historyOpen[id];
     setHistoryOpen((prev) => ({ ...prev, [id]: !isOpen }));
-    if (!isOpen && !historyData[id]) {
-      const url = isEntreprise && activiteId
-        ? `/api/stock/entreprise/${activiteId}/${id}/history`
-        : `/api/stock/client/${id}/history`;
-      try {
-        const { data } = await api.get(url);
-        setHistoryData((prev) => ({ ...prev, [id]: data as StockHistoryEntry[] }));
-      } catch { setHistoryData((prev) => ({ ...prev, [id]: [] })); }
-    }
+    if (!isOpen) await fetchHistory(id);
   };
 
   const toggleBulkSelect = (ingredientId: number) => {
@@ -545,7 +548,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
   }
 
   const nonLaboFournisseurs = fournisseurs.filter((f) => !f.isLabo);
-  const hasFournisseurs = isEntreprise && nonLaboFournisseurs.length > 0;
+  const hasFournisseurs = nonLaboFournisseurs.length > 0;
 
   const bulkAllValid = [...selectedIngIds].every((id) => {
     const rs = rows[id];
@@ -713,6 +716,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                                 onBlur={() => saveSeuilMin(entry.ingredientId)}
                                 style={{ width: 72, textAlign: 'right', fontSize: '0.82rem' }}
                                 className="input"
+                                disabled={!canWrite}
                                 title={seuilSaving[entry.ingredientId] ? 'Enregistrement…' : 'Seuil minimum — auto-save'}
                               />
                             </td>
@@ -723,6 +727,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                                 onChange={(e) => updateRow(entry.ingredientId, 'quantite', e.target.value)}
                                 style={{ width: 90, textAlign: 'right', ...warnStyle }}
                                 className="input"
+                                disabled={!canWrite}
                               />
                             </td>
                             <td style={{ textAlign: 'right' }}>
@@ -732,6 +737,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                                 onChange={(e) => updateRow(entry.ingredientId, 'prixUnitaire', e.target.value)}
                                 style={{ width: 100, textAlign: 'right', ...warnStyle }}
                                 className="input"
+                                disabled={!canWrite}
                               />
                             </td>
                             <td>
@@ -740,7 +746,8 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                                 min={yearStart} max={yearEnd}
                                 value={row.dateAppro}
                                 onChange={(e) => updateRow(entry.ingredientId, 'dateAppro', e.target.value)}
-                                disabled={isSelected}
+                                onFocus={() => fetchHistory(entry.ingredientId)}
+                                disabled={isSelected || !canWrite}
                                 title={isSelected ? 'Date définie par le formulaire ci-dessus' : undefined}
                               />
                             </td>
@@ -783,7 +790,8 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                                   <button
                                     className="btn btn-sm"
                                     onClick={() => setAffectationModal({ ingredientId: entry.ingredientId, nom: entry.nom })}
-                                    title="Affecter un fournisseur"
+                                    disabled={!canWrite}
+                                    title={!canWrite ? undefined : 'Affecter un fournisseur'}
                                     style={{
                                       marginRight: 4,
                                       background: fournisseurValidated ? '#dcfce7' : assignedFournisseur ? '#fef9c3' : '#eff6ff',
@@ -1111,7 +1119,10 @@ export default function StockPage() {
   const [clientEntries, setClientEntries] = useState<StockEntry[]>([]);
   const [clientLoading, setClientLoading] = useState(false);
   const [clientCategoryFilter, setClientCategoryFilter] = useState('');
+  const [clientIngredientFilter, setClientIngredientFilter] = useState<number | ''>('');
   const [clientNameFilter, setClientNameFilter] = useState('');
+  const [clientFournisseurFilter, setClientFournisseurFilter] = useState('');
+  const [clientRefFactureFilter, setClientRefFactureFilter] = useState('');
 
   const [typesSummary, setTypesSummary] = useState<ActiviteTypesSummary | null>(null);
   const [franchiseActivities, setFranchiseActivities] = useState<Activite[]>([]);
@@ -1192,23 +1203,62 @@ export default function StockPage() {
           <p className="text-muted">{t('client.stock.empty_stock')}</p>
         ) : (
           <>
-            <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
-              <select className="input" style={{ maxWidth: 220 }} value={clientCategoryFilter} onChange={(e) => setClientCategoryFilter(e.target.value)}>
-                <option value="">{t('client.catalogue_franchise.all_categories')}</option>
-                {clientCategories.map((c) => <option key={c} value={c}>{c}</option>)}
-              </select>
+            <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Catégorie</span>
+                <select className="input" style={{ maxWidth: 200 }} value={clientCategoryFilter} onChange={(e) => { setClientCategoryFilter(e.target.value); setClientIngredientFilter(''); }}>
+                  <option value="">{t('client.catalogue_franchise.all_categories')}</option>
+                  {clientCategories.map((c) => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Ingrédient</span>
+                <select
+                  className="input" style={{ maxWidth: 220 }} value={clientIngredientFilter} disabled={!clientCategoryFilter}
+                  onChange={(e) => setClientIngredientFilter(e.target.value === '' ? '' : Number(e.target.value))}
+                >
+                  <option value="">— Tous —</option>
+                  {clientEntries.filter((e) => e.categorie === clientCategoryFilter).map((e) => (
+                    <option key={e.ingredientId} value={e.ingredientId}>{e.nom}</option>
+                  ))}
+                </select>
+              </div>
               <input
                 type="text" className="input"
-                style={{ minWidth: 140, flex: '1 1 auto', maxWidth: 220 }}
+                style={{ minWidth: 130, maxWidth: 200, alignSelf: 'flex-end' }}
                 placeholder={t('client.stock.search_ingredient')}
                 value={clientNameFilter}
                 onChange={(e) => setClientNameFilter(e.target.value)}
               />
+              {indepFournisseurs.length > 0 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                  <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Fournisseur</span>
+                  <select className="input" style={{ maxWidth: 200 }} value={clientFournisseurFilter} onChange={(e) => setClientFournisseurFilter(e.target.value)}>
+                    <option value="">— Tous —</option>
+                    {indepFournisseurs.map((f) => <option key={f.id} value={String(f.id)}>{f.nom}</option>)}
+                  </select>
+                </div>
+              )}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Réf. Facture</span>
+                <input
+                  type="text" className="input" style={{ minWidth: 120, maxWidth: 180 }}
+                  placeholder="Réf. facture…"
+                  value={clientRefFactureFilter}
+                  onChange={(e) => setClientRefFactureFilter(e.target.value)}
+                />
+              </div>
+              {(clientCategoryFilter || clientIngredientFilter !== '' || clientNameFilter || clientFournisseurFilter || clientRefFactureFilter) && (
+                <button className="btn btn-ghost btn-sm" style={{ alignSelf: 'flex-end' }} onClick={() => { setClientCategoryFilter(''); setClientIngredientFilter(''); setClientNameFilter(''); setClientFournisseurFilter(''); setClientRefFactureFilter(''); }}>✕</button>
+              )}
             </div>
             <StockMatrix
               entries={clientEntries}
               categoryFilter={clientCategoryFilter}
+              ingredientFilter={clientIngredientFilter}
               nameFilter={clientNameFilter}
+              fournisseurFilter={clientFournisseurFilter}
+              refFactureFilter={clientRefFactureFilter}
               isEntreprise={false}
               fournisseurs={indepFournisseurs}
               onSave={saveClientStock}

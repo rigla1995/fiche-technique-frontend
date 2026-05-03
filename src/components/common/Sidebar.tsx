@@ -274,6 +274,20 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
     return () => window.removeEventListener('labos-changed', handler);
   }, [isEntreprise]);
 
+  useEffect(() => {
+    if (isEntreprise || user?.role !== 'client') return;
+    const handler = () => {
+      api.get('/api/stock/client/summary')
+        .then(({ data }) => {
+          setIndepHasFournisseurs(data.hasFournisseurs);
+          setIndepHasAppros(data.hasAppros);
+        })
+        .catch(() => {});
+    };
+    window.addEventListener('fournisseur-created', handler);
+    return () => window.removeEventListener('fournisseur-created', handler);
+  }, [isEntreprise, user?.role]);
+
   const adminLinks = [
     { to: '/admin', label: t('nav.dashboard'), icon: '📊', end: true },
     { to: '/admin/clients', label: t('nav.clients'), icon: '👥' },

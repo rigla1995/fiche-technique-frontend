@@ -90,6 +90,7 @@ export default function FournisseursPage() {
         await api.put(`${base}/${modal.item.id}`, payload);
       } else {
         await api.post(base, payload);
+        window.dispatchEvent(new Event('fournisseur-created'));
       }
       setModal(null);
       load();
