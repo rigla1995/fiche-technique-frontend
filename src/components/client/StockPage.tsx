@@ -340,6 +340,82 @@ function FournisseurInfoModal({ ingredientNom, fournisseurNom, refFacture, onClo
 
 // ────────────────────────────────────────────────────────────────────────────
 
+interface ApproConflictEntry {
+  ingredientNom: string;
+  entries: StockHistoryEntry[];
+}
+
+interface ApproConflictModalProps {
+  date: string;
+  conflicts: ApproConflictEntry[];
+  onConfirm: () => void;
+  onCancel: () => void;
+}
+
+function ApproConflictModal({ date, conflicts, onConfirm, onCancel }: ApproConflictModalProps) {
+  const [d, m, y] = date.split('-');
+  const dateLabel = `${d}/${m}/${y}`;
+  return (
+    <div className="modal-overlay" onClick={onCancel}>
+      <div className="modal" style={{ maxWidth: 540 }} onClick={(e) => e.stopPropagation()}>
+        <div className="modal-header" style={{ background: '#fffbeb', borderBottom: '1px solid #fde68a' }}>
+          <div>
+            <h2 style={{ color: '#92400e', margin: 0 }}>⚠️ Appros existantes pour le {dateLabel}</h2>
+            <p style={{ margin: '4px 0 0', fontSize: '0.82rem', color: '#b45309' }}>
+              {conflicts.length === 1
+                ? `"${conflicts[0].ingredientNom}" a déjà des appros à cette date.`
+                : `${conflicts.length} ingrédient(s) ont déjà des appros à cette date.`}
+            </p>
+          </div>
+          <button className="modal-close" onClick={onCancel}>×</button>
+        </div>
+        <div className="modal-body" style={{ maxHeight: 360, overflowY: 'auto', padding: '16px 20px' }}>
+          {conflicts.map((c) => (
+            <div key={c.ingredientNom} style={{ marginBottom: 16 }}>
+              {conflicts.length > 1 && (
+                <div style={{ fontWeight: 700, fontSize: '0.88rem', color: 'var(--text)', marginBottom: 6 }}>{c.ingredientNom}</div>
+              )}
+              <table style={{ width: '100%', fontSize: '0.8rem', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ background: '#fef9c3' }}>
+                    {['Quantité', 'Prix (U/DT)', 'Type', 'Fournisseur', 'Réf.'].map((h) => (
+                      <th key={h} style={{ padding: '4px 8px', textAlign: 'left', color: '#78350f', fontWeight: 700, borderBottom: '1px solid #fde68a' }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {c.entries.map((e, i) => (
+                    <tr key={i} style={{ borderBottom: '1px solid #fef3c7' }}>
+                      <td style={{ padding: '4px 8px', fontWeight: 600 }}>{e.quantite ?? '—'}</td>
+                      <td style={{ padding: '4px 8px' }}>{e.prixUnitaire !== null ? (e.prixUnitaire as number).toFixed(3) : '—'}</td>
+                      <td style={{ padding: '4px 8px' }}>
+                        <span className={`badge-appro ${e.typeAppro ?? 'manuel'}`} style={{ fontSize: '0.72rem' }}>
+                          {e.typeAppro === 'transfert' ? 'Transfert' : 'Manuel'}
+                        </span>
+                      </td>
+                      <td style={{ padding: '4px 8px', color: 'var(--text-muted)' }}>{e.fournisseurNom ?? '—'}</td>
+                      <td style={{ padding: '4px 8px', color: 'var(--text-muted)' }}>{e.refFacture ?? '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ))}
+        </div>
+        <div className="modal-footer" style={{ borderTop: '1px solid var(--border)', padding: '12px 20px', display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+          <button className="btn btn-ghost" onClick={onCancel}>Annuler</button>
+          <button className="btn btn-warning" onClick={onConfirm}
+            style={{ background: '#d97706', color: '#fff', border: 'none', padding: '7px 20px', borderRadius: 8, fontWeight: 700, cursor: 'pointer' }}>
+            Confirmer l'ajout quand même
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+
 function seuilClass(total: number | null, seuil: number | null): string {
   if (total === null) return '';
   if (seuil === null) return total === 0 ? 'stock-alert' : 'stock-ok';
@@ -385,6 +461,13 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
   const [bulkRefFacture, setBulkRefFacture] = useState('');
   const [bulkSaving, setBulkSaving] = useState(false);
 
+  // ── Conflict confirmation modal
+  const [conflictModal, setConflictModal] = useState<{
+    date: string;
+    conflicts: ApproConflictEntry[];
+    onConfirm: () => void;
+  } | null>(null);
+
   const toggleCat = (cat: string) => setOpenCats((prev) => { const n = new Set(prev); if (n.has(cat)) n.delete(cat); else n.add(cat); return n; });
 
   useEffect(() => {
@@ -429,9 +512,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
     return parseInt(y) === now.getFullYear() && parseInt(m) === now.getMonth() + 1;
   };
 
-  const saveRow = async (id: number) => {
-    const row = rows[id];
-    if (!row || !canSaveStockRow(row, hasFournisseurs)) return;
+  const doSaveRow = async (id: number, row: StockRowState) => {
     setRows((prev) => ({ ...prev, [id]: { ...prev[id], saving: true, error: '' } }));
     try {
       const fId = row.fournisseurId ? Number(row.fournisseurId) : null;
@@ -475,6 +556,33 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
     }
   };
 
+  const saveRow = async (id: number) => {
+    const row = rows[id];
+    if (!row || !canSaveStockRow(row, hasFournisseurs)) return;
+
+    // Ensure history is loaded for conflict detection
+    const hist = await fetchHistory(id);
+    const conflictEntries = hist.filter((h) => h.dateAppro === row.dateAppro);
+    const entry = entries.find((e) => e.ingredientId === id);
+    const hasConflict = conflictEntries.length > 0 ||
+      (entry?.quantite !== null && row.dateAppro === entry?.dateAppro);
+
+    if (hasConflict) {
+      const displayEntries = conflictEntries.length > 0 ? conflictEntries : [{
+        dateAppro: entry!.dateAppro!, quantite: entry!.quantite,
+        prixUnitaire: entry!.prixUnitaire, typeAppro: 'manuel',
+        fournisseurNom: null, refFacture: null, updatedAt: null,
+      }];
+      setConflictModal({
+        date: row.dateAppro,
+        conflicts: [{ ingredientNom: entry?.nom ?? '', entries: displayEntries as StockHistoryEntry[] }],
+        onConfirm: () => { setConflictModal(null); doSaveRow(id, row); },
+      });
+      return;
+    }
+    await doSaveRow(id, row);
+  };
+
   const saveSeuilMin = async (id: number) => {
     if (!onSaveSeuilMin) return;
     const raw = seuilEdits[id]?.trim();
@@ -484,15 +592,20 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
     setSeuilSaving((p) => ({ ...p, [id]: false }));
   };
 
-  const fetchHistory = async (id: number) => {
-    if (historyData[id]) return;
+  const fetchHistory = async (id: number): Promise<StockHistoryEntry[]> => {
+    if (historyData[id]) return historyData[id];
     const url = isEntreprise && activiteId
       ? `/api/stock/entreprise/${activiteId}/${id}/history`
       : `/api/stock/client/${id}/history`;
     try {
       const { data } = await api.get(url);
-      setHistoryData((prev) => ({ ...prev, [id]: data as StockHistoryEntry[] }));
-    } catch { setHistoryData((prev) => ({ ...prev, [id]: [] })); }
+      const entries = data as StockHistoryEntry[];
+      setHistoryData((prev) => ({ ...prev, [id]: entries }));
+      return entries;
+    } catch {
+      setHistoryData((prev) => ({ ...prev, [id]: [] }));
+      return [];
+    }
   };
 
   const toggleHistory = async (id: number) => {
@@ -517,8 +630,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
     setSelectedIngIds((prev) => new Set([...prev, ingredientId]));
   };
 
-  const saveBulkMatrix = async () => {
-    if (selectedIngIds.size === 0 || !bulkDate) return;
+  const doBulkSave = async () => {
     setBulkSaving(true);
     try {
       for (const ingId of selectedIngIds) {
@@ -541,6 +653,42 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
       setBulkRefFacture('');
     } catch { /* ignore */ }
     setBulkSaving(false);
+  };
+
+  const saveBulkMatrix = async () => {
+    if (selectedIngIds.size === 0 || !bulkDate) return;
+
+    // Pre-load history for all selected ingredients to detect conflicts
+    const histMap: Record<number, StockHistoryEntry[]> = {};
+    await Promise.all([...selectedIngIds].map(async (id) => {
+      histMap[id] = await fetchHistory(id);
+    }));
+
+    const conflicts: ApproConflictEntry[] = [];
+    for (const ingId of selectedIngIds) {
+      const hist = histMap[ingId] || [];
+      const conflictEntries = hist.filter((h) => h.dateAppro === bulkDate);
+      const entry = entries.find((e) => e.ingredientId === ingId);
+      const hasConflict = conflictEntries.length > 0 ||
+        (entry?.quantite !== null && bulkDate === entry?.dateAppro);
+      if (hasConflict) {
+        const displayEntries = conflictEntries.length > 0 ? conflictEntries : [{
+          dateAppro: bulkDate, quantite: entry!.quantite, prixUnitaire: entry!.prixUnitaire,
+          typeAppro: 'manuel', fournisseurNom: null, refFacture: null, updatedAt: null,
+        }];
+        conflicts.push({ ingredientNom: entry?.nom ?? `#${ingId}`, entries: displayEntries as StockHistoryEntry[] });
+      }
+    }
+
+    if (conflicts.length > 0) {
+      setConflictModal({
+        date: bulkDate,
+        conflicts,
+        onConfirm: () => { setConflictModal(null); doBulkSave(); },
+      });
+      return;
+    }
+    await doBulkSave();
   };
 
   let filtered = entries;
@@ -574,6 +722,15 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
 
   return (
     <div>
+      {conflictModal && (
+        <ApproConflictModal
+          date={conflictModal.date}
+          conflicts={conflictModal.conflicts}
+          onConfirm={conflictModal.onConfirm}
+          onCancel={() => setConflictModal(null)}
+        />
+      )}
+
       {pertesModal && activiteId && (
         <PerteModal
           ingredientId={pertesModal.ingredientId}
