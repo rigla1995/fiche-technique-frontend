@@ -92,37 +92,33 @@ function EditModal({ entry, fournisseurs, isEntreprise, onSave, onClose }: EditM
                 onChange={(e) => setPrix(e.target.value)} style={{ width: '100%' }} />
             </div>
           </div>
-          {isEntreprise && (
-            <div style={{ marginBottom: 12 }}>
-              <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 4 }}>
-                Fournisseur
-              </label>
-              {entry.typeAppro === 'transfert' ? (
-                <input
-                  className="input"
-                  style={{ width: '100%', background: 'var(--bg-secondary, #f3f4f6)', color: 'var(--text-muted)', cursor: 'not-allowed' }}
-                  value={entry.fournisseurNom ?? '—'}
-                  disabled
-                />
-              ) : nonLaboFournisseurs.length > 0 ? (
-                <select className="input" style={{ width: '100%' }} value={fId} onChange={(e) => setFId(e.target.value)}>
-                  <option value="">— Aucun —</option>
-                  {nonLaboFournisseurs.map((f) => <option key={f.id} value={f.id}>{f.nom}</option>)}
-                </select>
-              ) : (
-                <input className="input" style={{ width: '100%', color: 'var(--text-muted)' }} value="— Aucun fournisseur disponible —" disabled />
-              )}
-            </div>
-          )}
-          {isEntreprise && (
-            <div style={{ marginBottom: 16 }}>
-              <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 4 }}>
-                Réf. Facture / BL
-              </label>
-              <input className="input" type="text" value={ref} onChange={(e) => setRef(e.target.value)}
-                placeholder="N° facture ou BL" style={{ width: '100%' }} />
-            </div>
-          )}
+          <div style={{ marginBottom: 12 }}>
+            <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 4 }}>
+              Fournisseur
+            </label>
+            {entry.typeAppro === 'transfert' ? (
+              <input
+                className="input"
+                style={{ width: '100%', background: 'var(--bg-secondary, #f3f4f6)', color: 'var(--text-muted)', cursor: 'not-allowed' }}
+                value={entry.fournisseurNom ?? '—'}
+                disabled
+              />
+            ) : nonLaboFournisseurs.length > 0 ? (
+              <select className="input" style={{ width: '100%' }} value={fId} onChange={(e) => setFId(e.target.value)}>
+                <option value="">— Aucun —</option>
+                {nonLaboFournisseurs.map((f) => <option key={f.id} value={f.id}>{f.nom}</option>)}
+              </select>
+            ) : (
+              <input className="input" style={{ width: '100%', color: 'var(--text-muted)' }} value="— Aucun fournisseur disponible —" disabled />
+            )}
+          </div>
+          <div style={{ marginBottom: 16 }}>
+            <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 4 }}>
+              Réf. Facture / BL
+            </label>
+            <input className="input" type="text" value={ref} onChange={(e) => setRef(e.target.value)}
+              placeholder="N° facture ou BL" style={{ width: '100%' }} />
+          </div>
           {entry.typeAppro === 'transfert' && (
             <div style={{ background: '#fef3c7', border: '1px solid #fde68a', borderRadius: 8, padding: '8px 12px', marginBottom: 12, fontSize: '0.82rem', color: '#92400e' }}>
               ⚠️ Type Transfert — la modification de la quantité ajustera le stock du labo.
@@ -321,10 +317,11 @@ export default function HistoriqueApproPage() {
   }, []);
 
   useEffect(() => {
-    if (!isEntreprise) return;
-    api.get('/api/entreprise/fournisseurs')
-      .then(({ data }) => setFournisseurs(data as Fournisseur[]))
-      .catch(() => {});
+    if (isEntreprise) {
+      api.get('/api/entreprise/fournisseurs').then(({ data }) => setFournisseurs(data as Fournisseur[])).catch(() => {});
+    } else {
+      api.get('/api/fournisseurs').then(({ data }) => setFournisseurs(data as Fournisseur[])).catch(() => {});
+    }
   }, [isEntreprise]);
 
   useEffect(() => {
@@ -391,8 +388,8 @@ export default function HistoriqueApproPage() {
       else if (selectedCategoryId) params.set('categorieId', selectedCategoryId);
       if (startDate) params.set('startDate', startDate);
       if (endDate) params.set('endDate', endDate);
-      if (isEntreprise && selectedFournisseurId) params.set('fournisseurId', selectedFournisseurId);
-      if (isEntreprise && refFactureFilter.trim()) params.set('refFacture', refFactureFilter.trim());
+      if (selectedFournisseurId) params.set('fournisseurId', selectedFournisseurId);
+      if (refFactureFilter.trim()) params.set('refFacture', refFactureFilter.trim());
       const { data } = await api.get(`/api/stock/historique?${params}`);
       setResults(data as HistoriqueApproEntry[]);
     } catch {
@@ -430,8 +427,8 @@ export default function HistoriqueApproPage() {
     else if (selectedCategoryId) params.set('categorieId', selectedCategoryId);
     if (startDate) params.set('startDate', startDate);
     if (endDate) params.set('endDate', endDate);
-    if (isEntreprise && selectedFournisseurId) params.set('fournisseurId', selectedFournisseurId);
-    if (isEntreprise && refFactureFilter.trim()) params.set('refFacture', refFactureFilter.trim());
+    if (selectedFournisseurId) params.set('fournisseurId', selectedFournisseurId);
+    if (refFactureFilter.trim()) params.set('refFacture', refFactureFilter.trim());
     if (selectedIds.size > 0) params.set('selectedIds', [...selectedIds].join(','));
 
     const { data } = await api.get(
@@ -624,7 +621,7 @@ export default function HistoriqueApproPage() {
                 onChange={(e) => setEndDate(e.target.value)}
               />
             </div>
-            {isEntreprise && fournisseurs.length > 0 && (
+            {fournisseurs.length > 0 && (
               <div>
                 <label style={labelStyle}>Fournisseur</label>
                 <select
@@ -638,19 +635,17 @@ export default function HistoriqueApproPage() {
                 </select>
               </div>
             )}
-            {isEntreprise && (
-              <div>
-                <label style={labelStyle}>Réf. Facture</label>
-                <input
-                  type="text"
-                  className="input"
-                  style={{ width: '100%' }}
-                  placeholder="Rechercher réf…"
-                  value={refFactureFilter}
-                  onChange={(e) => setRefFactureFilter(e.target.value)}
-                />
-              </div>
-            )}
+            <div>
+              <label style={labelStyle}>Réf. Facture</label>
+              <input
+                type="text"
+                className="input"
+                style={{ width: '100%' }}
+                placeholder="Rechercher réf…"
+                value={refFactureFilter}
+                onChange={(e) => setRefFactureFilter(e.target.value)}
+              />
+            </div>
           </div>
         </div>
 
@@ -735,7 +730,7 @@ export default function HistoriqueApproPage() {
                 <col />
                 <col style={{ width: '100px' }} />
                 <col style={{ width: '85px' }} />
-                {isEntreprise && <col style={{ width: '130px' }} />}
+                <col style={{ width: '130px' }} />
                 <col style={{ width: '66px' }} />
               </colgroup>
               <thead>
@@ -753,7 +748,7 @@ export default function HistoriqueApproPage() {
                   <th>{t('client.historique_appro.col_ingredient')}</th>
                   <th style={{ textAlign: 'right' }}>{t('client.historique_appro.col_qty')}</th>
                   <th style={{ textAlign: 'right' }}>Prix/DT</th>
-                  {isEntreprise && <th>Fourn. / Réf</th>}
+                  <th>Fourn. / Réf</th>
                   <th></th>
                 </tr>
               </thead>
@@ -789,12 +784,10 @@ export default function HistoriqueApproPage() {
                     <td style={{ textAlign: 'right', fontWeight: 600, color: prixColor(r.prixUnitaire), fontSize: '0.88rem' }}>
                       {r.prixUnitaire !== null ? r.prixUnitaire.toFixed(3) : '—'}
                     </td>
-                    {isEntreprise && (
-                      <td style={{ fontSize: '0.78rem' }}>
-                        <div style={{ color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.fournisseurNom ?? '—'}</div>
-                        <div style={{ color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.refFacture ?? '—'}</div>
-                      </td>
-                    )}
+                    <td style={{ fontSize: '0.78rem' }}>
+                      <div style={{ color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.fournisseurNom ?? '—'}</div>
+                      <div style={{ color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.refFacture ?? '—'}</div>
+                    </td>
                     <td style={{ whiteSpace: 'nowrap', textAlign: 'right' }}>
                       <button
                         className="btn btn-ghost btn-sm"
