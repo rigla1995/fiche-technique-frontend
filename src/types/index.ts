@@ -205,7 +205,11 @@ export interface ActiviteTypesSummary {
 }
 
 export interface StockEntry {
-  ingredientId: number;
+  ingredientId: number;        // negative = PT product (-produitId)
+  produitId?: number;          // set for PT rows
+  isPT?: boolean;
+  prixPartiel?: boolean;       // PT: true if any recipe ingredient has no price
+  coutTotal?: number | null;
   nom: string;
   unite: string;
   categorie: string;

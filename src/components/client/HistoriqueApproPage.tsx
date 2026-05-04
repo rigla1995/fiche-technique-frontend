@@ -351,11 +351,25 @@ export default function HistoriqueApproPage() {
     setSelectedIngredientId('');
     if (!selectedCategoryId) return;
     setIngredientsLoading(true);
-    api.get(`/ingredients?categorieId=${selectedCategoryId}`)
-      .then(({ data }) => setIngredients(data as Ingredient[]))
-      .catch(() => {})
-      .finally(() => setIngredientsLoading(false));
-  }, [selectedCategoryId]);
+    if (selectedCategoryId === 'pt') {
+      const ptUrl = selectedActiviteId ? `/api/stock/pt?activiteId=${selectedActiviteId}` : '/api/stock/pt';
+      api.get(ptUrl)
+        .then(({ data }) => setIngredients((data as Array<{ produitId: number; nom: string }>).map((p) => ({
+          id: -(p.produitId),
+          name: p.nom,
+          unitName: 'unité',
+          categorieName: 'Produits Transformés',
+        }))))
+        .catch(() => {})
+        .finally(() => setIngredientsLoading(false));
+    } else {
+      api.get(`/ingredients?categorieId=${selectedCategoryId}`)
+        .then(({ data }) => setIngredients(data as Ingredient[]))
+        .catch(() => {})
+        .finally(() => setIngredientsLoading(false));
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedCategoryId, selectedActiviteId]);
 
   useEffect(() => {
     if (initIngredientId && (selectedActiviteId || !isEntreprise)) fetchResults();
@@ -384,8 +398,13 @@ export default function HistoriqueApproPage() {
           params.set('entType', entType);
         }
       }
-      if (selectedIngredientId) params.set('ingredientId', selectedIngredientId);
-      else if (selectedCategoryId) params.set('categorieId', selectedCategoryId);
+      if (selectedCategoryId === 'pt') {
+        params.set('ptOnly', 'true');
+        if (selectedIngredientId) params.set('ptProduitId', String(-Number(selectedIngredientId)));
+      } else {
+        if (selectedIngredientId) params.set('ingredientId', selectedIngredientId);
+        else if (selectedCategoryId) params.set('categorieId', selectedCategoryId);
+      }
       if (startDate) params.set('startDate', startDate);
       if (endDate) params.set('endDate', endDate);
       if (selectedFournisseurId) params.set('fournisseurId', selectedFournisseurId);
@@ -423,8 +442,13 @@ export default function HistoriqueApproPage() {
       else if (selectedFranchiseGroup && entType === 'franchise') params.set('franchiseGroup', selectedFranchiseGroup);
       else params.set('entType', entType);
     }
-    if (selectedIngredientId) params.set('ingredientId', selectedIngredientId);
-    else if (selectedCategoryId) params.set('categorieId', selectedCategoryId);
+    if (selectedCategoryId === 'pt') {
+      params.set('ptOnly', 'true');
+      if (selectedIngredientId) params.set('ptProduitId', String(-Number(selectedIngredientId)));
+    } else {
+      if (selectedIngredientId) params.set('ingredientId', selectedIngredientId);
+      else if (selectedCategoryId) params.set('categorieId', selectedCategoryId);
+    }
     if (startDate) params.set('startDate', startDate);
     if (endDate) params.set('endDate', endDate);
     if (selectedFournisseurId) params.set('fournisseurId', selectedFournisseurId);
@@ -568,6 +592,7 @@ export default function HistoriqueApproPage() {
               >
                 <option value="">{t('client.historique_appro.all_categories')}</option>
                 {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                {(!isEntreprise || selectedActiviteId) && <option value="pt">Produits Transformés</option>}
               </select>
             </div>
 
