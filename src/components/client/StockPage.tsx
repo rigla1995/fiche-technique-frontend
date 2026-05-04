@@ -209,7 +209,7 @@ function HistoryPopup({ ingredientId, nom, activiteId, isEntreprise, onClose }: 
                         </span>
                       </td>
                       <td style={{ textAlign: 'right' }}>{e.quantite ?? '—'}</td>
-                      <td style={{ textAlign: 'right' }}>{e.prixUnitaire !== null ? e.prixUnitaire.toFixed(3) : '—'}</td>
+                      <td style={{ textAlign: 'right' }}>{e.prixUnitaire != null ? e.prixUnitaire.toFixed(3) : '—'}</td>
                       <td style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>{e.fournisseurNom ?? '—'}</td>
                       <td style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>{e.refFacture ?? '—'}</td>
                     </tr>
@@ -392,7 +392,7 @@ function ApproConflictModal({ date, conflicts, onConfirm, onCancel }: ApproConfl
                   {c.entries.map((e, i) => (
                     <tr key={i} style={{ borderBottom: '1px solid #fef3c7' }}>
                       <td style={{ padding: '4px 8px', fontWeight: 600 }}>{e.quantite ?? '—'}</td>
-                      <td style={{ padding: '4px 8px' }}>{e.prixUnitaire !== null ? (e.prixUnitaire as number).toFixed(3) : '—'}</td>
+                      <td style={{ padding: '4px 8px' }}>{e.prixUnitaire != null ? (e.prixUnitaire as number).toFixed(3) : '—'}</td>
                       <td style={{ padding: '4px 8px' }}>
                         <span className={`badge-appro ${e.typeAppro ?? 'manuel'}`} style={{ fontSize: '0.72rem' }}>
                           {e.typeAppro === 'transfert' ? 'Transfert' : 'Manuel'}
@@ -1066,7 +1066,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                                               </span>
                                             </td>
                                             <td style={{ textAlign: 'right' }}>{h.quantite ?? '—'}</td>
-                                            <td style={{ textAlign: 'right' }}>{h.prixUnitaire !== null ? h.prixUnitaire.toFixed(3) : '—'}</td>
+                                            <td style={{ textAlign: 'right' }}>{h.prixUnitaire != null ? h.prixUnitaire.toFixed(3) : '—'}</td>
                                             <td style={{ color: 'var(--text-muted)' }}>{h.fournisseurNom ?? '—'}</td>
                                             <td style={{ color: 'var(--text-muted)' }}>{h.refFacture ?? '—'}</td>
                                           </tr>
