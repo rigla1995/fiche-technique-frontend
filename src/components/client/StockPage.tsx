@@ -910,17 +910,6 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                               />
                             </td>
                             <td>
-                              {hasExisting && entry.dateAppro && (
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: 3, marginBottom: 4 }}>
-                                  <span style={{ fontSize: '0.62rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Actuelle</span>
-                                  <input
-                                    type="date" className="input"
-                                    value={entry.dateAppro.substring(0, 10)}
-                                    disabled
-                                    style={{ maxWidth: 150, opacity: 0.6, background: 'var(--bg-secondary, #f8fafc)', cursor: 'default' }}
-                                  />
-                                </div>
-                              )}
                               <input
                                 type="date" className="input" style={{ maxWidth: 150, ...warnStyle }}
                                 min={yearStart} max={yearEnd}
