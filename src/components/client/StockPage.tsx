@@ -455,7 +455,19 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
           origQuantite: '0', origPrixUnitaire: '0', origDateAppro: today,
         },
       }));
-      setHistoryData((prev) => { const n = { ...prev }; delete n[id]; return n; });
+      // Keep history cache and add saved entry so date-conflict alarm fires next time
+      setHistoryData((prev) => {
+        const saved = {
+          dateAppro: row.dateAppro,
+          quantite: parseFloat(row.quantite) || 0,
+          prixUnitaire: parseFloat(row.prixUnitaire) || 0,
+          typeAppro: 'manuel',
+          fournisseurNom: null,
+          refFacture: row.refFacture || null,
+          updatedAt: new Date().toISOString(),
+        };
+        return { ...prev, [id]: [saved, ...(prev[id] || [])] };
+      });
       setHistoryOpen((prev) => ({ ...prev, [id]: false }));
       setTimeout(() => setRows((prev) => ({ ...prev, [id]: { ...prev[id], saved: false } })), 2500);
     } catch {

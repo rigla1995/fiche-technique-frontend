@@ -33,9 +33,14 @@ export default function ClientIngredientsCatalog({ embedded, onSelectionDone }: 
       const { data } = await api.post(`/ingredients/${ing.id}/select`);
       setIngredients((list) => list.map((i) => (i.id === ing.id ? { ...i, selected: data.selected } : i)));
       refreshSelections();
-      // Advance onboarding: step 3 (catalogue) → step 0 (done) on first selection
       if (data.selected && user?.onboardingStep === 3) {
         await advanceOnboarding(0);
+      }
+      if (!data.selected && data.hadHistory) {
+        const ok = window.confirm(
+          `"${ing.name}" a ${data.historyCount} entrée(s) d'approvisionnement enregistrée(s).\nVoulez-vous aussi supprimer cet historique ?`
+        );
+        if (ok) await api.delete(`/api/stock/client/${ing.id}/all-history`);
       }
     } finally {
       setTogglingId(null);

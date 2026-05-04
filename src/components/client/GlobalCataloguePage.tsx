@@ -315,11 +315,18 @@ export default function GlobalCataloguePage() {
   const toggle = async (ingId: number) => {
     setToggling(ingId);
     try {
-      let data: { selected: boolean };
+      let data: { selected: boolean; hadHistory?: boolean; historyCount?: number };
       if (!isEntreprise) {
         ({ data } = await api.post(`/ingredients/${ingId}/select`));
         refreshSelections();
         if (data.selected && user?.onboardingStep === 3) await advanceOnboarding(0);
+        if (!data.selected && data.hadHistory) {
+          const ing = ingredients.find((i) => i.id === ingId);
+          const ok = window.confirm(
+            `"${ing?.name}" a ${data.historyCount} entrée(s) d'approvisionnement enregistrée(s).\nVoulez-vous aussi supprimer cet historique ?`
+          );
+          if (ok) await api.delete(`/api/stock/client/${ingId}/all-history`);
+        }
       } else if (activeType === 'franchise' && groupLabo) {
         ({ data } = await api.post(`/api/labo/${groupLabo.id}/ingredients/${ingId}/select`));
         if (user?.onboardingStep === 3) await advanceOnboarding(0);
@@ -328,6 +335,13 @@ export default function GlobalCataloguePage() {
         if (!actId) return;
         ({ data } = await api.post(`/api/entreprise/activites/${actId}/ingredients/${ingId}/select`));
         if (user?.onboardingStep === 3) await advanceOnboarding(0);
+        if (!data.selected && data.hadHistory) {
+          const ing = ingredients.find((i) => i.id === ingId);
+          const ok = window.confirm(
+            `"${ing?.name}" a ${data.historyCount} entrée(s) d'approvisionnement enregistrée(s) pour cette activité.\nVoulez-vous aussi supprimer cet historique ?`
+          );
+          if (ok) await api.delete(`/api/stock/entreprise/${actId}/${ingId}/all-history`);
+        }
       }
       setIngredients((prev) => prev.map((i) => (i.id === ingId ? { ...i, selected: data.selected } : i)));
     } finally {

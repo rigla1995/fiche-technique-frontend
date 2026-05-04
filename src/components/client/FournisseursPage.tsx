@@ -31,6 +31,7 @@ export default function FournisseursPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [foPage, setFoPage] = useState(1);
+  const [search, setSearch] = useState('');
 
   const FOURN_PAGE_SIZE = 10;
 
@@ -115,14 +116,28 @@ export default function FournisseursPage() {
 
   const nonLaboFournisseurs = fournisseurs.filter((f) => !f.isLabo);
   const laboFournisseurs = fournisseurs.filter((f) => f.isLabo);
-  const foTotalPages = Math.max(1, Math.ceil(nonLaboFournisseurs.length / FOURN_PAGE_SIZE));
-  const pagedFournisseurs = nonLaboFournisseurs.slice((foPage - 1) * FOURN_PAGE_SIZE, foPage * FOURN_PAGE_SIZE);
+  const filteredFournisseurs = search.trim()
+    ? nonLaboFournisseurs.filter((f) =>
+        f.nom.toLowerCase().includes(search.toLowerCase()) ||
+        (f.telephone ?? '').includes(search) ||
+        (f.adresse ?? '').toLowerCase().includes(search.toLowerCase())
+      )
+    : nonLaboFournisseurs;
+  const foTotalPages = Math.max(1, Math.ceil(filteredFournisseurs.length / FOURN_PAGE_SIZE));
+  const pagedFournisseurs = filteredFournisseurs.slice((foPage - 1) * FOURN_PAGE_SIZE, foPage * FOURN_PAGE_SIZE);
 
   return (
     <div className="page">
       <div className="page-header">
         <h1>🚚 Fournisseurs {isIndep ? 'Activité' : ''}</h1>
-        <button className="btn btn-primary" onClick={openCreate}>+ Nouveau fournisseur</button>
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+          <input
+            type="text" className="input" placeholder="Rechercher…" value={search}
+            onChange={(e) => { setSearch(e.target.value); setFoPage(1); }}
+            style={{ width: 200 }}
+          />
+          <button className="btn btn-primary" onClick={openCreate}>+ Nouveau fournisseur</button>
+        </div>
       </div>
 
       {loading ? (
@@ -205,10 +220,10 @@ export default function FournisseursPage() {
                     </td>
                   </tr>
                 ))}
-                {nonLaboFournisseurs.length === 0 && (
+                {filteredFournisseurs.length === 0 && (
                   <tr>
                     <td colSpan={isIndep ? 4 : 6} style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '24px' }}>
-                      Aucun fournisseur. Cliquez sur "+ Nouveau fournisseur".
+                      {search ? 'Aucun résultat.' : 'Aucun fournisseur. Cliquez sur "+ Nouveau fournisseur".'}
                     </td>
                   </tr>
                 )}
@@ -216,7 +231,7 @@ export default function FournisseursPage() {
             </table>
             {foTotalPages > 1 && (
               <div style={{ padding: '8px 14px', fontSize: '0.78rem', color: 'var(--text-muted)', borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <span>{nonLaboFournisseurs.length} fournisseur{nonLaboFournisseurs.length > 1 ? 's' : ''}</span>
+                <span>{filteredFournisseurs.length} fournisseur{filteredFournisseurs.length > 1 ? 's' : ''}{search ? ` (filtré${filteredFournisseurs.length > 1 ? 's' : ''})` : ''}</span>
                 <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                   <button className="btn btn-ghost btn-sm" disabled={foPage === 1} onClick={() => setFoPage((p) => Math.max(1, p - 1))} style={{ padding: '3px 10px', fontWeight: 700 }}>‹</button>
                   <span style={{ fontWeight: 600, color: 'var(--text)' }}>{foPage} / {foTotalPages}</span>
