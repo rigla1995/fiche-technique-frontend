@@ -130,13 +130,26 @@ export default function FournisseursPage() {
     <div className="page">
       <div className="page-header">
         <h1>🚚 Fournisseurs {isIndep ? 'Activité' : ''}</h1>
-        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-          <input
-            type="text" className="input" placeholder="Rechercher…" value={search}
-            onChange={(e) => { setSearch(e.target.value); setFoPage(1); }}
-            style={{ width: 200 }}
-          />
-          <button className="btn btn-primary" onClick={openCreate}>+ Nouveau fournisseur</button>
+        <button className="btn btn-primary" onClick={openCreate}>+ Nouveau fournisseur</button>
+      </div>
+
+      {/* Filter panel */}
+      <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, marginBottom: 24, overflow: 'hidden', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
+        <div style={{ padding: '12px 20px', borderBottom: '1px solid var(--border)', background: 'var(--bg-secondary, #f8fafc)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <span style={{ fontWeight: 700, fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.09em', color: 'var(--text-muted)' }}>Filtres</span>
+          {search && (
+            <button className="btn btn-ghost btn-sm" style={{ fontSize: '0.78rem' }} onClick={() => { setSearch(''); setFoPage(1); }}>✕ Réinitialiser</button>
+          )}
+        </div>
+        <div style={{ padding: '16px 20px' }}>
+          <div>
+            <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 5 }}>Recherche</span>
+            <input
+              type="text" className="input" placeholder="Nom, téléphone, adresse…" value={search}
+              onChange={(e) => { setSearch(e.target.value); setFoPage(1); }}
+              style={{ maxWidth: 320 }}
+            />
+          </div>
         </div>
       </div>
 

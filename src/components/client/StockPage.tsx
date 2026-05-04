@@ -1185,71 +1185,78 @@ function ActivityStockSection({ label, activities, isFranchise, onSave }: Activi
         )}
       </div>
 
-      <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap', alignItems: 'flex-end' }}>
-        {isFranchise && hasMultipleGroups && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-            <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Groupe</span>
-            <select className="input" style={{ maxWidth: 200 }} value={selectedGroup} onChange={(e) => setSelectedGroup(e.target.value)}>
-              {groupNames.map((g) => <option key={g} value={g}>{g}</option>)}
+      {/* Filter panel */}
+      <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, marginBottom: 24, overflow: 'hidden', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
+        <div style={{ padding: '12px 20px', borderBottom: '1px solid var(--border)', background: 'var(--bg-secondary, #f8fafc)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <span style={{ fontWeight: 700, fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.09em', color: 'var(--text-muted)' }}>Filtres</span>
+          {(categoryFilter || ingredientFilter !== '' || nameFilter || fournisseurFilter || refFactureFilter) && (
+            <button className="btn btn-ghost btn-sm" style={{ fontSize: '0.78rem' }} onClick={() => { setCategoryFilter(''); setIngredientFilter(''); setNameFilter(''); setFournisseurFilter(''); setRefFactureFilter(''); }}>✕ Réinitialiser</button>
+          )}
+        </div>
+        <div style={{ padding: '16px 20px', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '12px 20px' }}>
+          {isFranchise && hasMultipleGroups && (
+            <div>
+              <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 5 }}>Groupe</span>
+              <select className="input" style={{ width: '100%' }} value={selectedGroup} onChange={(e) => setSelectedGroup(e.target.value)}>
+                {groupNames.map((g) => <option key={g} value={g}>{g}</option>)}
+              </select>
+            </div>
+          )}
+          <div>
+            <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 5 }}>Activité</span>
+            <select className="input" style={{ width: '100%' }} value={selectedId} onChange={(e) => setSelectedId(Number(e.target.value))}>
+              {(isFranchise ? groupActivities : activities).map((a) => <option key={a.id} value={a.id}>{a.nom}</option>)}
             </select>
           </div>
-        )}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-          <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Activité</span>
-          <select className="input" style={{ maxWidth: 220 }} value={selectedId} onChange={(e) => setSelectedId(Number(e.target.value))}>
-            {(isFranchise ? groupActivities : activities).map((a) => <option key={a.id} value={a.id}>{a.nom}</option>)}
-          </select>
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-          <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Catégorie</span>
-          <select className="input" style={{ maxWidth: 200 }} value={categoryFilter} onChange={(e) => { setCategoryFilter(e.target.value); setIngredientFilter(''); }}>
-            <option value="">{t('client.catalogue_franchise.all_categories')}</option>
-            {allCategories.map((c) => <option key={c} value={c}>{c}</option>)}
-          </select>
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-          <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Ingrédient</span>
-          <select
-            className="input" style={{ maxWidth: 220 }} value={ingredientFilter} disabled={!categoryFilter}
-            onChange={(e) => setIngredientFilter(e.target.value === '' ? '' : Number(e.target.value))}
-          >
-            <option value="">— Tous —</option>
-            {entries.filter((e) => e.categorie === categoryFilter).map((e) => (
-              <option key={e.ingredientId} value={e.ingredientId}>{e.nom}</option>
-            ))}
-          </select>
-        </div>
-        <input
-          type="text" className="input"
-          style={{ minWidth: 120, flex: '1 1 auto', maxWidth: 200, alignSelf: 'flex-end' }}
-          placeholder={t('client.stock.search_ingredient')}
-          value={nameFilter}
-          onChange={(e) => setNameFilter(e.target.value)}
-        />
-        {fournisseurs.length > 0 && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-            <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Fournisseur</span>
-            <select className="input" style={{ maxWidth: 200 }} value={fournisseurFilter} onChange={(e) => setFournisseurFilter(e.target.value)}>
+          <div>
+            <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 5 }}>Catégorie</span>
+            <select className="input" style={{ width: '100%' }} value={categoryFilter} onChange={(e) => { setCategoryFilter(e.target.value); setIngredientFilter(''); }}>
+              <option value="">{t('client.catalogue_franchise.all_categories')}</option>
+              {allCategories.map((c) => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </div>
+          <div>
+            <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 5 }}>Ingrédient</span>
+            <select
+              className="input" style={{ width: '100%' }} value={ingredientFilter} disabled={!categoryFilter}
+              onChange={(e) => setIngredientFilter(e.target.value === '' ? '' : Number(e.target.value))}
+            >
               <option value="">— Tous —</option>
-              {fournisseurs.map((f) => (
-                <option key={f.id} value={f.id}>{f.isLabo ? '🏭 ' : '🚚 '}{f.nom}</option>
+              {entries.filter((e) => e.categorie === categoryFilter).map((e) => (
+                <option key={e.ingredientId} value={e.ingredientId}>{e.nom}</option>
               ))}
             </select>
           </div>
-        )}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-          <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Réf. Facture</span>
-          <input
-            type="text" className="input"
-            style={{ minWidth: 120, maxWidth: 180 }}
-            placeholder="Réf. facture…"
-            value={refFactureFilter}
-            onChange={(e) => setRefFactureFilter(e.target.value)}
-          />
+          <div>
+            <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 5 }}>Nom</span>
+            <input
+              type="text" className="input" style={{ width: '100%' }}
+              placeholder={t('client.stock.search_ingredient')}
+              value={nameFilter}
+              onChange={(e) => setNameFilter(e.target.value)}
+            />
+          </div>
+          {fournisseurs.length > 0 && (
+            <div>
+              <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 5 }}>Fournisseur</span>
+              <select className="input" style={{ width: '100%' }} value={fournisseurFilter} onChange={(e) => setFournisseurFilter(e.target.value)}>
+                <option value="">— Tous —</option>
+                {fournisseurs.map((f) => (
+                  <option key={f.id} value={f.id}>{f.isLabo ? '🏭 ' : '🚚 '}{f.nom}</option>
+                ))}
+              </select>
+            </div>
+          )}
+          <div>
+            <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 5 }}>Réf. Facture</span>
+            <input
+              type="text" className="input" style={{ width: '100%' }}
+              placeholder="Réf. facture…"
+              value={refFactureFilter}
+              onChange={(e) => setRefFactureFilter(e.target.value)}
+            />
+          </div>
         </div>
-        {(categoryFilter || ingredientFilter !== '' || nameFilter || fournisseurFilter || refFactureFilter) && (
-          <button className="btn btn-ghost btn-sm" style={{ alignSelf: 'flex-end' }} onClick={() => { setCategoryFilter(''); setIngredientFilter(''); setNameFilter(''); setFournisseurFilter(''); setRefFactureFilter(''); }}>✕</button>
-        )}
       </div>
 
       {loading ? (
@@ -1372,54 +1379,62 @@ export default function StockPage() {
           <p className="text-muted">{t('client.stock.empty_stock')}</p>
         ) : (
           <>
-            <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap', alignItems: 'flex-end' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Catégorie</span>
-                <select className="input" style={{ maxWidth: 200 }} value={clientCategoryFilter} onChange={(e) => { setClientCategoryFilter(e.target.value); setClientIngredientFilter(''); }}>
-                  <option value="">{t('client.catalogue_franchise.all_categories')}</option>
-                  {clientCategories.map((c) => <option key={c} value={c}>{c}</option>)}
-                </select>
+            {/* Filter panel */}
+            <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, marginBottom: 24, overflow: 'hidden', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
+              <div style={{ padding: '12px 20px', borderBottom: '1px solid var(--border)', background: 'var(--bg-secondary, #f8fafc)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span style={{ fontWeight: 700, fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.09em', color: 'var(--text-muted)' }}>Filtres</span>
+                {(clientCategoryFilter || clientIngredientFilter !== '' || clientNameFilter || clientFournisseurFilter || clientRefFactureFilter) && (
+                  <button className="btn btn-ghost btn-sm" style={{ fontSize: '0.78rem' }} onClick={() => { setClientCategoryFilter(''); setClientIngredientFilter(''); setClientNameFilter(''); setClientFournisseurFilter(''); setClientRefFactureFilter(''); }}>✕ Réinitialiser</button>
+                )}
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Ingrédient</span>
-                <select
-                  className="input" style={{ maxWidth: 220 }} value={clientIngredientFilter} disabled={!clientCategoryFilter}
-                  onChange={(e) => setClientIngredientFilter(e.target.value === '' ? '' : Number(e.target.value))}
-                >
-                  <option value="">— Tous —</option>
-                  {clientEntries.filter((e) => e.categorie === clientCategoryFilter).map((e) => (
-                    <option key={e.ingredientId} value={e.ingredientId}>{e.nom}</option>
-                  ))}
-                </select>
-              </div>
-              <input
-                type="text" className="input"
-                style={{ minWidth: 130, maxWidth: 200, alignSelf: 'flex-end' }}
-                placeholder={t('client.stock.search_ingredient')}
-                value={clientNameFilter}
-                onChange={(e) => setClientNameFilter(e.target.value)}
-              />
-              {indepFournisseurs.length > 0 && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                  <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Fournisseur</span>
-                  <select className="input" style={{ maxWidth: 200 }} value={clientFournisseurFilter} onChange={(e) => setClientFournisseurFilter(e.target.value)}>
-                    <option value="">— Tous —</option>
-                    {indepFournisseurs.map((f) => <option key={f.id} value={String(f.id)}>{f.nom}</option>)}
+              <div style={{ padding: '16px 20px', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '12px 20px' }}>
+                <div>
+                  <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 5 }}>Catégorie</span>
+                  <select className="input" style={{ width: '100%' }} value={clientCategoryFilter} onChange={(e) => { setClientCategoryFilter(e.target.value); setClientIngredientFilter(''); }}>
+                    <option value="">{t('client.catalogue_franchise.all_categories')}</option>
+                    {clientCategories.map((c) => <option key={c} value={c}>{c}</option>)}
                   </select>
                 </div>
-              )}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Réf. Facture</span>
-                <input
-                  type="text" className="input" style={{ minWidth: 120, maxWidth: 180 }}
-                  placeholder="Réf. facture…"
-                  value={clientRefFactureFilter}
-                  onChange={(e) => setClientRefFactureFilter(e.target.value)}
-                />
+                <div>
+                  <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 5 }}>Ingrédient</span>
+                  <select
+                    className="input" style={{ width: '100%' }} value={clientIngredientFilter} disabled={!clientCategoryFilter}
+                    onChange={(e) => setClientIngredientFilter(e.target.value === '' ? '' : Number(e.target.value))}
+                  >
+                    <option value="">— Tous —</option>
+                    {clientEntries.filter((e) => e.categorie === clientCategoryFilter).map((e) => (
+                      <option key={e.ingredientId} value={e.ingredientId}>{e.nom}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 5 }}>Nom</span>
+                  <input
+                    type="text" className="input" style={{ width: '100%' }}
+                    placeholder={t('client.stock.search_ingredient')}
+                    value={clientNameFilter}
+                    onChange={(e) => setClientNameFilter(e.target.value)}
+                  />
+                </div>
+                {indepFournisseurs.length > 0 && (
+                  <div>
+                    <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 5 }}>Fournisseur</span>
+                    <select className="input" style={{ width: '100%' }} value={clientFournisseurFilter} onChange={(e) => setClientFournisseurFilter(e.target.value)}>
+                      <option value="">— Tous —</option>
+                      {indepFournisseurs.map((f) => <option key={f.id} value={String(f.id)}>{f.nom}</option>)}
+                    </select>
+                  </div>
+                )}
+                <div>
+                  <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 5 }}>Réf. Facture</span>
+                  <input
+                    type="text" className="input" style={{ width: '100%' }}
+                    placeholder="Réf. facture…"
+                    value={clientRefFactureFilter}
+                    onChange={(e) => setClientRefFactureFilter(e.target.value)}
+                  />
+                </div>
               </div>
-              {(clientCategoryFilter || clientIngredientFilter !== '' || clientNameFilter || clientFournisseurFilter || clientRefFactureFilter) && (
-                <button className="btn btn-ghost btn-sm" style={{ alignSelf: 'flex-end' }} onClick={() => { setClientCategoryFilter(''); setClientIngredientFilter(''); setClientNameFilter(''); setClientFournisseurFilter(''); setClientRefFactureFilter(''); }}>✕</button>
-              )}
             </div>
             <StockMatrix
               entries={clientEntries}

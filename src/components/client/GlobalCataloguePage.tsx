@@ -312,21 +312,55 @@ export default function GlobalCataloguePage() {
 
   useEffect(() => { load(); }, [load]);
 
+  const [deselectModal, setDeselectModal] = useState<{ ingId: number; ingName: string; historyCount: number; actId?: number | null } | null>(null);
+
   const toggle = async (ingId: number) => {
+    const ing = ingredients.find((i) => i.id === ingId);
+    if (!ing) return;
+
+    if (ing.selected) {
+      // Pre-check history before deselecting
+      setToggling(ingId);
+      try {
+        if (!isEntreprise) {
+          const { data: hist } = await api.get(`/api/stock/client/${ingId}/history`);
+          setToggling(null);
+          if (hist.length > 0) {
+            setDeselectModal({ ingId, ingName: ing.nom, historyCount: hist.length });
+            return;
+          }
+        } else if (activeType !== 'franchise' || !groupLabo) {
+          const actId = activeType === 'franchise' ? selectedFranchiseActId : selectedActId;
+          if (actId) {
+            const { data: hist } = await api.get(`/api/stock/entreprise/${actId}/${ingId}/history`);
+            setToggling(null);
+            if (hist.length > 0) {
+              setDeselectModal({ ingId, ingName: ing.nom, historyCount: hist.length, actId });
+              return;
+            }
+          } else {
+            setToggling(null);
+          }
+        } else {
+          setToggling(null);
+        }
+      } catch {
+        setToggling(null);
+      }
+    }
+
+    await doToggle(ingId);
+  };
+
+  const doToggle = async (ingId: number, deleteHistory = false) => {
     setToggling(ingId);
     try {
-      let data: { selected: boolean; hadHistory?: boolean; historyCount?: number };
+      let data: { selected: boolean };
       if (!isEntreprise) {
         ({ data } = await api.post(`/ingredients/${ingId}/select`));
         refreshSelections();
         if (data.selected && user?.onboardingStep === 3) await advanceOnboarding(0);
-        if (!data.selected && data.hadHistory) {
-          const ing = ingredients.find((i) => i.id === ingId);
-          const ok = window.confirm(
-            `"${ing?.name}" a ${data.historyCount} entrée(s) d'approvisionnement enregistrée(s).\nVoulez-vous aussi supprimer cet historique ?`
-          );
-          if (ok) await api.delete(`/api/stock/client/${ingId}/all-history`);
-        }
+        if (deleteHistory) await api.delete(`/api/stock/client/${ingId}/all-history`);
       } else if (activeType === 'franchise' && groupLabo) {
         ({ data } = await api.post(`/api/labo/${groupLabo.id}/ingredients/${ingId}/select`));
         if (user?.onboardingStep === 3) await advanceOnboarding(0);
@@ -335,13 +369,7 @@ export default function GlobalCataloguePage() {
         if (!actId) return;
         ({ data } = await api.post(`/api/entreprise/activites/${actId}/ingredients/${ingId}/select`));
         if (user?.onboardingStep === 3) await advanceOnboarding(0);
-        if (!data.selected && data.hadHistory) {
-          const ing = ingredients.find((i) => i.id === ingId);
-          const ok = window.confirm(
-            `"${ing?.name}" a ${data.historyCount} entrée(s) d'approvisionnement enregistrée(s) pour cette activité.\nVoulez-vous aussi supprimer cet historique ?`
-          );
-          if (ok) await api.delete(`/api/stock/entreprise/${actId}/${ingId}/all-history`);
-        }
+        if (deleteHistory) await api.delete(`/api/stock/entreprise/${actId}/${ingId}/all-history`);
       }
       setIngredients((prev) => prev.map((i) => (i.id === ingId ? { ...i, selected: data.selected } : i)));
     } finally {
@@ -470,6 +498,40 @@ export default function GlobalCataloguePage() {
           <Link to="/client/ingredients" style={{ color: 'var(--primary)', fontWeight: 600 }}>
             {t('nav.ingredients_catalog', 'Catalogue Ingrédients')}
           </Link>
+        </div>
+      )}
+
+      {deselectModal && (
+        <div className="modal-overlay" onClick={() => setDeselectModal(null)}>
+          <div className="modal" style={{ maxWidth: 440 }} onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header" style={{ background: '#fff7ed', borderBottom: '1px solid #fbd38d' }}>
+              <h2 style={{ color: '#c05621' }}>⚠️ Désassigner l'ingrédient</h2>
+              <button className="modal-close" onClick={() => setDeselectModal(null)}>×</button>
+            </div>
+            <div className="modal-body">
+              <p style={{ marginBottom: 12 }}>
+                <strong>"{deselectModal.ingName}"</strong> possède{' '}
+                <strong>{deselectModal.historyCount}</strong> entrée{deselectModal.historyCount > 1 ? 's' : ''} d'approvisionnement enregistrée{deselectModal.historyCount > 1 ? 's' : ''}.
+              </p>
+              <p style={{ color: 'var(--danger)', fontSize: '0.88rem' }}>
+                En confirmant, l'ingrédient sera désassigné <strong>et tout son historique d'appros sera supprimé définitivement</strong>.
+              </p>
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-ghost" onClick={() => setDeselectModal(null)}>Annuler</button>
+              <button
+                className="btn btn-danger"
+                style={{ background: 'var(--danger)', color: '#fff', border: 'none' }}
+                onClick={async () => {
+                  const m = deselectModal;
+                  setDeselectModal(null);
+                  await doToggle(m.ingId, true);
+                }}
+              >
+                Désassigner et supprimer
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

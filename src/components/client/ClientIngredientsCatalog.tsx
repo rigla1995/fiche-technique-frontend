@@ -19,6 +19,7 @@ export default function ClientIngredientsCatalog({ embedded, onSelectionDone }: 
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [togglingId, setTogglingId] = useState<number | null>(null);
+  const [deselectModal, setDeselectModal] = useState<{ ing: Ingredient; historyCount: number } | null>(null);
 
   const fetchIngredients = () => {
     setLoading(true);
@@ -27,24 +28,35 @@ export default function ClientIngredientsCatalog({ embedded, onSelectionDone }: 
 
   useEffect(() => { fetchIngredients(); }, []);
 
-  const toggleSelection = async (ing: Ingredient) => {
+  const doToggle = async (ing: Ingredient, deleteHistory = false) => {
     setTogglingId(ing.id);
     try {
       const { data } = await api.post(`/ingredients/${ing.id}/select`);
       setIngredients((list) => list.map((i) => (i.id === ing.id ? { ...i, selected: data.selected } : i)));
       refreshSelections();
-      if (data.selected && user?.onboardingStep === 3) {
-        await advanceOnboarding(0);
-      }
-      if (!data.selected && data.hadHistory) {
-        const ok = window.confirm(
-          `"${ing.name}" a ${data.historyCount} entrée(s) d'approvisionnement enregistrée(s).\nVoulez-vous aussi supprimer cet historique ?`
-        );
-        if (ok) await api.delete(`/api/stock/client/${ing.id}/all-history`);
-      }
+      if (data.selected && user?.onboardingStep === 3) await advanceOnboarding(0);
+      if (deleteHistory) await api.delete(`/api/stock/client/${ing.id}/all-history`);
     } finally {
       setTogglingId(null);
     }
+  };
+
+  const toggleSelection = async (ing: Ingredient) => {
+    if (ing.selected) {
+      // Pre-check history before deselecting
+      setTogglingId(ing.id);
+      try {
+        const { data: hist } = await api.get(`/api/stock/client/${ing.id}/history`);
+        setTogglingId(null);
+        if (hist.length > 0) {
+          setDeselectModal({ ing, historyCount: hist.length });
+          return;
+        }
+      } catch {
+        setTogglingId(null);
+      }
+    }
+    await doToggle(ing);
   };
 
   const selectedCount = ingredients.filter((i) => i.selected).length;
@@ -179,6 +191,39 @@ export default function ClientIngredientsCatalog({ embedded, onSelectionDone }: 
           </div>
         )}
         </>
+      )}
+      {deselectModal && (
+        <div className="modal-overlay" onClick={() => setDeselectModal(null)}>
+          <div className="modal" style={{ maxWidth: 440 }} onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header" style={{ background: '#fff7ed', borderBottom: '1px solid #fbd38d' }}>
+              <h2 style={{ color: '#c05621' }}>⚠️ Désassigner l'ingrédient</h2>
+              <button className="modal-close" onClick={() => setDeselectModal(null)}>×</button>
+            </div>
+            <div className="modal-body">
+              <p style={{ marginBottom: 12 }}>
+                <strong>"{deselectModal.ing.name}"</strong> possède{' '}
+                <strong>{deselectModal.historyCount}</strong> entrée{deselectModal.historyCount > 1 ? 's' : ''} d'approvisionnement enregistrée{deselectModal.historyCount > 1 ? 's' : ''}.
+              </p>
+              <p style={{ color: 'var(--danger)', fontSize: '0.88rem' }}>
+                En confirmant, l'ingrédient sera désassigné <strong>et tout son historique d'appros sera supprimé définitivement</strong>.
+              </p>
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-ghost" onClick={() => setDeselectModal(null)}>Annuler</button>
+              <button
+                className="btn btn-danger"
+                style={{ background: 'var(--danger)', color: '#fff', border: 'none' }}
+                onClick={async () => {
+                  const m = deselectModal;
+                  setDeselectModal(null);
+                  await doToggle(m.ing, true);
+                }}
+              >
+                Désassigner et supprimer
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
