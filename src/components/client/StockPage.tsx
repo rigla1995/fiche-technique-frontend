@@ -3,7 +3,7 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
-import type { Activite, StockEntry, StockHistoryEntry, ActiviteTypesSummary, Fournisseur } from '../../types';
+import type { Activite, StockEntry, StockHistoryEntry, ActiviteTypesSummary, Fournisseur, ProduitTransformeStockEntry, ProduitTransformeHistoryEntry } from '../../types';
 
 const currentYear = new Date().getFullYear();
 const yearStart = `${currentYear}-01-01`;
@@ -1306,6 +1306,12 @@ export default function StockPage() {
   const [activitesLoading, setActivitesLoading] = useState(false);
   const [indepFournisseurs, setIndepFournisseurs] = useState<Fournisseur[]>([]);
 
+  const [ptEntries, setPtEntries] = useState<ProduitTransformeStockEntry[]>([]);
+  const [ptRows, setPtRows] = useState<Record<number, { quantite: string; dateAppro: string; saving: boolean; saved: boolean; error: string }>>({});
+  const [ptHistoryOpen, setPtHistoryOpen] = useState<Record<number, boolean>>({});
+  const [ptHistoryData, setPtHistoryData] = useState<Record<number, ProduitTransformeHistoryEntry[]>>({});
+  const [ptSeuilEdits, setPtSeuilEdits] = useState<Record<number, string>>({});
+
   const loadClientStock = useCallback(async () => {
     setClientLoading(true);
     setClientCategoryFilter('');
@@ -1313,6 +1319,14 @@ export default function StockPage() {
     try {
       const { data } = await api.get('/api/stock/client');
       setClientEntries(data);
+      api.get('/api/stock/pt').then(({ data }) => {
+        setPtEntries(data as ProduitTransformeStockEntry[]);
+        const rows: Record<number, { quantite: string; dateAppro: string; saving: boolean; saved: boolean; error: string }> = {};
+        for (const e of data) {
+          rows[e.produitId] = { quantite: '0', dateAppro: todayStr(), saving: false, saved: false, error: '' };
+        }
+        setPtRows(rows);
+      }).catch(() => {});
     } catch { /* ignore */ }
     setClientLoading(false);
   }, []);
@@ -1356,6 +1370,43 @@ export default function StockPage() {
       fournisseurId: fournisseurId ?? null,
       refFacture: refFacture ?? null,
     });
+  };
+
+  const savePT = async (produitId: number) => {
+    const row = ptRows[produitId];
+    if (!row || !row.quantite || !row.dateAppro) return;
+    setPtRows((p) => ({ ...p, [produitId]: { ...p[produitId], saving: true, error: '' } }));
+    try {
+      const { data } = await api.put(`/api/stock/pt/${produitId}`, { quantite: parseFloat(row.quantite), dateAppro: row.dateAppro });
+      setPtEntries((prev) => prev.map((e) => e.produitId === produitId ? { ...e, totalQuantite: data.totalQuantite, lastPrixCalcule: data.prixCalcule, lastDateAppro: data.dateAppro, prixPartiel: data.prixPartiel } : e));
+      setPtRows((p) => ({ ...p, [produitId]: { ...p[produitId], saving: false, saved: true, error: '' } }));
+      setTimeout(() => setPtRows((p) => ({ ...p, [produitId]: { ...p[produitId], saved: false } })), 2500);
+    } catch {
+      setPtRows((p) => ({ ...p, [produitId]: { ...p[produitId], saving: false, error: 'Erreur' } }));
+    }
+  };
+
+  const fetchPTHistory = async (produitId: number) => {
+    try {
+      const { data } = await api.get(`/api/stock/pt/${produitId}/history`);
+      setPtHistoryData((p) => ({ ...p, [produitId]: data }));
+    } catch { /* ignore */ }
+  };
+
+  const togglePTHistory = (produitId: number) => {
+    setPtHistoryOpen((p) => {
+      const next = !p[produitId];
+      if (next) fetchPTHistory(produitId);
+      return { ...p, [produitId]: next };
+    });
+  };
+
+  const savePTSeuilMin = async (produitId: number) => {
+    const val = ptSeuilEdits[produitId];
+    if (val === undefined) return;
+    try {
+      await api.put(`/api/stock/pt/${produitId}/seuil-min`, { seuilMin: val ? parseFloat(val) : null });
+    } catch { /* ignore */ }
   };
 
   const clientCategories = Array.from(new Set(
@@ -1447,6 +1498,138 @@ export default function StockPage() {
               fournisseurs={indepFournisseurs}
               onSave={saveClientStock}
             />
+            {ptEntries.length > 0 && (
+              <div style={{ marginTop: 32 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14, paddingBottom: 10, borderBottom: '2px solid var(--border)' }}>
+                  <span style={{ width: 4, height: 22, borderRadius: 4, background: 'linear-gradient(180deg, #7c3aed 0%, #a78bfa 100%)', display: 'inline-block' }} />
+                  <h2 style={{ fontSize: '0.9rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--text)', margin: 0 }}>
+                    📦 Produits Transformés
+                  </h2>
+                </div>
+                <div className="table-responsive card th-blue">
+                  <table className="table">
+                    <thead>
+                      <tr>
+                        <th>{t('client.stock.ingredient')}</th>
+                        <th style={{ textAlign: 'right' }}>Total Stock<br /><span style={{ fontSize: '0.65rem', fontWeight: 400, color: 'var(--text-muted)' }}>mois en cours</span></th>
+                        <th style={{ textAlign: 'center' }}>Seuil min</th>
+                        <th style={{ textAlign: 'right' }}>Nouvelle Qté</th>
+                        <th style={{ textAlign: 'right' }}>Prix calculé (DT)</th>
+                        <th>{t('client.stock.date_appro')}</th>
+                        <th></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {ptEntries.map((entry) => {
+                        const row = ptRows[entry.produitId] ?? { quantite: '0', dateAppro: todayStr(), saving: false, saved: false, error: '' };
+                        const isHistOpen = ptHistoryOpen[entry.produitId] ?? false;
+                        const hist = ptHistoryData[entry.produitId];
+                        const totalQty = entry.totalQuantite;
+                        const seuilMin = entry.seuilMin ?? null;
+                        const cls = totalQty !== null && seuilMin !== null
+                          ? (totalQty <= 0 ? 'stock-alarm-critical' : totalQty <= seuilMin ? 'stock-alarm-warn' : 'stock-ok')
+                          : '';
+                        const canSaveRow = row.quantite.trim() !== '' && parseFloat(row.quantite) > 0 && row.dateAppro.trim() !== '' && !row.saving && canWrite;
+                        return (
+                          <>
+                            <tr key={entry.produitId}>
+                              <td>
+                                <div style={{ fontWeight: 600 }}>{entry.nom}</div>
+                                {entry.prixPartiel && <div style={{ fontSize: '0.72rem', color: '#d97706' }}>⚠️ Prix partiel</div>}
+                              </td>
+                              <td style={{ textAlign: 'right' }}>
+                                <span className={cls} style={{ fontSize: '1rem' }}>{totalQty !== null ? totalQty.toFixed(3) : '—'}</span>
+                              </td>
+                              <td style={{ textAlign: 'center' }}>
+                                <input
+                                  type="number" min="0" step="0.001" placeholder="—"
+                                  value={ptSeuilEdits[entry.produitId] ?? ''}
+                                  onChange={(e) => setPtSeuilEdits((p) => ({ ...p, [entry.produitId]: e.target.value }))}
+                                  onBlur={() => savePTSeuilMin(entry.produitId)}
+                                  style={{ width: 72, textAlign: 'right', fontSize: '0.82rem' }}
+                                  className="input"
+                                  disabled={!canWrite}
+                                />
+                              </td>
+                              <td style={{ textAlign: 'right' }}>
+                                <input
+                                  type="number" min="0" step="0.001" placeholder="0"
+                                  value={row.quantite}
+                                  onChange={(e) => setPtRows((p) => ({ ...p, [entry.produitId]: { ...p[entry.produitId], quantite: e.target.value } }))}
+                                  style={{ width: 90, textAlign: 'right' }}
+                                  className="input"
+                                  disabled={!canWrite}
+                                />
+                              </td>
+                              <td style={{ textAlign: 'right', fontWeight: 600, color: '#1d4ed8' }}>
+                                {entry.lastPrixCalcule !== null ? entry.lastPrixCalcule.toFixed(3) : '—'}
+                              </td>
+                              <td>
+                                <input
+                                  type="date" className="input" style={{ maxWidth: 150 }}
+                                  min={yearStart} max={yearEnd}
+                                  value={row.dateAppro}
+                                  onChange={(e) => setPtRows((p) => ({ ...p, [entry.produitId]: { ...p[entry.produitId], dateAppro: e.target.value } }))}
+                                  disabled={!canWrite}
+                                />
+                              </td>
+                              <td style={{ whiteSpace: 'nowrap' }}>
+                                {row.error && <span style={{ color: 'var(--danger)', fontSize: '0.75rem', marginRight: 4 }}>!</span>}
+                                <button
+                                  className={`btn btn-sm ${row.saved ? 'btn-success' : 'btn-primary'}`}
+                                  onClick={() => savePT(entry.produitId)}
+                                  disabled={!canSaveRow}
+                                  style={{ marginRight: 4 }}
+                                >
+                                  {row.saving ? '…' : row.saved ? '✓' : t('client.stock.save')}
+                                </button>
+                                <button
+                                  className="btn btn-ghost btn-sm"
+                                  onClick={() => togglePTHistory(entry.produitId)}
+                                  title={t('client.stock.history')}
+                                >
+                                  {isHistOpen ? '▲' : '▼'}
+                                </button>
+                              </td>
+                            </tr>
+                            {isHistOpen && (
+                              <tr key={`${entry.produitId}-hist`}>
+                                <td colSpan={7} style={{ background: '#f8faff', padding: '8px 16px' }}>
+                                  {!hist ? (
+                                    <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{t('common.loading')}</span>
+                                  ) : hist.length === 0 ? (
+                                    <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{t('client.stock.no_history')}</span>
+                                  ) : (
+                                    <table style={{ fontSize: '0.8rem', width: '100%', marginBottom: 6 }}>
+                                      <thead>
+                                        <tr>
+                                          <th style={{ textAlign: 'left', color: 'var(--text-muted)', fontWeight: 600, paddingBottom: 4 }}>{t('client.stock.date_appro')}</th>
+                                          <th style={{ textAlign: 'right', color: 'var(--text-muted)', fontWeight: 600, paddingBottom: 4 }}>{t('client.stock.qty')}</th>
+                                          <th style={{ textAlign: 'right', color: 'var(--text-muted)', fontWeight: 600, paddingBottom: 4 }}>Prix calculé</th>
+                                        </tr>
+                                      </thead>
+                                      <tbody>
+                                        {hist.map((h) => (
+                                          <tr key={h.id}>
+                                            <td style={{ color: 'var(--primary)', fontWeight: 600 }}>{fmtDate(h.dateAppro)}</td>
+                                            <td style={{ textAlign: 'right' }}>{h.quantite ?? '—'}</td>
+                                            <td style={{ textAlign: 'right', color: '#1d4ed8' }}>{h.prixCalcule !== null ? h.prixCalcule.toFixed(3) : '—'}</td>
+                                          </tr>
+                                        ))}
+                                      </tbody>
+                                    </table>
+                                  )}
+                                </td>
+                              </tr>
+                            )}
+                          </>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
           </>
         )
       )}

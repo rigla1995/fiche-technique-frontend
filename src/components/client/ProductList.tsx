@@ -43,6 +43,8 @@ export default function ProductList() {
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
+  const [togglingPT, setTogglingPT] = useState<number | null>(null);
+  const [ptDeselectModal, setPtDeselectModal] = useState<{ id: number; nom: string; historyCount: number } | null>(null);
 
   const [openProductGroups, setOpenProductGroups] = useState<Set<string>>(new Set());
 
@@ -123,6 +125,35 @@ export default function ProductList() {
     if (!window.confirm(t('client.products.delete_confirm'))) return;
     await api.delete(`/products/${id}`);
     setProducts((p) => p.filter((x) => x.id !== id));
+  };
+
+  const togglePT = async (p: Product) => {
+    if (p.isStockIngredient) {
+      // Pre-check history before untoggling
+      setTogglingPT(p.id);
+      try {
+        const { data: hist } = await api.get(`/api/stock/pt/${p.id}/history`);
+        setTogglingPT(null);
+        if (hist.length > 0) {
+          setPtDeselectModal({ id: p.id, nom: p.name, historyCount: hist.length });
+          return;
+        }
+      } catch {
+        setTogglingPT(null);
+      }
+    }
+    await doTogglePT(p.id);
+  };
+
+  const doTogglePT = async (id: number, deleteHistory = false) => {
+    setTogglingPT(id);
+    try {
+      await api.post(`/api/produits/${id}/toggle-stock-ingredient`);
+      if (deleteHistory) await api.delete(`/api/produits/${id}/stock-pt-history`);
+      setProducts((prev) => prev.map((p) => p.id === id ? { ...p, isStockIngredient: !p.isStockIngredient } : p));
+    } finally {
+      setTogglingPT(null);
+    }
   };
 
   // Build actCtx query string for links
@@ -292,6 +323,7 @@ export default function ProductList() {
                   <th>Activité</th>
                   <th style={{ textAlign: 'center' }}>🧂 {t('nav.ingredients')}</th>
                   {isVendable && <th style={{ textAlign: 'center' }}>📦 P.Utilisables</th>}
+                  {!isVendable && <th style={{ width: 60, textAlign: 'center' }}>📦 Stock</th>}
                   <th style={{ textAlign: 'right' }}>{t('common.actions')}</th>
                 </tr>
               </thead>
@@ -334,6 +366,19 @@ export default function ProductList() {
                           </button>
                         </td>
                       )}
+                      {!isVendable && (
+                        <td style={{ textAlign: 'center' }}>
+                          <button
+                            className="btn btn-ghost btn-sm"
+                            onClick={() => togglePT(p)}
+                            disabled={togglingPT === p.id}
+                            title={p.isStockIngredient ? 'Retirer du stock' : 'Ajouter au stock'}
+                            style={{ fontSize: '1rem', color: p.isStockIngredient ? 'var(--success)' : 'var(--text-muted)' }}
+                          >
+                            {togglingPT === p.id ? '…' : p.isStockIngredient ? '✓' : '○'}
+                          </button>
+                        </td>
+                      )}
                       <td style={{ textAlign: 'right' }}>{renderActions(p)}</td>
                     </tr>
                   );
@@ -367,6 +412,7 @@ export default function ProductList() {
                   <th>{t('common.name')}</th>
                   <th style={{ textAlign: 'center' }}>🧂 {t('nav.ingredients')}</th>
                   {isVendable && <th style={{ textAlign: 'center' }}>📦 P.Utilisables</th>}
+                  {!isVendable && <th style={{ width: 60, textAlign: 'center' }}>📦 Stock</th>}
                   <th style={{ textAlign: 'right' }}>{t('common.actions')}</th>
                 </tr>
               </thead>
@@ -389,6 +435,19 @@ export default function ProductList() {
                           disabled={!p.subProductsCount}
                           style={{ opacity: p.subProductsCount ? 1 : 0.4, cursor: p.subProductsCount ? 'pointer' : 'default' }}>
                           {p.subProductsCount ?? 0}
+                        </button>
+                      </td>
+                    )}
+                    {!isVendable && (
+                      <td style={{ textAlign: 'center' }}>
+                        <button
+                          className="btn btn-ghost btn-sm"
+                          onClick={() => togglePT(p)}
+                          disabled={togglingPT === p.id}
+                          title={p.isStockIngredient ? 'Retirer du stock' : 'Ajouter au stock'}
+                          style={{ fontSize: '1rem', color: p.isStockIngredient ? 'var(--success)' : 'var(--text-muted)' }}
+                        >
+                          {togglingPT === p.id ? '…' : p.isStockIngredient ? '✓' : '○'}
                         </button>
                       </td>
                     )}
@@ -589,6 +648,7 @@ export default function ProductList() {
                           <th>{t('common.name')}</th>
                           <th style={{ textAlign: 'center' }}>🧂 {t('nav.ingredients')}</th>
                           {isVendable && <th style={{ textAlign: 'center' }}>📦 P.Utilisables</th>}
+                          {!isVendable && <th style={{ width: 60, textAlign: 'center' }}>📦 Stock</th>}
                           <th style={{ textAlign: 'right' }}>{t('common.actions')}</th>
                         </tr>
                       </thead>
@@ -611,6 +671,19 @@ export default function ProductList() {
                                   disabled={!p.subProductsCount}
                                   style={{ opacity: p.subProductsCount ? 1 : 0.4, cursor: p.subProductsCount ? 'pointer' : 'default' }}>
                                   {p.subProductsCount ?? 0}
+                                </button>
+                              </td>
+                            )}
+                            {!isVendable && (
+                              <td style={{ textAlign: 'center' }}>
+                                <button
+                                  className="btn btn-ghost btn-sm"
+                                  onClick={() => togglePT(p)}
+                                  disabled={togglingPT === p.id}
+                                  title={p.isStockIngredient ? 'Retirer du stock' : 'Ajouter au stock'}
+                                  style={{ fontSize: '1rem', color: p.isStockIngredient ? 'var(--success)' : 'var(--text-muted)' }}
+                                >
+                                  {togglingPT === p.id ? '…' : p.isStockIngredient ? '✓' : '○'}
                                 </button>
                               </td>
                             )}
@@ -749,6 +822,40 @@ export default function ProductList() {
                 </div>
                 <div className="modal-footer">
                   <button className="btn btn-ghost" onClick={closePopup}>{t('common.close')}</button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {ptDeselectModal && (
+            <div className="modal-overlay" onClick={() => setPtDeselectModal(null)}>
+              <div className="modal" style={{ maxWidth: 440 }} onClick={(e) => e.stopPropagation()}>
+                <div className="modal-header" style={{ background: '#fff7ed', borderBottom: '1px solid #fbd38d' }}>
+                  <h2 style={{ color: '#c05621' }}>⚠️ Retirer du stock</h2>
+                  <button className="modal-close" onClick={() => setPtDeselectModal(null)}>×</button>
+                </div>
+                <div className="modal-body">
+                  <p style={{ marginBottom: 12 }}>
+                    <strong>"{ptDeselectModal.nom}"</strong> possède{' '}
+                    <strong>{ptDeselectModal.historyCount}</strong> entrée{ptDeselectModal.historyCount > 1 ? 's' : ''} d'approvisionnement enregistrée{ptDeselectModal.historyCount > 1 ? 's' : ''}.
+                  </p>
+                  <p style={{ color: 'var(--danger)', fontSize: '0.88rem' }}>
+                    En confirmant, le produit sera retiré du stock <strong>et tout son historique sera supprimé définitivement</strong>.
+                  </p>
+                </div>
+                <div className="modal-footer">
+                  <button className="btn btn-ghost" onClick={() => setPtDeselectModal(null)}>Annuler</button>
+                  <button
+                    className="btn btn-danger"
+                    style={{ background: 'var(--danger)', color: '#fff', border: 'none' }}
+                    onClick={async () => {
+                      const m = ptDeselectModal;
+                      setPtDeselectModal(null);
+                      await doTogglePT(m.id, true);
+                    }}
+                  >
+                    Retirer et supprimer
+                  </button>
                 </div>
               </div>
             </div>

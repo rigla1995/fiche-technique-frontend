@@ -135,6 +135,7 @@ export interface Product {
   activiteType?: 'franchise' | 'distincte' | null;
   franchiseGroup?: string | null;
   createdAt?: string;
+  isStockIngredient?: boolean;
 }
 
 export interface Client {
@@ -294,4 +295,23 @@ export interface ActiviteIngredient {
 export interface ApiError {
   message: string;
   statusCode?: number;
+}
+
+export interface ProduitTransformeStockEntry {
+  produitId: number;
+  nom: string;
+  totalQuantite: number | null;
+  lastDateAppro: string | null;
+  lastPrixCalcule: number | null;
+  seuilMin: number | null;
+  prixPartiel: boolean;
+}
+
+export interface ProduitTransformeHistoryEntry {
+  id: number;
+  produitId: number;
+  dateAppro: string;
+  quantite: number | null;
+  prixCalcule: number | null;
+  createdAt: string;
 }

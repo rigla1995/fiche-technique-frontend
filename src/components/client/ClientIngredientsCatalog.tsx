@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
 import { useSelection } from '../../context/SelectionContext';
 import { useAuth } from '../../context/AuthContext';
-import type { Ingredient } from '../../types';
+import type { Ingredient, ProduitTransformeStockEntry } from '../../types';
 
 interface Props {
   embedded?: boolean;
@@ -20,6 +20,7 @@ export default function ClientIngredientsCatalog({ embedded, onSelectionDone }: 
   const [search, setSearch] = useState('');
   const [togglingId, setTogglingId] = useState<number | null>(null);
   const [deselectModal, setDeselectModal] = useState<{ ing: Ingredient; historyCount: number } | null>(null);
+  const [ptProducts, setPtProducts] = useState<ProduitTransformeStockEntry[]>([]);
 
   const fetchIngredients = () => {
     setLoading(true);
@@ -27,6 +28,10 @@ export default function ClientIngredientsCatalog({ embedded, onSelectionDone }: 
   };
 
   useEffect(() => { fetchIngredients(); }, []);
+
+  useEffect(() => {
+    api.get('/api/stock/pt').then(({ data }) => setPtProducts(data)).catch(() => {});
+  }, []);
 
   const doToggle = async (ing: Ingredient, deleteHistory = false) => {
     setTogglingId(ing.id);
@@ -204,6 +209,41 @@ export default function ClientIngredientsCatalog({ embedded, onSelectionDone }: 
           </div>
         )}
         </>
+      )}
+      {ptProducts.length > 0 && (
+        <div style={{ marginTop: 28 }}>
+          <h2 style={{ fontSize: '1rem', fontWeight: 700, color: '#7c3aed', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
+            📦 Produits Transformés
+            <span style={{ fontSize: '0.78rem', fontWeight: 400, color: 'var(--text-muted)' }}>({ptProducts.length})</span>
+          </h2>
+          <div className="table-responsive card">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>{t('common.name')}</th>
+                  <th style={{ textAlign: 'right' }}>Stock mois</th>
+                  <th style={{ textAlign: 'right' }}>Prix calculé</th>
+                </tr>
+              </thead>
+              <tbody>
+                {ptProducts.map((p) => (
+                  <tr key={p.produitId} style={{ background: 'var(--primary-light)' }}>
+                    <td style={{ fontWeight: 600 }}>
+                      {p.nom}
+                      {p.prixPartiel && <span style={{ fontSize: '0.72rem', color: '#d97706', marginLeft: 8 }}>⚠️ Prix partiel</span>}
+                    </td>
+                    <td style={{ textAlign: 'right' }}>
+                      {p.totalQuantite !== null ? p.totalQuantite.toFixed(3) : '—'}
+                    </td>
+                    <td style={{ textAlign: 'right', color: '#1d4ed8', fontWeight: 600 }}>
+                      {p.lastPrixCalcule !== null ? `${p.lastPrixCalcule.toFixed(3)} DT` : '—'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
       )}
       {deselectModal && (
         <div className="modal-overlay" onClick={() => setDeselectModal(null)}>
