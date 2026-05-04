@@ -442,62 +442,89 @@ export default function ProductList() {
         <>
           {/* Franchise filters */}
           {isEntreprise && isFranchiseCtx && tab !== 'fiche-technique' && byTab.length > 0 && (
-            <div style={{ display: 'flex', gap: 12, marginBottom: 18, flexWrap: 'wrap', alignItems: 'flex-end', background: 'var(--surface)', padding: '14px 16px', borderRadius: 12, border: '1px solid var(--border)' }}>
-              {activitesLoading ? (
-                <span style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>{t('common.loading')}</span>
-              ) : (
-                <>
-                  {franchiseGroups.length > 1 && (
-                    <div style={{ display: 'flex', flexDirection: 'column' }}>
-                      <span style={labelStyle}>Franchise</span>
-                      <select className="input" style={{ maxWidth: 220 }} value={filterFranchiseGroup}
-                        onChange={(e) => { setFilterFranchiseGroup(e.target.value); setPage(1); }}>
-                        <option value="">Toutes les franchises</option>
-                        {franchiseGroups.map((g) => <option key={g} value={g}>{g}</option>)}
-                      </select>
-                    </div>
-                  )}
-                  {franchiseActivities.length > 1 && (
-                    <div style={{ display: 'flex', flexDirection: 'column' }}>
-                      <span style={labelStyle}>Activité</span>
-                      <select className="input" style={{ maxWidth: 220 }} value={filterFranchiseActId}
-                        onChange={(e) => { setFilterFranchiseActId(e.target.value); setPage(1); }}>
-                        <option value="">Toutes les activités</option>
-                        {franchiseActivities
-                          .filter((a) => !filterFranchiseGroup || (a.franchiseGroup || a.nom) === filterFranchiseGroup)
-                          .map((a) => <option key={a.id} value={a.id}>{a.nom}</option>)}
-                      </select>
-                    </div>
-                  )}
-                </>
-              )}
-              <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
-                <span style={labelStyle}>🔍 {t('common.search')}</span>
-                <input type="text" placeholder={t('common.search') + '...'} value={search}
-                  onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-                  className="input" style={{ maxWidth: 300 }} />
+            <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, marginBottom: 24, overflow: 'hidden', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
+              <div style={{ padding: '12px 20px', borderBottom: '1px solid var(--border)', background: 'var(--bg-secondary, #f8fafc)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span style={{ fontWeight: 700, fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.09em', color: 'var(--text-muted)' }}>Filtres</span>
+                {(filterFranchiseGroup || filterFranchiseActId || search) && (
+                  <button className="btn btn-ghost btn-sm" style={{ fontSize: '0.78rem' }} onClick={() => { setFilterFranchiseGroup(''); setFilterFranchiseActId(''); setSearch(''); setPage(1); }}>✕ Réinitialiser</button>
+                )}
+              </div>
+              <div style={{ padding: '16px 20px', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '12px 20px' }}>
+                {activitesLoading ? (
+                  <span style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>{t('common.loading')}</span>
+                ) : (
+                  <>
+                    {franchiseGroups.length > 1 && (
+                      <div>
+                        <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 5 }}>Franchise</span>
+                        <select className="input" style={{ width: '100%' }} value={filterFranchiseGroup}
+                          onChange={(e) => { setFilterFranchiseGroup(e.target.value); setPage(1); }}>
+                          <option value="">Toutes les franchises</option>
+                          {franchiseGroups.map((g) => <option key={g} value={g}>{g}</option>)}
+                        </select>
+                      </div>
+                    )}
+                    {franchiseActivities.length > 1 && (
+                      <div>
+                        <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 5 }}>Activité</span>
+                        <select className="input" style={{ width: '100%' }} value={filterFranchiseActId}
+                          onChange={(e) => { setFilterFranchiseActId(e.target.value); setPage(1); }}>
+                          <option value="">Toutes les activités</option>
+                          {franchiseActivities
+                            .filter((a) => !filterFranchiseGroup || (a.franchiseGroup || a.nom) === filterFranchiseGroup)
+                            .map((a) => <option key={a.id} value={a.id}>{a.nom}</option>)}
+                        </select>
+                      </div>
+                    )}
+                  </>
+                )}
+                <div>
+                  <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 5 }}>Nom</span>
+                  <input type="text" placeholder={t('common.search') + '...'} value={search}
+                    onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+                    className="input" style={{ width: '100%' }} />
+                </div>
               </div>
             </div>
           )}
 
           {/* Distinct filters */}
           {isEntreprise && isDistinctCtx && tab !== 'fiche-technique' && byTab.length > 0 && (
-            <div style={{ display: 'flex', gap: 12, marginBottom: 18, flexWrap: 'wrap', alignItems: 'flex-end', background: 'var(--surface)', padding: '14px 16px', borderRadius: 12, border: '1px solid var(--border)' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
-                <span style={labelStyle}>🔍 {t('common.search')}</span>
-                <input type="text" placeholder={t('common.search') + '...'} value={search}
-                  onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-                  className="input" style={{ maxWidth: 300 }} />
+            <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, marginBottom: 24, overflow: 'hidden', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
+              <div style={{ padding: '12px 20px', borderBottom: '1px solid var(--border)', background: 'var(--bg-secondary, #f8fafc)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span style={{ fontWeight: 700, fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.09em', color: 'var(--text-muted)' }}>Filtres</span>
+                {search && (
+                  <button className="btn btn-ghost btn-sm" style={{ fontSize: '0.78rem' }} onClick={() => { setSearch(''); setPage(1); }}>✕ Réinitialiser</button>
+                )}
+              </div>
+              <div style={{ padding: '16px 20px', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '12px 20px' }}>
+                <div>
+                  <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 5 }}>Nom</span>
+                  <input type="text" placeholder={t('common.search') + '...'} value={search}
+                    onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+                    className="input" style={{ width: '100%' }} />
+                </div>
               </div>
             </div>
           )}
 
           {/* Search bar for non-enterprise */}
           {!isEntreprise && byTab.length > 0 && (
-            <div style={{ marginBottom: 18 }}>
-              <input type="text" placeholder={'🔍 ' + t('common.search') + '...'}
-                value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-                className="input" style={{ maxWidth: 320 }} />
+            <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, marginBottom: 24, overflow: 'hidden', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
+              <div style={{ padding: '12px 20px', borderBottom: '1px solid var(--border)', background: 'var(--bg-secondary, #f8fafc)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span style={{ fontWeight: 700, fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.09em', color: 'var(--text-muted)' }}>Filtres</span>
+                {search && (
+                  <button className="btn btn-ghost btn-sm" style={{ fontSize: '0.78rem' }} onClick={() => { setSearch(''); setPage(1); }}>✕ Réinitialiser</button>
+                )}
+              </div>
+              <div style={{ padding: '16px 20px', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '12px 20px' }}>
+                <div>
+                  <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 5 }}>Nom</span>
+                  <input type="text" placeholder={t('common.search') + '...'}
+                    value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+                    className="input" style={{ width: '100%' }} />
+                </div>
+              </div>
             </div>
           )}
 

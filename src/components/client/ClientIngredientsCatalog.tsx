@@ -120,14 +120,27 @@ export default function ClientIngredientsCatalog({ embedded, onSelectionDone }: 
         </div>
       )}
 
-      <div className="search-bar">
-        <input
-          type="text"
-          placeholder={t('common.search') + '...'}
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="input"
-        />
+      {/* Filter panel */}
+      <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, marginBottom: 24, overflow: 'hidden', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
+        <div style={{ padding: '12px 20px', borderBottom: '1px solid var(--border)', background: 'var(--bg-secondary, #f8fafc)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <span style={{ fontWeight: 700, fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.09em', color: 'var(--text-muted)' }}>Filtres</span>
+          {search && (
+            <button className="btn btn-ghost btn-sm" style={{ fontSize: '0.78rem' }} onClick={() => setSearch('')}>✕ Réinitialiser</button>
+          )}
+        </div>
+        <div style={{ padding: '16px 20px', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '12px 20px' }}>
+          <div>
+            <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 5 }}>Recherche</span>
+            <input
+              type="text"
+              placeholder={t('common.search') + '...'}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="input"
+              style={{ width: '100%' }}
+            />
+          </div>
+        </div>
       </div>
 
       {loading ? (
