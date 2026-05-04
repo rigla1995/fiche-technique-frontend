@@ -622,7 +622,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
         ? (data as any[]).map((e) => ({
             dateAppro: e.dateAppro,
             quantite: e.quantite,
-            prixUnitaire: e.prixCalcule ?? null,
+            prixUnitaire: e.prixCalcule != null ? parseFloat(e.prixCalcule) : null,
             updatedAt: e.createdAt ?? null,
             typeAppro: 'manuel',
             fournisseurNom: null,
