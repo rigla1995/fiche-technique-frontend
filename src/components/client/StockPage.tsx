@@ -618,7 +618,17 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
       : `/api/stock/client/${id}/history`;
     try {
       const { data } = await api.get(url);
-      const entries = data as StockHistoryEntry[];
+      const entries: StockHistoryEntry[] = id < 0
+        ? (data as any[]).map((e) => ({
+            dateAppro: e.dateAppro,
+            quantite: e.quantite,
+            prixUnitaire: e.prixCalcule ?? null,
+            updatedAt: e.createdAt ?? null,
+            typeAppro: 'manuel',
+            fournisseurNom: null,
+            refFacture: null,
+          }))
+        : (data as StockHistoryEntry[]);
       setHistoryData((prev) => ({ ...prev, [id]: entries }));
       return entries;
     } catch {
