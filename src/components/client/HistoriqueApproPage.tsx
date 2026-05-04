@@ -64,6 +64,18 @@ function EditModal({ entry, fournisseurs, isEntreprise, onSave, onClose }: EditM
           <button className="modal-close" onClick={onClose}>✕</button>
         </div>
         <div className="modal-body">
+          <div style={{ marginBottom: 16 }}>
+            <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 4 }}>
+              Date d'appro
+            </label>
+            <input
+              className="input"
+              type="date"
+              value={entry.dateAppro ? entry.dateAppro.substring(0, 10) : ''}
+              disabled
+              style={{ width: '100%', opacity: 0.7, background: 'var(--bg-secondary, #f8fafc)', cursor: 'default' }}
+            />
+          </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
             <div>
               <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 4 }}>
