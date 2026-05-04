@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
@@ -858,8 +858,8 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                       const isSelected = selectedIngIds.has(entry.ingredientId);
                       const canSelect = isSelected || bulkAllValid || selectedIngIds.size === 0;
                       return (
-                        <>
-                          <tr key={entry.ingredientId} style={isSelected ? { background: '#f0fdf4' } : undefined}>
+                        <React.Fragment key={entry.ingredientId}>
+                          <tr style={isSelected ? { background: '#f0fdf4' } : undefined}>
                             <td style={{ textAlign: 'center' }}>
                               <input
                                 type="checkbox"
@@ -1057,7 +1057,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                               </td>
                             </tr>
                           )}
-                        </>
+                        </React.Fragment>
                       );
                     })}
                   </tbody>
@@ -1540,8 +1540,8 @@ export default function StockPage() {
                         const unitPrice = entry.lastPrixCalcule;
                         const previewTotal = qtyNum > 0 && unitPrice !== null ? (qtyNum * unitPrice) : null;
                         return (
-                          <>
-                            <tr key={entry.produitId}>
+                          <React.Fragment key={entry.produitId}>
+                            <tr>
                               <td>
                                 <div style={{ fontWeight: 600 }}>{entry.nom}</div>
                                 {entry.prixPartiel && <div style={{ fontSize: '0.72rem', color: '#d97706' }}>⚠️ Prix partiel</div>}
@@ -1634,7 +1634,7 @@ export default function StockPage() {
                                 </td>
                               </tr>
                             )}
-                          </>
+                          </React.Fragment>
                         );
                       })}
                     </tbody>
