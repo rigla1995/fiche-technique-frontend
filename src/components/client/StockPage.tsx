@@ -579,7 +579,6 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
     // Ensure history is loaded for conflict detection
     const hist = await fetchHistory(id);
     const conflictEntries = hist.filter((h) => h.dateAppro === row.dateAppro);
-    const entry = entries.find((e) => e.ingredientId === id);
     const hasConflict = conflictEntries.length > 0 ||
       (entry?.quantite !== null && row.dateAppro === entry?.dateAppro);
 
