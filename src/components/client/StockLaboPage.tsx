@@ -587,9 +587,7 @@ export default function StockLaboPage() {
                               <tr>
                                 <th style={{ width: 32 }}></th>
                                 <th>{t('client.stock.ingredient')}</th>
-                                <th style={{ textAlign: 'right' }}>Stock actuel</th>
-                                <th style={{ textAlign: 'right' }}>Cout Total<br /><span style={{ fontSize: '0.65rem', fontWeight: 400, color: 'var(--text-muted)' }}>mois en cours</span></th>
-                                <th style={{ textAlign: 'right' }}>Qté transférée</th>
+                                <th style={{ textAlign: 'right' }}>Stock actuel<br /><span style={{ fontSize: '0.65rem', fontWeight: 400, color: 'var(--text-muted)' }}>cout · transféré</span></th>
                                 <th style={{ textAlign: 'center' }}>Seuil min</th>
                                 <th style={{ textAlign: 'right' }}>Nouvelle Qté</th>
                                 <th style={{ textAlign: 'right' }}>{t('client.stock.prix_unitaire')}</th>
@@ -628,12 +626,12 @@ export default function StockLaboPage() {
                                         <span className={cls} style={{ fontSize: '1rem', fontWeight: 700 }}>
                                           {r.quantite !== null ? r.quantite.toFixed(3) : '—'}
                                         </span>
-                                      </td>
-                                      <td style={{ textAlign: 'right', color: '#1d4ed8', fontWeight: 500, fontSize: '0.88rem' }}>
-                                        {r.coutTotal != null && r.coutTotal > 0 ? `${r.coutTotal.toFixed(3)} DT` : '—'}
-                                      </td>
-                                      <td style={{ textAlign: 'right', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
-                                        {r.totalTransfere > 0 ? <span style={{ color: '#7c3aed', fontWeight: 600 }}>↗ {r.totalTransfere.toFixed(3)}</span> : '—'}
+                                        {r.coutTotal != null && r.coutTotal > 0 && (
+                                          <div style={{ fontSize: '0.72rem', color: '#1d4ed8', fontWeight: 500 }}>{r.coutTotal.toFixed(3)} DT</div>
+                                        )}
+                                        {r.totalTransfere > 0 && (
+                                          <div style={{ fontSize: '0.72rem', color: '#7c3aed', fontWeight: 600 }}>↗ {r.totalTransfere.toFixed(3)}</div>
+                                        )}
                                       </td>
                                       <td style={{ textAlign: 'center' }}>
                                         <input
@@ -700,7 +698,7 @@ export default function StockLaboPage() {
                                     {/* Appro history collapse */}
                                     {rs.historyOpen && (
                                       <tr>
-                                        <td colSpan={10} style={{ background: 'var(--surface)', padding: '8px 16px' }}>
+                                        <td colSpan={8} style={{ background: 'var(--surface)', padding: '8px 16px' }}>
                                           {rs.history.length === 0 ? (
                                             <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{t('client.stock.no_history')}</span>
                                           ) : (
