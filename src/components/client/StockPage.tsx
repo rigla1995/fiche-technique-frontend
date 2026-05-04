@@ -1311,6 +1311,7 @@ export default function StockPage() {
   const [ptHistoryOpen, setPtHistoryOpen] = useState<Record<number, boolean>>({});
   const [ptHistoryData, setPtHistoryData] = useState<Record<number, ProduitTransformeHistoryEntry[]>>({});
   const [ptSeuilEdits, setPtSeuilEdits] = useState<Record<number, string>>({});
+  const [ptSectionOpen, setPtSectionOpen] = useState(false);
 
   const loadClientStock = useCallback(async () => {
     setClientLoading(true);
@@ -1500,13 +1501,18 @@ export default function StockPage() {
             />
             {ptEntries.length > 0 && (
               <div style={{ marginTop: 32 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14, paddingBottom: 10, borderBottom: '2px solid var(--border)' }}>
+                <div
+                  style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: ptSectionOpen ? 14 : 0, paddingBottom: 10, borderBottom: '2px solid var(--border)', cursor: 'pointer', userSelect: 'none' }}
+                  onClick={() => setPtSectionOpen((v) => !v)}
+                >
                   <span style={{ width: 4, height: 22, borderRadius: 4, background: 'linear-gradient(180deg, #7c3aed 0%, #a78bfa 100%)', display: 'inline-block' }} />
-                  <h2 style={{ fontSize: '0.9rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--text)', margin: 0 }}>
+                  <h2 style={{ fontSize: '0.9rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--text)', margin: 0, flex: 1 }}>
                     📦 Produits Transformés
+                    <span style={{ fontSize: '0.78rem', fontWeight: 400, color: 'var(--text-muted)', marginLeft: 8 }}>({ptEntries.length})</span>
                   </h2>
+                  <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{ptSectionOpen ? '▲' : '▼'}</span>
                 </div>
-                <div className="table-responsive card th-blue">
+                {ptSectionOpen && <div className="table-responsive card th-blue">
                   <table className="table">
                     <thead>
                       <tr>
@@ -1514,7 +1520,7 @@ export default function StockPage() {
                         <th style={{ textAlign: 'right' }}>Total Stock<br /><span style={{ fontSize: '0.65rem', fontWeight: 400, color: 'var(--text-muted)' }}>mois en cours</span></th>
                         <th style={{ textAlign: 'center' }}>Seuil min</th>
                         <th style={{ textAlign: 'right' }}>Nouvelle Qté</th>
-                        <th style={{ textAlign: 'right' }}>Prix calculé (DT)</th>
+                        <th style={{ textAlign: 'right' }}>Prix calculé (DT)<br /><span style={{ fontSize: '0.65rem', fontWeight: 400, color: 'var(--text-muted)' }}>unitaire × qté</span></th>
                         <th>{t('client.stock.date_appro')}</th>
                         <th></th>
                       </tr>
@@ -1530,6 +1536,9 @@ export default function StockPage() {
                           ? (totalQty <= 0 ? 'stock-alarm-critical' : totalQty <= seuilMin ? 'stock-alarm-warn' : 'stock-ok')
                           : '';
                         const canSaveRow = row.quantite.trim() !== '' && parseFloat(row.quantite) > 0 && row.dateAppro.trim() !== '' && !row.saving && canWrite;
+                        const qtyNum = parseFloat(row.quantite) || 0;
+                        const unitPrice = entry.lastPrixCalcule;
+                        const previewTotal = qtyNum > 0 && unitPrice !== null ? (qtyNum * unitPrice) : null;
                         return (
                           <>
                             <tr key={entry.produitId}>
@@ -1562,7 +1571,10 @@ export default function StockPage() {
                                 />
                               </td>
                               <td style={{ textAlign: 'right', fontWeight: 600, color: '#1d4ed8' }}>
-                                {entry.lastPrixCalcule !== null ? entry.lastPrixCalcule.toFixed(3) : '—'}
+                                {previewTotal !== null
+                                  ? <>{previewTotal.toFixed(3)} <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 400 }}>({unitPrice!.toFixed(3)} × {qtyNum})</span></>
+                                  : unitPrice !== null ? unitPrice.toFixed(3) : '—'
+                                }
                               </td>
                               <td>
                                 <input
@@ -1627,7 +1639,7 @@ export default function StockPage() {
                       })}
                     </tbody>
                   </table>
-                </div>
+                </div>}
               </div>
             )}
           </>
