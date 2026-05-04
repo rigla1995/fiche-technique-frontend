@@ -440,7 +440,7 @@ interface StockMatrixProps {
   isEntreprise: boolean;
   fournisseurs?: Fournisseur[];
   onSave: (ingredientId: number, quantite: string, prixUnitaire: string, dateAppro: string, fournisseurId?: number | null, refFacture?: string | null) => Promise<void>;
-  onSavePT?: (produitId: number, quantite: string, dateAppro: string) => Promise<void>;
+  onSavePT?: (produitId: number, quantite: string, dateAppro: string) => Promise<{ prixCalcule: number | null; dateAppro: string; totalQuantite: number }>;
   onSaveSeuilMin?: (ingredientId: number, seuilMin: number | null) => Promise<void>;
   onSavePerte?: (ingredientId: number, quantite: number, typePerte: string, datePerte: string) => Promise<void>;
 }
@@ -521,8 +521,9 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
   const doSaveRow = async (id: number, row: StockRowState) => {
     setRows((prev) => ({ ...prev, [id]: { ...prev[id], saving: true, error: '' } }));
     try {
+      let ptResponse: { prixCalcule: number | null; dateAppro: string; totalQuantite: number } | null = null;
       if (id < 0 && onSavePT) {
-        await onSavePT(-id, row.quantite, row.dateAppro);
+        ptResponse = await onSavePT(-id, row.quantite, row.dateAppro);
       } else {
         const fId = row.fournisseurId ? Number(row.fournisseurId) : null;
         const ref = row.refFacture.trim() || null;
@@ -548,10 +549,11 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
       }));
       // Keep history cache and add saved entry so date-conflict alarm fires next time
       setHistoryData((prev) => {
+        const savedPrix = ptResponse ? (ptResponse.prixCalcule ?? 0) : (parseFloat(row.prixUnitaire) || 0);
         const saved = {
-          dateAppro: row.dateAppro,
+          dateAppro: ptResponse ? ptResponse.dateAppro : row.dateAppro,
           quantite: parseFloat(row.quantite) || 0,
-          prixUnitaire: parseFloat(row.prixUnitaire) || 0,
+          prixUnitaire: savedPrix,
           typeAppro: 'manuel',
           fournisseurNom: null,
           refFacture: row.refFacture || null,
@@ -952,7 +954,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                             </td>
                             <td style={{ whiteSpace: 'nowrap' }}>
                               {row.error && <span style={{ color: 'var(--danger)', fontSize: '0.75rem', marginRight: 4 }}>!</span>}
-                              {hasFournisseurs && (
+                              {hasFournisseurs && !entry.isPT && (
                                 isSelected ? (
                                   <button
                                     className="btn btn-sm"
@@ -1007,7 +1009,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                                   </button>
                                 )
                               )}
-                              {((isEntreprise && activiteId) || (!isEntreprise && onSavePerte)) && !entry.isPT && (
+                              {((isEntreprise && activiteId) || (!isEntreprise && onSavePerte)) && (
                                 <button
                                   className="perte-btn"
                                   onClick={() => setPertesModal({ ingredientId: entry.ingredientId, nom: entry.nom })}
@@ -1176,7 +1178,8 @@ function ActivityStockSection({ label, activities, isFranchise, onSave }: Activi
   };
 
   const handleSavePT = async (produitId: number, quantite: string, dateAppro: string) => {
-    await api.put(`/api/stock/pt/${produitId}`, { quantite: parseFloat(quantite), dateAppro, activiteId: selectedId });
+    const { data } = await api.put(`/api/stock/pt/${produitId}`, { quantite: parseFloat(quantite), dateAppro, activiteId: selectedId });
+    return data;
   };
 
   const handleSaveSeuilMin = async (ingredientId: number, seuilMin: number | null) => {
@@ -1390,7 +1393,8 @@ export default function StockPage() {
   };
 
   const saveClientStockPT = async (produitId: number, quantite: string, dateAppro: string) => {
-    await api.put(`/api/stock/pt/${produitId}`, { quantite: parseFloat(quantite), dateAppro });
+    const { data } = await api.put(`/api/stock/pt/${produitId}`, { quantite: parseFloat(quantite), dateAppro });
+    return data;
   };
 
   const saveClientSeuilMin = async (ingredientId: number, seuilMin: number | null) => {
