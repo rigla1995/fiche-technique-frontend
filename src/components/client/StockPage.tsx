@@ -429,68 +429,6 @@ function seuilClass(total: number | null, seuil: number | null): string {
   return 'stock-ok';
 }
 
-interface LinkedIngredientModalProps {
-  produitId: number;
-  produitNom: string;
-  currentLinkedId: number | null | undefined;
-  ingredients: StockEntry[];
-  onSave: (produitId: number, ingredientId: number | null) => Promise<void>;
-  onClose: () => void;
-}
-
-function LinkedIngredientModal({ produitId, produitNom, currentLinkedId, ingredients, onSave, onClose }: LinkedIngredientModalProps) {
-  const [selected, setSelected] = useState<string>(currentLinkedId != null ? String(currentLinkedId) : '');
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
-  const [done, setDone] = useState(false);
-
-  const submit = async () => {
-    setSaving(true);
-    setError('');
-    try {
-      await onSave(produitId, selected ? Number(selected) : null);
-      setDone(true);
-      setTimeout(onClose, 1200);
-    } catch {
-      setError('Erreur lors de la sauvegarde');
-      setSaving(false);
-    }
-  };
-
-  return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal" style={{ maxWidth: 420 }} onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header">
-          <div>
-            <h2 style={{ margin: 0 }}>🔗 Lier un ingrédient</h2>
-            <p style={{ margin: '4px 0 0', fontSize: '0.82rem', color: 'var(--text-muted)' }}>{produitNom}</p>
-          </div>
-          <button className="modal-close" onClick={onClose}>×</button>
-        </div>
-        <div className="modal-body" style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: 0 }}>
-            Sélectionne l'ingrédient correspondant à ce PT dans tes fiches techniques, pour que son prix soit utilisé dans les recettes d'autres produits.
-          </p>
-          <select className="input" value={selected} onChange={(e) => setSelected(e.target.value)} disabled={saving || done}>
-            <option value="">— Aucun —</option>
-            {ingredients.map((e) => (
-              <option key={e.ingredientId} value={e.ingredientId}>{e.nom}</option>
-            ))}
-          </select>
-          {error && <p style={{ color: 'var(--danger)', margin: 0, fontSize: '0.82rem' }}>{error}</p>}
-          {done && <p style={{ color: 'var(--success)', margin: 0, fontSize: '0.82rem' }}>✓ Lien enregistré</p>}
-        </div>
-        <div className="modal-footer">
-          <button className="btn btn-ghost" onClick={onClose} disabled={saving}>Annuler</button>
-          <button className="btn btn-primary" onClick={submit} disabled={saving || done}>
-            {saving ? '…' : 'Enregistrer'}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 interface StockMatrixProps {
   entries: StockEntry[];
   categoryFilter: string;
@@ -505,10 +443,9 @@ interface StockMatrixProps {
   onSavePT?: (produitId: number, quantite: string, dateAppro: string) => Promise<{ prixCalcule: number | null; dateAppro: string; totalQuantite: number }>;
   onSaveSeuilMin?: (ingredientId: number, seuilMin: number | null) => Promise<void>;
   onSavePerte?: (ingredientId: number, quantite: number, typePerte: string, datePerte: string) => Promise<void>;
-  onLinkIngredient?: (produitId: number, ingredientId: number | null) => Promise<void>;
 }
 
-function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fournisseurFilter, refFactureFilter, activiteId, isEntreprise, fournisseurs = [], onSave, onSavePT, onSaveSeuilMin, onSavePerte, onLinkIngredient }: StockMatrixProps) {
+function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fournisseurFilter, refFactureFilter, activiteId, isEntreprise, fournisseurs = [], onSave, onSavePT, onSaveSeuilMin, onSavePerte }: StockMatrixProps) {
   const { t } = useTranslation();
   const { canWrite } = useAuth();
   const navigate = useNavigate();
@@ -517,7 +454,6 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
   const [historyData, setHistoryData] = useState<Record<number, StockHistoryEntry[]>>({});
   const [openCats, setOpenCats] = useState<Set<string>>(new Set());
   const [pertesModal, setPertesModal] = useState<{ ingredientId: number; nom: string } | null>(null);
-  const [linkedModal, setLinkedModal] = useState<{ produitId: number; nom: string; currentLinkedId: number | null | undefined } | null>(null);
   const [affectationModal, setAffectationModal] = useState<{ ingredientId: number; nom: string } | null>(null);
   const [transfertInfoModal, setTransfertInfoModal] = useState<{ ingredientId: number; nom: string } | null>(null);
   const [seuilEdits, setSeuilEdits] = useState<Record<number, string>>({});
@@ -824,17 +760,6 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
         />
       )}
 
-      {linkedModal && onLinkIngredient && (
-        <LinkedIngredientModal
-          produitId={linkedModal.produitId}
-          produitNom={linkedModal.nom}
-          currentLinkedId={linkedModal.currentLinkedId}
-          ingredients={entries.filter((e) => !e.isPT).sort((a, b) => a.nom.localeCompare(b.nom))}
-          onSave={onLinkIngredient}
-          onClose={() => setLinkedModal(null)}
-        />
-      )}
-
       {transfertInfoModal && (() => {
         const entry = entries.find((e) => e.ingredientId === transfertInfoModal.ingredientId);
         const f = fournisseurs.find((f) => f.id === entry?.lastFournisseurId);
@@ -995,9 +920,15 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                                 onChange={(e) => updateRow(entry.ingredientId, 'quantite', e.target.value)}
                                 style={{ width: 90, textAlign: 'right', ...warnStyle }}
                                 className="input"
-                                disabled={!canWrite || (entry.isPT && !!entry.prixPartiel)}
-                                title={entry.isPT && entry.prixPartiel ? '⚠️ Prix incomplet — appros manquantes pour certains ingrédients' : undefined}
+                                disabled={!canWrite}
+                                title={entry.isPT && entry.prixPartiel ? '⚠️ Prix incomplet pour certains ingrédients — calcul partiel' : undefined}
                               />
+                              {entry.isPT && (entry.prixUnitaire ?? 0) > 0 && parseFloat(row.quantite) > 0 && (
+                                <div style={{ fontSize: '0.72rem', color: '#2563eb', marginTop: 2 }}>
+                                  ≈ {(parseFloat(row.quantite) * (entry.prixUnitaire || 0)).toFixed(3)} DT
+                                  {entry.prixPartiel && ' ⚠️'}
+                                </div>
+                              )}
                             </td>
                             <td style={{ textAlign: 'right' }}>
                               {entry.isPT ? (
@@ -1084,22 +1015,6 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                                   </button>
                                 )
                               )}
-                              {entry.isPT && onLinkIngredient && (
-                                <button
-                                  className="btn btn-sm"
-                                  onClick={() => setLinkedModal({ produitId: entry.produitId!, nom: entry.nom, currentLinkedId: entry.linkedIngredientId })}
-                                  title={entry.linkedIngredientId ? 'Modifier le lien ingrédient' : 'Lier un ingrédient pour le calcul de prix'}
-                                  style={{
-                                    marginRight: 4,
-                                    background: entry.linkedIngredientId ? '#dcfce7' : '#fef3c7',
-                                    color: entry.linkedIngredientId ? '#15803d' : '#92400e',
-                                    border: `1px solid ${entry.linkedIngredientId ? '#86efac' : '#fde68a'}`,
-                                    fontSize: '0.78rem',
-                                  }}
-                                >
-                                  {entry.linkedIngredientId ? '🔗' : '⚠️ Lier'}
-                                </button>
-                              )}
                               {((isEntreprise && activiteId) || (!isEntreprise && onSavePerte)) && (
                                 <button
                                   className="perte-btn"
@@ -1114,7 +1029,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                                 className={`btn btn-sm ${row.saved ? 'btn-success' : 'btn-primary'}`}
                                 onClick={() => saveRow(entry.ingredientId)}
                                 disabled={entry.isPT
-                                  ? (!row.quantite.trim() || parseFloat(row.quantite) <= 0 || !row.dateAppro.trim() || row.saving || !!entry.prixPartiel || !canWrite)
+                                  ? (!row.quantite.trim() || parseFloat(row.quantite) <= 0 || !row.dateAppro.trim() || row.saving || !canWrite)
                                   : (!canSaveStockRow(row, hasFournisseurs) || !canWrite)}
                                 style={{ marginRight: 4 }}
                               >
@@ -1273,11 +1188,6 @@ function ActivityStockSection({ label, activities, isFranchise, onSave }: Activi
     return data;
   };
 
-  const handleLinkIngredient = async (produitId: number, ingredientId: number | null) => {
-    await api.put(`/api/produits/${produitId}/link-ingredient`, { ingredientId });
-    loadStock(selectedId);
-  };
-
   const handleSaveSeuilMin = async (ingredientId: number, seuilMin: number | null) => {
     if (ingredientId < 0) {
       await api.put(`/api/stock/pt/${-ingredientId}/seuil-min`, { seuilMin });
@@ -1417,7 +1327,6 @@ function ActivityStockSection({ label, activities, isFranchise, onSave }: Activi
           onSave={handleSave}
           onSavePT={handleSavePT}
           onSaveSeuilMin={handleSaveSeuilMin}
-          onLinkIngredient={handleLinkIngredient}
         />
       )}
     </div>
@@ -1504,11 +1413,6 @@ export default function StockPage() {
 
   const saveClientPerte = async (ingredientId: number, quantite: number, typePerte: string, datePerte: string) => {
     await api.post(`/api/stock/client/pertes`, { ingredientId, quantite, typePerte, datePerte });
-  };
-
-  const linkClientIngredient = async (produitId: number, ingredientId: number | null) => {
-    await api.put(`/api/produits/${produitId}/link-ingredient`, { ingredientId });
-    loadClientStock();
   };
 
   const saveEntrepriseStock = async (activiteId: number, ingredientId: number, quantite: string, prixUnitaire: string, dateAppro: string, fournisseurId?: number | null, refFacture?: string | null) => {
@@ -1616,7 +1520,6 @@ export default function StockPage() {
               onSavePT={saveClientStockPT}
               onSaveSeuilMin={saveClientSeuilMin}
               onSavePerte={saveClientPerte}
-              onLinkIngredient={linkClientIngredient}
             />
           </>
         )

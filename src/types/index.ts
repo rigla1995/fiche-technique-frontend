@@ -222,7 +222,6 @@ export interface StockEntry {
   lastFournisseurId?: number | null;
   lastRefFacture?: string | null;
   lastTypeAppro?: string | null;
-  linkedIngredientId?: number | null;
 }
 
 export interface StockHistoryEntry {
