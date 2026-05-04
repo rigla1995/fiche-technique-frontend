@@ -928,7 +928,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                                 type="number" min="0" step="0.001" placeholder="0"
                                 value={row.quantite}
                                 onChange={(e) => updateRow(entry.ingredientId, 'quantite', e.target.value)}
-                                style={{ width: 90, textAlign: 'right', ...warnStyle }}
+                                style={{ width: 76, textAlign: 'right', ...warnStyle }}
                                 className="input"
                                 disabled={!canWrite}
                                 title={entry.isPT && entry.prixPartiel ? '⚠️ Prix incomplet pour certains ingrédients — calcul partiel' : undefined}
@@ -951,7 +951,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                                   type="number" min="0" step="0.001" placeholder="0.000"
                                   value={row.prixUnitaire}
                                   onChange={(e) => updateRow(entry.ingredientId, 'prixUnitaire', e.target.value)}
-                                  style={{ width: 100, textAlign: 'right', ...warnStyle }}
+                                  style={{ width: 84, textAlign: 'right', ...warnStyle }}
                                   className="input"
                                   disabled={!canWrite}
                                 />
@@ -959,7 +959,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                             </td>
                             <td>
                               <input
-                                type="date" className="input" style={{ maxWidth: 150, ...warnStyle }}
+                                type="date" className="input" style={{ maxWidth: 138, ...warnStyle }}
                                 min={yearStart} max={yearEnd}
                                 value={row.dateAppro}
                                 onChange={(e) => updateRow(entry.ingredientId, 'dateAppro', e.target.value)}
@@ -968,90 +968,45 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                                 title={isSelected ? 'Date définie par le formulaire ci-dessus' : undefined}
                               />
                             </td>
-                            <td style={{ whiteSpace: 'nowrap' }}>
-                              {row.error && <span style={{ color: 'var(--danger)', fontSize: '0.75rem', marginRight: 4 }}>!</span>}
-                              {hasFournisseurs && !entry.isPT && (
-                                isSelected ? (
+                            <td>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'stretch' }}>
+                                {row.error && <span style={{ color: 'var(--danger)', fontSize: '0.75rem' }}>!</span>}
+                                {hasFournisseurs && !entry.isPT && (
+                                  isSelected ? (
+                                    <button className="btn btn-sm" disabled style={{ width: '100%', background: '#e5e7eb', color: '#9ca3af', border: '1px solid #d1d5db', fontSize: '0.78rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                      Fournisseur (bulk)
+                                    </button>
+                                  ) : laboFournisseur ? (
+                                    <button className="btn btn-sm" onClick={() => setAffectationModal({ ingredientId: entry.ingredientId, nom: entry.nom })} style={{ width: '100%', background: '#dcfce7', color: '#15803d', border: '1px solid #86efac', fontSize: '0.78rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                      ✓ {laboFournisseur.nom}
+                                    </button>
+                                  ) : (
+                                    <button className="btn btn-sm" onClick={() => setAffectationModal({ ingredientId: entry.ingredientId, nom: entry.nom })} disabled={!canWrite} style={{ width: '100%', background: fournisseurValidated ? '#dcfce7' : assignedFournisseur ? '#fef9c3' : '#eff6ff', color: fournisseurValidated ? '#15803d' : assignedFournisseur ? '#92400e' : '#2563eb', border: `1px solid ${fournisseurValidated ? '#86efac' : assignedFournisseur ? '#fde68a' : '#bfdbfe'}`, fontSize: '0.78rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                      {fournisseurValidated ? `✓ ${assignedFournisseur!.nom}` : assignedFournisseur ? `${assignedFournisseur.nom}…` : '🚚 Fournisseur'}
+                                    </button>
+                                  )
+                                )}
+                                <div style={{ display: 'flex', gap: 4 }}>
+                                  {((isEntreprise && activiteId) || (!isEntreprise && onSavePerte)) && (
+                                    <button className="perte-btn" onClick={() => setPertesModal({ ingredientId: entry.ingredientId, nom: entry.nom })} title="Enregistrer une perte">
+                                      📉
+                                    </button>
+                                  )}
                                   <button
-                                    className="btn btn-sm"
-                                    disabled
-                                    title="Fournisseur défini par le formulaire ci-dessus"
-                                    style={{
-                                      marginRight: 4, background: '#e5e7eb', color: '#9ca3af',
-                                      border: '1px solid #d1d5db', fontSize: '0.78rem',
-                                      whiteSpace: 'nowrap', maxWidth: 130, overflow: 'hidden', textOverflow: 'ellipsis',
-                                    }}
+                                    className={`btn btn-sm ${row.saved ? 'btn-success' : 'btn-primary'}`}
+                                    onClick={() => saveRow(entry.ingredientId)}
+                                    disabled={entry.isPT
+                                      ? (!row.quantite.trim() || parseFloat(row.quantite) <= 0 || !row.dateAppro.trim() || row.saving || !canWrite)
+                                      : (!canSaveStockRow(row, hasFournisseurs) || !canWrite)}
+                                    style={{ flex: 1 }}
                                   >
-                                    Fournisseur (bulk)
+                                    {row.saving ? '…' : row.saved ? '✓' : t('client.stock.save')}
                                   </button>
-                                ) : laboFournisseur ? (
-                                  <button
-                                    className="btn btn-sm"
-                                    onClick={() => setAffectationModal({ ingredientId: entry.ingredientId, nom: entry.nom })}
-                                    title="Fournisseur labo — cliquer pour modifier"
-                                    style={{
-                                      marginRight: 4,
-                                      background: '#dcfce7',
-                                      color: '#15803d',
-                                      border: '1px solid #86efac',
-                                      fontSize: '0.78rem',
-                                      whiteSpace: 'nowrap',
-                                      maxWidth: 130,
-                                      overflow: 'hidden',
-                                      textOverflow: 'ellipsis',
-                                    }}
-                                  >
-                                    ✓ {laboFournisseur.nom}
+                                  <button className="btn btn-ghost btn-sm" onClick={() => toggleHistory(entry.ingredientId)} title={t('client.stock.history')}>
+                                    {isHistOpen ? '▲' : '▼'}
                                   </button>
-                                ) : (
-                                  <button
-                                    className="btn btn-sm"
-                                    onClick={() => setAffectationModal({ ingredientId: entry.ingredientId, nom: entry.nom })}
-                                    disabled={!canWrite}
-                                    title={!canWrite ? undefined : 'Affecter un fournisseur'}
-                                    style={{
-                                      marginRight: 4,
-                                      background: fournisseurValidated ? '#dcfce7' : assignedFournisseur ? '#fef9c3' : '#eff6ff',
-                                      color: fournisseurValidated ? '#15803d' : assignedFournisseur ? '#92400e' : '#2563eb',
-                                      border: `1px solid ${fournisseurValidated ? '#86efac' : assignedFournisseur ? '#fde68a' : '#bfdbfe'}`,
-                                      fontSize: '0.78rem',
-                                      whiteSpace: 'nowrap',
-                                      maxWidth: 130,
-                                      overflow: 'hidden',
-                                      textOverflow: 'ellipsis',
-                                    }}
-                                  >
-                                    {fournisseurValidated ? `✓ ${assignedFournisseur!.nom}` : assignedFournisseur ? `${assignedFournisseur.nom}…` : '🚚 Fournisseur'}
-                                  </button>
-                                )
-                              )}
-                              {((isEntreprise && activiteId) || (!isEntreprise && onSavePerte)) && (
-                                <button
-                                  className="perte-btn"
-                                  onClick={() => setPertesModal({ ingredientId: entry.ingredientId, nom: entry.nom })}
-                                  title="Enregistrer une perte"
-                                  style={{ marginRight: 4 }}
-                                >
-                                  📉
-                                </button>
-                              )}
-                              <button
-                                className={`btn btn-sm ${row.saved ? 'btn-success' : 'btn-primary'}`}
-                                onClick={() => saveRow(entry.ingredientId)}
-                                disabled={entry.isPT
-                                  ? (!row.quantite.trim() || parseFloat(row.quantite) <= 0 || !row.dateAppro.trim() || row.saving || !canWrite)
-                                  : (!canSaveStockRow(row, hasFournisseurs) || !canWrite)}
-                                style={{ marginRight: 4 }}
-                              >
-                                {row.saving ? '…' : row.saved ? '✓' : t('client.stock.save')}
-                              </button>
-                              <button
-                                className="btn btn-ghost btn-sm"
-                                onClick={() => toggleHistory(entry.ingredientId)}
-                                title={t('client.stock.history')}
-                              >
-                                {isHistOpen ? '▲' : '▼'}
-                              </button>
+                                </div>
+                              </div>
                             </td>
                           </tr>
                           {isHistOpen && (
