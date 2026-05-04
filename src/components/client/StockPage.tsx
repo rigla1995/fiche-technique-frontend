@@ -1538,7 +1538,7 @@ export default function StockPage() {
                         const canSaveRow = row.quantite.trim() !== '' && parseFloat(row.quantite) > 0 && row.dateAppro.trim() !== '' && !row.saving && canWrite;
                         const qtyNum = parseFloat(row.quantite) || 0;
                         const unitPrice = entry.lastPrixCalcule;
-                        const previewTotal = qtyNum > 0 && unitPrice !== null ? (qtyNum * unitPrice) : null;
+                        const previewTotal = qtyNum > 0 && unitPrice != null ? (qtyNum * unitPrice) : null;
                         return (
                           <React.Fragment key={entry.produitId}>
                             <tr>
@@ -1573,7 +1573,7 @@ export default function StockPage() {
                               <td style={{ textAlign: 'right', fontWeight: 600, color: '#1d4ed8' }}>
                                 {previewTotal !== null
                                   ? <>{previewTotal.toFixed(3)} <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 400 }}>({unitPrice!.toFixed(3)} × {qtyNum})</span></>
-                                  : unitPrice !== null ? unitPrice.toFixed(3) : '—'
+                                  : unitPrice != null ? unitPrice.toFixed(3) : '—'
                                 }
                               </td>
                               <td>
@@ -1625,7 +1625,7 @@ export default function StockPage() {
                                           <tr key={h.id}>
                                             <td style={{ color: 'var(--primary)', fontWeight: 600 }}>{fmtDate(h.dateAppro)}</td>
                                             <td style={{ textAlign: 'right' }}>{h.quantite ?? '—'}</td>
-                                            <td style={{ textAlign: 'right', color: '#1d4ed8' }}>{h.prixCalcule !== null ? h.prixCalcule.toFixed(3) : '—'}</td>
+                                            <td style={{ textAlign: 'right', color: '#1d4ed8' }}>{h.prixCalcule != null ? h.prixCalcule.toFixed(3) : '—'}</td>
                                           </tr>
                                         ))}
                                       </tbody>
