@@ -21,6 +21,9 @@ interface InventaireRow {
 }
 interface Activite { id: number; nom: string; type: string; franchiseGroup: string | null }
 
+const CAT_COLORS = ['#6366f1','#0ea5e9','#10b981','#f59e0b','#ef4444','#8b5cf6','#ec4899','#14b8a6'];
+const catColor = (cat: string) => CAT_COLORS[Math.abs([...cat].reduce((a,c)=>a+c.charCodeAt(0),0)) % CAT_COLORS.length];
+
 export default function InventairePage() {
   const [searchParams] = useSearchParams();
   const laboId = searchParams.get('laboId');
@@ -41,13 +44,11 @@ export default function InventairePage() {
   const [selectedActiviteId, setSelectedActiviteId] = useState<number | null>(null);
   const effectiveActiviteId = activiteId ? Number(activiteId) : selectedActiviteId;
 
-  // UI state
   const [openCategories, setOpenCategories] = useState<Set<string>>(new Set());
   const [openHistory, setOpenHistory] = useState<Set<number>>(new Set());
   const [searchName, setSearchName] = useState('');
   const [filterCategory, setFilterCategory] = useState('');
 
-  // Confirmation popup
   interface ConfirmEntry { ingredientId: number; nom: string; qty: number; isReplacement: boolean; oldQty: number | null }
   const [confirmPopup, setConfirmPopup] = useState<{ entries: ConfirmEntry[] } | null>(null);
 
@@ -148,39 +149,70 @@ export default function InventairePage() {
         ? `/api/labo/${laboId}/inventaire`
         : `/api/stock/entreprise/${effectiveActiviteId}/inventaire`;
       await api.post(url, { dateInventaire: date, entries });
-      setSuccessMsg('Inventaire sauvegardé.');
+      setSuccessMsg('Inventaire sauvegardé avec succès.');
       setTimeout(() => setSuccessMsg(''), 4000);
       loadStock();
     } catch { setErrorMsg('Erreur lors de la sauvegarde.'); }
     setSaving(false);
   };
 
-  const hasAnyQty = rows.some((r) => qtys[r.ingredientId] !== '');
+  const filledCount = rows.filter((r) => qtys[r.ingredientId] !== '').length;
+  const alarmTotal = rows.filter((r) => isAlarm(r)).length;
+  const hasAnyQty = filledCount > 0;
   const needsActiviteSelector = !!section && !activiteId && activites.length > 1 && !selectedActiviteId;
 
-  const contextTitle = laboId
-    ? `Stock Labo — ${contextNom}`
+  const contextLabel = laboId
+    ? `Labo — ${contextNom}`
     : section
-    ? `Stock ${section === 'franchise' ? 'Franchise' : 'Distinct'}${contextNom ? ` — ${contextNom}` : ''}`
+    ? `${section === 'franchise' ? 'Franchise' : 'Distinct'}${contextNom ? ` — ${contextNom}` : ''}`
     : contextNom || 'Inventaire';
 
   return (
-    <div style={{ maxWidth: 960, margin: '0 auto', padding: '24px 16px' }}>
-      {/* Header */}
-      <div style={{ marginBottom: 24 }}>
-        <h1 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: 2, letterSpacing: '-0.01em' }}>
-          🔢 Inventaire
-        </h1>
-        <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{contextTitle}</p>
+    <div style={{ maxWidth: 980, margin: '0 auto', padding: '24px 16px' }}>
+
+      {/* ── Hero header ── */}
+      <div style={{
+        background: 'linear-gradient(135deg, #1e3a5f 0%, #2563eb 60%, #0ea5e9 100%)',
+        borderRadius: 18, padding: '24px 28px', marginBottom: 24,
+        boxShadow: '0 8px 32px rgba(37,99,235,0.25)',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16,
+      }}>
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+            <div style={{ background: 'rgba(255,255,255,0.2)', borderRadius: 10, padding: '7px 9px', fontSize: '1.2rem', lineHeight: 1 }}>🔢</div>
+            <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0, letterSpacing: '-0.02em' }}>Inventaire</h1>
+          </div>
+          <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.85rem', margin: 0 }}>{contextLabel}</p>
+        </div>
+        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+          {rows.length > 0 && (
+            <div style={{ background: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(8px)', borderRadius: 12, padding: '10px 18px', textAlign: 'center' }}>
+              <div style={{ fontSize: '1.4rem', fontWeight: 900, color: '#fff', lineHeight: 1 }}>{rows.length}</div>
+              <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.75)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Ingrédients</div>
+            </div>
+          )}
+          {alarmTotal > 0 && (
+            <div style={{ background: 'rgba(245,158,11,0.25)', backdropFilter: 'blur(8px)', border: '1px solid rgba(245,158,11,0.5)', borderRadius: 12, padding: '10px 18px', textAlign: 'center' }}>
+              <div style={{ fontSize: '1.4rem', fontWeight: 900, color: '#fbbf24', lineHeight: 1 }}>{alarmTotal}</div>
+              <div style={{ fontSize: '0.7rem', color: '#fcd34d', textTransform: 'uppercase', letterSpacing: '0.06em' }}>⚠ Date existante</div>
+            </div>
+          )}
+          {filledCount > 0 && (
+            <div style={{ background: 'rgba(16,185,129,0.2)', backdropFilter: 'blur(8px)', border: '1px solid rgba(16,185,129,0.4)', borderRadius: 12, padding: '10px 18px', textAlign: 'center' }}>
+              <div style={{ fontSize: '1.4rem', fontWeight: 900, color: '#34d399', lineHeight: 1 }}>{filledCount}</div>
+              <div style={{ fontSize: '0.7rem', color: '#6ee7b7', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Saisis</div>
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* Activite selector */}
+      {/* ── Activite selector ── */}
       {section && !activiteId && activites.length > 1 && (
-        <div style={{ marginBottom: 20 }}>
-          <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: 4 }}>Sélectionner une activité</label>
+        <div style={{ marginBottom: 20, background: 'var(--surface)', borderRadius: 12, padding: '14px 18px', border: '1px solid var(--border)' }}>
+          <label style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 6 }}>Activité</label>
           <select value={selectedActiviteId ?? ''} onChange={(e) => setSelectedActiviteId(Number(e.target.value) || null)}
-            style={{ padding: '9px 13px', borderRadius: 9, border: '1px solid var(--border)', fontSize: '0.9rem', minWidth: 220 }}>
-            <option value="">— Choisir —</option>
+            style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid var(--border)', fontSize: '0.9rem', minWidth: 240, fontWeight: 600, background: 'var(--background)' }}>
+            <option value="">— Choisir une activité —</option>
             {activites.map((a) => <option key={a.id} value={a.id}>{a.nom}</option>)}
           </select>
         </div>
@@ -188,68 +220,123 @@ export default function InventairePage() {
 
       {!needsActiviteSelector && (
         <>
-          {/* Top bar: date + filters */}
-          <div style={{ background: 'var(--surface)', borderRadius: 12, padding: '14px 18px', marginBottom: 20, border: '1px solid var(--border)', display: 'flex', flexWrap: 'wrap', gap: 14, alignItems: 'flex-end' }}>
+          {/* ── Filter bar ── */}
+          <div style={{
+            background: 'var(--surface)', borderRadius: 14, padding: '16px 20px', marginBottom: 20,
+            border: '1px solid var(--border)', boxShadow: '0 2px 12px rgba(0,0,0,0.05)',
+            display: 'flex', flexWrap: 'wrap', gap: 14, alignItems: 'flex-end',
+          }}>
             <div>
-              <label style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: 4 }}>Date inventaire</label>
+              <label style={{ fontSize: '0.68rem', fontWeight: 800, color: '#2563eb', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>📅 Date inventaire</label>
               <input type="date" value={date} onChange={(e) => setDate(e.target.value)}
-                style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border)', fontSize: '0.9rem', fontWeight: 600 }} />
+                style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid #2563eb', fontSize: '0.92rem', fontWeight: 700, color: '#1e3a5f', background: '#eff6ff' }} />
             </div>
             <div>
-              <label style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: 4 }}>Rechercher</label>
+              <label style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>🔍 Rechercher</label>
               <input type="text" value={searchName} onChange={(e) => setSearchName(e.target.value)} placeholder="Nom ingrédient..."
-                style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border)', fontSize: '0.88rem', minWidth: 180 }} />
+                style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid var(--border)', fontSize: '0.88rem', minWidth: 190, background: 'var(--background)' }} />
             </div>
             <div>
-              <label style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: 4 }}>Catégorie</label>
+              <label style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>🏷 Catégorie</label>
               <select value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)}
-                style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border)', fontSize: '0.88rem', minWidth: 150 }}>
-                <option value="">Toutes</option>
+                style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid var(--border)', fontSize: '0.88rem', minWidth: 160, background: 'var(--background)' }}>
+                <option value="">Toutes les catégories</option>
                 {categories.map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>
             <div style={{ marginLeft: 'auto' }}>
-              <button onClick={handleSave} disabled={saving || !hasAnyQty}
-                style={{ padding: '9px 26px', borderRadius: 9, border: 'none', background: hasAnyQty ? 'var(--primary)' : '#d1d5db', color: '#fff', fontWeight: 700, fontSize: '0.95rem', cursor: hasAnyQty ? 'pointer' : 'not-allowed', transition: 'background 0.15s' }}>
-                {saving ? 'Sauvegarde...' : '💾 Sauvegarder'}
+              <button onClick={handleSave} disabled={saving || !hasAnyQty} style={{
+                padding: '10px 28px', borderRadius: 10, border: 'none',
+                background: hasAnyQty ? 'linear-gradient(135deg, #2563eb 0%, #0ea5e9 100%)' : '#e5e7eb',
+                color: hasAnyQty ? '#fff' : '#9ca3af', fontWeight: 800, fontSize: '0.95rem',
+                cursor: hasAnyQty ? 'pointer' : 'not-allowed',
+                boxShadow: hasAnyQty ? '0 4px 14px rgba(37,99,235,0.35)' : 'none',
+                transition: 'all 0.15s', display: 'flex', alignItems: 'center', gap: 7,
+              }}>
+                <span style={{ fontSize: '1rem' }}>💾</span>
+                {saving ? 'Sauvegarde...' : `Sauvegarder${filledCount > 0 ? ` (${filledCount})` : ''}`}
               </button>
             </div>
           </div>
 
-          {/* Messages */}
-          {errorMsg && <div style={{ background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: 8, padding: '10px 14px', marginBottom: 12, fontSize: '0.85rem', color: '#991b1b' }}>{errorMsg}</div>}
-          {successMsg && <div style={{ background: '#f0fdf4', border: '1px solid #86efac', borderRadius: 8, padding: '10px 14px', marginBottom: 12, fontSize: '0.85rem', color: '#166534' }}>✅ {successMsg}</div>}
+          {/* ── Messages ── */}
+          {errorMsg && (
+            <div style={{ background: 'linear-gradient(90deg, #fef2f2, #fff)', border: '1.5px solid #fca5a5', borderRadius: 10, padding: '11px 16px', marginBottom: 14, fontSize: '0.85rem', color: '#991b1b', display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span>🚫</span> {errorMsg}
+            </div>
+          )}
+          {successMsg && (
+            <div style={{ background: 'linear-gradient(90deg, #f0fdf4, #fff)', border: '1.5px solid #86efac', borderRadius: 10, padding: '11px 16px', marginBottom: 14, fontSize: '0.85rem', color: '#166534', display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span>✅</span> {successMsg}
+            </div>
+          )}
 
           {loading ? (
-            <p style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '40px 0' }}>Chargement...</p>
+            <div style={{ textAlign: 'center', padding: '60px 0' }}>
+              <div style={{ fontSize: '2rem', marginBottom: 12, animation: 'spin 1s linear infinite' }}>⚙️</div>
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Chargement des ingrédients...</p>
+            </div>
           ) : filteredRows.length === 0 ? (
-            <p style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '40px 0' }}>Aucun ingrédient trouvé.</p>
+            <div style={{ textAlign: 'center', padding: '60px 0', background: 'var(--surface)', borderRadius: 14, border: '1px dashed var(--border)' }}>
+              <div style={{ fontSize: '2.5rem', marginBottom: 10 }}>📦</div>
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', fontWeight: 500 }}>Aucun ingrédient trouvé.</p>
+            </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               {filteredCategories.map((cat) => {
                 const catRows = filteredRows.filter((r) => r.categorie === cat);
                 const isOpen = openCategories.has(cat);
                 const alarmCount = catRows.filter((r) => isAlarm(r)).length;
+                const filledInCat = catRows.filter((r) => qtys[r.ingredientId] !== '').length;
+                const color = catColor(cat);
                 return (
-                  <div key={cat} style={{ border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }}>
+                  <div key={cat} style={{
+                    borderRadius: 14, overflow: 'hidden',
+                    boxShadow: isOpen ? `0 4px 20px ${color}22` : '0 1px 6px rgba(0,0,0,0.07)',
+                    border: `1.5px solid ${isOpen ? color : 'var(--border)'}`,
+                    transition: 'box-shadow 0.2s, border-color 0.2s',
+                  }}>
                     {/* Category header */}
                     <button onClick={() => toggleCategory(cat)} style={{
-                      width: '100%', display: 'flex', alignItems: 'center', gap: 10,
-                      padding: '11px 16px', background: isOpen ? 'var(--primary)' : 'var(--surface)',
-                      border: 'none', cursor: 'pointer', textAlign: 'left', transition: 'background 0.15s',
+                      width: '100%', display: 'flex', alignItems: 'center', gap: 12,
+                      padding: '13px 18px',
+                      background: isOpen
+                        ? `linear-gradient(135deg, ${color}ee 0%, ${color}bb 100%)`
+                        : 'var(--surface)',
+                      border: 'none', cursor: 'pointer', textAlign: 'left',
+                      borderLeft: `5px solid ${color}`,
+                      transition: 'background 0.15s',
                     }}>
-                      <span style={{ fontSize: '0.72rem', fontWeight: 800, letterSpacing: '0.07em', textTransform: 'uppercase', color: isOpen ? '#fff' : 'var(--text)', flex: 1 }}>
-                        {cat}
-                        <span style={{ marginLeft: 8, fontSize: '0.7rem', fontWeight: 400, opacity: 0.7 }}>
+                      <div style={{
+                        width: 34, height: 34, borderRadius: 8,
+                        background: isOpen ? 'rgba(255,255,255,0.25)' : `${color}18`,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: '1rem', flexShrink: 0,
+                      }}>🏷</div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontWeight: 800, fontSize: '0.92rem', letterSpacing: '0.02em', color: isOpen ? '#fff' : 'var(--text)', textTransform: 'uppercase' }}>
+                          {cat}
+                        </div>
+                        <div style={{ fontSize: '0.73rem', color: isOpen ? 'rgba(255,255,255,0.75)' : 'var(--text-muted)', marginTop: 1 }}>
                           {catRows.length} ingrédient{catRows.length > 1 ? 's' : ''}
+                          {filledInCat > 0 && <span style={{ marginLeft: 6, color: isOpen ? '#bbf7d0' : '#16a34a', fontWeight: 700 }}>· {filledInCat} saisi{filledInCat > 1 ? 's' : ''}</span>}
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                        {alarmCount > 0 && (
+                          <span style={{ background: '#f59e0b', color: '#fff', fontSize: '0.68rem', fontWeight: 800, padding: '3px 9px', borderRadius: 20, letterSpacing: '0.03em' }}>
+                            ⚠ {alarmCount}
+                          </span>
+                        )}
+                        <span style={{
+                          width: 28, height: 28, borderRadius: 7,
+                          background: isOpen ? 'rgba(255,255,255,0.2)' : `${color}15`,
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          color: isOpen ? '#fff' : color, fontSize: '0.8rem', fontWeight: 700,
+                        }}>
+                          {isOpen ? '▲' : '▼'}
                         </span>
-                      </span>
-                      {alarmCount > 0 && !isOpen && (
-                        <span style={{ background: '#f59e0b', color: '#fff', fontSize: '0.68rem', fontWeight: 700, padding: '2px 7px', borderRadius: 10 }}>
-                          ⚠ {alarmCount}
-                        </span>
-                      )}
-                      <span style={{ color: isOpen ? '#fff' : 'var(--text-muted)', fontSize: '0.75rem' }}>{isOpen ? '▲' : '▼'}</span>
+                      </div>
                     </button>
 
                     {/* Ingredient rows */}
@@ -258,32 +345,42 @@ export default function InventairePage() {
                         {catRows.map((r, idx) => {
                           const alarm = isAlarm(r);
                           const histOpen = openHistory.has(r.ingredientId);
+                          const filled = qtys[r.ingredientId] !== '';
                           const inputStyle: React.CSSProperties = {
-                            width: '100%', padding: '8px 10px', borderRadius: 8, fontSize: '0.9rem',
-                            border: alarm ? '2px solid #f59e0b' : '1px solid var(--border)',
-                            background: alarm ? '#fffbeb' : undefined,
-                            boxShadow: alarm ? '0 0 0 3px #fef3c7' : undefined,
-                            outline: 'none', transition: 'border 0.15s, box-shadow 0.15s',
+                            width: '100%', padding: '9px 12px', borderRadius: 9, fontSize: '0.92rem',
+                            border: alarm ? '2px solid #f59e0b' : filled ? '2px solid #10b981' : '1.5px solid var(--border)',
+                            background: alarm ? '#fffbeb' : filled ? '#f0fdf4' : 'var(--background)',
+                            boxShadow: alarm ? '0 0 0 3px #fef3c7' : filled ? '0 0 0 3px #dcfce7' : 'none',
+                            outline: 'none', transition: 'all 0.15s', fontWeight: 700,
                           };
                           return (
                             <div key={r.ingredientId} style={{
                               borderTop: idx > 0 ? '1px solid var(--border)' : undefined,
-                              padding: '12px 16px',
-                              background: alarm ? 'linear-gradient(90deg, #fffbeb 0%, #fff 60%)' : (idx % 2 === 0 ? 'var(--background)' : 'var(--surface)'),
+                              padding: '14px 18px',
+                              background: alarm
+                                ? 'linear-gradient(90deg, #fffbeb 0%, #fffdf7 100%)'
+                                : filled
+                                ? 'linear-gradient(90deg, #f0fdf4 0%, #fff 80%)'
+                                : idx % 2 === 0 ? 'var(--background)' : 'var(--surface)',
+                              borderLeft: `4px solid ${alarm ? '#f59e0b' : filled ? '#10b981' : 'transparent'}`,
+                              transition: 'background 0.1s',
                             }}>
-                              <div style={{ display: 'grid', gridTemplateColumns: '1fr 140px 1fr auto', gap: 10, alignItems: 'center' }}>
+                              <div style={{ display: 'grid', gridTemplateColumns: '1fr 150px 1fr auto', gap: 12, alignItems: 'center' }}>
                                 {/* Name */}
                                 <div>
-                                  <div style={{ fontWeight: 700, fontSize: '0.93rem', display: 'flex', alignItems: 'center', gap: 6 }}>
-                                    {alarm && <span style={{ color: '#f59e0b', fontSize: '0.85rem' }}>⚠</span>}
+                                  <div style={{ fontWeight: 700, fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: 7, color: alarm ? '#92400e' : 'var(--text)' }}>
+                                    {alarm && <span style={{ background: '#fef3c7', border: '1px solid #f59e0b', borderRadius: 6, padding: '1px 6px', fontSize: '0.7rem', fontWeight: 800, color: '#d97706' }}>⚠ DATE</span>}
                                     {r.nom}
                                   </div>
-                                  <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)', marginTop: 1 }}>{r.unite}</div>
+                                  <div style={{ fontSize: '0.76rem', color: 'var(--text-muted)', marginTop: 2, display: 'flex', alignItems: 'center', gap: 5 }}>
+                                    <span style={{ background: `${color}18`, color, borderRadius: 5, padding: '1px 7px', fontWeight: 700, fontSize: '0.68rem' }}>{r.unite}</span>
+                                  </div>
                                 </div>
+
                                 {/* Qty input */}
                                 <div>
-                                  <div style={{ fontSize: '0.68rem', fontWeight: 700, color: alarm ? '#d97706' : 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 3 }}>
-                                    Qté réelle {alarm ? '⚠' : ''}
+                                  <div style={{ fontSize: '0.67rem', fontWeight: 800, color: alarm ? '#d97706' : 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>
+                                    Qté réelle
                                   </div>
                                   <input
                                     type="number" min="0" step="0.001"
@@ -293,17 +390,23 @@ export default function InventairePage() {
                                     style={inputStyle}
                                   />
                                 </div>
+
                                 {/* Note */}
                                 <div>
-                                  <div style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 3 }}>Note</div>
+                                  <div style={{ fontSize: '0.67rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Note</div>
                                   <input type="text" value={notes[r.ingredientId] ?? ''} onChange={(e) => setNotes((prev) => ({ ...prev, [r.ingredientId]: e.target.value }))}
-                                    placeholder="Observation..." style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid var(--border)', fontSize: '0.85rem' }} />
+                                    placeholder="Observation..."
+                                    style={{ width: '100%', padding: '9px 12px', borderRadius: 9, border: '1.5px solid var(--border)', fontSize: '0.85rem', background: 'var(--background)' }} />
                                 </div>
+
                                 {/* History toggle */}
                                 <button onClick={() => toggleHistory(r.ingredientId)} style={{
-                                  padding: '6px 10px', borderRadius: 7, border: '1px solid var(--border)',
-                                  background: histOpen ? '#f1f5f9' : 'none', cursor: 'pointer',
-                                  fontSize: '0.75rem', color: 'var(--text-muted)', whiteSpace: 'nowrap',
+                                  padding: '7px 11px', borderRadius: 8,
+                                  border: `1.5px solid ${histOpen ? color : 'var(--border)'}`,
+                                  background: histOpen ? `${color}15` : 'var(--background)',
+                                  cursor: 'pointer', fontSize: '0.75rem',
+                                  color: histOpen ? color : 'var(--text-muted)',
+                                  fontWeight: 700, whiteSpace: 'nowrap', transition: 'all 0.15s',
                                 }}>
                                   📋 {histOpen ? '▲' : '▼'}
                                 </button>
@@ -311,26 +414,31 @@ export default function InventairePage() {
 
                               {/* Collapsible last 5 inventaires */}
                               {histOpen && (
-                                <div style={{ marginTop: 10, padding: '10px 12px', background: '#f8fafc', borderRadius: 8, border: '1px solid #e2e8f0' }}>
+                                <div style={{ marginTop: 12, padding: '12px 14px', background: '#f8fafc', borderRadius: 10, border: '1px solid #e2e8f0' }}>
                                   {r.recentInventaires.length === 0 ? (
-                                    <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: 0 }}>Aucun inventaire enregistré</p>
+                                    <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: 0, fontStyle: 'italic' }}>Aucun inventaire enregistré pour cet ingrédient</p>
                                   ) : (
                                     <div>
-                                      <div style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 6, letterSpacing: '0.06em' }}>
+                                      <div style={{ fontSize: '0.67rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 8, letterSpacing: '0.07em' }}>
                                         5 derniers inventaires
                                       </div>
-                                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                                        {r.recentInventaires.map((inv) => (
-                                          <div key={inv.id} style={{
-                                            padding: '5px 12px', borderRadius: 20,
-                                            background: inv.date === date ? '#fef3c7' : '#fff',
-                                            border: inv.date === date ? '1px solid #f59e0b' : '1px solid #e2e8f0',
-                                            fontSize: '0.8rem', fontWeight: 600,
-                                            color: inv.date === date ? '#92400e' : 'var(--text)',
-                                          }}>
-                                            {fmtDate(inv.date)} — <strong>{inv.qty.toFixed(3)}</strong> {r.unite}
-                                          </div>
-                                        ))}
+                                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
+                                        {r.recentInventaires.map((inv) => {
+                                          const isCurrent = inv.date === date;
+                                          return (
+                                            <div key={inv.id} style={{
+                                              padding: '6px 14px', borderRadius: 20,
+                                              background: isCurrent ? '#fef3c7' : '#fff',
+                                              border: isCurrent ? '1.5px solid #f59e0b' : '1px solid #e2e8f0',
+                                              fontSize: '0.8rem', fontWeight: 600,
+                                              color: isCurrent ? '#92400e' : 'var(--text)',
+                                              boxShadow: isCurrent ? '0 2px 8px rgba(245,158,11,0.2)' : '0 1px 3px rgba(0,0,0,0.06)',
+                                            }}>
+                                              {isCurrent && <span style={{ marginRight: 5 }}>⚠</span>}
+                                              {fmtDate(inv.date)} — <strong>{inv.qty.toFixed(3)}</strong> {r.unite}
+                                            </div>
+                                          );
+                                        })}
                                       </div>
                                     </div>
                                   )}
@@ -349,51 +457,51 @@ export default function InventairePage() {
         </>
       )}
 
-      {/* Confirmation popup */}
+      {/* ── Confirmation popup ── */}
       {confirmPopup && (() => {
         const replacements = confirmPopup.entries.filter((e) => e.isReplacement);
         const newEntries = confirmPopup.entries.filter((e) => !e.isReplacement);
         const hasReplacements = replacements.length > 0;
         return (
           <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <div style={{ background: '#fff', borderRadius: 18, padding: 0, maxWidth: 520, width: '92%', overflow: 'hidden', boxShadow: '0 24px 64px rgba(0,0,0,0.4)' }}>
-              {/* Header */}
-              <div style={{ background: hasReplacements ? 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)' : 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', padding: '20px 26px' }}>
-                <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#fff', letterSpacing: '-0.01em' }}>
-                  {hasReplacements ? '🚨 Remplacement détecté' : '⚠️ Confirmer l\'inventaire'}
+            <div style={{ background: '#fff', borderRadius: 20, padding: 0, maxWidth: 530, width: '92%', overflow: 'hidden', boxShadow: '0 24px 80px rgba(0,0,0,0.45)' }}>
+              <div style={{
+                background: hasReplacements
+                  ? 'linear-gradient(135deg, #991b1b 0%, #dc2626 60%, #ef4444 100%)'
+                  : 'linear-gradient(135deg, #1e3a5f 0%, #2563eb 60%, #0ea5e9 100%)',
+                padding: '22px 28px',
+              }}>
+                <div style={{ fontSize: '1.15rem', fontWeight: 900, color: '#fff', letterSpacing: '-0.01em' }}>
+                  {hasReplacements ? '🚨 Remplacement détecté' : '📋 Confirmer l\'inventaire'}
                 </div>
-                <div style={{ fontSize: '0.83rem', color: 'rgba(255,255,255,0.88)', marginTop: 4 }}>
+                <div style={{ fontSize: '0.84rem', color: 'rgba(255,255,255,0.82)', marginTop: 5 }}>
                   Date : <strong>{fmtDate(date)}</strong> · {confirmPopup.entries.length} ingrédient(s)
-                  {hasReplacements && <> · <strong>{replacements.length} remplacement(s)</strong></>}
+                  {hasReplacements && <> · <strong style={{ color: '#fca5a5' }}>{replacements.length} remplacement(s)</strong></>}
                 </div>
               </div>
-              <div style={{ padding: '22px 26px' }}>
-                {/* Warning notice */}
-                <div style={{ background: '#fef3c7', border: '1px solid #fde68a', borderRadius: 10, padding: '11px 15px', marginBottom: 16, fontSize: '0.83rem', color: '#92400e', lineHeight: 1.5 }}>
+              <div style={{ padding: '22px 28px' }}>
+                <div style={{ background: '#fef3c7', border: '1.5px solid #fde68a', borderRadius: 11, padding: '12px 16px', marginBottom: 18, fontSize: '0.84rem', color: '#92400e', lineHeight: 1.6 }}>
                   ⚠️ <strong>Important :</strong> Cet inventaire <strong>ne peut pas être supprimé</strong>, seulement modifié. Il recalcule le stock à partir du <strong>{fmtDate(date)}</strong>.
                 </div>
 
-                {/* Replacement rows (alarming) */}
                 {hasReplacements && (
                   <div style={{ marginBottom: 14 }}>
-                    <div style={{ fontSize: '0.68rem', fontWeight: 800, color: '#dc2626', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 6 }}>
-                      🔄 Valeurs remplacées
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    <div style={{ fontSize: '0.67rem', fontWeight: 800, color: '#dc2626', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 7 }}>🔄 Valeurs remplacées</div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
                       {replacements.map((e) => (
                         <div key={e.ingredientId} style={{
                           display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                          padding: '9px 12px', borderRadius: 8,
+                          padding: '10px 14px', borderRadius: 9,
                           background: 'linear-gradient(90deg, #fef2f2 0%, #fff5f5 100%)',
                           border: '1.5px solid #fca5a5', fontSize: '0.87rem',
                         }}>
-                          <span style={{ fontWeight: 600, color: '#991b1b' }}>{e.nom}</span>
-                          <span style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 700 }}>
-                            <span style={{ color: '#9ca3af', textDecoration: 'line-through', fontSize: '0.82rem' }}>
+                          <span style={{ fontWeight: 700, color: '#991b1b' }}>{e.nom}</span>
+                          <span style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+                            <span style={{ color: '#9ca3af', textDecoration: 'line-through', fontSize: '0.82rem', fontWeight: 600 }}>
                               {e.oldQty !== null ? e.oldQty.toFixed(3) : '—'}
                             </span>
-                            <span style={{ color: '#6b7280', fontSize: '0.8rem' }}>→</span>
-                            <span style={{ color: '#dc2626', fontSize: '0.93rem' }}>{e.qty.toFixed(3)}</span>
+                            <span style={{ color: '#dc2626', fontWeight: 900, fontSize: '0.9rem' }}>→</span>
+                            <span style={{ color: '#dc2626', fontWeight: 900, fontSize: '0.95rem' }}>{e.qty.toFixed(3)}</span>
                           </span>
                         </div>
                       ))}
@@ -401,23 +509,20 @@ export default function InventairePage() {
                   </div>
                 )}
 
-                {/* New entries */}
                 {newEntries.length > 0 && (
-                  <div style={{ marginBottom: 16 }}>
+                  <div style={{ marginBottom: 18 }}>
                     {hasReplacements && (
-                      <div style={{ fontSize: '0.68rem', fontWeight: 800, color: '#16a34a', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 6 }}>
-                        ✨ Nouveaux inventaires
-                      </div>
+                      <div style={{ fontSize: '0.67rem', fontWeight: 800, color: '#16a34a', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 7 }}>✨ Nouveaux</div>
                     )}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4, maxHeight: 180, overflowY: 'auto' }}>
                       {newEntries.map((e) => (
                         <div key={e.ingredientId} style={{
                           display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                          padding: '7px 10px', borderRadius: 7,
+                          padding: '8px 12px', borderRadius: 8,
                           background: '#f8fafc', border: '1px solid #e2e8f0', fontSize: '0.87rem',
                         }}>
-                          <span style={{ fontWeight: 500 }}>{e.nom}</span>
-                          <span style={{ fontWeight: 800, color: 'var(--primary)' }}>{e.qty.toFixed(3)}</span>
+                          <span style={{ fontWeight: 600 }}>{e.nom}</span>
+                          <span style={{ fontWeight: 800, color: '#2563eb' }}>{e.qty.toFixed(3)}</span>
                         </div>
                       ))}
                     </div>
@@ -425,13 +530,16 @@ export default function InventairePage() {
                 )}
 
                 <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
-                  <button onClick={() => setConfirmPopup(null)} style={{ padding: '9px 22px', borderRadius: 9, border: '1px solid var(--border)', background: 'none', cursor: 'pointer', fontSize: '0.9rem', fontWeight: 500 }}>
+                  <button onClick={() => setConfirmPopup(null)} style={{ padding: '10px 22px', borderRadius: 10, border: '1.5px solid var(--border)', background: 'none', cursor: 'pointer', fontSize: '0.9rem', fontWeight: 600 }}>
                     Annuler
                   </button>
                   <button onClick={handleConfirmSave} style={{
-                    padding: '9px 26px', borderRadius: 9, border: 'none',
-                    background: hasReplacements ? 'linear-gradient(135deg, #dc2626, #b91c1c)' : 'linear-gradient(135deg, #f59e0b, #d97706)',
+                    padding: '10px 28px', borderRadius: 10, border: 'none',
+                    background: hasReplacements
+                      ? 'linear-gradient(135deg, #dc2626, #b91c1c)'
+                      : 'linear-gradient(135deg, #2563eb, #0ea5e9)',
                     color: '#fff', fontWeight: 800, cursor: 'pointer', fontSize: '0.9rem',
+                    boxShadow: hasReplacements ? '0 4px 14px rgba(220,38,38,0.4)' : '0 4px 14px rgba(37,99,235,0.4)',
                   }}>
                     {hasReplacements ? '🔄 Remplacer' : '✓ Confirmer'}
                   </button>

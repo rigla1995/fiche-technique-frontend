@@ -26,8 +26,8 @@ interface IngOption { ingredientId: number; nom: string; categorie: string }
 interface Activite { id: number; nom: string; type: string; franchiseGroup: string | null }
 
 const labelStyle: React.CSSProperties = {
-  fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)',
-  textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 4,
+  fontSize: '0.68rem', fontWeight: 800, color: 'var(--text-muted)',
+  textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5,
 };
 
 export default function HistoriqueInventairePage() {
@@ -76,7 +76,6 @@ export default function HistoriqueInventairePage() {
       .catch(() => {});
   }, [section]);
 
-  // Load ingredient options for filters
   useEffect(() => {
     if (!laboId && !effectiveActiviteId) return;
     const url = laboId
@@ -138,7 +137,7 @@ export default function HistoriqueInventairePage() {
       a.download = filename;
       a.click();
       URL.revokeObjectURL(blobUrl);
-    } catch { setErrorMsg('Erreur lors de l\'export Excel.'); }
+    } catch { setErrorMsg("Erreur lors de l'export Excel."); }
   };
 
   const toggleSelect = (id: string) => setSelectedIds((prev) => {
@@ -175,20 +174,45 @@ export default function HistoriqueInventairePage() {
   const canSearch = !!laboId || !!effectiveActiviteId;
 
   return (
-    <div style={{ maxWidth: 1100, margin: '0 auto', padding: '24px 16px' }}>
-      <div style={{ marginBottom: 24 }}>
-        <h1 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: 2, letterSpacing: '-0.01em' }}>
-          📊 Historique Inventaire
-        </h1>
-        {contextTitle && <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{contextTitle}</p>}
+    <div style={{ maxWidth: 1120, margin: '0 auto', padding: '24px 16px' }}>
+
+      {/* ── Hero header ── */}
+      <div style={{
+        background: 'linear-gradient(135deg, #134e4a 0%, #0f766e 55%, #0d9488 100%)',
+        borderRadius: 18, padding: '24px 28px', marginBottom: 24,
+        boxShadow: '0 8px 32px rgba(15,118,110,0.28)',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16,
+      }}>
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+            <div style={{ background: 'rgba(255,255,255,0.2)', borderRadius: 10, padding: '7px 9px', fontSize: '1.2rem', lineHeight: 1 }}>📊</div>
+            <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0, letterSpacing: '-0.02em' }}>Historique Inventaire</h1>
+          </div>
+          {contextTitle && <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.85rem', margin: 0 }}>{contextTitle}</p>}
+        </div>
+        {applied && histRows.length > 0 && (
+          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+            <div style={{ background: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(8px)', borderRadius: 12, padding: '10px 18px', textAlign: 'center' }}>
+              <div style={{ fontSize: '1.4rem', fontWeight: 900, color: '#fff', lineHeight: 1 }}>{histRows.length}</div>
+              <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.75)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Entrées</div>
+            </div>
+            {selectedIds.size > 0 && (
+              <div style={{ background: 'rgba(245,158,11,0.25)', backdropFilter: 'blur(8px)', border: '1px solid rgba(245,158,11,0.5)', borderRadius: 12, padding: '10px 18px', textAlign: 'center' }}>
+                <div style={{ fontSize: '1.4rem', fontWeight: 900, color: '#fbbf24', lineHeight: 1 }}>{selectedIds.size}</div>
+                <div style={{ fontSize: '0.7rem', color: '#fcd34d', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Sélectionnés</div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
+      {/* ── Activite selector ── */}
       {showActiviteSelector && (
-        <div style={{ marginBottom: 20 }}>
+        <div style={{ marginBottom: 20, background: 'var(--surface)', borderRadius: 12, padding: '14px 18px', border: '1px solid var(--border)' }}>
           <label style={labelStyle}>Activité</label>
           <select value={selectedActiviteId ?? ''} onChange={(e) => { setSelectedActiviteId(Number(e.target.value) || null); setApplied(false); setHistRows([]); }}
-            style={{ padding: '9px 13px', borderRadius: 9, border: '1px solid var(--border)', fontSize: '0.9rem', minWidth: 220 }}>
-            <option value="">— Choisir —</option>
+            style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid var(--border)', fontSize: '0.9rem', minWidth: 240, fontWeight: 600, background: 'var(--background)' }}>
+            <option value="">— Choisir une activité —</option>
             {activites.map((a) => <option key={a.id} value={a.id}>{a.nom}</option>)}
           </select>
         </div>
@@ -196,87 +220,151 @@ export default function HistoriqueInventairePage() {
 
       {canSearch && (
         <>
-          {/* Filters */}
-          <div style={{ background: 'var(--surface)', borderRadius: 12, padding: '14px 18px', marginBottom: 20, border: '1px solid var(--border)', display: 'flex', flexWrap: 'wrap', gap: 14, alignItems: 'flex-end' }}>
+          {/* ── Filters ── */}
+          <div style={{
+            background: 'var(--surface)', borderRadius: 14, padding: '16px 20px', marginBottom: 20,
+            border: '1px solid var(--border)', boxShadow: '0 2px 12px rgba(0,0,0,0.05)',
+            display: 'flex', flexWrap: 'wrap', gap: 14, alignItems: 'flex-end',
+          }}>
             <div>
-              <label style={labelStyle}>Date début</label>
+              <label style={{ ...labelStyle, color: '#0f766e' }}>📅 Date début</label>
               <input type="date" value={filters.startDate} onChange={(e) => setFilters((p) => ({ ...p, startDate: e.target.value }))}
-                style={{ padding: '8px 10px', borderRadius: 8, border: '1px solid var(--border)', fontSize: '0.88rem' }} />
+                style={{ padding: '9px 12px', borderRadius: 9, border: '1.5px solid #0f766e', fontSize: '0.88rem', background: '#f0fdfa', fontWeight: 600, color: '#134e4a' }} />
             </div>
             <div>
-              <label style={labelStyle}>Date fin</label>
+              <label style={{ ...labelStyle, color: '#0f766e' }}>📅 Date fin</label>
               <input type="date" value={filters.endDate} onChange={(e) => setFilters((p) => ({ ...p, endDate: e.target.value }))}
-                style={{ padding: '8px 10px', borderRadius: 8, border: '1px solid var(--border)', fontSize: '0.88rem' }} />
+                style={{ padding: '9px 12px', borderRadius: 9, border: '1.5px solid #0f766e', fontSize: '0.88rem', background: '#f0fdfa', fontWeight: 600, color: '#134e4a' }} />
             </div>
             <div>
-              <label style={labelStyle}>Catégorie</label>
+              <label style={labelStyle}>🏷 Catégorie</label>
               <select value={filters.categorie} onChange={(e) => setFilters((p) => ({ ...p, categorie: e.target.value, ingredientId: '' }))}
-                style={{ padding: '8px 10px', borderRadius: 8, border: '1px solid var(--border)', fontSize: '0.88rem', minWidth: 140 }}>
+                style={{ padding: '9px 12px', borderRadius: 9, border: '1.5px solid var(--border)', fontSize: '0.88rem', minWidth: 150, background: 'var(--background)' }}>
                 <option value="">Toutes</option>
                 {categories.map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>
             <div>
-              <label style={labelStyle}>Ingrédient</label>
+              <label style={labelStyle}>🔎 Ingrédient</label>
               <select value={filters.ingredientId} onChange={(e) => setFilters((p) => ({ ...p, ingredientId: e.target.value }))}
-                style={{ padding: '8px 10px', borderRadius: 8, border: '1px solid var(--border)', fontSize: '0.88rem', minWidth: 160 }}>
+                style={{ padding: '9px 12px', borderRadius: 9, border: '1.5px solid var(--border)', fontSize: '0.88rem', minWidth: 170, background: 'var(--background)' }}>
                 <option value="">Tous</option>
                 {filteredIngOptions.map((i) => <option key={i.ingredientId} value={i.ingredientId}>{i.nom}</option>)}
               </select>
             </div>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <button onClick={search} disabled={loading}
-                style={{ padding: '8px 22px', borderRadius: 8, border: 'none', background: 'var(--primary)', color: '#fff', fontWeight: 700, fontSize: '0.9rem', cursor: 'pointer' }}>
-                {loading ? '...' : '🔍 Rechercher'}
+            <div style={{ display: 'flex', gap: 10, marginLeft: 'auto', alignItems: 'center' }}>
+              <button onClick={search} disabled={loading} style={{
+                padding: '10px 26px', borderRadius: 10, border: 'none',
+                background: 'linear-gradient(135deg, #0f766e 0%, #0d9488 100%)',
+                color: '#fff', fontWeight: 800, fontSize: '0.9rem', cursor: 'pointer',
+                boxShadow: '0 4px 14px rgba(15,118,110,0.35)',
+                display: 'flex', alignItems: 'center', gap: 7,
+              }}>
+                <span>🔍</span> {loading ? 'Recherche...' : 'Rechercher'}
               </button>
               {applied && (
-                <button onClick={handleExport}
-                  style={{ padding: '8px 18px', borderRadius: 8, border: '1px solid #16a34a', background: '#f0fdf4', color: '#166534', fontWeight: 700, fontSize: '0.88rem', cursor: 'pointer' }}>
-                  📥 Excel{selectedIds.size > 0 ? ` (${selectedIds.size})` : ''}
+                <button onClick={handleExport} style={{
+                  padding: '10px 20px', borderRadius: 10,
+                  border: 'none',
+                  background: selectedIds.size > 0
+                    ? 'linear-gradient(135deg, #d97706, #f59e0b)'
+                    : 'linear-gradient(135deg, #16a34a, #22c55e)',
+                  color: '#fff', fontWeight: 800, fontSize: '0.88rem', cursor: 'pointer',
+                  boxShadow: selectedIds.size > 0
+                    ? '0 4px 14px rgba(217,119,6,0.35)'
+                    : '0 4px 14px rgba(22,163,74,0.35)',
+                  display: 'flex', alignItems: 'center', gap: 7, whiteSpace: 'nowrap',
+                }}>
+                  <span>📥</span>
+                  Générer Historique Inventaire
+                  {selectedIds.size > 0 && <span style={{ background: 'rgba(255,255,255,0.25)', borderRadius: 20, padding: '1px 8px', fontSize: '0.8rem' }}>{selectedIds.size}</span>}
                 </button>
               )}
             </div>
           </div>
 
-          {errorMsg && <div style={{ background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: 8, padding: '10px 14px', marginBottom: 12, fontSize: '0.85rem', color: '#991b1b' }}>{errorMsg}</div>}
-          {loading && <p style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '40px 0' }}>Chargement...</p>}
-          {!loading && applied && histRows.length === 0 && <p style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '40px 0' }}>Aucun inventaire trouvé pour ces critères.</p>}
+          {errorMsg && (
+            <div style={{ background: 'linear-gradient(90deg, #fef2f2, #fff)', border: '1.5px solid #fca5a5', borderRadius: 10, padding: '11px 16px', marginBottom: 14, fontSize: '0.85rem', color: '#991b1b', display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span>🚫</span> {errorMsg}
+            </div>
+          )}
+
+          {loading && (
+            <div style={{ textAlign: 'center', padding: '60px 0' }}>
+              <div style={{ fontSize: '2rem', marginBottom: 12 }}>⚙️</div>
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Chargement de l'historique...</p>
+            </div>
+          )}
+
+          {!loading && applied && histRows.length === 0 && (
+            <div style={{ textAlign: 'center', padding: '60px 0', background: 'var(--surface)', borderRadius: 14, border: '1px dashed var(--border)' }}>
+              <div style={{ fontSize: '2.5rem', marginBottom: 10 }}>📭</div>
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', fontWeight: 500 }}>Aucun inventaire trouvé pour ces critères.</p>
+            </div>
+          )}
+
           {!loading && histRows.length > 0 && (
-            <div style={{ borderRadius: 12, overflow: 'hidden', border: '1px solid var(--border)', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
+            <div style={{ borderRadius: 14, overflow: 'hidden', border: '1.5px solid var(--border)', boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.87rem' }}>
                 <thead>
-                  <tr style={{ background: 'var(--primary)', color: '#fff' }}>
-                    <th style={{ padding: '10px 12px', textAlign: 'center', width: 36 }}>
-                      <input type="checkbox" checked={selectedIds.size === histRows.length && histRows.length > 0} onChange={toggleAll} />
+                  <tr style={{ background: 'linear-gradient(135deg, #134e4a, #0f766e)', color: '#fff' }}>
+                    <th style={{ padding: '12px 14px', textAlign: 'center', width: 40 }}>
+                      <input type="checkbox" checked={selectedIds.size === histRows.length && histRows.length > 0} onChange={toggleAll}
+                        style={{ width: 16, height: 16, cursor: 'pointer' }} />
                     </th>
-                    <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: 700 }}>Date</th>
-                    <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: 700 }}>Ingrédient</th>
-                    <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: 700 }}>Catégorie</th>
-                    <th style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 700 }}>Qté réelle</th>
-                    <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: 700 }}>Note</th>
-                    <th style={{ padding: '10px 12px', textAlign: 'center', fontWeight: 700 }}>Action</th>
+                    <th style={{ padding: '12px 14px', textAlign: 'left', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase' }}>Date</th>
+                    <th style={{ padding: '12px 14px', textAlign: 'left', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase' }}>Ingrédient</th>
+                    <th style={{ padding: '12px 14px', textAlign: 'left', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase' }}>Catégorie</th>
+                    <th style={{ padding: '12px 14px', textAlign: 'right', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase' }}>Qté réelle</th>
+                    <th style={{ padding: '12px 14px', textAlign: 'left', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase' }}>Note</th>
+                    <th style={{ padding: '12px 14px', textAlign: 'center', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase' }}>Action</th>
                   </tr>
                 </thead>
                 <tbody>
                   {histRows.map((r, i) => {
                     const sel = selectedIds.has(r.id);
                     return (
-                      <tr key={r.id} style={{ background: sel ? '#fef3c7' : (i % 2 === 0 ? 'var(--surface)' : 'var(--background)'), transition: 'background 0.1s' }}>
-                        <td style={{ padding: '9px 12px', textAlign: 'center' }}>
-                          <input type="checkbox" checked={sel} onChange={() => toggleSelect(r.id)} />
+                      <tr key={r.id} style={{
+                        background: sel ? 'linear-gradient(90deg, #fef3c7, #fffbeb)' : i % 2 === 0 ? 'var(--surface)' : 'var(--background)',
+                        transition: 'background 0.1s',
+                        borderLeft: sel ? '3px solid #f59e0b' : '3px solid transparent',
+                      }}>
+                        <td style={{ padding: '10px 14px', textAlign: 'center' }}>
+                          <input type="checkbox" checked={sel} onChange={() => toggleSelect(r.id)}
+                            style={{ width: 16, height: 16, cursor: 'pointer', accentColor: '#0f766e' }} />
                         </td>
-                        <td style={{ padding: '9px 12px', fontWeight: 700, whiteSpace: 'nowrap' }}>{fmtDate(r.dateInventaire)}</td>
-                        <td style={{ padding: '9px 12px', fontWeight: 500 }}>{r.ingredientNom}</td>
-                        <td style={{ padding: '9px 12px', color: 'var(--text-muted)', fontSize: '0.82rem' }}>{r.categorie}</td>
-                        <td style={{ padding: '9px 12px', textAlign: 'right', fontWeight: 700, color: 'var(--primary)' }}>
-                          {r.quantiteReelle.toFixed(3)} <span style={{ fontWeight: 400, color: 'var(--text-muted)', fontSize: '0.8rem' }}>{r.unite}</span>
+                        <td style={{ padding: '10px 14px' }}>
+                          <span style={{
+                            background: '#f0fdfa', border: '1px solid #99f6e4',
+                            borderRadius: 7, padding: '3px 10px',
+                            fontWeight: 700, fontSize: '0.82rem', color: '#0f766e', whiteSpace: 'nowrap',
+                          }}>
+                            {fmtDate(r.dateInventaire)}
+                          </span>
                         </td>
-                        <td style={{ padding: '9px 12px', color: 'var(--text-muted)', fontSize: '0.82rem', maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {r.note || '—'}
+                        <td style={{ padding: '10px 14px', fontWeight: 600, color: 'var(--text)' }}>{r.ingredientNom}</td>
+                        <td style={{ padding: '10px 14px' }}>
+                          <span style={{ background: '#f1f5f9', color: '#475569', borderRadius: 6, padding: '2px 9px', fontSize: '0.78rem', fontWeight: 600 }}>
+                            {r.categorie}
+                          </span>
                         </td>
-                        <td style={{ padding: '9px 12px', textAlign: 'center' }}>
+                        <td style={{ padding: '10px 14px', textAlign: 'right' }}>
+                          <span style={{ fontWeight: 800, color: '#0f766e', fontSize: '0.93rem' }}>{r.quantiteReelle.toFixed(3)}</span>
+                          <span style={{ fontWeight: 400, color: 'var(--text-muted)', fontSize: '0.78rem', marginLeft: 4 }}>{r.unite}</span>
+                        </td>
+                        <td style={{ padding: '10px 14px', color: 'var(--text-muted)', fontSize: '0.82rem', maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {r.note
+                            ? <span style={{ background: '#fefce8', border: '1px solid #fde68a', borderRadius: 5, padding: '1px 8px', color: '#854d0e', fontSize: '0.78rem' }}>{r.note}</span>
+                            : <span style={{ color: '#cbd5e1' }}>—</span>}
+                        </td>
+                        <td style={{ padding: '10px 14px', textAlign: 'center' }}>
                           <button onClick={() => { setEditEntry(r); setEditQty(String(r.quantiteReelle)); setEditNote(r.note || ''); }}
-                            style={{ padding: '5px 14px', borderRadius: 7, border: '1px solid var(--border)', background: '#fff', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600 }}>
+                            style={{
+                              padding: '5px 14px', borderRadius: 8,
+                              border: '1.5px solid #0f766e', background: '#f0fdfa',
+                              cursor: 'pointer', fontSize: '0.8rem', fontWeight: 700, color: '#0f766e',
+                              transition: 'all 0.15s',
+                            }}>
                             ✏️ Modifier
                           </button>
                         </td>
@@ -285,44 +373,66 @@ export default function HistoriqueInventairePage() {
                   })}
                 </tbody>
               </table>
-              <div style={{ padding: '10px 16px', background: 'var(--surface)', borderTop: '1px solid var(--border)', fontSize: '0.82rem', color: 'var(--text-muted)', display: 'flex', justifyContent: 'space-between' }}>
-                <span>{histRows.length} enregistrement(s)</span>
-                {selectedIds.size > 0 && <span style={{ color: '#d97706', fontWeight: 600 }}>{selectedIds.size} sélectionné(s)</span>}
+              <div style={{
+                padding: '12px 18px', background: 'linear-gradient(135deg, #134e4a08, #0f766e0a)',
+                borderTop: '1px solid var(--border)', fontSize: '0.82rem',
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+              }}>
+                <span style={{ color: 'var(--text-muted)', fontWeight: 500 }}>
+                  <strong style={{ color: '#0f766e' }}>{histRows.length}</strong> enregistrement{histRows.length > 1 ? 's' : ''}
+                </span>
+                {selectedIds.size > 0 && (
+                  <span style={{
+                    background: '#fef3c7', border: '1px solid #fde68a',
+                    borderRadius: 8, padding: '3px 12px',
+                    color: '#92400e', fontWeight: 700, fontSize: '0.8rem',
+                  }}>
+                    ⭐ {selectedIds.size} sélectionné{selectedIds.size > 1 ? 's' : ''} — inclus dans l'export Excel
+                  </span>
+                )}
               </div>
             </div>
           )}
         </>
       )}
 
-      {/* Edit modal */}
+      {/* ── Edit modal ── */}
       {editEntry && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{ background: '#fff', borderRadius: 16, padding: '26px', maxWidth: 420, width: '90%', boxShadow: '0 16px 48px rgba(0,0,0,0.28)' }}>
-            <h3 style={{ fontSize: '1.05rem', fontWeight: 800, marginBottom: 4 }}>✏️ Modifier l'inventaire</h3>
-            <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginBottom: 16 }}>
-              {editEntry.ingredientNom} · {fmtDate(editEntry.dateInventaire)}
-            </p>
-            <div style={{ background: '#fef3c7', borderRadius: 8, padding: '9px 13px', marginBottom: 18, fontSize: '0.81rem', color: '#92400e' }}>
-              ⚠️ La date ne peut pas être modifiée.
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ background: '#fff', borderRadius: 18, padding: 0, maxWidth: 430, width: '90%', overflow: 'hidden', boxShadow: '0 20px 60px rgba(0,0,0,0.35)' }}>
+            <div style={{ background: 'linear-gradient(135deg, #134e4a, #0f766e)', padding: '20px 26px' }}>
+              <h3 style={{ fontSize: '1.05rem', fontWeight: 900, color: '#fff', margin: 0, marginBottom: 4 }}>✏️ Modifier l'inventaire</h3>
+              <p style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.78)', margin: 0 }}>
+                {editEntry.ingredientNom} · {fmtDate(editEntry.dateInventaire)}
+              </p>
             </div>
-            <div style={{ marginBottom: 14 }}>
-              <label style={labelStyle}>Quantité réelle ({editEntry.unite})</label>
-              <input type="number" min="0" step="0.001" value={editQty} onChange={(e) => setEditQty(e.target.value)}
-                style={{ width: '100%', padding: '9px 11px', borderRadius: 8, border: '1px solid var(--border)', fontSize: '0.92rem' }} />
-            </div>
-            <div style={{ marginBottom: 22 }}>
-              <label style={labelStyle}>Note</label>
-              <input type="text" value={editNote} onChange={(e) => setEditNote(e.target.value)} placeholder="Observation..."
-                style={{ width: '100%', padding: '9px 11px', borderRadius: 8, border: '1px solid var(--border)', fontSize: '0.88rem' }} />
-            </div>
-            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
-              <button onClick={() => setEditEntry(null)} style={{ padding: '9px 20px', borderRadius: 8, border: '1px solid var(--border)', background: 'none', cursor: 'pointer', fontSize: '0.9rem' }}>
-                Annuler
-              </button>
-              <button onClick={handleEditSave} disabled={editSaving}
-                style={{ padding: '9px 24px', borderRadius: 8, border: 'none', background: 'var(--primary)', color: '#fff', fontWeight: 700, cursor: 'pointer', fontSize: '0.9rem', opacity: editSaving ? 0.6 : 1 }}>
-                {editSaving ? '...' : 'Enregistrer'}
-              </button>
+            <div style={{ padding: '22px 26px' }}>
+              <div style={{ background: '#fef3c7', border: '1.5px solid #fde68a', borderRadius: 9, padding: '10px 14px', marginBottom: 18, fontSize: '0.81rem', color: '#92400e' }}>
+                ⚠️ La date ne peut pas être modifiée.
+              </div>
+              <div style={{ marginBottom: 14 }}>
+                <label style={labelStyle}>Quantité réelle ({editEntry.unite})</label>
+                <input type="number" min="0" step="0.001" value={editQty} onChange={(e) => setEditQty(e.target.value)}
+                  style={{ width: '100%', padding: '10px 13px', borderRadius: 9, border: '1.5px solid #0f766e', fontSize: '0.93rem', fontWeight: 700, background: '#f0fdfa', boxSizing: 'border-box' }} />
+              </div>
+              <div style={{ marginBottom: 22 }}>
+                <label style={labelStyle}>Note</label>
+                <input type="text" value={editNote} onChange={(e) => setEditNote(e.target.value)} placeholder="Observation..."
+                  style={{ width: '100%', padding: '10px 13px', borderRadius: 9, border: '1.5px solid var(--border)', fontSize: '0.88rem', background: 'var(--background)', boxSizing: 'border-box' }} />
+              </div>
+              <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+                <button onClick={() => setEditEntry(null)} style={{ padding: '10px 22px', borderRadius: 9, border: '1.5px solid var(--border)', background: 'none', cursor: 'pointer', fontSize: '0.9rem', fontWeight: 600 }}>
+                  Annuler
+                </button>
+                <button onClick={handleEditSave} disabled={editSaving} style={{
+                  padding: '10px 26px', borderRadius: 9, border: 'none',
+                  background: 'linear-gradient(135deg, #0f766e, #0d9488)', color: '#fff', fontWeight: 800,
+                  cursor: 'pointer', fontSize: '0.9rem', opacity: editSaving ? 0.6 : 1,
+                  boxShadow: '0 4px 14px rgba(15,118,110,0.35)',
+                }}>
+                  {editSaving ? '...' : '✓ Enregistrer'}
+                </button>
+              </div>
             </div>
           </div>
         </div>
