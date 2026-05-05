@@ -37,6 +37,7 @@ interface LaboStockRow {
   nom: string;
   unite: string;
   categorie: string;
+  activite?: string | null;
   quantite: number | null;        // net stock = total appros - total transféré
   prixUnitaire: number | null;
   dateAppro: string | null;
@@ -626,6 +627,9 @@ export default function StockLaboPage() {
                                           {r.nom}
                                         </div>
                                         <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{r.unite}</div>
+                                        {r.isPT && r.activite && (
+                                          <div style={{ fontSize: '0.70rem', color: '#7c3aed', fontWeight: 500, marginTop: 1 }}>📍 {r.activite}</div>
+                                        )}
                                       </td>
                                       <td style={{ textAlign: 'right' }}>
                                         <span className={cls} style={{ fontSize: '1rem', fontWeight: 700 }}>
