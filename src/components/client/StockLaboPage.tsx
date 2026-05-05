@@ -657,7 +657,13 @@ export default function StockLaboPage() {
                                         <input type="number" min="0" step="0.001" value={rs.quantite} onChange={(e) => setField(r.ingredientId, 'quantite', e.target.value)} style={{ width: 76, textAlign: 'right', ...warnStyle }} className="input" />
                                       </td>
                                       <td style={{ textAlign: 'right' }}>
-                                        <input type="number" min="0" step="0.001" value={rs.prixUnitaire} onChange={(e) => setField(r.ingredientId, 'prixUnitaire', e.target.value)} style={{ width: 84, textAlign: 'right', ...warnStyle }} className="input" />
+                                        {r.isPT ? (
+                                          <div style={{ width: 84, fontSize: '0.78rem', color: '#7c3aed', fontWeight: 600, textAlign: 'right', padding: '4px 0' }} title="Calculé automatiquement depuis les prix des ingrédients du labo">
+                                            Auto
+                                          </div>
+                                        ) : (
+                                          <input type="number" min="0" step="0.001" value={rs.prixUnitaire} onChange={(e) => setField(r.ingredientId, 'prixUnitaire', e.target.value)} style={{ width: 84, textAlign: 'right', ...warnStyle }} className="input" />
+                                        )}
                                       </td>
                                       <td>
                                         <input type="date" className="input" style={{ maxWidth: 138, ...warnStyle }} min={yearStart} max={yearEnd} value={rs.dateAppro} onChange={(e) => setDateApproField(r.ingredientId, e.target.value)} disabled={isSelected} title={isSelected ? 'Date définie par le formulaire ci-dessus' : undefined} />
@@ -685,16 +691,14 @@ export default function StockLaboPage() {
                                             );
                                           })()}
                                           <div style={{ display: 'flex', gap: 4 }}>
-                                            {!r.isPT && (
-                                              <button
-                                                className="perte-btn"
-                                                onClick={() => { setPerteModal({ ingredientId: r.ingredientId, nom: r.nom }); setPerteQty(''); setPerteType('avarie'); setPerteDate(todayStr()); }}
-                                                title="Enregistrer une perte"
-                                                disabled={!canWrite}
-                                              >
-                                                📉
-                                              </button>
-                                            )}
+                                            <button
+                                              className="perte-btn"
+                                              onClick={() => { setPerteModal({ ingredientId: r.ingredientId, nom: r.nom }); setPerteQty(''); setPerteType('avarie'); setPerteDate(todayStr()); }}
+                                              title="Enregistrer une perte"
+                                              disabled={!canWrite}
+                                            >
+                                              📉
+                                            </button>
                                             <button className={`btn btn-sm ${rs.saved ? 'btn-success' : 'btn-primary'}`} onClick={() => saveRow(r.ingredientId)} disabled={!canSaveRow(rs, r.isPT) || !canWrite} style={{ flex: 1 }}>
                                               {rs.saving ? '…' : rs.saved ? '✓' : t('common.save')}
                                             </button>
