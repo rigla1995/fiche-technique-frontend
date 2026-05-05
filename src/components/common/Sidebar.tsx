@@ -419,6 +419,17 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                       ) : (
                         <LockedLink label={t('nav.historique_appro')} reason={!effectiveHasSelections ? 'Sélectionnez d\'abord des ingrédients' : 'Aucun approvisionnement enregistré'} />
                       )}
+                      {effectiveHasSelections ? (
+                        <SubNavLink
+                          to="/client/inventaire"
+                          icon="🔢"
+                          label="Inventaire"
+                          isActive={location.pathname === '/client/inventaire' && !currentSearch.get('section')}
+                          onClick={onClose}
+                        />
+                      ) : (
+                        <LockedLink label="Inventaire" reason="Sélectionnez d'abord des ingrédients" />
+                      )}
                     </>
                   )}
 
@@ -526,6 +537,20 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                           </Link>
                         )}
                       </li>
+                      <li>
+                        {isOnboarding || !hasFranchise || !hasFranchiseSelections ? (
+                          <LockedLink label="Inventaire" />
+                        ) : (
+                          <Link
+                            to="/client/inventaire?section=franchise"
+                            className={`sidebar-link ${location.pathname === '/client/inventaire' && currentSearch.get('section') === 'franchise' ? 'active' : ''}`}
+                            onClick={onClose}
+                          >
+                            <span className="link-icon">🔢</span>
+                            <span className="link-label">Inventaire</span>
+                          </Link>
+                        )}
+                      </li>
                     </>
                   )}
 
@@ -573,6 +598,20 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                           </Link>
                         )}
                       </li>
+                      <li>
+                        {isOnboarding || !hasDistinct || !hasDistinctSelections ? (
+                          <LockedLink label="Inventaire" />
+                        ) : (
+                          <Link
+                            to="/client/inventaire?section=distinct"
+                            className={`sidebar-link ${location.pathname === '/client/inventaire' && currentSearch.get('section') === 'distinct' ? 'active' : ''}`}
+                            onClick={onClose}
+                          >
+                            <span className="link-icon">🔢</span>
+                            <span className="link-label">Inventaire</span>
+                          </Link>
+                        )}
+                      </li>
                     </>
                   )}
 
@@ -588,6 +627,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                         const isLaboTransfer = location.pathname === '/client/labo/transfer' && location.search.includes(laboParam);
                         const isLaboHistorique = location.pathname === '/client/labo/historique-transferts' && location.search.includes(laboParam);
                         const isLaboHistoriqueAppro = location.pathname === '/client/labo/historique-appro' && location.search.includes(laboParam);
+                        const isLaboInventaire = location.pathname === '/client/labo/inventaire' && location.search.includes(laboParam);
                         const stockLocked = (labo.fournisseurCount ?? 0) === 0;
                         return (
                           <React.Fragment key={labo.id}>
@@ -657,6 +697,20 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                                     >
                                       <span className="link-icon">📋</span>
                                       <span className="link-label">Historiques Transferts</span>
+                                    </Link>
+                                  )}
+                                </li>
+                                <li>
+                                  {stockLocked ? (
+                                    <LockedLink label="Inventaire" reason="Assignez d'abord un fournisseur" />
+                                  ) : (
+                                    <Link
+                                      to={`/client/labo/inventaire?laboId=${labo.id}`}
+                                      className={`sidebar-link ${isLaboInventaire ? 'active' : ''}`}
+                                      onClick={onClose}
+                                    >
+                                      <span className="link-icon">🔢</span>
+                                      <span className="link-label">Inventaire</span>
                                     </Link>
                                   )}
                                 </li>
