@@ -247,6 +247,30 @@ export default function StockLaboPage() {
       }
     }
 
+    // For ingredient rows, also check for existing appro on chosen date
+    if (!isPT && !confirmed) {
+      let history = rs.history;
+      if (history.length === 0) {
+        try {
+          const { data } = await api.get(`/api/labo/${laboId}/stock/${ingredientId}/history`);
+          history = data;
+          setField(ingredientId, 'history', data);
+        } catch { /* ignore */ }
+      }
+      const existingOnDate = history.filter((h) => h.dateAppro === rs.dateAppro && (h.quantite ?? 0) > 0);
+      if (existingOnDate.length > 0) {
+        const existingTotal = existingOnDate.reduce((sum, h) => sum + (h.quantite ?? 0), 0);
+        setPtConfirm({
+          ingredientId,
+          nom: stock.find((r) => r.ingredientId === ingredientId)?.nom ?? '',
+          dateAppro: rs.dateAppro,
+          existingQty: existingTotal,
+          newQty: parseFloat(rs.quantite),
+        });
+        return;
+      }
+    }
+
     setField(ingredientId, 'saving', true);
     try {
       await api.put(`/api/labo/${laboId}/stock/${ingredientId}`, {
