@@ -121,24 +121,34 @@ export default function TransferPage() {
       setAssignedSet(assigned);
       const init: TransferQtys = {};
       const dateInit: Record<number, string> = {};
-      const histStubs: Record<number, TransferRecord[]> = {};
       for (const r of stockRes.data as LaboStockRow[]) {
         init[r.ingredientId] = {};
         for (const act of (laboRes.data.activites || []) as Activite[]) {
           init[r.ingredientId][act.id] = '';
         }
         dateInit[r.ingredientId] = todayStr();
-        // Pre-populate history stubs from recentTransferDates so alarm works on first load
-        if (r.recentTransferDates && r.recentTransferDates.length > 0) {
-          histStubs[r.ingredientId] = r.recentTransferDates.map((d) => ({
-            id: 0, quantite: 0, dateTransfert: d, activiteId: 0, activiteNom: '', note: null,
-          }));
-        }
       }
       setQtys(init);
       setPerRowDates(dateInit);
-      setTransferHistory(histStubs);
-      setHistoryLoaded(new Set());
+
+      // Pre-load all transfer histories in parallel so alarm works on first render
+      const histResults = await Promise.allSettled(
+        (stockRes.data as LaboStockRow[]).map(async (r) => {
+          const { data } = await api.get(`/api/labo/${laboId}/transfers?ingredientId=${r.ingredientId}&limit=5`);
+          return [r.ingredientId, data] as [number, TransferRecord[]];
+        })
+      );
+      const fullHistory: Record<number, TransferRecord[]> = {};
+      const loadedIds = new Set<number>();
+      for (const result of histResults) {
+        if (result.status === 'fulfilled') {
+          const [id, data] = result.value;
+          fullHistory[id] = Array.isArray(data) ? data : [];
+          loadedIds.add(id);
+        }
+      }
+      setTransferHistory(fullHistory);
+      setHistoryLoaded(loadedIds);
     } catch { /* ignore */ }
     setLoading(false);
   }, [laboId]);
