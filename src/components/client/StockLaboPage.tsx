@@ -233,13 +233,14 @@ export default function StockLaboPage() {
           setField(ingredientId, 'history', data);
         } catch { /* ignore */ }
       }
-      const existing = history.find((h) => h.dateAppro === rs.dateAppro && (h.quantite ?? 0) > 0);
-      if (existing) {
+      const existingOnDate = history.filter((h) => h.dateAppro === rs.dateAppro && (h.quantite ?? 0) > 0);
+      if (existingOnDate.length > 0) {
+        const existingTotal = existingOnDate.reduce((sum, h) => sum + (h.quantite ?? 0), 0);
         setPtConfirm({
           ingredientId,
           nom: row?.nom ?? '',
           dateAppro: rs.dateAppro,
-          existingQty: existing.quantite ?? 0,
+          existingQty: existingTotal,
           newQty: parseFloat(rs.quantite),
         });
         return;
@@ -993,10 +994,12 @@ export default function StockLaboPage() {
             </div>
             <div className="modal-body">
               <p style={{ marginBottom: 12 }}>
-                Une appro de <strong>{ptConfirm.existingQty.toFixed(3)}</strong> existe déjà pour le <strong>{fmtDate(ptConfirm.dateAppro)}</strong>.
+                Tu as déjà un appro à cette date (<strong>{fmtDate(ptConfirm.dateAppro)}</strong>) avec la quantité{' '}
+                <strong>{ptConfirm.existingQty.toFixed(3)}</strong>.
               </p>
               <p style={{ marginBottom: 20 }}>
-                En confirmant, la nouvelle valeur sera :{' '}
+                Es-tu sûr d'ajouter <strong>{ptConfirm.newQty.toFixed(3)}</strong> ?{' '}
+                Car ça te fait un total d'appro de{' '}
                 <strong style={{ color: '#7c3aed', fontSize: '1.05rem' }}>
                   {ptConfirm.existingQty.toFixed(3)} + {ptConfirm.newQty.toFixed(3)} = {(ptConfirm.existingQty + ptConfirm.newQty).toFixed(3)}
                 </strong>
