@@ -26,6 +26,7 @@ import FournisseursPage from './components/client/FournisseursPage';
 import FournisseursLaboPage from './components/client/FournisseursLaboPage';
 import LaboHistoriqueApproPage from './components/client/LaboHistoriqueApproPage';
 import InventairePage from './components/client/InventairePage';
+import HistoriqueInventairePage from './components/client/HistoriqueInventairePage';
 import ErrorPage from './components/common/ErrorPage';
 import AbonnementsManagement from './components/admin/AbonnementsManagement';
 import TarifsConfig from './components/admin/TarifsConfig';
@@ -96,6 +97,8 @@ export default function App() {
             <Route path="/client/labo/historique-appro" element={<LaboHistoriqueApproPage />} />
             <Route path="/client/labo/inventaire" element={<InventairePage />} />
             <Route path="/client/inventaire" element={<InventairePage />} />
+            <Route path="/client/labo/inventaire/historique" element={<HistoriqueInventairePage />} />
+            <Route path="/client/inventaire/historique" element={<HistoriqueInventairePage />} />
             <Route path="/client/fournisseurs" element={<FournisseursPage />} />
             <Route path="/client/fournisseurs-labo" element={<FournisseursLaboPage />} />
             <Route path="/client/abonnement" element={<MonAbonnementPage />} />
