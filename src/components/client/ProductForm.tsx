@@ -170,9 +170,21 @@ export default function ProductForm() {
     };
 
     setLoading(true);
+    const buildProductFetch = () => {
+      const params = new URLSearchParams();
+      if (distinctActId) {
+        params.set('activiteId', String(distinctActId));
+      } else if (isFranchiseCtx) {
+        const fg = preFranchiseGroup || urlFg;
+        if (fg) params.set('franchiseGroup', fg);
+      }
+      const qs = params.toString();
+      return api.get(qs ? `/products?${qs}` : '/products');
+    };
+
     const fetches: Promise<{ data: unknown }>[] = [
       buildIngredientsFetch(),
-      api.get('/products'),
+      buildProductFetch(),
       api.get('/categories'),
     ];
     if (isEdit && id) fetches.push(api.get(`/products/${id}`));

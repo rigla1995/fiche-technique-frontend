@@ -32,6 +32,8 @@ interface LaboActivite { id: number; nom: string; type: string | null; franchise
 
 interface LaboStockRow {
   ingredientId: number;
+  produitId?: number;
+  isPT?: boolean;
   nom: string;
   unite: string;
   categorie: string;
@@ -203,10 +205,10 @@ export default function StockLaboPage() {
 
   const hasFournisseurs = fournisseurs.length > 0;
 
-  const canSaveRow = (rs: RowState | undefined): boolean => {
+  const canSaveRow = (rs: RowState | undefined, isPT = false): boolean => {
     if (!rs || rs.saving) return false;
     if (!rs.quantite.trim() || !rs.prixUnitaire.trim() || !rs.dateAppro.trim()) return false;
-    if (hasFournisseurs && (!rs.fournisseurId.trim() || !rs.refFacture.trim())) return false;
+    if (!isPT && hasFournisseurs && (!rs.fournisseurId.trim() || !rs.refFacture.trim())) return false;
     return true;
   };
 
@@ -607,19 +609,22 @@ export default function StockLaboPage() {
                                 const canSelect = isSelected || bulkAllValid || selectedIngIds.size === 0;
                                 return (
                                   <React.Fragment key={r.ingredientId}>
-                                    <tr style={isSelected ? { background: '#f0fdf4' } : undefined}>
+                                    <tr style={isSelected ? { background: '#f0fdf4' } : r.isPT ? { background: '#f5f3ff' } : undefined}>
                                       <td style={{ textAlign: 'center' }}>
                                         <input
                                           type="checkbox"
                                           checked={isSelected}
-                                          disabled={!canSelect}
-                                          onChange={() => toggleBulkSelect(r.ingredientId)}
-                                          style={{ width: 16, height: 16, cursor: canSelect ? 'pointer' : 'not-allowed', accentColor: 'var(--primary)' }}
-                                          title={!canSelect ? 'Remplissez la qté et prix des ingrédients sélectionnés avant d\'en ajouter un autre' : undefined}
+                                          disabled={!canSelect || !!r.isPT}
+                                          onChange={() => !r.isPT && toggleBulkSelect(r.ingredientId)}
+                                          style={{ width: 16, height: 16, cursor: (canSelect && !r.isPT) ? 'pointer' : 'not-allowed', accentColor: 'var(--primary)' }}
+                                          title={r.isPT ? 'Produit Transformé — appro individuelle' : !canSelect ? 'Remplissez la qté et prix des ingrédients sélectionnés avant d\'en ajouter un autre' : undefined}
                                         />
                                       </td>
                                       <td>
-                                        <div style={{ fontWeight: 600 }}>{r.nom}</div>
+                                        <div style={{ fontWeight: 600 }}>
+                                          {r.isPT && <span style={{ fontSize: '0.68rem', background: '#7c3aed', color: '#fff', borderRadius: 4, padding: '1px 5px', marginRight: 5, fontWeight: 700 }}>PT</span>}
+                                          {r.nom}
+                                        </div>
                                         <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{r.unite}</div>
                                       </td>
                                       <td style={{ textAlign: 'right' }}>
@@ -655,7 +660,7 @@ export default function StockLaboPage() {
                                       </td>
                                       <td>
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'stretch' }}>
-                                          {fournisseurs.length > 0 && (() => {
+                                          {fournisseurs.length > 0 && !r.isPT && (() => {
                                             const assignedF = rs.fournisseurId ? fournisseurs.find((f) => String(f.id) === rs.fournisseurId) : null;
                                             const validated = !!assignedF && rs.refFacture.trim() !== '';
                                             return (
@@ -676,15 +681,17 @@ export default function StockLaboPage() {
                                             );
                                           })()}
                                           <div style={{ display: 'flex', gap: 4 }}>
-                                            <button
-                                              className="perte-btn"
-                                              onClick={() => { setPerteModal({ ingredientId: r.ingredientId, nom: r.nom }); setPerteQty(''); setPerteType('avarie'); setPerteDate(todayStr()); }}
-                                              title="Enregistrer une perte"
-                                              disabled={!canWrite}
-                                            >
-                                              📉
-                                            </button>
-                                            <button className={`btn btn-sm ${rs.saved ? 'btn-success' : 'btn-primary'}`} onClick={() => saveRow(r.ingredientId)} disabled={!canSaveRow(rs) || !canWrite} style={{ flex: 1 }}>
+                                            {!r.isPT && (
+                                              <button
+                                                className="perte-btn"
+                                                onClick={() => { setPerteModal({ ingredientId: r.ingredientId, nom: r.nom }); setPerteQty(''); setPerteType('avarie'); setPerteDate(todayStr()); }}
+                                                title="Enregistrer une perte"
+                                                disabled={!canWrite}
+                                              >
+                                                📉
+                                              </button>
+                                            )}
+                                            <button className={`btn btn-sm ${rs.saved ? 'btn-success' : 'btn-primary'}`} onClick={() => saveRow(r.ingredientId)} disabled={!canSaveRow(rs, r.isPT) || !canWrite} style={{ flex: 1 }}>
                                               {rs.saving ? '…' : rs.saved ? '✓' : t('common.save')}
                                             </button>
                                             <button className="btn btn-ghost btn-sm" onClick={() => toggleHistory(r.ingredientId)} title="5 derniers appros">
