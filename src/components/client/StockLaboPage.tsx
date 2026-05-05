@@ -47,6 +47,7 @@ interface LaboStockRow {
   totalTransfere: number;
   lastFournisseurId: number | null;
   lastRefFacture: string | null;
+  recentDates?: string[];
 }
 
 interface RowState {
@@ -156,7 +157,8 @@ export default function StockLaboPage() {
           quantite: '0', prixUnitaire: '0', dateAppro: today,
           fournisseurId: '', refFacture: '',
           hasExisting: r.quantite !== null,
-          saving: false, saved: false, historyOpen: false, history: [],
+          saving: false, saved: false, historyOpen: false,
+          history: (r.recentDates || []).map((d) => ({ dateAppro: d, quantite: null, prixUnitaire: null, fournisseurNom: null, refFacture: null })),
         };
         seuilInit[r.ingredientId] = r.seuilMin !== null ? String(r.seuilMin) : '';
       }
