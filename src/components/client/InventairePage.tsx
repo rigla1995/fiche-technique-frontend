@@ -21,8 +21,7 @@ interface InventaireRow {
 }
 interface Activite { id: number; nom: string; type: string; franchiseGroup: string | null }
 
-const CAT_COLORS = ['#6366f1','#0ea5e9','#10b981','#f59e0b','#ef4444','#8b5cf6','#ec4899','#14b8a6'];
-const catColor = (cat: string) => CAT_COLORS[Math.abs([...cat].reduce((a,c)=>a+c.charCodeAt(0),0)) % CAT_COLORS.length];
+const catColor = (_cat: string) => '#2563eb';
 
 export default function InventairePage() {
   const [searchParams] = useSearchParams();
