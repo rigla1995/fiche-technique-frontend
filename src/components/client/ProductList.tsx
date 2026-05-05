@@ -129,18 +129,16 @@ export default function ProductList() {
 
   const togglePT = async (p: Product) => {
     if (p.isStockIngredient) {
-      // Pre-check history before untoggling
+      // Always show confirmation when removing from stock; pre-fetch history count
       setTogglingPT(p.id);
+      let histCount = 0;
       try {
         const { data: hist } = await api.get(`/api/stock/pt/${p.id}/history`);
-        setTogglingPT(null);
-        if (hist.length > 0) {
-          setPtDeselectModal({ id: p.id, nom: p.name, historyCount: hist.length });
-          return;
-        }
-      } catch {
-        setTogglingPT(null);
-      }
+        histCount = Array.isArray(hist) ? hist.length : 0;
+      } catch { /* ignore */ }
+      setTogglingPT(null);
+      setPtDeselectModal({ id: p.id, nom: p.name, historyCount: histCount });
+      return;
     }
     await doTogglePT(p.id);
   };
@@ -836,12 +834,18 @@ export default function ProductList() {
                 </div>
                 <div className="modal-body">
                   <p style={{ marginBottom: 12 }}>
-                    <strong>"{ptDeselectModal.nom}"</strong> possède{' '}
-                    <strong>{ptDeselectModal.historyCount}</strong> entrée{ptDeselectModal.historyCount > 1 ? 's' : ''} d'approvisionnement enregistrée{ptDeselectModal.historyCount > 1 ? 's' : ''}.
+                    Vous êtes sur le point de retirer <strong>"{ptDeselectModal.nom}"</strong> du stock.
                   </p>
-                  <p style={{ color: 'var(--danger)', fontSize: '0.88rem' }}>
-                    En confirmant, le produit sera retiré du stock <strong>et tout son historique sera supprimé définitivement</strong>.
-                  </p>
+                  {ptDeselectModal.historyCount > 0 ? (
+                    <p style={{ color: 'var(--danger)', fontSize: '0.88rem' }}>
+                      Ce produit possède <strong>{ptDeselectModal.historyCount}</strong> entrée{ptDeselectModal.historyCount > 1 ? 's' : ''} d'approvisionnement.
+                      En confirmant, <strong>tout l'historique sera supprimé définitivement</strong>.
+                    </p>
+                  ) : (
+                    <p style={{ color: '#92400e', fontSize: '0.88rem' }}>
+                      Si vous continuez, le produit ne sera plus visible dans votre stock. Cette action est réversible (vous pourrez le ré-activer).
+                    </p>
+                  )}
                 </div>
                 <div className="modal-footer">
                   <button className="btn btn-ghost" onClick={() => setPtDeselectModal(null)}>Annuler</button>
