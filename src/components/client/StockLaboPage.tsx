@@ -86,6 +86,7 @@ export default function StockLaboPage() {
   const [fournisseurs, setFournisseurs] = useState<Fournisseur[]>([]);
   const [fournisseurModal, setFournisseurModal] = useState<{ ingredientId: number; nom: string } | null>(null);
   const [perteModal, setPerteModal] = useState<{ ingredientId: number; nom: string } | null>(null);
+  const [ptConfirm, setPtConfirm] = useState<{ ingredientId: number; nom: string; dateAppro: string; existingQty: number; newQty: number } | null>(null);
   const [perteQty, setPerteQty] = useState('');
   const [perteType, setPerteType] = useState<'avarie' | 'dechet'>('avarie');
   const [perteDate, setPerteDate] = useState(todayStr());
@@ -216,10 +217,35 @@ export default function StockLaboPage() {
     return true;
   };
 
-  const saveRow = async (ingredientId: number) => {
+  const saveRow = async (ingredientId: number, confirmed = false) => {
     const rs = rowState[ingredientId];
-    const isPT = stock.find((r) => r.ingredientId === ingredientId)?.isPT ?? false;
+    const row = stock.find((r) => r.ingredientId === ingredientId);
+    const isPT = row?.isPT ?? false;
     if (!rs || !canSaveRow(rs, isPT)) return;
+
+    // For PT rows, check for existing appro on the chosen date before accumulating
+    if (isPT && !confirmed) {
+      let history = rs.history;
+      if (history.length === 0) {
+        try {
+          const { data } = await api.get(`/api/labo/${laboId}/stock/${ingredientId}/history`);
+          history = data;
+          setField(ingredientId, 'history', data);
+        } catch { /* ignore */ }
+      }
+      const existing = history.find((h) => h.dateAppro === rs.dateAppro && (h.quantite ?? 0) > 0);
+      if (existing) {
+        setPtConfirm({
+          ingredientId,
+          nom: row?.nom ?? '',
+          dateAppro: rs.dateAppro,
+          existingQty: existing.quantite ?? 0,
+          newQty: parseFloat(rs.quantite),
+        });
+        return;
+      }
+    }
+
     setField(ingredientId, 'saving', true);
     try {
       await api.put(`/api/labo/${laboId}/stock/${ingredientId}`, {
@@ -952,6 +978,38 @@ export default function StockLaboPage() {
               <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
                 <button className="btn btn-ghost" onClick={() => setFournisseurModal(null)}>Annuler</button>
                 <button className="btn btn-primary" onClick={() => setFournisseurModal(null)}>Valider</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* PT accumulation confirmation modal */}
+      {ptConfirm && (
+        <div className="modal-overlay" onClick={() => setPtConfirm(null)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 420 }}>
+            <div className="modal-header" style={{ background: '#7c3aed', color: '#fff' }}>
+              <h2 style={{ margin: 0, fontSize: '1rem' }}>⚠️ Appro existante — {ptConfirm.nom}</h2>
+              <button className="modal-close" onClick={() => setPtConfirm(null)} style={{ color: '#fff' }}>✕</button>
+            </div>
+            <div className="modal-body">
+              <p style={{ marginBottom: 12 }}>
+                Une appro de <strong>{ptConfirm.existingQty.toFixed(3)}</strong> existe déjà pour le <strong>{fmtDate(ptConfirm.dateAppro)}</strong>.
+              </p>
+              <p style={{ marginBottom: 20 }}>
+                En confirmant, la nouvelle valeur sera :{' '}
+                <strong style={{ color: '#7c3aed', fontSize: '1.05rem' }}>
+                  {ptConfirm.existingQty.toFixed(3)} + {ptConfirm.newQty.toFixed(3)} = {(ptConfirm.existingQty + ptConfirm.newQty).toFixed(3)}
+                </strong>
+              </p>
+              <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+                <button className="btn btn-ghost" onClick={() => setPtConfirm(null)}>Annuler</button>
+                <button
+                  className="btn btn-primary"
+                  style={{ background: '#7c3aed', borderColor: '#7c3aed' }}
+                  onClick={() => { const id = ptConfirm.ingredientId; setPtConfirm(null); saveRow(id, true); }}
+                >
+                  Confirmer
+                </button>
               </div>
             </div>
           </div>
