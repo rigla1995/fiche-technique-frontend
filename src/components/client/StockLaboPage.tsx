@@ -38,8 +38,9 @@ interface LaboStockRow {
   unite: string;
   categorie: string;
   activite?: string | null;
-  quantite: number | null;        // net stock = total appros - total transféré
+  quantite: number | null;
   prixUnitaire: number | null;
+  prixCalcule?: number | null;
   dateAppro: string | null;
   seuilMin: number | null;
   coutTotal: number | null;
@@ -596,7 +597,7 @@ export default function StockLaboPage() {
                                 <th style={{ textAlign: 'right' }}>Stock actuel<br /><span style={{ fontSize: '0.65rem', fontWeight: 400, color: 'var(--text-muted)' }}>cout · transféré</span></th>
                                 <th style={{ textAlign: 'center' }}>Seuil min</th>
                                 <th style={{ textAlign: 'right' }}>Nouvelle Qté</th>
-                                <th style={{ textAlign: 'right' }}>{t('client.stock.prix_unitaire')}</th>
+                                <th style={{ textAlign: 'right' }}>Prix (DT/U)</th>
                                 <th>{t('client.stock.date_appro')}</th>
                                 <th></th>
                               </tr>
@@ -661,8 +662,14 @@ export default function StockLaboPage() {
                                       </td>
                                       <td style={{ textAlign: 'right' }}>
                                         {r.isPT ? (
-                                          <div style={{ width: 84, fontSize: '0.78rem', color: '#7c3aed', fontWeight: 600, textAlign: 'right', padding: '4px 0' }} title="Calculé automatiquement depuis les prix des ingrédients du labo">
-                                            Auto
+                                          <div style={{ textAlign: 'right', padding: '4px 0' }} title="Calculé automatiquement depuis les prix des ingrédients du labo">
+                                            {r.prixCalcule != null && r.prixCalcule > 0 ? (
+                                              <span style={{ fontSize: '0.88rem', color: '#7c3aed', fontWeight: 600 }}>{r.prixCalcule.toFixed(3)}</span>
+                                            ) : r.prixUnitaire != null ? (
+                                              <span style={{ fontSize: '0.88rem', color: '#6b7280', fontWeight: 500 }}>{r.prixUnitaire.toFixed(3)}</span>
+                                            ) : (
+                                              <span style={{ fontSize: '0.78rem', color: '#9ca3af' }}>—</span>
+                                            )}
                                           </div>
                                         ) : (
                                           <input type="number" min="0" step="0.001" value={rs.prixUnitaire} onChange={(e) => setField(r.ingredientId, 'prixUnitaire', e.target.value)} style={{ width: 84, textAlign: 'right', ...warnStyle }} className="input" />
