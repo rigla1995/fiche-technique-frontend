@@ -111,7 +111,27 @@ export default function FranchiseCatalogPage() {
 
   return (
     <div className="page-content">
-      <h1 style={{ marginBottom: 20 }}>{t('nav.catalogue_franchise')}</h1>
+      {/* ── Hero header ── */}
+      <div style={{
+        background: 'linear-gradient(135deg, #1e1b4b 0%, #4338ca 55%, #6366f1 100%)',
+        borderRadius: 18, padding: '24px 28px', marginBottom: 24,
+        boxShadow: '0 8px 32px rgba(67,56,202,0.25)',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16,
+      }}>
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+            <div style={{ background: 'rgba(255,255,255,0.2)', borderRadius: 10, padding: '7px 9px', fontSize: '1.2rem', lineHeight: 1 }}>🏷</div>
+            <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0, letterSpacing: '-0.02em' }}>{t('nav.catalogue_franchise')}</h1>
+          </div>
+          <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.85rem', margin: 0 }}>Ingrédients assignés à vos activités franchise</p>
+        </div>
+        {assignedIngredients.length > 0 && (
+          <div style={{ background: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(8px)', borderRadius: 12, padding: '10px 18px', textAlign: 'center' }}>
+            <div style={{ fontSize: '1.4rem', fontWeight: 900, color: '#fff', lineHeight: 1 }}>{assignedIngredients.length}</div>
+            <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.75)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Ingrédients</div>
+          </div>
+        )}
+      </div>
 
       {justCreated && (
         <div style={{ background: '#dcfce7', border: '1px solid #86efac', borderRadius: 8, padding: '12px 16px', marginBottom: 16, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
@@ -135,47 +155,42 @@ export default function FranchiseCatalogPage() {
         <p className="text-muted">{t('client.catalogue_franchise.no_activities')}</p>
       ) : (
         <>
-          {/* Compact filter card */}
-          <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, marginBottom: 20, overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
-            <div style={{ padding: '10px 20px', borderBottom: '1px solid var(--border)', background: 'var(--bg-secondary, #f8fafc)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span style={{ fontWeight: 700, fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.09em', color: 'var(--text-muted)' }}>Filtres</span>
-              {(filterCategory || filterIngId !== '' || filterName) && (
-                <button className="btn btn-ghost btn-sm" style={{ fontSize: '0.78rem' }} onClick={() => { setFilterCategory(''); setFilterIngId(''); setFilterName(''); }}>✕ Réinitialiser</button>
-              )}
-            </div>
-            <div style={{ padding: '16px 20px', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '12px 20px' }}>
-              {groupNames.length > 1 && (
-                <div>
-                  <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 5 }}>Groupe</span>
-                  <select className="input" style={{ width: '100%' }} value={selectedGroup}
-                    onChange={(e) => { setSelectedGroup(e.target.value); setFilterCategory(''); setFilterIngId(''); setFilterName(''); }}>
-                    {groupNames.map((g) => <option key={g} value={g}>{g}</option>)}
-                  </select>
-                </div>
-              )}
+          {/* Filter bar */}
+          <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, marginBottom: 20, padding: '16px 20px', boxShadow: '0 2px 12px rgba(0,0,0,0.05)', display: 'flex', flexWrap: 'wrap', gap: 14, alignItems: 'flex-end' }}>
+            {groupNames.length > 1 && (
               <div>
-                <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 5 }}>Catégorie</span>
-                <select className="input" style={{ width: '100%' }} value={filterCategory}
-                  onChange={(e) => { setFilterCategory(e.target.value); setFilterIngId(''); }}>
-                  <option value="">{t('client.catalogue_franchise.all_categories')}</option>
-                  {allCategories.map((c) => <option key={c} value={c}>{c}</option>)}
+                <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#4338ca', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>🏢 Groupe</span>
+                <select className="input" value={selectedGroup}
+                  onChange={(e) => { setSelectedGroup(e.target.value); setFilterCategory(''); setFilterIngId(''); setFilterName(''); }}>
+                  {groupNames.map((g) => <option key={g} value={g}>{g}</option>)}
                 </select>
               </div>
-              <div>
-                <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 5 }}>Ingrédient</span>
-                <select className="input" style={{ width: '100%' }} value={filterIngId}
-                  disabled={!filterCategory}
-                  onChange={(e) => setFilterIngId(e.target.value === '' ? '' : Number(e.target.value))}>
-                  <option value="">— Tous —</option>
-                  {ingredientsInCategory.map((i) => <option key={i.id} value={i.id}>{i.nom}</option>)}
-                </select>
-              </div>
-              <div>
-                <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 5 }}>Nom</span>
-                <input type="text" className="input" style={{ width: '100%' }} placeholder="Rechercher…"
-                  value={filterName} onChange={(e) => setFilterName(e.target.value)} />
-              </div>
+            )}
+            <div>
+              <span style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>🏷 Catégorie</span>
+              <select className="input" value={filterCategory} onChange={(e) => { setFilterCategory(e.target.value); setFilterIngId(''); }}>
+                <option value="">{t('client.catalogue_franchise.all_categories')}</option>
+                {allCategories.map((c) => <option key={c} value={c}>{c}</option>)}
+              </select>
             </div>
+            <div>
+              <span style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>🔎 Ingrédient</span>
+              <select className="input" value={filterIngId} disabled={!filterCategory}
+                onChange={(e) => setFilterIngId(e.target.value === '' ? '' : Number(e.target.value))}>
+                <option value="">— Tous —</option>
+                {ingredientsInCategory.map((i) => <option key={i.id} value={i.id}>{i.nom}</option>)}
+              </select>
+            </div>
+            <div>
+              <span style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>Nom</span>
+              <input type="text" className="input" placeholder="Rechercher…" value={filterName} onChange={(e) => setFilterName(e.target.value)} />
+            </div>
+            {(filterCategory || filterIngId !== '' || filterName) && (
+              <button onClick={() => { setFilterCategory(''); setFilterIngId(''); setFilterName(''); }}
+                style={{ padding: '8px 14px', borderRadius: 8, border: '1px solid var(--border)', background: 'none', cursor: 'pointer', fontSize: '0.82rem', color: 'var(--text-muted)', alignSelf: 'flex-end' }}>
+                ✕ Réinitialiser
+              </button>
+            )}
           </div>
 
           {groupActivities.length === 0 ? (

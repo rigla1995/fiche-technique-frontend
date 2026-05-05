@@ -832,7 +832,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
             {isOpen && (
               <div className="table-responsive card th-blue" style={{ marginBottom: 0 }}>
                 <table className="table">
-                  <thead style={{ background: 'linear-gradient(135deg, #1e3a5f, #2563eb)', color: '#fff' }}>
+                  <thead style={{ background: '#eff6ff', borderBottom: '2px solid #2563eb', color: '#1e3a5f' }}>
                     <tr>
                       <th style={{ width: 32, fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px' }}></th>
                       <th style={{ fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px' }}>{t('client.stock.ingredient')}</th>

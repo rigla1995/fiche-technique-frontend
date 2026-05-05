@@ -307,7 +307,7 @@ export default function HistoriqueInventairePage() {
             <div style={{ borderRadius: 14, overflow: 'hidden', border: '1.5px solid var(--border)', boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.87rem' }}>
                 <thead>
-                  <tr style={{ background: 'linear-gradient(135deg, #134e4a, #0f766e)', color: '#fff' }}>
+                  <tr style={{ background: '#f0fdfa', borderBottom: '2px solid #0f766e', color: '#134e4a' }}>
                     <th style={{ padding: '12px 14px', textAlign: 'center', width: 40 }}>
                       <input type="checkbox" checked={selectedIds.size === histRows.length && histRows.length > 0} onChange={toggleAll}
                         style={{ width: 16, height: 16, cursor: 'pointer' }} />

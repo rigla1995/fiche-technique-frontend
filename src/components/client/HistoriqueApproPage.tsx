@@ -791,7 +791,7 @@ export default function HistoriqueApproPage() {
                 <col style={{ width: '66px' }} />
               </colgroup>
               <thead>
-                <tr style={{ background: 'linear-gradient(135deg, #134e4a, #0f766e)', color: '#fff' }}>
+                <tr style={{ background: '#f0fdfa', borderBottom: '2px solid #0f766e', color: '#134e4a' }}>
                   <th style={{ textAlign: 'center', padding: '0 4px', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
                     <input
                       type="checkbox"
