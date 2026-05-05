@@ -305,33 +305,55 @@ export default function TransferPage() {
         </div>
       )}
 
-      <div className="page-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+      {/* Hero header */}
+      <div style={{
+        background: 'linear-gradient(135deg, #3b0764 0%, #7e22ce 55%, #a855f7 100%)',
+        borderRadius: 18, padding: '24px 28px', marginBottom: 24,
+        boxShadow: '0 8px 32px rgba(126,34,206,0.28)',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16,
+      }}>
         <div>
-          <h1>↗ {labo ? labo.nom : t('common.loading')} — {t('client.labo.transfer_title')}</h1>
-          {labo && <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: 2 }}>{labo.franchiseGroup}</p>}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+            <div style={{ background: 'rgba(255,255,255,0.2)', borderRadius: 10, padding: '7px 9px', fontSize: '1.2rem' }}>🔄</div>
+            <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0 }}>
+              {labo ? labo.nom : t('common.loading')} — {t('client.labo.transfer_title')}
+            </h1>
+          </div>
+          {labo && (
+            <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.85rem', margin: 0 }}>{labo.franchiseGroup}</p>
+          )}
         </div>
         <div style={{ display: 'flex', gap: 10 }}>
-          <Link to={`/client/labo/stock?laboId=${laboId}`} className="btn btn-ghost btn-sm">← {t('client.labo.stock_title')}</Link>
+          <Link to={`/client/labo/stock?laboId=${laboId}`} className="btn btn-ghost btn-sm"
+            style={{ background: 'rgba(255,255,255,0.15)', color: '#fff', border: '1px solid rgba(255,255,255,0.3)', backdropFilter: 'blur(4px)' }}>
+            ← {t('client.labo.stock_title')}
+          </Link>
           {hasTransfers ? (
-            <Link to={`/client/labo/historique-transferts?laboId=${laboId}`} className="btn btn-secondary btn-sm">📋 {t('client.labo.transfers_history')}</Link>
+            <Link to={`/client/labo/historique-transferts?laboId=${laboId}`}
+              style={{ background: 'rgba(255,255,255,0.18)', color: '#fff', border: '1px solid rgba(255,255,255,0.35)', borderRadius: 8, padding: '6px 14px', fontWeight: 700, fontSize: '0.85rem', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+              📋 {t('client.labo.transfers_history')}
+            </Link>
           ) : (
-            <span className="btn btn-secondary btn-sm" style={{ opacity: 0.4, cursor: 'not-allowed', pointerEvents: 'none' }}>📋 {t('client.labo.transfers_history')}</span>
+            <span style={{ background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.4)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 8, padding: '6px 14px', fontWeight: 700, fontSize: '0.85rem', cursor: 'not-allowed', pointerEvents: 'none' }}>
+              📋 {t('client.labo.transfers_history')}
+            </span>
           )}
         </div>
       </div>
 
       {/* Global Réf. Facture + note */}
-      <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: '16px 20px', marginBottom: 20, display: 'flex', gap: 16, alignItems: 'flex-start', flexWrap: 'wrap' }}>
+      <div style={{ background: 'var(--surface)', borderRadius: 14, padding: '16px 20px', border: '1px solid var(--border)', boxShadow: '0 2px 12px rgba(0,0,0,0.05)', marginBottom: 20, display: 'flex', gap: 16, alignItems: 'flex-start', flexWrap: 'wrap' }}>
         <div style={{ flex: 1, minWidth: 160 }}>
-          <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 4 }}>
+          <label style={{ fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#7e22ce', display: 'block', marginBottom: 4 }}>
             Réf. Facture / BL <span style={{ color: 'var(--danger, #ef4444)' }}>*</span>
           </label>
           <input type="text" className="input" value={refFacture}
+            style={{ border: '1.5px solid #7e22ce', background: '#faf5ff', fontWeight: 600 }}
             onChange={(e) => { setRefFacture(e.target.value); if (errorMsg) setErrorMsg(''); }}
             placeholder="N° bon de livraison…" />
         </div>
         <div style={{ flex: 1, minWidth: 160 }}>
-          <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 4 }}>
+          <label style={{ fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>
             {t('client.labo.transfer_note')}
           </label>
           <input type="text" className="input" value={note} onChange={(e) => setNote(e.target.value)}
@@ -343,23 +365,23 @@ export default function TransferPage() {
       {errorMsg && <div style={{ background: 'var(--danger, #ef4444)', color: '#fff', borderRadius: 10, padding: '10px 18px', marginBottom: 16, fontWeight: 600 }}>{errorMsg}</div>}
 
       {!loading && stock.length > 0 && (
-        <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, marginBottom: 20, overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
-          <div style={{ padding: '10px 20px', borderBottom: '1px solid var(--border)', background: 'var(--bg-secondary, #f8fafc)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ fontWeight: 700, fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.09em', color: 'var(--text-muted)' }}>Filtres</span>
+        <div style={{ background: 'var(--surface)', borderRadius: 14, padding: '16px 20px', border: '1px solid var(--border)', boxShadow: '0 2px 12px rgba(0,0,0,0.05)', marginBottom: 20, overflow: 'hidden' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+            <span style={{ fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#7e22ce' }}>Filtres</span>
             {(filterCategorie || filterIngredientId !== '' || filterNom) && (
               <button className="btn btn-ghost btn-sm" style={{ fontSize: '0.78rem' }} onClick={() => { setFilterCategorie(''); setFilterIngredientId(''); setFilterNom(''); }}>✕ Réinitialiser</button>
             )}
           </div>
-          <div style={{ padding: '16px 20px', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '12px 20px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '12px 20px' }}>
             <div>
-              <span style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 5 }}>Catégorie</span>
+              <span style={{ fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--text-muted)', display: 'block', marginBottom: 5 }}>Catégorie</span>
               <select className="input" style={{ width: '100%' }} value={filterCategorie} onChange={(e) => { setFilterCategorie(e.target.value); setFilterIngredientId(''); }}>
                 <option value="">{t('client.catalogue_franchise.all_categories')}</option>
                 {allCategories.map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>
             <div>
-              <span style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 5 }}>Ingrédient</span>
+              <span style={{ fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--text-muted)', display: 'block', marginBottom: 5 }}>Ingrédient</span>
               <select className="input" style={{ width: '100%' }} value={filterIngredientId} disabled={!filterCategorie}
                 onChange={(e) => setFilterIngredientId(e.target.value === '' ? '' : Number(e.target.value))}>
                 <option value="">— Tous —</option>
@@ -367,7 +389,7 @@ export default function TransferPage() {
               </select>
             </div>
             <div>
-              <span style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 5 }}>Nom</span>
+              <span style={{ fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--text-muted)', display: 'block', marginBottom: 5 }}>Nom</span>
               <input type="text" className="input" style={{ width: '100%' }} placeholder="Rechercher…"
                 value={filterNom} onChange={(e) => setFilterNom(e.target.value)} />
             </div>
@@ -378,13 +400,22 @@ export default function TransferPage() {
       {loading ? (
         <p className="text-muted">{t('common.loading')}</p>
       ) : stock.length === 0 ? (
-        <div className="empty-state"><span className="empty-icon">🏭</span><p>{t('client.labo.empty_stock')}</p></div>
+        <div style={{ textAlign: 'center', padding: '48px 24px', color: 'var(--text-muted)' }}>
+          <div style={{ fontSize: '2.5rem', marginBottom: 12 }}>🏭</div>
+          <p style={{ fontSize: '0.95rem', fontWeight: 500 }}>{t('client.labo.empty_stock')}</p>
+        </div>
       ) : activites.length === 0 ? (
-        <div className="empty-state"><span className="empty-icon">🏪</span><p>{t('client.labo.no_activites')}</p></div>
+        <div style={{ textAlign: 'center', padding: '48px 24px', color: 'var(--text-muted)' }}>
+          <div style={{ fontSize: '2.5rem', marginBottom: 12 }}>🏪</div>
+          <p style={{ fontSize: '0.95rem', fontWeight: 500 }}>{t('client.labo.no_activites')}</p>
+        </div>
       ) : (
         <>
           {Object.keys(groups).length === 0 ? (
-            <p className="text-muted">{t('common.no_result')}</p>
+            <div style={{ textAlign: 'center', padding: '48px 24px', color: 'var(--text-muted)' }}>
+              <div style={{ fontSize: '2.5rem', marginBottom: 12 }}>🔍</div>
+              <p style={{ fontSize: '0.95rem', fontWeight: 500 }}>{t('common.no_result')}</p>
+            </div>
           ) : Object.entries(groups).sort(([a], [b]) => a.localeCompare(b)).map(([cat, rows]) => {
             const isOpen = openCats.has(cat);
             return (
@@ -395,17 +426,17 @@ export default function TransferPage() {
                   <span style={{ marginLeft: 'auto', fontSize: '0.8rem', color: 'var(--text-muted)' }}>{isOpen ? '▼' : '▶'}</span>
                 </button>
                 {isOpen && (
-                  <div className="table-responsive card th-orange" style={{ marginBottom: 0 }}>
+                  <div className="table-responsive card" style={{ marginBottom: 0 }}>
                     <table className="table">
                       <thead>
-                        <tr>
-                          <th style={{ minWidth: 140 }}>{t('client.stock.ingredient')}</th>
-                          <th style={{ textAlign: 'right', minWidth: 100 }}>{t('client.labo.labo_stock')}</th>
+                        <tr style={{ background: 'linear-gradient(135deg, #3b0764, #7e22ce)' }}>
+                          <th style={{ minWidth: 140, fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px', color: '#fff' }}>{t('client.stock.ingredient')}</th>
+                          <th style={{ textAlign: 'right', minWidth: 100, fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px', color: '#fff' }}>{t('client.labo.labo_stock')}</th>
                           {activites.map((act) => (
-                            <th key={act.id} style={{ textAlign: 'center', minWidth: 120, color: 'var(--primary)' }}>↗ {act.nom}</th>
+                            <th key={act.id} style={{ textAlign: 'center', minWidth: 120, fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px', color: '#e9d5ff' }}>↗ {act.nom}</th>
                           ))}
-                          <th style={{ textAlign: 'center', minWidth: 120 }}>Date transfert</th>
-                          <th style={{ textAlign: 'center', minWidth: 110 }}></th>
+                          <th style={{ textAlign: 'center', minWidth: 120, fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px', color: '#fff' }}>Date transfert</th>
+                          <th style={{ textAlign: 'center', minWidth: 110, fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px', color: '#fff' }}></th>
                         </tr>
                       </thead>
                       <tbody>
@@ -419,8 +450,8 @@ export default function TransferPage() {
                           const warnStyle = dateConflict ? { borderColor: '#f59e0b', boxShadow: '0 0 0 2px #fef3c7' } : {};
                           return (
                             <React.Fragment key={r.ingredientId}>
-                              <tr>
-                                <td>
+                              <tr style={dateConflict ? { borderLeft: '3px solid #f59e0b' } : {}}>
+                                <td style={{ padding: '12px 14px' }}>
                                   <div style={{ fontWeight: 600 }}>{r.nom}</div>
                                   <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{r.unite}</div>
                                   <button className="btn btn-ghost btn-sm" onClick={() => toggleTransfers(r.ingredientId)}
@@ -428,8 +459,8 @@ export default function TransferPage() {
                                     {isTransferOpen ? '↗▲' : '↗ historique'}
                                   </button>
                                 </td>
-                                <td style={{ textAlign: 'right' }}>
-                                  <span style={{ fontWeight: 700, color: qtyColor(r.quantite), fontSize: '1rem' }}>
+                                <td style={{ textAlign: 'right', padding: '12px 14px' }}>
+                                  <span style={{ fontWeight: 800, color: qtyColor(r.quantite), fontSize: '1rem' }}>
                                     {r.quantite !== null ? r.quantite : '—'}
                                   </span>
                                   {r.prixUnitaire !== null && (
@@ -442,7 +473,7 @@ export default function TransferPage() {
                                     ? (r.ptFranchiseGroup ? act.franchiseGroup === r.ptFranchiseGroup : act.id === r.activiteId)
                                     : assignedSet.has(`${r.ingredientId}-${act.id}`);
                                   return (
-                                    <td key={act.id} style={{ textAlign: 'center' }}>
+                                    <td key={act.id} style={{ textAlign: 'center', padding: '12px 14px' }}>
                                       {!stockEmpty && isAssigned ? (
                                         <input type="number" min="0" step="0.001" className="input"
                                           style={{ width: 100, textAlign: 'right', ...warnStyle }}
@@ -455,19 +486,21 @@ export default function TransferPage() {
                                     </td>
                                   );
                                 })}
-                                <td style={{ textAlign: 'center' }}>
-                                  <input type="date" className="input"
-                                    style={{ maxWidth: 138, fontSize: '0.82rem', ...warnStyle }}
-                                    min={yearStart} max={yearEnd}
-                                    value={rowDate}
-                                    onChange={(e) => setPerRowDates((prev) => ({ ...prev, [r.ingredientId]: e.target.value }))}
-                                    disabled={stockEmpty} />
+                                <td style={{ textAlign: 'center', padding: '12px 14px' }}>
+                                  <div style={{ display: 'inline-block', background: '#faf5ff', border: '1px solid #d8b4fe', borderRadius: 7, padding: '3px 10px', ...warnStyle }}>
+                                    <input type="date" className="input"
+                                      style={{ maxWidth: 138, fontSize: '0.82rem', border: '1.5px solid #7e22ce', background: '#faf5ff', fontWeight: 600, ...warnStyle }}
+                                      min={yearStart} max={yearEnd}
+                                      value={rowDate}
+                                      onChange={(e) => setPerRowDates((prev) => ({ ...prev, [r.ingredientId]: e.target.value }))}
+                                      disabled={stockEmpty} />
+                                  </div>
                                 </td>
-                                <td style={{ textAlign: 'center' }}>
-                                  <button className="btn btn-primary btn-sm"
+                                <td style={{ textAlign: 'center', padding: '12px 14px' }}>
+                                  <button
                                     onClick={() => handleRowTransfer(r.ingredientId)}
                                     disabled={!rowCanSave(r.ingredientId, stockEmpty) || !!perRowSaving[r.ingredientId]}
-                                    style={{ fontWeight: 700, minWidth: 90 }}>
+                                    style={{ background: 'linear-gradient(135deg, #7e22ce 0%, #a855f7 100%)', boxShadow: '0 4px 14px rgba(126,34,206,0.35)', borderRadius: 10, border: 'none', color: '#fff', fontWeight: 800, padding: '10px 24px', cursor: 'pointer', minWidth: 90, opacity: (!rowCanSave(r.ingredientId, stockEmpty) || !!perRowSaving[r.ingredientId]) ? 0.5 : 1 }}>
                                     {perRowSaving[r.ingredientId] ? '…' : '↗ Transférer'}
                                   </button>
                                 </td>
@@ -481,7 +514,10 @@ export default function TransferPage() {
                                     {isTransferLoading ? (
                                       <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Chargement…</span>
                                     ) : rowTransfers.filter(t => t.activiteNom).length === 0 ? (
-                                      <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Aucun transfert enregistré</span>
+                                      <div style={{ textAlign: 'center', padding: '16px 0', color: 'var(--text-muted)', fontSize: '0.82rem' }}>
+                                        <span style={{ display: 'block', fontSize: '1.4rem', marginBottom: 4 }}>📭</span>
+                                        Aucun transfert enregistré
+                                      </div>
                                     ) : (() => {
                                       const realTransfers = rowTransfers.filter(t => t.activiteNom);
                                       const actNames = Array.from(new Set(realTransfers.map((t) => t.activiteNom))).sort();
@@ -509,7 +545,11 @@ export default function TransferPage() {
                                               </tr>
                                               {realTransfers.map((tr, i) => (
                                                 <tr key={i} style={{ borderTop: '1px solid #f3e8ff', fontSize: '0.75rem' }}>
-                                                  <td style={{ color: 'var(--text-muted)', padding: '2px 8px' }}>{fmtDate(tr.dateTransfert)}</td>
+                                                  <td style={{ padding: '2px 8px' }}>
+                                                    <span style={{ background: '#faf5ff', border: '1px solid #d8b4fe', borderRadius: 7, padding: '3px 10px', fontWeight: 700, fontSize: '0.82rem', color: '#7e22ce' }}>
+                                                      {fmtDate(tr.dateTransfert)}
+                                                    </span>
+                                                  </td>
                                                   {actNames.map((an) => (
                                                     <td key={an} style={{ textAlign: 'right', padding: '2px 8px', color: tr.activiteNom === an ? '#7c3aed' : 'var(--text-muted)' }}>
                                                       {tr.activiteNom === an ? tr.quantite.toFixed(3) : '—'}

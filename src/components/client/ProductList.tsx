@@ -307,22 +307,22 @@ export default function ProductList() {
     return (
       <div key={groupKey} style={{ marginBottom: 10 }}>
         <button onClick={() => toggleGroup(groupKey)}
-          style={{ background: 'linear-gradient(135deg, #eff6ff, #dbeafe)', border: '1px solid #bfdbfe', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px', width: '100%', textAlign: 'left', borderRadius: isOpen ? '12px 12px 0 0' : 12 }}>
-          <span style={{ fontSize: '0.88rem', fontWeight: 800, color: '#1d4ed8', letterSpacing: '0.04em' }}>🏢 {group}</span>
+          style={{ background: 'linear-gradient(135deg, #eef2ff, #e0e7ff)', border: '1px solid #c7d2fe', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px', width: '100%', textAlign: 'left', borderRadius: isOpen ? '12px 12px 0 0' : 12 }}>
+          <span style={{ fontSize: '0.88rem', fontWeight: 800, color: '#4338ca', letterSpacing: '0.04em' }}>🏢 {group}</span>
           <span style={{ fontSize: '0.72rem', color: '#6b7280', fontWeight: 400 }}>({groupProducts.length} produit{groupProducts.length > 1 ? 's' : ''})</span>
           <span style={{ marginLeft: 'auto', fontSize: '0.8rem', color: '#6b7280' }}>{isOpen ? '▼' : '▶'}</span>
         </button>
         {isOpen && (
-          <div className="table-responsive card th-blue" style={{ borderRadius: '0 0 12px 12px', overflow: 'hidden', marginTop: 0, border: '1px solid #bfdbfe', borderTop: 'none' }}>
+          <div className="table-responsive card" style={{ borderRadius: '0 0 12px 12px', overflow: 'hidden', marginTop: 0, border: '1px solid #c7d2fe', borderTop: 'none' }}>
             <table className="table">
-              <thead>
+              <thead style={{ background: 'linear-gradient(135deg, #1e1b4b, #4338ca)' }}>
                 <tr>
-                  <th>{t('common.name')}</th>
-                  <th>Activité</th>
-                  <th style={{ textAlign: 'center' }}>🧂 {t('nav.ingredients')}</th>
-                  {isVendable && <th style={{ textAlign: 'center' }}>📦 P.Utilisables</th>}
-                  {!isVendable && <th style={{ width: 60, textAlign: 'center' }}>📦 Stock</th>}
-                  <th style={{ textAlign: 'right' }}>{t('common.actions')}</th>
+                  <th style={{ color: '#fff', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase' }}>{t('common.name')}</th>
+                  <th style={{ color: '#fff', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase' }}>Activité</th>
+                  <th style={{ textAlign: 'center', color: '#fff', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase' }}>🧂 {t('nav.ingredients')}</th>
+                  {isVendable && <th style={{ textAlign: 'center', color: '#fff', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase' }}>📦 P.Utilisables</th>}
+                  {!isVendable && <th style={{ width: 60, textAlign: 'center', color: '#fff', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase' }}>📦 Stock</th>}
+                  <th style={{ textAlign: 'right', color: '#fff', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase' }}>{t('common.actions')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -396,22 +396,22 @@ export default function ProductList() {
     return (
       <div key={groupKey} style={{ marginBottom: 10 }}>
         <button onClick={() => toggleGroup(groupKey)}
-          style={{ background: 'linear-gradient(135deg, #fffbeb, #fef3c7)', border: '1px solid #fde68a', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px', width: '100%', textAlign: 'left', borderRadius: isOpen ? '12px 12px 0 0' : 12 }}>
-          <span style={{ fontSize: '0.88rem', fontWeight: 800, color: '#92400e', letterSpacing: '0.04em' }}>🏪 {label}</span>
-          {act?.adresse && <span style={{ fontSize: '0.72rem', color: '#78350f' }}>📍 {act.adresse}</span>}
+          style={{ background: 'linear-gradient(135deg, #eef2ff, #e0e7ff)', border: '1px solid #c7d2fe', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px', width: '100%', textAlign: 'left', borderRadius: isOpen ? '12px 12px 0 0' : 12 }}>
+          <span style={{ fontSize: '0.88rem', fontWeight: 800, color: '#4338ca', letterSpacing: '0.04em' }}>🏪 {label}</span>
+          {act?.adresse && <span style={{ fontSize: '0.72rem', color: '#6366f1' }}>📍 {act.adresse}</span>}
           <span style={{ fontSize: '0.72rem', color: '#6b7280', fontWeight: 400 }}>({groupProducts.length} produit{groupProducts.length > 1 ? 's' : ''})</span>
           <span style={{ marginLeft: 'auto', fontSize: '0.8rem', color: '#6b7280' }}>{isOpen ? '▼' : '▶'}</span>
         </button>
         {isOpen && (
-          <div className="table-responsive card th-blue" style={{ borderRadius: '0 0 12px 12px', overflow: 'hidden', marginTop: 0, border: '1px solid #fde68a', borderTop: 'none' }}>
+          <div className="table-responsive card" style={{ borderRadius: '0 0 12px 12px', overflow: 'hidden', marginTop: 0, border: '1px solid #c7d2fe', borderTop: 'none' }}>
             <table className="table">
-              <thead>
+              <thead style={{ background: 'linear-gradient(135deg, #1e1b4b, #4338ca)' }}>
                 <tr>
-                  <th>{t('common.name')}</th>
-                  <th style={{ textAlign: 'center' }}>🧂 {t('nav.ingredients')}</th>
-                  {isVendable && <th style={{ textAlign: 'center' }}>📦 P.Utilisables</th>}
-                  {!isVendable && <th style={{ width: 60, textAlign: 'center' }}>📦 Stock</th>}
-                  <th style={{ textAlign: 'right' }}>{t('common.actions')}</th>
+                  <th style={{ color: '#fff', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase' }}>{t('common.name')}</th>
+                  <th style={{ textAlign: 'center', color: '#fff', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase' }}>🧂 {t('nav.ingredients')}</th>
+                  {isVendable && <th style={{ textAlign: 'center', color: '#fff', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase' }}>📦 P.Utilisables</th>}
+                  {!isVendable && <th style={{ width: 60, textAlign: 'center', color: '#fff', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase' }}>📦 Stock</th>}
+                  <th style={{ textAlign: 'right', color: '#fff', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase' }}>{t('common.actions')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -462,30 +462,41 @@ export default function ProductList() {
 
   return (
     <div className="page">
-      <div className="page-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-          <h1 style={{ margin: 0 }}>
-            {tab === 'fiche-technique'
-              ? t('client.products.tab_fiche_technique')
-              : tab === 'utilisable'
-                ? t('client.products.tab_utilisable')
-                : t('client.products.tab_vendable')}
-          </h1>
-          {ctxBadge && tab !== 'fiche-technique' && (
-            <span style={{ fontSize: '0.7rem', fontWeight: 800, padding: '4px 12px', borderRadius: 20, background: ctxBadge.bg, color: ctxBadge.color, border: `1px solid ${ctxBadge.border}`, textTransform: 'uppercase', letterSpacing: '0.07em' }}>
-              {ctxBadge.label}
-            </span>
-          )}
-          {tab !== 'fiche-technique' && byTab.length > 0 && (
-            <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 500 }}>
-              {byTab.length} produit{byTab.length > 1 ? 's' : ''}
-            </span>
-          )}
+      {/* ── Hero header ── */}
+      <div style={{
+        background: 'linear-gradient(135deg, #1e1b4b 0%, #4338ca 55%, #6366f1 100%)',
+        borderRadius: 18, padding: '24px 28px', marginBottom: 24,
+        boxShadow: '0 8px 32px rgba(67,56,202,0.28)',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16,
+      }}>
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+            <div style={{ background: 'rgba(255,255,255,0.2)', borderRadius: 10, padding: '7px 9px', fontSize: '1.2rem' }}>📦</div>
+            <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0 }}>
+              {tab === 'fiche-technique'
+                ? t('client.products.tab_fiche_technique')
+                : tab === 'utilisable'
+                  ? t('client.products.tab_utilisable')
+                  : t('client.products.tab_vendable')}
+            </h1>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+            {ctxBadge && tab !== 'fiche-technique' && (
+              <span style={{ fontSize: '0.7rem', fontWeight: 800, padding: '4px 12px', borderRadius: 20, background: 'rgba(255,255,255,0.2)', color: '#fff', border: '1px solid rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
+                {ctxBadge.label}
+              </span>
+            )}
+            {tab !== 'fiche-technique' && byTab.length > 0 && (
+              <span style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.75)', fontWeight: 500 }}>
+                {byTab.length} produit{byTab.length > 1 ? 's' : ''}
+              </span>
+            )}
+          </div>
         </div>
         {tab !== 'fiche-technique' && (!isEntreprise || isFranchiseCtx || isDistinctCtx) && (
           canWrite
-            ? <Link to={addPath} className="btn btn-primary" style={{ whiteSpace: 'nowrap' }}>+ {t(addKey)}</Link>
-            : <button className="btn btn-primary" disabled style={{ whiteSpace: 'nowrap', opacity: 0.45, cursor: 'not-allowed' }}>+ {t(addKey)}</button>
+            ? <Link to={addPath} className="btn btn-primary" style={{ background: 'linear-gradient(135deg, #4338ca, #6366f1)', boxShadow: '0 4px 14px rgba(67,56,202,0.35)', borderRadius: 10, border: 'none', color: '#fff', fontWeight: 800, padding: '10px 22px', whiteSpace: 'nowrap' }}>+ {t(addKey)}</Link>
+            : <button className="btn btn-primary" disabled style={{ background: 'linear-gradient(135deg, #4338ca, #6366f1)', borderRadius: 10, border: 'none', color: '#fff', fontWeight: 800, padding: '10px 22px', whiteSpace: 'nowrap', opacity: 0.45, cursor: 'not-allowed' }}>+ {t(addKey)}</button>
         )}
       </div>
 
@@ -499,14 +510,14 @@ export default function ProductList() {
         <>
           {/* Franchise filters */}
           {isEntreprise && isFranchiseCtx && tab !== 'fiche-technique' && byTab.length > 0 && (
-            <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, marginBottom: 24, overflow: 'hidden', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
-              <div style={{ padding: '12px 20px', borderBottom: '1px solid var(--border)', background: 'var(--bg-secondary, #f8fafc)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ background: 'var(--surface)', borderRadius: 14, padding: '16px 20px', border: '1px solid var(--border)', boxShadow: '0 2px 12px rgba(0,0,0,0.05)', marginBottom: 24 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
                 <span style={{ fontWeight: 700, fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.09em', color: 'var(--text-muted)' }}>Filtres</span>
                 {(filterFranchiseGroup || filterFranchiseActId || search) && (
                   <button className="btn btn-ghost btn-sm" style={{ fontSize: '0.78rem' }} onClick={() => { setFilterFranchiseGroup(''); setFilterFranchiseActId(''); setSearch(''); setPage(1); }}>✕ Réinitialiser</button>
                 )}
               </div>
-              <div style={{ padding: '16px 20px', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '12px 20px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '12px 20px' }}>
                 {activitesLoading ? (
                   <span style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>{t('common.loading')}</span>
                 ) : (
@@ -547,14 +558,14 @@ export default function ProductList() {
 
           {/* Distinct filters */}
           {isEntreprise && isDistinctCtx && tab !== 'fiche-technique' && byTab.length > 0 && (
-            <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, marginBottom: 24, overflow: 'hidden', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
-              <div style={{ padding: '12px 20px', borderBottom: '1px solid var(--border)', background: 'var(--bg-secondary, #f8fafc)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ background: 'var(--surface)', borderRadius: 14, padding: '16px 20px', border: '1px solid var(--border)', boxShadow: '0 2px 12px rgba(0,0,0,0.05)', marginBottom: 24 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
                 <span style={{ fontWeight: 700, fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.09em', color: 'var(--text-muted)' }}>Filtres</span>
                 {search && (
                   <button className="btn btn-ghost btn-sm" style={{ fontSize: '0.78rem' }} onClick={() => { setSearch(''); setPage(1); }}>✕ Réinitialiser</button>
                 )}
               </div>
-              <div style={{ padding: '16px 20px', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '12px 20px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '12px 20px' }}>
                 <div>
                   <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 5 }}>Nom</span>
                   <input type="text" placeholder={t('common.search') + '...'} value={search}
@@ -567,14 +578,14 @@ export default function ProductList() {
 
           {/* Search bar for non-enterprise */}
           {!isEntreprise && byTab.length > 0 && (
-            <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, marginBottom: 24, overflow: 'hidden', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
-              <div style={{ padding: '12px 20px', borderBottom: '1px solid var(--border)', background: 'var(--bg-secondary, #f8fafc)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ background: 'var(--surface)', borderRadius: 14, padding: '16px 20px', border: '1px solid var(--border)', boxShadow: '0 2px 12px rgba(0,0,0,0.05)', marginBottom: 24 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
                 <span style={{ fontWeight: 700, fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.09em', color: 'var(--text-muted)' }}>Filtres</span>
                 {search && (
                   <button className="btn btn-ghost btn-sm" style={{ fontSize: '0.78rem' }} onClick={() => { setSearch(''); setPage(1); }}>✕ Réinitialiser</button>
                 )}
               </div>
-              <div style={{ padding: '16px 20px', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '12px 20px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '12px 20px' }}>
                 <div>
                   <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 5 }}>Nom</span>
                   <input type="text" placeholder={t('common.search') + '...'}
@@ -590,7 +601,7 @@ export default function ProductList() {
           ) : searched.length === 0 ? (
             byTab.length === 0 ? (
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '60px 24px', textAlign: 'center' }}>
-                <div style={{ width: 72, height: 72, borderRadius: 20, background: 'linear-gradient(135deg, var(--primary) 0%, #7c3aed 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem', marginBottom: 20, boxShadow: '0 8px 24px rgba(37,99,235,0.18)' }}>
+                <div style={{ width: 72, height: 72, borderRadius: 20, background: 'linear-gradient(135deg, #4338ca 0%, #6366f1 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem', marginBottom: 20, boxShadow: '0 8px 24px rgba(67,56,202,0.28)' }}>
                   {isVendable ? '🍔' : '🧪'}
                 </div>
                 <h2 style={{ margin: '0 0 8px', fontSize: '1.15rem', fontWeight: 700, color: 'var(--text)' }}>
@@ -639,15 +650,15 @@ export default function ProductList() {
               {/* ── Flat table (non-enterprise or no context) ── */}
               {!isEntreprise && (
                 <>
-                  <div className="table-responsive card th-blue" style={{ borderRadius: 14, overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.07)' }}>
+                  <div className="table-responsive card" style={{ borderRadius: 14, overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.07)' }}>
                     <table className="table">
-                      <thead>
+                      <thead style={{ background: 'linear-gradient(135deg, #1e1b4b, #4338ca)' }}>
                         <tr>
-                          <th>{t('common.name')}</th>
-                          <th style={{ textAlign: 'center' }}>🧂 {t('nav.ingredients')}</th>
-                          {isVendable && <th style={{ textAlign: 'center' }}>📦 P.Utilisables</th>}
-                          {!isVendable && <th style={{ width: 60, textAlign: 'center' }}>📦 Stock</th>}
-                          <th style={{ textAlign: 'right' }}>{t('common.actions')}</th>
+                          <th style={{ color: '#fff', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase' }}>{t('common.name')}</th>
+                          <th style={{ textAlign: 'center', color: '#fff', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase' }}>🧂 {t('nav.ingredients')}</th>
+                          {isVendable && <th style={{ textAlign: 'center', color: '#fff', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase' }}>📦 P.Utilisables</th>}
+                          {!isVendable && <th style={{ width: 60, textAlign: 'center', color: '#fff', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase' }}>📦 Stock</th>}
+                          <th style={{ textAlign: 'right', color: '#fff', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase' }}>{t('common.actions')}</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -713,9 +724,9 @@ export default function ProductList() {
           {franchiseActsPopup && (
             <div className="modal-overlay" onClick={() => setFranchiseActsPopup(null)}>
               <div className="modal" style={{ maxWidth: 420 }} onClick={(e) => e.stopPropagation()}>
-                <div className="modal-header modal-header--primary">
+                <div className="modal-header" style={{ background: 'linear-gradient(135deg, #1e1b4b, #4338ca)', borderBottom: 'none' }}>
                   <div>
-                    <h2 style={{ margin: 0, fontSize: '1rem' }}>Activités — {franchiseActsPopup.productName}</h2>
+                    <h2 style={{ margin: 0, fontSize: '1rem', color: '#fff' }}>Activités — {franchiseActsPopup.productName}</h2>
                     {franchiseActsPopup.group && (
                       <div style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.85)', marginTop: 2 }}>🏢 {franchiseActsPopup.group}</div>
                     )}
@@ -761,8 +772,8 @@ export default function ProductList() {
           {popup && (
             <div className="modal-overlay" onClick={closePopup}>
               <div className="modal" onClick={(e) => e.stopPropagation()}>
-                <div className="modal-header modal-header--info">
-                  <h2>
+                <div className="modal-header" style={{ background: 'linear-gradient(135deg, #1e1b4b, #4338ca)', borderBottom: 'none' }}>
+                  <h2 style={{ color: '#fff', margin: 0 }}>
                     {popup.type === 'ingredients'
                       ? t('client.products.popup_ingredients_title')
                       : t('client.products.popup_subproducts_title')} — {popup.productName}
@@ -775,11 +786,11 @@ export default function ProductList() {
                   ) : popup.type === 'ingredients' ? (
                     detail?.ingredients && detail.ingredients.length > 0 ? (
                       <table className="table">
-                        <thead>
+                        <thead style={{ background: 'linear-gradient(135deg, #1e1b4b, #4338ca)' }}>
                           <tr>
-                            <th>{t('client.products.popup_col_ingredient')}</th>
-                            <th style={{ textAlign: 'right' }}>{t('client.products.popup_col_portion')}</th>
-                            <th>{t('client.products.popup_col_unit')}</th>
+                            <th style={{ color: '#fff', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase' }}>{t('client.products.popup_col_ingredient')}</th>
+                            <th style={{ textAlign: 'right', color: '#fff', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase' }}>{t('client.products.popup_col_portion')}</th>
+                            <th style={{ color: '#fff', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase' }}>{t('client.products.popup_col_unit')}</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -793,15 +804,18 @@ export default function ProductList() {
                         </tbody>
                       </table>
                     ) : (
-                      <p style={{ color: '#888', textAlign: 'center', padding: '16px 0' }}>{t('client.products.popup_no_ingredients')}</p>
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '32px 0' }}>
+                        <span style={{ fontSize: '2rem', marginBottom: 8 }}>🧂</span>
+                        <p style={{ color: 'var(--text-muted)', textAlign: 'center', margin: 0 }}>{t('client.products.popup_no_ingredients')}</p>
+                      </div>
                     )
                   ) : (
                     detail?.subProducts && detail.subProducts.length > 0 ? (
                       <table className="table">
-                        <thead>
+                        <thead style={{ background: 'linear-gradient(135deg, #1e1b4b, #4338ca)' }}>
                           <tr>
-                            <th>{t('client.products.popup_col_subproduct')}</th>
-                            <th style={{ textAlign: 'right' }}>{t('client.products.popup_col_portion')}</th>
+                            <th style={{ color: '#fff', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase' }}>{t('client.products.popup_col_subproduct')}</th>
+                            <th style={{ textAlign: 'right', color: '#fff', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase' }}>{t('client.products.popup_col_portion')}</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -814,7 +828,10 @@ export default function ProductList() {
                         </tbody>
                       </table>
                     ) : (
-                      <p style={{ color: '#888', textAlign: 'center', padding: '16px 0' }}>{t('client.products.popup_no_subproducts')}</p>
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '32px 0' }}>
+                        <span style={{ fontSize: '2rem', marginBottom: 8 }}>📦</span>
+                        <p style={{ color: 'var(--text-muted)', textAlign: 'center', margin: 0 }}>{t('client.products.popup_no_subproducts')}</p>
+                      </div>
                     )
                   )}
                 </div>

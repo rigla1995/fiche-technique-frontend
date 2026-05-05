@@ -118,17 +118,32 @@ export default function FournisseursLaboPage() {
 
   return (
     <div className="page">
-      <div className="page-header">
-        <h1>🏭 Fournisseurs Labo</h1>
+      {/* Hero header */}
+      <div style={{
+        background: 'linear-gradient(135deg, #7c2d12 0%, #ea580c 55%, #f97316 100%)',
+        borderRadius: 18, padding: '24px 28px', marginBottom: 24,
+        boxShadow: '0 8px 32px rgba(234,88,12,0.28)',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16,
+      }}>
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+            <div style={{ background: 'rgba(255,255,255,0.2)', borderRadius: 10, padding: '7px 9px', fontSize: '1.2rem' }}>🏭</div>
+            <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0 }}>Fournisseurs Labo</h1>
+          </div>
+          <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.85rem', margin: 0 }}>
+            Assignez des fournisseurs à chaque labo. Ces fournisseurs seront disponibles lors des approvisionnements du stock labo.
+          </p>
+        </div>
+        <div style={{ background: 'rgba(255,255,255,0.15)', borderRadius: 12, padding: '10px 18px', textAlign: 'center' }}>
+          <div style={{ fontSize: '1.4rem', fontWeight: 900, color: '#fff' }}>{labos.length}</div>
+          <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.75)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Labos</div>
+        </div>
       </div>
-      <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', marginBottom: 24 }}>
-        Assignez des fournisseurs à chaque labo. Ces fournisseurs seront disponibles lors des approvisionnements du stock labo.
-      </p>
 
       {labos.length === 0 ? (
-        <div className="empty-state">
-          <span className="empty-icon">🏭</span>
-          <p>Aucun labo enregistré.</p>
+        <div style={{ textAlign: 'center', padding: '48px 24px', color: 'var(--text-muted)' }}>
+          <div style={{ fontSize: '3rem', marginBottom: 12 }}>🏭</div>
+          <p style={{ fontSize: '0.95rem' }}>Aucun labo enregistré.</p>
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
@@ -141,22 +156,43 @@ export default function FournisseursLaboPage() {
             const err = newError[labo.id] ?? '';
 
             return (
-              <div key={labo.id} className="card" style={{ padding: 20 }}>
+              <div key={labo.id} style={{
+                background: 'var(--surface)',
+                borderRadius: 14, padding: 20,
+                border: '1px solid var(--border)',
+                borderLeft: '4px solid #ea580c',
+                boxShadow: '0 2px 12px rgba(0,0,0,0.05)',
+              }}>
+                {/* Labo card header */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
                   <div>
-                    <h2 style={{ margin: 0, fontSize: '1rem', fontWeight: 700 }}>🏭 {labo.nom}</h2>
+                    <h2 style={{ margin: 0, fontSize: '1rem', fontWeight: 800, color: 'var(--text)' }}>🏭 {labo.nom}</h2>
                     {labo.refLabo && (
                       <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Réf: {labo.refLabo}</span>
                     )}
                   </div>
                   <div style={{ display: 'flex', gap: 8 }}>
-                    <button className="btn btn-ghost btn-sm" onClick={() => openNewForm(labo.id)}>
+                    <button
+                      onClick={() => openNewForm(labo.id)}
+                      style={{
+                        background: 'rgba(234,88,12,0.08)', border: '1px solid rgba(234,88,12,0.25)',
+                        borderRadius: 8, color: '#ea580c', fontWeight: 700,
+                        padding: '6px 14px', cursor: 'pointer', fontSize: '0.82rem',
+                      }}
+                    >
                       + Nouveau fournisseur
                     </button>
                     <button
-                      className="btn btn-primary btn-sm"
                       onClick={() => saveAssignments(labo.id)}
                       disabled={isSaving}
+                      style={{
+                        background: 'linear-gradient(135deg, #ea580c, #f97316)',
+                        boxShadow: '0 4px 14px rgba(234,88,12,0.35)',
+                        borderRadius: 8, border: 'none', color: '#fff',
+                        fontWeight: 800, padding: '6px 16px',
+                        cursor: isSaving ? 'not-allowed' : 'pointer',
+                        opacity: isSaving ? 0.7 : 1, fontSize: '0.82rem',
+                      }}
                     >
                       {isSaving ? '…' : 'Enregistrer'}
                     </button>
@@ -165,7 +201,10 @@ export default function FournisseursLaboPage() {
 
                 {/* Add new fournisseur inline form */}
                 {isShowingNew && (
-                  <div style={{ background: 'var(--bg-secondary, #f8f9fa)', borderRadius: 8, padding: 14, marginBottom: 16, border: '1px solid var(--border)' }}>
+                  <div style={{
+                    background: 'var(--surface)', borderRadius: 10, padding: 14, marginBottom: 16,
+                    border: '1px solid var(--border)', boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+                  }}>
                     <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'flex-end' }}>
                       <div style={{ flex: '1 1 160px' }}>
                         <label style={labelStyle}>Nom *</label>
@@ -199,7 +238,18 @@ export default function FournisseursLaboPage() {
                       </div>
                       <div style={{ display: 'flex', gap: 6 }}>
                         <button className="btn btn-ghost btn-sm" onClick={() => closeNewForm(labo.id)}>Annuler</button>
-                        <button className="btn btn-primary btn-sm" onClick={() => saveNewFournisseur(labo.id)} disabled={isNewSaving}>
+                        <button
+                          onClick={() => saveNewFournisseur(labo.id)}
+                          disabled={isNewSaving}
+                          style={{
+                            background: 'linear-gradient(135deg, #ea580c, #f97316)',
+                            boxShadow: '0 4px 14px rgba(234,88,12,0.3)',
+                            borderRadius: 8, border: 'none', color: '#fff',
+                            fontWeight: 800, padding: '6px 14px',
+                            cursor: isNewSaving ? 'not-allowed' : 'pointer',
+                            opacity: isNewSaving ? 0.7 : 1, fontSize: '0.82rem',
+                          }}
+                        >
                           {isNewSaving ? '…' : 'Ajouter'}
                         </button>
                       </div>
@@ -223,9 +273,10 @@ export default function FournisseursLaboPage() {
                           style={{
                             display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer',
                             padding: '6px 12px', borderRadius: 8, fontSize: '0.88rem',
-                            border: `1px solid ${checked ? 'var(--primary)' : 'var(--border)'}`,
-                            background: checked ? 'var(--primary-light, #e8f0fe)' : 'var(--bg)',
-                            fontWeight: checked ? 600 : 400,
+                            border: `1px solid ${checked ? '#ea580c' : 'var(--border)'}`,
+                            background: checked ? 'rgba(234,88,12,0.08)' : 'var(--bg)',
+                            fontWeight: checked ? 700 : 400,
+                            color: checked ? '#ea580c' : 'var(--text)',
                             transition: 'all 0.15s',
                           }}
                         >

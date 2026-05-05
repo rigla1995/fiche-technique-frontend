@@ -90,15 +90,55 @@ export default function ClientIngredientsCatalog({ embedded, onSelectionDone }: 
 
   return (
     <div className={embedded ? '' : 'page'}>
-      <div className="page-header">
-        {!embedded && <h1>{t('client.ingredients_catalog.title')}</h1>}
-        {selectedCount > 0 && (
-          <span style={{ fontSize: '0.85rem', color: 'var(--success)', fontWeight: 600 }}>
-            ✓ {t('client.ingredients_catalog.selection_count', { count: selectedCount })}
-          </span>
-        )}
+      {/* Hero header */}
+      <div style={{
+        background: 'linear-gradient(135deg, #14532d 0%, #16a34a 55%, #22c55e 100%)',
+        borderRadius: 18,
+        padding: '24px 28px',
+        marginBottom: 24,
+        boxShadow: '0 8px 32px rgba(22,163,74,0.25)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        flexWrap: 'wrap',
+        gap: 16,
+      }}>
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+            <div style={{ background: 'rgba(255,255,255,0.2)', borderRadius: 10, padding: '7px 9px', fontSize: '1.2rem' }}>🧺</div>
+            <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0 }}>Catalogue Ingrédients</h1>
+          </div>
+          {selectedCount > 0 && (
+            <div style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              background: 'rgba(255,255,255,0.18)',
+              borderRadius: 20,
+              padding: '4px 12px',
+              marginTop: 4,
+            }}>
+              <span style={{ fontSize: '0.82rem', color: '#d1fae5', fontWeight: 700 }}>
+                ✓ {t('client.ingredients_catalog.selection_count', { count: selectedCount })}
+              </span>
+            </div>
+          )}
+        </div>
         {embedded && onSelectionDone && selectedCount > 0 && (
-          <button className="btn btn-primary" onClick={onSelectionDone}>
+          <button
+            className="btn"
+            style={{
+              background: 'rgba(255,255,255,0.18)',
+              border: '2px solid rgba(255,255,255,0.5)',
+              color: '#fff',
+              fontWeight: 700,
+              borderRadius: 10,
+              padding: '10px 20px',
+              fontSize: '0.95rem',
+              backdropFilter: 'blur(4px)',
+            }}
+            onClick={onSelectionDone}
+          >
             Continuer → ({selectedCount} ingrédient{selectedCount > 1 ? 's' : ''})
           </button>
         )}
@@ -125,91 +165,148 @@ export default function ClientIngredientsCatalog({ embedded, onSelectionDone }: 
         </div>
       )}
 
-      {/* Filter panel */}
-      <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, marginBottom: 24, overflow: 'hidden', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
-        <div style={{ padding: '12px 20px', borderBottom: '1px solid var(--border)', background: 'var(--bg-secondary, #f8fafc)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <span style={{ fontWeight: 700, fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.09em', color: 'var(--text-muted)' }}>Filtres</span>
-          {search && (
-            <button className="btn btn-ghost btn-sm" style={{ fontSize: '0.78rem' }} onClick={() => setSearch('')}>✕ Réinitialiser</button>
-          )}
+      {/* Search / Filter panel */}
+      <div style={{
+        background: 'var(--surface)',
+        borderRadius: 14,
+        padding: '14px 18px',
+        border: '1px solid var(--border)',
+        boxShadow: '0 2px 12px rgba(0,0,0,0.05)',
+        marginBottom: 24,
+        display: 'flex',
+        alignItems: 'center',
+        gap: 12,
+        flexWrap: 'wrap',
+      }}>
+        <div style={{ flex: 1, minWidth: 200 }}>
+          <input
+            type="text"
+            placeholder={t('common.search') + '...'}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="input"
+            style={{ width: '100%' }}
+          />
         </div>
-        <div style={{ padding: '16px 20px', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '12px 20px' }}>
-          <div>
-            <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 5 }}>Recherche</span>
-            <input
-              type="text"
-              placeholder={t('common.search') + '...'}
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="input"
-              style={{ width: '100%' }}
-            />
-          </div>
-        </div>
+        {search && (
+          <button
+            className="btn btn-ghost btn-sm"
+            style={{ fontSize: '0.78rem', whiteSpace: 'nowrap' }}
+            onClick={() => setSearch('')}
+          >
+            ✕ Réinitialiser
+          </button>
+        )}
       </div>
 
       {loading ? (
         <div className="loading-text">{t('common.loading')}</div>
       ) : filtered.length === 0 ? (
-        <div className="empty-state">
-          <span className="empty-icon">🧂</span>
-          <p>{t('client.ingredients_catalog.no_results')}</p>
+        <div style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '48px 24px',
+          color: 'var(--text-muted)',
+        }}>
+          <span style={{ fontSize: '2.8rem', marginBottom: 14 }}>🧂</span>
+          <p style={{ fontSize: '0.95rem', margin: 0, fontWeight: 500 }}>{t('client.ingredients_catalog.no_results')}</p>
         </div>
       ) : (
         <>
-        {pagedCatEntries.map(([cat, items]) => (
-          <div key={cat} style={{ marginBottom: 24 }}>
-            <h2 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--primary)', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
-              🏷️ {cat}
-              <span style={{ fontSize: '0.78rem', fontWeight: 400, color: 'var(--text-muted)' }}>({items.length})</span>
-            </h2>
-            <div className="table-responsive card">
-              <table className="table">
-                <thead>
-                  <tr>
-                    <th style={{ width: 40 }}></th>
-                    <th>{t('common.name')}</th>
-                    <th>{t('common.unit')}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {items.map((ing) => (
-                    <tr key={ing.id} style={{ background: ing.selected ? 'var(--primary-light)' : undefined }}>
-                      <td style={{ textAlign: 'center' }}>
-                        <button
-                          className="btn btn-ghost btn-sm"
-                          style={{
-                            fontSize: '1.1rem',
-                            padding: '2px 6px',
-                            color: ing.selected ? 'var(--success)' : 'var(--text-muted)',
-                          }}
-                          disabled={togglingId === ing.id}
-                          onClick={() => toggleSelection(ing)}
-                          title={ing.selected ? t('client.ingredients_catalog.deselect') : t('client.ingredients_catalog.select')}
-                        >
-                          {togglingId === ing.id ? '…' : ing.selected ? '✓' : '○'}
-                        </button>
-                      </td>
-                      <td>
-                        <span style={{ fontWeight: ing.selected ? 600 : undefined }}>{ing.name}</span>
-                      </td>
-                      <td>{ing.unit?.name || '—'}</td>
+          {pagedCatEntries.map(([cat, items]) => (
+            <div key={cat} style={{ marginBottom: 20 }}>
+              {/* Category group header */}
+              <div style={{
+                background: 'var(--surface)',
+                borderLeft: '4px solid #16a34a',
+                borderRadius: '0 10px 10px 0',
+                padding: '10px 16px',
+                marginBottom: 8,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
+              }}>
+                <span style={{ fontSize: '1rem', fontWeight: 800, color: '#15803d' }}>🏷️ {cat}</span>
+                <span style={{
+                  fontSize: '0.75rem',
+                  fontWeight: 700,
+                  color: '#fff',
+                  background: 'linear-gradient(135deg, #16a34a, #22c55e)',
+                  borderRadius: 20,
+                  padding: '2px 9px',
+                }}>
+                  {items.length}
+                </span>
+              </div>
+              <div className="table-responsive card">
+                <table className="table">
+                  <thead>
+                    <tr>
+                      <th style={{ width: 40 }}></th>
+                      <th>{t('common.name')}</th>
+                      <th>{t('common.unit')}</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {items.map((ing) => (
+                      <tr
+                        key={ing.id}
+                        style={ing.selected ? {
+                          borderLeft: '3px solid #16a34a',
+                          background: '#f0fdf4',
+                        } : undefined}
+                      >
+                        <td style={{ textAlign: 'center' }}>
+                          <button
+                            className="btn btn-sm"
+                            style={ing.selected ? {
+                              background: 'linear-gradient(135deg, #16a34a, #22c55e)',
+                              border: 'none',
+                              color: '#fff',
+                              fontWeight: 700,
+                              fontSize: '0.95rem',
+                              padding: '3px 10px',
+                              borderRadius: 8,
+                            } : {
+                              background: 'transparent',
+                              border: '2px solid #ef4444',
+                              color: '#ef4444',
+                              fontWeight: 700,
+                              fontSize: '0.95rem',
+                              padding: '3px 10px',
+                              borderRadius: 8,
+                            }}
+                            disabled={togglingId === ing.id}
+                            onClick={() => toggleSelection(ing)}
+                            title={ing.selected ? t('client.ingredients_catalog.deselect') : t('client.ingredients_catalog.select')}
+                          >
+                            {togglingId === ing.id ? '…' : ing.selected ? '✓' : '○'}
+                          </button>
+                        </td>
+                        <td>
+                          <span style={{ fontWeight: ing.selected ? 600 : undefined }}>{ing.name}</span>
+                        </td>
+                        <td>{ing.unit?.name || '—'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
-          </div>
-        ))}
-        {catTotalPages > 1 && (
-          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 10, marginTop: 8, fontSize: '0.82rem', color: 'var(--text-muted)' }}>
-            <button className="btn btn-ghost btn-sm" disabled={catPage === 1} onClick={() => setCatPage((p) => Math.max(1, p - 1))} style={{ padding: '3px 10px', fontWeight: 700 }}>‹</button>
-            <span style={{ fontWeight: 600, color: 'var(--text)' }}>{catPage} / {catTotalPages}</span>
-            <button className="btn btn-ghost btn-sm" disabled={catPage === catTotalPages} onClick={() => setCatPage((p) => Math.min(catTotalPages, p + 1))} style={{ padding: '3px 10px', fontWeight: 700 }}>›</button>
-          </div>
-        )}
+          ))}
+          {catTotalPages > 1 && (
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 10, marginTop: 8, fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+              <button className="btn btn-ghost btn-sm" disabled={catPage === 1} onClick={() => setCatPage((p) => Math.max(1, p - 1))} style={{ padding: '3px 10px', fontWeight: 700 }}>‹</button>
+              <span style={{ fontWeight: 600, color: 'var(--text)' }}>{catPage} / {catTotalPages}</span>
+              <button className="btn btn-ghost btn-sm" disabled={catPage === catTotalPages} onClick={() => setCatPage((p) => Math.min(catTotalPages, p + 1))} style={{ padding: '3px 10px', fontWeight: 700 }}>›</button>
+            </div>
+          )}
         </>
       )}
+
       {ptProducts.length > 0 && (
         <div style={{ marginTop: 28 }}>
           <h2 style={{ fontSize: '1rem', fontWeight: 700, color: '#7c3aed', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -245,6 +342,7 @@ export default function ClientIngredientsCatalog({ embedded, onSelectionDone }: 
           </div>
         </div>
       )}
+
       {deselectModal && (
         <div className="modal-overlay" onClick={() => setDeselectModal(null)}>
           <div className="modal" style={{ maxWidth: 440 }} onClick={(e) => e.stopPropagation()}>

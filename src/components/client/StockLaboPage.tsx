@@ -24,8 +24,8 @@ const seuilLabelClass = (restante: number | null, seuil: number | null): string 
 };
 
 const LABEL: React.CSSProperties = {
-  fontSize: '0.68rem', fontWeight: 700, color: 'var(--text-muted)',
-  textTransform: 'uppercase', letterSpacing: '0.05em',
+  fontSize: '0.68rem', fontWeight: 800, color: '#2563eb',
+  textTransform: 'uppercase', letterSpacing: '0.07em',
 };
 
 interface LaboActivite { id: number; nom: string; type: string | null; franchiseGroup: string | null }
@@ -463,19 +463,33 @@ export default function StockLaboPage() {
 
   if (!laboId) return <div className="page"><p className="text-muted">Labo introuvable.</p></div>;
 
+  const subtitle = labo
+    ? `${labo.franchiseGroup} · ☎ ${labo.referentTel}${labo.adresse ? ` · ${labo.adresse}` : ''}`
+    : t('common.loading');
+
   return (
     <div className="page" onClick={() => activityPopup && setActivityPopup(null)}>
-      <div className="page-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+      {/* Hero header */}
+      <div style={{
+        background: 'linear-gradient(135deg, #1e3a5f 0%, #2563eb 60%, #0ea5e9 100%)',
+        borderRadius: 18, padding: '24px 28px', marginBottom: 24,
+        boxShadow: '0 8px 32px rgba(37,99,235,0.25)',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16,
+      }}>
         <div>
-          <h1>🏭 {labo ? labo.nom : t('common.loading')} — {tab === 'stock' ? t('client.labo.stock_title') : 'Ingrédients Stock'}</h1>
-          {labo && (
-            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: 2 }}>
-              {labo.franchiseGroup} · ☎ {labo.referentTel}{labo.adresse ? ` · 📍 ${labo.adresse}` : ''}
-            </p>
-          )}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+            <div style={{ background: 'rgba(255,255,255,0.2)', borderRadius: 10, padding: '7px 9px', fontSize: '1.2rem' }}>🏭</div>
+            <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0 }}>
+              Stock Labo{labo ? ` — ${labo.nom}` : ''}
+            </h1>
+          </div>
+          <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.85rem', margin: 0 }}>{subtitle}</p>
         </div>
         {tab === 'stock' && (
-          <Link to={`/client/labo/transfer?laboId=${laboId}`} className="btn btn-primary btn-sm">
+          <Link
+            to={`/client/labo/transfer?laboId=${laboId}`}
+            style={{ background: 'rgba(37,99,235,0.1)', border: '1.5px solid #2563eb', color: '#2563eb', borderRadius: 9, padding: '8px 16px', fontWeight: 700, textDecoration: 'none', background: 'rgba(255,255,255,0.15)', border: '1.5px solid rgba(255,255,255,0.6)', color: '#fff' }}
+          >
             ↗ {t('client.labo.btn_transfer')}
           </Link>
         )}
@@ -537,35 +551,35 @@ export default function StockLaboPage() {
           )}
 
           {/* Filter panel */}
-          <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, marginBottom: 24, overflow: 'hidden', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
-            <div style={{ padding: '12px 20px', borderBottom: '1px solid var(--border)', background: 'var(--bg-secondary, #f8fafc)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span style={{ fontWeight: 700, fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.09em', color: 'var(--text-muted)' }}>Filtres</span>
+          <div style={{ background: 'var(--surface)', borderRadius: 14, padding: '16px 20px', border: '1px solid var(--border)', boxShadow: '0 2px 12px rgba(0,0,0,0.05)', marginBottom: 24 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+              <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#2563eb', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Filtres</span>
               {(sFilterCat || sFilterIngId || sFilterNom || sFilterFournisseur || sFilterRefFacture) && (
                 <button className="btn btn-ghost btn-sm" style={{ fontSize: '0.78rem' }} onClick={() => { setSFilterCat(''); setSFilterIngId(''); setSFilterNom(''); setSFilterFournisseur(''); setSFilterRefFacture(''); }}>✕ Réinitialiser</button>
               )}
             </div>
-            <div style={{ padding: '16px 20px', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '12px 20px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '12px 20px' }}>
               <div>
-                <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 5 }}>Catégorie</span>
+                <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#2563eb', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>Catégorie</span>
                 <select className="input" style={{ width: '100%' }} value={sFilterCat} onChange={(e) => { setSFilterCat(e.target.value); setSFilterIngId(''); }}>
                   <option value="">{t('client.catalogue_franchise.all_categories')}</option>
                   {allStockCats.map((c) => <option key={c} value={c}>{c}</option>)}
                 </select>
               </div>
               <div>
-                <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 5 }}>Ingrédient</span>
+                <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#2563eb', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>Ingrédient</span>
                 <select className="input" style={{ width: '100%' }} value={sFilterIngId} disabled={!sFilterCat} onChange={(e) => setSFilterIngId(e.target.value)}>
                   <option value="">— Tous —</option>
                   {stockInCat.map((r) => <option key={r.ingredientId} value={String(r.ingredientId)}>{r.nom}</option>)}
                 </select>
               </div>
               <div>
-                <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 5 }}>Nom ingrédient</span>
+                <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#2563eb', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>Nom ingrédient</span>
                 <input type="text" className="input" style={{ width: '100%' }} placeholder="Rechercher…" value={sFilterNom} onChange={(e) => setSFilterNom(e.target.value)} />
               </div>
               {fournisseurs.length > 0 && (
                 <div>
-                  <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 5 }}>Fournisseur</span>
+                  <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#2563eb', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>Fournisseur</span>
                   <select className="input" style={{ width: '100%' }} value={sFilterFournisseur} onChange={(e) => setSFilterFournisseur(e.target.value)}>
                     <option value="">— Tous —</option>
                     {fournisseurs.map((f) => <option key={f.id} value={String(f.id)}>{f.nom}</option>)}
@@ -573,7 +587,7 @@ export default function StockLaboPage() {
                 </div>
               )}
               <div>
-                <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 5 }}>Réf Facture</span>
+                <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#2563eb', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>Réf Facture</span>
                 <input type="text" className="input" style={{ width: '100%' }} placeholder="N° facture…" value={sFilterRefFacture} onChange={(e) => setSFilterRefFacture(e.target.value)} />
               </div>
             </div>
@@ -620,10 +634,13 @@ export default function StockLaboPage() {
           ) : stock.length === 0 ? (
             <div className="empty-state">
               <span className="empty-icon">🏭</span>
-              <p>{t('client.labo.empty_stock')}</p>
+              <p style={{ color: 'var(--text-muted)' }}>{t('client.labo.empty_stock')}</p>
             </div>
           ) : Object.keys(stockGroups).length === 0 ? (
-            <p className="text-muted">{t('common.no_result')}</p>
+            <div style={{ textAlign: 'center', padding: '32px 0', color: 'var(--text-muted)' }}>
+              <div style={{ fontSize: '2rem', marginBottom: 8 }}>🔍</div>
+              <p>{t('common.no_result')}</p>
+            </div>
           ) : (() => {
             const sorted = Object.entries(stockGroups).sort(([a], [b]) => a.localeCompare(b));
             const totalPages = Math.max(1, Math.ceil(sorted.length / STOCK_CAT_PAGE_SIZE));
@@ -635,24 +652,24 @@ export default function StockLaboPage() {
                   const toggle = () => setOpenStockCats((prev) => { const n = new Set(prev); if (n.has(cat)) n.delete(cat); else n.add(cat); return n; });
                   return (
                     <div key={cat} style={{ marginBottom: 12 }}>
-                      <button onClick={toggle} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0', width: '100%', textAlign: 'left', borderBottom: '2px solid var(--border)', marginBottom: isOpen ? 10 : 0 }}>
-                        <span style={{ fontSize: '0.82rem', fontWeight: 800, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>🏷️ {cat}</span>
+                      <button onClick={toggle} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', width: '100%', textAlign: 'left', borderLeft: '4px solid #2563eb', borderBottom: '1px solid var(--border)', marginBottom: isOpen ? 10 : 0, borderRadius: isOpen ? '4px 4px 0 0' : 4 }}>
+                        <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#2563eb', textTransform: 'uppercase', letterSpacing: '0.06em' }}>🏷️ {cat}</span>
                         <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 400 }}>({rows.length})</span>
                         <span style={{ marginLeft: 'auto', fontSize: '0.8rem', color: 'var(--text-muted)' }}>{isOpen ? '▼' : '▶'}</span>
                       </button>
                       {isOpen && (
                         <div className="table-responsive card th-indigo" style={{ marginBottom: 0 }}>
                           <table className="table">
-                            <thead>
+                            <thead style={{ background: 'linear-gradient(135deg, #1e3a5f, #2563eb)', color: '#fff' }}>
                               <tr>
-                                <th style={{ width: 32 }}></th>
-                                <th>{t('client.stock.ingredient')}</th>
-                                <th style={{ textAlign: 'right' }}>Stock actuel<br /><span style={{ fontSize: '0.65rem', fontWeight: 400, color: 'var(--text-muted)' }}>cout · transféré</span></th>
-                                <th style={{ textAlign: 'center' }}>Seuil min</th>
-                                <th style={{ textAlign: 'right' }}>Nouvelle Qté</th>
-                                <th style={{ textAlign: 'right' }}>Prix (DT/U)</th>
-                                <th>{t('client.stock.date_appro')}</th>
-                                <th></th>
+                                <th style={{ width: 32, fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px' }}></th>
+                                <th style={{ fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px' }}>{t('client.stock.ingredient')}</th>
+                                <th style={{ textAlign: 'right', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px' }}>Stock actuel<br /><span style={{ fontSize: '0.65rem', fontWeight: 400, opacity: 0.75 }}>cout · transféré</span></th>
+                                <th style={{ textAlign: 'center', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px' }}>Seuil min</th>
+                                <th style={{ textAlign: 'right', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px' }}>Nouvelle Qté</th>
+                                <th style={{ textAlign: 'right', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px' }}>Prix (DT/U)</th>
+                                <th style={{ fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px' }}>{t('client.stock.date_appro')}</th>
+                                <th style={{ fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px' }}></th>
                               </tr>
                             </thead>
                             <tbody>
@@ -689,7 +706,7 @@ export default function StockLaboPage() {
                                         )}
                                       </td>
                                       <td style={{ textAlign: 'right' }}>
-                                        <span className={cls} style={{ fontSize: '1rem', fontWeight: 700 }}>
+                                        <span className={cls} style={{ fontSize: '1rem', fontWeight: 800, color: cls === 'stock-ok' ? '#2563eb' : undefined }}>
                                           {r.quantite !== null ? r.quantite.toFixed(3) : '—'}
                                         </span>
                                         {r.coutTotal != null && r.coutTotal > 0 && (
@@ -762,7 +779,12 @@ export default function StockLaboPage() {
                                             >
                                               📉
                                             </button>
-                                            <button className={`btn btn-sm ${rs.saved ? 'btn-success' : 'btn-primary'}`} onClick={() => saveRow(r.ingredientId)} disabled={!canSaveRow(rs, r.isPT) || !canWrite} style={{ flex: 1 }}>
+                                            <button
+                                              className={`btn btn-sm ${rs.saved ? 'btn-success' : 'btn-primary'}`}
+                                              onClick={() => saveRow(r.ingredientId)}
+                                              disabled={!canSaveRow(rs, r.isPT) || !canWrite}
+                                              style={!rs.saved ? { background: 'linear-gradient(135deg, #2563eb, #0ea5e9)', boxShadow: '0 3px 10px rgba(37,99,235,0.3)', borderRadius: 8, border: 'none', color: '#fff', fontWeight: 700, flex: 1 } : { flex: 1 }}
+                                            >
                                               {rs.saving ? '…' : rs.saved ? '✓' : t('common.save')}
                                             </button>
                                             <button className="btn btn-ghost btn-sm" onClick={() => toggleHistory(r.ingredientId)} title="5 derniers appros">
@@ -834,30 +856,30 @@ export default function StockLaboPage() {
       {tab === 'ingredients' && (
         <>
           {/* Filter panel */}
-          <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, marginBottom: 24, overflow: 'hidden', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
-            <div style={{ padding: '12px 20px', borderBottom: '1px solid var(--border)', background: 'var(--bg-secondary, #f8fafc)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span style={{ fontWeight: 700, fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.09em', color: 'var(--text-muted)' }}>Filtres</span>
+          <div style={{ background: 'var(--surface)', borderRadius: 14, padding: '16px 20px', border: '1px solid var(--border)', boxShadow: '0 2px 12px rgba(0,0,0,0.05)', marginBottom: 24 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+              <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#2563eb', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Filtres</span>
               {(iFilterCat || iFilterIngId || iFilterNom) && (
                 <button className="btn btn-ghost btn-sm" style={{ fontSize: '0.78rem' }} onClick={() => { setIFilterCat(''); setIFilterIngId(''); setIFilterNom(''); }}>✕ Réinitialiser</button>
               )}
             </div>
-            <div style={{ padding: '16px 20px', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '12px 20px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '12px 20px' }}>
               <div>
-                <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 5 }}>Catégorie</span>
+                <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#2563eb', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>Catégorie</span>
                 <select className="input" style={{ width: '100%' }} value={iFilterCat} onChange={(e) => { setIFilterCat(e.target.value); setIFilterIngId(''); }}>
                   <option value="">{t('client.catalogue_franchise.all_categories')}</option>
                   {allIngCats.map((c) => <option key={c} value={c}>{c}</option>)}
                 </select>
               </div>
               <div>
-                <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 5 }}>Ingrédient</span>
+                <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#2563eb', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>Ingrédient</span>
                 <select className="input" style={{ width: '100%' }} value={iFilterIngId} disabled={!iFilterCat} onChange={(e) => setIFilterIngId(e.target.value)}>
                   <option value="">— Tous —</option>
                   {ingInCat.map((i) => <option key={i.ingredientId} value={String(i.ingredientId)}>{i.nom}</option>)}
                 </select>
               </div>
               <div>
-                <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 5 }}>Nom ingrédient</span>
+                <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#2563eb', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>Nom ingrédient</span>
                 <input type="text" className="input" style={{ width: '100%' }} placeholder="Rechercher…" value={iFilterNom} onChange={(e) => setIFilterNom(e.target.value)} />
               </div>
             </div>
@@ -868,12 +890,12 @@ export default function StockLaboPage() {
           ) : (assignments?.ingredients ?? []).length === 0 ? (
             <div className="empty-state">
               <span className="empty-icon">🧂</span>
-              <p>Aucun ingrédient assigné à ce labo. Utilisez le Catalogue Global pour en ajouter.</p>
+              <p style={{ color: 'var(--text-muted)' }}>Aucun ingrédient assigné à ce labo. Utilisez le Catalogue Global pour en ajouter.</p>
             </div>
           ) : activites.length === 0 ? (
             <div className="empty-state">
               <span className="empty-icon">🔗</span>
-              <p>Aucune activité liée à ce labo.</p>
+              <p style={{ color: 'var(--text-muted)' }}>Aucune activité liée à ce labo.</p>
             </div>
           ) : (() => {
             const sorted = Object.entries(ingGroups).sort(([a], [b]) => a.localeCompare(b));
@@ -886,21 +908,21 @@ export default function StockLaboPage() {
                   const toggle = () => setOpenIngCats((prev) => { const n = new Set(prev); if (n.has(cat)) n.delete(cat); else n.add(cat); return n; });
                   return (
                     <div key={cat} style={{ marginBottom: 16 }}>
-                      <button onClick={toggle} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0', width: '100%', textAlign: 'left', borderBottom: '2px solid var(--border)', marginBottom: isOpen ? 10 : 0 }}>
-                        <span style={{ fontSize: '0.82rem', fontWeight: 800, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>🏷️ {cat}</span>
+                      <button onClick={toggle} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', width: '100%', textAlign: 'left', borderLeft: '4px solid #2563eb', borderBottom: '1px solid var(--border)', marginBottom: isOpen ? 10 : 0, borderRadius: isOpen ? '4px 4px 0 0' : 4 }}>
+                        <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#2563eb', textTransform: 'uppercase', letterSpacing: '0.06em' }}>🏷️ {cat}</span>
                         <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 400 }}>({items.length})</span>
                         <span style={{ marginLeft: 'auto', fontSize: '0.8rem', color: 'var(--text-muted)' }}>{isOpen ? '▼' : '▶'}</span>
                       </button>
                       {isOpen && (
                         <div className="table-responsive card" style={{ overflowX: 'auto', marginBottom: 0 }}>
                           <table className="table" style={{ minWidth: 400 }}>
-                            <thead>
+                            <thead style={{ background: 'linear-gradient(135deg, #1e3a5f, #2563eb)', color: '#fff' }}>
                               <tr>
-                                <th style={{ minWidth: 160 }}>{t('client.stock.ingredient')}</th>
+                                <th style={{ minWidth: 160, fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px' }}>{t('client.stock.ingredient')}</th>
                                 {activites.map((act) => (
-                                  <th key={act.id} style={{ textAlign: 'center', minWidth: 100, color: 'var(--primary)' }}>
+                                  <th key={act.id} style={{ textAlign: 'center', minWidth: 100, fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px' }}>
                                     <div>{act.nom}</div>
-                                    {act.type && <div style={{ fontSize: '0.65rem', fontWeight: 400, color: 'var(--text-muted)', textTransform: 'uppercase' }}>{act.type === 'franchise' ? 'F' : 'D'}</div>}
+                                    {act.type && <div style={{ fontSize: '0.65rem', fontWeight: 400, opacity: 0.75, textTransform: 'uppercase' }}>{act.type === 'franchise' ? 'F' : 'D'}</div>}
                                   </th>
                                 ))}
                               </tr>
@@ -951,9 +973,9 @@ export default function StockLaboPage() {
       {perteModal && (
         <div className="modal-overlay" onClick={() => setPerteModal(null)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header modal-header--danger">
-              <h2>📉 Déclarer une perte — {perteModal.nom}</h2>
-              <button className="modal-close" onClick={() => setPerteModal(null)}>✕</button>
+            <div className="modal-header" style={{ background: 'linear-gradient(135deg, #dc2626, #b91c1c)', borderBottom: 'none' }}>
+              <h2 style={{ color: '#fff', margin: 0 }}>📉 Déclarer une perte — {perteModal.nom}</h2>
+              <button className="modal-close" onClick={() => setPerteModal(null)} style={{ color: '#fff' }}>✕</button>
             </div>
             <div className="modal-body">
               <label style={{ ...LABEL, display: 'block', marginBottom: 6 }}>Quantité perdue</label>

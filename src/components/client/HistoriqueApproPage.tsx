@@ -59,9 +59,9 @@ function EditModal({ entry, fournisseurs, isEntreprise, onSave, onClose }: EditM
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header modal-header--primary">
-          <h2>Modifier — {entry.ingredientNom}</h2>
-          <button className="modal-close" onClick={onClose}>✕</button>
+        <div className="modal-header" style={{ background: 'linear-gradient(135deg, #134e4a, #0f766e)', borderBottom: 'none' }}>
+          <h2 style={{ color: '#fff', margin: 0 }}>Modifier — {entry.ingredientNom}</h2>
+          <button className="modal-close" onClick={onClose} style={{ color: '#fff' }}>✕</button>
         </div>
         <div className="modal-body">
           <div style={{ marginBottom: 16 }}>
@@ -127,7 +127,11 @@ function EditModal({ entry, fournisseurs, isEntreprise, onSave, onClose }: EditM
           {error && <p style={{ color: 'var(--danger)', fontSize: '0.85rem', marginBottom: 8 }}>{error}</p>}
           <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
             <button className="btn btn-ghost" onClick={onClose} disabled={saving}>Annuler</button>
-            <button className="btn btn-primary" onClick={handleSave} disabled={saving}>
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              style={{ background: 'linear-gradient(135deg, #0f766e 0%, #0d9488 100%)', boxShadow: '0 4px 14px rgba(15,118,110,0.35)', borderRadius: 10, border: 'none', color: '#fff', fontWeight: 800, padding: '10px 26px', cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.7 : 1 }}
+            >
               {saving ? '…' : 'Enregistrer'}
             </button>
           </div>
@@ -207,9 +211,9 @@ function UnitTotalsPopup({ unitNom, entries, onClose }: UnitTotalsPopupProps) {
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 480 }}>
-        <div className="modal-header modal-header--primary">
-          <h2>Détail — {unitNom}</h2>
-          <button className="modal-close" onClick={onClose}>✕</button>
+        <div className="modal-header" style={{ background: 'linear-gradient(135deg, #134e4a, #0f766e)', borderBottom: 'none' }}>
+          <h2 style={{ color: '#fff', margin: 0 }}>Détail — {unitNom}</h2>
+          <button className="modal-close" onClick={onClose} style={{ color: '#fff' }}>✕</button>
         </div>
         <div className="modal-body" style={{ maxHeight: '60vh', overflowY: 'auto' }}>
           <table style={{ width: '100%', fontSize: '0.88rem' }}>
@@ -472,6 +476,11 @@ export default function HistoriqueApproPage() {
     textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 5,
   };
 
+  const dateLabelStyle: React.CSSProperties = {
+    fontSize: '0.68rem', fontWeight: 800, color: '#0f766e',
+    textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5,
+  };
+
   const sectionLabelStyle: React.CSSProperties = {
     fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-muted)',
     textTransform: 'uppercase', letterSpacing: '0.1em',
@@ -485,6 +494,12 @@ export default function HistoriqueApproPage() {
     : lockedType === 'distinct'
       ? `Historique Appro Distinct — ${currentYear}`
       : `${t('client.historique_appro.title')} — ${currentYear}`;
+
+  const contextSubtitle = lockedType === 'franchise'
+    ? 'Toutes les activités franchise consolidées'
+    : lockedType === 'distinct'
+      ? 'Activités distinctes'
+      : 'Consultation et export de l\'historique des approvisionnements';
 
   const qtyColor = (qty: number | null) => {
     if (qty === null) return 'var(--text-muted)';
@@ -500,27 +515,36 @@ export default function HistoriqueApproPage() {
 
   return (
     <div className="page">
-      <div className="page-header">
-        <h1>{pageTitle}</h1>
+      {/* ── Hero header ───────────────────────────────────────────────────── */}
+      <div style={{
+        background: 'linear-gradient(135deg, #134e4a 0%, #0f766e 55%, #0d9488 100%)',
+        borderRadius: 18, padding: '24px 28px', marginBottom: 24,
+        boxShadow: '0 8px 32px rgba(15,118,110,0.28)',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16,
+      }}>
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+            <div style={{ background: 'rgba(255,255,255,0.2)', borderRadius: 10, padding: '7px 9px', fontSize: '1.2rem' }}>📋</div>
+            <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0 }}>{pageTitle}</h1>
+          </div>
+          <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.85rem', margin: 0 }}>{contextSubtitle}</p>
+        </div>
       </div>
 
-      {/* ── Modern filter panel ─────────────────────────────────────────── */}
+      {/* ── Filter/toolbar bar ─────────────────────────────────────────────── */}
       <div style={{
-        background: 'var(--surface)',
-        border: '1px solid var(--border)',
-        borderRadius: 16,
+        background: 'var(--surface)', borderRadius: 14, padding: '16px 20px',
+        border: '1px solid var(--border)', boxShadow: '0 2px 12px rgba(0,0,0,0.05)',
         marginBottom: 24,
-        boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
-        overflow: 'hidden',
       }}>
         {/* Panel header */}
         <div style={{
-          padding: '12px 20px',
+          paddingBottom: 12,
+          marginBottom: 16,
           borderBottom: '1px solid var(--border)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          background: 'var(--bg-secondary, #f8fafc)',
         }}>
           <span style={{ fontWeight: 700, fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.09em', color: 'var(--text-muted)' }}>
             Filtres
@@ -542,7 +566,7 @@ export default function HistoriqueApproPage() {
         </div>
 
         {/* Section 1: Entity + Product */}
-        <div style={{ padding: '18px 24px 0' }}>
+        <div style={{ marginBottom: 16 }}>
           <div style={sectionLabelStyle}>
             <span style={{ width: 16, height: 2, background: 'var(--primary)', display: 'inline-block', borderRadius: 2 }} />
             Entité &amp; Produit
@@ -613,21 +637,21 @@ export default function HistoriqueApproPage() {
         </div>
 
         {/* Divider */}
-        <div style={{ margin: '16px 24px 0', borderTop: '1px dashed var(--border)' }} />
+        <div style={{ marginBottom: 16, borderTop: '1px dashed var(--border)' }} />
 
         {/* Section 2: Period + Supplier */}
-        <div style={{ padding: '16px 24px 0' }}>
+        <div style={{ marginBottom: 16 }}>
           <div style={sectionLabelStyle}>
             <span style={{ width: 16, height: 2, background: '#7c3aed', display: 'inline-block', borderRadius: 2 }} />
             Période &amp; Fournisseur
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '12px 20px' }}>
             <div>
-              <label style={labelStyle}>{t('client.historique_appro.start_date')}</label>
+              <label style={dateLabelStyle}>{t('client.historique_appro.start_date')}</label>
               <input
                 type="date"
                 className="input"
-                style={{ width: '100%' }}
+                style={{ width: '100%', border: '1.5px solid #0f766e', background: '#f0fdfa', fontWeight: 600 }}
                 min={yearStart}
                 max={yearEnd}
                 value={startDate}
@@ -635,11 +659,11 @@ export default function HistoriqueApproPage() {
               />
             </div>
             <div>
-              <label style={labelStyle}>{t('client.historique_appro.end_date')}</label>
+              <label style={dateLabelStyle}>{t('client.historique_appro.end_date')}</label>
               <input
                 type="date"
                 className="input"
-                style={{ width: '100%' }}
+                style={{ width: '100%', border: '1.5px solid #0f766e', background: '#f0fdfa', fontWeight: 600 }}
                 min={yearStart}
                 max={yearEnd}
                 value={endDate}
@@ -676,16 +700,24 @@ export default function HistoriqueApproPage() {
 
         {/* Actions footer */}
         <div style={{
-          padding: '16px 24px',
-          marginTop: 16,
+          paddingTop: 16,
           borderTop: '1px solid var(--border)',
-          background: 'var(--bg-secondary, #f8fafc)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           gap: 12,
         }}>
-          <button className="btn btn-primary" onClick={fetchResults} disabled={loading} style={{ minWidth: 140 }}>
+          <button
+            onClick={fetchResults}
+            disabled={loading}
+            style={{
+              background: 'linear-gradient(135deg, #0f766e 0%, #0d9488 100%)',
+              boxShadow: '0 4px 14px rgba(15,118,110,0.35)',
+              borderRadius: 10, border: 'none', color: '#fff', fontWeight: 800,
+              padding: '10px 26px', minWidth: 140,
+              cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.7 : 1,
+            }}
+          >
             {loading ? t('common.loading') : '🔍 Rechercher'}
           </button>
           <button
@@ -693,13 +725,13 @@ export default function HistoriqueApproPage() {
             disabled={results.length === 0 || !canWrite}
             style={{
               display: 'flex', alignItems: 'center', gap: 8,
-              padding: '9px 20px', borderRadius: 10, border: 'none',
-              cursor: (results.length === 0 || !canWrite) ? 'not-allowed' : 'pointer',
-              background: (results.length > 0 && canWrite) ? 'linear-gradient(135deg, #059669 0%, #10b981 100%)' : 'var(--bg-secondary, #e5e7eb)',
+              background: (results.length > 0 && canWrite) ? 'linear-gradient(135deg, #16a34a, #22c55e)' : 'var(--bg-secondary, #e5e7eb)',
+              boxShadow: (results.length > 0 && canWrite) ? '0 4px 14px rgba(22,163,74,0.35)' : 'none',
+              borderRadius: 10, border: 'none',
               color: (results.length > 0 && canWrite) ? '#fff' : 'var(--text-muted)',
-              fontWeight: 700, fontSize: '0.88rem',
+              fontWeight: 800, padding: '10px 20px',
+              cursor: (results.length === 0 || !canWrite) ? 'not-allowed' : 'pointer',
               opacity: (results.length === 0 || !canWrite) ? 0.55 : 1,
-              boxShadow: results.length > 0 ? '0 2px 8px rgba(16,185,129,0.25)' : 'none',
               transition: 'all 0.15s',
               minWidth: 180,
             }}
@@ -714,9 +746,9 @@ export default function HistoriqueApproPage() {
       {!searched ? null : loading ? (
         <p className="text-muted">{t('common.loading')}</p>
       ) : results.length === 0 ? (
-        <div className="empty-state">
-          <span className="empty-icon">📦</span>
-          <p>{t('client.historique_appro.no_results')}</p>
+        <div style={{ textAlign: 'center', padding: '48px 24px' }}>
+          <div style={{ fontSize: '2.5rem', marginBottom: 12 }}>📦</div>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem' }}>{t('client.historique_appro.no_results')}</p>
         </div>
       ) : (
         <>
@@ -747,7 +779,7 @@ export default function HistoriqueApproPage() {
             ))}
           </div>
 
-          <div className="card th-teal" style={{ overflowX: 'hidden' }}>
+          <div className="card" style={{ overflowX: 'hidden' }}>
             <table className="table" style={{ tableLayout: 'fixed', width: '100%' }}>
               <colgroup>
                 <col style={{ width: '36px' }} />
@@ -759,8 +791,8 @@ export default function HistoriqueApproPage() {
                 <col style={{ width: '66px' }} />
               </colgroup>
               <thead>
-                <tr>
-                  <th style={{ textAlign: 'center', padding: '0 4px' }}>
+                <tr style={{ background: 'linear-gradient(135deg, #134e4a, #0f766e)', color: '#fff' }}>
+                  <th style={{ textAlign: 'center', padding: '0 4px', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
                     <input
                       type="checkbox"
                       checked={results.length > 0 && selectedIds.size === results.length}
@@ -769,19 +801,19 @@ export default function HistoriqueApproPage() {
                       style={{ cursor: 'pointer', accentColor: 'var(--primary)' }}
                     />
                   </th>
-                  <th>{t('client.historique_appro.col_date')}</th>
-                  <th>{t('client.historique_appro.col_ingredient')}</th>
-                  <th style={{ textAlign: 'right' }}>{t('client.historique_appro.col_qty')}</th>
-                  <th style={{ textAlign: 'right' }}>Prix/DT</th>
-                  <th>Fourn. / Réf</th>
-                  <th></th>
+                  <th style={{ fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px' }}>{t('client.historique_appro.col_date')}</th>
+                  <th style={{ fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px' }}>{t('client.historique_appro.col_ingredient')}</th>
+                  <th style={{ textAlign: 'right', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px' }}>{t('client.historique_appro.col_qty')}</th>
+                  <th style={{ textAlign: 'right', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px' }}>Prix/DT</th>
+                  <th style={{ fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px' }}>Fourn. / Réf</th>
+                  <th style={{ padding: '12px 14px' }}></th>
                 </tr>
               </thead>
               <tbody>
                 {pagedResults.map((r) => {
                   const isSelected = selectedIds.has(r.id);
                   return (
-                  <tr key={r.id} style={isSelected ? { background: 'rgba(234,88,12,0.08)', outline: '1px solid rgba(234,88,12,0.3)' } : undefined}>
+                  <tr key={r.id} style={isSelected ? { background: 'linear-gradient(90deg, #fef3c7, #fffbeb)', borderLeft: '3px solid #f59e0b' } : undefined}>
                     <td style={{ textAlign: 'center', padding: '0 4px' }}>
                       <input
                         type="checkbox"
@@ -791,9 +823,11 @@ export default function HistoriqueApproPage() {
                       />
                     </td>
                     <td>
-                      <div style={{ fontWeight: 600, color: 'var(--primary)', fontSize: '0.85rem' }}>{fmtDate(r.dateAppro)}</div>
+                      <span style={{ background: '#f0fdfa', border: '1px solid #99f6e4', borderRadius: 7, padding: '3px 10px', fontWeight: 700, fontSize: '0.82rem', color: '#0f766e', display: 'inline-block' }}>
+                        {fmtDate(r.dateAppro)}
+                      </span>
                       {isEntreprise && (
-                        <span className={`badge-appro ${r.typeAppro ?? 'manuel'}`} style={{ fontSize: '0.68rem' }}>
+                        <span className={`badge-appro ${r.typeAppro ?? 'manuel'}`} style={{ fontSize: '0.68rem', display: 'block', marginTop: 4 }}>
                           {r.typeAppro === 'transfert' ? 'Transfert' : 'Manuel'}
                         </span>
                       )}
@@ -802,7 +836,7 @@ export default function HistoriqueApproPage() {
                       <div style={{ fontWeight: 600, fontSize: '0.88rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.ingredientNom}</div>
                       <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.categorieNom}</div>
                     </td>
-                    <td style={{ textAlign: 'right', fontWeight: 700, color: qtyColor(r.quantite) }}>
+                    <td style={{ textAlign: 'right', fontWeight: 800, color: '#0f766e' }}>
                       <div>{r.quantite ?? '—'}</div>
                       <div style={{ color: 'var(--text-muted)', fontSize: '0.72rem', fontWeight: 400 }}>{r.uniteNom}</div>
                     </td>

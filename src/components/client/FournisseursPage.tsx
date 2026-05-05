@@ -128,37 +128,72 @@ export default function FournisseursPage() {
 
   return (
     <div className="page">
-      <div className="page-header">
-        <h1>🚚 Fournisseurs {isIndep ? 'Activité' : ''}</h1>
-        <button className="btn btn-primary" onClick={openCreate}>+ Nouveau fournisseur</button>
+      {/* Hero header */}
+      <div style={{
+        background: 'linear-gradient(135deg, #7c2d12 0%, #ea580c 55%, #f97316 100%)',
+        borderRadius: 18, padding: '24px 28px', marginBottom: 24,
+        boxShadow: '0 8px 32px rgba(234,88,12,0.28)',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16,
+      }}>
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+            <div style={{ background: 'rgba(255,255,255,0.2)', borderRadius: 10, padding: '7px 9px', fontSize: '1.2rem' }}>🏪</div>
+            <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0 }}>
+              Fournisseurs {isIndep ? 'Activité' : ''}
+            </h1>
+          </div>
+          <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.85rem', margin: 0 }}>
+            Gérez vos fournisseurs et leurs associations
+          </p>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+          <div style={{ background: 'rgba(255,255,255,0.15)', borderRadius: 12, padding: '10px 18px', textAlign: 'center' }}>
+            <div style={{ fontSize: '1.4rem', fontWeight: 900, color: '#fff' }}>{fournisseurs.length}</div>
+            <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.75)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Fournisseurs</div>
+          </div>
+          <button
+            onClick={openCreate}
+            style={{
+              background: 'rgba(255,255,255,0.2)',
+              boxShadow: '0 4px 14px rgba(0,0,0,0.15)',
+              borderRadius: 10, border: '1px solid rgba(255,255,255,0.35)',
+              color: '#fff', fontWeight: 800, padding: '10px 22px',
+              cursor: 'pointer', fontSize: '0.9rem', backdropFilter: 'blur(4px)',
+            }}
+          >
+            + Nouveau fournisseur
+          </button>
+        </div>
       </div>
 
       {/* Filter panel */}
-      <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, marginBottom: 24, overflow: 'hidden', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
-        <div style={{ padding: '12px 20px', borderBottom: '1px solid var(--border)', background: 'var(--bg-secondary, #f8fafc)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <div style={{
+        background: 'var(--surface)', borderRadius: 14, padding: '16px 20px',
+        border: '1px solid var(--border)', boxShadow: '0 2px 12px rgba(0,0,0,0.05)',
+        marginBottom: 24,
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
           <span style={{ fontWeight: 700, fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.09em', color: 'var(--text-muted)' }}>Filtres</span>
           {search && (
             <button className="btn btn-ghost btn-sm" style={{ fontSize: '0.78rem' }} onClick={() => { setSearch(''); setFoPage(1); }}>✕ Réinitialiser</button>
           )}
         </div>
-        <div style={{ padding: '16px 20px' }}>
-          <div>
-            <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 5 }}>Recherche</span>
-            <input
-              type="text" className="input" placeholder="Nom, téléphone, adresse…" value={search}
-              onChange={(e) => { setSearch(e.target.value); setFoPage(1); }}
-              style={{ maxWidth: 320 }}
-            />
-          </div>
+        <div>
+          <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 5 }}>Recherche</span>
+          <input
+            type="text" className="input" placeholder="Nom, téléphone, adresse…" value={search}
+            onChange={(e) => { setSearch(e.target.value); setFoPage(1); }}
+            style={{ maxWidth: 320 }}
+          />
         </div>
       </div>
 
       {loading ? (
         <p className="text-muted">Chargement…</p>
       ) : fournisseurs.length === 0 ? (
-        <div className="empty-state">
-          <span className="empty-icon">🚚</span>
-          <p>Aucun fournisseur enregistré. Créez-en un pour pouvoir l'associer aux approvisionnements.</p>
+        <div style={{ textAlign: 'center', padding: '48px 24px', color: 'var(--text-muted)' }}>
+          <div style={{ fontSize: '3rem', marginBottom: 12 }}>🚚</div>
+          <p style={{ fontSize: '0.95rem' }}>Aucun fournisseur enregistré. Créez-en un pour pouvoir l'associer aux approvisionnements.</p>
         </div>
       ) : (
         <>
@@ -168,15 +203,21 @@ export default function FournisseursPage() {
               <h2 style={{ fontSize: '0.78rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--text-muted)', marginBottom: 10 }}>
                 🏭 Fournisseurs Labo (auto-gérés)
               </h2>
-              <div className="table-responsive card th-indigo">
-                <table className="table">
-                  <thead><tr><th>Nom</th><th>Téléphone</th><th>Activités liées</th></tr></thead>
+              <div style={{ borderRadius: 12, overflow: 'hidden', border: '1px solid var(--border)', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
+                <table className="table" style={{ margin: 0 }}>
+                  <thead>
+                    <tr style={{ background: 'linear-gradient(135deg, #7c2d12, #ea580c)' }}>
+                      <th style={{ fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px', color: '#fff' }}>Nom</th>
+                      <th style={{ fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px', color: '#fff' }}>Téléphone</th>
+                      <th style={{ fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px', color: '#fff' }}>Activités liées</th>
+                    </tr>
+                  </thead>
                   <tbody>
-                    {laboFournisseurs.map((f) => (
-                      <tr key={f.id} style={{ background: 'var(--primary-light, #e8f0fe)', opacity: 0.9 }}>
-                        <td style={{ fontWeight: 700 }}>🏭 {f.nom}</td>
-                        <td style={{ color: 'var(--text-muted)' }}>{f.telephone ?? '—'}</td>
-                        <td>
+                    {laboFournisseurs.map((f, idx) => (
+                      <tr key={f.id} style={{ background: idx % 2 === 0 ? 'var(--surface)' : 'rgba(234,88,12,0.03)', borderLeft: '4px solid #ea580c' }}>
+                        <td style={{ fontWeight: 700, padding: '10px 14px' }}>🏭 {f.nom}</td>
+                        <td style={{ color: 'var(--text-muted)', padding: '10px 14px' }}>{f.telephone ?? '—'}</td>
+                        <td style={{ padding: '10px 14px' }}>
                           <div className="fournisseur-card-acts">
                             {f.activiteIds.length === 0
                               ? <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>—</span>
@@ -192,33 +233,47 @@ export default function FournisseursPage() {
           )}
 
           {/* Regular fournisseurs */}
-          <div className="table-responsive card th-cyan">
-            <table className="table">
+          <div style={{ borderRadius: 12, overflow: 'hidden', border: '1px solid var(--border)', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
+            <table className="table" style={{ margin: 0 }}>
               <thead>
-                <tr>
-                  <th>Nom</th>
-                  <th>Téléphone</th>
-                  <th>Adresse</th>
-                  {!isIndep && <><th>Activités liées</th><th>Labos liés</th></>}
-                  <th></th>
+                <tr style={{ background: 'linear-gradient(135deg, #7c2d12, #ea580c)' }}>
+                  <th style={{ fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px', color: '#fff' }}>Nom</th>
+                  <th style={{ fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px', color: '#fff' }}>Téléphone</th>
+                  <th style={{ fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px', color: '#fff' }}>Adresse</th>
+                  {!isIndep && (
+                    <>
+                      <th style={{ fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px', color: '#fff' }}>Activités liées</th>
+                      <th style={{ fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px', color: '#fff' }}>Labos liés</th>
+                    </>
+                  )}
+                  <th style={{ fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px', color: '#fff' }}></th>
                 </tr>
               </thead>
               <tbody>
-                {pagedFournisseurs.map((f) => (
-                  <tr key={f.id}>
-                    <td style={{ fontWeight: 700 }}>{f.nom}</td>
-                    <td style={{ color: 'var(--text-muted)' }}>{f.telephone ?? '—'}</td>
-                    <td style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{f.adresse ?? '—'}</td>
+                {pagedFournisseurs.map((f, idx) => (
+                  <tr
+                    key={f.id}
+                    style={{
+                      background: idx % 2 === 0 ? 'var(--surface)' : 'rgba(234,88,12,0.03)',
+                      borderLeft: '4px solid #ea580c',
+                      transition: 'background 0.12s',
+                    }}
+                    onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(234,88,12,0.07)')}
+                    onMouseLeave={(e) => (e.currentTarget.style.background = idx % 2 === 0 ? 'var(--surface)' : 'rgba(234,88,12,0.03)')}
+                  >
+                    <td style={{ fontWeight: 700, padding: '10px 14px' }}>{f.nom}</td>
+                    <td style={{ color: 'var(--text-muted)', padding: '10px 14px' }}>{f.telephone ?? '—'}</td>
+                    <td style={{ color: 'var(--text-muted)', fontSize: '0.85rem', padding: '10px 14px' }}>{f.adresse ?? '—'}</td>
                     {!isIndep && (
                       <>
-                        <td>
+                        <td style={{ padding: '10px 14px' }}>
                           <div className="fournisseur-card-acts">
                             {f.activiteIds.length === 0
                               ? <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>—</span>
                               : f.activiteIds.map((id) => <span key={id} className="act-chip">{activiteLabel(id)}</span>)}
                           </div>
                         </td>
-                        <td>
+                        <td style={{ padding: '10px 14px' }}>
                           <div className="fournisseur-card-acts">
                             {(f.laboIds ?? []).length === 0
                               ? <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>—</span>
@@ -227,16 +282,31 @@ export default function FournisseursPage() {
                         </td>
                       </>
                     )}
-                    <td style={{ whiteSpace: 'nowrap' }}>
-                      <button className="btn btn-ghost btn-sm" style={{ marginRight: 6 }} onClick={() => openEdit(f)}>✏️</button>
-                      <button className="btn btn-ghost btn-sm" style={{ color: 'var(--danger)' }} onClick={() => handleDelete(f)}>🗑️</button>
+                    <td style={{ whiteSpace: 'nowrap', padding: '10px 14px' }}>
+                      <button
+                        onClick={() => openEdit(f)}
+                        style={{
+                          marginRight: 6, background: 'rgba(234,88,12,0.08)', border: '1px solid rgba(234,88,12,0.2)',
+                          borderRadius: 7, padding: '5px 10px', cursor: 'pointer', fontSize: '0.85rem',
+                          color: '#ea580c', fontWeight: 700,
+                        }}
+                      >✏️</button>
+                      <button
+                        onClick={() => handleDelete(f)}
+                        style={{
+                          background: 'rgba(220,38,38,0.07)', border: '1px solid rgba(220,38,38,0.18)',
+                          borderRadius: 7, padding: '5px 10px', cursor: 'pointer', fontSize: '0.85rem',
+                          color: 'var(--danger)', fontWeight: 700,
+                        }}
+                      >🗑️</button>
                     </td>
                   </tr>
                 ))}
                 {filteredFournisseurs.length === 0 && (
                   <tr>
-                    <td colSpan={isIndep ? 4 : 6} style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '24px' }}>
-                      {search ? 'Aucun résultat.' : 'Aucun fournisseur. Cliquez sur "+ Nouveau fournisseur".'}
+                    <td colSpan={isIndep ? 4 : 6} style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '32px 24px' }}>
+                      <div style={{ fontSize: '2rem', marginBottom: 8 }}>🔍</div>
+                      <div>{search ? 'Aucun résultat.' : 'Aucun fournisseur. Cliquez sur "+ Nouveau fournisseur".'}</div>
                     </td>
                   </tr>
                 )}
@@ -259,9 +329,14 @@ export default function FournisseursPage() {
       {modal && (
         <div className="modal-overlay" onClick={() => setModal(null)}>
           <div className="modal" style={{ maxWidth: 520 }} onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h2>{modal.mode === 'create' ? 'Nouveau fournisseur' : 'Modifier le fournisseur'}</h2>
-              <button className="modal-close" onClick={() => setModal(null)}>×</button>
+            <div className="modal-header" style={{ background: 'linear-gradient(135deg, #7c2d12, #ea580c)', borderRadius: '12px 12px 0 0', padding: '18px 22px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <h2 style={{ color: '#fff', margin: 0, fontSize: '1.05rem', fontWeight: 800 }}>
+                {modal.mode === 'create' ? 'Nouveau fournisseur' : 'Modifier le fournisseur'}
+              </h2>
+              <button
+                onClick={() => setModal(null)}
+                style={{ background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: 8, color: '#fff', fontWeight: 900, fontSize: '1.1rem', cursor: 'pointer', padding: '2px 9px', lineHeight: 1 }}
+              >×</button>
             </div>
             <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               <div>
@@ -308,9 +383,21 @@ export default function FournisseursPage() {
               )}
               {error && <p style={{ color: 'var(--danger)', fontSize: '0.85rem' }}>{error}</p>}
             </div>
-            <div className="modal-footer">
+            <div className="modal-footer" style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, padding: '14px 22px', borderTop: '1px solid var(--border)' }}>
               <button className="btn btn-ghost" onClick={() => setModal(null)}>Annuler</button>
-              <button className="btn btn-primary" onClick={save} disabled={saving}>{saving ? '…' : 'Enregistrer'}</button>
+              <button
+                onClick={save}
+                disabled={saving}
+                style={{
+                  background: 'linear-gradient(135deg, #ea580c, #f97316)',
+                  boxShadow: '0 4px 14px rgba(234,88,12,0.35)',
+                  borderRadius: 10, border: 'none', color: '#fff',
+                  fontWeight: 800, padding: '10px 22px', cursor: saving ? 'not-allowed' : 'pointer',
+                  opacity: saving ? 0.7 : 1,
+                }}
+              >
+                {saving ? '…' : 'Enregistrer'}
+              </button>
             </div>
           </div>
         </div>

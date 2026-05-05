@@ -62,7 +62,10 @@ function IngredientList({
         {selectedCount} / {ingredients.length} {t('global_catalogue.selected_count', 'ingrédient(s) sélectionné(s)')}
       </p>
       {filtered.length === 0 ? (
-        <p className="text-muted">{t('common.no_result')}</p>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 24px' }}>
+          <span style={{ fontSize: '2rem', marginBottom: 8 }}>🏷</span>
+          <p style={{ color: 'var(--text-muted)', textAlign: 'center', margin: 0 }}>{t('common.no_result')}</p>
+        </div>
       ) : (() => {
         const sortedGroups = Object.entries(groups).sort(([a], [b]) => a.localeCompare(b));
         const totalCatPages = Math.max(1, Math.ceil(sortedGroups.length / CAT_PAGE_SIZE));
@@ -72,19 +75,19 @@ function IngredientList({
             const isOpen = openCats.has(cat);
             return (
             <div key={cat} style={{ marginBottom: 8 }}>
-              <button onClick={() => toggleCat(cat)} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0', width: '100%', textAlign: 'left', borderBottom: '2px solid var(--border)', marginBottom: isOpen ? 8 : 0 }}>
-                <span style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>🏷️ {cat}</span>
+              <button onClick={() => toggleCat(cat)} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0', width: '100%', textAlign: 'left', borderBottom: '2px solid #c7d2fe', marginBottom: isOpen ? 8 : 0 }}>
+                <span style={{ fontSize: '0.78rem', fontWeight: 800, color: '#4338ca', textTransform: 'uppercase', letterSpacing: '0.06em' }}>🏷 {cat}</span>
                 <span style={{ fontWeight: 400, fontSize: '0.72rem', color: 'var(--text-muted)' }}>({items.filter((i) => i.selected).length}/{items.length})</span>
                 <span style={{ marginLeft: 'auto', fontSize: '0.8rem', color: 'var(--text-muted)' }}>{isOpen ? '▼' : '▶'}</span>
               </button>
               {isOpen && (
               <div className="table-responsive card" style={{ marginBottom: 0 }}>
                 <table className="table">
-                  <thead>
+                  <thead style={{ background: 'linear-gradient(135deg, #1e1b4b, #4338ca)' }}>
                     <tr>
-                      <th style={{ width: 40 }}></th>
-                      <th>{t('common.name')}</th>
-                      <th style={{ width: 100 }}>{t('common.unit')}</th>
+                      <th style={{ width: 40, color: '#fff', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase' }}></th>
+                      <th style={{ color: '#fff', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase' }}>{t('common.name')}</th>
+                      <th style={{ width: 100, color: '#fff', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase' }}>{t('common.unit')}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -155,14 +158,14 @@ function FiltersBar({
   const ingredientsInCat = filterCategory ? ingredients.filter((i) => i.categorie === filterCategory) : ingredients;
   const hasFilter = filterCategory || filterIngId !== '' || filterName;
   return (
-    <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, marginBottom: 20, overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
-      <div style={{ padding: '10px 20px', borderBottom: '1px solid var(--border)', background: 'var(--bg-secondary, #f8fafc)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+    <div style={{ background: 'var(--surface)', borderRadius: 14, padding: '16px 20px', border: '1px solid var(--border)', boxShadow: '0 2px 12px rgba(0,0,0,0.05)', marginBottom: 20 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
         <span style={{ fontWeight: 700, fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.09em', color: 'var(--text-muted)' }}>Filtres</span>
         {hasFilter && (
           <button className="btn btn-ghost btn-sm" style={{ fontSize: '0.78rem' }} onClick={() => { onCatChange(''); onIngChange(''); onNameChange(''); }}>✕ Réinitialiser</button>
         )}
       </div>
-      <div style={{ padding: '16px 20px', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '12px 20px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '12px 20px' }}>
         <div>
           <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 5 }}>Catégorie</span>
           <select className="input" style={{ width: '100%' }} value={filterCategory} onChange={(e) => { onCatChange(e.target.value); onIngChange(''); }}>
@@ -383,10 +386,23 @@ export default function GlobalCataloguePage() {
 
   return (
     <div className="page-content">
-      <h1 style={{ marginBottom: 8 }}>{t('nav.catalogue_global', 'Catalogue Global')}</h1>
-      <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', marginBottom: 24 }}>
-        {t('global_catalogue.subtitle', 'Sélectionnez les ingrédients à inclure dans votre catalogue. Les pages Catalogue Ingrédients affichent uniquement les ingrédients sélectionnés ici.')}
-      </p>
+      {/* ── Hero header ── */}
+      <div style={{
+        background: 'linear-gradient(135deg, #1e1b4b 0%, #4338ca 55%, #6366f1 100%)',
+        borderRadius: 18, padding: '24px 28px', marginBottom: 24,
+        boxShadow: '0 8px 32px rgba(67,56,202,0.28)',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16,
+      }}>
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+            <div style={{ background: 'rgba(255,255,255,0.2)', borderRadius: 10, padding: '7px 9px', fontSize: '1.2rem' }}>🏷</div>
+            <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0 }}>{t('nav.catalogue_global', 'Catalogue Global')}</h1>
+          </div>
+          <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.88rem', margin: 0 }}>
+            {t('global_catalogue.subtitle', 'Sélectionnez les ingrédients à inclure dans votre catalogue. Les pages Catalogue Ingrédients affichent uniquement les ingrédients sélectionnés ici.')}
+          </p>
+        </div>
+      </div>
 
       {/* Entreprise type + context selector */}
       {isEntreprise && (
@@ -396,7 +412,11 @@ export default function GlobalCataloguePage() {
             {(['franchise', 'distinct'] as const).map((type) => (
               <button
                 key={type}
-                className={`btn btn-sm ${activeType === type ? 'btn-primary' : 'btn-secondary'}`}
+                className="btn btn-sm"
+                style={activeType === type
+                  ? { background: 'linear-gradient(135deg, #4338ca, #6366f1)', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 700, padding: '8px 18px' }
+                  : { background: 'var(--surface)', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: 8, fontWeight: 600, padding: '8px 18px' }
+                }
                 onClick={() => { setActiveType(type); setIngredients([]); }}
               >
                 {type === 'franchise' ? `🔗 ${t('nav.espace_franchise', 'Espace Franchise')}` : `📍 ${t('nav.espace_distinct', 'Espace Distinct')}`}

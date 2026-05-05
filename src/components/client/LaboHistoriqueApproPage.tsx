@@ -38,6 +38,11 @@ const labelStyle: React.CSSProperties = {
   textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 4,
 };
 
+const dateLabelStyle: React.CSSProperties = {
+  fontSize: '0.68rem', fontWeight: 800, color: '#0f766e',
+  textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 4,
+};
+
 const warningBanner = (
   <div style={{ background: '#fef3c7', border: '1px solid #fde68a', borderRadius: 8, padding: '8px 12px', marginBottom: 12, fontSize: '0.82rem', color: '#92400e', display: 'flex', gap: 8, alignItems: 'flex-start' }}>
     <span>⚠️</span>
@@ -93,9 +98,9 @@ function EditModal({
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header modal-header--primary">
-          <h2>Modifier — {entry.ingredientNom}</h2>
-          <button className="modal-close" onClick={onClose}>✕</button>
+        <div className="modal-header" style={{ background: 'linear-gradient(135deg, #134e4a, #0f766e)', borderBottom: 'none' }}>
+          <h2 style={{ color: '#fff', margin: 0 }}>Modifier — {entry.ingredientNom}</h2>
+          <button className="modal-close" onClick={onClose} style={{ color: '#fff' }}>✕</button>
         </div>
         <div className="modal-body">
           {warningBanner}
@@ -129,7 +134,11 @@ function EditModal({
           {error && <p style={{ color: 'var(--danger)', fontSize: '0.85rem', marginBottom: 8 }}>{error}</p>}
           <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
             <button className="btn btn-ghost" onClick={onClose} disabled={saving}>Annuler</button>
-            <button className="btn btn-primary" onClick={handleSave} disabled={saving}>
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              style={{ background: 'linear-gradient(135deg, #0f766e 0%, #0d9488 100%)', boxShadow: '0 4px 14px rgba(15,118,110,0.35)', borderRadius: 10, border: 'none', color: '#fff', fontWeight: 800, padding: '10px 26px', cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.7 : 1 }}
+            >
               {saving ? '…' : 'Enregistrer'}
             </button>
           </div>
@@ -326,26 +335,48 @@ export default function LaboHistoriqueApproPage() {
 
   return (
     <div className="page">
-      <div className="page-header">
-        <h1>📋 Historique Appro — {labo?.nom ?? '…'} ({currentYear})</h1>
+      {/* ── Hero header ───────────────────────────────────────────────────── */}
+      <div style={{
+        background: 'linear-gradient(135deg, #134e4a 0%, #0f766e 55%, #0d9488 100%)',
+        borderRadius: 18, padding: '24px 28px', marginBottom: 24,
+        boxShadow: '0 8px 32px rgba(15,118,110,0.28)',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16,
+      }}>
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+            <div style={{ background: 'rgba(255,255,255,0.2)', borderRadius: 10, padding: '7px 9px', fontSize: '1.2rem' }}>📋</div>
+            <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0 }}>
+              Historique Approvisionnement — {labo?.nom ?? '…'}
+            </h1>
+          </div>
+          <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.85rem', margin: 0 }}>
+            {labo?.franchiseGroup
+              ? `Franchise : ${labo.franchiseGroup} · ${currentYear}`
+              : `Labo — consultation et export des approvisionnements ${currentYear}`}
+          </p>
+        </div>
       </div>
 
-      {/* Franchise group context badge */}
-      {labo?.franchiseGroup && (
-        <div style={{ background: '#eef2ff', border: '1px solid #c7d2fe', borderRadius: 8, padding: '8px 14px', marginBottom: 16, fontSize: '0.82rem', color: '#3730a3', display: 'inline-flex', gap: 6, alignItems: 'center' }}>
-          🔗 <strong>Franchise :</strong> {labo.franchiseGroup}
-        </div>
-      )}
-
-      {/* ── Modern filter panel ─────────────────────────────────────────── */}
-      <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, marginBottom: 24, boxShadow: '0 2px 12px rgba(0,0,0,0.06)', overflow: 'hidden' }}>
-        {/* Header */}
-        <div style={{ padding: '12px 20px', borderBottom: '1px solid var(--border)', background: 'var(--bg-secondary, #f8fafc)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      {/* ── Filter/toolbar bar ─────────────────────────────────────────────── */}
+      <div style={{
+        background: 'var(--surface)', borderRadius: 14, padding: '16px 20px',
+        border: '1px solid var(--border)', boxShadow: '0 2px 12px rgba(0,0,0,0.05)',
+        marginBottom: 24,
+      }}>
+        {/* Panel header */}
+        <div style={{
+          paddingBottom: 12,
+          marginBottom: 16,
+          borderBottom: '1px solid var(--border)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+        }}>
           <span style={{ fontWeight: 700, fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.09em', color: 'var(--text-muted)' }}>Filtres</span>
         </div>
 
         {/* Section 1: Produit */}
-        <div style={{ padding: '18px 24px 0' }}>
+        <div style={{ marginBottom: 16 }}>
           <div style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
             <span style={{ width: 16, height: 2, background: 'var(--primary)', display: 'inline-block', borderRadius: 2 }} />
             Produit
@@ -372,23 +403,23 @@ export default function LaboHistoriqueApproPage() {
         </div>
 
         {/* Divider */}
-        <div style={{ margin: '16px 24px 0', borderTop: '1px dashed var(--border)' }} />
+        <div style={{ marginBottom: 16, borderTop: '1px dashed var(--border)' }} />
 
         {/* Section 2: Période & Fournisseur */}
-        <div style={{ padding: '16px 24px 0' }}>
+        <div style={{ marginBottom: 16 }}>
           <div style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
             <span style={{ width: 16, height: 2, background: '#7c3aed', display: 'inline-block', borderRadius: 2 }} />
             Période &amp; Fournisseur
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '12px 20px' }}>
             <div>
-              <label style={labelStyle}>Date début</label>
-              <input type="date" className="input" style={{ width: '100%' }} min={yearStart} max={yearEnd}
+              <label style={dateLabelStyle}>Date début</label>
+              <input type="date" className="input" style={{ width: '100%', border: '1.5px solid #0f766e', background: '#f0fdfa', fontWeight: 600 }} min={yearStart} max={yearEnd}
                 value={startDate} onChange={(e) => setStartDate(e.target.value)} />
             </div>
             <div>
-              <label style={labelStyle}>Date fin</label>
-              <input type="date" className="input" style={{ width: '100%' }} min={yearStart} max={yearEnd}
+              <label style={dateLabelStyle}>Date fin</label>
+              <input type="date" className="input" style={{ width: '100%', border: '1.5px solid #0f766e', background: '#f0fdfa', fontWeight: 600 }} min={yearStart} max={yearEnd}
                 value={endDate} onChange={(e) => setEndDate(e.target.value)} />
             </div>
             {fournisseurs.length > 0 && (
@@ -411,14 +442,24 @@ export default function LaboHistoriqueApproPage() {
         </div>
 
         {/* Actions footer */}
-        <div style={{ padding: '16px 24px', marginTop: 16, borderTop: '1px solid var(--border)', background: 'var(--bg-secondary, #f8fafc)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
+        <div style={{ paddingTop: 16, borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
           {hasFilters && (
             <button className="btn btn-ghost btn-sm"
               onClick={() => { setFilterCategorieId(''); setFilterIngredientId(''); setFilterFournisseurId(''); setFilterRefFacture(''); }}>
               ✕ Réinitialiser
             </button>
           )}
-          <button className="btn btn-primary" onClick={fetchResults} disabled={loading} style={{ minWidth: 140 }}>
+          <button
+            onClick={fetchResults}
+            disabled={loading}
+            style={{
+              background: 'linear-gradient(135deg, #0f766e 0%, #0d9488 100%)',
+              boxShadow: '0 4px 14px rgba(15,118,110,0.35)',
+              borderRadius: 10, border: 'none', color: '#fff', fontWeight: 800,
+              padding: '10px 26px', minWidth: 140,
+              cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.7 : 1,
+            }}
+          >
             {loading ? 'Chargement…' : '🔍 Rechercher'}
           </button>
           <button
@@ -426,13 +467,13 @@ export default function LaboHistoriqueApproPage() {
             disabled={results.length === 0}
             style={{
               display: 'flex', alignItems: 'center', gap: 8,
-              padding: '9px 20px', borderRadius: 10, border: 'none',
-              cursor: results.length === 0 ? 'not-allowed' : 'pointer',
-              background: results.length > 0 ? 'linear-gradient(135deg, #059669 0%, #10b981 100%)' : 'var(--bg-secondary, #e5e7eb)',
+              background: results.length > 0 ? 'linear-gradient(135deg, #16a34a, #22c55e)' : 'var(--bg-secondary, #e5e7eb)',
+              boxShadow: results.length > 0 ? '0 4px 14px rgba(22,163,74,0.35)' : 'none',
+              borderRadius: 10, border: 'none',
               color: results.length > 0 ? '#fff' : 'var(--text-muted)',
-              fontWeight: 700, fontSize: '0.88rem',
+              fontWeight: 800, padding: '10px 20px',
+              cursor: results.length === 0 ? 'not-allowed' : 'pointer',
               opacity: results.length === 0 ? 0.55 : 1,
-              boxShadow: results.length > 0 ? '0 2px 8px rgba(16,185,129,0.25)' : 'none',
               transition: 'all 0.15s',
               minWidth: 180,
             }}
@@ -445,13 +486,16 @@ export default function LaboHistoriqueApproPage() {
 
       {/* Results */}
       {!searched ? (
-        <p className="text-muted" style={{ textAlign: 'center', marginTop: 40 }}>Cliquez sur Rechercher pour afficher les approvisionnements.</p>
+        <div style={{ textAlign: 'center', padding: '48px 24px' }}>
+          <div style={{ fontSize: '2rem', marginBottom: 10 }}>🔍</div>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem' }}>Cliquez sur Rechercher pour afficher les approvisionnements.</p>
+        </div>
       ) : loading ? (
         <p className="text-muted">Chargement…</p>
       ) : results.length === 0 ? (
-        <div className="empty-state">
-          <span className="empty-icon">📦</span>
-          <p>Aucun approvisionnement trouvé pour cette période.</p>
+        <div style={{ textAlign: 'center', padding: '48px 24px' }}>
+          <div style={{ fontSize: '2.5rem', marginBottom: 12 }}>📦</div>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem' }}>Aucun approvisionnement trouvé pour cette période.</p>
         </div>
       ) : (
         <>
@@ -471,7 +515,7 @@ export default function LaboHistoriqueApproPage() {
             ))}
           </div>
 
-          <div className="card th-teal" style={{ overflowX: 'hidden' }}>
+          <div className="card" style={{ overflowX: 'hidden' }}>
             <table className="table" style={{ tableLayout: 'fixed', width: '100%' }}>
               <colgroup>
                 <col style={{ width: '36px' }} />
@@ -483,8 +527,8 @@ export default function LaboHistoriqueApproPage() {
                 <col style={{ width: '66px' }} />
               </colgroup>
               <thead>
-                <tr>
-                  <th style={{ textAlign: 'center', padding: '0 4px' }}>
+                <tr style={{ background: 'linear-gradient(135deg, #134e4a, #0f766e)', color: '#fff' }}>
+                  <th style={{ textAlign: 'center', padding: '0 4px', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
                     <input
                       type="checkbox"
                       checked={results.length > 0 && selectedIds.size === results.length}
@@ -493,19 +537,19 @@ export default function LaboHistoriqueApproPage() {
                       style={{ cursor: 'pointer', accentColor: 'var(--primary)' }}
                     />
                   </th>
-                  <th>Date</th>
-                  <th>Ingrédient</th>
-                  <th style={{ textAlign: 'right' }}>Quantité</th>
-                  <th style={{ textAlign: 'right' }}>Prix/DT</th>
-                  <th>Fourn. / Réf</th>
-                  <th></th>
+                  <th style={{ fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px' }}>Date</th>
+                  <th style={{ fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px' }}>Ingrédient</th>
+                  <th style={{ textAlign: 'right', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px' }}>Quantité</th>
+                  <th style={{ textAlign: 'right', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px' }}>Prix/DT</th>
+                  <th style={{ fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px' }}>Fourn. / Réf</th>
+                  <th style={{ padding: '12px 14px' }}></th>
                 </tr>
               </thead>
               <tbody>
                 {pagedResults.map((r) => {
                   const isSelected = selectedIds.has(r.id);
                   return (
-                  <tr key={r.id} style={isSelected ? { background: 'rgba(234,88,12,0.08)', outline: '1px solid rgba(234,88,12,0.3)' } : undefined}>
+                  <tr key={r.id} style={isSelected ? { background: 'linear-gradient(90deg, #fef3c7, #fffbeb)', borderLeft: '3px solid #f59e0b' } : undefined}>
                     <td style={{ textAlign: 'center', padding: '0 4px' }}>
                       <input
                         type="checkbox"
@@ -515,13 +559,15 @@ export default function LaboHistoriqueApproPage() {
                       />
                     </td>
                     <td>
-                      <div style={{ fontWeight: 600, color: 'var(--primary)', fontSize: '0.85rem' }}>{fmtDate(r.dateAppro)}</div>
+                      <span style={{ background: '#f0fdfa', border: '1px solid #99f6e4', borderRadius: 7, padding: '3px 10px', fontWeight: 700, fontSize: '0.82rem', color: '#0f766e', display: 'inline-block' }}>
+                        {fmtDate(r.dateAppro)}
+                      </span>
                     </td>
                     <td>
                       <div style={{ fontWeight: 600, fontSize: '0.88rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.ingredientNom}</div>
                       <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.categorieNom}</div>
                     </td>
-                    <td style={{ textAlign: 'right', fontWeight: 700, color: (r.quantite ?? 0) > 0 ? '#15803d' : '#dc2626' }}>
+                    <td style={{ textAlign: 'right', fontWeight: 800, color: '#0f766e' }}>
                       <div>{r.quantite ?? '—'}</div>
                       <div style={{ color: 'var(--text-muted)', fontSize: '0.72rem', fontWeight: 400 }}>{r.uniteNom}</div>
                     </td>

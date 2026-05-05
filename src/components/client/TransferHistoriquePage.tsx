@@ -102,50 +102,69 @@ export default function TransferHistoriquePage() {
 
   return (
     <div className="page">
-      <div className="page-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+      {/* Hero header */}
+      <div style={{
+        background: 'linear-gradient(135deg, #3b0764 0%, #7e22ce 55%, #a855f7 100%)',
+        borderRadius: 18, padding: '24px 28px', marginBottom: 24,
+        boxShadow: '0 8px 32px rgba(126,34,206,0.28)',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16,
+      }}>
         <div>
-          <h1>📋 {labo ? labo.nom : t('common.loading')} — {t('client.labo.transfers_history')} {currentYear}</h1>
-          {labo && <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: 2 }}>{labo.franchiseGroup}</p>}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+            <div style={{ background: 'rgba(255,255,255,0.2)', borderRadius: 10, padding: '7px 9px', fontSize: '1.2rem' }}>📋</div>
+            <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0 }}>
+              {labo ? labo.nom : t('common.loading')} — {t('client.labo.transfers_history')} {currentYear}
+            </h1>
+          </div>
+          {labo && (
+            <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.85rem', margin: 0 }}>{labo.franchiseGroup}</p>
+          )}
         </div>
-        <Link to={`/client/labo/transfer?laboId=${laboId}`} className="btn btn-primary btn-sm">
-          ↗ {t('client.labo.btn_transfer')}
+        <Link to={`/client/labo/transfer?laboId=${laboId}`}
+          style={{ background: 'linear-gradient(135deg, #7e22ce 0%, #a855f7 100%)', boxShadow: '0 4px 14px rgba(126,34,206,0.35)', borderRadius: 10, border: 'none', color: '#fff', fontWeight: 800, padding: '10px 24px', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+          🔄 {t('client.labo.btn_transfer')}
         </Link>
       </div>
 
-      {/* ── Modern filter panel ─────────────────────────────────────────── */}
-      <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, marginBottom: 20, boxShadow: '0 2px 12px rgba(0,0,0,0.06)', overflow: 'hidden' }}>
-        <div style={{ padding: '12px 20px', borderBottom: '1px solid var(--border)', background: 'var(--bg-secondary, #f8fafc)' }}>
-          <span style={{ fontWeight: 700, fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.09em', color: 'var(--text-muted)' }}>Filtres</span>
+      {/* Filter panel */}
+      <div style={{ background: 'var(--surface)', borderRadius: 14, padding: '16px 20px', border: '1px solid var(--border)', boxShadow: '0 2px 12px rgba(0,0,0,0.05)', marginBottom: 20, overflow: 'hidden' }}>
+        <div style={{ marginBottom: 14 }}>
+          <span style={{ fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#7e22ce' }}>Filtres</span>
         </div>
-        <div style={{ padding: '18px 24px 0' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(190px, 1fr))', gap: '12px 20px' }}>
-            {activites.length > 0 && (
-              <div>
-                <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 5 }}>
-                  {t('client.labo.filter_activite')}
-                </label>
-                <select className="input" style={{ width: '100%' }} value={filterActiviteId} onChange={(e) => setFilterActiviteId(e.target.value)}>
-                  <option value="">{t('client.labo.all_activites')}</option>
-                  {activites.map((a) => <option key={a.id} value={a.id}>{a.nom}</option>)}
-                </select>
-              </div>
-            )}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(190px, 1fr))', gap: '12px 20px', marginBottom: 16 }}>
+          {activites.length > 0 && (
             <div>
-              <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 5 }}>
-                {t('client.historique_appro.start_date')}
+              <label style={{ fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--text-muted)', display: 'block', marginBottom: 5 }}>
+                {t('client.labo.filter_activite')}
               </label>
-              <input type="date" className="input" style={{ width: '100%' }} min={yearStart} max={yearEnd} value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+              <select className="input" style={{ width: '100%' }} value={filterActiviteId} onChange={(e) => setFilterActiviteId(e.target.value)}>
+                <option value="">{t('client.labo.all_activites')}</option>
+                {activites.map((a) => <option key={a.id} value={a.id}>{a.nom}</option>)}
+              </select>
             </div>
-            <div>
-              <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 5 }}>
-                {t('client.historique_appro.end_date')}
-              </label>
-              <input type="date" className="input" style={{ width: '100%' }} min={yearStart} max={yearEnd} value={endDate} onChange={(e) => setEndDate(e.target.value)} />
-            </div>
+          )}
+          <div>
+            <label style={{ fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#7e22ce', display: 'block', marginBottom: 5 }}>
+              {t('client.historique_appro.start_date')}
+            </label>
+            <input type="date" className="input"
+              style={{ width: '100%', border: '1.5px solid #7e22ce', background: '#faf5ff', fontWeight: 600 }}
+              min={yearStart} max={yearEnd} value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+          </div>
+          <div>
+            <label style={{ fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#7e22ce', display: 'block', marginBottom: 5 }}>
+              {t('client.historique_appro.end_date')}
+            </label>
+            <input type="date" className="input"
+              style={{ width: '100%', border: '1.5px solid #7e22ce', background: '#faf5ff', fontWeight: 600 }}
+              min={yearStart} max={yearEnd} value={endDate} onChange={(e) => setEndDate(e.target.value)} />
           </div>
         </div>
-        <div style={{ padding: '16px 24px', marginTop: 16, borderTop: '1px solid var(--border)', background: 'var(--bg-secondary, #f8fafc)', display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
-          <button className="btn btn-primary" onClick={fetchResults} disabled={loading}>
+        <div style={{ borderTop: '1px solid var(--border)', paddingTop: 14, display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+          <button
+            onClick={fetchResults}
+            disabled={loading}
+            style={{ background: 'linear-gradient(135deg, #7e22ce 0%, #a855f7 100%)', boxShadow: '0 4px 14px rgba(126,34,206,0.35)', borderRadius: 10, border: 'none', color: '#fff', fontWeight: 800, padding: '10px 24px', cursor: 'pointer', opacity: loading ? 0.6 : 1 }}>
             {loading ? t('common.loading') : '🔍 Rechercher'}
           </button>
         </div>
@@ -155,9 +174,9 @@ export default function TransferHistoriquePage() {
       {!searched ? null : loading ? (
         <p className="text-muted">{t('common.loading')}</p>
       ) : results.length === 0 ? (
-        <div className="empty-state">
-          <span className="empty-icon">📦</span>
-          <p>{t('client.historique_appro.no_results')}</p>
+        <div style={{ textAlign: 'center', padding: '48px 24px', color: 'var(--text-muted)' }}>
+          <div style={{ fontSize: '2.5rem', marginBottom: 12 }}>📦</div>
+          <p style={{ fontSize: '0.95rem', fontWeight: 500 }}>{t('client.historique_appro.no_results')}</p>
         </div>
       ) : (
         <>
@@ -211,17 +230,17 @@ export default function TransferHistoriquePage() {
           </div>
 
           {/* Client-side filters (compact card) */}
-          <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, marginBottom: 16, overflow: 'hidden', boxShadow: '0 1px 6px rgba(0,0,0,0.04)' }}>
-            <div style={{ padding: '10px 18px', borderBottom: '1px solid var(--border)', background: 'var(--bg-secondary, #f8fafc)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span style={{ fontWeight: 700, fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)' }}>Affiner les résultats</span>
+          <div style={{ background: 'var(--surface)', borderRadius: 14, padding: '16px 20px', border: '1px solid var(--border)', boxShadow: '0 2px 12px rgba(0,0,0,0.05)', marginBottom: 16, overflow: 'hidden' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+              <span style={{ fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#7e22ce' }}>Affiner les résultats</span>
               {(filterCategorie || filterNom) && (
                 <button className="btn btn-ghost btn-sm" style={{ fontSize: '0.75rem' }}
                   onClick={() => { setFilterCategorie(''); setFilterNom(''); setPage(1); }}>✕ Réinitialiser</button>
               )}
             </div>
-            <div style={{ padding: '14px 18px', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '10px 18px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '10px 18px' }}>
               <div>
-                <span style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 5 }}>Catégorie</span>
+                <span style={{ fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--text-muted)', display: 'block', marginBottom: 5 }}>Catégorie</span>
                 <select className="input" style={{ width: '100%' }} value={filterCategorie}
                   onChange={(e) => { setFilterCategorie(e.target.value); setPage(1); }}>
                   <option value="">{t('client.catalogue_franchise.all_categories')}</option>
@@ -229,7 +248,7 @@ export default function TransferHistoriquePage() {
                 </select>
               </div>
               <div>
-                <span style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 5 }}>{t('client.stock.ingredient')}</span>
+                <span style={{ fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--text-muted)', display: 'block', marginBottom: 5 }}>{t('client.stock.ingredient')}</span>
                 <input
                   type="text" className="input" style={{ width: '100%' }}
                   placeholder={t('client.stock.search_ingredient')}
@@ -241,35 +260,42 @@ export default function TransferHistoriquePage() {
           </div>
 
           {filteredResults.length === 0 ? (
-            <p className="text-muted">{t('common.no_result')}</p>
+            <div style={{ textAlign: 'center', padding: '32px 24px', color: 'var(--text-muted)' }}>
+              <div style={{ fontSize: '2rem', marginBottom: 8 }}>🔍</div>
+              <p style={{ fontSize: '0.9rem', fontWeight: 500 }}>{t('common.no_result')}</p>
+            </div>
           ) : (
             <div className="table-responsive card">
               <table className="table">
                 <thead>
-                  <tr>
-                    <th>{t('client.labo.col_date')}</th>
-                    <th>{t('client.labo.col_activite')}</th>
-                    <th>{t('client.historique_appro.col_ingredient')}</th>
-                    <th>{t('client.historique_appro.col_category')}</th>
-                    <th style={{ textAlign: 'right' }}>{t('client.historique_appro.col_qty')}</th>
-                    <th style={{ textAlign: 'center', width: 60 }}></th>
+                  <tr style={{ background: 'linear-gradient(135deg, #3b0764, #7e22ce)', color: '#fff' }}>
+                    <th style={{ fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px', color: '#fff' }}>{t('client.labo.col_date')}</th>
+                    <th style={{ fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px', color: '#fff' }}>{t('client.labo.col_activite')}</th>
+                    <th style={{ fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px', color: '#fff' }}>{t('client.historique_appro.col_ingredient')}</th>
+                    <th style={{ fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px', color: '#fff' }}>{t('client.historique_appro.col_category')}</th>
+                    <th style={{ textAlign: 'right', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px', color: '#fff' }}>{t('client.historique_appro.col_qty')}</th>
+                    <th style={{ textAlign: 'center', width: 60, fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px', color: '#fff' }}></th>
                   </tr>
                 </thead>
                 <tbody>
                   {pagedResults.map((r) => (
                     <tr key={r.id}>
-                      <td style={{ fontWeight: 600, color: 'var(--primary)' }}>{fmtDate(r.dateTransfert)}</td>
-                      <td style={{ fontWeight: 600 }}>{r.activiteNom}</td>
-                      <td>{r.ingredientNom}</td>
-                      <td style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{r.categorieNom}</td>
-                      <td style={{ textAlign: 'right', fontWeight: 700, color: 'var(--success, #10b981)' }}>
+                      <td style={{ padding: '12px 14px' }}>
+                        <span style={{ background: '#faf5ff', border: '1px solid #d8b4fe', borderRadius: 7, padding: '3px 10px', fontWeight: 700, fontSize: '0.82rem', color: '#7e22ce' }}>
+                          {fmtDate(r.dateTransfert)}
+                        </span>
+                      </td>
+                      <td style={{ fontWeight: 600, padding: '12px 14px' }}>{r.activiteNom}</td>
+                      <td style={{ padding: '12px 14px' }}>{r.ingredientNom}</td>
+                      <td style={{ color: 'var(--text-muted)', fontSize: '0.85rem', padding: '12px 14px' }}>{r.categorieNom}</td>
+                      <td style={{ textAlign: 'right', fontWeight: 800, color: 'var(--success, #10b981)', padding: '12px 14px' }}>
                         {r.quantite % 1 === 0 ? r.quantite.toFixed(0) : r.quantite} <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem', fontWeight: 400 }}>{r.uniteNom}</span>
                       </td>
-                      <td style={{ textAlign: 'center' }}>
+                      <td style={{ textAlign: 'center', padding: '12px 14px' }}>
                         {r.note ? (
                           <button
                             className="btn btn-ghost btn-sm"
-                            style={{ fontSize: '0.78rem', padding: '3px 10px', borderRadius: 20, border: '1px solid var(--border)', color: 'var(--primary)' }}
+                            style={{ fontSize: '0.78rem', padding: '3px 10px', borderRadius: 20, border: '1px solid #d8b4fe', color: '#7e22ce' }}
                             onClick={() => setDetailPopup(r)}
                           >
                             📝
