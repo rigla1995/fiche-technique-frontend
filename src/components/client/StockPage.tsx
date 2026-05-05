@@ -856,8 +856,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                     <tr>
                       <th style={{ width: 32 }}></th>
                       <th>{t('client.stock.ingredient')}</th>
-                      <th style={{ textAlign: 'right' }}>Total Stock<br /><span style={{ fontSize: '0.65rem', fontWeight: 400, color: 'var(--text-muted)' }}>mois en cours</span></th>
-                      <th style={{ textAlign: 'right' }}>Cout Total<br /><span style={{ fontSize: '0.65rem', fontWeight: 400, color: 'var(--text-muted)' }}>mois en cours</span></th>
+                      <th style={{ textAlign: 'right' }}>Stock Actuel<br /><span style={{ fontSize: '0.65rem', fontWeight: 400, color: 'var(--text-muted)' }}>COUT · TOTAL</span></th>
                       <th style={{ textAlign: 'center' }}>Seuil min</th>
                       <th style={{ textAlign: 'right' }}>Nouvelle Qté</th>
                       <th style={{ textAlign: 'right' }}>Prix (U/DT)</th>
@@ -906,10 +905,10 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                               <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{entry.unite}</div>
                             </td>
                             <td style={{ textAlign: 'right' }}>
-                              <span className={cls} style={{ fontSize: '1rem' }}>{totalDisplay}</span>
-                            </td>
-                            <td style={{ textAlign: 'right', color: '#1d4ed8', fontWeight: 500, fontSize: '0.88rem' }}>
-                              {entry.coutTotal != null && entry.coutTotal > 0 ? `${entry.coutTotal.toFixed(3)} DT` : '—'}
+                              <span className={cls} style={{ fontSize: '1rem', fontWeight: 700 }}>{totalDisplay}</span>
+                              {entry.coutTotal != null && entry.coutTotal > 0 && (
+                                <div style={{ fontSize: '0.72rem', color: '#1d4ed8', fontWeight: 500 }}>{entry.coutTotal.toFixed(3)} DT</div>
+                              )}
                             </td>
                             <td style={{ textAlign: 'center' }}>
                               <input
@@ -1011,7 +1010,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                           </tr>
                           {isHistOpen && (
                             <tr key={`${entry.ingredientId}-hist`}>
-                              <td colSpan={9} style={{ background: '#f8faff', padding: '8px 16px' }}>
+                              <td colSpan={8} style={{ background: '#f8faff', padding: '8px 16px' }}>
                                 {!hist ? (
                                   <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{t('common.loading')}</span>
                                 ) : hist.length === 0 ? (
