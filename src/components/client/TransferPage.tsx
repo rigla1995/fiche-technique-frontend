@@ -154,7 +154,9 @@ export default function TransferPage() {
 
   const getTransferDates = (ingredientId: number): Set<string> => {
     const histDates = (transferHistory[ingredientId] || []).map((h) => h.dateTransfert);
-    return new Set(histDates);
+    const row = stock.find((r) => r.ingredientId === ingredientId);
+    const recentDates = row?.recentTransferDates || [];
+    return new Set([...histDates, ...recentDates]);
   };
 
   const handleRowTransfer = async (ingredientId: number, confirmed = false) => {
