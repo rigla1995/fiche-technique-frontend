@@ -48,7 +48,8 @@ export default function InventairePage() {
   const [filterCategory, setFilterCategory] = useState('');
 
   // Confirmation popup
-  const [confirmPopup, setConfirmPopup] = useState<{ entries: { ingredientId: number; nom: string; qty: number }[] } | null>(null);
+  interface ConfirmEntry { ingredientId: number; nom: string; qty: number; isReplacement: boolean; oldQty: number | null }
+  const [confirmPopup, setConfirmPopup] = useState<{ entries: ConfirmEntry[] } | null>(null);
 
   useEffect(() => {
     if (!section) return;
@@ -121,7 +122,13 @@ export default function InventairePage() {
   const handleSave = () => {
     const entries = rows
       .filter((r) => qtys[r.ingredientId] !== '' && parseFloat(qtys[r.ingredientId] || '0') >= 0)
-      .map((r) => ({ ingredientId: r.ingredientId, nom: r.nom, qty: parseFloat(qtys[r.ingredientId]) }));
+      .map((r) => {
+        const isReplacement = r.inventaireDates.includes(date);
+        const oldQty = isReplacement
+          ? (r.recentInventaires.find((inv) => inv.date === date)?.qty ?? null)
+          : null;
+        return { ingredientId: r.ingredientId, nom: r.nom, qty: parseFloat(qtys[r.ingredientId]), isReplacement, oldQty };
+      });
     if (entries.length === 0) { setErrorMsg('Aucune quantité saisie.'); return; }
     setErrorMsg('');
     setConfirmPopup({ entries });
@@ -343,39 +350,97 @@ export default function InventairePage() {
       )}
 
       {/* Confirmation popup */}
-      {confirmPopup && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{ background: '#fff', borderRadius: 18, padding: 0, maxWidth: 500, width: '92%', overflow: 'hidden', boxShadow: '0 24px 64px rgba(0,0,0,0.35)' }}>
-            <div style={{ background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', padding: '20px 26px' }}>
-              <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#fff', letterSpacing: '-0.01em' }}>⚠️ Confirmer l'inventaire</div>
-              <div style={{ fontSize: '0.83rem', color: 'rgba(255,255,255,0.88)', marginTop: 4 }}>
-                Date : <strong>{fmtDate(date)}</strong> · {confirmPopup.entries.length} ingrédient(s)
+      {confirmPopup && (() => {
+        const replacements = confirmPopup.entries.filter((e) => e.isReplacement);
+        const newEntries = confirmPopup.entries.filter((e) => !e.isReplacement);
+        const hasReplacements = replacements.length > 0;
+        return (
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ background: '#fff', borderRadius: 18, padding: 0, maxWidth: 520, width: '92%', overflow: 'hidden', boxShadow: '0 24px 64px rgba(0,0,0,0.4)' }}>
+              {/* Header */}
+              <div style={{ background: hasReplacements ? 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)' : 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', padding: '20px 26px' }}>
+                <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#fff', letterSpacing: '-0.01em' }}>
+                  {hasReplacements ? '🚨 Remplacement détecté' : '⚠️ Confirmer l\'inventaire'}
+                </div>
+                <div style={{ fontSize: '0.83rem', color: 'rgba(255,255,255,0.88)', marginTop: 4 }}>
+                  Date : <strong>{fmtDate(date)}</strong> · {confirmPopup.entries.length} ingrédient(s)
+                  {hasReplacements && <> · <strong>{replacements.length} remplacement(s)</strong></>}
+                </div>
               </div>
-            </div>
-            <div style={{ padding: '22px 26px' }}>
-              <div style={{ background: '#fef3c7', border: '1px solid #fde68a', borderRadius: 10, padding: '12px 16px', marginBottom: 18, fontSize: '0.84rem', color: '#92400e', lineHeight: 1.5 }}>
-                ⚠️ <strong>Important :</strong> Cet inventaire <strong>ne peut pas être supprimé</strong>, seulement modifié. Il sera utilisé comme point de départ pour recalculer le stock à partir du <strong>{fmtDate(date)}</strong>.
-              </div>
-              <div style={{ maxHeight: 200, overflowY: 'auto', marginBottom: 18, display: 'flex', flexDirection: 'column', gap: 4 }}>
-                {confirmPopup.entries.map((e) => (
-                  <div key={e.ingredientId} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 10px', borderRadius: 7, background: '#f8fafc', border: '1px solid #e2e8f0', fontSize: '0.87rem' }}>
-                    <span style={{ fontWeight: 500 }}>{e.nom}</span>
-                    <span style={{ fontWeight: 800, color: 'var(--primary)' }}>{e.qty.toFixed(3)}</span>
+              <div style={{ padding: '22px 26px' }}>
+                {/* Warning notice */}
+                <div style={{ background: '#fef3c7', border: '1px solid #fde68a', borderRadius: 10, padding: '11px 15px', marginBottom: 16, fontSize: '0.83rem', color: '#92400e', lineHeight: 1.5 }}>
+                  ⚠️ <strong>Important :</strong> Cet inventaire <strong>ne peut pas être supprimé</strong>, seulement modifié. Il recalcule le stock à partir du <strong>{fmtDate(date)}</strong>.
+                </div>
+
+                {/* Replacement rows (alarming) */}
+                {hasReplacements && (
+                  <div style={{ marginBottom: 14 }}>
+                    <div style={{ fontSize: '0.68rem', fontWeight: 800, color: '#dc2626', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 6 }}>
+                      🔄 Valeurs remplacées
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                      {replacements.map((e) => (
+                        <div key={e.ingredientId} style={{
+                          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                          padding: '9px 12px', borderRadius: 8,
+                          background: 'linear-gradient(90deg, #fef2f2 0%, #fff5f5 100%)',
+                          border: '1.5px solid #fca5a5', fontSize: '0.87rem',
+                        }}>
+                          <span style={{ fontWeight: 600, color: '#991b1b' }}>{e.nom}</span>
+                          <span style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 700 }}>
+                            <span style={{ color: '#9ca3af', textDecoration: 'line-through', fontSize: '0.82rem' }}>
+                              {e.oldQty !== null ? e.oldQty.toFixed(3) : '—'}
+                            </span>
+                            <span style={{ color: '#6b7280', fontSize: '0.8rem' }}>→</span>
+                            <span style={{ color: '#dc2626', fontSize: '0.93rem' }}>{e.qty.toFixed(3)}</span>
+                          </span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                ))}
-              </div>
-              <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
-                <button onClick={() => setConfirmPopup(null)} style={{ padding: '9px 22px', borderRadius: 9, border: '1px solid var(--border)', background: 'none', cursor: 'pointer', fontSize: '0.9rem', fontWeight: 500 }}>
-                  Annuler
-                </button>
-                <button onClick={handleConfirmSave} style={{ padding: '9px 26px', borderRadius: 9, border: 'none', background: 'linear-gradient(135deg, #f59e0b, #d97706)', color: '#fff', fontWeight: 800, cursor: 'pointer', fontSize: '0.9rem' }}>
-                  ✓ Confirmer
-                </button>
+                )}
+
+                {/* New entries */}
+                {newEntries.length > 0 && (
+                  <div style={{ marginBottom: 16 }}>
+                    {hasReplacements && (
+                      <div style={{ fontSize: '0.68rem', fontWeight: 800, color: '#16a34a', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 6 }}>
+                        ✨ Nouveaux inventaires
+                      </div>
+                    )}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                      {newEntries.map((e) => (
+                        <div key={e.ingredientId} style={{
+                          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                          padding: '7px 10px', borderRadius: 7,
+                          background: '#f8fafc', border: '1px solid #e2e8f0', fontSize: '0.87rem',
+                        }}>
+                          <span style={{ fontWeight: 500 }}>{e.nom}</span>
+                          <span style={{ fontWeight: 800, color: 'var(--primary)' }}>{e.qty.toFixed(3)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+                  <button onClick={() => setConfirmPopup(null)} style={{ padding: '9px 22px', borderRadius: 9, border: '1px solid var(--border)', background: 'none', cursor: 'pointer', fontSize: '0.9rem', fontWeight: 500 }}>
+                    Annuler
+                  </button>
+                  <button onClick={handleConfirmSave} style={{
+                    padding: '9px 26px', borderRadius: 9, border: 'none',
+                    background: hasReplacements ? 'linear-gradient(135deg, #dc2626, #b91c1c)' : 'linear-gradient(135deg, #f59e0b, #d97706)',
+                    color: '#fff', fontWeight: 800, cursor: 'pointer', fontSize: '0.9rem',
+                  }}>
+                    {hasReplacements ? '🔄 Remplacer' : '✓ Confirmer'}
+                  </button>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 }
