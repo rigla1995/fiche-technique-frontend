@@ -1150,6 +1150,7 @@ function ActivityStockSection({ label, activities, isFranchise, onSave }: Activi
 
   const handleSavePT = async (produitId: number, quantite: string, dateAppro: string) => {
     const { data } = await api.put(`/api/stock/pt/${produitId}`, { quantite: parseFloat(quantite), dateAppro, activiteId: selectedId });
+    if (selectedId) loadStock(selectedId);
     return data;
   };
 
@@ -1365,6 +1366,7 @@ export default function StockPage() {
 
   const saveClientStockPT = async (produitId: number, quantite: string, dateAppro: string) => {
     const { data } = await api.put(`/api/stock/pt/${produitId}`, { quantite: parseFloat(quantite), dateAppro });
+    loadClientStock();
     return data;
   };
 
