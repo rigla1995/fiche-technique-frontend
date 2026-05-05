@@ -208,14 +208,17 @@ export default function StockLaboPage() {
 
   const canSaveRow = (rs: RowState | undefined, isPT = false): boolean => {
     if (!rs || rs.saving) return false;
-    if (!rs.quantite.trim() || !rs.prixUnitaire.trim() || !rs.dateAppro.trim()) return false;
+    if (!rs.quantite.trim() || parseFloat(rs.quantite) <= 0) return false;
+    if (!isPT && (!rs.prixUnitaire.trim() || !rs.dateAppro.trim())) return false;
+    if (!rs.dateAppro.trim()) return false;
     if (!isPT && hasFournisseurs && (!rs.fournisseurId.trim() || !rs.refFacture.trim())) return false;
     return true;
   };
 
   const saveRow = async (ingredientId: number) => {
     const rs = rowState[ingredientId];
-    if (!rs || !canSaveRow(rs)) return;
+    const isPT = stock.find((r) => r.ingredientId === ingredientId)?.isPT ?? false;
+    if (!rs || !canSaveRow(rs, isPT)) return;
     setField(ingredientId, 'saving', true);
     try {
       await api.put(`/api/labo/${laboId}/stock/${ingredientId}`, {
