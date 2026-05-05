@@ -36,6 +36,8 @@ interface LaboStockRow {
   categorie: string;
   quantite: number | null;
   prixUnitaire: number | null;
+  isPT?: boolean;
+  activiteId?: number | null;  // for PT: the activité this PT belongs to
 }
 
 interface Activite {
@@ -57,13 +59,13 @@ export default function TransferPage() {
   const [loading, setLoading] = useState(true);
   const [hasTransfers, setHasTransfers] = useState(false);
 
-  const [dateTransfert, setDateTransfert] = useState(todayStr());
   const [note, setNote] = useState('');
   const [refFacture, setRefFacture] = useState('');
   const [qtys, setQtys] = useState<TransferQtys>({});
-  const [saving, setSaving] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
+  const [perRowDates, setPerRowDates] = useState<Record<number, string>>({});
+  const [perRowSaving, setPerRowSaving] = useState<Record<number, boolean>>({});
 
   // Filters
   const [filterCategorie, setFilterCategorie] = useState('');
@@ -123,6 +125,11 @@ export default function TransferPage() {
         }
       }
       setQtys(init);
+      const dateInit: Record<number, string> = {};
+      for (const r of stockRes.data as LaboStockRow[]) {
+        dateInit[r.ingredientId] = todayStr();
+      }
+      setPerRowDates(dateInit);
     } catch { /* ignore */ }
     setLoading(false);
   }, [laboId]);
@@ -136,54 +143,56 @@ export default function TransferPage() {
     }));
   };
 
-  const handleTransfer = async () => {
+  const handleRowTransfer = async (ingredientId: number) => {
     setErrorMsg('');
     if (!refFacture.trim()) { setErrorMsg('Le N° de BL (Réf. Facture) est obligatoire.'); return; }
-    // Build transfer list
-    const transfers: { activiteId: number; ingredientId: number; quantite: number }[] = [];
-    for (const [ingId, actMap] of Object.entries(qtys)) {
-      for (const [actId, val] of Object.entries(actMap)) {
-        const q = parseFloat(val);
-        if (q > 0) transfers.push({ activiteId: Number(actId), ingredientId: Number(ingId), quantite: q });
-      }
-    }
-    if (transfers.length === 0) { setErrorMsg(t('client.labo.transfer_empty')); return; }
+    const activiteMap = qtys[ingredientId] || {};
+    const transfers = Object.entries(activiteMap)
+      .filter(([, v]) => parseFloat(v) > 0)
+      .map(([actId, v]) => ({ activiteId: Number(actId), ingredientId, quantite: parseFloat(v) }));
+    if (transfers.length === 0) return;
 
-    // Check no over-transfer per ingredient
-    for (const r of stock) {
-      const totalForIng = transfers
-        .filter((t) => t.ingredientId === r.ingredientId)
-        .reduce((s, t) => s + t.quantite, 0);
-      if (r.quantite !== null && totalForIng > r.quantite) {
-        setErrorMsg(t('client.labo.transfer_overstock', { nom: r.nom, disponible: r.quantite }));
+    // Check no over-transfer
+    const row = stock.find(r => r.ingredientId === ingredientId);
+    if (row && row.quantite !== null) {
+      const total = transfers.reduce((s, t) => s + t.quantite, 0);
+      if (total > row.quantite) {
+        setErrorMsg(t('client.labo.transfer_overstock', { nom: row.nom, disponible: row.quantite }));
         return;
       }
     }
 
-    setSaving(true);
+    const dateTransfert = perRowDates[ingredientId] || todayStr();
+    setPerRowSaving(prev => ({ ...prev, [ingredientId]: true }));
     try {
-      await api.post(`/api/labo/${laboId}/transfer`, { dateTransfert, note: note || undefined, refFacture: refFacture.trim() || undefined, transfers });
-      setSuccessMsg(t('client.labo.transfer_success'));
-      setHasTransfers(true);
-      setTimeout(() => setSuccessMsg(''), 3000);
-      // Reset qtys
-      setQtys((prev) => {
-        const next = { ...prev };
-        for (const ingId of Object.keys(next)) {
-          next[Number(ingId)] = Object.fromEntries(Object.keys(next[Number(ingId)]).map((a) => [a, '']));
-        }
-        return next;
+      await api.post(`/api/labo/${laboId}/transfer`, {
+        dateTransfert, note: note || undefined, refFacture: refFacture.trim(), transfers
       });
-      setNote('');
-      setRefFacture('');
+      setHasTransfers(true);
+      setQtys(prev => ({ ...prev, [ingredientId]: Object.fromEntries(Object.keys(prev[ingredientId]).map(a => [a, ''])) }));
+      setPerRowDates(prev => ({ ...prev, [ingredientId]: todayStr() }));
+      // Reload transfer history for this row if open
+      if (openTransfers.has(ingredientId)) {
+        setTransferLoading(prev => new Set([...prev, ingredientId]));
+        const { data } = await api.get(`/api/labo/${laboId}/transfers?ingredientId=${ingredientId}&limit=5`);
+        setTransferHistory(prev => ({ ...prev, [ingredientId]: data }));
+        setTransferLoading(prev => { const n = new Set(prev); n.delete(ingredientId); return n; });
+      }
       // Reload stock
       const { data } = await api.get(`/api/labo/${laboId}/stock?assignedOnly=true`);
       setStock(data);
+      setSuccessMsg(t('client.labo.transfer_success'));
+      setTimeout(() => setSuccessMsg(''), 3000);
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
       setErrorMsg(msg || t('common.error'));
     }
-    setSaving(false);
+    setPerRowSaving(prev => ({ ...prev, [ingredientId]: false }));
+  };
+
+  const rowCanSave = (ingredientId: number): boolean => {
+    const activiteMap = qtys[ingredientId] || {};
+    return Object.values(activiteMap).some(v => parseFloat(v) > 0);
   };
 
   const activites: Activite[] = labo?.activites || [];
@@ -224,22 +233,8 @@ export default function TransferPage() {
         </div>
       </div>
 
-      {/* Date + note */}
+      {/* Réf. Facture + note (global) */}
       <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: '16px 20px', marginBottom: 20, display: 'flex', gap: 16, alignItems: 'flex-start', flexWrap: 'wrap' }}>
-        <div>
-          <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 4 }}>
-            {t('client.labo.transfer_date')} *
-          </label>
-          <input
-            type="date"
-            className="input"
-            style={{ maxWidth: 170 }}
-            min={yearStart}
-            max={yearEnd}
-            value={dateTransfert}
-            onChange={(e) => setDateTransfert(e.target.value)}
-          />
-        </div>
         <div style={{ flex: 1, minWidth: 160 }}>
           <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 4 }}>
             Réf. Facture / BL <span style={{ color: 'var(--danger, #ef4444)' }}>*</span>
@@ -341,6 +336,8 @@ export default function TransferPage() {
                           ↗ {act.nom}
                         </th>
                       ))}
+                      <th style={{ textAlign: 'center', minWidth: 110 }}>Date</th>
+                      <th style={{ textAlign: 'center', minWidth: 80 }}></th>
                     </tr>
                   </thead>
                   <tbody>
@@ -374,7 +371,7 @@ export default function TransferPage() {
                             )}
                           </td>
                           {activites.map((act) => {
-                            const isAssigned = assignedSet.has(`${r.ingredientId}-${act.id}`);
+                            const isAssigned = r.isPT ? act.id === r.activiteId : assignedSet.has(`${r.ingredientId}-${act.id}`);
                             return (
                               <td key={act.id} style={{ textAlign: 'center' }}>
                                 {isAssigned ? (
@@ -394,10 +391,33 @@ export default function TransferPage() {
                               </td>
                             );
                           })}
+                          {/* Per-row date */}
+                          <td style={{ textAlign: 'center' }}>
+                            <input
+                              type="date"
+                              className="input"
+                              style={{ maxWidth: 130, fontSize: '0.82rem' }}
+                              min={yearStart}
+                              max={yearEnd}
+                              value={perRowDates[r.ingredientId] || todayStr()}
+                              onChange={(e) => setPerRowDates(prev => ({ ...prev, [r.ingredientId]: e.target.value }))}
+                            />
+                          </td>
+                          {/* Per-row save */}
+                          <td style={{ textAlign: 'center' }}>
+                            <button
+                              className="btn btn-primary btn-sm"
+                              onClick={() => handleRowTransfer(r.ingredientId)}
+                              disabled={!rowCanSave(r.ingredientId) || !!perRowSaving[r.ingredientId]}
+                              style={{ fontWeight: 700, minWidth: 60 }}
+                            >
+                              {perRowSaving[r.ingredientId] ? '…' : '↗'}
+                            </button>
+                          </td>
                         </tr>
                         {isTransferOpen && (
                           <tr>
-                            <td colSpan={2 + activites.length} style={{ background: '#faf5ff', padding: '8px 16px', borderTop: '1px solid #e9d5ff' }}>
+                            <td colSpan={4 + activites.length} style={{ background: '#faf5ff', padding: '8px 16px', borderTop: '1px solid #e9d5ff' }}>
                               <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>
                                 ↗ 5 derniers transferts — {r.nom}
                               </div>
@@ -458,16 +478,6 @@ export default function TransferPage() {
             );
           })}
 
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 8 }}>
-            <button
-              className="btn btn-primary"
-              onClick={handleTransfer}
-              disabled={saving}
-              style={{ minWidth: 160, fontWeight: 700 }}
-            >
-              {saving ? t('common.loading') : `↗ ${t('client.labo.btn_confirm_transfer')}`}
-            </button>
-          </div>
         </>
       )}
     </div>
