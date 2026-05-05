@@ -118,7 +118,7 @@ export default function HistoriqueInventairePage() {
     setLoading(false);
   }, [laboId, effectiveActiviteId, filters]);
 
-  const handleExport = () => {
+  const handleExport = async () => {
     const params = new URLSearchParams();
     if (filters.startDate) params.set('startDate', filters.startDate);
     if (filters.endDate) params.set('endDate', filters.endDate);
@@ -127,7 +127,18 @@ export default function HistoriqueInventairePage() {
     const url = laboId
       ? `/api/labo/${laboId}/inventaire/historique/export-excel?${params}`
       : `/api/stock/entreprise/${effectiveActiviteId}/inventaire/historique/export-excel?${params}`;
-    window.open(`${import.meta.env.VITE_API_URL || ''}${url}`, '_blank');
+    try {
+      const { data, headers } = await api.get(url, { responseType: 'blob' });
+      const disposition = headers['content-disposition'] || '';
+      const match = disposition.match(/filename="?([^"]+)"?/);
+      const filename = match ? match[1] : 'Inventaire.xlsx';
+      const blobUrl = URL.createObjectURL(new Blob([data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(blobUrl);
+    } catch { setErrorMsg('Erreur lors de l\'export Excel.'); }
   };
 
   const toggleSelect = (id: string) => setSelectedIds((prev) => {
@@ -160,7 +171,8 @@ export default function HistoriqueInventairePage() {
     ? `${section === 'franchise' ? 'Franchise' : 'Distinct'}${contextNom ? ` — ${contextNom}` : ''}`
     : contextNom || '';
 
-  const needsActiviteSelector = !!section && !activiteId && activites.length > 1 && !selectedActiviteId;
+  const showActiviteSelector = !!section && !activiteId && activites.length > 1;
+  const canSearch = !!laboId || !!effectiveActiviteId;
 
   return (
     <div style={{ maxWidth: 1100, margin: '0 auto', padding: '24px 16px' }}>
@@ -171,10 +183,10 @@ export default function HistoriqueInventairePage() {
         {contextTitle && <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{contextTitle}</p>}
       </div>
 
-      {needsActiviteSelector && (
+      {showActiviteSelector && (
         <div style={{ marginBottom: 20 }}>
-          <label style={labelStyle}>Sélectionner une activité</label>
-          <select value={selectedActiviteId ?? ''} onChange={(e) => setSelectedActiviteId(Number(e.target.value) || null)}
+          <label style={labelStyle}>Activité</label>
+          <select value={selectedActiviteId ?? ''} onChange={(e) => { setSelectedActiviteId(Number(e.target.value) || null); setApplied(false); setHistRows([]); }}
             style={{ padding: '9px 13px', borderRadius: 9, border: '1px solid var(--border)', fontSize: '0.9rem', minWidth: 220 }}>
             <option value="">— Choisir —</option>
             {activites.map((a) => <option key={a.id} value={a.id}>{a.nom}</option>)}
@@ -182,7 +194,7 @@ export default function HistoriqueInventairePage() {
         </div>
       )}
 
-      {!needsActiviteSelector && (
+      {canSearch && (
         <>
           {/* Filters */}
           <div style={{ background: 'var(--surface)', borderRadius: 12, padding: '14px 18px', marginBottom: 20, border: '1px solid var(--border)', display: 'flex', flexWrap: 'wrap', gap: 14, alignItems: 'flex-end' }}>
