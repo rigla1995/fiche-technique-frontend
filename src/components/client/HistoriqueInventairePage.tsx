@@ -15,6 +15,7 @@ interface HistEntry {
   quantiteReelle: number;
   note: string | null;
   ingredientId: number;
+  isPT?: boolean;
   ingredientNom: string;
   unite: string;
   categorie: string;
@@ -350,7 +351,10 @@ export default function HistoriqueInventairePage() {
                             {fmtDate(r.dateInventaire)}
                           </span>
                         </td>
-                        <td style={{ padding: '10px 14px', fontWeight: 600, color: 'var(--text)' }}>{r.ingredientNom}</td>
+                        <td style={{ padding: '10px 14px', fontWeight: 600, color: 'var(--text)' }}>
+                          {r.isPT && <span style={{ background: '#ede9fe', border: '1px solid #a78bfa', borderRadius: 5, padding: '1px 6px', fontSize: '0.68rem', fontWeight: 800, color: '#7c3aed', marginRight: 6 }}>PT</span>}
+                          {r.ingredientNom}
+                        </td>
                         <td style={{ padding: '10px 14px' }}>
                           <span style={{ background: '#f1f5f9', color: '#475569', borderRadius: 6, padding: '2px 9px', fontSize: '0.78rem', fontWeight: 600 }}>
                             {r.categorie}

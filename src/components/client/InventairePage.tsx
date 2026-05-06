@@ -12,6 +12,8 @@ const fmtDate = (iso: string | null | undefined) => {
 interface RecentInv { id: string; qty: number; date: string }
 interface InventaireRow {
   ingredientId: number;
+  produitId?: number;
+  isPT?: boolean;
   nom: string;
   unite: string;
   categorie: string;
@@ -375,6 +377,7 @@ export default function InventairePage() {
                                 <div>
                                   <div style={{ fontWeight: 700, fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: 7, color: alarm ? '#92400e' : 'var(--text)' }}>
                                     {alarm && <span style={{ background: '#fef3c7', border: '1px solid #f59e0b', borderRadius: 6, padding: '1px 6px', fontSize: '0.7rem', fontWeight: 800, color: '#d97706' }}>⚠ DATE</span>}
+                                    {r.isPT && <span style={{ background: '#ede9fe', border: '1px solid #a78bfa', borderRadius: 6, padding: '1px 6px', fontSize: '0.68rem', fontWeight: 800, color: '#7c3aed' }}>PT</span>}
                                     {r.nom}
                                   </div>
                                   <div style={{ fontSize: '0.76rem', color: 'var(--text-muted)', marginTop: 2, display: 'flex', alignItems: 'center', gap: 5 }}>
