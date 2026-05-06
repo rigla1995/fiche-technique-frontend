@@ -98,6 +98,8 @@ export default function StockLaboPage() {
   const [perteSaving, setPerteSaving] = useState(false);
   const [pertePrix, setPertePrix] = useState<number | null>(null);
   const [pertePrixLoading, setPertePrixLoading] = useState(false);
+  const [perteDateMin, setPerteDateMin] = useState<string | null>(null);
+  const [perteDateMax, setPerteDateMax] = useState<string | null>(null);
 
   // Assignment data
   const [assignments, setAssignments] = useState<{ activites: LaboActivite[]; ingredients: AssignIngredient[] } | null>(null);
@@ -347,6 +349,19 @@ export default function StockLaboPage() {
     setSeuilMinSaving((p) => ({ ...p, [ingredientId]: false }));
   };
 
+  const fetchPerteDateRange = async (ingredientId: number) => {
+    if (ingredientId < 0) { setPerteDateMin(null); setPerteDateMax(null); return; }
+    try {
+      const r = await api.get(`/api/labo/${laboId}/pertes/date-range`, { params: { ingredientId } });
+      const { minDate, maxDate } = r.data;
+      setPerteDateMin(minDate ?? null);
+      setPerteDateMax(maxDate ?? null);
+      const today = new Date().toISOString().split('T')[0];
+      if (maxDate && today > maxDate) setPerteDate(maxDate);
+      else if (minDate && today < minDate) setPerteDate(minDate);
+    } catch { setPerteDateMin(null); setPerteDateMax(null); }
+  };
+
   const fetchPertePrix = async (ingredientId: number, date: string) => {
     if (ingredientId < 0) { setPertePrix(null); return; } // PT — no price
     setPertePrixLoading(true);
@@ -371,6 +386,8 @@ export default function StockLaboPage() {
       setPerteType('avarie');
       setPerteDate(todayStr());
       setPertePrix(null);
+      setPerteDateMin(null);
+      setPerteDateMax(null);
       loadStock();
     } catch { /* ignore */ }
     setPerteSaving(false);
@@ -825,7 +842,7 @@ export default function StockLaboPage() {
                                           <div style={{ display: 'flex', gap: 4 }}>
                                             <button
                                               className="perte-btn"
-                                              onClick={() => { setPerteModal({ ingredientId: r.ingredientId, nom: r.nom }); setPerteQty(''); setPerteType('avarie'); const d = todayStr(); setPerteDate(d); fetchPertePrix(r.ingredientId, d); }}
+                                              onClick={() => { setPerteModal({ ingredientId: r.ingredientId, nom: r.nom }); setPerteQty(''); setPerteType('avarie'); const d = todayStr(); setPerteDate(d); setPerteDateMin(null); setPerteDateMax(null); fetchPerteDateRange(r.ingredientId).then(() => fetchPertePrix(r.ingredientId, d)); }}
                                               title="Enregistrer une perte"
                                               disabled={!canWrite}
                                             >
@@ -1072,8 +1089,14 @@ export default function StockLaboPage() {
                 <option value="dechet">Déchet</option>
               </select>
               <label style={{ ...LABEL, display: 'block', marginBottom: 6 }}>Date de perte</label>
-              <input className="input" type="date" style={{ width: '100%', fontSize: '0.9rem', marginBottom: 16 }} max={todayStr()} value={perteDate}
+              <input className="input" type="date" style={{ width: '100%', fontSize: '0.9rem' }}
+                min={perteDateMin ?? undefined} max={perteDateMax ?? todayStr()} value={perteDate}
                 onChange={(e) => { setPerteDate(e.target.value); if (perteModal) fetchPertePrix(perteModal.ingredientId, e.target.value); }} />
+              {perteDateMin && perteDateMax && (
+                <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: 3, marginBottom: 12 }}>
+                  Appros : {perteDateMin.split('-').reverse().join('/')} → {perteDateMax.split('-').reverse().join('/')}
+                </p>
+              )}
               {perteModal && perteModal.ingredientId >= 0 && (
                 <div style={{ marginBottom: 16, display: 'flex', flexDirection: 'column', gap: 6 }}>
                   <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 6, padding: '7px 12px', display: 'flex', justifyContent: 'space-between' }}>
