@@ -314,6 +314,7 @@ export interface HistoriquePerteEntry {
   uniteNom: string;
   categorieNom: string | null;
   quantite: number;
+  prixUnitaire?: number | null;
   typePerte: 'avarie' | 'dechet';
   datePerte: string;
   createdAt: string;

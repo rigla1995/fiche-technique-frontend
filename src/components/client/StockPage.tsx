@@ -70,6 +70,30 @@ function PerteModal({ ingredientId, nom, activiteId, onSaveOverride, onAfterSave
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [done, setDone] = useState(false);
+  const [prixUnitaire, setPrixUnitaire] = useState<number | null>(null);
+  const [loadingPrix, setLoadingPrix] = useState(false);
+
+  const fetchPrix = async (date: string) => {
+    setLoadingPrix(true);
+    try {
+      let res;
+      if (activiteId) {
+        res = await api.get(`/api/entreprise/pertes/prix`, { params: { activiteId, ingredientId, date } });
+      } else {
+        res = await api.get(`/api/stock/client/pertes/prix`, { params: { ingredientId, date } });
+      }
+      setPrixUnitaire(res.data.prixUnitaire ?? null);
+    } catch {
+      setPrixUnitaire(null);
+    }
+    setLoadingPrix(false);
+  };
+
+  useEffect(() => { fetchPrix(datePerte); }, [datePerte]);
+
+  const coutTotal = prixUnitaire != null && quantite && parseFloat(quantite) > 0
+    ? prixUnitaire * parseFloat(quantite)
+    : null;
 
   const submit = async () => {
     if (!quantite || parseFloat(quantite) <= 0) { setError('Quantité invalide'); return; }
@@ -126,6 +150,18 @@ function PerteModal({ ingredientId, nom, activiteId, onSaveOverride, onAfterSave
                 <input type="date" className="input" style={{ width: '100%' }}
                   min={yearStart} max={todayStr()} value={datePerte} onChange={(e) => setDatePerte(e.target.value)} />
               </div>
+              <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 6, padding: '8px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: '0.8rem', color: '#7f1d1d', fontWeight: 600 }}>Prix unitaire appro</span>
+                <span style={{ fontWeight: 700, color: '#991b1b', fontSize: '0.95rem' }}>
+                  {loadingPrix ? '…' : prixUnitaire != null ? `${prixUnitaire.toFixed(3)} DT` : '—'}
+                </span>
+              </div>
+              {coutTotal != null && (
+                <div style={{ background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: 6, padding: '8px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: '0.8rem', color: '#7c2d12', fontWeight: 600 }}>Coût total</span>
+                  <span style={{ fontWeight: 700, color: '#c2410c', fontSize: '0.95rem' }}>{coutTotal.toFixed(3)} DT</span>
+                </div>
+              )}
               {error && <p style={{ color: 'var(--danger)', fontSize: '0.85rem' }}>{error}</p>}
             </>
           )}

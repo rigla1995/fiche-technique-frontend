@@ -222,6 +222,8 @@ export default function HistoriquepertesPage() {
   useEffect(() => { loadPertes(); }, [loadPertes]);
 
   const totalQty = entries.reduce((s, e) => s + e.quantite, 0);
+  const totalCout = entries.reduce((s, e) => s + (e.prixUnitaire != null ? e.quantite * e.prixUnitaire : 0), 0);
+  const hasCout = entries.some((e) => e.prixUnitaire != null);
 
   const filteredIngredients = ingredients;
 
@@ -377,9 +379,17 @@ export default function HistoriquepertesPage() {
           </span>
         </div>
         {entries.length > 0 && (
-          <div style={{ background: '#fff1f2', border: '1px solid #fecdd3', borderRadius: 10, padding: '6px 16px', display: 'flex', gap: 16 }}>
-            <span style={{ fontSize: '0.78rem', color: '#9f1239', fontWeight: 700 }}>Total quantité</span>
-            <span style={{ fontSize: '0.85rem', fontWeight: 900, color: '#b91c1c' }}>{totalQty.toFixed(3)}</span>
+          <div style={{ background: '#fff1f2', border: '1px solid #fecdd3', borderRadius: 10, padding: '6px 16px', display: 'flex', gap: 24, flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <span style={{ fontSize: '0.78rem', color: '#9f1239', fontWeight: 700 }}>Total quantité</span>
+              <span style={{ fontSize: '0.85rem', fontWeight: 900, color: '#b91c1c' }}>{totalQty.toFixed(3)}</span>
+            </div>
+            {hasCout && (
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <span style={{ fontSize: '0.78rem', color: '#9f1239', fontWeight: 700 }}>Coût total</span>
+                <span style={{ fontSize: '0.85rem', fontWeight: 900, color: '#c2410c' }}>{totalCout.toFixed(3)} DT</span>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -412,6 +422,8 @@ export default function HistoriquepertesPage() {
                 <th style={{ textAlign: 'right' }}>Quantité</th>
                 <th>Unité</th>
                 <th>Type</th>
+                <th style={{ textAlign: 'right' }}>Prix Unit.</th>
+                <th style={{ textAlign: 'right' }}>Coût Total</th>
                 {canWrite && <th style={{ textAlign: 'center' }}>Actions</th>}
               </tr>
             </thead>
@@ -443,6 +455,12 @@ export default function HistoriquepertesPage() {
                         {isAvarie ? 'Avarie' : 'Déchet'}
                       </span>
                     </td>
+                    <td style={{ textAlign: 'right', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                      {entry.prixUnitaire != null ? entry.prixUnitaire.toFixed(3) : '—'}
+                    </td>
+                    <td style={{ textAlign: 'right', fontWeight: 600, color: '#c2410c', fontSize: '0.85rem' }}>
+                      {entry.prixUnitaire != null ? (entry.quantite * entry.prixUnitaire).toFixed(3) : '—'}
+                    </td>
                     {canWrite && (
                       <td style={{ textAlign: 'center', whiteSpace: 'nowrap' }} onClick={(e) => e.stopPropagation()}>
                         <button
@@ -467,7 +485,12 @@ export default function HistoriquepertesPage() {
               <tr style={{ background: '#fef2f2', borderTop: '2px solid #fecaca' }}>
                 <td colSpan={isEntreprise ? (canWrite ? 5 : 4) : (canWrite ? 4 : 3)} />
                 <td style={{ textAlign: 'right', fontWeight: 900, color: '#b91c1c', fontSize: '0.95rem' }}>{totalQty.toFixed(3)}</td>
-                <td colSpan={canWrite ? 3 : 2} style={{ fontWeight: 700, fontSize: '0.75rem', color: '#9f1239', textTransform: 'uppercase' }}>Total</td>
+                <td style={{ fontWeight: 700, fontSize: '0.75rem', color: '#9f1239', textTransform: 'uppercase' }}>Total</td>
+                <td />
+                <td style={{ textAlign: 'right', fontWeight: 900, color: '#c2410c', fontSize: '0.95rem' }}>
+                  {hasCout ? totalCout.toFixed(3) : '—'}
+                </td>
+                {canWrite && <td />}
               </tr>
             </tfoot>
           </table>
