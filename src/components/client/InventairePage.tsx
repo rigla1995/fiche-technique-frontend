@@ -58,7 +58,7 @@ export default function InventairePage() {
         const filtered = (data as Activite[]).filter((a) =>
           section === 'franchise'
             ? (a.type === 'franchise_avec_labo' || a.type === 'franchise_gestion_separee' || a.franchiseGroup)
-            : a.type === 'distinct'
+            : a.type === 'distincte' || a.type == null
         );
         setActivites(filtered);
         if (filtered.length === 1) setSelectedActiviteId(filtered[0].id);
@@ -66,8 +66,10 @@ export default function InventairePage() {
       .catch(() => {});
   }, [section]);
 
+  const isClientMode = !laboId && !section && !activiteId;
+
   const loadStock = useCallback(async () => {
-    if (!laboId && !effectiveActiviteId) return;
+    if (!laboId && !effectiveActiviteId && !isClientMode) return;
     setLoading(true);
     setErrorMsg('');
     try {
@@ -76,6 +78,8 @@ export default function InventairePage() {
         url = `/api/labo/${laboId}/inventaire`;
         const laboRes = await api.get(`/api/labo/${laboId}`);
         setContextNom(laboRes.data?.nom || 'Labo');
+      } else if (isClientMode) {
+        url = '/api/stock/client/inventaire';
       } else {
         url = `/api/stock/entreprise/${effectiveActiviteId}/inventaire`;
         const act = activites.find((a) => a.id === effectiveActiviteId);
@@ -93,7 +97,7 @@ export default function InventairePage() {
       setNotes(initNotes);
     } catch { setErrorMsg('Erreur lors du chargement.'); }
     setLoading(false);
-  }, [laboId, effectiveActiviteId, activites]);
+  }, [laboId, effectiveActiviteId, activites, isClientMode]);
 
   useEffect(() => { loadStock(); }, [loadStock]);
 
@@ -146,6 +150,8 @@ export default function InventairePage() {
       }));
       const url = laboId
         ? `/api/labo/${laboId}/inventaire`
+        : isClientMode
+        ? '/api/stock/client/inventaire'
         : `/api/stock/entreprise/${effectiveActiviteId}/inventaire`;
       await api.post(url, { dateInventaire: date, entries });
       setSuccessMsg('Inventaire sauvegardé avec succès.');
@@ -158,7 +164,7 @@ export default function InventairePage() {
   const filledCount = rows.filter((r) => qtys[r.ingredientId] !== '').length;
   const alarmTotal = rows.filter((r) => isAlarm(r)).length;
   const hasAnyQty = filledCount > 0;
-  const needsActiviteSelector = !!section && !activiteId && activites.length > 1 && !selectedActiviteId;
+  const needsActiviteSelector = !isClientMode && !!section && !activiteId && activites.length > 1 && !selectedActiviteId;
 
   const contextLabel = laboId
     ? `Labo — ${contextNom}`

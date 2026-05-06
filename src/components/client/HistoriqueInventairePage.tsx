@@ -61,6 +61,8 @@ export default function HistoriqueInventairePage() {
   const [editNote, setEditNote] = useState('');
   const [editSaving, setEditSaving] = useState(false);
 
+  const isClientMode = !laboId && !section && !activiteId;
+
   useEffect(() => {
     if (!section) return;
     api.get('/api/entreprise/activites')
@@ -68,7 +70,7 @@ export default function HistoriqueInventairePage() {
         const filtered = (data as Activite[]).filter((a) =>
           section === 'franchise'
             ? (a.type === 'franchise_avec_labo' || a.type === 'franchise_gestion_separee' || a.franchiseGroup)
-            : a.type === 'distinct'
+            : a.type === 'distincte' || a.type == null
         );
         setActivites(filtered);
         if (filtered.length === 1) setSelectedActiviteId(filtered[0].id);
@@ -77,9 +79,11 @@ export default function HistoriqueInventairePage() {
   }, [section]);
 
   useEffect(() => {
-    if (!laboId && !effectiveActiviteId) return;
+    if (!laboId && !effectiveActiviteId && !isClientMode) return;
     const url = laboId
       ? `/api/labo/${laboId}/inventaire`
+      : isClientMode
+      ? '/api/stock/client/inventaire'
       : `/api/stock/entreprise/${effectiveActiviteId}/inventaire`;
     api.get(url).then(({ data }) => {
       setIngOptions(data.map((r: any) => ({ ingredientId: r.ingredientId, nom: r.nom, categorie: r.categorie })));
@@ -87,7 +91,7 @@ export default function HistoriqueInventairePage() {
         api.get(`/api/labo/${laboId}`).then(({ data: l }) => setContextNom(l?.nom || 'Labo')).catch(() => {});
       }
     }).catch(() => {});
-  }, [laboId, effectiveActiviteId]);
+  }, [laboId, effectiveActiviteId, isClientMode]);
 
   const categories = [...new Set(ingOptions.map((i) => i.categorie))];
   const filteredIngOptions = filters.categorie
@@ -95,7 +99,7 @@ export default function HistoriqueInventairePage() {
     : ingOptions;
 
   const search = useCallback(async () => {
-    if (!laboId && !effectiveActiviteId) return;
+    if (!laboId && !effectiveActiviteId && !isClientMode) return;
     setLoading(true);
     setApplied(true);
     setErrorMsg('');
@@ -106,6 +110,8 @@ export default function HistoriqueInventairePage() {
       if (filters.ingredientId) params.set('ingredientId', filters.ingredientId);
       const url = laboId
         ? `/api/labo/${laboId}/inventaire/historique?${params}`
+        : isClientMode
+        ? `/api/stock/client/inventaire/historique?${params}`
         : `/api/stock/entreprise/${effectiveActiviteId}/inventaire/historique?${params}`;
       const { data } = await api.get(url);
       const filtered = filters.categorie
@@ -115,7 +121,7 @@ export default function HistoriqueInventairePage() {
       setSelectedIds(new Set());
     } catch { setErrorMsg('Erreur lors de la recherche.'); }
     setLoading(false);
-  }, [laboId, effectiveActiviteId, filters]);
+  }, [laboId, effectiveActiviteId, filters, isClientMode]);
 
   const handleExport = async () => {
     const params = new URLSearchParams();
@@ -125,6 +131,8 @@ export default function HistoriqueInventairePage() {
     if (selectedIds.size > 0) params.set('selectedIds', [...selectedIds].join(','));
     const url = laboId
       ? `/api/labo/${laboId}/inventaire/historique/export-excel?${params}`
+      : isClientMode
+      ? `/api/stock/client/inventaire/historique/export-excel?${params}`
       : `/api/stock/entreprise/${effectiveActiviteId}/inventaire/historique/export-excel?${params}`;
     try {
       const { data, headers } = await api.get(url, { responseType: 'blob' });
@@ -171,7 +179,7 @@ export default function HistoriqueInventairePage() {
     : contextNom || '';
 
   const showActiviteSelector = !!section && !activiteId && activites.length > 1;
-  const canSearch = !!laboId || !!effectiveActiviteId;
+  const canSearch = !!laboId || !!effectiveActiviteId || isClientMode;
 
   return (
     <div style={{ maxWidth: 1120, margin: '0 auto', padding: '24px 16px' }}>
