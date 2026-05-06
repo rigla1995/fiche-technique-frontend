@@ -307,7 +307,7 @@ export default function HistoriquepertesPage() {
           onClick={handleExport} disabled={exporting || entries.length === 0}
           style={{ background: '#fff', color: '#b91c1c', border: 'none', fontWeight: 700, borderRadius: 10, padding: '10px 20px', fontSize: '0.88rem' }}
         >
-          {exporting ? '…' : `📊 Export Excel${selected.size > 0 ? ` (${selected.size})` : ''}`}
+          {exporting ? '…' : selected.size > 0 ? `📊 Export Excel (${selected.size} en surbrillance)` : '📊 Export Excel'}
         </button>
       </div>
 
@@ -423,8 +423,8 @@ export default function HistoriquepertesPage() {
                   ? (isAvarie ? '#fee2e2' : '#ffedd5')
                   : (i % 2 === 0 ? 'var(--surface)' : '#fff5f5');
                 return (
-                  <tr key={entry.id} style={{ background: rowBg, cursor: 'pointer' }}>
-                    <td style={{ textAlign: 'center' }} onClick={() => toggleSelect(entry.id)}>
+                  <tr key={entry.id} style={{ background: rowBg, cursor: 'pointer' }} onClick={() => toggleSelect(entry.id)}>
+                    <td style={{ textAlign: 'center' }} onClick={(e) => e.stopPropagation()}>
                       <input type="checkbox" checked={isSelected} onChange={() => toggleSelect(entry.id)} style={{ cursor: 'pointer' }} />
                     </td>
                     <td style={{ fontWeight: 600, color: '#b91c1c', whiteSpace: 'nowrap' }}>{fmtDate(entry.datePerte)}</td>
@@ -444,7 +444,7 @@ export default function HistoriquepertesPage() {
                       </span>
                     </td>
                     {canWrite && (
-                      <td style={{ textAlign: 'center', whiteSpace: 'nowrap' }}>
+                      <td style={{ textAlign: 'center', whiteSpace: 'nowrap' }} onClick={(e) => e.stopPropagation()}>
                         <button
                           className="btn btn-ghost btn-sm"
                           style={{ marginRight: 4, fontSize: '0.85rem' }}
