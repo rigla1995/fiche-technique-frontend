@@ -3,6 +3,7 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
+import PortionsModal from './PortionsModal';
 import type { Activite, StockEntry, StockHistoryEntry, ActiviteTypesSummary, Fournisseur } from '../../types';
 
 const currentYear = new Date().getFullYear();
@@ -505,6 +506,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
   const [totalOverrides, setTotalOverrides] = useState<Record<number, number>>({});
   const [ptRecipes, setPtRecipes] = useState<Record<number, Array<{ ingredientId: number; nom: string; portion: number; unite: string }>>>({});
   const [ptStockModal, setPtStockModal] = useState<{ produitId: number; nom: string } | null>(null);
+  const [portionsModal, setPortionsModal] = useState<{ produitId: number; nom: string } | null>(null);
 
   const fetchPtRecipe = async (produitId: number) => {
     if (ptRecipes[produitId]) return;
@@ -928,6 +930,26 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
         );
       })()}
 
+      {/* Portions custom modal */}
+      {portionsModal && (
+        <PortionsModal
+          produitNom={portionsModal.nom}
+          recipeUrl={activiteId
+            ? `/api/stock/pt/${portionsModal.produitId}/recipe?activiteId=${activiteId}`
+            : `/api/stock/pt/${portionsModal.produitId}/recipe`}
+          onSave={async (qty, dateAppro, customPortions) => {
+            await api.put(`/api/stock/pt/${portionsModal.produitId}`, {
+              quantite: qty,
+              dateAppro,
+              activiteId: activiteId ?? undefined,
+              customPortions: customPortions.length > 0 ? customPortions : undefined,
+            });
+          }}
+          onClose={() => setPortionsModal(null)}
+          onSaved={() => { onRefresh?.(); }}
+        />
+      )}
+
       {/* Bulk appro form */}
       {selectedIngIds.size > 0 && (
         <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end', flexWrap: 'wrap', marginBottom: 16, padding: '12px 16px', background: '#f0fdf4', border: '1px solid #86efac', borderRadius: 10 }}>
@@ -1131,13 +1153,24 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                                     </button>
                                   )}
                                   {entry.isPT && entry.produitId && (
-                                    <button
-                                      className="btn btn-ghost btn-sm"
-                                      title="Stock des ingrédients relatifs"
-                                      onClick={() => { fetchPtRecipe(entry.produitId!); setPtStockModal({ produitId: entry.produitId!, nom: entry.nom }); }}
-                                    >
-                                      📊
-                                    </button>
+                                    <>
+                                      <button
+                                        className="btn btn-ghost btn-sm"
+                                        title="Stock des ingrédients relatifs"
+                                        onClick={() => { fetchPtRecipe(entry.produitId!); setPtStockModal({ produitId: entry.produitId!, nom: entry.nom }); }}
+                                      >
+                                        📊
+                                      </button>
+                                      {canWrite && (
+                                        <button
+                                          className="btn btn-ghost btn-sm"
+                                          title="Portions personnalisées pour cette appro"
+                                          onClick={() => setPortionsModal({ produitId: entry.produitId!, nom: entry.nom })}
+                                        >
+                                          ⚙️
+                                        </button>
+                                      )}
+                                    </>
                                   )}
                                   {(() => {
                                     const ptMaxQty = entry.isPT && entry.produitId && ptRecipes[entry.produitId] && ptRecipes[entry.produitId].length > 0

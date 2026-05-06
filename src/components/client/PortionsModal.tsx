@@ -1,0 +1,249 @@
+import { useState, useEffect, useMemo } from 'react';
+import api from '../../api/client';
+
+const todayStr = () => new Date().toISOString().split('T')[0];
+const currentYear = new Date().getFullYear();
+const yearStart = `${currentYear}-01-01`;
+
+interface RecipeIngredient {
+  ingredientId: number;
+  nom: string;
+  unite: string;
+  categorie: string;
+  categorieId: number | null;
+  portionStandard: number;
+  lastPrix: number | null;
+}
+
+export interface CustomPortion {
+  ingredientId: number;
+  portionCustom: number;
+}
+
+interface Props {
+  produitNom: string;
+  recipeUrl: string;
+  onSave: (qty: number, dateAppro: string, customPortions: CustomPortion[]) => Promise<void>;
+  onClose: () => void;
+  onSaved: () => void;
+}
+
+export default function PortionsModal({ produitNom, recipeUrl, onSave, onClose, onSaved }: Props) {
+  const [recipe, setRecipe] = useState<RecipeIngredient[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [portions, setPortions] = useState<Record<number, string>>({});
+  const [qty, setQty] = useState('');
+  const [dateAppro, setDateAppro] = useState(todayStr());
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  const [done, setDone] = useState(false);
+
+  // Filters
+  const [fCategorie, setFCategorie] = useState('');
+  const [fIngredient, setFIngredient] = useState('');
+  const [fNom, setFNom] = useState('');
+
+  useEffect(() => {
+    api.get(recipeUrl).then(({ data }) => {
+      const rows = data as RecipeIngredient[];
+      setRecipe(rows);
+      const init: Record<number, string> = {};
+      for (const r of rows) init[r.ingredientId] = String(r.portionStandard);
+      setPortions(init);
+    }).catch(() => {}).finally(() => setLoading(false));
+  }, [recipeUrl]);
+
+  // Derived filter options
+  const categories = useMemo(() => {
+    const seen = new Set<string>();
+    return recipe.filter((r) => { const k = r.categorie; if (seen.has(k)) return false; seen.add(k); return true; })
+      .map((r) => ({ id: r.categorieId, nom: r.categorie }));
+  }, [recipe]);
+
+  const ingredientsForCat = useMemo(() => {
+    if (!fCategorie) return recipe;
+    return recipe.filter((r) => String(r.categorieId) === fCategorie);
+  }, [recipe, fCategorie]);
+
+  const visibleRecipe = useMemo(() => {
+    return recipe.filter((r) => {
+      if (fCategorie && String(r.categorieId) !== fCategorie) return false;
+      if (fIngredient && String(r.ingredientId) !== fIngredient) return false;
+      if (fNom && !r.nom.toLowerCase().includes(fNom.toLowerCase())) return false;
+      return true;
+    });
+  }, [recipe, fCategorie, fIngredient, fNom]);
+
+  // Live prixCalcule based on current portions × lastPrix
+  const prixCalcule = useMemo(() => {
+    let total = 0;
+    for (const r of recipe) {
+      const p = parseFloat(portions[r.ingredientId] ?? String(r.portionStandard));
+      if (!isNaN(p) && r.lastPrix != null) total += p * r.lastPrix;
+    }
+    return total;
+  }, [recipe, portions]);
+
+  const coutTotal = qty && parseFloat(qty) > 0 ? prixCalcule * parseFloat(qty) : null;
+
+  const handleSave = async () => {
+    if (!qty || parseFloat(qty) <= 0) { setError('Quantité invalide'); return; }
+    setSaving(true);
+    setError('');
+    try {
+      // Only send portions that differ from standard
+      const customPortions: CustomPortion[] = recipe
+        .filter((r) => {
+          const custom = parseFloat(portions[r.ingredientId] ?? String(r.portionStandard));
+          return !isNaN(custom) && custom !== r.portionStandard;
+        })
+        .map((r) => ({ ingredientId: r.ingredientId, portionCustom: parseFloat(portions[r.ingredientId]) }));
+
+      await onSave(parseFloat(qty), dateAppro, customPortions);
+      setDone(true);
+      onSaved();
+      setTimeout(onClose, 1200);
+    } catch (e: unknown) {
+      const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      setError(msg ?? 'Erreur serveur');
+    }
+    setSaving(false);
+  };
+
+  const LABEL: React.CSSProperties = { fontSize: '0.68rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' };
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal" style={{ maxWidth: 700, width: '95vw' }} onClick={(e) => e.stopPropagation()}>
+        <div className="modal-header" style={{ background: 'linear-gradient(135deg, #1d4ed8, #0ea5e9)', borderBottom: 'none' }}>
+          <h2 style={{ color: '#fff', margin: 0, fontSize: '1rem' }}>⚙️ Portions personnalisées — {produitNom}</h2>
+          <button className="modal-close" onClick={onClose} style={{ color: '#fff' }}>×</button>
+        </div>
+        <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {done ? (
+            <p style={{ color: 'var(--success)', fontWeight: 700, textAlign: 'center' }}>✓ Appro enregistrée</p>
+          ) : loading ? (
+            <p className="text-muted" style={{ textAlign: 'center', padding: '20px 0' }}>Chargement de la recette…</p>
+          ) : recipe.length === 0 ? (
+            <p className="text-muted" style={{ textAlign: 'center', padding: '20px 0' }}>Ce produit n'a pas d'ingrédients dans la recette.</p>
+          ) : (
+            <>
+              {/* Header inputs */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <div>
+                  <label style={{ ...LABEL, display: 'block', marginBottom: 4 }}>Quantité PT appro</label>
+                  <input type="number" min="0.001" step="0.001" className="input" style={{ width: '100%' }}
+                    value={qty} onChange={(e) => setQty(e.target.value)} placeholder="Ex: 10" autoFocus />
+                </div>
+                <div>
+                  <label style={{ ...LABEL, display: 'block', marginBottom: 4 }}>Date d'appro</label>
+                  <input type="date" className="input" style={{ width: '100%' }}
+                    min={yearStart} max={todayStr()} value={dateAppro} onChange={(e) => setDateAppro(e.target.value)} />
+                </div>
+              </div>
+
+              {/* Prix indicator */}
+              <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+                <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 8, padding: '8px 14px', display: 'flex', gap: 8, alignItems: 'center' }}>
+                  <span style={{ fontSize: '0.78rem', color: '#1e40af', fontWeight: 700 }}>Prix unitaire PT</span>
+                  <span style={{ fontWeight: 900, color: '#1d4ed8' }}>{prixCalcule.toFixed(3)} DT</span>
+                </div>
+                {coutTotal != null && coutTotal > 0 && (
+                  <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 8, padding: '8px 14px', display: 'flex', gap: 8, alignItems: 'center' }}>
+                    <span style={{ fontSize: '0.78rem', color: '#166534', fontWeight: 700 }}>Coût total appro</span>
+                    <span style={{ fontWeight: 900, color: '#15803d' }}>{coutTotal.toFixed(3)} DT</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Filters */}
+              <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, padding: '10px 14px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px 14px' }}>
+                  <div>
+                    <label style={{ ...LABEL, display: 'block', marginBottom: 3 }}>Catégorie</label>
+                    <select className="input" style={{ width: '100%', fontSize: '0.85rem' }} value={fCategorie}
+                      onChange={(e) => { setFCategorie(e.target.value); setFIngredient(''); }}>
+                      <option value="">— Toutes —</option>
+                      {categories.map((c) => <option key={c.nom} value={String(c.id ?? '')}>{c.nom}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label style={{ ...LABEL, display: 'block', marginBottom: 3 }}>Ingrédient</label>
+                    <select className="input" style={{ width: '100%', fontSize: '0.85rem' }} value={fIngredient}
+                      onChange={(e) => setFIngredient(e.target.value)} disabled={ingredientsForCat.length === 0}>
+                      <option value="">— Tous —</option>
+                      {ingredientsForCat.map((r) => <option key={r.ingredientId} value={String(r.ingredientId)}>{r.nom}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label style={{ ...LABEL, display: 'block', marginBottom: 3 }}>Nom</label>
+                    <input type="text" className="input" style={{ width: '100%', fontSize: '0.85rem' }}
+                      placeholder="Recherche…" value={fNom} onChange={(e) => setFNom(e.target.value)} />
+                  </div>
+                </div>
+              </div>
+
+              {/* Ingredients table */}
+              <div className="table-responsive" style={{ borderRadius: 10, overflow: 'hidden', border: '1px solid var(--border)', maxHeight: 320, overflowY: 'auto' }}>
+                <table className="table" style={{ minWidth: 500 }}>
+                  <thead>
+                    <tr style={{ background: '#1d4ed8' }}>
+                      <th style={{ color: '#fff' }}>Ingrédient</th>
+                      <th style={{ color: '#fff' }}>Catégorie</th>
+                      <th style={{ textAlign: 'right', color: '#fff' }}>Portion standard</th>
+                      <th style={{ textAlign: 'right', color: '#fff' }}>Portion custom</th>
+                      <th style={{ textAlign: 'right', color: '#fff' }}>Unité</th>
+                      <th style={{ textAlign: 'right', color: '#fff' }}>Prix unit.</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {visibleRecipe.length === 0 ? (
+                      <tr><td colSpan={6} style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '16px 0' }}>Aucun ingrédient pour ces filtres</td></tr>
+                    ) : visibleRecipe.map((r, i) => {
+                      const customVal = portions[r.ingredientId] ?? String(r.portionStandard);
+                      const isModified = parseFloat(customVal) !== r.portionStandard && customVal !== '';
+                      return (
+                        <tr key={r.ingredientId} style={{ background: i % 2 === 0 ? 'var(--surface)' : '#f8faff' }}>
+                          <td style={{ fontWeight: 600 }}>{r.nom}</td>
+                          <td style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>{r.categorie}</td>
+                          <td style={{ textAlign: 'right', color: 'var(--text-muted)', fontSize: '0.85rem' }}>{r.portionStandard.toFixed(3)}</td>
+                          <td style={{ textAlign: 'right' }}>
+                            <input
+                              type="number" min="0" step="0.001" className="input"
+                              style={{ width: 90, textAlign: 'right', padding: '3px 6px', fontSize: '0.88rem',
+                                border: isModified ? '1.5px solid #f59e0b' : undefined,
+                                background: isModified ? '#fffbeb' : undefined }}
+                              value={customVal}
+                              onChange={(e) => setPortions((prev) => ({ ...prev, [r.ingredientId]: e.target.value }))}
+                            />
+                          </td>
+                          <td style={{ textAlign: 'right', fontSize: '0.82rem', color: 'var(--text-muted)' }}>{r.unite}</td>
+                          <td style={{ textAlign: 'right', fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+                            {r.lastPrix != null ? r.lastPrix.toFixed(3) : '—'}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+              {error && <p style={{ color: 'var(--danger)', fontSize: '0.85rem' }}>{error}</p>}
+            </>
+          )}
+        </div>
+        {!done && !loading && recipe.length > 0 && (
+          <div className="modal-footer">
+            <button className="btn btn-ghost" onClick={onClose}>Annuler</button>
+            <button
+              className="btn btn-primary btn-sm"
+              style={{ background: 'linear-gradient(135deg, #1d4ed8, #0ea5e9)', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 700 }}
+              onClick={handleSave} disabled={saving || !qty || parseFloat(qty) <= 0}
+            >
+              {saving ? '…' : 'Enregistrer l\'appro'}
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

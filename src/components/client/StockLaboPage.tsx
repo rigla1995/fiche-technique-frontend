@@ -3,6 +3,7 @@ import { useSearchParams, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
+import PortionsModal from './PortionsModal';
 
 const currentYear = new Date().getFullYear();
 const yearStart = `${currentYear}-01-01`;
@@ -137,6 +138,7 @@ export default function StockLaboPage() {
   // ── PT recipe / stock popup
   const [ptRecipes, setPtRecipes] = useState<Record<number, Array<{ ingredientId: number; nom: string; portion: number; unite: string }>>>({});
   const [ptStockModal, setPtStockModal] = useState<{ produitId: number; nom: string } | null>(null);
+  const [portionsModal, setPortionsModal] = useState<{ produitId: number; nom: string } | null>(null);
 
   const fetchPtRecipe = async (produitId: number) => {
     if (ptRecipes[produitId]) return;
@@ -849,13 +851,24 @@ export default function StockLaboPage() {
                                               📉
                                             </button>
                                             {r.isPT && r.produitId && (
-                                              <button
-                                                className="btn btn-ghost btn-sm"
-                                                title="Stock des ingrédients relatifs"
-                                                onClick={() => { fetchPtRecipe(r.produitId!); setPtStockModal({ produitId: r.produitId!, nom: r.nom }); }}
-                                              >
-                                                📊
-                                              </button>
+                                              <>
+                                                <button
+                                                  className="btn btn-ghost btn-sm"
+                                                  title="Stock des ingrédients relatifs"
+                                                  onClick={() => { fetchPtRecipe(r.produitId!); setPtStockModal({ produitId: r.produitId!, nom: r.nom }); }}
+                                                >
+                                                  📊
+                                                </button>
+                                                {canWrite && (
+                                                  <button
+                                                    className="btn btn-ghost btn-sm"
+                                                    title="Portions personnalisées pour cette appro"
+                                                    onClick={() => setPortionsModal({ produitId: r.produitId!, nom: r.nom })}
+                                                  >
+                                                    ⚙️
+                                                  </button>
+                                                )}
+                                              </>
                                             )}
                                             {(() => {
                                               const ptMaxQty = r.isPT && r.produitId && ptRecipes[r.produitId] && ptRecipes[r.produitId].length > 0
@@ -1242,6 +1255,22 @@ export default function StockLaboPage() {
           </div>
         );
       })()}
+
+      {portionsModal && (
+        <PortionsModal
+          produitNom={portionsModal.nom}
+          recipeUrl={`/api/labo/${laboId}/pt/${portionsModal.produitId}/recipe`}
+          onSave={async (qty, dateAppro, customPortions) => {
+            await api.put(`/api/labo/${laboId}/stock/-${portionsModal.produitId}`, {
+              quantite: qty,
+              dateAppro,
+              customPortions: customPortions.length > 0 ? customPortions : undefined,
+            });
+          }}
+          onClose={() => setPortionsModal(null)}
+          onSaved={() => { loadStock(); }}
+        />
+      )}
     </div>
   );
 }
