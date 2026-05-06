@@ -1260,6 +1260,7 @@ export default function StockLaboPage() {
         <PortionsModal
           produitNom={portionsModal.nom}
           recipeUrl={`/api/labo/${laboId}/pt/${portionsModal.produitId}/recipe`}
+          stockMap={Object.fromEntries(stock.filter((s) => !s.isPT).map((s) => [s.ingredientId, s.quantite ?? 0]))}
           onSave={async (qty, dateAppro, customPortions) => {
             await api.put(`/api/labo/${laboId}/stock/-${portionsModal.produitId}`, {
               quantite: qty,

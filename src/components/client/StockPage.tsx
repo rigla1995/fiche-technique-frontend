@@ -937,6 +937,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
           recipeUrl={activiteId
             ? `/api/stock/pt/${portionsModal.produitId}/recipe?activiteId=${activiteId}`
             : `/api/stock/pt/${portionsModal.produitId}/recipe`}
+          stockMap={Object.fromEntries(entries.filter((e) => !e.isPT).map((e) => [e.ingredientId, e.quantite ?? 0]))}
           onSave={async (qty, dateAppro, customPortions) => {
             await api.put(`/api/stock/pt/${portionsModal.produitId}`, {
               quantite: qty,

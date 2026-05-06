@@ -23,12 +23,13 @@ export interface CustomPortion {
 interface Props {
   produitNom: string;
   recipeUrl: string;
+  stockMap?: Record<number, number>;
   onSave: (qty: number, dateAppro: string, customPortions: CustomPortion[]) => Promise<void>;
   onClose: () => void;
   onSaved: () => void;
 }
 
-export default function PortionsModal({ produitNom, recipeUrl, onSave, onClose, onSaved }: Props) {
+export default function PortionsModal({ produitNom, recipeUrl, stockMap, onSave, onClose, onSaved }: Props) {
   const [recipe, setRecipe] = useState<RecipeIngredient[]>([]);
   const [loading, setLoading] = useState(true);
   const [portions, setPortions] = useState<Record<number, string>>({});
@@ -86,8 +87,26 @@ export default function PortionsModal({ produitNom, recipeUrl, onSave, onClose, 
 
   const coutTotal = qty && parseFloat(qty) > 0 ? prixCalcule * parseFloat(qty) : null;
 
+  // Max realizable qty based on current ingredient stock vs current portions
+  const maxQty = useMemo(() => {
+    if (!stockMap || recipe.length === 0) return null;
+    let min = Infinity;
+    for (const r of recipe) {
+      const p = parseFloat(portions[r.ingredientId] ?? String(r.portionStandard));
+      if (isNaN(p) || p <= 0) continue;
+      const stock = stockMap[r.ingredientId];
+      if (stock == null) continue;
+      min = Math.min(min, stock / p);
+    }
+    return isFinite(min) ? min : null;
+  }, [recipe, portions, stockMap]);
+
+  const qtyNum = parseFloat(qty);
+  const qtyExceedsMax = maxQty != null && !isNaN(qtyNum) && qtyNum > maxQty;
+
   const handleSave = async () => {
     if (!qty || parseFloat(qty) <= 0) { setError('Quantité invalide'); return; }
+    if (qtyExceedsMax) { setError(`Quantité dépasse le max réalisable (${maxQty!.toFixed(3)})`); return; }
     setSaving(true);
     setError('');
     try {
@@ -132,8 +151,15 @@ export default function PortionsModal({ produitNom, recipeUrl, onSave, onClose, 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                 <div>
                   <label style={{ ...LABEL, display: 'block', marginBottom: 4 }}>Quantité PT appro</label>
-                  <input type="number" min="0.001" step="0.001" className="input" style={{ width: '100%' }}
+                  <input type="number" min="0.001" step="0.001"
+                    max={maxQty != null ? maxQty : undefined}
+                    className="input" style={{ width: '100%', border: qtyExceedsMax ? '1.5px solid #dc2626' : undefined, background: qtyExceedsMax ? '#fef2f2' : undefined }}
                     value={qty} onChange={(e) => setQty(e.target.value)} placeholder="Ex: 10" autoFocus />
+                  {qtyExceedsMax && (
+                    <p style={{ color: '#dc2626', fontSize: '0.72rem', marginTop: 3 }}>
+                      Dépasse le max réalisable ({maxQty!.toFixed(3)})
+                    </p>
+                  )}
                 </div>
                 <div>
                   <label style={{ ...LABEL, display: 'block', marginBottom: 4 }}>Date d'appro</label>
@@ -152,6 +178,12 @@ export default function PortionsModal({ produitNom, recipeUrl, onSave, onClose, 
                   <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 8, padding: '8px 14px', display: 'flex', gap: 8, alignItems: 'center' }}>
                     <span style={{ fontSize: '0.78rem', color: '#166534', fontWeight: 700 }}>Coût total appro</span>
                     <span style={{ fontWeight: 900, color: '#15803d' }}>{coutTotal.toFixed(3)} DT</span>
+                  </div>
+                )}
+                {maxQty != null && (
+                  <div style={{ background: qtyExceedsMax ? '#fef2f2' : '#f5f3ff', border: `1px solid ${qtyExceedsMax ? '#fecaca' : '#ddd6fe'}`, borderRadius: 8, padding: '8px 14px', display: 'flex', gap: 8, alignItems: 'center' }}>
+                    <span style={{ fontSize: '0.78rem', color: qtyExceedsMax ? '#991b1b' : '#6d28d9', fontWeight: 700 }}>Qté max réalisable</span>
+                    <span style={{ fontWeight: 900, color: qtyExceedsMax ? '#dc2626' : '#7c3aed' }}>{maxQty.toFixed(3)}</span>
                   </div>
                 )}
               </div>
@@ -237,7 +269,7 @@ export default function PortionsModal({ produitNom, recipeUrl, onSave, onClose, 
             <button
               className="btn btn-primary btn-sm"
               style={{ background: 'linear-gradient(135deg, #1d4ed8, #0ea5e9)', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 700 }}
-              onClick={handleSave} disabled={saving || !qty || parseFloat(qty) <= 0}
+              onClick={handleSave} disabled={saving || !qty || parseFloat(qty) <= 0 || qtyExceedsMax}
             >
               {saving ? '…' : 'Enregistrer l\'appro'}
             </button>
