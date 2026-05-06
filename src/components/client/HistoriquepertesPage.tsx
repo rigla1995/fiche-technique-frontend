@@ -59,6 +59,20 @@ function EditPerteModal({ entry, onSave, onClose }: EditPerteModalProps) {
         <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <p style={{ fontWeight: 600, color: 'var(--text)', fontSize: '0.9rem' }}>{entry.ingredientNom}</p>
 
+          {/* Readonly info row */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+            <div>
+              <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: 4 }}>Date de perte</label>
+              <input type="date" className="input" style={{ width: '100%', background: 'var(--surface-alt, #f9fafb)', color: 'var(--text-muted)' }}
+                value={entry.datePerte} disabled />
+            </div>
+            <div>
+              <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: 4 }}>Prix unitaire</label>
+              <input type="text" className="input" style={{ width: '100%', background: 'var(--surface-alt, #f9fafb)', color: 'var(--text-muted)' }}
+                value={entry.prixUnitaire != null ? `${entry.prixUnitaire.toFixed(3)} DT` : '—'} disabled />
+            </div>
+          </div>
+
           {warned && (
             <div style={{ background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: 8, padding: '10px 14px', fontSize: '0.85rem', color: '#c2410c' }}>
               ⚠️ <strong>Attention :</strong> modifier la quantité impacte le calcul du stock actuel. Confirmer ?
