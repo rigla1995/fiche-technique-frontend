@@ -227,6 +227,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const currentProductTab = currentSearch.get('tab');
   const currentActCtx = currentSearch.get('actCtx');
   const isHistoriquePage = location.pathname === '/client/stock/historique';
+  const isHistoriquepertesPage = location.pathname === '/client/stock/historique-pertes';
   const isProductsPage = location.pathname === '/client/products';
   const isProductActive = (tab: string, actCtx: string) =>
     isProductsPage && currentProductTab === tab && currentActCtx === actCtx;
@@ -420,6 +421,17 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                         <LockedLink label={t('nav.historique_appro')} reason={!effectiveHasSelections ? 'Sélectionnez d\'abord des ingrédients' : 'Aucun approvisionnement enregistré'} />
                       )}
                       {effectiveHasSelections ? (
+                        <SubNavLink
+                          to="/client/stock/historique-pertes"
+                          icon="📉"
+                          label="Historique Pertes"
+                          isActive={isHistoriquepertesPage && !currentHistType}
+                          onClick={onClose}
+                        />
+                      ) : (
+                        <LockedLink label="Historique Pertes" reason="Sélectionnez d'abord des ingrédients" />
+                      )}
+                      {effectiveHasSelections ? (
                         <SubNavLink to="/client/inventaire" icon="🔢" label="Inventaire"
                           isActive={location.pathname === '/client/inventaire' && !currentSearch.get('section')} onClick={onClose} />
                       ) : (
@@ -539,6 +551,20 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                         )}
                       </li>
                       <li>
+                        {isOnboarding || !hasFranchise ? (
+                          <LockedLink label="Historique Pertes" />
+                        ) : (
+                          <Link
+                            to="/client/stock/historique-pertes?type=franchise"
+                            className={`sidebar-link ${isHistoriquepertesPage && currentHistType === 'franchise' ? 'active' : ''}`}
+                            onClick={onClose}
+                          >
+                            <span className="link-icon">📉</span>
+                            <span className="link-label">Historique Pertes</span>
+                          </Link>
+                        )}
+                      </li>
+                      <li>
                         {isOnboarding || !hasFranchise || !hasFranchiseSelections ? (
                           <LockedLink label="Inventaire" />
                         ) : (
@@ -600,6 +626,20 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                           >
                             <span className="link-icon">📋</span>
                             <span className="link-label">Historique Appro</span>
+                          </Link>
+                        )}
+                      </li>
+                      <li>
+                        {isOnboarding || !hasDistinct ? (
+                          <LockedLink label="Historique Pertes" />
+                        ) : (
+                          <Link
+                            to="/client/stock/historique-pertes?type=distinct"
+                            className={`sidebar-link ${isHistoriquepertesPage && currentHistType === 'distinct' ? 'active' : ''}`}
+                            onClick={onClose}
+                          >
+                            <span className="link-icon">📉</span>
+                            <span className="link-label">Historique Pertes</span>
                           </Link>
                         )}
                       </li>

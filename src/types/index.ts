@@ -305,6 +305,20 @@ export interface ApiError {
   statusCode?: number;
 }
 
+export interface HistoriquePerteEntry {
+  id: number;
+  activiteId?: number | null;
+  activiteNom?: string | null;
+  ingredientId: number;
+  ingredientNom: string;
+  uniteNom: string;
+  categorieNom: string | null;
+  quantite: number;
+  typePerte: 'avarie' | 'dechet';
+  datePerte: string;
+  createdAt: string;
+}
+
 export interface ProduitTransformeStockEntry {
   produitId: number;
   nom: string;
