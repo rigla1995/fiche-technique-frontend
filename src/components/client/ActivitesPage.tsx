@@ -147,16 +147,16 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
 
   const isFranchise = memeActivite === true;
 
-  const openAdd = (preType?: 'franchise' | 'distincte') => {
+  const openAdd = (preType?: 'franchise' | 'franchise_labo' | 'distincte') => {
     setEditingId(null);
     setIsDuplicate(false);
     setForm(emptyForm());
-    setMemeActivite(preType === 'franchise' ? true : preType === 'distincte' ? false : null);
+    setMemeActivite(preType === 'franchise' || preType === 'franchise_labo' ? true : preType === 'distincte' ? false : null);
     setNombreActivites('2');
     setFranchiseName('');
     setFranchiseStep(0);
     setFranchiseForms([emptyFranchiseStep(), emptyFranchiseStep()]);
-    setHasLabo(null);
+    setHasLabo(preType === 'franchise_labo' ? true : null);
     setLaboAction(null);
     setSelectedLaboId('');
     setLaboNom('');
@@ -684,16 +684,32 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
             <form onSubmit={submit} className="modal-body">
               {/* Franchise/Distinct question — only when type isn't already determined */}
               {!editingId && !isDuplicate && memeActivite === null && (
-                <div className="franchise-question" style={{ marginBottom: 16 }}>
-                  <p style={{ fontWeight: 600, marginBottom: 8 }}>{t('client.entreprise.franchise_question')}</p>
-                  <div style={{ display: 'flex', gap: 12 }}>
-                    <label className={`franchise-option ${memeActivite === true ? 'selected' : ''}`}>
-                      <input type="radio" name="franchise" checked={memeActivite === true} onChange={() => setMemeActivite(true)} />
-                      {t('client.entreprise.franchise_yes')}
+                <div style={{ marginBottom: 16 }}>
+                  <p style={{ fontWeight: 600, marginBottom: 12, fontSize: '0.95rem' }}>{t('client.entreprise.franchise_question')}</p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    <label style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '14px 16px', borderRadius: 10, border: '2px solid var(--border)', background: 'var(--surface)', cursor: 'pointer', transition: 'border-color 0.15s' }}
+                      onClick={() => setMemeActivite(true)}>
+                      <span style={{ fontSize: '1.4rem', marginTop: 2 }}>🏪</span>
+                      <div>
+                        <div style={{ fontWeight: 700, fontSize: '0.95rem' }}>{t('client.entreprise.franchise_yes')}</div>
+                        <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: 2 }}>Plusieurs points de vente partageant les mêmes ingrédients</div>
+                      </div>
                     </label>
-                    <label className={`franchise-option ${memeActivite === false ? 'selected' : ''}`}>
-                      <input type="radio" name="franchise" checked={memeActivite === false} onChange={() => setMemeActivite(false)} />
-                      {t('client.entreprise.franchise_no')}
+                    <label style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '14px 16px', borderRadius: 10, border: '2px solid var(--border)', background: 'var(--surface)', cursor: 'pointer', transition: 'border-color 0.15s' }}
+                      onClick={() => { setMemeActivite(true); setHasLabo(true); }}>
+                      <span style={{ fontSize: '1.4rem', marginTop: 2 }}>🏭</span>
+                      <div>
+                        <div style={{ fontWeight: 700, fontSize: '0.95rem' }}>Franchise avec Labo <span style={{ fontWeight: 400, color: 'var(--text-muted)', fontSize: '0.8rem' }}>(gestion séparée)</span></div>
+                        <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: 2 }}>Franchises approvisionnées par un labo central — nécessite min. 2 franchises</div>
+                      </div>
+                    </label>
+                    <label style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '14px 16px', borderRadius: 10, border: '2px solid var(--border)', background: 'var(--surface)', cursor: 'pointer', transition: 'border-color 0.15s' }}
+                      onClick={() => setMemeActivite(false)}>
+                      <span style={{ fontSize: '1.4rem', marginTop: 2 }}>🏬</span>
+                      <div>
+                        <div style={{ fontWeight: 700, fontSize: '0.95rem' }}>{t('client.entreprise.franchise_no')}</div>
+                        <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: 2 }}>Activité avec sa propre gestion indépendante</div>
+                      </div>
                     </label>
                   </div>
                 </div>

@@ -48,7 +48,7 @@ function buildInitialRowState(entries: StockEntry[]): Record<number, StockRowSta
 
 function canSaveStockRow(row: StockRowState, requireFournisseur = false): boolean {
   if (row.saving) return false;
-  if (!row.quantite.trim() || !row.prixUnitaire.trim() || !row.dateAppro.trim()) return false;
+  if (!row.quantite.trim() || !row.prixUnitaire.trim() || parseFloat(row.prixUnitaire) <= 0 || !row.dateAppro.trim()) return false;
   if (requireFournisseur && (!row.fournisseurId.trim() || !row.refFacture.trim())) return false;
   return true;
 }

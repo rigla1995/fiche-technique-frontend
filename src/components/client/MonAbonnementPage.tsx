@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import api from '../../api/client';
 import type { Abonnement, Demande } from '../../types';
 import { useAuth } from '../../context/AuthContext';
@@ -34,15 +34,29 @@ export default function MonAbonnementPage() {
   const [demandeNotes, setDemandeNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  useEffect(() => {
-    Promise.all([
-      api.get('/api/abonnements/mon-abonnement'),
-      api.get('/api/abonnements/demandes'),
-    ]).then(([aboRes, demandesRes]) => {
+  const fetchAll = useCallback(async () => {
+    try {
+      const [aboRes, demandesRes] = await Promise.all([
+        api.get('/api/abonnements/mon-abonnement'),
+        api.get('/api/abonnements/demandes'),
+      ]);
       setAbo(aboRes.data);
       setDemandes(demandesRes.data);
-    }).finally(() => setLoading(false));
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => { fetchAll(); }, [fetchAll]);
+
+  // Auto-refresh on tab focus when there's a pending upgrade demande
+  useEffect(() => {
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') fetchAll();
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => document.removeEventListener('visibilitychange', onVisibility);
+  }, [fetchAll]);
 
   const submitDemande = async () => {
     setSubmitting(true);

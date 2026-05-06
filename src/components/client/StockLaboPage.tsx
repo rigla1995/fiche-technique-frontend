@@ -243,7 +243,7 @@ export default function StockLaboPage() {
   const canSaveRow = (rs: RowState | undefined, isPT = false): boolean => {
     if (!rs || rs.saving) return false;
     if (!rs.quantite.trim() || parseFloat(rs.quantite) <= 0) return false;
-    if (!isPT && (!rs.prixUnitaire.trim() || !rs.dateAppro.trim())) return false;
+    if (!isPT && (!rs.prixUnitaire.trim() || parseFloat(rs.prixUnitaire) <= 0 || !rs.dateAppro.trim())) return false;
     if (!rs.dateAppro.trim()) return false;
     if (!isPT && hasFournisseurs && (!rs.fournisseurId.trim() || !rs.refFacture.trim())) return false;
     return true;
