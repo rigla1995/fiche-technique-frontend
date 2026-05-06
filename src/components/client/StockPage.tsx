@@ -59,10 +59,11 @@ interface PerteModalProps {
   nom: string;
   activiteId?: number;
   onSaveOverride?: (ingredientId: number, quantite: number, typePerte: string, datePerte: string) => Promise<void>;
+  onAfterSave?: () => void;
   onClose: () => void;
 }
 
-function PerteModal({ ingredientId, nom, activiteId, onSaveOverride, onClose }: PerteModalProps) {
+function PerteModal({ ingredientId, nom, activiteId, onSaveOverride, onAfterSave, onClose }: PerteModalProps) {
   const [quantite, setQuantite] = useState('');
   const [typePerte, setTypePerte] = useState<'avarie' | 'dechet'>('avarie');
   const [datePerte, setDatePerte] = useState(todayStr());
@@ -86,6 +87,7 @@ function PerteModal({ ingredientId, nom, activiteId, onSaveOverride, onClose }: 
         });
       }
       setDone(true);
+      onAfterSave?.();
       setTimeout(onClose, 1200);
     } catch (e: unknown) {
       const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message;
@@ -122,7 +124,7 @@ function PerteModal({ ingredientId, nom, activiteId, onSaveOverride, onClose }: 
               <div>
                 <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: 4 }}>Date de la perte</label>
                 <input type="date" className="input" style={{ width: '100%' }}
-                  min={yearStart} max={yearEnd} value={datePerte} onChange={(e) => setDatePerte(e.target.value)} />
+                  min={yearStart} max={todayStr()} value={datePerte} onChange={(e) => setDatePerte(e.target.value)} />
               </div>
               {error && <p style={{ color: 'var(--danger)', fontSize: '0.85rem' }}>{error}</p>}
             </>
@@ -420,9 +422,10 @@ interface StockMatrixProps {
   onSavePT?: (produitId: number, quantite: string, dateAppro: string) => Promise<{ prixCalcule: number | null; dateAppro: string; totalQuantite: number }>;
   onSaveSeuilMin?: (ingredientId: number, seuilMin: number | null) => Promise<void>;
   onSavePerte?: (ingredientId: number, quantite: number, typePerte: string, datePerte: string) => Promise<void>;
+  onRefresh?: () => void;
 }
 
-function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fournisseurFilter, refFactureFilter, activiteId, isEntreprise, fournisseurs = [], onSave, onSavePT, onSaveSeuilMin, onSavePerte }: StockMatrixProps) {
+function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fournisseurFilter, refFactureFilter, activiteId, isEntreprise, fournisseurs = [], onSave, onSavePT, onSaveSeuilMin, onSavePerte, onRefresh }: StockMatrixProps) {
   const { t } = useTranslation();
   const { canWrite } = useAuth();
   const navigate = useNavigate();
@@ -436,6 +439,24 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
   const [seuilEdits, setSeuilEdits] = useState<Record<number, string>>({});
   const [seuilSaving, setSeuilSaving] = useState<Record<number, boolean>>({});
   const [totalOverrides, setTotalOverrides] = useState<Record<number, number>>({});
+  const [ptRecipes, setPtRecipes] = useState<Record<number, Array<{ ingredientId: number; nom: string; portion: number; unite: string }>>>({});
+  const [ptStockModal, setPtStockModal] = useState<{ produitId: number; nom: string } | null>(null);
+
+  const fetchPtRecipe = async (produitId: number) => {
+    if (ptRecipes[produitId]) return;
+    try {
+      const { data } = await api.get(`/api/produits/${produitId}`);
+      setPtRecipes((prev) => ({
+        ...prev,
+        [produitId]: (data.ingredients || []).map((r: { ingredientId: number; ingredientName?: string; nom?: string; portion: number | string; unitName?: string; unite?: string }) => ({
+          ingredientId: r.ingredientId,
+          nom: r.ingredientName || r.nom || '',
+          portion: parseFloat(String(r.portion)) || 0,
+          unite: r.unitName || r.unite || '',
+        })),
+      }));
+    } catch { /* ignore */ }
+  };
 
   // ── Bulk appro selection
   const [selectedIngIds, setSelectedIngIds] = useState<Set<number>>(new Set());
@@ -541,6 +562,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
       });
       setHistoryOpen((prev) => ({ ...prev, [id]: false }));
       setTimeout(() => setRows((prev) => ({ ...prev, [id]: { ...prev[id], saved: false } })), 2500);
+      onRefresh?.();
     } catch {
       setRows((prev) => ({ ...prev, [id]: { ...prev[id], saving: false, error: t('common.error') } }));
     }
@@ -746,6 +768,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
           nom={pertesModal.nom}
           activiteId={activiteId}
           onSaveOverride={!activiteId && onSavePerte ? onSavePerte : undefined}
+          onAfterSave={onRefresh}
           onClose={() => setPertesModal(null)}
         />
       )}
@@ -784,6 +807,63 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
         />
       )}
 
+      {ptStockModal && (() => {
+        const recipe = ptRecipes[ptStockModal.produitId] ?? [];
+        const rows2 = recipe.map((r) => {
+          const stock = entries.find((e) => e.ingredientId === r.ingredientId)?.totalQuantite ?? 0;
+          const maxUnits = r.portion > 0 ? stock / r.portion : Infinity;
+          return { ...r, stock, maxUnits };
+        });
+        const overallMax = rows2.length > 0 ? Math.min(...rows2.map((r) => r.maxUnits)) : null;
+        return (
+          <div className="modal-overlay" onClick={() => setPtStockModal(null)}>
+            <div className="modal" style={{ maxWidth: 520 }} onClick={(e) => e.stopPropagation()}>
+              <div className="modal-header" style={{ background: 'linear-gradient(135deg, #7c3aed, #a855f7)', borderBottom: 'none' }}>
+                <h2 style={{ color: '#fff', margin: 0, fontSize: '1rem' }}>📊 Stock — {ptStockModal.nom}</h2>
+                <button className="modal-close" onClick={() => setPtStockModal(null)} style={{ color: '#fff' }}>×</button>
+              </div>
+              <div className="modal-body">
+                {recipe.length === 0 ? (
+                  <p style={{ color: 'var(--text-muted)', textAlign: 'center' }}>Recette non chargée ou vide.</p>
+                ) : (
+                  <div className="table-responsive">
+                    <table className="table" style={{ fontSize: '0.85rem' }}>
+                      <thead>
+                        <tr>
+                          <th>Ingrédient</th>
+                          <th style={{ textAlign: 'right' }}>Portion</th>
+                          <th style={{ textAlign: 'right' }}>Stock actuel</th>
+                          <th style={{ textAlign: 'right' }}>Max PT</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {rows2.map((r) => (
+                          <tr key={r.ingredientId}>
+                            <td>{r.nom}</td>
+                            <td style={{ textAlign: 'right' }}>{r.portion} {r.unite}</td>
+                            <td style={{ textAlign: 'right', fontWeight: 600, color: r.stock <= 0 ? 'var(--danger)' : 'var(--success)' }}>{r.stock.toFixed(3)}</td>
+                            <td style={{ textAlign: 'right', color: '#7c3aed', fontWeight: 700 }}>{isFinite(r.maxUnits) ? r.maxUnits.toFixed(3) : '∞'}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+                {overallMax !== null && (
+                  <div style={{ marginTop: 12, padding: '8px 14px', background: '#f5f3ff', borderRadius: 8, border: '1px solid #ddd6fe', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontWeight: 700, color: '#7c3aed', fontSize: '0.85rem' }}>Quantité max réalisable</span>
+                    <span style={{ fontWeight: 900, color: '#7c3aed', fontSize: '1.1rem' }}>{isFinite(overallMax) ? overallMax.toFixed(3) : '∞'}</span>
+                  </div>
+                )}
+              </div>
+              <div className="modal-footer">
+                <button className="btn btn-primary" onClick={() => setPtStockModal(null)}>Fermer</button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
       {/* Bulk appro form */}
       {selectedIngIds.size > 0 && (
         <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end', flexWrap: 'wrap', marginBottom: 16, padding: '12px 16px', background: '#f0fdf4', border: '1px solid #86efac', borderRadius: 10 }}>
@@ -792,7 +872,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
             <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#2563eb', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Date d'appro</span>
-            <input type="date" className="input" style={{ maxWidth: 150 }} min={yearStart} max={yearEnd} value={bulkDate} onChange={(e) => setBulkDate(e.target.value)} />
+            <input type="date" className="input" style={{ maxWidth: 150 }} min={yearStart} max={todayStr()} value={bulkDate} onChange={(e) => setBulkDate(e.target.value)} />
           </div>
           {hasFournisseurs && (
             <>
@@ -954,7 +1034,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                             <td>
                               <input
                                 type="date" className="input" style={{ maxWidth: 138, ...warnStyle }}
-                                min={yearStart} max={yearEnd}
+                                min={yearStart} max={todayStr()}
                                 value={row.dateAppro}
                                 onChange={(e) => updateRow(entry.ingredientId, 'dateAppro', e.target.value)}
                                 onFocus={() => fetchHistory(entry.ingredientId)}
@@ -986,16 +1066,44 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                                       📉
                                     </button>
                                   )}
-                                  <button
-                                    className={`btn btn-sm ${row.saved ? 'btn-success' : 'btn-primary'}`}
-                                    onClick={() => saveRow(entry.ingredientId)}
-                                    disabled={entry.isPT
-                                      ? (!row.quantite.trim() || parseFloat(row.quantite) <= 0 || !row.dateAppro.trim() || row.saving || !canWrite)
-                                      : (!canSaveStockRow(row, hasFournisseurs) || !canWrite)}
-                                    style={!row.saved ? { background: 'linear-gradient(135deg, #2563eb, #0ea5e9)', boxShadow: '0 3px 10px rgba(37,99,235,0.3)', borderRadius: 8, border: 'none', color: '#fff', fontWeight: 700, flex: 1 } : { flex: 1 }}
-                                  >
-                                    {row.saving ? '…' : row.saved ? '✓' : t('client.stock.save')}
-                                  </button>
+                                  {entry.isPT && entry.produitId && (
+                                    <button
+                                      className="btn btn-ghost btn-sm"
+                                      title="Stock des ingrédients relatifs"
+                                      onClick={() => { fetchPtRecipe(entry.produitId!); setPtStockModal({ produitId: entry.produitId!, nom: entry.nom }); }}
+                                    >
+                                      📊
+                                    </button>
+                                  )}
+                                  {(() => {
+                                    const ptMaxQty = entry.isPT && entry.produitId && ptRecipes[entry.produitId] && ptRecipes[entry.produitId].length > 0
+                                      ? Math.min(...ptRecipes[entry.produitId].map((r) => {
+                                          const stock = entries.find((e) => e.ingredientId === r.ingredientId)?.totalQuantite ?? 0;
+                                          return r.portion > 0 ? stock / r.portion : Infinity;
+                                        }))
+                                      : null;
+                                    const ptQtyExceeds = ptMaxQty !== null && isFinite(ptMaxQty)
+                                      && row.quantite.trim() !== '' && parseFloat(row.quantite) > ptMaxQty;
+                                    return (
+                                      <>
+                                        {ptQtyExceeds && (
+                                          <span style={{ fontSize: '0.7rem', color: '#b91c1c', fontWeight: 700, alignSelf: 'center' }} title={`Max: ${ptMaxQty!.toFixed(3)}`}>
+                                            Max: {ptMaxQty!.toFixed(3)}
+                                          </span>
+                                        )}
+                                        <button
+                                          className={`btn btn-sm ${row.saved ? 'btn-success' : 'btn-primary'}`}
+                                          onClick={() => saveRow(entry.ingredientId)}
+                                          disabled={entry.isPT
+                                            ? (!row.quantite.trim() || parseFloat(row.quantite) <= 0 || !row.dateAppro.trim() || row.saving || !canWrite || !!ptQtyExceeds)
+                                            : (!canSaveStockRow(row, hasFournisseurs) || !canWrite)}
+                                          style={!row.saved ? { background: 'linear-gradient(135deg, #2563eb, #0ea5e9)', boxShadow: '0 3px 10px rgba(37,99,235,0.3)', borderRadius: 8, border: 'none', color: '#fff', fontWeight: 700, flex: 1 } : { flex: 1 }}
+                                        >
+                                          {row.saving ? '…' : row.saved ? '✓' : t('client.stock.save')}
+                                        </button>
+                                      </>
+                                    );
+                                  })()}
                                   <button className="btn btn-ghost btn-sm" onClick={() => toggleHistory(entry.ingredientId)} title={t('client.stock.history')}>
                                     {isHistOpen ? '▲' : '▼'}
                                   </button>
@@ -1140,6 +1248,7 @@ function ActivityStockSection({ label, activities, isFranchise, onSave }: Activi
 
   const handleSave = async (ingredientId: number, quantite: string, prixUnitaire: string, dateAppro: string, fournisseurId?: number | null, refFacture?: string | null) => {
     await onSave(selectedId, ingredientId, quantite, prixUnitaire, dateAppro, fournisseurId, refFacture);
+    if (selectedId) loadStock(selectedId);
   };
 
   const handleSavePT = async (produitId: number, quantite: string, dateAppro: string) => {
@@ -1290,6 +1399,7 @@ function ActivityStockSection({ label, activities, isFranchise, onSave }: Activi
           onSave={handleSave}
           onSavePT={handleSavePT}
           onSaveSeuilMin={handleSaveSeuilMin}
+          onRefresh={() => { if (selectedId) loadStock(selectedId); }}
         />
       )}
     </div>
@@ -1507,6 +1617,7 @@ export default function StockPage() {
               onSavePT={saveClientStockPT}
               onSaveSeuilMin={saveClientSeuilMin}
               onSavePerte={saveClientPerte}
+              onRefresh={loadClientStock}
             />
           </>
         )

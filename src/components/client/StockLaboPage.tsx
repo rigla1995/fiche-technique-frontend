@@ -130,6 +130,26 @@ export default function StockLaboPage() {
     anchor: { x: number; y: number };
   } | null>(null);
 
+  // ── PT recipe / stock popup
+  const [ptRecipes, setPtRecipes] = useState<Record<number, Array<{ ingredientId: number; nom: string; portion: number; unite: string }>>>({});
+  const [ptStockModal, setPtStockModal] = useState<{ produitId: number; nom: string } | null>(null);
+
+  const fetchPtRecipe = async (produitId: number) => {
+    if (ptRecipes[produitId]) return;
+    try {
+      const { data } = await api.get(`/api/produits/${produitId}`);
+      setPtRecipes((prev) => ({
+        ...prev,
+        [produitId]: (data.ingredients || []).map((r: { ingredientId: number; ingredientName?: string; nom?: string; portion: number | string; unitName?: string; unite?: string }) => ({
+          ingredientId: r.ingredientId,
+          nom: r.ingredientName || r.nom || '',
+          portion: parseFloat(String(r.portion)) || 0,
+          unite: r.unitName || r.unite || '',
+        })),
+      }));
+    } catch { /* ignore */ }
+  };
+
   // ── Bulk appro selection
   const [selectedIngIds, setSelectedIngIds] = useState<Set<number>>(new Set());
   const [bulkDate, setBulkDate] = useState(todayStr());
@@ -605,7 +625,7 @@ export default function StockLaboPage() {
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
                 <span style={LABEL}>Date d'appro</span>
-                <input type="date" className="input" style={{ maxWidth: 150 }} min={yearStart} max={yearEnd} value={bulkDate} onChange={(e) => setBulkDate(e.target.value)} />
+                <input type="date" className="input" style={{ maxWidth: 150 }} min={yearStart} max={todayStr()} value={bulkDate} onChange={(e) => setBulkDate(e.target.value)} />
               </div>
               {hasFournisseurs && (
                 <>
@@ -765,7 +785,7 @@ export default function StockLaboPage() {
                                         )}
                                       </td>
                                       <td>
-                                        <input type="date" className="input" style={{ maxWidth: 138, ...warnStyle }} min={yearStart} max={yearEnd} value={rs.dateAppro} onChange={(e) => setDateApproField(r.ingredientId, e.target.value)} disabled={isSelected} title={isSelected ? 'Date définie par le formulaire ci-dessus' : undefined} />
+                                        <input type="date" className="input" style={{ maxWidth: 138, ...warnStyle }} min={yearStart} max={todayStr()} value={rs.dateAppro} onChange={(e) => setDateApproField(r.ingredientId, e.target.value)} disabled={isSelected} title={isSelected ? 'Date définie par le formulaire ci-dessus' : undefined} />
                                       </td>
                                       <td>
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'stretch' }}>
@@ -798,14 +818,42 @@ export default function StockLaboPage() {
                                             >
                                               📉
                                             </button>
-                                            <button
-                                              className={`btn btn-sm ${rs.saved ? 'btn-success' : 'btn-primary'}`}
-                                              onClick={() => saveRow(r.ingredientId)}
-                                              disabled={!canSaveRow(rs, r.isPT) || !canWrite}
-                                              style={!rs.saved ? { background: 'linear-gradient(135deg, #2563eb, #0ea5e9)', boxShadow: '0 3px 10px rgba(37,99,235,0.3)', borderRadius: 8, border: 'none', color: '#fff', fontWeight: 700, flex: 1 } : { flex: 1 }}
-                                            >
-                                              {rs.saving ? '…' : rs.saved ? '✓' : t('common.save')}
-                                            </button>
+                                            {r.isPT && r.produitId && (
+                                              <button
+                                                className="btn btn-ghost btn-sm"
+                                                title="Stock des ingrédients relatifs"
+                                                onClick={() => { fetchPtRecipe(r.produitId!); setPtStockModal({ produitId: r.produitId!, nom: r.nom }); }}
+                                              >
+                                                📊
+                                              </button>
+                                            )}
+                                            {(() => {
+                                              const ptMaxQty = r.isPT && r.produitId && ptRecipes[r.produitId] && ptRecipes[r.produitId].length > 0
+                                                ? Math.min(...ptRecipes[r.produitId].map((rec) => {
+                                                    const st = stock.find((s) => s.ingredientId === rec.ingredientId)?.quantite ?? 0;
+                                                    return rec.portion > 0 ? (st ?? 0) / rec.portion : Infinity;
+                                                  }))
+                                                : null;
+                                              const ptQtyExceeds = ptMaxQty !== null && isFinite(ptMaxQty)
+                                                && rs.quantite.trim() !== '' && parseFloat(rs.quantite) > ptMaxQty;
+                                              return (
+                                                <>
+                                                  {ptQtyExceeds && (
+                                                    <span style={{ fontSize: '0.7rem', color: '#b91c1c', fontWeight: 700, alignSelf: 'center' }} title={`Max: ${ptMaxQty!.toFixed(3)}`}>
+                                                      Max: {ptMaxQty!.toFixed(3)}
+                                                    </span>
+                                                  )}
+                                                  <button
+                                                    className={`btn btn-sm ${rs.saved ? 'btn-success' : 'btn-primary'}`}
+                                                    onClick={() => saveRow(r.ingredientId)}
+                                                    disabled={!canSaveRow(rs, r.isPT) || !canWrite || !!ptQtyExceeds}
+                                                    style={!rs.saved ? { background: 'linear-gradient(135deg, #2563eb, #0ea5e9)', boxShadow: '0 3px 10px rgba(37,99,235,0.3)', borderRadius: 8, border: 'none', color: '#fff', fontWeight: 700, flex: 1 } : { flex: 1 }}
+                                                  >
+                                                    {rs.saving ? '…' : rs.saved ? '✓' : t('common.save')}
+                                                  </button>
+                                                </>
+                                              );
+                                            })()}
                                             <button className="btn btn-ghost btn-sm" onClick={() => toggleHistory(r.ingredientId)} title="5 derniers appros">
                                               {rs.historyOpen ? '📋▲' : '📋'}
                                             </button>
@@ -1085,6 +1133,62 @@ export default function StockLaboPage() {
           </div>
         </div>
       )}
+      {ptStockModal && (() => {
+        const recipe = ptRecipes[ptStockModal.produitId] ?? [];
+        const recipeRows = recipe.map((r) => {
+          const st = stock.find((s) => s.ingredientId === r.ingredientId)?.quantite ?? 0;
+          const maxUnits = r.portion > 0 ? (st ?? 0) / r.portion : Infinity;
+          return { ...r, stock: st ?? 0, maxUnits };
+        });
+        const overallMax = recipeRows.length > 0 ? Math.min(...recipeRows.map((r) => r.maxUnits)) : null;
+        return (
+          <div className="modal-overlay" onClick={() => setPtStockModal(null)}>
+            <div className="modal" style={{ maxWidth: 520 }} onClick={(e) => e.stopPropagation()}>
+              <div className="modal-header" style={{ background: 'linear-gradient(135deg, #7c3aed, #a855f7)', borderBottom: 'none' }}>
+                <h2 style={{ color: '#fff', margin: 0, fontSize: '1rem' }}>📊 Stock — {ptStockModal.nom}</h2>
+                <button className="modal-close" onClick={() => setPtStockModal(null)} style={{ color: '#fff' }}>×</button>
+              </div>
+              <div className="modal-body">
+                {recipe.length === 0 ? (
+                  <p style={{ color: 'var(--text-muted)', textAlign: 'center' }}>Recette non chargée ou vide.</p>
+                ) : (
+                  <div className="table-responsive">
+                    <table className="table" style={{ fontSize: '0.85rem' }}>
+                      <thead>
+                        <tr>
+                          <th>Ingrédient</th>
+                          <th style={{ textAlign: 'right' }}>Portion</th>
+                          <th style={{ textAlign: 'right' }}>Stock actuel</th>
+                          <th style={{ textAlign: 'right' }}>Max PT</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {recipeRows.map((r) => (
+                          <tr key={r.ingredientId}>
+                            <td>{r.nom}</td>
+                            <td style={{ textAlign: 'right' }}>{r.portion} {r.unite}</td>
+                            <td style={{ textAlign: 'right', fontWeight: 600, color: r.stock <= 0 ? 'var(--danger)' : 'var(--success)' }}>{r.stock.toFixed(3)}</td>
+                            <td style={{ textAlign: 'right', color: '#7c3aed', fontWeight: 700 }}>{isFinite(r.maxUnits) ? r.maxUnits.toFixed(3) : '∞'}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+                {overallMax !== null && (
+                  <div style={{ marginTop: 12, padding: '8px 14px', background: '#f5f3ff', borderRadius: 8, border: '1px solid #ddd6fe', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontWeight: 700, color: '#7c3aed', fontSize: '0.85rem' }}>Quantité max réalisable</span>
+                    <span style={{ fontWeight: 900, color: '#7c3aed', fontSize: '1.1rem' }}>{isFinite(overallMax) ? overallMax.toFixed(3) : '∞'}</span>
+                  </div>
+                )}
+              </div>
+              <div className="modal-footer">
+                <button className="btn btn-primary" onClick={() => setPtStockModal(null)}>Fermer</button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
