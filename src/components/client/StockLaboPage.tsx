@@ -715,18 +715,18 @@ export default function StockLaboPage() {
                       </button>
                       {isOpen && (
                         <div className="table-responsive card th-indigo" style={{ marginBottom: 0 }}>
-                          <table className="table">
+                          <table className="table" style={{ width: '100%' }}>
                             <thead style={{ background: '#eff6ff', borderBottom: '2px solid #2563eb', color: '#1e3a5f' }}>
                               <tr>
-                                <th style={{ width: 32, fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px' }}></th>
-                                <th style={{ fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px' }}>{t('client.stock.ingredient')}</th>
-                                <th style={{ textAlign: 'right', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px' }}>Stock actuel<br /><span style={{ fontSize: '0.65rem', fontWeight: 400, opacity: 0.75 }}>cout · pertes · PT</span></th>
-                                <th style={{ textAlign: 'right', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px', minWidth: 90 }}>Inventaire<br /><span style={{ fontSize: '0.65rem', fontWeight: 400, opacity: 0.75 }}>DATE · QTÉ</span></th>
-                                <th style={{ textAlign: 'center', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px' }}>Seuil min</th>
-                                <th style={{ textAlign: 'right', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px' }}>Nouvelle Qté</th>
-                                <th style={{ textAlign: 'right', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px' }}>Prix (DT/U)</th>
-                                <th style={{ fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px' }}>{t('client.stock.date_appro')}</th>
-                                <th style={{ fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px' }}></th>
+                                <th style={{ width: 32, fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '8px 8px' }}></th>
+                                <th style={{ fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '8px 8px' }}>{t('client.stock.ingredient')}</th>
+                                <th style={{ textAlign: 'right', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '8px 8px' }}>Stock<br /><span style={{ fontSize: '0.65rem', fontWeight: 400, opacity: 0.75 }}>coût · pertes</span></th>
+                                <th style={{ textAlign: 'right', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '8px 8px' }}>Inv.<br /><span style={{ fontSize: '0.65rem', fontWeight: 400, opacity: 0.75 }}>date · qté</span></th>
+                                <th style={{ textAlign: 'center', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '8px 8px' }}>Seuil</th>
+                                <th style={{ textAlign: 'right', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '8px 8px' }}>Qté</th>
+                                <th style={{ textAlign: 'right', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '8px 8px' }}>Prix</th>
+                                <th style={{ fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '8px 8px' }}>Date</th>
+                                <th style={{ fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '8px 8px' }}></th>
                               </tr>
                             </thead>
                             <tbody>
@@ -779,7 +779,7 @@ export default function StockLaboPage() {
                                           <div style={{ fontSize: '0.68rem', color: '#7c3aed', fontWeight: 500 }}>PT: {r.ptUsageDepuisInv.toFixed(3)}</div>
                                         )}
                                       </td>
-                                      <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+                                      <td style={{ textAlign: 'right' }}>
                                         {r.lastInvDate ? (
                                           <>
                                             <div style={{ fontSize: '0.72rem', color: '#1e3a5f', fontWeight: 700 }}>{r.lastInvDate.split('-').reverse().join('/')}</div>
@@ -817,7 +817,7 @@ export default function StockLaboPage() {
                                         )}
                                       </td>
                                       <td>
-                                        <input type="date" className="input" style={{ maxWidth: 138, ...warnStyle }} min={yearStart} max={todayStr()} value={rs.dateAppro} onChange={(e) => setDateApproField(r.ingredientId, e.target.value)} disabled={isSelected} title={isSelected ? 'Date définie par le formulaire ci-dessus' : undefined} />
+                                        <input type="date" className="input" style={{ width: '100%', minWidth: 110, ...warnStyle }} min={yearStart} max={todayStr()} value={rs.dateAppro} onChange={(e) => setDateApproField(r.ingredientId, e.target.value)} disabled={isSelected} title={isSelected ? 'Date définie par le formulaire ci-dessus' : undefined} />
                                       </td>
                                       <td>
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'stretch' }}>
@@ -841,6 +841,26 @@ export default function StockLaboPage() {
                                               </button>
                                             );
                                           })()}
+                                          {r.isPT && r.produitId && (
+                                            <div style={{ display: 'flex', gap: 4 }}>
+                                              <button
+                                                className="btn btn-ghost btn-sm"
+                                                title="Stock des ingrédients relatifs"
+                                                onClick={() => { fetchPtRecipe(r.produitId!); setPtStockModal({ produitId: r.produitId!, nom: r.nom }); }}
+                                              >
+                                                📊
+                                              </button>
+                                              {canWrite && (
+                                                <button
+                                                  className="btn btn-ghost btn-sm"
+                                                  title="Portions personnalisées pour cette appro"
+                                                  onClick={() => setPortionsModal({ produitId: r.produitId!, nom: r.nom })}
+                                                >
+                                                  ⚙️
+                                                </button>
+                                              )}
+                                            </div>
+                                          )}
                                           <div style={{ display: 'flex', gap: 4 }}>
                                             <button
                                               className="perte-btn"
@@ -850,26 +870,6 @@ export default function StockLaboPage() {
                                             >
                                               📉
                                             </button>
-                                            {r.isPT && r.produitId && (
-                                              <>
-                                                <button
-                                                  className="btn btn-ghost btn-sm"
-                                                  title="Stock des ingrédients relatifs"
-                                                  onClick={() => { fetchPtRecipe(r.produitId!); setPtStockModal({ produitId: r.produitId!, nom: r.nom }); }}
-                                                >
-                                                  📊
-                                                </button>
-                                                {canWrite && (
-                                                  <button
-                                                    className="btn btn-ghost btn-sm"
-                                                    title="Portions personnalisées pour cette appro"
-                                                    onClick={() => setPortionsModal({ produitId: r.produitId!, nom: r.nom })}
-                                                  >
-                                                    ⚙️
-                                                  </button>
-                                                )}
-                                              </>
-                                            )}
                                             {(() => {
                                               const ptMaxQty = r.isPT && r.produitId && ptRecipes[r.produitId] && ptRecipes[r.produitId].length > 0
                                                 ? Math.min(...ptRecipes[r.produitId].map((rec) => {

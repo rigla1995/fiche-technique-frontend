@@ -1147,31 +1147,31 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                                     </button>
                                   )
                                 )}
+                                {entry.isPT && entry.produitId && (
+                                  <div style={{ display: 'flex', gap: 4 }}>
+                                    <button
+                                      className="btn btn-ghost btn-sm"
+                                      title="Stock des ingrédients relatifs"
+                                      onClick={() => { fetchPtRecipe(entry.produitId!); setPtStockModal({ produitId: entry.produitId!, nom: entry.nom }); }}
+                                    >
+                                      📊
+                                    </button>
+                                    {canWrite && (
+                                      <button
+                                        className="btn btn-ghost btn-sm"
+                                        title="Portions personnalisées pour cette appro"
+                                        onClick={() => setPortionsModal({ produitId: entry.produitId!, nom: entry.nom })}
+                                      >
+                                        ⚙️
+                                      </button>
+                                    )}
+                                  </div>
+                                )}
                                 <div style={{ display: 'flex', gap: 4 }}>
                                   {((isEntreprise && activiteId) || (!isEntreprise && onSavePerte)) && (
                                     <button className="perte-btn" onClick={() => setPertesModal({ ingredientId: entry.ingredientId, nom: entry.nom })} title="Enregistrer une perte">
                                       📉
                                     </button>
-                                  )}
-                                  {entry.isPT && entry.produitId && (
-                                    <>
-                                      <button
-                                        className="btn btn-ghost btn-sm"
-                                        title="Stock des ingrédients relatifs"
-                                        onClick={() => { fetchPtRecipe(entry.produitId!); setPtStockModal({ produitId: entry.produitId!, nom: entry.nom }); }}
-                                      >
-                                        📊
-                                      </button>
-                                      {canWrite && (
-                                        <button
-                                          className="btn btn-ghost btn-sm"
-                                          title="Portions personnalisées pour cette appro"
-                                          onClick={() => setPortionsModal({ produitId: entry.produitId!, nom: entry.nom })}
-                                        >
-                                          ⚙️
-                                        </button>
-                                      )}
-                                    </>
                                   )}
                                   {(() => {
                                     const ptMaxQty = entry.isPT && entry.produitId && ptRecipes[entry.produitId] && ptRecipes[entry.produitId].length > 0
