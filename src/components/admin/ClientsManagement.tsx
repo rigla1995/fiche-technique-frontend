@@ -295,6 +295,24 @@ export default function ClientsManagement() {
                   </div>
                 )}
 
+                {/* Type switcher — visible in edit mode */}
+                {editId && (
+                  <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+                    {(['independant', 'entreprise'] as CompteType[]).map((t) => (
+                      <button key={t} type="button"
+                        onClick={() => setSelectedType(t)}
+                        style={{
+                          flex: 1, padding: '8px 12px', borderRadius: 8, fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer', border: '2px solid',
+                          borderColor: selectedType === t ? 'var(--primary)' : 'var(--border)',
+                          background: selectedType === t ? 'var(--primary-light, #eef2ff)' : 'var(--surface)',
+                          color: selectedType === t ? 'var(--primary)' : 'var(--text-muted)',
+                        }}>
+                        {t === 'independant' ? '👤 Indépendant' : '🏢 Entreprise'}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
                 {selectedType === 'independant' && (
                   <>
                     <div className="form-group">
