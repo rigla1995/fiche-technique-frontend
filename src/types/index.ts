@@ -14,6 +14,23 @@ export interface User {
   gerantActiviteType?: 'franchise' | 'labo' | 'activite_distincte';
 }
 
+export interface Promotion {
+  id: number;
+  abonnementId: number;
+  type: 'percent_off' | 'free_months' | 'fixed_price';
+  appliesTo: 'onboarding' | 'mensualite' | 'les_deux';
+  discountOnboarding: number | null;
+  discountMensualite: number | null;
+  fixedOnboarding: number | null;
+  fixedMensualite: number | null;
+  dateDebut: string;
+  monthsDuration: number | null;
+  dateFin: string | null;
+  notes: string | null;
+  createdAt: string;
+  isActive: boolean;
+}
+
 export interface Abonnement {
   id: number;
   clientId: number;
@@ -26,7 +43,9 @@ export interface Abonnement {
   modeCompte: 'actif' | 'read_only' | 'desactive' | 'archive';
   prolongationJours: number;
   notes: string | null;
+  hasActivePromo?: boolean;
   paiements?: Paiement[];
+  promotions?: Promotion[];
   createdAt: string;
   updatedAt: string;
 }
