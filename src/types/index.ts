@@ -222,6 +222,10 @@ export interface StockEntry {
   lastFournisseurId?: number | null;
   lastRefFacture?: string | null;
   lastTypeAppro?: string | null;
+  lastInvDate?: string | null;
+  lastInvQty?: number | null;
+  pertesDepuisInv?: number | null;
+  ptUsageDepuisInv?: number | null;
 }
 
 export interface StockHistoryEntry {

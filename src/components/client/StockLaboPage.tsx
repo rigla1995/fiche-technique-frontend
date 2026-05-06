@@ -48,6 +48,10 @@ interface LaboStockRow {
   lastFournisseurId: number | null;
   lastRefFacture: string | null;
   recentDates?: string[];
+  lastInvDate?: string | null;
+  lastInvQty?: number | null;
+  pertesDepuisInv?: number | null;
+  ptUsageDepuisInv?: number | null;
 }
 
 interface RowState {
@@ -664,7 +668,8 @@ export default function StockLaboPage() {
                               <tr>
                                 <th style={{ width: 32, fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px' }}></th>
                                 <th style={{ fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px' }}>{t('client.stock.ingredient')}</th>
-                                <th style={{ textAlign: 'right', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px' }}>Stock actuel<br /><span style={{ fontSize: '0.65rem', fontWeight: 400, opacity: 0.75 }}>cout · transféré</span></th>
+                                <th style={{ textAlign: 'right', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px' }}>Stock actuel<br /><span style={{ fontSize: '0.65rem', fontWeight: 400, opacity: 0.75 }}>cout · pertes · PT</span></th>
+                                <th style={{ textAlign: 'right', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px', minWidth: 90 }}>Inventaire<br /><span style={{ fontSize: '0.65rem', fontWeight: 400, opacity: 0.75 }}>DATE · QTÉ</span></th>
                                 <th style={{ textAlign: 'center', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px' }}>Seuil min</th>
                                 <th style={{ textAlign: 'right', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px' }}>Nouvelle Qté</th>
                                 <th style={{ textAlign: 'right', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px' }}>Prix (DT/U)</th>
@@ -715,6 +720,20 @@ export default function StockLaboPage() {
                                         {r.totalTransfere > 0 && (
                                           <div style={{ fontSize: '0.72rem', color: '#7c3aed', fontWeight: 600 }}>↗ {r.totalTransfere.toFixed(3)}</div>
                                         )}
+                                        {r.pertesDepuisInv != null && r.pertesDepuisInv > 0 && (
+                                          <div style={{ fontSize: '0.68rem', color: '#dc2626', fontWeight: 500 }}>Pertes: {r.pertesDepuisInv.toFixed(3)}</div>
+                                        )}
+                                        {r.ptUsageDepuisInv != null && r.ptUsageDepuisInv > 0 && (
+                                          <div style={{ fontSize: '0.68rem', color: '#7c3aed', fontWeight: 500 }}>PT: {r.ptUsageDepuisInv.toFixed(3)}</div>
+                                        )}
+                                      </td>
+                                      <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+                                        {r.lastInvDate ? (
+                                          <>
+                                            <div style={{ fontSize: '0.72rem', color: '#1e3a5f', fontWeight: 700 }}>{r.lastInvDate.split('-').reverse().join('/')}</div>
+                                            <div style={{ fontSize: '0.72rem', color: '#64748b' }}>{r.lastInvQty?.toFixed(3) ?? '—'}</div>
+                                          </>
+                                        ) : <span style={{ fontSize: '0.72rem', color: '#cbd5e1' }}>—</span>}
                                       </td>
                                       <td style={{ textAlign: 'center' }}>
                                         <input
@@ -798,7 +817,7 @@ export default function StockLaboPage() {
                                     {/* Appro history collapse */}
                                     {rs.historyOpen && (
                                       <tr>
-                                        <td colSpan={8} style={{ background: 'var(--surface)', padding: '8px 16px' }}>
+                                        <td colSpan={9} style={{ background: 'var(--surface)', padding: '8px 16px' }}>
                                           {rs.history.length === 0 ? (
                                             <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{t('client.stock.no_history')}</span>
                                           ) : (

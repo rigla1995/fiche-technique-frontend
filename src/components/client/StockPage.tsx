@@ -836,7 +836,8 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                     <tr>
                       <th style={{ width: 32, fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px' }}></th>
                       <th style={{ fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px' }}>{t('client.stock.ingredient')}</th>
-                      <th style={{ textAlign: 'right', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px' }}>Stock Actuel<br /><span style={{ fontSize: '0.65rem', fontWeight: 400, opacity: 0.75 }}>COUT · TOTAL</span></th>
+                      <th style={{ textAlign: 'right', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px' }}>Stock Actuel<br /><span style={{ fontSize: '0.65rem', fontWeight: 400, opacity: 0.75 }}>COUT · PERTES · PT</span></th>
+                      <th style={{ textAlign: 'right', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px', minWidth: 90 }}>Inventaire<br /><span style={{ fontSize: '0.65rem', fontWeight: 400, opacity: 0.75 }}>DATE · QTÉ</span></th>
                       <th style={{ textAlign: 'center', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px' }}>Seuil min</th>
                       <th style={{ textAlign: 'right', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px' }}>Nouvelle Qté</th>
                       <th style={{ textAlign: 'right', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px' }}>Prix (U/DT)</th>
@@ -889,6 +890,20 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                               {entry.coutTotal != null && entry.coutTotal > 0 && (
                                 <div style={{ fontSize: '0.72rem', color: '#1d4ed8', fontWeight: 500 }}>{entry.coutTotal.toFixed(3)} DT</div>
                               )}
+                              {entry.pertesDepuisInv != null && entry.pertesDepuisInv > 0 && (
+                                <div style={{ fontSize: '0.68rem', color: '#dc2626', fontWeight: 500 }}>Pertes: {entry.pertesDepuisInv.toFixed(3)}</div>
+                              )}
+                              {entry.ptUsageDepuisInv != null && entry.ptUsageDepuisInv > 0 && (
+                                <div style={{ fontSize: '0.68rem', color: '#7c3aed', fontWeight: 500 }}>PT: {entry.ptUsageDepuisInv.toFixed(3)}</div>
+                              )}
+                            </td>
+                            <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+                              {entry.lastInvDate ? (
+                                <>
+                                  <div style={{ fontSize: '0.72rem', color: '#1e3a5f', fontWeight: 700 }}>{entry.lastInvDate.split('-').reverse().join('/')}</div>
+                                  <div style={{ fontSize: '0.72rem', color: '#64748b' }}>{entry.lastInvQty?.toFixed(3) ?? '—'}</div>
+                                </>
+                              ) : <span style={{ fontSize: '0.72rem', color: '#cbd5e1' }}>—</span>}
                             </td>
                             <td style={{ textAlign: 'center' }}>
                               <input
@@ -990,7 +1005,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                           </tr>
                           {isHistOpen && (
                             <tr key={`${entry.ingredientId}-hist`}>
-                              <td colSpan={8} style={{ background: '#f8faff', padding: '8px 16px' }}>
+                              <td colSpan={9} style={{ background: '#f8faff', padding: '8px 16px' }}>
                                 {!hist ? (
                                   <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{t('common.loading')}</span>
                                 ) : hist.length === 0 ? (
