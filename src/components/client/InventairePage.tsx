@@ -18,6 +18,7 @@ interface InventaireRow {
   unite: string;
   categorie: string;
   seuilMin: number | null;
+  totalStock: number | null;
   recentInventaires: RecentInv[];
   inventaireDates: string[];
 }
@@ -372,7 +373,7 @@ export default function InventairePage() {
                               borderLeft: `4px solid ${alarm ? '#f59e0b' : filled ? '#10b981' : 'transparent'}`,
                               transition: 'background 0.1s',
                             }}>
-                              <div style={{ display: 'grid', gridTemplateColumns: '1fr 150px 1fr auto', gap: 12, alignItems: 'center' }}>
+                              <div style={{ display: 'grid', gridTemplateColumns: '1fr 110px 150px 1fr auto', gap: 12, alignItems: 'center' }}>
                                 {/* Name */}
                                 <div>
                                   <div style={{ fontWeight: 700, fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: 7, color: alarm ? '#92400e' : 'var(--text)' }}>
@@ -382,6 +383,21 @@ export default function InventairePage() {
                                   </div>
                                   <div style={{ fontSize: '0.76rem', color: 'var(--text-muted)', marginTop: 2, display: 'flex', alignItems: 'center', gap: 5 }}>
                                     <span style={{ background: `${color}18`, color, borderRadius: 5, padding: '1px 7px', fontWeight: 700, fontSize: '0.68rem' }}>{r.unite}</span>
+                                  </div>
+                                </div>
+
+                                {/* Total Stock */}
+                                <div>
+                                  <div style={{ fontSize: '0.67rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>
+                                    Total Stock
+                                  </div>
+                                  <div style={{
+                                    padding: '8px 10px', borderRadius: 9, fontSize: '0.9rem', fontWeight: 800, textAlign: 'right',
+                                    background: r.totalStock !== null && r.totalStock > 0 ? '#f0fdf4' : '#f8fafc',
+                                    border: r.totalStock !== null && r.totalStock > 0 ? '1.5px solid #86efac' : '1.5px solid #e2e8f0',
+                                    color: r.totalStock !== null && r.totalStock > 0 ? '#15803d' : '#9ca3af',
+                                  }}>
+                                    {r.totalStock !== null ? r.totalStock.toFixed(3) : '—'}
                                   </div>
                                 </div>
 
