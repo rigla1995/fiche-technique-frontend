@@ -237,6 +237,7 @@ export default function InventairePage() {
             <div>
               <label style={{ fontSize: '0.68rem', fontWeight: 800, color: '#2563eb', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>📅 Date inventaire</label>
               <input type="date" value={date} onChange={(e) => setDate(e.target.value)}
+                max={todayStr()}
                 style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid #2563eb', fontSize: '0.92rem', fontWeight: 700, color: '#1e3a5f', background: '#eff6ff' }} />
             </div>
             <div>

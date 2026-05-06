@@ -992,7 +992,7 @@ export default function StockLaboPage() {
                 <option value="dechet">Déchet</option>
               </select>
               <label style={{ ...LABEL, display: 'block', marginBottom: 6 }}>Date de perte</label>
-              <input className="input" type="date" style={{ width: '100%', fontSize: '0.9rem', marginBottom: 16 }} value={perteDate} onChange={(e) => setPerteDate(e.target.value)} />
+              <input className="input" type="date" style={{ width: '100%', fontSize: '0.9rem', marginBottom: 16 }} max={todayStr()} value={perteDate} onChange={(e) => setPerteDate(e.target.value)} />
               <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
                 <button className="btn btn-ghost" onClick={() => setPerteModal(null)}>Annuler</button>
                 <button
