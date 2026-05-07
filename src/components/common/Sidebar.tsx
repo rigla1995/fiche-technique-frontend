@@ -365,8 +365,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                   <LockedLink label={t('nav.rapports', 'Rapports')} />
                 ) : (
                   <NavLink
-                    to="/client"
-                    end
+                    to="/client/rapports"
                     className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
                     onClick={onClose}
                   >

@@ -35,6 +35,7 @@ import DemandesManagement from './components/admin/DemandesManagement';
 import MonAbonnementPage from './components/client/MonAbonnementPage';
 import GerantsPage from './components/client/GerantsPage';
 import UpgradeWizard from './components/client/UpgradeWizard';
+import RapportsPage from './components/client/RapportsPage';
 import './i18n';
 import './index.css';
 
@@ -106,6 +107,7 @@ export default function App() {
             <Route path="/client/abonnement" element={<MonAbonnementPage />} />
             <Route path="/client/gerants" element={<GerantsPage />} />
             <Route path="/client/upgrade-wizard" element={<UpgradeWizard />} />
+            <Route path="/client/rapports" element={<RapportsPage />} />
           </Route>
 
           {/* Error pages */}
