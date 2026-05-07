@@ -239,7 +239,7 @@ function GerantSidebarContent({
             <li><NavLink to="/client/stock" end className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📦</span><span className="link-label">Stock Activité</span></NavLink></li>
             <li><NavLink to="/client/stock/historique" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📋</span><span className="link-label">Historique Appro</span></NavLink></li>
             <li><NavLink to="/client/stock/historique-pertes" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📉</span><span className="link-label">Historique Pertes</span></NavLink></li>
-            <li><NavLink to="/client/inventaire" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}><span className="link-icon">🔢</span><span className="link-label">Inventaire</span></NavLink></li>
+            <li><NavLink to="/client/inventaire" end className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}><span className="link-icon">🔢</span><span className="link-label">Inventaire</span></NavLink></li>
             <li><NavLink to="/client/inventaire/historique" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📊</span><span className="link-label">Historique Inventaire</span></NavLink></li>
           </>
         )}
