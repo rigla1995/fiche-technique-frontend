@@ -235,7 +235,7 @@ function GerantSidebarContent({
         <CollapsibleHeader label="Espace Activité" icon="📍" isOpen={openSections.has('gerant-indep')} locked={false} onToggle={() => toggleSection('gerant-indep')} />
         {openSections.has('gerant-indep') && (
           <>
-            <li><NavLink to="/client/stock" className={({ isActive }) => `sidebar-link ${isActive && !currentSection ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📦</span><span className="link-label">Stock Activité</span></NavLink></li>
+            <li><NavLink to="/client/stock" end className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📦</span><span className="link-label">Stock Activité</span></NavLink></li>
             <li><NavLink to="/client/stock/historique" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📋</span><span className="link-label">Historique Appro</span></NavLink></li>
             <li><NavLink to="/client/stock/historique-pertes" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📉</span><span className="link-label">Historique Pertes</span></NavLink></li>
             <li><NavLink to="/client/inventaire" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}><span className="link-icon">🔢</span><span className="link-label">Inventaire</span></NavLink></li>
@@ -464,9 +464,9 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
     { to: '/admin/ingredients', label: t('nav.ingredients'), icon: '🧂' },
   ];
 
-  const sidebarTitle = isEntreprise && user?.entrepriseName
-    ? `Espace ${user.entrepriseName}`
-    : t('client.title');
+  const sidebarTitle = isGerant
+    ? (isEntreprise && user?.entrepriseName ? `Espace ${user.entrepriseName}` : 'Espace Gérant')
+    : (isEntreprise && user?.entrepriseName ? `Espace ${user.entrepriseName}` : t('client.title'));
 
   const onboardingHint = isOnboarding ? (
     <div style={{ background: '#fef9c3', borderRadius: 8, padding: '10px 12px', margin: '8px 12px', fontSize: '0.78rem', color: '#854d0e', lineHeight: 1.5 }}>
