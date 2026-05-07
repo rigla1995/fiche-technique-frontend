@@ -5,7 +5,7 @@ import { useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useSelection } from '../../context/SelectionContext';
 import api from '../../api/client';
-import type { ActiviteTypesSummary, Labo } from '../../types';
+import type { Activite, ActiviteTypesSummary, Labo, User } from '../../types';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -202,6 +202,132 @@ function ProductSubLinks({
   );
 }
 
+interface GerantSidebarProps {
+  user: User;
+  labos: Labo[];
+  gerantActivites: Activite[];
+  location: ReturnType<typeof useLocation>;
+  openSections: Set<string>;
+  toggleSection: (key: string) => void;
+  onClose: () => void;
+  isHistoriquePage: boolean;
+  isHistoriquepertesPage: boolean;
+  isProductsPage: boolean;
+  currentSection: string | null;
+  currentHistType: string | null;
+  currentProductTab: string | null;
+  currentActCtx: string | null;
+}
+
+function GerantSidebarContent({
+  user, labos, gerantActivites, location, openSections, toggleSection, onClose,
+  isHistoriquePage, isHistoriquepertesPage, isProductsPage,
+  currentSection, currentHistType, currentProductTab, currentActCtx,
+}: GerantSidebarProps) {
+  const gerantActiviteId = user.gerantActiviteId;
+  const isLaboGerant = user.gerantActiviteType === 'labo';
+
+  if (isLaboGerant) {
+    const laboId = gerantActiviteId!;
+    const assignedLabo = labos.find(l => l.id === laboId);
+    const laboActivites = gerantActivites.filter(a => a.laboId === laboId);
+    const laboParam = `laboId=${laboId}`;
+    const curTab = new URLSearchParams(location.search).get('tab');
+    const isLaboIngredients = location.pathname === '/client/labo/stock' && location.search.includes(laboParam) && curTab === 'ingredients';
+    const isLaboStock = location.pathname === '/client/labo/stock' && location.search.includes(laboParam) && curTab !== 'ingredients';
+    const isLaboTransfer = location.pathname === '/client/labo/transfer' && location.search.includes(laboParam);
+    const isLaboHistoriqueAppro = location.pathname === '/client/labo/historique-appro' && location.search.includes(laboParam);
+    const isLaboHistorique = location.pathname === '/client/labo/historique-transferts' && location.search.includes(laboParam);
+    const isLaboInventaire = location.pathname === '/client/labo/inventaire' && location.search.includes(laboParam);
+    const laboLabel = assignedLabo?.nom || 'Labo';
+
+    return (
+      <>
+        <CollapsibleHeader label={`Espace ${laboLabel}`} icon="🏭" isOpen={openSections.has('gerant-labo')} locked={false} onToggle={() => toggleSection('gerant-labo')} />
+        {openSections.has('gerant-labo') && (
+          <>
+            <li><Link to={`/client/labo/stock?laboId=${laboId}&tab=ingredients`} className={`sidebar-link ${isLaboIngredients ? 'active' : ''}`} onClick={onClose}><span className="link-icon">🧂</span><span className="link-label">Ingrédients Stock</span></Link></li>
+            <li><Link to={`/client/labo/stock?laboId=${laboId}`} className={`sidebar-link ${isLaboStock ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📦</span><span className="link-label">Stock {laboLabel}</span></Link></li>
+            <li><Link to={`/client/labo/transfer?laboId=${laboId}`} className={`sidebar-link ${isLaboTransfer ? 'active' : ''}`} onClick={onClose}><span className="link-icon">↗</span><span className="link-label">Transferts {laboLabel}</span></Link></li>
+            <li><Link to={`/client/labo/historique-appro?laboId=${laboId}`} className={`sidebar-link ${isLaboHistoriqueAppro ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📋</span><span className="link-label">Historique Appro</span></Link></li>
+            <li><Link to={`/client/labo/historique-transferts?laboId=${laboId}`} className={`sidebar-link ${isLaboHistorique ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📋</span><span className="link-label">Historiques Transferts</span></Link></li>
+            <li><Link to={`/client/labo/inventaire?laboId=${laboId}`} className={`sidebar-link ${isLaboInventaire ? 'active' : ''}`} onClick={onClose}><span className="link-icon">🔢</span><span className="link-label">Inventaire</span></Link></li>
+            <li><Link to={`/client/labo/inventaire/historique?laboId=${laboId}`} className={`sidebar-link ${location.pathname === '/client/labo/inventaire/historique' && location.search.includes(laboParam) ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📊</span><span className="link-label">Historique Inventaire</span></Link></li>
+          </>
+        )}
+
+        {laboActivites.length > 0 && (
+          <>
+            <Divider />
+            <CollapsibleHeader label="Stocks Activités" icon="📍" isOpen={openSections.has('gerant-activites-stock')} locked={false} onToggle={() => toggleSection('gerant-activites-stock')} />
+            {openSections.has('gerant-activites-stock') && laboActivites.map(act => {
+              const section = act.type === 'franchise' ? 'franchise' : 'distinct';
+              const isActive = location.pathname === '/client/stock' && currentSection === section;
+              return (
+                <li key={act.id}>
+                  <Link to={`/client/stock?section=${section}`} className={`sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>
+                    <span className="link-icon">📦</span>
+                    <span className="link-label">{act.nom} <span style={{ fontSize: '0.7rem', opacity: 0.55 }}>(lecture)</span></span>
+                  </Link>
+                </li>
+              );
+            })}
+          </>
+        )}
+
+        {laboActivites.length > 0 && (
+          <>
+            <Divider />
+            <CollapsibleHeader label="Produits" icon="🍔" isOpen={openSections.has('gerant-produits')} locked={false} onToggle={() => toggleSection('gerant-produits')} />
+            {openSections.has('gerant-produits') && laboActivites.map(act => {
+              const actCtx = act.type === 'franchise' ? 'franchise' : 'distinct';
+              return (
+                <React.Fragment key={act.id}>
+                  <SubNavLink to={`/client/products?tab=vendable&actCtx=${actCtx}`} icon="🍔" label={`Vendables — ${act.nom}`} isActive={isProductsPage && currentProductTab === 'vendable' && currentActCtx === actCtx} onClick={onClose} />
+                  <SubNavLink to={`/client/products?tab=utilisable&actCtx=${actCtx}`} icon="🧪" label={`Utilisables — ${act.nom}`} isActive={isProductsPage && currentProductTab === 'utilisable' && currentActCtx === actCtx} onClick={onClose} />
+                </React.Fragment>
+              );
+            })}
+          </>
+        )}
+      </>
+    );
+  }
+
+  // Activité gérant (franchise or activite_distincte)
+  const activiteId = gerantActiviteId!;
+  const assignedActivite = gerantActivites.find(a => a.id === activiteId);
+  const activiteNom = assignedActivite?.nom || 'Activité';
+  const section = user.gerantActiviteType === 'franchise' ? 'franchise' : 'distinct';
+  const ingredientsPath = section === 'franchise' ? '/client/catalogue-franchise' : '/client/catalogue-distinct';
+  const actCtx = section;
+
+  return (
+    <>
+      <CollapsibleHeader label={`Espace ${activiteNom}`} icon="📍" isOpen={openSections.has('gerant-activite')} locked={false} onToggle={() => toggleSection('gerant-activite')} />
+      {openSections.has('gerant-activite') && (
+        <>
+          <li><NavLink to={ingredientsPath} className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}><span className="link-icon">🧂</span><span className="link-label">Ingrédients</span></NavLink></li>
+          <li><Link to={`/client/stock?section=${section}`} className={`sidebar-link ${location.pathname === '/client/stock' && currentSection === section ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📦</span><span className="link-label">Stock Activité</span></Link></li>
+          <li><Link to={`/client/stock/historique?type=${section}`} className={`sidebar-link ${isHistoriquePage && currentHistType === section ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📋</span><span className="link-label">Historique Appro</span></Link></li>
+          <li><Link to={`/client/stock/historique-pertes?type=${section}`} className={`sidebar-link ${isHistoriquepertesPage && currentHistType === section ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📉</span><span className="link-label">Historique Pertes</span></Link></li>
+          <li><Link to={`/client/inventaire?section=${section}`} className={`sidebar-link ${location.pathname === '/client/inventaire' && new URLSearchParams(location.search).get('section') === section ? 'active' : ''}`} onClick={onClose}><span className="link-icon">🔢</span><span className="link-label">Inventaire</span></Link></li>
+          <li><Link to={`/client/inventaire/historique?section=${section}`} className={`sidebar-link ${location.pathname === '/client/inventaire/historique' && new URLSearchParams(location.search).get('section') === section ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📊</span><span className="link-label">Historique Inventaire</span></Link></li>
+        </>
+      )}
+
+      <Divider />
+      <CollapsibleHeader label="Produits" icon="🍔" isOpen={openSections.has('gerant-produits')} locked={false} onToggle={() => toggleSection('gerant-produits')} />
+      {openSections.has('gerant-produits') && (
+        <>
+          <SubNavLink to={`/client/products?tab=vendable&actCtx=${actCtx}`} icon="🍔" label="Produits Vendables" isActive={isProductsPage && currentProductTab === 'vendable' && currentActCtx === actCtx} onClick={onClose} />
+          <SubNavLink to={`/client/products?tab=utilisable&actCtx=${actCtx}`} icon="🧪" label="Produits Utilisables" isActive={isProductsPage && currentProductTab === 'utilisable' && currentActCtx === actCtx} onClick={onClose} />
+        </>
+      )}
+    </>
+  );
+}
+
 export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const { t } = useTranslation();
   const { user } = useAuth();
@@ -211,9 +337,11 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const [indepHasFournisseurs, setIndepHasFournisseurs] = useState(true);
   const [indepHasAppros, setIndepHasAppros] = useState(true);
   const isAdmin = user?.role === 'super_admin';
+  const isGerant = user?.role === 'gerant';
   const [openSections, setOpenSections] = useState<Set<string>>(
     isAdmin ? new Set(['admin-general', 'admin-ref']) : new Set()
   );
+  const [gerantActivites, setGerantActivites] = useState<Activite[]>([]);
 
   const location = useLocation();
   const step = user?.onboardingStep ?? 0;
@@ -248,6 +376,18 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   });
 
   useEffect(() => {
+    if (isGerant) {
+      api.get('/api/entreprise/activites')
+        .then(({ data }) => setGerantActivites(data))
+        .catch(() => {});
+    }
+  }, [isGerant]);
+
+  useEffect(() => {
+    if (isGerant && isEntreprise) {
+      api.get('/api/labo').then(({ data }) => setLabos(data)).catch(() => setLabos([]));
+      return;
+    }
     if (isEntreprise && (step === 0 || step === 3)) {
       api.get('/api/entreprise/activites/types-summary')
         .then(({ data }) => setTypesSummary(data))
@@ -357,6 +497,23 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                 </>
               )}
             </>
+          ) : isGerant ? (
+            <GerantSidebarContent
+              user={user!}
+              labos={labos}
+              gerantActivites={gerantActivites}
+              location={location}
+              openSections={openSections}
+              toggleSection={toggleSection}
+              onClose={onClose}
+              isHistoriquePage={isHistoriquePage}
+              isHistoriquepertesPage={isHistoriquepertesPage}
+              isProductsPage={isProductsPage}
+              currentSection={currentSection}
+              currentHistType={currentHistType}
+              currentProductTab={currentProductTab}
+              currentActCtx={currentActCtx}
+            />
           ) : (
             <>
               {/* Rapports */}
