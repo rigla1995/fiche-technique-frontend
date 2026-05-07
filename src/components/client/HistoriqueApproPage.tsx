@@ -263,6 +263,9 @@ export default function HistoriqueApproPage() {
   const initIngredientId = searchParams.get('ingredientId') || '';
   const initActiviteId = searchParams.get('activiteId') || '';
   const lockedType = searchParams.get('type') as 'franchise' | 'distinct' | null;
+  const laboId = searchParams.get('laboId') || '';
+  const isGerant = user?.role === 'gerant';
+  const isReadOnly = isGerant && !!laboId;
 
   const [entType, setEntType] = useState<'franchise' | 'distinct'>(lockedType ?? 'franchise');
 
@@ -347,8 +350,9 @@ export default function HistoriqueApproPage() {
     api.get('/api/entreprise/activites')
       .then(({ data }) => {
         const all = data as Activite[];
-        const franchise = all.filter((a) => a.type === 'franchise');
-        const distinct = all.filter((a) => a.type === 'distincte' || a.type == null);
+        const filtered = laboId ? all.filter((a) => String((a as any).laboId) === laboId) : all;
+        const franchise = filtered.filter((a) => a.type === 'franchise');
+        const distinct = filtered.filter((a) => a.type === 'distincte' || a.type == null);
         setFranchiseActivities(franchise);
         setDistinctActivities(distinct);
         const groups = Array.from(new Set(franchise.map((a) => a.franchiseGroup || a.nom))).sort();
@@ -414,6 +418,7 @@ export default function HistoriqueApproPage() {
         } else {
           params.set('entType', entType);
         }
+        if (laboId) params.set('laboId', laboId);
       }
       if (selectedCategoryId === 'pt') {
         params.set('ptOnly', 'true');
@@ -861,20 +866,22 @@ export default function HistoriqueApproPage() {
                       <div style={{ color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.refFacture ?? '—'}</div>
                     </td>
                     <td style={{ whiteSpace: 'nowrap', textAlign: 'right' }}>
-                      <button
-                        className="btn btn-ghost btn-sm"
-                        onClick={() => setEditEntry(r)}
-                        title="Modifier"
-                        disabled={!canWrite}
-                        style={{ marginRight: 2, fontSize: '0.8rem', padding: '2px 6px', opacity: canWrite ? 1 : 0.4 }}
-                      >✏️</button>
-                      <button
-                        className="btn btn-ghost btn-sm"
-                        onClick={() => setDeleteEntry(r)}
-                        title="Supprimer"
-                        disabled={!canWrite}
-                        style={{ fontSize: '0.8rem', color: '#dc2626', padding: '2px 6px', opacity: canWrite ? 1 : 0.4 }}
-                      >🗑️</button>
+                      {!isReadOnly && (<>
+                        <button
+                          className="btn btn-ghost btn-sm"
+                          onClick={() => setEditEntry(r)}
+                          title="Modifier"
+                          disabled={!canWrite}
+                          style={{ marginRight: 2, fontSize: '0.8rem', padding: '2px 6px', opacity: canWrite ? 1 : 0.4 }}
+                        >✏️</button>
+                        <button
+                          className="btn btn-ghost btn-sm"
+                          onClick={() => setDeleteEntry(r)}
+                          title="Supprimer"
+                          disabled={!canWrite}
+                          style={{ fontSize: '0.8rem', color: '#dc2626', padding: '2px 6px', opacity: canWrite ? 1 : 0.4 }}
+                        >🗑️</button>
+                      </>)}
                     </td>
                   </tr>
                   );

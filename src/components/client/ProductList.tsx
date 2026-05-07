@@ -25,6 +25,7 @@ export default function ProductList() {
   const [searchParams, setSearchParams] = useSearchParams();
   const tab = (searchParams.get('tab') as TabType) || 'vendable';
   const actCtx = searchParams.get('actCtx') || '';
+  const laboId = searchParams.get('laboId') || '';
 
   const isFranchiseCtx = actCtx === 'franchise';
   const isDistinctCtx = actCtx === 'distinct' || actCtx.startsWith('distinct-');
@@ -85,12 +86,13 @@ export default function ProductList() {
     } else if (isDistinctCtx) {
       params.set('activiteType', 'distincte');
     }
+    if (laboId) params.set('laboId', laboId);
     const qs = params.toString();
     api.get(`/products${qs ? `?${qs}` : ''}`)
       .then(({ data }) => setProducts(data as Product[]))
       .finally(() => setLoading(false));
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isEntreprise, isFranchiseCtx, isDistinctCtx, filterFranchiseGroup, filterFranchiseActId]);
+  }, [isEntreprise, isFranchiseCtx, isDistinctCtx, filterFranchiseGroup, filterFranchiseActId, laboId]);
 
   // Open all accordion groups when products load
   useEffect(() => {

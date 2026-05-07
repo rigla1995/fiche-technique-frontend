@@ -282,38 +282,33 @@ function GerantSidebarContent({
           </>
         )}
 
-        {laboActivites.length > 0 && (
+        <Divider />
+        <CollapsibleHeader label="Approvisionnements Activités" icon="📋" isOpen={openSections.has('gerant-appros')} locked={false} onToggle={() => toggleSection('gerant-appros')} />
+        {openSections.has('gerant-appros') && (
           <>
-            <Divider />
-            <CollapsibleHeader label="Stocks Activités" icon="📍" isOpen={openSections.has('gerant-activites-stock')} locked={false} onToggle={() => toggleSection('gerant-activites-stock')} />
-            {openSections.has('gerant-activites-stock') && laboActivites.map(act => {
-              const section = act.type === 'franchise' ? 'franchise' : 'distinct';
-              const isActive = location.pathname === '/client/stock' && currentSection === section;
-              return (
-                <li key={act.id}>
-                  <Link to={`/client/stock?section=${section}`} className={`sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>
-                    <span className="link-icon">📦</span>
-                    <span className="link-label">{act.nom} <span style={{ fontSize: '0.7rem', opacity: 0.55 }}>(lecture)</span></span>
-                  </Link>
-                </li>
-              );
-            })}
+            <li>
+              <Link to={`/client/stock/historique?type=franchise&laboId=${laboId}`} className={`sidebar-link ${isHistoriquePage && currentHistType === 'franchise' ? 'active' : ''}`} onClick={onClose}>
+                <span className="link-icon">🔗</span>
+                <span className="link-label">Franchises</span>
+              </Link>
+            </li>
+            <li>
+              <Link to={`/client/stock/historique?type=distinct&laboId=${laboId}`} className={`sidebar-link ${isHistoriquePage && currentHistType === 'distinct' ? 'active' : ''}`} onClick={onClose}>
+                <span className="link-icon">📍</span>
+                <span className="link-label">Distinctes</span>
+              </Link>
+            </li>
           </>
         )}
 
-        {laboActivites.length > 0 && (
+        <Divider />
+        <CollapsibleHeader label="Produits" icon="🍔" isOpen={openSections.has('gerant-produits')} locked={false} onToggle={() => toggleSection('gerant-produits')} />
+        {openSections.has('gerant-produits') && (
           <>
-            <Divider />
-            <CollapsibleHeader label="Produits" icon="🍔" isOpen={openSections.has('gerant-produits')} locked={false} onToggle={() => toggleSection('gerant-produits')} />
-            {openSections.has('gerant-produits') && laboActivites.map(act => {
-              const actCtx = act.type === 'franchise' ? 'franchise' : 'distinct';
-              return (
-                <React.Fragment key={act.id}>
-                  <SubNavLink to={`/client/products?tab=vendable&actCtx=${actCtx}`} icon="🍔" label={`Vendables — ${act.nom}`} isActive={isProductsPage && currentProductTab === 'vendable' && currentActCtx === actCtx} onClick={onClose} />
-                  <SubNavLink to={`/client/products?tab=utilisable&actCtx=${actCtx}`} icon="🧪" label={`Utilisables — ${act.nom}`} isActive={isProductsPage && currentProductTab === 'utilisable' && currentActCtx === actCtx} onClick={onClose} />
-                </React.Fragment>
-              );
-            })}
+            <SubNavLink to={`/client/products?tab=vendable&actCtx=franchise&laboId=${laboId}`} icon="🍔" label="Vendables Franchises" isActive={isProductsPage && currentProductTab === 'vendable' && currentActCtx === 'franchise'} onClick={onClose} />
+            <SubNavLink to={`/client/products?tab=utilisable&actCtx=franchise&laboId=${laboId}`} icon="🧪" label="Utilisables Franchises" isActive={isProductsPage && currentProductTab === 'utilisable' && currentActCtx === 'franchise'} onClick={onClose} />
+            <SubNavLink to={`/client/products?tab=vendable&actCtx=distinct&laboId=${laboId}`} icon="🍔" label="Vendables Distinctes" isActive={isProductsPage && currentProductTab === 'vendable' && currentActCtx === 'distinct'} onClick={onClose} />
+            <SubNavLink to={`/client/products?tab=utilisable&actCtx=distinct&laboId=${laboId}`} icon="🧪" label="Utilisables Distinctes" isActive={isProductsPage && currentProductTab === 'utilisable' && currentActCtx === 'distinct'} onClick={onClose} />
           </>
         )}
       </>
