@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import api from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
-import type { Fournisseur, Activite, Labo } from '../../types';
+import type { Fournisseur, FournisseurApproActivite, Activite, Labo } from '../../types';
 
 interface FournisseurFormData {
   nom: string;
@@ -247,6 +247,7 @@ export default function FournisseursPage() {
                       <th style={{ fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px', color: '#fff' }}>Labos liés</th>
                     </>
                   )}
+                  <th style={{ fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px', color: '#fff', textAlign: 'center' }}>Appros</th>
                   <th style={{ fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px', color: '#fff' }}></th>
                 </tr>
               </thead>
@@ -283,6 +284,35 @@ export default function FournisseursPage() {
                         </td>
                       </>
                     )}
+                    <td style={{ textAlign: 'center', padding: '10px 14px', verticalAlign: 'middle' }}>
+                      {(f.approCount ?? 0) === 0 ? (
+                        <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>—</span>
+                      ) : (
+                        <div>
+                          <span style={{
+                            display: 'inline-block', background: '#fff7ed', color: '#c2410c',
+                            border: '1px solid #fed7aa', borderRadius: 20,
+                            padding: '2px 10px', fontSize: '0.82rem', fontWeight: 800,
+                          }}>
+                            {f.approCount}
+                          </span>
+                          {!isIndep && (f.approByActivite ?? []).length > 0 && (
+                            <div style={{ marginTop: 5, display: 'flex', flexWrap: 'wrap', gap: 4, justifyContent: 'center' }}>
+                              {(f.approByActivite as FournisseurApproActivite[]).map((a) => (
+                                <span key={a.activiteId} style={{
+                                  display: 'inline-flex', alignItems: 'center', gap: 4,
+                                  background: '#eff6ff', color: '#1d4ed8',
+                                  border: '1px solid #bfdbfe', borderRadius: 12,
+                                  padding: '1px 7px', fontSize: '0.72rem', fontWeight: 700,
+                                }}>
+                                  {a.nom} <span style={{ fontWeight: 900 }}>{a.count}</span>
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </td>
                     <td style={{ whiteSpace: 'nowrap', padding: '10px 14px' }}>
                       <button
                         onClick={() => openEdit(f)}
@@ -307,7 +337,7 @@ export default function FournisseursPage() {
                 ))}
                 {filteredFournisseurs.length === 0 && (
                   <tr>
-                    <td colSpan={isIndep ? 4 : 6} style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '32px 24px' }}>
+                    <td colSpan={isIndep ? 5 : 7} style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '32px 24px' }}>
                       <div style={{ fontSize: '2rem', marginBottom: 8 }}>🔍</div>
                       <div>{search ? 'Aucun résultat.' : 'Aucun fournisseur. Cliquez sur "+ Nouveau fournisseur".'}</div>
                     </td>

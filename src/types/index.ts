@@ -274,6 +274,12 @@ export interface HistoriqueApproEntry {
   refFacture: string | null;
 }
 
+export interface FournisseurApproActivite {
+  activiteId: number;
+  nom: string;
+  count: number;
+}
+
 export interface Fournisseur {
   id: number;
   nom: string;
@@ -284,6 +290,8 @@ export interface Fournisseur {
   laboIds: number[];
   createdAt?: string;
   hasAppros?: boolean;
+  approCount?: number;
+  approByActivite?: FournisseurApproActivite[];
 }
 
 export interface LaboStockRow {
