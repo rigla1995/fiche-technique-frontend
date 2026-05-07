@@ -272,6 +272,7 @@ export interface HistoriqueApproEntry {
   fournisseurId?: number | null;
   fournisseurNom: string | null;
   refFacture: string | null;
+  createdBy?: number | null;
 }
 
 export interface FournisseurApproActivite {
@@ -346,6 +347,7 @@ export interface HistoriquePerteEntry {
   typePerte: 'avarie' | 'dechet';
   datePerte: string;
   createdAt: string;
+  createdBy?: number | null;
 }
 
 export interface ProduitTransformeStockEntry {

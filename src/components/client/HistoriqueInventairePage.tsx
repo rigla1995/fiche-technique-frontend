@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import api from '../../api/client';
+import { useAuth } from '../../context/AuthContext';
 
 const currentYear = new Date().getFullYear();
 const fmtDate = (iso: string | null | undefined) => {
@@ -21,6 +22,7 @@ interface HistEntry {
   categorie: string;
   laboNom?: string;
   activiteNom?: string;
+  createdBy?: number | null;
 }
 
 interface IngOption { ingredientId: number; nom: string; categorie: string }
@@ -32,6 +34,8 @@ const labelStyle: React.CSSProperties = {
 };
 
 export default function HistoriqueInventairePage() {
+  const { user, canWrite } = useAuth();
+  const isGerant = user?.role === 'gerant';
   const [searchParams] = useSearchParams();
   const laboId = searchParams.get('laboId');
   const activiteId = searchParams.get('activiteId');
@@ -370,15 +374,17 @@ export default function HistoriqueInventairePage() {
                             : <span style={{ color: '#cbd5e1' }}>—</span>}
                         </td>
                         <td style={{ padding: '10px 14px', textAlign: 'center' }}>
-                          <button onClick={() => { setEditEntry(r); setEditQty(String(r.quantiteReelle)); setEditNote(r.note || ''); }}
-                            style={{
-                              padding: '5px 14px', borderRadius: 8,
-                              border: '1.5px solid #0f766e', background: '#f0fdfa',
-                              cursor: 'pointer', fontSize: '0.8rem', fontWeight: 700, color: '#0f766e',
-                              transition: 'all 0.15s',
-                            }}>
-                            ✏️ Modifier
-                          </button>
+                          {canWrite && (!isGerant || r.createdBy === user?.id) && (
+                            <button onClick={() => { setEditEntry(r); setEditQty(String(r.quantiteReelle)); setEditNote(r.note || ''); }}
+                              style={{
+                                padding: '5px 14px', borderRadius: 8,
+                                border: '1.5px solid #0f766e', background: '#f0fdfa',
+                                cursor: 'pointer', fontSize: '0.8rem', fontWeight: 700, color: '#0f766e',
+                                transition: 'all 0.15s',
+                              }}>
+                              ✏️ Modifier
+                            </button>
+                          )}
                         </td>
                       </tr>
                     );

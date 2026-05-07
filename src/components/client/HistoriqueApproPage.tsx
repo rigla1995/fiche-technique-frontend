@@ -867,7 +867,7 @@ export default function HistoriqueApproPage() {
                       <div style={{ color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.refFacture ?? '—'}</div>
                     </td>
                     <td style={{ whiteSpace: 'nowrap', textAlign: 'right' }}>
-                      {!isReadOnly && (<>
+                      {!isReadOnly && (!isGerant || r.createdBy === user?.id) && (<>
                         <button
                           className="btn btn-ghost btn-sm"
                           onClick={() => setEditEntry(r)}

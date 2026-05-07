@@ -480,18 +480,20 @@ export default function HistoriquepertesPage() {
                     </td>
                     {canWrite && (
                       <td style={{ textAlign: 'center', whiteSpace: 'nowrap' }} onClick={(e) => e.stopPropagation()}>
-                        <button
-                          className="btn btn-ghost btn-sm"
-                          style={{ marginRight: 4, fontSize: '0.85rem' }}
-                          onClick={() => setEditModal(entry)}
-                          title="Modifier"
-                        >✏️</button>
-                        <button
-                          className="btn btn-ghost btn-sm"
-                          style={{ fontSize: '0.85rem', color: '#b91c1c' }}
-                          onClick={() => setDeleteModal(entry)}
-                          title="Supprimer"
-                        >🗑️</button>
+                        {(!isGerant || entry.createdBy === user?.id) && (<>
+                          <button
+                            className="btn btn-ghost btn-sm"
+                            style={{ marginRight: 4, fontSize: '0.85rem' }}
+                            onClick={() => setEditModal(entry)}
+                            title="Modifier"
+                          >✏️</button>
+                          <button
+                            className="btn btn-ghost btn-sm"
+                            style={{ fontSize: '0.85rem', color: '#b91c1c' }}
+                            onClick={() => setDeleteModal(entry)}
+                            title="Supprimer"
+                          >🗑️</button>
+                        </>)}
                       </td>
                     )}
                   </tr>

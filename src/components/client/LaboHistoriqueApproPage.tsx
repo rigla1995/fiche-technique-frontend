@@ -28,6 +28,7 @@ interface HistEntry {
   refFacture: string | null;
   fournisseurId: number | null;
   fournisseurNom: string | null;
+  createdBy?: number | null;
 }
 
 interface LaboFournisseur { id: number; nom: string; telephone: string | null }
@@ -208,7 +209,8 @@ function DeleteModal({
 
 // ── Main page ──────────────────────────────────────────────────────────────────
 export default function LaboHistoriqueApproPage() {
-  const { canWrite } = useAuth();
+  const { canWrite, user } = useAuth();
+  const isGerant = user?.role === 'gerant';
   const [searchParams] = useSearchParams();
   const laboId = searchParams.get('laboId');
 
@@ -579,20 +581,22 @@ export default function LaboHistoriqueApproPage() {
                       <div style={{ color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.refFacture ?? '—'}</div>
                     </td>
                     <td style={{ whiteSpace: 'nowrap', textAlign: 'right' }}>
-                      <button
-                        className="btn btn-ghost btn-sm"
-                        onClick={() => setEditEntry(r)}
-                        title="Modifier"
-                        disabled={!canWrite}
-                        style={{ marginRight: 2, fontSize: '0.8rem', padding: '2px 6px', opacity: canWrite ? 1 : 0.4 }}
-                      >✏️</button>
-                      <button
-                        className="btn btn-ghost btn-sm"
-                        onClick={() => setDeleteEntry(r)}
-                        title="Supprimer"
-                        disabled={!canWrite}
-                        style={{ fontSize: '0.8rem', color: '#dc2626', padding: '2px 6px', opacity: canWrite ? 1 : 0.4 }}
-                      >🗑️</button>
+                      {(!isGerant || r.createdBy === user?.id) && (<>
+                        <button
+                          className="btn btn-ghost btn-sm"
+                          onClick={() => setEditEntry(r)}
+                          title="Modifier"
+                          disabled={!canWrite}
+                          style={{ marginRight: 2, fontSize: '0.8rem', padding: '2px 6px', opacity: canWrite ? 1 : 0.4 }}
+                        >✏️</button>
+                        <button
+                          className="btn btn-ghost btn-sm"
+                          onClick={() => setDeleteEntry(r)}
+                          title="Supprimer"
+                          disabled={!canWrite}
+                          style={{ fontSize: '0.8rem', color: '#dc2626', padding: '2px 6px', opacity: canWrite ? 1 : 0.4 }}
+                        >🗑️</button>
+                      </>)}
                     </td>
                   </tr>
                   );
