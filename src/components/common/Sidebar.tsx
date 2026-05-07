@@ -304,12 +304,7 @@ function GerantSidebarContent({
         <Divider />
         <CollapsibleHeader label="Produits" icon="🍔" isOpen={openSections.has('gerant-produits')} locked={false} onToggle={() => toggleSection('gerant-produits')} />
         {openSections.has('gerant-produits') && (
-          <>
-            <SubNavLink to={`/client/products?tab=vendable&actCtx=franchise&laboId=${laboId}`} icon="🍔" label="Vendables Franchises" isActive={isProductsPage && currentProductTab === 'vendable' && currentActCtx === 'franchise'} onClick={onClose} />
-            <SubNavLink to={`/client/products?tab=utilisable&actCtx=franchise&laboId=${laboId}`} icon="🧪" label="Utilisables Franchises" isActive={isProductsPage && currentProductTab === 'utilisable' && currentActCtx === 'franchise'} onClick={onClose} />
-            <SubNavLink to={`/client/products?tab=vendable&actCtx=distinct&laboId=${laboId}`} icon="🍔" label="Vendables Distinctes" isActive={isProductsPage && currentProductTab === 'vendable' && currentActCtx === 'distinct'} onClick={onClose} />
-            <SubNavLink to={`/client/products?tab=utilisable&actCtx=distinct&laboId=${laboId}`} icon="🧪" label="Utilisables Distinctes" isActive={isProductsPage && currentProductTab === 'utilisable' && currentActCtx === 'distinct'} onClick={onClose} />
-          </>
+          <SubNavLink to={`/client/products?tab=utilisable&laboId=${laboId}`} icon="🧪" label="Produits Utilisables (PT)" isActive={isProductsPage && currentProductTab === 'utilisable'} onClick={onClose} />
         )}
       </>
     );
@@ -341,8 +336,8 @@ function GerantSidebarContent({
       <CollapsibleHeader label="Produits" icon="🍔" isOpen={openSections.has('gerant-produits')} locked={false} onToggle={() => toggleSection('gerant-produits')} />
       {openSections.has('gerant-produits') && (
         <>
-          <SubNavLink to={`/client/products?tab=vendable&actCtx=${actCtx}`} icon="🍔" label="Produits Vendables" isActive={isProductsPage && currentProductTab === 'vendable' && currentActCtx === actCtx} onClick={onClose} />
-          <SubNavLink to={`/client/products?tab=utilisable&actCtx=${actCtx}`} icon="🧪" label="Produits Utilisables" isActive={isProductsPage && currentProductTab === 'utilisable' && currentActCtx === actCtx} onClick={onClose} />
+          <SubNavLink to="/client/products?tab=vendable" icon="🍔" label="Produits Vendables" isActive={isProductsPage && currentProductTab === 'vendable'} onClick={onClose} />
+          <SubNavLink to="/client/products?tab=utilisable" icon="🧪" label="Produits Utilisables" isActive={isProductsPage && currentProductTab === 'utilisable'} onClick={onClose} />
         </>
       )}
     </>
