@@ -32,6 +32,7 @@ export default function FournisseursPage() {
   const [error, setError] = useState('');
   const [foPage, setFoPage] = useState(1);
   const [search, setSearch] = useState('');
+  const [deleteConfirm, setDeleteConfirm] = useState<Fournisseur | null>(null);
 
   const FOURN_PAGE_SIZE = 10;
 
@@ -103,10 +104,10 @@ export default function FournisseursPage() {
   };
 
   const handleDelete = async (f: Fournisseur) => {
-    if (!window.confirm(`Supprimer "${f.nom}" ?`)) return;
     try {
       const base = isIndep ? '/api/fournisseurs' : '/api/entreprise/fournisseurs';
       await api.delete(`${base}/${f.id}`);
+      setDeleteConfirm(null);
       load();
     } catch { /* ignore */ }
   };
@@ -291,14 +292,16 @@ export default function FournisseursPage() {
                           color: '#ea580c', fontWeight: 700,
                         }}
                       >✏️</button>
-                      <button
-                        onClick={() => handleDelete(f)}
-                        style={{
-                          background: 'rgba(220,38,38,0.07)', border: '1px solid rgba(220,38,38,0.18)',
-                          borderRadius: 7, padding: '5px 10px', cursor: 'pointer', fontSize: '0.85rem',
-                          color: 'var(--danger)', fontWeight: 700,
-                        }}
-                      >🗑️</button>
+                      {!f.hasAppros && (
+                        <button
+                          onClick={() => setDeleteConfirm(f)}
+                          style={{
+                            background: 'rgba(220,38,38,0.07)', border: '1px solid rgba(220,38,38,0.18)',
+                            borderRadius: 7, padding: '5px 10px', cursor: 'pointer', fontSize: '0.85rem',
+                            color: 'var(--danger)', fontWeight: 700,
+                          }}
+                        >🗑️</button>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -324,6 +327,34 @@ export default function FournisseursPage() {
             )}
           </div>
         </>
+      )}
+
+      {deleteConfirm && (
+        <div className="modal-overlay" onClick={() => setDeleteConfirm(null)}>
+          <div className="modal" style={{ maxWidth: 420 }} onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header" style={{ background: 'linear-gradient(135deg, #b91c1c, #dc2626)', borderRadius: '12px 12px 0 0', padding: '18px 22px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <h2 style={{ color: '#fff', margin: 0, fontSize: '1rem', fontWeight: 800 }}>⚠️ Confirmer la suppression</h2>
+              <button onClick={() => setDeleteConfirm(null)} style={{ background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: 8, color: '#fff', fontWeight: 900, fontSize: '1.1rem', cursor: 'pointer', padding: '2px 9px', lineHeight: 1 }}>×</button>
+            </div>
+            <div className="modal-body">
+              <p style={{ margin: 0, fontSize: '0.95rem' }}>
+                Voulez-vous vraiment supprimer le fournisseur <strong>"{deleteConfirm.nom}"</strong> ?
+              </p>
+              <p style={{ margin: '10px 0 0', fontSize: '0.83rem', color: 'var(--text-muted)' }}>
+                Cette action est irréversible.
+              </p>
+            </div>
+            <div className="modal-footer" style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, padding: '14px 22px', borderTop: '1px solid var(--border)' }}>
+              <button className="btn btn-ghost" onClick={() => setDeleteConfirm(null)}>Annuler</button>
+              <button
+                onClick={() => handleDelete(deleteConfirm)}
+                style={{ background: 'linear-gradient(135deg, #b91c1c, #dc2626)', border: 'none', borderRadius: 10, color: '#fff', fontWeight: 800, padding: '10px 22px', cursor: 'pointer' }}
+              >
+                Supprimer
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {modal && (

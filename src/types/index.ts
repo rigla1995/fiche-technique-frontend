@@ -283,6 +283,7 @@ export interface Fournisseur {
   activiteIds: number[];
   laboIds: number[];
   createdAt?: string;
+  hasAppros?: boolean;
 }
 
 export interface LaboStockRow {
