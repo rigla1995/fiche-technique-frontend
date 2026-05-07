@@ -45,6 +45,8 @@ export default function ProductList() {
   const [page, setPage] = useState(1);
   const [togglingPT, setTogglingPT] = useState<number | null>(null);
   const [ptDeselectModal, setPtDeselectModal] = useState<{ id: number; nom: string; historyCount: number } | null>(null);
+  const [deleteModal, setDeleteModal] = useState<{ product: Product; historyCount?: number } | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const [openProductGroups, setOpenProductGroups] = useState<Set<string>>(new Set());
 
@@ -121,15 +123,39 @@ export default function ProductList() {
 
   const closePopup = () => { setPopup(null); setDetail(null); };
 
-  const handleDelete = async (id: number) => {
-    if (!window.confirm(t('client.products.delete_confirm'))) return;
-    await api.delete(`/products/${id}`);
-    setProducts((p) => p.filter((x) => x.id !== id));
+  const handleDelete = async (product: Product) => {
+    if (product.type === 'utilisable' && product.isStockIngredient) {
+      // PT: pre-fetch history count to show cascade impact
+      setTogglingPT(product.id);
+      let histCount = 0;
+      try {
+        const { data: hist } = await api.get(`/api/stock/pt/${product.id}/history`);
+        histCount = Array.isArray(hist) ? hist.length : 0;
+      } catch { /* ignore */ }
+      setTogglingPT(null);
+      setDeleteModal({ product, historyCount: histCount });
+    } else {
+      setDeleteModal({ product });
+    }
+  };
+
+  const doDelete = async () => {
+    if (!deleteModal) return;
+    const { product } = deleteModal;
+    setDeleting(true);
+    try {
+      if (product.type === 'utilisable' && product.isStockIngredient) {
+        await api.delete(`/api/produits/${product.id}/stock-pt-history`);
+      }
+      await api.delete(`/products/${product.id}`);
+      setProducts((p) => p.filter((x) => x.id !== product.id));
+      setDeleteModal(null);
+    } catch { /* ignore */ }
+    setDeleting(false);
   };
 
   const togglePT = async (p: Product) => {
     if (p.isStockIngredient) {
-      // Always show confirmation when removing from stock; pre-fetch history count
       setTogglingPT(p.id);
       let histCount = 0;
       try {
@@ -137,8 +163,11 @@ export default function ProductList() {
         histCount = Array.isArray(hist) ? hist.length : 0;
       } catch { /* ignore */ }
       setTogglingPT(null);
-      setPtDeselectModal({ id: p.id, nom: p.name, historyCount: histCount });
-      return;
+      // Only show modal if there's history to warn about; otherwise act silently
+      if (histCount > 0) {
+        setPtDeselectModal({ id: p.id, nom: p.name, historyCount: histCount });
+        return;
+      }
     }
     await doTogglePT(p.id);
   };
@@ -285,7 +314,7 @@ export default function ProductList() {
       }
       <button
         className="btn btn-danger btn-sm"
-        onClick={() => handleDelete(p.id)}
+        onClick={() => handleDelete(p)}
         disabled={!canWrite}
         title={t('common.delete')}
         style={{ width: 32, height: 32, padding: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', borderRadius: 7, ...disabledStyle }}
@@ -841,6 +870,59 @@ export default function ProductList() {
               </div>
             </div>
           )}
+
+          {deleteModal && (() => {
+            const { product, historyCount } = deleteModal;
+            const isCascade = product.type === 'utilisable' && product.isStockIngredient;
+            return (
+              <div className="modal-overlay" onClick={() => setDeleteModal(null)}>
+                <div className="modal" style={{ maxWidth: 460 }} onClick={(e) => e.stopPropagation()}>
+                  <div className="modal-header" style={{ background: isCascade ? 'linear-gradient(135deg, #7c2d12, #dc2626)' : 'linear-gradient(135deg, #b91c1c, #dc2626)', borderRadius: '12px 12px 0 0', padding: '18px 22px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <h2 style={{ color: '#fff', margin: 0, fontSize: '1rem', fontWeight: 800 }}>
+                      {isCascade ? '⚠️ Suppression avec cascade' : '🗑️ Supprimer le produit'}
+                    </h2>
+                    <button onClick={() => setDeleteModal(null)} style={{ background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: 8, color: '#fff', fontWeight: 900, fontSize: '1.1rem', cursor: 'pointer', padding: '2px 9px', lineHeight: 1 }}>×</button>
+                  </div>
+                  <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    <div style={{ background: '#f8faff', borderRadius: 8, padding: '12px 14px', border: '1px solid #e2e8f0' }}>
+                      <div style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Produit</div>
+                      <div style={{ fontWeight: 700, fontSize: '0.95rem' }}>{product.name}</div>
+                      <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: 2 }}>
+                        {product.type === 'vendable' ? '🛒 Vendable' : product.isStockIngredient ? '🔄 Utilisable — Produit transformé' : '🧂 Utilisable'}
+                      </div>
+                    </div>
+                    {isCascade ? (
+                      <div style={{ background: '#fff1f2', border: '1px solid #fecdd3', borderRadius: 8, padding: '12px 14px' }}>
+                        <div style={{ fontWeight: 800, color: '#b91c1c', fontSize: '0.88rem', marginBottom: 6 }}>
+                          ⚠️ Cette suppression entraîne des effets en cascade :
+                        </div>
+                        <ul style={{ margin: 0, paddingLeft: 18, fontSize: '0.83rem', color: '#7f1d1d', lineHeight: 1.7 }}>
+                          {(historyCount ?? 0) > 0 && (
+                            <li><strong>{historyCount}</strong> entrée{(historyCount ?? 0) > 1 ? 's' : ''} d'approvisionnement supprimée{(historyCount ?? 0) > 1 ? 's' : ''}</li>
+                          )}
+                          <li>Retrait du stock et recalcul des quantités</li>
+                          <li>Suppression des inventaires associés</li>
+                        </ul>
+                      </div>
+                    ) : null}
+                    <div style={{ background: '#fff7ed', border: '1px solid #fbd38d', borderRadius: 8, padding: '8px 12px', fontSize: '0.82rem', color: '#92400e', fontWeight: 600 }}>
+                      🔒 Action irréversible — cette suppression ne peut pas être annulée.
+                    </div>
+                  </div>
+                  <div className="modal-footer" style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, padding: '14px 22px', borderTop: '1px solid var(--border)' }}>
+                    <button className="btn btn-ghost" onClick={() => setDeleteModal(null)} disabled={deleting}>Annuler</button>
+                    <button
+                      onClick={doDelete}
+                      disabled={deleting}
+                      style={{ background: 'linear-gradient(135deg, #b91c1c, #dc2626)', border: 'none', borderRadius: 10, color: '#fff', fontWeight: 800, padding: '10px 22px', cursor: deleting ? 'not-allowed' : 'pointer', opacity: deleting ? 0.7 : 1 }}
+                    >
+                      {deleting ? '…' : 'Supprimer définitivement'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
 
           {ptDeselectModal && (
             <div className="modal-overlay" onClick={() => setPtDeselectModal(null)}>

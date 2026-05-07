@@ -315,40 +315,36 @@ export default function GlobalCataloguePage() {
 
   useEffect(() => { load(); }, [load]);
 
-  const [deselectModal, setDeselectModal] = useState<{ ingId: number; ingName: string; historyCount: number; actId?: number | null } | null>(null);
+  const [deselectModal, setDeselectModal] = useState<{ ingId: number; ingName: string; approCount: number; inventaireCount: number; actId?: number | null } | null>(null);
 
   const toggle = async (ingId: number) => {
     const ing = ingredients.find((i) => i.id === ingId);
     if (!ing) return;
 
     if (ing.selected) {
-      // Pre-check history before deselecting
       setToggling(ingId);
       try {
         if (!isEntreprise) {
-          const { data: hist } = await api.get(`/api/stock/client/${ingId}/history`);
+          const { data } = await api.get(`/api/stock/client/${ingId}/cascade-info`);
           setToggling(null);
-          if (hist.length > 0) {
-            setDeselectModal({ ingId, ingName: ing.nom, historyCount: hist.length });
-            return;
-          }
+          setDeselectModal({ ingId, ingName: ing.nom, approCount: data.approCount ?? 0, inventaireCount: data.inventaireCount ?? 0 });
+          return;
         } else if (activeType !== 'franchise' || !groupLabo) {
           const actId = activeType === 'franchise' ? selectedFranchiseActId : selectedActId;
           if (actId) {
-            const { data: hist } = await api.get(`/api/stock/entreprise/${actId}/${ingId}/history`);
+            const { data } = await api.get(`/api/stock/entreprise/${actId}/${ingId}/cascade-info`);
             setToggling(null);
-            if (hist.length > 0) {
-              setDeselectModal({ ingId, ingName: ing.nom, historyCount: hist.length, actId });
-              return;
-            }
-          } else {
-            setToggling(null);
+            setDeselectModal({ ingId, ingName: ing.nom, approCount: data.approCount ?? 0, inventaireCount: data.inventaireCount ?? 0, actId });
+            return;
           }
+          setToggling(null);
         } else {
           setToggling(null);
         }
       } catch {
         setToggling(null);
+        setDeselectModal({ ingId, ingName: ing.nom, approCount: 0, inventaireCount: 0 });
+        return;
       }
     }
 
@@ -521,39 +517,58 @@ export default function GlobalCataloguePage() {
         </div>
       )}
 
-      {deselectModal && (
-        <div className="modal-overlay" onClick={() => setDeselectModal(null)}>
-          <div className="modal" style={{ maxWidth: 440 }} onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header" style={{ background: '#fff7ed', borderBottom: '1px solid #fbd38d' }}>
-              <h2 style={{ color: '#c05621' }}>⚠️ Désassigner l'ingrédient</h2>
-              <button className="modal-close" onClick={() => setDeselectModal(null)}>×</button>
-            </div>
-            <div className="modal-body">
-              <p style={{ marginBottom: 12 }}>
-                <strong>"{deselectModal.ingName}"</strong> possède{' '}
-                <strong>{deselectModal.historyCount}</strong> entrée{deselectModal.historyCount > 1 ? 's' : ''} d'approvisionnement enregistrée{deselectModal.historyCount > 1 ? 's' : ''}.
-              </p>
-              <p style={{ color: 'var(--danger)', fontSize: '0.88rem' }}>
-                En confirmant, l'ingrédient sera désassigné <strong>et tout son historique d'appros sera supprimé définitivement</strong>.
-              </p>
-            </div>
-            <div className="modal-footer">
-              <button className="btn btn-ghost" onClick={() => setDeselectModal(null)}>Annuler</button>
-              <button
-                className="btn btn-danger"
-                style={{ background: 'var(--danger)', color: '#fff', border: 'none' }}
-                onClick={async () => {
-                  const m = deselectModal;
-                  setDeselectModal(null);
-                  await doToggle(m.ingId, true);
-                }}
-              >
-                Désassigner et supprimer
-              </button>
+      {deselectModal && (() => {
+        const hasCascade = deselectModal.approCount > 0 || deselectModal.inventaireCount > 0;
+        return (
+          <div className="modal-overlay" onClick={() => setDeselectModal(null)}>
+            <div className="modal" style={{ maxWidth: 460 }} onClick={(e) => e.stopPropagation()}>
+              <div className="modal-header" style={{ background: hasCascade ? 'linear-gradient(135deg, #7c2d12, #dc2626)' : 'linear-gradient(135deg, #b91c1c, #dc2626)', borderRadius: '12px 12px 0 0', padding: '18px 22px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <h2 style={{ color: '#fff', margin: 0, fontSize: '1rem', fontWeight: 800 }}>
+                  {hasCascade ? '⚠️ Désassignation avec cascade' : '⚠️ Désassigner l\'ingrédient'}
+                </h2>
+                <button onClick={() => setDeselectModal(null)} style={{ background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: 8, color: '#fff', fontWeight: 900, fontSize: '1.1rem', cursor: 'pointer', padding: '2px 9px', lineHeight: 1 }}>×</button>
+              </div>
+              <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <div style={{ background: '#f8faff', borderRadius: 8, padding: '12px 14px', border: '1px solid #e2e8f0' }}>
+                  <div style={{ fontWeight: 700, fontSize: '0.95rem' }}>{deselectModal.ingName}</div>
+                </div>
+                {hasCascade ? (
+                  <div style={{ background: '#fff1f2', border: '1px solid #fecdd3', borderRadius: 8, padding: '12px 14px' }}>
+                    <div style={{ fontWeight: 800, color: '#b91c1c', fontSize: '0.88rem', marginBottom: 6 }}>
+                      ⚠️ Cette désassignation entraîne des effets en cascade :
+                    </div>
+                    <ul style={{ margin: 0, paddingLeft: 18, fontSize: '0.83rem', color: '#7f1d1d', lineHeight: 1.7 }}>
+                      {deselectModal.approCount > 0 && (
+                        <li><strong>{deselectModal.approCount}</strong> approvisionnement{deselectModal.approCount > 1 ? 's' : ''} supprimé{deselectModal.approCount > 1 ? 's' : ''}</li>
+                      )}
+                      {deselectModal.inventaireCount > 0 && (
+                        <li><strong>{deselectModal.inventaireCount}</strong> inventaire{deselectModal.inventaireCount > 1 ? 's' : ''} supprimé{deselectModal.inventaireCount > 1 ? 's' : ''}</li>
+                      )}
+                      <li>Recalcul du stock de l'activité</li>
+                    </ul>
+                  </div>
+                ) : null}
+                <div style={{ background: '#fff7ed', border: '1px solid #fbd38d', borderRadius: 8, padding: '8px 12px', fontSize: '0.82rem', color: '#92400e', fontWeight: 600 }}>
+                  🔒 Action irréversible — cette suppression ne peut pas être annulée.
+                </div>
+              </div>
+              <div className="modal-footer" style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, padding: '14px 22px', borderTop: '1px solid var(--border)' }}>
+                <button className="btn btn-ghost" onClick={() => setDeselectModal(null)}>Annuler</button>
+                <button
+                  style={{ background: 'linear-gradient(135deg, #b91c1c, #dc2626)', border: 'none', borderRadius: 10, color: '#fff', fontWeight: 800, padding: '10px 22px', cursor: 'pointer' }}
+                  onClick={async () => {
+                    const m = deselectModal;
+                    setDeselectModal(null);
+                    await doToggle(m.ingId, m.approCount > 0 || m.inventaireCount > 0);
+                  }}
+                >
+                  {hasCascade ? 'Désassigner et supprimer' : 'Désassigner'}
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 }

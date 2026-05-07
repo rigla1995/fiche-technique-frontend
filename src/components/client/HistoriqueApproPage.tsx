@@ -170,21 +170,34 @@ function DeleteModal({ entry, onConfirm, onClose }: DeleteModalProps) {
           <h2 style={{ color: '#991b1b' }}>Supprimer l'appro</h2>
           <button className="modal-close" onClick={onClose}>✕</button>
         </div>
-        <div className="modal-body">
-          <p style={{ marginBottom: 12 }}>
-            Supprimer l'appro du <strong>{fmtDate(entry.dateAppro)}</strong> pour <strong>{entry.ingredientNom}</strong> ({entry.quantite} {entry.uniteNom}) ?
-          </p>
+        <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div style={{ background: '#f8faff', borderRadius: 8, padding: '12px 14px', border: '1px solid #e2e8f0' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px 12px', fontSize: '0.83rem' }}>
+              <span style={{ color: 'var(--text-muted)', fontWeight: 600 }}>Ingrédient</span>
+              <span style={{ fontWeight: 700 }}>{entry.ingredientNom}</span>
+              <span style={{ color: 'var(--text-muted)', fontWeight: 600 }}>Date</span>
+              <span style={{ fontWeight: 700 }}>{fmtDate(entry.dateAppro)}</span>
+              <span style={{ color: 'var(--text-muted)', fontWeight: 600 }}>Quantité</span>
+              <span style={{ fontWeight: 700 }}>{entry.quantite} {entry.uniteNom}</span>
+            </div>
+          </div>
+          <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 8, padding: '8px 12px', fontSize: '0.82rem', color: '#1e40af', fontWeight: 600 }}>
+            📊 Impact stock : le stock de cet ingrédient sera recalculé après suppression.
+          </div>
           {entry.typeAppro === 'transfert' && (
-            <div style={{ background: '#fef3c7', border: '1px solid #fde68a', borderRadius: 8, padding: '8px 12px', marginBottom: 12, fontSize: '0.82rem', color: '#92400e' }}>
-              ⚠️ Type Transfert — la suppression restaurera la quantité dans le stock du labo.
+            <div style={{ background: '#fef3c7', border: '1px solid #fde68a', borderRadius: 8, padding: '8px 12px', fontSize: '0.82rem', color: '#92400e' }}>
+              ⚠️ Type Transfert — la quantité sera restituée dans le stock du labo source.
             </div>
           )}
-          {error && <p style={{ color: 'var(--danger)', fontSize: '0.85rem', marginBottom: 8 }}>{error}</p>}
-          <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+          <div style={{ background: '#fff7ed', border: '1px solid #fbd38d', borderRadius: 8, padding: '8px 12px', fontSize: '0.82rem', color: '#92400e', fontWeight: 600 }}>
+            🔒 Action irréversible — cette suppression ne peut pas être annulée.
+          </div>
+          {error && <p style={{ color: 'var(--danger)', fontSize: '0.85rem', margin: 0 }}>{error}</p>}
+          <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 4 }}>
             <button className="btn btn-ghost" onClick={onClose} disabled={deleting}>Annuler</button>
             <button className="btn btn-danger" onClick={handleDelete} disabled={deleting}
               style={{ background: '#dc2626', color: '#fff', border: 'none' }}>
-              {deleting ? '…' : 'Supprimer'}
+              {deleting ? '…' : 'Supprimer définitivement'}
             </button>
           </div>
         </div>
