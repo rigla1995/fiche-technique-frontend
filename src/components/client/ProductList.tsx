@@ -62,18 +62,20 @@ export default function ProductList() {
   const [distinctActivities, setDistinctActivities] = useState<Activite[]>([]);
   const [activitesLoading, setActivitesLoading] = useState(false);
 
-  // Load all activities for enterprise users
+  // Load all activities for enterprise users (filtered by laboId if present)
   useEffect(() => {
     if (!isEntreprise) return;
     setActivitesLoading(true);
     api.get('/api/entreprise/activites')
       .then(({ data }) => {
         const all = data as Activite[];
-        setFranchiseActivities(all.filter((a) => a.type === 'franchise'));
-        setDistinctActivities(all.filter((a) => a.type === 'distincte' || a.type == null));
+        const scoped = laboId ? all.filter((a) => String((a as any).laboId) === laboId) : all;
+        setFranchiseActivities(scoped.filter((a) => a.type === 'franchise'));
+        setDistinctActivities(scoped.filter((a) => a.type === 'distincte' || a.type == null));
       })
       .finally(() => setActivitesLoading(false));
-  }, [isEntreprise]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isEntreprise, laboId]);
 
   // Load products
   useEffect(() => {
