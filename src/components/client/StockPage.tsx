@@ -641,7 +641,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
     if (entry?.isPT) {
       if (!row.quantite.trim() || parseFloat(row.quantite) <= 0 || !row.dateAppro.trim() || row.saving) return;
     } else {
-      if (!canSaveStockRow(row, hasFournisseurs)) return;
+      if (!canSaveStockRow(row, true)) return;
     }
 
     // Ensure history is loaded for conflict detection
@@ -814,7 +814,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
     return !isNaN(qty) && qty > 0 && !isNaN(prix) && prix > 0;
   });
   const canSaveBulk = selectedIngIds.size > 0 && !!bulkDate.trim() && bulkAllValid
-    && (!hasFournisseurs || (!!bulkFournisseurId && !!bulkRefFacture.trim()));
+    && (!!bulkFournisseurId && !!bulkRefFacture.trim());
 
   return (
     <div>
@@ -961,21 +961,19 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
             <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#2563eb', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Date d'appro</span>
             <input type="date" className="input" style={{ maxWidth: 150 }} min={yearStart} max={todayStr()} value={bulkDate} onChange={(e) => setBulkDate(e.target.value)} />
           </div>
-          {hasFournisseurs && (
-            <>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#2563eb', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Fournisseur</span>
-                <select className="input" style={{ maxWidth: 200 }} value={bulkFournisseurId} onChange={(e) => setBulkFournisseurId(e.target.value)}>
-                  <option value="">— Sélectionner —</option>
-                  {nonLaboFournisseurs.map((f) => <option key={f.id} value={String(f.id)}>{f.nom}</option>)}
-                </select>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#2563eb', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Réf Facture</span>
-                <input type="text" className="input" style={{ maxWidth: 160 }} placeholder="N° facture…" value={bulkRefFacture} onChange={(e) => setBulkRefFacture(e.target.value)} />
-              </div>
-            </>
-          )}
+          <>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+              <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#2563eb', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Fournisseur</span>
+              <select className="input" style={{ maxWidth: 200 }} value={bulkFournisseurId} onChange={(e) => setBulkFournisseurId(e.target.value)}>
+                <option value="">— Sélectionner —</option>
+                {nonLaboFournisseurs.map((f) => <option key={f.id} value={String(f.id)}>{f.nom}</option>)}
+              </select>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+              <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#2563eb', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Réf Facture</span>
+              <input type="text" className="input" style={{ maxWidth: 160 }} placeholder="N° facture…" value={bulkRefFacture} onChange={(e) => setBulkRefFacture(e.target.value)} />
+            </div>
+          </>
           <div style={{ display: 'flex', gap: 8, alignSelf: 'flex-end' }}>
             <button className="btn btn-primary btn-sm" onClick={saveBulkMatrix} disabled={!canSaveBulk || bulkSaving || !canWrite}>
               {bulkSaving ? '…' : `Enregistrer (${selectedIngIds.size})`}
@@ -1132,7 +1130,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                             <td>
                               <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'stretch' }}>
                                 {row.error && <span style={{ color: 'var(--danger)', fontSize: '0.75rem' }}>!</span>}
-                                {hasFournisseurs && !entry.isPT && (
+                                {!entry.isPT && (
                                   isSelected ? (
                                     <button className="btn btn-sm" disabled style={{ width: '100%', background: '#e5e7eb', color: '#9ca3af', border: '1px solid #d1d5db', fontSize: '0.78rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                       Fournisseur (bulk)
@@ -1194,7 +1192,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                                           onClick={() => saveRow(entry.ingredientId)}
                                           disabled={entry.isPT
                                             ? (!row.quantite.trim() || parseFloat(row.quantite) <= 0 || !row.dateAppro.trim() || row.saving || !canWrite || !!ptQtyExceeds)
-                                            : (!canSaveStockRow(row, hasFournisseurs) || !canWrite)}
+                                            : (!canSaveStockRow(row, true) || !canWrite)}
                                           style={!row.saved ? { background: 'linear-gradient(135deg, #2563eb, #0ea5e9)', boxShadow: '0 3px 10px rgba(37,99,235,0.3)', borderRadius: 8, border: 'none', color: '#fff', fontWeight: 700, flex: 1 } : { flex: 1 }}
                                         >
                                           {row.saving ? '…' : row.saved ? '✓' : t('client.stock.save')}

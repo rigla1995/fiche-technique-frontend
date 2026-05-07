@@ -245,7 +245,7 @@ export default function StockLaboPage() {
     if (!rs.quantite.trim() || parseFloat(rs.quantite) <= 0) return false;
     if (!isPT && (!rs.prixUnitaire.trim() || parseFloat(rs.prixUnitaire) <= 0 || !rs.dateAppro.trim())) return false;
     if (!rs.dateAppro.trim()) return false;
-    if (!isPT && hasFournisseurs && (!rs.fournisseurId.trim() || !rs.refFacture.trim())) return false;
+    if (!isPT && (!rs.fournisseurId.trim() || !rs.refFacture.trim())) return false;
     return true;
   };
 
@@ -515,7 +515,7 @@ export default function StockLaboPage() {
     return !isNaN(qty) && qty > 0 && !isNaN(prix) && prix > 0;
   });
   const canSaveBulk = selectedIngIds.size > 0 && !!bulkDate.trim() && bulkAllValid
-    && (!hasFournisseurs || (!!bulkFournisseurId && !!bulkRefFacture.trim()));
+    && (!!bulkFournisseurId && !!bulkRefFacture.trim());
 
   if (!laboId) return <div className="page"><p className="text-muted">Labo introuvable.</p></div>;
 
@@ -659,21 +659,19 @@ export default function StockLaboPage() {
                 <span style={LABEL}>Date d'appro</span>
                 <input type="date" className="input" style={{ maxWidth: 150 }} min={yearStart} max={todayStr()} value={bulkDate} onChange={(e) => setBulkDate(e.target.value)} />
               </div>
-              {hasFournisseurs && (
-                <>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                    <span style={LABEL}>Fournisseur</span>
-                    <select className="input" style={{ maxWidth: 200 }} value={bulkFournisseurId} onChange={(e) => setBulkFournisseurId(e.target.value)}>
-                      <option value="">— Sélectionner —</option>
-                      {fournisseurs.map((f) => <option key={f.id} value={String(f.id)}>{f.nom}</option>)}
-                    </select>
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                    <span style={LABEL}>Réf Facture</span>
-                    <input type="text" className="input" style={{ maxWidth: 160 }} placeholder="N° facture…" value={bulkRefFacture} onChange={(e) => setBulkRefFacture(e.target.value)} />
-                  </div>
-                </>
-              )}
+              <>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                  <span style={LABEL}>Fournisseur</span>
+                  <select className="input" style={{ maxWidth: 200 }} value={bulkFournisseurId} onChange={(e) => setBulkFournisseurId(e.target.value)}>
+                    <option value="">— Sélectionner —</option>
+                    {fournisseurs.map((f) => <option key={f.id} value={String(f.id)}>{f.nom}</option>)}
+                  </select>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                  <span style={LABEL}>Réf Facture</span>
+                  <input type="text" className="input" style={{ maxWidth: 160 }} placeholder="N° facture…" value={bulkRefFacture} onChange={(e) => setBulkRefFacture(e.target.value)} />
+                </div>
+              </>
               <div style={{ display: 'flex', gap: 8, alignSelf: 'flex-end' }}>
                 <button className="btn btn-primary btn-sm" onClick={saveBulk} disabled={!canSaveBulk || bulkSaving || !canWrite}>
                   {bulkSaving ? '…' : `Enregistrer (${selectedIngIds.size})`}
@@ -821,7 +819,7 @@ export default function StockLaboPage() {
                                       </td>
                                       <td>
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'stretch' }}>
-                                          {fournisseurs.length > 0 && !r.isPT && (() => {
+                                          {!r.isPT && (() => {
                                             const assignedF = rs.fournisseurId ? fournisseurs.find((f) => String(f.id) === rs.fournisseurId) : null;
                                             const validated = !!assignedF && rs.refFacture.trim() !== '';
                                             return (
