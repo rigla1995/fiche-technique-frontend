@@ -403,10 +403,10 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                       ) : (
                         <LockedLink label="Ingrédients Activité" reason="Sélectionnez d'abord des ingrédients dans le Catalogue Global" />
                       )}
-                      {effectiveHasSelections && indepHasFournisseurs ? (
+                      {effectiveHasSelections ? (
                         <SubNavLink to="/client/stock" icon="📦" label="Stock Activité" isActive={location.pathname === '/client/stock' && !currentSection} onClick={onClose} />
                       ) : (
-                        <LockedLink label="Stock Activité" reason={!effectiveHasSelections ? 'Sélectionnez d\'abord des ingrédients' : 'Ajoutez d\'abord un fournisseur'} />
+                        <LockedLink label="Stock Activité" reason="Sélectionnez d'abord des ingrédients dans le Catalogue Global" />
                       )}
                       {effectiveHasSelections && indepHasAppros ? (
                         <SubNavLink
