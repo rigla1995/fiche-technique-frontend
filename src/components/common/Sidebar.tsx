@@ -204,6 +204,7 @@ function ProductSubLinks({
 
 interface GerantSidebarProps {
   user: User;
+  isEntreprise: boolean;
   labos: Labo[];
   gerantActivites: Activite[];
   location: ReturnType<typeof useLocation>;
@@ -220,12 +221,37 @@ interface GerantSidebarProps {
 }
 
 function GerantSidebarContent({
-  user, labos, gerantActivites, location, openSections, toggleSection, onClose,
+  user, isEntreprise, labos, gerantActivites, location, openSections, toggleSection, onClose,
   isHistoriquePage, isHistoriquepertesPage, isProductsPage,
   currentSection, currentHistType, currentProductTab, currentActCtx,
 }: GerantSidebarProps) {
   const gerantActiviteId = user.gerantActiviteId;
   const isLaboGerant = user.gerantActiviteType === 'labo';
+
+  // Independent gérant: show simplified indep stock section
+  if (!isEntreprise) {
+    return (
+      <>
+        <CollapsibleHeader label="Espace Activité" icon="📍" isOpen={openSections.has('gerant-indep')} locked={false} onToggle={() => toggleSection('gerant-indep')} />
+        {openSections.has('gerant-indep') && (
+          <>
+            <li><NavLink to="/client/stock" className={({ isActive }) => `sidebar-link ${isActive && !currentSection ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📦</span><span className="link-label">Stock Activité</span></NavLink></li>
+            <li><NavLink to="/client/stock/historique" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📋</span><span className="link-label">Historique Appro</span></NavLink></li>
+            <li><NavLink to="/client/stock/historique-pertes" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📉</span><span className="link-label">Historique Pertes</span></NavLink></li>
+            <li><NavLink to="/client/inventaire" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}><span className="link-icon">🔢</span><span className="link-label">Inventaire</span></NavLink></li>
+          </>
+        )}
+        <Divider />
+        <CollapsibleHeader label="Produits" icon="🍔" isOpen={openSections.has('gerant-produits')} locked={false} onToggle={() => toggleSection('gerant-produits')} />
+        {openSections.has('gerant-produits') && (
+          <>
+            <SubNavLink to="/client/products?tab=vendable" icon="🍔" label="Produits Vendables" isActive={isProductsPage && currentProductTab === 'vendable' && !currentActCtx} onClick={onClose} />
+            <SubNavLink to="/client/products?tab=utilisable" icon="🧪" label="Produits Utilisables" isActive={isProductsPage && currentProductTab === 'utilisable' && !currentActCtx} onClick={onClose} />
+          </>
+        )}
+      </>
+    );
+  }
 
   if (isLaboGerant) {
     const laboId = gerantActiviteId!;
@@ -376,12 +402,12 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   });
 
   useEffect(() => {
-    if (isGerant) {
+    if (isGerant && isEntreprise) {
       api.get('/api/entreprise/activites')
         .then(({ data }) => setGerantActivites(data))
         .catch(() => {});
     }
-  }, [isGerant]);
+  }, [isGerant, isEntreprise]);
 
   useEffect(() => {
     if (isGerant && isEntreprise) {
@@ -500,6 +526,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
           ) : isGerant ? (
             <GerantSidebarContent
               user={user!}
+              isEntreprise={isEntreprise}
               labos={labos}
               gerantActivites={gerantActivites}
               location={location}
