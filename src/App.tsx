@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Layout from './components/common/Layout';
 import LoginPage from './components/auth/LoginPage';
+import InvitePage from './components/auth/InvitePage';
 import AdminDashboard from './components/admin/AdminDashboard';
 import ClientsManagement from './components/admin/ClientsManagement';
 import UnitsManagement from './components/admin/UnitsManagement';
@@ -64,6 +65,7 @@ export default function App() {
       <AuthProvider>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/invite/:token" element={<InvitePage />} />
           <Route path="/" element={<RootRedirect />} />
 
           {/* Super Admin routes */}

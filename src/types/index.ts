@@ -93,7 +93,7 @@ export interface Gerant {
   montantMensuel: number;
   actif: boolean;
   createdAt: string;
-  temporaryPassword?: string;
+  activatedAt?: string | null;
 }
 
 export interface AuthResponse {
@@ -165,6 +165,7 @@ export interface Client {
   compteType?: 'independant' | 'entreprise';
   onboardingStep?: number;
   createdAt?: string;
+  activatedAt?: string | null;
 }
 
 export interface DomaineActivite {

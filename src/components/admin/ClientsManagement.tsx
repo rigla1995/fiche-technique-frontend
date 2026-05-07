@@ -41,7 +41,8 @@ export default function ClientsManagement() {
   const [editId, setEditId] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
-  const [tempPassword, setTempPassword] = useState<string | null>(null);
+  const [inviteSent, setInviteSent] = useState<{ nom: string; email: string } | null>(null);
+  const [resendingId, setResendingId] = useState<number | null>(null);
   const [search, setSearch] = useState('');
 
   const fetchClients = () => {
@@ -125,7 +126,7 @@ export default function ClientsManagement() {
               compteType: 'entreprise',
             };
         const { data } = await api.post('/admin/clients', payload);
-        if (data?.temporaryPassword) setTempPassword(data.temporaryPassword);
+        setInviteSent({ nom: data.name, email: data.email });
         closeModal();
         fetchClients();
       }
@@ -141,6 +142,18 @@ export default function ClientsManagement() {
     if (!window.confirm(t('admin.clients.delete_confirm'))) return;
     await api.delete(`/admin/clients/${id}`);
     fetchClients();
+  };
+
+  const handleResendInvite = async (id: number, email: string) => {
+    setResendingId(id);
+    try {
+      await api.post(`/auth/invite/resend/${id}`);
+      alert(`Invitation renvoyée à ${email}`);
+    } catch {
+      alert('Erreur lors de l\'envoi');
+    } finally {
+      setResendingId(null);
+    }
   };
 
   const filtered = clients.filter(
@@ -195,7 +208,20 @@ export default function ClientsManagement() {
                     )}
                   </td>
                   <td className="actions-cell">
+                    {!c.activatedAt && (
+                      <span style={{ background: '#fef9c3', color: '#854d0e', padding: '2px 8px', borderRadius: 20, fontSize: '0.72rem', fontWeight: 700, marginRight: 6 }}>⏳ En attente</span>
+                    )}
                     <button className="btn btn-ghost btn-sm" onClick={() => openEdit(c)}>{t('common.edit')}</button>
+                    {!c.activatedAt && (
+                      <button
+                        className="btn btn-ghost btn-sm"
+                        style={{ color: '#4338ca', borderColor: '#4338ca' }}
+                        disabled={resendingId === c.id}
+                        onClick={() => handleResendInvite(c.id, c.email)}
+                      >
+                        {resendingId === c.id ? '…' : '✉️ Renvoyer'}
+                      </button>
+                    )}
                     {c.compteType === 'entreprise' && (c.onboardingStep ?? 0) > 0 && (
                       <button
                         className="btn btn-ghost btn-sm"
@@ -222,25 +248,13 @@ export default function ClientsManagement() {
         </div>
       )}
 
-      {/* Temp password modal */}
-      {tempPassword && (
-        <div className="modal-overlay" onClick={() => setTempPassword(null)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header modal-header--success">
-              <h2>{t('admin.clients.temp_password_title')}</h2>
-              <button className="modal-close" onClick={() => setTempPassword(null)}>×</button>
-            </div>
-            <div className="modal-body">
-              <p>{t('admin.clients.temp_password_message')}</p>
-              <div style={{ background: '#f5f5f5', borderRadius: '6px', padding: '12px 16px', margin: '12px 0', fontFamily: 'monospace', fontSize: '1.2rem', letterSpacing: '0.05em', textAlign: 'center', userSelect: 'all' }}>
-                {tempPassword}
-              </div>
-              <p style={{ fontSize: '0.875rem', color: '#666' }}>{t('admin.clients.temp_password_note')}</p>
-            </div>
-            <div className="modal-footer">
-              <button className="btn btn-primary" onClick={() => setTempPassword(null)}>{t('common.close')}</button>
-            </div>
-          </div>
+      {/* Invite sent banner */}
+      {inviteSent && (
+        <div style={{ background: '#dcfce7', border: '1px solid #86efac', borderRadius: 10, padding: '14px 18px', marginBottom: 16, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+          <span style={{ color: '#15803d', fontWeight: 600 }}>
+            ✉️ Invitation envoyée à <strong>{inviteSent.nom}</strong> ({inviteSent.email}) — le compte sera activé dès qu'il cliquera sur le lien.
+          </span>
+          <button onClick={() => setInviteSent(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#15803d', fontSize: '1rem' }}>✕</button>
         </div>
       )}
 

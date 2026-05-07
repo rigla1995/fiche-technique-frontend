@@ -25,7 +25,8 @@ export default function GerantsPage() {
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState<GerantForm>(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
-  const [createdPwd, setCreatedPwd] = useState<{ nom: string; email: string; pwd: string } | null>(null);
+  const [inviteSent, setInviteSent] = useState<{ nom: string; email: string } | null>(null);
+  const [resendingId, setResendingId] = useState<number | null>(null);
   const [error, setError] = useState('');
 
   const freeLimit = isEntreprise ? 3 : 1;
@@ -58,7 +59,7 @@ export default function GerantsPage() {
         activiteType: form.activiteType || undefined,
       });
       setGerants((g) => [...g, res.data]);
-      setCreatedPwd({ nom: res.data.nom, email: res.data.email, pwd: res.data.temporaryPassword });
+      setInviteSent({ nom: res.data.nom, email: res.data.email });
       setShowForm(false);
       setForm(EMPTY_FORM);
     } catch (e: unknown) {
@@ -77,6 +78,18 @@ export default function GerantsPage() {
     if (!confirm('Supprimer ce gérant ?')) return;
     await api.delete(`/api/abonnements/gerants/${id}`);
     setGerants((gs) => gs.filter((g) => g.id !== id));
+  };
+
+  const handleResendInvite = async (id: number, email: string) => {
+    setResendingId(id);
+    try {
+      await api.post(`/auth/invite/resend/${id}`);
+      alert(`Invitation renvoyée à ${email}`);
+    } catch {
+      alert('Erreur lors de l\'envoi');
+    } finally {
+      setResendingId(null);
+    }
   };
 
   const activiteLabel = (g: Gerant) => {
@@ -99,24 +112,19 @@ export default function GerantsPage() {
           </div>
         </div>
         <button
-          onClick={() => { setShowForm(true); setCreatedPwd(null); setError(''); }}
+          onClick={() => { setShowForm(true); setInviteSent(null); setError(''); }}
           style={{ padding: '8px 18px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 600, fontSize: 14, cursor: 'pointer' }}>
           + Nouveau gérant
         </button>
       </div>
 
-      {/* Success credential display */}
-      {createdPwd && (
-        <div style={{ background: '#dcfce7', border: '1px solid #86efac', borderRadius: 10, padding: 16, marginBottom: 20 }}>
-          <div style={{ fontWeight: 700, color: '#166534', marginBottom: 6 }}>Compte gérant créé avec succès</div>
-          <div style={{ fontSize: 13, color: '#15803d' }}>
-            <strong>Nom :</strong> {createdPwd.nom}<br />
-            <strong>Email :</strong> {createdPwd.email}<br />
-            <strong>Mot de passe temporaire :</strong>{' '}
-            <code style={{ background: '#bbf7d0', padding: '2px 6px', borderRadius: 4 }}>{createdPwd.pwd}</code>
-          </div>
-          <div style={{ fontSize: 12, color: '#16a34a', marginTop: 6 }}>Communiquez ces identifiants au gérant. Il sera invité à changer son mot de passe.</div>
-          <button onClick={() => setCreatedPwd(null)} style={{ marginTop: 8, fontSize: 12, color: '#15803d', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}>Fermer</button>
+      {/* Invite sent banner */}
+      {inviteSent && (
+        <div style={{ background: '#dcfce7', border: '1px solid #86efac', borderRadius: 10, padding: '14px 18px', marginBottom: 20, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+          <span style={{ color: '#15803d', fontWeight: 600, fontSize: 14 }}>
+            ✉️ Invitation envoyée à <strong>{inviteSent.nom}</strong> ({inviteSent.email}) — le compte sera activé dès qu'il cliquera sur le lien.
+          </span>
+          <button onClick={() => setInviteSent(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#15803d', fontSize: '1rem' }}>✕</button>
         </div>
       )}
 
@@ -247,6 +255,17 @@ export default function GerantsPage() {
                 }}>
                   {g.actif ? 'Actif' : 'Inactif'}
                 </span>
+                {!g.activatedAt && (
+                  <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 10, background: '#fef9c3', color: '#854d0e' }}>⏳ En attente</span>
+                )}
+                {!g.activatedAt && (
+                  <button
+                    onClick={() => handleResendInvite(g.id, g.email)}
+                    disabled={resendingId === g.id}
+                    style={{ padding: '4px 10px', background: '#eef2ff', border: '1px solid #c7d2fe', borderRadius: 6, fontSize: 12, cursor: 'pointer', color: '#4338ca', fontWeight: 600 }}>
+                    {resendingId === g.id ? '…' : '✉️ Renvoyer'}
+                  </button>
+                )}
                 <button onClick={() => toggleActif(g)}
                   style={{ padding: '4px 10px', background: '#f3f4f6', border: '1px solid #d1d5db', borderRadius: 6, fontSize: 12, cursor: 'pointer', color: '#374151' }}>
                   {g.actif ? 'Désactiver' : 'Activer'}

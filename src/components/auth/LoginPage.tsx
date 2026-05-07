@@ -19,8 +19,13 @@ export default function LoginPage() {
     try {
       await login(email, password);
       navigate('/');
-    } catch {
-      setError(t('auth.login_error'));
+    } catch (e: unknown) {
+      const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      if (msg === 'invite_pending') {
+        setError('Votre compte n\'est pas encore activé. Consultez votre email d\'invitation.');
+      } else {
+        setError(t('auth.login_error'));
+      }
     } finally {
       setLoading(false);
     }
