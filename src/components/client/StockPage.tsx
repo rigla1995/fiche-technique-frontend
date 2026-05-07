@@ -1321,9 +1321,10 @@ function ActivityStockSection({ label, activities, isFranchise, initialActiviteI
   const [dupMsg, setDupMsg] = useState('');
 
   useEffect(() => {
+    if (initialActiviteId) return; // locked by gérant — don't override
     const first = groupActivities[0]?.id ?? 0;
     setSelectedId(first);
-  }, [selectedGroup]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [selectedGroup, initialActiviteId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadStock = useCallback(async (actId: number) => {
     setLoading(true);

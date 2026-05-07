@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
 import type { Activite, ActiviteIngredient } from '../../types';
@@ -11,7 +11,9 @@ export default function FranchiseCatalogPage() {
   const { t } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
-  const justCreated = new URLSearchParams(location.search).get('created') === '1';
+  const [searchParams] = useSearchParams();
+  const justCreated = searchParams.get('created') === '1';
+  const lockedActiviteId = searchParams.get('activiteId') ? Number(searchParams.get('activiteId')) : null;
 
   const [activites, setActivites] = useState<Activite[]>([]);
   const [selectionMap, setSelectionMap] = useState<SelectionMap>({});
@@ -49,12 +51,13 @@ export default function FranchiseCatalogPage() {
     try {
       const { data: allActs } = await api.get('/api/entreprise/activites');
       const franchise = (allActs as Activite[]).filter((a) => a.type === 'franchise');
-      setActivites(franchise);
+      const display = lockedActiviteId ? franchise.filter((a) => a.id === lockedActiviteId) : franchise;
+      setActivites(display);
 
-      if (franchise.length === 0) { setLoading(false); return; }
+      if (display.length === 0) { setLoading(false); return; }
 
       const results = await Promise.all(
-        franchise.map((a) =>
+        display.map((a) =>
           api.get(`/api/entreprise/activites/${a.id}/ingredients`).then(({ data }) => ({ actId: a.id, data: data as ActiviteIngredient[] }))
         )
       );
@@ -71,7 +74,7 @@ export default function FranchiseCatalogPage() {
       setSelectionMap(map);
     } catch { /* ignore */ }
     setLoading(false);
-  }, []);
+  }, [lockedActiviteId]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -143,13 +146,15 @@ export default function FranchiseCatalogPage() {
       )}
 
       {/* Catalogue Global banner */}
-      <div style={{ background: '#eef2ff', border: '1px solid #c7d2fe', borderRadius: 8, padding: '10px 14px', marginBottom: 16, fontSize: '0.85rem', color: '#3730a3' }}>
-        🌐 {t('client.catalogue_franchise.global_hint', 'Ce catalogue affiche les ingrédients assignés via le')}{' '}
-        <Link to="/client/catalogue-global" style={{ color: '#2563eb', fontWeight: 600, textDecoration: 'underline' }}>
-          {t('nav.catalogue_global', 'Catalogue Global')}
-        </Link>.
-        {' '}{t('client.catalogue_franchise.global_hint2', 'Pour modifier votre sélection (labo ou activité), rendez-vous dans le Catalogue Global.')}
-      </div>
+      {!lockedActiviteId && (
+        <div style={{ background: '#eef2ff', border: '1px solid #c7d2fe', borderRadius: 8, padding: '10px 14px', marginBottom: 16, fontSize: '0.85rem', color: '#3730a3' }}>
+          🌐 {t('client.catalogue_franchise.global_hint', 'Ce catalogue affiche les ingrédients assignés via le')}{' '}
+          <Link to="/client/catalogue-global" style={{ color: '#2563eb', fontWeight: 600, textDecoration: 'underline' }}>
+            {t('nav.catalogue_global', 'Catalogue Global')}
+          </Link>.
+          {' '}{t('client.catalogue_franchise.global_hint2', 'Pour modifier votre sélection (labo ou activité), rendez-vous dans le Catalogue Global.')}
+        </div>
+      )}
 
       {activites.length === 0 ? (
         <p className="text-muted">{t('client.catalogue_franchise.no_activities')}</p>
