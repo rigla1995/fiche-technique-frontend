@@ -1305,7 +1305,13 @@ function ActivityStockSection({ label, activities, isFranchise, initialActiviteI
   const groupNames = useMemo(() => Object.keys(groups).sort(), [groups]);
   const hasMultipleGroups = groupNames.length > 1;
 
-  const [selectedGroup, setSelectedGroup] = useState<string>(() => groupNames[0] ?? '');
+  const [selectedGroup, setSelectedGroup] = useState<string>(() => {
+    if (initialActiviteId) {
+      const act = activities.find((a) => a.id === initialActiviteId);
+      if (act) return act.franchiseGroup || act.nom;
+    }
+    return groupNames[0] ?? '';
+  });
   const groupActivities = useMemo(() => (selectedGroup ? (groups[selectedGroup] ?? activities) : activities), [groups, selectedGroup, activities]);
 
   const [selectedId, setSelectedId] = useState<number>(initialActiviteId ?? groupActivities[0]?.id ?? 0);
@@ -1414,7 +1420,7 @@ function ActivityStockSection({ label, activities, isFranchise, initialActiviteI
           )}
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '12px 20px' }}>
-          {isFranchise && hasMultipleGroups && (
+          {isFranchise && hasMultipleGroups && !initialActiviteId && (
             <div>
               <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#2563eb', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>Groupe</span>
               <select className="input" style={{ width: '100%' }} value={selectedGroup} onChange={(e) => setSelectedGroup(e.target.value)}>
