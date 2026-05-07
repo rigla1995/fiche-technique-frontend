@@ -266,6 +266,7 @@ export default function HistoriqueApproPage() {
   const laboId = searchParams.get('laboId') || '';
   const isGerant = user?.role === 'gerant';
   const isReadOnly = isGerant && !!laboId;
+  const isActiviteGerant = isGerant && !!initActiviteId && !laboId;
 
   const [entType, setEntType] = useState<'franchise' | 'distinct'>(lockedType ?? 'franchise');
 
@@ -590,7 +591,7 @@ export default function HistoriqueApproPage() {
             Entité &amp; Produit
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(190px, 1fr))', gap: '12px 20px' }}>
-            {isEntreprise && entType === 'franchise' && franchiseGroups.length > 0 && (
+            {isEntreprise && !isActiviteGerant && entType === 'franchise' && franchiseGroups.length > 0 && (
               <div>
                 <label style={labelStyle}>{t('client.historique_appro.franchise_group')}</label>
                 <select
@@ -609,7 +610,7 @@ export default function HistoriqueApproPage() {
               <div style={{ display: 'flex', alignItems: 'flex-end', paddingBottom: 8 }}>
                 <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>{t('common.loading')}</span>
               </div>
-            ) : isEntreprise && activitiesForDropdown.length > 0 ? (
+            ) : isEntreprise && !isActiviteGerant && activitiesForDropdown.length > 0 ? (
               <div>
                 <label style={labelStyle}>{t('client.historique_appro.activity')}</label>
                 <select

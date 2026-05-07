@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
 import { useSelection } from '../../context/SelectionContext';
@@ -15,6 +15,8 @@ export default function ClientIngredientsCatalog({ embedded, onSelectionDone }: 
   const { t } = useTranslation();
   const { refreshSelections } = useSelection();
   const { user, advanceOnboarding } = useAuth();
+  const [searchParams] = useSearchParams();
+  const isReadOnly = searchParams.get('readonly') === 'true';
   const [ingredients, setIngredients] = useState<Ingredient[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -280,9 +282,9 @@ export default function ClientIngredientsCatalog({ embedded, onSelectionDone }: 
                               padding: '3px 10px',
                               borderRadius: 8,
                             }}
-                            disabled={togglingId === ing.id}
-                            onClick={() => toggleSelection(ing)}
-                            title={ing.selected ? t('client.ingredients_catalog.deselect') : t('client.ingredients_catalog.select')}
+                            disabled={togglingId === ing.id || isReadOnly}
+                            onClick={() => !isReadOnly && toggleSelection(ing)}
+                            title={isReadOnly ? 'Lecture seule' : ing.selected ? t('client.ingredients_catalog.deselect') : t('client.ingredients_catalog.select')}
                           >
                             {togglingId === ing.id ? '…' : ing.selected ? '✓' : '○'}
                           </button>

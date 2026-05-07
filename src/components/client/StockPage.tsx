@@ -1284,10 +1284,11 @@ interface ActivityStockSectionProps {
   label: string;
   activities: Activite[];
   isFranchise?: boolean;
+  initialActiviteId?: number;
   onSave: (activiteId: number, ingredientId: number, quantite: string, prixUnitaire: string, dateAppro: string, fournisseurId?: number | null, refFacture?: string | null) => Promise<void>;
 }
 
-function ActivityStockSection({ label, activities, isFranchise, onSave }: ActivityStockSectionProps) {
+function ActivityStockSection({ label, activities, isFranchise, initialActiviteId, onSave }: ActivityStockSectionProps) {
   const { t } = useTranslation();
   const { canWrite } = useAuth();
 
@@ -1307,7 +1308,7 @@ function ActivityStockSection({ label, activities, isFranchise, onSave }: Activi
   const [selectedGroup, setSelectedGroup] = useState<string>(() => groupNames[0] ?? '');
   const groupActivities = useMemo(() => (selectedGroup ? (groups[selectedGroup] ?? activities) : activities), [groups, selectedGroup, activities]);
 
-  const [selectedId, setSelectedId] = useState<number>(groupActivities[0]?.id ?? 0);
+  const [selectedId, setSelectedId] = useState<number>(initialActiviteId ?? groupActivities[0]?.id ?? 0);
   const [entries, setEntries] = useState<StockEntry[]>([]);
   const [loading, setLoading] = useState(false);
   const [fournisseurs, setFournisseurs] = useState<Fournisseur[]>([]);
@@ -1420,12 +1421,14 @@ function ActivityStockSection({ label, activities, isFranchise, onSave }: Activi
               </select>
             </div>
           )}
-          <div>
-            <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#2563eb', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>Activité</span>
-            <select className="input" style={{ width: '100%' }} value={selectedId} onChange={(e) => setSelectedId(Number(e.target.value))}>
-              {(isFranchise ? groupActivities : activities).map((a) => <option key={a.id} value={a.id}>{a.nom}</option>)}
-            </select>
-          </div>
+          {!initialActiviteId && (
+            <div>
+              <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#2563eb', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>Activité</span>
+              <select className="input" style={{ width: '100%' }} value={selectedId} onChange={(e) => setSelectedId(Number(e.target.value))}>
+                {(isFranchise ? groupActivities : activities).map((a) => <option key={a.id} value={a.id}>{a.nom}</option>)}
+              </select>
+            </div>
+          )}
           <div>
             <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#2563eb', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>Catégorie</span>
             <select className="input" style={{ width: '100%' }} value={categoryFilter} onChange={(e) => { setCategoryFilter(e.target.value); setIngredientFilter(''); }}>
@@ -1514,6 +1517,7 @@ export default function StockPage() {
   const [searchParams] = useSearchParams();
   const isEntreprise = user?.compteType === 'entreprise';
   const section = searchParams.get('section') as 'franchise' | 'distinct' | null;
+  const urlActiviteId = searchParams.get('activiteId') ? Number(searchParams.get('activiteId')) : undefined;
 
   const [clientEntries, setClientEntries] = useState<StockEntry[]>([]);
   const [clientLoading, setClientLoading] = useState(false);
@@ -1733,6 +1737,7 @@ export default function StockPage() {
                 label={t('client.stock.franchise_section')}
                 activities={franchiseActivities}
                 isFranchise={true}
+                initialActiviteId={urlActiviteId}
                 onSave={saveEntrepriseStock}
               />
             )}
@@ -1740,6 +1745,7 @@ export default function StockPage() {
               <ActivityStockSection
                 label={t('client.stock.distinct_section')}
                 activities={distinctActivities}
+                initialActiviteId={urlActiviteId}
                 onSave={saveEntrepriseStock}
               />
             )}

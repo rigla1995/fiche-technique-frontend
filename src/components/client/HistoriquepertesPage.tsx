@@ -161,6 +161,9 @@ export default function HistoriquepertesPage() {
   const [searchParams] = useSearchParams();
   const isEntreprise = user?.compteType === 'entreprise';
   const type = searchParams.get('type') as 'franchise' | 'distinct' | null;
+  const urlActiviteId = searchParams.get('activiteId') || '';
+  const isGerant = user?.role === 'gerant';
+  const isActiviteGerant = isGerant && !!urlActiviteId;
 
   // Data
   const [entries, setEntries] = useState<HistoriquePerteEntry[]>([]);
@@ -170,7 +173,7 @@ export default function HistoriquepertesPage() {
   const [ingredients, setIngredients] = useState<Ingredient[]>([]);
 
   // Filters
-  const [fActiviteId, setFActiviteId] = useState('');
+  const [fActiviteId, setFActiviteId] = useState(urlActiviteId);
   const [fCategorie, setFCategorie] = useState('');
   const [fIngredient, setFIngredient] = useState('');
   const [fNom, setFNom] = useState('');
@@ -334,7 +337,7 @@ export default function HistoriquepertesPage() {
           <button className="btn btn-ghost btn-sm" style={{ fontSize: '0.78rem' }} onClick={resetFilters}>✕ Réinitialiser</button>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(170px, 1fr))', gap: '12px 20px' }}>
-          {isEntreprise && activites.length > 0 && (
+          {isEntreprise && !isActiviteGerant && activites.length > 0 && (
             <div>
               <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#b91c1c', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>Activité</span>
               <select className="input" style={{ width: '100%' }} value={fActiviteId} onChange={(e) => setFActiviteId(e.target.value)}>

@@ -78,7 +78,8 @@ interface Fournisseur { id: number; nom: string }
 
 export default function StockLaboPage() {
   const { t } = useTranslation();
-  const { canWrite } = useAuth();
+  const { canWrite, user } = useAuth();
+  const isGerantLabo = user?.role === 'gerant';
   const [searchParams] = useSearchParams();
   const laboId = searchParams.get('laboId') || '';
   const tab = searchParams.get('tab') === 'ingredients' ? 'ingredients' : 'stock';
@@ -1061,8 +1062,9 @@ export default function StockLaboPage() {
                                         <input
                                           type="checkbox"
                                           checked={a?.assigned ?? false}
-                                          onChange={() => toggleAssignment(ing.ingredientId, act.id)}
-                                          style={{ width: 18, height: 18, accentColor: 'var(--primary)', cursor: 'pointer' }}
+                                          disabled={isGerantLabo}
+                                          onChange={() => !isGerantLabo && toggleAssignment(ing.ingredientId, act.id)}
+                                          style={{ width: 18, height: 18, accentColor: 'var(--primary)', cursor: isGerantLabo ? 'not-allowed' : 'pointer' }}
                                         />
                                       </td>
                                     );
