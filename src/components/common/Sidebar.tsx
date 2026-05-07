@@ -304,7 +304,10 @@ function GerantSidebarContent({
         <Divider />
         <CollapsibleHeader label="Produits" icon="🍔" isOpen={openSections.has('gerant-produits')} locked={false} onToggle={() => toggleSection('gerant-produits')} />
         {openSections.has('gerant-produits') && (
-          <SubNavLink to={`/client/products?tab=utilisable&laboId=${laboId}`} icon="🧪" label="Produits Utilisables (PT)" isActive={isProductsPage && currentProductTab === 'utilisable'} onClick={onClose} />
+          <>
+            <SubNavLink to={`/client/products?tab=utilisable&actCtx=franchise&laboId=${laboId}`} icon="🧪" label="Utilisables Franchises" isActive={isProductsPage && currentProductTab === 'utilisable' && currentActCtx === 'franchise'} onClick={onClose} />
+            <SubNavLink to={`/client/products?tab=utilisable&actCtx=distinct&laboId=${laboId}`} icon="🧪" label="Utilisables Distinctes" isActive={isProductsPage && currentProductTab === 'utilisable' && currentActCtx === 'distinct'} onClick={onClose} />
+          </>
         )}
       </>
     );
