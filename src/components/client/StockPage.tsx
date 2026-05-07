@@ -1139,6 +1139,10 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                                     <button className="btn btn-sm" onClick={() => setAffectationModal({ ingredientId: entry.ingredientId, nom: entry.nom })} style={{ width: '100%', background: '#dcfce7', color: '#15803d', border: '1px solid #86efac', fontSize: '0.78rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                       ✓ {laboFournisseur.nom}
                                     </button>
+                                  ) : nonLaboFournisseurs.length === 0 ? (
+                                    <button className="btn btn-sm" disabled title="Ajoutez d'abord un fournisseur dans la section Fournisseurs" style={{ width: '100%', background: '#fff7ed', color: '#92400e', border: '1px solid #fed7aa', fontSize: '0.78rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', cursor: 'not-allowed' }}>
+                                      ⚠️ Aucun fournisseur
+                                    </button>
                                   ) : (
                                     <button className="btn btn-sm" onClick={() => setAffectationModal({ ingredientId: entry.ingredientId, nom: entry.nom })} disabled={!canWrite} style={{ width: '100%', background: fournisseurValidated ? '#dcfce7' : assignedFournisseur ? '#fef9c3' : '#eff6ff', color: fournisseurValidated ? '#15803d' : assignedFournisseur ? '#92400e' : '#2563eb', border: `1px solid ${fournisseurValidated ? '#86efac' : assignedFournisseur ? '#fde68a' : '#bfdbfe'}`, fontSize: '0.78rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                       {fournisseurValidated ? `✓ ${assignedFournisseur!.nom}` : assignedFournisseur ? `${assignedFournisseur.nom}…` : '🚚 Fournisseur'}

@@ -822,6 +822,18 @@ export default function StockLaboPage() {
                                           {!r.isPT && (() => {
                                             const assignedF = rs.fournisseurId ? fournisseurs.find((f) => String(f.id) === rs.fournisseurId) : null;
                                             const validated = !!assignedF && rs.refFacture.trim() !== '';
+                                            if (fournisseurs.length === 0) {
+                                              return (
+                                                <button
+                                                  className="btn btn-sm"
+                                                  disabled
+                                                  title="Ajoutez d'abord un fournisseur dans la section Fournisseurs Labo"
+                                                  style={{ width: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', background: '#fff7ed', color: '#92400e', border: '1px solid #fed7aa', cursor: 'not-allowed' }}
+                                                >
+                                                  ⚠️ Aucun fournisseur
+                                                </button>
+                                              );
+                                            }
                                             return (
                                               <button
                                                 className="btn btn-sm"
