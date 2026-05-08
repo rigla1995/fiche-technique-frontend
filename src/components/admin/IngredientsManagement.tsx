@@ -1,21 +1,23 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
-import type { Category, Ingredient, Unit } from '../../types';
+import type { Category, DomaineActivite, Ingredient, Unit } from '../../types';
 
 interface IngredientForm {
   name: string;
   unitId: string;
   categorieId: string;
+  domaineIds: number[];
 }
 
-const emptyForm: IngredientForm = { name: '', unitId: '', categorieId: '' };
+const emptyForm: IngredientForm = { name: '', unitId: '', categorieId: '', domaineIds: [] };
 
 export default function IngredientsManagement() {
   const { t } = useTranslation();
   const [ingredients, setIngredients] = useState<Ingredient[]>([]);
   const [units, setUnits] = useState<Unit[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [domaines, setDomaines] = useState<DomaineActivite[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState<IngredientForm>(emptyForm);
@@ -26,8 +28,8 @@ export default function IngredientsManagement() {
 
   const fetchData = () => {
     setLoading(true);
-    Promise.all([api.get('/ingredients'), api.get('/units'), api.get('/categories')])
-      .then(([ing, u, cat]) => { setIngredients(ing.data); setUnits(u.data); setCategories(cat.data); })
+    Promise.all([api.get('/ingredients'), api.get('/units'), api.get('/categories'), api.get('/api/domaines')])
+      .then(([ing, u, cat, dom]) => { setIngredients(ing.data); setUnits(u.data); setCategories(cat.data); setDomaines(dom.data); })
       .finally(() => setLoading(false));
   };
 
@@ -39,6 +41,7 @@ export default function IngredientsManagement() {
       name: i.name,
       unitId: String(i.unitId),
       categorieId: i.categorieId ? String(i.categorieId) : '',
+      domaineIds: (i as { domaineIds?: number[] }).domaineIds || [],
     });
     setEditId(i.id);
     setShowModal(true);
@@ -53,6 +56,7 @@ export default function IngredientsManagement() {
         name: form.name,
         unitId: parseInt(form.unitId),
         categorieId: form.categorieId ? parseInt(form.categorieId) : null,
+        domaineIds: form.domaineIds,
       };
       if (editId) {
         await api.put(`/ingredients/${editId}`, payload);
@@ -156,20 +160,40 @@ export default function IngredientsManagement() {
                   <tr>
                     <th>{t('common.name')}</th>
                     <th>{t('common.unit')}</th>
+                    <th>Domaines</th>
                     <th>{t('common.actions')}</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {items.map((i) => (
+                  {items.map((i) => {
+                    const ingDomaines = (i as { domaineIds?: number[] }).domaineIds || [];
+                    return (
                     <tr key={i.id}>
                       <td>{i.name}</td>
                       <td><span className="unit-badge">{i.unit?.name}</span></td>
+                      <td>
+                        {ingDomaines.length === 0 ? (
+                          <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Tous</span>
+                        ) : (
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                            {ingDomaines.map((did) => {
+                              const d = domaines.find((dom) => dom.id === did);
+                              return (
+                                <span key={did} style={{ background: '#f0fdf4', color: '#15803d', fontSize: '0.72rem', fontWeight: 600, padding: '1px 7px', borderRadius: 12, border: '1px solid #bbf7d0' }}>
+                                  {d ? d.nom : `#${did}`}
+                                </span>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </td>
                       <td className="actions-cell">
                         <button className="btn btn-ghost btn-sm" onClick={() => openEdit(i)}>{t('common.edit')}</button>
                         <button className="btn btn-danger btn-sm" onClick={() => handleDelete(i.id)}>{t('common.delete')}</button>
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -202,6 +226,48 @@ export default function IngredientsManagement() {
                   <option value="">— {t('admin.ingredients.category')} —</option>
                   {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
+              </div>
+              <div className="form-group">
+                <label>
+                  Domaines d'activité
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginLeft: 6 }}>
+                    (laisser vide = visible pour tous)
+                  </span>
+                </label>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 4 }}>
+                  {domaines.map((d) => {
+                    const checked = form.domaineIds.includes(d.id);
+                    return (
+                      <label
+                        key={d.id}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer',
+                          padding: '5px 12px', borderRadius: 20, fontSize: '0.82rem', fontWeight: 600,
+                          border: `1.5px solid ${checked ? '#15803d' : 'var(--border)'}`,
+                          background: checked ? '#dcfce7' : '#f8fafc',
+                          color: checked ? '#15803d' : 'var(--text-muted)',
+                          userSelect: 'none',
+                        }}
+                      >
+                        <input
+                          type="checkbox"
+                          style={{ display: 'none' }}
+                          checked={checked}
+                          onChange={() => setForm((f) => ({
+                            ...f,
+                            domaineIds: checked
+                              ? f.domaineIds.filter((id) => id !== d.id)
+                              : [...f.domaineIds, d.id],
+                          }))}
+                        />
+                        {checked ? '✓ ' : ''}{d.nom}
+                      </label>
+                    );
+                  })}
+                  {domaines.length === 0 && (
+                    <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Aucun domaine configuré</span>
+                  )}
+                </div>
               </div>
               <div className="modal-footer">
                 <button type="button" className="btn btn-ghost" onClick={closeModal}>{t('common.cancel')}</button>
