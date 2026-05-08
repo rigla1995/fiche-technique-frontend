@@ -247,7 +247,7 @@ export default function ClientIngredientsCatalog({ embedded, onSelectionDone }: 
                   background: 'linear-gradient(135deg, #16a34a, #22c55e)',
                   borderRadius: 20, padding: '2px 9px',
                 }}>
-                  {items.filter((i) => i.selected).length}/{items.length}
+                  {items.length}
                 </span>
               </button>
               {isOpen && <div className="table-responsive card">
