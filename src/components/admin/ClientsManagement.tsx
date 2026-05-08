@@ -54,7 +54,7 @@ export default function ClientsManagement() {
 
   useEffect(() => {
     fetchClients();
-    api.get('/api/domaines').then(({ data }) => setDomaines(data)).catch(() => {});
+    api.get('/api/domaines?hasIngredients=true').then(({ data }) => setDomaines(data)).catch(() => {});
   }, []);
 
   const openAdd = () => {
