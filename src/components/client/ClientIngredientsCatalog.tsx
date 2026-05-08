@@ -23,6 +23,8 @@ export default function ClientIngredientsCatalog({ embedded, onSelectionDone }: 
   const [togglingId, setTogglingId] = useState<number | null>(null);
   const [deselectModal, setDeselectModal] = useState<{ ing: Ingredient; approCount: number; inventaireCount: number } | null>(null);
   const [ptProducts, setPtProducts] = useState<ProduitTransformeStockEntry[]>([]);
+  const [openCats, setOpenCats] = useState<Set<string>>(new Set());
+  const toggleCat = (cat: string) => setOpenCats((prev) => { const n = new Set(prev); if (n.has(cat)) n.delete(cat); else n.add(cat); return n; });
 
   const fetchIngredients = () => {
     setLoading(true);
@@ -221,33 +223,34 @@ export default function ClientIngredientsCatalog({ embedded, onSelectionDone }: 
         </div>
       ) : (
         <>
-          {pagedCatEntries.map(([cat, items]) => (
-            <div key={cat} style={{ marginBottom: 20 }}>
-              {/* Category group header */}
-              <div style={{
-                background: 'var(--surface)',
-                borderLeft: '4px solid #16a34a',
-                borderRadius: '0 10px 10px 0',
-                padding: '10px 16px',
-                marginBottom: 8,
-                display: 'flex',
-                alignItems: 'center',
-                gap: 8,
-                boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
-              }}>
-                <span style={{ fontSize: '1rem', fontWeight: 800, color: '#15803d' }}>🏷️ {cat}</span>
+          {pagedCatEntries.map(([cat, items]) => {
+            const isOpen = search ? true : openCats.has(cat);
+            return (
+            <div key={cat} style={{ marginBottom: 12 }}>
+              <button
+                type="button"
+                onClick={() => toggleCat(cat)}
+                style={{
+                  width: '100%', display: 'flex', alignItems: 'center', gap: 8,
+                  padding: '8px 14px', borderRadius: 8, marginBottom: isOpen ? 8 : 0,
+                  background: isOpen ? '#f0fdf4' : 'var(--surface)',
+                  border: `1px solid ${isOpen ? '#86efac' : 'var(--border)'}`,
+                  borderLeft: `4px solid #16a34a`,
+                  cursor: 'pointer', textAlign: 'left',
+                  boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
+                }}
+              >
+                <span style={{ fontSize: '0.75rem', transition: 'transform 0.15s', display: 'inline-block', transform: isOpen ? 'rotate(90deg)' : 'rotate(0deg)', color: '#16a34a' }}>▶</span>
+                <span style={{ fontSize: '0.95rem', fontWeight: 800, color: '#15803d', flex: 1 }}>🏷️ {cat}</span>
                 <span style={{
-                  fontSize: '0.75rem',
-                  fontWeight: 700,
-                  color: '#fff',
+                  fontSize: '0.75rem', fontWeight: 700, color: '#fff',
                   background: 'linear-gradient(135deg, #16a34a, #22c55e)',
-                  borderRadius: 20,
-                  padding: '2px 9px',
+                  borderRadius: 20, padding: '2px 9px',
                 }}>
-                  {items.length}
+                  {items.filter((i) => i.selected).length}/{items.length}
                 </span>
-              </div>
-              <div className="table-responsive card">
+              </button>
+              {isOpen && <div className="table-responsive card">
                 <table className="table">
                   <thead>
                     <tr>
@@ -300,9 +303,10 @@ export default function ClientIngredientsCatalog({ embedded, onSelectionDone }: 
                     ))}
                   </tbody>
                 </table>
-              </div>
+              </div>}
             </div>
-          ))}
+            );
+          })}
           {catTotalPages > 1 && (
             <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 10, marginTop: 8, fontSize: '0.82rem', color: 'var(--text-muted)' }}>
               <button className="btn btn-ghost btn-sm" disabled={catPage === 1} onClick={() => setCatPage((p) => Math.max(1, p - 1))} style={{ padding: '3px 10px', fontWeight: 700 }}>‹</button>
