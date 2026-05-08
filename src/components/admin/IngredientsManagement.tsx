@@ -25,6 +25,14 @@ export default function IngredientsManagement() {
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState('');
   const [filterCat, setFilterCat] = useState('');
+  const [openCats, setOpenCats] = useState<Set<string>>(new Set());
+
+  const toggleCat = (cat: string) =>
+    setOpenCats((prev) => {
+      const next = new Set(prev);
+      if (next.has(cat)) next.delete(cat); else next.add(cat);
+      return next;
+    });
 
   const fetchData = () => {
     setLoading(true);
@@ -148,13 +156,27 @@ export default function IngredientsManagement() {
           <p>{t('common.no_result')}</p>
         </div>
       ) : (
-        sortedGroups.map(([cat, items]) => (
-          <div key={cat} style={{ marginBottom: 24 }}>
-            <h2 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--primary)', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
-              🏷️ {cat}
-              <span style={{ fontSize: '0.78rem', fontWeight: 400, color: 'var(--text-muted)' }}>({items.length})</span>
-            </h2>
-            <div className="table-responsive card">
+        sortedGroups.map(([cat, items]) => {
+          // Auto-open when filtering/searching
+          const isOpen = search || filterCat ? true : openCats.has(cat);
+          return (
+          <div key={cat} style={{ marginBottom: 12 }}>
+            <button
+              type="button"
+              onClick={() => toggleCat(cat)}
+              style={{
+                width: '100%', display: 'flex', alignItems: 'center', gap: 8,
+                padding: '8px 12px', borderRadius: 8, marginBottom: isOpen ? 8 : 0,
+                background: isOpen ? 'var(--primary-light, #eef2ff)' : '#f1f5f9',
+                border: `1px solid ${isOpen ? 'var(--primary)' : 'var(--border)'}`,
+                cursor: 'pointer', textAlign: 'left',
+              }}
+            >
+              <span style={{ fontSize: '0.85rem', transition: 'transform 0.15s', display: 'inline-block', transform: isOpen ? 'rotate(90deg)' : 'rotate(0deg)', color: 'var(--primary)' }}>▶</span>
+              <span style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--primary)', flex: 1 }}>🏷️ {cat}</span>
+              <span style={{ fontSize: '0.78rem', fontWeight: 400, color: 'var(--text-muted)' }}>{items.length} ingrédient{items.length > 1 ? 's' : ''}</span>
+            </button>
+            {isOpen && <div className="table-responsive card">
               <table className="table">
                 <thead style={{ background: '#f0fdf4' }}>
                   <tr>
@@ -196,9 +218,10 @@ export default function IngredientsManagement() {
                   })}
                 </tbody>
               </table>
-            </div>
+            </div>}
           </div>
-        ))
+          );
+        })
       )}
 
       {showModal && (

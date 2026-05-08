@@ -129,6 +129,14 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
   const [ingredientsActivite, setIngredientsActivite] = useState<Activite | null>(null);
   const [ingredients, setIngredients] = useState<ActiviteIngredient[]>([]);
   const [ingredientsLoading, setIngredientsLoading] = useState(false);
+  const [openIngCats, setOpenIngCats] = useState<Set<string>>(new Set());
+
+  const toggleIngCat = (cat: string) =>
+    setOpenIngCats((prev) => {
+      const next = new Set(prev);
+      if (next.has(cat)) next.delete(cat); else next.add(cat);
+      return next;
+    });
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -401,7 +409,7 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
     setIngredientsLoading(false);
   };
 
-  const closeIngredients = () => { setIngredientsActivite(null); setIngredients([]); };
+  const closeIngredients = () => { setIngredientsActivite(null); setIngredients([]); setOpenIngCats(new Set()); };
 
   const toggleIngredient = async (ingredientId: number) => {
     if (!ingredientsActivite) return;
@@ -934,11 +942,29 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
               ) : ingredients.length === 0 ? (
                 <p className="text-muted">{t('client.stock.empty_stock')}</p>
               ) : (
-                Object.entries(ingredientGroups).sort(([a], [b]) => a.localeCompare(b)).map(([cat, items]) => (
-                  <div key={cat} style={{ marginBottom: 20 }}>
-                    <h3 style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--primary)', marginBottom: 8 }}>
-                      🏷️ {cat} <span style={{ fontWeight: 400, color: 'var(--text-muted)', fontSize: '0.75rem' }}>({items.length})</span>
-                    </h3>
+                Object.entries(ingredientGroups).sort(([a], [b]) => a.localeCompare(b)).map(([cat, items]) => {
+                  const isOpen = openIngCats.has(cat);
+                  const selectedCount = items.filter((i) => i.selected).length;
+                  return (
+                  <div key={cat} style={{ marginBottom: 8 }}>
+                    <button
+                      type="button"
+                      onClick={() => toggleIngCat(cat)}
+                      style={{
+                        width: '100%', display: 'flex', alignItems: 'center', gap: 8,
+                        padding: '6px 10px', borderRadius: 6, marginBottom: isOpen ? 6 : 0,
+                        background: isOpen ? 'var(--primary-light, #eef2ff)' : '#f1f5f9',
+                        border: `1px solid ${isOpen ? 'var(--primary)' : 'var(--border)'}`,
+                        cursor: 'pointer', textAlign: 'left',
+                      }}
+                    >
+                      <span style={{ fontSize: '0.75rem', transition: 'transform 0.15s', display: 'inline-block', transform: isOpen ? 'rotate(90deg)' : 'rotate(0deg)', color: 'var(--primary)' }}>▶</span>
+                      <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--primary)', flex: 1 }}>🏷️ {cat}</span>
+                      <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                        {selectedCount > 0 ? `${selectedCount}/` : ''}{items.length}
+                      </span>
+                    </button>
+                    {isOpen && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                       {items.map((ing) => (
                         <label key={ing.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 8px', borderRadius: 6, cursor: 'pointer', background: ing.selected ? 'var(--primary-light, #eef2ff)' : 'transparent' }}>
@@ -952,8 +978,10 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                         </label>
                       ))}
                     </div>
+                    )}
                   </div>
-                ))
+                  );
+                })
               )}
             </div>
             <div className="modal-footer">
