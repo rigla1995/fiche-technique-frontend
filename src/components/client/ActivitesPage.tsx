@@ -5,10 +5,10 @@ import api from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 import type { Activite, ActiviteIngredient, Labo } from '../../types';
 
-type ActiviteForm = { nom: string; adresse: string; telephone: string; email: string };
-const emptyForm = (): ActiviteForm => ({ nom: '', adresse: '', telephone: '', email: '' });
-type FranchiseStepForm = { telephone: string; email: string; adresse: string };
-const emptyFranchiseStep = (): FranchiseStepForm => ({ telephone: '', email: '', adresse: '' });
+type ActiviteForm = { nom: string; adresse: string; telephone: string };
+const emptyForm = (): ActiviteForm => ({ nom: '', adresse: '', telephone: '' });
+type FranchiseStepForm = { telephone: string; adresse: string };
+const emptyFranchiseStep = (): FranchiseStepForm => ({ telephone: '', adresse: '' });
 
 interface Props {
   onCreated?: () => void;
@@ -171,7 +171,7 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
   const openEdit = (act: Activite) => {
     setEditingId(act.id);
     setIsDuplicate(false);
-    setForm({ nom: act.nom, adresse: act.adresse || '', telephone: act.telephone || '', email: act.email || '' });
+    setForm({ nom: act.nom, adresse: act.adresse || '', telephone: act.telephone || '' });
     setMemeActivite(null);
     setNombreActivites('1');
     setError('');
@@ -187,7 +187,7 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
       const groupCount = activites.filter((a) => a.franchiseGroup === act.franchiseGroup).length;
       suggestedNom = `${act.franchiseGroup} ${groupCount + 1}`;
     }
-    setForm({ nom: suggestedNom, adresse: '', telephone: '', email: '' });
+    setForm({ nom: suggestedNom, adresse: '', telephone: '' });
     setMemeActivite(null);
     setNombreActivites('1');
     setError('');
@@ -291,7 +291,6 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
           franchiseName: fn,
           memeActivite: true,
           telephone: f.telephone,
-          email: f.email || undefined,
           adresse: f.adresse,
           ...(laboId ? { laboId } : {}),
         });
@@ -325,7 +324,7 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
     setError('');
     try {
       if (editingId) {
-        await api.put(`/api/entreprise/activites/${editingId}`, { nom: form.nom, adresse: form.adresse, telephone: form.telephone, email: form.email });
+        await api.put(`/api/entreprise/activites/${editingId}`, { nom: form.nom, adresse: form.adresse, telephone: form.telephone });
         setMsg(t('client.entreprise.activity_updated'));
       } else {
         const isFirst = activites.length === 0;
@@ -349,7 +348,7 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
           }
         }
 
-        const payload: Record<string, unknown> = { nom: form.nom, adresse: form.adresse, telephone: form.telephone, email: form.email };
+        const payload: Record<string, unknown> = { nom: form.nom, adresse: form.adresse, telephone: form.telephone };
         if (memeActivite !== null) payload.memeActivite = memeActivite;
         if (distinctLaboId) payload.laboId = distinctLaboId;
         await api.post('/api/entreprise/activites', payload);
@@ -544,7 +543,6 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                                 <tr>
                                   <th>{t('common.name')}</th>
                                   <th style={{ width: 120 }}>{t('client.entreprise.activity_telephone')}</th>
-                                  <th style={{ width: 170 }}>{t('client.entreprise.activity_email')}</th>
                                   <th>{t('client.entreprise.activity_adresse')}</th>
                                   {acts.some((a) => a.laboId) && (
                                     <th style={{ width: 130 }}>{t('client.entreprise.labo', 'Labo')}</th>
@@ -557,7 +555,6 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                                   <tr key={act.id}>
                                     <td style={{ fontWeight: 700 }}>{act.nom}</td>
                                     <td style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{act.telephone || '—'}</td>
-                                    <td style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{act.email || '—'}</td>
                                     <td style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{act.adresse || '—'}</td>
                                     {acts.some((a) => a.laboId) && (
                                       <td>
@@ -638,7 +635,6 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                           <tr>
                             <th>{t('common.name')}</th>
                             <th style={{ width: 150 }}>{t('client.entreprise.activity_telephone')}</th>
-                            <th style={{ width: 190 }}>{t('client.entreprise.activity_email')}</th>
                             <th>{t('client.entreprise.activity_adresse')}</th>
                             <th style={{ width: 140, textAlign: 'right' }}></th>
                           </tr>
@@ -648,7 +644,6 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                             <tr key={act.id}>
                               <td style={{ fontWeight: 700 }}>{act.nom}</td>
                               <td style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{act.telephone || '—'}</td>
-                              <td style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{act.email || '—'}</td>
                               <td style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{act.adresse || '—'}</td>
                               <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
                                 <button className="btn btn-ghost btn-sm" title={t('client.entreprise.manage_ingredients')} onClick={() => openIngredients(act)}>🧂</button>
@@ -807,14 +802,6 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                         />
                       </div>
                       <div className="form-field" style={{ marginBottom: 12 }}>
-                        <label>{t('client.entreprise.activity_email')}</label>
-                        <input
-                          type="email"
-                          value={franchiseForms[franchiseStep]?.email ?? ''}
-                          onChange={(e) => updateFranchiseForm('email', e.target.value)}
-                        />
-                      </div>
-                      <div className="form-field" style={{ marginBottom: 12 }}>
                         <label>{t('client.entreprise.activity_adresse')} *</label>
                         <textarea
                           value={franchiseForms[franchiseStep]?.adresse ?? ''}
@@ -843,14 +830,6 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                         {t('client.entreprise.activity_name_exists', { name: form.nom.trim() })}
                       </p>
                     )}
-                  </div>
-                  <div className="form-field" style={{ marginBottom: 12 }}>
-                    <label>{t('client.entreprise.activity_email')}</label>
-                    <input
-                      type="email"
-                      value={form.email}
-                      onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
-                    />
                   </div>
                   <div className="form-field" style={{ marginBottom: 12 }}>
                     <label>{t('client.entreprise.activity_telephone')}</label>

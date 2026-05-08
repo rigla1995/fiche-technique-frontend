@@ -132,7 +132,11 @@ export default function ClientsManagement() {
       }
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || t('common.error');
-      setFormErrors({ global: msg });
+      if (msg.toLowerCase().includes('email')) {
+        setFormErrors({ email: msg });
+      } else {
+        setFormErrors({ global: msg });
+      }
     } finally {
       setSaving(false);
     }
