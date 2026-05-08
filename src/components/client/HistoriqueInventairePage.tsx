@@ -276,14 +276,14 @@ export default function HistoriqueInventairePage() {
                 <span>🔍</span> {loading ? 'Recherche...' : 'Rechercher'}
               </button>
               {applied && (
-                <button onClick={handleExport} style={{
+                <button onClick={handleExport} disabled={!canWrite} style={{
                   padding: '10px 20px', borderRadius: 10,
                   border: 'none',
-                  background: selectedIds.size > 0
+                  background: !canWrite ? '#e5e7eb' : selectedIds.size > 0
                     ? 'linear-gradient(135deg, #d97706, #f59e0b)'
                     : 'linear-gradient(135deg, #16a34a, #22c55e)',
-                  color: '#fff', fontWeight: 800, fontSize: '0.88rem', cursor: 'pointer',
-                  boxShadow: selectedIds.size > 0
+                  color: !canWrite ? '#9ca3af' : '#fff', fontWeight: 800, fontSize: '0.88rem', cursor: !canWrite ? 'not-allowed' : 'pointer',
+                  boxShadow: !canWrite ? 'none' : selectedIds.size > 0
                     ? '0 4px 14px rgba(217,119,6,0.35)'
                     : '0 4px 14px rgba(22,163,74,0.35)',
                   display: 'flex', alignItems: 'center', gap: 7, whiteSpace: 'nowrap',

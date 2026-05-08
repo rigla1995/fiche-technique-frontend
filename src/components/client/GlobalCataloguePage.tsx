@@ -196,7 +196,7 @@ function FiltersBar({
 
 export default function GlobalCataloguePage() {
   const { t } = useTranslation();
-  const { user, advanceOnboarding } = useAuth();
+  const { user, canWrite, advanceOnboarding } = useAuth();
   const { refreshSelections } = useSelection();
 
   const isEntreprise = user?.compteType === 'entreprise';
@@ -504,6 +504,7 @@ export default function GlobalCataloguePage() {
           filterIngId={filterIngId}
           filterName={filterName}
           onToggle={toggle}
+          readOnly={!canWrite}
         />
       )}
 
