@@ -74,7 +74,6 @@ function PerteModal({ ingredientId, nom, activiteId, onSaveOverride, onAfterSave
   const [prixUnitaire, setPrixUnitaire] = useState<number | null>(null);
   const [loadingPrix, setLoadingPrix] = useState(false);
   const [dateMin, setDateMin] = useState<string | null>(null);
-  const [dateMax, setDateMax] = useState<string | null>(null);
 
   // Fetch allowed date range on open
   useEffect(() => {
@@ -86,12 +85,8 @@ function PerteModal({ ingredientId, nom, activiteId, onSaveOverride, onAfterSave
         } else {
           res = await api.get(`/api/stock/client/pertes/date-range`, { params: { ingredientId } });
         }
-        const { minDate, maxDate } = res.data;
+        const { minDate } = res.data;
         setDateMin(minDate ?? null);
-        setDateMax(maxDate ?? null);
-        // Clamp current datePerte to the range
-        if (maxDate && todayStr() > maxDate) setDatePerte(maxDate);
-        else if (minDate && todayStr() < minDate) setDatePerte(minDate);
       } catch { /* keep defaults */ }
     };
     fetchRange();
@@ -172,12 +167,7 @@ function PerteModal({ ingredientId, nom, activiteId, onSaveOverride, onAfterSave
               <div>
                 <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: 4 }}>Date de la perte</label>
                 <input type="date" className="input" style={{ width: '100%' }}
-                  min={dateMin ?? yearStart} max={dateMax ?? todayStr()} value={datePerte} onChange={(e) => setDatePerte(e.target.value)} />
-                {dateMin && dateMax && (
-                  <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: 3 }}>
-                    Appros : {dateMin.split('-').reverse().join('/')} → {dateMax.split('-').reverse().join('/')}
-                  </p>
-                )}
+                  min={yearStart} max={todayStr()} value={datePerte} onChange={(e) => setDatePerte(e.target.value)} />
               </div>
               <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 6, padding: '8px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ fontSize: '0.8rem', color: '#7f1d1d', fontWeight: 600 }}>Prix unitaire appro</span>
