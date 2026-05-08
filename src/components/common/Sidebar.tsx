@@ -484,8 +484,22 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
         <ul className="sidebar-nav" style={{ flex: 1 }}>
           {user?.role === 'super_admin' ? (
             <>
+              {/* ── Rapports (accès rapide) ── */}
+              <li>
+                <NavLink
+                  to="/admin/rapports"
+                  className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
+                  onClick={onClose}
+                >
+                  <span className="link-icon">📊</span>
+                  <span className="link-label">Rapports</span>
+                </NavLink>
+              </li>
+
+              <Divider />
+
               {/* ══ ESPACE ADMINISTRATION ══ */}
-              <CollapsibleHeader label="Espace Administration" icon="📊" isOpen={openSections.has('admin-general')} locked={false} onToggle={() => toggleSection('admin-general')} />
+              <CollapsibleHeader label="Espace Administration" icon="🛠️" isOpen={openSections.has('admin-general')} locked={false} onToggle={() => toggleSection('admin-general')} />
               {openSections.has('admin-general') && (
                 <>
                   <SubNavLink to="/admin" icon="📊" label={t('nav.dashboard')} isActive={location.pathname === '/admin'} onClick={onClose} />

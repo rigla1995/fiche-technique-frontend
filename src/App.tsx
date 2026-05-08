@@ -33,6 +33,7 @@ import ErrorPage from './components/common/ErrorPage';
 import AbonnementsManagement from './components/admin/AbonnementsManagement';
 import TarifsConfig from './components/admin/TarifsConfig';
 import DemandesManagement from './components/admin/DemandesManagement';
+import AdminRapportsPage from './components/admin/AdminRapportsPage';
 import MonAbonnementPage from './components/client/MonAbonnementPage';
 import GerantsPage from './components/client/GerantsPage';
 import UpgradeWizard from './components/client/UpgradeWizard';
@@ -76,6 +77,7 @@ export default function App() {
             <Route path="/admin/ingredients" element={<IngredientsManagement />} />
             <Route path="/admin/categories" element={<CategoriesManagement />} />
             <Route path="/admin/domaines" element={<DomainesManagement />} />
+            <Route path="/admin/rapports" element={<AdminRapportsPage />} />
             <Route path="/admin/abonnements" element={<AbonnementsManagement />} />
             <Route path="/admin/tarifs" element={<TarifsConfig />} />
             <Route path="/admin/demandes" element={<DemandesManagement />} />
