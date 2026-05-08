@@ -3,7 +3,6 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import Layout from './components/common/Layout';
 import LoginPage from './components/auth/LoginPage';
 import InvitePage from './components/auth/InvitePage';
-import AdminDashboard from './components/admin/AdminDashboard';
 import ClientsManagement from './components/admin/ClientsManagement';
 import UnitsManagement from './components/admin/UnitsManagement';
 import IngredientsManagement from './components/admin/IngredientsManagement';
@@ -71,7 +70,7 @@ export default function App() {
 
           {/* Super Admin routes */}
           <Route element={<Layout requireRole="super_admin" />}>
-            <Route path="/admin" element={<AdminDashboard />} />
+            <Route path="/admin" element={<Navigate to="/admin/rapports" replace />} />
             <Route path="/admin/clients" element={<ClientsManagement />} />
             <Route path="/admin/units" element={<UnitsManagement />} />
             <Route path="/admin/ingredients" element={<IngredientsManagement />} />

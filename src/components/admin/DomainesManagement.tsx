@@ -12,6 +12,7 @@ export default function DomainesManagement() {
   const [editId, setEditId] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [search, setSearch] = useState('');
 
   const fetch = () => {
     setLoading(true);
@@ -58,19 +59,30 @@ export default function DomainesManagement() {
         <button className="btn btn-primary" onClick={openAdd}>+ {t('admin.domaines.add')}</button>
       </div>
 
+      <div style={{ background: '#f8fafc', border: '1px solid var(--border)', borderRadius: 8, padding: '10px 16px', marginBottom: 16 }}>
+        <input
+          type="text"
+          placeholder={t('common.search') + '…'}
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="input"
+          style={{ maxWidth: 320 }}
+        />
+      </div>
+
       {loading ? (
         <div className="loading-text">{t('common.loading')}</div>
       ) : (
         <div className="table-responsive card">
           <table className="table">
-            <thead>
+            <thead style={{ background: '#fff7ed' }}>
               <tr>
                 <th>{t('common.name')}</th>
                 <th>{t('common.actions')}</th>
               </tr>
             </thead>
             <tbody>
-              {domaines.map((d) => (
+              {domaines.filter((d) => d.nom.toLowerCase().includes(search.toLowerCase())).map((d) => (
                 <tr key={d.id}>
                   <td>{d.nom}</td>
                   <td className="actions-cell">

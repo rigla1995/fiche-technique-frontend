@@ -360,7 +360,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const isAdmin = user?.role === 'super_admin';
   const isGerant = user?.role === 'gerant';
   const [openSections, setOpenSections] = useState<Set<string>>(
-    isAdmin ? new Set(['admin-general', 'admin-ref']) : new Set()
+    isAdmin ? new Set(['admin-ref']) : new Set()
   );
   const [gerantActivites, setGerantActivites] = useState<Activite[]>([]);
 
@@ -484,33 +484,24 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
         <ul className="sidebar-nav" style={{ flex: 1 }}>
           {user?.role === 'super_admin' ? (
             <>
-              {/* ── Rapports (accès rapide) ── */}
+              {/* ── Liens directs ── */}
               <li>
-                <NavLink
-                  to="/admin/rapports"
-                  className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
-                  onClick={onClose}
-                >
+                <NavLink to="/admin/rapports" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>
                   <span className="link-icon">📊</span>
                   <span className="link-label">Rapports</span>
+                </NavLink>
+              </li>
+              <li>
+                <NavLink to="/admin/clients" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>
+                  <span className="link-icon">👥</span>
+                  <span className="link-label">{t('nav.clients')}</span>
                 </NavLink>
               </li>
 
               <Divider />
 
-              {/* ══ ESPACE ADMINISTRATION ══ */}
-              <CollapsibleHeader label="Espace Administration" icon="🛠️" isOpen={openSections.has('admin-general')} locked={false} onToggle={() => toggleSection('admin-general')} />
-              {openSections.has('admin-general') && (
-                <>
-                  <SubNavLink to="/admin" icon="📊" label={t('nav.dashboard')} isActive={location.pathname === '/admin'} onClick={onClose} />
-                  <SubNavLink to="/admin/clients" icon="👥" label={t('nav.clients')} isActive={location.pathname === '/admin/clients'} onClick={onClose} />
-                </>
-              )}
-
-              <Divider />
-
-              {/* ══ ESPACE RÉFÉRENTIELS ══ */}
-              <CollapsibleHeader label="Espace Référentiels" icon="🗂️" isOpen={openSections.has('admin-ref')} locked={false} onToggle={() => toggleSection('admin-ref')} />
+              {/* ══ RÉFÉRENTIELS ══ */}
+              <CollapsibleHeader label="Référentiels" icon="🗂️" isOpen={openSections.has('admin-ref')} locked={false} onToggle={() => toggleSection('admin-ref')} />
               {openSections.has('admin-ref') && (
                 <>
                   <SubNavLink to="/admin/units" icon="📏" label={t('nav.units')} isActive={location.pathname === '/admin/units'} onClick={onClose} />
@@ -522,8 +513,8 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
               <Divider />
 
-              {/* ══ ESPACE ABONNEMENTS ══ */}
-              <CollapsibleHeader label="Espace Abonnements" icon="💳" isOpen={openSections.has('admin-abo')} locked={false} onToggle={() => toggleSection('admin-abo')} />
+              {/* ══ ABONNEMENTS ══ */}
+              <CollapsibleHeader label="Abonnements" icon="💳" isOpen={openSections.has('admin-abo')} locked={false} onToggle={() => toggleSection('admin-abo')} />
               {openSections.has('admin-abo') && (
                 <>
                   <SubNavLink to="/admin/abonnements" icon="💳" label="Abonnements" isActive={location.pathname === '/admin/abonnements'} onClick={onClose} />

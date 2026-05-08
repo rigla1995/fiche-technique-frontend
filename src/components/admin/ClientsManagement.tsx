@@ -174,13 +174,14 @@ export default function ClientsManagement() {
         <button className="btn btn-primary" onClick={openAdd}>+ {t('admin.clients.add')}</button>
       </div>
 
-      <div className="search-bar">
+      <div style={{ background: '#f8fafc', border: '1px solid var(--border)', borderRadius: 8, padding: '10px 16px', marginBottom: 16 }}>
         <input
           type="text"
-          placeholder={t('common.search') + '...'}
+          placeholder={t('common.search') + '…'}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="input"
+          style={{ maxWidth: 360 }}
         />
       </div>
 
@@ -189,7 +190,7 @@ export default function ClientsManagement() {
       ) : (
         <div className="table-responsive card">
           <table className="table">
-            <thead>
+            <thead style={{ background: '#eff6ff' }}>
               <tr>
                 <th>{t('common.name')}</th>
                 <th>{t('common.email')}</th>

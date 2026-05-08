@@ -55,13 +55,14 @@ export default function CategoriesManagement() {
         <button className="btn btn-primary" onClick={openAdd}>+ {t('admin.categories.add')}</button>
       </div>
 
-      <div className="search-bar">
+      <div style={{ background: '#f8fafc', border: '1px solid var(--border)', borderRadius: 8, padding: '10px 16px', marginBottom: 16 }}>
         <input
           type="text"
-          placeholder={t('common.search') + '...'}
+          placeholder={t('common.search') + '…'}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="input"
+          style={{ maxWidth: 320 }}
         />
       </div>
 
@@ -70,7 +71,7 @@ export default function CategoriesManagement() {
       ) : (
         <div className="table-responsive card">
           <table className="table">
-            <thead>
+            <thead style={{ background: '#eef2ff' }}>
               <tr>
                 <th>{t('common.name')}</th>
                 <th>{t('common.actions')}</th>
