@@ -100,7 +100,9 @@ export default function StockLaboPage() {
   const [perteSaving, setPerteSaving] = useState(false);
   const [pertePrix, setPertePrix] = useState<number | null>(null);
   const [pertePrixLoading, setPertePrixLoading] = useState(false);
+  const [perteLoadingRange, setPerteLoadingRange] = useState(false);
   const [perteDateMin, setPerteDateMin] = useState<string | null>(null);
+  const [perteDateMax, setPerteDateMax] = useState<string | null>(null);
 
   // Assignment data
   const [assignments, setAssignments] = useState<{ activites: LaboActivite[]; ingredients: AssignIngredient[] } | null>(null);
@@ -352,12 +354,20 @@ export default function StockLaboPage() {
   };
 
   const fetchPerteDateRange = async (ingredientId: number) => {
-    if (ingredientId < 0) { setPerteDateMin(null); return; }
+    if (ingredientId < 0) { setPerteDateMin(null); setPerteDateMax(null); return; }
+    setPerteLoadingRange(true);
     try {
       const r = await api.get(`/api/labo/${laboId}/pertes/date-range`, { params: { ingredientId } });
-      const { minDate } = r.data;
+      const { minDate, maxDate } = r.data;
       setPerteDateMin(minDate ?? null);
-    } catch { setPerteDateMin(null); }
+      setPerteDateMax(maxDate ?? null);
+      if (minDate && maxDate) {
+        const today = todayStr();
+        if (today > maxDate) setPerteDate(maxDate);
+        else if (today < minDate) setPerteDate(minDate);
+      }
+    } catch { setPerteDateMin(null); setPerteDateMax(null); }
+    setPerteLoadingRange(false);
   };
 
   const fetchPertePrix = async (ingredientId: number, date: string) => {
@@ -385,6 +395,7 @@ export default function StockLaboPage() {
       setPerteDate(todayStr());
       setPertePrix(null);
       setPerteDateMin(null);
+      setPerteDateMax(null);
       loadStock();
     } catch { /* ignore */ }
     setPerteSaving(false);
@@ -1094,49 +1105,72 @@ export default function StockLaboPage() {
               <button className="modal-close" onClick={() => setPerteModal(null)} style={{ color: '#fff' }}>✕</button>
             </div>
             <div className="modal-body">
-              <label style={{ ...LABEL, display: 'block', marginBottom: 6 }}>Quantité perdue</label>
-              <input
-                className="input" type="number" min="0.001" step="0.001"
-                style={{ width: '100%', fontSize: '0.9rem', marginBottom: 16 }}
-                value={perteQty} onChange={(e) => setPerteQty(e.target.value)}
-                placeholder="Ex: 2.5"
-                autoFocus
-              />
-              <label style={{ ...LABEL, display: 'block', marginBottom: 6 }}>Type de perte</label>
-              <select className="input" style={{ width: '100%', fontSize: '0.9rem', marginBottom: 16 }} value={perteType} onChange={(e) => setPerteType(e.target.value as 'avarie' | 'dechet')}>
-                <option value="avarie">Avarie</option>
-                <option value="dechet">Déchet</option>
-              </select>
-              <label style={{ ...LABEL, display: 'block', marginBottom: 6 }}>Date de perte</label>
-              <input className="input" type="date" style={{ width: '100%', fontSize: '0.9rem' }}
-                min={yearStart} max={todayStr()} value={perteDate}
-                onChange={(e) => { setPerteDate(e.target.value); if (perteModal) fetchPertePrix(perteModal.ingredientId, e.target.value); }} />
-              {perteModal && perteModal.ingredientId >= 0 && (
-                <div style={{ marginBottom: 16, display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 6, padding: '7px 12px', display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ fontSize: '0.8rem', color: '#7f1d1d', fontWeight: 600 }}>Prix unitaire appro</span>
-                    <span style={{ fontWeight: 700, color: '#991b1b' }}>
-                      {pertePrixLoading ? '…' : pertePrix != null ? `${pertePrix.toFixed(3)} DT` : '—'}
-                    </span>
+              {perteLoadingRange ? (
+                <p style={{ color: 'var(--text-muted)', textAlign: 'center' }}>…</p>
+              ) : !perteDateMin || !perteDateMax ? (
+                <>
+                  <div style={{ background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: 8, padding: '14px 16px', textAlign: 'center', marginBottom: 16 }}>
+                    <p style={{ margin: 0, color: '#92400e', fontWeight: 600, fontSize: '0.9rem' }}>
+                      Aucun approvisionnement enregistré pour cet ingrédient cette année.
+                    </p>
+                    <p style={{ margin: '6px 0 0', color: '#b45309', fontSize: '0.8rem' }}>
+                      Enregistrez d'abord un appro avant de déclarer une perte.
+                    </p>
                   </div>
-                  {pertePrix != null && perteQty && parseFloat(perteQty) > 0 && (
-                    <div style={{ background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: 6, padding: '7px 12px', display: 'flex', justifyContent: 'space-between' }}>
-                      <span style={{ fontSize: '0.8rem', color: '#7c2d12', fontWeight: 600 }}>Coût total</span>
-                      <span style={{ fontWeight: 700, color: '#c2410c' }}>{(pertePrix * parseFloat(perteQty)).toFixed(3)} DT</span>
+                  <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+                    <button className="btn btn-ghost" onClick={() => setPerteModal(null)}>Fermer</button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <label style={{ ...LABEL, display: 'block', marginBottom: 6 }}>Quantité perdue</label>
+                  <input
+                    className="input" type="number" min="0.001" step="0.001"
+                    style={{ width: '100%', fontSize: '0.9rem', marginBottom: 16 }}
+                    value={perteQty} onChange={(e) => setPerteQty(e.target.value)}
+                    placeholder="Ex: 2.5"
+                    autoFocus
+                  />
+                  <label style={{ ...LABEL, display: 'block', marginBottom: 6 }}>Type de perte</label>
+                  <select className="input" style={{ width: '100%', fontSize: '0.9rem', marginBottom: 16 }} value={perteType} onChange={(e) => setPerteType(e.target.value as 'avarie' | 'dechet')}>
+                    <option value="avarie">Avarie</option>
+                    <option value="dechet">Déchet</option>
+                  </select>
+                  <label style={{ ...LABEL, display: 'block', marginBottom: 6 }}>Date de perte</label>
+                  <input className="input" type="date" style={{ width: '100%', fontSize: '0.9rem' }}
+                    min={perteDateMin} max={perteDateMax} value={perteDate}
+                    onChange={(e) => { setPerteDate(e.target.value); if (perteModal) fetchPertePrix(perteModal.ingredientId, e.target.value); }} />
+                  <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: 3, marginBottom: 12 }}>
+                    Appros {new Date().getFullYear()} : {perteDateMin.split('-').reverse().join('/')} → {perteDateMax.split('-').reverse().join('/')}
+                  </p>
+                  {perteModal && perteModal.ingredientId >= 0 && (
+                    <div style={{ marginBottom: 16, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 6, padding: '7px 12px', display: 'flex', justifyContent: 'space-between' }}>
+                        <span style={{ fontSize: '0.8rem', color: '#7f1d1d', fontWeight: 600 }}>Prix unitaire appro</span>
+                        <span style={{ fontWeight: 700, color: '#991b1b' }}>
+                          {pertePrixLoading ? '…' : pertePrix != null ? `${pertePrix.toFixed(3)} DT` : '—'}
+                        </span>
+                      </div>
+                      {pertePrix != null && perteQty && parseFloat(perteQty) > 0 && (
+                        <div style={{ background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: 6, padding: '7px 12px', display: 'flex', justifyContent: 'space-between' }}>
+                          <span style={{ fontSize: '0.8rem', color: '#7c2d12', fontWeight: 600 }}>Coût total</span>
+                          <span style={{ fontWeight: 700, color: '#c2410c' }}>{(pertePrix * parseFloat(perteQty)).toFixed(3)} DT</span>
+                        </div>
+                      )}
                     </div>
                   )}
-                </div>
+                  <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+                    <button className="btn btn-ghost" onClick={() => setPerteModal(null)}>Annuler</button>
+                    <button
+                      className="btn btn-danger"
+                      onClick={savePerte}
+                      disabled={!perteQty.trim() || parseFloat(perteQty) <= 0 || perteSaving}
+                    >
+                      {perteSaving ? '…' : 'Enregistrer la perte'}
+                    </button>
+                  </div>
+                </>
               )}
-              <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
-                <button className="btn btn-ghost" onClick={() => setPerteModal(null)}>Annuler</button>
-                <button
-                  className="btn btn-danger"
-                  onClick={savePerte}
-                  disabled={!perteQty.trim() || parseFloat(perteQty) <= 0 || perteSaving}
-                >
-                  {perteSaving ? '…' : 'Enregistrer la perte'}
-                </button>
-              </div>
             </div>
           </div>
         </div>

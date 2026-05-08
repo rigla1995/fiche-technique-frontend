@@ -73,11 +73,14 @@ function PerteModal({ ingredientId, nom, activiteId, onSaveOverride, onAfterSave
   const [done, setDone] = useState(false);
   const [prixUnitaire, setPrixUnitaire] = useState<number | null>(null);
   const [loadingPrix, setLoadingPrix] = useState(false);
+  const [loadingRange, setLoadingRange] = useState(true);
   const [dateMin, setDateMin] = useState<string | null>(null);
+  const [dateMax, setDateMax] = useState<string | null>(null);
 
-  // Fetch allowed date range on open
+  // Fetch allowed date range (current-year appros only) on open
   useEffect(() => {
     const fetchRange = async () => {
+      setLoadingRange(true);
       try {
         let res;
         if (activiteId) {
@@ -85,9 +88,17 @@ function PerteModal({ ingredientId, nom, activiteId, onSaveOverride, onAfterSave
         } else {
           res = await api.get(`/api/stock/client/pertes/date-range`, { params: { ingredientId } });
         }
-        const { minDate } = res.data;
+        const { minDate, maxDate } = res.data;
         setDateMin(minDate ?? null);
+        setDateMax(maxDate ?? null);
+        // Clamp initial date to the allowed range
+        if (minDate && maxDate) {
+          const today = todayStr();
+          if (today > maxDate) setDatePerte(maxDate);
+          else if (today < minDate) setDatePerte(minDate);
+        }
       } catch { /* keep defaults */ }
+      setLoadingRange(false);
     };
     fetchRange();
   }, [ingredientId, activiteId]);
@@ -148,8 +159,19 @@ function PerteModal({ ingredientId, nom, activiteId, onSaveOverride, onAfterSave
         </div>
         <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <p style={{ fontWeight: 600, color: 'var(--text)' }}>{nom}</p>
-          {done ? (
+          {loadingRange ? (
+            <p style={{ color: 'var(--text-muted)', textAlign: 'center' }}>…</p>
+          ) : done ? (
             <p style={{ color: 'var(--success)', fontWeight: 700, textAlign: 'center' }}>✓ Perte enregistrée</p>
+          ) : !dateMin || !dateMax ? (
+            <div style={{ background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: 8, padding: '14px 16px', textAlign: 'center' }}>
+              <p style={{ margin: 0, color: '#92400e', fontWeight: 600, fontSize: '0.9rem' }}>
+                Aucun approvisionnement enregistré pour cet ingrédient cette année.
+              </p>
+              <p style={{ margin: '6px 0 0', color: '#b45309', fontSize: '0.8rem' }}>
+                Enregistrez d'abord un appro avant de déclarer une perte.
+              </p>
+            </div>
           ) : (
             <>
               <div>
@@ -167,7 +189,10 @@ function PerteModal({ ingredientId, nom, activiteId, onSaveOverride, onAfterSave
               <div>
                 <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: 4 }}>Date de la perte</label>
                 <input type="date" className="input" style={{ width: '100%' }}
-                  min={yearStart} max={todayStr()} value={datePerte} onChange={(e) => setDatePerte(e.target.value)} />
+                  min={dateMin} max={dateMax} value={datePerte} onChange={(e) => setDatePerte(e.target.value)} />
+                <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: 3 }}>
+                  Appros {new Date().getFullYear()} : {dateMin.split('-').reverse().join('/')} → {dateMax.split('-').reverse().join('/')}
+                </p>
               </div>
               <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 6, padding: '8px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ fontSize: '0.8rem', color: '#7f1d1d', fontWeight: 600 }}>Prix unitaire appro</span>
@@ -188,9 +213,11 @@ function PerteModal({ ingredientId, nom, activiteId, onSaveOverride, onAfterSave
         {!done && (
           <div className="modal-footer">
             <button className="btn btn-ghost" onClick={onClose}>Annuler</button>
-            <button className="btn btn-danger btn-sm" style={{ background: '#be123c', color: '#fff', borderColor: '#be123c' }} onClick={submit} disabled={saving}>
-              {saving ? '…' : 'Enregistrer la perte'}
-            </button>
+            {!loadingRange && dateMin && dateMax && (
+              <button className="btn btn-danger btn-sm" style={{ background: '#be123c', color: '#fff', borderColor: '#be123c' }} onClick={submit} disabled={saving}>
+                {saving ? '…' : 'Enregistrer la perte'}
+              </button>
+            )}
           </div>
         )}
       </div>
