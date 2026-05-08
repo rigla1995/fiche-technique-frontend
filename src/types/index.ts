@@ -166,6 +166,7 @@ export interface Client {
   onboardingStep?: number;
   createdAt?: string;
   activatedAt?: string | null;
+  domaineIds?: number[];
 }
 
 export interface DomaineActivite {

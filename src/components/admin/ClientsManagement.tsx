@@ -9,7 +9,7 @@ const TUNISIAN_PHONE = /^(\+216[\s-]?)?[2579]\d{7}$/;
 
 interface IndependantForm {
   nomActivite: string;
-  domaineId: string;
+  domaineIds: number[];
   email: string;
   telephone: string;
   adresse: string;
@@ -22,7 +22,7 @@ interface EntrepriseForm {
   adresse: string;
 }
 
-const emptyIndependant = (): IndependantForm => ({ nomActivite: '', domaineId: '', email: '', telephone: '', adresse: '' });
+const emptyIndependant = (): IndependantForm => ({ nomActivite: '', domaineIds: [], email: '', telephone: '', adresse: '' });
 const emptyEntreprise = (): EntrepriseForm => ({ nomEntreprise: '', email: '', telephone: '', adresse: '' });
 
 export default function ClientsManagement() {
@@ -71,7 +71,7 @@ export default function ClientsManagement() {
     setEditId(c.id);
     setSelectedType(c.compteType === 'entreprise' ? 'entreprise' : 'independant');
     setModalStep('form');
-    setIndForm({ nomActivite: c.name, domaineId: '', email: c.email, telephone: c.phone || '', adresse: '' });
+    setIndForm({ nomActivite: c.name, domaineIds: c.domaineIds || [], email: c.email, telephone: c.phone || '', adresse: '' });
     setEntForm({ nomEntreprise: c.name, email: c.email, telephone: c.phone || '', adresse: '' });
     setFormErrors({});
     setShowModal(true);
@@ -105,7 +105,7 @@ export default function ClientsManagement() {
     try {
       if (editId) {
         const payload = selectedType === 'independant'
-          ? { name: indForm.nomActivite, email: indForm.email, phone: indForm.telephone, compteType: 'independant' }
+          ? { name: indForm.nomActivite, email: indForm.email, phone: indForm.telephone, compteType: 'independant', domaineIds: indForm.domaineIds }
           : { name: entForm.nomEntreprise, email: entForm.email, phone: entForm.telephone, compteType: 'entreprise' };
         await api.put(`/admin/clients/${editId}`, payload);
         closeModal();
@@ -117,7 +117,7 @@ export default function ClientsManagement() {
               email: indForm.email,
               telephone: indForm.telephone,
               adresse: indForm.adresse,
-              domaineId: indForm.domaineId ? parseInt(indForm.domaineId) : undefined,
+              domaineIds: indForm.domaineIds,
               compteType: 'independant',
             }
           : {
@@ -272,6 +272,7 @@ export default function ClientsManagement() {
                 <th>{t('common.email')}</th>
                 <th>{t('common.phone')}</th>
                 <th>Type</th>
+                <th>Domaines</th>
                 <th>Statut</th>
                 <th>{t('common.actions')}</th>
               </tr>
@@ -287,6 +288,24 @@ export default function ClientsManagement() {
                       <Badge bg="#fef9c3" color="#854d0e">🏢 Entreprise</Badge>
                     ) : (
                       <Badge bg="#eff6ff" color="#1d4ed8">👤 Indépendant</Badge>
+                    )}
+                  </td>
+                  <td>
+                    {c.compteType === 'entreprise' ? (
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>par activité</span>
+                    ) : (c.domaineIds || []).length === 0 ? (
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>—</span>
+                    ) : (
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
+                        {(c.domaineIds || []).map((did) => {
+                          const d = domaines.find((dom) => dom.id === did);
+                          return (
+                            <span key={did} style={{ background: '#dbeafe', color: '#1d4ed8', fontSize: '0.7rem', fontWeight: 600, padding: '1px 7px', borderRadius: 12, border: '1px solid #bfdbfe' }}>
+                              {d ? d.nom : `#${did}`}
+                            </span>
+                          );
+                        })}
+                      </div>
                     )}
                   </td>
                   <td>
@@ -327,7 +346,7 @@ export default function ClientsManagement() {
                 </tr>
               ))}
               {filtered.length === 0 && (
-                <tr><td colSpan={6} className="empty-cell">{t('common.no_result')}</td></tr>
+                <tr><td colSpan={7} className="empty-cell">{t('common.no_result')}</td></tr>
               )}
             </tbody>
           </table>
@@ -425,17 +444,46 @@ export default function ClientsManagement() {
                       {formErrors.nom && <span className="field-error">{formErrors.nom}</span>}
                     </div>
                     <div className="form-group">
-                      <label>Domaine d'activité</label>
-                      <select
-                        className="input"
-                        value={indForm.domaineId}
-                        onChange={(e) => setIndForm((f) => ({ ...f, domaineId: e.target.value }))}
-                      >
-                        <option value="">— Choisir un domaine —</option>
-                        {domaines.map((d) => (
-                          <option key={d.id} value={d.id}>{d.nom}</option>
-                        ))}
-                      </select>
+                      <label>
+                        Domaines d'activité
+                        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginLeft: 6 }}>
+                          (détermine les ingrédients visibles dans le catalogue)
+                        </span>
+                      </label>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 4 }}>
+                        {domaines.map((d) => {
+                          const checked = indForm.domaineIds.includes(d.id);
+                          return (
+                            <label
+                              key={d.id}
+                              style={{
+                                display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer',
+                                padding: '5px 12px', borderRadius: 20, fontSize: '0.82rem', fontWeight: 600,
+                                border: `1.5px solid ${checked ? '#1d4ed8' : 'var(--border)'}`,
+                                background: checked ? '#dbeafe' : '#f8fafc',
+                                color: checked ? '#1d4ed8' : 'var(--text-muted)',
+                                userSelect: 'none',
+                              }}
+                            >
+                              <input
+                                type="checkbox"
+                                style={{ display: 'none' }}
+                                checked={checked}
+                                onChange={() => setIndForm((f) => ({
+                                  ...f,
+                                  domaineIds: checked
+                                    ? f.domaineIds.filter((id) => id !== d.id)
+                                    : [...f.domaineIds, d.id],
+                                }))}
+                              />
+                              {checked ? '✓ ' : ''}{d.nom}
+                            </label>
+                          );
+                        })}
+                        {domaines.length === 0 && (
+                          <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Aucun domaine configuré</span>
+                        )}
+                      </div>
                     </div>
                     <div className="form-group">
                       <label>{t('common.email')} *</label>
