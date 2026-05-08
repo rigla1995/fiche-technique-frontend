@@ -1187,7 +1187,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                                   </div>
                                 )}
                                 <div style={{ display: 'flex', gap: 4 }}>
-                                  {((isEntreprise && activiteId) || (!isEntreprise && onSavePerte)) && (
+                                  {canWrite && ((isEntreprise && activiteId) || (!isEntreprise && onSavePerte)) && (
                                     <button className="perte-btn" onClick={() => setPertesModal({ ingredientId: entry.ingredientId, nom: entry.nom })} title="Enregistrer une perte">
                                       📉
                                     </button>

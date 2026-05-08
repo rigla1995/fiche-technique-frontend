@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import api from '../../api/client';
+import { useAuth } from '../../context/AuthContext';
 
 const todayStr = () => new Date().toISOString().slice(0, 10);
 const fmtDate = (iso: string | null | undefined) => {
@@ -27,6 +28,7 @@ interface Activite { id: number; nom: string; type: string; franchiseGroup: stri
 const catColor = (_cat: string) => '#2563eb';
 
 export default function InventairePage() {
+  const { canWrite } = useAuth();
   const [searchParams] = useSearchParams();
   const laboId = searchParams.get('laboId');
   const activiteId = searchParams.get('activiteId');
@@ -254,11 +256,11 @@ export default function InventairePage() {
               </select>
             </div>
             <div style={{ marginLeft: 'auto' }}>
-              <button onClick={handleSave} disabled={saving || !hasAnyQty} style={{
+              <button onClick={handleSave} disabled={saving || !hasAnyQty || !canWrite} style={{
                 padding: '10px 28px', borderRadius: 10, border: 'none',
-                background: hasAnyQty ? 'linear-gradient(135deg, #2563eb 0%, #0ea5e9 100%)' : '#e5e7eb',
-                color: hasAnyQty ? '#fff' : '#9ca3af', fontWeight: 800, fontSize: '0.95rem',
-                cursor: hasAnyQty ? 'pointer' : 'not-allowed',
+                background: hasAnyQty && canWrite ? 'linear-gradient(135deg, #2563eb 0%, #0ea5e9 100%)' : '#e5e7eb',
+                color: hasAnyQty && canWrite ? '#fff' : '#9ca3af', fontWeight: 800, fontSize: '0.95rem',
+                cursor: hasAnyQty && canWrite ? 'pointer' : 'not-allowed',
                 boxShadow: hasAnyQty ? '0 4px 14px rgba(37,99,235,0.35)' : 'none',
                 transition: 'all 0.15s', display: 'flex', alignItems: 'center', gap: 7,
               }}>

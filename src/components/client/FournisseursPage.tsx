@@ -19,7 +19,7 @@ const labelStyle: React.CSSProperties = {
 };
 
 export default function FournisseursPage() {
-  const { user } = useAuth();
+  const { user, canWrite } = useAuth();
   const isIndep = user?.compteType === 'independant';
 
   const [fournisseurs, setFournisseurs] = useState<Fournisseur[]>([]);
@@ -152,6 +152,7 @@ export default function FournisseursPage() {
             <div style={{ fontSize: '1.4rem', fontWeight: 900, color: '#fff' }}>{fournisseurs.length}</div>
             <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.75)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Fournisseurs</div>
           </div>
+          {canWrite && (
           <button
             onClick={openCreate}
             style={{
@@ -164,6 +165,7 @@ export default function FournisseursPage() {
           >
             + Nouveau fournisseur
           </button>
+          )}
         </div>
       </div>
 
@@ -314,15 +316,17 @@ export default function FournisseursPage() {
                       )}
                     </td>
                     <td style={{ whiteSpace: 'nowrap', padding: '10px 14px' }}>
-                      <button
-                        onClick={() => openEdit(f)}
-                        style={{
-                          marginRight: 6, background: 'rgba(234,88,12,0.08)', border: '1px solid rgba(234,88,12,0.2)',
-                          borderRadius: 7, padding: '5px 10px', cursor: 'pointer', fontSize: '0.85rem',
-                          color: '#ea580c', fontWeight: 700,
-                        }}
-                      >✏️</button>
-                      {!f.hasAppros && (
+                      {canWrite && (
+                        <button
+                          onClick={() => openEdit(f)}
+                          style={{
+                            marginRight: 6, background: 'rgba(234,88,12,0.08)', border: '1px solid rgba(234,88,12,0.2)',
+                            borderRadius: 7, padding: '5px 10px', cursor: 'pointer', fontSize: '0.85rem',
+                            color: '#ea580c', fontWeight: 700,
+                          }}
+                        >✏️</button>
+                      )}
+                      {canWrite && !f.hasAppros && (
                         <button
                           onClick={() => setDeleteConfirm(f)}
                           style={{
@@ -448,7 +452,7 @@ export default function FournisseursPage() {
               <button className="btn btn-ghost" onClick={() => setModal(null)}>Annuler</button>
               <button
                 onClick={save}
-                disabled={saving}
+                disabled={saving || !canWrite}
                 style={{
                   background: 'linear-gradient(135deg, #ea580c, #f97316)',
                   boxShadow: '0 4px 14px rgba(234,88,12,0.35)',
