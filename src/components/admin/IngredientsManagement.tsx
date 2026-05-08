@@ -22,6 +22,7 @@ export default function IngredientsManagement() {
   const [editId, setEditId] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState('');
+  const [filterCat, setFilterCat] = useState('');
 
   const fetchData = () => {
     setLoading(true);
@@ -73,11 +74,15 @@ export default function IngredientsManagement() {
 
   const filtered = ingredients.filter((i) => {
     const q = search.toLowerCase();
-    return (
+    const matchSearch =
       i.name.toLowerCase().includes(q) ||
       (i.categorieName || '').toLowerCase().includes(q) ||
-      (i.unit?.name || '').toLowerCase().includes(q)
-    );
+      (i.unit?.name || '').toLowerCase().includes(q);
+    const matchCat =
+      filterCat === '' ||
+      (filterCat === '__none__' && !i.categorieId) ||
+      String(i.categorieId) === filterCat;
+    return matchSearch && matchCat;
   });
 
   // Group by category
@@ -101,15 +106,34 @@ export default function IngredientsManagement() {
         <button className="btn btn-primary" onClick={openAdd}>+ {t('admin.ingredients.add')}</button>
       </div>
 
-      <div style={{ background: '#f8fafc', border: '1px solid var(--border)', borderRadius: 8, padding: '10px 16px', marginBottom: 16 }}>
+      <div style={{ background: '#f8fafc', border: '1px solid var(--border)', borderRadius: 8, padding: '10px 16px', marginBottom: 16, display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
         <input
           type="text"
           placeholder={t('common.search') + '…'}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="input"
-          style={{ maxWidth: 320 }}
+          style={{ minWidth: 200, flex: 1 }}
         />
+        <select
+          className="input"
+          style={{ minWidth: 180 }}
+          value={filterCat}
+          onChange={(e) => setFilterCat(e.target.value)}
+        >
+          <option value="">🏷️ Toutes les catégories ({ingredients.length})</option>
+          {categories.map((c) => (
+            <option key={c.id} value={String(c.id)}>
+              {c.name} ({ingredients.filter((i) => i.categorieId === c.id).length})
+            </option>
+          ))}
+          <option value="__none__">Sans catégorie ({ingredients.filter((i) => !i.categorieId).length})</option>
+        </select>
+        {(search || filterCat) && (
+          <button className="btn btn-ghost btn-sm" onClick={() => { setSearch(''); setFilterCat(''); }}>
+            ✕ Réinitialiser
+          </button>
+        )}
       </div>
 
       {loading ? (

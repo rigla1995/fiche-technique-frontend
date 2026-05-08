@@ -44,6 +44,8 @@ export default function ClientsManagement() {
   const [inviteSent, setInviteSent] = useState<{ nom: string; email: string } | null>(null);
   const [resendingId, setResendingId] = useState<number | null>(null);
   const [search, setSearch] = useState('');
+  const [filterType, setFilterType] = useState<'' | 'independant' | 'entreprise'>('');
+  const [filterStatus, setFilterStatus] = useState<'' | 'active' | 'pending'>('');
 
   const fetchClients = () => {
     setLoading(true);
@@ -160,29 +162,103 @@ export default function ClientsManagement() {
     }
   };
 
-  const filtered = clients.filter(
-    (c) =>
-      c.name.toLowerCase().includes(search.toLowerCase()) ||
-      c.email.toLowerCase().includes(search.toLowerCase()) ||
-      (c.phone || '').toLowerCase().includes(search.toLowerCase())
+  const totalIndep = clients.filter((c) => c.compteType !== 'entreprise').length;
+  const totalEntreprise = clients.filter((c) => c.compteType === 'entreprise').length;
+  const totalPending = clients.filter((c) => !c.activatedAt).length;
+
+  const filtered = clients.filter((c) => {
+    const q = search.toLowerCase();
+    const matchSearch =
+      c.name.toLowerCase().includes(q) ||
+      c.email.toLowerCase().includes(q) ||
+      (c.phone || '').toLowerCase().includes(q);
+    const matchType =
+      filterType === '' ||
+      (filterType === 'independant' && c.compteType !== 'entreprise') ||
+      (filterType === 'entreprise' && c.compteType === 'entreprise');
+    const matchStatus =
+      filterStatus === '' ||
+      (filterStatus === 'active' && !!c.activatedAt) ||
+      (filterStatus === 'pending' && !c.activatedAt);
+    return matchSearch && matchType && matchStatus;
+  });
+
+  const Badge = ({ children, bg, color }: { children: React.ReactNode; bg: string; color: string }) => (
+    <span style={{ background: bg, color, fontSize: '0.72rem', fontWeight: 700, padding: '2px 8px', borderRadius: 20 }}>
+      {children}
+    </span>
   );
 
   return (
     <div className="page">
       <div className="page-header">
-        <h1>{t('admin.clients.title')}</h1>
+        <h1>👥 {t('admin.clients.title')}</h1>
         <button className="btn btn-primary" onClick={openAdd}>+ {t('admin.clients.add')}</button>
       </div>
 
-      <div style={{ background: '#f8fafc', border: '1px solid var(--border)', borderRadius: 8, padding: '10px 16px', marginBottom: 16 }}>
+      {/* Stats KPI bar */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 16 }}>
+        {[
+          { label: 'Total', value: clients.length, icon: '👥', bg: '#eff6ff', color: '#1d4ed8' },
+          { label: 'Indépendants', value: totalIndep, icon: '👤', bg: '#f0fdf4', color: '#15803d' },
+          { label: 'Entreprises', value: totalEntreprise, icon: '🏢', bg: '#fef9c3', color: '#854d0e' },
+          { label: 'En attente', value: totalPending, icon: '⏳', bg: totalPending > 0 ? '#fee2e2' : '#f8fafc', color: totalPending > 0 ? '#991b1b' : '#64748b' },
+        ].map(({ label, value, icon, bg, color }) => (
+          <div key={label} style={{ background: bg, border: `1px solid ${color}22`, borderRadius: 10, padding: '12px 16px' }}>
+            <div style={{ fontSize: '1.4rem', fontWeight: 700, color }}>{icon} {value}</div>
+            <div style={{ fontSize: '0.78rem', color, opacity: 0.8 }}>{label}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Filter row */}
+      <div style={{ background: '#f8fafc', border: '1px solid var(--border)', borderRadius: 8, padding: '10px 16px', marginBottom: 16, display: 'flex', gap: 16, flexWrap: 'wrap', alignItems: 'center' }}>
         <input
           type="text"
-          placeholder={t('common.search') + '…'}
+          placeholder="Rechercher par nom, email, téléphone…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="input"
-          style={{ maxWidth: 360 }}
+          style={{ minWidth: 220, flex: 1 }}
         />
+        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+          <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 600 }}>Type :</span>
+          {([
+            { value: '', label: 'Tous', count: clients.length },
+            { value: 'independant', label: '👤 Indép', count: totalIndep },
+            { value: 'entreprise', label: '🏢 Entreprise', count: totalEntreprise },
+          ] as const).map(({ value, label, count }) => (
+            <button
+              key={value}
+              className={`btn btn-sm ${filterType === value ? 'btn-primary' : 'btn-ghost'}`}
+              onClick={() => setFilterType(value)}
+            >
+              {label} <span style={{ fontSize: '0.7rem', opacity: 0.8 }}>({count})</span>
+            </button>
+          ))}
+        </div>
+        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+          <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 600 }}>Statut :</span>
+          {([
+            { value: '', label: 'Tous' },
+            { value: 'active', label: '✅ Activés' },
+            { value: 'pending', label: '⏳ En attente', alert: totalPending > 0 },
+          ] as const).map(({ value, label, alert }) => (
+            <button
+              key={value}
+              className={`btn btn-sm ${filterStatus === value ? 'btn-primary' : 'btn-ghost'}`}
+              style={alert && filterStatus !== value ? { borderColor: '#dc2626', color: '#dc2626' } : {}}
+              onClick={() => setFilterStatus(value)}
+            >
+              {label}
+              {value === 'pending' && totalPending > 0 && (
+                <span style={{ background: '#dc2626', color: '#fff', borderRadius: '50%', width: 16, height: 16, fontSize: '0.65rem', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginLeft: 4 }}>
+                  {totalPending}
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
       </div>
 
       {loading ? (
@@ -195,27 +271,32 @@ export default function ClientsManagement() {
                 <th>{t('common.name')}</th>
                 <th>{t('common.email')}</th>
                 <th>{t('common.phone')}</th>
-                <th>{t('admin.clients.compte_type')}</th>
+                <th>Type</th>
+                <th>Statut</th>
                 <th>{t('common.actions')}</th>
               </tr>
             </thead>
             <tbody>
               {filtered.map((c) => (
-                <tr key={c.id}>
-                  <td>{c.name}</td>
-                  <td>{c.email}</td>
+                <tr key={c.id} style={!c.activatedAt ? { background: '#fffbeb' } : {}}>
+                  <td style={{ fontWeight: 600 }}>{c.name}</td>
+                  <td style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{c.email}</td>
                   <td>{c.phone || '—'}</td>
                   <td>
                     {c.compteType === 'entreprise' ? (
-                      <span style={{ background: '#fef9c3', color: '#854d0e', padding: '2px 10px', borderRadius: 20, fontSize: '0.75rem', fontWeight: 700 }}>🏢 Entreprise</span>
+                      <Badge bg="#fef9c3" color="#854d0e">🏢 Entreprise</Badge>
                     ) : (
-                      <span style={{ background: 'var(--primary-light)', color: 'var(--primary)', padding: '2px 10px', borderRadius: 20, fontSize: '0.75rem', fontWeight: 700 }}>👤 Indépendant</span>
+                      <Badge bg="#eff6ff" color="#1d4ed8">👤 Indépendant</Badge>
+                    )}
+                  </td>
+                  <td>
+                    {c.activatedAt ? (
+                      <Badge bg="#dcfce7" color="#15803d">✅ Activé</Badge>
+                    ) : (
+                      <Badge bg="#fee2e2" color="#991b1b">⏳ En attente</Badge>
                     )}
                   </td>
                   <td className="actions-cell">
-                    {!c.activatedAt && (
-                      <span style={{ background: '#fef9c3', color: '#854d0e', padding: '2px 8px', borderRadius: 20, fontSize: '0.72rem', fontWeight: 700, marginRight: 6 }}>⏳ En attente</span>
-                    )}
                     <button className="btn btn-ghost btn-sm" onClick={() => openEdit(c)}>{t('common.edit')}</button>
                     {!c.activatedAt && (
                       <button
@@ -246,7 +327,7 @@ export default function ClientsManagement() {
                 </tr>
               ))}
               {filtered.length === 0 && (
-                <tr><td colSpan={5} className="empty-cell">{t('common.no_result')}</td></tr>
+                <tr><td colSpan={6} className="empty-cell">{t('common.no_result')}</td></tr>
               )}
             </tbody>
           </table>
@@ -432,7 +513,7 @@ export default function ClientsManagement() {
                 )}
 
                 <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: 12 }}>
-                  🔑 Un mot de passe temporaire sera généré automatiquement.
+                  ✉️ Un email d'invitation sera envoyé automatiquement pour activer le compte.
                 </p>
 
                 <div className="modal-footer">
