@@ -41,7 +41,7 @@ export default function ClientsManagement() {
   const [editId, setEditId] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
-  const [inviteSent, setInviteSent] = useState<{ nom: string; email: string; inviteUrl?: string | null } | null>(null);
+  const [inviteSent, setInviteSent] = useState<{ nom: string; email: string } | null>(null);
   const [resendingId, setResendingId] = useState<number | null>(null);
   const [search, setSearch] = useState('');
   const [filterType, setFilterType] = useState<'' | 'independant' | 'entreprise'>('');
@@ -128,7 +128,7 @@ export default function ClientsManagement() {
               compteType: 'entreprise',
             };
         const { data } = await api.post('/admin/clients', payload);
-        setInviteSent({ nom: data.name, email: data.email, inviteUrl: data.inviteUrl });
+        setInviteSent({ nom: data.name, email: data.email });
         closeModal();
         fetchClients();
       }
@@ -353,36 +353,14 @@ export default function ClientsManagement() {
         </div>
       )}
 
-      {/* Invite sent banner */}
+      {/* Account created banner */}
       {inviteSent && (
-        <div style={{ background: inviteSent.inviteUrl ? '#fffbeb' : '#dcfce7', border: `1px solid ${inviteSent.inviteUrl ? '#fcd34d' : '#86efac'}`, borderRadius: 10, padding: '14px 18px', marginBottom: 16 }}>
+        <div style={{ background: '#eff6ff', border: '1px solid #93c5fd', borderRadius: 10, padding: '14px 18px', marginBottom: 16 }}>
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
-            <div>
-              {inviteSent.inviteUrl ? (
-                <>
-                  <p style={{ margin: '0 0 8px', color: '#92400e', fontWeight: 600 }}>
-                    ⚠️ Email non configuré — copiez ce lien d'invitation et envoyez-le manuellement à <strong>{inviteSent.nom}</strong> ({inviteSent.email}) :
-                  </p>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                    <code style={{ background: '#fef3c7', border: '1px solid #fcd34d', borderRadius: 6, padding: '4px 10px', fontSize: '0.78rem', wordBreak: 'break-all', color: '#78350f' }}>
-                      {inviteSent.inviteUrl}
-                    </code>
-                    <button
-                      className="btn btn-sm btn-ghost"
-                      style={{ borderColor: '#d97706', color: '#d97706', flexShrink: 0 }}
-                      onClick={() => navigator.clipboard.writeText(inviteSent.inviteUrl!)}
-                    >
-                      📋 Copier
-                    </button>
-                  </div>
-                </>
-              ) : (
-                <span style={{ color: '#15803d', fontWeight: 600 }}>
-                  ✉️ Invitation envoyée à <strong>{inviteSent.nom}</strong> ({inviteSent.email}) — le compte sera activé dès qu'il cliquera sur le lien.
-                </span>
-              )}
-            </div>
-            <button onClick={() => setInviteSent(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: inviteSent.inviteUrl ? '#92400e' : '#15803d', fontSize: '1rem', flexShrink: 0 }}>✕</button>
+            <span style={{ color: '#1d4ed8', fontWeight: 600 }}>
+              Compte créé pour <strong>{inviteSent.nom}</strong> ({inviteSent.email}). Rendez-vous dans <strong>Abonnements</strong> pour confirmer l'abonnement et envoyer l'invitation.
+            </span>
+            <button onClick={() => setInviteSent(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#1d4ed8', fontSize: '1rem', flexShrink: 0 }}>✕</button>
           </div>
         </div>
       )}

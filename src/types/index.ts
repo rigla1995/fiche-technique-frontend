@@ -44,8 +44,16 @@ export interface Abonnement {
   prolongationJours: number;
   notes: string | null;
   hasActivePromo?: boolean;
+  inviteSent?: boolean;
   paiements?: Paiement[];
   promotions?: Promotion[];
+  pricing?: {
+    baseMensuel: number | null;
+    baseOnboarding: number | null;
+    effectifMensuel: number | null;
+    effectifOnboarding: number | null;
+    activePromo: Promotion | null;
+  };
   createdAt: string;
   updatedAt: string;
 }

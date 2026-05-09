@@ -61,6 +61,8 @@ export default function AbonnementsManagement() {
 
   const [search, setSearch] = useState('');
   const [filterMode, setFilterMode] = useState('');
+  const [confirmSending, setConfirmSending] = useState(false);
+  const [confirmResult, setConfirmResult] = useState<{ inviteUrl?: string | null } | null>(null);
 
   useEffect(() => { fetchList(); }, []);
 
@@ -76,6 +78,7 @@ export default function AbonnementsManagement() {
 
   const openDetail = useCallback(async (ab: Abonnement) => {
     setDetailLoading(true);
+    setConfirmResult(null);
     try {
       const res = await api.get(`/api/abonnements/client/${ab.clientId}`);
       setSelected(res.data);
@@ -92,6 +95,22 @@ export default function AbonnementsManagement() {
       setDetailLoading(false);
     }
   }, []);
+
+  const handleConfirmInvite = async () => {
+    if (!selected) return;
+    setConfirmSending(true);
+    setConfirmResult(null);
+    try {
+      const res = await api.post(`/api/abonnements/client/${selected.clientId}/confirm-invite`);
+      setConfirmResult(res.data);
+      setSelected((s) => s ? { ...s, inviteSent: true } : s);
+      setAbonnements((list) => list.map((a) => a.clientId === selected.clientId ? { ...a, inviteSent: true } : a));
+    } catch (err: any) {
+      alert(err?.response?.data?.message || 'Erreur lors de l\'envoi');
+    } finally {
+      setConfirmSending(false);
+    }
+  };
 
   const savePaiement = async () => {
     if (!selected || !pMois) return;
@@ -291,6 +310,35 @@ export default function AbonnementsManagement() {
                 {MODE_LABELS[selected.modeCompte]?.label || selected.modeCompte}
               </span>
             </div>
+
+            {/* Confirm invite banner */}
+            {!selected.inviteSent && (
+              <div style={{ background: '#fffbeb', border: '1px solid #fbbf24', borderRadius: 10, padding: '14px 18px', marginBottom: 20 }}>
+                <div style={{ fontSize: 14, fontWeight: 600, color: '#92400e', marginBottom: 10 }}>
+                  Invitation non envoyée — l'abonnement doit être confirmé avant que le client puisse activer son compte.
+                </div>
+                <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+                  <button onClick={handleConfirmInvite} disabled={confirmSending}
+                    style={{ padding: '7px 18px', background: '#16a34a', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>
+                    {confirmSending ? 'Envoi...' : 'Confirmer et envoyer l\'invitation'}
+                  </button>
+                  {confirmResult?.inviteUrl && (
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                      <code style={{ background: '#fef3c7', border: '1px solid #fcd34d', borderRadius: 6, padding: '4px 10px', fontSize: '0.78rem', wordBreak: 'break-all', color: '#78350f' }}>
+                        {confirmResult.inviteUrl}
+                      </code>
+                      <button className="btn btn-sm btn-ghost" style={{ borderColor: '#d97706', color: '#d97706' }}
+                        onClick={() => navigator.clipboard.writeText(confirmResult!.inviteUrl!)}>
+                        Copier
+                      </button>
+                    </div>
+                  )}
+                  {confirmResult && !confirmResult.inviteUrl && (
+                    <span style={{ color: '#16a34a', fontWeight: 600, fontSize: 13 }}>Invitation envoyée avec succès</span>
+                  )}
+                </div>
+              </div>
+            )}
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 24 }}>
               {/* Onboarding */}

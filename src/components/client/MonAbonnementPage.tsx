@@ -176,6 +176,51 @@ export default function MonAbonnementPage() {
         </div>
       </div>
 
+      {/* Pricing card */}
+      {abo.pricing && (
+        <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #e5e7eb', padding: 20, marginBottom: 20 }}>
+          <h3 style={{ margin: '0 0 14px', fontSize: 15, fontWeight: 700, color: '#111827' }}>Tarification</h3>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <div style={{ background: '#f9fafb', borderRadius: 8, padding: '12px 16px', border: '1px solid #e5e7eb' }}>
+              <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 4 }}>Mensualité</div>
+              {abo.pricing.activePromo ? (
+                <>
+                  <div style={{ fontSize: 13, color: '#9ca3af', textDecoration: 'line-through' }}>
+                    {abo.pricing.baseMensuel != null ? `${abo.pricing.baseMensuel} DT/mois` : '—'}
+                  </div>
+                  <div style={{ fontSize: 18, fontWeight: 700, color: '#7c3aed' }}>
+                    {abo.pricing.effectifMensuel != null ? `${abo.pricing.effectifMensuel} DT/mois` : '—'}
+                  </div>
+                  <div style={{ fontSize: 11, color: '#7c3aed', marginTop: 2 }}>Promotion appliquée</div>
+                </>
+              ) : (
+                <div style={{ fontSize: 18, fontWeight: 700, color: '#111827' }}>
+                  {abo.pricing.baseMensuel != null ? `${abo.pricing.baseMensuel} DT/mois` : '—'}
+                </div>
+              )}
+            </div>
+            <div style={{ background: '#f9fafb', borderRadius: 8, padding: '12px 16px', border: '1px solid #e5e7eb' }}>
+              <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 4 }}>Onboarding</div>
+              {abo.pricing.activePromo ? (
+                <>
+                  <div style={{ fontSize: 13, color: '#9ca3af', textDecoration: 'line-through' }}>
+                    {abo.pricing.baseOnboarding != null ? `${abo.pricing.baseOnboarding} DT` : '—'}
+                  </div>
+                  <div style={{ fontSize: 18, fontWeight: 700, color: '#7c3aed' }}>
+                    {abo.pricing.effectifOnboarding != null ? `${abo.pricing.effectifOnboarding} DT` : '—'}
+                  </div>
+                  <div style={{ fontSize: 11, color: '#7c3aed', marginTop: 2 }}>Promotion appliquée</div>
+                </>
+              ) : (
+                <div style={{ fontSize: 18, fontWeight: 700, color: '#111827' }}>
+                  {abo.pricing.baseOnboarding != null ? `${abo.pricing.baseOnboarding} DT` : '—'}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Paiements */}
       <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #e5e7eb', overflow: 'hidden', marginBottom: 20 }}>
         <div style={{ padding: '14px 20px', borderBottom: '1px solid #e5e7eb', background: '#f9fafb' }}>
