@@ -7,7 +7,7 @@ export interface User {
   onboardingStep?: number;
   phone?: string;
   entrepriseName?: string | null;
-  modeCompte?: 'actif' | 'read_only' | 'desactive' | 'archive';
+  modeCompte?: 'actif' | 'read_only' | 'desactive' | 'archive' | 'bloque';
   prolongationJours?: number;
   gerantParentId?: number;
   gerantActiviteId?: number;
@@ -18,11 +18,13 @@ export interface Promotion {
   id: number;
   abonnementId: number;
   type: 'percent_off' | 'free_months' | 'fixed_price';
-  appliesTo: 'onboarding' | 'mensualite' | 'les_deux';
+  appliesTo: 'onboarding' | 'mensualite' | 'les_deux' | 'supplement_gerant' | 'supplement_labo';
   discountOnboarding: number | null;
   discountMensualite: number | null;
   fixedOnboarding: number | null;
   fixedMensualite: number | null;
+  discountSupplement: number | null;
+  fixedSupplement: number | null;
   dateDebut: string;
   monthsDuration: number | null;
   dateFin: string | null;
@@ -37,10 +39,11 @@ export interface Abonnement {
   clientNom: string;
   clientEmail: string;
   compteType: 'independant' | 'entreprise';
-  statutOnboarding: 'payé' | 'impayé' | 'offert';
+  statutOnboarding: 'payé' | 'impayé' | 'offert' | 'gratuit';
   montantOnboarding: number;
+  dateOnboarding: string | null;
   dateDebut: string;
-  modeCompte: 'actif' | 'read_only' | 'desactive' | 'archive';
+  modeCompte: 'actif' | 'read_only' | 'desactive' | 'archive' | 'bloque';
   prolongationJours: number;
   notes: string | null;
   hasActivePromo?: boolean;
@@ -67,6 +70,7 @@ export interface Paiement {
   statut: 'payé' | 'impayé' | 'en_attente' | 'remisé' | 'gratuit';
   saisiePar: number | null;
   dateSaisie: string | null;
+  datePaiement: string | null;
   notes: string | null;
 }
 
