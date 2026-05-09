@@ -28,6 +28,11 @@ const APPLIES_LABELS: Record<string, string> = {
 
 const fmtDate = (d: string) => d ? new Date(d).toLocaleDateString('fr-FR') : '—';
 const fmtMois = (d: string) => d ? new Date(d).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' }) : '—';
+const addOneMonth = (ym: string): string => {
+  const [y, m] = ym.slice(0, 7).split('-').map(Number);
+  const next = new Date(y, m, 1);
+  return `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}`;
+};
 
 // ── Confirmation Modal ────────────────────────────────────────────────────────
 interface ConfirmPayload {
@@ -297,6 +302,12 @@ export default function AbonnementsManagement() {
     setDetailLoading(true);
     setConfirmResult(null);
     setPromoError(null);
+    setPromoAppliesTo('mensualite');
+    setPromoType('percent_off');
+    setPromoMoisDebut('');
+    setPromoMonths('');
+    setPromoDiscountVal('');
+    setPromoFixedVal('');
     setPMontantInfo(null);
     try {
       const res = await api.get(`/api/abonnements/client/${ab.clientId}?withPricing=1`);
@@ -436,10 +447,12 @@ export default function AbonnementsManagement() {
   };
 
   const savePromotion = async () => {
-    if (!selected || !promoMoisDebut) return;
+    if (!selected || !promoCanSubmit) return;
     setPromoSaving(true);
     setPromoError(null);
-    const dateDebut = promoMoisDebut + '-01';
+    const dateDebut = promoAppliesTo === 'onboarding'
+      ? (selected.dateDebut || new Date().toISOString().slice(0, 10))
+      : promoMoisDebut + '-01';
     const body: Record<string, any> = {
       type: promoType,
       appliesTo: promoAppliesTo,
@@ -494,12 +507,52 @@ export default function AbonnementsManagement() {
     return matchSearch && matchMode;
   });
 
-  // Which applies_to options are blocked by active promos
+  // Promo availability derived vars
   const activePromos = selected?.promotions?.filter((p) => p.isActive) || [];
-  const blockedMens = activePromos.some((p) => ['mensualite', 'les_deux'].includes(p.appliesTo));
-  const blockedOb = activePromos.some((p) => ['onboarding', 'les_deux'].includes(p.appliesTo));
-  const blockedGerant = activePromos.some((p) => p.appliesTo === 'supplement_gerant');
-  const blockedLabo = activePromos.some((p) => p.appliesTo === 'supplement_labo');
+  const activeObPromo = activePromos.find((p) => ['onboarding', 'les_deux'].includes(p.appliesTo)) || null;
+  const activeMensPromo = activePromos.find((p) => ['mensualite', 'les_deux'].includes(p.appliesTo)) || null;
+  const activeGerantPromo = activePromos.find((p) => p.appliesTo === 'supplement_gerant') || null;
+  const activeLaboPromo = activePromos.find((p) => p.appliesTo === 'supplement_labo') || null;
+
+  const hideOnboarding = ['payé', 'offert', 'gratuit'].includes(selected?.statutOnboarding || '') || !!activeObPromo;
+  const hideMensPermanent = !!activeMensPromo && !activeMensPromo.dateFin;
+  const hideGerantPermanent = !!activeGerantPromo && !activeGerantPromo.dateFin;
+  const hideLaboPermanent = !!activeLaboPromo && !activeLaboPromo.dateFin;
+
+  const mensMinMois = activeMensPromo?.dateFin
+    ? addOneMonth(activeMensPromo.dateFin)
+    : selected?.dateDebut?.slice(0, 7);
+  const gerantMinMois = activeGerantPromo?.dateFin
+    ? addOneMonth(activeGerantPromo.dateFin)
+    : selected?.dateDebut?.slice(0, 7);
+  const laboMinMois = activeLaboPromo?.dateFin
+    ? addOneMonth(activeLaboPromo.dateFin)
+    : selected?.dateDebut?.slice(0, 7);
+
+  const promoCurrentMinMois = promoAppliesTo === 'mensualite' ? mensMinMois
+    : promoAppliesTo === 'supplement_gerant' ? gerantMinMois
+    : promoAppliesTo === 'supplement_labo' ? laboMinMois
+    : undefined;
+
+  const paidMonthSet = new Set(
+    (selected?.paiements || [])
+      .map((p) => (p.statut === 'payé' ? p.mois?.slice(0, 7) : null))
+      .filter(Boolean) as string[]
+  );
+  const promoMoisIsPaid = promoAppliesTo !== 'onboarding' && !!promoMoisDebut && paidMonthSet.has(promoMoisDebut);
+
+  const hasAmountFilled = promoType === 'free_months'
+    || (promoType === 'percent_off' && !!promoDiscountVal)
+    || (promoType === 'fixed_price' && !!promoFixedVal);
+  const hasMoisFilled = promoAppliesTo === 'onboarding' || !!promoMoisDebut;
+  const promoCanSubmit = hasAmountFilled && hasMoisFilled && !promoMoisIsPaid && !promoSaving;
+
+  const visibleAppliesTo = [
+    !hideOnboarding ? { value: 'onboarding', label: 'OnBoarding' } : null,
+    !hideMensPermanent ? { value: 'mensualite', label: 'Mensualité' } : null,
+    !hideGerantPermanent ? { value: 'supplement_gerant', label: 'Supplément Gérant' } : null,
+    !hideLaboPermanent ? { value: 'supplement_labo', label: 'Supplément Labo' } : null,
+  ].filter(Boolean) as { value: string; label: string }[];
 
   return (
     <>
@@ -678,67 +731,109 @@ export default function AbonnementsManagement() {
               {/* Add promo form */}
               <div style={{ fontSize: 12, fontWeight: 600, color: '#78350f', marginBottom: 10 }}>Ajouter une promotion</div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginBottom: 10 }}>
-                <div>
-                  <label style={{ fontSize: 11, color: '#374151', display: 'block', marginBottom: 3 }}>Appliqué à</label>
-                  <select value={promoAppliesTo} onChange={(e) => { setPromoAppliesTo(e.target.value); setPromoDiscountVal(''); setPromoFixedVal(''); }}
-                    style={{ width: '100%', padding: '5px 8px', borderRadius: 6, border: '1px solid #fde68a', fontSize: 12 }}>
-                    <option value="mensualite" disabled={blockedMens}>Mensualité{blockedMens ? ' (active)' : ''}</option>
-                    <option value="onboarding" disabled={blockedOb}>OnBoarding{blockedOb ? ' (active)' : ''}</option>
-                    <option value="supplement_gerant" disabled={blockedGerant}>Supplément Gérant{blockedGerant ? ' (active)' : ''}</option>
-                    <option value="supplement_labo" disabled={blockedLabo}>Supplément Labo{blockedLabo ? ' (active)' : ''}</option>
-                  </select>
+              {visibleAppliesTo.length === 0 ? (
+                <div style={{ fontSize: 12, color: '#a16207', background: '#fef3c7', borderRadius: 8, padding: '8px 12px' }}>
+                  Aucune catégorie disponible — toutes les promotions actives sont permanentes ou l'onboarding est réglé.
                 </div>
-                <div>
-                  <label style={{ fontSize: 11, color: '#374151', display: 'block', marginBottom: 3 }}>Type</label>
-                  <select value={promoType} onChange={(e) => setPromoType(e.target.value as Promotion['type'])}
-                    style={{ width: '100%', padding: '5px 8px', borderRadius: 6, border: '1px solid #fde68a', fontSize: 12 }}>
-                    <option value="percent_off">% Réduction</option>
-                    <option value="free_months">Gratuit</option>
-                    <option value="fixed_price">Prix fixe</option>
-                  </select>
-                </div>
-                <div>
-                  <label style={{ fontSize: 11, color: '#374151', display: 'block', marginBottom: 3 }}>Mois début</label>
-                  <input type="month" value={promoMoisDebut} onChange={(e) => setPromoMoisDebut(e.target.value)}
-                    min={selected.dateDebut ? selected.dateDebut.slice(0, 7) : undefined}
-                    style={{ width: '100%', padding: '5px 8px', borderRadius: 6, border: '1px solid #fde68a', fontSize: 12, boxSizing: 'border-box' }} />
-                </div>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginBottom: 10 }}>
-                {promoType !== 'free_months' && (
-                  <div>
-                    <label style={{ fontSize: 11, color: '#374151', display: 'block', marginBottom: 3 }}>
-                      {promoType === 'percent_off' ? 'Réduction (%)' : 'Montant fixe (DT)'}
-                    </label>
-                    <input
-                      type="number" min="0" max={promoType === 'percent_off' ? '100' : undefined} step="0.01"
-                      placeholder={promoType === 'percent_off' ? 'ex: 20' : 'ex: 120'}
-                      value={promoType === 'percent_off' ? promoDiscountVal : promoFixedVal}
-                      onChange={(e) => promoType === 'percent_off' ? setPromoDiscountVal(e.target.value) : setPromoFixedVal(e.target.value)}
-                      style={{ width: '100%', padding: '5px 8px', borderRadius: 6, border: '1px solid #fde68a', fontSize: 12, boxSizing: 'border-box' }} />
+              ) : (
+                <>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginBottom: 10 }}>
+                    {/* Appliqué à */}
+                    <div>
+                      <label style={{ fontSize: 11, color: '#374151', display: 'block', marginBottom: 3 }}>Appliqué à</label>
+                      <select
+                        value={visibleAppliesTo.find((o) => o.value === promoAppliesTo) ? promoAppliesTo : visibleAppliesTo[0].value}
+                        onChange={(e) => { setPromoAppliesTo(e.target.value); setPromoDiscountVal(''); setPromoFixedVal(''); setPromoMoisDebut(''); }}
+                        style={{ width: '100%', padding: '5px 8px', borderRadius: 6, border: '1px solid #fde68a', fontSize: 12 }}>
+                        {visibleAppliesTo.map((o) => (
+                          <option key={o.value} value={o.value}>{o.label}</option>
+                        ))}
+                      </select>
+                    </div>
+                    {/* Type */}
+                    <div>
+                      <label style={{ fontSize: 11, color: '#374151', display: 'block', marginBottom: 3 }}>Type</label>
+                      <select value={promoType} onChange={(e) => { setPromoType(e.target.value as Promotion['type']); setPromoDiscountVal(''); setPromoFixedVal(''); }}
+                        style={{ width: '100%', padding: '5px 8px', borderRadius: 6, border: '1px solid #fde68a', fontSize: 12 }}>
+                        <option value="percent_off">% Réduction</option>
+                        <option value="free_months">Gratuit</option>
+                        <option value="fixed_price">Prix fixe</option>
+                      </select>
+                    </div>
+                    {/* Mois début — hidden for onboarding */}
+                    {promoAppliesTo !== 'onboarding' && (
+                      <div>
+                        <label style={{ fontSize: 11, color: '#374151', display: 'block', marginBottom: 3 }}>
+                          Mois début
+                          {promoCurrentMinMois && (
+                            <span style={{ color: '#d97706', marginLeft: 4 }}>
+                              (min {promoCurrentMinMois})
+                            </span>
+                          )}
+                        </label>
+                        <input
+                          type="month"
+                          value={promoMoisDebut}
+                          onChange={(e) => setPromoMoisDebut(e.target.value)}
+                          min={promoCurrentMinMois}
+                          style={{
+                            width: '100%', padding: '5px 8px', borderRadius: 6, fontSize: 12, boxSizing: 'border-box',
+                            border: `1px solid ${promoMoisIsPaid ? '#fca5a5' : '#fde68a'}`,
+                            background: promoMoisIsPaid ? '#fff1f2' : '#fff',
+                          }} />
+                      </div>
+                    )}
                   </div>
-                )}
-                {promoAppliesTo !== 'onboarding' && (
-                  <div>
-                    <label style={{ fontSize: 11, color: '#374151', display: 'block', marginBottom: 3 }}>Durée (mois, vide = permanent)</label>
-                    <input type="number" min="1" max="120" placeholder="vide = permanent" value={promoMonths} onChange={(e) => setPromoMonths(e.target.value)}
-                      style={{ width: '100%', padding: '5px 8px', borderRadius: 6, border: '1px solid #fde68a', fontSize: 12, boxSizing: 'border-box' }} />
-                  </div>
-                )}
-                <div style={{ display: 'flex', alignItems: 'flex-end' }}>
-                  <button onClick={savePromotion} disabled={promoSaving || !promoMoisDebut}
-                    style={{ padding: '6px 18px', background: '#d97706', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: 12, cursor: 'pointer', whiteSpace: 'nowrap' }}>
-                    {promoSaving ? '…' : '+ Ajouter'}
-                  </button>
-                </div>
-              </div>
 
-              {promoError && (
-                <div style={{ background: '#fee2e2', border: '1px solid #fecaca', borderRadius: 6, padding: '6px 10px', fontSize: 12, color: '#dc2626' }}>
-                  {promoError}
-                </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginBottom: 10 }}>
+                    {promoType !== 'free_months' && (
+                      <div>
+                        <label style={{ fontSize: 11, color: '#374151', display: 'block', marginBottom: 3 }}>
+                          {promoType === 'percent_off' ? 'Réduction (%)' : 'Montant fixe (DT)'}
+                        </label>
+                        <input
+                          type="number" min="0" max={promoType === 'percent_off' ? '100' : undefined} step="0.01"
+                          placeholder={promoType === 'percent_off' ? 'ex: 20' : 'ex: 120'}
+                          value={promoType === 'percent_off' ? promoDiscountVal : promoFixedVal}
+                          onChange={(e) => promoType === 'percent_off' ? setPromoDiscountVal(e.target.value) : setPromoFixedVal(e.target.value)}
+                          style={{ width: '100%', padding: '5px 8px', borderRadius: 6, border: '1px solid #fde68a', fontSize: 12, boxSizing: 'border-box' }} />
+                      </div>
+                    )}
+                    {promoAppliesTo !== 'onboarding' && (
+                      <div>
+                        <label style={{ fontSize: 11, color: '#374151', display: 'block', marginBottom: 3 }}>Durée (mois, vide = permanent)</label>
+                        <input type="number" min="1" max="120" placeholder="vide = permanent" value={promoMonths} onChange={(e) => setPromoMonths(e.target.value)}
+                          style={{ width: '100%', padding: '5px 8px', borderRadius: 6, border: '1px solid #fde68a', fontSize: 12, boxSizing: 'border-box' }} />
+                      </div>
+                    )}
+                    <div style={{ display: 'flex', alignItems: 'flex-end' }}>
+                      <button
+                        onClick={savePromotion}
+                        disabled={!promoCanSubmit}
+                        style={{
+                          padding: '6px 18px', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: 12,
+                          whiteSpace: 'nowrap',
+                          background: promoCanSubmit ? '#d97706' : '#e5e7eb',
+                          color: promoCanSubmit ? '#fff' : '#9ca3af',
+                          cursor: promoCanSubmit ? 'pointer' : 'default',
+                        }}>
+                        {promoSaving ? '…' : '+ Ajouter'}
+                      </button>
+                    </div>
+                  </div>
+
+                  {promoMoisIsPaid && (
+                    <div style={{ background: '#fee2e2', border: '1px solid #fecaca', borderRadius: 6, padding: '6px 10px', fontSize: 12, color: '#dc2626', marginBottom: 8 }}>
+                      Ce mois est déjà marqué comme payé — impossible d'y appliquer une promotion.
+                    </div>
+                  )}
+
+                  {promoError && (
+                    <div style={{ background: '#fee2e2', border: '1px solid #fecaca', borderRadius: 6, padding: '6px 10px', fontSize: 12, color: '#dc2626' }}>
+                      {promoError}
+                    </div>
+                  )}
+                </>
               )}
             </div>
 
