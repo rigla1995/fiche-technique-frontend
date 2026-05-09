@@ -746,100 +746,156 @@ export default function AbonnementsManagement() {
             })()}
 
             {/* ── Mensualités ────────────────────────────────────────── */}
-            <div style={{ background: '#f0f9ff', borderRadius: 10, padding: 16, border: '1px solid #bae6fd', marginBottom: 20 }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: '#0369a1', marginBottom: 12 }}>Mensualité</div>
-              <div style={{ display: 'flex', gap: 12, alignItems: 'flex-end', flexWrap: 'wrap', marginBottom: pMontantInfo ? 12 : 0 }}>
-                <div>
-                  <label style={{ fontSize: 11, color: '#374151', display: 'block', marginBottom: 3 }}>Mois</label>
-                  <input type="month" value={pMois} onChange={(e) => setPMois(e.target.value)}
-                    style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid #bae6fd', fontSize: 13 }} />
+            <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #e2e8f0', marginBottom: 20, overflow: 'hidden' }}>
+              {/* Card header */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 18px', background: 'linear-gradient(135deg,#f0f9ff 0%,#dbeafe 100%)', borderBottom: '1px solid #bfdbfe' }}>
+                <span style={{ fontSize: 18 }}>📅</span>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: '#1e3a5f' }}>Mensualité</div>
+                  <div style={{ fontSize: 11, color: '#3b82f6', marginTop: 1 }}>Paiement mensuel récurrent</div>
                 </div>
-                <div>
-                  <label style={{ fontSize: 11, color: '#374151', display: 'block', marginBottom: 3 }}>Statut</label>
-                  <select value={pStatut} onChange={(e) => setPStatut(e.target.value)}
-                    style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid #bae6fd', fontSize: 13 }}>
-                    <option value="payé">Payé</option>
-                    <option value="impayé">Impayé</option>
-                    <option value="en_attente">En attente</option>
-                    <option value="remisé">Remisé</option>
-                    <option value="gratuit">Gratuit</option>
-                  </select>
-                </div>
-                <div>
-                  <label style={{ fontSize: 11, color: '#374151', display: 'block', marginBottom: 3 }}>Date paiement</label>
-                  <input type="date" value={pDatePaiement} onChange={(e) => setPDatePaiement(e.target.value)}
-                    style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid #bae6fd', fontSize: 13 }} />
-                </div>
-                <button onClick={requestPaiement} disabled={!pMontantInfo || pMontantLoading}
-                  style={{ padding: '7px 18px', background: '#0369a1', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 600, fontSize: 13, cursor: !pMontantInfo ? 'default' : 'pointer', opacity: !pMontantInfo ? 0.5 : 1 }}>
-                  Enregistrer
-                </button>
+                {pMontantInfo && !pMontantLoading && (
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontSize: 10, fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total calculé</div>
+                    <div style={{ fontSize: 20, fontWeight: 800, color: '#1d4ed8', marginTop: 1 }}>{pMontantInfo.total} DT</div>
+                  </div>
+                )}
+                {pMontantLoading && (
+                  <div style={{ fontSize: 12, color: '#3b82f6', display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ width: 12, height: 12, border: '2px solid #3b82f6', borderTopColor: 'transparent', borderRadius: '50%', display: 'inline-block', animation: 'spin 0.7s linear infinite' }} />
+                    Calcul...
+                  </div>
+                )}
               </div>
 
-              {pMontantLoading && (
-                <div style={{ fontSize: 12, color: '#6b7280' }}>Calcul en cours...</div>
-              )}
-              {pMontantInfo && !pMontantLoading && (
-                <div style={{ background: '#fff', borderRadius: 8, border: '1px solid #bae6fd', padding: '10px 14px' }}>
-                  {pMontantInfo.existing && (
-                    <div style={{ fontSize: 11, color: '#6b7280', marginBottom: 6 }}>
-                      ⚠️ Paiement existant pour ce mois ({pMontantInfo.existing.statut})
-                    </div>
-                  )}
-                  <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-                    <div style={{ fontSize: 12, color: '#374151' }}>
-                      Mensualité : <strong>{pMontantInfo.breakdown.mensualite.effectif} DT</strong>
-                      {pMontantInfo.breakdown.mensualite.hasPromo && <span style={{ color: '#d97706', marginLeft: 4 }}>🏷️</span>}
-                    </div>
-                    {pMontantInfo.breakdown.supplementGerant.active && (
-                      <div style={{ fontSize: 12, color: '#374151' }}>
-                        Sup. Gérant : <strong>{pMontantInfo.breakdown.supplementGerant.effectif} DT</strong>
-                        {pMontantInfo.breakdown.supplementGerant.hasPromo && <span style={{ color: '#d97706', marginLeft: 4 }}>🏷️</span>}
+              <div style={{ padding: '16px 18px' }}>
+                {/* Breakdown chips */}
+                {pMontantInfo && !pMontantLoading && (
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 14 }}>
+                    {pMontantInfo.existing && (
+                      <div style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', background: '#fffbeb', borderRadius: 8, border: '1px solid #fde68a', fontSize: 12, color: '#92400e', marginBottom: 2 }}>
+                        <span>⚠️</span>
+                        <span>Paiement existant pour ce mois</span>
+                        <span style={{ fontWeight: 700, marginLeft: 4 }}>{(STATUT_COLORS[pMontantInfo.existing.statut] || STATUT_COLORS['en_attente']).label}</span>
+                        {pMontantInfo.existing.datePaiement && (
+                          <span style={{ marginLeft: 'auto', color: '#a16207' }}>Réglé le {fmtDate(pMontantInfo.existing.datePaiement)}</span>
+                        )}
                       </div>
                     )}
-                    {pMontantInfo.breakdown.supplementLabo.active && (
-                      <div style={{ fontSize: 12, color: '#374151' }}>
-                        Sup. Labo : <strong>{pMontantInfo.breakdown.supplementLabo.effectif} DT</strong>
-                        {pMontantInfo.breakdown.supplementLabo.hasPromo && <span style={{ color: '#d97706', marginLeft: 4 }}>🏷️</span>}
+                    {[
+                      { label: 'Mensualité', val: pMontantInfo.breakdown.mensualite.effectif, base: pMontantInfo.breakdown.mensualite.base, hasPromo: pMontantInfo.breakdown.mensualite.hasPromo },
+                      ...(pMontantInfo.breakdown.supplementGerant.active ? [{ label: 'Sup. Gérant', val: pMontantInfo.breakdown.supplementGerant.effectif, base: pMontantInfo.breakdown.supplementGerant.base, hasPromo: pMontantInfo.breakdown.supplementGerant.hasPromo }] : []),
+                      ...(pMontantInfo.breakdown.supplementLabo.active ? [{ label: 'Sup. Labo', val: pMontantInfo.breakdown.supplementLabo.effectif, base: pMontantInfo.breakdown.supplementLabo.base, hasPromo: pMontantInfo.breakdown.supplementLabo.hasPromo }] : []),
+                    ].map((item) => (
+                      <div key={item.label} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 14px', background: '#f8fafc', borderRadius: 10, border: '1px solid #e2e8f0', flex: '1 1 120px' }}>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: 10, fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{item.label}</div>
+                          <div style={{ display: 'flex', alignItems: 'baseline', gap: 5, marginTop: 2 }}>
+                            <span style={{ fontSize: 16, fontWeight: 800, color: '#0f172a' }}>{item.val} DT</span>
+                            {item.hasPromo && item.val !== item.base && (
+                              <span style={{ fontSize: 11, color: '#94a3b8', textDecoration: 'line-through' }}>{item.base} DT</span>
+                            )}
+                          </div>
+                        </div>
+                        {item.hasPromo && <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 7px', borderRadius: 6, background: '#fef3c7', color: '#92400e' }}>🏷️</span>}
                       </div>
-                    )}
-                    <div style={{ fontSize: 14, fontWeight: 800, color: '#0369a1', marginLeft: 'auto' }}>
-                      Total : {pMontantInfo.total} DT
-                    </div>
+                    ))}
                   </div>
+                )}
+
+                {/* Controls */}
+                <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end', flexWrap: 'wrap' }}>
+                  <div style={{ flex: '1 1 130px' }}>
+                    <label style={{ fontSize: 11, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 4 }}>Mois</label>
+                    <input type="month" value={pMois} onChange={(e) => setPMois(e.target.value)}
+                      style={{ width: '100%', padding: '7px 10px', borderRadius: 8, border: '1.5px solid #e2e8f0', fontSize: 13, boxSizing: 'border-box' }} />
+                  </div>
+                  <div style={{ flex: '1 1 130px' }}>
+                    <label style={{ fontSize: 11, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 4 }}>Statut</label>
+                    <select value={pStatut} onChange={(e) => setPStatut(e.target.value)}
+                      style={{ width: '100%', padding: '7px 10px', borderRadius: 8, border: '1.5px solid #e2e8f0', fontSize: 13, background: '#fff' }}>
+                      <option value="payé">Payé</option>
+                      <option value="impayé">Impayé</option>
+                      <option value="en_attente">En attente</option>
+                      <option value="remisé">Remisé</option>
+                      <option value="gratuit">Gratuit</option>
+                    </select>
+                  </div>
+                  <div style={{ flex: '1 1 140px' }}>
+                    <label style={{ fontSize: 11, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 4 }}>Date de paiement</label>
+                    <input type="date" value={pDatePaiement} onChange={(e) => setPDatePaiement(e.target.value)}
+                      style={{ width: '100%', padding: '7px 10px', borderRadius: 8, border: '1.5px solid #e2e8f0', fontSize: 13, boxSizing: 'border-box' }} />
+                  </div>
+                  <button onClick={requestPaiement} disabled={!pMontantInfo || pMontantLoading}
+                    style={{
+                      padding: '8px 22px', background: !pMontantInfo ? '#93c5fd' : '#2563eb',
+                      color: '#fff', border: 'none', borderRadius: 9, fontWeight: 700, fontSize: 13,
+                      cursor: !pMontantInfo ? 'default' : 'pointer', whiteSpace: 'nowrap',
+                    }}>
+                    Enregistrer
+                  </button>
                 </div>
-              )}
+              </div>
             </div>
 
             {/* ── Mode compte ────────────────────────────────────────── */}
-            <div style={{ background: '#f9fafb', borderRadius: 10, padding: 16, border: '1px solid #e5e7eb' }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: '#374151', marginBottom: 12 }}>Mode compte</div>
-              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                {(['actif', 'read_only', 'bloque'] as const).map((mode) => {
-                  const v = MODE_LABELS[mode];
-                  const isCurrent = selected.modeCompte === mode;
-                  return (
-                    <button
-                      key={mode}
-                      disabled={modeSaving || isCurrent}
-                      onClick={() => saveMode(mode)}
-                      style={{
-                        padding: '7px 16px', borderRadius: 8, border: `1.5px solid ${v.color}`,
-                        background: isCurrent ? v.color : 'transparent',
-                        color: isCurrent ? '#fff' : v.color,
-                        fontSize: 13, fontWeight: 600, cursor: modeSaving || isCurrent ? 'default' : 'pointer',
-                        opacity: modeSaving && !isCurrent ? 0.6 : 1,
-                      }}
-                    >{v.label}</button>
-                  );
-                })}
-                {['desactive', 'archive'].includes(selected.modeCompte) && (
-                  <span style={{ fontSize: 12, color: '#9ca3af', alignSelf: 'center' }}>
-                    (mode automatique : {MODE_LABELS[selected.modeCompte]?.label})
-                  </span>
-                )}
-              </div>
-            </div>
+            {(() => {
+              const modeConfig: Record<string, { icon: string; desc: string }> = {
+                actif:     { icon: '✅', desc: 'Accès complet à toutes les fonctionnalités' },
+                read_only: { icon: '👁️', desc: 'Consultation uniquement, aucune modification' },
+                bloque:    { icon: '🚫', desc: 'Accès totalement bloqué pour le client et ses gérants' },
+              };
+              const isAuto = ['desactive', 'archive'].includes(selected.modeCompte);
+              return (
+                <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #e2e8f0', overflow: 'hidden' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 18px', background: 'linear-gradient(135deg,#f8fafc 0%,#f1f5f9 100%)', borderBottom: '1px solid #e2e8f0' }}>
+                    <span style={{ fontSize: 18 }}>⚙️</span>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: '#0f172a' }}>Mode d'accès</div>
+                      <div style={{ fontSize: 11, color: '#64748b', marginTop: 1 }}>Contrôle manuel du niveau d'accès du compte</div>
+                    </div>
+                    {isAuto && (
+                      <span style={{ fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 20, background: (MODE_LABELS[selected.modeCompte]?.color || '#6b7280') + '20', color: MODE_LABELS[selected.modeCompte]?.color || '#6b7280' }}>
+                        {MODE_LABELS[selected.modeCompte]?.label} (auto)
+                      </span>
+                    )}
+                  </div>
+
+                  <div style={{ padding: '16px 18px', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
+                    {(['actif', 'read_only', 'bloque'] as const).map((mode) => {
+                      const v = MODE_LABELS[mode];
+                      const mc = modeConfig[mode];
+                      const isCurrent = selected.modeCompte === mode;
+                      return (
+                        <button
+                          key={mode}
+                          disabled={modeSaving || isCurrent}
+                          onClick={() => saveMode(mode)}
+                          style={{
+                            padding: '14px 12px', borderRadius: 10,
+                            border: `2px solid ${isCurrent ? v.color : '#e2e8f0'}`,
+                            background: isCurrent ? v.color + '12' : '#f8fafc',
+                            cursor: modeSaving || isCurrent ? 'default' : 'pointer',
+                            textAlign: 'left', transition: 'all 0.15s',
+                            opacity: modeSaving && !isCurrent ? 0.5 : 1,
+                          }}
+                        >
+                          <div style={{ fontSize: 20, marginBottom: 6 }}>{mc.icon}</div>
+                          <div style={{ fontSize: 12, fontWeight: 700, color: isCurrent ? v.color : '#374151', marginBottom: 3 }}>{v.label}</div>
+                          <div style={{ fontSize: 10, color: '#94a3b8', lineHeight: 1.4 }}>{mc.desc}</div>
+                          {isCurrent && (
+                            <div style={{ marginTop: 8, display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 700, color: v.color }}>
+                              <span style={{ width: 6, height: 6, borderRadius: '50%', background: v.color, display: 'inline-block' }} />
+                              Actuel
+                            </div>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })()}
           </>
         )}
       </div>
