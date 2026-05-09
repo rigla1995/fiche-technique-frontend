@@ -191,39 +191,53 @@ export default function MonAbonnementPage() {
           <h3 style={{ margin: '0 0 14px', fontSize: 15, fontWeight: 700, color: '#111827' }}>Tarification</h3>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             {/* Mensualité */}
-            <div style={{ background: '#f9fafb', borderRadius: 8, padding: '12px 16px', border: '1px solid #e5e7eb' }}>
-              <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 6 }}>Mensualité</div>
-              {abo.pricing.activePromo && abo.pricing.baseMensuel != null && (
-                <div style={{ fontSize: 13, color: '#9ca3af', textDecoration: 'line-through', marginBottom: 2 }}>
-                  {abo.pricing.baseMensuel} DT/mois
+            {(() => {
+              const p = abo.pricing!;
+              const promoAffectsMens = p.activePromo && ['mensualite', 'les_deux'].includes(p.activePromo.appliesTo);
+              const priceChanged = promoAffectsMens && p.effectifMensuel !== p.baseMensuel;
+              return (
+                <div style={{ background: '#f9fafb', borderRadius: 8, padding: '12px 16px', border: '1px solid #e5e7eb' }}>
+                  <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 6 }}>Mensualité</div>
+                  {priceChanged && p.baseMensuel != null && (
+                    <div style={{ fontSize: 13, color: '#9ca3af', textDecoration: 'line-through', marginBottom: 2 }}>
+                      {p.baseMensuel} DT/mois
+                    </div>
+                  )}
+                  <div style={{ fontSize: 20, fontWeight: 800, color: promoAffectsMens ? '#7c3aed' : '#111827' }}>
+                    {p.effectifMensuel != null ? `${p.effectifMensuel} DT/mois` : (p.baseMensuel != null ? `${p.baseMensuel} DT/mois` : '—')}
+                  </div>
+                  {promoAffectsMens && (
+                    <div style={{ fontSize: 11, color: '#7c3aed', marginTop: 4, fontWeight: 600 }}>
+                      {p.effectifMensuel === 0 ? 'Gratuit (promotion)' : 'Promotion appliquée'}
+                    </div>
+                  )}
                 </div>
-              )}
-              <div style={{ fontSize: 20, fontWeight: 800, color: abo.pricing.activePromo ? '#7c3aed' : '#111827' }}>
-                {abo.pricing.effectifMensuel != null ? `${abo.pricing.effectifMensuel} DT/mois` : (abo.pricing.baseMensuel != null ? `${abo.pricing.baseMensuel} DT/mois` : '—')}
-              </div>
-              {abo.pricing.activePromo && (
-                <div style={{ fontSize: 11, color: '#7c3aed', marginTop: 4, fontWeight: 600 }}>
-                  {abo.pricing.effectifMensuel === 0 ? 'Gratuit (promotion)' : 'Promotion appliquée'}
-                </div>
-              )}
-            </div>
+              );
+            })()}
             {/* Onboarding */}
-            <div style={{ background: '#f9fafb', borderRadius: 8, padding: '12px 16px', border: '1px solid #e5e7eb' }}>
-              <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 6 }}>Onboarding</div>
-              {abo.pricing.activePromo && abo.pricing.baseOnboarding != null && (
-                <div style={{ fontSize: 13, color: '#9ca3af', textDecoration: 'line-through', marginBottom: 2 }}>
-                  {abo.pricing.baseOnboarding} DT
+            {(() => {
+              const p = abo.pricing!;
+              const promoAffectsOb = p.activePromo && ['onboarding', 'les_deux'].includes(p.activePromo.appliesTo);
+              const priceChanged = promoAffectsOb && p.effectifOnboarding !== p.baseOnboarding;
+              return (
+                <div style={{ background: '#f9fafb', borderRadius: 8, padding: '12px 16px', border: '1px solid #e5e7eb' }}>
+                  <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 6 }}>Onboarding</div>
+                  {priceChanged && p.baseOnboarding != null && (
+                    <div style={{ fontSize: 13, color: '#9ca3af', textDecoration: 'line-through', marginBottom: 2 }}>
+                      {p.baseOnboarding} DT
+                    </div>
+                  )}
+                  <div style={{ fontSize: 20, fontWeight: 800, color: promoAffectsOb ? '#7c3aed' : '#111827' }}>
+                    {p.effectifOnboarding != null ? `${p.effectifOnboarding} DT` : (p.baseOnboarding != null ? `${p.baseOnboarding} DT` : '—')}
+                  </div>
+                  {promoAffectsOb && (
+                    <div style={{ fontSize: 11, color: '#7c3aed', marginTop: 4, fontWeight: 600 }}>
+                      {p.effectifOnboarding === 0 ? 'Gratuit (promotion)' : 'Promotion appliquée'}
+                    </div>
+                  )}
                 </div>
-              )}
-              <div style={{ fontSize: 20, fontWeight: 800, color: abo.pricing.activePromo ? '#7c3aed' : '#111827' }}>
-                {abo.pricing.effectifOnboarding != null ? `${abo.pricing.effectifOnboarding} DT` : (abo.pricing.baseOnboarding != null ? `${abo.pricing.baseOnboarding} DT` : '—')}
-              </div>
-              {abo.pricing.activePromo && (
-                <div style={{ fontSize: 11, color: '#7c3aed', marginTop: 4, fontWeight: 600 }}>
-                  {abo.pricing.effectifOnboarding === 0 ? 'Gratuit (promotion)' : 'Promotion appliquée'}
-                </div>
-              )}
-            </div>
+              );
+            })()}
           </div>
         </div>
       )}
