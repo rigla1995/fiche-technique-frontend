@@ -31,13 +31,19 @@ const fmtMois = (d: string) => d ? new Date(d).toLocaleDateString('fr-FR', { mon
 
 // ── Confirmation Modal ────────────────────────────────────────────────────────
 interface ConfirmPayload {
-  type: 'onboarding' | 'mensualite';
+  type: 'onboarding' | 'mensualite' | 'mode';
   clientNom: string;
-  montant: number | null;
-  statut: string;
-  datePaiement: string;
+  // payment fields
+  montant?: number | null;
+  statut?: string;
+  datePaiement?: string;
   mois?: string;
+  // mode fields
+  newMode?: string;
+  currentMode?: string;
 }
+
+const MODE_DANGER: Record<string, boolean> = { bloque: true };
 
 function ConfirmationModal({
   payload,
@@ -50,42 +56,59 @@ function ConfirmationModal({
   onConfirm: () => void;
   onCancel: () => void;
 }) {
-  const sc = STATUT_COLORS[payload.statut] || { bg: '#f3f4f6', text: '#374151', label: payload.statut };
+  const isMode = payload.type === 'mode';
   const isOnboarding = payload.type === 'onboarding';
+
+  const sc = !isMode ? (STATUT_COLORS[payload.statut || ''] || { bg: '#f3f4f6', text: '#374151', label: payload.statut || '' }) : null;
+  const newModeLabel = MODE_LABELS[payload.newMode || ''];
+  const currentModeLabel = MODE_LABELS[payload.currentMode || ''];
+  const isDanger = MODE_DANGER[payload.newMode || ''];
+
+  const confirmBg = isMode
+    ? (isDanger ? '#dc2626' : newModeLabel?.color || '#2563eb')
+    : '#2563eb';
+
+  const modeIconMap: Record<string, string> = {
+    actif: '✅', read_only: '👁️', bloque: '🚫', desactive: '⛔', archive: '🗄️',
+  };
 
   return (
     <div style={{
       position: 'fixed', inset: 0, zIndex: 1000,
-      background: 'rgba(15,23,42,0.45)',
+      background: 'rgba(15,23,42,0.5)',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
-      backdropFilter: 'blur(2px)',
+      backdropFilter: 'blur(3px)',
     }}>
       <div style={{
-        background: '#fff', borderRadius: 16, width: 420, maxWidth: '94vw',
-        boxShadow: '0 20px 60px rgba(0,0,0,0.18)',
+        background: '#fff', borderRadius: 16, width: 440, maxWidth: '94vw',
+        boxShadow: '0 25px 70px rgba(0,0,0,0.22)',
         overflow: 'hidden',
       }}>
         {/* Header */}
         <div style={{
           padding: '20px 24px 16px',
           borderBottom: '1px solid #f1f5f9',
-          background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
+          background: isMode && isDanger
+            ? 'linear-gradient(135deg,#fef2f2 0%,#fee2e2 100%)'
+            : 'linear-gradient(135deg,#f8fafc 0%,#f1f5f9 100%)',
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <div style={{
-              width: 40, height: 40, borderRadius: 10,
-              background: isOnboarding ? '#e0f2fe' : '#eff6ff',
+              width: 44, height: 44, borderRadius: 12,
+              background: isMode ? (isDanger ? '#fee2e2' : '#f0fdf4') : (isOnboarding ? '#e0f2fe' : '#eff6ff'),
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 18,
+              fontSize: 20,
             }}>
-              {isOnboarding ? '🎯' : '📅'}
+              {isMode ? modeIconMap[payload.newMode || ''] || '⚙️' : (isOnboarding ? '🎯' : '📅')}
             </div>
             <div>
-              <div style={{ fontSize: 15, fontWeight: 700, color: '#0f172a' }}>
-                Confirmer le paiement
+              <div style={{ fontSize: 15, fontWeight: 700, color: isMode && isDanger ? '#991b1b' : '#0f172a' }}>
+                {isMode ? 'Modifier le mode d\'accès' : 'Confirmer le paiement'}
               </div>
-              <div style={{ fontSize: 12, color: '#64748b', marginTop: 1 }}>
-                {isOnboarding ? 'Onboarding' : `Mensualité · ${fmtMois(payload.mois || '')}`}
+              <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>
+                {isMode
+                  ? `${currentModeLabel?.label || payload.currentMode} → ${newModeLabel?.label || payload.newMode}`
+                  : (isOnboarding ? 'Onboarding' : `Mensualité · ${fmtMois(payload.mois || '')}`)}
               </div>
             </div>
           </div>
@@ -93,7 +116,7 @@ function ConfirmationModal({
 
         {/* Body */}
         <div style={{ padding: '20px 24px' }}>
-          {/* Client */}
+          {/* Client row */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16, padding: '10px 14px', background: '#f8fafc', borderRadius: 10 }}>
             <div style={{ width: 34, height: 34, borderRadius: 8, background: '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15 }}>👤</div>
             <div>
@@ -102,35 +125,70 @@ function ConfirmationModal({
             </div>
           </div>
 
-          {/* Details grid */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 18 }}>
-            <div style={{ padding: '12px 14px', background: '#f8fafc', borderRadius: 10, border: '1px solid #e2e8f0' }}>
-              <div style={{ fontSize: 10, fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>Montant</div>
-              <div style={{ fontSize: 20, fontWeight: 800, color: '#0f172a' }}>
-                {payload.montant != null ? `${payload.montant} DT` : '—'}
+          {/* Mode: transition card */}
+          {isMode && (
+            <>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: 10, alignItems: 'center', marginBottom: 16 }}>
+                <div style={{ padding: '14px', background: '#f8fafc', borderRadius: 10, border: '1px solid #e2e8f0', textAlign: 'center' }}>
+                  <div style={{ fontSize: 22, marginBottom: 4 }}>{modeIconMap[payload.currentMode || ''] || '⚙️'}</div>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>Actuel</div>
+                  <span style={{ display: 'inline-block', fontSize: 12, fontWeight: 700, padding: '4px 10px', borderRadius: 20, background: (currentModeLabel?.color || '#6b7280') + '20', color: currentModeLabel?.color || '#6b7280' }}>
+                    {currentModeLabel?.label || payload.currentMode}
+                  </span>
+                </div>
+                <div style={{ fontSize: 20, color: '#94a3b8', fontWeight: 300 }}>→</div>
+                <div style={{ padding: '14px', background: isDanger ? '#fef2f2' : '#f0fdf4', borderRadius: 10, border: `1px solid ${isDanger ? '#fecaca' : '#bbf7d0'}`, textAlign: 'center' }}>
+                  <div style={{ fontSize: 22, marginBottom: 4 }}>{modeIconMap[payload.newMode || ''] || '⚙️'}</div>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>Nouveau</div>
+                  <span style={{ display: 'inline-block', fontSize: 12, fontWeight: 700, padding: '4px 10px', borderRadius: 20, background: (newModeLabel?.color || '#374151') + '20', color: newModeLabel?.color || '#374151' }}>
+                    {newModeLabel?.label || payload.newMode}
+                  </span>
+                </div>
               </div>
-            </div>
-            <div style={{ padding: '12px 14px', background: '#f8fafc', borderRadius: 10, border: '1px solid #e2e8f0' }}>
-              <div style={{ fontSize: 10, fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>Statut</div>
-              <span style={{ display: 'inline-block', fontSize: 12, fontWeight: 700, padding: '4px 10px', borderRadius: 20, background: sc.bg, color: sc.text }}>
-                {sc.label}
-              </span>
-            </div>
-          </div>
-
-          {payload.datePaiement && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', background: '#f0fdf4', borderRadius: 10, border: '1px solid #bbf7d0', marginBottom: 18 }}>
-              <span style={{ fontSize: 14 }}>📆</span>
-              <div>
-                <div style={{ fontSize: 10, fontWeight: 600, color: '#166534', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Date de paiement</div>
-                <div style={{ fontSize: 13, fontWeight: 600, color: '#14532d', marginTop: 1 }}>{fmtDate(payload.datePaiement)}</div>
+              <div style={{ display: 'flex', gap: 8, padding: '10px 14px', borderRadius: 10, border: `1px solid ${isDanger ? '#fecaca' : '#e2e8f0'}`, background: isDanger ? '#fef2f2' : '#fafafa', marginBottom: 16, fontSize: 12, color: isDanger ? '#991b1b' : '#64748b' }}>
+                <span style={{ fontSize: 14, flexShrink: 0 }}>{isDanger ? '⚠️' : 'ℹ️'}</span>
+                <span>
+                  {payload.newMode === 'bloque'
+                    ? 'Ce client et tous ses gérants seront immédiatement déconnectés et ne pourront plus accéder à l\'application.'
+                    : payload.newMode === 'read_only'
+                    ? 'Le client pourra consulter ses données mais ne pourra effectuer aucune modification.'
+                    : 'Le client et ses gérants retrouveront un accès complet à toutes les fonctionnalités.'}
+                </span>
               </div>
-            </div>
+            </>
           )}
 
-          <div style={{ fontSize: 12, color: '#64748b', background: '#fafafa', borderRadius: 8, padding: '10px 12px', border: '1px solid #e2e8f0' }}>
-            Cette action enregistrera le paiement. Vous pourrez le modifier à tout moment.
-          </div>
+          {/* Payment: details grid */}
+          {!isMode && sc && (
+            <>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 16 }}>
+                <div style={{ padding: '12px 14px', background: '#f8fafc', borderRadius: 10, border: '1px solid #e2e8f0' }}>
+                  <div style={{ fontSize: 10, fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>Montant</div>
+                  <div style={{ fontSize: 20, fontWeight: 800, color: '#0f172a' }}>
+                    {payload.montant != null ? `${payload.montant} DT` : '—'}
+                  </div>
+                </div>
+                <div style={{ padding: '12px 14px', background: '#f8fafc', borderRadius: 10, border: '1px solid #e2e8f0' }}>
+                  <div style={{ fontSize: 10, fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>Statut</div>
+                  <span style={{ display: 'inline-block', fontSize: 12, fontWeight: 700, padding: '4px 10px', borderRadius: 20, background: sc.bg, color: sc.text }}>
+                    {sc.label}
+                  </span>
+                </div>
+              </div>
+              {payload.datePaiement && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', background: '#f0fdf4', borderRadius: 10, border: '1px solid #bbf7d0', marginBottom: 16 }}>
+                  <span style={{ fontSize: 14 }}>📆</span>
+                  <div>
+                    <div style={{ fontSize: 10, fontWeight: 600, color: '#166534', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Date de paiement</div>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: '#14532d', marginTop: 1 }}>{fmtDate(payload.datePaiement)}</div>
+                  </div>
+                </div>
+              )}
+              <div style={{ fontSize: 12, color: '#64748b', background: '#fafafa', borderRadius: 8, padding: '10px 12px', border: '1px solid #e2e8f0' }}>
+                Cette action enregistrera le paiement. Vous pourrez le modifier à tout moment.
+              </div>
+            </>
+          )}
         </div>
 
         {/* Footer */}
@@ -151,7 +209,7 @@ function ConfirmationModal({
             disabled={saving}
             style={{
               padding: '9px 24px', borderRadius: 9, border: 'none',
-              background: saving ? '#93c5fd' : '#2563eb',
+              background: saving ? confirmBg + 'aa' : confirmBg,
               color: '#fff', fontSize: 13, fontWeight: 700,
               cursor: saving ? 'default' : 'pointer',
               display: 'flex', alignItems: 'center', gap: 8,
@@ -160,7 +218,7 @@ function ConfirmationModal({
             {saving && (
               <span style={{ width: 14, height: 14, border: '2px solid #fff', borderTopColor: 'transparent', borderRadius: '50%', display: 'inline-block', animation: 'spin 0.7s linear infinite' }} />
             )}
-            {saving ? 'Enregistrement...' : 'Confirmer'}
+            {saving ? 'Enregistrement...' : (isMode ? 'Confirmer le changement' : 'Confirmer')}
           </button>
         </div>
       </div>
@@ -353,13 +411,25 @@ export default function AbonnementsManagement() {
     }
   };
 
-  const saveMode = async (mode: string) => {
+  const requestMode = (mode: string) => {
     if (!selected) return;
+    setConfirmModal({
+      type: 'mode',
+      clientNom: selected.clientNom,
+      newMode: mode,
+      currentMode: selected.modeCompte,
+    });
+  };
+
+  const saveMode = async () => {
+    if (!selected || !confirmModal?.newMode) return;
+    const mode = confirmModal.newMode;
     setModeSaving(true);
     try {
       await api.put(`/api/abonnements/client/${selected.clientId}/mode`, { mode });
       setSelected((s) => s ? { ...s, modeCompte: mode as Abonnement['modeCompte'] } : s);
       fetchList();
+      setConfirmModal(null);
     } finally {
       setModeSaving(false);
     }
@@ -436,8 +506,8 @@ export default function AbonnementsManagement() {
     {confirmModal && (
       <ConfirmationModal
         payload={confirmModal}
-        saving={confirmModal.type === 'onboarding' ? obSaving : paving}
-        onConfirm={confirmModal.type === 'onboarding' ? saveOnboarding : savePaiement}
+        saving={confirmModal.type === 'onboarding' ? obSaving : confirmModal.type === 'mensualite' ? paving : modeSaving}
+        onConfirm={confirmModal.type === 'onboarding' ? saveOnboarding : confirmModal.type === 'mensualite' ? savePaiement : saveMode}
         onCancel={() => setConfirmModal(null)}
       />
     )}
@@ -870,7 +940,7 @@ export default function AbonnementsManagement() {
                         <button
                           key={mode}
                           disabled={modeSaving || isCurrent}
-                          onClick={() => saveMode(mode)}
+                          onClick={() => requestMode(mode)}
                           style={{
                             padding: '14px 12px', borderRadius: 10,
                             border: `2px solid ${isCurrent ? v.color : '#e2e8f0'}`,
