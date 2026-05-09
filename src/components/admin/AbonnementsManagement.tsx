@@ -424,15 +424,6 @@ export default function AbonnementsManagement() {
 
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginBottom: 10 }}>
                 <div>
-                  <label style={{ fontSize: 11, color: '#374151', display: 'block', marginBottom: 3 }}>Type</label>
-                  <select value={promoType} onChange={(e) => setPromoType(e.target.value as Promotion['type'])}
-                    style={{ width: '100%', padding: '5px 8px', borderRadius: 6, border: '1px solid #fde68a', fontSize: 12 }}>
-                    <option value="percent_off">% Réduction</option>
-                    <option value="free_months">Gratuit</option>
-                    <option value="fixed_price">Prix fixe</option>
-                  </select>
-                </div>
-                <div>
                   <label style={{ fontSize: 11, color: '#374151', display: 'block', marginBottom: 3 }}>Appliqué à</label>
                   <select value={promoAppliesTo} onChange={(e) => { setPromoAppliesTo(e.target.value); setPromoDiscountVal(''); setPromoFixedVal(''); }}
                     style={{ width: '100%', padding: '5px 8px', borderRadius: 6, border: '1px solid #fde68a', fontSize: 12 }}>
@@ -440,6 +431,15 @@ export default function AbonnementsManagement() {
                     <option value="onboarding" disabled={blockedOb}>OnBoarding{blockedOb ? ' (active)' : ''}</option>
                     <option value="supplement_gerant" disabled={blockedGerant}>Supplément Gérant{blockedGerant ? ' (active)' : ''}</option>
                     <option value="supplement_labo" disabled={blockedLabo}>Supplément Labo{blockedLabo ? ' (active)' : ''}</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={{ fontSize: 11, color: '#374151', display: 'block', marginBottom: 3 }}>Type</label>
+                  <select value={promoType} onChange={(e) => setPromoType(e.target.value as Promotion['type'])}
+                    style={{ width: '100%', padding: '5px 8px', borderRadius: 6, border: '1px solid #fde68a', fontSize: 12 }}>
+                    <option value="percent_off">% Réduction</option>
+                    <option value="free_months">Gratuit</option>
+                    <option value="fixed_price">Prix fixe</option>
                   </select>
                 </div>
                 <div>
