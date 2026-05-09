@@ -79,6 +79,7 @@ export default function AbonnementsManagement() {
   const openDetail = useCallback(async (ab: Abonnement) => {
     setDetailLoading(true);
     setConfirmResult(null);
+    setPromoError(null);
     try {
       const res = await api.get(`/api/abonnements/client/${ab.clientId}`);
       setSelected(res.data);
@@ -173,9 +174,12 @@ export default function AbonnementsManagement() {
     }
   };
 
+  const [promoError, setPromoError] = useState<string | null>(null);
+
   const savePromotion = async () => {
     if (!selected || !promoDateDebut) return;
     setPromoSaving(true);
+    setPromoError(null);
     try {
       await api.post(`/api/abonnements/client/${selected.clientId}/promotions`, {
         type: promoType,
@@ -192,6 +196,8 @@ export default function AbonnementsManagement() {
       setPromoDiscountOb(''); setPromoDiscountMens(''); setPromoFixedOb(''); setPromoFixedMens('');
       await openDetail(selected);
       fetchList();
+    } catch (err: any) {
+      setPromoError(err?.response?.data?.message || 'Erreur lors de l\'ajout');
     } finally {
       setPromoSaving(false);
     }
@@ -519,31 +525,47 @@ export default function AbonnementsManagement() {
 
               {/* Add promo form */}
               <div style={{ fontSize: 12, fontWeight: 600, color: '#78350f', marginBottom: 8 }}>Ajouter une promotion</div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginBottom: 10 }}>
-                <div>
-                  <label style={{ fontSize: 11, color: '#374151', display: 'block', marginBottom: 3 }}>Type</label>
-                  <select value={promoType} onChange={(e) => setPromoType(e.target.value as Promotion['type'])}
-                    style={{ width: '100%', padding: '5px 8px', borderRadius: 6, border: '1px solid #fde68a', fontSize: 12 }}>
-                    <option value="percent_off">% Réduction</option>
-                    <option value="free_months">Mois gratuits</option>
-                    <option value="fixed_price">Prix fixe</option>
-                  </select>
-                </div>
-                <div>
-                  <label style={{ fontSize: 11, color: '#374151', display: 'block', marginBottom: 3 }}>Appliqué à</label>
-                  <select value={promoAppliesTo} onChange={(e) => setPromoAppliesTo(e.target.value as Promotion['appliesTo'])}
-                    style={{ width: '100%', padding: '5px 8px', borderRadius: 6, border: '1px solid #fde68a', fontSize: 12 }}>
-                    <option value="mensualite">Mensualité</option>
-                    <option value="onboarding">Onboarding</option>
-                    <option value="les_deux">Les deux</option>
-                  </select>
-                </div>
-                <div>
-                  <label style={{ fontSize: 11, color: '#374151', display: 'block', marginBottom: 3 }}>Date début</label>
-                  <input type="date" value={promoDateDebut} onChange={(e) => setPromoDateDebut(e.target.value)}
-                    style={{ width: '100%', padding: '5px 8px', borderRadius: 6, border: '1px solid #fde68a', fontSize: 12, boxSizing: 'border-box' }} />
-                </div>
-              </div>
+              {(() => {
+                const activePromos = selected.promotions?.filter((p) => p.isActive) || [];
+                const blockedMens = activePromos.some((p) => ['mensualite', 'les_deux'].includes(p.appliesTo));
+                const blockedOb = activePromos.some((p) => ['onboarding', 'les_deux'].includes(p.appliesTo));
+                const blockedLesDeux = blockedMens || blockedOb;
+                return (
+                  <>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginBottom: 10 }}>
+                      <div>
+                        <label style={{ fontSize: 11, color: '#374151', display: 'block', marginBottom: 3 }}>Type</label>
+                        <select value={promoType} onChange={(e) => setPromoType(e.target.value as Promotion['type'])}
+                          style={{ width: '100%', padding: '5px 8px', borderRadius: 6, border: '1px solid #fde68a', fontSize: 12 }}>
+                          <option value="percent_off">% Réduction</option>
+                          <option value="free_months">Mois gratuits</option>
+                          <option value="fixed_price">Prix fixe</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label style={{ fontSize: 11, color: '#374151', display: 'block', marginBottom: 3 }}>Appliqué à</label>
+                        <select value={promoAppliesTo} onChange={(e) => setPromoAppliesTo(e.target.value as Promotion['appliesTo'])}
+                          style={{ width: '100%', padding: '5px 8px', borderRadius: 6, border: '1px solid #fde68a', fontSize: 12 }}>
+                          <option value="mensualite" disabled={blockedMens}>Mensualité{blockedMens ? ' (promo active)' : ''}</option>
+                          <option value="onboarding" disabled={blockedOb}>Onboarding{blockedOb ? ' (promo active)' : ''}</option>
+                          <option value="les_deux" disabled={blockedLesDeux}>Les deux{blockedLesDeux ? ' (promo active)' : ''}</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label style={{ fontSize: 11, color: '#374151', display: 'block', marginBottom: 3 }}>Date début</label>
+                        <input type="date" value={promoDateDebut} onChange={(e) => setPromoDateDebut(e.target.value)}
+                          min={selected.dateDebut}
+                          style={{ width: '100%', padding: '5px 8px', borderRadius: 6, border: '1px solid #fde68a', fontSize: 12, boxSizing: 'border-box' }} />
+                      </div>
+                    </div>
+                    {promoError && (
+                      <div style={{ background: '#fee2e2', border: '1px solid #fecaca', borderRadius: 6, padding: '6px 10px', fontSize: 12, color: '#dc2626', marginBottom: 8 }}>
+                        {promoError}
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
 
               {promoType !== 'free_months' && (
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, marginBottom: 10 }}>

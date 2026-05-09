@@ -52,7 +52,8 @@ export interface Abonnement {
     baseOnboarding: number | null;
     effectifMensuel: number | null;
     effectifOnboarding: number | null;
-    activePromo: Promotion | null;
+    activePromoMensuel: Promotion | null;
+    activePromoOnboarding: Promotion | null;
   };
   createdAt: string;
   updatedAt: string;

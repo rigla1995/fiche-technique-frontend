@@ -193,8 +193,8 @@ export default function MonAbonnementPage() {
             {/* Mensualité */}
             {(() => {
               const p = abo.pricing!;
-              const promoAffectsMens = p.activePromo && ['mensualite', 'les_deux'].includes(p.activePromo.appliesTo);
-              const priceChanged = promoAffectsMens && p.effectifMensuel !== p.baseMensuel;
+              const promo = p.activePromoMensuel;
+              const priceChanged = promo && p.effectifMensuel !== p.baseMensuel;
               return (
                 <div style={{ background: '#f9fafb', borderRadius: 8, padding: '12px 16px', border: '1px solid #e5e7eb' }}>
                   <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 6 }}>Mensualité</div>
@@ -203,10 +203,10 @@ export default function MonAbonnementPage() {
                       {p.baseMensuel} DT/mois
                     </div>
                   )}
-                  <div style={{ fontSize: 20, fontWeight: 800, color: promoAffectsMens ? '#7c3aed' : '#111827' }}>
+                  <div style={{ fontSize: 20, fontWeight: 800, color: promo ? '#7c3aed' : '#111827' }}>
                     {p.effectifMensuel != null ? `${p.effectifMensuel} DT/mois` : (p.baseMensuel != null ? `${p.baseMensuel} DT/mois` : '—')}
                   </div>
-                  {promoAffectsMens && (
+                  {promo && (
                     <div style={{ fontSize: 11, color: '#7c3aed', marginTop: 4, fontWeight: 600 }}>
                       {p.effectifMensuel === 0 ? 'Gratuit (promotion)' : 'Promotion appliquée'}
                     </div>
@@ -217,8 +217,8 @@ export default function MonAbonnementPage() {
             {/* Onboarding */}
             {(() => {
               const p = abo.pricing!;
-              const promoAffectsOb = p.activePromo && ['onboarding', 'les_deux'].includes(p.activePromo.appliesTo);
-              const priceChanged = promoAffectsOb && p.effectifOnboarding !== p.baseOnboarding;
+              const promo = p.activePromoOnboarding;
+              const priceChanged = promo && p.effectifOnboarding !== p.baseOnboarding;
               return (
                 <div style={{ background: '#f9fafb', borderRadius: 8, padding: '12px 16px', border: '1px solid #e5e7eb' }}>
                   <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 6 }}>Onboarding</div>
@@ -227,10 +227,10 @@ export default function MonAbonnementPage() {
                       {p.baseOnboarding} DT
                     </div>
                   )}
-                  <div style={{ fontSize: 20, fontWeight: 800, color: promoAffectsOb ? '#7c3aed' : '#111827' }}>
+                  <div style={{ fontSize: 20, fontWeight: 800, color: promo ? '#7c3aed' : '#111827' }}>
                     {p.effectifOnboarding != null ? `${p.effectifOnboarding} DT` : (p.baseOnboarding != null ? `${p.baseOnboarding} DT` : '—')}
                   </div>
-                  {promoAffectsOb && (
+                  {promo && (
                     <div style={{ fontSize: 11, color: '#7c3aed', marginTop: 4, fontWeight: 600 }}>
                       {p.effectifOnboarding === 0 ? 'Gratuit (promotion)' : 'Promotion appliquée'}
                     </div>
