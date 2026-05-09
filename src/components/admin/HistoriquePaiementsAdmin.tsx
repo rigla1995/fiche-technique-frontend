@@ -60,7 +60,7 @@ export default function HistoriquePaiementsAdmin() {
     return (r.clientNom || '').toLowerCase().includes(q) || (r.clientEmail || '').toLowerCase().includes(q);
   });
 
-  const totalMontant = displayed.reduce((s, r) => s + (r.montantDt || 0), 0);
+  const totalMontant = displayed.reduce((s, r) => s + (parseFloat(String(r.montantDt ?? 0)) || 0), 0);
   const countPayé    = displayed.filter((r) => r.statut === 'payé').length;
 
   return (
