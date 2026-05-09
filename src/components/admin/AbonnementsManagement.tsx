@@ -448,7 +448,7 @@ export default function AbonnementsManagement() {
   };
 
   const savePromotion = async () => {
-    if (!selected || !promoCanSubmit) return;
+    if (!selected || !promoCanSubmitFull) return;
     setPromoSaving(true);
     setPromoError(null);
     const dateDebut = promoAppliesTo === 'onboarding'
@@ -554,6 +554,33 @@ export default function AbonnementsManagement() {
     !hideGerantPermanent ? { value: 'supplement_gerant', label: 'Supplément Gérant' } : null,
     !hideLaboPermanent ? { value: 'supplement_labo', label: 'Supplément Labo' } : null,
   ].filter(Boolean) as { value: string; label: string }[];
+
+  // Compute months blocked by existing promos for the current promoAppliesTo
+  const conflictAppliesMap: Record<string, string[]> = {
+    mensualite: ['mensualite', 'les_deux'],
+    supplement_gerant: ['supplement_gerant'],
+    supplement_labo: ['supplement_labo'],
+  };
+  const promoBlockedMonths = new Set<string>();
+  if (promoAppliesTo !== 'onboarding' && selected?.promotions) {
+    const conflictTypes = conflictAppliesMap[promoAppliesTo] || [];
+    selected.promotions
+      .filter((p) => conflictTypes.includes(p.appliesTo))
+      .forEach((p) => {
+        const start = new Date(p.dateDebut + 'T00:00:00');
+        const end = p.dateFin ? new Date(p.dateFin + 'T00:00:00') : new Date(new Date().getFullYear() + 3, 11, 31);
+        const cur = new Date(start.getFullYear(), start.getMonth(), 1);
+        while (cur <= end) {
+          promoBlockedMonths.add(`${cur.getFullYear()}-${String(cur.getMonth() + 1).padStart(2, '0')}`);
+          cur.setMonth(cur.getMonth() + 1);
+        }
+      });
+  }
+  const promoMoisIsBlocked = promoAppliesTo !== 'onboarding' && !!promoMoisDebut && promoBlockedMonths.has(promoMoisDebut);
+  const promoCanSubmitFull = promoCanSubmit && !promoMoisIsBlocked;
+
+  // Today string for delete guard
+  const todayStr = new Date().toISOString().slice(0, 10);
 
   return (
     <>
@@ -691,12 +718,14 @@ export default function AbonnementsManagement() {
 
             {/* ── Promotions ─────────────────────────────────────────── */}
             <div style={{ background: '#fffbeb', borderRadius: 10, padding: 16, border: '1px solid #fde68a', marginBottom: 20 }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: '#92400e', marginBottom: 14 }}>🏷️ Promotions</div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: '#92400e', marginBottom: 14 }}>🏷️ Promotions — Année {new Date().getFullYear()}</div>
 
-              {/* Active promos list */}
-              {selected.promotions && selected.promotions.filter((p) => p.isActive).length > 0 && (
+              {/* Current-year promo list (actif + expiré) */}
+              {selected.promotions && selected.promotions.length > 0 && (
                 <div style={{ marginBottom: 14 }}>
-                  {selected.promotions.filter((p) => p.isActive).map((p) => {
+                  {selected.promotions.map((p) => {
+                    const isActif = p.statutPromo === 'actif';
+                    const isFuture = p.dateDebut > todayStr;
                     let remiseStr = '';
                     if (p.type === 'free_months') remiseStr = 'Gratuit (100%)';
                     else if (p.type === 'percent_off') {
@@ -704,25 +733,43 @@ export default function AbonnementsManagement() {
                       remiseStr = val ? `-${val}%` : '—';
                     } else {
                       const val = p.fixedSupplement ?? p.fixedMensualite ?? p.fixedOnboarding;
-                      remiseStr = val ? `${val} DT` : '—';
+                      remiseStr = val ? `-${val} DT` : '—';
                     }
+                    const canDelete = isFuture; // only deletable if not yet started
                     return (
-                      <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 10, background: '#fef3c7', borderRadius: 8, padding: '8px 12px', marginBottom: 6 }}>
-                        <span style={{ fontSize: 11, fontWeight: 700, background: '#f59e0b', color: '#fff', borderRadius: 6, padding: '2px 7px' }}>Actif</span>
-                        <span style={{ fontSize: 12, color: '#78350f', fontWeight: 600 }}>{APPLIES_LABELS[p.appliesTo] || p.appliesTo}</span>
-                        <span style={{ fontSize: 12, color: '#92400e' }}>
+                      <div key={p.id} style={{
+                        display: 'flex', alignItems: 'center', gap: 10,
+                        background: isActif ? '#fef3c7' : '#f9fafb',
+                        borderRadius: 8, padding: '8px 12px', marginBottom: 6,
+                        opacity: isActif ? 1 : 0.7,
+                        border: `1px solid ${isActif ? '#fde68a' : '#e5e7eb'}`,
+                      }}>
+                        <span style={{
+                          fontSize: 10, fontWeight: 700, borderRadius: 6, padding: '2px 7px', flexShrink: 0,
+                          background: isActif ? '#f59e0b' : '#9ca3af', color: '#fff',
+                        }}>
+                          {isActif ? (isFuture ? 'Planifié' : 'Actif') : 'Expiré'}
+                        </span>
+                        <span style={{ fontSize: 12, color: isActif ? '#78350f' : '#6b7280', fontWeight: 600 }}>
+                          {APPLIES_LABELS[p.appliesTo] || p.appliesTo}
+                        </span>
+                        <span style={{ fontSize: 12, color: isActif ? '#92400e' : '#9ca3af' }}>
                           {p.type === 'percent_off' ? '% Réduction' : p.type === 'free_months' ? 'Gratuit' : 'Prix fixe'}
                           {' · '}{remiseStr}
                         </span>
-                        <span style={{ fontSize: 11, color: '#a16207', marginLeft: 'auto' }}>
+                        <span style={{ fontSize: 11, color: isActif ? '#a16207' : '#9ca3af', marginLeft: 'auto' }}>
                           {fmtDate(p.dateDebut)} → {p.dateFin ? fmtDate(p.dateFin) : 'Permanent'}
                         </span>
-                        <button
-                          onClick={() => deletePromo(p.id)}
-                          disabled={promoDeleting === p.id}
-                          style={{ padding: '2px 8px', background: '#fee2e2', color: '#dc2626', border: '1px solid #fecaca', borderRadius: 6, fontSize: 11, cursor: 'pointer' }}>
-                          {promoDeleting === p.id ? '…' : '✕'}
-                        </button>
+                        {canDelete ? (
+                          <button
+                            onClick={() => deletePromo(p.id)}
+                            disabled={promoDeleting === p.id}
+                            style={{ padding: '2px 8px', background: '#fee2e2', color: '#dc2626', border: '1px solid #fecaca', borderRadius: 6, fontSize: 11, cursor: 'pointer', flexShrink: 0 }}>
+                            {promoDeleting === p.id ? '…' : '✕'}
+                          </button>
+                        ) : (
+                          <span style={{ width: 28, flexShrink: 0 }} />
+                        )}
                       </div>
                     );
                   })}
@@ -779,8 +826,8 @@ export default function AbonnementsManagement() {
                           min={promoCurrentMinMois}
                           style={{
                             width: '100%', padding: '5px 8px', borderRadius: 6, fontSize: 12, boxSizing: 'border-box',
-                            border: `1px solid ${promoMoisIsPaid ? '#fca5a5' : '#fde68a'}`,
-                            background: promoMoisIsPaid ? '#fff1f2' : '#fff',
+                            border: `1px solid ${(promoMoisIsPaid || promoMoisIsBlocked) ? '#fca5a5' : '#fde68a'}`,
+                            background: (promoMoisIsPaid || promoMoisIsBlocked) ? '#fff1f2' : '#fff',
                           }} />
                       </div>
                     )}
@@ -810,13 +857,13 @@ export default function AbonnementsManagement() {
                     <div style={{ display: 'flex', alignItems: 'flex-end' }}>
                       <button
                         onClick={savePromotion}
-                        disabled={!promoCanSubmit}
+                        disabled={!promoCanSubmitFull}
                         style={{
                           padding: '6px 18px', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: 12,
                           whiteSpace: 'nowrap',
-                          background: promoCanSubmit ? '#d97706' : '#e5e7eb',
-                          color: promoCanSubmit ? '#fff' : '#9ca3af',
-                          cursor: promoCanSubmit ? 'pointer' : 'default',
+                          background: promoCanSubmitFull ? '#d97706' : '#e5e7eb',
+                          color: promoCanSubmitFull ? '#fff' : '#9ca3af',
+                          cursor: promoCanSubmitFull ? 'pointer' : 'default',
                         }}>
                         {promoSaving ? '…' : '+ Ajouter'}
                       </button>
@@ -826,6 +873,11 @@ export default function AbonnementsManagement() {
                   {promoMoisIsPaid && (
                     <div style={{ background: '#fee2e2', border: '1px solid #fecaca', borderRadius: 6, padding: '6px 10px', fontSize: 12, color: '#dc2626', marginBottom: 8 }}>
                       Ce mois est déjà marqué comme payé — impossible d'y appliquer une promotion.
+                    </div>
+                  )}
+                  {promoMoisIsBlocked && !promoMoisIsPaid && (
+                    <div style={{ background: '#fee2e2', border: '1px solid #fecaca', borderRadius: 6, padding: '6px 10px', fontSize: 12, color: '#dc2626', marginBottom: 8 }}>
+                      Ce mois est déjà couvert par une promotion existante pour cette catégorie.
                     </div>
                   )}
 

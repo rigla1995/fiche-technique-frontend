@@ -31,6 +31,7 @@ export interface Promotion {
   notes: string | null;
   createdAt: string;
   isActive: boolean;
+  statutPromo: 'actif' | 'expiré';
 }
 
 export interface Abonnement {
