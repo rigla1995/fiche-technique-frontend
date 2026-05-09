@@ -10,15 +10,164 @@ const MODE_LABELS: Record<string, { label: string; color: string }> = {
   bloque:    { label: 'Bloqué',       color: '#7c3aed' },
 };
 
+const STATUT_COLORS: Record<string, { bg: string; text: string; label: string }> = {
+  payé:       { bg: '#dcfce7', text: '#166534', label: 'Payé' },
+  impayé:     { bg: '#fee2e2', text: '#991b1b', label: 'Impayé' },
+  en_attente: { bg: '#fef3c7', text: '#92400e', label: 'En attente' },
+  remisé:     { bg: '#ede9fe', text: '#5b21b6', label: 'Remisé' },
+  gratuit:    { bg: '#dcfce7', text: '#166534', label: 'Gratuit' },
+  offert:     { bg: '#e0f2fe', text: '#075985', label: 'Offert' },
+};
+
 const APPLIES_LABELS: Record<string, string> = {
-  onboarding:       'OnBoarding',
-  mensualite:       'Mensualité',
+  onboarding:        'OnBoarding',
+  mensualite:        'Mensualité',
   supplement_gerant: 'Supplément Gérant',
   supplement_labo:   'Supplément Labo',
 };
 
 const fmtDate = (d: string) => d ? new Date(d).toLocaleDateString('fr-FR') : '—';
 const fmtMois = (d: string) => d ? new Date(d).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' }) : '—';
+
+// ── Confirmation Modal ────────────────────────────────────────────────────────
+interface ConfirmPayload {
+  type: 'onboarding' | 'mensualite';
+  clientNom: string;
+  montant: number | null;
+  statut: string;
+  datePaiement: string;
+  mois?: string;
+}
+
+function ConfirmationModal({
+  payload,
+  saving,
+  onConfirm,
+  onCancel,
+}: {
+  payload: ConfirmPayload;
+  saving: boolean;
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  const sc = STATUT_COLORS[payload.statut] || { bg: '#f3f4f6', text: '#374151', label: payload.statut };
+  const isOnboarding = payload.type === 'onboarding';
+
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 1000,
+      background: 'rgba(15,23,42,0.45)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      backdropFilter: 'blur(2px)',
+    }}>
+      <div style={{
+        background: '#fff', borderRadius: 16, width: 420, maxWidth: '94vw',
+        boxShadow: '0 20px 60px rgba(0,0,0,0.18)',
+        overflow: 'hidden',
+      }}>
+        {/* Header */}
+        <div style={{
+          padding: '20px 24px 16px',
+          borderBottom: '1px solid #f1f5f9',
+          background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{
+              width: 40, height: 40, borderRadius: 10,
+              background: isOnboarding ? '#e0f2fe' : '#eff6ff',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: 18,
+            }}>
+              {isOnboarding ? '🎯' : '📅'}
+            </div>
+            <div>
+              <div style={{ fontSize: 15, fontWeight: 700, color: '#0f172a' }}>
+                Confirmer le paiement
+              </div>
+              <div style={{ fontSize: 12, color: '#64748b', marginTop: 1 }}>
+                {isOnboarding ? 'Onboarding' : `Mensualité · ${fmtMois(payload.mois || '')}`}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Body */}
+        <div style={{ padding: '20px 24px' }}>
+          {/* Client */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16, padding: '10px 14px', background: '#f8fafc', borderRadius: 10 }}>
+            <div style={{ width: 34, height: 34, borderRadius: 8, background: '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15 }}>👤</div>
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 600, color: '#0f172a' }}>{payload.clientNom}</div>
+              <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 1 }}>Client</div>
+            </div>
+          </div>
+
+          {/* Details grid */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 18 }}>
+            <div style={{ padding: '12px 14px', background: '#f8fafc', borderRadius: 10, border: '1px solid #e2e8f0' }}>
+              <div style={{ fontSize: 10, fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>Montant</div>
+              <div style={{ fontSize: 20, fontWeight: 800, color: '#0f172a' }}>
+                {payload.montant != null ? `${payload.montant} DT` : '—'}
+              </div>
+            </div>
+            <div style={{ padding: '12px 14px', background: '#f8fafc', borderRadius: 10, border: '1px solid #e2e8f0' }}>
+              <div style={{ fontSize: 10, fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>Statut</div>
+              <span style={{ display: 'inline-block', fontSize: 12, fontWeight: 700, padding: '4px 10px', borderRadius: 20, background: sc.bg, color: sc.text }}>
+                {sc.label}
+              </span>
+            </div>
+          </div>
+
+          {payload.datePaiement && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', background: '#f0fdf4', borderRadius: 10, border: '1px solid #bbf7d0', marginBottom: 18 }}>
+              <span style={{ fontSize: 14 }}>📆</span>
+              <div>
+                <div style={{ fontSize: 10, fontWeight: 600, color: '#166534', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Date de paiement</div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: '#14532d', marginTop: 1 }}>{fmtDate(payload.datePaiement)}</div>
+              </div>
+            </div>
+          )}
+
+          <div style={{ fontSize: 12, color: '#64748b', background: '#fafafa', borderRadius: 8, padding: '10px 12px', border: '1px solid #e2e8f0' }}>
+            Cette action enregistrera le paiement. Vous pourrez le modifier à tout moment.
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div style={{ padding: '14px 24px 20px', display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+          <button
+            onClick={onCancel}
+            disabled={saving}
+            style={{
+              padding: '9px 20px', borderRadius: 9, border: '1.5px solid #e2e8f0',
+              background: '#fff', color: '#374151', fontSize: 13, fontWeight: 600,
+              cursor: 'pointer',
+            }}
+          >
+            Annuler
+          </button>
+          <button
+            onClick={onConfirm}
+            disabled={saving}
+            style={{
+              padding: '9px 24px', borderRadius: 9, border: 'none',
+              background: saving ? '#93c5fd' : '#2563eb',
+              color: '#fff', fontSize: 13, fontWeight: 700,
+              cursor: saving ? 'default' : 'pointer',
+              display: 'flex', alignItems: 'center', gap: 8,
+            }}
+          >
+            {saving && (
+              <span style={{ width: 14, height: 14, border: '2px solid #fff', borderTopColor: 'transparent', borderRadius: '50%', display: 'inline-block', animation: 'spin 0.7s linear infinite' }} />
+            )}
+            {saving ? 'Enregistrement...' : 'Confirmer'}
+          </button>
+        </div>
+      </div>
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+    </div>
+  );
+}
 
 interface MontantMoisInfo {
   moisStr: string;
@@ -47,6 +196,9 @@ export default function AbonnementsManagement() {
   const [promoSaving, setPromoSaving] = useState(false);
   const [promoDeleting, setPromoDeleting] = useState<number | null>(null);
   const [promoError, setPromoError] = useState<string | null>(null);
+
+  // confirmation modal
+  const [confirmModal, setConfirmModal] = useState<ConfirmPayload | null>(null);
 
   // onboarding
   const [obStatut, setObStatut] = useState<string>('impayé');
@@ -145,6 +297,17 @@ export default function AbonnementsManagement() {
     }
   };
 
+  const requestOnboarding = () => {
+    if (!selected) return;
+    setConfirmModal({
+      type: 'onboarding',
+      clientNom: selected.clientNom,
+      montant: selected.pricing?.effectifOnboarding ?? selected.montantOnboarding ?? null,
+      statut: obStatut,
+      datePaiement: obDatePaiement,
+    });
+  };
+
   const saveOnboarding = async () => {
     if (!selected) return;
     setObSaving(true);
@@ -154,9 +317,22 @@ export default function AbonnementsManagement() {
         datePaiement: obDatePaiement || undefined,
       });
       setSelected((s) => s ? { ...s, statutOnboarding: res.data.statutOnboarding, dateOnboarding: res.data.dateOnboarding } : s);
+      setConfirmModal(null);
     } finally {
       setObSaving(false);
     }
+  };
+
+  const requestPaiement = () => {
+    if (!selected || !pMois || !pMontantInfo) return;
+    setConfirmModal({
+      type: 'mensualite',
+      clientNom: selected.clientNom,
+      montant: pMontantInfo.total,
+      statut: pStatut,
+      datePaiement: pDatePaiement,
+      mois: pMois + '-01',
+    });
   };
 
   const savePaiement = async () => {
@@ -171,6 +347,7 @@ export default function AbonnementsManagement() {
       });
       await fetchMontantMois(pMois);
       fetchList();
+      setConfirmModal(null);
     } finally {
       setPaving(false);
     }
@@ -255,6 +432,15 @@ export default function AbonnementsManagement() {
   const blockedLabo = activePromos.some((p) => p.appliesTo === 'supplement_labo');
 
   return (
+    <>
+    {confirmModal && (
+      <ConfirmationModal
+        payload={confirmModal}
+        saving={confirmModal.type === 'onboarding' ? obSaving : paving}
+        onConfirm={confirmModal.type === 'onboarding' ? saveOnboarding : savePaiement}
+        onCancel={() => setConfirmModal(null)}
+      />
+    )}
     <div style={{ display: 'flex', gap: 24, minHeight: 600 }}>
       {/* List panel */}
       <div style={{ flex: '0 0 420px', background: '#fff', borderRadius: 12, border: '1px solid #e5e7eb', overflow: 'hidden' }}>
@@ -487,41 +673,77 @@ export default function AbonnementsManagement() {
             </div>
 
             {/* ── Onboarding ─────────────────────────────────────────── */}
-            <div style={{ background: '#f9fafb', borderRadius: 10, padding: 16, border: '1px solid #e5e7eb', marginBottom: 20 }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: '#374151', marginBottom: 12 }}>Onboarding</div>
-              <div style={{ display: 'flex', gap: 16, alignItems: 'flex-end', flexWrap: 'wrap' }}>
-                <div>
-                  <div style={{ fontSize: 11, color: '#6b7280', marginBottom: 4 }}>Montant</div>
-                  <div style={{ fontSize: 18, fontWeight: 800, color: '#111827' }}>
-                    {selected.pricing?.effectifOnboarding != null
-                      ? `${selected.pricing.effectifOnboarding} DT`
-                      : selected.montantOnboarding ? `${selected.montantOnboarding} DT` : '—'}
+            {(() => {
+              const montantEffectif = selected.pricing?.effectifOnboarding ?? selected.montantOnboarding ?? null;
+              const montantBase = selected.montantOnboarding;
+              const hasPromoOb = !!selected.pricing?.activePromoOnboarding;
+              const scOb = STATUT_COLORS[selected.statutOnboarding] || STATUT_COLORS['impayé'];
+              return (
+                <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #e2e8f0', marginBottom: 20, overflow: 'hidden' }}>
+                  {/* Card header */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 18px', background: 'linear-gradient(135deg,#f0f9ff 0%,#e0f2fe 100%)', borderBottom: '1px solid #bae6fd' }}>
+                    <span style={{ fontSize: 18 }}>🎯</span>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: '#0c4a6e' }}>Onboarding</div>
+                      <div style={{ fontSize: 11, color: '#0369a1', marginTop: 1 }}>Formation initiale + mise en place</div>
+                    </div>
+                    {/* Current status badge */}
+                    <span style={{ fontSize: 11, fontWeight: 700, padding: '4px 12px', borderRadius: 20, background: scOb.bg, color: scOb.text }}>
+                      {scOb.label}
+                    </span>
                   </div>
-                  {selected.pricing?.activePromoOnboarding && (
-                    <div style={{ fontSize: 11, color: '#d97706', marginTop: 2 }}>🏷️ Promo appliquée</div>
-                  )}
+
+                  <div style={{ padding: '16px 18px' }}>
+                    {/* Amount row */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16, padding: '12px 16px', background: '#f8fafc', borderRadius: 10 }}>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 10, fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 3 }}>Montant à régler</div>
+                        <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+                          <span style={{ fontSize: 22, fontWeight: 800, color: '#0f172a' }}>
+                            {montantEffectif != null ? `${montantEffectif} DT` : '—'}
+                          </span>
+                          {hasPromoOb && montantBase != null && montantEffectif !== montantBase && (
+                            <span style={{ fontSize: 12, color: '#94a3b8', textDecoration: 'line-through' }}>{montantBase} DT</span>
+                          )}
+                        </div>
+                      </div>
+                      {hasPromoOb && (
+                        <span style={{ fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 8, background: '#fef3c7', color: '#92400e' }}>🏷️ Promo</span>
+                      )}
+                      {selected.dateOnboarding && (
+                        <div style={{ textAlign: 'right' }}>
+                          <div style={{ fontSize: 10, color: '#94a3b8', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Réglé le</div>
+                          <div style={{ fontSize: 13, fontWeight: 600, color: '#374151', marginTop: 2 }}>{fmtDate(selected.dateOnboarding)}</div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Edit row */}
+                    <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end', flexWrap: 'wrap' }}>
+                      <div style={{ flex: 1, minWidth: 130 }}>
+                        <label style={{ fontSize: 11, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 4 }}>Nouveau statut</label>
+                        <select value={obStatut} onChange={(e) => setObStatut(e.target.value)}
+                          style={{ width: '100%', padding: '7px 10px', borderRadius: 8, border: '1.5px solid #e2e8f0', fontSize: 13, background: '#fff' }}>
+                          <option value="impayé">Impayé</option>
+                          <option value="payé">Payé</option>
+                          <option value="offert">Offert</option>
+                          <option value="gratuit">Gratuit (promo)</option>
+                        </select>
+                      </div>
+                      <div style={{ flex: 1, minWidth: 140 }}>
+                        <label style={{ fontSize: 11, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 4 }}>Date de paiement</label>
+                        <input type="date" value={obDatePaiement} onChange={(e) => setObDatePaiement(e.target.value)}
+                          style={{ width: '100%', padding: '7px 10px', borderRadius: 8, border: '1.5px solid #e2e8f0', fontSize: 13, boxSizing: 'border-box' }} />
+                      </div>
+                      <button onClick={requestOnboarding}
+                        style={{ padding: '8px 20px', background: '#0ea5e9', color: '#fff', border: 'none', borderRadius: 9, fontWeight: 700, fontSize: 13, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                        Enregistrer
+                      </button>
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <label style={{ fontSize: 11, color: '#374151', display: 'block', marginBottom: 3 }}>Statut</label>
-                  <select value={obStatut} onChange={(e) => setObStatut(e.target.value)}
-                    style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: 13 }}>
-                    <option value="impayé">Impayé</option>
-                    <option value="payé">Payé</option>
-                    <option value="offert">Offert</option>
-                    <option value="gratuit">Gratuit (promo)</option>
-                  </select>
-                </div>
-                <div>
-                  <label style={{ fontSize: 11, color: '#374151', display: 'block', marginBottom: 3 }}>Date paiement</label>
-                  <input type="date" value={obDatePaiement} onChange={(e) => setObDatePaiement(e.target.value)}
-                    style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: 13 }} />
-                </div>
-                <button onClick={saveOnboarding} disabled={obSaving}
-                  style={{ padding: '7px 18px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>
-                  {obSaving ? '…' : 'Sauvegarder'}
-                </button>
-              </div>
-            </div>
+              );
+            })()}
 
             {/* ── Mensualités ────────────────────────────────────────── */}
             <div style={{ background: '#f0f9ff', borderRadius: 10, padding: 16, border: '1px solid #bae6fd', marginBottom: 20 }}>
@@ -548,9 +770,9 @@ export default function AbonnementsManagement() {
                   <input type="date" value={pDatePaiement} onChange={(e) => setPDatePaiement(e.target.value)}
                     style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid #bae6fd', fontSize: 13 }} />
                 </div>
-                <button onClick={savePaiement} disabled={paving || !pMontantInfo}
-                  style={{ padding: '7px 18px', background: '#0369a1', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>
-                  {paving ? '…' : 'Enregistrer'}
+                <button onClick={requestPaiement} disabled={!pMontantInfo || pMontantLoading}
+                  style={{ padding: '7px 18px', background: '#0369a1', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 600, fontSize: 13, cursor: !pMontantInfo ? 'default' : 'pointer', opacity: !pMontantInfo ? 0.5 : 1 }}>
+                  Enregistrer
                 </button>
               </div>
 
@@ -622,5 +844,6 @@ export default function AbonnementsManagement() {
         )}
       </div>
     </div>
+    </>
   );
 }
