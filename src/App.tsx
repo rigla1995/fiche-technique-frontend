@@ -30,6 +30,8 @@ import InventairePage from './components/client/InventairePage';
 import HistoriqueInventairePage from './components/client/HistoriqueInventairePage';
 import ErrorPage from './components/common/ErrorPage';
 import AbonnementsManagement from './components/admin/AbonnementsManagement';
+import HistoriquePaiementsAdmin from './components/admin/HistoriquePaiementsAdmin';
+import HistoriquePromotionsAdmin from './components/admin/HistoriquePromotionsAdmin';
 import TarifsConfig from './components/admin/TarifsConfig';
 import DemandesManagement from './components/admin/DemandesManagement';
 import AdminRapportsPage from './components/admin/AdminRapportsPage';
@@ -78,6 +80,8 @@ export default function App() {
             <Route path="/admin/domaines" element={<DomainesManagement />} />
             <Route path="/admin/rapports" element={<AdminRapportsPage />} />
             <Route path="/admin/abonnements" element={<AbonnementsManagement />} />
+            <Route path="/admin/abonnements/paiements"  element={<HistoriquePaiementsAdmin />} />
+            <Route path="/admin/abonnements/promotions" element={<HistoriquePromotionsAdmin />} />
             <Route path="/admin/tarifs" element={<TarifsConfig />} />
             <Route path="/admin/demandes" element={<DemandesManagement />} />
           </Route>
