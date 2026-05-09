@@ -63,7 +63,7 @@ export interface Paiement {
   abonnementId: number;
   mois: string;
   montantDt: number | null;
-  statut: 'payé' | 'impayé' | 'en_attente' | 'remisé';
+  statut: 'payé' | 'impayé' | 'en_attente' | 'remisé' | 'gratuit';
   saisiePar: number | null;
   dateSaisie: string | null;
   notes: string | null;

@@ -15,6 +15,15 @@ const STATUT_COLORS: Record<string, string> = {
   impayé:     '#dc2626',
   en_attente: '#d97706',
   remisé:     '#7c3aed',
+  gratuit:    '#16a34a',
+};
+
+const STATUT_LABELS: Record<string, string> = {
+  payé:       'Payé',
+  impayé:     'Impayé',
+  en_attente: 'En attente',
+  remisé:     'Remisé',
+  gratuit:    'Gratuit',
 };
 
 const fmtDate = (d: string) => d ? new Date(d).toLocaleDateString('fr-FR') : '—';
@@ -181,39 +190,37 @@ export default function MonAbonnementPage() {
         <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #e5e7eb', padding: 20, marginBottom: 20 }}>
           <h3 style={{ margin: '0 0 14px', fontSize: 15, fontWeight: 700, color: '#111827' }}>Tarification</h3>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            {/* Mensualité */}
             <div style={{ background: '#f9fafb', borderRadius: 8, padding: '12px 16px', border: '1px solid #e5e7eb' }}>
-              <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 4 }}>Mensualité</div>
-              {abo.pricing.activePromo ? (
-                <>
-                  <div style={{ fontSize: 13, color: '#9ca3af', textDecoration: 'line-through' }}>
-                    {abo.pricing.baseMensuel != null ? `${abo.pricing.baseMensuel} DT/mois` : '—'}
-                  </div>
-                  <div style={{ fontSize: 18, fontWeight: 700, color: '#7c3aed' }}>
-                    {abo.pricing.effectifMensuel != null ? `${abo.pricing.effectifMensuel} DT/mois` : '—'}
-                  </div>
-                  <div style={{ fontSize: 11, color: '#7c3aed', marginTop: 2 }}>Promotion appliquée</div>
-                </>
-              ) : (
-                <div style={{ fontSize: 18, fontWeight: 700, color: '#111827' }}>
-                  {abo.pricing.baseMensuel != null ? `${abo.pricing.baseMensuel} DT/mois` : '—'}
+              <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 6 }}>Mensualité</div>
+              {abo.pricing.activePromo && abo.pricing.baseMensuel != null && (
+                <div style={{ fontSize: 13, color: '#9ca3af', textDecoration: 'line-through', marginBottom: 2 }}>
+                  {abo.pricing.baseMensuel} DT/mois
+                </div>
+              )}
+              <div style={{ fontSize: 20, fontWeight: 800, color: abo.pricing.activePromo ? '#7c3aed' : '#111827' }}>
+                {abo.pricing.effectifMensuel != null ? `${abo.pricing.effectifMensuel} DT/mois` : (abo.pricing.baseMensuel != null ? `${abo.pricing.baseMensuel} DT/mois` : '—')}
+              </div>
+              {abo.pricing.activePromo && (
+                <div style={{ fontSize: 11, color: '#7c3aed', marginTop: 4, fontWeight: 600 }}>
+                  {abo.pricing.effectifMensuel === 0 ? 'Gratuit (promotion)' : 'Promotion appliquée'}
                 </div>
               )}
             </div>
+            {/* Onboarding */}
             <div style={{ background: '#f9fafb', borderRadius: 8, padding: '12px 16px', border: '1px solid #e5e7eb' }}>
-              <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 4 }}>Onboarding</div>
-              {abo.pricing.activePromo ? (
-                <>
-                  <div style={{ fontSize: 13, color: '#9ca3af', textDecoration: 'line-through' }}>
-                    {abo.pricing.baseOnboarding != null ? `${abo.pricing.baseOnboarding} DT` : '—'}
-                  </div>
-                  <div style={{ fontSize: 18, fontWeight: 700, color: '#7c3aed' }}>
-                    {abo.pricing.effectifOnboarding != null ? `${abo.pricing.effectifOnboarding} DT` : '—'}
-                  </div>
-                  <div style={{ fontSize: 11, color: '#7c3aed', marginTop: 2 }}>Promotion appliquée</div>
-                </>
-              ) : (
-                <div style={{ fontSize: 18, fontWeight: 700, color: '#111827' }}>
-                  {abo.pricing.baseOnboarding != null ? `${abo.pricing.baseOnboarding} DT` : '—'}
+              <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 6 }}>Onboarding</div>
+              {abo.pricing.activePromo && abo.pricing.baseOnboarding != null && (
+                <div style={{ fontSize: 13, color: '#9ca3af', textDecoration: 'line-through', marginBottom: 2 }}>
+                  {abo.pricing.baseOnboarding} DT
+                </div>
+              )}
+              <div style={{ fontSize: 20, fontWeight: 800, color: abo.pricing.activePromo ? '#7c3aed' : '#111827' }}>
+                {abo.pricing.effectifOnboarding != null ? `${abo.pricing.effectifOnboarding} DT` : (abo.pricing.baseOnboarding != null ? `${abo.pricing.baseOnboarding} DT` : '—')}
+              </div>
+              {abo.pricing.activePromo && (
+                <div style={{ fontSize: 11, color: '#7c3aed', marginTop: 4, fontWeight: 600 }}>
+                  {abo.pricing.effectifOnboarding === 0 ? 'Gratuit (promotion)' : 'Promotion appliquée'}
                 </div>
               )}
             </div>
@@ -241,13 +248,17 @@ export default function MonAbonnementPage() {
               {abo.paiements.map((p) => (
                 <tr key={p.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
                   <td style={{ padding: '10px 16px', color: '#111827' }}>{fmtMois(p.mois)}</td>
-                  <td style={{ padding: '10px 16px', color: '#374151' }}>{p.montantDt ? `${p.montantDt} DT` : '—'}</td>
+                  <td style={{ padding: '10px 16px', color: '#374151' }}>
+                    {p.statut === 'gratuit' ? (
+                      <span style={{ color: '#16a34a', fontWeight: 600 }}>Gratuit</span>
+                    ) : p.montantDt != null ? `${p.montantDt} DT` : '—'}
+                  </td>
                   <td style={{ padding: '10px 16px' }}>
                     <span style={{
                       fontSize: 12, fontWeight: 600, padding: '3px 10px', borderRadius: 10,
                       background: (STATUT_COLORS[p.statut] || '#6b7280') + '20',
                       color: STATUT_COLORS[p.statut] || '#6b7280',
-                    }}>{p.statut}</span>
+                    }}>{STATUT_LABELS[p.statut] || p.statut}</span>
                   </td>
                   <td style={{ padding: '10px 16px', color: '#6b7280' }}>{p.dateSaisie ? fmtDate(p.dateSaisie) : '—'}</td>
                 </tr>
