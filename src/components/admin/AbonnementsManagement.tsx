@@ -189,9 +189,16 @@ function ConfirmationModal({
                   </div>
                 </div>
               )}
-              <div style={{ fontSize: 12, color: '#64748b', background: '#fafafa', borderRadius: 8, padding: '10px 12px', border: '1px solid #e2e8f0' }}>
-                Cette action enregistrera le paiement. Vous pourrez le modifier à tout moment.
-              </div>
+              {isOnboarding ? (
+                <div style={{ display: 'flex', gap: 8, padding: '10px 12px', background: '#fef3c7', borderRadius: 8, border: '1px solid #fde68a', fontSize: 12, color: '#92400e' }}>
+                  <span style={{ fontSize: 14, flexShrink: 0 }}>⚠️</span>
+                  <span>Action irréversible. Une fois confirmé, vous ne pourrez plus appliquer de promotion sur l'onboarding.</span>
+                </div>
+              ) : (
+                <div style={{ fontSize: 12, color: '#64748b', background: '#fafafa', borderRadius: 8, padding: '10px 12px', border: '1px solid #e2e8f0' }}>
+                  Cette action enregistrera le paiement. Vous pourrez le modifier à tout moment.
+                </div>
+              )}
             </>
           )}
         </div>
@@ -234,11 +241,12 @@ function ConfirmationModal({
 
 interface MontantMoisInfo {
   moisStr: string;
+  isGratuit: boolean;
   existing: { montantDt: string | null; statut: string; datePaiement: string | null } | null;
   breakdown: {
-    mensualite: { base: number; effectif: number; hasPromo: boolean };
-    supplementGerant: { base: number; effectif: number; active: boolean; hasPromo: boolean };
-    supplementLabo: { base: number; effectif: number; active: boolean; hasPromo: boolean };
+    mensualite: { base: number; effectif: number; hasPromo: boolean; promoType: string | null };
+    supplementGerant: { base: number; effectif: number; active: boolean; hasPromo: boolean; promoType: string | null };
+    supplementLabo: { base: number; effectif: number; active: boolean; hasPromo: boolean; promoType: string | null };
   };
   total: number;
 }
@@ -264,7 +272,6 @@ export default function AbonnementsManagement() {
   const [confirmModal, setConfirmModal] = useState<ConfirmPayload | null>(null);
 
   // onboarding
-  const [obStatut, setObStatut] = useState<string>('impayé');
   const [obDatePaiement, setObDatePaiement] = useState('');
   const [obSaving, setObSaving] = useState(false);
 
@@ -272,7 +279,6 @@ export default function AbonnementsManagement() {
   const [pMois, setPMois] = useState('');
   const [pMontantInfo, setPMontantInfo] = useState<MontantMoisInfo | null>(null);
   const [pMontantLoading, setPMontantLoading] = useState(false);
-  const [pStatut, setPStatut] = useState<string>('payé');
   const [pDatePaiement, setPDatePaiement] = useState('');
   const [paving, setPaving] = useState(false);
 
@@ -312,12 +318,10 @@ export default function AbonnementsManagement() {
     try {
       const res = await api.get(`/api/abonnements/client/${ab.clientId}?withPricing=1`);
       setSelected(res.data);
-      setObStatut(res.data.statutOnboarding || 'impayé');
       setObDatePaiement(res.data.dateOnboarding ? res.data.dateOnboarding.slice(0, 10) : '');
       // Default mensualité month to current month
       const now = new Date();
       setPMois(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`);
-      setPStatut('payé');
       setPDatePaiement('');
     } finally {
       setDetailLoading(false);
@@ -331,12 +335,10 @@ export default function AbonnementsManagement() {
     try {
       const res = await api.get(`/api/abonnements/client/${selected.clientId}/montant-mois`, { params: { mois } });
       setPMontantInfo(res.data);
-      // Pre-fill statut from existing payment if any
-      if (res.data.existing) {
-        setPStatut(res.data.existing.statut);
-        setPDatePaiement(res.data.existing.datePaiement ? res.data.existing.datePaiement.slice(0, 10) : '');
+      // Pre-fill date from existing payment if payé
+      if (res.data.existing?.statut === 'payé' && res.data.existing.datePaiement) {
+        setPDatePaiement(res.data.existing.datePaiement.slice(0, 10));
       } else {
-        setPStatut('payé');
         setPDatePaiement('');
       }
     } catch {
@@ -367,12 +369,12 @@ export default function AbonnementsManagement() {
   };
 
   const requestOnboarding = () => {
-    if (!selected) return;
+    if (!selected || !obDatePaiement) return;
     setConfirmModal({
       type: 'onboarding',
       clientNom: selected.clientNom,
       montant: selected.pricing?.effectifOnboarding ?? selected.montantOnboarding ?? null,
-      statut: obStatut,
+      statut: 'payé',
       datePaiement: obDatePaiement,
     });
   };
@@ -382,7 +384,6 @@ export default function AbonnementsManagement() {
     setObSaving(true);
     try {
       const res = await api.put(`/api/abonnements/client/${selected.clientId}/onboarding`, {
-        statut: obStatut,
         datePaiement: obDatePaiement || undefined,
       });
       setSelected((s) => s ? { ...s, statutOnboarding: res.data.statutOnboarding, dateOnboarding: res.data.dateOnboarding } : s);
@@ -393,12 +394,12 @@ export default function AbonnementsManagement() {
   };
 
   const requestPaiement = () => {
-    if (!selected || !pMois || !pMontantInfo) return;
+    if (!selected || !pMois || !pMontantInfo || pMontantInfo.isGratuit) return;
     setConfirmModal({
       type: 'mensualite',
       clientNom: selected.clientNom,
       montant: pMontantInfo.total,
-      statut: pStatut,
+      statut: 'payé',
       datePaiement: pDatePaiement,
       mois: pMois + '-01',
     });
@@ -410,7 +411,7 @@ export default function AbonnementsManagement() {
     try {
       await api.post(`/api/abonnements/client/${selected.clientId}/paiements`, {
         mois: pMois + '-01',
-        statut: pStatut,
+        statut: 'payé',
         montant: pMontantInfo.total,
         datePaiement: pDatePaiement || undefined,
       });
@@ -839,10 +840,21 @@ export default function AbonnementsManagement() {
 
             {/* ── Onboarding ─────────────────────────────────────────── */}
             {(() => {
-              const montantEffectif = selected.pricing?.effectifOnboarding ?? selected.montantOnboarding ?? null;
-              const montantBase = selected.montantOnboarding;
-              const hasPromoOb = !!selected.pricing?.activePromoOnboarding;
-              const scOb = STATUT_COLORS[selected.statutOnboarding] || STATUT_COLORS['impayé'];
+              const activeObPromoFull = selected.pricing?.activePromoOnboarding;
+              const isGratuitOb = selected.statutOnboarding === 'gratuit' || activeObPromoFull?.type === 'free_months';
+              const isPayeOb = selected.statutOnboarding === 'payé' || !!selected.dateOnboarding;
+              const isEnAttenteOb = !isGratuitOb && !isPayeOb;
+
+              const montantBase = selected.montantOnboarding ?? null;
+              const montantEffectif = selected.pricing?.effectifOnboarding ?? montantBase;
+              const hasDiscount = montantBase != null && montantEffectif != null && montantEffectif !== montantBase;
+
+              const statusBadge = isGratuitOb
+                ? { bg: '#dcfce7', text: '#166534', label: 'Gratuit', icon: '🎁' }
+                : isPayeOb
+                  ? { bg: '#dcfce7', text: '#166534', label: 'Payé', icon: '✅' }
+                  : { bg: '#fef3c7', text: '#92400e', label: 'En Attente', icon: '⏳' };
+
               return (
                 <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #e2e8f0', marginBottom: 20, overflow: 'hidden' }}>
                   {/* Card header */}
@@ -852,156 +864,222 @@ export default function AbonnementsManagement() {
                       <div style={{ fontSize: 13, fontWeight: 700, color: '#0c4a6e' }}>Onboarding</div>
                       <div style={{ fontSize: 11, color: '#0369a1', marginTop: 1 }}>Formation initiale + mise en place</div>
                     </div>
-                    {/* Current status badge */}
-                    <span style={{ fontSize: 11, fontWeight: 700, padding: '4px 12px', borderRadius: 20, background: scOb.bg, color: scOb.text }}>
-                      {scOb.label}
+                    <span style={{ fontSize: 11, fontWeight: 700, padding: '4px 12px', borderRadius: 20, background: statusBadge.bg, color: statusBadge.text }}>
+                      {statusBadge.icon} {statusBadge.label}
                     </span>
                   </div>
 
                   <div style={{ padding: '16px 18px' }}>
-                    {/* Amount row */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16, padding: '12px 16px', background: '#f8fafc', borderRadius: 10 }}>
+                    {/* Amount info row */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: isEnAttenteOb ? 16 : 0, padding: '12px 16px', background: '#f8fafc', borderRadius: 10 }}>
                       <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: 10, fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 3 }}>Montant à régler</div>
+                        <div style={{ fontSize: 10, fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 3 }}>
+                          {isGratuitOb ? 'Montant (promo gratuit)' : isPayeOb ? 'Montant réglé' : 'Montant à régler'}
+                        </div>
                         <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-                          <span style={{ fontSize: 22, fontWeight: 800, color: '#0f172a' }}>
-                            {montantEffectif != null ? `${montantEffectif} DT` : '—'}
-                          </span>
-                          {hasPromoOb && montantBase != null && montantEffectif !== montantBase && (
-                            <span style={{ fontSize: 12, color: '#94a3b8', textDecoration: 'line-through' }}>{montantBase} DT</span>
+                          {isGratuitOb ? (
+                            <>
+                              <span style={{ fontSize: 22, fontWeight: 800, color: '#16a34a' }}>0 DT</span>
+                              {montantBase != null && (
+                                <span style={{ fontSize: 14, color: '#94a3b8', textDecoration: 'line-through' }}>{montantBase} DT</span>
+                              )}
+                            </>
+                          ) : (
+                            <>
+                              <span style={{ fontSize: 22, fontWeight: 800, color: '#0f172a' }}>
+                                {montantEffectif != null ? `${montantEffectif} DT` : '—'}
+                              </span>
+                              {hasDiscount && montantBase != null && (
+                                <span style={{ fontSize: 12, color: '#94a3b8', textDecoration: 'line-through' }}>{montantBase} DT</span>
+                              )}
+                            </>
                           )}
                         </div>
                       </div>
-                      {hasPromoOb && (
+                      {isGratuitOb && (
+                        <span style={{ fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 8, background: '#dcfce7', color: '#166534' }}>🎁 Promo active</span>
+                      )}
+                      {!isGratuitOb && activeObPromoFull && (
                         <span style={{ fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 8, background: '#fef3c7', color: '#92400e' }}>🏷️ Promo</span>
                       )}
-                      {selected.dateOnboarding && (
+                      {isPayeOb && selected.dateOnboarding && (
                         <div style={{ textAlign: 'right' }}>
                           <div style={{ fontSize: 10, color: '#94a3b8', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Réglé le</div>
-                          <div style={{ fontSize: 13, fontWeight: 600, color: '#374151', marginTop: 2 }}>{fmtDate(selected.dateOnboarding)}</div>
+                          <div style={{ fontSize: 13, fontWeight: 600, color: '#166534', marginTop: 2 }}>{fmtDate(selected.dateOnboarding)}</div>
                         </div>
                       )}
                     </div>
 
-                    {/* Edit row */}
-                    <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end', flexWrap: 'wrap' }}>
-                      <div style={{ flex: 1, minWidth: 130 }}>
-                        <label style={{ fontSize: 11, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 4 }}>Nouveau statut</label>
-                        <select value={obStatut} onChange={(e) => setObStatut(e.target.value)}
-                          style={{ width: '100%', padding: '7px 10px', borderRadius: 8, border: '1.5px solid #e2e8f0', fontSize: 13, background: '#fff' }}>
-                          <option value="impayé">Impayé</option>
-                          <option value="payé">Payé</option>
-                          <option value="offert">Offert</option>
-                          <option value="gratuit">Gratuit (promo)</option>
-                        </select>
+                    {/* Gratuit info note */}
+                    {isGratuitOb && (
+                      <div style={{ marginTop: 12, display: 'flex', gap: 8, padding: '8px 12px', background: '#f0fdf4', borderRadius: 8, border: '1px solid #bbf7d0', fontSize: 12, color: '#166534' }}>
+                        <span>ℹ️</span>
+                        <span>L'onboarding est couvert par une promotion gratuite. Aucune action requise.</span>
                       </div>
-                      <div style={{ flex: 1, minWidth: 140 }}>
-                        <label style={{ fontSize: 11, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 4 }}>Date de paiement</label>
-                        <input type="date" value={obDatePaiement} onChange={(e) => setObDatePaiement(e.target.value)}
-                          style={{ width: '100%', padding: '7px 10px', borderRadius: 8, border: '1.5px solid #e2e8f0', fontSize: 13, boxSizing: 'border-box' }} />
+                    )}
+
+                    {/* En attente: payment form */}
+                    {isEnAttenteOb && (
+                      <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end', flexWrap: 'wrap' }}>
+                        <div style={{ flex: 1, minWidth: 180 }}>
+                          <label style={{ fontSize: 11, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 4 }}>Date de paiement</label>
+                          <input type="date" value={obDatePaiement} onChange={(e) => setObDatePaiement(e.target.value)}
+                            style={{ width: '100%', padding: '7px 10px', borderRadius: 8, border: '1.5px solid #e2e8f0', fontSize: 13, boxSizing: 'border-box' }} />
+                        </div>
+                        <button
+                          onClick={requestOnboarding}
+                          disabled={!obDatePaiement}
+                          style={{
+                            padding: '8px 20px', border: 'none', borderRadius: 9, fontWeight: 700, fontSize: 13,
+                            whiteSpace: 'nowrap',
+                            background: obDatePaiement ? '#0ea5e9' : '#e5e7eb',
+                            color: obDatePaiement ? '#fff' : '#9ca3af',
+                            cursor: obDatePaiement ? 'pointer' : 'default',
+                          }}>
+                          Confirmer le paiement
+                        </button>
                       </div>
-                      <button onClick={requestOnboarding}
-                        style={{ padding: '8px 20px', background: '#0ea5e9', color: '#fff', border: 'none', borderRadius: 9, fontWeight: 700, fontSize: 13, cursor: 'pointer', whiteSpace: 'nowrap' }}>
-                        Enregistrer
-                      </button>
-                    </div>
+                    )}
                   </div>
                 </div>
               );
             })()}
 
             {/* ── Mensualités ────────────────────────────────────────── */}
-            <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #e2e8f0', marginBottom: 20, overflow: 'hidden' }}>
-              {/* Card header */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 18px', background: 'linear-gradient(135deg,#f0f9ff 0%,#dbeafe 100%)', borderBottom: '1px solid #bfdbfe' }}>
-                <span style={{ fontSize: 18 }}>📅</span>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: '#1e3a5f' }}>Mensualité</div>
-                  <div style={{ fontSize: 11, color: '#3b82f6', marginTop: 1 }}>Paiement mensuel récurrent</div>
-                </div>
-                {pMontantInfo && !pMontantLoading && (
-                  <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontSize: 10, fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total calculé</div>
-                    <div style={{ fontSize: 20, fontWeight: 800, color: '#1d4ed8', marginTop: 1 }}>{pMontantInfo.total} DT</div>
-                  </div>
-                )}
-                {pMontantLoading && (
-                  <div style={{ fontSize: 12, color: '#3b82f6', display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <span style={{ width: 12, height: 12, border: '2px solid #3b82f6', borderTopColor: 'transparent', borderRadius: '50%', display: 'inline-block', animation: 'spin 0.7s linear infinite' }} />
-                    Calcul...
-                  </div>
-                )}
-              </div>
+            {(() => {
+              const monthIsGratuit = !!pMontantInfo?.isGratuit;
+              const monthIsPaye = pMontantInfo?.existing?.statut === 'payé';
+              const monthIsAlreadyGratuit = pMontantInfo?.existing?.statut === 'gratuit';
+              const monthIsLocked = monthIsGratuit || monthIsPaye || monthIsAlreadyGratuit;
 
-              <div style={{ padding: '16px 18px' }}>
-                {/* Breakdown chips */}
-                {pMontantInfo && !pMontantLoading && (
-                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 14 }}>
-                    {pMontantInfo.existing && (
-                      <div style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', background: '#fffbeb', borderRadius: 8, border: '1px solid #fde68a', fontSize: 12, color: '#92400e', marginBottom: 2 }}>
-                        <span>⚠️</span>
-                        <span>Paiement existant pour ce mois</span>
-                        <span style={{ fontWeight: 700, marginLeft: 4 }}>{(STATUT_COLORS[pMontantInfo.existing.statut] || STATUT_COLORS['en_attente']).label}</span>
-                        {pMontantInfo.existing.datePaiement && (
-                          <span style={{ marginLeft: 'auto', color: '#a16207' }}>Réglé le {fmtDate(pMontantInfo.existing.datePaiement)}</span>
+              return (
+                <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #e2e8f0', marginBottom: 20, overflow: 'hidden' }}>
+                  {/* Card header */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 18px', background: 'linear-gradient(135deg,#f0f9ff 0%,#dbeafe 100%)', borderBottom: '1px solid #bfdbfe' }}>
+                    <span style={{ fontSize: 18 }}>📅</span>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: '#1e3a5f' }}>Mensualité</div>
+                      <div style={{ fontSize: 11, color: '#3b82f6', marginTop: 1 }}>Paiement mensuel récurrent</div>
+                    </div>
+                    {pMontantInfo && !pMontantLoading && (
+                      monthIsGratuit ? (
+                        <span style={{ fontSize: 12, fontWeight: 700, padding: '4px 12px', borderRadius: 20, background: '#dcfce7', color: '#166534' }}>🎁 Gratuit</span>
+                      ) : (
+                        <div style={{ textAlign: 'right' }}>
+                          <div style={{ fontSize: 10, fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total</div>
+                          <div style={{ fontSize: 20, fontWeight: 800, color: '#1d4ed8', marginTop: 1 }}>{pMontantInfo.total} DT</div>
+                        </div>
+                      )
+                    )}
+                    {pMontantLoading && (
+                      <div style={{ fontSize: 12, color: '#3b82f6', display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <span style={{ width: 12, height: 12, border: '2px solid #3b82f6', borderTopColor: 'transparent', borderRadius: '50%', display: 'inline-block', animation: 'spin 0.7s linear infinite' }} />
+                        Calcul...
+                      </div>
+                    )}
+                  </div>
+
+                  <div style={{ padding: '16px 18px' }}>
+                    {/* Month picker — always visible */}
+                    <div style={{ marginBottom: 14 }}>
+                      <label style={{ fontSize: 11, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 4 }}>Mois</label>
+                      <input type="month" value={pMois} onChange={(e) => setPMois(e.target.value)}
+                        style={{ padding: '7px 10px', borderRadius: 8, border: '1.5px solid #e2e8f0', fontSize: 13, boxSizing: 'border-box' }} />
+                    </div>
+
+                    {/* Breakdown chips */}
+                    {pMontantInfo && !pMontantLoading && (
+                      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 14 }}>
+                        {[
+                          { label: 'Mensualité', ...pMontantInfo.breakdown.mensualite, show: true },
+                          { label: 'Sup. Gérant', ...pMontantInfo.breakdown.supplementGerant, show: pMontantInfo.breakdown.supplementGerant.active },
+                          { label: 'Sup. Labo', ...pMontantInfo.breakdown.supplementLabo, show: pMontantInfo.breakdown.supplementLabo.active },
+                        ].filter((i) => i.show).map((item) => {
+                          const isFree = item.promoType === 'free_months';
+                          return (
+                            <div key={item.label} style={{
+                              display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px',
+                              background: isFree ? '#f0fdf4' : '#f8fafc',
+                              borderRadius: 10,
+                              border: `1px solid ${isFree ? '#bbf7d0' : '#e2e8f0'}`,
+                              flex: '1 1 130px',
+                            }}>
+                              <div style={{ flex: 1 }}>
+                                <div style={{ fontSize: 10, fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{item.label}</div>
+                                {isFree ? (
+                                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 5, marginTop: 2 }}>
+                                    <span style={{ fontSize: 16, fontWeight: 800, color: '#16a34a' }}>0 DT</span>
+                                    <span style={{ fontSize: 11, color: '#94a3b8', textDecoration: 'line-through' }}>{item.base} DT</span>
+                                  </div>
+                                ) : (
+                                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 5, marginTop: 2 }}>
+                                    <span style={{ fontSize: 16, fontWeight: 800, color: '#0f172a' }}>{item.effectif} DT</span>
+                                    {item.hasPromo && item.effectif !== item.base && (
+                                      <span style={{ fontSize: 11, color: '#94a3b8', textDecoration: 'line-through' }}>{item.base} DT</span>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                              {isFree && <span style={{ fontSize: 13 }}>🎁</span>}
+                              {!isFree && item.hasPromo && <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 7px', borderRadius: 6, background: '#fef3c7', color: '#92400e' }}>🏷️</span>}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    {/* Locked month messages */}
+                    {pMontantInfo && !pMontantLoading && monthIsLocked && (
+                      <div style={{
+                        display: 'flex', gap: 8, padding: '10px 14px',
+                        background: monthIsPaye ? '#f0fdf4' : '#f0fdf4',
+                        borderRadius: 10, border: '1px solid #bbf7d0',
+                        fontSize: 13, color: '#166534', alignItems: 'center',
+                      }}>
+                        <span style={{ fontSize: 16 }}>{monthIsPaye ? '✅' : '🎁'}</span>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontWeight: 600 }}>
+                            {monthIsPaye ? 'Paiement confirmé' : 'Mois gratuit'}
+                          </div>
+                          <div style={{ fontSize: 11, color: '#4ade80', marginTop: 1 }}>
+                            {monthIsPaye && pMontantInfo.existing?.datePaiement
+                              ? `Réglé le ${fmtDate(pMontantInfo.existing.datePaiement)}`
+                              : monthIsGratuit ? 'Couvert par une promotion gratuite'
+                              : 'Marqué comme gratuit'}
+                          </div>
+                        </div>
+                        {pMontantInfo.existing?.montantDt != null && (
+                          <span style={{ fontSize: 16, fontWeight: 800 }}>{pMontantInfo.existing.montantDt} DT</span>
                         )}
                       </div>
                     )}
-                    {[
-                      { label: 'Mensualité', val: pMontantInfo.breakdown.mensualite.effectif, base: pMontantInfo.breakdown.mensualite.base, hasPromo: pMontantInfo.breakdown.mensualite.hasPromo },
-                      ...(pMontantInfo.breakdown.supplementGerant.active ? [{ label: 'Sup. Gérant', val: pMontantInfo.breakdown.supplementGerant.effectif, base: pMontantInfo.breakdown.supplementGerant.base, hasPromo: pMontantInfo.breakdown.supplementGerant.hasPromo }] : []),
-                      ...(pMontantInfo.breakdown.supplementLabo.active ? [{ label: 'Sup. Labo', val: pMontantInfo.breakdown.supplementLabo.effectif, base: pMontantInfo.breakdown.supplementLabo.base, hasPromo: pMontantInfo.breakdown.supplementLabo.hasPromo }] : []),
-                    ].map((item) => (
-                      <div key={item.label} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 14px', background: '#f8fafc', borderRadius: 10, border: '1px solid #e2e8f0', flex: '1 1 120px' }}>
-                        <div style={{ flex: 1 }}>
-                          <div style={{ fontSize: 10, fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{item.label}</div>
-                          <div style={{ display: 'flex', alignItems: 'baseline', gap: 5, marginTop: 2 }}>
-                            <span style={{ fontSize: 16, fontWeight: 800, color: '#0f172a' }}>{item.val} DT</span>
-                            {item.hasPromo && item.val !== item.base && (
-                              <span style={{ fontSize: 11, color: '#94a3b8', textDecoration: 'line-through' }}>{item.base} DT</span>
-                            )}
-                          </div>
-                        </div>
-                        {item.hasPromo && <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 7px', borderRadius: 6, background: '#fef3c7', color: '#92400e' }}>🏷️</span>}
-                      </div>
-                    ))}
-                  </div>
-                )}
 
-                {/* Controls */}
-                <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end', flexWrap: 'wrap' }}>
-                  <div style={{ flex: '1 1 130px' }}>
-                    <label style={{ fontSize: 11, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 4 }}>Mois</label>
-                    <input type="month" value={pMois} onChange={(e) => setPMois(e.target.value)}
-                      style={{ width: '100%', padding: '7px 10px', borderRadius: 8, border: '1.5px solid #e2e8f0', fontSize: 13, boxSizing: 'border-box' }} />
+                    {/* Payment form — only for unlocked months */}
+                    {(!pMontantInfo || !monthIsLocked) && !pMontantLoading && (
+                      <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end', flexWrap: 'wrap' }}>
+                        <div style={{ flex: '1 1 160px' }}>
+                          <label style={{ fontSize: 11, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 4 }}>Date de paiement</label>
+                          <input type="date" value={pDatePaiement} onChange={(e) => setPDatePaiement(e.target.value)}
+                            style={{ width: '100%', padding: '7px 10px', borderRadius: 8, border: '1.5px solid #e2e8f0', fontSize: 13, boxSizing: 'border-box' }} />
+                        </div>
+                        <button
+                          onClick={requestPaiement}
+                          disabled={!pMontantInfo || pMontantLoading || !pDatePaiement}
+                          style={{
+                            padding: '8px 22px', border: 'none', borderRadius: 9, fontWeight: 700, fontSize: 13,
+                            whiteSpace: 'nowrap',
+                            background: (pMontantInfo && pDatePaiement) ? '#2563eb' : '#e5e7eb',
+                            color: (pMontantInfo && pDatePaiement) ? '#fff' : '#9ca3af',
+                            cursor: (pMontantInfo && pDatePaiement) ? 'pointer' : 'default',
+                          }}>
+                          Confirmer le paiement
+                        </button>
+                      </div>
+                    )}
                   </div>
-                  <div style={{ flex: '1 1 130px' }}>
-                    <label style={{ fontSize: 11, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 4 }}>Statut</label>
-                    <select value={pStatut} onChange={(e) => setPStatut(e.target.value)}
-                      style={{ width: '100%', padding: '7px 10px', borderRadius: 8, border: '1.5px solid #e2e8f0', fontSize: 13, background: '#fff' }}>
-                      <option value="payé">Payé</option>
-                      <option value="impayé">Impayé</option>
-                      <option value="en_attente">En attente</option>
-                      <option value="remisé">Remisé</option>
-                      <option value="gratuit">Gratuit</option>
-                    </select>
-                  </div>
-                  <div style={{ flex: '1 1 140px' }}>
-                    <label style={{ fontSize: 11, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 4 }}>Date de paiement</label>
-                    <input type="date" value={pDatePaiement} onChange={(e) => setPDatePaiement(e.target.value)}
-                      style={{ width: '100%', padding: '7px 10px', borderRadius: 8, border: '1.5px solid #e2e8f0', fontSize: 13, boxSizing: 'border-box' }} />
-                  </div>
-                  <button onClick={requestPaiement} disabled={!pMontantInfo || pMontantLoading}
-                    style={{
-                      padding: '8px 22px', background: !pMontantInfo ? '#93c5fd' : '#2563eb',
-                      color: '#fff', border: 'none', borderRadius: 9, fontWeight: 700, fontSize: 13,
-                      cursor: !pMontantInfo ? 'default' : 'pointer', whiteSpace: 'nowrap',
-                    }}>
-                    Enregistrer
-                  </button>
                 </div>
-              </div>
-            </div>
+              );
+            })()}
 
             {/* ── Mode compte ────────────────────────────────────────── */}
             {(() => {
