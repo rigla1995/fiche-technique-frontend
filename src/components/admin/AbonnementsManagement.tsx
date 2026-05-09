@@ -810,7 +810,7 @@ export default function AbonnementsManagement() {
                   <>
                     {activeAndPlanned.length > 0 && (
                       <div style={{ marginBottom: 14 }}>
-                        {activeAndPlanned.map((p) => promoRow(p, true))}
+                        {activeAndPlanned.map((p) => promoRow(p, p.dateDebut > todayStr))}
                       </div>
                     )}
 
