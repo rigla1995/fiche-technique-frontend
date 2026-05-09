@@ -987,44 +987,83 @@ export default function AbonnementsManagement() {
                         style={{ padding: '7px 10px', borderRadius: 8, border: '1.5px solid #e2e8f0', fontSize: 13, boxSizing: 'border-box' }} />
                     </div>
 
-                    {/* Breakdown chips */}
+                    {/* Detailed breakdown table */}
                     {pMontantInfo && !pMontantLoading && (
-                      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 14 }}>
+                      <div style={{ marginBottom: 14, background: '#f8fafc', borderRadius: 10, border: '1px solid #e2e8f0', overflow: 'hidden' }}>
+                        {/* Column headers */}
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 80px 1fr 90px', gap: 0, padding: '7px 14px', background: '#f1f5f9', borderBottom: '1px solid #e2e8f0' }}>
+                          {['Poste', 'Base', 'Remise', 'Montant'].map((h) => (
+                            <div key={h} style={{ fontSize: 10, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', textAlign: h === 'Montant' ? 'right' : 'left' }}>{h}</div>
+                          ))}
+                        </div>
+
+                        {/* Line items */}
                         {[
                           { label: 'Mensualité', ...pMontantInfo.breakdown.mensualite, show: true },
                           { label: 'Sup. Gérant', ...pMontantInfo.breakdown.supplementGerant, show: pMontantInfo.breakdown.supplementGerant.active },
                           { label: 'Sup. Labo', ...pMontantInfo.breakdown.supplementLabo, show: pMontantInfo.breakdown.supplementLabo.active },
-                        ].filter((i) => i.show).map((item) => {
+                        ].filter((i) => i.show).map((item, idx, arr) => {
                           const isFree = item.promoType === 'free_months';
+                          const hasDiscount = item.hasPromo && item.effectif !== item.base;
+                          const reduction = item.base - item.effectif;
                           return (
                             <div key={item.label} style={{
-                              display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px',
-                              background: isFree ? '#f0fdf4' : '#f8fafc',
-                              borderRadius: 10,
-                              border: `1px solid ${isFree ? '#bbf7d0' : '#e2e8f0'}`,
-                              flex: '1 1 130px',
+                              display: 'grid', gridTemplateColumns: '1fr 80px 1fr 90px', gap: 0,
+                              padding: '10px 14px',
+                              borderBottom: idx < arr.length - 1 ? '1px solid #e2e8f0' : 'none',
+                              background: isFree ? '#f0fdf4' : '#fff',
                             }}>
-                              <div style={{ flex: 1 }}>
-                                <div style={{ fontSize: 10, fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{item.label}</div>
+                              {/* Poste */}
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                <span style={{ fontSize: 13, fontWeight: 600, color: '#0f172a' }}>{item.label}</span>
+                              </div>
+                              {/* Base */}
+                              <div style={{ display: 'flex', alignItems: 'center' }}>
+                                <span style={{
+                                  fontSize: 13, color: hasDiscount || isFree ? '#94a3b8' : '#374151',
+                                  textDecoration: hasDiscount || isFree ? 'line-through' : 'none',
+                                }}>
+                                  {item.base} DT
+                                </span>
+                              </div>
+                              {/* Remise */}
+                              <div style={{ display: 'flex', alignItems: 'center' }}>
                                 {isFree ? (
-                                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 5, marginTop: 2 }}>
-                                    <span style={{ fontSize: 16, fontWeight: 800, color: '#16a34a' }}>0 DT</span>
-                                    <span style={{ fontSize: 11, color: '#94a3b8', textDecoration: 'line-through' }}>{item.base} DT</span>
-                                  </div>
+                                  <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 6, background: '#dcfce7', color: '#166534' }}>🎁 Gratuit</span>
+                                ) : hasDiscount ? (
+                                  <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 6, background: '#fef3c7', color: '#92400e' }}>
+                                    🏷️ -{reduction} DT
+                                  </span>
                                 ) : (
-                                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 5, marginTop: 2 }}>
-                                    <span style={{ fontSize: 16, fontWeight: 800, color: '#0f172a' }}>{item.effectif} DT</span>
-                                    {item.hasPromo && item.effectif !== item.base && (
-                                      <span style={{ fontSize: 11, color: '#94a3b8', textDecoration: 'line-through' }}>{item.base} DT</span>
-                                    )}
-                                  </div>
+                                  <span style={{ fontSize: 11, color: '#cbd5e1' }}>—</span>
                                 )}
                               </div>
-                              {isFree && <span style={{ fontSize: 13 }}>🎁</span>}
-                              {!isFree && item.hasPromo && <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 7px', borderRadius: 6, background: '#fef3c7', color: '#92400e' }}>🏷️</span>}
+                              {/* Montant effectif */}
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
+                                <span style={{ fontSize: 14, fontWeight: 800, color: isFree ? '#16a34a' : '#0f172a' }}>
+                                  {item.effectif} DT
+                                </span>
+                              </div>
                             </div>
                           );
                         })}
+
+                        {/* Total row */}
+                        <div style={{
+                          display: 'grid', gridTemplateColumns: '1fr 80px 1fr 90px', gap: 0,
+                          padding: '10px 14px',
+                          background: 'linear-gradient(135deg,#eff6ff 0%,#dbeafe 100%)',
+                          borderTop: '2px solid #bfdbfe',
+                        }}>
+                          <div style={{ gridColumn: '1 / 4', display: 'flex', alignItems: 'center' }}>
+                            <span style={{ fontSize: 11, fontWeight: 700, color: '#1d4ed8', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Total à régler</span>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
+                            <span style={{ fontSize: 18, fontWeight: 800, color: pMontantInfo.isGratuit ? '#16a34a' : '#1d4ed8' }}>
+                              {pMontantInfo.total} DT
+                            </span>
+                          </div>
+                        </div>
                       </div>
                     )}
 
