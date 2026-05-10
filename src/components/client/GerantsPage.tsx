@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import api from '../../api/client';
-import type { Gerant, Activite, Labo } from '../../types';
+import type { Gerant, Activite, Labo, AbonnementConfig } from '../../types';
 import { useAuth } from '../../context/AuthContext';
 
 interface GerantForm {
@@ -28,19 +28,28 @@ export default function GerantsPage() {
   const [inviteSent, setInviteSent] = useState<{ nom: string; email: string } | null>(null);
   const [resendingId, setResendingId] = useState<number | null>(null);
   const [error, setError] = useState('');
+  const [abonnementConfig, setAbonnementConfig] = useState<AbonnementConfig | null>(null);
 
   const freeLimit = isEntreprise ? 3 : 1;
   const freeCount = gerants.filter((g) => g.estGratuit).length;
   const canAddFree = freeCount < freeLimit;
+  const maxGerants = abonnementConfig?.nbGerants ?? null;
+  const atGerantLimit = maxGerants !== null && gerants.length >= maxGerants;
 
   useEffect(() => {
-    const calls: Promise<unknown>[] = [api.get('/api/abonnements/gerants')];
+    const calls: Promise<unknown>[] = [
+      api.get('/api/abonnements/gerants'),
+      api.get('/api/abonnements/mon-abonnement').catch(() => null),
+    ];
     if (isEntreprise) {
       calls.push(api.get('/api/entreprise/activites'));
       calls.push(api.get('/api/labo/'));
     }
-    Promise.all(calls).then(([gerantRes, activiteRes, laboRes]) => {
+    Promise.all(calls).then(([gerantRes, aboRes, activiteRes, laboRes]) => {
       setGerants((gerantRes as { data: Gerant[] }).data);
+      if ((aboRes as { data?: { config?: AbonnementConfig } } | null)?.data?.config) {
+        setAbonnementConfig((aboRes as { data: { config: AbonnementConfig } }).data.config);
+      }
       if (activiteRes) setActivites((activiteRes as { data: Activite[] }).data || []);
       if (laboRes) setLabos((laboRes as { data: Labo[] }).data || []);
     }).finally(() => setLoading(false));
@@ -108,14 +117,22 @@ export default function GerantsPage() {
         <div>
           <h1 style={{ fontSize: 22, fontWeight: 700, color: '#111827', margin: 0 }}>Comptes gérants</h1>
           <div style={{ fontSize: 13, color: '#6b7280', marginTop: 4 }}>
-            {freeCount}/{freeLimit} compte(s) gratuit(s) utilisé(s)
+            {maxGerants !== null
+              ? `${gerants.length}/${maxGerants} gérant(s) configuré(s)`
+              : `${freeCount}/${freeLimit} compte(s) gratuit(s) utilisé(s)`}
           </div>
         </div>
-        <button
-          onClick={() => { setShowForm(true); setInviteSent(null); setError(''); }}
-          style={{ padding: '8px 18px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 600, fontSize: 14, cursor: 'pointer' }}>
-          + Nouveau gérant
-        </button>
+        {atGerantLimit ? (
+          <span style={{ fontSize: 13, color: '#6b7280', background: '#f3f4f6', border: '1px solid #e5e7eb', borderRadius: 8, padding: '8px 16px' }}>
+            🔒 Limite de {maxGerants} gérant(s) atteinte
+          </span>
+        ) : (
+          <button
+            onClick={() => { setShowForm(true); setInviteSent(null); setError(''); }}
+            style={{ padding: '8px 18px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 600, fontSize: 14, cursor: 'pointer' }}>
+            + Nouveau gérant
+          </button>
+        )}
       </div>
 
       {/* Invite sent banner */}

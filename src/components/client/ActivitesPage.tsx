@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
-import type { Activite, ActiviteIngredient, Labo } from '../../types';
+import type { Activite, ActiviteIngredient, Labo, AbonnementConfig } from '../../types';
 
 type ActiviteForm = { nom: string; adresse: string; telephone: string };
 const emptyForm = (): ActiviteForm => ({ nom: '', adresse: '', telephone: '' });
@@ -28,8 +28,10 @@ interface LaboSelectOrCreateProps {
   laboRefLabo: string; setLaboRefLabo: (v: string) => void;
   laboTel: string; setLaboTel: (v: string) => void;
   laboAdresse: string; setLaboAdresse: (v: string) => void;
+  atLaboLimit?: boolean;
+  maxLabos?: number | null;
 }
-function LaboSelectOrCreate({ labos, laboAction, setLaboAction, selectedLaboId, setSelectedLaboId, laboNom, setLaboNom, laboRefLabo, setLaboRefLabo, laboTel, setLaboTel, laboAdresse, setLaboAdresse }: LaboSelectOrCreateProps) {
+function LaboSelectOrCreate({ labos, laboAction, setLaboAction, selectedLaboId, setSelectedLaboId, laboNom, setLaboNom, laboRefLabo, setLaboRefLabo, laboTel, setLaboTel, laboAdresse, setLaboAdresse, atLaboLimit, maxLabos }: LaboSelectOrCreateProps) {
   const fieldLabel: React.CSSProperties = { fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 3 };
   return (
     <div style={{ background: '#f8fafc', border: '1px solid var(--border)', borderRadius: 10, padding: '14px 16px', marginBottom: 14 }}>
@@ -41,10 +43,16 @@ function LaboSelectOrCreate({ labos, laboAction, setLaboAction, selectedLaboId, 
             Sélectionner un labo existant
           </label>
         )}
-        <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', padding: '8px 12px', borderRadius: 8, border: `2px solid ${laboAction === 'create' ? 'var(--primary)' : 'var(--border)'}`, background: laboAction === 'create' ? 'var(--primary-light, #eef2ff)' : 'white', fontWeight: 600, fontSize: '0.85rem' }}>
-          <input type="radio" checked={laboAction === 'create'} onChange={() => setLaboAction('create')} style={{ accentColor: 'var(--primary)' }} />
-          Créer un nouveau labo
-        </label>
+        {atLaboLimit ? (
+          <span style={{ fontSize: 12, color: '#6b7280', background: '#f3f4f6', border: '1px solid #e5e7eb', borderRadius: 6, padding: '8px 12px' }}>
+            🔒 Limite de {maxLabos} labo(s) atteinte
+          </span>
+        ) : (
+          <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', padding: '8px 12px', borderRadius: 8, border: `2px solid ${laboAction === 'create' ? 'var(--primary)' : 'var(--border)'}`, background: laboAction === 'create' ? 'var(--primary-light, #eef2ff)' : 'white', fontWeight: 600, fontSize: '0.85rem' }}>
+            <input type="radio" checked={laboAction === 'create'} onChange={() => setLaboAction('create')} style={{ accentColor: 'var(--primary)' }} />
+            Créer un nouveau labo
+          </label>
+        )}
       </div>
 
       {laboAction === 'select' && labos.length > 0 && (
@@ -111,6 +119,7 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
   const [laboAdresse, setLaboAdresse] = useState('');
   const [laboWizardStep, setLaboWizardStep] = useState<'choice' | 'labo-form' | 'activities'>('choice');
   const [labos, setLabos] = useState<Labo[]>([]);
+  const [abonnementConfig, setAbonnementConfig] = useState<AbonnementConfig | null>(null);
   // List filters
   const [filterFranchiseGroup, setFilterFranchiseGroup] = useState('');
   const [filterFranchiseName, setFilterFranchiseName] = useState('');
@@ -141,17 +150,24 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [actRes, laboRes] = await Promise.all([
+      const [actRes, laboRes, aboRes] = await Promise.all([
         api.get('/api/entreprise/activites'),
         api.get('/api/labo'),
+        api.get('/api/abonnements/mon-abonnement').catch(() => null),
       ]);
       setActivites(actRes.data);
       setLabos(laboRes.data);
+      if (aboRes?.data?.config) setAbonnementConfig(aboRes.data.config);
     } catch { /* ignore */ }
     setLoading(false);
   }, []);
 
   useEffect(() => { load(); }, [load]);
+
+  const maxActivites = abonnementConfig?.nbActivites ?? null;
+  const maxLabos = abonnementConfig?.nbLabos ?? null;
+  const atActiviteLimit = maxActivites !== null && activites.length >= maxActivites;
+  const atLaboLimit = maxLabos !== null && labos.length >= maxLabos;
 
   const isFranchise = memeActivite === true;
 
@@ -465,12 +481,21 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
           <span className="empty-icon">🏢</span>
           <p style={{ marginBottom: 16 }}>{t('client.entreprise.no_activities')}</p>
           <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center' }}>
-            <button className="btn btn-primary" onClick={() => openAdd('franchise')}>
-              🔗 {t('client.entreprise.franchise_yes')}
-            </button>
-            <button className="btn btn-secondary" onClick={() => openAdd('distincte')}>
-              📍 {t('client.entreprise.franchise_no')}
-            </button>
+            {!atActiviteLimit && (
+              <>
+                <button className="btn btn-primary" onClick={() => openAdd('franchise')}>
+                  🔗 {t('client.entreprise.franchise_yes')}
+                </button>
+                <button className="btn btn-secondary" onClick={() => openAdd('distincte')}>
+                  📍 {t('client.entreprise.franchise_no')}
+                </button>
+              </>
+            )}
+            {atActiviteLimit && (
+              <div style={{ fontSize: 13, color: '#6b7280', background: '#f3f4f6', border: '1px solid #e5e7eb', borderRadius: 8, padding: '8px 16px' }}>
+                🔒 Limite de {maxActivites} activité(s) atteinte
+              </div>
+            )}
           </div>
         </div>
       ) : (
@@ -490,9 +515,15 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                     🏢 {franchiseActivities.length}
                   </span>
                 </div>
-                <button className="btn btn-primary btn-sm" onClick={() => openAdd('franchise')}>
-                  + {t('client.entreprise.add_activity')}
-                </button>
+                {atActiviteLimit ? (
+                  <span style={{ fontSize: 12, color: '#6b7280', background: '#f3f4f6', border: '1px solid #e5e7eb', borderRadius: 6, padding: '4px 10px' }}>
+                    🔒 Limite atteinte ({maxActivites})
+                  </span>
+                ) : (
+                  <button className="btn btn-primary btn-sm" onClick={() => openAdd('franchise')}>
+                    + {t('client.entreprise.add_activity')}
+                  </button>
+                )}
               </div>
 
               {franchiseActivities.length === 0 ? (
@@ -611,9 +642,15 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                     🏢 {distinctActivities.length}
                   </span>
                 </div>
-                <button className="btn btn-secondary btn-sm" onClick={() => openAdd('distincte')}>
-                  + {t('client.entreprise.add_activity')}
-                </button>
+                {atActiviteLimit ? (
+                  <span style={{ fontSize: 12, color: '#6b7280', background: '#f3f4f6', border: '1px solid #e5e7eb', borderRadius: 6, padding: '4px 10px' }}>
+                    🔒 Limite atteinte ({maxActivites})
+                  </span>
+                ) : (
+                  <button className="btn btn-secondary btn-sm" onClick={() => openAdd('distincte')}>
+                    + {t('client.entreprise.add_activity')}
+                  </button>
+                )}
               </div>
 
               {distinctActivities.length === 0 ? (
@@ -781,6 +818,8 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                         setLaboTel={setLaboTel}
                         laboAdresse={laboAdresse}
                         setLaboAdresse={setLaboAdresse}
+                        atLaboLimit={atLaboLimit}
+                        maxLabos={maxLabos}
                       />}
                     </div>
                   )}
@@ -885,6 +924,8 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                         setLaboTel={setLaboTel}
                         laboAdresse={laboAdresse}
                         setLaboAdresse={setLaboAdresse}
+                        atLaboLimit={atLaboLimit}
+                        maxLabos={maxLabos}
                       />}
                     </div>
                   )}
