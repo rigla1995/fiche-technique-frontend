@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
 import type { Client, DomaineActivite } from '../../types';
+import AddClientModal from './AddClientModal';
 
 type CompteType = 'independant' | 'entreprise';
 
@@ -32,7 +33,9 @@ export default function ClientsManagement() {
   const [loading, setLoading] = useState(true);
   const [domaines, setDomaines] = useState<DomaineActivite[]>([]);
 
-  // Modal state
+  // Add modal (new 4-step flow)
+  const [showAddModal, setShowAddModal] = useState(false);
+  // Edit modal (legacy inline)
   const [showModal, setShowModal] = useState(false);
   const [modalStep, setModalStep] = useState<'type' | 'form'>('type');
   const [selectedType, setSelectedType] = useState<CompteType | null>(null);
@@ -57,15 +60,7 @@ export default function ClientsManagement() {
     api.get('/api/domaines?hasIngredients=true').then(({ data }) => setDomaines(data)).catch(() => {});
   }, []);
 
-  const openAdd = () => {
-    setEditId(null);
-    setSelectedType(null);
-    setModalStep('type');
-    setIndForm(emptyIndependant());
-    setEntForm(emptyEntreprise());
-    setFormErrors({});
-    setShowModal(true);
-  };
+  const openAdd = () => setShowAddModal(true);
 
   const openEdit = (c: Client) => {
     setEditId(c.id);
@@ -190,6 +185,13 @@ export default function ClientsManagement() {
   );
 
   return (
+    <>
+    {showAddModal && (
+      <AddClientModal
+        onClose={() => setShowAddModal(false)}
+        onCreated={() => { fetchClients(); setShowAddModal(false); }}
+      />
+    )}
     <div className="page">
       <div className="page-header">
         <h1>👥 {t('admin.clients.title')}</h1>
@@ -583,5 +585,6 @@ export default function ClientsManagement() {
         </div>
       )}
     </div>
+    </>
   );
 }

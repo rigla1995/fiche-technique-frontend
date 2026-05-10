@@ -742,6 +742,48 @@ export default function AbonnementsManagement() {
               </div>
             )}
 
+            {/* ── Configuration Souscrite ────────────────────────────── */}
+            {selected.config && (() => {
+              const cfg = selected.config!;
+              const activiteLabel = cfg.nbActivites === 1 ? '1 activité — 200 DT/mois' : cfg.nbActivites === 2 ? '2 activités — 350 DT/mois' : `${cfg.nbActivites} activités — ${cfg.nbActivites} × 120 DT`;
+              const items = [
+                { icon: '🏪', label: 'Activité(s)', value: activiteLabel },
+                ...(cfg.nbLabos > 0 ? [{ icon: '🧪', label: 'Labo(s)', value: `${cfg.nbLabos} labo${cfg.nbLabos > 1 ? 's' : ''} — ${cfg.nbLabos} × 160 DT/mois` }] : []),
+                ...(cfg.nbGerants > 0 ? [{ icon: '👤', label: 'Gérant(s)', value: `${cfg.nbGerants} gérant${cfg.nbGerants > 1 ? 's' : ''} — ${cfg.nbGerants} × 80 DT/mois` }] : []),
+              ];
+              const totalMensuel = (() => {
+                const a = cfg.nbActivites === 1 ? 200 : cfg.nbActivites === 2 ? 350 : cfg.nbActivites * 120;
+                return a + cfg.nbLabos * 160 + cfg.nbGerants * 80;
+              })();
+              return (
+                <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #e2e8f0', marginBottom: 20, overflow: 'hidden' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 18px', background: 'linear-gradient(135deg,#f5f3ff 0%,#ede9fe 100%)', borderBottom: '1px solid #ddd6fe' }}>
+                    <span style={{ fontSize: 18 }}>⚙️</span>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: '#4c1d95' }}>Configuration souscrite</div>
+                      <div style={{ fontSize: 11, color: '#6d28d9', marginTop: 1 }}>Capacité configurée par l'administrateur</div>
+                    </div>
+                    <span style={{ fontSize: 14, fontWeight: 800, color: '#4c1d95' }}>{totalMensuel} DT/mois</span>
+                  </div>
+                  <div style={{ padding: '14px 18px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {items.map((item, i) => (
+                      <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <span style={{ width: 28, height: 28, background: '#f5f3ff', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, flexShrink: 0 }}>{item.icon}</span>
+                        <div style={{ flex: 1 }}>
+                          <span style={{ fontSize: 11, fontWeight: 700, color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{item.label}</span>
+                          <div style={{ fontSize: 13, color: '#374151', marginTop: 1 }}>{item.value}</div>
+                        </div>
+                      </div>
+                    ))}
+                    <div style={{ borderTop: '1px solid #e9d5ff', paddingTop: 10, marginTop: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: 11, color: '#7c3aed', fontWeight: 700 }}>Onboarding (one-time)</span>
+                      <span style={{ fontSize: 14, fontWeight: 800, color: '#4c1d95' }}>{cfg.montantOnboarding} DT</span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* ── Promotions ─────────────────────────────────────────── */}
             <div style={{ background: '#fffbeb', borderRadius: 10, padding: 16, border: '1px solid #fde68a', marginBottom: 20 }}>
               <div style={{ fontSize: 13, fontWeight: 700, color: '#92400e', marginBottom: 14 }}>🏷️ Promotions — Année {new Date().getFullYear()}</div>
