@@ -35,6 +35,7 @@ import HistoriquePromotionsAdmin from './components/admin/HistoriquePromotionsAd
 import TarifsConfig from './components/admin/TarifsConfig';
 import DemandesManagement from './components/admin/DemandesManagement';
 import AdminRapportsPage from './components/admin/AdminRapportsPage';
+import AdminSupportPage from './components/admin/AdminSupportPage';
 import MonAbonnementPage from './components/client/MonAbonnementPage';
 import GerantsPage from './components/client/GerantsPage';
 import SupportPage from './components/client/SupportPage';
@@ -85,6 +86,7 @@ export default function App() {
             <Route path="/admin/abonnements/promotions" element={<HistoriquePromotionsAdmin />} />
             <Route path="/admin/tarifs" element={<TarifsConfig />} />
             <Route path="/admin/demandes" element={<DemandesManagement />} />
+            <Route path="/admin/support" element={<AdminSupportPage />} />
           </Route>
 
           {/* Client + Gérant routes */}
