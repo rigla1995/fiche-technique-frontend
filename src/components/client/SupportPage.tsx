@@ -25,8 +25,8 @@ type FilterKey = typeof FILTERS[number]['key'];
 
 const fmtDate = (d: string) => new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });
 
-interface CatItem { id: number; nom: string }
-interface UniteItem { id: number; nom: string; symbole?: string }
+interface CatItem { id: number; name: string }
+interface UniteItem { id: number; name: string }
 interface SupplPricing {
   prixActiviteSup: number;
   prixLaboSup: number;
@@ -103,8 +103,8 @@ export default function SupportPage() {
         body = {
           ...body,
           domaineId: domaineId ? Number(domaineId) : null,
-          categorieNom: cat?.nom || '',
-          uniteNom: uni?.nom || '',
+          categorieNom: cat?.name || '',
+          uniteNom: uni?.name || '',
           nomIngredient: nomIngredient.trim(),
         };
       } else if (formType === 'supplement') {
@@ -234,14 +234,14 @@ export default function SupportPage() {
                       <label style={lbl}>Catégorie</label>
                       <select value={categorieId} onChange={(e) => setCategorieId(e.target.value)} style={inp}>
                         <option value="">— Sélectionner —</option>
-                        {categories.map((c) => <option key={c.id} value={c.id}>{c.nom}</option>)}
+                        {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                       </select>
                     </div>
                     <div>
                       <label style={lbl}>Unité</label>
                       <select value={uniteId} onChange={(e) => setUniteId(e.target.value)} style={inp}>
                         <option value="">— Sélectionner —</option>
-                        {unites.map((u) => <option key={u.id} value={u.id}>{u.symbole ? `${u.nom} (${u.symbole})` : u.nom}</option>)}
+                        {unites.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
                       </select>
                     </div>
                   </div>
