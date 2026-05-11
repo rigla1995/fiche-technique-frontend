@@ -117,7 +117,6 @@ export default function Profile() {
   if (loading) return <div style={{ padding: 40, textAlign: 'center', color: '#9ca3af' }}>{t('common.loading')}</div>;
 
   const initials = form.name ? form.name.split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase() : '?';
-  const isEntreprise = user?.compteType === 'entreprise' || !user?.compteType;
 
   return (
     <div className="page" style={{ maxWidth: 620 }}>
@@ -131,30 +130,10 @@ export default function Profile() {
         <div style={{ width: 60, height: 60, borderRadius: '50%', background: 'rgba(255,255,255,0.2)', border: '2px solid rgba(255,255,255,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.5rem', fontWeight: 800, color: '#fff', flexShrink: 0 }}>
           {initials}
         </div>
-        <div style={{ flex: 1 }}>
+        <div>
           <h1 style={{ margin: 0, fontSize: '1.4rem', fontWeight: 900, color: '#fff' }}>{form.name || t('client.profile.title')}</h1>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6, flexWrap: 'wrap' }}>
-            <span style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.7)' }}>{form.email}</span>
-            <span style={{
-              fontSize: '0.72rem', fontWeight: 700, padding: '2px 10px', borderRadius: 20,
-              background: isEntreprise ? '#fef9c3' : 'rgba(255,255,255,0.2)',
-              color: isEntreprise ? '#854d0e' : '#fff',
-            }}>
-              {isEntreprise ? `🏢 ${t('client.profile.type_entreprise')}` : `👤 ${t('client.profile.type_client')}`}
-            </span>
-          </div>
+          <span style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.7)', marginTop: 4, display: 'block' }}>{form.email}</span>
         </div>
-        {user?.compteType !== 'entreprise' && (
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
-            {upgradeMsg && (
-              <span style={{ fontSize: '0.78rem', color: upgradeMsg === t('common.error') ? '#fca5a5' : '#bbf7d0' }}>{upgradeMsg}</span>
-            )}
-            <button onClick={handleUpgrade} disabled={upgrading}
-              style={{ padding: '8px 18px', borderRadius: 9, border: '1.5px solid rgba(255,255,255,0.35)', background: 'rgba(255,255,255,0.12)', backdropFilter: 'blur(4px)', color: '#fff', fontWeight: 700, fontSize: '0.82rem', cursor: upgrading ? 'default' : 'pointer' }}>
-              {upgrading ? t('common.loading') : `🏢 ${t('client.profile.upgrade_btn')}`}
-            </button>
-          </div>
-        )}
       </div>
 
       {user?.onboardingStep === 1 && (
