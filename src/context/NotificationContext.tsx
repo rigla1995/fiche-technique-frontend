@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react';
 import { useAuth } from './AuthContext';
+import api from '../api/client';
 
 export interface AppNotification {
   id: string;
@@ -18,6 +19,7 @@ interface NotificationContextValue {
   unreadCount: number;
   markAllRead: () => void;
   clear: () => void;
+  clearAllFromDB: () => Promise<void>;
 }
 
 const NotificationContext = createContext<NotificationContextValue>({
@@ -25,12 +27,35 @@ const NotificationContext = createContext<NotificationContextValue>({
   unreadCount: 0,
   markAllRead: () => {},
   clear: () => {},
+  clearAllFromDB: async () => {},
 });
 
 export function NotificationProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const esRef = useRef<EventSource | null>(null);
+
+  // Load persisted notifications from DB on login
+  useEffect(() => {
+    if (!user) { setNotifications([]); return; }
+    api.get('/api/notifications').then(({ data }) => {
+      const mapped: AppNotification[] = data.map((r: {
+        id: number; eventType: string; demandeId: number; type: string;
+        clientNom?: string; statut?: string; notesAdmin?: string | null; createdAt: string;
+      }) => ({
+        id: String(r.id),
+        eventType: r.eventType as AppNotification['eventType'],
+        demandeId: r.demandeId,
+        type: r.type,
+        clientNom: r.clientNom,
+        statut: r.statut,
+        notesAdmin: r.notesAdmin,
+        readAt: null,
+        createdAt: new Date(r.createdAt).getTime(),
+      }));
+      setNotifications(mapped);
+    }).catch(() => {});
+  }, [user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const push = useCallback((eventType: AppNotification['eventType'], data: Record<string, unknown>) => {
     const notif: AppNotification = {
@@ -55,7 +80,6 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
     const connect = () => {
       if (esRef.current) esRef.current.close();
-      // SSE doesn't support custom headers; use cookie-based or query-param token
       const es = new EventSource(`${url}?token=${encodeURIComponent(token)}`);
       esRef.current = es;
 
@@ -82,10 +106,15 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
   const clear = useCallback(() => setNotifications([]), []);
 
+  const clearAllFromDB = useCallback(async () => {
+    await api.delete('/api/notifications').catch(() => {});
+    setNotifications([]);
+  }, []);
+
   const unreadCount = notifications.filter((n) => !n.readAt).length;
 
   return (
-    <NotificationContext.Provider value={{ notifications, unreadCount, markAllRead, clear }}>
+    <NotificationContext.Provider value={{ notifications, unreadCount, markAllRead, clear, clearAllFromDB }}>
       {children}
     </NotificationContext.Provider>
   );

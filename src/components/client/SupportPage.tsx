@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import api from '../../api/client';
 import type { SupportDemande, DomaineActivite } from '../../types';
+import { useNotifications } from '../../context/NotificationContext';
 
 const TYPE_LABELS: Record<string, { label: string; icon: string; desc: string }> = {
   ingredient_manquant: { label: 'Ingrédient manquant', icon: '🥕', desc: 'Demander l\'ajout d\'un ingrédient absent du catalogue' },
@@ -38,6 +39,7 @@ interface SupplPricing {
 }
 
 export default function SupportPage() {
+  const { clearAllFromDB } = useNotifications();
   const [demandes, setDemandes] = useState<SupportDemande[]>([]);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState<Record<number, boolean>>({});
@@ -82,11 +84,12 @@ export default function SupportPage() {
 
   useEffect(() => {
     fetchDemandes();
+    clearAllFromDB();
     api.get('/api/domaines').then(({ data }) => setDomaines(data)).catch(() => {});
     api.get('/api/categories').then(({ data }) => setCategories(data)).catch(() => {});
     api.get('/api/unites?all=true').then(({ data }) => setUnites(data)).catch(() => {});
     api.get('/api/abonnements/supplement-pricing').then(({ data }) => setSupplPricing(data)).catch(() => {});
-  }, [fetchDemandes]);
+  }, [fetchDemandes, clearAllFromDB]);
 
   const resetForm = () => {
     setFormType(null);

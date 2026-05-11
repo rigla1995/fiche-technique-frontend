@@ -35,6 +35,12 @@ export default function Header({ onMenuToggle }: HeaderProps) {
     if (!open && unreadCount > 0) markAllRead();
   };
 
+  const handleNotifClick = () => {
+    setOpen(false);
+    const path = user?.role === 'super_admin' ? '/admin/support' : '/support';
+    navigate(path);
+  };
+
   const typeLabel = (type: string) => {
     if (type === 'ingredient_manquant') return 'Ingrédient manquant';
     if (type === 'supplement') return 'Ajout de capacité';
@@ -109,10 +115,11 @@ export default function Header({ onMenuToggle }: HeaderProps) {
                 </div>
               ) : (
                 notifications.map((n) => (
-                  <div key={n.id} style={{
+                  <div key={n.id} onClick={handleNotifClick} style={{
                     padding: '10px 14px',
                     borderBottom: '1px solid var(--border)',
                     background: n.readAt ? 'transparent' : 'rgba(239,68,68,0.05)',
+                    cursor: 'pointer',
                   }}>
                     <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
                       <span style={{ fontSize: '1.1rem', flexShrink: 0 }}>

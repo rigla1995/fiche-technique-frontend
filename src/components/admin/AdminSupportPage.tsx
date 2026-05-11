@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import api from '../../api/client';
 import type { SupportDemande } from '../../types';
+import { useNotifications } from '../../context/NotificationContext';
 
 const TYPE_INFO: Record<string, { label: string; icon: string; color: string; bg: string }> = {
   ingredient_manquant: { label: 'Ingrédient manquant', icon: '🥕', color: '#92400e', bg: '#fef3c7' },
@@ -73,6 +74,7 @@ function DemandeDetails({ d }: { d: SupportDemande }) {
 }
 
 export default function AdminSupportPage() {
+  const { clearAllFromDB } = useNotifications();
   const [demandes, setDemandes] = useState<SupportDemande[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterStatut, setFilterStatut] = useState('en_attente');
@@ -106,7 +108,7 @@ export default function AdminSupportPage() {
     }
   }, [filterStatut, filterType]);
 
-  useEffect(() => { fetchDemandes(); }, [fetchDemandes]);
+  useEffect(() => { fetchDemandes(); clearAllFromDB(); }, [fetchDemandes, clearAllFromDB]);
 
   useEffect(() => {
     api.get('/api/domaines').then(({ data }) => setDomaines(data)).catch(() => {});
