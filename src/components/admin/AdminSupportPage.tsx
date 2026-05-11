@@ -27,6 +27,19 @@ interface AdminEdits {
   notes: string;
 }
 
+interface SupplPricing {
+  prixActiviteSup: number;
+  prixLaboSup: number;
+  prixGerantSup: number;
+  currentMensuel: number;
+  activiteCost: number;
+  laboCost: number;
+  gerantCost: number;
+  nbActivites: number;
+  nbLabos: number;
+  nbGerants: number;
+}
+
 function DemandeDetails({ d }: { d: SupportDemande }) {
   if (d.type === 'ingredient_manquant') {
     return (
@@ -66,7 +79,9 @@ export default function AdminSupportPage() {
   const [filterType, setFilterType] = useState('');
   const [traiting, setTraiting] = useState<Record<number, boolean>>({});
   const [expanded, setExpanded] = useState<Record<number, boolean>>({});
+  const [viewDetails, setViewDetails] = useState<Record<number, boolean>>({});
   const [edits, setEdits] = useState<Record<number, AdminEdits>>({});
+  const [supplPricings, setSupplPricings] = useState<Record<number, SupplPricing>>({});
 
   // Reference data for ingredient editing
   const [domaines, setDomaines] = useState<DomaineItem[]>([]);
@@ -93,6 +108,17 @@ export default function AdminSupportPage() {
     api.get('/api/categories').then(({ data }) => setCategories(data)).catch(() => {});
     api.get('/api/unites?all=true').then(({ data }) => setUnites(data)).catch(() => {});
   }, []);
+
+  const toggleExpand = async (d: SupportDemande) => {
+    const next = !expanded[d.id];
+    setExpanded(e => ({ ...e, [d.id]: next }));
+    if (next && d.type === 'supplement' && !supplPricings[d.id]) {
+      try {
+        const res = await api.get(`/api/abonnements/client/${d.clientId}/supplement-pricing`);
+        setSupplPricings(p => ({ ...p, [d.id]: res.data }));
+      } catch { /* ignore */ }
+    }
+  };
 
   const getEdits = (d: SupportDemande): AdminEdits => edits[d.id] || {
     domaineId: String(d.domaineId || ''),
@@ -236,11 +262,18 @@ export default function AdminSupportPage() {
                         </div>
                       )}
                     </div>
-                    {/* Only show Traiter button for non-aide pending requests */}
+                    {/* Traiter button (pending, non-aide) */}
                     {isPending && !isAide && (
-                      <button onClick={() => setExpanded((e) => ({ ...e, [d.id]: !e[d.id] }))}
+                      <button onClick={() => toggleExpand(d)}
                         style={{ padding: '7px 16px', borderRadius: 8, border: `1.5px solid ${isExpanded ? '#e2e8f0' : '#4338ca'}`, background: isExpanded ? '#f8fafc' : '#f5f3ff', color: isExpanded ? '#6b7280' : '#4338ca', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}>
                         {isExpanded ? 'Annuler' : '✏️ Traiter'}
+                      </button>
+                    )}
+                    {/* Voir les détails button (processed) */}
+                    {!isPending && (
+                      <button onClick={() => setViewDetails(v => ({ ...v, [d.id]: !v[d.id] }))}
+                        style={{ padding: '7px 16px', borderRadius: 8, border: '1.5px solid #e2e8f0', background: '#f8fafc', color: '#374151', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', flexShrink: 0 }}>
+                        {viewDetails[d.id] ? 'Masquer' : '👁 Détails'}
                       </button>
                     )}
                   </div>
@@ -300,49 +333,91 @@ export default function AdminSupportPage() {
                 )}
 
                 {/* Treatment panel — supplement */}
-                {isPending && !isAide && isExpanded && d.type === 'supplement' && (
-                  <div style={{ borderTop: '1px solid #f3f4f6', padding: '16px 20px', background: '#fafafa' }}>
-                    {/* Details summary */}
-                    <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 10, padding: '14px 18px', marginBottom: 14 }}>
-                      <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#1e40af', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 10 }}>Détails de la demande</div>
-                      <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-                        {(d.nbActivitesSupp ?? 0) > 0 && (
-                          <div style={{ background: '#fff', border: '1px solid #bfdbfe', borderRadius: 8, padding: '8px 16px', textAlign: 'center' }}>
-                            <div style={{ fontSize: '1.5rem', fontWeight: 900, color: '#1e40af' }}>+{d.nbActivitesSupp}</div>
-                            <div style={{ fontSize: '0.72rem', color: '#1e40af', fontWeight: 600 }}>Activité{(d.nbActivitesSupp ?? 0) > 1 ? 's' : ''}</div>
-                          </div>
-                        )}
-                        {(d.nbLabosSupp ?? 0) > 0 && (
-                          <div style={{ background: '#fff', border: '1px solid #bfdbfe', borderRadius: 8, padding: '8px 16px', textAlign: 'center' }}>
-                            <div style={{ fontSize: '1.5rem', fontWeight: 900, color: '#1e40af' }}>+{d.nbLabosSupp}</div>
-                            <div style={{ fontSize: '0.72rem', color: '#1e40af', fontWeight: 600 }}>Labo{(d.nbLabosSupp ?? 0) > 1 ? 's' : ''}</div>
-                          </div>
-                        )}
-                        {(d.nbGerantsSupp ?? 0) > 0 && (
-                          <div style={{ background: '#fff', border: '1px solid #bfdbfe', borderRadius: 8, padding: '8px 16px', textAlign: 'center' }}>
-                            <div style={{ fontSize: '1.5rem', fontWeight: 900, color: '#1e40af' }}>+{d.nbGerantsSupp}</div>
-                            <div style={{ fontSize: '0.72rem', color: '#1e40af', fontWeight: 600 }}>Gérant{(d.nbGerantsSupp ?? 0) > 1 ? 's' : ''}</div>
-                          </div>
-                        )}
+                {isPending && !isAide && isExpanded && d.type === 'supplement' && (() => {
+                  const sp = supplPricings[d.id];
+                  const nbA = (sp?.nbActivites ?? 0) + (d.nbActivitesSupp ?? 0);
+                  const nbL = (sp?.nbLabos ?? 0) + (d.nbLabosSupp ?? 0);
+                  const nbG = (sp?.nbGerants ?? 0) + (d.nbGerantsSupp ?? 0);
+                  const fmtDt = (n: number | undefined) => n != null ? `${Number(n).toFixed(2)} DT` : '—';
+                  // Compute new costs
+                  const newActiviteCost = sp
+                    ? (nbA === 1 ? sp.prixActiviteSup : nbA === 2 ? sp.prixActiviteSup * 2 : nbA * sp.prixActiviteSup)
+                    : null;
+                  const newLaboCost = sp ? nbL * sp.prixLaboSup : null;
+                  const newGerantCost = sp ? nbG * sp.prixGerantSup : null;
+                  const newMensuel = sp && newActiviteCost != null
+                    ? newActiviteCost + (newLaboCost ?? 0) + (newGerantCost ?? 0)
+                    : null;
+                  return (
+                    <div style={{ borderTop: '1px solid #f3f4f6', padding: '16px 20px', background: '#fafafa' }}>
+                      {/* Added capacity */}
+                      <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 10, padding: '14px 18px', marginBottom: 14 }}>
+                        <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#1e40af', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 10 }}>Capacité demandée</div>
+                        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                          {(d.nbActivitesSupp ?? 0) > 0 && <div style={{ background: '#fff', border: '1px solid #bfdbfe', borderRadius: 8, padding: '8px 16px', textAlign: 'center' }}><div style={{ fontSize: '1.4rem', fontWeight: 900, color: '#1e40af' }}>+{d.nbActivitesSupp}</div><div style={{ fontSize: '0.72rem', color: '#1e40af', fontWeight: 600 }}>Activité{(d.nbActivitesSupp ?? 0) > 1 ? 's' : ''}</div></div>}
+                          {(d.nbLabosSupp ?? 0) > 0 && <div style={{ background: '#fff', border: '1px solid #bfdbfe', borderRadius: 8, padding: '8px 16px', textAlign: 'center' }}><div style={{ fontSize: '1.4rem', fontWeight: 900, color: '#1e40af' }}>+{d.nbLabosSupp}</div><div style={{ fontSize: '0.72rem', color: '#1e40af', fontWeight: 600 }}>Labo{(d.nbLabosSupp ?? 0) > 1 ? 's' : ''}</div></div>}
+                          {(d.nbGerantsSupp ?? 0) > 0 && <div style={{ background: '#fff', border: '1px solid #bfdbfe', borderRadius: 8, padding: '8px 16px', textAlign: 'center' }}><div style={{ fontSize: '1.4rem', fontWeight: 900, color: '#1e40af' }}>+{d.nbGerantsSupp}</div><div style={{ fontSize: '0.72rem', color: '#1e40af', fontWeight: 600 }}>Gérant{(d.nbGerantsSupp ?? 0) > 1 ? 's' : ''}</div></div>}
+                        </div>
                       </div>
-                      <div style={{ marginTop: 10, fontSize: '0.78rem', color: '#374151' }}>
-                        Client : <strong>{d.clientNom}</strong>{d.clientEmail ? ` · ${d.clientEmail}` : ''}
+
+                      {/* New billing breakdown */}
+                      {sp ? (
+                        <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 10, padding: '14px 18px', marginBottom: 14 }}>
+                          <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 10 }}>Nouvelle facturation (après avenant)</div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', color: '#374151', marginBottom: 6 }}>
+                            <span>{nbA} activité{nbA > 1 ? 's' : ''} <span style={{ color: '#9ca3af' }}>(avant: {sp.nbActivites})</span></span>
+                            <span style={{ fontWeight: 700 }}>{fmtDt(newActiviteCost ?? undefined)}</span>
+                          </div>
+                          {nbL > 0 && <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', color: '#374151', marginBottom: 6 }}>
+                            <span>{nbL} labo{nbL > 1 ? 's' : ''} × {sp.prixLaboSup} DT <span style={{ color: '#9ca3af' }}>(avant: {sp.nbLabos})</span></span>
+                            <span style={{ fontWeight: 700 }}>{fmtDt(newLaboCost ?? undefined)}</span>
+                          </div>}
+                          {nbG > 0 && <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', color: '#374151', marginBottom: 6 }}>
+                            <span>{nbG} gérant{nbG > 1 ? 's' : ''} × {sp.prixGerantSup} DT <span style={{ color: '#9ca3af' }}>(avant: {sp.nbGerants})</span></span>
+                            <span style={{ fontWeight: 700 }}>{fmtDt(newGerantCost ?? undefined)}</span>
+                          </div>}
+                          <div style={{ borderTop: '1px solid #e5e7eb', marginTop: 8, paddingTop: 8, display: 'flex', justifyContent: 'space-between' }}>
+                            <span style={{ fontSize: '0.82rem', color: '#6b7280' }}>Mensuel actuel</span>
+                            <span style={{ fontSize: '0.82rem', fontWeight: 600, color: '#6b7280' }}>{fmtDt(sp.currentMensuel)}</span>
+                          </div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
+                            <span style={{ fontSize: '0.9rem', fontWeight: 800, color: '#1e40af' }}>Nouveau mensuel</span>
+                            <span style={{ fontSize: '1rem', fontWeight: 900, color: '#1e40af' }}>{fmtDt(newMensuel ?? undefined)}/mois</span>
+                          </div>
+                        </div>
+                      ) : (
+                        <div style={{ fontSize: '0.78rem', color: '#9ca3af', marginBottom: 14 }}>Chargement du tarif…</div>
+                      )}
+
+                      <label style={lbl}>Note / avenant pour le client (optionnel)</label>
+                      <textarea rows={2} value={edit.notes} onChange={(e) => setEdit(d.id, 'notes', e.target.value)}
+                        placeholder="Ex: Avenant n°X signé le … — votre configuration sera mise à jour."
+                        style={{ ...inp, resize: 'vertical', fontFamily: 'inherit', marginBottom: 12 }} />
+                      <div style={{ display: 'flex', gap: 10 }}>
+                        <button onClick={() => traiter(d, 'validée')} disabled={traiting[d.id]}
+                          style={{ flex: 1, padding: '9px', background: traiting[d.id] ? '#e5e7eb' : 'linear-gradient(135deg,#15803d,#16a34a)', color: traiting[d.id] ? '#9ca3af' : '#fff', border: 'none', borderRadius: 9, fontWeight: 700, fontSize: '0.85rem', cursor: traiting[d.id] ? 'default' : 'pointer' }}>
+                          {traiting[d.id] ? '…' : '✅ Valider et mettre à jour la config'}
+                        </button>
+                        <button onClick={() => traiter(d, 'refusée')} disabled={traiting[d.id]}
+                          style={{ flex: 1, padding: '9px', background: traiting[d.id] ? '#e5e7eb' : 'linear-gradient(135deg,#b91c1c,#dc2626)', color: traiting[d.id] ? '#9ca3af' : '#fff', border: 'none', borderRadius: 9, fontWeight: 700, fontSize: '0.85rem', cursor: traiting[d.id] ? 'default' : 'pointer' }}>
+                          {traiting[d.id] ? '…' : '❌ Refuser'}
+                        </button>
                       </div>
                     </div>
-                    <label style={lbl}>Note / avenant pour le client (optionnel)</label>
-                    <textarea rows={2} value={edit.notes} onChange={(e) => setEdit(d.id, 'notes', e.target.value)}
-                      placeholder="Ex: Avenant n°X signé le … — votre configuration sera mise à jour."
-                      style={{ ...inp, resize: 'vertical', fontFamily: 'inherit', marginBottom: 12 }} />
-                    <div style={{ display: 'flex', gap: 10 }}>
-                      <button onClick={() => traiter(d, 'validée')} disabled={traiting[d.id]}
-                        style={{ flex: 1, padding: '9px', background: traiting[d.id] ? '#e5e7eb' : 'linear-gradient(135deg,#15803d,#16a34a)', color: traiting[d.id] ? '#9ca3af' : '#fff', border: 'none', borderRadius: 9, fontWeight: 700, fontSize: '0.85rem', cursor: traiting[d.id] ? 'default' : 'pointer' }}>
-                        {traiting[d.id] ? '…' : '✅ Valider et mettre à jour la config'}
-                      </button>
-                      <button onClick={() => traiter(d, 'refusée')} disabled={traiting[d.id]}
-                        style={{ flex: 1, padding: '9px', background: traiting[d.id] ? '#e5e7eb' : 'linear-gradient(135deg,#b91c1c,#dc2626)', color: traiting[d.id] ? '#9ca3af' : '#fff', border: 'none', borderRadius: 9, fontWeight: 700, fontSize: '0.85rem', cursor: traiting[d.id] ? 'default' : 'pointer' }}>
-                        {traiting[d.id] ? '…' : '❌ Refuser'}
-                      </button>
-                    </div>
+                  );
+                })()}
+
+                {/* Voir les détails (processed requests) */}
+                {!isPending && viewDetails[d.id] && (
+                  <div style={{ borderTop: '1px solid #f3f4f6', padding: '14px 20px', background: '#fafafa' }}>
+                    <DemandeDetails d={d} />
+                    {d.notesAdmin && (
+                      <div style={{ marginTop: 10, background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 8, padding: '10px 14px' }}>
+                        <div style={{ fontSize: '0.7rem', fontWeight: 700, color: '#1e40af', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 3 }}>Note admin</div>
+                        <div style={{ fontSize: '0.82rem', color: '#1e3a5f' }}>{d.notesAdmin}</div>
+                      </div>
+                    )}
+                    {d.traiteLe && <div style={{ marginTop: 8, fontSize: '0.72rem', color: '#94a3b8' }}>Traité le {fmtDate(d.traiteLe)}{d.traiteParNom ? ` par ${d.traiteParNom}` : ''}</div>}
                   </div>
                 )}
               </div>

@@ -40,6 +40,7 @@ interface SupplPricing {
 export default function SupportPage() {
   const [demandes, setDemandes] = useState<SupportDemande[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deleting, setDeleting] = useState<Record<number, boolean>>({});
   const [showForm, setShowForm] = useState(false);
   const [formType, setFormType] = useState<SupportDemande['type'] | null>(null);
   const [saving, setSaving] = useState(false);
@@ -88,6 +89,16 @@ export default function SupportPage() {
     setDomaineId(''); setCategorieId(''); setUniteId(''); setNomIngredient('');
     setNbActivites(0); setNbLabos(0); setNbGerants(0); setDescription('');
     setError(null);
+  };
+
+  const deleteDemande = async (id: number) => {
+    if (!window.confirm('Supprimer cette demande ?')) return;
+    setDeleting(d => ({ ...d, [id]: true }));
+    try {
+      await api.delete(`/api/abonnements/support/${id}`);
+      setDemandes(prev => prev.filter(d => d.id !== id));
+    } catch { /* already processed — ignore */ }
+    finally { setDeleting(d => ({ ...d, [id]: false })); }
   };
 
   const handleSubmit = async () => {
@@ -365,6 +376,12 @@ export default function SupportPage() {
                     <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: 1 }}>{fmtDate(d.createdAt)}</div>
                   </div>
                   <span style={{ fontSize: '0.75rem', fontWeight: 700, padding: '4px 12px', borderRadius: 20, background: s.bg, color: s.text }}>{s.label}</span>
+                  {d.statut === 'en_attente' && (
+                    <button onClick={() => deleteDemande(d.id)} disabled={deleting[d.id]}
+                      style={{ marginLeft: 6, padding: '4px 10px', borderRadius: 8, border: '1px solid #fecaca', background: '#fff', color: '#dc2626', fontSize: '0.72rem', fontWeight: 700, cursor: deleting[d.id] ? 'default' : 'pointer', opacity: deleting[d.id] ? 0.6 : 1 }}>
+                      {deleting[d.id] ? '…' : '🗑 Supprimer'}
+                    </button>
+                  )}
                 </div>
                 <div style={{ fontSize: '0.82rem', color: '#374151' }}>
                   {d.type === 'ingredient_manquant' && d.nomIngredient && (
