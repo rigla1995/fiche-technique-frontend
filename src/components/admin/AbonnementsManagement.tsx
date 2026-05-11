@@ -665,7 +665,7 @@ export default function AbonnementsManagement() {
                     <div style={{ fontWeight: 600, fontSize: 14, color: '#111827' }}>{ab.clientNom}</div>
                     <div style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>{ab.clientEmail}</div>
                     <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 2 }}>
-                      {ab.compteType === 'entreprise' ? 'Entreprise' : 'Indépendant'} — depuis {fmtDate(ab.dateDebut)}
+                      {ab.compteType === 'independant' ? 'Indépendant' : 'Entreprise'} — depuis {fmtDate(ab.dateDebut)}
                     </div>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-end' }}>
@@ -700,7 +700,7 @@ export default function AbonnementsManagement() {
                 <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: '#111827' }}>{selected.clientNom}</h2>
                 <div style={{ color: '#6b7280', fontSize: 14, marginTop: 4 }}>{selected.clientEmail}</div>
                 <div style={{ color: '#9ca3af', fontSize: 12, marginTop: 2 }}>
-                  {selected.compteType === 'entreprise' ? 'Entreprise' : 'Indépendant'} — depuis {fmtDate(selected.dateDebut)}
+                  {selected.compteType === 'independant' ? 'Indépendant' : 'Entreprise'} — depuis {fmtDate(selected.dateDebut)}
                 </div>
               </div>
               <span style={{

@@ -63,7 +63,7 @@ export default function ClientsManagement() {
 
   const openEdit = (c: Client) => {
     setEditId(c.id);
-    setSelectedType(c.compteType === 'entreprise' ? 'entreprise' : 'independant');
+    setSelectedType(c.compteType === 'independant' ? 'independant' : 'entreprise');
     setModalStep('form');
     setIndForm({ nomActivite: c.name, domaineIds: c.domaineIds || [], email: c.email, telephone: c.phone || '', adresse: '' });
     setEntForm({ nomEntreprise: c.name, email: c.email, telephone: c.phone || '', adresse: '' });
@@ -260,7 +260,7 @@ export default function ClientsManagement() {
                   <td style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{c.email}</td>
                   <td>{c.phone || '—'}</td>
                   <td>
-                    {c.compteType === 'entreprise' ? (
+                    {c.compteType !== 'independant' ? (
                       <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>par activité</span>
                     ) : (c.domaineIds || []).length === 0 ? (
                       <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>—</span>
@@ -296,7 +296,7 @@ export default function ClientsManagement() {
                         {resendingId === c.id ? '…' : '✉️ Renvoyer'}
                       </button>
                     )}
-                    {c.compteType === 'entreprise' && (c.onboardingStep ?? 0) > 0 && (
+                    {c.compteType !== 'independant' && (c.onboardingStep ?? 0) > 0 && (
                       <button
                         className="btn btn-ghost btn-sm"
                         style={{ color: 'var(--warning, #b45309)', borderColor: 'var(--warning, #b45309)' }}
