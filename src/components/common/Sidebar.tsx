@@ -1,10 +1,9 @@
-import React, { useState, useRef, useEffect as useEffectAlias } from 'react';
+import React, { useState } from 'react';
 import { NavLink, Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useSelection } from '../../context/SelectionContext';
-import { useNotifications } from '../../context/NotificationContext';
 import api from '../../api/client';
 import type { Activite, ActiviteTypesSummary, Labo, User, AbonnementConfig } from '../../types';
 
@@ -484,123 +483,12 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
     </div>
   ) : null;
 
-  const { notifications, unreadCount, markAllRead } = useNotifications();
-  const [notifOpen, setNotifOpen] = useState(false);
-  const notifRef = useRef<HTMLDivElement>(null);
-
-  useEffectAlias(() => {
-    if (!notifOpen) return;
-    const handler = (e: MouseEvent) => {
-      if (notifRef.current && !notifRef.current.contains(e.target as Node)) {
-        setNotifOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, [notifOpen]);
-
-  const handleBellClick = () => {
-    setNotifOpen((v) => !v);
-    if (!notifOpen && unreadCount > 0) markAllRead();
-  };
-
-  const typeLabel = (type: string) => {
-    if (type === 'ingredient_manquant') return 'Ingrédient manquant';
-    if (type === 'supplement') return 'Ajout de capacité';
-    return 'Aide';
-  };
-
   return (
     <>
       {isOpen && <div className="sidebar-overlay" onClick={onClose} />}
       <nav className={`sidebar ${isOpen ? 'sidebar-open' : ''}`}>
-        <div className="sidebar-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-          <span className="sidebar-title" style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {user?.role === 'super_admin' ? t('admin.title') : sidebarTitle}
-          </span>
-
-          {/* Alarm bell — shown for clients AND admins */}
-          <div ref={notifRef} style={{ position: 'relative', flexShrink: 0 }}>
-            <button
-              onClick={handleBellClick}
-              title="Notifications"
-              style={{
-                position: 'relative', background: 'none', border: 'none', cursor: 'pointer',
-                padding: '4px 6px', borderRadius: 8, color: 'var(--text)',
-                fontSize: '1.15rem', lineHeight: 1,
-                animation: unreadCount > 0 ? 'bell-ring 0.6s ease infinite alternate' : 'none',
-              }}
-            >
-              🔔
-              {unreadCount > 0 && (
-                <span style={{
-                  position: 'absolute', top: 0, right: 0,
-                  background: '#ef4444', color: '#fff',
-                  borderRadius: '50%', minWidth: 16, height: 16,
-                  fontSize: '0.62rem', fontWeight: 900,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  lineHeight: 1, padding: '0 3px',
-                  boxShadow: '0 0 0 2px var(--surface)',
-                }}>
-                  {unreadCount > 9 ? '9+' : unreadCount}
-                </span>
-              )}
-            </button>
-
-            {notifOpen && (
-              <div style={{
-                position: 'absolute', top: 'calc(100% + 6px)', right: 0,
-                width: 280, maxHeight: 340, overflowY: 'auto',
-                background: 'var(--surface)', borderRadius: 12,
-                border: '1px solid var(--border)',
-                boxShadow: '0 8px 32px rgba(0,0,0,0.16)',
-                zIndex: 9999,
-              }}>
-                <div style={{ padding: '10px 14px 6px', fontWeight: 800, fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', borderBottom: '1px solid var(--border)' }}>
-                  Notifications
-                </div>
-                {notifications.length === 0 ? (
-                  <div style={{ padding: '20px 14px', fontSize: '0.83rem', color: 'var(--text-muted)', textAlign: 'center' }}>
-                    Aucune notification
-                  </div>
-                ) : (
-                  notifications.map((n) => (
-                    <div key={n.id} style={{
-                      padding: '10px 14px',
-                      borderBottom: '1px solid var(--border)',
-                      background: n.readAt ? 'transparent' : 'rgba(239,68,68,0.05)',
-                    }}>
-                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
-                        <span style={{ fontSize: '1.1rem', flexShrink: 0 }}>
-                          {n.eventType === 'new_demande' ? '📥' : n.statut === 'validée' ? '✅' : '❌'}
-                        </span>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text)', lineHeight: 1.3 }}>
-                            {n.eventType === 'new_demande'
-                              ? `Nouvelle demande — ${typeLabel(n.type)}`
-                              : `Demande ${n.statut === 'validée' ? 'validée' : 'refusée'} — ${typeLabel(n.type)}`}
-                          </div>
-                          {n.clientNom && (
-                            <div style={{ fontSize: '0.73rem', color: 'var(--text-muted)', marginTop: 2 }}>
-                              Client : {n.clientNom}
-                            </div>
-                          )}
-                          {n.notesAdmin && (
-                            <div style={{ fontSize: '0.73rem', color: 'var(--text-muted)', marginTop: 2, fontStyle: 'italic' }}>
-                              {n.notesAdmin}
-                            </div>
-                          )}
-                          <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginTop: 4 }}>
-                            {new Date(n.createdAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            )}
-          </div>
+        <div className="sidebar-header">
+          <span className="sidebar-title">{user?.role === 'super_admin' ? t('admin.title') : sidebarTitle}</span>
         </div>
 
         {onboardingHint}
