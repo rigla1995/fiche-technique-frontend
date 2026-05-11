@@ -118,6 +118,7 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
   const [laboTel, setLaboTel] = useState('');
   const [laboAdresse, setLaboAdresse] = useState('');
   const [laboWizardStep, setLaboWizardStep] = useState<'choice' | 'labo-form' | 'activities'>('choice');
+  const [wizardStep, setWizardStep] = useState(1); // 0=type, 1=main, 2=labo, 3=per-activity
   const [labos, setLabos] = useState<Labo[]>([]);
   const [abonnementConfig, setAbonnementConfig] = useState<AbonnementConfig | null>(null);
   // List filters
@@ -168,6 +169,7 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
   const maxLabos = abonnementConfig?.nbLabos ?? null;
   const atActiviteLimit = maxActivites !== null && activites.length >= maxActivites;
   const atLaboLimit = maxLabos !== null && labos.length >= maxLabos;
+  const configHasLabo = maxLabos !== null && maxLabos > 0;
 
   const isFranchise = memeActivite === true;
 
@@ -184,9 +186,8 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
     setFranchiseStep(0);
     setFranchiseForms([emptyFranchiseStep(), emptyFranchiseStep()]);
     // Pre-determine labo: if config has no labos → always false; if has labos → preset or ask
-    const configHasLabo = maxLabos !== null && maxLabos > 0;
     if (preType === 'franchise_labo') { setHasLabo(true); }
-    else if (preType === 'franchise') { setHasLabo(configHasLabo ? true : false); }
+    else if (preType === 'franchise') { setHasLabo(configHasLabo ? null : false); }
     else if (preType === 'distincte') { setHasLabo(configHasLabo ? null : false); }
     else { setHasLabo(null); }
     setLaboAction(null);
@@ -197,6 +198,7 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
     setLaboAdresse('');
     setLaboWizardStep('choice');
     setError('');
+    setWizardStep(preType ? 1 : 0);
     setShowForm(true);
   };
 
@@ -207,6 +209,7 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
     setMemeActivite(null);
     setNombreActivites('1');
     setError('');
+    setWizardStep(1);
     setShowForm(true);
   };
 
@@ -223,6 +226,7 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
     setMemeActivite(null);
     setNombreActivites('1');
     setError('');
+    setWizardStep(1);
     setShowForm(true);
   };
 
@@ -342,6 +346,41 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
       setError(errMsg || t('common.error'));
     }
     setSaving(false);
+  };
+
+  const handleFranchiseSetupNext = () => {
+    if (!franchiseName.trim()) { setError('Nom du réseau requis'); return; }
+    if (franchiseNameConflict) return;
+    if (franchiseCount < 2) { setError('Minimum 2 activités requises'); return; }
+    if (maxActivites !== null && franchiseCount > maxActivites - activites.length) {
+      setError(`Seulement ${maxActivites - activites.length} activité(s) disponible(s)`); return;
+    }
+    setError('');
+    setWizardStep(configHasLabo ? 2 : 3);
+  };
+
+  const handleLaboStepNext = () => {
+    if (hasLabo === null) { setError('Veuillez choisir une option'); return; }
+    if (hasLabo === true) {
+      if (!laboAction) { setError('Veuillez sélectionner ou créer un labo'); return; }
+      if (laboAction === 'select' && !selectedLaboId) { setError('Veuillez sélectionner un labo'); return; }
+      if (laboAction === 'create') {
+        if (!laboNom.trim()) { setError('Nom du labo requis'); return; }
+        if (!laboRefLabo.trim()) { setError('Référence du labo requise'); return; }
+        if (!laboTel.trim()) { setError('Téléphone du labo requis'); return; }
+      }
+    }
+    setError('');
+    setWizardStep(3);
+  };
+
+  const handleActivityBack = () => {
+    setError('');
+    if (franchiseStep > 0) {
+      setFranchiseStep((s) => s - 1);
+    } else {
+      setWizardStep(configHasLabo ? 2 : 1);
+    }
   };
 
   const submit = async (e: React.FormEvent) => {
@@ -763,263 +802,337 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
         </>
       )}
 
-      {/* Add / Edit form modal */}
+      {/* Add / Edit form modal — step-based wizard */}
       {showForm && (
-        <div className="modal-overlay">
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-overlay" onClick={closeForm}>
+          <div className="modal" style={{ maxWidth: 500 }} onClick={(e) => e.stopPropagation()}>
+
+            {/* Header */}
             <div className="modal-header modal-header--primary">
-              <h2>
-                {isDuplicate ? `${t('client.entreprise.duplicate_activity')} — ${t('client.entreprise.add_activity')}`
-                  : editingId ? t('client.entreprise.edit_activity')
-                  : t('client.entreprise.add_activity')}
-              </h2>
+              <div style={{ flex: 1 }}>
+                <h2 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700 }}>
+                  {editingId
+                    ? t('client.entreprise.edit_activity')
+                    : isDuplicate
+                    ? t('client.entreprise.duplicate_activity')
+                    : wizardStep === 0
+                    ? t('client.entreprise.add_activity')
+                    : isFranchise
+                    ? wizardStep === 1
+                      ? '🔗 Nouveau réseau franchise'
+                      : wizardStep === 2
+                      ? '🏭 Laboratoire'
+                      : `${franchiseName || 'Franchise'} — Activité ${franchiseStep + 1} / ${franchiseCount}`
+                    : t('client.entreprise.add_activity')}
+                </h2>
+                {/* Franchise progress indicator */}
+                {isFranchise && !editingId && !isDuplicate && wizardStep >= 1 && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10 }}>
+                    {(configHasLabo
+                      ? [{ label: 'Réseau', s: 1 }, { label: 'Labo', s: 2 }, { label: 'Détails', s: 3 }]
+                      : [{ label: 'Réseau', s: 1 }, { label: 'Détails', s: 3 }]
+                    ).map(({ label, s }, idx, arr) => (
+                      <div key={s} style={{ display: 'flex', alignItems: 'center', gap: idx < arr.length - 1 ? 8 : 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                          <span style={{
+                            width: 22, height: 22, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            fontSize: '0.7rem', fontWeight: 800, flexShrink: 0,
+                            background: wizardStep > s ? '#22c55e' : wizardStep === s ? 'white' : 'rgba(255,255,255,0.25)',
+                            color: wizardStep > s ? 'white' : wizardStep === s ? 'var(--primary)' : 'rgba(255,255,255,0.6)',
+                          }}>
+                            {wizardStep > s ? '✓' : idx + 1}
+                          </span>
+                          <span style={{ fontSize: '0.72rem', fontWeight: wizardStep === s ? 700 : 400, color: wizardStep >= s ? 'white' : 'rgba(255,255,255,0.55)' }}>
+                            {label}
+                          </span>
+                        </div>
+                        {idx < arr.length - 1 && (
+                          <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.35)', marginLeft: 3 }}>›</span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
               <button className="modal-close" onClick={closeForm}>✕</button>
             </div>
-            <form onSubmit={submit} className="modal-body">
-              {/* Franchise/Distinct question — only when type isn't already determined */}
-              {!editingId && !isDuplicate && memeActivite === null && (
-                <div style={{ marginBottom: 16 }}>
-                  <p style={{ fontWeight: 600, marginBottom: 12, fontSize: '0.95rem' }}>{t('client.entreprise.franchise_question')}</p>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                    <label style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '14px 16px', borderRadius: 10, border: '2px solid var(--border)', background: 'var(--surface)', cursor: 'pointer', transition: 'border-color 0.15s' }}
-                      onClick={() => setMemeActivite(true)}>
-                      <span style={{ fontSize: '1.4rem', marginTop: 2 }}>🏪</span>
-                      <div>
-                        <div style={{ fontWeight: 700, fontSize: '0.95rem' }}>{t('client.entreprise.franchise_yes')}</div>
-                        <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: 2 }}>Plusieurs points de vente partageant les mêmes ingrédients</div>
-                      </div>
-                    </label>
-                    {(maxLabos === null || maxLabos > 0) && (
-                      <label style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '14px 16px', borderRadius: 10, border: '2px solid var(--border)', background: 'var(--surface)', cursor: 'pointer', transition: 'border-color 0.15s' }}
-                        onClick={() => { setMemeActivite(true); setHasLabo(true); }}>
-                        <span style={{ fontSize: '1.4rem', marginTop: 2 }}>🏭</span>
-                        <div>
-                          <div style={{ fontWeight: 700, fontSize: '0.95rem' }}>Franchise avec Labo <span style={{ fontWeight: 400, color: 'var(--text-muted)', fontSize: '0.8rem' }}>(gestion séparée)</span></div>
-                          <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: 2 }}>Franchises approvisionnées par un labo central — nécessite min. 2 franchises</div>
-                        </div>
-                      </label>
-                    )}
-                    <label style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '14px 16px', borderRadius: 10, border: '2px solid var(--border)', background: 'var(--surface)', cursor: 'pointer', transition: 'border-color 0.15s' }}
-                      onClick={() => setMemeActivite(false)}>
-                      <span style={{ fontSize: '1.4rem', marginTop: 2 }}>🏬</span>
-                      <div>
-                        <div style={{ fontWeight: 700, fontSize: '0.95rem' }}>{t('client.entreprise.franchise_no')}</div>
-                        <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: 2 }}>Activité avec sa propre gestion indépendante</div>
-                      </div>
-                    </label>
-                  </div>
+
+            <form onSubmit={submit}>
+
+              {/* ── STEP 0: Type selection ── */}
+              {wizardStep === 0 && !editingId && !isDuplicate && (
+                <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  <p style={{ margin: '0 0 4px', fontSize: '0.88rem', color: 'var(--text-muted)' }}>
+                    Choisissez le type d'activité à créer
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => { setMemeActivite(true); setHasLabo(configHasLabo ? null : false); setWizardStep(1); }}
+                    style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '16px 18px', borderRadius: 12, border: '2px solid var(--border)', background: 'var(--surface)', cursor: 'pointer', textAlign: 'left', width: '100%' }}
+                  >
+                    <span style={{ fontSize: '1.8rem', flexShrink: 0 }}>🔗</span>
+                    <div>
+                      <div style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text)' }}>Franchise</div>
+                      <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: 3 }}>Plusieurs points de vente partageant les mêmes recettes</div>
+                    </div>
+                    <span style={{ marginLeft: 'auto', color: 'var(--text-muted)', fontSize: '1.1rem' }}>›</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setMemeActivite(false); setHasLabo(configHasLabo ? null : false); setWizardStep(1); }}
+                    style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '16px 18px', borderRadius: 12, border: '2px solid var(--border)', background: 'var(--surface)', cursor: 'pointer', textAlign: 'left', width: '100%' }}
+                  >
+                    <span style={{ fontSize: '1.8rem', flexShrink: 0 }}>📍</span>
+                    <div>
+                      <div style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text)' }}>Activité distincte</div>
+                      <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: 3 }}>Point de vente indépendant avec sa propre gestion</div>
+                    </div>
+                    <span style={{ marginLeft: 'auto', color: 'var(--text-muted)', fontSize: '1.1rem' }}>›</span>
+                  </button>
                 </div>
               )}
 
-              {/* Franchise creation wizard */}
-              {isFranchise && !editingId && !isDuplicate && (
-                <>
-                  {/* Step 1: name + count — always visible once franchise selected */}
-                  <div className="form-field" style={{ marginBottom: 12 }}>
-                    <label>{t('client.entreprise.franchise_name')} *</label>
+              {/* ── STEP 1A: Franchise setup (name + count) ── */}
+              {wizardStep === 1 && isFranchise && !editingId && !isDuplicate && (
+                <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+                  <div className="form-field" style={{ marginBottom: 0 }}>
+                    <label style={{ fontWeight: 600 }}>Nom du réseau *</label>
                     <input
                       type="text"
                       placeholder={t('client.entreprise.franchise_name_placeholder')}
                       value={franchiseName}
                       onChange={(e) => setFranchiseName(e.target.value)}
+                      autoFocus
                       style={franchiseNameConflict ? { borderColor: 'var(--danger, #ef4444)' } : undefined}
                     />
                     {franchiseNameConflict && (
-                      <p style={{ color: 'var(--danger, #ef4444)', fontSize: '0.8rem', marginTop: 4 }}>
+                      <p style={{ color: 'var(--danger, #ef4444)', fontSize: '0.78rem', margin: '4px 0 0' }}>
                         {t('client.entreprise.franchise_name_exists', { name: franchiseName.trim() })}
                       </p>
                     )}
                   </div>
-                  <div className="form-field" style={{ marginBottom: 16 }}>
-                    <label>{t('client.entreprise.franchise_count')} * <span style={{ fontWeight: 400, color: 'var(--text-muted)', fontSize: '0.8rem' }}>(min. 2)</span></label>
+                  <div className="form-field" style={{ marginBottom: 0 }}>
+                    <label style={{ fontWeight: 600 }}>
+                      {t('client.entreprise.franchise_count')} *{' '}
+                      <span style={{ fontWeight: 400, color: 'var(--text-muted)', fontSize: '0.78rem' }}>
+                        (min. 2{maxActivites !== null ? `, max. ${maxActivites - activites.length} disponibles` : ''})
+                      </span>
+                    </label>
                     <input
                       type="number"
                       min="2"
-                      max="20"
+                      max={maxActivites !== null ? maxActivites - activites.length : 20}
                       value={nombreActivites}
                       onChange={(e) => handleNombreActivitesChange(e.target.value)}
-                      style={{ width: 80 }}
+                      style={{ width: 90 }}
                     />
                   </div>
-
-                  {/* Labo choice — shown once name + count are set; hidden when config has no labos */}
-                  {franchiseUnlocked && (
-                    <div style={{ borderTop: '1px solid var(--border)', paddingTop: 14, marginTop: 4 }}>
-                      {(maxLabos === null || maxLabos > 0) && (
-                        <>
-                          <p style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                            {t('client.labo.labo_choice_label')}
-                          </p>
-                          <div style={{ display: 'flex', gap: 10, marginBottom: hasLabo === false ? 0 : 14 }}>
-                            <label style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 16px', borderRadius: 10, border: `2px solid ${hasLabo === true ? 'var(--primary)' : 'var(--border)'}`, background: hasLabo === true ? 'var(--primary-light, #eef2ff)' : 'var(--surface)', cursor: 'pointer', flex: 1, fontWeight: 600, fontSize: '0.9rem' }}>
-                              <input type="radio" name="hasLabo" checked={hasLabo === true} onChange={() => { setHasLabo(true); setLaboAction(null); setSelectedLaboId(''); }} style={{ accentColor: 'var(--primary)' }} />
-                              🏭 {t('client.labo.avec_labo')}
-                            </label>
-                            <label style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 16px', borderRadius: 10, border: `2px solid ${hasLabo === false ? 'var(--primary)' : 'var(--border)'}`, background: hasLabo === false ? 'var(--primary-light, #eef2ff)' : 'var(--surface)', cursor: 'pointer', flex: 1, fontWeight: 600, fontSize: '0.9rem' }}>
-                              <input type="radio" name="hasLabo" checked={hasLabo === false} onChange={() => { setHasLabo(false); setLaboAction(null); }} style={{ accentColor: 'var(--primary)' }} />
-                              📋 {t('client.labo.gestion_separee')}
-                            </label>
-                          </div>
-                        </>
-                      )}
-
-                      {/* Labo: select existing or create new */}
-                      {hasLabo === true && <LaboSelectOrCreate
-                        labos={labos}
-                        laboAction={laboAction}
-                        setLaboAction={setLaboAction}
-                        selectedLaboId={selectedLaboId}
-                        setSelectedLaboId={setSelectedLaboId}
-                        laboNom={laboNom}
-                        setLaboNom={setLaboNom}
-                        laboRefLabo={laboRefLabo}
-                        setLaboRefLabo={setLaboRefLabo}
-                        laboTel={laboTel}
-                        setLaboTel={setLaboTel}
-                        laboAdresse={laboAdresse}
-                        setLaboAdresse={setLaboAdresse}
-                        atLaboLimit={atLaboLimit}
-                        maxLabos={maxLabos}
-                      />}
-                    </div>
-                  )}
-
-                  {/* Per-activity step form — unlocked when franchiseName + count > 1 */}
-                  {franchiseUnlocked && hasLabo !== null && (
-                    <div style={{ borderTop: '1px solid var(--border)', paddingTop: 14, marginTop: 4 }}>
-                      <p style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--primary)', marginBottom: 12 }}>
-                        {t('client.entreprise.step_indicator', { current: franchiseStep + 1, total: franchiseCount })}
-                      </p>
-                      <div className="form-field" style={{ marginBottom: 12 }}>
-                        <label>{t('client.entreprise.activity_nom')}</label>
-                        <input
-                          type="text"
-                          value={`${franchiseName.trim()} ${franchiseStep + 1}`}
-                          disabled
-                          style={{ background: 'var(--surface)', color: 'var(--text-muted)' }}
-                        />
-                      </div>
-                      <div className="form-field" style={{ marginBottom: 12 }}>
-                        <label>{t('client.entreprise.activity_telephone')} * <span style={{ fontWeight: 400, color: 'var(--text-muted)', fontSize: '0.8rem' }}>{t('validation.phone_hint')}</span></label>
-                        <input
-                          type="text"
-                          placeholder={t('validation.phone_placeholder')}
-                          value={franchiseForms[franchiseStep]?.telephone ?? ''}
-                          onChange={(e) => updateFranchiseForm('telephone', e.target.value)}
-                        />
-                      </div>
-                      <div className="form-field" style={{ marginBottom: 12 }}>
-                        <label>{t('client.entreprise.activity_adresse')} *</label>
-                        <textarea
-                          value={franchiseForms[franchiseStep]?.adresse ?? ''}
-                          onChange={(e) => updateFranchiseForm('adresse', e.target.value)}
-                          rows={2}
-                        />
-                      </div>
-                    </div>
-                  )}
-                </>
+                </div>
               )}
 
-              {/* Distinct or edit: single name + contact fields */}
-              {(!isFranchise || editingId || isDuplicate) && (memeActivite !== null || editingId || isDuplicate) && (
-                <>
-                  <div className="form-field" style={{ marginBottom: 12 }}>
-                    <label>{t('client.entreprise.activity_nom')} *</label>
+              {/* ── STEP 1B: Distinct new / Edit / Duplicate ── */}
+              {wizardStep === 1 && (!isFranchise || editingId || isDuplicate) && (
+                <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                  <div className="form-field" style={{ marginBottom: 0 }}>
+                    <label style={{ fontWeight: 600 }}>{t('client.entreprise.activity_nom')} *</label>
                     <input
                       type="text"
                       value={form.nom}
                       onChange={(e) => setForm((f) => ({ ...f, nom: e.target.value }))}
+                      autoFocus
                       style={distinctNameConflict ? { borderColor: 'var(--danger, #ef4444)' } : undefined}
                     />
                     {distinctNameConflict && (
-                      <p style={{ color: 'var(--danger, #ef4444)', fontSize: '0.8rem', marginTop: 4 }}>
+                      <p style={{ color: 'var(--danger, #ef4444)', fontSize: '0.78rem', margin: '4px 0 0' }}>
                         {t('client.entreprise.activity_name_exists', { name: form.nom.trim() })}
                       </p>
                     )}
                   </div>
-                  <div className="form-field" style={{ marginBottom: 12 }}>
-                    <label>{t('client.entreprise.activity_telephone')}</label>
+                  <div className="form-field" style={{ marginBottom: 0 }}>
+                    <label style={{ fontWeight: 600 }}>{t('client.entreprise.activity_telephone')}</label>
                     <input
                       type="text"
+                      placeholder="+216 …"
                       value={form.telephone}
                       onChange={(e) => setForm((f) => ({ ...f, telephone: e.target.value }))}
                     />
                   </div>
-                  <div className="form-field" style={{ marginBottom: 12 }}>
-                    <label>{t('client.entreprise.activity_adresse')}</label>
+                  <div className="form-field" style={{ marginBottom: 0 }}>
+                    <label style={{ fontWeight: 600 }}>{t('client.entreprise.activity_adresse')}</label>
                     <textarea
                       value={form.adresse}
                       onChange={(e) => setForm((f) => ({ ...f, adresse: e.target.value }))}
                       rows={2}
                     />
                   </div>
-                  {/* Distinct + labo option (not shown when editing) */}
-                  {!editingId && !isDuplicate && !isFranchise && (
-                    <div style={{ borderTop: '1px solid var(--border)', paddingTop: 14, marginTop: 4 }}>
-                      <p style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                        {t('client.labo.labo_choice_label')}
+                  {/* Optional labo for distinct new */}
+                  {!editingId && !isDuplicate && configHasLabo && (
+                    <div style={{ background: '#f8fafc', border: '1px solid var(--border)', borderRadius: 12, padding: '14px 16px' }}>
+                      <p style={{ margin: '0 0 10px', fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                        Laboratoire (optionnel)
                       </p>
-                      <div style={{ display: 'flex', gap: 10, marginBottom: hasLabo ? 14 : 0 }}>
-                        <label style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 16px', borderRadius: 10, border: `2px solid ${hasLabo === true ? 'var(--primary)' : 'var(--border)'}`, background: hasLabo === true ? 'var(--primary-light, #eef2ff)' : 'var(--surface)', cursor: 'pointer', flex: 1, fontWeight: 600, fontSize: '0.88rem' }}>
-                          <input type="radio" name="hasLaboDistinct" checked={hasLabo === true} onChange={() => { setHasLabo(true); setLaboAction(null); setSelectedLaboId(''); }} style={{ accentColor: 'var(--primary)' }} />
-                          🏭 {t('client.labo.avec_labo')}
+                      <div style={{ display: 'flex', gap: 10, marginBottom: hasLabo === true ? 14 : 0 }}>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', borderRadius: 10, border: `2px solid ${hasLabo !== true ? 'var(--primary)' : 'var(--border)'}`, background: hasLabo !== true ? 'var(--primary-light, #eef2ff)' : 'var(--surface)', cursor: 'pointer', flex: 1, fontSize: '0.88rem', fontWeight: 600 }}>
+                          <input type="radio" checked={hasLabo !== true} onChange={() => { setHasLabo(false); setLaboAction(null); }} style={{ accentColor: 'var(--primary)' }} />
+                          Sans labo
                         </label>
-                        <label style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 16px', borderRadius: 10, border: `2px solid ${hasLabo === false ? 'var(--primary)' : 'var(--border)'}`, background: hasLabo === false ? 'var(--primary-light, #eef2ff)' : 'var(--surface)', cursor: 'pointer', flex: 1, fontWeight: 600, fontSize: '0.88rem' }}>
-                          <input type="radio" name="hasLaboDistinct" checked={hasLabo === false} onChange={() => { setHasLabo(false); setLaboAction(null); }} style={{ accentColor: 'var(--primary)' }} />
-                          📋 {t('client.labo.gestion_separee')}
+                        <label style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', borderRadius: 10, border: `2px solid ${hasLabo === true ? 'var(--primary)' : 'var(--border)'}`, background: hasLabo === true ? 'var(--primary-light, #eef2ff)' : 'var(--surface)', cursor: 'pointer', flex: 1, fontSize: '0.88rem', fontWeight: 600 }}>
+                          <input type="radio" checked={hasLabo === true} onChange={() => { setHasLabo(true); setLaboAction(null); setSelectedLaboId(''); }} style={{ accentColor: 'var(--primary)' }} />
+                          🏭 Avec labo
                         </label>
                       </div>
-                      {hasLabo === true && <LaboSelectOrCreate
-                        labos={labos}
-                        laboAction={laboAction}
-                        setLaboAction={setLaboAction}
-                        selectedLaboId={selectedLaboId}
-                        setSelectedLaboId={setSelectedLaboId}
-                        laboNom={laboNom}
-                        setLaboNom={setLaboNom}
-                        laboRefLabo={laboRefLabo}
-                        setLaboRefLabo={setLaboRefLabo}
-                        laboTel={laboTel}
-                        setLaboTel={setLaboTel}
-                        laboAdresse={laboAdresse}
-                        setLaboAdresse={setLaboAdresse}
-                        atLaboLimit={atLaboLimit}
-                        maxLabos={maxLabos}
-                      />}
+                      {hasLabo === true && (
+                        <LaboSelectOrCreate
+                          labos={labos}
+                          laboAction={laboAction}
+                          setLaboAction={setLaboAction}
+                          selectedLaboId={selectedLaboId}
+                          setSelectedLaboId={setSelectedLaboId}
+                          laboNom={laboNom} setLaboNom={setLaboNom}
+                          laboRefLabo={laboRefLabo} setLaboRefLabo={setLaboRefLabo}
+                          laboTel={laboTel} setLaboTel={setLaboTel}
+                          laboAdresse={laboAdresse} setLaboAdresse={setLaboAdresse}
+                          atLaboLimit={atLaboLimit}
+                          maxLabos={maxLabos}
+                        />
+                      )}
                     </div>
                   )}
-                </>
+                </div>
               )}
 
-              {error && <p className="form-error">{error}</p>}
+              {/* ── STEP 2: Franchise labo ── */}
+              {wizardStep === 2 && isFranchise && !editingId && !isDuplicate && (
+                <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                  <p style={{ margin: 0, fontSize: '0.88rem', color: 'var(--text-muted)' }}>
+                    Le réseau <strong>{franchiseName}</strong> sera-t-il approvisionné par un laboratoire central ?
+                  </p>
+                  <div style={{ display: 'flex', gap: 10 }}>
+                    <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '14px 16px', borderRadius: 12, border: `2px solid ${hasLabo === true ? 'var(--primary)' : 'var(--border)'}`, background: hasLabo === true ? 'var(--primary-light, #eef2ff)' : 'var(--surface)', cursor: 'pointer', flex: 1 }}>
+                      <input type="radio" checked={hasLabo === true} onChange={() => { setHasLabo(true); setLaboAction(null); setSelectedLaboId(''); }} style={{ accentColor: 'var(--primary)', marginTop: 3 }} />
+                      <div>
+                        <div style={{ fontWeight: 700, fontSize: '0.9rem' }}>🏭 Avec labo</div>
+                        <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: 2 }}>Un labo central approvisionne toutes les franchises</div>
+                      </div>
+                    </label>
+                    <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '14px 16px', borderRadius: 12, border: `2px solid ${hasLabo === false ? 'var(--primary)' : 'var(--border)'}`, background: hasLabo === false ? 'var(--primary-light, #eef2ff)' : 'var(--surface)', cursor: 'pointer', flex: 1 }}>
+                      <input type="radio" checked={hasLabo === false} onChange={() => { setHasLabo(false); setLaboAction(null); }} style={{ accentColor: 'var(--primary)', marginTop: 3 }} />
+                      <div>
+                        <div style={{ fontWeight: 700, fontSize: '0.9rem' }}>📋 Sans labo</div>
+                        <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: 2 }}>Gestion des ingrédients par activité</div>
+                      </div>
+                    </label>
+                  </div>
+                  {hasLabo === true && (
+                    <LaboSelectOrCreate
+                      labos={labos}
+                      laboAction={laboAction}
+                      setLaboAction={setLaboAction}
+                      selectedLaboId={selectedLaboId}
+                      setSelectedLaboId={setSelectedLaboId}
+                      laboNom={laboNom} setLaboNom={setLaboNom}
+                      laboRefLabo={laboRefLabo} setLaboRefLabo={setLaboRefLabo}
+                      laboTel={laboTel} setLaboTel={setLaboTel}
+                      laboAdresse={laboAdresse} setLaboAdresse={setLaboAdresse}
+                      atLaboLimit={atLaboLimit}
+                      maxLabos={maxLabos}
+                    />
+                  )}
+                </div>
+              )}
 
+              {/* ── STEP 3: Per-activity details ── */}
+              {wizardStep === 3 && isFranchise && !editingId && !isDuplicate && (
+                <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                  {/* Progress bar */}
+                  {franchiseCount > 2 && (
+                    <div style={{ display: 'flex', gap: 3, marginBottom: 2 }}>
+                      {Array.from({ length: franchiseCount }, (_, i) => (
+                        <div key={i} style={{ flex: 1, height: 4, borderRadius: 4, background: i < franchiseStep ? '#22c55e' : i === franchiseStep ? 'var(--primary)' : '#e5e7eb' }} />
+                      ))}
+                    </div>
+                  )}
+                  <div className="form-field" style={{ marginBottom: 0 }}>
+                    <label style={{ fontWeight: 400, color: 'var(--text-muted)', fontSize: '0.78rem' }}>Nom de l'activité</label>
+                    <input
+                      type="text"
+                      value={`${franchiseName.trim()} ${franchiseStep + 1}`}
+                      disabled
+                      style={{ background: '#f8fafc', color: 'var(--text-muted)' }}
+                    />
+                  </div>
+                  <div className="form-field" style={{ marginBottom: 0 }}>
+                    <label style={{ fontWeight: 600 }}>
+                      {t('client.entreprise.activity_telephone')} *{' '}
+                      <span style={{ fontWeight: 400, color: 'var(--text-muted)', fontSize: '0.78rem' }}>{t('validation.phone_hint')}</span>
+                    </label>
+                    <input
+                      type="text"
+                      placeholder={t('validation.phone_placeholder')}
+                      value={franchiseForms[franchiseStep]?.telephone ?? ''}
+                      onChange={(e) => updateFranchiseForm('telephone', e.target.value)}
+                      autoFocus
+                    />
+                  </div>
+                  <div className="form-field" style={{ marginBottom: 0 }}>
+                    <label style={{ fontWeight: 600 }}>{t('client.entreprise.activity_adresse')} *</label>
+                    <textarea
+                      value={franchiseForms[franchiseStep]?.adresse ?? ''}
+                      onChange={(e) => updateFranchiseForm('adresse', e.target.value)}
+                      rows={2}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {error && (
+                <p style={{ margin: '0 20px 12px', color: 'var(--danger, #ef4444)', fontSize: '0.82rem', fontWeight: 500 }}>
+                  ⚠ {error}
+                </p>
+              )}
+
+              {/* Footer */}
               <div className="modal-footer">
-                <button type="button" className="btn btn-secondary" onClick={closeForm}>{t('common.cancel')}</button>
-
-                {/* Franchise wizard navigation */}
-                {isFranchise && !editingId && !isDuplicate ? (
-                  <>
-                    {franchiseUnlocked && franchiseStep > 0 && (
-                      <button type="button" className="btn btn-secondary" onClick={() => { setFranchiseStep((s) => s - 1); setError(''); }}>
-                        {t('client.entreprise.previous')}
-                      </button>
-                    )}
-                    {franchiseUnlocked && franchiseStep < franchiseCount - 1 ? (
-                      <button type="button" className="btn btn-primary" onClick={handleFranchiseNext} disabled={saving}>
-                        {t('client.entreprise.next')}
-                      </button>
-                    ) : (() => {
-                      const laboReady = hasLabo === false || (hasLabo === true && laboAction !== null && (laboAction === 'select' ? !!selectedLaboId : true));
-                      return (
-                        <button type="button" className="btn btn-primary" onClick={franchiseUnlocked && laboReady ? handleFranchiseSave : undefined} disabled={saving || !franchiseUnlocked || hasLabo === null || !laboReady}>
-                          {saving ? t('common.loading') : t('common.save')}
-                        </button>
-                      );
-                    })()}
-                  </>
+                {/* Left: Cancel or Back */}
+                {wizardStep <= 1 ? (
+                  <button type="button" className="btn btn-secondary" onClick={closeForm}>
+                    {t('common.cancel')}
+                  </button>
+                ) : wizardStep === 2 ? (
+                  <button type="button" className="btn btn-secondary" onClick={() => { setWizardStep(1); setError(''); }}>
+                    ‹ {t('client.entreprise.previous')}
+                  </button>
                 ) : (
-                  <button type="submit" className="btn btn-primary" disabled={saving || (memeActivite === null && !editingId && !isDuplicate) || distinctNameConflict}>
+                  <button type="button" className="btn btn-secondary" onClick={handleActivityBack}>
+                    ‹ {t('client.entreprise.previous')}
+                  </button>
+                )}
+
+                {/* Right: Forward or Save */}
+                {wizardStep === 0 ? null
+                  : wizardStep === 1 && isFranchise && !editingId && !isDuplicate ? (
+                  <button type="button" className="btn btn-primary" onClick={handleFranchiseSetupNext}>
+                    Suivant ›
+                  </button>
+                ) : wizardStep === 1 ? (
+                  <button
+                    type="submit"
+                    className="btn btn-primary"
+                    disabled={saving || distinctNameConflict || !form.nom.trim()}
+                  >
+                    {saving ? t('common.loading') : t('common.save')}
+                  </button>
+                ) : wizardStep === 2 ? (
+                  <button type="button" className="btn btn-primary" onClick={handleLaboStepNext} disabled={hasLabo === null}>
+                    Suivant ›
+                  </button>
+                ) : franchiseStep < franchiseCount - 1 ? (
+                  <button type="button" className="btn btn-primary" onClick={handleFranchiseNext} disabled={saving}>
+                    Suivant ›{' '}
+                    <span style={{ opacity: 0.7, fontSize: '0.78rem' }}>({franchiseStep + 1}/{franchiseCount})</span>
+                  </button>
+                ) : (
+                  <button type="button" className="btn btn-primary" onClick={handleFranchiseSave} disabled={saving}>
                     {saving ? t('common.loading') : t('common.save')}
                   </button>
                 )}
