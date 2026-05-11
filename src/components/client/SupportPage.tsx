@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import api from '../../api/client';
 import type { SupportDemande, DomaineActivite } from '../../types';
 
@@ -8,13 +8,34 @@ const TYPE_LABELS: Record<string, { label: string; icon: string; desc: string }>
   aide:                { label: 'Besoin d\'aide',       icon: '💬', desc: 'Nous décrire votre besoin ou signaler un problème' },
 };
 
-const STATUT: Record<string, { label: string; bg: string; text: string }> = {
-  en_attente: { label: 'En attente',  bg: '#fef3c7', text: '#92400e' },
-  validée:    { label: 'Validée',     bg: '#dcfce7', text: '#166534' },
-  refusée:    { label: 'Refusée',     bg: '#fee2e2', text: '#991b1b' },
+const STATUT: Record<string, { label: string; bg: string; text: string; border: string }> = {
+  en_attente: { label: 'En attente', bg: '#fef3c7', text: '#92400e', border: '#f59e0b' },
+  validée:    { label: 'Validée',    bg: '#dcfce7', text: '#166534', border: '#22c55e' },
+  refusée:    { label: 'Refusée',    bg: '#fee2e2', text: '#991b1b', border: '#ef4444' },
 };
 
+const FILTERS = [
+  { key: 'all',        label: 'Toutes' },
+  { key: 'en_attente', label: 'En attente' },
+  { key: 'validée',    label: 'Validées' },
+  { key: 'refusée',    label: 'Refusées' },
+] as const;
+
+type FilterKey = typeof FILTERS[number]['key'];
+
 const fmtDate = (d: string) => new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });
+
+interface CatItem { id: number; nom: string }
+interface UniteItem { id: number; nom: string; symbole?: string }
+interface SupplPricing {
+  prixActiviteSup: number;
+  prixLaboSup: number;
+  prixGerantSup: number;
+  currentMensuel: number;
+  nbActivites: number;
+  nbLabos: number;
+  nbGerants: number;
+}
 
 export default function SupportPage() {
   const [demandes, setDemandes] = useState<SupportDemande[]>([]);
@@ -24,12 +45,18 @@ export default function SupportPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [filterStatut, setFilterStatut] = useState<FilterKey>('all');
+
+  // Reference data
   const [domaines, setDomaines] = useState<DomaineActivite[]>([]);
+  const [categories, setCategories] = useState<CatItem[]>([]);
+  const [unites, setUnites] = useState<UniteItem[]>([]);
+  const [supplPricing, setSupplPricing] = useState<SupplPricing | null>(null);
 
   // Ingredient form
   const [domaineId, setDomaineId] = useState('');
-  const [categorieNom, setCategorieNom] = useState('');
-  const [uniteNom, setUniteNom] = useState('');
+  const [categorieId, setCategorieId] = useState('');
+  const [uniteId, setUniteId] = useState('');
   const [nomIngredient, setNomIngredient] = useState('');
 
   // Supplement form
@@ -40,21 +67,25 @@ export default function SupportPage() {
   // Aide form
   const [description, setDescription] = useState('');
 
-  const fetchDemandes = async () => {
+  const fetchDemandes = useCallback(async () => {
     setLoading(true);
     try {
       const { data } = await api.get('/api/abonnements/support');
       setDemandes(data);
     } finally { setLoading(false); }
-  };
+  }, []);
 
   useEffect(() => {
     fetchDemandes();
     api.get('/api/domaines').then(({ data }) => setDomaines(data)).catch(() => {});
-  }, []);
+    api.get('/api/categories').then(({ data }) => setCategories(data)).catch(() => {});
+    api.get('/api/unites').then(({ data }) => setUnites(data)).catch(() => {});
+    api.get('/api/abonnements/supplement-pricing').then(({ data }) => setSupplPricing(data)).catch(() => {});
+  }, [fetchDemandes]);
 
   const resetForm = () => {
-    setFormType(null); setDomaineId(''); setCategorieNom(''); setUniteNom(''); setNomIngredient('');
+    setFormType(null);
+    setDomaineId(''); setCategorieId(''); setUniteId(''); setNomIngredient('');
     setNbActivites(0); setNbLabos(0); setNbGerants(0); setDescription('');
     setError(null);
   };
@@ -67,7 +98,15 @@ export default function SupportPage() {
       let body: Record<string, unknown> = { type: formType };
       if (formType === 'ingredient_manquant') {
         if (!nomIngredient.trim()) { setError('Nom de l\'ingrédient requis'); setSaving(false); return; }
-        body = { ...body, domaineId: domaineId ? Number(domaineId) : null, categorieNom, uniteNom, nomIngredient: nomIngredient.trim() };
+        const cat = categories.find(c => String(c.id) === categorieId);
+        const uni = unites.find(u => String(u.id) === uniteId);
+        body = {
+          ...body,
+          domaineId: domaineId ? Number(domaineId) : null,
+          categorieNom: cat?.nom || '',
+          uniteNom: uni?.nom || '',
+          nomIngredient: nomIngredient.trim(),
+        };
       } else if (formType === 'supplement') {
         if (nbActivites + nbLabos + nbGerants === 0) { setError('Indiquez au moins un supplément'); setSaving(false); return; }
         body = { ...body, nbActivitesSupp: nbActivites, nbLabosSupp: nbLabos, nbGerantsSupp: nbGerants };
@@ -87,24 +126,60 @@ export default function SupportPage() {
     } finally { setSaving(false); }
   };
 
+  const filtered = filterStatut === 'all' ? demandes : demandes.filter(d => d.statut === filterStatut);
+  const pending = demandes.filter(d => d.statut === 'en_attente').length;
+
+  // Supplement live pricing
+  const supplTotal = supplPricing
+    ? (supplPricing.currentMensuel ?? 0)
+      + nbActivites * (supplPricing.prixActiviteSup ?? 0)
+      + nbLabos * (supplPricing.prixLaboSup ?? 0)
+      + nbGerants * (supplPricing.prixGerantSup ?? 0)
+    : null;
+  const supplDelta = supplPricing
+    ? nbActivites * (supplPricing.prixActiviteSup ?? 0)
+      + nbLabos * (supplPricing.prixLaboSup ?? 0)
+      + nbGerants * (supplPricing.prixGerantSup ?? 0)
+    : 0;
+
   return (
-    <div style={{ maxWidth: 760, margin: '0 auto', padding: '24px 16px' }}>
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
+    <div className="page">
+      {/* Hero */}
+      <div style={{
+        background: 'linear-gradient(135deg, #0f172a 0%, #1e3a5f 55%, #1e40af 100%)',
+        borderRadius: 18, padding: '24px 28px', marginBottom: 24,
+        boxShadow: '0 8px 32px rgba(30,64,175,0.25)',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16,
+      }}>
         <div>
-          <h1 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: '#0f172a', letterSpacing: '-0.02em' }}>💬 Support</h1>
-          <p style={{ margin: '4px 0 0', fontSize: 13, color: '#64748b' }}>Faites vos demandes — nous répondons sous 24h</p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+            <div style={{ background: 'rgba(255,255,255,0.15)', borderRadius: 10, padding: '7px 9px', fontSize: '1.2rem' }}>💬</div>
+            <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0 }}>Support</h1>
+          </div>
+          <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.85rem', margin: 0 }}>
+            Faites vos demandes — nous répondons sous 24h
+          </p>
         </div>
-        {!showForm && (
-          <button onClick={() => { resetForm(); setShowForm(true); }}
-            style={{ padding: '10px 22px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg,#4338ca,#6366f1)', color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer', boxShadow: '0 4px 12px rgba(99,102,241,0.3)' }}>
-            + Nouvelle demande
-          </button>
-        )}
+        <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+          {pending > 0 && (
+            <div style={{ background: '#fef3c7', borderRadius: 10, padding: '8px 16px', display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontSize: '1rem' }}>⏳</span>
+              <div>
+                <div style={{ fontSize: '0.75rem', color: '#92400e', fontWeight: 700 }}>{pending} en attente</div>
+              </div>
+            </div>
+          )}
+          {!showForm && (
+            <button onClick={() => { resetForm(); setShowForm(true); }}
+              style={{ padding: '10px 22px', borderRadius: 10, border: 'none', background: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(4px)', color: '#fff', fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer', border: '1px solid rgba(255,255,255,0.25)' } as React.CSSProperties}>
+              + Nouvelle demande
+            </button>
+          )}
+        </div>
       </div>
 
       {success && (
-        <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 10, padding: '12px 16px', marginBottom: 16, fontSize: 13, color: '#166534', fontWeight: 600 }}>
+        <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 10, padding: '12px 16px', marginBottom: 16, fontSize: '0.85rem', color: '#166534', fontWeight: 600 }}>
           ✓ {success}
         </div>
       )}
@@ -112,35 +187,36 @@ export default function SupportPage() {
       {/* New request form */}
       {showForm && (
         <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 16, padding: 24, marginBottom: 24, boxShadow: '0 4px 20px rgba(0,0,0,0.06)' }}>
-          <div style={{ fontSize: 15, fontWeight: 800, color: '#0f172a', marginBottom: 18 }}>Nouvelle demande</div>
+          <div style={{ fontSize: '0.95rem', fontWeight: 800, color: '#0f172a', marginBottom: 18 }}>Nouvelle demande</div>
 
-          {/* Type selection */}
           {!formType ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {Object.entries(TYPE_LABELS).map(([key, { label, icon, desc }]) => (
                 <button key={key} onClick={() => setFormType(key as SupportDemande['type'])}
-                  style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 18px', borderRadius: 12, border: '1.5px solid #e2e8f0', background: '#fff', cursor: 'pointer', textAlign: 'left', transition: 'all 0.15s' }}
+                  style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 18px', borderRadius: 12, border: '1.5px solid #e2e8f0', background: '#fff', cursor: 'pointer', textAlign: 'left' }}
                   onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#6366f1'; e.currentTarget.style.background = '#f5f3ff'; }}
                   onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.background = '#fff'; }}>
-                  <div style={{ width: 44, height: 44, borderRadius: 12, background: '#f5f3ff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, flexShrink: 0 }}>{icon}</div>
+                  <div style={{ width: 44, height: 44, borderRadius: 12, background: '#f5f3ff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.4rem', flexShrink: 0 }}>{icon}</div>
                   <div>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: '#0f172a' }}>{label}</div>
-                    <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>{desc}</div>
+                    <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#0f172a' }}>{label}</div>
+                    <div style={{ fontSize: '0.78rem', color: '#64748b', marginTop: 2 }}>{desc}</div>
                   </div>
-                  <span style={{ marginLeft: 'auto', color: '#94a3b8', fontSize: 16 }}>→</span>
+                  <span style={{ marginLeft: 'auto', color: '#94a3b8', fontSize: '1rem' }}>→</span>
                 </button>
               ))}
+              <button onClick={() => { resetForm(); setShowForm(false); }}
+                style={{ marginTop: 4, padding: '9px', borderRadius: 9, border: '1px solid #e2e8f0', background: '#fff', color: '#64748b', fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer' }}>
+                Annuler
+              </button>
             </div>
           ) : (
             <div>
-              {/* Back */}
-              <button onClick={() => setFormType(null)} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', color: '#6366f1', fontSize: 12, fontWeight: 600, cursor: 'pointer', marginBottom: 16, padding: 0 }}>
+              <button onClick={() => setFormType(null)} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', color: '#6366f1', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer', marginBottom: 16, padding: 0 }}>
                 ← Changer de type
               </button>
-
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18, padding: '10px 14px', background: '#f5f3ff', borderRadius: 10 }}>
-                <span style={{ fontSize: 20 }}>{TYPE_LABELS[formType].icon}</span>
-                <span style={{ fontSize: 13, fontWeight: 700, color: '#4c1d95' }}>{TYPE_LABELS[formType].label}</span>
+                <span style={{ fontSize: '1.25rem' }}>{TYPE_LABELS[formType].icon}</span>
+                <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#4c1d95' }}>{TYPE_LABELS[formType].label}</span>
               </div>
 
               {/* Ingredient form */}
@@ -156,11 +232,17 @@ export default function SupportPage() {
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                     <div>
                       <label style={lbl}>Catégorie</label>
-                      <input value={categorieNom} onChange={(e) => setCategorieNom(e.target.value)} placeholder="ex: Produits laitiers" style={inp} />
+                      <select value={categorieId} onChange={(e) => setCategorieId(e.target.value)} style={inp}>
+                        <option value="">— Sélectionner —</option>
+                        {categories.map((c) => <option key={c.id} value={c.id}>{c.nom}</option>)}
+                      </select>
                     </div>
                     <div>
                       <label style={lbl}>Unité</label>
-                      <input value={uniteNom} onChange={(e) => setUniteNom(e.target.value)} placeholder="ex: kg, L, pièce" style={inp} />
+                      <select value={uniteId} onChange={(e) => setUniteId(e.target.value)} style={inp}>
+                        <option value="">— Sélectionner —</option>
+                        {unites.map((u) => <option key={u.id} value={u.id}>{u.symbole ? `${u.nom} (${u.symbole})` : u.nom}</option>)}
+                      </select>
                     </div>
                   </div>
                   <div>
@@ -173,23 +255,45 @@ export default function SupportPage() {
               {/* Supplement form */}
               {formType === 'supplement' && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                  <p style={{ margin: '0 0 8px', fontSize: 13, color: '#374151' }}>Indiquez les suppléments souhaités. Votre demande sera examinée et un avenant vous sera envoyé.</p>
+                  {supplPricing && (
+                    <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 10, padding: '12px 16px', fontSize: '0.82rem', color: '#1e40af', marginBottom: 4 }}>
+                      Abonnement actuel : <strong>{supplPricing.currentMensuel} DT/mois</strong>
+                      {' '}({supplPricing.nbActivites} activité{supplPricing.nbActivites !== 1 ? 's' : ''}
+                      {supplPricing.nbLabos > 0 ? `, ${supplPricing.nbLabos} labo${supplPricing.nbLabos !== 1 ? 's' : ''}` : ''}
+                      {supplPricing.nbGerants > 0 ? `, ${supplPricing.nbGerants} gérant${supplPricing.nbGerants !== 1 ? 's' : ''}` : ''})
+                    </div>
+                  )}
                   {[
-                    { label: 'Activités supplémentaires', value: nbActivites, set: setNbActivites },
-                    { label: 'Labos supplémentaires', value: nbLabos, set: setNbLabos },
-                    { label: 'Gérants supplémentaires', value: nbGerants, set: setNbGerants },
-                  ].map(({ label, value, set }) => (
+                    { label: 'Activités supplémentaires', value: nbActivites, set: setNbActivites, prix: supplPricing?.prixActiviteSup },
+                    { label: 'Labos supplémentaires',     value: nbLabos,     set: setNbLabos,     prix: supplPricing?.prixLaboSup },
+                    { label: 'Gérants supplémentaires',   value: nbGerants,   set: setNbGerants,   prix: supplPricing?.prixGerantSup },
+                  ].map(({ label, value, set, prix }) => (
                     <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', background: '#f8fafc', borderRadius: 10, border: '1px solid #e2e8f0' }}>
-                      <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: '#374151' }}>{label}</span>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: '0.85rem', fontWeight: 600, color: '#374151' }}>{label}</div>
+                        {prix != null && <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: 2 }}>{prix} DT / unité / mois</div>}
+                      </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                         <button onClick={() => set(Math.max(0, value - 1))} disabled={value === 0}
-                          style={{ width: 28, height: 28, borderRadius: '50%', border: '1.5px solid #e2e8f0', background: value === 0 ? '#f8fafc' : '#f1f5f9', color: value === 0 ? '#cbd5e1' : '#334155', fontSize: 16, cursor: value === 0 ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>−</button>
-                        <span style={{ fontSize: 18, fontWeight: 800, color: '#0f172a', minWidth: 20, textAlign: 'center' }}>{value}</span>
+                          style={{ width: 30, height: 30, borderRadius: '50%', border: '1.5px solid #e2e8f0', background: value === 0 ? '#f8fafc' : '#f1f5f9', color: value === 0 ? '#cbd5e1' : '#334155', fontSize: '1rem', cursor: value === 0 ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>−</button>
+                        <span style={{ fontSize: '1.1rem', fontWeight: 800, color: '#0f172a', minWidth: 24, textAlign: 'center' }}>{value}</span>
                         <button onClick={() => set(value + 1)}
-                          style={{ width: 28, height: 28, borderRadius: '50%', border: '1.5px solid #6366f1', background: '#6366f1', color: '#fff', fontSize: 16, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+</button>
+                          style={{ width: 30, height: 30, borderRadius: '50%', border: '1.5px solid #4338ca', background: '#4338ca', color: '#fff', fontSize: '1rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+</button>
                       </div>
+                      {value > 0 && prix != null && (
+                        <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#4338ca', minWidth: 60, textAlign: 'right' }}>+{(value * prix).toFixed(0)} DT</span>
+                      )}
                     </div>
                   ))}
+                  {supplDelta > 0 && supplPricing && (
+                    <div style={{ background: 'linear-gradient(135deg,#f5f3ff,#ede9fe)', border: '1px solid #ddd6fe', borderRadius: 12, padding: '14px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div>
+                        <div style={{ fontSize: '0.78rem', color: '#6d28d9', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Nouveau total estimé</div>
+                        <div style={{ fontSize: '0.78rem', color: '#7c3aed', marginTop: 2 }}>+{supplDelta.toFixed(0)} DT/mois de plus</div>
+                      </div>
+                      <div style={{ fontSize: '1.6rem', fontWeight: 900, color: '#4c1d95' }}>{supplTotal?.toFixed(0)} DT<span style={{ fontSize: '0.8rem', fontWeight: 500, color: '#7c3aed' }}>/mois</span></div>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -203,15 +307,15 @@ export default function SupportPage() {
                 </div>
               )}
 
-              {error && <div style={{ background: '#fee2e2', border: '1px solid #fecaca', borderRadius: 8, padding: '10px 14px', fontSize: 12, color: '#dc2626', marginTop: 10 }}>{error}</div>}
+              {error && <div style={{ background: '#fee2e2', border: '1px solid #fecaca', borderRadius: 8, padding: '10px 14px', fontSize: '0.8rem', color: '#dc2626', marginTop: 10 }}>{error}</div>}
 
               <div style={{ display: 'flex', gap: 10, marginTop: 18 }}>
                 <button onClick={() => { resetForm(); setShowForm(false); }}
-                  style={{ flex: 1, padding: '10px', borderRadius: 9, border: '1px solid #e2e8f0', background: '#fff', color: '#374151', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                  style={{ flex: 1, padding: '10px', borderRadius: 9, border: '1px solid #e2e8f0', background: '#fff', color: '#374151', fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer' }}>
                   Annuler
                 </button>
                 <button onClick={handleSubmit} disabled={saving}
-                  style={{ flex: 2, padding: '10px', borderRadius: 9, border: 'none', background: saving ? '#e5e7eb' : 'linear-gradient(135deg,#4338ca,#6366f1)', color: saving ? '#9ca3af' : '#fff', fontSize: 13, fontWeight: 700, cursor: saving ? 'default' : 'pointer' }}>
+                  style={{ flex: 2, padding: '10px', borderRadius: 9, border: 'none', background: saving ? '#e5e7eb' : 'linear-gradient(135deg,#1e3a5f,#1e40af)', color: saving ? '#9ca3af' : '#fff', fontSize: '0.85rem', fontWeight: 700, cursor: saving ? 'default' : 'pointer' }}>
                   {saving ? 'Envoi…' : 'Envoyer la demande'}
                 </button>
               </div>
@@ -220,40 +324,58 @@ export default function SupportPage() {
         </div>
       )}
 
+      {/* Filter bar */}
+      {!showForm && demandes.length > 0 && (
+        <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
+          {FILTERS.map(({ key, label }) => {
+            const count = key === 'all' ? demandes.length : demandes.filter(d => d.statut === key).length;
+            const active = filterStatut === key;
+            return (
+              <button key={key} onClick={() => setFilterStatut(key)}
+                style={{ padding: '6px 14px', borderRadius: 20, border: `1.5px solid ${active ? '#1e40af' : '#e2e8f0'}`, background: active ? '#1e40af' : '#fff', color: active ? '#fff' : '#374151', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer' }}>
+                {label} {count > 0 && <span style={{ opacity: 0.75 }}>({count})</span>}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
       {/* Demandes list */}
       {loading ? (
-        <div style={{ textAlign: 'center', padding: 40, color: '#94a3b8', fontSize: 13 }}>Chargement…</div>
+        <div style={{ textAlign: 'center', padding: 40, color: '#94a3b8', fontSize: '0.88rem' }}>Chargement…</div>
       ) : demandes.length === 0 ? (
         <div style={{ textAlign: 'center', padding: 48, background: '#f8fafc', borderRadius: 16, border: '1px dashed #e2e8f0' }}>
-          <div style={{ fontSize: 40, marginBottom: 12 }}>💬</div>
-          <div style={{ fontSize: 14, fontWeight: 700, color: '#374151', marginBottom: 6 }}>Aucune demande pour le moment</div>
-          <div style={{ fontSize: 13, color: '#94a3b8' }}>Cliquez sur "Nouvelle demande" pour nous contacter.</div>
+          <div style={{ fontSize: '2.5rem', marginBottom: 12 }}>💬</div>
+          <div style={{ fontSize: '0.9rem', fontWeight: 700, color: '#374151', marginBottom: 6 }}>Aucune demande pour le moment</div>
+          <div style={{ fontSize: '0.82rem', color: '#94a3b8' }}>Cliquez sur "Nouvelle demande" pour nous contacter.</div>
         </div>
+      ) : filtered.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: 32, color: '#94a3b8', fontSize: '0.85rem' }}>Aucune demande dans cette catégorie.</div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {demandes.map((d) => {
+          {filtered.map((d) => {
             const s = STATUT[d.statut] || STATUT.en_attente;
             const t = TYPE_LABELS[d.type];
             return (
-              <div key={d.id} style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 14, padding: '16px 18px', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: d.notesAdmin ? 10 : 0 }}>
-                  <span style={{ fontSize: 20 }}>{t.icon}</span>
+              <div key={d.id} style={{ background: '#fff', border: `1px solid #e2e8f0`, borderLeft: `4px solid ${s.border}`, borderRadius: 14, padding: '16px 18px', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+                  <span style={{ fontSize: '1.25rem' }}>{t.icon}</span>
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: '#0f172a' }}>{t.label}</div>
-                    <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 1 }}>{fmtDate(d.createdAt)}</div>
+                    <div style={{ fontSize: '0.88rem', fontWeight: 700, color: '#0f172a' }}>{t.label}</div>
+                    <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: 1 }}>{fmtDate(d.createdAt)}</div>
                   </div>
-                  <span style={{ fontSize: 11, fontWeight: 700, padding: '4px 12px', borderRadius: 20, background: s.bg, color: s.text }}>{s.label}</span>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 700, padding: '4px 12px', borderRadius: 20, background: s.bg, color: s.text }}>{s.label}</span>
                 </div>
-                {/* Details */}
-                <div style={{ fontSize: 12, color: '#374151', marginTop: 8 }}>
+                <div style={{ fontSize: '0.82rem', color: '#374151' }}>
                   {d.type === 'ingredient_manquant' && d.nomIngredient && (
                     <span>🥕 <strong>{d.nomIngredient}</strong>{d.categorieNom ? ` · ${d.categorieNom}` : ''}{d.uniteNom ? ` · ${d.uniteNom}` : ''}</span>
                   )}
                   {d.type === 'supplement' && (
                     <span>
-                      {[d.nbActivitesSupp && `+${d.nbActivitesSupp} activité${(d.nbActivitesSupp||0) > 1?'s':''}`,
-                        d.nbLabosSupp && `+${d.nbLabosSupp} labo${(d.nbLabosSupp||0) > 1?'s':''}`,
-                        d.nbGerantsSupp && `+${d.nbGerantsSupp} gérant${(d.nbGerantsSupp||0) > 1?'s':''}`
+                      {[
+                        d.nbActivitesSupp && `+${d.nbActivitesSupp} activité${(d.nbActivitesSupp || 0) > 1 ? 's' : ''}`,
+                        d.nbLabosSupp && `+${d.nbLabosSupp} labo${(d.nbLabosSupp || 0) > 1 ? 's' : ''}`,
+                        d.nbGerantsSupp && `+${d.nbGerantsSupp} gérant${(d.nbGerantsSupp || 0) > 1 ? 's' : ''}`,
                       ].filter(Boolean).join(' · ')}
                     </span>
                   )}
@@ -262,10 +384,10 @@ export default function SupportPage() {
                   )}
                 </div>
                 {d.notesAdmin && (
-                  <div style={{ marginTop: 10, background: '#f8fafc', borderRadius: 8, padding: '10px 12px', borderLeft: '3px solid #6366f1' }}>
-                    <div style={{ fontSize: 10, fontWeight: 700, color: '#6366f1', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 4 }}>Réponse de l'administration</div>
-                    <div style={{ fontSize: 12, color: '#374151' }}>{d.notesAdmin}</div>
-                    {d.traiteLe && <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 4 }}>Le {fmtDate(d.traiteLe)}</div>}
+                  <div style={{ marginTop: 10, background: '#f8fafc', borderRadius: 8, padding: '10px 12px', borderLeft: '3px solid #4338ca' }}>
+                    <div style={{ fontSize: '0.7rem', fontWeight: 700, color: '#4338ca', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 4 }}>Réponse de l'administration</div>
+                    <div style={{ fontSize: '0.82rem', color: '#374151' }}>{d.notesAdmin}</div>
+                    {d.traiteLe && <div style={{ fontSize: '0.72rem', color: '#94a3b8', marginTop: 4 }}>Le {fmtDate(d.traiteLe)}</div>}
                   </div>
                 )}
               </div>
@@ -277,5 +399,5 @@ export default function SupportPage() {
   );
 }
 
-const lbl: React.CSSProperties = { fontSize: 11, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.04em' };
-const inp: React.CSSProperties = { width: '100%', padding: '9px 12px', borderRadius: 8, border: '1.5px solid #e2e8f0', fontSize: 13, color: '#0f172a', outline: 'none', boxSizing: 'border-box', background: '#fff' };
+const lbl: React.CSSProperties = { fontSize: '0.72rem', fontWeight: 600, color: '#374151', display: 'block', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.04em' };
+const inp: React.CSSProperties = { width: '100%', padding: '9px 12px', borderRadius: 8, border: '1.5px solid #e2e8f0', fontSize: '0.85rem', color: '#0f172a', outline: 'none', boxSizing: 'border-box', background: '#fff' };

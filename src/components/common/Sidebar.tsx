@@ -533,7 +533,6 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                   <SubNavLink to="/admin/abonnements/paiements" icon="💰" label="Hist. paiements" isActive={location.pathname === '/admin/abonnements/paiements'} onClick={onClose} />
                   <SubNavLink to="/admin/abonnements/promotions" icon="🎁" label="Hist. promotions" isActive={location.pathname === '/admin/abonnements/promotions'} onClick={onClose} />
                   <SubNavLink to="/admin/tarifs" icon="⚙️" label="Tarifs" isActive={location.pathname === '/admin/tarifs'} onClick={onClose} />
-                  <SubNavLink to="/admin/demandes" icon="📨" label="Demandes" isActive={location.pathname === '/admin/demandes'} onClick={onClose} />
                   <SubNavLink to="/admin/support" icon="💬" label="Support" isActive={location.pathname === '/admin/support'} onClick={onClose} />
                 </>
               )}

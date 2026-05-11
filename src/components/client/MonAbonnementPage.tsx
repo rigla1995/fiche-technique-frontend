@@ -1,56 +1,44 @@
 import { useState, useEffect, useCallback } from 'react';
 import api from '../../api/client';
-import type { Abonnement, Demande } from '../../types';
+import type { Abonnement } from '../../types';
 import { useAuth } from '../../context/AuthContext';
 
-const MODE_INFO: Record<string, { label: string; color: string; desc: string }> = {
-  actif:     { label: 'Actif',         color: '#16a34a', desc: 'Votre compte est pleinement opérationnel.' },
-  read_only: { label: 'Lecture seule', color: '#d97706', desc: 'Paiement en attente — création et modification bloquées.' },
-  desactive: { label: 'Suspendu',      color: '#dc2626', desc: 'Compte suspendu. Contactez l\'administrateur.' },
-  archive:   { label: 'Archivé',       color: '#6b7280', desc: 'Compte archivé suite à non-paiement.' },
+const MODE_INFO: Record<string, { label: string; color: string; bg: string; icon: string; desc: string }> = {
+  actif:     { label: 'Actif',         color: '#16a34a', bg: '#dcfce7', icon: '✅', desc: 'Votre compte est pleinement opérationnel.' },
+  read_only: { label: 'Lecture seule', color: '#d97706', bg: '#fef3c7', icon: '⚠️', desc: 'Paiement en attente — création et modification bloquées.' },
+  desactive: { label: 'Suspendu',      color: '#dc2626', bg: '#fee2e2', icon: '🚫', desc: 'Compte suspendu. Contactez l\'administrateur.' },
+  archive:   { label: 'Archivé',       color: '#6b7280', bg: '#f3f4f6', icon: '📦', desc: 'Compte archivé suite à non-paiement.' },
 };
 
 const STATUT_COLORS: Record<string, string> = {
-  payé:       '#16a34a',
-  impayé:     '#dc2626',
-  en_attente: '#d97706',
-  remisé:     '#7c3aed',
-  gratuit:    '#16a34a',
+  payé: '#16a34a', impayé: '#dc2626', en_attente: '#d97706', remisé: '#7c3aed', gratuit: '#16a34a',
 };
-
 const STATUT_LABELS: Record<string, string> = {
-  payé:       'Payé',
-  impayé:     'Impayé',
-  en_attente: 'En attente',
-  remisé:     'Remisé',
-  gratuit:    'Gratuit',
+  payé: 'Payé', impayé: 'Impayé', en_attente: 'En attente', remisé: 'Remisé', gratuit: 'Gratuit',
 };
 
 const fmtDate = (d: string) => d ? new Date(d).toLocaleDateString('fr-FR') : '—';
 const fmtMois = (d: string) => d ? new Date(d).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' }) : '—';
 
+interface ConfigBreakdown {
+  activite: { nb: number; total: number };
+  labo:     { nb: number; total: number };
+  gerant:   { nb: number; total: number };
+  prixActiviteSup: number;
+  prixLaboSup: number;
+  prixGerantSup: number;
+}
+
 export default function MonAbonnementPage() {
   const { user } = useAuth();
   const isIndep = user?.compteType === 'independant';
   const [abo, setAbo] = useState<Abonnement | null>(null);
-  const [demandes, setDemandes] = useState<Demande[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showDemandeForm, setShowDemandeForm] = useState(false);
-  const [demandeType, setDemandeType] = useState<'gerant_sup' | 'labo_sup' | 'upgrade_entreprise'>('gerant_sup');
-  const [showUpgradeForm, setShowUpgradeForm] = useState(false);
-  const [upgradeNotes, setUpgradeNotes] = useState('');
-  const [submittingUpgrade, setSubmittingUpgrade] = useState(false);
-  const [demandeNotes, setDemandeNotes] = useState('');
-  const [submitting, setSubmitting] = useState(false);
 
   const fetchAll = useCallback(async () => {
     try {
-      const [aboRes, demandesRes] = await Promise.all([
-        api.get('/api/abonnements/mon-abonnement'),
-        api.get('/api/abonnements/demandes'),
-      ]);
+      const aboRes = await api.get('/api/abonnements/mon-abonnement');
       setAbo(aboRes.data);
-      setDemandes(demandesRes.data);
     } finally {
       setLoading(false);
     }
@@ -58,292 +46,197 @@ export default function MonAbonnementPage() {
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
-  // Auto-refresh on tab focus when there's a pending upgrade demande
   useEffect(() => {
-    const onVisibility = () => {
-      if (document.visibilityState === 'visible') fetchAll();
-    };
+    const onVisibility = () => { if (document.visibilityState === 'visible') fetchAll(); };
     document.addEventListener('visibilitychange', onVisibility);
     return () => document.removeEventListener('visibilitychange', onVisibility);
   }, [fetchAll]);
 
-  const submitDemande = async () => {
-    setSubmitting(true);
-    try {
-      await api.post('/api/abonnements/demandes', { typeDemande: demandeType, notes: demandeNotes || undefined });
-      const res = await api.get('/api/abonnements/demandes');
-      setDemandes(res.data);
-      setShowDemandeForm(false);
-      setDemandeNotes('');
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const submitUpgrade = async () => {
-    setSubmittingUpgrade(true);
-    try {
-      await api.post('/api/abonnements/demandes', { typeDemande: 'upgrade_entreprise', notes: upgradeNotes || undefined });
-      const res = await api.get('/api/abonnements/demandes');
-      setDemandes(res.data);
-      setShowUpgradeForm(false);
-      setUpgradeNotes('');
-    } finally {
-      setSubmittingUpgrade(false);
-    }
-  };
-
-  const upgradeDemandeExistante = demandes.find((d) => d.typeDemande === 'upgrade_entreprise');
-
-  if (loading) return <div style={{ padding: 32, textAlign: 'center', color: '#9ca3af' }}>Chargement...</div>;
-  if (!abo) return <div style={{ padding: 32, textAlign: 'center', color: '#9ca3af' }}>Abonnement introuvable</div>;
+  if (loading) return <div style={{ padding: 40, textAlign: 'center', color: '#9ca3af' }}>Chargement…</div>;
+  if (!abo) return <div style={{ padding: 40, textAlign: 'center', color: '#9ca3af' }}>Abonnement introuvable</div>;
 
   const mode = MODE_INFO[abo.modeCompte] || MODE_INFO.actif;
+  const pricing = abo.pricing;
+  const config = abo.config;
+  const breakdown = pricing?.configBreakdown as ConfigBreakdown | undefined;
+  const effectifMensuel = pricing?.effectifMensuel ?? pricing?.baseMensuel;
 
   return (
-    <div style={{ maxWidth: 800, margin: '0 auto', padding: 24 }}>
-      <h1 style={{ fontSize: 22, fontWeight: 700, color: '#111827', marginBottom: 24 }}>Mon abonnement</h1>
-
-      {/* Upgrade banner (indép only) */}
-      {isIndep && (
-        <div style={{
-          background: 'linear-gradient(135deg, #eff6ff, #dbeafe)',
-          border: '1px solid #93c5fd',
-          borderRadius: 14, padding: 20, marginBottom: 20,
-        }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
-            <div>
-              <div style={{ fontSize: 15, fontWeight: 700, color: '#1e40af' }}>Passer en compte Entreprise</div>
-              <div style={{ fontSize: 13, color: '#3b82f6', marginTop: 4 }}>
-                Gérez plusieurs activités, labos et gérants sous un seul compte.
-              </div>
-            </div>
-            {upgradeDemandeExistante ? (
-              <span style={{
-                fontSize: 13, fontWeight: 600, padding: '6px 16px', borderRadius: 10,
-                background: upgradeDemandeExistante.statut === 'validée' ? '#dcfce7' : upgradeDemandeExistante.statut === 'refusée' ? '#fee2e2' : '#fef9c3',
-                color: upgradeDemandeExistante.statut === 'validée' ? '#166534' : upgradeDemandeExistante.statut === 'refusée' ? '#991b1b' : '#854d0e',
-              }}>
-                Demande {upgradeDemandeExistante.statut}
-              </span>
-            ) : (
-              <button onClick={() => setShowUpgradeForm(!showUpgradeForm)}
-                style={{ padding: '8px 18px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
-                Demander l'upgrade
-              </button>
-            )}
-          </div>
-          {showUpgradeForm && (
-            <div style={{ marginTop: 16, display: 'flex', gap: 10, alignItems: 'flex-end', flexWrap: 'wrap' }}>
-              <div style={{ flex: 1 }}>
-                <label style={{ fontSize: 12, color: '#374151', display: 'block', marginBottom: 4 }}>Message (optionnel)</label>
-                <input value={upgradeNotes} onChange={(e) => setUpgradeNotes(e.target.value)}
-                  placeholder="Décrivez votre activité, vos besoins..."
-                  style={{ width: '100%', padding: '7px 10px', borderRadius: 6, border: '1px solid #93c5fd', fontSize: 13 }} />
-              </div>
-              <button onClick={submitUpgrade} disabled={submittingUpgrade}
-                style={{ padding: '7px 18px', background: '#16a34a', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>
-                {submittingUpgrade ? '...' : 'Envoyer'}
-              </button>
-              <button onClick={() => setShowUpgradeForm(false)}
-                style={{ padding: '7px 12px', background: '#f3f4f6', color: '#374151', border: 'none', borderRadius: 8, fontSize: 13, cursor: 'pointer' }}>
-                Annuler
-              </button>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Status card */}
+    <div className="page">
+      {/* Hero */}
       <div style={{
-        background: `linear-gradient(135deg, ${mode.color}15, ${mode.color}05)`,
-        border: `1px solid ${mode.color}40`,
-        borderRadius: 14, padding: 24, marginBottom: 20,
-        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        background: 'linear-gradient(135deg, #1e1b4b 0%, #4338ca 55%, #6366f1 100%)',
+        borderRadius: 18, padding: '24px 28px', marginBottom: 24,
+        boxShadow: '0 8px 32px rgba(67,56,202,0.28)',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16,
       }}>
         <div>
-          <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 4 }}>
-            {abo.compteType === 'independant' ? 'Compte Indépendant' : 'Compte Entreprise'} — depuis {fmtDate(abo.dateDebut)}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+            <div style={{ background: 'rgba(255,255,255,0.2)', borderRadius: 10, padding: '7px 9px', fontSize: '1.2rem' }}>💳</div>
+            <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0 }}>Mon Abonnement</h1>
           </div>
-          <div style={{ fontSize: 24, fontWeight: 800, color: mode.color }}>{mode.label}</div>
-          <div style={{ fontSize: 13, color: '#6b7280', marginTop: 4 }}>{mode.desc}</div>
-          {abo.prolongationJours > 0 && (
-            <div style={{ fontSize: 12, color: '#7c3aed', marginTop: 6 }}>
-              ✚ Prolongation accordée : {abo.prolongationJours} jour(s)
-            </div>
-          )}
+          <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.85rem', margin: 0 }}>
+            {isIndep ? 'Compte Indépendant' : 'Compte Entreprise'} — depuis {fmtDate(abo.dateDebut)}
+          </p>
         </div>
-        <div style={{ textAlign: 'right' }}>
-          <div style={{ fontSize: 12, color: '#9ca3af', marginBottom: 4 }}>Onboarding</div>
-          <span style={{
-            fontSize: 13, fontWeight: 600, padding: '4px 12px', borderRadius: 12,
-            background: abo.statutOnboarding === 'payé' ? '#dcfce7' : abo.statutOnboarding === 'offert' ? '#ede9fe' : '#fee2e2',
-            color: abo.statutOnboarding === 'payé' ? '#166534' : abo.statutOnboarding === 'offert' ? '#6d28d9' : '#991b1b',
-          }}>
-            {abo.statutOnboarding} {abo.montantOnboarding ? `(${abo.montantOnboarding} DT)` : ''}
-          </span>
+        <div style={{ background: mode.bg, borderRadius: 12, padding: '10px 20px', display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span style={{ fontSize: '1.3rem' }}>{mode.icon}</span>
+          <div>
+            <div style={{ fontSize: '0.78rem', color: '#374151', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{mode.label}</div>
+            <div style={{ fontSize: '0.72rem', color: '#6b7280' }}>{mode.desc}</div>
+          </div>
         </div>
       </div>
 
-      {/* Pricing card */}
-      {abo.pricing && (
-        <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #e5e7eb', padding: 20, marginBottom: 20 }}>
-          <h3 style={{ margin: '0 0 14px', fontSize: 15, fontWeight: 700, color: '#111827' }}>Tarification</h3>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            {/* Mensualité */}
-            {(() => {
-              const p = abo.pricing!;
-              const promo = p.activePromoMensuel;
-              const priceChanged = promo && p.effectifMensuel !== p.baseMensuel;
-              return (
-                <div style={{ background: '#f9fafb', borderRadius: 8, padding: '12px 16px', border: '1px solid #e5e7eb' }}>
-                  <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 6 }}>Mensualité</div>
-                  {priceChanged && p.baseMensuel != null && (
-                    <div style={{ fontSize: 13, color: '#9ca3af', textDecoration: 'line-through', marginBottom: 2 }}>
-                      {p.baseMensuel} DT/mois
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 20, marginBottom: 24 }}>
+        {/* Config card */}
+        {config && (
+          <div style={{ background: '#fff', borderRadius: 16, border: '1px solid #e5e7eb', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
+            <div style={{ background: 'linear-gradient(135deg, #f5f3ff, #ede9fe)', padding: '16px 20px', borderBottom: '1px solid #ddd6fe' }}>
+              <div style={{ fontWeight: 800, fontSize: '0.9rem', color: '#4c1d95', display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span>⚙️</span> Votre configuration
+              </div>
+            </div>
+            <div style={{ padding: '16px 20px' }}>
+              {[
+                { label: 'Activités', nb: config.nbActivites ?? 0, cost: breakdown?.activite.total, icon: '📍' },
+                { label: 'Labos',     nb: config.nbLabos ?? 0,     cost: breakdown?.labo.total,     icon: '🏭' },
+                { label: 'Gérants',   nb: config.nbGerants ?? 0,   cost: breakdown?.gerant.total,   icon: '👤' },
+              ].map(({ label, nb, cost, icon }) => (
+                <div key={label} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid #f3f4f6' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <span style={{ fontSize: '1.1rem' }}>{icon}</span>
+                    <div>
+                      <div style={{ fontWeight: 600, fontSize: '0.88rem', color: nb > 0 ? '#111827' : '#9ca3af' }}>
+                        {nb} {label}
+                      </div>
                     </div>
-                  )}
-                  <div style={{ fontSize: 20, fontWeight: 800, color: promo ? '#7c3aed' : '#111827' }}>
-                    {p.effectifMensuel != null ? `${p.effectifMensuel} DT/mois` : (p.baseMensuel != null ? `${p.baseMensuel} DT/mois` : '—')}
                   </div>
-                  {promo && (
-                    <div style={{ fontSize: 11, color: '#7c3aed', marginTop: 4, fontWeight: 600 }}>
-                      {p.effectifMensuel === 0 ? 'Gratuit (promotion)' : 'Promotion appliquée'}
-                    </div>
+                  {nb > 0 && cost != null && cost > 0 && (
+                    <span style={{ fontWeight: 700, fontSize: '0.9rem', color: '#4c1d95' }}>{cost.toFixed(2)} DT</span>
                   )}
+                  {nb === 0 && <span style={{ fontSize: '0.75rem', color: '#9ca3af' }}>Non inclus</span>}
                 </div>
-              );
-            })()}
-            {/* Onboarding */}
-            {(() => {
-              const p = abo.pricing!;
-              const promo = p.activePromoOnboarding;
-              const priceChanged = promo && p.effectifOnboarding !== p.baseOnboarding;
-              return (
-                <div style={{ background: '#f9fafb', borderRadius: 8, padding: '12px 16px', border: '1px solid #e5e7eb' }}>
-                  <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 6 }}>Onboarding</div>
-                  {priceChanged && p.baseOnboarding != null && (
-                    <div style={{ fontSize: 13, color: '#9ca3af', textDecoration: 'line-through', marginBottom: 2 }}>
-                      {p.baseOnboarding} DT
-                    </div>
-                  )}
-                  <div style={{ fontSize: 20, fontWeight: 800, color: promo ? '#7c3aed' : '#111827' }}>
-                    {p.effectifOnboarding != null ? `${p.effectifOnboarding} DT` : (p.baseOnboarding != null ? `${p.baseOnboarding} DT` : '—')}
-                  </div>
-                  {promo && (
-                    <div style={{ fontSize: 11, color: '#7c3aed', marginTop: 4, fontWeight: 600 }}>
-                      {p.effectifOnboarding === 0 ? 'Gratuit (promotion)' : 'Promotion appliquée'}
-                    </div>
-                  )}
+              ))}
+              {abo.prolongationJours > 0 && (
+                <div style={{ marginTop: 10, background: '#ede9fe', borderRadius: 8, padding: '8px 12px', fontSize: '0.8rem', color: '#6d28d9', fontWeight: 600 }}>
+                  ✚ Prolongation accordée : {abo.prolongationJours} jour(s)
                 </div>
-              );
-            })()}
+              )}
+            </div>
           </div>
-        </div>
-      )}
+        )}
+
+        {/* Pricing card */}
+        {pricing && (
+          <div style={{ background: '#fff', borderRadius: 16, border: '1px solid #e5e7eb', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
+            <div style={{ background: 'linear-gradient(135deg, #eff6ff, #dbeafe)', padding: '16px 20px', borderBottom: '1px solid #bfdbfe' }}>
+              <div style={{ fontWeight: 800, fontSize: '0.9rem', color: '#1e40af', display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span>💰</span> Tarification mensuelle
+              </div>
+            </div>
+            <div style={{ padding: '20px' }}>
+              <div style={{ textAlign: 'center', marginBottom: 16 }}>
+                {pricing.activePromoMensuel && pricing.baseMensuel !== effectifMensuel && (
+                  <div style={{ fontSize: '1rem', color: '#9ca3af', textDecoration: 'line-through', marginBottom: 4 }}>
+                    {pricing.baseMensuel} DT/mois
+                  </div>
+                )}
+                <div style={{ fontSize: '2.2rem', fontWeight: 900, color: pricing.activePromoMensuel ? '#7c3aed' : '#1e40af', lineHeight: 1 }}>
+                  {effectifMensuel != null ? `${effectifMensuel} DT` : '—'}
+                  <span style={{ fontSize: '0.9rem', fontWeight: 500, color: '#6b7280' }}>/mois</span>
+                </div>
+                {pricing.activePromoMensuel && (
+                  <div style={{ marginTop: 6, background: '#f5f3ff', borderRadius: 8, padding: '4px 12px', display: 'inline-block', fontSize: '0.78rem', color: '#7c3aed', fontWeight: 700 }}>
+                    🎉 Promotion appliquée
+                  </div>
+                )}
+              </div>
+
+              {breakdown && (
+                <div style={{ background: '#f8fafc', borderRadius: 10, padding: '12px 16px' }}>
+                  <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10 }}>Détail</div>
+                  {breakdown.activite.nb > 0 && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', marginBottom: 6 }}>
+                      <span style={{ color: '#374151' }}>{breakdown.activite.nb} activité{breakdown.activite.nb > 1 ? 's' : ''}</span>
+                      <span style={{ fontWeight: 600, color: '#111827' }}>{breakdown.activite.total.toFixed(2)} DT</span>
+                    </div>
+                  )}
+                  {breakdown.labo.nb > 0 && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', marginBottom: 6 }}>
+                      <span style={{ color: '#374151' }}>{breakdown.labo.nb} labo{breakdown.labo.nb > 1 ? 's' : ''} × {breakdown.prixLaboSup} DT</span>
+                      <span style={{ fontWeight: 600, color: '#111827' }}>{breakdown.labo.total.toFixed(2)} DT</span>
+                    </div>
+                  )}
+                  {breakdown.gerant.nb > 0 && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', marginBottom: 6 }}>
+                      <span style={{ color: '#374151' }}>{breakdown.gerant.nb} gérant{breakdown.gerant.nb > 1 ? 's' : ''} × {breakdown.prixGerantSup} DT</span>
+                      <span style={{ fontWeight: 600, color: '#111827' }}>{breakdown.gerant.total.toFixed(2)} DT</span>
+                    </div>
+                  )}
+                  <div style={{ borderTop: '1px solid #e5e7eb', marginTop: 8, paddingTop: 8, display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', fontWeight: 800, color: '#1e40af' }}>
+                    <span>Total base</span>
+                    <span>{(pricing.baseMensuel ?? 0).toFixed(2)} DT/mois</span>
+                  </div>
+                </div>
+              )}
+
+              {pricing.baseOnboarding != null && (
+                <div style={{ marginTop: 14, display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', background: '#f0fdf4', borderRadius: 8, border: '1px solid #bbf7d0' }}>
+                  <span style={{ fontSize: '0.82rem', color: '#374151', fontWeight: 600 }}>Onboarding</span>
+                  <span style={{ fontSize: '0.9rem', fontWeight: 800, color: '#16a34a' }}>
+                    {pricing.effectifOnboarding != null ? pricing.effectifOnboarding : pricing.baseOnboarding} DT
+                    <span style={{ fontSize: '0.72rem', color: '#6b7280', fontWeight: 400, marginLeft: 4 }}>({abo.statutOnboarding})</span>
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Paiements */}
-      <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #e5e7eb', overflow: 'hidden', marginBottom: 20 }}>
-        <div style={{ padding: '14px 20px', borderBottom: '1px solid #e5e7eb', background: '#f9fafb' }}>
-          <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: '#111827' }}>Historique des paiements</h3>
+      <div style={{ background: '#fff', borderRadius: 16, border: '1px solid #e5e7eb', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
+        <div style={{ background: 'linear-gradient(135deg, #f9fafb, #f3f4f6)', padding: '16px 24px', borderBottom: '1px solid #e5e7eb', display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span style={{ fontSize: '1.1rem' }}>🧾</span>
+          <h3 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 800, color: '#111827' }}>Historique des paiements</h3>
         </div>
         {!abo.paiements?.length ? (
-          <div style={{ padding: 24, textAlign: 'center', color: '#9ca3af' }}>Aucun paiement enregistré</div>
-        ) : (
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
-            <thead>
-              <tr style={{ background: '#f9fafb' }}>
-                {['Mois', 'Montant', 'Statut', 'Date'].map((h) => (
-                  <th key={h} style={{ padding: '10px 16px', textAlign: 'left', borderBottom: '1px solid #e5e7eb', fontWeight: 600, color: '#374151', fontSize: 13 }}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {abo.paiements.map((p) => (
-                <tr key={p.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
-                  <td style={{ padding: '10px 16px', color: '#111827' }}>{fmtMois(p.mois)}</td>
-                  <td style={{ padding: '10px 16px', color: '#374151' }}>
-                    {p.statut === 'gratuit' ? (
-                      <span style={{ color: '#16a34a', fontWeight: 600 }}>Gratuit</span>
-                    ) : p.montantDt != null ? `${p.montantDt} DT` : '—'}
-                  </td>
-                  <td style={{ padding: '10px 16px' }}>
-                    <span style={{
-                      fontSize: 12, fontWeight: 600, padding: '3px 10px', borderRadius: 10,
-                      background: (STATUT_COLORS[p.statut] || '#6b7280') + '20',
-                      color: STATUT_COLORS[p.statut] || '#6b7280',
-                    }}>{STATUT_LABELS[p.statut] || p.statut}</span>
-                  </td>
-                  <td style={{ padding: '10px 16px', color: '#6b7280' }}>{p.dateSaisie ? fmtDate(p.dateSaisie) : '—'}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
-
-      {/* Demandes */}
-      <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #e5e7eb', overflow: 'hidden' }}>
-        <div style={{ padding: '14px 20px', borderBottom: '1px solid #e5e7eb', background: '#f9fafb', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: '#111827' }}>Mes demandes</h3>
-          <button
-            onClick={() => setShowDemandeForm(!showDemandeForm)}
-            style={{ padding: '6px 14px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
-            + Nouvelle demande
-          </button>
-        </div>
-
-        {showDemandeForm && (
-          <div style={{ padding: 20, borderBottom: '1px solid #e5e7eb', background: '#f0f9ff' }}>
-            <div style={{ display: 'flex', gap: 12, alignItems: 'flex-end', flexWrap: 'wrap' }}>
-              <div>
-                <label style={{ fontSize: 12, color: '#374151', display: 'block', marginBottom: 4 }}>Type de demande</label>
-                <select value={demandeType} onChange={(e) => setDemandeType(e.target.value as typeof demandeType)}
-                  style={{ padding: '7px 10px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: 13 }}>
-                  <option value="gerant_sup">Gérant supplémentaire (80 DT/mois)</option>
-                  {!isIndep && <option value="labo_sup">Labo supplémentaire (150 DT/mois)</option>}
-                </select>
-              </div>
-              <div style={{ flex: 1 }}>
-                <label style={{ fontSize: 12, color: '#374151', display: 'block', marginBottom: 4 }}>Message (optionnel)</label>
-                <input value={demandeNotes} onChange={(e) => setDemandeNotes(e.target.value)}
-                  placeholder="Précisions..."
-                  style={{ width: '100%', padding: '7px 10px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: 13 }} />
-              </div>
-              <button onClick={submitDemande} disabled={submitting}
-                style={{ padding: '7px 18px', background: '#16a34a', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>
-                {submitting ? '...' : 'Envoyer'}
-              </button>
-              <button onClick={() => setShowDemandeForm(false)}
-                style={{ padding: '7px 12px', background: '#f3f4f6', color: '#374151', border: 'none', borderRadius: 8, fontSize: 13, cursor: 'pointer' }}>
-                Annuler
-              </button>
-            </div>
+          <div style={{ padding: 32, textAlign: 'center', color: '#9ca3af', fontSize: '0.9rem' }}>
+            <div style={{ fontSize: '2rem', marginBottom: 8 }}>📭</div>
+            Aucun paiement enregistré
           </div>
-        )}
-
-        {demandes.length === 0 ? (
-          <div style={{ padding: 24, textAlign: 'center', color: '#9ca3af' }}>Aucune demande</div>
         ) : (
-          <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {demandes.map((d) => (
-              <div key={d.id} style={{ background: '#f9fafb', borderRadius: 8, padding: '12px 16px', border: '1px solid #e5e7eb', display: 'flex', justifyContent: 'space-between' }}>
-                <div>
-                  <div style={{ fontWeight: 600, fontSize: 14, color: '#111827' }}>
-                    {d.typeDemande === 'gerant_sup' ? 'Gérant supplémentaire' : d.typeDemande === 'labo_sup' ? 'Labo supplémentaire' : 'Passage compte Entreprise'}
-                  </div>
-                  <div style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>
-                    {d.montantMensuelDt ? `${d.montantMensuelDt} DT/mois` : ''} — {fmtDate(d.createdAt)}
-                  </div>
-                  {d.notesAdmin && <div style={{ fontSize: 12, color: '#7c3aed', marginTop: 4 }}>Réponse admin : {d.notesAdmin}</div>}
-                </div>
-                <span style={{
-                  fontSize: 12, fontWeight: 600, padding: '3px 10px', borderRadius: 10, alignSelf: 'flex-start',
-                  background: d.statut === 'validée' ? '#dcfce7' : d.statut === 'refusée' ? '#fee2e2' : '#fef9c3',
-                  color: d.statut === 'validée' ? '#166534' : d.statut === 'refusée' ? '#991b1b' : '#854d0e',
-                }}>{d.statut}</span>
-              </div>
-            ))}
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.88rem' }}>
+              <thead>
+                <tr style={{ background: '#f9fafb' }}>
+                  {['Mois', 'Montant', 'Statut', 'Date'].map((h) => (
+                    <th key={h} style={{ padding: '10px 20px', textAlign: 'left', borderBottom: '1px solid #e5e7eb', fontWeight: 700, color: '#374151', fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {abo.paiements.map((p, i) => (
+                  <tr key={p.id} style={{ borderBottom: '1px solid #f3f4f6', background: i % 2 === 0 ? '#fff' : '#fafafa' }}>
+                    <td style={{ padding: '12px 20px', color: '#111827', fontWeight: 600 }}>{fmtMois(p.mois)}</td>
+                    <td style={{ padding: '12px 20px', color: '#374151', fontWeight: 700 }}>
+                      {p.statut === 'gratuit' ? (
+                        <span style={{ color: '#16a34a', fontWeight: 700 }}>Gratuit</span>
+                      ) : p.montantDt != null ? `${p.montantDt} DT` : '—'}
+                    </td>
+                    <td style={{ padding: '12px 20px' }}>
+                      <span style={{
+                        fontSize: '0.75rem', fontWeight: 700, padding: '3px 10px', borderRadius: 20,
+                        background: (STATUT_COLORS[p.statut] || '#6b7280') + '20',
+                        color: STATUT_COLORS[p.statut] || '#6b7280',
+                      }}>{STATUT_LABELS[p.statut] || p.statut}</span>
+                    </td>
+                    <td style={{ padding: '12px 20px', color: '#6b7280' }}>{p.dateSaisie ? fmtDate(p.dateSaisie) : '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
       </div>
