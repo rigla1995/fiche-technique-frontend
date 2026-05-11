@@ -526,7 +526,6 @@ export default function AddClientModal({ onClose, onCreated }: Props) {
                   <div>
                     <label style={labelStyle}>Appliqué à</label>
                     <select value={promoForm.appliesTo} onChange={(e) => setPromoForm((f) => ({ ...f, appliesTo: e.target.value, moisDebut: '' }))} style={selectStyle}>
-                      <option value="onboarding">OnBoarding</option>
                       <option value="mensualite">Mensualité</option>
                       <option value="supplement_gerant">Sup. Gérant</option>
                       <option value="supplement_labo">Sup. Labo</option>

@@ -5,7 +5,7 @@ import { useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useSelection } from '../../context/SelectionContext';
 import api from '../../api/client';
-import type { Activite, ActiviteTypesSummary, Labo, User } from '../../types';
+import type { Activite, ActiviteTypesSummary, Labo, User, AbonnementConfig } from '../../types';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -357,6 +357,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const [labos, setLabos] = useState<Labo[]>([]);
   const [indepHasFournisseurs, setIndepHasFournisseurs] = useState(true);
   const [indepHasAppros, setIndepHasAppros] = useState(true);
+  const [aboConfig, setAboConfig] = useState<AbonnementConfig | null>(null);
   const isAdmin = user?.role === 'super_admin';
   const isGerant = user?.role === 'gerant';
   const [openSections, setOpenSections] = useState<Set<string>>(
@@ -366,7 +367,8 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
   const location = useLocation();
   const step = user?.onboardingStep ?? 0;
-  const isEntreprise = user?.compteType === 'entreprise';
+  // Include null compteType: new config-based clients have no compteType but should use entreprise layout
+  const isEntreprise = user?.compteType === 'entreprise' || (user?.role === 'client' && !user?.compteType);
   const isOnboarding = isEntreprise && step > 0;
   const effectiveHasSelections = isEntreprise ? (step === 0) : hasSelections;
 
@@ -416,6 +418,9 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
       api.get('/api/labo')
         .then(({ data }) => setLabos(data))
         .catch(() => setLabos([]));
+      api.get('/api/abonnements/mon-abonnement')
+        .then(({ data }) => { if (data?.config) setAboConfig(data.config); })
+        .catch(() => {});
     }
     if (!isEntreprise && user?.role === 'client') {
       api.get('/api/stock/client/summary')
@@ -692,9 +697,10 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
               {/* Entreprise layout */}
               {isEntreprise && (
                 <>
+                  {/* ══ ESPACE FRANCHISE ══ — hidden until at least one franchise activity exists */}
+                  {(hasFranchise || typesSummary === null) && (
+                  <>
                   <Divider />
-
-                  {/* ══ ESPACE FRANCHISE ══ */}
                   <CollapsibleHeader label="Espace Franchise" icon="🔗" isOpen={openSections.has('franchise')} locked={isOnboarding || !hasFranchise} onToggle={() => toggleSection('franchise')} />
                   {openSections.has('franchise') && (
                     <>
@@ -770,10 +776,13 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                       </li>
                     </>
                   )}
+                  </>
+                  )}
 
+                  {/* ══ ESPACE DISTINCT ══ — hidden until at least one distinct activity exists */}
+                  {(hasDistinct || typesSummary === null) && (
+                  <>
                   <Divider />
-
-                  {/* ══ ESPACE DISTINCT ══ */}
                   <CollapsibleHeader label="Espace Distinct" icon="📍" isOpen={openSections.has('distinct')} locked={isOnboarding || !hasDistinct} onToggle={() => toggleSection('distinct')} />
                   {openSections.has('distinct') && (
                     <>
@@ -848,6 +857,8 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                         )}
                       </li>
                     </>
+                  )}
+                  </>
                   )}
 
                   {/* ══ ESPACE LABO(S) ══ — hidden if no labos */}
@@ -1028,12 +1039,12 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
                   <Divider />
 
-                  {/* ══ ESPACE FOURNISSEURS ══ */}
-                  <CollapsibleHeader label="Espace Fournisseurs" icon="🚚" isOpen={openSections.has('fournisseurs')} locked={isOnboarding || (!hasFranchise && !hasDistinct)} onToggle={() => toggleSection('fournisseurs')} />
-                  {openSections.has('fournisseurs') && !isOnboarding && (
+                  {/* ══ ESPACE FOURNISSEURS ══ — always visible from first login */}
+                  <CollapsibleHeader label="Espace Fournisseurs" icon="🚚" isOpen={openSections.has('fournisseurs')} locked={false} onToggle={() => toggleSection('fournisseurs')} />
+                  {openSections.has('fournisseurs') && (
                     <>
                       <li>
-                        {!hasFranchise && !hasDistinct ? (
+                        {!hasFranchise && !hasDistinct && typesSummary !== null ? (
                           <LockedLink label="Fournisseurs" reason="Créez d'abord une activité" />
                         ) : (
                           <NavLink to="/client/fournisseurs" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>
@@ -1042,25 +1053,28 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                           </NavLink>
                         )}
                       </li>
-                      <li>
-                        {labos.length === 0 ? (
-                          <LockedLink label="Fournisseurs Labos" reason="Aucun labo configuré" />
-                        ) : (
-                          <NavLink to="/client/fournisseurs-labo" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>
-                            <span className="link-icon">🏭</span>
-                            <span className="link-label">Fournisseurs Labos</span>
-                          </NavLink>
-                        )}
-                      </li>
+                      {/* Fournisseurs Labo: visible when config has labos or labos exist; disabled when config has labos but none created */}
+                      {(labos.length > 0 || (aboConfig?.nbLabos ?? 0) > 0) && (
+                        <li>
+                          {labos.length === 0 ? (
+                            <LockedLink label="Fournisseurs Labos" reason="Créez d'abord un labo depuis Mes Activités" />
+                          ) : (
+                            <NavLink to="/client/fournisseurs-labo" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>
+                              <span className="link-icon">🏭</span>
+                              <span className="link-label">Fournisseurs Labos</span>
+                            </NavLink>
+                          )}
+                        </li>
+                      )}
                     </>
                   )}
 
                   <Divider />
 
-                  {/* ══ CATALOGUE GLOBAL ══ */}
+                  {/* ══ CATALOGUE GLOBAL ══ — unlocks once at least one activity exists */}
                   <li>
-                    {isOnboarding && step < 3 ? (
-                      <LockedLink label="Catalogue Global" />
+                    {(isOnboarding && step < 3) || (!hasFranchise && !hasDistinct && typesSummary !== null) ? (
+                      <LockedLink label="Catalogue Global" reason={!hasFranchise && !hasDistinct && typesSummary !== null ? "Créez d'abord une activité" : undefined} />
                     ) : (
                       <NavLink to="/client/catalogue-global" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>
                         <span className="link-icon">🌐</span>
@@ -1068,11 +1082,13 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                       </NavLink>
                     )}
                   </li>
-                  <li>
-                    <span style={{ display: 'block', padding: '2px 18px 8px', fontSize: '0.71rem', color: 'var(--text-muted)', lineHeight: 1.45 }}>
-                      Sélection des ingrédients pour les labos et les activités de type gestion séparée
-                    </span>
-                  </li>
+                  {(hasFranchise || hasDistinct) && (
+                    <li>
+                      <span style={{ display: 'block', padding: '2px 18px 8px', fontSize: '0.71rem', color: 'var(--text-muted)', lineHeight: 1.45 }}>
+                        Sélection des ingrédients pour les labos et les activités
+                      </span>
+                    </li>
+                  )}
                 </>
               )}
 

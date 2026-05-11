@@ -47,7 +47,6 @@ export default function ClientsManagement() {
   const [inviteSent, setInviteSent] = useState<{ nom: string; email: string } | null>(null);
   const [resendingId, setResendingId] = useState<number | null>(null);
   const [search, setSearch] = useState('');
-  const [filterType, setFilterType] = useState<'' | 'independant' | 'entreprise'>('');
   const [filterStatus, setFilterStatus] = useState<'' | 'active' | 'pending'>('');
 
   const fetchClients = () => {
@@ -157,8 +156,6 @@ export default function ClientsManagement() {
     }
   };
 
-  const totalIndep = clients.filter((c) => c.compteType !== 'entreprise').length;
-  const totalEntreprise = clients.filter((c) => c.compteType === 'entreprise').length;
   const totalPending = clients.filter((c) => !c.activatedAt).length;
 
   const filtered = clients.filter((c) => {
@@ -167,15 +164,11 @@ export default function ClientsManagement() {
       c.name.toLowerCase().includes(q) ||
       c.email.toLowerCase().includes(q) ||
       (c.phone || '').toLowerCase().includes(q);
-    const matchType =
-      filterType === '' ||
-      (filterType === 'independant' && c.compteType !== 'entreprise') ||
-      (filterType === 'entreprise' && c.compteType === 'entreprise');
     const matchStatus =
       filterStatus === '' ||
       (filterStatus === 'active' && !!c.activatedAt) ||
       (filterStatus === 'pending' && !c.activatedAt);
-    return matchSearch && matchType && matchStatus;
+    return matchSearch && matchStatus;
   });
 
   const Badge = ({ children, bg, color }: { children: React.ReactNode; bg: string; color: string }) => (
@@ -199,11 +192,9 @@ export default function ClientsManagement() {
       </div>
 
       {/* Stats KPI bar */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 16 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12, marginBottom: 16 }}>
         {[
           { label: 'Total', value: clients.length, icon: '👥', bg: '#eff6ff', color: '#1d4ed8' },
-          { label: 'Indépendants', value: totalIndep, icon: '👤', bg: '#f0fdf4', color: '#15803d' },
-          { label: 'Entreprises', value: totalEntreprise, icon: '🏢', bg: '#fef9c3', color: '#854d0e' },
           { label: 'En attente', value: totalPending, icon: '⏳', bg: totalPending > 0 ? '#fee2e2' : '#f8fafc', color: totalPending > 0 ? '#991b1b' : '#64748b' },
         ].map(({ label, value, icon, bg, color }) => (
           <div key={label} style={{ background: bg, border: `1px solid ${color}22`, borderRadius: 10, padding: '12px 16px' }}>
@@ -223,22 +214,6 @@ export default function ClientsManagement() {
           className="input"
           style={{ minWidth: 220, flex: 1 }}
         />
-        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-          <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 600 }}>Type :</span>
-          {([
-            { value: '', label: 'Tous', count: clients.length },
-            { value: 'independant', label: '👤 Indép', count: totalIndep },
-            { value: 'entreprise', label: '🏢 Entreprise', count: totalEntreprise },
-          ] as const).map(({ value, label, count }) => (
-            <button
-              key={value}
-              className={`btn btn-sm ${filterType === value ? 'btn-primary' : 'btn-ghost'}`}
-              onClick={() => setFilterType(value)}
-            >
-              {label} <span style={{ fontSize: '0.7rem', opacity: 0.8 }}>({count})</span>
-            </button>
-          ))}
-        </div>
         <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
           <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 600 }}>Statut :</span>
           {([
@@ -273,7 +248,6 @@ export default function ClientsManagement() {
                 <th>{t('common.name')}</th>
                 <th>{t('common.email')}</th>
                 <th>{t('common.phone')}</th>
-                <th>Type</th>
                 <th>Domaines</th>
                 <th>Statut</th>
                 <th>{t('common.actions')}</th>
@@ -285,13 +259,6 @@ export default function ClientsManagement() {
                   <td style={{ fontWeight: 600 }}>{c.name}</td>
                   <td style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{c.email}</td>
                   <td>{c.phone || '—'}</td>
-                  <td>
-                    {c.compteType === 'entreprise' ? (
-                      <Badge bg="#fef9c3" color="#854d0e">🏢 Entreprise</Badge>
-                    ) : (
-                      <Badge bg="#eff6ff" color="#1d4ed8">👤 Indépendant</Badge>
-                    )}
-                  </td>
                   <td>
                     {c.compteType === 'entreprise' ? (
                       <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>par activité</span>
@@ -348,7 +315,7 @@ export default function ClientsManagement() {
                 </tr>
               ))}
               {filtered.length === 0 && (
-                <tr><td colSpan={7} className="empty-cell">{t('common.no_result')}</td></tr>
+                <tr><td colSpan={6} className="empty-cell">{t('common.no_result')}</td></tr>
               )}
             </tbody>
           </table>

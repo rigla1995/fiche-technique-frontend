@@ -7,9 +7,10 @@ const TYPE_LABELS: Record<string, string> = {
   fixed_price:  'Prix fixe',
 };
 const APPLIES_LABELS: Record<string, string> = {
-  mensualite: 'Mensualité',
-  onboarding: 'Onboarding',
-  les_deux:   'Les deux',
+  onboarding:        'OnBoarding',
+  mensualite:        'Mensualité',
+  supplement_gerant: 'Sup. Gérant',
+  supplement_labo:   'Sup. Labo',
 };
 
 const fmtDate = (d: string) => d ? new Date(d).toLocaleDateString('fr-FR') : '—';
@@ -20,8 +21,10 @@ interface PromoRow {
   appliesTo: string;
   discountOnboarding: number | null;
   discountMensualite: number | null;
+  discountSupplement: number | null;
   fixedOnboarding: number | null;
   fixedMensualite: number | null;
+  fixedSupplement: number | null;
   dateDebut: string;
   dateFin: string | null;
   monthsDuration: number | null;
@@ -36,14 +39,16 @@ interface PromoRow {
 function promoRemise(p: PromoRow): string {
   if (p.type === 'free_months') return 'Gratuit (100%)';
   if (p.type === 'percent_off') {
-    const parts = [];
+    const parts: string[] = [];
     if (p.discountOnboarding) parts.push(`OB: -${p.discountOnboarding}%`);
     if (p.discountMensualite) parts.push(`Mens: -${p.discountMensualite}%`);
+    if (p.discountSupplement) parts.push(`Sup: -${p.discountSupplement}%`);
     return parts.join(' / ') || '—';
   }
-  const parts = [];
+  const parts: string[] = [];
   if (p.fixedOnboarding) parts.push(`OB: ${p.fixedOnboarding} DT`);
   if (p.fixedMensualite) parts.push(`Mens: ${p.fixedMensualite} DT`);
+  if (p.fixedSupplement) parts.push(`Sup: ${p.fixedSupplement} DT`);
   return parts.join(' / ') || '—';
 }
 

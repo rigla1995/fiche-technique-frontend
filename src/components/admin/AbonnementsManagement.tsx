@@ -712,35 +712,6 @@ export default function AbonnementsManagement() {
               </span>
             </div>
 
-            {/* Invite banner */}
-            {!selected.inviteSent && (
-              <div style={{ background: '#fffbeb', border: '1px solid #fbbf24', borderRadius: 10, padding: '14px 18px', marginBottom: 20 }}>
-                <div style={{ fontSize: 14, fontWeight: 600, color: '#92400e', marginBottom: 10 }}>
-                  Invitation non envoyée — confirmez l'abonnement pour que le client puisse activer son compte.
-                </div>
-                <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-                  <button onClick={handleConfirmInvite} disabled={confirmSending}
-                    style={{ padding: '7px 18px', background: '#16a34a', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>
-                    {confirmSending ? 'Envoi...' : 'Confirmer et envoyer l\'invitation'}
-                  </button>
-                  {confirmResult?.inviteUrl && (
-                    <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                      <code style={{ background: '#fef3c7', border: '1px solid #fcd34d', borderRadius: 6, padding: '4px 10px', fontSize: '0.78rem', wordBreak: 'break-all', color: '#78350f' }}>
-                        {confirmResult.inviteUrl}
-                      </code>
-                      <button
-                        style={{ padding: '4px 10px', borderRadius: 6, border: '1px solid #d97706', color: '#d97706', background: 'transparent', fontSize: 12, cursor: 'pointer' }}
-                        onClick={() => navigator.clipboard.writeText(confirmResult!.inviteUrl!)}>
-                        Copier
-                      </button>
-                    </div>
-                  )}
-                  {confirmResult && !confirmResult.inviteUrl && (
-                    <span style={{ color: '#16a34a', fontWeight: 600, fontSize: 13 }}>Invitation envoyée ✓</span>
-                  )}
-                </div>
-              </div>
-            )}
 
             {/* ── Configuration Souscrite ────────────────────────────── */}
             {selected.config && (() => {
@@ -1150,9 +1121,9 @@ export default function AbonnementsManagement() {
 
                         {/* Line items */}
                         {[
-                          { label: 'Mensualité', ...pMontantInfo.breakdown.mensualite, show: true },
-                          { label: 'Sup. Gérant', ...pMontantInfo.breakdown.supplementGerant, show: pMontantInfo.breakdown.supplementGerant.active },
-                          { label: 'Sup. Labo', ...pMontantInfo.breakdown.supplementLabo, show: pMontantInfo.breakdown.supplementLabo.active },
+                          { label: selected.config ? `Activités (×${selected.config.nbActivites})` : 'Activités', ...pMontantInfo.breakdown.mensualite, show: true },
+                          { label: selected.config && pMontantInfo.breakdown.supplementGerant.active ? `Gérant(s) (×${selected.config.nbGerants})` : 'Gérant(s)', ...pMontantInfo.breakdown.supplementGerant, show: pMontantInfo.breakdown.supplementGerant.active },
+                          { label: selected.config && pMontantInfo.breakdown.supplementLabo.active ? `Labo(s) (×${selected.config.nbLabos})` : 'Labo(s)', ...pMontantInfo.breakdown.supplementLabo, show: pMontantInfo.breakdown.supplementLabo.active },
                         ].filter((i) => i.show).map((item, idx, arr) => {
                           const isFree = item.promoType === 'free_months';
                           const hasDiscount = item.hasPromo && item.effectif !== item.base;

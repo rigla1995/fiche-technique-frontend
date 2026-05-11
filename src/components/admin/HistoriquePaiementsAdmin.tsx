@@ -27,7 +27,6 @@ interface PaiementRow {
   dateSaisie: string | null;
   notes: string | null;
   clientId: number;
-  compteType: string;
   clientNom: string;
   clientEmail: string;
 }
@@ -116,7 +115,7 @@ export default function HistoriquePaiementsAdmin() {
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
             <thead>
               <tr style={{ background: '#f9fafb', borderBottom: '1px solid #e5e7eb' }}>
-                {['Client', 'Type', 'Mois', 'Montant', 'Statut', 'Saisi le', 'Notes'].map((h) => (
+                {['Client', 'Mois', 'Montant', 'Statut', 'Saisi le', 'Notes'].map((h) => (
                   <th key={h} style={{ padding: '10px 14px', textAlign: 'left', fontWeight: 600, color: '#374151', fontSize: 12 }}>{h}</th>
                 ))}
               </tr>
@@ -127,11 +126,6 @@ export default function HistoriquePaiementsAdmin() {
                   <td style={{ padding: '10px 14px' }}>
                     <div style={{ fontWeight: 600, color: '#111827' }}>{r.clientNom}</div>
                     <div style={{ fontSize: 11, color: '#9ca3af' }}>{r.clientEmail}</div>
-                  </td>
-                  <td style={{ padding: '10px 14px' }}>
-                    <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 8, background: r.compteType === 'entreprise' ? '#fef9c3' : '#ede9fe', color: r.compteType === 'entreprise' ? '#854d0e' : '#6d28d9', fontWeight: 600 }}>
-                      {r.compteType === 'entreprise' ? 'Entreprise' : 'Indép.'}
-                    </span>
                   </td>
                   <td style={{ padding: '10px 14px', color: '#374151' }}>{fmtMois(r.mois)}</td>
                   <td style={{ padding: '10px 14px', fontWeight: 600, color: r.statut === 'gratuit' ? '#16a34a' : '#111827' }}>

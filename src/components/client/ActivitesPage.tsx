@@ -175,12 +175,19 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
     setEditingId(null);
     setIsDuplicate(false);
     setForm(emptyForm());
-    setMemeActivite(preType === 'franchise' || preType === 'franchise_labo' ? true : preType === 'distincte' ? false : null);
+    // Single-activité config: always distincte, skip type question
+    const forceSingle = maxActivites === 1;
+    const preIsFranchise = preType === 'franchise' || preType === 'franchise_labo';
+    setMemeActivite(forceSingle ? false : preIsFranchise ? true : preType === 'distincte' ? false : null);
     setNombreActivites('2');
     setFranchiseName('');
     setFranchiseStep(0);
     setFranchiseForms([emptyFranchiseStep(), emptyFranchiseStep()]);
-    setHasLabo(preType === 'franchise_labo' ? true : null);
+    // Pre-determine labo based on config: maxLabos=0 → gestion séparée, maxLabos>0 → avec labo
+    const configHasLabo = maxLabos !== null && maxLabos > 0;
+    if (preType === 'franchise_labo') { setHasLabo(true); }
+    else if (preType === 'franchise') { setHasLabo(configHasLabo ? true : false); }
+    else { setHasLabo(null); }
     setLaboAction(null);
     setSelectedLaboId('');
     setLaboNom('');
@@ -481,20 +488,23 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
           <span className="empty-icon">🏢</span>
           <p style={{ marginBottom: 16 }}>{t('client.entreprise.no_activities')}</p>
           <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center' }}>
-            {!atActiviteLimit && (
+            {atActiviteLimit ? (
+              <div style={{ fontSize: 13, color: '#6b7280', background: '#f3f4f6', border: '1px solid #e5e7eb', borderRadius: 8, padding: '8px 16px' }}>
+                🔒 Limite de {maxActivites} activité(s) atteinte
+              </div>
+            ) : maxActivites === 1 ? (
+              <button className="btn btn-primary" onClick={() => openAdd('distincte')}>
+                + Ajouter mon activité
+              </button>
+            ) : (
               <>
                 <button className="btn btn-primary" onClick={() => openAdd('franchise')}>
-                  🔗 {t('client.entreprise.franchise_yes')}
+                  🔗 {maxLabos ? 'Franchise avec Labo' : t('client.entreprise.franchise_yes')}
                 </button>
                 <button className="btn btn-secondary" onClick={() => openAdd('distincte')}>
                   📍 {t('client.entreprise.franchise_no')}
                 </button>
               </>
-            )}
-            {atActiviteLimit && (
-              <div style={{ fontSize: 13, color: '#6b7280', background: '#f3f4f6', border: '1px solid #e5e7eb', borderRadius: 8, padding: '8px 16px' }}>
-                🔒 Limite de {maxActivites} activité(s) atteinte
-              </div>
             )}
           </div>
         </div>
@@ -735,14 +745,16 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                         <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: 2 }}>Plusieurs points de vente partageant les mêmes ingrédients</div>
                       </div>
                     </label>
-                    <label style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '14px 16px', borderRadius: 10, border: '2px solid var(--border)', background: 'var(--surface)', cursor: 'pointer', transition: 'border-color 0.15s' }}
-                      onClick={() => { setMemeActivite(true); setHasLabo(true); }}>
-                      <span style={{ fontSize: '1.4rem', marginTop: 2 }}>🏭</span>
-                      <div>
-                        <div style={{ fontWeight: 700, fontSize: '0.95rem' }}>Franchise avec Labo <span style={{ fontWeight: 400, color: 'var(--text-muted)', fontSize: '0.8rem' }}>(gestion séparée)</span></div>
-                        <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: 2 }}>Franchises approvisionnées par un labo central — nécessite min. 2 franchises</div>
-                      </div>
-                    </label>
+                    {(maxLabos === null || maxLabos > 0) && (
+                      <label style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '14px 16px', borderRadius: 10, border: '2px solid var(--border)', background: 'var(--surface)', cursor: 'pointer', transition: 'border-color 0.15s' }}
+                        onClick={() => { setMemeActivite(true); setHasLabo(true); }}>
+                        <span style={{ fontSize: '1.4rem', marginTop: 2 }}>🏭</span>
+                        <div>
+                          <div style={{ fontWeight: 700, fontSize: '0.95rem' }}>Franchise avec Labo <span style={{ fontWeight: 400, color: 'var(--text-muted)', fontSize: '0.8rem' }}>(gestion séparée)</span></div>
+                          <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: 2 }}>Franchises approvisionnées par un labo central — nécessite min. 2 franchises</div>
+                        </div>
+                      </label>
+                    )}
                     <label style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '14px 16px', borderRadius: 10, border: '2px solid var(--border)', background: 'var(--surface)', cursor: 'pointer', transition: 'border-color 0.15s' }}
                       onClick={() => setMemeActivite(false)}>
                       <span style={{ fontSize: '1.4rem', marginTop: 2 }}>🏬</span>
