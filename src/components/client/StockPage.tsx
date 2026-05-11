@@ -818,7 +818,11 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
     groups[cat].push(entry);
   }
 
-  const nonLaboFournisseurs = fournisseurs.filter((f) => !f.isLabo);
+  const nonLaboFournisseurs = fournisseurs.filter((f) => {
+    if (f.isLabo) return false;
+    if (activiteId) return f.activiteIds.includes(activiteId);
+    return true;
+  });
   const hasFournisseurs = nonLaboFournisseurs.length > 0;
 
   const bulkAllValid = [...selectedIngIds].every((id) => {
