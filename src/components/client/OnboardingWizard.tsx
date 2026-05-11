@@ -139,7 +139,7 @@ export default function OnboardingWizard() {
   const goNext = async (nextStep: number) => {
     if (nextStep >= 4) {
       await advanceOnboarding(0);
-      navigate('/client', { replace: true });
+      navigate('/client/rapports', { replace: true });
     } else {
       await advanceOnboarding(nextStep);
     }

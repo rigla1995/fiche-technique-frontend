@@ -27,7 +27,7 @@ export default function UpgradeWizard() {
         activiteNom: activiteNom.trim() || undefined,
       });
       updateUser({ onboardingStep: 0 });
-      navigate('/client', { replace: true });
+      navigate('/client/rapports', { replace: true });
     } catch {
       setError('Une erreur est survenue. Veuillez réessayer.');
     } finally {

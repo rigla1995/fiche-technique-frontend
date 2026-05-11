@@ -44,12 +44,18 @@ import RapportsPage from './components/client/RapportsPage';
 import './i18n';
 import './index.css';
 
+function ClientDefaultRedirect() {
+  const { user } = useAuth();
+  if (user?.role === 'gerant') return <Navigate to="/client/stock" replace />;
+  return <Navigate to="/client/rapports" replace />;
+}
+
 function RootRedirect() {
   const { user, isLoading } = useAuth();
   if (isLoading) return <div className="page-loading"><div className="spinner" /></div>;
   if (!user) return <Navigate to="/login" replace />;
   if (user.role === 'super_admin') return <Navigate to="/admin" replace />;
-  if (user.role === 'gerant') return <Navigate to="/client" replace />;
+  if (user.role === 'gerant') return <Navigate to="/client/stock" replace />;
   // Entreprise user with pending onboarding → send to profile to change password
   if (user.compteType === 'entreprise' && (user.onboardingStep ?? 0) === 50) {
     return <Navigate to="/client/upgrade-wizard" replace />;
@@ -60,7 +66,7 @@ function RootRedirect() {
   if (user.compteType === 'entreprise' && (user.onboardingStep ?? 0) === 2) {
     return <Navigate to="/client/activites" replace />;
   }
-  return <Navigate to="/client" replace />;
+  return <Navigate to="/client/rapports" replace />;
 }
 
 export default function App() {
@@ -91,7 +97,7 @@ export default function App() {
 
           {/* Client + Gérant routes */}
           <Route element={<Layout requireRole="client" />}>
-            <Route path="/client" element={<ClientDashboard />} />
+            <Route path="/client" element={<ClientDefaultRedirect />} />
             <Route path="/client/products" element={<ProductList />} />
             <Route path="/client/products/new" element={<ProductForm />} />
             <Route path="/client/products/:id/edit" element={<ProductForm />} />

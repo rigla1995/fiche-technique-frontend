@@ -335,7 +335,7 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
       if (isFirst && user?.onboardingStep === 2) await advanceOnboarding(3);
       closeForm();
       if (isFirst) {
-        navigate('/client/catalogue-franchise?created=1');
+        navigate('/client/catalogue-global?created=1');
         return;
       }
       setMsg(t('client.entreprise.activity_created'));
@@ -427,7 +427,7 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
         if (isFirst && user?.onboardingStep === 2) await advanceOnboarding(3);
         closeForm();
         if (isFirst) {
-          navigate('/client/catalogue-distinct?created=1');
+          navigate('/client/catalogue-global?created=1');
           return;
         }
         setMsg(t('client.entreprise.activity_created'));
