@@ -309,8 +309,12 @@ function GerantSidebarContent({
         <CollapsibleHeader label="Produits" icon="🍔" isOpen={openSections.has('gerant-produits')} locked={false} onToggle={() => toggleSection('gerant-produits')} />
         {openSections.has('gerant-produits') && (
           <>
-            <SubNavLink to={`/client/products?tab=utilisable&actCtx=franchise&laboId=${laboId}`} icon="🧪" label="Utilisables Franchises" isActive={isProductsPage && currentProductTab === 'utilisable' && currentActCtx === 'franchise'} onClick={onClose} />
-            <SubNavLink to={`/client/products?tab=utilisable&actCtx=distinct&laboId=${laboId}`} icon="🧪" label="Utilisables Distinctes" isActive={isProductsPage && currentProductTab === 'utilisable' && currentActCtx === 'distinct'} onClick={onClose} />
+            {gerantActivites.some(a => a.type === 'franchise') && (
+              <SubNavLink to={`/client/products?tab=utilisable&actCtx=franchise&laboId=${laboId}`} icon="🧪" label="Utilisables Franchises" isActive={isProductsPage && currentProductTab === 'utilisable' && currentActCtx === 'franchise'} onClick={onClose} />
+            )}
+            {gerantActivites.some(a => a.type === 'distincte' || a.type == null) && (
+              <SubNavLink to={`/client/products?tab=utilisable&actCtx=distinct&laboId=${laboId}`} icon="🧪" label="Utilisables Distinctes" isActive={isProductsPage && currentProductTab === 'utilisable' && currentActCtx === 'distinct'} onClick={onClose} />
+            )}
           </>
         )}
       </>
@@ -991,62 +995,70 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                   <CollapsibleHeader label="Espace Produits" icon="🍔" isOpen={openSections.has('produits')} locked={isOnboarding || (!hasFranchiseSelections && !hasDistinctSelections)} onToggle={() => toggleSection('produits')} />
                   {openSections.has('produits') && (
                     <>
-                      <li>
-                        {isOnboarding || !hasFranchiseSelections ? (
-                          <LockedLink label="Produits Vendables (F)" />
-                        ) : (
-                          <Link
-                            to="/client/products?tab=vendable&actCtx=franchise"
-                            className={`sidebar-link ${isProductActive('vendable', 'franchise') ? 'active' : ''}`}
-                            onClick={onClose}
-                          >
-                            <span className="link-icon">🍔</span>
-                            <span className="link-label">Produits Vendables (F)</span>
-                          </Link>
-                        )}
-                      </li>
-                      <li>
-                        {isOnboarding || !hasFranchiseSelections ? (
-                          <LockedLink label="Produits Utilisables (F)" />
-                        ) : (
-                          <Link
-                            to="/client/products?tab=utilisable&actCtx=franchise"
-                            className={`sidebar-link ${isProductActive('utilisable', 'franchise') ? 'active' : ''}`}
-                            onClick={onClose}
-                          >
-                            <span className="link-icon">🧪</span>
-                            <span className="link-label">Produits Utilisables (F)</span>
-                          </Link>
-                        )}
-                      </li>
-                      <li>
-                        {isOnboarding || !hasDistinctSelections ? (
-                          <LockedLink label="Produits Vendables (D)" />
-                        ) : (
-                          <Link
-                            to="/client/products?tab=vendable&actCtx=distinct"
-                            className={`sidebar-link ${isProductActive('vendable', 'distinct') ? 'active' : ''}`}
-                            onClick={onClose}
-                          >
-                            <span className="link-icon">🍔</span>
-                            <span className="link-label">Produits Vendables (D)</span>
-                          </Link>
-                        )}
-                      </li>
-                      <li>
-                        {isOnboarding || !hasDistinctSelections ? (
-                          <LockedLink label="Produits Utilisables (D)" />
-                        ) : (
-                          <Link
-                            to="/client/products?tab=utilisable&actCtx=distinct"
-                            className={`sidebar-link ${isProductActive('utilisable', 'distinct') ? 'active' : ''}`}
-                            onClick={onClose}
-                          >
-                            <span className="link-icon">🧪</span>
-                            <span className="link-label">Produits Utilisables (D)</span>
-                          </Link>
-                        )}
-                      </li>
+                      {hasFranchise && (
+                        <li>
+                          {isOnboarding || !hasFranchiseSelections ? (
+                            <LockedLink label="Produits Vendables (F)" />
+                          ) : (
+                            <Link
+                              to="/client/products?tab=vendable&actCtx=franchise"
+                              className={`sidebar-link ${isProductActive('vendable', 'franchise') ? 'active' : ''}`}
+                              onClick={onClose}
+                            >
+                              <span className="link-icon">🍔</span>
+                              <span className="link-label">Produits Vendables (F)</span>
+                            </Link>
+                          )}
+                        </li>
+                      )}
+                      {hasFranchise && (
+                        <li>
+                          {isOnboarding || !hasFranchiseSelections ? (
+                            <LockedLink label="Produits Utilisables (F)" />
+                          ) : (
+                            <Link
+                              to="/client/products?tab=utilisable&actCtx=franchise"
+                              className={`sidebar-link ${isProductActive('utilisable', 'franchise') ? 'active' : ''}`}
+                              onClick={onClose}
+                            >
+                              <span className="link-icon">🧪</span>
+                              <span className="link-label">Produits Utilisables (F)</span>
+                            </Link>
+                          )}
+                        </li>
+                      )}
+                      {hasDistinct && (
+                        <li>
+                          {isOnboarding || !hasDistinctSelections ? (
+                            <LockedLink label="Produits Vendables (D)" />
+                          ) : (
+                            <Link
+                              to="/client/products?tab=vendable&actCtx=distinct"
+                              className={`sidebar-link ${isProductActive('vendable', 'distinct') ? 'active' : ''}`}
+                              onClick={onClose}
+                            >
+                              <span className="link-icon">🍔</span>
+                              <span className="link-label">Produits Vendables (D)</span>
+                            </Link>
+                          )}
+                        </li>
+                      )}
+                      {hasDistinct && (
+                        <li>
+                          {isOnboarding || !hasDistinctSelections ? (
+                            <LockedLink label="Produits Utilisables (D)" />
+                          ) : (
+                            <Link
+                              to="/client/products?tab=utilisable&actCtx=distinct"
+                              className={`sidebar-link ${isProductActive('utilisable', 'distinct') ? 'active' : ''}`}
+                              onClick={onClose}
+                            >
+                              <span className="link-icon">🧪</span>
+                              <span className="link-label">Produits Utilisables (D)</span>
+                            </Link>
+                          )}
+                        </li>
+                      )}
                     </>
                   )}
 
