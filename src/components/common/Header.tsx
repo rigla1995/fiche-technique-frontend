@@ -37,7 +37,7 @@ export default function Header({ onMenuToggle }: HeaderProps) {
 
   const handleNotifClick = () => {
     setOpen(false);
-    const path = user?.role === 'super_admin' ? '/admin/support' : '/support';
+    const path = user?.role === 'super_admin' ? '/admin/support' : '/client/support';
     navigate(path);
   };
 
