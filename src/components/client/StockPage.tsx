@@ -77,7 +77,7 @@ function PerteModal({ ingredientId, nom, activiteId, onSaveOverride, onAfterSave
   const [dateMin, setDateMin] = useState<string | null>(null);
   const [dateMax, setDateMax] = useState<string | null>(null);
 
-  // Fetch allowed date range (current-year appros only) on open
+  // Fetch allowed date range (all-time first appro) on open
   useEffect(() => {
     const fetchRange = async () => {
       setLoadingRange(true);
@@ -166,7 +166,7 @@ function PerteModal({ ingredientId, nom, activiteId, onSaveOverride, onAfterSave
           ) : !dateMin || !dateMax ? (
             <div style={{ background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: 8, padding: '14px 16px', textAlign: 'center' }}>
               <p style={{ margin: 0, color: '#92400e', fontWeight: 600, fontSize: '0.9rem' }}>
-                Aucun approvisionnement enregistré pour cet ingrédient cette année.
+                Aucun approvisionnement enregistré pour cet ingrédient.
               </p>
               <p style={{ margin: '6px 0 0', color: '#b45309', fontSize: '0.8rem' }}>
                 Enregistrez d'abord un appro avant de déclarer une perte.
@@ -191,7 +191,7 @@ function PerteModal({ ingredientId, nom, activiteId, onSaveOverride, onAfterSave
                 <input type="date" className="input" style={{ width: '100%' }}
                   min={dateMin} max={dateMax} value={datePerte} onChange={(e) => setDatePerte(e.target.value)} />
                 <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: 3 }}>
-                  Appros {new Date().getFullYear()} : {dateMin.split('-').reverse().join('/')} → {dateMax.split('-').reverse().join('/')}
+                  Premier appro : {dateMin.split('-').reverse().join('/')} — Dernier : {dateMax.split('-').reverse().join('/')}
                 </p>
               </div>
               <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 6, padding: '8px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

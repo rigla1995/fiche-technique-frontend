@@ -1141,7 +1141,7 @@ export default function StockLaboPage() {
                     min={perteDateMin} max={perteDateMax} value={perteDate}
                     onChange={(e) => { setPerteDate(e.target.value); if (perteModal) fetchPertePrix(perteModal.ingredientId, e.target.value); }} />
                   <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: 3, marginBottom: 12 }}>
-                    Appros {new Date().getFullYear()} : {perteDateMin.split('-').reverse().join('/')} → {perteDateMax.split('-').reverse().join('/')}
+                    Premier appro : {perteDateMin.split('-').reverse().join('/')} — Dernier : {perteDateMax.split('-').reverse().join('/')}
                   </p>
                   {perteModal && perteModal.ingredientId >= 0 && (
                     <div style={{ marginBottom: 16, display: 'flex', flexDirection: 'column', gap: 6 }}>
