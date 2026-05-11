@@ -26,6 +26,7 @@ import GlobalCataloguePage from './components/client/GlobalCataloguePage';
 import FournisseursPage from './components/client/FournisseursPage';
 import FournisseursLaboPage from './components/client/FournisseursLaboPage';
 import LaboHistoriqueApproPage from './components/client/LaboHistoriqueApproPage';
+import LaboHistoriquepertesPage from './components/client/LaboHistoriquepertesPage';
 import InventairePage from './components/client/InventairePage';
 import HistoriqueInventairePage from './components/client/HistoriqueInventairePage';
 import ErrorPage from './components/common/ErrorPage';
@@ -114,6 +115,7 @@ export default function App() {
             <Route path="/client/labo/transfer" element={<TransferPage />} />
             <Route path="/client/labo/historique-transferts" element={<TransferHistoriquePage />} />
             <Route path="/client/labo/historique-appro" element={<LaboHistoriqueApproPage />} />
+            <Route path="/client/labo/historique-pertes" element={<LaboHistoriquepertesPage />} />
             <Route path="/client/labo/inventaire" element={<InventairePage />} />
             <Route path="/client/inventaire" element={<InventairePage />} />
             <Route path="/client/labo/inventaire/historique" element={<HistoriqueInventairePage />} />
