@@ -112,27 +112,41 @@ export default function GerantsPage() {
   };
 
   return (
-    <div style={{ maxWidth: 900, margin: '0 auto', padding: 24 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+    <div className="page-content">
+      {/* ── Header ── */}
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16, marginBottom: 24 }}>
         <div>
-          <h1 style={{ fontSize: 22, fontWeight: 700, color: '#111827', margin: 0 }}>Comptes gérants</h1>
-          <div style={{ fontSize: 13, color: '#6b7280', marginTop: 4 }}>
-            {maxGerants !== null
-              ? `${gerants.length}/${maxGerants} gérant(s) configuré(s)`
-              : `${freeCount}/${freeLimit} compte(s) gratuit(s) utilisé(s)`}
-          </div>
+          <h1 style={{ margin: 0 }}>Comptes gérants</h1>
+          <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginTop: 4, marginBottom: 0 }}>
+            Gérez les accès de vos collaborateurs à leurs espaces activités.
+          </p>
         </div>
-        {atGerantLimit ? (
-          <span style={{ fontSize: 13, color: '#6b7280', background: '#f3f4f6', border: '1px solid #e5e7eb', borderRadius: 8, padding: '8px 16px' }}>
-            🔒 Limite de {maxGerants} gérant(s) atteinte
-          </span>
-        ) : (
-          <button
-            onClick={() => { setShowForm(true); setInviteSent(null); setError(''); }}
-            style={{ padding: '8px 18px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 600, fontSize: 14, cursor: 'pointer' }}>
-            + Nouveau gérant
-          </button>
-        )}
+        <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+          {/* Quota card */}
+          {maxGerants !== null && (
+            <div style={{
+              background: atGerantLimit ? '#fef2f2' : gerants.length > 0 ? '#f0fdf4' : '#f8fafc',
+              border: `1px solid ${atGerantLimit ? '#fecaca' : gerants.length > 0 ? '#bbf7d0' : '#e2e8f0'}`,
+              borderRadius: 12, padding: '10px 16px', minWidth: 110, textAlign: 'center',
+            }}>
+              <div style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Gérants</div>
+              <div style={{ fontSize: '1.3rem', fontWeight: 800, color: atGerantLimit ? '#dc2626' : gerants.length > 0 ? '#16a34a' : '#475569', lineHeight: 1 }}>
+                {gerants.length}<span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)' }}> / {maxGerants}</span>
+              </div>
+            </div>
+          )}
+          {atGerantLimit ? (
+            <span style={{ fontSize: 13, color: '#6b7280', background: '#f3f4f6', border: '1px solid #e5e7eb', borderRadius: 8, padding: '8px 16px' }}>
+              🔒 Limite atteinte ({maxGerants})
+            </span>
+          ) : (
+            <button
+              onClick={() => { setShowForm(true); setInviteSent(null); setError(''); }}
+              style={{ padding: '9px 20px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: 9, fontWeight: 600, fontSize: 14, cursor: 'pointer' }}>
+              + Nouveau gérant
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Invite sent banner */}
@@ -238,57 +252,81 @@ export default function GerantsPage() {
       {loading ? (
         <div style={{ textAlign: 'center', color: '#9ca3af', padding: 40 }}>Chargement...</div>
       ) : gerants.length === 0 ? (
-        <div style={{ textAlign: 'center', color: '#9ca3af', padding: 40 }}>
-          Aucun compte gérant. Créez votre premier gérant.
+        <div style={{
+          background: '#fff', border: '1px solid #e5e7eb', borderRadius: 16,
+          padding: '48px 32px', textAlign: 'center', maxWidth: 480, margin: '0 auto',
+        }}>
+          <div style={{ fontSize: 42, marginBottom: 14 }}>👥</div>
+          <h2 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#111827', marginBottom: 8 }}>
+            Aucun compte gérant
+          </h2>
+          <p style={{ fontSize: '0.86rem', color: '#6b7280', lineHeight: 1.6, marginBottom: 24 }}>
+            {maxGerants !== null
+              ? `Votre abonnement inclut ${maxGerants} compte(s) gérant. Créez un premier compte pour donner accès à un collaborateur.`
+              : 'Créez un compte gérant pour donner accès à un collaborateur.'}
+          </p>
+          {!atGerantLimit && (
+            <button
+              onClick={() => { setShowForm(true); setInviteSent(null); setError(''); }}
+              style={{ padding: '9px 24px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: 9, fontWeight: 600, fontSize: 14, cursor: 'pointer' }}>
+              + Créer un gérant
+            </button>
+          )}
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {gerants.map((g) => (
             <div key={g.id} style={{
-              background: '#fff', borderRadius: 10, border: '1px solid #e5e7eb',
-              padding: '14px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+              background: '#fff', borderRadius: 12, border: '1px solid #e5e7eb',
+              padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16,
             }}>
-              <div>
-                <div style={{ fontWeight: 600, fontSize: 15, color: '#111827' }}>{g.nom}</div>
-                <div style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>
-                  {g.email} · {g.telephone}
+              {/* Left: identity */}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 3 }}>
+                  <span style={{ fontWeight: 700, fontSize: 14, color: '#111827' }}>{g.nom}</span>
+                  <span style={{
+                    fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 10,
+                    background: g.actif ? '#dcfce7' : '#fee2e2',
+                    color: g.actif ? '#166534' : '#991b1b',
+                  }}>
+                    {g.actif ? 'Actif' : 'Inactif'}
+                  </span>
+                  {!g.activatedAt && (
+                    <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 10, background: '#fef9c3', color: '#854d0e' }}>
+                      ⏳ Invitation en attente
+                    </span>
+                  )}
+                  <span style={{
+                    fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 10,
+                    background: g.estGratuit ? '#eff6ff' : '#fefce8',
+                    color: g.estGratuit ? '#1d4ed8' : '#854d0e',
+                  }}>
+                    {g.estGratuit ? 'Gratuit' : `${g.montantMensuel} DT/mois`}
+                  </span>
                 </div>
-                {isEntreprise && (
-                  <div style={{ fontSize: 12, color: '#9ca3af', marginTop: 2 }}>{activiteLabel(g)}</div>
+                <div style={{ fontSize: 12, color: '#6b7280' }}>
+                  {g.email}{g.telephone ? ` · ${g.telephone}` : ''}
+                </div>
+                {isEntreprise && g.activiteId && (
+                  <div style={{ fontSize: 12, color: '#9ca3af', marginTop: 2 }}>📍 {activiteLabel(g)}</div>
                 )}
               </div>
-              <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-                <span style={{
-                  fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 10,
-                  background: g.estGratuit ? '#dbeafe' : '#fef9c3',
-                  color: g.estGratuit ? '#1d4ed8' : '#854d0e',
-                }}>
-                  {g.estGratuit ? 'Gratuit' : `${g.montantMensuel} DT/mois`}
-                </span>
-                <span style={{
-                  fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 10,
-                  background: g.actif ? '#dcfce7' : '#fee2e2',
-                  color: g.actif ? '#166534' : '#991b1b',
-                }}>
-                  {g.actif ? 'Actif' : 'Inactif'}
-                </span>
-                {!g.activatedAt && (
-                  <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 10, background: '#fef9c3', color: '#854d0e' }}>⏳ En attente</span>
-                )}
+              {/* Right: actions */}
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0 }}>
                 {!g.activatedAt && (
                   <button
                     onClick={() => handleResendInvite(g.id, g.email)}
                     disabled={resendingId === g.id}
-                    style={{ padding: '4px 10px', background: '#eef2ff', border: '1px solid #c7d2fe', borderRadius: 6, fontSize: 12, cursor: 'pointer', color: '#4338ca', fontWeight: 600 }}>
+                    style={{ padding: '5px 11px', background: '#eef2ff', border: '1px solid #c7d2fe', borderRadius: 7, fontSize: 12, cursor: 'pointer', color: '#4338ca', fontWeight: 600 }}>
                     {resendingId === g.id ? '…' : '✉️ Renvoyer'}
                   </button>
                 )}
                 <button onClick={() => toggleActif(g)}
-                  style={{ padding: '4px 10px', background: '#f3f4f6', border: '1px solid #d1d5db', borderRadius: 6, fontSize: 12, cursor: 'pointer', color: '#374151' }}>
+                  style={{ padding: '5px 11px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 7, fontSize: 12, cursor: 'pointer', color: '#374151' }}>
                   {g.actif ? 'Désactiver' : 'Activer'}
                 </button>
                 <button onClick={() => deleteGerant(g.id)}
-                  style={{ padding: '4px 10px', background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: 6, fontSize: 12, cursor: 'pointer', color: '#991b1b' }}>
+                  style={{ padding: '5px 11px', background: '#fff1f2', border: '1px solid #fecdd3', borderRadius: 7, fontSize: 12, cursor: 'pointer', color: '#be123c' }}>
                   Supprimer
                 </button>
               </div>

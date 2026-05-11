@@ -505,18 +505,6 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                   </div>
                 </div>
               )}
-              {abonnementConfig.nbGerants > 0 && (
-                <div style={{
-                  background: '#f8fafc',
-                  border: '1px solid #e2e8f0',
-                  borderRadius: 12, padding: '10px 16px', minWidth: 110, textAlign: 'center',
-                }}>
-                  <div style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Gérants</div>
-                  <div style={{ fontSize: '1.3rem', fontWeight: 800, color: '#475569', lineHeight: 1 }}>
-                    {abonnementConfig.nbGerants}<span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)' }}>  alloués</span>
-                  </div>
-                </div>
-              )}
             </div>
           )}
         </div>
