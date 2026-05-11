@@ -127,69 +127,109 @@ export default function MonAbonnementPage() {
           </div>
         )}
 
-        {/* Pricing card */}
+        {/* Tarification card */}
         {pricing && (
           <div style={{ background: '#fff', borderRadius: 16, border: '1px solid #e5e7eb', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
             <div style={{ background: 'linear-gradient(135deg, #eff6ff, #dbeafe)', padding: '16px 20px', borderBottom: '1px solid #bfdbfe' }}>
               <div style={{ fontWeight: 800, fontSize: '0.9rem', color: '#1e40af', display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span>💰</span> Tarification mensuelle
+                <span>💰</span> Votre tarification
               </div>
             </div>
             <div style={{ padding: '20px' }}>
-              <div style={{ textAlign: 'center', marginBottom: 16 }}>
-                {pricing.activePromoMensuel && pricing.baseMensuel !== effectifMensuel && (
-                  <div style={{ fontSize: '1rem', color: '#9ca3af', textDecoration: 'line-through', marginBottom: 4 }}>
-                    {pricing.baseMensuel} DT/mois
-                  </div>
-                )}
-                <div style={{ fontSize: '2.2rem', fontWeight: 900, color: pricing.activePromoMensuel ? '#7c3aed' : '#1e40af', lineHeight: 1 }}>
-                  {effectifMensuel != null ? `${effectifMensuel} DT` : '—'}
-                  <span style={{ fontSize: '0.9rem', fontWeight: 500, color: '#6b7280' }}>/mois</span>
+
+              {/* ── Tarification mensuelle ── */}
+              <div style={{ marginBottom: pricing.baseOnboarding != null ? 18 : 0 }}>
+                <div style={{ fontSize: '0.72rem', fontWeight: 800, color: '#1e40af', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 12 }}>
+                  Tarification mensuelle
                 </div>
-                {pricing.activePromoMensuel && (
-                  <div style={{ marginTop: 6, background: '#f5f3ff', borderRadius: 8, padding: '4px 12px', display: 'inline-block', fontSize: '0.78rem', color: '#7c3aed', fontWeight: 700 }}>
-                    🎉 Promotion appliquée
+
+                {breakdown ? (
+                  <div style={{ background: '#f8fafc', borderRadius: 10, padding: '12px 16px' }}>
+                    {breakdown.activite.nb > 0 && (
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.84rem', marginBottom: 8, paddingBottom: 8, borderBottom: '1px solid #f1f5f9' }}>
+                        <span style={{ color: '#374151' }}>
+                          📍 {breakdown.activite.nb} activité{breakdown.activite.nb > 1 ? 's' : ''}
+                        </span>
+                        <span style={{ fontWeight: 700, color: '#111827' }}>{breakdown.activite.total.toFixed(2)} DT</span>
+                      </div>
+                    )}
+                    {breakdown.labo.nb > 0 && (
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.84rem', marginBottom: 8, paddingBottom: 8, borderBottom: '1px solid #f1f5f9' }}>
+                        <span style={{ color: '#374151' }}>
+                          🏭 {breakdown.labo.nb} labo{breakdown.labo.nb > 1 ? 's' : ''} × {breakdown.prixLaboSup} DT
+                        </span>
+                        <span style={{ fontWeight: 700, color: '#111827' }}>{breakdown.labo.total.toFixed(2)} DT</span>
+                      </div>
+                    )}
+                    {breakdown.gerant.nb > 0 && (
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.84rem', marginBottom: 8, paddingBottom: 8, borderBottom: '1px solid #f1f5f9' }}>
+                        <span style={{ color: '#374151' }}>
+                          👤 {breakdown.gerant.nb} gérant{breakdown.gerant.nb > 1 ? 's' : ''} × {breakdown.prixGerantSup} DT
+                        </span>
+                        <span style={{ fontWeight: 700, color: '#111827' }}>{breakdown.gerant.total.toFixed(2)} DT</span>
+                      </div>
+                    )}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 4 }}>
+                      <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#1e40af' }}>Total</span>
+                      <div style={{ textAlign: 'right' }}>
+                        {pricing.activePromoMensuel && pricing.baseMensuel !== effectifMensuel && (
+                          <div style={{ fontSize: '0.78rem', color: '#9ca3af', textDecoration: 'line-through' }}>
+                            {(pricing.baseMensuel ?? 0).toFixed(2)} DT/mois
+                          </div>
+                        )}
+                        <div style={{ fontSize: '1.2rem', fontWeight: 900, color: pricing.activePromoMensuel ? '#7c3aed' : '#1e40af', lineHeight: 1.2 }}>
+                          {effectifMensuel != null ? `${effectifMensuel} DT` : '—'}
+                          <span style={{ fontSize: '0.78rem', fontWeight: 500, color: '#6b7280', marginLeft: 3 }}>/mois</span>
+                        </div>
+                      </div>
+                    </div>
+                    {pricing.activePromoMensuel && (
+                      <div style={{ marginTop: 8, background: '#f5f3ff', borderRadius: 6, padding: '4px 10px', display: 'inline-block', fontSize: '0.75rem', color: '#7c3aed', fontWeight: 700 }}>
+                        🎉 Promotion appliquée
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', background: '#f8fafc', borderRadius: 8 }}>
+                    <span style={{ fontSize: '0.84rem', color: '#374151' }}>Mensuel</span>
+                    <span style={{ fontSize: '1.2rem', fontWeight: 900, color: '#1e40af' }}>
+                      {effectifMensuel != null ? `${effectifMensuel} DT` : '—'}
+                      <span style={{ fontSize: '0.78rem', fontWeight: 500, color: '#6b7280', marginLeft: 3 }}>/mois</span>
+                    </span>
                   </div>
                 )}
               </div>
 
-              {breakdown && (
-                <div style={{ background: '#f8fafc', borderRadius: 10, padding: '12px 16px' }}>
-                  <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10 }}>Détail</div>
-                  {breakdown.activite.nb > 0 && (
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', marginBottom: 6 }}>
-                      <span style={{ color: '#374151' }}>{breakdown.activite.nb} activité{breakdown.activite.nb > 1 ? 's' : ''}</span>
-                      <span style={{ fontWeight: 600, color: '#111827' }}>{breakdown.activite.total.toFixed(2)} DT</span>
+              {/* ── Tarification onboarding ── */}
+              {pricing.baseOnboarding != null && (() => {
+                const onbStatut = abo.statutOnboarding || 'en_attente';
+                const onbColor = STATUT_COLORS[onbStatut] || '#6b7280';
+                const onbLabel = STATUT_LABELS[onbStatut] || onbStatut;
+                const onbMontant = pricing.effectifOnboarding != null ? pricing.effectifOnboarding : pricing.baseOnboarding;
+                return (
+                  <div>
+                    <div style={{ height: 1, background: '#e5e7eb', marginBottom: 18 }} />
+                    <div style={{ fontSize: '0.72rem', fontWeight: 800, color: '#15803d', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 12 }}>
+                      Tarification onboarding
                     </div>
-                  )}
-                  {breakdown.labo.nb > 0 && (
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', marginBottom: 6 }}>
-                      <span style={{ color: '#374151' }}>{breakdown.labo.nb} labo{breakdown.labo.nb > 1 ? 's' : ''} × {breakdown.prixLaboSup} DT</span>
-                      <span style={{ fontWeight: 600, color: '#111827' }}>{breakdown.labo.total.toFixed(2)} DT</span>
+                    <div style={{ background: '#f0fdf4', borderRadius: 10, padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: '1px solid #bbf7d0' }}>
+                      <div>
+                        <div style={{ fontSize: '0.84rem', color: '#374151', fontWeight: 600 }}>Frais d'intégration</div>
+                        <div style={{ marginTop: 5 }}>
+                          <span style={{
+                            fontSize: '0.72rem', fontWeight: 700, padding: '2px 9px', borderRadius: 20,
+                            background: onbColor + '20', color: onbColor,
+                          }}>{onbLabel}</span>
+                        </div>
+                      </div>
+                      <div style={{ fontSize: '1.15rem', fontWeight: 900, color: '#16a34a', textAlign: 'right' }}>
+                        {onbMontant} DT
+                        <div style={{ fontSize: '0.72rem', fontWeight: 400, color: '#6b7280' }}>unique</div>
+                      </div>
                     </div>
-                  )}
-                  {breakdown.gerant.nb > 0 && (
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', marginBottom: 6 }}>
-                      <span style={{ color: '#374151' }}>{breakdown.gerant.nb} gérant{breakdown.gerant.nb > 1 ? 's' : ''} × {breakdown.prixGerantSup} DT</span>
-                      <span style={{ fontWeight: 600, color: '#111827' }}>{breakdown.gerant.total.toFixed(2)} DT</span>
-                    </div>
-                  )}
-                  <div style={{ borderTop: '1px solid #e5e7eb', marginTop: 8, paddingTop: 8, display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', fontWeight: 800, color: '#1e40af' }}>
-                    <span>Total base</span>
-                    <span>{(pricing.baseMensuel ?? 0).toFixed(2)} DT/mois</span>
                   </div>
-                </div>
-              )}
-
-              {pricing.baseOnboarding != null && (
-                <div style={{ marginTop: 14, display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', background: '#f0fdf4', borderRadius: 8, border: '1px solid #bbf7d0' }}>
-                  <span style={{ fontSize: '0.82rem', color: '#374151', fontWeight: 600 }}>Onboarding</span>
-                  <span style={{ fontSize: '0.9rem', fontWeight: 800, color: '#16a34a' }}>
-                    {pricing.effectifOnboarding != null ? pricing.effectifOnboarding : pricing.baseOnboarding} DT
-                    <span style={{ fontSize: '0.72rem', color: '#6b7280', fontWeight: 400, marginLeft: 4 }}>({abo.statutOnboarding})</span>
-                  </span>
-                </div>
-              )}
+                );
+              })()}
             </div>
           </div>
         )}
