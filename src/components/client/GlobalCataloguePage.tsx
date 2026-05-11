@@ -199,7 +199,7 @@ export default function GlobalCataloguePage() {
   const { user, canWrite, advanceOnboarding } = useAuth();
   const { refreshSelections } = useSelection();
 
-  const isEntreprise = user?.compteType === 'entreprise';
+  const isEntreprise = user?.compteType === 'entreprise' || !user?.compteType;
 
   // Common state
   const [ingredients, setIngredients] = useState<GlobalIngredient[]>([]);

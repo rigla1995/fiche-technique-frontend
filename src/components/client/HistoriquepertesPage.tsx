@@ -159,7 +159,7 @@ export default function HistoriquepertesPage() {
   const { t } = useTranslation();
   const { user, canWrite } = useAuth();
   const [searchParams] = useSearchParams();
-  const isEntreprise = user?.compteType === 'entreprise';
+  const isEntreprise = user?.compteType === 'entreprise' || !user?.compteType;
   const type = searchParams.get('type') as 'franchise' | 'distinct' | null;
   const urlActiviteId = searchParams.get('activiteId') || '';
   const isGerant = user?.role === 'gerant';

@@ -258,7 +258,7 @@ export default function HistoriqueApproPage() {
   const { t } = useTranslation();
   const { user, canWrite } = useAuth();
   const [searchParams] = useSearchParams();
-  const isEntreprise = user?.compteType === 'entreprise';
+  const isEntreprise = user?.compteType === 'entreprise' || !user?.compteType;
 
   const initIngredientId = searchParams.get('ingredientId') || '';
   const initActiviteId = searchParams.get('activiteId') || '';

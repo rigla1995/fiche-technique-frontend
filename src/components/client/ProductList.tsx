@@ -20,7 +20,7 @@ const PAGE_SIZE = 10;
 export default function ProductList() {
   const { t } = useTranslation();
   const { user, canWrite } = useAuth();
-  const isEntreprise = user?.compteType === 'entreprise';
+  const isEntreprise = user?.compteType === 'entreprise' || !user?.compteType;
 
   const [searchParams, setSearchParams] = useSearchParams();
   const tab = (searchParams.get('tab') as TabType) || 'vendable';

@@ -8,7 +8,7 @@ import type { Product } from '../../types';
 export default function ClientDashboard() {
   const { t } = useTranslation();
   const { user } = useAuth();
-  const isEntreprise = user?.compteType === 'entreprise';
+  const isEntreprise = user?.compteType === 'entreprise' || !user?.compteType;
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
 

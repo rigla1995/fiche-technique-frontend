@@ -133,7 +133,7 @@ export default function Profile() {
         <div>
           <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 700 }}>{t('client.profile.account_type')}</span>
           <div style={{ marginTop: 4 }}>
-            {user?.compteType === 'entreprise' ? (
+            {user?.compteType === 'entreprise' || !user?.compteType ? (
               <span className="role-badge" style={{ background: '#fef9c3', color: '#854d0e', borderRadius: 20, padding: '3px 12px', fontSize: '0.8rem', fontWeight: 700 }}>🏢 {t('client.profile.type_entreprise')}</span>
             ) : (
               <span className="role-badge" style={{ background: 'var(--primary-light)', color: 'var(--primary)', borderRadius: 20, padding: '3px 12px', fontSize: '0.8rem', fontWeight: 700 }}>👤 {t('client.profile.type_client')}</span>

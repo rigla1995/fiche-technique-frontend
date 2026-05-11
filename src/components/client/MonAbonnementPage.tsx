@@ -163,7 +163,7 @@ export default function MonAbonnementPage() {
       }}>
         <div>
           <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 4 }}>
-            {abo.compteType === 'entreprise' ? 'Compte Entreprise' : 'Compte Indépendant'} — depuis {fmtDate(abo.dateDebut)}
+            {abo.compteType === 'independant' ? 'Compte Indépendant' : 'Compte Entreprise'} — depuis {fmtDate(abo.dateDebut)}
           </div>
           <div style={{ fontSize: 24, fontWeight: 800, color: mode.color }}>{mode.label}</div>
           <div style={{ fontSize: 13, color: '#6b7280', marginTop: 4 }}>{mode.desc}</div>
