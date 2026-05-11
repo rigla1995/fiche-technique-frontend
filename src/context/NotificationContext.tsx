@@ -4,8 +4,8 @@ import api from '../api/client';
 
 export interface AppNotification {
   id: string;
-  eventType: 'new_demande' | 'demande_traitee';
-  demandeId: number;
+  eventType: 'new_demande' | 'demande_traitee' | 'new_inventaire';
+  demandeId?: number;
   type: string;
   clientNom?: string;
   statut?: string;
@@ -20,6 +20,7 @@ interface NotificationContextValue {
   markAllRead: () => void;
   clear: () => void;
   clearAllFromDB: () => Promise<void>;
+  clearByEventType: (eventType: string) => Promise<void>;
 }
 
 const NotificationContext = createContext<NotificationContextValue>({
@@ -28,6 +29,7 @@ const NotificationContext = createContext<NotificationContextValue>({
   markAllRead: () => {},
   clear: () => {},
   clearAllFromDB: async () => {},
+  clearByEventType: async () => {},
 });
 
 export function NotificationProvider({ children }: { children: React.ReactNode }) {
@@ -40,7 +42,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     if (!user) { setNotifications([]); return; }
     api.get('/api/notifications').then(({ data }) => {
       const mapped: AppNotification[] = data.map((r: {
-        id: number; eventType: string; demandeId: number; type: string;
+        id: number; eventType: string; demandeId?: number; type: string;
         clientNom?: string; statut?: string; notesAdmin?: string | null; createdAt: string;
       }) => ({
         id: String(r.id),
@@ -61,7 +63,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     const notif: AppNotification = {
       id: `${Date.now()}-${Math.random()}`,
       eventType,
-      demandeId: data.demandeId as number,
+      demandeId: data.demandeId as number | undefined,
       type: data.type as string,
       clientNom: data.clientNom as string | undefined,
       statut: data.statut as string | undefined,
@@ -89,6 +91,9 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       es.addEventListener('demande_traitee', (e) => {
         try { push('demande_traitee', JSON.parse(e.data)); } catch { /* ignore */ }
       });
+      es.addEventListener('new_inventaire', (e) => {
+        try { push('new_inventaire', JSON.parse(e.data)); } catch { /* ignore */ }
+      });
 
       es.onerror = () => {
         es.close();
@@ -111,10 +116,15 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     setNotifications([]);
   }, []);
 
+  const clearByEventType = useCallback(async (eventType: string) => {
+    await api.delete(`/api/notifications?eventType=${encodeURIComponent(eventType)}`).catch(() => {});
+    setNotifications((prev) => prev.filter((n) => n.eventType !== eventType));
+  }, []);
+
   const unreadCount = notifications.filter((n) => !n.readAt).length;
 
   return (
-    <NotificationContext.Provider value={{ notifications, unreadCount, markAllRead, clear, clearAllFromDB }}>
+    <NotificationContext.Provider value={{ notifications, unreadCount, markAllRead, clear, clearAllFromDB, clearByEventType }}>
       {children}
     </NotificationContext.Provider>
   );

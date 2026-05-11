@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import api from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
+import { useNotifications } from '../../context/NotificationContext';
 
 const currentYear = new Date().getFullYear();
 const fmtDate = (iso: string | null | undefined) => {
@@ -35,6 +36,7 @@ const labelStyle: React.CSSProperties = {
 
 export default function HistoriqueInventairePage() {
   const { user, canWrite } = useAuth();
+  const { clearByEventType } = useNotifications();
   const isGerant = user?.role === 'gerant';
   const [searchParams] = useSearchParams();
   const laboId = searchParams.get('laboId');
@@ -67,6 +69,10 @@ export default function HistoriqueInventairePage() {
   const [editSaving, setEditSaving] = useState(false);
 
   const isClientMode = !laboId && !section && !activiteId;
+
+  useEffect(() => {
+    if (!isGerant) clearByEventType('new_inventaire');
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!section) return;

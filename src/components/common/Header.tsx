@@ -35,10 +35,14 @@ export default function Header({ onMenuToggle }: HeaderProps) {
     if (!open && unreadCount > 0) markAllRead();
   };
 
-  const handleNotifClick = () => {
+  const handleNotifClick = (eventType: string) => {
     setOpen(false);
-    const path = user?.role === 'super_admin' ? '/admin/support' : '/client/support';
-    navigate(path);
+    if (eventType === 'new_inventaire') {
+      navigate('/client/inventaire/historique');
+    } else {
+      const path = user?.role === 'super_admin' ? '/admin/support' : '/client/support';
+      navigate(path);
+    }
   };
 
   const typeLabel = (type: string) => {
@@ -115,7 +119,7 @@ export default function Header({ onMenuToggle }: HeaderProps) {
                 </div>
               ) : (
                 notifications.map((n) => (
-                  <div key={n.id} onClick={handleNotifClick} style={{
+                  <div key={n.id} onClick={() => handleNotifClick(n.eventType)} style={{
                     padding: '10px 14px',
                     borderBottom: '1px solid var(--border)',
                     background: n.readAt ? 'transparent' : 'rgba(239,68,68,0.05)',
@@ -123,11 +127,15 @@ export default function Header({ onMenuToggle }: HeaderProps) {
                   }}>
                     <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
                       <span style={{ fontSize: '1.1rem', flexShrink: 0 }}>
-                        {n.eventType === 'new_demande' ? '📥' : n.statut === 'validée' ? '✅' : '❌'}
+                        {n.eventType === 'new_inventaire' ? '📦'
+                          : n.eventType === 'new_demande' ? '📥'
+                          : n.statut === 'validée' ? '✅' : '❌'}
                       </span>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text)', lineHeight: 1.3 }}>
-                          {n.eventType === 'new_demande'
+                          {n.eventType === 'new_inventaire'
+                            ? 'Inventaire ajouté par un gérant'
+                            : n.eventType === 'new_demande'
                             ? `Nouvelle demande — ${typeLabel(n.type)}`
                             : `Demande ${n.statut === 'validée' ? 'validée ✓' : 'refusée ✗'} — ${typeLabel(n.type)}`}
                         </div>
