@@ -512,40 +512,60 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
   return (
     <div className={minimal ? '' : 'page-content'}>
       {!minimal && (
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16, marginBottom: 24 }}>
+        <div style={{
+          background: 'linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #1d4ed8 100%)',
+          borderRadius: 18, padding: '24px 28px', marginBottom: 24,
+          boxShadow: '0 8px 32px rgba(29,78,216,0.22)',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16,
+        }}>
           <div>
-            <h1 style={{ margin: 0 }}>{t('nav.activites')}</h1>
-            <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginTop: 4, marginBottom: 0 }}>
-              Gérez vos points de vente, franchises et laboratoires de production.
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+              <div style={{ background: 'rgba(255,255,255,0.15)', borderRadius: 10, padding: '7px 9px', fontSize: '1.2rem' }}>🏢</div>
+              <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0 }}>{t('nav.activites')}</h1>
+            </div>
+            <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.85rem', margin: 0 }}>
+              Gérez vos points de vente, franchises et laboratoires de production
             </p>
           </div>
-          {/* Config quota indicators */}
-          {!loading && abonnementConfig && (
-            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-              <div style={{
-                background: atActiviteLimit ? '#fef2f2' : activites.length > 0 ? '#f0fdf4' : '#f8fafc',
-                border: `1px solid ${atActiviteLimit ? '#fecaca' : activites.length > 0 ? '#bbf7d0' : '#e2e8f0'}`,
-                borderRadius: 12, padding: '10px 16px', minWidth: 110, textAlign: 'center',
-              }}>
-                <div style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Activités</div>
-                <div style={{ fontSize: '1.3rem', fontWeight: 800, color: atActiviteLimit ? '#dc2626' : activites.length > 0 ? '#16a34a' : '#475569', lineHeight: 1 }}>
-                  {activites.length}<span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)' }}> / {abonnementConfig.nbActivites}</span>
-                </div>
-              </div>
-              {abonnementConfig.nbLabos > 0 && (
+          <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+            {!loading && abonnementConfig && (
+              <>
                 <div style={{
-                  background: atLaboLimit ? '#fef2f2' : usedLabos > 0 ? '#f0fdf4' : '#f8fafc',
-                  border: `1px solid ${atLaboLimit ? '#fecaca' : usedLabos > 0 ? '#bbf7d0' : '#e2e8f0'}`,
-                  borderRadius: 12, padding: '10px 16px', minWidth: 110, textAlign: 'center',
+                  background: atActiviteLimit ? '#fef2f2' : activites.length > 0 ? '#f0fdf4' : 'rgba(255,255,255,0.1)',
+                  borderRadius: 12, padding: '10px 20px', textAlign: 'center', minWidth: 90,
+                  border: `1px solid ${atActiviteLimit ? '#fecaca' : activites.length > 0 ? '#bbf7d0' : 'rgba(255,255,255,0.2)'}`,
                 }}>
-                  <div style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Labos</div>
-                  <div style={{ fontSize: '1.3rem', fontWeight: 800, color: atLaboLimit ? '#dc2626' : usedLabos > 0 ? '#16a34a' : '#475569', lineHeight: 1 }}>
-                    {usedLabos}<span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)' }}> / {abonnementConfig.nbLabos}</span>
+                  <div style={{ fontSize: '0.66rem', fontWeight: 700, color: atActiviteLimit || activites.length > 0 ? '#6b7280' : 'rgba(255,255,255,0.7)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 2 }}>Activités</div>
+                  <div style={{ fontSize: '1.4rem', fontWeight: 900, color: atActiviteLimit ? '#dc2626' : activites.length > 0 ? '#16a34a' : '#fff', lineHeight: 1 }}>
+                    {activites.length}<span style={{ fontSize: '0.8rem', fontWeight: 600, color: atActiviteLimit || activites.length > 0 ? '#6b7280' : 'rgba(255,255,255,0.6)' }}> / {abonnementConfig.nbActivites}</span>
                   </div>
                 </div>
-              )}
-            </div>
-          )}
+                {abonnementConfig.nbLabos > 0 && (
+                  <div style={{
+                    background: atLaboLimit ? '#fef2f2' : usedLabos > 0 ? '#f5f3ff' : 'rgba(255,255,255,0.1)',
+                    borderRadius: 12, padding: '10px 20px', textAlign: 'center', minWidth: 80,
+                    border: `1px solid ${atLaboLimit ? '#fecaca' : usedLabos > 0 ? '#c4b5fd' : 'rgba(255,255,255,0.2)'}`,
+                  }}>
+                    <div style={{ fontSize: '0.66rem', fontWeight: 700, color: atLaboLimit || usedLabos > 0 ? '#6b7280' : 'rgba(255,255,255,0.7)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 2 }}>Labos</div>
+                    <div style={{ fontSize: '1.4rem', fontWeight: 900, color: atLaboLimit ? '#dc2626' : usedLabos > 0 ? '#7c3aed' : '#fff', lineHeight: 1 }}>
+                      {usedLabos}<span style={{ fontSize: '0.8rem', fontWeight: 600, color: atLaboLimit || usedLabos > 0 ? '#6b7280' : 'rgba(255,255,255,0.6)' }}> / {abonnementConfig.nbLabos}</span>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+            {!atActiviteLimit && !loading && (
+              <button onClick={() => openAdd()}
+                style={{ padding: '10px 22px', borderRadius: 10, border: 'none', background: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(4px)', color: '#fff', fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer', border: '1px solid rgba(255,255,255,0.25)' } as React.CSSProperties}>
+                + Nouvelle activité
+              </button>
+            )}
+            {atActiviteLimit && !loading && (
+              <div style={{ background: 'rgba(255,255,255,0.1)', borderRadius: 10, padding: '8px 16px', fontSize: '0.8rem', color: 'rgba(255,255,255,0.7)', border: '1px solid rgba(255,255,255,0.2)' }}>
+                🔒 Limite atteinte ({maxActivites})
+              </div>
+            )}
+          </div>
         </div>
       )}
 
@@ -594,23 +614,21 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
       ) : (
         <>
           {/* Franchise section — always visible so user can add a franchise activity */}
-          <div style={{ marginBottom: 36 }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+          <div style={{ marginBottom: 32 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14, padding: '10px 16px', background: 'linear-gradient(135deg,#eff6ff,#dbeafe)', borderRadius: 12, border: '1px solid #bfdbfe' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <span style={{ width: 4, height: 22, borderRadius: 4, background: 'linear-gradient(180deg, #2563eb 0%, #0ea5e9 100%)', display: 'inline-block', flexShrink: 0 }} />
-                  <h2 style={{ fontSize: '0.82rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text)', margin: 0 }}>
-                    {t('nav.espace_franchise')}
-                  </h2>
+                  <span style={{ fontSize: '1.1rem' }}>🔗</span>
+                  <span style={{ fontSize: '0.9rem', fontWeight: 800, color: '#1e40af' }}>{t('nav.espace_franchise')}</span>
                   <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#7c3aed', background: '#ede9fe', border: '1px solid #c4b5fd', borderRadius: 20, padding: '2px 10px' }}>
-                    🏭 {new Set(franchiseActivities.filter((a) => a.laboId).map((a) => a.laboId)).size}
+                    🏭 {new Set(franchiseActivities.filter((a) => a.laboId).map((a) => a.laboId)).size} labo(s)
                   </span>
-                  <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--primary)', background: 'var(--primary-light)', border: '1px solid #bfdbfe', borderRadius: 20, padding: '2px 10px' }}>
-                    🏢 {franchiseActivities.length}
+                  <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#1e40af', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 20, padding: '2px 10px' }}>
+                    🏢 {franchiseActivities.length} activité(s)
                   </span>
                 </div>
                 {atActiviteLimit ? (
-                  <span style={{ fontSize: 12, color: '#6b7280', background: '#f3f4f6', border: '1px solid #e5e7eb', borderRadius: 6, padding: '4px 10px' }}>
-                    🔒 Limite atteinte ({maxActivites})
+                  <span style={{ fontSize: '0.75rem', color: '#6b7280', background: '#f3f4f6', border: '1px solid #e5e7eb', borderRadius: 8, padding: '5px 12px' }}>
+                    🔒 Limite atteinte
                   </span>
                 ) : (
                   <button className="btn btn-primary btn-sm" onClick={() => openAdd('franchise')}>
@@ -724,20 +742,18 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
 
           {/* Distinct section — always visible when any activities exist so user can add a distinct activity */}
           {(distinctActivities.length > 0 || franchiseActivities.length > 0) && (
-            <div style={{ marginBottom: 36 }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+            <div style={{ marginBottom: 32 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14, padding: '10px 16px', background: 'linear-gradient(135deg,#f0fdf4,#dcfce7)', borderRadius: 12, border: '1px solid #bbf7d0' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <span style={{ width: 4, height: 22, borderRadius: 4, background: 'linear-gradient(180deg, #10b981 0%, #059669 100%)', display: 'inline-block', flexShrink: 0 }} />
-                  <h2 style={{ fontSize: '0.82rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text)', margin: 0 }}>
-                    {t('nav.espace_distinct')}
-                  </h2>
+                  <span style={{ fontSize: '1.1rem' }}>📍</span>
+                  <span style={{ fontSize: '0.9rem', fontWeight: 800, color: '#166534' }}>{t('nav.espace_distinct')}</span>
                   <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#059669', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 20, padding: '2px 10px' }}>
-                    🏢 {distinctActivities.length}
+                    🏢 {distinctActivities.length} activité(s)
                   </span>
                 </div>
                 {atActiviteLimit ? (
-                  <span style={{ fontSize: 12, color: '#6b7280', background: '#f3f4f6', border: '1px solid #e5e7eb', borderRadius: 6, padding: '4px 10px' }}>
-                    🔒 Limite atteinte ({maxActivites})
+                  <span style={{ fontSize: '0.75rem', color: '#6b7280', background: '#f3f4f6', border: '1px solid #e5e7eb', borderRadius: 8, padding: '5px 12px' }}>
+                    🔒 Limite atteinte
                   </span>
                 ) : (
                   <button className="btn btn-secondary btn-sm" onClick={() => openAdd('distincte')}>

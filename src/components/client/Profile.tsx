@@ -114,136 +114,152 @@ export default function Profile() {
     setUpgrading(false);
   };
 
-  if (loading) return <div className="loading-text">{t('common.loading')}</div>;
+  if (loading) return <div style={{ padding: 40, textAlign: 'center', color: '#9ca3af' }}>{t('common.loading')}</div>;
+
+  const initials = form.name ? form.name.split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase() : '?';
+  const isEntreprise = user?.compteType === 'entreprise' || !user?.compteType;
 
   return (
-    <div className="page" style={{ maxWidth: 560 }}>
-      <div className="page-header">
-        <h1>{t('client.profile.title')}</h1>
-      </div>
-
-      {user?.onboardingStep === 1 && (
-        <div className="alert alert-warning" style={{ marginBottom: 16 }}>
-          🔒 Bienvenue ! Veuillez définir un nouveau mot de passe pour accéder à votre espace.
+    <div className="page" style={{ maxWidth: 620 }}>
+      {/* ── Hero ── */}
+      <div style={{
+        background: 'linear-gradient(135deg, #1e1b4b 0%, #4338ca 55%, #6366f1 100%)',
+        borderRadius: 18, padding: '24px 28px', marginBottom: 24,
+        boxShadow: '0 8px 32px rgba(67,56,202,0.28)',
+        display: 'flex', alignItems: 'center', gap: 20, flexWrap: 'wrap',
+      }}>
+        <div style={{ width: 60, height: 60, borderRadius: '50%', background: 'rgba(255,255,255,0.2)', border: '2px solid rgba(255,255,255,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.5rem', fontWeight: 800, color: '#fff', flexShrink: 0 }}>
+          {initials}
         </div>
-      )}
-
-      {/* Account type + upgrade */}
-      <div className="card" style={{ padding: '16px 24px', marginBottom: 16, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
-        <div>
-          <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 700 }}>{t('client.profile.account_type')}</span>
-          <div style={{ marginTop: 4 }}>
-            {user?.compteType === 'entreprise' || !user?.compteType ? (
-              <span className="role-badge" style={{ background: '#fef9c3', color: '#854d0e', borderRadius: 20, padding: '3px 12px', fontSize: '0.8rem', fontWeight: 700 }}>🏢 {t('client.profile.type_entreprise')}</span>
-            ) : (
-              <span className="role-badge" style={{ background: 'var(--primary-light)', color: 'var(--primary)', borderRadius: 20, padding: '3px 12px', fontSize: '0.8rem', fontWeight: 700 }}>👤 {t('client.profile.type_client')}</span>
-            )}
+        <div style={{ flex: 1 }}>
+          <h1 style={{ margin: 0, fontSize: '1.4rem', fontWeight: 900, color: '#fff' }}>{form.name || t('client.profile.title')}</h1>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6, flexWrap: 'wrap' }}>
+            <span style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.7)' }}>{form.email}</span>
+            <span style={{
+              fontSize: '0.72rem', fontWeight: 700, padding: '2px 10px', borderRadius: 20,
+              background: isEntreprise ? '#fef9c3' : 'rgba(255,255,255,0.2)',
+              color: isEntreprise ? '#854d0e' : '#fff',
+            }}>
+              {isEntreprise ? `🏢 ${t('client.profile.type_entreprise')}` : `👤 ${t('client.profile.type_client')}`}
+            </span>
           </div>
         </div>
         {user?.compteType !== 'entreprise' && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            {upgradeMsg && <span style={{ fontSize: '0.875rem', color: upgradeMsg === t('common.error') ? 'var(--danger)' : 'var(--success)' }}>{upgradeMsg}</span>}
-            <button className="btn btn-primary btn-sm" onClick={handleUpgrade} disabled={upgrading}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
+            {upgradeMsg && (
+              <span style={{ fontSize: '0.78rem', color: upgradeMsg === t('common.error') ? '#fca5a5' : '#bbf7d0' }}>{upgradeMsg}</span>
+            )}
+            <button onClick={handleUpgrade} disabled={upgrading}
+              style={{ padding: '8px 18px', borderRadius: 9, border: '1.5px solid rgba(255,255,255,0.35)', background: 'rgba(255,255,255,0.12)', backdropFilter: 'blur(4px)', color: '#fff', fontWeight: 700, fontSize: '0.82rem', cursor: upgrading ? 'default' : 'pointer' }}>
               {upgrading ? t('common.loading') : `🏢 ${t('client.profile.upgrade_btn')}`}
             </button>
           </div>
         )}
       </div>
 
-      <div className="card" style={{ padding: '24px' }}>
-        {success && (
-          <div style={{ background: '#e6f9ee', color: '#1a7a40', border: '1px solid #b2dfc5', borderRadius: 8, padding: '10px 16px', marginBottom: 16 }}>
-            {t('client.profile.success')}
-          </div>
-        )}
-        {errors.global && (
-          <div style={{ background: '#fff0f0', color: '#c00', border: '1px solid #fbb', borderRadius: 8, padding: '10px 16px', marginBottom: 16 }}>
-            {errors.global}
-          </div>
-        )}
-        <form onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label>{t('common.name')}</label>
-            <input
-              className={`input${errors.name ? ' input-error' : ''}`}
-              value={form.name}
-              onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-            />
-            {errors.name && <span className="field-error">{errors.name}</span>}
-          </div>
-          <div className="form-group">
-            <label>{t('common.email')}</label>
-            <input
-              className={`input${errors.email ? ' input-error' : ''}`}
-              type="email"
-              value={form.email}
-              onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
-            />
-            {errors.email && <span className="field-error">{errors.email}</span>}
-          </div>
-          <div className="form-group">
-            <label>{t('common.phone')} <span style={{ fontSize: '0.8em', color: '#888' }}>{t('validation.phone_hint')}</span></label>
-            <input
-              className={`input${errors.phone ? ' input-error' : ''}`}
-              value={form.phone}
-              placeholder={t('validation.phone_placeholder')}
-              onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
-            />
-            {errors.phone && <span className="field-error">{errors.phone}</span>}
-          </div>
+      {user?.onboardingStep === 1 && (
+        <div style={{ background: '#fef3c7', border: '1px solid #fde68a', borderRadius: 12, padding: '12px 18px', marginBottom: 20, fontSize: '0.85rem', color: '#92400e', fontWeight: 600 }}>
+          🔒 Bienvenue ! Veuillez définir un nouveau mot de passe pour accéder à votre espace.
+        </div>
+      )}
 
-          <hr style={{ margin: '20px 0', borderColor: '#eee' }} />
-          <p style={{ fontSize: '0.875rem', color: '#666', marginBottom: 12 }}>
-            {t('client.profile.password_section_hint')}
-          </p>
+      {success && (
+        <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 12, padding: '12px 18px', marginBottom: 20, fontSize: '0.85rem', color: '#166534', fontWeight: 600 }}>
+          ✓ {t('client.profile.success')}
+        </div>
+      )}
+      {errors.global && (
+        <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 12, padding: '12px 18px', marginBottom: 20, fontSize: '0.85rem', color: '#dc2626', fontWeight: 600 }}>
+          ⚠ {errors.global}
+        </div>
+      )}
 
-          <div className="form-group">
-            <label>{t('client.profile.current_password')}</label>
-            <input
-              className={`input${errors.currentPassword ? ' input-error' : ''}`}
-              type="password"
-              value={form.currentPassword}
-              onChange={(e) => setForm((f) => ({ ...f, currentPassword: e.target.value }))}
-            />
-            {errors.currentPassword && <span className="field-error">{errors.currentPassword}</span>}
+      <form onSubmit={handleSubmit}>
+        {/* ── Informations personnelles ── */}
+        <div style={{ background: '#fff', borderRadius: 16, border: '1px solid #e5e7eb', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', marginBottom: 20 }}>
+          <div style={{ background: 'linear-gradient(135deg,#f5f3ff,#ede9fe)', padding: '14px 20px', borderBottom: '1px solid #ddd6fe', display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontSize: '1rem' }}>👤</span>
+            <span style={{ fontWeight: 800, fontSize: '0.88rem', color: '#4c1d95' }}>Informations personnelles</span>
           </div>
-          <div className="form-group">
-            <label>{t('client.profile.new_password')}</label>
-            <input
-              className={`input${errors.password ? ' input-error' : ''}`}
-              type="password"
-              value={form.password}
-              onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
-            />
-            {form.password && (
-              <ul style={{ margin: '6px 0 0 4px', padding: 0, listStyle: 'none', fontSize: '0.8rem' }}>
-                {PASSWORD_RULES.map((r) => (
-                  <li key={r.label} style={{ color: r.test(form.password) ? '#1a7a40' : '#c00' }}>
-                    {r.test(form.password) ? '✓' : '✗'} {r.label}
-                  </li>
-                ))}
-              </ul>
-            )}
-            {errors.password && <span className="field-error">{errors.password}</span>}
+          <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div>
+              <label style={lbl}>{t('common.name')} *</label>
+              <input value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+                style={{ ...inp, borderColor: errors.name ? '#ef4444' : '#e2e8f0' }} />
+              {errors.name && <span style={err}>{errors.name}</span>}
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+              <div>
+                <label style={lbl}>{t('common.email')} *</label>
+                <input type="email" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
+                  style={{ ...inp, borderColor: errors.email ? '#ef4444' : '#e2e8f0' }} />
+                {errors.email && <span style={err}>{errors.email}</span>}
+              </div>
+              <div>
+                <label style={lbl}>{t('common.phone')} <span style={{ fontWeight: 400, textTransform: 'none' }}>{t('validation.phone_hint')}</span></label>
+                <input value={form.phone} placeholder={t('validation.phone_placeholder')} onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
+                  style={{ ...inp, borderColor: errors.phone ? '#ef4444' : '#e2e8f0' }} />
+                {errors.phone && <span style={err}>{errors.phone}</span>}
+              </div>
+            </div>
           </div>
-          <div className="form-group">
-            <label>{t('client.profile.confirm_password')}</label>
-            <input
-              className={`input${errors.confirmPassword ? ' input-error' : ''}`}
-              type="password"
-              value={form.confirmPassword}
-              onChange={(e) => setForm((f) => ({ ...f, confirmPassword: e.target.value }))}
-            />
-            {errors.confirmPassword && <span className="field-error">{errors.confirmPassword}</span>}
-          </div>
+        </div>
 
-          <div style={{ marginTop: 24 }}>
-            <button type="submit" className="btn btn-primary" disabled={saving} style={{ width: '100%' }}>
-              {saving ? t('common.loading') : t('client.profile.save')}
-            </button>
+        {/* ── Sécurité ── */}
+        <div style={{ background: '#fff', borderRadius: 16, border: '1px solid #e5e7eb', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', marginBottom: 24 }}>
+          <div style={{ background: 'linear-gradient(135deg,#f0f9ff,#e0f2fe)', padding: '14px 20px', borderBottom: '1px solid #bae6fd', display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontSize: '1rem' }}>🔒</span>
+            <span style={{ fontWeight: 800, fontSize: '0.88rem', color: '#0369a1' }}>Sécurité — Changer le mot de passe</span>
           </div>
-        </form>
-      </div>
+          <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <p style={{ margin: 0, fontSize: '0.82rem', color: '#6b7280' }}>{t('client.profile.password_section_hint')}</p>
+            <div>
+              <label style={lbl}>{t('client.profile.current_password')}</label>
+              <input type="password" value={form.currentPassword} onChange={(e) => setForm((f) => ({ ...f, currentPassword: e.target.value }))}
+                style={{ ...inp, borderColor: errors.currentPassword ? '#ef4444' : '#e2e8f0' }} />
+              {errors.currentPassword && <span style={err}>{errors.currentPassword}</span>}
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+              <div>
+                <label style={lbl}>{t('client.profile.new_password')}</label>
+                <input type="password" value={form.password} onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
+                  style={{ ...inp, borderColor: errors.password ? '#ef4444' : '#e2e8f0' }} />
+                {form.password && (
+                  <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 3 }}>
+                    {PASSWORD_RULES.map((r) => (
+                      <div key={r.label} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.75rem', color: r.test(form.password) ? '#16a34a' : '#dc2626' }}>
+                        <span style={{ width: 14, height: 14, borderRadius: '50%', background: r.test(form.password) ? '#dcfce7' : '#fee2e2', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.6rem', flexShrink: 0 }}>
+                          {r.test(form.password) ? '✓' : '✗'}
+                        </span>
+                        {r.label}
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {errors.password && <span style={err}>{errors.password}</span>}
+              </div>
+              <div>
+                <label style={lbl}>{t('client.profile.confirm_password')}</label>
+                <input type="password" value={form.confirmPassword} onChange={(e) => setForm((f) => ({ ...f, confirmPassword: e.target.value }))}
+                  style={{ ...inp, borderColor: errors.confirmPassword ? '#ef4444' : '#e2e8f0' }} />
+                {errors.confirmPassword && <span style={err}>{errors.confirmPassword}</span>}
+                {form.confirmPassword && !errors.confirmPassword && form.password === form.confirmPassword && (
+                  <div style={{ marginTop: 6, fontSize: '0.75rem', color: '#16a34a' }}>✓ Mots de passe identiques</div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <button type="submit" disabled={saving}
+          style={{ width: '100%', padding: '13px', borderRadius: 12, border: 'none', background: saving ? '#e5e7eb' : 'linear-gradient(135deg,#4338ca,#6366f1)', color: saving ? '#9ca3af' : '#fff', fontSize: '0.95rem', fontWeight: 800, cursor: saving ? 'default' : 'pointer', boxShadow: saving ? 'none' : '0 4px 16px rgba(99,102,241,0.35)' }}>
+          {saving ? t('common.loading') : `💾 ${t('client.profile.save')}`}
+        </button>
+      </form>
     </div>
   );
 }
+
+const lbl: React.CSSProperties = { fontSize: '0.72rem', fontWeight: 700, color: '#374151', display: 'block', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.04em' };
+const inp: React.CSSProperties = { width: '100%', padding: '9px 12px', borderRadius: 9, border: '1.5px solid #e2e8f0', fontSize: '0.88rem', color: '#0f172a', outline: 'none', boxSizing: 'border-box', background: '#fff' };
+const err: React.CSSProperties = { fontSize: '0.75rem', color: '#dc2626', marginTop: 4, display: 'block' };

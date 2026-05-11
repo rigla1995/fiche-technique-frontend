@@ -111,38 +111,53 @@ export default function GerantsPage() {
     return a ? `${g.activiteType === 'franchise' ? 'Franchise' : 'Distincte'} : ${a.nom}` : `Activité #${g.activiteId}`;
   };
 
+  const activeCount = gerants.filter((g) => g.actif).length;
+  const pendingInvites = gerants.filter((g) => !g.activatedAt).length;
+
   return (
-    <div className="page-content">
-      {/* ── Header ── */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16, marginBottom: 24 }}>
+    <div className="page">
+      {/* ── Hero ── */}
+      <div style={{
+        background: 'linear-gradient(135deg, #0f172a 0%, #1e3a5f 55%, #0369a1 100%)',
+        borderRadius: 18, padding: '24px 28px', marginBottom: 24,
+        boxShadow: '0 8px 32px rgba(3,105,161,0.22)',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16,
+      }}>
         <div>
-          <h1 style={{ margin: 0 }}>Comptes gérants</h1>
-          <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginTop: 4, marginBottom: 0 }}>
-            Gérez les accès de vos collaborateurs à leurs espaces activités.
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+            <div style={{ background: 'rgba(255,255,255,0.15)', borderRadius: 10, padding: '7px 9px', fontSize: '1.2rem' }}>👥</div>
+            <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0 }}>Comptes gérants</h1>
+          </div>
+          <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.85rem', margin: 0 }}>
+            Gérez les accès de vos collaborateurs à leurs espaces activités
           </p>
         </div>
         <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
-          {/* Quota card */}
           {maxGerants !== null && (
             <div style={{
-              background: atGerantLimit ? '#fef2f2' : gerants.length > 0 ? '#f0fdf4' : '#f8fafc',
-              border: `1px solid ${atGerantLimit ? '#fecaca' : gerants.length > 0 ? '#bbf7d0' : '#e2e8f0'}`,
-              borderRadius: 12, padding: '10px 16px', minWidth: 110, textAlign: 'center',
+              background: atGerantLimit ? '#fef2f2' : '#f0fdf4',
+              borderRadius: 12, padding: '10px 20px', textAlign: 'center', minWidth: 90,
+              border: `1px solid ${atGerantLimit ? '#fecaca' : '#bbf7d0'}`,
             }}>
-              <div style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Gérants</div>
-              <div style={{ fontSize: '1.3rem', fontWeight: 800, color: atGerantLimit ? '#dc2626' : gerants.length > 0 ? '#16a34a' : '#475569', lineHeight: 1 }}>
-                {gerants.length}<span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)' }}> / {maxGerants}</span>
+              <div style={{ fontSize: '0.68rem', fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 2 }}>Gérants</div>
+              <div style={{ fontSize: '1.4rem', fontWeight: 900, color: atGerantLimit ? '#dc2626' : '#16a34a', lineHeight: 1 }}>
+                {gerants.length}<span style={{ fontSize: '0.82rem', fontWeight: 600, color: '#6b7280' }}> / {maxGerants}</span>
               </div>
             </div>
           )}
+          {activeCount > 0 && (
+            <div style={{ background: '#eff6ff', borderRadius: 12, padding: '10px 20px', textAlign: 'center', minWidth: 80, border: '1px solid #bfdbfe' }}>
+              <div style={{ fontSize: '0.68rem', fontWeight: 700, color: '#1e40af', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 2 }}>Actifs</div>
+              <div style={{ fontSize: '1.4rem', fontWeight: 900, color: '#1e40af', lineHeight: 1 }}>{activeCount}</div>
+            </div>
+          )}
           {atGerantLimit ? (
-            <span style={{ fontSize: 13, color: '#6b7280', background: '#f3f4f6', border: '1px solid #e5e7eb', borderRadius: 8, padding: '8px 16px' }}>
+            <div style={{ background: 'rgba(255,255,255,0.1)', borderRadius: 10, padding: '8px 16px', fontSize: '0.8rem', color: 'rgba(255,255,255,0.7)', border: '1px solid rgba(255,255,255,0.2)' }}>
               🔒 Limite atteinte ({maxGerants})
-            </span>
+            </div>
           ) : (
-            <button
-              onClick={() => { setShowForm(true); setInviteSent(null); setError(''); }}
-              style={{ padding: '9px 20px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: 9, fontWeight: 600, fontSize: 14, cursor: 'pointer' }}>
+            <button onClick={() => { setShowForm(true); setInviteSent(null); setError(''); }}
+              style={{ padding: '10px 22px', borderRadius: 10, border: 'none', background: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(4px)', color: '#fff', fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer', border: '1px solid rgba(255,255,255,0.25)' } as React.CSSProperties}>
               + Nouveau gérant
             </button>
           )}
@@ -151,189 +166,186 @@ export default function GerantsPage() {
 
       {/* Invite sent banner */}
       {inviteSent && (
-        <div style={{ background: '#dcfce7', border: '1px solid #86efac', borderRadius: 10, padding: '14px 18px', marginBottom: 20, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-          <span style={{ color: '#15803d', fontWeight: 600, fontSize: 14 }}>
-            ✉️ Invitation envoyée à <strong>{inviteSent.nom}</strong> ({inviteSent.email}) — le compte sera activé dès qu'il cliquera sur le lien.
-          </span>
-          <button onClick={() => setInviteSent(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#15803d', fontSize: '1rem' }}>✕</button>
+        <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 12, padding: '14px 18px', marginBottom: 20, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span style={{ fontSize: '1.2rem' }}>✉️</span>
+            <span style={{ color: '#166534', fontWeight: 600, fontSize: '0.88rem' }}>
+              Invitation envoyée à <strong>{inviteSent.nom}</strong> ({inviteSent.email}) — le compte sera activé dès qu'il cliquera sur le lien.
+            </span>
+          </div>
+          <button onClick={() => setInviteSent(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#166534', fontSize: '1rem', padding: 4 }}>✕</button>
+        </div>
+      )}
+
+      {pendingInvites > 0 && !inviteSent && (
+        <div style={{ background: '#fef3c7', border: '1px solid #fde68a', borderRadius: 10, padding: '10px 16px', marginBottom: 16, fontSize: '0.82rem', color: '#92400e', fontWeight: 600 }}>
+          ⏳ {pendingInvites} invitation{pendingInvites > 1 ? 's' : ''} en attente d'activation
         </div>
       )}
 
       {/* Create form */}
       {showForm && (
-        <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #e5e7eb', padding: 20, marginBottom: 20 }}>
-          <h3 style={{ margin: '0 0 16px', fontSize: 16, fontWeight: 700, color: '#111827' }}>
-            Nouveau gérant {!canAddFree ? '(payant — 80 DT/mois)' : '(gratuit)'}
-          </h3>
-          {!canAddFree && (
-            <div style={{ background: '#fef9c3', border: '1px solid #fde047', borderRadius: 8, padding: '10px 14px', fontSize: 13, color: '#854d0e', marginBottom: 14 }}>
-              Vous avez atteint la limite de {freeLimit} gérant(s) gratuit(s). Ce compte sera facturé 80 DT/mois et nécessite une validation admin.
-            </div>
-          )}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-            <div>
-              <label style={{ fontSize: 12, color: '#374151', display: 'block', marginBottom: 4 }}>Nom *</label>
-              <input value={form.nom} onChange={(e) => setForm((f) => ({ ...f, nom: e.target.value }))}
-                style={{ width: '100%', padding: '8px 10px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: 14, boxSizing: 'border-box' }} />
-            </div>
-            <div>
-              <label style={{ fontSize: 12, color: '#374151', display: 'block', marginBottom: 4 }}>Téléphone *</label>
-              <input value={form.telephone} onChange={(e) => setForm((f) => ({ ...f, telephone: e.target.value }))}
-                style={{ width: '100%', padding: '8px 10px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: 14, boxSizing: 'border-box' }} />
-            </div>
-            <div>
-              <label style={{ fontSize: 12, color: '#374151', display: 'block', marginBottom: 4 }}>Email *</label>
-              <input type="email" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
-                style={{ width: '100%', padding: '8px 10px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: 14, boxSizing: 'border-box' }} />
-            </div>
-            {isEntreprise && (
-              <>
-                <div>
-                  <label style={{ fontSize: 12, color: '#374151', display: 'block', marginBottom: 4 }}>Type d'activité assignée</label>
-                  <select value={form.activiteType} onChange={(e) => setForm((f) => ({ ...f, activiteType: e.target.value as GerantForm['activiteType'], activiteId: '', franchiseGroup: '' }))}
-                    style={{ width: '100%', padding: '8px 10px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: 14 }}>
-                    <option value="">— Sélectionner —</option>
-                    <option value="franchise">Franchise</option>
-                    <option value="activite_distincte">Activité distincte</option>
-                    <option value="labo">Labo</option>
-                  </select>
-                </div>
-                {form.activiteType === 'franchise' && (() => {
-                  const groups = Array.from(new Set(
-                    activites.filter((a) => a.type === 'franchise').map((a) => (a as any).franchiseGroup || a.nom)
-                  )).sort();
-                  return groups.length > 1 ? (
-                    <div>
-                      <label style={{ fontSize: 12, color: '#374151', display: 'block', marginBottom: 4 }}>Groupe Franchise</label>
-                      <select value={form.franchiseGroup} onChange={(e) => setForm((f) => ({ ...f, franchiseGroup: e.target.value, activiteId: '' }))}
-                        style={{ width: '100%', padding: '8px 10px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: 14 }}>
-                        <option value="">— Tous les groupes —</option>
-                        {groups.map((g) => <option key={g} value={g}>{g}</option>)}
-                      </select>
-                    </div>
-                  ) : null;
-                })()}
-                {form.activiteType && (
+        <div style={{ background: '#fff', borderRadius: 16, border: '1px solid #e5e7eb', overflow: 'hidden', boxShadow: '0 4px 20px rgba(0,0,0,0.06)', marginBottom: 24 }}>
+          <div style={{ background: 'linear-gradient(135deg,#f0f9ff,#e0f2fe)', padding: '14px 20px', borderBottom: '1px solid #bae6fd', display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontSize: '1rem' }}>👤</span>
+            <span style={{ fontWeight: 800, fontSize: '0.9rem', color: '#0369a1' }}>
+              Nouveau gérant {!canAddFree ? '— payant (80 DT/mois)' : '— inclus dans votre abonnement'}
+            </span>
+          </div>
+          <div style={{ padding: '20px' }}>
+            {!canAddFree && (
+              <div style={{ background: '#fef9c3', border: '1px solid #fde68a', borderRadius: 10, padding: '10px 14px', fontSize: '0.82rem', color: '#92400e', marginBottom: 16 }}>
+                ⚠ Vous avez atteint la limite de {freeLimit} gérant(s) gratuit(s). Ce compte sera facturé <strong>80 DT/mois</strong> et nécessite une validation admin.
+              </div>
+            )}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 14 }}>
+              <div>
+                <label style={lbl}>Nom *</label>
+                <input value={form.nom} onChange={(e) => setForm((f) => ({ ...f, nom: e.target.value }))} style={inp} placeholder="Nom complet" />
+              </div>
+              <div>
+                <label style={lbl}>Téléphone *</label>
+                <input value={form.telephone} onChange={(e) => setForm((f) => ({ ...f, telephone: e.target.value }))} style={inp} placeholder="+216 …" />
+              </div>
+              <div style={{ gridColumn: '1 / -1' }}>
+                <label style={lbl}>Email *</label>
+                <input type="email" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} style={inp} placeholder="email@exemple.com" />
+              </div>
+              {isEntreprise && (
+                <>
                   <div>
-                    <label style={{ fontSize: 12, color: '#374151', display: 'block', marginBottom: 4 }}>
-                      {form.activiteType === 'labo' ? 'Labo' : 'Activité'}
-                    </label>
-                    <select value={form.activiteId} onChange={(e) => setForm((f) => ({ ...f, activiteId: e.target.value }))}
-                      style={{ width: '100%', padding: '8px 10px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: 14 }}>
+                    <label style={lbl}>Type d'activité assignée</label>
+                    <select value={form.activiteType} onChange={(e) => setForm((f) => ({ ...f, activiteType: e.target.value as GerantForm['activiteType'], activiteId: '', franchiseGroup: '' }))} style={inp}>
                       <option value="">— Sélectionner —</option>
-                      {form.activiteType === 'labo'
-                        ? labos.map((l) => <option key={l.id} value={l.id}>{l.nom}</option>)
-                        : activites
-                            .filter((a) => a.type === (form.activiteType === 'franchise' ? 'franchise' : 'distincte'))
-                            .filter((a) => !form.franchiseGroup || ((a as any).franchiseGroup || a.nom) === form.franchiseGroup)
-                            .map((a) => <option key={a.id} value={a.id}>{a.nom}</option>)
-                      }
+                      <option value="franchise">Franchise</option>
+                      <option value="activite_distincte">Activité distincte</option>
+                      <option value="labo">Labo</option>
                     </select>
                   </div>
-                )}
-              </>
-            )}
-          </div>
-          {error && <div style={{ color: '#dc2626', fontSize: 13, marginTop: 10 }}>{error}</div>}
-          <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
-            <button onClick={submitForm} disabled={saving}
-              style={{ padding: '8px 20px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 600, fontSize: 14, cursor: 'pointer' }}>
-              {saving ? 'Création...' : 'Créer le compte'}
-            </button>
-            <button onClick={() => { setShowForm(false); setError(''); setForm(EMPTY_FORM); }}
-              style={{ padding: '8px 16px', background: '#f3f4f6', color: '#374151', border: 'none', borderRadius: 8, fontSize: 14, cursor: 'pointer' }}>
-              Annuler
-            </button>
+                  {form.activiteType === 'franchise' && (() => {
+                    const groups = Array.from(new Set(activites.filter((a) => a.type === 'franchise').map((a) => (a as any).franchiseGroup || a.nom))).sort();
+                    return groups.length > 1 ? (
+                      <div>
+                        <label style={lbl}>Groupe Franchise</label>
+                        <select value={form.franchiseGroup} onChange={(e) => setForm((f) => ({ ...f, franchiseGroup: e.target.value, activiteId: '' }))} style={inp}>
+                          <option value="">— Tous les groupes —</option>
+                          {groups.map((g) => <option key={g} value={g}>{g}</option>)}
+                        </select>
+                      </div>
+                    ) : null;
+                  })()}
+                  {form.activiteType && (
+                    <div>
+                      <label style={lbl}>{form.activiteType === 'labo' ? 'Labo' : 'Activité'}</label>
+                      <select value={form.activiteId} onChange={(e) => setForm((f) => ({ ...f, activiteId: e.target.value }))} style={inp}>
+                        <option value="">— Sélectionner —</option>
+                        {form.activiteType === 'labo'
+                          ? labos.map((l) => <option key={l.id} value={l.id}>{l.nom}</option>)
+                          : activites.filter((a) => a.type === (form.activiteType === 'franchise' ? 'franchise' : 'distincte'))
+                              .filter((a) => !form.franchiseGroup || ((a as any).franchiseGroup || a.nom) === form.franchiseGroup)
+                              .map((a) => <option key={a.id} value={a.id}>{a.nom}</option>)
+                        }
+                      </select>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+            {error && <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, padding: '9px 13px', fontSize: '0.82rem', color: '#dc2626', marginBottom: 14 }}>{error}</div>}
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button onClick={submitForm} disabled={saving}
+                style={{ flex: 2, padding: '10px', borderRadius: 9, border: 'none', background: saving ? '#e5e7eb' : 'linear-gradient(135deg,#1e3a5f,#0369a1)', color: saving ? '#9ca3af' : '#fff', fontSize: '0.88rem', fontWeight: 700, cursor: saving ? 'default' : 'pointer' }}>
+                {saving ? 'Création…' : '✓ Créer et envoyer l\'invitation'}
+              </button>
+              <button onClick={() => { setShowForm(false); setError(''); setForm(EMPTY_FORM); }}
+                style={{ flex: 1, padding: '10px', borderRadius: 9, border: '1px solid #e2e8f0', background: '#fff', color: '#374151', fontSize: '0.88rem', fontWeight: 600, cursor: 'pointer' }}>
+                Annuler
+              </button>
+            </div>
           </div>
         </div>
       )}
 
-      {/* Gérants list */}
+      {/* ── Gérants list ── */}
       {loading ? (
-        <div style={{ textAlign: 'center', color: '#9ca3af', padding: 40 }}>Chargement...</div>
+        <div style={{ textAlign: 'center', color: '#9ca3af', padding: 60 }}>Chargement…</div>
       ) : gerants.length === 0 ? (
-        <div style={{
-          background: '#fff', border: '1px solid #e5e7eb', borderRadius: 16,
-          padding: '48px 32px', textAlign: 'center', maxWidth: 480, margin: '0 auto',
-        }}>
-          <div style={{ fontSize: 42, marginBottom: 14 }}>👥</div>
-          <h2 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#111827', marginBottom: 8 }}>
-            Aucun compte gérant
-          </h2>
-          <p style={{ fontSize: '0.86rem', color: '#6b7280', lineHeight: 1.6, marginBottom: 24 }}>
+        <div style={{ textAlign: 'center', padding: 56, background: '#f8fafc', borderRadius: 18, border: '1.5px dashed #e2e8f0' }}>
+          <div style={{ fontSize: '3rem', marginBottom: 14 }}>👥</div>
+          <div style={{ fontSize: '1rem', fontWeight: 800, color: '#111827', marginBottom: 8 }}>Aucun compte gérant</div>
+          <p style={{ fontSize: '0.86rem', color: '#6b7280', lineHeight: 1.7, marginBottom: 24, maxWidth: 400, margin: '0 auto 24px' }}>
             {maxGerants !== null
               ? `Votre abonnement inclut ${maxGerants} compte(s) gérant. Créez un premier compte pour donner accès à un collaborateur.`
               : 'Créez un compte gérant pour donner accès à un collaborateur.'}
           </p>
           {!atGerantLimit && (
-            <button
-              onClick={() => { setShowForm(true); setInviteSent(null); setError(''); }}
-              style={{ padding: '9px 24px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: 9, fontWeight: 600, fontSize: 14, cursor: 'pointer' }}>
+            <button onClick={() => { setShowForm(true); setInviteSent(null); setError(''); }}
+              style={{ padding: '11px 28px', background: 'linear-gradient(135deg,#1e3a5f,#0369a1)', color: '#fff', border: 'none', borderRadius: 10, fontWeight: 700, fontSize: '0.9rem', cursor: 'pointer' }}>
               + Créer un gérant
             </button>
           )}
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {gerants.map((g) => (
-            <div key={g.id} style={{
-              background: '#fff', borderRadius: 12, border: '1px solid #e5e7eb',
-              padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16,
-            }}>
-              {/* Left: identity */}
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 3 }}>
-                  <span style={{ fontWeight: 700, fontSize: 14, color: '#111827' }}>{g.nom}</span>
-                  <span style={{
-                    fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 10,
-                    background: g.actif ? '#dcfce7' : '#fee2e2',
-                    color: g.actif ? '#166534' : '#991b1b',
-                  }}>
-                    {g.actif ? 'Actif' : 'Inactif'}
-                  </span>
-                  {!g.activatedAt && (
-                    <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 10, background: '#fef9c3', color: '#854d0e' }}>
-                      ⏳ Invitation en attente
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {gerants.map((g) => {
+            const initials = g.nom.split(' ').map((w: string) => w[0]).slice(0, 2).join('').toUpperCase();
+            return (
+              <div key={g.id} style={{
+                background: '#fff', borderRadius: 14, border: '1px solid #e5e7eb',
+                borderLeft: `4px solid ${g.actif ? '#22c55e' : '#e5e7eb'}`,
+                padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap',
+                boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
+              }}>
+                {/* Avatar */}
+                <div style={{ width: 44, height: 44, borderRadius: '50%', background: g.actif ? 'linear-gradient(135deg,#1e3a5f,#0369a1)' : '#e5e7eb', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.85rem', fontWeight: 800, color: g.actif ? '#fff' : '#6b7280', flexShrink: 0 }}>
+                  {initials}
+                </div>
+                {/* Info */}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 4 }}>
+                    <span style={{ fontWeight: 800, fontSize: '0.9rem', color: '#0f172a' }}>{g.nom}</span>
+                    <span style={{ fontSize: '0.7rem', fontWeight: 700, padding: '2px 8px', borderRadius: 20, background: g.actif ? '#dcfce7' : '#fee2e2', color: g.actif ? '#166534' : '#991b1b' }}>
+                      {g.actif ? '● Actif' : '○ Inactif'}
                     </span>
+                    {!g.activatedAt && (
+                      <span style={{ fontSize: '0.7rem', fontWeight: 700, padding: '2px 8px', borderRadius: 20, background: '#fef3c7', color: '#92400e' }}>⏳ Invitation en attente</span>
+                    )}
+                    <span style={{ fontSize: '0.7rem', fontWeight: 700, padding: '2px 8px', borderRadius: 20, background: g.estGratuit ? '#eff6ff' : '#fefce8', color: g.estGratuit ? '#1d4ed8' : '#854d0e' }}>
+                      {g.estGratuit ? 'Gratuit' : `${g.montantMensuel} DT/mois`}
+                    </span>
+                  </div>
+                  <div style={{ fontSize: '0.8rem', color: '#6b7280' }}>
+                    📧 {g.email}{g.telephone ? ` · 📞 ${g.telephone}` : ''}
+                  </div>
+                  {isEntreprise && g.activiteId && (
+                    <div style={{ fontSize: '0.78rem', color: '#7c3aed', marginTop: 3, fontWeight: 600 }}>📍 {activiteLabel(g)}</div>
                   )}
-                  <span style={{
-                    fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 10,
-                    background: g.estGratuit ? '#eff6ff' : '#fefce8',
-                    color: g.estGratuit ? '#1d4ed8' : '#854d0e',
-                  }}>
-                    {g.estGratuit ? 'Gratuit' : `${g.montantMensuel} DT/mois`}
-                  </span>
                 </div>
-                <div style={{ fontSize: 12, color: '#6b7280' }}>
-                  {g.email}{g.telephone ? ` · ${g.telephone}` : ''}
-                </div>
-                {isEntreprise && g.activiteId && (
-                  <div style={{ fontSize: 12, color: '#9ca3af', marginTop: 2 }}>📍 {activiteLabel(g)}</div>
-                )}
-              </div>
-              {/* Right: actions */}
-              <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0 }}>
-                {!g.activatedAt && (
-                  <button
-                    onClick={() => handleResendInvite(g.id, g.email)}
-                    disabled={resendingId === g.id}
-                    style={{ padding: '5px 11px', background: '#eef2ff', border: '1px solid #c7d2fe', borderRadius: 7, fontSize: 12, cursor: 'pointer', color: '#4338ca', fontWeight: 600 }}>
-                    {resendingId === g.id ? '…' : '✉️ Renvoyer'}
+                {/* Actions */}
+                <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexShrink: 0, flexWrap: 'wrap' }}>
+                  {!g.activatedAt && (
+                    <button onClick={() => handleResendInvite(g.id, g.email)} disabled={resendingId === g.id}
+                      style={{ padding: '6px 12px', background: '#eef2ff', border: '1px solid #c7d2fe', borderRadius: 8, fontSize: '0.78rem', cursor: 'pointer', color: '#4338ca', fontWeight: 700 }}>
+                      {resendingId === g.id ? '…' : '✉️ Renvoyer'}
+                    </button>
+                  )}
+                  <button onClick={() => toggleActif(g)}
+                    style={{ padding: '6px 12px', background: g.actif ? '#fff' : '#f0fdf4', border: `1px solid ${g.actif ? '#e2e8f0' : '#bbf7d0'}`, borderRadius: 8, fontSize: '0.78rem', cursor: 'pointer', color: g.actif ? '#374151' : '#166534', fontWeight: 700 }}>
+                    {g.actif ? '⏸ Désactiver' : '▶ Activer'}
                   </button>
-                )}
-                <button onClick={() => toggleActif(g)}
-                  style={{ padding: '5px 11px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 7, fontSize: 12, cursor: 'pointer', color: '#374151' }}>
-                  {g.actif ? 'Désactiver' : 'Activer'}
-                </button>
-                <button onClick={() => deleteGerant(g.id)}
-                  style={{ padding: '5px 11px', background: '#fff1f2', border: '1px solid #fecdd3', borderRadius: 7, fontSize: 12, cursor: 'pointer', color: '#be123c' }}>
-                  Supprimer
-                </button>
+                  <button onClick={() => deleteGerant(g.id)}
+                    style={{ padding: '6px 12px', background: '#fff', border: '1px solid #fecdd3', borderRadius: 8, fontSize: '0.78rem', cursor: 'pointer', color: '#be123c', fontWeight: 700 }}>
+                    🗑
+                  </button>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
   );
 }
+
+const lbl: React.CSSProperties = { fontSize: '0.72rem', fontWeight: 700, color: '#374151', display: 'block', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.04em' };
+const inp: React.CSSProperties = { width: '100%', padding: '9px 12px', borderRadius: 8, border: '1.5px solid #e2e8f0', fontSize: '0.85rem', color: '#0f172a', outline: 'none', boxSizing: 'border-box', background: '#fff' };
