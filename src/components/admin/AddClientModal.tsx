@@ -489,7 +489,12 @@ export default function AddClientModal({ onClose, onCreated }: Props) {
               <Counter label="Gérants" sub="Comptes gérants supplémentaires" value={nbGerants} onChange={(n) => setNbGerants(n)} />
               <div style={{ marginTop: 4 }}>
                 <label style={labelStyle}>Frais d'Onboarding (DT) *</label>
-                <input type="number" min="0" value={montantOnboarding} onChange={(e) => setMontantOnboarding(e.target.value)}
+                <input type="number" min="0" value={montantOnboarding} onChange={(e) => {
+                  setMontantOnboarding(e.target.value);
+                  if (parseFloat(e.target.value) <= 0 && promoForm.appliesTo === 'onboarding') {
+                    setPromoForm((f) => ({ ...f, appliesTo: 'mensualite' }));
+                  }
+                }}
                   placeholder="ex: 800" style={{ ...inputStyle, fontSize: 18, fontWeight: 700, textAlign: 'right' }} />
                 <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 4 }}>Formation initiale + mise en place — paiement unique</div>
               </div>
@@ -526,6 +531,7 @@ export default function AddClientModal({ onClose, onCreated }: Props) {
                   <div>
                     <label style={labelStyle}>Appliqué à</label>
                     <select value={promoForm.appliesTo} onChange={(e) => setPromoForm((f) => ({ ...f, appliesTo: e.target.value, moisDebut: '' }))} style={selectStyle}>
+                      {parseFloat(montantOnboarding) > 0 && <option value="onboarding">OnBoarding</option>}
                       <option value="mensualite">Mensualité</option>
                       <option value="supplement_gerant">Sup. Gérant</option>
                       <option value="supplement_labo">Sup. Labo</option>
