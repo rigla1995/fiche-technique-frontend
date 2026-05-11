@@ -820,7 +820,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
 
   const nonLaboFournisseurs = fournisseurs.filter((f) => {
     if (f.isLabo) return false;
-    if (activiteId) return f.activiteIds.includes(activiteId);
+    if (activiteId) return (f.activiteIds ?? []).includes(activiteId);
     return true;
   });
   const hasFournisseurs = nonLaboFournisseurs.length > 0;
