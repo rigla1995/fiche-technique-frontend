@@ -18,6 +18,11 @@ const labelStyle: React.CSSProperties = {
   textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 4,
 };
 
+const thStyle: React.CSSProperties = {
+  fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase',
+  padding: '12px 14px', color: '#fff', background: 'transparent',
+};
+
 export default function FournisseursPage() {
   const { user, canWrite } = useAuth();
   const isIndep = user?.compteType === 'independant';
@@ -210,9 +215,9 @@ export default function FournisseursPage() {
                 <table className="table" style={{ margin: 0 }}>
                   <thead>
                     <tr style={{ background: 'linear-gradient(135deg, #7c2d12, #ea580c)' }}>
-                      <th style={{ fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px', color: '#fff' }}>Nom</th>
-                      <th style={{ fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px', color: '#fff' }}>Téléphone</th>
-                      <th style={{ fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px', color: '#fff' }}>Activités liées</th>
+                      <th style={thStyle}>Nom</th>
+                      <th style={thStyle}>Téléphone</th>
+                      <th style={thStyle}>Activités liées</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -240,17 +245,17 @@ export default function FournisseursPage() {
             <table className="table" style={{ margin: 0 }}>
               <thead>
                 <tr style={{ background: 'linear-gradient(135deg, #7c2d12, #ea580c)' }}>
-                  <th style={{ fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px', color: '#fff' }}>Nom</th>
-                  <th style={{ fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px', color: '#fff' }}>Téléphone</th>
-                  <th style={{ fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px', color: '#fff' }}>Adresse</th>
+                  <th style={thStyle}>Nom</th>
+                  <th style={thStyle}>Téléphone</th>
+                  <th style={thStyle}>Adresse</th>
                   {!isIndep && (
                     <>
-                      <th style={{ fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px', color: '#fff' }}>Activités liées</th>
-                      <th style={{ fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px', color: '#fff' }}>Labos liés</th>
+                      <th style={thStyle}>Activités liées</th>
+                      <th style={thStyle}>Labos liés</th>
                     </>
                   )}
-                  <th style={{ fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px', color: '#fff', textAlign: 'center' }}>Appros</th>
-                  <th style={{ fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px', color: '#fff' }}></th>
+                  <th style={{ ...thStyle, textAlign: 'center' }}>Appros</th>
+                  <th style={thStyle}></th>
                 </tr>
               </thead>
               <tbody>
