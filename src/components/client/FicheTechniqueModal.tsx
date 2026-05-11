@@ -298,7 +298,7 @@ export default function FicheTechniqueModal({ productId, productName, hasIngredi
 
   return (
     <>
-      <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-overlay">
         <div className="modal" style={{ maxWidth: 640 }} onClick={(e) => e.stopPropagation()}>
           <div className="modal-header modal-header--primary">
             <h2 style={{ margin: 0 }}>📄 Fiche Technique — {productName}</h2>
@@ -515,7 +515,7 @@ export default function FicheTechniqueModal({ productId, productName, hasIngredi
 
       {/* Manual prices popup */}
       {showManualPopup && (
-        <div className="modal-overlay" style={{ zIndex: 1050 }} onClick={() => setShowManualPopup(false)}>
+        <div className="modal-overlay" style={{ zIndex: 1050 }}>
           <div className="modal" style={{ maxWidth: 560 }} onClick={(e) => e.stopPropagation()}>
             <div className="modal-header modal-header--primary">
               <h2>Prix Ingrédients — {productName}</h2>
@@ -599,7 +599,7 @@ export default function FicheTechniqueModal({ productId, productName, hasIngredi
         };
         const bulkFournisseur = fournisseurs.find((f) => String(f.id) === bulkMissingFournisseurId);
         return (
-          <div className="modal-overlay" style={{ zIndex: 1050 }} onClick={() => setShowMissingPopup(false)}>
+          <div className="modal-overlay" style={{ zIndex: 1050 }}>
             <div className="modal" style={{ maxWidth: 860, width: '96vw' }} onClick={(e) => e.stopPropagation()}>
               {/* Header */}
               <div style={{ background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', padding: '16px 24px', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
@@ -886,7 +886,7 @@ export default function FicheTechniqueModal({ productId, productName, hasIngredi
 
       {/* Zero-price warning popup */}
       {showZeroWarning && (
-        <div className="modal-overlay" style={{ zIndex: 1100 }} onClick={() => setShowZeroWarning(false)}>
+        <div className="modal-overlay" style={{ zIndex: 1100 }}>
           <div className="modal" style={{ maxWidth: 500, borderRadius: 16, overflow: 'hidden', padding: 0 }} onClick={(e) => e.stopPropagation()}>
             <div style={{ background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', padding: '20px 24px 16px', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>

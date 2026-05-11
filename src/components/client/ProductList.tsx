@@ -755,7 +755,7 @@ export default function ProductList() {
           )}
 
           {franchiseActsPopup && (
-            <div className="modal-overlay" onClick={() => setFranchiseActsPopup(null)}>
+            <div className="modal-overlay">
               <div className="modal" style={{ maxWidth: 420 }} onClick={(e) => e.stopPropagation()}>
                 <div className="modal-header" style={{ background: 'linear-gradient(135deg, #1e1b4b, #4338ca)', borderBottom: 'none' }}>
                   <div>
@@ -803,7 +803,7 @@ export default function ProductList() {
           )}
 
           {popup && (
-            <div className="modal-overlay" onClick={closePopup}>
+            <div className="modal-overlay">
               <div className="modal" onClick={(e) => e.stopPropagation()}>
                 <div className="modal-header" style={{ background: 'linear-gradient(135deg, #1e1b4b, #4338ca)', borderBottom: 'none' }}>
                   <h2 style={{ color: '#fff', margin: 0 }}>
@@ -879,7 +879,7 @@ export default function ProductList() {
             const { product, historyCount } = deleteModal;
             const isCascade = product.type === 'utilisable' && product.isStockIngredient;
             return (
-              <div className="modal-overlay" onClick={() => setDeleteModal(null)}>
+              <div className="modal-overlay">
                 <div className="modal" style={{ maxWidth: 460 }} onClick={(e) => e.stopPropagation()}>
                   <div className="modal-header" style={{ background: isCascade ? 'linear-gradient(135deg, #7c2d12, #dc2626)' : 'linear-gradient(135deg, #b91c1c, #dc2626)', borderRadius: '12px 12px 0 0', padding: '18px 22px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <h2 style={{ color: '#fff', margin: 0, fontSize: '1rem', fontWeight: 800 }}>
@@ -929,7 +929,7 @@ export default function ProductList() {
           })()}
 
           {ptDeselectModal && (
-            <div className="modal-overlay" onClick={() => setPtDeselectModal(null)}>
+            <div className="modal-overlay">
               <div className="modal" style={{ maxWidth: 440 }} onClick={(e) => e.stopPropagation()}>
                 <div className="modal-header" style={{ background: '#fff7ed', borderBottom: '1px solid #fbd38d' }}>
                   <h2 style={{ color: '#c05621' }}>⚠️ Retirer du stock</h2>

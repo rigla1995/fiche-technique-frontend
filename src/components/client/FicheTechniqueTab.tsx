@@ -694,7 +694,7 @@ export default function FicheTechniqueTab({ isEntreprise, franchiseActivities, d
 
       {/* Manual prices popup */}
       {showManualPopup && (
-        <div className="modal-overlay" onClick={() => setShowManualPopup(false)}>
+        <div className="modal-overlay">
           <div className="modal" style={{ maxWidth: 560 }} onClick={(e) => e.stopPropagation()}>
             <div className="modal-header modal-header--primary">
               <h2>Prix Ingrédients — {products.find((p) => p.id === parseInt(selectedProductId))?.nom ?? ''}</h2>
@@ -782,7 +782,7 @@ export default function FicheTechniqueTab({ isEntreprise, franchiseActivities, d
 
       {/* Missing stock popup */}
       {showMissingPopup && stockCheckResult && (
-        <div className="modal-overlay" onClick={() => setShowMissingPopup(false)}>
+        <div className="modal-overlay">
           <div className="modal" style={{ maxWidth: 580 }} onClick={(e) => e.stopPropagation()}>
             <div style={{
               background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
@@ -893,7 +893,7 @@ export default function FicheTechniqueTab({ isEntreprise, franchiseActivities, d
 
       {/* Zero-price warning popup — rendered after main popup so it stacks on top */}
       {showZeroWarning && (
-        <div className="modal-overlay" style={{ zIndex: 1100 }} onClick={() => setShowZeroWarning(false)}>
+        <div className="modal-overlay" style={{ zIndex: 1100 }}>
           <div className="modal" style={{ maxWidth: 500, borderRadius: 16, overflow: 'hidden', padding: 0 }} onClick={(e) => e.stopPropagation()}>
             {/* Coloured header band */}
             <div style={{

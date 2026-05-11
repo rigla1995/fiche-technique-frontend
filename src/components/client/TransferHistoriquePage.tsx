@@ -324,7 +324,7 @@ export default function TransferHistoriquePage() {
 
       {/* Detail popup */}
       {detailPopup && (
-        <div className="modal-overlay" onClick={() => setDetailPopup(null)}>
+        <div className="modal-overlay">
           <div className="modal" style={{ maxWidth: 460 }} onClick={(e) => e.stopPropagation()}>
             <div className="modal-header modal-header--primary">
               <h2>📋 Détail du transfert</h2>

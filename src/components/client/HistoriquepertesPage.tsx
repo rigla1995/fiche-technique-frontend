@@ -50,7 +50,7 @@ function EditPerteModal({ entry, onSave, onClose }: EditPerteModalProps) {
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <div className="modal-overlay">
       <div className="modal" style={{ maxWidth: 400 }} onClick={(e) => e.stopPropagation()}>
         <div className="modal-header" style={{ background: 'linear-gradient(135deg, #991b1b, #dc2626)', borderBottom: 'none' }}>
           <h2 style={{ color: '#fff', margin: 0, fontSize: '1rem' }}>✏️ Modifier la perte</h2>
@@ -127,7 +127,7 @@ function DeletePerteModal({ entry, onConfirm, onClose }: DeletePerteModalProps) 
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <div className="modal-overlay">
       <div className="modal" style={{ maxWidth: 400 }} onClick={(e) => e.stopPropagation()}>
         <div className="modal-header" style={{ background: 'linear-gradient(135deg, #7f1d1d, #b91c1c)', borderBottom: 'none' }}>
           <h2 style={{ color: '#fff', margin: 0, fontSize: '1rem' }}>🗑️ Supprimer la perte</h2>

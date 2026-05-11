@@ -1098,7 +1098,7 @@ export default function StockLaboPage() {
 
       {/* Perte modal */}
       {perteModal && (
-        <div className="modal-overlay" onClick={() => setPerteModal(null)}>
+        <div className="modal-overlay">
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header" style={{ background: 'linear-gradient(135deg, #dc2626, #b91c1c)', borderBottom: 'none' }}>
               <h2 style={{ color: '#fff', margin: 0 }}>📉 Déclarer une perte — {perteModal.nom}</h2>
@@ -1178,7 +1178,7 @@ export default function StockLaboPage() {
 
       {/* Fournisseur modal */}
       {fournisseurModal && (
-        <div className="modal-overlay" onClick={() => setFournisseurModal(null)}>
+        <div className="modal-overlay">
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header modal-header--primary">
               <h2>Fournisseur — {fournisseurModal.nom}</h2>
@@ -1202,7 +1202,7 @@ export default function StockLaboPage() {
       )}
       {/* PT accumulation confirmation modal */}
       {ptConfirm && (
-        <div className="modal-overlay" onClick={() => setPtConfirm(null)}>
+        <div className="modal-overlay">
           <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 420 }}>
             <div className="modal-header" style={{ background: '#7c3aed', color: '#fff' }}>
               <h2 style={{ margin: 0, fontSize: '1rem' }}>⚠️ Appro existante — {ptConfirm.nom}</h2>
@@ -1243,7 +1243,7 @@ export default function StockLaboPage() {
         });
         const overallMax = recipeRows.length > 0 ? Math.min(...recipeRows.map((r) => r.maxUnits)) : null;
         return (
-          <div className="modal-overlay" onClick={() => setPtStockModal(null)}>
+          <div className="modal-overlay">
             <div className="modal" style={{ maxWidth: 520 }} onClick={(e) => e.stopPropagation()}>
               <div className="modal-header" style={{ background: 'linear-gradient(135deg, #7c3aed, #a855f7)', borderBottom: 'none' }}>
                 <h2 style={{ color: '#fff', margin: 0, fontSize: '1rem' }}>📊 Stock — {ptStockModal.nom}</h2>

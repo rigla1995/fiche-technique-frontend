@@ -336,7 +336,7 @@ export default function ClientsManagement() {
 
       {/* Create/Edit modal */}
       {showModal && (
-        <div className="modal-overlay" onClick={closeModal}>
+        <div className="modal-overlay">
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header modal-header--primary">
               <h2>{editId ? t('admin.clients.edit') : t('admin.clients.add')}</h2>

@@ -57,7 +57,7 @@ function EditModal({ entry, fournisseurs, isEntreprise, onSave, onClose }: EditM
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <div className="modal-overlay">
       <div className="modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header" style={{ background: 'linear-gradient(135deg, #134e4a, #0f766e)', borderBottom: 'none' }}>
           <h2 style={{ color: '#fff', margin: 0 }}>Modifier — {entry.ingredientNom}</h2>
@@ -164,7 +164,7 @@ function DeleteModal({ entry, onConfirm, onClose }: DeleteModalProps) {
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <div className="modal-overlay">
       <div className="modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header" style={{ background: '#fee2e2', borderBottom: '1px solid #fecaca' }}>
           <h2 style={{ color: '#991b1b' }}>Supprimer l'appro</h2>
@@ -222,7 +222,7 @@ function UnitTotalsPopup({ unitNom, entries, onClose }: UnitTotalsPopupProps) {
   const rows = Object.values(byIngredient).sort((a, b) => b.qty - a.qty);
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <div className="modal-overlay">
       <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 480 }}>
         <div className="modal-header" style={{ background: 'linear-gradient(135deg, #134e4a, #0f766e)', borderBottom: 'none' }}>
           <h2 style={{ color: '#fff', margin: 0 }}>Détail — {unitNom}</h2>

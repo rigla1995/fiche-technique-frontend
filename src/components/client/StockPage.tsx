@@ -151,7 +151,7 @@ function PerteModal({ ingredientId, nom, activiteId, onSaveOverride, onAfterSave
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <div className="modal-overlay">
       <div className="modal" style={{ maxWidth: 380 }} onClick={(e) => e.stopPropagation()}>
         <div className="modal-header" style={{ background: 'linear-gradient(135deg, #dc2626, #b91c1c)', borderBottom: 'none' }}>
           <h2 style={{ color: '#fff', margin: 0 }}>📉 Enregistrer une perte</h2>
@@ -259,7 +259,7 @@ function HistoryPopup({ ingredientId, nom, activiteId, isEntreprise, onClose }: 
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <div className="modal-overlay">
       <div className="modal" style={{ maxWidth: 600 }} onClick={(e) => e.stopPropagation()}>
         <div className="modal-header modal-header--info">
           <h2>{t('client.stock.history_title', { nom })}</h2>
@@ -335,7 +335,7 @@ function FournisseurAffectationModal({ ingredientNom, fournisseurs, initialFourn
   const selectedFournisseur = fournisseurs.find((f) => String(f.id) === fournisseurId);
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <div className="modal-overlay">
       <div className="modal" style={{ maxWidth: 420 }} onClick={(e) => e.stopPropagation()}>
         <div className="modal-header" style={{ background: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)', borderBottom: '1px solid #bfdbfe' }}>
           <div>
@@ -399,7 +399,7 @@ interface FournisseurInfoModalProps {
 
 function FournisseurInfoModal({ ingredientNom, fournisseurNom, refFacture, onClose }: FournisseurInfoModalProps) {
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <div className="modal-overlay">
       <div className="modal" style={{ maxWidth: 380 }} onClick={(e) => e.stopPropagation()}>
         <div className="modal-header" style={{ background: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)', borderBottom: '1px solid #bfdbfe' }}>
           <div>
@@ -449,7 +449,7 @@ function ApproConflictModal({ date, conflicts, newQuantite, onConfirm, onCancel 
   const newQty = newQuantite ?? 0;
   const nom = conflicts.length === 1 ? conflicts[0].ingredientNom : `${conflicts.length} ingrédient(s)`;
   return (
-    <div className="modal-overlay" onClick={onCancel}>
+    <div className="modal-overlay">
       <div className="modal" style={{ maxWidth: 480 }} onClick={(e) => e.stopPropagation()}>
         <div className="modal-header" style={{ background: '#fffbeb', borderBottom: '1px solid #fde68a' }}>
           <h2 style={{ color: '#92400e', margin: 0, fontSize: '1rem' }}>⚠️ Appro existante — {nom}</h2>
@@ -899,7 +899,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
         });
         const overallMax = rows2.length > 0 ? Math.min(...rows2.map((r) => r.maxUnits)) : null;
         return (
-          <div className="modal-overlay" onClick={() => setPtStockModal(null)}>
+          <div className="modal-overlay">
             <div className="modal" style={{ maxWidth: 520 }} onClick={(e) => e.stopPropagation()}>
               <div className="modal-header" style={{ background: 'linear-gradient(135deg, #7c3aed, #a855f7)', borderBottom: 'none' }}>
                 <h2 style={{ color: '#fff', margin: 0, fontSize: '1rem' }}>📊 Stock — {ptStockModal.nom}</h2>

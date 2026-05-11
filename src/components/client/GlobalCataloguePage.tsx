@@ -521,7 +521,7 @@ export default function GlobalCataloguePage() {
       {deselectModal && (() => {
         const hasCascade = deselectModal.approCount > 0 || deselectModal.inventaireCount > 0;
         return (
-          <div className="modal-overlay" onClick={() => setDeselectModal(null)}>
+          <div className="modal-overlay">
             <div className="modal" style={{ maxWidth: 460 }} onClick={(e) => e.stopPropagation()}>
               <div className="modal-header" style={{ background: hasCascade ? 'linear-gradient(135deg, #7c2d12, #dc2626)' : 'linear-gradient(135deg, #b91c1c, #dc2626)', borderRadius: '12px 12px 0 0', padding: '18px 22px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <h2 style={{ color: '#fff', margin: 0, fontSize: '1rem', fontWeight: 800 }}>

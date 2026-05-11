@@ -96,7 +96,7 @@ export default function CategoriesManagement() {
       )}
 
       {showModal && (
-        <div className="modal-overlay" onClick={closeModal}>
+        <div className="modal-overlay">
           <div className="modal modal-sm" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header modal-header--primary">
               <h2>{editId ? t('admin.categories.edit') : t('admin.categories.add')}</h2>

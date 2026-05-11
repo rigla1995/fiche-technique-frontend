@@ -804,7 +804,7 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
 
       {/* Add / Edit form modal — step-based wizard */}
       {showForm && (
-        <div className="modal-overlay" onClick={closeForm}>
+        <div className="modal-overlay">
           <div className="modal" style={{ maxWidth: 500 }} onClick={(e) => e.stopPropagation()}>
 
             {/* Header */}
@@ -1207,7 +1207,7 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
 
       {/* Labo detail popup */}
       {laboPopup && (
-        <div className="modal-overlay" onClick={() => setLaboPopup(null)}>
+        <div className="modal-overlay">
           <div className="modal" style={{ maxWidth: 360 }} onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h2 style={{ margin: 0 }}>🏭 {laboPopup.nom}</h2>
