@@ -77,6 +77,11 @@ export default function AdminSupportPage() {
   const [loading, setLoading] = useState(true);
   const [filterStatut, setFilterStatut] = useState('en_attente');
   const [filterType, setFilterType] = useState('');
+  const [filterClient, setFilterClient] = useState('');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 10;
   const [traiting, setTraiting] = useState<Record<number, boolean>>({});
   const [expanded, setExpanded] = useState<Record<number, boolean>>({});
   const [viewDetails, setViewDetails] = useState<Record<number, boolean>>({});
@@ -150,6 +155,19 @@ export default function AdminSupportPage() {
     }
   };
 
+  const filtered = demandes.filter((d) => {
+    if (filterClient) {
+      const nom = (d.clientNom || '').toLowerCase();
+      if (!nom.includes(filterClient.toLowerCase())) return false;
+    }
+    if (dateFrom && new Date(d.createdAt) < new Date(dateFrom)) return false;
+    if (dateTo && new Date(d.createdAt) > new Date(dateTo + 'T23:59:59')) return false;
+    return true;
+  });
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+  const paginated = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+
   const pendingCount = demandes.filter(d => d.statut === 'en_attente').length;
 
   return (
@@ -182,30 +200,60 @@ export default function AdminSupportPage() {
       </div>
 
       {/* Filters */}
-      <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #e5e7eb', padding: '14px 20px', marginBottom: 20, display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
-        <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Filtres</span>
-        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-          {[
-            { key: '', label: 'Tous statuts' },
-            { key: 'en_attente', label: '⏳ En attente' },
-            { key: 'validée', label: '✅ Validées' },
-            { key: 'refusée', label: '❌ Refusées' },
-          ].map(({ key, label }) => (
-            <button key={key} onClick={() => setFilterStatut(key)}
-              style={{ padding: '6px 14px', borderRadius: 20, border: `1.5px solid ${filterStatut === key ? '#1e40af' : '#e2e8f0'}`, background: filterStatut === key ? '#1e40af' : '#fff', color: filterStatut === key ? '#fff' : '#374151', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer' }}>
-              {label}
-            </button>
-          ))}
-        </div>
-        <div style={{ marginLeft: 'auto' }}>
-          <select value={filterType} onChange={(e) => setFilterType(e.target.value)}
-            style={{ padding: '7px 12px', borderRadius: 8, border: '1.5px solid #e2e8f0', fontSize: '0.82rem', background: '#fff', color: '#374151' }}>
+      <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #e5e7eb', padding: '14px 20px', marginBottom: 20, display: 'flex', flexDirection: 'column', gap: 12 }}>
+        {/* Row 1: statut + type */}
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+          <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Statut</span>
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            {[
+              { key: '', label: 'Tous' },
+              { key: 'en_attente', label: '⏳ En attente' },
+              { key: 'validée', label: '✅ Validées' },
+              { key: 'refusée', label: '❌ Refusées' },
+            ].map(({ key, label }) => (
+              <button key={key} onClick={() => { setFilterStatut(key); setPage(1); }}
+                style={{ padding: '5px 13px', borderRadius: 20, border: `1.5px solid ${filterStatut === key ? '#1e40af' : '#e2e8f0'}`, background: filterStatut === key ? '#1e40af' : '#fff', color: filterStatut === key ? '#fff' : '#374151', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer' }}>
+                {label}
+              </button>
+            ))}
+          </div>
+          <select value={filterType} onChange={(e) => { setFilterType(e.target.value); setPage(1); }}
+            style={{ marginLeft: 'auto', padding: '6px 12px', borderRadius: 8, border: '1.5px solid #e2e8f0', fontSize: '0.8rem', background: '#fff', color: '#374151' }}>
             <option value="">Tous types</option>
             <option value="ingredient_manquant">🥕 Ingrédient manquant</option>
             <option value="supplement">➕ Ajout de capacité</option>
             <option value="aide">💬 Besoin d'aide</option>
           </select>
         </div>
+        {/* Row 2: client search + date range */}
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+          <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Client</span>
+          <input
+            type="text"
+            value={filterClient}
+            onChange={(e) => { setFilterClient(e.target.value); setPage(1); }}
+            placeholder="Rechercher par nom client…"
+            style={{ flex: 1, minWidth: 160, maxWidth: 240, padding: '6px 12px', borderRadius: 8, border: '1.5px solid #e2e8f0', fontSize: '0.82rem', color: '#0f172a', background: '#fff', outline: 'none' }}
+          />
+          <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em', marginLeft: 8 }}>Date</span>
+          <input type="date" value={dateFrom} onChange={(e) => { setDateFrom(e.target.value); setPage(1); }}
+            style={{ padding: '6px 10px', borderRadius: 8, border: '1.5px solid #e2e8f0', fontSize: '0.8rem', color: '#374151', background: '#fff' }} />
+          <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>→</span>
+          <input type="date" value={dateTo} onChange={(e) => { setDateTo(e.target.value); setPage(1); }}
+            style={{ padding: '6px 10px', borderRadius: 8, border: '1.5px solid #e2e8f0', fontSize: '0.8rem', color: '#374151', background: '#fff' }} />
+          {(filterClient || dateFrom || dateTo) && (
+            <button onClick={() => { setFilterClient(''); setDateFrom(''); setDateTo(''); setPage(1); }}
+              style={{ padding: '5px 12px', borderRadius: 8, border: '1px solid #fecaca', background: '#fff', color: '#dc2626', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer' }}>
+              ✕ Réinitialiser
+            </button>
+          )}
+        </div>
+        {/* Result count */}
+        {(filterClient || dateFrom || dateTo) && (
+          <div style={{ fontSize: '0.78rem', color: '#6b7280' }}>
+            {filtered.length} résultat{filtered.length !== 1 ? 's' : ''} sur {demandes.length} demande{demandes.length !== 1 ? 's' : ''}
+          </div>
+        )}
       </div>
 
       {loading ? (
@@ -215,9 +263,14 @@ export default function AdminSupportPage() {
           <div style={{ fontSize: '2.5rem', marginBottom: 12 }}>📭</div>
           <div style={{ fontSize: '0.9rem', fontWeight: 700, color: '#374151' }}>Aucune demande trouvée</div>
         </div>
+      ) : filtered.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: 48, background: '#f8fafc', borderRadius: 16, border: '1px dashed #e2e8f0' }}>
+          <div style={{ fontSize: '2.5rem', marginBottom: 12 }}>🔍</div>
+          <div style={{ fontSize: '0.9rem', fontWeight: 700, color: '#374151' }}>Aucune demande ne correspond aux filtres</div>
+        </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {demandes.map((d) => {
+          {paginated.map((d) => {
             const s = STATUT_INFO[d.statut] || STATUT_INFO.en_attente;
             const t = TYPE_INFO[d.type] || { label: d.type, icon: '📝', color: '#374151', bg: '#f3f4f6' };
             const isPending = d.statut === 'en_attente';
@@ -423,6 +476,21 @@ export default function AdminSupportPage() {
               </div>
             );
           })}
+          {totalPages > 1 && (
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 10, paddingTop: 8 }}>
+              <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={safePage === 1}
+                style={{ padding: '6px 16px', borderRadius: 8, border: '1.5px solid #e2e8f0', background: safePage === 1 ? '#f8fafc' : '#fff', color: safePage === 1 ? '#cbd5e1' : '#374151', fontSize: '0.82rem', fontWeight: 600, cursor: safePage === 1 ? 'default' : 'pointer' }}>
+                ← Précédent
+              </button>
+              <span style={{ fontSize: '0.8rem', color: '#6b7280', fontWeight: 600 }}>
+                Page {safePage} / {totalPages} <span style={{ color: '#94a3b8', fontWeight: 400 }}>({filtered.length} résultats)</span>
+              </span>
+              <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={safePage === totalPages}
+                style={{ padding: '6px 16px', borderRadius: 8, border: '1.5px solid #e2e8f0', background: safePage === totalPages ? '#f8fafc' : '#fff', color: safePage === totalPages ? '#cbd5e1' : '#374151', fontSize: '0.82rem', fontWeight: 600, cursor: safePage === totalPages ? 'default' : 'pointer' }}>
+                Suivant →
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>

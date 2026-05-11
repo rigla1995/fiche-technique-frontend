@@ -47,6 +47,10 @@ export default function SupportPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [filterStatut, setFilterStatut] = useState<FilterKey>('all');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 10;
 
   // Reference data
   const [domaines, setDomaines] = useState<DomaineActivite[]>([]);
@@ -137,7 +141,15 @@ export default function SupportPage() {
     } finally { setSaving(false); }
   };
 
-  const filtered = filterStatut === 'all' ? demandes : demandes.filter(d => d.statut === filterStatut);
+  const filtered = demandes.filter((d) => {
+    if (filterStatut !== 'all' && d.statut !== filterStatut) return false;
+    if (dateFrom && new Date(d.createdAt) < new Date(dateFrom)) return false;
+    if (dateTo && new Date(d.createdAt) > new Date(dateTo + 'T23:59:59')) return false;
+    return true;
+  });
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+  const paginated = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
   const pending = demandes.filter(d => d.statut === 'en_attente').length;
 
   // Supplement live pricing
@@ -337,17 +349,33 @@ export default function SupportPage() {
 
       {/* Filter bar */}
       {!showForm && demandes.length > 0 && (
-        <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
-          {FILTERS.map(({ key, label }) => {
-            const count = key === 'all' ? demandes.length : demandes.filter(d => d.statut === key).length;
-            const active = filterStatut === key;
-            return (
-              <button key={key} onClick={() => setFilterStatut(key)}
-                style={{ padding: '6px 14px', borderRadius: 20, border: `1.5px solid ${active ? '#1e40af' : '#e2e8f0'}`, background: active ? '#1e40af' : '#fff', color: active ? '#fff' : '#374151', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer' }}>
-                {label} {count > 0 && <span style={{ opacity: 0.75 }}>({count})</span>}
+        <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, padding: '12px 16px', marginBottom: 16, display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            {FILTERS.map(({ key, label }) => {
+              const count = key === 'all' ? demandes.length : demandes.filter(d => d.statut === key).length;
+              const active = filterStatut === key;
+              return (
+                <button key={key} onClick={() => { setFilterStatut(key); setPage(1); }}
+                  style={{ padding: '5px 13px', borderRadius: 20, border: `1.5px solid ${active ? '#1e40af' : '#e2e8f0'}`, background: active ? '#1e40af' : '#fff', color: active ? '#fff' : '#374151', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer' }}>
+                  {label} {count > 0 && <span style={{ opacity: 0.75 }}>({count})</span>}
+                </button>
+              );
+            })}
+          </div>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginLeft: 'auto', flexWrap: 'wrap' }}>
+            <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Date</span>
+            <input type="date" value={dateFrom} onChange={(e) => { setDateFrom(e.target.value); setPage(1); }}
+              style={{ padding: '5px 10px', borderRadius: 8, border: '1.5px solid #e2e8f0', fontSize: '0.8rem', color: '#374151', background: '#fff' }} />
+            <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>→</span>
+            <input type="date" value={dateTo} onChange={(e) => { setDateTo(e.target.value); setPage(1); }}
+              style={{ padding: '5px 10px', borderRadius: 8, border: '1.5px solid #e2e8f0', fontSize: '0.8rem', color: '#374151', background: '#fff' }} />
+            {(dateFrom || dateTo) && (
+              <button onClick={() => { setDateFrom(''); setDateTo(''); setPage(1); }}
+                style={{ padding: '4px 10px', borderRadius: 8, border: '1px solid #fecaca', background: '#fff', color: '#dc2626', fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer' }}>
+                ✕
               </button>
-            );
-          })}
+            )}
+          </div>
         </div>
       )}
 
@@ -364,7 +392,7 @@ export default function SupportPage() {
         <div style={{ textAlign: 'center', padding: 32, color: '#94a3b8', fontSize: '0.85rem' }}>Aucune demande dans cette catégorie.</div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {filtered.map((d) => {
+          {paginated.map((d) => {
             const s = STATUT[d.statut] || STATUT.en_attente;
             const t = TYPE_LABELS[d.type];
             return (
@@ -410,6 +438,21 @@ export default function SupportPage() {
               </div>
             );
           })}
+          {totalPages > 1 && (
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 8, paddingTop: 8 }}>
+              <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={safePage === 1}
+                style={{ padding: '5px 14px', borderRadius: 8, border: '1.5px solid #e2e8f0', background: safePage === 1 ? '#f8fafc' : '#fff', color: safePage === 1 ? '#cbd5e1' : '#374151', fontSize: '0.82rem', fontWeight: 600, cursor: safePage === 1 ? 'default' : 'pointer' }}>
+                ← Précédent
+              </button>
+              <span style={{ fontSize: '0.8rem', color: '#6b7280', fontWeight: 600 }}>
+                Page {safePage} / {totalPages} <span style={{ color: '#94a3b8', fontWeight: 400 }}>({filtered.length} demandes)</span>
+              </span>
+              <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={safePage === totalPages}
+                style={{ padding: '5px 14px', borderRadius: 8, border: '1.5px solid #e2e8f0', background: safePage === totalPages ? '#f8fafc' : '#fff', color: safePage === totalPages ? '#cbd5e1' : '#374151', fontSize: '0.82rem', fontWeight: 600, cursor: safePage === totalPages ? 'default' : 'pointer' }}>
+                Suivant →
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>
