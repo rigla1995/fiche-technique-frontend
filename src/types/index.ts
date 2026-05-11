@@ -93,6 +93,7 @@ export interface Abonnement {
     effectifOnboarding: number | null;
     activePromoMensuel: Promotion | null;
     activePromoOnboarding: Promotion | null;
+    configBreakdown?: unknown;
   };
   createdAt: string;
   updatedAt: string;

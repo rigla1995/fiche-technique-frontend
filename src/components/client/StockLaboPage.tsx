@@ -549,7 +549,7 @@ export default function StockLaboPage() {
         {tab === 'stock' && (
           <Link
             to={`/client/labo/transfer?laboId=${laboId}`}
-            style={{ background: 'rgba(37,99,235,0.1)', border: '1.5px solid #2563eb', color: '#2563eb', borderRadius: 9, padding: '8px 16px', fontWeight: 700, textDecoration: 'none', background: 'rgba(255,255,255,0.15)', border: '1.5px solid rgba(255,255,255,0.6)', color: '#fff' }}
+            style={{ background: 'rgba(255,255,255,0.15)', border: '1.5px solid rgba(255,255,255,0.6)', color: '#fff', borderRadius: 9, padding: '8px 16px', fontWeight: 700, textDecoration: 'none' }}
           >
             ↗ {t('client.labo.btn_transfer')}
           </Link>

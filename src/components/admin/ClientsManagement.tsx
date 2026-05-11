@@ -217,10 +217,10 @@ export default function ClientsManagement() {
         <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
           <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 600 }}>Statut :</span>
           {([
-            { value: '', label: 'Tous' },
-            { value: 'active', label: '✅ Activés' },
-            { value: 'pending', label: '⏳ En attente', alert: totalPending > 0 },
-          ] as const).map(({ value, label, alert }) => (
+            { value: '' as const, label: 'Tous', alert: false },
+            { value: 'active' as const, label: '✅ Activés', alert: false },
+            { value: 'pending' as const, label: '⏳ En attente', alert: totalPending > 0 },
+          ]).map(({ value, label, alert }) => (
             <button
               key={value}
               className={`btn btn-sm ${filterStatus === value ? 'btn-primary' : 'btn-ghost'}`}

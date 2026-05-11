@@ -5,7 +5,7 @@ import {
 } from 'recharts';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
+import autoTable, { type RowInput } from 'jspdf-autotable';
 import api from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 
@@ -23,8 +23,9 @@ const fmt = (n: number | string | null | undefined, d = 2) =>
   n == null || n === '' ? '—' : parseFloat(String(n)).toFixed(d).replace(/\.?0+$/, '').replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
 
 const fmtDate = (d: string) => d ? new Date(d).toLocaleDateString('fr-FR') : '—';
-const fmtMois = (m: string) => {
-  const [y, mo] = m.split('-');
+const fmtMois = (m: unknown) => {
+  const s = String(m ?? '');
+  const [y, mo] = s.split('-');
   return new Date(parseInt(y), parseInt(mo) - 1, 1).toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' });
 };
 
@@ -130,7 +131,7 @@ function RapportPertes({ filters }: { filters: FilterOptions }) {
     autoTable(doc, {
       startY: 32,
       head: [['Ingrédient', 'Catégorie', 'Unité', 'Type', 'Date', 'Qté', 'Valeur (DT)']],
-      body: rows.map((r) => [r.ingredient_nom, r.categorie, r.unite, r.type_perte, fmtDate(r.date_perte as string), fmt(r.quantite as number), fmt(r.valeur as number)]),
+      body: rows.map((r) => [r.ingredient_nom, r.categorie, r.unite, r.type_perte, fmtDate(r.date_perte as string), fmt(r.quantite as number), fmt(r.valeur as number)]) as RowInput[],
       styles: { fontSize: 9 }, headStyles: { fillColor: [99, 102, 241] },
       foot: [['', '', '', '', 'TOTAL', totalQte + ' lignes', fmt(totalValeur) + ' DT']],
     });
@@ -179,10 +180,10 @@ function RapportPertes({ filters }: { filters: FilterOptions }) {
               <ChartBox title="Répartition par type">
                 <ResponsiveContainer width="100%" height={200}>
                   <PieChart>
-                    <Pie data={data.byType} dataKey="valeur" nameKey="type" cx="50%" cy="50%" outerRadius={70} label={({ type, pct }) => `${type} ${pct ? pct + '%' : ''}`}>
+                    <Pie data={data.byType} dataKey="valeur" nameKey="type" cx="50%" cy="50%" outerRadius={70} label={((props: {type?: unknown; pct?: unknown}) => `${props.type} ${props.pct ? props.pct + '%' : ''}`) as unknown as boolean}>
                       {data.byType.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
                     </Pie>
-                    <Tooltip formatter={(v: number) => [`${fmt(v)} DT`, 'Valeur']} />
+                    <Tooltip formatter={(v: unknown) => [`${fmt(v as number)} DT`, 'Valeur']} />
                     <Legend />
                   </PieChart>
                 </ResponsiveContainer>
@@ -194,7 +195,7 @@ function RapportPertes({ filters }: { filters: FilterOptions }) {
                   <BarChart data={data.byCategorie.slice(0, 8)} layout="vertical" margin={{ left: 20, right: 10 }}>
                     <XAxis type="number" tick={{ fontSize: 11 }} tickFormatter={(v) => `${v} DT`} />
                     <YAxis type="category" dataKey="categorie" tick={{ fontSize: 10 }} width={90} />
-                    <Tooltip formatter={(v: number) => [`${fmt(v)} DT`, 'Valeur']} />
+                    <Tooltip formatter={(v: unknown) => [`${fmt(v as number)} DT`, 'Valeur']} />
                     <Bar dataKey="valeur" fill="#ef4444" radius={[0, 4, 4, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
@@ -207,7 +208,7 @@ function RapportPertes({ filters }: { filters: FilterOptions }) {
                     <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
                     <XAxis dataKey="mois" tick={{ fontSize: 10 }} tickFormatter={fmtMois} />
                     <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => `${v} DT`} />
-                    <Tooltip formatter={(v: number) => [`${fmt(v)} DT`, 'Valeur']} labelFormatter={fmtMois} />
+                    <Tooltip formatter={(v: unknown) => [`${fmt(v as number)} DT`, 'Valeur']} labelFormatter={fmtMois} />
                     <Line type="monotone" dataKey="valeur" stroke="#ef4444" strokeWidth={2} dot={{ r: 3 }} />
                   </LineChart>
                 </ResponsiveContainer>
@@ -307,7 +308,7 @@ function RapportCoutMatiere({ filters }: { filters: FilterOptions }) {
     autoTable(doc, {
       startY: 32,
       head: [['Ingrédient', 'Catégorie', 'Unité', 'Qté', 'Prix moy.', 'Coût (DT)', '%']],
-      body: rows.map((r) => [r.ingredient_nom, r.categorie, r.unite, fmt(r.quantite_totale as number), fmt(r.prix_moyen as number), fmt(r.cout_total as number), `${r.pct}%`]),
+      body: rows.map((r) => [r.ingredient_nom, r.categorie, r.unite, fmt(r.quantite_totale as number), fmt(r.prix_moyen as number), fmt(r.cout_total as number), `${r.pct}%`]) as RowInput[],
       styles: { fontSize: 9 }, headStyles: { fillColor: [99, 102, 241] },
       foot: [['', '', '', '', '', fmt(total) + ' DT', '100%']],
     });
@@ -358,7 +359,7 @@ function RapportCoutMatiere({ filters }: { filters: FilterOptions }) {
                     <Pie data={data.byCategorie} dataKey="cout_total" nameKey="categorie" cx="50%" cy="50%" outerRadius={70}>
                       {data.byCategorie.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
                     </Pie>
-                    <Tooltip formatter={(v: number) => [`${fmt(v)} DT`, 'Coût']} />
+                    <Tooltip formatter={(v: unknown) => [`${fmt(v as number)} DT`, 'Coût']} />
                     <Legend />
                   </PieChart>
                 </ResponsiveContainer>
@@ -369,7 +370,7 @@ function RapportCoutMatiere({ filters }: { filters: FilterOptions }) {
                 <BarChart data={rows.slice(0, 10)} layout="vertical" margin={{ left: 10, right: 10 }}>
                   <XAxis type="number" tick={{ fontSize: 10 }} tickFormatter={(v) => `${v} DT`} />
                   <YAxis type="category" dataKey="ingredient_nom" tick={{ fontSize: 9 }} width={90} />
-                  <Tooltip formatter={(v: number) => [`${fmt(v)} DT`, 'Coût']} />
+                  <Tooltip formatter={(v: unknown) => [`${fmt(v as number)} DT`, 'Coût']} />
                   <Bar dataKey="cout_total" fill="#6366f1" radius={[0, 4, 4, 0]} />
                 </BarChart>
               </ResponsiveContainer>
@@ -381,7 +382,7 @@ function RapportCoutMatiere({ filters }: { filters: FilterOptions }) {
                     <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
                     <XAxis dataKey="mois" tick={{ fontSize: 10 }} tickFormatter={fmtMois} />
                     <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => `${v} DT`} />
-                    <Tooltip formatter={(v: number) => [`${fmt(v)} DT`, 'Coût']} labelFormatter={fmtMois} />
+                    <Tooltip formatter={(v: unknown) => [`${fmt(v as number)} DT`, 'Coût']} labelFormatter={fmtMois} />
                     <Line type="monotone" dataKey="cout" stroke="#6366f1" strokeWidth={2} dot={{ r: 3 }} />
                   </LineChart>
                 </ResponsiveContainer>
@@ -486,7 +487,7 @@ function RapportAppros({ filters }: { filters: FilterOptions }) {
     autoTable(doc, {
       startY: 32,
       head: [['Date', 'Ingrédient', 'Catégorie', 'Fournisseur', 'Réf.', 'Qté', 'Prix unit.', 'Total (DT)']],
-      body: rows.map((r) => [fmtDate(r.date_appro as string), r.ingredient_nom, r.categorie, r.fournisseur_nom || '—', r.ref_facture || '—', fmt(r.quantite as number), fmt(r.prix_unitaire as number), fmt(r.total as number)]),
+      body: rows.map((r) => [fmtDate(r.date_appro as string), r.ingredient_nom, r.categorie, r.fournisseur_nom || '—', r.ref_facture || '—', fmt(r.quantite as number), fmt(r.prix_unitaire as number), fmt(r.total as number)]) as RowInput[],
       styles: { fontSize: 8 }, headStyles: { fillColor: [16, 185, 129] },
       foot: [['', '', '', '', '', '', 'TOTAL', fmt(totalDT) + ' DT']],
     });
@@ -542,7 +543,7 @@ function RapportAppros({ filters }: { filters: FilterOptions }) {
                   <BarChart data={data.byFournisseur.slice(0, 8)} layout="vertical" margin={{ left: 10 }}>
                     <XAxis type="number" tick={{ fontSize: 10 }} tickFormatter={(v) => `${v} DT`} />
                     <YAxis type="category" dataKey="fournisseur" tick={{ fontSize: 9 }} width={100} />
-                    <Tooltip formatter={(v: number) => [`${fmt(v)} DT`, 'Total']} />
+                    <Tooltip formatter={(v: unknown) => [`${fmt(v as number)} DT`, 'Total']} />
                     <Bar dataKey="total" fill="#10b981" radius={[0, 4, 4, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
@@ -555,7 +556,7 @@ function RapportAppros({ filters }: { filters: FilterOptions }) {
                     <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
                     <XAxis dataKey="mois" tick={{ fontSize: 10 }} tickFormatter={fmtMois} />
                     <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => `${v} DT`} />
-                    <Tooltip formatter={(v: number) => [`${fmt(v)} DT`, 'Total']} labelFormatter={fmtMois} />
+                    <Tooltip formatter={(v: unknown) => [`${fmt(v as number)} DT`, 'Total']} labelFormatter={fmtMois} />
                     <Line type="monotone" dataKey="total" stroke="#10b981" strokeWidth={2} dot={{ r: 3 }} />
                   </LineChart>
                 </ResponsiveContainer>
@@ -653,7 +654,7 @@ function RapportStock({ filters }: { filters: FilterOptions }) {
     autoTable(doc, {
       startY: 32,
       head: [['Ingrédient', 'Catégorie', 'Unité', 'Quantité', 'Prix unit.', 'Valeur (DT)', 'Alerte']],
-      body: rows.map((r) => [r.ingredient_nom, r.categorie, r.unite, fmt(r.quantite as number), fmt(r.prix_unitaire as number), fmt(r.valeur as number), r.alerte]),
+      body: rows.map((r) => [r.ingredient_nom, r.categorie, r.unite, fmt(r.quantite as number), fmt(r.prix_unitaire as number), fmt(r.valeur as number), r.alerte]) as RowInput[],
       styles: { fontSize: 9 }, headStyles: { fillColor: [245, 158, 11] },
       foot: [['', '', '', '', '', fmt(data?.totalValeur ?? 0) + ' DT', '']],
       didParseCell: (d) => {
@@ -709,7 +710,7 @@ function RapportStock({ filters }: { filters: FilterOptions }) {
                     <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
                     <XAxis dataKey="categorie" tick={{ fontSize: 10 }} />
                     <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => `${v} DT`} />
-                    <Tooltip formatter={(v: number) => [`${fmt(v)} DT`, 'Valeur']} />
+                    <Tooltip formatter={(v: unknown) => [`${fmt(v as number)} DT`, 'Valeur']} />
                     <Bar dataKey="valeur" fill="#f59e0b" radius={[4, 4, 0, 0]}>
                       {data.byCategorie.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
                     </Bar>
@@ -799,7 +800,7 @@ function RapportActivites() {
     autoTable(doc, {
       startY: 32,
       head: [['Activité', 'Coût appros (DT)', 'Valeur pertes (DT)', 'Valeur stock (DT)']],
-      body: rows.map((r) => [r.activite_nom, fmt(r.cout_appros as number), fmt(r.valeur_pertes as number), fmt(r.valeur_stock as number)]),
+      body: rows.map((r) => [r.activite_nom, fmt(r.cout_appros as number), fmt(r.valeur_pertes as number), fmt(r.valeur_stock as number)]) as RowInput[],
       styles: { fontSize: 9 }, headStyles: { fillColor: [139, 92, 246] },
     });
     doc.save(`rapport-activites-${new Date().getFullYear()}.pdf`);
@@ -820,7 +821,7 @@ function RapportActivites() {
             <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
             <XAxis dataKey="activite_nom" tick={{ fontSize: 10 }} angle={-15} textAnchor="end" />
             <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => `${v} DT`} />
-            <Tooltip formatter={(v: number) => [`${fmt(v)} DT`]} />
+            <Tooltip formatter={(v: unknown) => [`${fmt(v as number)} DT`]} />
             <Legend />
             <Bar dataKey="cout_appros" name="Coût appros" fill="#6366f1" radius={[4, 4, 0, 0]} />
             <Bar dataKey="valeur_pertes" name="Valeur pertes" fill="#ef4444" radius={[4, 4, 0, 0]} />
@@ -864,7 +865,7 @@ const TABS = [
   { id: 'stock', label: '📦 Stock' },
 ] as const;
 
-type TabId = typeof TABS[number]['id'];
+type TabId = typeof TABS[number]['id'] | 'activites';
 
 export default function RapportsPage() {
   const { user } = useAuth();

@@ -542,7 +542,7 @@ export default function ProductList() {
       ) : (
         <>
           {/* Franchise filters */}
-          {isEntreprise && isFranchiseCtx && tab !== 'fiche-technique' && byTab.length > 0 && (
+          {isEntreprise && isFranchiseCtx && byTab.length > 0 && (
             <div style={{ background: 'var(--surface)', borderRadius: 14, padding: '16px 20px', border: '1px solid var(--border)', boxShadow: '0 2px 12px rgba(0,0,0,0.05)', marginBottom: 24 }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
                 <span style={{ fontWeight: 700, fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.09em', color: 'var(--text-muted)' }}>Filtres</span>
@@ -590,7 +590,7 @@ export default function ProductList() {
           )}
 
           {/* Distinct filters */}
-          {isEntreprise && isDistinctCtx && tab !== 'fiche-technique' && byTab.length > 0 && (
+          {isEntreprise && isDistinctCtx && byTab.length > 0 && (
             <div style={{ background: 'var(--surface)', borderRadius: 14, padding: '16px 20px', border: '1px solid var(--border)', boxShadow: '0 2px 12px rgba(0,0,0,0.05)', marginBottom: 24 }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
                 <span style={{ fontWeight: 700, fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.09em', color: 'var(--text-muted)' }}>Filtres</span>

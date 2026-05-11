@@ -239,7 +239,7 @@ export default function GlobalCataloguePage() {
   const distinctActivities = activites.filter((a) => a.type !== 'franchise');
 
   // Find labo for selected franchise group
-  const groupLabo = labos.find((l) => l.franchiseGroup.toLowerCase() === selectedGroup.toLowerCase()) ?? null;
+  const groupLabo = labos.find((l) => l.franchiseGroup?.toLowerCase() === selectedGroup.toLowerCase()) ?? null;
 
   // Find franchise activities in selected group (for gestion séparée)
   const groupActivities = activites.filter(

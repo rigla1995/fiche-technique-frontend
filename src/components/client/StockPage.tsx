@@ -550,7 +550,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
   const [conflictModal, setConflictModal] = useState<{
     date: string;
     conflicts: ApproConflictEntry[];
-    newQuantite: number;
+    newQuantite?: number;
     onConfirm: () => void;
   } | null>(null);
 

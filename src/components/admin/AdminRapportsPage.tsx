@@ -55,7 +55,7 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
 }
 
 const fmt = (n: number) => n.toLocaleString('fr-TN', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
-const fmtDT = (n: number) => `${fmt(n)} DT`;
+const fmtDT = (n: unknown) => `${fmt(n as number)} DT`;
 const monthLabel = (s: string) => {
   const [y, m] = s.split('-');
   const d = new Date(parseInt(y), parseInt(m) - 1);
@@ -130,7 +130,7 @@ export default function AdminRapportsPage() {
               <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
               <XAxis dataKey="label" tick={{ fontSize: 12 }} />
               <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => `${fmt(v)}`} />
-              <Tooltip formatter={(v: number) => [`${fmtDT(v)}`]} />
+              <Tooltip formatter={(v: unknown) => [`${fmtDT(v)}`]} />
               <Legend wrapperStyle={{ fontSize: 12 }} />
               <Bar dataKey="payeDt" name="Encaissé" fill="#16a34a" radius={[3, 3, 0, 0]} />
               <Bar dataKey="impayeDt" name="Impayé" fill="#ef4444" radius={[3, 3, 0, 0]} />
@@ -153,7 +153,7 @@ export default function AdminRapportsPage() {
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
                   <XAxis dataKey="label" tick={{ fontSize: 12 }} />
                   <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
-                  <Tooltip formatter={(v: number) => [v, 'Nouveaux clients']} />
+                  <Tooltip formatter={(v: unknown) => [String(v), 'Nouveaux clients']} />
                   <Bar dataKey="count" name="Clients" fill="#2563eb" radius={[3, 3, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
