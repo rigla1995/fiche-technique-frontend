@@ -145,32 +145,23 @@ export default function MonAbonnementPage() {
 
                 {breakdown ? (
                   <div style={{ background: '#f8fafc', borderRadius: 10, padding: '12px 16px' }}>
-                    {breakdown.activite.nb > 0 && (
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.84rem', marginBottom: 8, paddingBottom: 8, borderBottom: '1px solid #f1f5f9' }}>
-                        <span style={{ color: '#374151' }}>
-                          📍 {breakdown.activite.nb} activité{breakdown.activite.nb > 1 ? 's' : ''}
+                    {[
+                      { icon: '📍', label: `Activité${breakdown.activite.nb > 1 ? 's' : ''}`, nb: breakdown.activite.nb, total: breakdown.activite.total, unit: null },
+                      { icon: '🏭', label: `Labo${breakdown.labo.nb > 1 ? 's' : ''}`,          nb: breakdown.labo.nb,     total: breakdown.labo.total,     unit: breakdown.prixLaboSup },
+                      { icon: '👤', label: `Gérant${breakdown.gerant.nb > 1 ? 's' : ''}`,      nb: breakdown.gerant.nb,   total: breakdown.gerant.total,   unit: breakdown.prixGerantSup },
+                    ].map(({ icon, label, nb, total, unit }) => (
+                      <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.84rem', marginBottom: 8, paddingBottom: 8, borderBottom: '1px solid #f1f5f9' }}>
+                        <span style={{ color: nb > 0 ? '#374151' : '#9ca3af' }}>
+                          {icon} {nb > 0 ? `${nb} ${label}${unit != null ? ` × ${unit} DT` : ''}` : label}
                         </span>
-                        <span style={{ fontWeight: 700, color: '#111827' }}>{breakdown.activite.total.toFixed(2)} DT</span>
+                        {nb > 0
+                          ? <span style={{ fontWeight: 700, color: '#111827' }}>{total.toFixed(2)} DT</span>
+                          : <span style={{ fontSize: '0.75rem', color: '#9ca3af' }}>Non inclus</span>
+                        }
                       </div>
-                    )}
-                    {breakdown.labo.nb > 0 && (
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.84rem', marginBottom: 8, paddingBottom: 8, borderBottom: '1px solid #f1f5f9' }}>
-                        <span style={{ color: '#374151' }}>
-                          🏭 {breakdown.labo.nb} labo{breakdown.labo.nb > 1 ? 's' : ''} × {breakdown.prixLaboSup} DT
-                        </span>
-                        <span style={{ fontWeight: 700, color: '#111827' }}>{breakdown.labo.total.toFixed(2)} DT</span>
-                      </div>
-                    )}
-                    {breakdown.gerant.nb > 0 && (
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.84rem', marginBottom: 8, paddingBottom: 8, borderBottom: '1px solid #f1f5f9' }}>
-                        <span style={{ color: '#374151' }}>
-                          👤 {breakdown.gerant.nb} gérant{breakdown.gerant.nb > 1 ? 's' : ''} × {breakdown.prixGerantSup} DT
-                        </span>
-                        <span style={{ fontWeight: 700, color: '#111827' }}>{breakdown.gerant.total.toFixed(2)} DT</span>
-                      </div>
-                    )}
+                    ))}
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 4 }}>
-                      <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#1e40af' }}>Total</span>
+                      <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#1e40af' }}>Total mensuel</span>
                       <div style={{ textAlign: 'right' }}>
                         {pricing.activePromoMensuel && pricing.baseMensuel !== effectifMensuel && (
                           <div style={{ fontSize: '0.78rem', color: '#9ca3af', textDecoration: 'line-through' }}>
