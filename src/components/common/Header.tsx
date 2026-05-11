@@ -64,27 +64,20 @@ export default function Header({ onMenuToggle }: HeaderProps) {
       {/* Right */}
       <div className="header-right">
         {/* User chip */}
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: 9,
-          background: 'rgba(255,255,255,0.18)', borderRadius: 8,
-          padding: '5px 14px 5px 6px',
-          border: '1px solid rgba(255,255,255,0.3)',
-        }}>
-          {/* Avatar circle */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
           <div style={{
-            width: 30, height: 30, borderRadius: '50%',
-            background: 'rgba(255,255,255,0.9)',
+            width: 34, height: 34, borderRadius: '50%',
+            background: 'rgba(255,255,255,0.92)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: '0.72rem', fontWeight: 800, color: '#6366f1', flexShrink: 0,
+            fontSize: '0.78rem', fontWeight: 800, color: '#6366f1', flexShrink: 0,
+            boxShadow: '0 0 0 2px rgba(255,255,255,0.35)',
           }}>
             {initials(user?.name)}
           </div>
           <div style={{ lineHeight: 1.25 }}>
-            <div className="user-name" style={{ fontSize: '0.82rem' }}>{user?.name}</div>
-            <div>
-              <span className={`role-badge role-${user?.role}`} style={{ marginTop: 1, display: 'inline-block' }}>
-                {user?.role === 'super_admin' ? 'Admin' : 'Client'}
-              </span>
+            <div style={{ fontSize: '0.84rem', fontWeight: 700, color: '#fff' }}>{user?.name}</div>
+            <div style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.6)', fontWeight: 500, letterSpacing: '0.03em' }}>
+              {user?.role === 'super_admin' ? 'Administrateur' : 'Client'}
             </div>
           </div>
         </div>
