@@ -66,16 +66,16 @@ export default function Header({ onMenuToggle }: HeaderProps) {
         {/* User chip */}
         <div style={{
           display: 'flex', alignItems: 'center', gap: 9,
-          background: '#f8fafc', borderRadius: 8,
+          background: 'rgba(255,255,255,0.18)', borderRadius: 8,
           padding: '5px 14px 5px 6px',
-          border: '1px solid #e5e7eb',
+          border: '1px solid rgba(255,255,255,0.3)',
         }}>
           {/* Avatar circle */}
           <div style={{
             width: 30, height: 30, borderRadius: '50%',
-            background: '#3b5bdb',
+            background: 'rgba(255,255,255,0.9)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: '0.72rem', fontWeight: 800, color: '#fff', flexShrink: 0,
+            fontSize: '0.72rem', fontWeight: 800, color: '#6366f1', flexShrink: 0,
           }}>
             {initials(user?.name)}
           </div>
@@ -95,10 +95,10 @@ export default function Header({ onMenuToggle }: HeaderProps) {
             onClick={handleBell}
             title="Notifications"
             style={{
-              position: 'relative', background: '#f8fafc',
-              border: '1px solid #e5e7eb',
+              position: 'relative', background: 'rgba(255,255,255,0.18)',
+              border: '1px solid rgba(255,255,255,0.3)',
               cursor: 'pointer', padding: '7px 9px', borderRadius: 8,
-              fontSize: '1.1rem', lineHeight: 1, color: '#6b7280',
+              fontSize: '1.1rem', lineHeight: 1, color: '#fff',
               transition: 'background 0.15s',
               animation: unreadCount > 0 ? 'bell-ring 0.45s ease infinite alternate' : 'none',
             }}
