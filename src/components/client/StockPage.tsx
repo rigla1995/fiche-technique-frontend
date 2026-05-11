@@ -91,11 +91,9 @@ function PerteModal({ ingredientId, nom, activiteId, onSaveOverride, onAfterSave
         const { minDate, maxDate } = res.data;
         setDateMin(minDate ?? null);
         setDateMax(maxDate ?? null);
-        // Clamp initial date to the allowed range
-        if (minDate && maxDate) {
+        if (minDate) {
           const today = todayStr();
-          if (today > maxDate) setDatePerte(maxDate);
-          else if (today < minDate) setDatePerte(minDate);
+          if (today < minDate) setDatePerte(minDate);
         }
       } catch { /* keep defaults */ }
       setLoadingRange(false);
@@ -163,7 +161,7 @@ function PerteModal({ ingredientId, nom, activiteId, onSaveOverride, onAfterSave
             <p style={{ color: 'var(--text-muted)', textAlign: 'center' }}>…</p>
           ) : done ? (
             <p style={{ color: 'var(--success)', fontWeight: 700, textAlign: 'center' }}>✓ Perte enregistrée</p>
-          ) : !dateMin || !dateMax ? (
+          ) : !dateMin ? (
             <div style={{ background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: 8, padding: '14px 16px', textAlign: 'center' }}>
               <p style={{ margin: 0, color: '#92400e', fontWeight: 600, fontSize: '0.9rem' }}>
                 Aucun approvisionnement enregistré pour cet ingrédient.
@@ -189,9 +187,9 @@ function PerteModal({ ingredientId, nom, activiteId, onSaveOverride, onAfterSave
               <div>
                 <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: 4 }}>Date de la perte</label>
                 <input type="date" className="input" style={{ width: '100%' }}
-                  min={dateMin} max={dateMax} value={datePerte} onChange={(e) => setDatePerte(e.target.value)} />
+                  min={dateMin} value={datePerte} onChange={(e) => setDatePerte(e.target.value)} />
                 <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: 3 }}>
-                  Premier appro : {dateMin.split('-').reverse().join('/')} — Dernier : {dateMax.split('-').reverse().join('/')}
+                  Premier appro : {dateMin.split('-').reverse().join('/')}
                 </p>
               </div>
               <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 6, padding: '8px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -213,7 +211,7 @@ function PerteModal({ ingredientId, nom, activiteId, onSaveOverride, onAfterSave
         {!done && (
           <div className="modal-footer">
             <button className="btn btn-ghost" onClick={onClose}>Annuler</button>
-            {!loadingRange && dateMin && dateMax && (
+            {!loadingRange && dateMin && (
               <button className="btn btn-danger btn-sm" style={{ background: '#be123c', color: '#fff', borderColor: '#be123c' }} onClick={submit} disabled={saving}>
                 {saving ? '…' : 'Enregistrer la perte'}
               </button>
