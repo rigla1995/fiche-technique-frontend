@@ -26,6 +26,7 @@ interface HistEntry {
   quantite: number | null;
   prixUnitaire: number | null;
   refFacture: string | null;
+  typeAppro: string | null;
   fournisseurId: number | null;
   fournisseurNom: string | null;
   createdBy?: number | null;
@@ -523,6 +524,7 @@ export default function LaboHistoriqueApproPage() {
                 <col style={{ width: '36px' }} />
                 <col style={{ width: '110px' }} />
                 <col />
+                <col style={{ width: '90px' }} />
                 <col style={{ width: '100px' }} />
                 <col style={{ width: '85px' }} />
                 <col style={{ width: '130px' }} />
@@ -541,6 +543,7 @@ export default function LaboHistoriqueApproPage() {
                   </th>
                   <th style={{ fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px' }}>Date</th>
                   <th style={{ fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px' }}>Ingrédient</th>
+                  <th style={{ fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px' }}>Type</th>
                   <th style={{ textAlign: 'right', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px' }}>Quantité</th>
                   <th style={{ textAlign: 'right', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px' }}>Prix/DT</th>
                   <th style={{ fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px' }}>Fourn. / Réf</th>
@@ -568,6 +571,18 @@ export default function LaboHistoriqueApproPage() {
                     <td>
                       <div style={{ fontWeight: 600, fontSize: '0.88rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.ingredientNom}</div>
                       <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.categorieNom}</div>
+                    </td>
+                    <td>
+                      {r.typeAppro === 'manuel' && (
+                        <span style={{ background: '#dcfce7', color: '#15803d', borderRadius: 6, padding: '2px 8px', fontSize: '0.72rem', fontWeight: 700 }}>Appro</span>
+                      )}
+                      {r.typeAppro === 'transfert' && (
+                        <span style={{ background: '#e0f2fe', color: '#0369a1', borderRadius: 6, padding: '2px 8px', fontSize: '0.72rem', fontWeight: 700 }}>Transfert</span>
+                      )}
+                      {r.typeAppro && r.typeAppro !== 'manuel' && r.typeAppro !== 'transfert' && (
+                        <span style={{ background: '#f3e8ff', color: '#7c3aed', borderRadius: 6, padding: '2px 8px', fontSize: '0.72rem', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'inline-block', maxWidth: 80 }} title={r.typeAppro}>PT</span>
+                      )}
+                      {!r.typeAppro && <span style={{ color: 'var(--text-muted)' }}>—</span>}
                     </td>
                     <td style={{ textAlign: 'right', fontWeight: 800, color: '#0f766e' }}>
                       <div>{r.quantite ?? '—'}</div>
