@@ -559,16 +559,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
   const toggleCat = (cat: string) => setOpenCats((prev) => { const n = new Set(prev); if (n.has(cat)) n.delete(cat); else n.add(cat); return n; });
 
   useEffect(() => {
-    const initialRows = buildInitialRowState(entries);
-    // Pre-select labo fournisseur when it's the only fournisseur available (franchise+labo activités)
-    const nonLabo = fournisseurs.filter((f) => !f.isLabo);
-    const laboF = fournisseurs.find((f) => f.isLabo);
-    if (laboF && nonLabo.length === 0) {
-      for (const key of Object.keys(initialRows)) {
-        initialRows[Number(key)].fournisseurId = String(laboF.id);
-      }
-    }
-    setRows(initialRows);
+    setRows(buildInitialRowState(entries));
     setSelectedIngIds(new Set());
     setTotalOverrides({});
     const initial: Record<number, string> = {};
@@ -576,7 +567,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
       initial[e.ingredientId] = e.seuilMin !== null ? String(e.seuilMin) : '';
     }
     setSeuilEdits(initial);
-  }, [entries]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [entries]);
 
   const updateRow = (id: number, field: keyof StockRowState, value: string) => {
     if (field === 'dateAppro') {
@@ -667,7 +658,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
     if (entry?.isPT) {
       if (!row.quantite.trim() || parseFloat(row.quantite) <= 0 || !row.dateAppro.trim() || row.saving) return;
     } else {
-      if (!canSaveStockRow(row, hasFournisseurs)) return;
+      if (!canSaveStockRow(row, true)) return;
     }
 
     // Ensure history is loaded for conflict detection
@@ -1222,7 +1213,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                                           onClick={() => saveRow(entry.ingredientId)}
                                           disabled={entry.isPT
                                             ? (!row.quantite.trim() || parseFloat(row.quantite) <= 0 || !row.dateAppro.trim() || row.saving || !canWrite || !!ptQtyExceeds)
-                                            : (!canSaveStockRow(row, hasFournisseurs) || !canWrite)}
+                                            : (!canSaveStockRow(row, true) || !canWrite)}
                                           style={!row.saved ? { background: 'linear-gradient(135deg, #2563eb, #0ea5e9)', boxShadow: '0 3px 10px rgba(37,99,235,0.3)', borderRadius: 8, border: 'none', color: '#fff', fontWeight: 700, flex: 1 } : { flex: 1 }}
                                         >
                                           {row.saving ? '…' : row.saved ? '✓' : t('client.stock.save')}
