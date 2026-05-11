@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { NotificationProvider } from './context/NotificationContext';
 import Layout from './components/common/Layout';
 import LoginPage from './components/auth/LoginPage';
 import InvitePage from './components/auth/InvitePage';
@@ -74,6 +75,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
+        <NotificationProvider>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/invite/:token" element={<InvitePage />} />
@@ -133,6 +135,7 @@ export default function App() {
           <Route path="/error/:code" element={<ErrorPage />} />
           <Route path="*" element={<ErrorPage code={404} />} />
         </Routes>
+        </NotificationProvider>
       </AuthProvider>
     </BrowserRouter>
   );

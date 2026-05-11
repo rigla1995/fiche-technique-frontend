@@ -457,3 +457,8 @@ select.input { cursor: pointer; }
 .sub-nav-link:hover { background: var(--primary-light); color: var(--primary); }
 .sub-nav-link.active { background: var(--primary-light); color: var(--primary); font-weight: 700; }
 .sidebar-divider { height: 1px; background: var(--border); margin: 6px 12px; }
+
+@keyframes bell-ring {
+  0%   { transform: rotate(-12deg); }
+  100% { transform: rotate(12deg);  }
+}
