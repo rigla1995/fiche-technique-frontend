@@ -268,6 +268,7 @@ export interface ActiviteTypesSummary {
   hasDistinct: boolean;
   hasFranchiseSelections: boolean;
   hasDistinctSelections: boolean;
+  hasFranchiseReady: boolean;
   hasFranchiseAppro: boolean;
   hasDistinctAppro: boolean;
   hasFranchiseFournisseurs: boolean;

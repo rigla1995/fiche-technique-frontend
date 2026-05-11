@@ -387,6 +387,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const hasDistinct = typesSummary === null ? true : typesSummary.hasDistinct;
   const hasFranchiseSelections = typesSummary === null ? true : typesSummary.hasFranchiseSelections;
   const hasDistinctSelections = typesSummary === null ? true : typesSummary.hasDistinctSelections;
+  const hasFranchiseReady = typesSummary === null ? true : typesSummary.hasFranchiseReady;
   const hasFranchiseAppro = typesSummary === null ? true : typesSummary.hasFranchiseAppro;
   const hasDistinctAppro = typesSummary === null ? true : typesSummary.hasDistinctAppro;
   const hasFranchiseFournisseurs = typesSummary === null ? true : typesSummary.hasFranchiseFournisseurs;
@@ -701,11 +702,11 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                   {(hasFranchise || typesSummary === null) && (
                   <>
                   <Divider />
-                  <CollapsibleHeader label="Espace Franchise" icon="🔗" isOpen={openSections.has('franchise')} locked={isOnboarding || !hasFranchise} onToggle={() => toggleSection('franchise')} />
+                  <CollapsibleHeader label="Espace Franchise" icon="🔗" isOpen={openSections.has('franchise')} locked={isOnboarding || !hasFranchiseReady} onToggle={() => toggleSection('franchise')} />
                   {openSections.has('franchise') && (
                     <>
                       <li>
-                        {(isOnboarding && step < 3) || !hasFranchise || !hasFranchiseSelections ? (
+                        {(isOnboarding && step < 3) || !hasFranchiseReady ? (
                           <LockedLink label="Ingrédients Franchises" />
                         ) : (
                           <NavLink to="/client/catalogue-franchise" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>
@@ -715,8 +716,8 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                         )}
                       </li>
                       <li>
-                        {isOnboarding || !hasFranchise || !hasFranchiseSelections || !hasFranchiseFournisseurs ? (
-                          <LockedLink label="Stocks Franchises" reason={(!hasFranchiseFournisseurs && hasFranchiseSelections) ? 'Ajoutez d\'abord un fournisseur à cette activité' : undefined} />
+                        {isOnboarding || !hasFranchiseReady || !hasFranchiseSelections || !hasFranchiseFournisseurs ? (
+                          <LockedLink label="Stocks Franchises" reason={(!hasFranchiseFournisseurs && hasFranchiseSelections && hasFranchiseReady) ? 'Ajoutez d\'abord un fournisseur à cette activité' : undefined} />
                         ) : (
                           <NavLink
                             to="/client/stock?section=franchise"
@@ -729,7 +730,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                         )}
                       </li>
                       <li>
-                        {isOnboarding || !hasFranchise || !hasFranchiseAppro ? (
+                        {isOnboarding || !hasFranchiseReady || !hasFranchiseAppro ? (
                           <LockedLink label="Historique Appro" />
                         ) : (
                           <Link
@@ -743,7 +744,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                         )}
                       </li>
                       <li>
-                        {isOnboarding || !hasFranchise ? (
+                        {isOnboarding || !hasFranchiseReady ? (
                           <LockedLink label="Historique Pertes" />
                         ) : (
                           <Link
@@ -757,7 +758,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                         )}
                       </li>
                       <li>
-                        {isOnboarding || !hasFranchise || !hasFranchiseSelections ? (
+                        {isOnboarding || !hasFranchiseReady || !hasFranchiseSelections ? (
                           <LockedLink label="Inventaire" />
                         ) : (
                           <Link to="/client/inventaire?section=franchise" className={`sidebar-link ${location.pathname === '/client/inventaire' && currentSearch.get('section') === 'franchise' ? 'active' : ''}`} onClick={onClose}>
@@ -766,7 +767,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                         )}
                       </li>
                       <li>
-                        {isOnboarding || !hasFranchise || !hasFranchiseSelections ? (
+                        {isOnboarding || !hasFranchiseReady || !hasFranchiseSelections ? (
                           <LockedLink label="Historique Inventaire" />
                         ) : (
                           <Link to="/client/inventaire/historique?section=franchise" className={`sidebar-link ${location.pathname === '/client/inventaire/historique' && currentSearch.get('section') === 'franchise' ? 'active' : ''}`} onClick={onClose}>
