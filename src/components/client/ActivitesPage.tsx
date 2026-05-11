@@ -183,10 +183,11 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
     setFranchiseName('');
     setFranchiseStep(0);
     setFranchiseForms([emptyFranchiseStep(), emptyFranchiseStep()]);
-    // Pre-determine labo based on config: maxLabos=0 → gestion séparée, maxLabos>0 → avec labo
+    // Pre-determine labo: if config has no labos → always false; if has labos → preset or ask
     const configHasLabo = maxLabos !== null && maxLabos > 0;
     if (preType === 'franchise_labo') { setHasLabo(true); }
     else if (preType === 'franchise') { setHasLabo(configHasLabo ? true : false); }
+    else if (preType === 'distincte') { setHasLabo(configHasLabo ? null : false); }
     else { setHasLabo(null); }
     setLaboAction(null);
     setSelectedLaboId('');
@@ -798,22 +799,26 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                     />
                   </div>
 
-                  {/* Labo choice — shown once name + count are set */}
+                  {/* Labo choice — shown once name + count are set; hidden when config has no labos */}
                   {franchiseUnlocked && (
                     <div style={{ borderTop: '1px solid var(--border)', paddingTop: 14, marginTop: 4 }}>
-                      <p style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                        {t('client.labo.labo_choice_label')}
-                      </p>
-                      <div style={{ display: 'flex', gap: 10, marginBottom: hasLabo === false ? 0 : 14 }}>
-                        <label style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 16px', borderRadius: 10, border: `2px solid ${hasLabo === true ? 'var(--primary)' : 'var(--border)'}`, background: hasLabo === true ? 'var(--primary-light, #eef2ff)' : 'var(--surface)', cursor: 'pointer', flex: 1, fontWeight: 600, fontSize: '0.9rem' }}>
-                          <input type="radio" name="hasLabo" checked={hasLabo === true} onChange={() => { setHasLabo(true); setLaboAction(null); setSelectedLaboId(''); }} style={{ accentColor: 'var(--primary)' }} />
-                          🏭 {t('client.labo.avec_labo')}
-                        </label>
-                        <label style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 16px', borderRadius: 10, border: `2px solid ${hasLabo === false ? 'var(--primary)' : 'var(--border)'}`, background: hasLabo === false ? 'var(--primary-light, #eef2ff)' : 'var(--surface)', cursor: 'pointer', flex: 1, fontWeight: 600, fontSize: '0.9rem' }}>
-                          <input type="radio" name="hasLabo" checked={hasLabo === false} onChange={() => { setHasLabo(false); setLaboAction(null); }} style={{ accentColor: 'var(--primary)' }} />
-                          📋 {t('client.labo.gestion_separee')}
-                        </label>
-                      </div>
+                      {(maxLabos === null || maxLabos > 0) && (
+                        <>
+                          <p style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                            {t('client.labo.labo_choice_label')}
+                          </p>
+                          <div style={{ display: 'flex', gap: 10, marginBottom: hasLabo === false ? 0 : 14 }}>
+                            <label style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 16px', borderRadius: 10, border: `2px solid ${hasLabo === true ? 'var(--primary)' : 'var(--border)'}`, background: hasLabo === true ? 'var(--primary-light, #eef2ff)' : 'var(--surface)', cursor: 'pointer', flex: 1, fontWeight: 600, fontSize: '0.9rem' }}>
+                              <input type="radio" name="hasLabo" checked={hasLabo === true} onChange={() => { setHasLabo(true); setLaboAction(null); setSelectedLaboId(''); }} style={{ accentColor: 'var(--primary)' }} />
+                              🏭 {t('client.labo.avec_labo')}
+                            </label>
+                            <label style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 16px', borderRadius: 10, border: `2px solid ${hasLabo === false ? 'var(--primary)' : 'var(--border)'}`, background: hasLabo === false ? 'var(--primary-light, #eef2ff)' : 'var(--surface)', cursor: 'pointer', flex: 1, fontWeight: 600, fontSize: '0.9rem' }}>
+                              <input type="radio" name="hasLabo" checked={hasLabo === false} onChange={() => { setHasLabo(false); setLaboAction(null); }} style={{ accentColor: 'var(--primary)' }} />
+                              📋 {t('client.labo.gestion_separee')}
+                            </label>
+                          </div>
+                        </>
+                      )}
 
                       {/* Labo: select existing or create new */}
                       {hasLabo === true && <LaboSelectOrCreate
