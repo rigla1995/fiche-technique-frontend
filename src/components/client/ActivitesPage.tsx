@@ -468,16 +468,58 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
     !filterDistinctName || a.nom.toLowerCase().includes(filterDistinctName.toLowerCase())
   );
 
+  const usedLabos = new Set(activites.filter((a) => a.laboId).map((a) => a.laboId)).size;
+
   return (
     <div className={minimal ? '' : 'page-content'}>
-      {!minimal && <h1 style={{ marginBottom: 24 }}>{t('nav.activites')}</h1>}
-
-      {!loading && activites.length > 0 && (
-        <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 12 }}>
-          <span>🏭 {new Set(activites.filter((a) => a.laboId).map((a) => a.laboId)).size} labo(s)</span>
-          <span style={{ color: 'var(--border)' }}>·</span>
-          <span>🏢 {activites.length} {t('client.entreprise.activities_section').toLowerCase()}</span>
-        </p>
+      {!minimal && (
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16, marginBottom: 24 }}>
+          <div>
+            <h1 style={{ margin: 0 }}>{t('nav.activites')}</h1>
+            <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginTop: 4, marginBottom: 0 }}>
+              Gérez vos points de vente, franchises et laboratoires de production.
+            </p>
+          </div>
+          {/* Config quota indicators */}
+          {!loading && abonnementConfig && (
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+              <div style={{
+                background: atActiviteLimit ? '#fef2f2' : activites.length > 0 ? '#f0fdf4' : '#f8fafc',
+                border: `1px solid ${atActiviteLimit ? '#fecaca' : activites.length > 0 ? '#bbf7d0' : '#e2e8f0'}`,
+                borderRadius: 12, padding: '10px 16px', minWidth: 110, textAlign: 'center',
+              }}>
+                <div style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Activités</div>
+                <div style={{ fontSize: '1.3rem', fontWeight: 800, color: atActiviteLimit ? '#dc2626' : activites.length > 0 ? '#16a34a' : '#475569', lineHeight: 1 }}>
+                  {activites.length}<span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)' }}> / {abonnementConfig.nbActivites}</span>
+                </div>
+              </div>
+              {abonnementConfig.nbLabos > 0 && (
+                <div style={{
+                  background: atLaboLimit ? '#fef2f2' : usedLabos > 0 ? '#f0fdf4' : '#f8fafc',
+                  border: `1px solid ${atLaboLimit ? '#fecaca' : usedLabos > 0 ? '#bbf7d0' : '#e2e8f0'}`,
+                  borderRadius: 12, padding: '10px 16px', minWidth: 110, textAlign: 'center',
+                }}>
+                  <div style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Labos</div>
+                  <div style={{ fontSize: '1.3rem', fontWeight: 800, color: atLaboLimit ? '#dc2626' : usedLabos > 0 ? '#16a34a' : '#475569', lineHeight: 1 }}>
+                    {usedLabos}<span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)' }}> / {abonnementConfig.nbLabos}</span>
+                  </div>
+                </div>
+              )}
+              {abonnementConfig.nbGerants > 0 && (
+                <div style={{
+                  background: '#f8fafc',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: 12, padding: '10px 16px', minWidth: 110, textAlign: 'center',
+                }}>
+                  <div style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Gérants</div>
+                  <div style={{ fontSize: '1.3rem', fontWeight: 800, color: '#475569', lineHeight: 1 }}>
+                    {abonnementConfig.nbGerants}<span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)' }}>  alloués</span>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       )}
 
       {msg && <div className="alert alert-success">{msg}</div>}
@@ -485,9 +527,22 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
       {loading ? (
         <p className="text-muted">{t('common.loading')}</p>
       ) : activites.length === 0 ? (
-        <div className="empty-state">
-          <span className="empty-icon">🏢</span>
-          <p style={{ marginBottom: 16 }}>{t('client.entreprise.no_activities')}</p>
+        <div style={{
+          background: '#fff', border: '1px solid #e5e7eb', borderRadius: 16,
+          padding: '48px 32px', textAlign: 'center', maxWidth: 560, margin: '0 auto',
+        }}>
+          <div style={{ fontSize: 48, marginBottom: 16 }}>🏢</div>
+          <h2 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#111827', marginBottom: 8 }}>
+            Créez votre première activité
+          </h2>
+          <p style={{ fontSize: '0.88rem', color: '#6b7280', marginBottom: 28, lineHeight: 1.6 }}>
+            {maxActivites === 1
+              ? 'Votre abonnement inclut 1 activité. Renseignez son nom et son adresse pour commencer.'
+              : maxLabos
+                ? `Votre abonnement inclut jusqu'à ${maxActivites} activités et ${maxLabos} labo(s). Choisissez le type pour démarrer.`
+                : `Votre abonnement inclut jusqu'à ${maxActivites} activités. Choisissez le type pour démarrer.`
+            }
+          </p>
           <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center' }}>
             {atActiviteLimit ? (
               <div style={{ fontSize: 13, color: '#6b7280', background: '#f3f4f6', border: '1px solid #e5e7eb', borderRadius: 8, padding: '8px 16px' }}>
@@ -499,10 +554,10 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
               </button>
             ) : (
               <>
-                <button className="btn btn-primary" onClick={() => openAdd('franchise')}>
+                <button className="btn btn-primary" onClick={() => openAdd('franchise')} style={{ minWidth: 180 }}>
                   🔗 {maxLabos ? 'Franchise avec Labo' : t('client.entreprise.franchise_yes')}
                 </button>
-                <button className="btn btn-secondary" onClick={() => openAdd('distincte')}>
+                <button className="btn btn-secondary" onClick={() => openAdd('distincte')} style={{ minWidth: 180 }}>
                   📍 {t('client.entreprise.franchise_no')}
                 </button>
               </>
