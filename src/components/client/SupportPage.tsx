@@ -26,7 +26,6 @@ type FilterKey = typeof FILTERS[number]['key'];
 const fmtDate = (d: string) => new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });
 
 interface CatItem { id: number; name: string }
-interface UniteItem { id: number; name: string }
 interface SupplPricing {
   prixActiviteSup: number;
   prixLaboSup: number;
@@ -50,13 +49,12 @@ export default function SupportPage() {
   // Reference data
   const [domaines, setDomaines] = useState<DomaineActivite[]>([]);
   const [categories, setCategories] = useState<CatItem[]>([]);
-  const [unites, setUnites] = useState<UniteItem[]>([]);
   const [supplPricing, setSupplPricing] = useState<SupplPricing | null>(null);
 
   // Ingredient form
   const [domaineId, setDomaineId] = useState('');
   const [categorieId, setCategorieId] = useState('');
-  const [uniteId, setUniteId] = useState('');
+  const [uniteNom, setUniteNom] = useState('');
   const [nomIngredient, setNomIngredient] = useState('');
 
   // Supplement form
@@ -79,13 +77,12 @@ export default function SupportPage() {
     fetchDemandes();
     api.get('/api/domaines').then(({ data }) => setDomaines(data)).catch(() => {});
     api.get('/api/categories').then(({ data }) => setCategories(data)).catch(() => {});
-    api.get('/api/unites').then(({ data }) => setUnites(data)).catch(() => {});
     api.get('/api/abonnements/supplement-pricing').then(({ data }) => setSupplPricing(data)).catch(() => {});
   }, [fetchDemandes]);
 
   const resetForm = () => {
     setFormType(null);
-    setDomaineId(''); setCategorieId(''); setUniteId(''); setNomIngredient('');
+    setDomaineId(''); setCategorieId(''); setUniteNom(''); setNomIngredient('');
     setNbActivites(0); setNbLabos(0); setNbGerants(0); setDescription('');
     setError(null);
   };
@@ -99,12 +96,11 @@ export default function SupportPage() {
       if (formType === 'ingredient_manquant') {
         if (!nomIngredient.trim()) { setError('Nom de l\'ingrédient requis'); setSaving(false); return; }
         const cat = categories.find(c => String(c.id) === categorieId);
-        const uni = unites.find(u => String(u.id) === uniteId);
         body = {
           ...body,
           domaineId: domaineId ? Number(domaineId) : null,
           categorieNom: cat?.name || '',
-          uniteNom: uni?.name || '',
+          uniteNom: uniteNom.trim(),
           nomIngredient: nomIngredient.trim(),
         };
       } else if (formType === 'supplement') {
@@ -239,10 +235,7 @@ export default function SupportPage() {
                     </div>
                     <div>
                       <label style={lbl}>Unité</label>
-                      <select value={uniteId} onChange={(e) => setUniteId(e.target.value)} style={inp}>
-                        <option value="">— Sélectionner —</option>
-                        {unites.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
-                      </select>
+                      <input value={uniteNom} onChange={(e) => setUniteNom(e.target.value)} placeholder="ex: kg, L, pièce…" style={inp} />
                     </div>
                   </div>
                   <div>
