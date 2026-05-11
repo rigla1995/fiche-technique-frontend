@@ -277,9 +277,9 @@ function GerantSidebarContent({
           <>
             <li><Link to={`/client/labo/stock?laboId=${laboId}&tab=ingredients`} className={`sidebar-link ${isLaboIngredients ? 'active' : ''}`} onClick={onClose}><span className="link-icon">🧂</span><span className="link-label">Ingrédients Stock</span></Link></li>
             <li><Link to={`/client/labo/stock?laboId=${laboId}`} className={`sidebar-link ${isLaboStock ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📦</span><span className="link-label">Stock {laboLabel}</span></Link></li>
-            <li><Link to={`/client/labo/transfer?laboId=${laboId}`} className={`sidebar-link ${isLaboTransfer ? 'active' : ''}`} onClick={onClose}><span className="link-icon">↗</span><span className="link-label">Transferts {laboLabel}</span></Link></li>
             <li><Link to={`/client/labo/historique-appro?laboId=${laboId}`} className={`sidebar-link ${isLaboHistoriqueAppro ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📋</span><span className="link-label">Historique Appro</span></Link></li>
             <li><Link to={`/client/labo/historique-pertes?laboId=${laboId}`} className={`sidebar-link ${isLaboHistoriquePertes ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📉</span><span className="link-label">Historique Pertes</span></Link></li>
+            <li><Link to={`/client/labo/transfer?laboId=${laboId}`} className={`sidebar-link ${isLaboTransfer ? 'active' : ''}`} onClick={onClose}><span className="link-icon">↗</span><span className="link-label">Transferts {laboLabel}</span></Link></li>
             <li><Link to={`/client/labo/historique-transferts?laboId=${laboId}`} className={`sidebar-link ${isLaboHistorique ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📋</span><span className="link-label">Historiques Transferts</span></Link></li>
             <li><Link to={`/client/labo/inventaire?laboId=${laboId}`} className={`sidebar-link ${isLaboInventaire ? 'active' : ''}`} onClick={onClose}><span className="link-icon">🔢</span><span className="link-label">Inventaire</span></Link></li>
             <li><Link to={`/client/labo/inventaire/historique?laboId=${laboId}`} className={`sidebar-link ${location.pathname === '/client/labo/inventaire/historique' && location.search.includes(laboParam) ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📊</span><span className="link-label">Historique Inventaire</span></Link></li>
@@ -910,20 +910,6 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                                 </li>
                                 <li>
                                   {stockLocked ? (
-                                    <LockedLink label={`Transferts ${labo.nom}`} reason="Assignez d'abord un fournisseur" />
-                                  ) : (
-                                    <Link
-                                      to={`/client/labo/transfer?laboId=${labo.id}`}
-                                      className={`sidebar-link ${isLaboTransfer ? 'active' : ''}`}
-                                      onClick={onClose}
-                                    >
-                                      <span className="link-icon">↗</span>
-                                      <span className="link-label">Transferts {labo.nom}</span>
-                                    </Link>
-                                  )}
-                                </li>
-                                <li>
-                                  {stockLocked ? (
                                     <LockedLink label="Historique Appro" reason="Assignez d'abord un fournisseur" />
                                   ) : (
                                     <Link
@@ -942,6 +928,20 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                                   ) : (
                                     <Link to={`/client/labo/historique-pertes?laboId=${labo.id}`} className={`sidebar-link ${isLaboHistoriquePertes ? 'active' : ''}`} onClick={onClose}>
                                       <span className="link-icon">📉</span><span className="link-label">Historique Pertes</span>
+                                    </Link>
+                                  )}
+                                </li>
+                                <li>
+                                  {stockLocked ? (
+                                    <LockedLink label={`Transferts ${labo.nom}`} reason="Assignez d'abord un fournisseur" />
+                                  ) : (
+                                    <Link
+                                      to={`/client/labo/transfer?laboId=${labo.id}`}
+                                      className={`sidebar-link ${isLaboTransfer ? 'active' : ''}`}
+                                      onClick={onClose}
+                                    >
+                                      <span className="link-icon">↗</span>
+                                      <span className="link-label">Transferts {labo.nom}</span>
                                     </Link>
                                   )}
                                 </li>
