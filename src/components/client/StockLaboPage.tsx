@@ -65,7 +65,7 @@ interface RowState {
   saving: boolean;
   saved: boolean;
   historyOpen: boolean;
-  history: { dateAppro: string; quantite: number | null; prixUnitaire: number | null; fournisseurNom: string | null; refFacture: string | null }[];
+  history: { dateAppro: string; quantite: number | null; prixUnitaire: number | null; fournisseurNom: string | null; refFacture: string | null; typeAppro?: string | null }[];
 }
 
 interface AssignIngredient {
@@ -932,6 +932,7 @@ export default function StockLaboPage() {
                                               <thead>
                                                 <tr>
                                                   <th style={{ textAlign: 'left', color: 'var(--text-muted)', fontWeight: 600, paddingBottom: 4 }}>{t('client.stock.date_appro')}</th>
+                                                  <th style={{ textAlign: 'left', color: 'var(--text-muted)', fontWeight: 600, paddingBottom: 4 }}>Type</th>
                                                   <th style={{ textAlign: 'right', color: 'var(--text-muted)', fontWeight: 600, paddingBottom: 4 }}>{t('client.stock.quantity')}</th>
                                                   <th style={{ textAlign: 'right', color: 'var(--text-muted)', fontWeight: 600, paddingBottom: 4 }}>{t('client.stock.prix_unitaire')}</th>
                                                   <th style={{ textAlign: 'left', color: 'var(--text-muted)', fontWeight: 600, paddingBottom: 4 }}>Fournisseur</th>
@@ -942,6 +943,12 @@ export default function StockLaboPage() {
                                                 {rs.history.slice(0, 5).map((h, i) => (
                                                   <tr key={i}>
                                                     <td style={{ color: 'var(--primary)', fontWeight: 600 }}>{fmtDate(h.dateAppro)}</td>
+                                                    <td>
+                                                      {h.typeAppro === 'manuel' && <span style={{ background: '#dcfce7', color: '#15803d', borderRadius: 5, padding: '1px 7px', fontSize: '0.7rem', fontWeight: 700 }}>Appro</span>}
+                                                      {h.typeAppro === 'transfert' && <span style={{ background: '#e0f2fe', color: '#0369a1', borderRadius: 5, padding: '1px 7px', fontSize: '0.7rem', fontWeight: 700 }}>Transfert</span>}
+                                                      {h.typeAppro && h.typeAppro !== 'manuel' && h.typeAppro !== 'transfert' && <span style={{ background: '#f3e8ff', color: '#7c3aed', borderRadius: 5, padding: '1px 7px', fontSize: '0.7rem', fontWeight: 700 }}>PT</span>}
+                                                      {!h.typeAppro && '—'}
+                                                    </td>
                                                     <td style={{ textAlign: 'right' }}>{h.quantite ?? '—'}</td>
                                                     <td style={{ textAlign: 'right' }}>{h.prixUnitaire !== null ? h.prixUnitaire.toFixed(3) : '—'}</td>
                                                     <td style={{ color: 'var(--text-muted)' }}>{h.fournisseurNom ?? '—'}</td>
