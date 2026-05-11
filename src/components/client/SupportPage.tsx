@@ -52,7 +52,7 @@ export default function SupportPage() {
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [page, setPage] = useState(1);
-  const PAGE_SIZE = 10;
+  const PAGE_SIZE = 5;
 
   // Reference data
   const [domaines, setDomaines] = useState<DomaineActivite[]>([]);

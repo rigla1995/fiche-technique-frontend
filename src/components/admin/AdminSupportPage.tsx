@@ -83,7 +83,7 @@ export default function AdminSupportPage() {
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [page, setPage] = useState(1);
-  const PAGE_SIZE = 10;
+  const PAGE_SIZE = 5;
   const [traiting, setTraiting] = useState<Record<number, boolean>>({});
   const [expanded, setExpanded] = useState<Record<number, boolean>>({});
   const [viewDetails, setViewDetails] = useState<Record<number, boolean>>({});
