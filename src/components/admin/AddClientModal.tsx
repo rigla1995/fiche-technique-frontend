@@ -559,10 +559,12 @@ export default function AddClientModal({ onClose, onCreated }: Props) {
                         style={inputStyle} />
                     </div>
                   )}
-                  <div>
-                    <label style={labelStyle}>Durée (mois, vide = permanent)</label>
-                    <input type="number" min="1" value={promoForm.months} onChange={(e) => setPromoForm((f) => ({ ...f, months: e.target.value }))} placeholder="permanent" style={inputStyle} />
-                  </div>
+                  {promoForm.appliesTo !== 'onboarding' && (
+                    <div>
+                      <label style={labelStyle}>Durée (mois, vide = permanent)</label>
+                      <input type="number" min="1" value={promoForm.months} onChange={(e) => setPromoForm((f) => ({ ...f, months: e.target.value }))} placeholder="permanent" style={inputStyle} />
+                    </div>
+                  )}
                 </div>
                 {promoError && <div style={{ color: '#dc2626', fontSize: 12, marginBottom: 8 }}>{promoError}</div>}
                 <button onClick={addPromo} style={{ padding: '7px 18px', borderRadius: 8, border: 'none', background: '#d97706', color: '#fff', fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>
