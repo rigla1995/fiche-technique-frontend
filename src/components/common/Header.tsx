@@ -1,4 +1,3 @@
-import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../context/AuthContext';
 import { useNotifications } from '../../context/NotificationContext';
 import { useNavigate } from 'react-router-dom';
@@ -9,17 +8,13 @@ interface HeaderProps {
 }
 
 export default function Header({ onMenuToggle }: HeaderProps) {
-  const { t } = useTranslation();
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const { notifications, unreadCount, markAllRead } = useNotifications();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
-  };
+  const handleLogout = () => { logout(); navigate('/login'); };
 
   useEffect(() => {
     if (!open) return;
@@ -40,8 +35,7 @@ export default function Header({ onMenuToggle }: HeaderProps) {
     if (eventType === 'new_inventaire') {
       navigate('/client/inventaire/historique');
     } else {
-      const path = user?.role === 'super_admin' ? '/admin/support' : '/client/support';
-      navigate(path);
+      navigate(user?.role === 'super_admin' ? '/admin/support' : '/client/support');
     }
   };
 
@@ -51,23 +45,48 @@ export default function Header({ onMenuToggle }: HeaderProps) {
     return 'Aide';
   };
 
+  const initials = (name?: string) =>
+    name ? name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2) : '?';
+
   return (
     <header className="header">
+      {/* Left */}
       <div className="header-left">
         <button className="menu-toggle" onClick={onMenuToggle} aria-label="Menu">
-          <span></span><span></span><span></span>
+          <span /><span /><span />
         </button>
         <div className="header-brand">
           <span className="brand-icon">🍽️</span>
           <span className="brand-name">FicheTech</span>
         </div>
       </div>
+
+      {/* Right */}
       <div className="header-right">
-        <div className="user-info">
-          <span className="user-name">{user?.name}</span>
-          <span className={`role-badge role-${user?.role}`}>
-            {user?.role === 'super_admin' ? 'Admin' : 'Client'}
-          </span>
+        {/* User chip */}
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 9,
+          background: 'rgba(255,255,255,0.09)', borderRadius: 24,
+          padding: '5px 12px 5px 6px',
+          border: '1px solid rgba(255,255,255,0.12)',
+        }}>
+          {/* Avatar circle */}
+          <div style={{
+            width: 30, height: 30, borderRadius: '50%',
+            background: 'linear-gradient(135deg, #2563eb, #0ea5e9)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: '0.72rem', fontWeight: 900, color: '#fff', flexShrink: 0,
+          }}>
+            {initials(user?.name)}
+          </div>
+          <div style={{ lineHeight: 1.25 }}>
+            <div className="user-name" style={{ fontSize: '0.82rem' }}>{user?.name}</div>
+            <div>
+              <span className={`role-badge role-${user?.role}`} style={{ marginTop: 1, display: 'inline-block' }}>
+                {user?.role === 'super_admin' ? 'Admin' : 'Client'}
+              </span>
+            </div>
+          </div>
         </div>
 
         {/* Notification bell */}
@@ -76,21 +95,23 @@ export default function Header({ onMenuToggle }: HeaderProps) {
             onClick={handleBell}
             title="Notifications"
             style={{
-              position: 'relative', background: 'none', border: 'none',
-              cursor: 'pointer', padding: '4px 6px', borderRadius: 8,
-              fontSize: '1.15rem', lineHeight: 1, color: 'var(--text)',
-              animation: unreadCount > 0 ? 'bell-ring 0.5s ease infinite alternate' : 'none',
+              position: 'relative', background: 'rgba(255,255,255,0.09)',
+              border: '1px solid rgba(255,255,255,0.14)',
+              cursor: 'pointer', padding: '7px 9px', borderRadius: 10,
+              fontSize: '1.1rem', lineHeight: 1, color: 'rgba(255,255,255,0.85)',
+              transition: 'background 0.15s',
+              animation: unreadCount > 0 ? 'bell-ring 0.45s ease infinite alternate' : 'none',
             }}
           >
             🔔
             {unreadCount > 0 && (
               <span style={{
-                position: 'absolute', top: 0, right: 0,
+                position: 'absolute', top: -3, right: -3,
                 background: '#ef4444', color: '#fff',
-                borderRadius: '50%', minWidth: 16, height: 16,
-                fontSize: '0.62rem', fontWeight: 900,
+                borderRadius: '50%', minWidth: 18, height: 18,
+                fontSize: '0.6rem', fontWeight: 900,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                padding: '0 3px', boxShadow: '0 0 0 2px #fff',
+                padding: '0 3px', boxShadow: '0 0 0 2px #0f172a',
               }}>
                 {unreadCount > 9 ? '9+' : unreadCount}
               </span>
@@ -99,40 +120,70 @@ export default function Header({ onMenuToggle }: HeaderProps) {
 
           {open && (
             <div style={{
-              position: 'absolute', top: 'calc(100% + 8px)', right: 0,
-              width: 300, maxHeight: 360, overflowY: 'auto',
-              background: 'var(--surface)', borderRadius: 12,
-              border: '1px solid var(--border)',
-              boxShadow: '0 8px 32px rgba(0,0,0,0.16)',
+              position: 'absolute', top: 'calc(100% + 10px)', right: 0,
+              width: 320, maxHeight: 400, overflowY: 'auto',
+              background: '#fff', borderRadius: 14,
+              border: '1px solid #e2e8f0',
+              boxShadow: '0 12px 40px rgba(0,0,0,0.18)',
               zIndex: 9999,
             }}>
               <div style={{
-                padding: '10px 14px 8px', fontWeight: 800, fontSize: '0.72rem',
-                textTransform: 'uppercase', letterSpacing: '0.07em',
-                color: 'var(--text-muted)', borderBottom: '1px solid var(--border)',
+                padding: '12px 16px 10px', fontWeight: 900, fontSize: '0.7rem',
+                textTransform: 'uppercase', letterSpacing: '0.08em',
+                color: '#64748b', borderBottom: '1px solid #f1f5f9',
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
               }}>
-                Notifications
+                <span>Notifications</span>
+                {unreadCount > 0 && (
+                  <span style={{
+                    background: '#ef4444', color: '#fff', borderRadius: 20,
+                    fontSize: '0.65rem', fontWeight: 900, padding: '2px 7px',
+                  }}>
+                    {unreadCount} nouvelle{unreadCount > 1 ? 's' : ''}
+                  </span>
+                )}
               </div>
+
               {notifications.length === 0 ? (
-                <div style={{ padding: '24px 14px', fontSize: '0.83rem', color: 'var(--text-muted)', textAlign: 'center' }}>
-                  Aucune notification
+                <div style={{ padding: '32px 16px', textAlign: 'center' }}>
+                  <div style={{ fontSize: '2rem', marginBottom: 8 }}>🔕</div>
+                  <div style={{ fontSize: '0.85rem', color: '#64748b' }}>Aucune notification</div>
                 </div>
               ) : (
                 notifications.map((n) => (
-                  <div key={n.id} onClick={() => handleNotifClick(n.eventType)} style={{
-                    padding: '10px 14px',
-                    borderBottom: '1px solid var(--border)',
-                    background: n.readAt ? 'transparent' : 'rgba(239,68,68,0.05)',
-                    cursor: 'pointer',
-                  }}>
-                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
-                      <span style={{ fontSize: '1.1rem', flexShrink: 0 }}>
+                  <div
+                    key={n.id}
+                    onClick={() => handleNotifClick(n.eventType)}
+                    style={{
+                      padding: '11px 16px',
+                      borderBottom: '1px solid #f8fafc',
+                      background: n.readAt ? '#fff' : '#fef9ff',
+                      cursor: 'pointer',
+                      transition: 'background 0.1s',
+                    }}
+                    onMouseEnter={e => (e.currentTarget.style.background = '#f8fafc')}
+                    onMouseLeave={e => (e.currentTarget.style.background = n.readAt ? '#fff' : '#fef9ff')}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+                      {/* Icon bubble */}
+                      <div style={{
+                        width: 34, height: 34, borderRadius: 10, flexShrink: 0,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: '1rem',
+                        background: n.eventType === 'new_inventaire'
+                          ? 'linear-gradient(135deg,#eff6ff,#dbeafe)'
+                          : n.eventType === 'new_demande'
+                          ? 'linear-gradient(135deg,#fef3c7,#fde68a)'
+                          : n.statut === 'validée'
+                          ? 'linear-gradient(135deg,#d1fae5,#a7f3d0)'
+                          : 'linear-gradient(135deg,#fee2e2,#fecaca)',
+                      }}>
                         {n.eventType === 'new_inventaire' ? '📦'
                           : n.eventType === 'new_demande' ? '📥'
                           : n.statut === 'validée' ? '✅' : '❌'}
-                      </span>
+                      </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text)', lineHeight: 1.3 }}>
+                        <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#0f172a', lineHeight: 1.35 }}>
                           {n.eventType === 'new_inventaire'
                             ? 'Inventaire ajouté par un gérant'
                             : n.eventType === 'new_demande'
@@ -140,19 +191,22 @@ export default function Header({ onMenuToggle }: HeaderProps) {
                             : `Demande ${n.statut === 'validée' ? 'validée ✓' : 'refusée ✗'} — ${typeLabel(n.type)}`}
                         </div>
                         {n.clientNom && (
-                          <div style={{ fontSize: '0.73rem', color: 'var(--text-muted)', marginTop: 2 }}>
-                            Client : {n.clientNom}
+                          <div style={{ fontSize: '0.73rem', color: '#64748b', marginTop: 2 }}>
+                            👤 {n.clientNom}
                           </div>
                         )}
                         {n.notesAdmin && (
-                          <div style={{ fontSize: '0.73rem', color: 'var(--text-muted)', marginTop: 2, fontStyle: 'italic' }}>
+                          <div style={{ fontSize: '0.73rem', color: '#64748b', marginTop: 2, fontStyle: 'italic' }}>
                             {n.notesAdmin}
                           </div>
                         )}
-                        <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginTop: 4 }}>
+                        <div style={{ fontSize: '0.66rem', color: '#94a3b8', marginTop: 4 }}>
                           {new Date(n.createdAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
                         </div>
                       </div>
+                      {!n.readAt && (
+                        <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#2563eb', flexShrink: 0, marginTop: 5 }} />
+                      )}
                     </div>
                   </div>
                 ))
@@ -161,8 +215,9 @@ export default function Header({ onMenuToggle }: HeaderProps) {
           )}
         </div>
 
-        <button className="btn btn-ghost btn-sm" onClick={handleLogout}>
-          {t('auth.logout')}
+        {/* Logout */}
+        <button className="btn btn-ghost btn-sm" onClick={handleLogout} style={{ fontWeight: 600 }}>
+          Déconnexion
         </button>
       </div>
     </header>
