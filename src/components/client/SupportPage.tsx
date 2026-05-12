@@ -28,6 +28,7 @@ const fmtDate = (d: string) => new Date(d).toLocaleDateString('fr-FR', { day: '2
 
 interface CatItem { id: number; name: string }
 interface UniteItem { id: number; name: string }
+interface PromoInfo { type: string; discount?: number | null; fixed?: number | null; }
 interface SupplPricing {
   prixActiviteSup: number;
   prixLaboSup: number;
@@ -36,7 +37,9 @@ interface SupplPricing {
   nbActivites: number;
   nbLabos: number;
   nbGerants: number;
-  activitePromo?: { type: string; discount?: number; fixed?: number } | null;
+  activitePromo?: PromoInfo | null;
+  laboPromo?:     PromoInfo | null;
+  gerantPromo?:   PromoInfo | null;
 }
 
 export default function SupportPage() {
@@ -155,6 +158,12 @@ export default function SupportPage() {
   const safePage = Math.min(page, totalPages);
   const paginated = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
   const pending = demandes.filter(d => d.statut === 'en_attente').length;
+
+  const promoLabel = (p: PromoInfo) =>
+    p.type === 'percent_off' && p.discount != null ? `${p.discount}% de réduction`
+    : p.type === 'free_months' ? 'Gratuit'
+    : p.fixed != null ? `Prix fixe ${p.fixed} DT`
+    : 'Promotion active';
 
   // Supplement live pricing
   const supplTotal = supplPricing
@@ -290,25 +299,20 @@ export default function SupportPage() {
                       {supplPricing.nbGerants > 0 ? `, ${supplPricing.nbGerants} gérant${supplPricing.nbGerants !== 1 ? 's' : ''}` : ''})
                     </div>
                   )}
-                  {supplPricing?.activitePromo && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 14px', background: '#fef3c7', border: '1px solid #fde68a', borderRadius: 10, fontSize: '0.8rem', color: '#92400e', fontWeight: 600 }}>
+                  {([
+                    { promo: supplPricing?.activitePromo, label: 'activités supplémentaires' },
+                    { promo: supplPricing?.laboPromo,     label: 'labos supplémentaires' },
+                    { promo: supplPricing?.gerantPromo,   label: 'gérants supplémentaires' },
+                  ] as { promo: PromoInfo | null | undefined; label: string }[]).filter(x => x.promo).map(({ promo, label }) => (
+                    <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 14px', background: '#fef3c7', border: '1px solid #fde68a', borderRadius: 10, fontSize: '0.8rem', color: '#92400e', fontWeight: 600 }}>
                       <span style={{ fontSize: '1rem' }}>🏷️</span>
-                      <span>
-                        Promotion active sur les activités supplémentaires
-                        {supplPricing.activitePromo.type === 'percent_off' && supplPricing.activitePromo.discount != null
-                          ? ` — ${supplPricing.activitePromo.discount}% de réduction`
-                          : supplPricing.activitePromo.type === 'free_months'
-                          ? ' — Gratuit'
-                          : supplPricing.activitePromo.fixed != null
-                          ? ` — Prix fixe ${supplPricing.activitePromo.fixed} DT`
-                          : ''}
-                      </span>
+                      <span>Promotion active sur les {label} — {promoLabel(promo!)}</span>
                     </div>
-                  )}
+                  ))}
                   {[
                     { label: 'Activités supplémentaires', value: nbActivites, set: setNbActivites, prix: supplPricing?.prixActiviteSup, hasPromo: !!supplPricing?.activitePromo },
-                    { label: 'Labos supplémentaires',     value: nbLabos,     set: setNbLabos,     prix: supplPricing?.prixLaboSup,     hasPromo: false },
-                    { label: 'Gérants supplémentaires',   value: nbGerants,   set: setNbGerants,   prix: supplPricing?.prixGerantSup,   hasPromo: false },
+                    { label: 'Labos supplémentaires',     value: nbLabos,     set: setNbLabos,     prix: supplPricing?.prixLaboSup,     hasPromo: !!supplPricing?.laboPromo },
+                    { label: 'Gérants supplémentaires',   value: nbGerants,   set: setNbGerants,   prix: supplPricing?.prixGerantSup,   hasPromo: !!supplPricing?.gerantPromo },
                   ].map(({ label, value, set, prix, hasPromo }) => (
                     <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', background: hasPromo ? '#fffbeb' : '#f8fafc', borderRadius: 10, border: `1px solid ${hasPromo ? '#fde68a' : '#e2e8f0'}` }}>
                       <div style={{ flex: 1 }}>
