@@ -318,6 +318,7 @@ export default function AddClientModal({ onClose, onCreated }: Props) {
     if (step === 0) {
       if (!nom.trim()) { setError('Le nom est obligatoire.'); return; }
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { setError('Email invalide.'); return; }
+      if (emailChecking) { setError('Vérification de l\'email en cours…'); return; }
       if (emailExists) { setError('Cet email est déjà utilisé.'); return; }
       if (!telValid) { setError('Téléphone invalide — format tunisien requis (ex: 20 123 456 ou +216 20 123 456).'); return; }
       if (selectedDomaines.length === 0) { setError('Veuillez sélectionner au moins un domaine d\'activité.'); return; }
@@ -689,10 +690,15 @@ export default function AddClientModal({ onClose, onCreated }: Props) {
             {step === 0 ? 'Annuler' : '← Retour'}
           </button>
 
-          {step < 3 ? (
-            <button onClick={next} style={{ padding: '9px 28px', borderRadius: 9, border: 'none', background: 'linear-gradient(135deg,#4338ca,#6366f1)', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 14px rgba(99,102,241,0.35)' }}>
-              Suivant →
-            </button>
+          {step < 3 ? (() => {
+            const nextDisabled = (step === 0 && !step1Valid) || (step === 1 && !step2Valid);
+            return (
+              <button onClick={next} disabled={nextDisabled}
+                style={{ padding: '9px 28px', borderRadius: 9, border: 'none', background: nextDisabled ? '#e5e7eb' : 'linear-gradient(135deg,#4338ca,#6366f1)', color: nextDisabled ? '#9ca3af' : '#fff', fontSize: 13, fontWeight: 700, cursor: nextDisabled ? 'default' : 'pointer', boxShadow: nextDisabled ? 'none' : '0 4px 14px rgba(99,102,241,0.35)' }}>
+                {step === 0 && emailChecking ? 'Vérification…' : 'Suivant →'}
+              </button>
+            );
+          })()
           ) : (
             <button
               onClick={handleSubmit}
