@@ -696,7 +696,6 @@ export default function AddClientModal({ onClose, onCreated }: Props) {
               style={{ padding: '9px 28px', borderRadius: 9, border: 'none', background: nextDisabled ? '#e5e7eb' : 'linear-gradient(135deg,#4338ca,#6366f1)', color: nextDisabled ? '#9ca3af' : '#fff', fontSize: 13, fontWeight: 700, cursor: nextDisabled ? 'default' : 'pointer', boxShadow: nextDisabled ? 'none' : '0 4px 14px rgba(99,102,241,0.35)' }}>
               {step === 0 && emailChecking ? 'Vérification…' : 'Suivant →'}
             </button>
-          )
           ) : (
             <button
               onClick={handleSubmit}
