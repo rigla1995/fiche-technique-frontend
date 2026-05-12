@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import api from '../../api/client';
-import jsPDF from 'jspdf';
 import type { DomaineActivite, Promotion } from '../../types';
+import { generateContractPdf } from '../../utils/contractPdf';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -24,159 +24,8 @@ interface PromoForm {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
+const TUNISIAN_PHONE = /^(\+216[\s-]?)?[2579]\d{7}$/;
 const fmt = (n: number) => `${n.toLocaleString('fr-FR')} DT`;
-const today = () => new Date().toISOString().slice(0, 10);
-const todayFr = () => new Date().toLocaleDateString('fr-FR');
-
-// ── Contract PDF generator ─────────────────────────────────────────────────────
-
-function generateContractPdf(params: {
-  clientNom: string;
-  clientEmail: string;
-  clientTel: string;
-  nbActivites: number;
-  nbLabos: number;
-  nbGerants: number;
-  montantOnboarding: number;
-  totalMensuel: number;
-  promos: PromoForm[];
-  appName: string;
-}): string {
-  const { clientNom, clientEmail, clientTel, nbActivites, nbLabos, nbGerants,
-          montantOnboarding, totalMensuel, appName } = params;
-  const doc = new jsPDF({ unit: 'mm', format: 'a4' });
-  const W = 210; const PL = 20; const PR = 20;
-  const TW = W - PL - PR;
-  let y = 0;
-
-  const line = (text: string, x: number, yy: number, size = 10, style: 'normal' | 'bold' = 'normal', color = '#111827') => {
-    doc.setFontSize(size);
-    doc.setFont('helvetica', style);
-    doc.setTextColor(color);
-    doc.text(text, x, yy);
-  };
-
-  const hRule = (yy: number, col = '#e2e8f0') => {
-    doc.setDrawColor(col);
-    doc.setLineWidth(0.3);
-    doc.line(PL, yy, W - PR, yy);
-  };
-
-  const fillRect = (x: number, yy: number, w: number, h: number, col: string) => {
-    doc.setFillColor(col);
-    doc.rect(x, yy, w, h, 'F');
-  };
-
-  // Header
-  fillRect(0, 0, W, 38, '#1e1b4b');
-  line(appName, PL, 18, 20, 'bold', '#ffffff');
-  line('CONTRAT D\'ABONNEMENT', PL, 28, 11, 'normal', '#c7d2fe');
-  line(`Ref: CTR-${Date.now().toString().slice(-8)}`, W - PR, 28, 8, 'normal', '#a5b4fc');
-  y = 50;
-
-  // Parties
-  fillRect(PL, y, TW, 7, '#f8fafc');
-  line('PARTIES', PL + 3, y + 5, 9, 'bold', '#374151');
-  y += 12;
-  line('Prestataire', PL, y, 9, 'bold', '#6366f1');
-  line(appName + ' — Plateforme de gestion des fiches techniques', PL + 35, y, 9, 'normal', '#1f2937');
-  y += 7;
-  line('Client', PL, y, 9, 'bold', '#6366f1');
-  line(clientNom, PL + 35, y, 9, 'normal', '#1f2937');
-  y += 5;
-  line('', PL, y, 9);
-  if (clientEmail) { line(`Email : ${clientEmail}`, PL + 35, y, 8, 'normal', '#6b7280'); y += 5; }
-  if (clientTel)   { line(`Tél   : ${clientTel}`,   PL + 35, y, 8, 'normal', '#6b7280'); y += 5; }
-  y += 5;
-  hRule(y); y += 8;
-
-  // Configuration
-  fillRect(PL, y, TW, 7, '#f8fafc');
-  line('CONFIGURATION SOUSCRITE', PL + 3, y + 5, 9, 'bold', '#374151');
-  y += 12;
-
-  const rows: [string, string, string][] = [
-    ['Activité(s)', `${nbActivites} activité${nbActivites > 1 ? 's' : ''}`,
-      nbActivites === 1 ? '200 DT/mois' : nbActivites === 2 ? '350 DT/mois' : `${nbActivites} × 120 = ${nbActivites * 120} DT/mois`],
-    ...(nbLabos > 0 ? [['Labo(s)', `${nbLabos} labo${nbLabos > 1 ? 's' : ''}`, `${nbLabos} × 160 = ${nbLabos * 160} DT/mois`] as [string,string,string]] : []),
-    ...(nbGerants > 0 ? [['Gérant(s)', `${nbGerants} gérant${nbGerants > 1 ? 's' : ''}`, `${nbGerants} × 80 = ${nbGerants * 80} DT/mois`] as [string,string,string]] : []),
-  ];
-
-  for (const [label, detail, prix] of rows) {
-    line('•', PL + 2, y, 10, 'normal', '#6366f1');
-    line(label, PL + 7, y, 9, 'bold', '#1f2937');
-    line(detail, PL + 45, y, 9, 'normal', '#374151');
-    line(prix, W - PR - 5, y, 9, 'normal', '#374151');
-    doc.setFont('helvetica', 'normal');
-    y += 6;
-  }
-  y += 3;
-
-  // Totals box
-  fillRect(PL, y, TW, 24, '#eff6ff');
-  hRule(y, '#bfdbfe');
-  line('Frais d\'onboarding (une fois) :', PL + 4, y + 8, 9, 'normal', '#374151');
-  line(fmt(montantOnboarding), W - PR - 4, y + 8, 10, 'bold', '#1d4ed8');
-  line('Mensualité (abonnement récurrent) :', PL + 4, y + 17, 9, 'normal', '#374151');
-  line(fmt(totalMensuel), W - PR - 4, y + 17, 10, 'bold', '#1d4ed8');
-  hRule(y + 24, '#bfdbfe');
-  y += 32;
-
-  // Terms
-  fillRect(PL, y, TW, 7, '#f8fafc');
-  line('CONDITIONS', PL + 3, y + 5, 9, 'bold', '#374151');
-  y += 12;
-
-  const terms = [
-    `1. Le présent contrat prend effet à compter de la date d'activation du compte.`,
-    `2. L'abonnement est facturé mensuellement. Le paiement est dû en début de mois.`,
-    `3. Toute demande de supplément (activité, labo, gérant) fait l'objet d'un avenant.`,
-    `4. Le prestataire se réserve le droit de suspendre l'accès en cas de non-paiement.`,
-    `5. La résiliation doit être notifiée 30 jours à l'avance par email.`,
-  ];
-  for (const t of terms) {
-    const lines = doc.splitTextToSize(t, TW - 4);
-    for (const l of lines) {
-      line(l, PL + 2, y, 8, 'normal', '#374151');
-      y += 5;
-    }
-  }
-  y += 5;
-
-  // Signatures
-  hRule(y); y += 10;
-  fillRect(PL, y, TW, 7, '#f8fafc');
-  line('SIGNATURES', PL + 3, y + 5, 9, 'bold', '#374151');
-  y += 14;
-
-  // Two columns
-  const col1 = PL; const col2 = PL + TW / 2 + 5;
-  line('Prestataire', col1, y, 9, 'bold', '#374151');
-  line('Client', col2, y, 9, 'bold', '#374151');
-  y += 6;
-  line(appName, col1, y, 8, 'normal', '#6b7280');
-  line(clientNom, col2, y, 8, 'normal', '#6b7280');
-  y += 5;
-  line(`Date : ${todayFr()}`, col1, y, 8, 'normal', '#6b7280');
-  line(`Date : ${todayFr()}`, col2, y, 8, 'normal', '#6b7280');
-  y += 14;
-  hRule(y - 4, '#9ca3af');
-  hRule(y - 4 + (col2 - col1), '#9ca3af');
-  line('Signature & cachet', col1, y + 2, 7, 'normal', '#9ca3af');
-  line(`Signature — ${clientNom}`, col2, y + 2, 7, 'normal', '#9ca3af');
-  y += 12;
-
-  // Acceptance note
-  fillRect(PL, y, TW, 11, '#fefce8');
-  line('⚡ Validation numérique : l\'activation du compte par le client vaut acceptation du présent contrat.', PL + 3, y + 7, 7.5, 'normal', '#713f12');
-
-  // Footer
-  fillRect(0, 290, W, 10, '#f1f5f9');
-  doc.setFontSize(7); doc.setFont('helvetica', 'normal'); doc.setTextColor('#9ca3af');
-  doc.text(`${appName} — Contrat généré le ${todayFr()} — Confidentiel`, W / 2, 296, { align: 'center' });
-
-  return doc.output('datauristring').split(',')[1]; // base64 only
-}
 
 // ── Step indicator ────────────────────────────────────────────────────────────
 
@@ -313,6 +162,7 @@ export default function AddClientModal({ onClose, onCreated }: Props) {
   const [nom, setNom] = useState('');
   const [email, setEmail] = useState('');
   const [tel, setTel] = useState('');
+  const [telTouched, setTelTouched] = useState(false);
   const [domaines, setDomaines] = useState<DomaineActivite[]>([]);
   const [selectedDomaines, setSelectedDomaines] = useState<number[]>([]);
 
@@ -331,10 +181,23 @@ export default function AddClientModal({ onClose, onCreated }: Props) {
 
   // Step 4
   const [pdfBase64, setPdfBase64] = useState<string | null>(null);
+  const [pdfObjectUrl, setPdfObjectUrl] = useState<string | null>(null);
 
   useEffect(() => {
     api.get('/api/domaines?hasIngredients=true').then(({ data }) => setDomaines(data)).catch(() => {});
   }, []);
+
+  // Build blob URL for PDF preview
+  useEffect(() => {
+    if (!pdfBase64) { setPdfObjectUrl(null); return; }
+    const byteChars = atob(pdfBase64);
+    const byteArr = new Uint8Array(byteChars.length);
+    for (let i = 0; i < byteChars.length; i++) byteArr[i] = byteChars.charCodeAt(i);
+    const blob = new Blob([byteArr], { type: 'application/pdf' });
+    const url = URL.createObjectURL(blob);
+    setPdfObjectUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [pdfBase64]);
 
   // Fetch pricing preview whenever config changes
   const fetchPreview = useCallback(async (na: number, nl: number, ng: number) => {
@@ -358,21 +221,30 @@ export default function AddClientModal({ onClose, onCreated }: Props) {
         nbActivites, nbLabos, nbGerants,
         montantOnboarding: parseFloat(montantOnboarding) || 0,
         totalMensuel: preview?.totalMensuel || 0,
-        promos,
         appName: 'Fiche Technique',
       });
       setPdfBase64(base64);
     }
-  }, [step, nom, email, tel, nbActivites, nbLabos, nbGerants, montantOnboarding, preview, promos]);
+  }, [step, nom, email, tel, nbActivites, nbLabos, nbGerants, montantOnboarding, preview]);
 
   // ── Step validation ──
 
-  const step1Valid = nom.trim().length > 0 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) && tel.trim().length > 0;
+  const telValid = TUNISIAN_PHONE.test(tel.replace(/\s/g, ''));
+  const step1Valid =
+    nom.trim().length > 0 &&
+    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) &&
+    telValid &&
+    selectedDomaines.length > 0;
   const step2Valid = nbActivites >= 1 && montantOnboarding !== '' && parseFloat(montantOnboarding) >= 0;
 
   const next = () => {
     setError(null);
-    if (step === 0 && !step1Valid) { setError('Nom, email et téléphone sont obligatoires.'); return; }
+    if (step === 0) {
+      if (!nom.trim()) { setError('Le nom est obligatoire.'); return; }
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { setError('Email invalide.'); return; }
+      if (!telValid) { setError('Téléphone invalide — format tunisien requis (ex: 20 123 456 ou +216 20 123 456).'); return; }
+      if (selectedDomaines.length === 0) { setError('Veuillez sélectionner au moins un domaine d\'activité.'); return; }
+    }
     if (step === 1 && !step2Valid) { setError('Configurez au moins 1 activité et renseignez le montant d\'onboarding.'); return; }
     setStep((s) => s + 1);
   };
@@ -410,8 +282,8 @@ export default function AddClientModal({ onClose, onCreated }: Props) {
       });
       onCreated();
       onClose();
-    } catch (err: any) {
-      setError(err?.response?.data?.message || 'Erreur lors de la création');
+    } catch (err: unknown) {
+      setError((err as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Erreur lors de la création');
     } finally {
       setSaving(false);
     }
@@ -448,7 +320,7 @@ export default function AddClientModal({ onClose, onCreated }: Props) {
 
           {/* ── STEP 1: Informations ── */}
           {step === 0 && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               <div>
                 <label style={labelStyle}>Nom complet *</label>
                 <input value={nom} onChange={(e) => setNom(e.target.value)} placeholder="Nom du client ou de l'entreprise" style={inputStyle} />
@@ -459,23 +331,68 @@ export default function AddClientModal({ onClose, onCreated }: Props) {
                   <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="email@exemple.com" style={inputStyle} />
                 </div>
                 <div>
-                  <label style={labelStyle}>Téléphone *</label>
-                  <input type="tel" value={tel} onChange={(e) => setTel(e.target.value)} placeholder="+216 XX XXX XXX" style={inputStyle} />
+                  <label style={labelStyle}>Téléphone * <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0, color: '#94a3b8' }}>(format tunisien)</span></label>
+                  <input
+                    type="tel"
+                    value={tel}
+                    onChange={(e) => setTel(e.target.value)}
+                    onBlur={() => setTelTouched(true)}
+                    placeholder="20 123 456"
+                    style={{
+                      ...inputStyle,
+                      borderColor: telTouched && tel && !telValid ? '#fca5a5' : inputStyle.borderColor,
+                      background: telTouched && tel && !telValid ? '#fff5f5' : inputStyle.background,
+                    }}
+                  />
+                  {telTouched && tel && !telValid && (
+                    <div style={{ fontSize: 11, color: '#dc2626', marginTop: 4 }}>
+                      Format invalide — ex: 20 123 456 ou +216 20 123 456
+                    </div>
+                  )}
                 </div>
               </div>
+
+              {/* Domaines — restructured */}
               <div>
-                <label style={labelStyle}>Domaine(s) d'activité</label>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 6 }}>
-                  {domaines.map((d) => {
-                    const sel = selectedDomaines.includes(d.id);
-                    return (
-                      <button key={d.id} type="button"
-                        onClick={() => setSelectedDomaines((p) => sel ? p.filter((x) => x !== d.id) : [...p, d.id])}
-                        style={{ padding: '6px 14px', borderRadius: 20, border: `1.5px solid ${sel ? '#6366f1' : '#e2e8f0'}`, background: sel ? '#eff6ff' : '#fff', color: sel ? '#4338ca' : '#64748b', fontSize: 12, fontWeight: sel ? 700 : 500, cursor: 'pointer', transition: 'all 0.15s' }}>
-                        {d.nom}
-                      </button>
-                    );
-                  })}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                  <label style={{ ...labelStyle, marginBottom: 0 }}>
+                    Domaine(s) d'activité *
+                  </label>
+                  {selectedDomaines.length > 0 && (
+                    <span style={{ fontSize: 11, fontWeight: 700, color: '#4338ca', background: '#eef2ff', border: '1px solid #c7d2fe', borderRadius: 12, padding: '2px 10px' }}>
+                      {selectedDomaines.length} sélectionné{selectedDomaines.length > 1 ? 's' : ''}
+                    </span>
+                  )}
+                </div>
+                <div style={{ border: '1.5px solid #e2e8f0', borderRadius: 10, padding: 12, background: '#fafbff' }}>
+                  {domaines.length === 0 ? (
+                    <p style={{ fontSize: 12, color: '#94a3b8', margin: 0 }}>Chargement des domaines…</p>
+                  ) : (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                      {domaines.map((d) => {
+                        const sel = selectedDomaines.includes(d.id);
+                        return (
+                          <button key={d.id} type="button"
+                            onClick={() => setSelectedDomaines((p) => sel ? p.filter((x) => x !== d.id) : [...p, d.id])}
+                            style={{
+                              padding: '7px 16px', borderRadius: 20,
+                              border: `1.5px solid ${sel ? '#6366f1' : '#e2e8f0'}`,
+                              background: sel ? '#eef2ff' : '#fff',
+                              color: sel ? '#4338ca' : '#64748b',
+                              fontSize: 13, fontWeight: sel ? 700 : 500,
+                              cursor: 'pointer', transition: 'all 0.15s',
+                              display: 'flex', alignItems: 'center', gap: 6,
+                            }}>
+                            {sel && <span style={{ fontSize: 10 }}>✓</span>}
+                            {d.nom}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+                <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 5 }}>
+                  Sélectionnez au moins un domaine — détermine les ingrédients accessibles au client
                 </div>
               </div>
             </div>
@@ -577,19 +494,20 @@ export default function AddClientModal({ onClose, onCreated }: Props) {
           {/* ── STEP 4: Contrat ── */}
           {step === 3 && (
             <div>
-              <div style={{ background: 'linear-gradient(135deg,#f0f9ff 0%,#e0f2fe 100%)', border: '1px solid #bae6fd', borderRadius: 14, padding: '18px 20px', marginBottom: 18 }}>
-                <div style={{ fontSize: 14, fontWeight: 800, color: '#0c4a6e', marginBottom: 14 }}>📄 Récapitulatif de la commande</div>
-                <div style={{ display: 'grid', gap: 8 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
-                    <span style={{ color: '#374151', fontWeight: 600 }}>👤 Client</span>
+              {/* Summary */}
+              <div style={{ background: 'linear-gradient(135deg,#f0f9ff 0%,#e0f2fe 100%)', border: '1px solid #bae6fd', borderRadius: 14, padding: '14px 18px', marginBottom: 14 }}>
+                <div style={{ fontSize: 13, fontWeight: 800, color: '#0c4a6e', marginBottom: 10 }}>📋 Récapitulatif</div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+                  <div style={{ display: 'flex', gap: 8, fontSize: 12 }}>
+                    <span style={{ color: '#64748b', fontWeight: 600 }}>👤 Client</span>
                     <span style={{ color: '#0f172a', fontWeight: 700 }}>{nom}</span>
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
-                    <span style={{ color: '#374151', fontWeight: 600 }}>📧 Email</span>
+                  <div style={{ display: 'flex', gap: 8, fontSize: 12 }}>
+                    <span style={{ color: '#64748b', fontWeight: 600 }}>📧</span>
                     <span style={{ color: '#0f172a' }}>{email}</span>
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
-                    <span style={{ color: '#374151', fontWeight: 600 }}>📱 Téléphone</span>
+                  <div style={{ display: 'flex', gap: 8, fontSize: 12 }}>
+                    <span style={{ color: '#64748b', fontWeight: 600 }}>📱</span>
                     <span style={{ color: '#0f172a' }}>{tel}</span>
                   </div>
                 </div>
@@ -598,29 +516,50 @@ export default function AddClientModal({ onClose, onCreated }: Props) {
               <PricingCard preview={preview} montantOnboarding={montantOnboarding} />
 
               {promos.length > 0 && (
-                <div style={{ marginTop: 14, background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 10, padding: '12px 16px' }}>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: '#166534', marginBottom: 8 }}>🏷️ Promotions appliquées</div>
+                <div style={{ marginTop: 10, background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 10, padding: '10px 14px' }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: '#166534', marginBottom: 6 }}>🏷️ Promotions</div>
                   {promos.map((p, i) => (
-                    <div key={i} style={{ fontSize: 12, color: '#15803d', marginBottom: 4 }}>• {promoLabel(p)}</div>
+                    <div key={i} style={{ fontSize: 12, color: '#15803d', marginBottom: 3 }}>• {promoLabel(p)}</div>
                   ))}
                 </div>
               )}
 
-              <div style={{ marginTop: 18, background: '#fefce8', border: '1px solid #fde68a', borderRadius: 10, padding: '12px 16px' }}>
-                <div style={{ fontSize: 12, fontWeight: 700, color: '#713f12', marginBottom: 6 }}>📬 Ce qui sera envoyé au client :</div>
-                <div style={{ fontSize: 12, color: '#713f12', lineHeight: 1.6 }}>
-                  ✉️ Email professionnel de bienvenue<br />
-                  📎 Contrat PDF en pièce jointe<br />
-                  🔗 Lien d'activation du compte (48h)<br />
-                  <span style={{ color: '#92400e', fontStyle: 'italic', marginTop: 4, display: 'block' }}>L'activation du compte vaut acceptation numérique du contrat.</span>
+              {/* PDF Preview */}
+              <div style={{ marginTop: 14 }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: '#374151', marginBottom: 8 }}>
+                  📄 Aperçu du contrat
+                  {pdfBase64 && (
+                    <button
+                      onClick={() => {
+                        const link = document.createElement('a');
+                        link.href = `data:application/pdf;base64,${pdfBase64}`;
+                        link.download = `contrat-${nom.replace(/\s+/g, '-').toLowerCase()}.pdf`;
+                        link.click();
+                      }}
+                      style={{ marginLeft: 10, fontSize: 11, fontWeight: 600, color: '#4338ca', background: '#eef2ff', border: '1px solid #c7d2fe', borderRadius: 6, padding: '2px 10px', cursor: 'pointer' }}
+                    >
+                      ⬇ Télécharger
+                    </button>
+                  )}
                 </div>
+                {pdfObjectUrl ? (
+                  <iframe
+                    src={pdfObjectUrl}
+                    title="Aperçu du contrat"
+                    style={{ width: '100%', height: 420, border: '1.5px solid #e2e8f0', borderRadius: 10, display: 'block' }}
+                  />
+                ) : (
+                  <div style={{ height: 80, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f8fafc', border: '1.5px dashed #e2e8f0', borderRadius: 10 }}>
+                    <span style={{ fontSize: 12, color: '#94a3b8' }}>Génération du contrat…</span>
+                  </div>
+                )}
               </div>
 
-              <div style={{ marginTop: 14, display: 'flex', alignItems: 'center', gap: 10, background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, padding: '10px 14px' }}>
-                <div style={{ width: 8, height: 8, borderRadius: '50%', background: pdfBase64 ? '#16a34a' : '#f59e0b', flexShrink: 0 }} />
-                <span style={{ fontSize: 12, color: pdfBase64 ? '#166534' : '#92400e' }}>
-                  {pdfBase64 ? 'Contrat PDF généré — prêt à envoyer' : 'Génération du contrat PDF en cours…'}
-                </span>
+              <div style={{ marginTop: 12, background: '#fefce8', border: '1px solid #fde68a', borderRadius: 10, padding: '10px 14px' }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: '#713f12', marginBottom: 4 }}>📬 Ce qui sera envoyé au client :</div>
+                <div style={{ fontSize: 11, color: '#92400e', lineHeight: 1.7 }}>
+                  ✉️ Email de bienvenue · 📎 Contrat PDF · 🔗 Lien d'activation (48h)
+                </div>
               </div>
             </div>
           )}

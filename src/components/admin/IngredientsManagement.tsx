@@ -25,6 +25,7 @@ export default function IngredientsManagement() {
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState('');
   const [filterCat, setFilterCat] = useState('');
+  const [filterDom, setFilterDom] = useState('');
   const [openCats, setOpenCats] = useState<Set<string>>(new Set());
 
   const toggleCat = (cat: string) =>
@@ -86,6 +87,7 @@ export default function IngredientsManagement() {
 
   const filtered = ingredients.filter((i) => {
     const q = search.toLowerCase();
+    const ingDomaines = (i as { domaineIds?: number[] }).domaineIds || [];
     const matchSearch =
       i.name.toLowerCase().includes(q) ||
       (i.categorieName || '').toLowerCase().includes(q) ||
@@ -94,7 +96,11 @@ export default function IngredientsManagement() {
       filterCat === '' ||
       (filterCat === '__none__' && !i.categorieId) ||
       String(i.categorieId) === filterCat;
-    return matchSearch && matchCat;
+    const matchDom =
+      filterDom === '' ||
+      ingDomaines.length === 0 || // "tous" ingredients always match
+      ingDomaines.includes(parseInt(filterDom));
+    return matchSearch && matchCat && matchDom;
   });
 
   // Group by category
@@ -118,31 +124,48 @@ export default function IngredientsManagement() {
         <button className="btn btn-primary" onClick={openAdd}>+ {t('admin.ingredients.add')}</button>
       </div>
 
-      <div style={{ background: '#f8fafc', border: '1px solid var(--border)', borderRadius: 8, padding: '10px 16px', marginBottom: 16, display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
-        <input
-          type="text"
-          placeholder={t('common.search') + '…'}
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="input"
-          style={{ minWidth: 200, flex: 1 }}
-        />
-        <select
-          className="input"
-          style={{ minWidth: 180 }}
-          value={filterCat}
-          onChange={(e) => setFilterCat(e.target.value)}
-        >
-          <option value="">🏷️ Toutes les catégories ({ingredients.length})</option>
-          {categories.map((c) => (
-            <option key={c.id} value={String(c.id)}>
-              {c.name} ({ingredients.filter((i) => i.categorieId === c.id).length})
-            </option>
-          ))}
-          <option value="__none__">Sans catégorie ({ingredients.filter((i) => !i.categorieId).length})</option>
-        </select>
-        {(search || filterCat) && (
-          <button className="btn btn-ghost btn-sm" onClick={() => { setSearch(''); setFilterCat(''); }}>
+      <div style={{ background: '#f8fafc', border: '1px solid var(--border)', borderRadius: 10, padding: '12px 16px', marginBottom: 16, display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4, flex: 1, minWidth: 200 }}>
+          <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Recherche</span>
+          <input
+            type="text"
+            placeholder="Nom, catégorie, unité…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="input"
+          />
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 180 }}>
+          <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Catégorie</span>
+          <select
+            className="input"
+            value={filterCat}
+            onChange={(e) => setFilterCat(e.target.value)}
+          >
+            <option value="">Toutes ({ingredients.length})</option>
+            {categories.map((c) => (
+              <option key={c.id} value={String(c.id)}>
+                {c.name} ({ingredients.filter((i) => i.categorieId === c.id).length})
+              </option>
+            ))}
+            <option value="__none__">Sans catégorie ({ingredients.filter((i) => !i.categorieId).length})</option>
+          </select>
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 160 }}>
+          <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Domaine</span>
+          <select
+            className="input"
+            value={filterDom}
+            onChange={(e) => setFilterDom(e.target.value)}
+          >
+            <option value="">Tous les domaines</option>
+            {domaines.map((d) => (
+              <option key={d.id} value={String(d.id)}>{d.nom}</option>
+            ))}
+          </select>
+        </div>
+        {(search || filterCat || filterDom) && (
+          <button className="btn btn-ghost btn-sm" onClick={() => { setSearch(''); setFilterCat(''); setFilterDom(''); }} style={{ marginBottom: 1 }}>
             ✕ Réinitialiser
           </button>
         )}

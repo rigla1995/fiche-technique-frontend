@@ -14,12 +14,12 @@ export default function DomainesManagement() {
   const [error, setError] = useState('');
   const [search, setSearch] = useState('');
 
-  const fetch = () => {
+  const fetchDomaines = () => {
     setLoading(true);
     api.get('/api/domaines').then(({ data }) => setDomaines(data)).finally(() => setLoading(false));
   };
 
-  useEffect(() => { fetch(); }, []);
+  useEffect(() => { fetchDomaines(); }, []);
 
   const openAdd = () => { setNom(''); setEditId(null); setError(''); setShowModal(true); };
   const openEdit = (d: DomaineActivite) => { setNom(d.nom); setEditId(d.id); setError(''); setShowModal(true); };
@@ -37,10 +37,9 @@ export default function DomainesManagement() {
         await api.post('/api/domaines', { nom });
       }
       closeModal();
-      fetch();
+      fetchDomaines();
     } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || t('common.error');
-      setError(msg);
+      setError((err as { response?: { data?: { message?: string } } })?.response?.data?.message || t('common.error'));
     } finally {
       setSaving(false);
     }
@@ -49,51 +48,76 @@ export default function DomainesManagement() {
   const handleDelete = async (id: number) => {
     if (!window.confirm(t('admin.domaines.delete_confirm'))) return;
     await api.delete(`/api/domaines/${id}`);
-    fetch();
+    fetchDomaines();
   };
+
+  const filtered = domaines.filter((d) => d.nom.toLowerCase().includes(search.toLowerCase()));
 
   return (
     <div className="page">
       <div className="page-header">
-        <h1>{t('admin.domaines.title')}</h1>
+        <div>
+          <h1>{t('admin.domaines.title')}</h1>
+          <p style={{ margin: '2px 0 0', fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+            {domaines.length} domaine{domaines.length !== 1 ? 's' : ''} dans le référentiel
+          </p>
+        </div>
         <button className="btn btn-primary" onClick={openAdd}>+ {t('admin.domaines.add')}</button>
       </div>
 
-      <div style={{ background: '#f8fafc', border: '1px solid var(--border)', borderRadius: 8, padding: '10px 16px', marginBottom: 16 }}>
-        <input
-          type="text"
-          placeholder={t('common.search') + '…'}
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="input"
-          style={{ maxWidth: 320 }}
-        />
+      {/* Filter bar */}
+      <div style={{ background: '#f8fafc', border: '1px solid var(--border)', borderRadius: 10, padding: '12px 16px', marginBottom: 16, display: 'flex', gap: 12, alignItems: 'flex-end', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4, flex: 1, minWidth: 200 }}>
+          <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Recherche</span>
+          <input
+            type="text"
+            placeholder="Filtrer par nom…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="input"
+          />
+        </div>
+        {search && (
+          <button className="btn btn-ghost btn-sm" onClick={() => setSearch('')} style={{ marginBottom: 1 }}>
+            ✕ Réinitialiser
+          </button>
+        )}
       </div>
 
       {loading ? (
         <div className="loading-text">{t('common.loading')}</div>
+      ) : filtered.length === 0 ? (
+        <div className="empty-state">
+          <span className="empty-icon">🌐</span>
+          <p>{domaines.length === 0 ? 'Aucun domaine défini.' : 'Aucun résultat pour cette recherche.'}</p>
+          {domaines.length === 0 && (
+            <button className="btn btn-primary" onClick={openAdd}>Créer le premier domaine</button>
+          )}
+        </div>
       ) : (
         <div className="table-responsive card">
           <table className="table">
-            <thead style={{ background: '#fff7ed' }}>
+            <thead>
               <tr>
-                <th>{t('common.name')}</th>
-                <th>{t('common.actions')}</th>
+                <th style={{ width: '60%' }}>{t('common.name')}</th>
+                <th style={{ width: '40%', textAlign: 'right' }}>{t('common.actions')}</th>
               </tr>
             </thead>
             <tbody>
-              {domaines.filter((d) => d.nom.toLowerCase().includes(search.toLowerCase())).map((d) => (
+              {filtered.map((d) => (
                 <tr key={d.id}>
-                  <td>{d.nom}</td>
-                  <td className="actions-cell">
-                    <button className="btn btn-ghost btn-sm" onClick={() => openEdit(d)}>{t('common.edit')}</button>
-                    <button className="btn btn-danger btn-sm" onClick={() => handleDelete(d.id)}>{t('common.delete')}</button>
+                  <td>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#f59e0b', flexShrink: 0 }} />
+                      <span style={{ fontWeight: 600, color: '#0f172a' }}>{d.nom}</span>
+                    </div>
+                  </td>
+                  <td className="actions-cell" style={{ justifyContent: 'flex-end' }}>
+                    <button className="btn btn-ghost btn-sm" onClick={() => openEdit(d)}>✏️ {t('common.edit')}</button>
+                    <button className="btn btn-danger btn-sm" onClick={() => handleDelete(d.id)}>🗑️</button>
                   </td>
                 </tr>
               ))}
-              {domaines.length === 0 && (
-                <tr><td colSpan={2} className="empty-cell">{t('common.no_result')}</td></tr>
-              )}
             </tbody>
           </table>
         </div>
@@ -101,30 +125,30 @@ export default function DomainesManagement() {
 
       {showModal && (
         <div className="modal-overlay">
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
+          <div className="modal modal-sm" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header modal-header--primary">
               <h2>{editId ? t('admin.domaines.edit') : t('admin.domaines.add')}</h2>
               <button className="modal-close" onClick={closeModal}>×</button>
             </div>
             <form onSubmit={handleSubmit} className="modal-body">
               {error && (
-                <div style={{ background: '#fff0f0', color: '#c00', border: '1px solid #fbb', borderRadius: 6, padding: '8px 12px', marginBottom: 12 }}>
+                <div style={{ background: '#fee2e2', color: '#dc2626', border: '1px solid #fecaca', borderRadius: 6, padding: '8px 12px', marginBottom: 12, fontSize: '0.85rem' }}>
                   {error}
                 </div>
               )}
               <div className="form-group">
-                <label>{t('admin.domaines.name')}</label>
+                <label>{t('admin.domaines.name')} *</label>
                 <input
                   className="input"
+                  autoFocus
                   value={nom}
                   onChange={(e) => setNom(e.target.value)}
                   placeholder={t('admin.domaines.examples')}
-                  autoFocus
                 />
               </div>
               <div className="modal-footer">
                 <button type="button" className="btn btn-ghost" onClick={closeModal}>{t('common.cancel')}</button>
-                <button type="submit" className="btn btn-primary" disabled={saving}>
+                <button type="submit" className="btn btn-primary" disabled={saving || !nom.trim()}>
                   {saving ? t('common.loading') : t('common.save')}
                 </button>
               </div>

@@ -1,53 +1,43 @@
 import { useEffect, useState } from 'react';
-import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
-import type { Client, DomaineActivite } from '../../types';
+import type { Abonnement, DomaineActivite } from '../../types';
 import AddClientModal from './AddClientModal';
+import { generateContractPdf } from '../../utils/contractPdf';
 
-type CompteType = 'independant' | 'entreprise';
-
-const TUNISIAN_PHONE = /^(\+216[\s-]?)?[2579]\d{7}$/;
-
-interface IndependantForm {
-  nomActivite: string;
-  domaineIds: number[];
+interface Client {
+  id: number;
+  name: string;
   email: string;
-  telephone: string;
-  adresse: string;
+  phone?: string;
+  compteType?: 'independant' | 'entreprise' | null;
+  onboardingStep?: number;
+  createdAt?: string;
+  activatedAt?: string | null;
+  domaineIds?: number[];
 }
 
-interface EntrepriseForm {
-  nomEntreprise: string;
-  email: string;
-  telephone: string;
-  adresse: string;
-}
-
-const emptyIndependant = (): IndependantForm => ({ nomActivite: '', domaineIds: [], email: '', telephone: '', adresse: '' });
-const emptyEntreprise = (): EntrepriseForm => ({ nomEntreprise: '', email: '', telephone: '', adresse: '' });
+const fmtDT = (n: number) => `${n.toLocaleString('fr-FR')} DT`;
 
 export default function ClientsManagement() {
-  const { t } = useTranslation();
-
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
   const [domaines, setDomaines] = useState<DomaineActivite[]>([]);
 
-  // Add modal (new 4-step flow)
   const [showAddModal, setShowAddModal] = useState(false);
-  // Edit modal (legacy inline)
-  const [showModal, setShowModal] = useState(false);
-  const [modalStep, setModalStep] = useState<'type' | 'form'>('type');
-  const [selectedType, setSelectedType] = useState<CompteType | null>(null);
-  const [indForm, setIndForm] = useState<IndependantForm>(emptyIndependant());
-  const [entForm, setEntForm] = useState<EntrepriseForm>(emptyEntreprise());
-  const [editId, setEditId] = useState<number | null>(null);
-  const [saving, setSaving] = useState(false);
-  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
-  const [inviteSent, setInviteSent] = useState<{ nom: string; email: string } | null>(null);
+
+  // Edit modal — domain-only
+  const [editClient, setEditClient] = useState<Client | null>(null);
+  const [editDomaines, setEditDomaines] = useState<number[]>([]);
+  const [editSaving, setEditSaving] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
+
   const [resendingId, setResendingId] = useState<number | null>(null);
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState<'' | 'active' | 'pending'>('');
+
+  // Popups
+  const [configPopup, setConfigPopup] = useState<{ client: Client; data: Abonnement | null; loading: boolean } | null>(null);
+  const [domainesPopup, setDomainesPopup] = useState<{ name: string; ids: number[] } | null>(null);
 
   const fetchClients = () => {
     setLoading(true);
@@ -56,90 +46,72 @@ export default function ClientsManagement() {
 
   useEffect(() => {
     fetchClients();
-    api.get('/api/domaines?hasIngredients=true').then(({ data }) => setDomaines(data)).catch(() => {});
+    api.get('/api/domaines').then(({ data }) => setDomaines(data)).catch(() => {});
   }, []);
 
-  const openAdd = () => setShowAddModal(true);
-
-  const openEdit = (c: Client) => {
-    setEditId(c.id);
-    setSelectedType(c.compteType === 'independant' ? 'independant' : 'entreprise');
-    setModalStep('form');
-    setIndForm({ nomActivite: c.name, domaineIds: c.domaineIds || [], email: c.email, telephone: c.phone || '', adresse: '' });
-    setEntForm({ nomEntreprise: c.name, email: c.email, telephone: c.phone || '', adresse: '' });
-    setFormErrors({});
-    setShowModal(true);
-  };
-
-  const closeModal = () => { setShowModal(false); setFormErrors({}); };
-
-  const selectType = (type: CompteType) => {
-    setSelectedType(type);
-    setModalStep('form');
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const errs: Record<string, string> = {};
-
-    if (selectedType === 'independant') {
-      if (!indForm.nomActivite.trim()) errs.nom = t('validation.name_required');
-      if (!indForm.email.trim()) errs.email = t('validation.email_required');
-      if (indForm.telephone && !TUNISIAN_PHONE.test(indForm.telephone.replace(/\s/g, ''))) errs.telephone = t('validation.phone_invalid');
-    } else {
-      if (!entForm.nomEntreprise.trim()) errs.nom = t('validation.name_required');
-      if (!entForm.email.trim()) errs.email = t('validation.email_required');
-      if (entForm.telephone && !TUNISIAN_PHONE.test(entForm.telephone.replace(/\s/g, ''))) errs.telephone = t('validation.phone_invalid');
-    }
-
-    setFormErrors(errs);
-    if (Object.keys(errs).length > 0) return;
-
-    setSaving(true);
+  // ── Config popup ──────────────────────────────────────────────────────────
+  const openConfig = async (client: Client) => {
+    setConfigPopup({ client, data: null, loading: true });
     try {
-      if (editId) {
-        const payload = selectedType === 'independant'
-          ? { name: indForm.nomActivite, email: indForm.email, phone: indForm.telephone, compteType: 'independant', domaineIds: indForm.domaineIds }
-          : { name: entForm.nomEntreprise, email: entForm.email, phone: entForm.telephone, compteType: 'entreprise' };
-        await api.put(`/admin/clients/${editId}`, payload);
-        closeModal();
-        fetchClients();
-      } else {
-        const payload = selectedType === 'independant'
-          ? {
-              name: indForm.nomActivite,
-              email: indForm.email,
-              telephone: indForm.telephone,
-              adresse: indForm.adresse,
-              domaineIds: indForm.domaineIds,
-              compteType: 'independant',
-            }
-          : {
-              name: entForm.nomEntreprise,
-              email: entForm.email,
-              telephone: entForm.telephone,
-              adresse: entForm.adresse,
-              compteType: 'entreprise',
-            };
-        const { data } = await api.post('/admin/clients', payload);
-        setInviteSent({ nom: data.name, email: data.email });
-        closeModal();
-        fetchClients();
-      }
+      const { data } = await api.get(`/api/abonnements/client/${client.id}?withPricing=1`);
+      setConfigPopup({ client, data, loading: false });
+    } catch {
+      setConfigPopup({ client, data: null, loading: false });
+    }
+  };
+
+  // ── Contrat download ──────────────────────────────────────────────────────
+  const downloadContract = async (client: Client) => {
+    let abo: Abonnement | null = null;
+    try {
+      const { data } = await api.get(`/api/abonnements/client/${client.id}?withPricing=1`);
+      abo = data;
+    } catch { return; }
+    if (!abo?.config) return;
+    const base64 = generateContractPdf({
+      clientNom: client.name,
+      clientEmail: client.email,
+      clientTel: client.phone || '',
+      nbActivites: abo.config.nbActivites,
+      nbLabos: abo.config.nbLabos,
+      nbGerants: abo.config.nbGerants,
+      montantOnboarding: abo.config.montantOnboarding,
+      totalMensuel: abo.pricing?.effectifMensuel ?? abo.pricing?.baseMensuel ?? 0,
+      promos: [],
+      appName: 'Fiche Technique',
+    });
+    const link = document.createElement('a');
+    link.href = `data:application/pdf;base64,${base64}`;
+    link.download = `contrat-${client.name.replace(/\s+/g, '-').toLowerCase()}.pdf`;
+    link.click();
+  };
+
+  // ── Edit ──────────────────────────────────────────────────────────────────
+  const openEdit = (c: Client) => {
+    setEditClient(c);
+    setEditDomaines(c.domaineIds || []);
+    setEditError(null);
+  };
+  const closeEdit = () => { setEditClient(null); setEditError(null); };
+
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editClient) return;
+    setEditSaving(true);
+    setEditError(null);
+    try {
+      await api.put(`/admin/clients/${editClient.id}`, { domaineIds: editDomaines });
+      closeEdit();
+      fetchClients();
     } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || t('common.error');
-      if (msg.toLowerCase().includes('email')) {
-        setFormErrors({ email: msg });
-      } else {
-        setFormErrors({ global: msg });
-      }
+      setEditError((err as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Erreur');
     } finally {
-      setSaving(false);
+      setEditSaving(false);
     }
   };
 
   const handleDelete = async (id: number) => {
-    if (!window.confirm(t('admin.clients.delete_confirm'))) return;
+    if (!window.confirm('Supprimer ce client et toutes ses données ?')) return;
     await api.delete(`/admin/clients/${id}`);
     fetchClients();
   };
@@ -149,11 +121,8 @@ export default function ClientsManagement() {
     try {
       await api.post(`/auth/invite/resend/${id}`);
       alert(`Invitation renvoyée à ${email}`);
-    } catch {
-      alert('Erreur lors de l\'envoi');
-    } finally {
-      setResendingId(null);
-    }
+    } catch { alert("Erreur lors de l'envoi"); }
+    finally { setResendingId(null); }
   };
 
   const totalPending = clients.filter((c) => !c.activatedAt).length;
@@ -171,11 +140,13 @@ export default function ClientsManagement() {
     return matchSearch && matchStatus;
   });
 
-  const Badge = ({ children, bg, color }: { children: React.ReactNode; bg: string; color: string }) => (
-    <span style={{ background: bg, color, fontSize: '0.72rem', fontWeight: 700, padding: '2px 8px', borderRadius: 20 }}>
-      {children}
-    </span>
-  );
+  const modeLabelMap: Record<string, { label: string; bg: string; color: string }> = {
+    actif:     { label: 'Actif',      bg: '#dcfce7', color: '#15803d' },
+    read_only: { label: 'Lecture',    bg: '#fef3c7', color: '#92400e' },
+    desactive: { label: 'Désactivé',  bg: '#fee2e2', color: '#991b1b' },
+    archive:   { label: 'Archivé',    bg: '#f1f5f9', color: '#475569' },
+    bloque:    { label: 'Bloqué',     bg: '#ede9fe', color: '#5b21b6' },
+  };
 
   return (
     <>
@@ -185,13 +156,14 @@ export default function ClientsManagement() {
         onCreated={() => { fetchClients(); setShowAddModal(false); }}
       />
     )}
+
     <div className="page">
       <div className="page-header">
-        <h1>👥 {t('admin.clients.title')}</h1>
-        <button className="btn btn-primary" onClick={openAdd}>+ {t('admin.clients.add')}</button>
+        <h1>👥 Clients</h1>
+        <button className="btn btn-primary" onClick={() => setShowAddModal(true)}>+ Ajouter</button>
       </div>
 
-      {/* Stats KPI bar */}
+      {/* KPI bar */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12, marginBottom: 16 }}>
         {[
           { label: 'Total', value: clients.length, icon: '👥', bg: '#eff6ff', color: '#1d4ed8' },
@@ -206,352 +178,340 @@ export default function ClientsManagement() {
 
       {/* Filter row */}
       <div style={{ background: '#f8fafc', border: '1px solid var(--border)', borderRadius: 8, padding: '10px 16px', marginBottom: 16, display: 'flex', gap: 16, flexWrap: 'wrap', alignItems: 'center' }}>
-        <input
-          type="text"
-          placeholder="Rechercher par nom, email, téléphone…"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="input"
-          style={{ minWidth: 220, flex: 1 }}
-        />
-        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-          <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 600 }}>Statut :</span>
-          {([
-            { value: '' as const, label: 'Tous', alert: false },
-            { value: 'active' as const, label: '✅ Activés', alert: false },
-            { value: 'pending' as const, label: '⏳ En attente', alert: totalPending > 0 },
-          ]).map(({ value, label, alert }) => (
-            <button
-              key={value}
-              className={`btn btn-sm ${filterStatus === value ? 'btn-primary' : 'btn-ghost'}`}
-              style={alert && filterStatus !== value ? { borderColor: '#dc2626', color: '#dc2626' } : {}}
-              onClick={() => setFilterStatus(value)}
-            >
-              {label}
-              {value === 'pending' && totalPending > 0 && (
-                <span style={{ background: '#dc2626', color: '#fff', borderRadius: '50%', width: 16, height: 16, fontSize: '0.65rem', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginLeft: 4 }}>
-                  {totalPending}
-                </span>
-              )}
-            </button>
-          ))}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 3, flex: 1, minWidth: 220 }}>
+          <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Recherche</span>
+          <input
+            type="text"
+            placeholder="Nom, email, téléphone…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="input"
+          />
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+          <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Statut</span>
+          <div style={{ display: 'flex', gap: 6 }}>
+            {([
+              { value: '' as const, label: 'Tous' },
+              { value: 'active' as const, label: '✅ Activés' },
+              { value: 'pending' as const, label: '⏳ En attente' },
+            ]).map(({ value, label }) => (
+              <button
+                key={value}
+                className={`btn btn-sm ${filterStatus === value ? 'btn-primary' : 'btn-ghost'}`}
+                onClick={() => setFilterStatus(value)}
+              >
+                {label}
+                {value === 'pending' && totalPending > 0 && (
+                  <span style={{ background: '#dc2626', color: '#fff', borderRadius: '50%', width: 16, height: 16, fontSize: '0.65rem', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginLeft: 4 }}>
+                    {totalPending}
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
       {loading ? (
-        <div className="loading-text">{t('common.loading')}</div>
+        <div className="loading-text">Chargement…</div>
       ) : (
         <div className="table-responsive card">
           <table className="table">
-            <thead style={{ background: '#eff6ff' }}>
+            <thead>
               <tr>
-                <th>{t('common.name')}</th>
-                <th>{t('common.email')}</th>
-                <th>{t('common.phone')}</th>
+                <th>Nom</th>
+                <th>Email</th>
+                <th>Téléphone</th>
                 <th>Domaines</th>
+                <th>Configuration</th>
+                <th>Contrat</th>
                 <th>Statut</th>
-                <th>{t('common.actions')}</th>
+                <th>Actions</th>
               </tr>
             </thead>
             <tbody>
-              {filtered.map((c) => (
-                <tr key={c.id} style={!c.activatedAt ? { background: '#fffbeb' } : {}}>
-                  <td style={{ fontWeight: 600 }}>{c.name}</td>
-                  <td style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{c.email}</td>
-                  <td>{c.phone || '—'}</td>
-                  <td>
-                    {c.compteType !== 'independant' ? (
-                      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>par activité</span>
-                    ) : (c.domaineIds || []).length === 0 ? (
-                      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>—</span>
-                    ) : (
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
-                        {(c.domaineIds || []).map((did) => {
-                          const d = domaines.find((dom) => dom.id === did);
-                          return (
-                            <span key={did} style={{ background: '#dbeafe', color: '#1d4ed8', fontSize: '0.7rem', fontWeight: 600, padding: '1px 7px', borderRadius: 12, border: '1px solid #bfdbfe' }}>
-                              {d ? d.nom : `#${did}`}
-                            </span>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </td>
-                  <td>
-                    {c.activatedAt ? (
-                      <Badge bg="#dcfce7" color="#15803d">✅ Activé</Badge>
-                    ) : (
-                      <Badge bg="#fee2e2" color="#991b1b">⏳ En attente</Badge>
-                    )}
-                  </td>
-                  <td className="actions-cell">
-                    <button className="btn btn-ghost btn-sm" onClick={() => openEdit(c)}>{t('common.edit')}</button>
-                    {!c.activatedAt && (
+              {filtered.map((c) => {
+                const domCount = (c.domaineIds || []).length;
+                return (
+                  <tr key={c.id} style={!c.activatedAt ? { background: '#fffbeb' } : {}}>
+                    <td style={{ fontWeight: 600 }}>{c.name}</td>
+                    <td style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{c.email}</td>
+                    <td style={{ fontSize: '0.85rem' }}>{c.phone || '—'}</td>
+
+                    {/* Domaines — count badge */}
+                    <td>
+                      {domCount === 0 ? (
+                        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>—</span>
+                      ) : (
+                        <button
+                          onClick={() => setDomainesPopup({ name: c.name, ids: c.domaineIds || [] })}
+                          style={{
+                            background: '#dbeafe', color: '#1d4ed8', border: '1px solid #bfdbfe',
+                            borderRadius: 20, padding: '2px 10px', fontSize: '0.75rem', fontWeight: 700,
+                            cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4,
+                          }}
+                        >
+                          🏷️ {domCount} domaine{domCount > 1 ? 's' : ''}
+                        </button>
+                      )}
+                    </td>
+
+                    {/* Configuration */}
+                    <td>
                       <button
-                        className="btn btn-ghost btn-sm"
-                        style={{ color: '#4338ca', borderColor: '#4338ca' }}
-                        disabled={resendingId === c.id}
-                        onClick={() => handleResendInvite(c.id, c.email)}
-                      >
-                        {resendingId === c.id ? '…' : '✉️ Renvoyer'}
-                      </button>
-                    )}
-                    {c.compteType !== 'independant' && (c.onboardingStep ?? 0) > 0 && (
-                      <button
-                        className="btn btn-ghost btn-sm"
-                        style={{ color: 'var(--warning, #b45309)', borderColor: 'var(--warning, #b45309)' }}
-                        title="Réinitialiser l'onboarding (débloquer le compte)"
-                        onClick={async () => {
-                          if (!window.confirm(`Réinitialiser l'onboarding de ${c.name} et débloquer son compte ?`)) return;
-                          await api.put(`/admin/clients/${c.id}`, { onboardingStep: 0 });
-                          setClients((prev) => prev.map((x) => x.id === c.id ? { ...x, onboardingStep: 0 } : x));
+                        onClick={() => openConfig(c)}
+                        style={{
+                          background: '#f0fdf4', color: '#15803d', border: '1px solid #bbf7d0',
+                          borderRadius: 7, padding: '4px 10px', fontSize: '0.78rem', fontWeight: 700,
+                          cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 5,
                         }}
                       >
-                        🔓 Reset
+                        ⚙️ Config
                       </button>
-                    )}
-                    <button className="btn btn-danger btn-sm" onClick={() => handleDelete(c.id)}>{t('common.delete')}</button>
-                  </td>
-                </tr>
-              ))}
+                    </td>
+
+                    {/* Contrat */}
+                    <td>
+                      {c.activatedAt ? (
+                        <button
+                          onClick={() => downloadContract(c)}
+                          style={{
+                            background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe',
+                            borderRadius: 7, padding: '4px 10px', fontSize: '0.78rem', fontWeight: 700,
+                            cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 5,
+                          }}
+                        >
+                          📄 PDF
+                        </button>
+                      ) : (
+                        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>—</span>
+                      )}
+                    </td>
+
+                    {/* Statut */}
+                    <td>
+                      {c.activatedAt ? (
+                        <span style={{ background: '#dcfce7', color: '#15803d', fontSize: '0.72rem', fontWeight: 700, padding: '2px 8px', borderRadius: 20 }}>✅ Activé</span>
+                      ) : (
+                        <span style={{ background: '#fee2e2', color: '#991b1b', fontSize: '0.72rem', fontWeight: 700, padding: '2px 8px', borderRadius: 20 }}>⏳ En attente</span>
+                      )}
+                    </td>
+
+                    <td className="actions-cell">
+                      <button className="btn btn-ghost btn-sm" onClick={() => openEdit(c)}>✏️ Modifier</button>
+                      {!c.activatedAt && (
+                        <button
+                          className="btn btn-ghost btn-sm"
+                          style={{ color: '#4338ca', borderColor: '#4338ca' }}
+                          disabled={resendingId === c.id}
+                          onClick={() => handleResendInvite(c.id, c.email)}
+                        >
+                          {resendingId === c.id ? '…' : '✉️ Renvoyer'}
+                        </button>
+                      )}
+                      {c.compteType !== 'independant' && (c.onboardingStep ?? 0) > 0 && (
+                        <button
+                          className="btn btn-ghost btn-sm"
+                          style={{ color: 'var(--warning, #b45309)', borderColor: 'var(--warning, #b45309)' }}
+                          onClick={async () => {
+                            if (!window.confirm(`Réinitialiser l'onboarding de ${c.name} ?`)) return;
+                            await api.put(`/admin/clients/${c.id}`, { onboardingStep: 0 });
+                            setClients((prev) => prev.map((x) => x.id === c.id ? { ...x, onboardingStep: 0 } : x));
+                          }}
+                        >
+                          🔓 Reset
+                        </button>
+                      )}
+                      <button className="btn btn-danger btn-sm" onClick={() => handleDelete(c.id)}>🗑️</button>
+                    </td>
+                  </tr>
+                );
+              })}
               {filtered.length === 0 && (
-                <tr><td colSpan={6} className="empty-cell">{t('common.no_result')}</td></tr>
+                <tr><td colSpan={8} className="empty-cell">Aucun résultat</td></tr>
               )}
             </tbody>
           </table>
         </div>
       )}
+    </div>
 
-      {/* Account created banner */}
-      {inviteSent && (
-        <div style={{ background: '#eff6ff', border: '1px solid #93c5fd', borderRadius: 10, padding: '14px 18px', marginBottom: 16 }}>
-          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
-            <span style={{ color: '#1d4ed8', fontWeight: 600 }}>
-              Compte créé pour <strong>{inviteSent.nom}</strong> ({inviteSent.email}). Rendez-vous dans <strong>Abonnements</strong> pour confirmer l'abonnement et envoyer l'invitation.
-            </span>
-            <button onClick={() => setInviteSent(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#1d4ed8', fontSize: '1rem', flexShrink: 0 }}>✕</button>
+    {/* ── POPUP : Domaines ─────────────────────────────────────────────── */}
+    {domainesPopup && (
+      <div className="modal-overlay" onClick={() => setDomainesPopup(null)}>
+        <div className="modal modal-sm" onClick={(e) => e.stopPropagation()}>
+          <div className="modal-header modal-header--info">
+            <h2>🏷️ Domaines — {domainesPopup.name}</h2>
+            <button className="modal-close" onClick={() => setDomainesPopup(null)}>×</button>
+          </div>
+          <div className="modal-body">
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+              {domainesPopup.ids.map((id) => {
+                const d = domaines.find((x) => x.id === id);
+                return (
+                  <span key={id} style={{ background: '#dbeafe', color: '#1d4ed8', border: '1px solid #bfdbfe', borderRadius: 20, padding: '4px 14px', fontSize: '0.85rem', fontWeight: 600 }}>
+                    {d ? d.nom : `Domaine #${id}`}
+                  </span>
+                );
+              })}
+            </div>
           </div>
         </div>
-      )}
+      </div>
+    )}
 
-      {/* Create/Edit modal */}
-      {showModal && (
-        <div className="modal-overlay">
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header modal-header--primary">
-              <h2>{editId ? t('admin.clients.edit') : t('admin.clients.add')}</h2>
-              <button className="modal-close" onClick={closeModal}>×</button>
+    {/* ── POPUP : Configuration ────────────────────────────────────────── */}
+    {configPopup && (
+      <div className="modal-overlay" onClick={() => setConfigPopup(null)}>
+        <div className="modal" style={{ maxWidth: 520 }} onClick={(e) => e.stopPropagation()}>
+          <div className="modal-header" style={{ background: 'linear-gradient(135deg,#1e1b4b,#4338ca)', borderBottom: 'none' }}>
+            <h2 style={{ color: '#fff' }}>⚙️ Configuration — {configPopup.client.name}</h2>
+            <button className="modal-close" style={{ color: '#fff' }} onClick={() => setConfigPopup(null)}>×</button>
+          </div>
+          <div className="modal-body">
+            {configPopup.loading ? (
+              <div className="loading-text">Chargement…</div>
+            ) : !configPopup.data?.config ? (
+              <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '24px 0' }}>
+                ℹ️ Aucune configuration enregistrée
+              </div>
+            ) : (() => {
+              const cfg = configPopup.data.config;
+              const pricing = configPopup.data.pricing;
+              const abo = configPopup.data;
+              const modeInfo = modeLabelMap[abo.modeCompte] || { label: abo.modeCompte, bg: '#f1f5f9', color: '#475569' };
+              return (
+                <>
+                  {/* Mode */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, padding: '10px 14px', background: modeInfo.bg, borderRadius: 8 }}>
+                    <span style={{ fontWeight: 700, color: modeInfo.color }}>Mode compte</span>
+                    <span style={{ fontWeight: 800, color: modeInfo.color }}>{modeInfo.label}</span>
+                  </div>
+
+                  {/* Config de base */}
+                  <div style={{ marginBottom: 14 }}>
+                    <div style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>Configuration souscrite</div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+                      {[
+                        { label: 'Activités', value: cfg.nbActivites, icon: '🏪' },
+                        { label: 'Labos', value: cfg.nbLabos, icon: '🔬' },
+                        { label: 'Gérants', value: cfg.nbGerants, icon: '👤' },
+                      ].map(({ label, value, icon }) => (
+                        <div key={label} style={{ textAlign: 'center', background: '#f8fafc', border: '1px solid var(--border)', borderRadius: 10, padding: '12px 8px' }}>
+                          <div style={{ fontSize: '1.5rem', marginBottom: 2 }}>{icon}</div>
+                          <div style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--primary)', lineHeight: 1 }}>{value}</div>
+                          <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginTop: 3 }}>{label}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Pricing breakdown */}
+                  <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 10, padding: '14px 16px', marginBottom: 12 }}>
+                    <div style={{ fontSize: '0.68rem', fontWeight: 800, color: '#1d4ed8', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>Tarification</div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
+                        <span style={{ color: '#374151' }}>Mensualité de base</span>
+                        <span style={{ fontWeight: 700, color: '#1d4ed8' }}>{fmtDT(pricing?.baseMensuel ?? 0)}</span>
+                      </div>
+                      {pricing?.activePromoMensuel && (
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem' }}>
+                          <span style={{ color: '#16a34a' }}>🏷️ Promo active</span>
+                          <span style={{ fontWeight: 700, color: '#16a34a' }}>{fmtDT(pricing.effectifMensuel ?? 0)}</span>
+                        </div>
+                      )}
+                      <div style={{ borderTop: '1px solid #bfdbfe', paddingTop: 8, display: 'flex', justifyContent: 'space-between' }}>
+                        <span style={{ fontWeight: 700, color: '#1e40af' }}>Mensualité effective</span>
+                        <span style={{ fontSize: '1.1rem', fontWeight: 800, color: '#1e40af' }}>{fmtDT(pricing?.effectifMensuel ?? pricing?.baseMensuel ?? 0)}</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', paddingTop: 4, borderTop: '1px solid #bfdbfe' }}>
+                        <span style={{ color: '#374151' }}>Onboarding (one-time)</span>
+                        <span style={{ fontWeight: 700, color: '#0369a1' }}>{fmtDT(cfg.montantOnboarding)}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Date début */}
+                  <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', textAlign: 'right' }}>
+                    Début abonnement : <strong>{new Date(abo.dateDebut).toLocaleDateString('fr-FR')}</strong>
+                  </div>
+                </>
+              );
+            })()}
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/* ── MODAL : Modifier client ──────────────────────────────────────── */}
+    {editClient && (
+      <div className="modal-overlay">
+        <div className="modal modal-sm" onClick={(e) => e.stopPropagation()}>
+          <div className="modal-header modal-header--primary">
+            <h2>✏️ Modifier — {editClient.name}</h2>
+            <button className="modal-close" onClick={closeEdit}>×</button>
+          </div>
+          <form onSubmit={handleEditSubmit} className="modal-body">
+            <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginBottom: 16, lineHeight: 1.5 }}>
+              Vous pouvez ajouter ou retirer des domaines d'activité. Les autres champs sont gérés via l'espace Abonnements.
+            </p>
+
+            <div className="form-group">
+              <label style={{ fontWeight: 700, marginBottom: 8, display: 'block' }}>
+                Domaines d'activité
+              </label>
+              {domaines.length === 0 ? (
+                <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>Aucun domaine configuré dans le référentiel.</p>
+              ) : (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                  {domaines.map((d) => {
+                    const checked = editDomaines.includes(d.id);
+                    return (
+                      <label
+                        key={d.id}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer',
+                          padding: '6px 14px', borderRadius: 20, fontSize: '0.84rem', fontWeight: 600,
+                          border: `1.5px solid ${checked ? '#4338ca' : 'var(--border)'}`,
+                          background: checked ? '#eef2ff' : '#f8fafc',
+                          color: checked ? '#4338ca' : 'var(--text-muted)',
+                          userSelect: 'none', transition: 'all 0.12s',
+                        }}
+                      >
+                        <input
+                          type="checkbox"
+                          style={{ display: 'none' }}
+                          checked={checked}
+                          onChange={() => setEditDomaines((prev) =>
+                            checked ? prev.filter((id) => id !== d.id) : [...prev, d.id]
+                          )}
+                        />
+                        {checked ? '✓ ' : ''}{d.nom}
+                      </label>
+                    );
+                  })}
+                </div>
+              )}
             </div>
 
-            {/* Step 1: type selection */}
-            {modalStep === 'type' && (
-              <div className="modal-body">
-                <p style={{ marginBottom: 20, color: 'var(--text-muted)' }}>
-                  Choisissez le type de compte à créer :
-                </p>
-                <div style={{ display: 'flex', gap: 16 }}>
-                  <button
-                    type="button"
-                    className="compte-type-card"
-                    onClick={() => selectType('independant')}
-                  >
-                    <span style={{ fontSize: '2rem' }}>👤</span>
-                    <strong>Indépendant</strong>
-                    <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                      Gérant unique d'une activité
-                    </span>
-                  </button>
-                  <button
-                    type="button"
-                    className="compte-type-card"
-                    onClick={() => selectType('entreprise')}
-                  >
-                    <span style={{ fontSize: '2rem' }}>🏢</span>
-                    <strong>Entreprise</strong>
-                    <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                      Plusieurs activités / restaurants
-                    </span>
-                  </button>
-                </div>
+            {editError && (
+              <div style={{ background: '#fee2e2', color: '#dc2626', border: '1px solid #fecaca', borderRadius: 6, padding: '8px 12px', fontSize: '0.85rem', marginTop: 8 }}>
+                {editError}
               </div>
             )}
 
-            {/* Step 2: form */}
-            {modalStep === 'form' && (
-              <form onSubmit={handleSubmit} className="modal-body">
-                {formErrors.global && (
-                  <div style={{ background: '#fff0f0', color: '#c00', border: '1px solid #fbb', borderRadius: 6, padding: '8px 12px', marginBottom: 12 }}>
-                    {formErrors.global}
-                  </div>
-                )}
-
-                {/* Type switcher — visible in edit mode */}
-                {editId && (
-                  <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
-                    {(['independant', 'entreprise'] as CompteType[]).map((t) => (
-                      <button key={t} type="button"
-                        onClick={() => setSelectedType(t)}
-                        style={{
-                          flex: 1, padding: '8px 12px', borderRadius: 8, fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer', border: '2px solid',
-                          borderColor: selectedType === t ? 'var(--primary)' : 'var(--border)',
-                          background: selectedType === t ? 'var(--primary-light, #eef2ff)' : 'var(--surface)',
-                          color: selectedType === t ? 'var(--primary)' : 'var(--text-muted)',
-                        }}>
-                        {t === 'independant' ? '👤 Indépendant' : '🏢 Entreprise'}
-                      </button>
-                    ))}
-                  </div>
-                )}
-
-                {selectedType === 'independant' && (
-                  <>
-                    <div className="form-group">
-                      <label>Nom de l'activité *</label>
-                      <input
-                        className={`input${formErrors.nom ? ' input-error' : ''}`}
-                        value={indForm.nomActivite}
-                        onChange={(e) => setIndForm((f) => ({ ...f, nomActivite: e.target.value }))}
-                      />
-                      {formErrors.nom && <span className="field-error">{formErrors.nom}</span>}
-                    </div>
-                    <div className="form-group">
-                      <label>
-                        Domaines d'activité
-                        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginLeft: 6 }}>
-                          (détermine les ingrédients visibles dans le catalogue)
-                        </span>
-                      </label>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 4 }}>
-                        {domaines.map((d) => {
-                          const checked = indForm.domaineIds.includes(d.id);
-                          return (
-                            <label
-                              key={d.id}
-                              style={{
-                                display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer',
-                                padding: '5px 12px', borderRadius: 20, fontSize: '0.82rem', fontWeight: 600,
-                                border: `1.5px solid ${checked ? '#1d4ed8' : 'var(--border)'}`,
-                                background: checked ? '#dbeafe' : '#f8fafc',
-                                color: checked ? '#1d4ed8' : 'var(--text-muted)',
-                                userSelect: 'none',
-                              }}
-                            >
-                              <input
-                                type="checkbox"
-                                style={{ display: 'none' }}
-                                checked={checked}
-                                onChange={() => setIndForm((f) => ({
-                                  ...f,
-                                  domaineIds: checked
-                                    ? f.domaineIds.filter((id) => id !== d.id)
-                                    : [...f.domaineIds, d.id],
-                                }))}
-                              />
-                              {checked ? '✓ ' : ''}{d.nom}
-                            </label>
-                          );
-                        })}
-                        {domaines.length === 0 && (
-                          <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Aucun domaine configuré</span>
-                        )}
-                      </div>
-                    </div>
-                    <div className="form-group">
-                      <label>{t('common.email')} *</label>
-                      <input
-                        className={`input${formErrors.email ? ' input-error' : ''}`}
-                        type="email"
-                        value={indForm.email}
-                        onChange={(e) => setIndForm((f) => ({ ...f, email: e.target.value }))}
-                      />
-                      {formErrors.email && <span className="field-error">{formErrors.email}</span>}
-                    </div>
-                    <div className="form-group">
-                      <label>{t('common.phone')} <span style={{ fontSize: '0.8em', color: '#888' }}>{t('validation.phone_hint')}</span></label>
-                      <input
-                        className={`input${formErrors.telephone ? ' input-error' : ''}`}
-                        placeholder={t('validation.phone_placeholder')}
-                        value={indForm.telephone}
-                        onChange={(e) => setIndForm((f) => ({ ...f, telephone: e.target.value }))}
-                      />
-                      {formErrors.telephone && <span className="field-error">{formErrors.telephone}</span>}
-                    </div>
-                    <div className="form-group">
-                      <label>Adresse</label>
-                      <textarea
-                        className="input"
-                        rows={2}
-                        value={indForm.adresse}
-                        onChange={(e) => setIndForm((f) => ({ ...f, adresse: e.target.value }))}
-                      />
-                    </div>
-                  </>
-                )}
-
-                {selectedType === 'entreprise' && (
-                  <>
-                    <div className="form-group">
-                      <label>Nom de l'entreprise *</label>
-                      <input
-                        className={`input${formErrors.nom ? ' input-error' : ''}`}
-                        value={entForm.nomEntreprise}
-                        onChange={(e) => setEntForm((f) => ({ ...f, nomEntreprise: e.target.value }))}
-                      />
-                      {formErrors.nom && <span className="field-error">{formErrors.nom}</span>}
-                    </div>
-                    <div className="form-group">
-                      <label>{t('common.email')} *</label>
-                      <input
-                        className={`input${formErrors.email ? ' input-error' : ''}`}
-                        type="email"
-                        value={entForm.email}
-                        onChange={(e) => setEntForm((f) => ({ ...f, email: e.target.value }))}
-                      />
-                      {formErrors.email && <span className="field-error">{formErrors.email}</span>}
-                    </div>
-                    <div className="form-group">
-                      <label>{t('common.phone')} <span style={{ fontSize: '0.8em', color: '#888' }}>{t('validation.phone_hint')}</span></label>
-                      <input
-                        className={`input${formErrors.telephone ? ' input-error' : ''}`}
-                        placeholder={t('validation.phone_placeholder')}
-                        value={entForm.telephone}
-                        onChange={(e) => setEntForm((f) => ({ ...f, telephone: e.target.value }))}
-                      />
-                      {formErrors.telephone && <span className="field-error">{formErrors.telephone}</span>}
-                    </div>
-                    <div className="form-group">
-                      <label>Adresse</label>
-                      <textarea
-                        className="input"
-                        rows={2}
-                        value={entForm.adresse}
-                        onChange={(e) => setEntForm((f) => ({ ...f, adresse: e.target.value }))}
-                      />
-                    </div>
-                  </>
-                )}
-
-                <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: 12 }}>
-                  ✉️ Un email d'invitation sera envoyé automatiquement pour activer le compte.
-                </p>
-
-                <div className="modal-footer">
-                  {!editId && (
-                    <button type="button" className="btn btn-secondary" onClick={() => setModalStep('type')}>
-                      ← Retour
-                    </button>
-                  )}
-                  <button type="button" className="btn btn-ghost" onClick={closeModal}>{t('common.cancel')}</button>
-                  <button type="submit" className="btn btn-primary" disabled={saving}>
-                    {saving ? t('common.loading') : t('common.save')}
-                  </button>
-                </div>
-              </form>
-            )}
-          </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 20, paddingTop: 14, borderTop: '1px solid var(--border)' }}>
+              <button type="button" className="btn btn-ghost" onClick={closeEdit}>Annuler</button>
+              <button type="submit" className="btn btn-primary" disabled={editSaving}>
+                {editSaving ? 'Enregistrement…' : '✓ Enregistrer'}
+              </button>
+            </div>
+          </form>
         </div>
-      )}
-    </div>
+      </div>
+    )}
     </>
   );
 }
+
