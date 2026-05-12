@@ -20,10 +20,11 @@ const STATUT_COLORS: Record<string, { bg: string; text: string; label: string }>
 };
 
 const APPLIES_LABELS: Record<string, string> = {
-  onboarding:        'OnBoarding',
-  mensualite:        'Mensualité',
-  supplement_gerant: 'Supplément Gérant',
-  supplement_labo:   'Supplément Labo',
+  onboarding:          'OnBoarding',
+  mensualite:          'Mensualité',
+  supplement_gerant:   'Supplément Gérant',
+  supplement_labo:     'Supplément Labo',
+  supplement_activite: 'Supplément Activité',
 };
 
 const fmtDate = (d: string) => d ? new Date(d).toLocaleDateString('fr-FR') : '—';
@@ -540,11 +541,13 @@ export default function AbonnementsManagement() {
   const activeMensPromo = activePromos.find((p) => ['mensualite', 'les_deux'].includes(p.appliesTo)) || null;
   const activeGerantPromo = activePromos.find((p) => p.appliesTo === 'supplement_gerant') || null;
   const activeLaboPromo = activePromos.find((p) => p.appliesTo === 'supplement_labo') || null;
+  const activeActivitePromo = activePromos.find((p) => p.appliesTo === 'supplement_activite') || null;
 
   const hideOnboarding = ['payé', 'offert', 'gratuit'].includes(selected?.statutOnboarding || '') || !!activeObPromo;
   const hideMensPermanent = !!activeMensPromo && !activeMensPromo.dateFin;
   const hideGerantPermanent = !!activeGerantPromo && !activeGerantPromo.dateFin;
   const hideLaboPermanent = !!activeLaboPromo && !activeLaboPromo.dateFin;
+  const hideActivitePermanent = !!activeActivitePromo && !activeActivitePromo.dateFin;
 
   const mensMinMois = activeMensPromo?.dateFin
     ? addOneMonth(activeMensPromo.dateFin)
@@ -555,10 +558,14 @@ export default function AbonnementsManagement() {
   const laboMinMois = activeLaboPromo?.dateFin
     ? addOneMonth(activeLaboPromo.dateFin)
     : selected?.dateDebut?.slice(0, 7);
+  const activiteMinMois = activeActivitePromo?.dateFin
+    ? addOneMonth(activeActivitePromo.dateFin)
+    : selected?.dateDebut?.slice(0, 7);
 
   const promoCurrentMinMois = promoAppliesTo === 'mensualite' ? mensMinMois
     : promoAppliesTo === 'supplement_gerant' ? gerantMinMois
     : promoAppliesTo === 'supplement_labo' ? laboMinMois
+    : promoAppliesTo === 'supplement_activite' ? activiteMinMois
     : undefined;
 
   const paidMonthSet = new Set(
@@ -579,6 +586,7 @@ export default function AbonnementsManagement() {
     (!hideMensPermanent || editingPromo?.appliesTo === 'mensualite') ? { value: 'mensualite', label: 'Mensualité' } : null,
     (!hideGerantPermanent || editingPromo?.appliesTo === 'supplement_gerant') ? { value: 'supplement_gerant', label: 'Supplément Gérant' } : null,
     (!hideLaboPermanent || editingPromo?.appliesTo === 'supplement_labo') ? { value: 'supplement_labo', label: 'Supplément Labo' } : null,
+    (!hideActivitePermanent || editingPromo?.appliesTo === 'supplement_activite') ? { value: 'supplement_activite', label: 'Supplément Activité' } : null,
   ].filter(Boolean) as { value: string; label: string }[];
 
   // Compute months blocked by existing promos for the current promoAppliesTo
@@ -586,6 +594,7 @@ export default function AbonnementsManagement() {
     mensualite: ['mensualite', 'les_deux'],
     supplement_gerant: ['supplement_gerant'],
     supplement_labo: ['supplement_labo'],
+    supplement_activite: ['supplement_activite'],
   };
   const promoBlockedMonths = new Set<string>();
   if (promoAppliesTo !== 'onboarding' && selected?.promotions) {
@@ -621,25 +630,52 @@ export default function AbonnementsManagement() {
     <div style={{ display: 'flex', gap: 24, minHeight: 600 }}>
       {/* List panel */}
       <div style={{ flex: '0 0 420px', background: '#fff', borderRadius: 12, border: '1px solid #e5e7eb', overflow: 'hidden' }}>
-        <div style={{ padding: '16px 20px', borderBottom: '1px solid #e5e7eb', background: '#f9fafb' }}>
-          <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: '#111827' }}>Abonnements</h2>
-          <div style={{ marginTop: 12, display: 'flex', gap: 8 }}>
-            <input
-              placeholder="Rechercher client..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              style={{ flex: 1, padding: '6px 10px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: 13 }}
-            />
-            <select
-              value={filterMode}
-              onChange={(e) => setFilterMode(e.target.value)}
-              style={{ padding: '6px 8px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: 13 }}
-            >
-              <option value="">Tous</option>
-              {Object.entries(MODE_LABELS).map(([k, v]) => (
-                <option key={k} value={k}>{v.label}</option>
-              ))}
-            </select>
+        <div style={{ padding: '16px 20px', borderBottom: '1px solid #e2e8f0', background: 'linear-gradient(135deg,#f8fafc 0%,#f1f5f9 100%)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+            <div>
+              <h2 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: '#0f172a' }}>Abonnements</h2>
+              <p style={{ margin: '2px 0 0', fontSize: 12, color: '#64748b' }}>{abonnements.length} client{abonnements.length !== 1 ? 's' : ''} · {filtered.length} affiché{filtered.length !== 1 ? 's' : ''}</p>
+            </div>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+              <span style={{ fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Recherche</span>
+              <input
+                placeholder="Nom ou email du client…"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                style={{ padding: '7px 11px', borderRadius: 8, border: '1px solid #cbd5e1', fontSize: 13, outline: 'none', background: '#fff' }}
+              />
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+              <span style={{ fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Statut</span>
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                {[
+                  { value: '', label: 'Tous' },
+                  { value: 'actif', label: 'Actif' },
+                  { value: 'read_only', label: 'Lecture Seule' },
+                  { value: 'bloque', label: 'Bloqué' },
+                ].map(({ value, label }) => {
+                  const isActive = filterMode === value;
+                  const modeColor = value ? MODE_LABELS[value]?.color : '#64748b';
+                  return (
+                    <button
+                      key={value}
+                      onClick={() => setFilterMode(value)}
+                      style={{
+                        padding: '5px 12px', borderRadius: 20, fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                        border: `1.5px solid ${isActive ? modeColor : '#e2e8f0'}`,
+                        background: isActive ? (modeColor + '18') : '#fff',
+                        color: isActive ? modeColor : '#64748b',
+                        transition: 'all 0.15s',
+                      }}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
           </div>
         </div>
         <div style={{ overflowY: 'auto', maxHeight: 600 }}>

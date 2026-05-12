@@ -60,6 +60,7 @@ export default function MonAbonnementPage() {
   const config = abo.config;
   const breakdown = pricing?.configBreakdown as ConfigBreakdown | undefined;
   const effectifMensuel = pricing?.effectifMensuel ?? pricing?.baseMensuel;
+  const activeSupplActivitePromo = abo.promotions?.find((p) => p.appliesTo === 'supplement_activite' && p.isActive) ?? null;
 
   return (
     <div className="page">
@@ -225,6 +226,29 @@ export default function MonAbonnementPage() {
           </div>
         )}
       </div>
+
+      {/* Supplément activité promo banner */}
+      {activeSupplActivitePromo && (
+        <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 14, padding: '14px 20px', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 14, boxShadow: '0 2px 8px rgba(217,119,6,0.1)' }}>
+          <div style={{ width: 42, height: 42, borderRadius: 12, background: '#fef3c7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.3rem', flexShrink: 0 }}>🏷️</div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#92400e' }}>Promotion — Supplément Activité</div>
+            <div style={{ fontSize: '0.78rem', color: '#b45309', marginTop: 2 }}>
+              {activeSupplActivitePromo.type === 'free_months'
+                ? 'Supplément activité gratuit'
+                : activeSupplActivitePromo.type === 'percent_off' && activeSupplActivitePromo.discountSupplement != null
+                ? `${activeSupplActivitePromo.discountSupplement}% de réduction sur le supplément activité`
+                : activeSupplActivitePromo.fixedSupplement != null
+                ? `Prix fixe ${activeSupplActivitePromo.fixedSupplement} DT sur le supplément activité`
+                : 'Promotion active'}
+              {activeSupplActivitePromo.dateFin
+                ? ` · Jusqu'au ${fmtDate(activeSupplActivitePromo.dateFin)}`
+                : ' · Permanente'}
+            </div>
+          </div>
+          <span style={{ fontSize: '0.72rem', fontWeight: 700, padding: '4px 10px', borderRadius: 20, background: '#fef3c7', color: '#92400e', border: '1px solid #fde68a' }}>Active</span>
+        </div>
+      )}
 
       {/* Paiements */}
       <div style={{ background: '#fff', borderRadius: 16, border: '1px solid #e5e7eb', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>

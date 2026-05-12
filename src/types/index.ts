@@ -18,7 +18,7 @@ export interface Promotion {
   id: number;
   abonnementId: number;
   type: 'percent_off' | 'free_months' | 'fixed_price';
-  appliesTo: 'onboarding' | 'mensualite' | 'les_deux' | 'supplement_gerant' | 'supplement_labo';
+  appliesTo: 'onboarding' | 'mensualite' | 'les_deux' | 'supplement_gerant' | 'supplement_labo' | 'supplement_activite';
   discountOnboarding: number | null;
   discountMensualite: number | null;
   fixedOnboarding: number | null;

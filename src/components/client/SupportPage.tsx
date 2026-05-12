@@ -36,6 +36,7 @@ interface SupplPricing {
   nbActivites: number;
   nbLabos: number;
   nbGerants: number;
+  activitePromo?: { type: string; discount?: number; fixed?: number } | null;
 }
 
 export default function SupportPage() {
@@ -289,14 +290,32 @@ export default function SupportPage() {
                       {supplPricing.nbGerants > 0 ? `, ${supplPricing.nbGerants} gérant${supplPricing.nbGerants !== 1 ? 's' : ''}` : ''})
                     </div>
                   )}
+                  {supplPricing?.activitePromo && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 14px', background: '#fef3c7', border: '1px solid #fde68a', borderRadius: 10, fontSize: '0.8rem', color: '#92400e', fontWeight: 600 }}>
+                      <span style={{ fontSize: '1rem' }}>🏷️</span>
+                      <span>
+                        Promotion active sur les activités supplémentaires
+                        {supplPricing.activitePromo.type === 'percent_off' && supplPricing.activitePromo.discount != null
+                          ? ` — ${supplPricing.activitePromo.discount}% de réduction`
+                          : supplPricing.activitePromo.type === 'free_months'
+                          ? ' — Gratuit'
+                          : supplPricing.activitePromo.fixed != null
+                          ? ` — Prix fixe ${supplPricing.activitePromo.fixed} DT`
+                          : ''}
+                      </span>
+                    </div>
+                  )}
                   {[
-                    { label: 'Activités supplémentaires', value: nbActivites, set: setNbActivites, prix: supplPricing?.prixActiviteSup },
-                    { label: 'Labos supplémentaires',     value: nbLabos,     set: setNbLabos,     prix: supplPricing?.prixLaboSup },
-                    { label: 'Gérants supplémentaires',   value: nbGerants,   set: setNbGerants,   prix: supplPricing?.prixGerantSup },
-                  ].map(({ label, value, set, prix }) => (
-                    <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', background: '#f8fafc', borderRadius: 10, border: '1px solid #e2e8f0' }}>
+                    { label: 'Activités supplémentaires', value: nbActivites, set: setNbActivites, prix: supplPricing?.prixActiviteSup, hasPromo: !!supplPricing?.activitePromo },
+                    { label: 'Labos supplémentaires',     value: nbLabos,     set: setNbLabos,     prix: supplPricing?.prixLaboSup,     hasPromo: false },
+                    { label: 'Gérants supplémentaires',   value: nbGerants,   set: setNbGerants,   prix: supplPricing?.prixGerantSup,   hasPromo: false },
+                  ].map(({ label, value, set, prix, hasPromo }) => (
+                    <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', background: hasPromo ? '#fffbeb' : '#f8fafc', borderRadius: 10, border: `1px solid ${hasPromo ? '#fde68a' : '#e2e8f0'}` }}>
                       <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: '0.85rem', fontWeight: 600, color: '#374151' }}>{label}</div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <div style={{ fontSize: '0.85rem', fontWeight: 600, color: '#374151' }}>{label}</div>
+                          {hasPromo && <span style={{ fontSize: '0.68rem', fontWeight: 700, padding: '1px 6px', borderRadius: 8, background: '#fef3c7', color: '#92400e' }}>🏷️ Promo</span>}
+                        </div>
                         {prix != null && <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: 2 }}>{prix} DT / unité / mois</div>}
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
