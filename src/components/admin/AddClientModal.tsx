@@ -312,6 +312,7 @@ export default function AddClientModal({ onClose, onCreated }: Props) {
     telValid &&
     selectedDomaines.length > 0;
   const step2Valid = nbActivites >= 1 && montantOnboarding !== '';
+  const nextDisabled = (step === 0 && !step1Valid) || (step === 1 && !step2Valid);
 
   const next = () => {
     setError(null);
@@ -690,15 +691,12 @@ export default function AddClientModal({ onClose, onCreated }: Props) {
             {step === 0 ? 'Annuler' : '← Retour'}
           </button>
 
-          {step < 3 ? (() => {
-            const nextDisabled = (step === 0 && !step1Valid) || (step === 1 && !step2Valid);
-            return (
-              <button onClick={next} disabled={nextDisabled}
-                style={{ padding: '9px 28px', borderRadius: 9, border: 'none', background: nextDisabled ? '#e5e7eb' : 'linear-gradient(135deg,#4338ca,#6366f1)', color: nextDisabled ? '#9ca3af' : '#fff', fontSize: 13, fontWeight: 700, cursor: nextDisabled ? 'default' : 'pointer', boxShadow: nextDisabled ? 'none' : '0 4px 14px rgba(99,102,241,0.35)' }}>
-                {step === 0 && emailChecking ? 'Vérification…' : 'Suivant →'}
-              </button>
-            );
-          })()
+          {step < 3 ? (
+            <button onClick={next} disabled={nextDisabled}
+              style={{ padding: '9px 28px', borderRadius: 9, border: 'none', background: nextDisabled ? '#e5e7eb' : 'linear-gradient(135deg,#4338ca,#6366f1)', color: nextDisabled ? '#9ca3af' : '#fff', fontSize: 13, fontWeight: 700, cursor: nextDisabled ? 'default' : 'pointer', boxShadow: nextDisabled ? 'none' : '0 4px 14px rgba(99,102,241,0.35)' }}>
+              {step === 0 && emailChecking ? 'Vérification…' : 'Suivant →'}
+            </button>
+          )
           ) : (
             <button
               onClick={handleSubmit}
