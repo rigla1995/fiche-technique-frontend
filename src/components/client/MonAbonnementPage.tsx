@@ -61,6 +61,8 @@ export default function MonAbonnementPage() {
   const breakdown = pricing?.configBreakdown as ConfigBreakdown | undefined;
   const effectifMensuel = pricing?.effectifMensuel ?? pricing?.baseMensuel;
   const activeSupplActivitePromo = abo.promotions?.find((p) => p.appliesTo === 'supplement_activite' && p.isActive) ?? null;
+  const activeSupplLaboPromo     = abo.promotions?.find((p) => p.appliesTo === 'supplement_labo'     && p.isActive) ?? null;
+  const activeSupplGerantPromo   = abo.promotions?.find((p) => p.appliesTo === 'supplement_gerant'   && p.isActive) ?? null;
 
   return (
     <div className="page">
@@ -227,28 +229,30 @@ export default function MonAbonnementPage() {
         )}
       </div>
 
-      {/* Supplément activité promo banner */}
-      {activeSupplActivitePromo && (
-        <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 14, padding: '14px 20px', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 14, boxShadow: '0 2px 8px rgba(217,119,6,0.1)' }}>
+      {/* Supplement promo banners (activité / labo / gérant) */}
+      {([
+        { promo: activeSupplActivitePromo, title: 'Supplément Activité',  noun: 'activité' },
+        { promo: activeSupplLaboPromo,     title: 'Supplément Labo',       noun: 'labo' },
+        { promo: activeSupplGerantPromo,   title: 'Supplément Gérant',     noun: 'gérant' },
+      ] as { promo: typeof activeSupplActivitePromo; title: string; noun: string }[]).filter(x => x.promo).map(({ promo, title, noun }) => (
+        <div key={noun} style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 14, padding: '14px 20px', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 14, boxShadow: '0 2px 8px rgba(217,119,6,0.1)' }}>
           <div style={{ width: 42, height: 42, borderRadius: 12, background: '#fef3c7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.3rem', flexShrink: 0 }}>🏷️</div>
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#92400e' }}>Promotion — Supplément Activité</div>
+            <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#92400e' }}>Promotion — {title}</div>
             <div style={{ fontSize: '0.78rem', color: '#b45309', marginTop: 2 }}>
-              {activeSupplActivitePromo.type === 'free_months'
-                ? 'Supplément activité gratuit'
-                : activeSupplActivitePromo.type === 'percent_off' && activeSupplActivitePromo.discountSupplement != null
-                ? `${activeSupplActivitePromo.discountSupplement}% de réduction sur le supplément activité`
-                : activeSupplActivitePromo.fixedSupplement != null
-                ? `Prix fixe ${activeSupplActivitePromo.fixedSupplement} DT sur le supplément activité`
+              {promo!.type === 'free_months'
+                ? `Supplément ${noun} gratuit`
+                : promo!.type === 'percent_off' && promo!.discountSupplement != null
+                ? `${promo!.discountSupplement}% de réduction sur le supplément ${noun}`
+                : promo!.fixedSupplement != null
+                ? `Prix fixe ${promo!.fixedSupplement} DT sur le supplément ${noun}`
                 : 'Promotion active'}
-              {activeSupplActivitePromo.dateFin
-                ? ` · Jusqu'au ${fmtDate(activeSupplActivitePromo.dateFin)}`
-                : ' · Permanente'}
+              {promo!.dateFin ? ` · Jusqu'au ${fmtDate(promo!.dateFin)}` : ' · Permanente'}
             </div>
           </div>
           <span style={{ fontSize: '0.72rem', fontWeight: 700, padding: '4px 10px', borderRadius: 20, background: '#fef3c7', color: '#92400e', border: '1px solid #fde68a' }}>Active</span>
         </div>
-      )}
+      ))}
 
       {/* Paiements */}
       <div style={{ background: '#fff', borderRadius: 16, border: '1px solid #e5e7eb', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
