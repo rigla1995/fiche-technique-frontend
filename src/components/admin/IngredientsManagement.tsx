@@ -107,26 +107,33 @@ export default function IngredientsManagement() {
     return matchSearch && matchCat && matchDom;
   });
 
-  // Paginate on the flat filtered list (10 ingredients per page)
-  const isPaginated = filtered.length > PER_PAGE;
-  const paginated = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE);
+  // Group ALL filtered ingredients by category first, then paginate groups (10 groups/page)
   const noCategory = t('client.ingredients_catalog.no_category');
-  const groups: Record<string, Ingredient[]> = {};
-  for (const ing of paginated) {
+  const allGroups: Record<string, Ingredient[]> = {};
+  for (const ing of filtered) {
     const cat = ing.categorieName || noCategory;
-    if (!groups[cat]) groups[cat] = [];
-    groups[cat].push(ing);
+    if (!allGroups[cat]) allGroups[cat] = [];
+    allGroups[cat].push(ing);
   }
-  const sortedGroups = Object.entries(groups).sort(([a], [b]) => {
+  const sortedGroups = Object.entries(allGroups).sort(([a], [b]) => {
     if (a === noCategory) return 1;
     if (b === noCategory) return -1;
     return a.localeCompare(b);
   });
+  // Paginate on category count (10 groups per page)
+  const totalGroups = sortedGroups.length;
+  const pagedGroups = sortedGroups.slice((page - 1) * PER_PAGE, page * PER_PAGE);
+  const isPaginated = totalGroups > PER_PAGE;
 
   return (
     <div className="page">
       <div className="page-header">
-        <h1>{t('admin.ingredients.title')}</h1>
+        <div>
+          <h1>{t('admin.ingredients.title')}</h1>
+          <p style={{ margin: '2px 0 0', fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+            {ingredients.length} ingrédient{ingredients.length !== 1 ? 's' : ''} · {totalGroups} catégorie{totalGroups !== 1 ? 's' : ''}
+          </p>
+        </div>
         <button className="btn btn-primary" onClick={openAdd}>+ {t('admin.ingredients.add')}</button>
       </div>
 
@@ -186,25 +193,23 @@ export default function IngredientsManagement() {
         </div>
       ) : (
         <>
-        {sortedGroups.map(([cat, items]) => {
-          // Always open when paginating or filtering — groups are never collapsed with pagination active
-          const isOpen = isPaginated || search || filterCat || filterDom ? true : openCats.has(cat);
+        {pagedGroups.map(([cat, items]) => {
+          // Auto-open when a filter is active; otherwise respect user toggle
+          const isOpen = search || filterCat || filterDom ? true : openCats.has(cat);
           return (
           <div key={cat} style={{ marginBottom: 12 }}>
             <button
               type="button"
-              onClick={() => { if (!isPaginated) toggleCat(cat); }}
+              onClick={() => toggleCat(cat)}
               style={{
                 width: '100%', display: 'flex', alignItems: 'center', gap: 8,
                 padding: '8px 12px', borderRadius: 8, marginBottom: isOpen ? 8 : 0,
-                background: 'var(--primary-light, #eef2ff)',
-                border: '1px solid var(--primary)',
-                cursor: isPaginated ? 'default' : 'pointer', textAlign: 'left',
+                background: isOpen ? 'var(--primary-light, #eef2ff)' : '#f1f5f9',
+                border: `1px solid ${isOpen ? 'var(--primary)' : 'var(--border)'}`,
+                cursor: 'pointer', textAlign: 'left',
               }}
             >
-              {!isPaginated && (
-                <span style={{ fontSize: '0.85rem', transition: 'transform 0.15s', display: 'inline-block', transform: isOpen ? 'rotate(90deg)' : 'rotate(0deg)', color: 'var(--primary)' }}>▶</span>
-              )}
+              <span style={{ fontSize: '0.85rem', transition: 'transform 0.15s', display: 'inline-block', transform: isOpen ? 'rotate(90deg)' : 'rotate(0deg)', color: 'var(--primary)' }}>▶</span>
               <span style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--primary)', flex: 1 }}>🏷️ {cat}</span>
               <span style={{ fontSize: '0.78rem', fontWeight: 400, color: 'var(--text-muted)' }}>{items.length} ingrédient{items.length > 1 ? 's' : ''}</span>
             </button>
@@ -254,7 +259,7 @@ export default function IngredientsManagement() {
           </div>
           );
         })}
-        <Pagination total={filtered.length} page={page} perPage={PER_PAGE} onChange={setPage} />
+        <Pagination total={totalGroups} page={page} perPage={PER_PAGE} onChange={setPage} />
         </>
       )}
 

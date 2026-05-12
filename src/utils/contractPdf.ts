@@ -155,28 +155,27 @@ export function generateContractPdf(params: ContractPdfParams): string {
   // ── RÉCAPITULATIF FINANCIER ────────────────────────────────────────────────
   y = sectionHeader('RÉCAPITULATIF FINANCIER', y);
 
-  // Row 1 — onboarding (12mm)
-  rect(ML, y, CW, 12, '#f0f9ff');
+  // Row 1 — onboarding (10mm)
+  rect(ML, y, CW, 10, '#f0f9ff');
   hrule(y, '#bfdbfe');
   setFont(8, 'normal', '#374151');
-  txt('Frais d\'onboarding', ML + 4, y + 5);
-  setFont(7, 'normal', '#64748b');
-  txt('(versement unique à l\'activation)', ML + 4, y + 9.5);
+  txt('Frais d\'onboarding (versement unique)', ML + 4, y + 6.5);
   setFont(10, 'bold', '#0369a1');
-  txt(fmt(montantOnboarding), RX - 4, y + 7, { align: 'right' });
-  hrule(y + 12, '#bfdbfe');
-  y += 12;
+  txt(fmt(montantOnboarding), RX - 4, y + 6.5, { align: 'right' });
+  hrule(y + 10, '#bfdbfe');
+  y += 10;
 
-  // Row 2 — mensualité (16mm — more prominent)
-  rect(ML, y, CW, 16, '#dbeafe');
-  setFont(9, 'bold', '#1e40af');
-  txt('Mensualité abonnement (récurrente)', ML + 4, y + 7);
+  // Row 2 — mensualité: label line + price line separately
+  rect(ML, y, CW, 20, '#dbeafe');
+  setFont(8, 'bold', '#1e40af');
+  txt('Mensualité abonnement récurrente', ML + 4, y + 6);
   setFont(7, 'normal', '#3b82f6');
-  txt('Facturée chaque mois, dès l\'activation', ML + 4, y + 12);
-  setFont(14, 'bold', '#1d4ed8');
-  txt(fmt(totalMensuel), RX - 4, y + 11, { align: 'right' });
-  hrule(y + 16, '#1d4ed8');
-  y += 22;
+  txt('Facturée chaque mois dès l\'activation', ML + 4, y + 11);
+  // Price on its own line at the bottom of the row — no overlap with labels above
+  setFont(13, 'bold', '#1d4ed8');
+  txt(fmt(totalMensuel) + ' / mois', RX - 4, y + 17, { align: 'right' });
+  hrule(y + 20, '#1d4ed8');
+  y += 26;
 
   // ── CONDITIONS GÉNÉRALES ───────────────────────────────────────────────────
   y = sectionHeader('CONDITIONS GÉNÉRALES', y);
@@ -332,16 +331,16 @@ export function generateAvenantPdf(params: AvenantPdfParams): string {
   hrule(y + 12, '#e2e8f0');
   y += 12;
 
-  // Nouveau mensuel (blue, 16mm — prominent)
-  rect(ML, y, CW, 16, '#dbeafe');
-  setFont(9, 'bold', '#1e40af');
-  txt('Nouvelle mensualité (dès cet avenant)', ML + 4, y + 7);
+  // Nouveau mensuel (blue, 20mm — prominent)
+  rect(ML, y, CW, 20, '#dbeafe');
+  setFont(8, 'bold', '#1e40af');
+  txt('Nouvelle mensualité (dès cet avenant)', ML + 4, y + 6);
   setFont(7, 'normal', '#3b82f6');
-  txt(effectifMensuel && effectifMensuel < nouveauMensuel ? `Promo active : ${fmt(effectifMensuel)} / mois effectif` : 'Sans promotion active', ML + 4, y + 12);
-  setFont(14, 'bold', '#1d4ed8');
-  txt(fmt(nouveauMensuel), RX - 4, y + 11, { align: 'right' });
-  hrule(y + 16, '#1d4ed8');
-  y += 22;
+  txt(effectifMensuel && effectifMensuel < nouveauMensuel ? `Promo active : ${fmt(effectifMensuel)} / mois effectif` : 'Sans promotion active', ML + 4, y + 11);
+  setFont(13, 'bold', '#1d4ed8');
+  txt(fmt(nouveauMensuel) + ' / mois', RX - 4, y + 17, { align: 'right' });
+  hrule(y + 20, '#1d4ed8');
+  y += 26;
 
   // ── NOTE ADMIN ─────────────────────────────────────────────────────────────
   if (notesAdmin.trim()) {
