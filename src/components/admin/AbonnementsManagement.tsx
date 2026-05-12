@@ -807,7 +807,7 @@ export default function AbonnementsManagement() {
 
             {/* ── Promotions ─────────────────────────────────────────── */}
             <div style={{ background: '#fffbeb', borderRadius: 10, padding: 16, border: '1px solid #fde68a', marginBottom: 20 }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: '#92400e', marginBottom: 14 }}>🏷️ Promotions — Année {new Date().getFullYear()}</div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: '#92400e', marginBottom: 14 }}>🏷️ Promotions</div>
 
               {/* Active + planifié promos */}
               {(() => {
