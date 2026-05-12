@@ -111,6 +111,7 @@ export default function HistoriquePromotionsAdmin() {
   }, [rows, selectedClientId, filtActive, filtAppliesTo]);
 
   const totalActive = rows.filter(r => r.isActive).length;
+  const appliesEntries: [string, string][] = [['', 'Toutes'], ...Object.entries(APPLIES_LABELS)];
 
   return (
     <div style={{ display: 'flex', gap: 20, minHeight: 600 }}>
@@ -221,7 +222,7 @@ export default function HistoriquePromotionsAdmin() {
                 );
               })}
               <span style={{ fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', marginLeft: 8, marginRight: 2 }}>Catégorie</span>
-              {[['', 'Toutes'], ...Object.entries(APPLIES_LABELS)] as [string, string][]).map(([v, label]) => {
+              {appliesEntries.map(([v, label]) => {
                 const active = filtAppliesTo === v;
                 const color = v ? (APPLIES_COLORS[v] || '#4f46e5') : '#64748b';
                 return (
