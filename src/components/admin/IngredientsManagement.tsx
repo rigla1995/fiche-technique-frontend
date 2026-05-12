@@ -2,6 +2,9 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
 import type { Category, DomaineActivite, Ingredient, Unit } from '../../types';
+import Pagination from '../common/Pagination';
+
+const PER_PAGE = 10;
 
 interface IngredientForm {
   name: string;
@@ -26,6 +29,7 @@ export default function IngredientsManagement() {
   const [search, setSearch] = useState('');
   const [filterCat, setFilterCat] = useState('');
   const [filterDom, setFilterDom] = useState('');
+  const [page, setPage] = useState(1);
   const [openCats, setOpenCats] = useState<Set<string>>(new Set());
 
   const toggleCat = (cat: string) =>
@@ -103,10 +107,11 @@ export default function IngredientsManagement() {
     return matchSearch && matchCat && matchDom;
   });
 
-  // Group by category
+  // Paginate first, then group (so pagination is on flat ingredient count)
+  const paginated = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE);
   const noCategory = t('client.ingredients_catalog.no_category');
   const groups: Record<string, Ingredient[]> = {};
-  for (const ing of filtered) {
+  for (const ing of paginated) {
     const cat = ing.categorieName || noCategory;
     if (!groups[cat]) groups[cat] = [];
     groups[cat].push(ing);
@@ -165,7 +170,7 @@ export default function IngredientsManagement() {
           </select>
         </div>
         {(search || filterCat || filterDom) && (
-          <button className="btn btn-ghost btn-sm" onClick={() => { setSearch(''); setFilterCat(''); setFilterDom(''); }} style={{ marginBottom: 1 }}>
+          <button className="btn btn-ghost btn-sm" onClick={() => { setSearch(''); setFilterCat(''); setFilterDom(''); setPage(1); }} style={{ marginBottom: 1 }}>
             ✕ Réinitialiser
           </button>
         )}
@@ -179,9 +184,10 @@ export default function IngredientsManagement() {
           <p>{t('common.no_result')}</p>
         </div>
       ) : (
-        sortedGroups.map(([cat, items]) => {
+        <>
+        {sortedGroups.map(([cat, items]) => {
           // Auto-open when filtering/searching
-          const isOpen = search || filterCat ? true : openCats.has(cat);
+          const isOpen = search || filterCat || filterDom ? true : openCats.has(cat);
           return (
           <div key={cat} style={{ marginBottom: 12 }}>
             <button
@@ -244,7 +250,9 @@ export default function IngredientsManagement() {
             </div>}
           </div>
           );
-        })
+        })}
+        <Pagination total={filtered.length} page={page} perPage={PER_PAGE} onChange={(p) => { setPage(p); setOpenCats(new Set()); }} />
+        </>
       )}
 
       {showModal && (

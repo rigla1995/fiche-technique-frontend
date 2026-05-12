@@ -19,135 +19,223 @@ const todayFr = () => new Date().toLocaleDateString('fr-FR');
 export function generateContractPdf(params: ContractPdfParams): string {
   const { clientNom, clientEmail, clientTel, nbActivites, nbLabos, nbGerants,
           montantOnboarding, totalMensuel, appName } = params;
+
   const doc = new jsPDF({ unit: 'mm', format: 'a4' });
-  const W = 210; const PL = 20; const PR = 20;
-  const TW = W - PL - PR;
+  const PW = 210; // page width
+  const PH = 297; // page height
+  const ML = 18;  // margin left
+  const MR = 18;  // margin right
+  const CW = PW - ML - MR; // content width
+  const RX = PW - MR;      // right edge x (for right-aligned text)
   let y = 0;
 
-  const line = (text: string, x: number, yy: number, size = 10, style: 'normal' | 'bold' = 'normal', color = '#111827') => {
+  // ── Helpers ──────────────────────────────────────────────────────────────────
+
+  const setFont = (size: number, style: 'normal' | 'bold' = 'normal', color = '#111827') => {
     doc.setFontSize(size);
     doc.setFont('helvetica', style);
-    doc.setTextColor(color);
-    doc.text(text, x, yy);
+    const r = parseInt(color.slice(1, 3), 16);
+    const g = parseInt(color.slice(3, 5), 16);
+    const b = parseInt(color.slice(5, 7), 16);
+    doc.setTextColor(r, g, b);
   };
 
-  const hRule = (yy: number, col = '#e2e8f0') => {
-    doc.setDrawColor(col);
-    doc.setLineWidth(0.3);
-    doc.line(PL, yy, W - PR, yy);
-  };
+  const txt = (text: string, x: number, yy: number, opts?: { align?: 'left' | 'center' | 'right' }) =>
+    doc.text(text, x, yy, opts);
 
-  const fillRect = (x: number, yy: number, w: number, h: number, col: string) => {
-    doc.setFillColor(col);
+  const rect = (x: number, yy: number, w: number, h: number, hexFill: string) => {
+    const r = parseInt(hexFill.slice(1, 3), 16);
+    const g = parseInt(hexFill.slice(3, 5), 16);
+    const b = parseInt(hexFill.slice(5, 7), 16);
+    doc.setFillColor(r, g, b);
     doc.rect(x, yy, w, h, 'F');
   };
 
-  // Header
-  fillRect(0, 0, W, 38, '#1e1b4b');
-  line(appName, PL, 18, 20, 'bold', '#ffffff');
-  line('CONTRAT D\'ABONNEMENT', PL, 28, 11, 'normal', '#c7d2fe');
-  line(`Ref: CTR-${Date.now().toString().slice(-8)}`, W - PR, 28, 8, 'normal', '#a5b4fc');
-  y = 50;
+  const hrule = (yy: number, hexCol = '#e2e8f0', x1 = ML, x2 = RX) => {
+    const r = parseInt(hexCol.slice(1, 3), 16);
+    const g = parseInt(hexCol.slice(3, 5), 16);
+    const b = parseInt(hexCol.slice(5, 7), 16);
+    doc.setDrawColor(r, g, b);
+    doc.setLineWidth(0.25);
+    doc.line(x1, yy, x2, yy);
+  };
 
-  // Parties
-  fillRect(PL, y, TW, 7, '#f8fafc');
-  line('PARTIES', PL + 3, y + 5, 9, 'bold', '#374151');
-  y += 12;
-  line('Prestataire', PL, y, 9, 'bold', '#6366f1');
-  line(appName + ' — Plateforme de gestion des fiches techniques', PL + 35, y, 9, 'normal', '#1f2937');
+  const sectionHeader = (label: string, yy: number): number => {
+    rect(ML, yy, CW, 7, '#f0f4ff');
+    hrule(yy, '#c7d2fe');
+    hrule(yy + 7, '#c7d2fe');
+    setFont(8, 'bold', '#3730a3');
+    txt(label, ML + 4, yy + 5);
+    return yy + 12;
+  };
+
+  // ── HEADER BAND ───────────────────────────────────────────────────────────
+
+  // Deep navy background
+  rect(0, 0, PW, 42, '#1e1b4b');
+  // Subtle accent strip
+  rect(0, 38, PW, 4, '#4338ca');
+
+  setFont(22, 'bold', '#ffffff');
+  txt(appName, ML, 17);
+
+  setFont(10, 'normal', '#c7d2fe');
+  txt('CONTRAT D\'ABONNEMENT', ML, 27);
+
+  setFont(8, 'normal', '#818cf8');
+  const ref = `Réf. CTR-${Date.now().toString().slice(-8)}`;
+  txt(ref, RX, 17, { align: 'right' });
+
+  setFont(8, 'normal', '#a5b4fc');
+  txt(`Émis le ${todayFr()}`, RX, 24, { align: 'right' });
+
+  y = 54;
+
+  // ── PARTIES ───────────────────────────────────────────────────────────────
+
+  y = sectionHeader('PARTIES AU CONTRAT', y);
+
+  // Two-column party block
+  const mid = ML + CW / 2 + 4;
+
+  // Left: Prestataire
+  rect(ML, y, CW / 2 - 4, 26, '#f8fafc');
+  hrule(y, '#e2e8f0', ML, ML + CW / 2 - 4);
+  hrule(y + 26, '#e2e8f0', ML, ML + CW / 2 - 4);
+  setFont(7, 'bold', '#6366f1'); txt('PRESTATAIRE', ML + 4, y + 6);
+  setFont(9, 'bold', '#0f172a'); txt(appName, ML + 4, y + 13);
+  setFont(7, 'normal', '#64748b'); txt('Plateforme de gestion des fiches techniques', ML + 4, y + 19);
+
+  // Right: Client
+  rect(mid, y, CW / 2 - 4, 26, '#f8fafc');
+  hrule(y, '#e2e8f0', mid, mid + CW / 2 - 4);
+  hrule(y + 26, '#e2e8f0', mid, mid + CW / 2 - 4);
+  setFont(7, 'bold', '#6366f1'); txt('CLIENT', mid + 4, y + 6);
+  setFont(9, 'bold', '#0f172a'); txt(clientNom, mid + 4, y + 13);
+  setFont(7, 'normal', '#64748b');
+  if (clientEmail) txt(clientEmail, mid + 4, y + 19);
+  if (clientTel)   txt(`Tél : ${clientTel}`, mid + 4, y + 24);
+
+  y += 34;
+
+  // ── CONFIGURATION SOUSCRITE ───────────────────────────────────────────────
+
+  y = sectionHeader('CONFIGURATION SOUSCRITE', y);
+
+  // Table header row
+  rect(ML, y, CW, 7, '#eef2ff');
+  setFont(7, 'bold', '#4338ca');
+  txt('Poste', ML + 4, y + 5);
+  txt('Quantité', ML + 70, y + 5);
+  txt('Tarif mensuel', RX - 4, y + 5, { align: 'right' });
   y += 7;
-  line('Client', PL, y, 9, 'bold', '#6366f1');
-  line(clientNom, PL + 35, y, 9, 'normal', '#1f2937');
-  y += 5;
-  line('', PL, y, 9);
-  if (clientEmail) { line(`Email : ${clientEmail}`, PL + 35, y, 8, 'normal', '#6b7280'); y += 5; }
-  if (clientTel)   { line(`Tél   : ${clientTel}`,   PL + 35, y, 8, 'normal', '#6b7280'); y += 5; }
-  y += 5;
-  hRule(y); y += 8;
+  hrule(y, '#c7d2fe');
+  y += 2;
 
-  // Configuration
-  fillRect(PL, y, TW, 7, '#f8fafc');
-  line('CONFIGURATION SOUSCRITE', PL + 3, y + 5, 9, 'bold', '#374151');
-  y += 12;
-
-  const rows: [string, string, string][] = [
-    ['Activité(s)', `${nbActivites} activité${nbActivites > 1 ? 's' : ''}`,
-      nbActivites === 1 ? '200 DT/mois' : nbActivites === 2 ? '350 DT/mois' : `${nbActivites} × 120 = ${nbActivites * 120} DT/mois`],
-    ...(nbLabos > 0 ? [['Labo(s)', `${nbLabos} labo${nbLabos > 1 ? 's' : ''}`, `${nbLabos} × 160 = ${nbLabos * 160} DT/mois`] as [string, string, string]] : []),
-    ...(nbGerants > 0 ? [['Gérant(s)', `${nbGerants} gérant${nbGerants > 1 ? 's' : ''}`, `${nbGerants} × 80 = ${nbGerants * 80} DT/mois`] as [string, string, string]] : []),
-  ];
-
-  for (const [label, detail, prix] of rows) {
-    line('•', PL + 2, y, 10, 'normal', '#6366f1');
-    line(label, PL + 7, y, 9, 'bold', '#1f2937');
-    line(detail, PL + 45, y, 9, 'normal', '#374151');
-    line(prix, W - PR - 5, y, 9, 'normal', '#374151');
-    doc.setFont('helvetica', 'normal');
-    y += 6;
+  // Build rows
+  const configRows: { label: string; qty: string; price: string }[] = [];
+  if (nbActivites === 1) {
+    configRows.push({ label: 'Activité', qty: '1', price: '200 DT / mois' });
+  } else if (nbActivites === 2) {
+    configRows.push({ label: 'Activités', qty: '2', price: '350 DT / mois (forfait)' });
+  } else {
+    configRows.push({ label: 'Activités', qty: String(nbActivites), price: `${nbActivites} × 120 = ${nbActivites * 120} DT / mois` });
   }
-  y += 3;
+  if (nbLabos > 0)   configRows.push({ label: 'Labo(s)', qty: String(nbLabos), price: `${nbLabos} × 160 = ${nbLabos * 160} DT / mois` });
+  if (nbGerants > 0) configRows.push({ label: 'Gérant(s) sup.', qty: String(nbGerants), price: `${nbGerants} × 80 = ${nbGerants * 80} DT / mois` });
 
-  // Totals box
-  fillRect(PL, y, TW, 24, '#eff6ff');
-  hRule(y, '#bfdbfe');
-  line('Frais d\'onboarding (une fois) :', PL + 4, y + 8, 9, 'normal', '#374151');
-  line(fmt(montantOnboarding), W - PR - 4, y + 8, 10, 'bold', '#1d4ed8');
-  line('Mensualité (abonnement récurrent) :', PL + 4, y + 17, 9, 'normal', '#374151');
-  line(fmt(totalMensuel), W - PR - 4, y + 17, 10, 'bold', '#1d4ed8');
-  hRule(y + 24, '#bfdbfe');
-  y += 32;
+  for (let i = 0; i < configRows.length; i++) {
+    const row = configRows[i];
+    if (i % 2 === 0) rect(ML, y, CW, 8, '#fafbff');
+    setFont(9, 'normal', '#0f172a'); txt(row.label, ML + 4, y + 5.5);
+    setFont(9, 'bold', '#4338ca');   txt(row.qty, ML + 70, y + 5.5);
+    setFont(8, 'normal', '#374151'); txt(row.price, RX - 4, y + 5.5, { align: 'right' });
+    hrule(y + 8, '#f1f5f9');
+    y += 8;
+  }
+  y += 4;
 
-  // Terms
-  fillRect(PL, y, TW, 7, '#f8fafc');
-  line('CONDITIONS', PL + 3, y + 5, 9, 'bold', '#374151');
-  y += 12;
+  // ── RÉCAPITULATIF FINANCIER ────────────────────────────────────────────────
+
+  y = sectionHeader('RÉCAPITULATIF FINANCIER', y);
+
+  // Totals table
+  rect(ML, y, CW, 20, '#eff6ff');
+  hrule(y, '#bfdbfe');
+
+  setFont(9, 'normal', '#374151'); txt('Frais d\'onboarding (versement unique)', ML + 4, y + 7);
+  setFont(10, 'bold', '#1d4ed8');  txt(fmt(montantOnboarding), RX - 4, y + 7, { align: 'right' });
+
+  hrule(y + 10, '#dbeafe', ML + 4, RX - 4);
+
+  setFont(9, 'bold', '#1e40af');  txt('Mensualité (abonnement récurrent)', ML + 4, y + 17);
+  setFont(12, 'bold', '#1d4ed8'); txt(fmt(totalMensuel), RX - 4, y + 17, { align: 'right' });
+
+  hrule(y + 20, '#bfdbfe');
+  y += 26;
+
+  // ── CONDITIONS GÉNÉRALES ──────────────────────────────────────────────────
+
+  y = sectionHeader('CONDITIONS GÉNÉRALES', y);
 
   const terms = [
-    `1. Le présent contrat prend effet à compter de la date d'activation du compte.`,
-    `2. L'abonnement est facturé mensuellement. Le paiement est dû en début de mois.`,
-    `3. Toute demande de supplément (activité, labo, gérant) fait l'objet d'un avenant.`,
-    `4. Le prestataire se réserve le droit de suspendre l'accès en cas de non-paiement.`,
-    `5. La résiliation doit être notifiée 30 jours à l'avance par email.`,
+    '1. Ce contrat entre en vigueur à la date d\'activation du compte par le client.',
+    '2. L\'abonnement est facturé mensuellement, dû en début de période.',
+    '3. Toute modification de configuration (ajout d\'activité, labo ou gérant) fait l\'objet d\'un avenant tarifaire.',
+    '4. En cas de non-paiement, le prestataire se réserve le droit de suspendre l\'accès sans préavis.',
+    '5. La résiliation doit être notifiée par email avec un préavis de 30 jours calendaires.',
   ];
+  setFont(8, 'normal', '#374151');
   for (const t of terms) {
-    const lines = doc.splitTextToSize(t, TW - 4);
-    for (const l of lines) {
-      line(l, PL + 2, y, 8, 'normal', '#374151');
-      y += 5;
-    }
+    const lines = doc.splitTextToSize(t, CW - 8);
+    for (const l of lines) { txt(l, ML + 4, y); y += 5; }
+    y += 1;
   }
-  y += 5;
+  y += 4;
 
-  // Signatures
-  hRule(y); y += 10;
-  fillRect(PL, y, TW, 7, '#f8fafc');
-  line('SIGNATURES', PL + 3, y + 5, 9, 'bold', '#374151');
-  y += 14;
+  // ── SIGNATURES ────────────────────────────────────────────────────────────
 
-  const col1 = PL; const col2 = PL + TW / 2 + 5;
-  line('Prestataire', col1, y, 9, 'bold', '#374151');
-  line('Client', col2, y, 9, 'bold', '#374151');
-  y += 6;
-  line(appName, col1, y, 8, 'normal', '#6b7280');
-  line(clientNom, col2, y, 8, 'normal', '#6b7280');
-  y += 5;
-  line(`Date : ${todayFr()}`, col1, y, 8, 'normal', '#6b7280');
-  line(`Date : ${todayFr()}`, col2, y, 8, 'normal', '#6b7280');
-  y += 14;
-  hRule(y - 4, '#9ca3af');
-  hRule(y - 4 + (col2 - col1), '#9ca3af');
-  line('Signature & cachet', col1, y + 2, 7, 'normal', '#9ca3af');
-  line(`Signature — ${clientNom}`, col2, y + 2, 7, 'normal', '#9ca3af');
-  y += 12;
+  y = sectionHeader('SIGNATURES', y);
 
-  // Acceptance note
-  fillRect(PL, y, TW, 11, '#fefce8');
-  line('⚡ Validation numérique : l\'activation du compte par le client vaut acceptation du présent contrat.', PL + 3, y + 7, 7.5, 'normal', '#713f12');
+  const sw = (CW - 8) / 2; // signature box width
+  const sx1 = ML;
+  const sx2 = ML + sw + 8;
 
-  // Footer
-  fillRect(0, 290, W, 10, '#f1f5f9');
-  doc.setFontSize(7); doc.setFont('helvetica', 'normal'); doc.setTextColor('#9ca3af');
-  doc.text(`${appName} — Contrat généré le ${todayFr()} — Confidentiel`, W / 2, 296, { align: 'center' });
+  // Prestataire box
+  rect(sx1, y, sw, 32, '#f8fafc');
+  hrule(y, '#e2e8f0', sx1, sx1 + sw);
+  hrule(y + 32, '#e2e8f0', sx1, sx1 + sw);
+  setFont(7, 'bold', '#374151'); txt('PRESTATAIRE', sx1 + 4, y + 6);
+  setFont(8, 'normal', '#64748b'); txt(appName, sx1 + 4, y + 12);
+  setFont(7, 'normal', '#64748b'); txt(`Date : ${todayFr()}`, sx1 + 4, y + 18);
+  hrule(y + 26, '#9ca3af', sx1 + 4, sx1 + sw - 4);
+  setFont(7, 'normal', '#9ca3af'); txt('Signature & cachet', sx1 + 4, y + 31);
 
-  return doc.output('datauristring').split(',')[1]; // base64 only
+  // Client box
+  rect(sx2, y, sw, 32, '#f8fafc');
+  hrule(y, '#e2e8f0', sx2, sx2 + sw);
+  hrule(y + 32, '#e2e8f0', sx2, sx2 + sw);
+  setFont(7, 'bold', '#374151'); txt('CLIENT', sx2 + 4, y + 6);
+  setFont(8, 'normal', '#64748b'); txt(clientNom, sx2 + 4, y + 12);
+  setFont(7, 'normal', '#64748b'); txt(`Date : ${todayFr()}`, sx2 + 4, y + 18);
+  hrule(y + 26, '#9ca3af', sx2 + 4, sx2 + sw - 4);
+  setFont(7, 'normal', '#9ca3af'); txt(`Signature — ${clientNom}`, sx2 + 4, y + 31);
+
+  y += 40;
+
+  // ── ACCEPTATION NUMÉRIQUE ─────────────────────────────────────────────────
+
+  rect(ML, y, CW, 10, '#fefce8');
+  hrule(y, '#fde68a');
+  hrule(y + 10, '#fde68a');
+  setFont(7.5, 'normal', '#92400e');
+  txt('Validation numérique : l\'activation du compte par le client vaut acceptation du présent contrat.', ML + 4, y + 6.5);
+
+  // ── FOOTER ────────────────────────────────────────────────────────────────
+
+  rect(0, PH - 12, PW, 12, '#1e1b4b');
+  setFont(7, 'normal', '#a5b4fc');
+  txt(`${appName}  ·  Contrat généré le ${todayFr()}  ·  Document confidentiel`, PW / 2, PH - 5.5, { align: 'center' });
+
+  return doc.output('datauristring').split(',')[1];
 }

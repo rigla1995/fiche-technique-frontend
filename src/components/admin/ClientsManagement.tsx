@@ -35,6 +35,10 @@ export default function ClientsManagement() {
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState<'' | 'active' | 'pending'>('');
 
+  // Delete confirmation modal
+  const [deleteTarget, setDeleteTarget] = useState<Client | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
   // Popups
   const [configPopup, setConfigPopup] = useState<{ client: Client; data: Abonnement | null; loading: boolean } | null>(null);
   const [domainesPopup, setDomainesPopup] = useState<{ name: string; ids: number[] } | null>(null);
@@ -110,10 +114,16 @@ export default function ClientsManagement() {
     }
   };
 
-  const handleDelete = async (id: number) => {
-    if (!window.confirm('Supprimer ce client et toutes ses données ?')) return;
-    await api.delete(`/admin/clients/${id}`);
-    fetchClients();
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      await api.delete(`/admin/clients/${deleteTarget.id}`);
+      setDeleteTarget(null);
+      fetchClients();
+    } finally {
+      setDeleting(false);
+    }
   };
 
   const handleResendInvite = async (id: number, email: string) => {
@@ -323,7 +333,7 @@ export default function ClientsManagement() {
                           🔓 Reset
                         </button>
                       )}
-                      <button className="btn btn-danger btn-sm" onClick={() => handleDelete(c.id)}>🗑️</button>
+                      <button className="btn btn-danger btn-sm" onClick={() => setDeleteTarget(c)}>🗑️</button>
                     </td>
                   </tr>
                 );
@@ -439,6 +449,65 @@ export default function ClientsManagement() {
                 </>
               );
             })()}
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/* ── MODAL : Confirmation suppression ───────────────────────────── */}
+    {deleteTarget && (
+      <div className="modal-overlay">
+        <div className="modal modal-sm" onClick={(e) => e.stopPropagation()}>
+          <div style={{ background: 'linear-gradient(135deg,#7f1d1d,#dc2626)', padding: '18px 22px', borderRadius: '12px 12px 0 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span style={{ fontSize: 22 }}>⚠️</span>
+              <div>
+                <div style={{ fontWeight: 800, color: '#fff', fontSize: 15 }}>Suppression irréversible</div>
+                <div style={{ fontSize: 11, color: '#fca5a5', marginTop: 1 }}>{deleteTarget.name}</div>
+              </div>
+            </div>
+            <button onClick={() => setDeleteTarget(null)} style={{ background: 'rgba(255,255,255,0.15)', border: 'none', color: '#fff', borderRadius: '50%', width: 30, height: 30, cursor: 'pointer', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
+          </div>
+          <div style={{ padding: '18px 22px' }}>
+            <p style={{ fontSize: 13, color: '#374151', lineHeight: 1.6, marginBottom: 14 }}>
+              La suppression de <strong>{deleteTarget.name}</strong> entraînera la suppression définitive et irréversible de toutes les données associées :
+            </p>
+            <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, padding: '12px 14px', marginBottom: 18 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: '#991b1b', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>Données supprimées</div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '5px 12px' }}>
+                {[
+                  '🏪 Activités',
+                  '🔬 Labos',
+                  '👤 Gérants',
+                  '📦 Inventaires',
+                  '🚚 Approvisionnements',
+                  '📉 Pertes',
+                  '🔄 Transferts',
+                  '📋 Abonnements',
+                  '🏷️ Promotions',
+                  '📊 Tout l\'historique',
+                ].map((item) => (
+                  <div key={item} style={{ fontSize: 12, color: '#dc2626', display: 'flex', alignItems: 'center', gap: 4 }}>
+                    {item}
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+              <button
+                onClick={() => setDeleteTarget(null)}
+                style={{ padding: '9px 20px', borderRadius: 8, border: '1px solid #e2e8f0', background: '#fff', color: '#374151', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+              >
+                Annuler
+              </button>
+              <button
+                onClick={confirmDelete}
+                disabled={deleting}
+                style={{ padding: '9px 20px', borderRadius: 8, border: 'none', background: deleting ? '#fca5a5' : '#dc2626', color: '#fff', fontSize: 13, fontWeight: 700, cursor: deleting ? 'default' : 'pointer', boxShadow: '0 4px 12px rgba(220,38,38,0.35)' }}
+              >
+                {deleting ? 'Suppression…' : '🗑️ Supprimer définitivement'}
+              </button>
+            </div>
           </div>
         </div>
       </div>

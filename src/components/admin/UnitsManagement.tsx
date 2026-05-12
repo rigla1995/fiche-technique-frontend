@@ -2,6 +2,9 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
 import type { Unit } from '../../types';
+import Pagination from '../common/Pagination';
+
+const PER_PAGE = 10;
 
 export default function UnitsManagement() {
   const { t } = useTranslation();
@@ -13,6 +16,7 @@ export default function UnitsManagement() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [search, setSearch] = useState('');
+  const [page, setPage] = useState(1);
 
   const fetchUnits = () => {
     setLoading(true);
@@ -52,6 +56,7 @@ export default function UnitsManagement() {
   };
 
   const filtered = units.filter((u) => u.name.toLowerCase().includes(search.toLowerCase()));
+  const paginated = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE);
 
   return (
     <div className="page">
@@ -73,7 +78,7 @@ export default function UnitsManagement() {
             type="text"
             placeholder="Filtrer par nom…"
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
             className="input"
           />
         </div>
@@ -104,7 +109,7 @@ export default function UnitsManagement() {
               </tr>
             </thead>
             <tbody>
-              {filtered.map((u) => (
+              {paginated.map((u) => (
                 <tr key={u.id}>
                   <td>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -120,6 +125,7 @@ export default function UnitsManagement() {
               ))}
             </tbody>
           </table>
+          <Pagination total={filtered.length} page={page} perPage={PER_PAGE} onChange={setPage} />
         </div>
       )}
 
