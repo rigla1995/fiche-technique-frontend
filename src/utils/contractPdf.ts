@@ -34,7 +34,12 @@ export interface AvenantPdfParams {
 
 // ── Shared helpers ────────────────────────────────────────────────────────────
 
-const fmt = (n: number) => `${n.toLocaleString('fr-FR')} DT`;
+// Custom formatter — avoids toLocaleString's non-breaking space ( )
+// which jsPDF renders as '/' in some environments
+const fmt = (n: number) => {
+  const s = Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+  return `${s} DT`;
+};
 const todayFr = () => new Date().toLocaleDateString('fr-FR');
 
 function makeDoc() {
@@ -165,17 +170,17 @@ export function generateContractPdf(params: ContractPdfParams): string {
   hrule(y + 10, '#bfdbfe');
   y += 10;
 
-  // Row 2 — mensualité: label line + price line separately
-  rect(ML, y, CW, 20, '#dbeafe');
-  setFont(8, 'bold', '#1e40af');
-  txt('Mensualité abonnement récurrente', ML + 4, y + 6);
+  // Row 2 — mensualite: label LEFT + price RIGHT on same y coordinate (no overflow possible)
+  rect(ML, y, CW, 16, '#dbeafe');
+  hrule(y, '#93c5fd');
+  setFont(9, 'bold', '#1e40af');
+  txt('Mensualite abonnement', ML + 4, y + 7);
+  setFont(11, 'bold', '#1d4ed8');
+  txt(fmt(totalMensuel) + ' /mois', RX - 4, y + 7, { align: 'right' });
   setFont(7, 'normal', '#3b82f6');
-  txt('Facturée chaque mois dès l\'activation', ML + 4, y + 11);
-  // Price on its own line at the bottom of the row — no overlap with labels above
-  setFont(13, 'bold', '#1d4ed8');
-  txt(fmt(totalMensuel) + ' / mois', RX - 4, y + 17, { align: 'right' });
-  hrule(y + 20, '#1d4ed8');
-  y += 26;
+  txt('Facturation mensuelle recurrente', ML + 4, y + 12);
+  hrule(y + 16, '#1d4ed8');
+  y += 22;
 
   // ── CONDITIONS GÉNÉRALES ───────────────────────────────────────────────────
   y = sectionHeader('CONDITIONS GÉNÉRALES', y);
@@ -331,16 +336,17 @@ export function generateAvenantPdf(params: AvenantPdfParams): string {
   hrule(y + 12, '#e2e8f0');
   y += 12;
 
-  // Nouveau mensuel (blue, 20mm — prominent)
-  rect(ML, y, CW, 20, '#dbeafe');
-  setFont(8, 'bold', '#1e40af');
-  txt('Nouvelle mensualité (dès cet avenant)', ML + 4, y + 6);
+  // Nouveau mensuel: label LEFT + price RIGHT on same y
+  rect(ML, y, CW, 16, '#dbeafe');
+  hrule(y, '#93c5fd');
+  setFont(9, 'bold', '#1e40af');
+  txt('Nouvelle mensualite', ML + 4, y + 7);
+  setFont(11, 'bold', '#1d4ed8');
+  txt(fmt(nouveauMensuel) + ' /mois', RX - 4, y + 7, { align: 'right' });
   setFont(7, 'normal', '#3b82f6');
-  txt(effectifMensuel && effectifMensuel < nouveauMensuel ? `Promo active : ${fmt(effectifMensuel)} / mois effectif` : 'Sans promotion active', ML + 4, y + 11);
-  setFont(13, 'bold', '#1d4ed8');
-  txt(fmt(nouveauMensuel) + ' / mois', RX - 4, y + 17, { align: 'right' });
-  hrule(y + 20, '#1d4ed8');
-  y += 26;
+  txt(effectifMensuel && effectifMensuel < nouveauMensuel ? `Promo active : ${fmt(effectifMensuel)} /mois effectif` : 'Facturation mensuelle recurrente', ML + 4, y + 12);
+  hrule(y + 16, '#1d4ed8');
+  y += 22;
 
   // ── NOTE ADMIN ─────────────────────────────────────────────────────────────
   if (notesAdmin.trim()) {
