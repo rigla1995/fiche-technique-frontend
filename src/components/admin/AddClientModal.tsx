@@ -5,12 +5,13 @@ import { generateContractPdf } from '../../utils/contractPdf';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-interface PricingLine { nb: number; unitPrice: number; total: number; }
+interface ActLine { label: string; unitPrice?: number; total: number; }
 interface PricingPreview {
-  activite: PricingLine;
-  labo: PricingLine;
-  gerant: PricingLine;
+  activite: { nb: number; total: number; lines?: ActLine[] };
+  labo:     { nb: number; unitPrice: number; total: number };
+  gerant:   { nb: number; unitPrice: number; total: number };
   totalMensuel: number;
+  onboardingPrice?: number;
 }
 
 interface PromoForm {
@@ -66,40 +67,56 @@ function StepIndicator({ current }: { current: number }) {
 
 // ── Pricing card ──────────────────────────────────────────────────────────────
 
-function PricingCard({ preview, montantOnboarding }: { preview: PricingPreview | null; montantOnboarding: string }) {
+function PricingCard({ preview }: { preview: PricingPreview | null }) {
   if (!preview) return null;
-  const ob = parseFloat(montantOnboarding) || 0;
+  const ob = preview.onboardingPrice ?? 0;
+  const row = (label: string, total: number, sub?: string) => (
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', fontSize: 12 }}>
+      <span style={{ color: '#374151' }}>{label}{sub && <span style={{ color: '#94a3b8', marginLeft: 4 }}>{sub}</span>}</span>
+      <span style={{ fontWeight: 700, color: '#1d4ed8', whiteSpace: 'nowrap', marginLeft: 8 }}>{fmt(total)}</span>
+    </div>
+  );
   return (
     <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 12, padding: '16px 18px', marginTop: 14 }}>
       <div style={{ fontSize: 11, fontWeight: 700, color: '#1d4ed8', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Récapitulatif tarifaire</div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-        {preview.activite.nb > 0 && (
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
-            <span style={{ color: '#374151' }}>
-              {preview.activite.nb === 1 ? '1 Activité (forfait)' : preview.activite.nb === 2 ? '2 Activités (forfait)' : `${preview.activite.nb} Activités (${preview.activite.nb} × 120 DT)`}
-            </span>
-            <span style={{ fontWeight: 700, color: '#1d4ed8' }}>{fmt(preview.activite.total)}</span>
+        {/* Activity breakdown — tier lines */}
+        {preview.activite.lines && preview.activite.lines.length > 0
+          ? preview.activite.lines.map((l, i) => (
+              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, paddingLeft: i > 0 ? 8 : 0 }}>
+                <span style={{ color: i === 0 ? '#374151' : '#64748b' }}>
+                  {i > 0 && <span style={{ marginRight: 4, color: '#c7d2fe' }}>↳</span>}
+                  {l.label}
+                </span>
+                <span style={{ fontWeight: i === 0 ? 600 : 500, color: '#1d4ed8' }}>{fmt(l.total)}</span>
+              </div>
+            ))
+          : preview.activite.nb > 0 && row(`${preview.activite.nb} Activité${preview.activite.nb > 1 ? 's' : ''}`, preview.activite.total)
+        }
+        {/* Subtotal activités when multiple lines */}
+        {preview.activite.lines && preview.activite.lines.length > 1 && (
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, paddingLeft: 0, color: '#6366f1', fontWeight: 700, marginTop: 2 }}>
+            <span>Total activités ({preview.activite.nb})</span>
+            <span>{fmt(preview.activite.total)}</span>
           </div>
         )}
-        {preview.labo.nb > 0 && (
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
-            <span style={{ color: '#374151' }}>{preview.labo.nb} Labo{preview.labo.nb > 1 ? 's' : ''} ({preview.labo.nb} × 160 DT)</span>
-            <span style={{ fontWeight: 700, color: '#1d4ed8' }}>{fmt(preview.labo.total)}</span>
-          </div>
+        {preview.labo.nb > 0 && row(
+          `${preview.labo.nb} Labo${preview.labo.nb > 1 ? 's' : ''}`,
+          preview.labo.total,
+          `(${preview.labo.nb} × ${fmt(preview.labo.unitPrice)})`
         )}
-        {preview.gerant.nb > 0 && (
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
-            <span style={{ color: '#374151' }}>{preview.gerant.nb} Gérant{preview.gerant.nb > 1 ? 's' : ''} ({preview.gerant.nb} × 80 DT)</span>
-            <span style={{ fontWeight: 700, color: '#1d4ed8' }}>{fmt(preview.gerant.total)}</span>
-          </div>
+        {preview.gerant.nb > 0 && row(
+          `${preview.gerant.nb} Gérant${preview.gerant.nb > 1 ? 's' : ''}`,
+          preview.gerant.total,
+          `(${preview.gerant.nb} × ${fmt(preview.gerant.unitPrice)})`
         )}
         <div style={{ borderTop: '1px solid #bfdbfe', paddingTop: 8, marginTop: 4, display: 'flex', justifyContent: 'space-between' }}>
           <span style={{ fontSize: 12, fontWeight: 700, color: '#1e40af' }}>Mensualité</span>
           <span style={{ fontSize: 14, fontWeight: 800, color: '#1e40af' }}>{fmt(preview.totalMensuel)}</span>
         </div>
         {ob > 0 && (
-          <div style={{ display: 'flex', justifyContent: 'space-between', background: '#fff', borderRadius: 6, padding: '6px 10px', marginTop: 2 }}>
-            <span style={{ fontSize: 12, color: '#374151' }}>Onboarding (one-time)</span>
+          <div style={{ display: 'flex', justifyContent: 'space-between', background: '#fff', borderRadius: 6, padding: '6px 10px', marginTop: 2, border: '1px solid #dbeafe' }}>
+            <span style={{ fontSize: 12, color: '#374151' }}>Onboarding <span style={{ color: '#94a3b8' }}>(paiement unique)</span></span>
             <span style={{ fontSize: 12, fontWeight: 700, color: '#0369a1' }}>{fmt(ob)}</span>
           </div>
         )}
@@ -199,12 +216,13 @@ export default function AddClientModal({ onClose, onCreated }: Props) {
     return () => URL.revokeObjectURL(url);
   }, [pdfBase64]);
 
-  // Fetch pricing preview whenever config changes
+  // Fetch pricing preview whenever config changes; auto-set onboarding price from response
   const fetchPreview = useCallback(async (na: number, nl: number, ng: number) => {
     setPreviewLoading(true);
     try {
       const { data } = await api.get('/api/abonnements/pricing-preview', { params: { nbActivites: na, nbLabos: nl, nbGerants: ng } });
       setPreview(data);
+      if (data.onboardingPrice != null) setMontantOnboarding(String(data.onboardingPrice));
     } catch { setPreview(null); }
     finally { setPreviewLoading(false); }
   }, []);
@@ -235,7 +253,7 @@ export default function AddClientModal({ onClose, onCreated }: Props) {
     /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) &&
     telValid &&
     selectedDomaines.length > 0;
-  const step2Valid = nbActivites >= 1 && montantOnboarding !== '' && parseFloat(montantOnboarding) >= 0;
+  const step2Valid = nbActivites >= 1 && montantOnboarding !== '';
 
   const next = () => {
     setError(null);
@@ -245,7 +263,7 @@ export default function AddClientModal({ onClose, onCreated }: Props) {
       if (!telValid) { setError('Téléphone invalide — format tunisien requis (ex: 20 123 456 ou +216 20 123 456).'); return; }
       if (selectedDomaines.length === 0) { setError('Veuillez sélectionner au moins un domaine d\'activité.'); return; }
     }
-    if (step === 1 && !step2Valid) { setError('Configurez au moins 1 activité et renseignez le montant d\'onboarding.'); return; }
+    if (step === 1 && !step2Valid) { setError('Configurez au moins 1 activité (chargement du tarif en cours…).'); return; }
     setStep((s) => s + 1);
   };
   const prev = () => { setError(null); setStep((s) => s - 1); };
@@ -404,21 +422,10 @@ export default function AddClientModal({ onClose, onCreated }: Props) {
               <Counter label="Activités" sub="Unités de production / points de vente" value={nbActivites} onChange={(n) => setNbActivites(n)} min={1} />
               <Counter label="Labos" sub="Laboratoires de production centralisée" value={nbLabos} onChange={(n) => setNbLabos(n)} />
               <Counter label="Gérants" sub="Comptes gérants supplémentaires" value={nbGerants} onChange={(n) => setNbGerants(n)} />
-              <div style={{ marginTop: 4 }}>
-                <label style={labelStyle}>Frais d'Onboarding (DT) *</label>
-                <input type="number" min="0" value={montantOnboarding} onChange={(e) => {
-                  setMontantOnboarding(e.target.value);
-                  if (parseFloat(e.target.value) <= 0 && promoForm.appliesTo === 'onboarding') {
-                    setPromoForm((f) => ({ ...f, appliesTo: 'mensualite' }));
-                  }
-                }}
-                  placeholder="ex: 800" style={{ ...inputStyle, fontSize: 18, fontWeight: 700, textAlign: 'right' }} />
-                <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 4 }}>Formation initiale + mise en place — paiement unique</div>
-              </div>
               {previewLoading ? (
-                <div style={{ textAlign: 'center', color: '#94a3b8', fontSize: 12, padding: 12 }}>Calcul…</div>
+                <div style={{ textAlign: 'center', color: '#94a3b8', fontSize: 12, padding: 12 }}>Calcul en cours…</div>
               ) : (
-                <PricingCard preview={preview} montantOnboarding={montantOnboarding} />
+                <PricingCard preview={preview} />
               )}
             </div>
           )}
@@ -513,7 +520,7 @@ export default function AddClientModal({ onClose, onCreated }: Props) {
                 </div>
               </div>
 
-              <PricingCard preview={preview} montantOnboarding={montantOnboarding} />
+              <PricingCard preview={preview} />
 
               {promos.length > 0 && (
                 <div style={{ marginTop: 10, background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 10, padding: '10px 14px' }}>
