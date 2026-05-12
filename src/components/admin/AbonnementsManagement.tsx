@@ -617,31 +617,6 @@ export default function AbonnementsManagement() {
   // Today string for delete guard
   const todayStr = new Date().toISOString().slice(0, 10);
 
-  // Build list of valid months for the promo month picker:
-  // from promoCurrentMinMois up to 24 months from now, excluding paid and blocked months
-  const validPromoMonths: { value: string; label: string }[] = (() => {
-    if (promoAppliesTo === 'onboarding' || !promoCurrentMinMois) return [];
-    const months: { value: string; label: string }[] = [];
-    const [sy, sm] = promoCurrentMinMois.split('-').map(Number);
-    const now = new Date();
-    const maxYear = now.getFullYear();
-    const maxMonth = now.getMonth() + 1 + 24; // 24 months ahead
-    const maxY = maxYear + Math.floor((maxMonth - 1) / 12);
-    const maxM = ((maxMonth - 1) % 12) + 1;
-    let y = sy, m = sm;
-    while (y < maxY || (y === maxY && m <= maxM)) {
-      const key = `${y}-${String(m).padStart(2, '0')}`;
-      if (!paidMonthSet.has(key) && !promoBlockedMonths.has(key)) {
-        months.push({
-          value: key,
-          label: new Date(y, m - 1, 1).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' }),
-        });
-      }
-      m++;
-      if (m > 12) { m = 1; y++; }
-    }
-    return months;
-  })();
 
   return (
     <>
@@ -940,34 +915,27 @@ export default function AbonnementsManagement() {
                         <option value="fixed_price">Prix fixe</option>
                       </select>
                     </div>
-                    {/* Mois début — hidden for onboarding, select shows only valid months */}
+                    {/* Mois début — hidden for onboarding */}
                     {promoAppliesTo !== 'onboarding' && (
                       <div>
                         <label style={{ fontSize: 11, color: '#374151', display: 'block', marginBottom: 3 }}>
                           Mois début
+                          {promoCurrentMinMois && (
+                            <span style={{ color: '#d97706', marginLeft: 4 }}>
+                              (min {promoCurrentMinMois})
+                            </span>
+                          )}
                         </label>
-                        <select
+                        <input
+                          type="month"
                           value={promoMoisDebut}
                           onChange={(e) => setPromoMoisDebut(e.target.value)}
+                          min={promoCurrentMinMois}
                           style={{
                             width: '100%', padding: '5px 8px', borderRadius: 6, fontSize: 12, boxSizing: 'border-box',
-                            border: '1px solid #fde68a', background: '#fff',
-                          }}
-                        >
-                          <option value="">— Sélectionner —</option>
-                          {/* When editing, include current month even if paid/blocked */}
-                          {editingPromo && promoMoisDebut && !validPromoMonths.find((m) => m.value === promoMoisDebut) && (
-                            <option value={promoMoisDebut}>
-                              {new Date(promoMoisDebut + '-01').toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}
-                            </option>
-                          )}
-                          {validPromoMonths.map(({ value, label }) => (
-                            <option key={value} value={value}>{label}</option>
-                          ))}
-                          {validPromoMonths.length === 0 && !editingPromo && (
-                            <option value="" disabled>Aucun mois disponible</option>
-                          )}
-                        </select>
+                            border: `1px solid ${(promoMoisIsPaid || promoMoisIsBlocked) ? '#fca5a5' : '#fde68a'}`,
+                            background: (promoMoisIsPaid || promoMoisIsBlocked) ? '#fff1f2' : '#fff',
+                          }} />
                       </div>
                     )}
                   </div>
