@@ -302,13 +302,14 @@ export default function AddClientModal({ onClose, onCreated }: Props) {
 
   // ── Step validation ──
 
-  const { emailExists, emailChecking } = useEmailCheck(email);
+  const { emailExists, emailChecking, emailCheckFailed } = useEmailCheck(email);
   const telValid = TUNISIAN_PHONE.test(tel.replace(/\s/g, ''));
   const step1Valid =
     nom.trim().length > 0 &&
     /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) &&
     !emailExists &&
     !emailChecking &&
+    !emailCheckFailed &&
     telValid &&
     selectedDomaines.length > 0;
   const step2Valid = nbActivites >= 1 && montantOnboarding !== '';
@@ -320,6 +321,7 @@ export default function AddClientModal({ onClose, onCreated }: Props) {
       if (!nom.trim()) { setError('Le nom est obligatoire.'); return; }
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { setError('Email invalide.'); return; }
       if (emailChecking) { setError('Vérification de l\'email en cours…'); return; }
+      if (emailCheckFailed) { setError('Impossible de vérifier l\'email — vérifiez votre connexion.'); return; }
       if (emailExists) { setError('Cet email est déjà utilisé.'); return; }
       if (!telValid) { setError('Téléphone invalide — format tunisien requis (ex: 20 123 456 ou +216 20 123 456).'); return; }
       if (selectedDomaines.length === 0) { setError('Veuillez sélectionner au moins un domaine d\'activité.'); return; }
@@ -414,13 +416,16 @@ export default function AddClientModal({ onClose, onCreated }: Props) {
                     placeholder="email@exemple.com"
                     style={{
                       ...inputStyle,
-                      borderColor: emailExists ? '#fca5a5' : inputStyle.borderColor,
-                      background: emailExists ? '#fff5f5' : inputStyle.background,
+                      borderColor: emailExists ? '#fca5a5' : emailCheckFailed ? '#fcd34d' : inputStyle.borderColor,
+                      background: emailExists ? '#fff5f5' : emailCheckFailed ? '#fffbeb' : inputStyle.background,
                     }}
                   />
                   {emailChecking && <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 3 }}>Vérification…</div>}
                   {!emailChecking && emailExists && (
                     <div style={{ fontSize: 11, color: '#dc2626', marginTop: 3 }}>Cet email est déjà utilisé.</div>
+                  )}
+                  {!emailChecking && emailCheckFailed && (
+                    <div style={{ fontSize: 11, color: '#d97706', marginTop: 3 }}>⚠ Vérification impossible — connexion au serveur requise.</div>
                   )}
                 </div>
                 <div>
