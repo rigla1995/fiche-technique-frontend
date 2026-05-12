@@ -2,6 +2,23 @@ import jsPDF from 'jspdf';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
+export interface ContractPromo {
+  appliesTo: string;   // 'onboarding' | 'mensualite'
+  type: string;        // 'percent_off' | 'free_months' | 'fixed_price'
+  discountVal?: string;
+  fixedVal?: string;
+  months?: string;     // duration in months (empty = permanent)
+  moisDebut?: string;  // YYYY-MM
+}
+
+export interface ContractPricingPreview {
+  activite: { nb: number; total: number; lines?: { label: string; total: number }[] };
+  labo:     { nb: number; unitPrice: number; total: number };
+  gerant:   { nb: number; unitPrice: number; total: number };
+  totalMensuel: number;
+  onboardingPrice?: number;
+}
+
 export interface ContractPdfParams {
   clientNom: string;
   clientEmail: string;
@@ -11,7 +28,8 @@ export interface ContractPdfParams {
   nbGerants: number;
   montantOnboarding: number;
   totalMensuel: number;
-  promos?: unknown[];
+  promos?: ContractPromo[];
+  preview?: ContractPricingPreview;
   appName: string;
 }
 
@@ -93,9 +111,34 @@ function makeDoc() {
 
 export function generateContractPdf(params: ContractPdfParams): string {
   const { clientNom, clientEmail, clientTel, nbActivites, nbLabos, nbGerants,
-          montantOnboarding, totalMensuel, appName } = params;
+          montantOnboarding, totalMensuel, promos = [], preview, appName } = params;
+
+  // ── Promo helpers ────────────────────────────────────────────────────────────
+  const mensPromo = promos.find((p) => ['mensualite', 'les_deux'].includes(p.appliesTo));
+  const obPromo   = promos.find((p) => ['onboarding', 'les_deux'].includes(p.appliesTo));
+
+  const applyPromo = (base: number, p: ContractPromo): number => {
+    if (p.type === 'free_months') return 0;
+    if (p.type === 'percent_off' && p.discountVal) return Math.round(base * (1 - parseFloat(p.discountVal) / 100) * 100) / 100;
+    if (p.type === 'fixed_price' && p.fixedVal) return parseFloat(p.fixedVal);
+    return base;
+  };
+  const promoLabel = (p: ContractPromo): string => {
+    if (p.type === 'free_months') return 'Gratuit (100%)';
+    if (p.type === 'percent_off') return `-${p.discountVal}%`;
+    return `-${p.fixedVal} DT (prix fixe)`;
+  };
+  const promoDurLabel = (p: ContractPromo): string => {
+    if (!p.months) return 'Permanent';
+    const start = p.moisDebut ? ` a partir de ${p.moisDebut}` : '';
+    return `${p.months} mois${start}`;
+  };
+
+  const effectifMensuel   = mensPromo ? applyPromo(totalMensuel, mensPromo) : totalMensuel;
+  const effectifOnboarding = obPromo  ? applyPromo(montantOnboarding, obPromo) : montantOnboarding;
 
   const { doc, PW, PH, ML, MR, CW, RX, setFont, txt, rect, hrule, sectionHeader } = makeDoc();
+  void MR;
   let y = 0;
 
   // ── HEADER ─────────────────────────────────────────────────────────────────
@@ -125,7 +168,7 @@ export function generateContractPdf(params: ContractPdfParams): string {
   setFont(9, 'bold', '#0f172a');  txt(clientNom, mid + 4, y + 13);
   setFont(7, 'normal', '#64748b');
   if (clientEmail) txt(clientEmail, mid + 4, y + 19);
-  if (clientTel)   txt(`Tél : ${clientTel}`, mid + 4, y + 24);
+  if (clientTel)   txt(`Tel : ${clientTel}`, mid + 4, y + 24);
   y += 34;
 
   // ── CONFIGURATION SOUSCRITE ────────────────────────────────────────────────
@@ -133,24 +176,41 @@ export function generateContractPdf(params: ContractPdfParams): string {
   rect(ML, y, CW, 7, '#eef2ff');
   setFont(7, 'bold', '#4338ca');
   txt('Poste', ML + 4, y + 5);
-  txt('Qté', ML + 70, y + 5);
+  txt('Qte', ML + 70, y + 5);
   txt('Tarif mensuel', RX - 4, y + 5, { align: 'right' });
   y += 7;
   hrule(y, '#c7d2fe');
   y += 2;
 
+  // Use preview breakdown when available, fall back to param values
   const configRows: { label: string; qty: string; price: string }[] = [];
-  if (nbActivites === 1)       configRows.push({ label: 'Activité', qty: '1', price: '200 DT / mois' });
-  else if (nbActivites === 2)  configRows.push({ label: 'Activités', qty: '2', price: '350 DT / mois (forfait)' });
-  else                          configRows.push({ label: 'Activités', qty: String(nbActivites), price: `${nbActivites} × 120 = ${nbActivites * 120} DT / mois` });
-  if (nbLabos > 0)   configRows.push({ label: 'Labo(s)', qty: String(nbLabos), price: `${nbLabos} × 160 = ${nbLabos * 160} DT / mois` });
-  if (nbGerants > 0) configRows.push({ label: 'Gérant(s) sup.', qty: String(nbGerants), price: `${nbGerants} × 80 = ${nbGerants * 80} DT / mois` });
+  if (preview) {
+    if (preview.activite.nb > 0) {
+      const lines = preview.activite.lines;
+      if (lines && lines.length > 1) {
+        lines.forEach((l, i) => configRows.push({
+          label: i === 0 ? `Activite(s) (x${preview.activite.nb})` : `  ${l.label}`,
+          qty: i === 0 ? String(preview.activite.nb) : '',
+          price: `${l.total} DT / mois`,
+        }));
+      } else {
+        configRows.push({ label: `Activite(s)`, qty: String(preview.activite.nb), price: `${preview.activite.total} DT / mois` });
+      }
+    }
+    if (preview.labo.nb > 0)   configRows.push({ label: 'Labo(s)', qty: String(preview.labo.nb), price: `${preview.labo.nb} x ${preview.labo.unitPrice} = ${preview.labo.total} DT / mois` });
+    if (preview.gerant.nb > 0) configRows.push({ label: 'Gerant(s) sup.', qty: String(preview.gerant.nb), price: `${preview.gerant.nb} x ${preview.gerant.unitPrice} = ${preview.gerant.total} DT / mois` });
+  } else {
+    if (nbActivites === 1)      configRows.push({ label: 'Activite', qty: '1', price: `${totalMensuel} DT / mois` });
+    else                         configRows.push({ label: 'Activites', qty: String(nbActivites), price: `${totalMensuel} DT / mois` });
+    if (nbLabos > 0)   configRows.push({ label: 'Labo(s)', qty: String(nbLabos), price: `${nbLabos} x 160 = ${nbLabos * 160} DT / mois` });
+    if (nbGerants > 0) configRows.push({ label: 'Gerant(s) sup.', qty: String(nbGerants), price: `${nbGerants} x 80 = ${nbGerants * 80} DT / mois` });
+  }
 
   for (let i = 0; i < configRows.length; i++) {
     const row = configRows[i];
     if (i % 2 === 0) rect(ML, y, CW, 8, '#fafbff');
     setFont(9, 'normal', '#0f172a'); txt(row.label, ML + 4, y + 5.5);
-    setFont(9, 'bold', '#4338ca');   txt(row.qty, ML + 70, y + 5.5);
+    setFont(9, 'bold', '#4338ca');   if (row.qty) txt(row.qty, ML + 70, y + 5.5);
     setFont(8, 'normal', '#374151'); txt(row.price, RX - 4, y + 5.5, { align: 'right' });
     hrule(y + 8, '#f1f5f9');
     y += 8;
@@ -158,29 +218,42 @@ export function generateContractPdf(params: ContractPdfParams): string {
   y += 4;
 
   // ── RÉCAPITULATIF FINANCIER ────────────────────────────────────────────────
-  y = sectionHeader('RÉCAPITULATIF FINANCIER', y);
+  y = sectionHeader('RECAPITULATIF FINANCIER', y);
 
-  // Row 1 — onboarding (10mm)
-  rect(ML, y, CW, 10, '#f0f9ff');
+  // ── Onboarding ──
+  const obH = obPromo ? 18 : 10;
+  rect(ML, y, CW, obH, '#f0f9ff');
   hrule(y, '#bfdbfe');
   setFont(8, 'normal', '#374151');
   txt('Frais d\'onboarding (versement unique)', ML + 4, y + 6.5);
-  setFont(10, 'bold', '#0369a1');
-  txt(fmt(montantOnboarding), RX - 4, y + 6.5, { align: 'right' });
-  hrule(y + 10, '#bfdbfe');
-  y += 10;
+  if (obPromo) {
+    // Base (crossed-out visual: show in grey with "base:" label)
+    setFont(8, 'normal', '#94a3b8'); txt(`Base : ${fmt(montantOnboarding)}`, ML + 4, y + 13);
+    setFont(8, 'bold', '#d97706');   txt(`Promo : ${promoLabel(obPromo)}  (${promoDurLabel(obPromo)})`, ML + 55, y + 13);
+    setFont(10, 'bold', '#0369a1');  txt(fmt(effectifOnboarding), RX - 4, y + 6.5, { align: 'right' });
+  } else {
+    setFont(10, 'bold', '#0369a1');  txt(fmt(montantOnboarding), RX - 4, y + 6.5, { align: 'right' });
+  }
+  hrule(y + obH, '#bfdbfe');
+  y += obH;
 
-  // Row 2 — mensualite: label LEFT + price RIGHT on same y coordinate (no overflow possible)
-  rect(ML, y, CW, 16, '#dbeafe');
+  // ── Mensualité ──
+  const mensH = mensPromo ? 22 : 16;
+  rect(ML, y, CW, mensH, '#dbeafe');
   hrule(y, '#93c5fd');
   setFont(9, 'bold', '#1e40af');
   txt('Mensualite abonnement', ML + 4, y + 7);
   setFont(11, 'bold', '#1d4ed8');
-  txt(fmt(totalMensuel) + ' /mois', RX - 4, y + 7, { align: 'right' });
-  setFont(7, 'normal', '#3b82f6');
-  txt('Facturation mensuelle recurrente', ML + 4, y + 12);
-  hrule(y + 16, '#1d4ed8');
-  y += 22;
+  txt(fmt(effectifMensuel) + ' /mois', RX - 4, y + 7, { align: 'right' });
+  if (mensPromo) {
+    setFont(7, 'normal', '#94a3b8'); txt(`Base : ${fmt(totalMensuel)} /mois`, ML + 4, y + 13);
+    setFont(7, 'bold', '#d97706');   txt(`Promo : ${promoLabel(mensPromo)}  |  ${promoDurLabel(mensPromo)}`, ML + 50, y + 13);
+    setFont(7, 'normal', '#3b82f6'); txt('Puis tarif normal apres expiration promo', ML + 4, y + 19);
+  } else {
+    setFont(7, 'normal', '#3b82f6'); txt('Facturation mensuelle recurrente', ML + 4, y + 12);
+  }
+  hrule(y + mensH, '#1d4ed8');
+  y += mensH + 6;
 
   // ── CONDITIONS GÉNÉRALES ───────────────────────────────────────────────────
   y = sectionHeader('CONDITIONS GÉNÉRALES', y);

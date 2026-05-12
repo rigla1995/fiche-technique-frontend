@@ -66,17 +66,54 @@ function StepIndicator({ current }: { current: number }) {
   );
 }
 
+// ── Promo helpers ─────────────────────────────────────────────────────────────
+
+function applyPromoToBase(base: number, p: PromoForm): number {
+  if (p.type === 'free_months') return 0;
+  if (p.type === 'percent_off' && p.discountVal) return Math.round(base * (1 - parseFloat(p.discountVal) / 100) * 100) / 100;
+  if (p.type === 'fixed_price' && p.fixedVal) return parseFloat(p.fixedVal);
+  return base;
+}
+function promoShortLabel(p: PromoForm): string {
+  if (p.type === 'free_months') return 'Gratuit';
+  if (p.type === 'percent_off') return `-${p.discountVal}%`;
+  return `-${p.fixedVal} DT`;
+}
+function promoDurStr(p: PromoForm): string {
+  if (!p.months) return 'Permanent';
+  return `${p.months} mois${p.moisDebut ? ` à partir de ${p.moisDebut}` : ''}`;
+}
+
 // ── Pricing card ──────────────────────────────────────────────────────────────
 
-function PricingCard({ preview }: { preview: PricingPreview | null }) {
+function PricingCard({ preview, promos }: { preview: PricingPreview | null; promos?: PromoForm[] }) {
   if (!preview) return null;
   const ob = preview.onboardingPrice ?? 0;
+
+  const mensPromo = promos?.find((p) => ['mensualite', 'les_deux'].includes(p.appliesTo));
+  const obPromo   = promos?.find((p) => ['onboarding', 'les_deux'].includes(p.appliesTo));
+
+  const effectifMensuel    = mensPromo ? applyPromoToBase(preview.totalMensuel, mensPromo) : preview.totalMensuel;
+  const effectifOnboarding = obPromo   ? applyPromoToBase(ob, obPromo) : ob;
+
+  const PromoRow = ({ p, base, effectif }: { p: PromoForm; base: number; effectif: number }) => (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', paddingLeft: 8, marginTop: 2 }}>
+      <span style={{ fontSize: 11, color: '#94a3b8', textDecoration: 'line-through' }}>{fmt(base)}</span>
+      <span style={{ fontSize: 11, fontWeight: 700, padding: '1px 7px', borderRadius: 6, background: '#fef3c7', color: '#92400e' }}>
+        🏷️ {promoShortLabel(p)}
+      </span>
+      <span style={{ fontSize: 10, color: '#6b7280' }}>{promoDurStr(p)}</span>
+      <span style={{ marginLeft: 'auto', fontSize: 13, fontWeight: 800, color: effectif === 0 ? '#16a34a' : '#1d4ed8' }}>{fmt(effectif)}</span>
+    </div>
+  );
+
   const row = (label: string, total: number, sub?: string) => (
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', fontSize: 12 }}>
       <span style={{ color: '#374151' }}>{label}{sub && <span style={{ color: '#94a3b8', marginLeft: 4 }}>{sub}</span>}</span>
       <span style={{ fontWeight: 700, color: '#1d4ed8', whiteSpace: 'nowrap', marginLeft: 8 }}>{fmt(total)}</span>
     </div>
   );
+
   return (
     <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 12, padding: '16px 18px', marginTop: 14 }}>
       <div style={{ fontSize: 11, fontWeight: 700, color: '#1d4ed8', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Récapitulatif tarifaire</div>
@@ -94,31 +131,41 @@ function PricingCard({ preview }: { preview: PricingPreview | null }) {
             ))
           : preview.activite.nb > 0 && row(`${preview.activite.nb} Activité${preview.activite.nb > 1 ? 's' : ''}`, preview.activite.total)
         }
-        {/* Subtotal activités when multiple lines */}
         {preview.activite.lines && preview.activite.lines.length > 1 && (
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, paddingLeft: 0, color: '#6366f1', fontWeight: 700, marginTop: 2 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#6366f1', fontWeight: 700, marginTop: 2 }}>
             <span>Total activités ({preview.activite.nb})</span>
             <span>{fmt(preview.activite.total)}</span>
           </div>
         )}
-        {preview.labo.nb > 0 && row(
-          `${preview.labo.nb} Labo${preview.labo.nb > 1 ? 's' : ''}`,
-          preview.labo.total,
-          `(${preview.labo.nb} × ${fmt(preview.labo.unitPrice)})`
-        )}
-        {preview.gerant.nb > 0 && row(
-          `${preview.gerant.nb} Gérant${preview.gerant.nb > 1 ? 's' : ''}`,
-          preview.gerant.total,
-          `(${preview.gerant.nb} × ${fmt(preview.gerant.unitPrice)})`
-        )}
-        <div style={{ borderTop: '1px solid #bfdbfe', paddingTop: 8, marginTop: 4, display: 'flex', justifyContent: 'space-between' }}>
-          <span style={{ fontSize: 12, fontWeight: 700, color: '#1e40af' }}>Mensualité</span>
-          <span style={{ fontSize: 14, fontWeight: 800, color: '#1e40af' }}>{fmt(preview.totalMensuel)}</span>
+        {preview.labo.nb > 0 && row(`${preview.labo.nb} Labo${preview.labo.nb > 1 ? 's' : ''}`, preview.labo.total, `(${preview.labo.nb} × ${fmt(preview.labo.unitPrice)})`)}
+        {preview.gerant.nb > 0 && row(`${preview.gerant.nb} Gérant${preview.gerant.nb > 1 ? 's' : ''}`, preview.gerant.total, `(${preview.gerant.nb} × ${fmt(preview.gerant.unitPrice)})`)}
+
+        {/* Mensualité total + optional promo */}
+        <div style={{ borderTop: '1px solid #bfdbfe', paddingTop: 8, marginTop: 4 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <span style={{ fontSize: 12, fontWeight: 700, color: '#1e40af' }}>Mensualité</span>
+            <span style={{ fontSize: mensPromo ? 12 : 14, fontWeight: 800, color: '#1e40af', textDecoration: mensPromo ? 'line-through' : 'none', opacity: mensPromo ? 0.5 : 1 }}>
+              {fmt(preview.totalMensuel)}
+            </span>
+          </div>
+          {mensPromo && <PromoRow p={mensPromo} base={preview.totalMensuel} effectif={effectifMensuel} />}
+          {mensPromo && (
+            <div style={{ fontSize: 10, color: '#6b7280', marginTop: 3, paddingLeft: 8 }}>
+              Puis {fmt(preview.totalMensuel)}/mois après expiration de la promo
+            </div>
+          )}
         </div>
+
+        {/* Onboarding + optional promo */}
         {ob > 0 && (
-          <div style={{ display: 'flex', justifyContent: 'space-between', background: '#fff', borderRadius: 6, padding: '6px 10px', marginTop: 2, border: '1px solid #dbeafe' }}>
-            <span style={{ fontSize: 12, color: '#374151' }}>Onboarding <span style={{ color: '#94a3b8' }}>(paiement unique)</span></span>
-            <span style={{ fontSize: 12, fontWeight: 700, color: '#0369a1' }}>{fmt(ob)}</span>
+          <div style={{ background: '#fff', borderRadius: 6, padding: '8px 10px', marginTop: 2, border: '1px solid #dbeafe' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+              <span style={{ fontSize: 12, color: '#374151' }}>Onboarding <span style={{ color: '#94a3b8' }}>(paiement unique)</span></span>
+              <span style={{ fontSize: obPromo ? 11 : 12, fontWeight: 700, color: '#0369a1', textDecoration: obPromo ? 'line-through' : 'none', opacity: obPromo ? 0.5 : 1 }}>
+                {fmt(ob)}
+              </span>
+            </div>
+            {obPromo && <PromoRow p={obPromo} base={ob} effectif={effectifOnboarding} />}
           </div>
         )}
       </div>
@@ -240,11 +287,17 @@ export default function AddClientModal({ onClose, onCreated }: Props) {
         nbActivites, nbLabos, nbGerants,
         montantOnboarding: parseFloat(montantOnboarding) || 0,
         totalMensuel: preview?.totalMensuel || 0,
+        promos: promos.map((p) => ({
+          appliesTo: p.appliesTo, type: p.type,
+          discountVal: p.discountVal, fixedVal: p.fixedVal,
+          months: p.months, moisDebut: p.moisDebut,
+        })),
+        preview: preview ?? undefined,
         appName: 'Fiche Technique',
       });
       setPdfBase64(base64);
     }
-  }, [step, nom, email, tel, nbActivites, nbLabos, nbGerants, montantOnboarding, preview]);
+  }, [step, nom, email, tel, nbActivites, nbLabos, nbGerants, montantOnboarding, preview, promos]);
 
   // ── Step validation ──
 
@@ -426,7 +479,7 @@ export default function AddClientModal({ onClose, onCreated }: Props) {
               {previewLoading ? (
                 <div style={{ textAlign: 'center', color: '#94a3b8', fontSize: 12, padding: 12 }}>Calcul en cours…</div>
               ) : (
-                <PricingCard preview={preview} />
+                <PricingCard preview={preview} promos={promos} />
               )}
             </div>
           )}
