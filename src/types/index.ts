@@ -93,7 +93,14 @@ export interface Abonnement {
     effectifOnboarding: number | null;
     activePromoMensuel: Promotion | null;
     activePromoOnboarding: Promotion | null;
-    configBreakdown?: unknown;
+    configBreakdown?: {
+      activite: { nb: number; total: number };
+      labo:     { nb: number; total: number };
+      gerant:   { nb: number; total: number };
+      prixActiviteSup: number;
+      prixLaboSup: number;
+      prixGerantSup: number;
+    };
   };
   createdAt: string;
   updatedAt: string;

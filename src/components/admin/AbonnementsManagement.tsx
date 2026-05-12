@@ -753,16 +753,29 @@ export default function AbonnementsManagement() {
             {/* ── Configuration Souscrite ────────────────────────────── */}
             {selected.config && (() => {
               const cfg = selected.config!;
-              const activiteLabel = cfg.nbActivites === 1 ? '1 activité — 200 DT/mois' : cfg.nbActivites === 2 ? '2 activités — 350 DT/mois' : `${cfg.nbActivites} activités — ${cfg.nbActivites} × 120 DT`;
+              const bd = selected.pricing?.configBreakdown;
+              // Use real breakdown totals from API; fall back to pricing.baseMensuel
+              const totalActivite = bd?.activite.total ?? (selected.pricing?.baseMensuel ?? 0);
+              const totalLabo     = bd?.labo.total     ?? 0;
+              const totalGerant   = bd?.gerant.total   ?? 0;
+              const totalMensuel  = bd
+                ? (bd.activite.total + bd.labo.total + bd.gerant.total)
+                : (selected.pricing?.baseMensuel ?? 0);
+              const pLaboUnit   = bd?.prixLaboSup;
+              const pGerantUnit = bd?.prixGerantSup;
+
+              const activiteLabel = `${cfg.nbActivites} activité${cfg.nbActivites > 1 ? 's' : ''} — ${totalActivite} DT/mois`;
               const items = [
                 { icon: '🏪', label: 'Activité(s)', value: activiteLabel },
-                ...(cfg.nbLabos > 0 ? [{ icon: '🧪', label: 'Labo(s)', value: `${cfg.nbLabos} labo${cfg.nbLabos > 1 ? 's' : ''} — ${cfg.nbLabos} × 160 DT/mois` }] : []),
-                ...(cfg.nbGerants > 0 ? [{ icon: '👤', label: 'Gérant(s)', value: `${cfg.nbGerants} gérant${cfg.nbGerants > 1 ? 's' : ''} — ${cfg.nbGerants} × 80 DT/mois` }] : []),
+                ...(cfg.nbLabos > 0 ? [{
+                  icon: '🧪', label: 'Labo(s)',
+                  value: `${cfg.nbLabos} labo${cfg.nbLabos > 1 ? 's' : ''}${pLaboUnit ? ` — ${cfg.nbLabos} × ${pLaboUnit} DT` : ''} — ${totalLabo} DT/mois`,
+                }] : []),
+                ...(cfg.nbGerants > 0 ? [{
+                  icon: '👤', label: 'Gérant(s)',
+                  value: `${cfg.nbGerants} gérant${cfg.nbGerants > 1 ? 's' : ''}${pGerantUnit ? ` — ${cfg.nbGerants} × ${pGerantUnit} DT` : ''} — ${totalGerant} DT/mois`,
+                }] : []),
               ];
-              const totalMensuel = (() => {
-                const a = cfg.nbActivites === 1 ? 200 : cfg.nbActivites === 2 ? 350 : cfg.nbActivites * 120;
-                return a + cfg.nbLabos * 160 + cfg.nbGerants * 80;
-              })();
               return (
                 <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #e2e8f0', marginBottom: 20, overflow: 'hidden' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 18px', background: 'linear-gradient(135deg,#f5f3ff 0%,#ede9fe 100%)', borderBottom: '1px solid #ddd6fe' }}>
