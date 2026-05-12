@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import api from '../../api/client';
 
 const STATUT_COLORS: Record<string, string> = {
@@ -16,8 +16,8 @@ const STATUT_LABELS: Record<string, string> = {
   gratuit:    'Gratuit',
 };
 
-const fmtDate  = (d: string) => d ? new Date(d).toLocaleDateString('fr-FR') : '—';
-const fmtMois  = (d: string) => d ? new Date(d).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' }) : '—';
+const fmtDate = (d: string) => d ? new Date(d).toLocaleDateString('fr-FR') : '—';
+const fmtMois = (d: string) => d ? new Date(d).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' }) : '—';
 
 interface PaiementRow {
   id: number;
@@ -31,119 +31,213 @@ interface PaiementRow {
   clientEmail: string;
 }
 
+const PALETTE = ['#dbeafe:#1d4ed8','#dcfce7:#166534','#fce7f3:#9d174d','#ede9fe:#6d28d9','#fff7ed:#c2410c','#e0f2fe:#075985'];
+function getAvatar(nom: string, selected: boolean) {
+  const initials = nom.trim().split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase();
+  const p = PALETTE[(nom.charCodeAt(0) || 0) % PALETTE.length].split(':');
+  return { initials, bg: selected ? '#e0e7ff' : p[0], color: selected ? '#4f46e5' : p[1] };
+}
+
 export default function HistoriquePaiementsAdmin() {
-  const [rows, setRows]         = useState<PaiementRow[]>([]);
-  const [loading, setLoading]   = useState(true);
-  const [search, setSearch]     = useState('');
+  const [rows, setRows] = useState<PaiementRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedClientId, setSelectedClientId] = useState<number | null>(null);
+  const [search, setSearch] = useState('');
   const [filtStatut, setFiltStatut] = useState('');
   const [filtMois, setFiltMois] = useState('');
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const params: Record<string, string> = {};
-      if (filtStatut) params.statut = filtStatut;
-      if (filtMois)   params.mois   = filtMois + '-01';
-      const res = await api.get('/api/abonnements/all-paiements', { params });
+      const res = await api.get('/api/abonnements/all-paiements');
       setRows(res.data);
     } finally {
       setLoading(false);
     }
-  }, [filtStatut, filtMois]);
+  }, []);
 
   useEffect(() => { load(); }, [load]);
 
-  const displayed = rows.filter((r) => {
-    if (!search) return true;
-    const q = search.toLowerCase();
-    return (r.clientNom || '').toLowerCase().includes(q) || (r.clientEmail || '').toLowerCase().includes(q);
-  });
+  const clients = useMemo(() => {
+    const map = new Map<number, { id: number; nom: string; email: string; total: number; payeCount: number; montant: number }>();
+    for (const r of rows) {
+      if (!map.has(r.clientId)) map.set(r.clientId, { id: r.clientId, nom: r.clientNom, email: r.clientEmail, total: 0, payeCount: 0, montant: 0 });
+      const c = map.get(r.clientId)!;
+      c.total++;
+      if (r.statut === 'payé') { c.payeCount++; c.montant += parseFloat(String(r.montantDt ?? 0)) || 0; }
+    }
+    return Array.from(map.values()).sort((a, b) => a.nom.localeCompare(b.nom, 'fr'));
+  }, [rows]);
 
-  const totalMontant = displayed.reduce((s, r) => s + (parseFloat(String(r.montantDt ?? 0)) || 0), 0);
-  const countPayé    = displayed.filter((r) => r.statut === 'payé').length;
+  const filteredClients = useMemo(() => {
+    if (!search) return clients;
+    const q = search.toLowerCase();
+    return clients.filter(c => c.nom.toLowerCase().includes(q) || c.email.toLowerCase().includes(q));
+  }, [clients, search]);
+
+  const selectedClient = clients.find(c => c.id === selectedClientId) ?? null;
+
+  const clientRows = useMemo(() => {
+    if (selectedClientId === null) return [];
+    return rows.filter(r => {
+      if (r.clientId !== selectedClientId) return false;
+      if (filtStatut && r.statut !== filtStatut) return false;
+      if (filtMois && r.mois.slice(0, 7) !== filtMois) return false;
+      return true;
+    });
+  }, [rows, selectedClientId, filtStatut, filtMois]);
+
+  const totalPayes = rows.filter(r => r.statut === 'payé').length;
+  const totalMontant = rows.filter(r => r.statut === 'payé').reduce((s, r) => s + (parseFloat(String(r.montantDt ?? 0)) || 0), 0);
 
   return (
-    <div style={{ padding: 24, maxWidth: 1100, margin: '0 auto' }}>
-      <h1 style={{ fontSize: 22, fontWeight: 800, color: '#111827', marginBottom: 6 }}>Historique paiements</h1>
-      <p style={{ fontSize: 13, color: '#6b7280', marginBottom: 24 }}>Tous les paiements mensualités, tous clients confondus.</p>
-
-      {/* KPIs */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 24 }}>
-        {[
-          { label: 'Total lignes', value: displayed.length, color: '#2563eb' },
-          { label: 'Payés', value: countPayé, color: '#16a34a' },
-          { label: 'Montant total', value: `${totalMontant.toFixed(2)} DT`, color: '#7c3aed' },
-        ].map((k) => (
-          <div key={k.label} style={{ background: '#fff', borderRadius: 10, border: '1px solid #e5e7eb', padding: '14px 18px' }}>
-            <div style={{ fontSize: 12, color: '#6b7280' }}>{k.label}</div>
-            <div style={{ fontSize: 22, fontWeight: 800, color: k.color, marginTop: 2 }}>{k.value}</div>
+    <div style={{ display: 'flex', gap: 20, minHeight: 600 }}>
+      {/* ── Left: client list ─────────────────────────────────────── */}
+      <div style={{ flex: '0 0 360px', background: '#fff', borderRadius: 16, border: '1px solid #e2e8f0', overflow: 'hidden', boxShadow: '0 4px 24px rgba(30,27,75,0.10)' }}>
+        <div style={{ padding: '18px 18px 14px', background: 'linear-gradient(135deg,#1e1b4b 0%,#3730a3 55%,#4f46e5 100%)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+            <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>💰</div>
+            <div>
+              <h2 style={{ margin: 0, fontSize: 15, fontWeight: 800, color: '#fff' }}>Historique paiements</h2>
+              <p style={{ margin: 0, fontSize: 11, color: 'rgba(255,255,255,0.6)' }}>{clients.length} clients · {rows.length} paiements</p>
+            </div>
           </div>
-        ))}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 6, marginBottom: 12 }}>
+            {[
+              { label: 'Total', value: String(rows.length), color: 'rgba(255,255,255,0.9)', bg: 'rgba(255,255,255,0.1)' },
+              { label: 'Payés', value: String(totalPayes), color: '#86efac', bg: 'rgba(134,239,172,0.15)' },
+              { label: `${totalMontant.toFixed(0)} DT`, value: null, color: '#fde047', bg: 'rgba(253,224,71,0.15)' },
+            ].map((s, i) => (
+              <div key={i} style={{ background: s.bg, borderRadius: 8, padding: '7px 4px', textAlign: 'center' }}>
+                {s.value !== null && <div style={{ fontSize: 17, fontWeight: 800, color: s.color, lineHeight: 1 }}>{s.value}</div>}
+                <div style={{ fontSize: s.value === null ? 11 : 9, fontWeight: 700, color: s.color, opacity: 0.85, marginTop: s.value !== null ? 2 : 0 }}>{s.label}</div>
+              </div>
+            ))}
+          </div>
+          <div style={{ position: 'relative' }}>
+            <span style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', fontSize: 12, pointerEvents: 'none' }}>🔍</span>
+            <input placeholder="Rechercher un client…" value={search} onChange={(e) => setSearch(e.target.value)}
+              style={{ width: '100%', padding: '8px 10px 8px 30px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.2)', fontSize: 12, outline: 'none', background: 'rgba(255,255,255,0.12)', color: '#fff', boxSizing: 'border-box' }} />
+          </div>
+        </div>
+        <div style={{ overflowY: 'auto', maxHeight: 520 }}>
+          {loading ? (
+            <div style={{ padding: 32, textAlign: 'center', color: '#9ca3af' }}>Chargement...</div>
+          ) : filteredClients.length === 0 ? (
+            <div style={{ padding: 40, textAlign: 'center' }}>
+              <div style={{ fontSize: 32, marginBottom: 8 }}>🔍</div>
+              <div style={{ fontSize: 13, fontWeight: 500, color: '#9ca3af' }}>Aucun client</div>
+            </div>
+          ) : filteredClients.map((c) => {
+            const isSel = selectedClientId === c.id;
+            const av = getAvatar(c.nom, isSel);
+            return (
+              <div key={c.id} onClick={() => setSelectedClientId(isSel ? null : c.id)}
+                style={{ padding: '12px 14px', cursor: 'pointer', borderBottom: '1px solid #f3f4f6', borderLeft: `3px solid ${isSel ? '#4f46e5' : 'transparent'}`, background: isSel ? '#f0f0ff' : 'transparent' }}>
+                <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                  <div style={{ width: 40, height: 40, borderRadius: 11, background: av.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 800, color: av.color, flexShrink: 0 }}>{av.initials}</div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 700, fontSize: 13, color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.nom}</div>
+                    <div style={{ fontSize: 11, color: '#6b7280', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.email}</div>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 3, alignItems: 'flex-end', flexShrink: 0 }}>
+                    <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 10, background: '#eff6ff', color: '#2563eb' }}>{c.total} pmt{c.total !== 1 ? 's' : ''}</span>
+                    <span style={{ fontSize: 10, fontWeight: 600, padding: '2px 7px', borderRadius: 10, background: '#dcfce7', color: '#166534' }}>{c.montant.toFixed(0)} DT</span>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </div>
 
-      {/* Filters */}
-      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 16 }}>
-        <input
-          placeholder="Rechercher client..."
-          value={search} onChange={(e) => setSearch(e.target.value)}
-          style={{ padding: '7px 12px', borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 13, minWidth: 200 }}
-        />
-        <select value={filtStatut} onChange={(e) => setFiltStatut(e.target.value)}
-          style={{ padding: '7px 12px', borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 13 }}>
-          <option value="">Tous les statuts</option>
-          {Object.entries(STATUT_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-        </select>
-        <input
-          type="month" value={filtMois} onChange={(e) => setFiltMois(e.target.value)}
-          style={{ padding: '7px 12px', borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 13 }}
-        />
-        {(filtStatut || filtMois || search) && (
-          <button onClick={() => { setFiltStatut(''); setFiltMois(''); setSearch(''); }}
-            style={{ padding: '7px 14px', borderRadius: 8, border: '1px solid #e5e7eb', background: '#f3f4f6', fontSize: 13, cursor: 'pointer', color: '#6b7280' }}>
-            Réinitialiser
-          </button>
-        )}
-      </div>
-
-      {/* Table */}
-      <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #e5e7eb', overflow: 'hidden' }}>
-        {loading ? (
-          <div style={{ padding: 40, textAlign: 'center', color: '#9ca3af' }}>Chargement...</div>
-        ) : displayed.length === 0 ? (
-          <div style={{ padding: 40, textAlign: 'center', color: '#9ca3af' }}>Aucun paiement trouvé</div>
+      {/* ── Right: detail ─────────────────────────────────────────── */}
+      <div style={{ flex: 1, background: '#fff', borderRadius: 16, border: '1px solid #e2e8f0', overflow: 'hidden', boxShadow: '0 4px 24px rgba(0,0,0,0.05)' }}>
+        {!selectedClient ? (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', minHeight: 400, gap: 12 }}>
+            <div style={{ fontSize: 48 }}>💰</div>
+            <div style={{ fontSize: 15, fontWeight: 700, color: '#374151' }}>Sélectionner un client</div>
+            <div style={{ fontSize: 13, color: '#9ca3af' }}>Cliquez sur un client pour voir son historique</div>
+          </div>
         ) : (
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-            <thead>
-              <tr style={{ background: '#f9fafb', borderBottom: '1px solid #e5e7eb' }}>
-                {['Client', 'Mois', 'Montant', 'Statut', 'Saisi le', 'Notes'].map((h) => (
-                  <th key={h} style={{ padding: '10px 14px', textAlign: 'left', fontWeight: 600, color: '#374151', fontSize: 12 }}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {displayed.map((r) => (
-                <tr key={r.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
-                  <td style={{ padding: '10px 14px' }}>
-                    <div style={{ fontWeight: 600, color: '#111827' }}>{r.clientNom}</div>
-                    <div style={{ fontSize: 11, color: '#9ca3af' }}>{r.clientEmail}</div>
-                  </td>
-                  <td style={{ padding: '10px 14px', color: '#374151' }}>{fmtMois(r.mois)}</td>
-                  <td style={{ padding: '10px 14px', fontWeight: 600, color: r.statut === 'gratuit' ? '#16a34a' : '#111827' }}>
-                    {r.statut === 'gratuit' ? 'Gratuit' : r.montantDt != null ? `${r.montantDt} DT` : '—'}
-                  </td>
-                  <td style={{ padding: '10px 14px' }}>
-                    <span style={{
-                      fontSize: 11, fontWeight: 600, padding: '3px 10px', borderRadius: 10,
-                      background: (STATUT_COLORS[r.statut] || '#6b7280') + '20',
-                      color: STATUT_COLORS[r.statut] || '#6b7280',
-                    }}>{STATUT_LABELS[r.statut] || r.statut}</span>
-                  </td>
-                  <td style={{ padding: '10px 14px', color: '#6b7280' }}>{r.dateSaisie ? fmtDate(r.dateSaisie) : '—'}</td>
-                  <td style={{ padding: '10px 14px', color: '#9ca3af', fontSize: 12 }}>{r.notes || '—'}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <div style={{ padding: 24 }}>
+            {/* Hero */}
+            {(() => {
+              const av = getAvatar(selectedClient.nom, false);
+              return (
+                <div style={{ background: 'linear-gradient(135deg,#1e1b4b 0%,#3730a3 55%,#4f46e5 100%)', borderRadius: 14, padding: '16px 20px', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 14 }}>
+                  <div style={{ width: 48, height: 48, borderRadius: 13, background: 'rgba(255,255,255,0.18)', border: '2px solid rgba(255,255,255,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 17, fontWeight: 800, color: '#fff', flexShrink: 0 }}>{av.initials}</div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 16, fontWeight: 800, color: '#fff' }}>{selectedClient.nom}</div>
+                    <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', marginTop: 2 }}>{selectedClient.email}</div>
+                  </div>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    {[
+                      { label: 'Paiements', value: String(selectedClient.total) },
+                      { label: 'Encaissé', value: `${selectedClient.montant.toFixed(0)} DT` },
+                    ].map(s => (
+                      <div key={s.label} style={{ background: 'rgba(255,255,255,0.12)', borderRadius: 10, padding: '8px 14px', textAlign: 'center' }}>
+                        <div style={{ fontSize: 15, fontWeight: 800, color: '#fff' }}>{s.value}</div>
+                        <div style={{ fontSize: 9, fontWeight: 600, color: 'rgba(255,255,255,0.7)', textTransform: 'uppercase', letterSpacing: '0.06em', marginTop: 1 }}>{s.label}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* Filters */}
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 16, alignItems: 'center' }}>
+              <span style={{ fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', marginRight: 2 }}>Statut</span>
+              {(['', 'payé', 'en_attente', 'impayé', 'gratuit', 'remisé'] as const).map((v) => {
+                const label = v === '' ? 'Tous' : STATUT_LABELS[v] || v;
+                const color = v ? STATUT_COLORS[v] : '#64748b';
+                const active = filtStatut === v;
+                return (
+                  <button key={v} onClick={() => setFiltStatut(v)}
+                    style={{ padding: '4px 12px', borderRadius: 20, fontSize: 11, fontWeight: 600, cursor: 'pointer', border: `1.5px solid ${active ? color : '#e2e8f0'}`, background: active ? color + '18' : '#fff', color: active ? color : '#94a3b8' }}>
+                    {label}
+                  </button>
+                );
+              })}
+              <input type="month" value={filtMois} onChange={(e) => setFiltMois(e.target.value)}
+                style={{ marginLeft: 'auto', padding: '5px 10px', borderRadius: 8, border: '1.5px solid #e2e8f0', fontSize: 12, color: '#374151' }} />
+              {(filtStatut || filtMois) && (
+                <button onClick={() => { setFiltStatut(''); setFiltMois(''); }}
+                  style={{ padding: '4px 10px', borderRadius: 8, border: '1px solid #fecaca', background: '#fff', color: '#dc2626', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>✕</button>
+              )}
+            </div>
+
+            {/* Payment cards */}
+            {clientRows.length === 0 ? (
+              <div style={{ padding: 40, textAlign: 'center', background: '#f8fafc', borderRadius: 12, border: '1px dashed #e2e8f0' }}>
+                <div style={{ fontSize: 32, marginBottom: 8 }}>📭</div>
+                <div style={{ fontSize: 13, color: '#9ca3af' }}>Aucun paiement trouvé</div>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {clientRows.map((r) => {
+                  const color = STATUT_COLORS[r.statut] || '#6b7280';
+                  const label = STATUT_LABELS[r.statut] || r.statut;
+                  return (
+                    <div key={r.id} style={{ background: '#fff', borderRadius: 12, border: '1px solid #e5e7eb', borderLeft: `4px solid ${color}`, padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 16 }}>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontWeight: 700, fontSize: 14, color: '#0f172a' }}>{fmtMois(r.mois)}</div>
+                        {r.dateSaisie && <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 2 }}>Saisi le {fmtDate(r.dateSaisie)}</div>}
+                        {r.notes && <div style={{ fontSize: 11, color: '#6b7280', marginTop: 2, fontStyle: 'italic' }}>{r.notes}</div>}
+                      </div>
+                      <div style={{ textAlign: 'right' }}>
+                        <div style={{ fontSize: 20, fontWeight: 800, color: r.statut === 'gratuit' ? '#16a34a' : '#0f172a' }}>
+                          {r.statut === 'gratuit' ? 'Gratuit' : r.montantDt != null ? `${r.montantDt} DT` : '—'}
+                        </div>
+                        <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 10, background: color + '18', color }}>{label}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         )}
       </div>
     </div>
