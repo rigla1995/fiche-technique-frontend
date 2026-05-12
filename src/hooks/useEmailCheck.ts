@@ -7,7 +7,7 @@ export function useEmailCheck(email: string, excludeId?: string | number) {
 
   useEffect(() => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!email || !emailRegex.test(email)) { setExists(false); return; }
+    if (!email || !emailRegex.test(email)) { setExists(false); setChecking(false); return; }
 
     setChecking(true);
     const timer = setTimeout(async () => {
