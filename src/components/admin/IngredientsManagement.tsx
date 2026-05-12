@@ -107,7 +107,8 @@ export default function IngredientsManagement() {
     return matchSearch && matchCat && matchDom;
   });
 
-  // Paginate first, then group (so pagination is on flat ingredient count)
+  // Paginate on the flat filtered list (10 ingredients per page)
+  const isPaginated = filtered.length > PER_PAGE;
   const paginated = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE);
   const noCategory = t('client.ingredients_catalog.no_category');
   const groups: Record<string, Ingredient[]> = {};
@@ -186,22 +187,24 @@ export default function IngredientsManagement() {
       ) : (
         <>
         {sortedGroups.map(([cat, items]) => {
-          // Auto-open when filtering/searching
-          const isOpen = search || filterCat || filterDom ? true : openCats.has(cat);
+          // Always open when paginating or filtering — groups are never collapsed with pagination active
+          const isOpen = isPaginated || search || filterCat || filterDom ? true : openCats.has(cat);
           return (
           <div key={cat} style={{ marginBottom: 12 }}>
             <button
               type="button"
-              onClick={() => toggleCat(cat)}
+              onClick={() => { if (!isPaginated) toggleCat(cat); }}
               style={{
                 width: '100%', display: 'flex', alignItems: 'center', gap: 8,
                 padding: '8px 12px', borderRadius: 8, marginBottom: isOpen ? 8 : 0,
-                background: isOpen ? 'var(--primary-light, #eef2ff)' : '#f1f5f9',
-                border: `1px solid ${isOpen ? 'var(--primary)' : 'var(--border)'}`,
-                cursor: 'pointer', textAlign: 'left',
+                background: 'var(--primary-light, #eef2ff)',
+                border: '1px solid var(--primary)',
+                cursor: isPaginated ? 'default' : 'pointer', textAlign: 'left',
               }}
             >
-              <span style={{ fontSize: '0.85rem', transition: 'transform 0.15s', display: 'inline-block', transform: isOpen ? 'rotate(90deg)' : 'rotate(0deg)', color: 'var(--primary)' }}>▶</span>
+              {!isPaginated && (
+                <span style={{ fontSize: '0.85rem', transition: 'transform 0.15s', display: 'inline-block', transform: isOpen ? 'rotate(90deg)' : 'rotate(0deg)', color: 'var(--primary)' }}>▶</span>
+              )}
               <span style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--primary)', flex: 1 }}>🏷️ {cat}</span>
               <span style={{ fontSize: '0.78rem', fontWeight: 400, color: 'var(--text-muted)' }}>{items.length} ingrédient{items.length > 1 ? 's' : ''}</span>
             </button>
@@ -251,7 +254,7 @@ export default function IngredientsManagement() {
           </div>
           );
         })}
-        <Pagination total={filtered.length} page={page} perPage={PER_PAGE} onChange={(p) => { setPage(p); setOpenCats(new Set()); }} />
+        <Pagination total={filtered.length} page={page} perPage={PER_PAGE} onChange={setPage} />
         </>
       )}
 
