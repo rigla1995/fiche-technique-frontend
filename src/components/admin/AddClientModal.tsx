@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import api from '../../api/client';
 import type { DomaineActivite, Promotion } from '../../types';
 import { generateContractPdf } from '../../utils/contractPdf';
+import { MonthPicker } from './MonthPicker';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -310,7 +311,7 @@ export default function AddClientModal({ onClose, onCreated }: Props) {
   // ── Render helpers ──
 
   const promoLabel = (p: PromoForm) => {
-    const applyLbl: Record<string, string> = { onboarding: 'OnBoarding', mensualite: 'Mensualité', supplement_gerant: 'Sup. Gérant', supplement_labo: 'Sup. Labo' };
+    const applyLbl: Record<string, string> = { onboarding: 'OnBoarding', mensualite: 'Mensualité' };
     const typeLbl = p.type === 'free_months' ? 'Gratuit' : p.type === 'percent_off' ? `−${p.discountVal}%` : `${p.fixedVal} DT`;
     const dur = p.months ? ` · ${p.months} mois` : ' · Permanent';
     const start = p.appliesTo !== 'onboarding' && p.moisDebut ? ` · À partir de ${p.moisDebut}` : '';
@@ -431,72 +432,111 @@ export default function AddClientModal({ onClose, onCreated }: Props) {
           )}
 
           {/* ── STEP 3: Promotions ── */}
-          {step === 2 && (
-            <div>
-              <div style={{ fontSize: 13, color: '#374151', marginBottom: 14, lineHeight: 1.5 }}>
-                Optionnel — ajoutez des promotions de lancement. Elles seront appliquées dès la création du compte.
-              </div>
+          {step === 2 && (() => {
+            // Current month as minimum (new client starts today)
+            const nowYM = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
 
-              {promos.length > 0 && (
-                <div style={{ marginBottom: 14 }}>
-                  {promos.map((p, i) => (
-                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 8, padding: '8px 12px', marginBottom: 6 }}>
-                      <span style={{ flex: 1, fontSize: 12, color: '#166534' }}>✓ {promoLabel(p)}</span>
-                      <button onClick={() => removePromo(i)} style={{ background: '#fee2e2', color: '#dc2626', border: '1px solid #fecaca', borderRadius: 5, padding: '2px 8px', fontSize: 11, cursor: 'pointer' }}>✕</button>
-                    </div>
-                  ))}
-                </div>
-              )}
+            // Months blocked by promos already added in this session (mensualite only)
+            const promoBlockedMonths = new Set<string>();
+            promos
+              .filter((p) => ['mensualite', 'les_deux'].includes(p.appliesTo))
+              .forEach((p) => {
+                if (!p.moisDebut) return;
+                const start = new Date(p.moisDebut + '-01T00:00:00');
+                const end = p.months
+                  ? (() => { const d = new Date(start); d.setMonth(d.getMonth() + parseInt(p.months)); d.setDate(d.getDate() - 1); return d; })()
+                  : new Date(new Date().getFullYear() + 3, 11, 31);
+                const cur = new Date(start.getFullYear(), start.getMonth(), 1);
+                while (cur <= end) {
+                  promoBlockedMonths.add(`${cur.getFullYear()}-${String(cur.getMonth() + 1).padStart(2, '0')}`);
+                  cur.setMonth(cur.getMonth() + 1);
+                }
+              });
 
-              {/* Mini promo form */}
-              <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 12, padding: 16 }}>
-                <div style={{ fontSize: 12, fontWeight: 700, color: '#78350f', marginBottom: 12 }}>Ajouter une promotion</div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
-                  <div>
-                    <label style={labelStyle}>Appliqué à</label>
-                    <select value={promoForm.appliesTo} onChange={(e) => setPromoForm((f) => ({ ...f, appliesTo: e.target.value, moisDebut: '' }))} style={selectStyle}>
-                      {parseFloat(montantOnboarding) > 0 && <option value="onboarding">OnBoarding</option>}
-                      <option value="mensualite">Mensualité</option>
-                      <option value="supplement_gerant">Sup. Gérant</option>
-                      <option value="supplement_labo">Sup. Labo</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label style={labelStyle}>Type</label>
-                    <select value={promoForm.type} onChange={(e) => setPromoForm((f) => ({ ...f, type: e.target.value as PromoForm['type'], discountVal: '', fixedVal: '' }))} style={selectStyle}>
-                      <option value="percent_off">% Réduction</option>
-                      <option value="free_months">Gratuit</option>
-                      <option value="fixed_price">Prix fixe</option>
-                    </select>
-                  </div>
-                  {promoForm.appliesTo !== 'onboarding' && (
-                    <div>
-                      <label style={labelStyle}>Mois début</label>
-                      <input type="month" value={promoForm.moisDebut} onChange={(e) => setPromoForm((f) => ({ ...f, moisDebut: e.target.value }))} style={inputStyle} />
-                    </div>
-                  )}
-                  {promoForm.type !== 'free_months' && (
-                    <div>
-                      <label style={labelStyle}>{promoForm.type === 'percent_off' ? 'Réduction (%)' : 'Montant fixe (DT)'}</label>
-                      <input type="number" min="0" value={promoForm.type === 'percent_off' ? promoForm.discountVal : promoForm.fixedVal}
-                        onChange={(e) => setPromoForm((f) => promoForm.type === 'percent_off' ? { ...f, discountVal: e.target.value } : { ...f, fixedVal: e.target.value })}
-                        style={inputStyle} />
-                    </div>
-                  )}
-                  {promoForm.appliesTo !== 'onboarding' && (
-                    <div>
-                      <label style={labelStyle}>Durée (mois, vide = permanent)</label>
-                      <input type="number" min="1" value={promoForm.months} onChange={(e) => setPromoForm((f) => ({ ...f, months: e.target.value }))} placeholder="permanent" style={inputStyle} />
-                    </div>
-                  )}
+            const isMonthDisabled = (ym: string) => {
+              if (ym < nowYM) return true;
+              if (promoBlockedMonths.has(ym)) return true;
+              return false;
+            };
+
+            const hasObPromo = promos.some((p) => p.appliesTo === 'onboarding');
+            const visibleApplies = [
+              (!hasObPromo && parseFloat(montantOnboarding) > 0) ? { value: 'onboarding', label: 'OnBoarding' } : null,
+              { value: 'mensualite', label: 'Mensualité' },
+            ].filter(Boolean) as { value: string; label: string }[];
+
+            return (
+              <div>
+                <div style={{ fontSize: 13, color: '#374151', marginBottom: 14, lineHeight: 1.5 }}>
+                  Optionnel — ajoutez des promotions de lancement. Elles seront appliquées dès la création du compte.
                 </div>
-                {promoError && <div style={{ color: '#dc2626', fontSize: 12, marginBottom: 8 }}>{promoError}</div>}
-                <button onClick={addPromo} style={{ padding: '7px 18px', borderRadius: 8, border: 'none', background: '#d97706', color: '#fff', fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>
-                  + Ajouter
-                </button>
+
+                {promos.length > 0 && (
+                  <div style={{ marginBottom: 14 }}>
+                    {promos.map((p, i) => (
+                      <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 8, padding: '8px 12px', marginBottom: 6 }}>
+                        <span style={{ flex: 1, fontSize: 12, color: '#166534' }}>✓ {promoLabel(p)}</span>
+                        <button onClick={() => removePromo(i)} style={{ background: '#fee2e2', color: '#dc2626', border: '1px solid #fecaca', borderRadius: 5, padding: '2px 8px', fontSize: 11, cursor: 'pointer' }}>✕</button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Mini promo form */}
+                <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 12, padding: 16 }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: '#78350f', marginBottom: 12 }}>Ajouter une promotion</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10, alignItems: 'start' }}>
+                    <div>
+                      <label style={labelStyle}>Appliqué à</label>
+                      <select
+                        value={visibleApplies.find((o) => o.value === promoForm.appliesTo) ? promoForm.appliesTo : visibleApplies[0]?.value || 'mensualite'}
+                        onChange={(e) => setPromoForm((f) => ({ ...f, appliesTo: e.target.value, moisDebut: '' }))}
+                        style={selectStyle}
+                      >
+                        {visibleApplies.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label style={labelStyle}>Type</label>
+                      <select value={promoForm.type} onChange={(e) => setPromoForm((f) => ({ ...f, type: e.target.value as PromoForm['type'], discountVal: '', fixedVal: '' }))} style={selectStyle}>
+                        <option value="percent_off">% Réduction</option>
+                        <option value="free_months">Gratuit</option>
+                        <option value="fixed_price">Prix fixe</option>
+                      </select>
+                    </div>
+                    {promoForm.appliesTo !== 'onboarding' && (
+                      <div>
+                        <label style={labelStyle}>Mois début</label>
+                        <MonthPicker
+                          value={promoForm.moisDebut}
+                          onChange={(ym) => setPromoForm((f) => ({ ...f, moisDebut: ym }))}
+                          isDisabled={isMonthDisabled}
+                        />
+                      </div>
+                    )}
+                    {promoForm.type !== 'free_months' && (
+                      <div>
+                        <label style={labelStyle}>{promoForm.type === 'percent_off' ? 'Réduction (%)' : 'Montant fixe (DT)'}</label>
+                        <input type="number" min="0" value={promoForm.type === 'percent_off' ? promoForm.discountVal : promoForm.fixedVal}
+                          onChange={(e) => setPromoForm((f) => promoForm.type === 'percent_off' ? { ...f, discountVal: e.target.value } : { ...f, fixedVal: e.target.value })}
+                          style={inputStyle} />
+                      </div>
+                    )}
+                    {promoForm.appliesTo !== 'onboarding' && (
+                      <div>
+                        <label style={labelStyle}>Durée (mois, vide = permanent)</label>
+                        <input type="number" min="1" value={promoForm.months} onChange={(e) => setPromoForm((f) => ({ ...f, months: e.target.value }))} placeholder="permanent" style={inputStyle} />
+                      </div>
+                    )}
+                  </div>
+                  {promoError && <div style={{ color: '#dc2626', fontSize: 12, marginBottom: 8 }}>{promoError}</div>}
+                  <button onClick={addPromo} style={{ padding: '7px 18px', borderRadius: 8, border: 'none', background: '#d97706', color: '#fff', fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>
+                    + Ajouter
+                  </button>
+                </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
 
           {/* ── STEP 4: Contrat ── */}
           {step === 3 && (
