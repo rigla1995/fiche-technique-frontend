@@ -669,10 +669,8 @@ export default function AbonnementsManagement() {
         <div style={{ padding: '10px 14px', background: '#f8fafc', borderBottom: '1px solid #e2e8f0', display: 'flex', gap: 5, flexWrap: 'wrap' }}>
           {([
             { value: 'actif', label: 'Actif' },
-            { value: 'read_only', label: 'Lecture' },
+            { value: 'read_only', label: 'Lecture seule' },
             { value: 'bloque', label: 'Bloqué' },
-            { value: 'desactive', label: 'Désactivé' },
-            { value: 'archive', label: 'Archivé' },
           ] as { value: string; label: string }[]).map(({ value, label }) => {
             const isChipActive = filterMode === value;
             const modeColor = MODE_LABELS[value]?.color || '#64748b';
