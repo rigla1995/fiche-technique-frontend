@@ -2,6 +2,71 @@ import { useState, useEffect, useCallback } from 'react';
 import api from '../../api/client';
 import type { Abonnement, Promotion } from '../../types';
 
+const MONTH_ABBR = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc'];
+
+function MonthPicker({
+  value,
+  onChange,
+  isDisabled,
+}: {
+  value: string;
+  onChange: (ym: string) => void;
+  isDisabled: (ym: string) => boolean;
+}) {
+  const [year, setYear] = useState(() => {
+    if (value && value.length >= 7) return parseInt(value.slice(0, 4));
+    return new Date().getFullYear();
+  });
+
+  useEffect(() => {
+    if (value && value.length >= 7) setYear(parseInt(value.slice(0, 4)));
+  }, [value]);
+
+  return (
+    <div style={{ border: '1px solid #fde68a', borderRadius: 8, padding: '6px 8px', background: '#fff' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+        <button type="button" onClick={() => setYear((y) => y - 1)}
+          style={{ width: 22, height: 22, border: '1px solid #e2e8f0', borderRadius: 6, background: '#f8fafc', cursor: 'pointer', fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#374151', padding: 0 }}>
+          ‹
+        </button>
+        <span style={{ fontSize: 12, fontWeight: 700, color: '#374151' }}>{year}</span>
+        <button type="button" onClick={() => setYear((y) => y + 1)}
+          style={{ width: 22, height: 22, border: '1px solid #e2e8f0', borderRadius: 6, background: '#f8fafc', cursor: 'pointer', fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#374151', padding: 0 }}>
+          ›
+        </button>
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 3 }}>
+        {MONTH_ABBR.map((label, i) => {
+          const ym = `${year}-${String(i + 1).padStart(2, '0')}`;
+          const disabled = isDisabled(ym);
+          const selected = value === ym;
+          return (
+            <button
+              type="button"
+              key={ym}
+              disabled={disabled}
+              onClick={() => onChange(ym)}
+              style={{
+                padding: '4px 2px',
+                borderRadius: 5,
+                border: selected ? '2px solid #d97706' : '1.5px solid transparent',
+                background: disabled ? '#f9fafb' : selected ? '#fef3c7' : '#f3f4f6',
+                color: disabled ? '#d1d5db' : selected ? '#92400e' : '#374151',
+                fontSize: 10,
+                fontWeight: selected ? 700 : 500,
+                cursor: disabled ? 'default' : 'pointer',
+                transition: 'background 0.1s',
+              }}
+            >
+              {label}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 const MODE_LABELS: Record<string, { label: string; color: string }> = {
   actif:     { label: 'Actif',        color: '#16a34a' },
   read_only: { label: 'Lecture seule', color: '#d97706' },
@@ -905,7 +970,7 @@ export default function AbonnementsManagement() {
                 </div>
               ) : (
                 <>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginBottom: 10 }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginBottom: 10, alignItems: 'start' }}>
                     {/* Appliqué à */}
                     <div>
                       <label style={{ fontSize: 11, color: '#374151', display: 'block', marginBottom: 3 }}>Appliqué à</label>
@@ -933,22 +998,19 @@ export default function AbonnementsManagement() {
                       <div>
                         <label style={{ fontSize: 11, color: '#374151', display: 'block', marginBottom: 3 }}>
                           Mois début
-                          {promoCurrentMinMois && (
-                            <span style={{ color: '#d97706', marginLeft: 4 }}>
-                              (min {promoCurrentMinMois})
-                            </span>
-                          )}
+                          {!promoMoisDebut && <span style={{ color: '#d97706', marginLeft: 4 }}>(requis)</span>}
                         </label>
-                        <input
-                          type="month"
+                        <MonthPicker
                           value={promoMoisDebut}
-                          onChange={(e) => setPromoMoisDebut(e.target.value)}
-                          min={promoCurrentMinMois}
-                          style={{
-                            width: '100%', padding: '5px 8px', borderRadius: 6, fontSize: 12, boxSizing: 'border-box',
-                            border: `1px solid ${(promoMoisIsPaid || promoMoisIsBlocked) ? '#fca5a5' : '#fde68a'}`,
-                            background: (promoMoisIsPaid || promoMoisIsBlocked) ? '#fff1f2' : '#fff',
-                          }} />
+                          onChange={setPromoMoisDebut}
+                          isDisabled={(ym) => {
+                            const minMois = selected?.dateDebut?.slice(0, 7);
+                            if (minMois && ym < minMois) return true;
+                            if (paidMonthSet.has(ym)) return true;
+                            if (promoBlockedMonths.has(ym)) return true;
+                            return false;
+                          }}
+                        />
                       </div>
                     )}
                   </div>
