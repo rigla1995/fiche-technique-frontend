@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
 import type { Entreprise, Activite } from '../../types';
+import { useEmailCheck } from '../../hooks/useEmailCheck';
 
 type ActiviteForm = { nom: string; adresse: string; telephone: string; email: string };
 const emptyForm = (): ActiviteForm => ({ nom: '', adresse: '', telephone: '', email: '' });
@@ -12,6 +13,7 @@ export default function EntrepriseProfile() {
   // Company profile state
   const [profile, setProfile] = useState<Entreprise | null>(null);
   const [profileForm, setProfileForm] = useState({ nom: '', email: '', telephone: '', adresse: '' });
+  const { emailExists: profileEmailExists, emailChecking: profileEmailChecking } = useEmailCheck(profileForm.email, profile?.id);
   const [profileLoading, setProfileLoading] = useState(true);
   const [profileSaving, setProfileSaving] = useState(false);
   const [profileMsg, setProfileMsg] = useState('');
@@ -156,7 +158,10 @@ export default function EntrepriseProfile() {
                 value={profileForm.email}
                 onChange={(e) => setProfileForm((p) => ({ ...p, email: e.target.value }))}
                 required
+                style={profileEmailExists ? { borderColor: '#fca5a5', background: '#fff5f5' } : undefined}
               />
+              {profileEmailChecking && <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 3 }}>Vérification…</div>}
+              {!profileEmailChecking && profileEmailExists && <div style={{ fontSize: 11, color: '#dc2626', marginTop: 3 }}>Cet email est déjà utilisé.</div>}
             </div>
             <div className="form-field">
               <label>{t('client.entreprise.telephone')}</label>

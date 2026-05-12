@@ -3,6 +3,7 @@ import api from '../../api/client';
 import type { DomaineActivite, Promotion } from '../../types';
 import { generateContractPdf } from '../../utils/contractPdf';
 import { MonthPicker } from './MonthPicker';
+import { useEmailCheck } from '../../hooks/useEmailCheck';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -301,10 +302,13 @@ export default function AddClientModal({ onClose, onCreated }: Props) {
 
   // ── Step validation ──
 
+  const { emailExists, emailChecking } = useEmailCheck(email);
   const telValid = TUNISIAN_PHONE.test(tel.replace(/\s/g, ''));
   const step1Valid =
     nom.trim().length > 0 &&
     /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) &&
+    !emailExists &&
+    !emailChecking &&
     telValid &&
     selectedDomaines.length > 0;
   const step2Valid = nbActivites >= 1 && montantOnboarding !== '';
@@ -314,6 +318,7 @@ export default function AddClientModal({ onClose, onCreated }: Props) {
     if (step === 0) {
       if (!nom.trim()) { setError('Le nom est obligatoire.'); return; }
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { setError('Email invalide.'); return; }
+      if (emailExists) { setError('Cet email est déjà utilisé.'); return; }
       if (!telValid) { setError('Téléphone invalide — format tunisien requis (ex: 20 123 456 ou +216 20 123 456).'); return; }
       if (selectedDomaines.length === 0) { setError('Veuillez sélectionner au moins un domaine d\'activité.'); return; }
     }
@@ -400,7 +405,21 @@ export default function AddClientModal({ onClose, onCreated }: Props) {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                 <div>
                   <label style={labelStyle}>Email *</label>
-                  <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="email@exemple.com" style={inputStyle} />
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="email@exemple.com"
+                    style={{
+                      ...inputStyle,
+                      borderColor: emailExists ? '#fca5a5' : inputStyle.borderColor,
+                      background: emailExists ? '#fff5f5' : inputStyle.background,
+                    }}
+                  />
+                  {emailChecking && <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 3 }}>Vérification…</div>}
+                  {!emailChecking && emailExists && (
+                    <div style={{ fontSize: 11, color: '#dc2626', marginTop: 3 }}>Cet email est déjà utilisé.</div>
+                  )}
                 </div>
                 <div>
                   <label style={labelStyle}>Téléphone * <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0, color: '#94a3b8' }}>(format tunisien)</span></label>

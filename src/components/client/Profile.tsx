@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
+import { useEmailCheck } from '../../hooks/useEmailCheck';
 
 interface ProfileForm {
   name: string;
@@ -18,6 +19,7 @@ const TUNISIAN_PHONE = /^(\+216[\s-]?)?[2579]\d{7}$/;
 export default function Profile() {
   const { t } = useTranslation();
   const { user, updateUser, advanceOnboarding } = useAuth();
+  const { emailExists: profileEmailExists, emailChecking: profileEmailChecking } = useEmailCheck(form.email, user?.id);
   const navigate = useNavigate();
   const [upgrading, setUpgrading] = useState(false);
   const [upgradeMsg, setUpgradeMsg] = useState('');
@@ -49,6 +51,7 @@ export default function Profile() {
     if (!form.name.trim()) errs.name = t('validation.name_required');
     if (!form.email.trim()) errs.email = t('validation.email_required');
     else if (!/\S+@\S+\.\S+/.test(form.email)) errs.email = t('validation.email_invalid');
+    else if (profileEmailExists) errs.email = 'Cet email est déjà utilisé.';
     if (form.phone && !TUNISIAN_PHONE.test(form.phone.replace(/\s/g, ''))) {
       errs.phone = t('validation.phone_invalid');
     }
@@ -171,7 +174,9 @@ export default function Profile() {
               <div>
                 <label style={lbl}>{t('common.email')} *</label>
                 <input type="email" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
-                  style={{ ...inp, borderColor: errors.email ? '#ef4444' : '#e2e8f0' }} />
+                  style={{ ...inp, borderColor: errors.email || profileEmailExists ? '#fca5a5' : '#e2e8f0', background: profileEmailExists ? '#fff5f5' : '#fff' }} />
+                {profileEmailChecking && <span style={{ fontSize: 11, color: '#94a3b8', marginTop: 3, display: 'block' }}>Vérification…</span>}
+                {!profileEmailChecking && profileEmailExists && <span style={{ fontSize: 11, color: '#dc2626', marginTop: 3, display: 'block' }}>Cet email est déjà utilisé.</span>}
                 {errors.email && <span style={err}>{errors.email}</span>}
               </div>
               <div>

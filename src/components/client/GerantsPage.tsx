@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import api from '../../api/client';
 import type { Gerant, Activite, Labo, AbonnementConfig } from '../../types';
 import { useAuth } from '../../context/AuthContext';
+import { useEmailCheck } from '../../hooks/useEmailCheck';
 
 interface GerantForm {
   nom: string;
@@ -29,6 +30,7 @@ export default function GerantsPage() {
   const [resendingId, setResendingId] = useState<number | null>(null);
   const [error, setError] = useState('');
   const [abonnementConfig, setAbonnementConfig] = useState<AbonnementConfig | null>(null);
+  const { emailExists: gerantEmailExists, emailChecking: gerantEmailChecking } = useEmailCheck(form.email);
 
   const freeLimit = isEntreprise ? 3 : 1;
   const freeCount = gerants.filter((g) => g.estGratuit).length;
@@ -57,6 +59,7 @@ export default function GerantsPage() {
 
   const submitForm = async () => {
     if (!form.nom || !form.telephone || !form.email) { setError('Nom, téléphone et email requis'); return; }
+    if (gerantEmailExists) { setError('Cet email est déjà utilisé.'); return; }
     setSaving(true);
     setError('');
     try {
@@ -209,7 +212,15 @@ export default function GerantsPage() {
               </div>
               <div style={{ gridColumn: '1 / -1' }}>
                 <label style={lbl}>Email *</label>
-                <input type="email" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} style={inp} placeholder="email@exemple.com" />
+                <input
+                  type="email"
+                  value={form.email}
+                  onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
+                  placeholder="email@exemple.com"
+                  style={{ ...inp, borderColor: gerantEmailExists ? '#fca5a5' : (inp as React.CSSProperties).borderColor, background: gerantEmailExists ? '#fff5f5' : (inp as React.CSSProperties).background }}
+                />
+                {gerantEmailChecking && <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 3 }}>Vérification…</div>}
+                {!gerantEmailChecking && gerantEmailExists && <div style={{ fontSize: 11, color: '#dc2626', marginTop: 3 }}>Cet email est déjà utilisé.</div>}
               </div>
               {isEntreprise && (
                 <>
