@@ -78,7 +78,8 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     if (!user) return;
 
     const token = localStorage.getItem('token') || sessionStorage.getItem('token') || '';
-    const url = `/api/notifications/stream`;
+    const baseUrl = (import.meta.env.VITE_API_URL as string | undefined) || 'http://localhost:3000';
+    const url = `${baseUrl}/api/notifications/stream`;
 
     const connect = () => {
       if (esRef.current) esRef.current.close();
