@@ -625,7 +625,7 @@ export default function AddClientModal({ onClose, onCreated }: Props) {
                     const start = p.appliesTo !== 'onboarding' && p.moisDebut ? ` · À partir de ${p.moisDebut}` : '';
                     // Compute effective amount
                     const base = p.appliesTo === 'onboarding'
-                      ? (preview?.onboardingPrice ?? parseFloat(montantOnboarding) || 0)
+                      ? (preview?.onboardingPrice ?? parseFloat(montantOnboarding) ?? 0)
                       : (preview?.totalMensuel ?? 0);
                     const effectif = applyPromoToBase(base, p);
                     const suffix = p.appliesTo === 'onboarding' ? '' : '/mois';
