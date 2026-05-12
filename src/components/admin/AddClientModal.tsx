@@ -613,14 +613,36 @@ export default function AddClientModal({ onClose, onCreated }: Props) {
                 </div>
               </div>
 
-              <PricingCard preview={preview} />
+              <PricingCard preview={preview} promos={promos} />
 
               {promos.length > 0 && (
                 <div style={{ marginTop: 10, background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 10, padding: '10px 14px' }}>
                   <div style={{ fontSize: 11, fontWeight: 700, color: '#166534', marginBottom: 6 }}>🏷️ Promotions</div>
-                  {promos.map((p, i) => (
-                    <div key={i} style={{ fontSize: 12, color: '#15803d', marginBottom: 3 }}>• {promoLabel(p)}</div>
-                  ))}
+                  {promos.map((p, i) => {
+                    const applyLbl: Record<string, string> = { onboarding: 'OnBoarding', mensualite: 'Mensualité' };
+                    const typeLbl = p.type === 'free_months' ? 'Gratuit' : p.type === 'percent_off' ? `−${p.discountVal}%` : `${p.fixedVal} DT`;
+                    const dur = p.months ? `${p.months} mois` : 'Permanent';
+                    const start = p.appliesTo !== 'onboarding' && p.moisDebut ? ` · À partir de ${p.moisDebut}` : '';
+                    // Compute effective amount
+                    const base = p.appliesTo === 'onboarding'
+                      ? (preview?.onboardingPrice ?? parseFloat(montantOnboarding) || 0)
+                      : (preview?.totalMensuel ?? 0);
+                    const effectif = applyPromoToBase(base, p);
+                    const suffix = p.appliesTo === 'onboarding' ? '' : '/mois';
+                    return (
+                      <div key={i} style={{ display: 'flex', alignItems: 'baseline', gap: 6, fontSize: 12, color: '#15803d', marginBottom: 6, flexWrap: 'wrap' }}>
+                        <span style={{ fontWeight: 600 }}>{applyLbl[p.appliesTo] || p.appliesTo}</span>
+                        <span style={{ color: '#6b7280' }}>—</span>
+                        <span style={{ fontWeight: 700, color: '#d97706' }}>{typeLbl}</span>
+                        <span style={{ color: '#6b7280' }}>·</span>
+                        <span style={{ color: '#6b7280' }}>{dur}{start}</span>
+                        <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'baseline', gap: 5 }}>
+                          <span style={{ fontSize: 11, color: '#94a3b8', textDecoration: 'line-through' }}>{fmt(base)}{suffix}</span>
+                          <span style={{ fontSize: 13, fontWeight: 800, color: effectif === 0 ? '#16a34a' : '#166534' }}>→ {fmt(effectif)}{suffix}</span>
+                        </span>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
 
