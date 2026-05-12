@@ -17,16 +17,6 @@ const STATUT_INFO: Record<string, { label: string; bg: string; text: string; bor
 
 const fmtDate = (d: string | null) => (d ? new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' }) : '—');
 
-interface DomaineItem { id: number; nom: string }
-interface CatItem { id: number; name: string }
-interface UniteItem { id: number; name: string }
-interface AdminEdits { domaineId: string; categorieNom: string; uniteNom: string; notes: string }
-interface SupplPricing {
-  prixActiviteSup: number; prixLaboSup: number; prixGerantSup: number;
-  currentMensuel: number; activiteCost: number; laboCost: number; gerantCost: number;
-  nbActivites: number; nbLabos: number; nbGerants: number;
-}
-
 function DemandeDetails({ d }: { d: SupportDemande }) {
   if (d.type === 'ingredient_manquant') {
     return (
@@ -58,6 +48,8 @@ function getAvatar(nom: string, selected: boolean) {
   return { initials, bg: selected ? '#e0e7ff' : p[0], color: selected ? '#4f46e5' : p[1] };
 }
 
+const PAGE_SIZE = 5;
+
 export default function AdminSupportPage() {
   const { clearAllFromDB } = useNotifications();
   const [demandes, setDemandes] = useState<SupportDemande[]>([]);
@@ -66,14 +58,7 @@ export default function AdminSupportPage() {
   const [search, setSearch] = useState('');
   const [filterStatut, setFilterStatut] = useState('en_attente');
   const [filterType, setFilterType] = useState('');
-  const [traiting, setTraiting] = useState<Record<number, boolean>>({});
-  const [expanded, setExpanded] = useState<Record<number, boolean>>({});
-  const [viewDetails, setViewDetails] = useState<Record<number, boolean>>({});
-  const [edits, setEdits] = useState<Record<number, AdminEdits>>({});
-  const [supplPricings, setSupplPricings] = useState<Record<number, SupplPricing>>({});
-  const [domaines, setDomaines] = useState<DomaineItem[]>([]);
-  const [categories, setCategories] = useState<CatItem[]>([]);
-  const [unites, setUnites] = useState<UniteItem[]>([]);
+  const [page, setPage] = useState(1);
 
   const fetchDemandes = useCallback(async () => {
     setLoading(true);
@@ -86,13 +71,10 @@ export default function AdminSupportPage() {
   }, []);
 
   useEffect(() => { fetchDemandes(); clearAllFromDB(); }, [fetchDemandes, clearAllFromDB]);
-  useEffect(() => {
-    api.get('/api/domaines').then(({ data }) => setDomaines(data)).catch(() => {});
-    api.get('/api/categories').then(({ data }) => setCategories(data)).catch(() => {});
-    api.get('/api/unites?all=true').then(({ data }) => setUnites(data)).catch(() => {});
-  }, []);
 
-  // Unique clients
+  // Reset page when client or filters change
+  useEffect(() => { setPage(1); }, [selectedClientId, filterStatut, filterType]);
+
   const clients = useMemo(() => {
     const map = new Map<number, { id: number; nom: string; email: string; total: number; pending: number }>();
     for (const d of demandes) {
@@ -122,48 +104,9 @@ export default function AdminSupportPage() {
     });
   }, [demandes, selectedClientId, filterStatut, filterType]);
 
+  const totalPages = Math.max(1, Math.ceil(clientDemandes.length / PAGE_SIZE));
+  const pagedDemandes = clientDemandes.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
   const pendingTotal = demandes.filter(d => d.statut === 'en_attente').length;
-
-  const toggleExpand = async (d: SupportDemande) => {
-    const next = !expanded[d.id];
-    setExpanded(e => ({ ...e, [d.id]: next }));
-    if (next && d.type === 'supplement' && !supplPricings[d.id]) {
-      try {
-        const res = await api.get(`/api/abonnements/client/${d.clientId}/supplement-pricing`);
-        setSupplPricings(p => ({ ...p, [d.id]: res.data }));
-      } catch { /* ignore */ }
-    }
-  };
-
-  const getEdits = (d: SupportDemande): AdminEdits => edits[d.id] || {
-    domaineId: String(d.domaineId || ''),
-    categorieNom: d.categorieNom || '',
-    uniteNom: d.uniteNom || '',
-    notes: '',
-  };
-
-  const setEdit = (id: number, key: keyof AdminEdits, val: string) =>
-    setEdits(e => ({ ...e, [id]: { ...getEdits({ id } as SupportDemande), ...e[id], [key]: val } }));
-
-  const traiter = async (d: SupportDemande, statut: 'validée' | 'refusée') => {
-    setTraiting(t => ({ ...t, [d.id]: true }));
-    const edit = getEdits(d);
-    try {
-      const body: Record<string, unknown> = { statut, notesAdmin: edit.notes || undefined };
-      if (d.type === 'ingredient_manquant') {
-        body.domaineId = edit.domaineId ? Number(edit.domaineId) : null;
-        body.categorieNom = edit.categorieNom || undefined;
-        body.uniteNom = edit.uniteNom || undefined;
-      }
-      const res = await api.put(`/api/abonnements/admin/support/${d.id}`, body);
-      setDemandes(prev => prev.map(x => x.id === d.id ? res.data : x));
-      setExpanded(e => ({ ...e, [d.id]: false }));
-    } catch (e: unknown) {
-      alert((e as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Erreur');
-    } finally {
-      setTraiting(t => ({ ...t, [d.id]: false }));
-    }
-  };
 
   return (
     <div style={{ display: 'flex', gap: 20, minHeight: 600 }}>
@@ -275,13 +218,13 @@ export default function AdminSupportPage() {
                 );
               })}
               <span style={{ fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', marginLeft: 8, marginRight: 2 }}>Type</span>
-              {([['', 'Tous'], ['ingredient_manquant', '🥕'], ['supplement', '➕'], ['aide', '💬']] as [string, string][]).map(([v, label]) => {
+              {([['', 'Tous'], ['ingredient_manquant', ''], ['supplement', ''], ['aide', '']] as [string, string][]).map(([v]) => {
                 const info = v ? TYPE_INFO[v] : null;
                 const active = filterType === v;
                 return (
                   <button key={v} onClick={() => setFilterType(v)}
                     style={{ padding: '4px 12px', borderRadius: 20, fontSize: 11, fontWeight: 600, cursor: 'pointer', border: `1.5px solid ${active ? (info?.color || '#64748b') : '#e2e8f0'}`, background: active ? (info?.bg || '#f1f5f9') : '#fff', color: active ? (info?.color || '#64748b') : '#94a3b8' }}>
-                    {info ? `${info.icon} ${info.label}` : label}
+                    {info ? `${info.icon} ${info.label}` : 'Tous'}
                   </button>
                 );
               })}
@@ -298,165 +241,40 @@ export default function AdminSupportPage() {
                 <div style={{ fontSize: 13, color: '#9ca3af' }}>Aucune demande trouvée</div>
               </div>
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {clientDemandes.map((d) => {
-                  const s = STATUT_INFO[d.statut] || STATUT_INFO.en_attente;
-                  const t = TYPE_INFO[d.type] || { label: d.type, icon: '📝', color: '#374151', bg: '#f3f4f6' };
-                  const isPending = d.statut === 'en_attente';
-                  const isAide = d.type === 'aide';
-                  const isExpanded = expanded[d.id] || false;
-                  const edit = getEdits(d);
-                  const sp = supplPricings[d.id];
-                  return (
-                    <div key={d.id} style={{ background: '#fff', borderRadius: 14, border: '1px solid #e5e7eb', borderLeft: `4px solid ${s.border}`, boxShadow: '0 1px 4px rgba(0,0,0,0.04)', overflow: 'hidden' }}>
-                      <div style={{ padding: '16px 20px' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 6 }}>
-                              <span style={{ fontSize: '0.75rem', fontWeight: 700, padding: '3px 10px', borderRadius: 20, background: t.bg, color: t.color }}>{t.icon} {t.label}</span>
-                              <span style={{ fontSize: '0.75rem', fontWeight: 700, padding: '3px 10px', borderRadius: 20, background: s.bg, color: s.text }}>{s.label}</span>
-                              <span style={{ fontSize: '0.72rem', color: '#94a3b8', marginLeft: 'auto' }}>{fmtDate(d.createdAt)}</span>
-                            </div>
-                            <DemandeDetails d={d} />
-                            {d.notesAdmin && (
-                              <div style={{ marginTop: 10, background: '#f8fafc', border: '1px solid #e5e7eb', borderRadius: 8, padding: '8px 12px', borderLeft: '3px solid #4338ca' }}>
-                                <div style={{ fontSize: '0.7rem', fontWeight: 700, color: '#4338ca', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 3 }}>Note admin</div>
-                                <div style={{ fontSize: '0.82rem', color: '#374151' }}>{d.notesAdmin}</div>
-                              </div>
-                            )}
-                            {d.traiteLe && <div style={{ marginTop: 6, fontSize: '0.72rem', color: '#94a3b8' }}>Traité le {fmtDate(d.traiteLe)}{d.traiteParNom ? ` par ${d.traiteParNom}` : ''}</div>}
-                          </div>
-                          {isPending && !isAide && (
-                            <button onClick={() => toggleExpand(d)}
-                              style={{ padding: '7px 16px', borderRadius: 8, border: `1.5px solid ${isExpanded ? '#e2e8f0' : '#4338ca'}`, background: isExpanded ? '#f8fafc' : '#f5f3ff', color: isExpanded ? '#6b7280' : '#4338ca', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}>
-                              {isExpanded ? 'Annuler' : '✏️ Traiter'}
-                            </button>
-                          )}
-                          {!isPending && (
-                            <button onClick={() => setViewDetails(v => ({ ...v, [d.id]: !v[d.id] }))}
-                              style={{ padding: '7px 16px', borderRadius: 8, border: '1.5px solid #e2e8f0', background: '#f8fafc', color: '#374151', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', flexShrink: 0 }}>
-                              {viewDetails[d.id] ? 'Masquer' : '👁 Détails'}
-                            </button>
-                          )}
+              <>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  {pagedDemandes.map((d) => {
+                    const s = STATUT_INFO[d.statut] || STATUT_INFO.en_attente;
+                    const t = TYPE_INFO[d.type] || { label: d.type, icon: '📝', color: '#374151', bg: '#f3f4f6' };
+                    return (
+                      <div key={d.id} style={{ background: '#fff', borderRadius: 14, border: '1px solid #e5e7eb', borderLeft: `4px solid ${s.border}`, boxShadow: '0 1px 4px rgba(0,0,0,0.04)', padding: '16px 20px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 6 }}>
+                          <span style={{ fontSize: '0.75rem', fontWeight: 700, padding: '3px 10px', borderRadius: 20, background: t.bg, color: t.color }}>{t.icon} {t.label}</span>
+                          <span style={{ fontSize: '0.75rem', fontWeight: 700, padding: '3px 10px', borderRadius: 20, background: s.bg, color: s.text }}>{s.label}</span>
+                          <span style={{ fontSize: '0.72rem', color: '#94a3b8', marginLeft: 'auto' }}>{fmtDate(d.createdAt)}</span>
                         </div>
+                        <DemandeDetails d={d} />
+                        {d.notesAdmin && (
+                          <div style={{ marginTop: 10, background: '#f8fafc', border: '1px solid #e5e7eb', borderRadius: 8, padding: '8px 12px', borderLeft: '3px solid #4338ca' }}>
+                            <div style={{ fontSize: '0.7rem', fontWeight: 700, color: '#4338ca', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 3 }}>Note admin</div>
+                            <div style={{ fontSize: '0.82rem', color: '#374151' }}>{d.notesAdmin}</div>
+                          </div>
+                        )}
+                        {d.traiteLe && <div style={{ marginTop: 6, fontSize: '0.72rem', color: '#94a3b8' }}>Traité le {fmtDate(d.traiteLe)}{d.traiteParNom ? ` par ${d.traiteParNom}` : ''}</div>}
                       </div>
-
-                      {/* Treatment: ingredient */}
-                      {isPending && !isAide && isExpanded && d.type === 'ingredient_manquant' && (
-                        <div style={{ borderTop: '1px solid #f3f4f6', padding: '16px 20px', background: '#fafafa' }}>
-                          <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#374151', marginBottom: 12, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Vérifier / modifier avant validation</div>
-                          <div style={{ marginBottom: 12 }}>
-                            <label style={lbl}>Nom de l'ingrédient (non modifiable)</label>
-                            <div style={{ padding: '9px 12px', borderRadius: 8, border: '1.5px solid #e2e8f0', fontSize: '0.85rem', color: '#6b7280', background: '#f1f5f9', fontWeight: 700 }}>{d.nomIngredient}</div>
-                          </div>
-                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 12 }}>
-                            <div>
-                              <label style={lbl}>Domaine</label>
-                              <select value={edit.domaineId} onChange={(e) => setEdit(d.id, 'domaineId', e.target.value)} style={inp}>
-                                <option value="">— Aucun —</option>
-                                {domaines.map(x => <option key={x.id} value={x.id}>{x.nom}</option>)}
-                              </select>
-                            </div>
-                            <div>
-                              <label style={lbl}>Catégorie</label>
-                              <select value={edit.categorieNom} onChange={(e) => setEdit(d.id, 'categorieNom', e.target.value)} style={inp}>
-                                <option value="">— Aucune —</option>
-                                {categories.map(x => <option key={x.id} value={x.name}>{x.name}</option>)}
-                              </select>
-                            </div>
-                            <div>
-                              <label style={lbl}>Unité</label>
-                              <select value={edit.uniteNom} onChange={(e) => setEdit(d.id, 'uniteNom', e.target.value)} style={inp}>
-                                <option value="">— Aucune —</option>
-                                {unites.map(x => <option key={x.id} value={x.name}>{x.name}</option>)}
-                              </select>
-                            </div>
-                          </div>
-                          <label style={lbl}>Note pour le client (optionnel)</label>
-                          <textarea rows={2} value={edit.notes} onChange={(e) => setEdit(d.id, 'notes', e.target.value)}
-                            placeholder="Message visible par le client…" style={{ ...inp, resize: 'vertical', fontFamily: 'inherit', marginBottom: 12 }} />
-                          <div style={{ display: 'flex', gap: 10 }}>
-                            <button onClick={() => traiter(d, 'validée')} disabled={traiting[d.id]}
-                              style={{ flex: 1, padding: '9px', background: traiting[d.id] ? '#e5e7eb' : 'linear-gradient(135deg,#15803d,#16a34a)', color: traiting[d.id] ? '#9ca3af' : '#fff', border: 'none', borderRadius: 9, fontWeight: 700, fontSize: '0.85rem', cursor: traiting[d.id] ? 'default' : 'pointer' }}>
-                              {traiting[d.id] ? '…' : '✅ Valider et ajouter au catalogue'}
-                            </button>
-                            <button onClick={() => traiter(d, 'refusée')} disabled={traiting[d.id]}
-                              style={{ flex: 1, padding: '9px', background: traiting[d.id] ? '#e5e7eb' : 'linear-gradient(135deg,#b91c1c,#dc2626)', color: traiting[d.id] ? '#9ca3af' : '#fff', border: 'none', borderRadius: 9, fontWeight: 700, fontSize: '0.85rem', cursor: traiting[d.id] ? 'default' : 'pointer' }}>
-                              {traiting[d.id] ? '…' : '❌ Refuser'}
-                            </button>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Treatment: supplement */}
-                      {isPending && !isAide && isExpanded && d.type === 'supplement' && (() => {
-                        const nbA = (sp?.nbActivites ?? 0) + (d.nbActivitesSupp ?? 0);
-                        const nbL = (sp?.nbLabos ?? 0) + (d.nbLabosSupp ?? 0);
-                        const nbG = (sp?.nbGerants ?? 0) + (d.nbGerantsSupp ?? 0);
-                        const fmtDt = (n: number | undefined) => n != null ? `${Number(n).toFixed(2)} DT` : '—';
-                        const newActiviteCost = sp ? (nbA === 1 ? sp.prixActiviteSup : nbA * sp.prixActiviteSup) : null;
-                        const newLaboCost = sp ? nbL * sp.prixLaboSup : null;
-                        const newGerantCost = sp ? nbG * sp.prixGerantSup : null;
-                        const newMensuel = sp && newActiviteCost != null ? newActiviteCost + (newLaboCost ?? 0) + (newGerantCost ?? 0) : null;
-                        return (
-                          <div style={{ borderTop: '1px solid #f3f4f6', padding: '16px 20px', background: '#fafafa' }}>
-                            <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 10, padding: '14px 18px', marginBottom: 14 }}>
-                              <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#1e40af', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 10 }}>Capacité demandée</div>
-                              <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-                                {(d.nbActivitesSupp ?? 0) > 0 && <div style={{ background: '#fff', border: '1px solid #bfdbfe', borderRadius: 8, padding: '8px 16px', textAlign: 'center' }}><div style={{ fontSize: '1.4rem', fontWeight: 900, color: '#1e40af' }}>+{d.nbActivitesSupp}</div><div style={{ fontSize: '0.72rem', color: '#1e40af', fontWeight: 600 }}>Activité{(d.nbActivitesSupp ?? 0) > 1 ? 's' : ''}</div></div>}
-                                {(d.nbLabosSupp ?? 0) > 0 && <div style={{ background: '#fff', border: '1px solid #bfdbfe', borderRadius: 8, padding: '8px 16px', textAlign: 'center' }}><div style={{ fontSize: '1.4rem', fontWeight: 900, color: '#1e40af' }}>+{d.nbLabosSupp}</div><div style={{ fontSize: '0.72rem', color: '#1e40af', fontWeight: 600 }}>Labo{(d.nbLabosSupp ?? 0) > 1 ? 's' : ''}</div></div>}
-                                {(d.nbGerantsSupp ?? 0) > 0 && <div style={{ background: '#fff', border: '1px solid #bfdbfe', borderRadius: 8, padding: '8px 16px', textAlign: 'center' }}><div style={{ fontSize: '1.4rem', fontWeight: 900, color: '#1e40af' }}>+{d.nbGerantsSupp}</div><div style={{ fontSize: '0.72rem', color: '#1e40af', fontWeight: 600 }}>Gérant{(d.nbGerantsSupp ?? 0) > 1 ? 's' : ''}</div></div>}
-                              </div>
-                            </div>
-                            {sp ? (
-                              <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 10, padding: '14px 18px', marginBottom: 14 }}>
-                                <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 10 }}>Nouvelle facturation</div>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', color: '#374151', marginBottom: 6 }}>
-                                  <span>{nbA} activité{nbA > 1 ? 's' : ''} <span style={{ color: '#9ca3af' }}>(avant: {sp.nbActivites})</span></span>
-                                  <span style={{ fontWeight: 700 }}>{fmtDt(newActiviteCost ?? undefined)}</span>
-                                </div>
-                                {nbL > 0 && <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', color: '#374151', marginBottom: 6 }}><span>{nbL} labo{nbL > 1 ? 's' : ''} × {sp.prixLaboSup} DT</span><span style={{ fontWeight: 700 }}>{fmtDt(newLaboCost ?? undefined)}</span></div>}
-                                {nbG > 0 && <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', color: '#374151', marginBottom: 6 }}><span>{nbG} gérant{nbG > 1 ? 's' : ''} × {sp.prixGerantSup} DT</span><span style={{ fontWeight: 700 }}>{fmtDt(newGerantCost ?? undefined)}</span></div>}
-                                <div style={{ borderTop: '1px solid #e5e7eb', marginTop: 8, paddingTop: 8, display: 'flex', justifyContent: 'space-between' }}>
-                                  <span style={{ fontSize: '0.9rem', fontWeight: 800, color: '#1e40af' }}>Nouveau mensuel</span>
-                                  <span style={{ fontSize: '1rem', fontWeight: 900, color: '#1e40af' }}>{fmtDt(newMensuel ?? undefined)}/mois</span>
-                                </div>
-                              </div>
-                            ) : <div style={{ fontSize: '0.78rem', color: '#9ca3af', marginBottom: 14 }}>Chargement du tarif…</div>}
-                            <label style={lbl}>Note / avenant pour le client (optionnel)</label>
-                            <textarea rows={2} value={edit.notes} onChange={(e) => setEdit(d.id, 'notes', e.target.value)}
-                              placeholder="Ex: Avenant n°X signé le …" style={{ ...inp, resize: 'vertical', fontFamily: 'inherit', marginBottom: 12 }} />
-                            <div style={{ display: 'flex', gap: 10 }}>
-                              <button onClick={() => traiter(d, 'validée')} disabled={traiting[d.id]}
-                                style={{ flex: 1, padding: '9px', background: traiting[d.id] ? '#e5e7eb' : 'linear-gradient(135deg,#15803d,#16a34a)', color: traiting[d.id] ? '#9ca3af' : '#fff', border: 'none', borderRadius: 9, fontWeight: 700, fontSize: '0.85rem', cursor: traiting[d.id] ? 'default' : 'pointer' }}>
-                                {traiting[d.id] ? '…' : '✅ Valider et mettre à jour la config'}
-                              </button>
-                              <button onClick={() => traiter(d, 'refusée')} disabled={traiting[d.id]}
-                                style={{ flex: 1, padding: '9px', background: traiting[d.id] ? '#e5e7eb' : 'linear-gradient(135deg,#b91c1c,#dc2626)', color: traiting[d.id] ? '#9ca3af' : '#fff', border: 'none', borderRadius: 9, fontWeight: 700, fontSize: '0.85rem', cursor: traiting[d.id] ? 'default' : 'pointer' }}>
-                                {traiting[d.id] ? '…' : '❌ Refuser'}
-                              </button>
-                            </div>
-                          </div>
-                        );
-                      })()}
-
-                      {/* Processed details */}
-                      {!isPending && viewDetails[d.id] && (
-                        <div style={{ borderTop: '1px solid #f3f4f6', padding: '14px 20px', background: '#fafafa' }}>
-                          <DemandeDetails d={d} />
-                          {d.notesAdmin && (
-                            <div style={{ marginTop: 10, background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 8, padding: '10px 14px' }}>
-                              <div style={{ fontSize: '0.7rem', fontWeight: 700, color: '#1e40af', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 3 }}>Note admin</div>
-                              <div style={{ fontSize: '0.82rem', color: '#1e3a5f' }}>{d.notesAdmin}</div>
-                            </div>
-                          )}
-                          {d.traiteLe && <div style={{ marginTop: 8, fontSize: '0.72rem', color: '#94a3b8' }}>Traité le {fmtDate(d.traiteLe)}{d.traiteParNom ? ` par ${d.traiteParNom}` : ''}</div>}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
+                    );
+                  })}
+                </div>
+                {totalPages > 1 && (
+                  <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 12, marginTop: 16 }}>
+                    <button disabled={page === 1} onClick={() => setPage(p => p - 1)}
+                      style={{ padding: '6px 14px', borderRadius: 8, border: '1.5px solid #e2e8f0', background: page === 1 ? '#f8fafc' : '#fff', color: page === 1 ? '#cbd5e1' : '#374151', fontWeight: 600, fontSize: 12, cursor: page === 1 ? 'default' : 'pointer' }}>← Précédent</button>
+                    <span style={{ fontSize: 12, color: '#64748b', fontWeight: 600 }}>Page {page} / {totalPages}</span>
+                    <button disabled={page === totalPages} onClick={() => setPage(p => p + 1)}
+                      style={{ padding: '6px 14px', borderRadius: 8, border: '1.5px solid #e2e8f0', background: page === totalPages ? '#f8fafc' : '#fff', color: page === totalPages ? '#cbd5e1' : '#374151', fontWeight: 600, fontSize: 12, cursor: page === totalPages ? 'default' : 'pointer' }}>Suivant →</button>
+                  </div>
+                )}
+              </>
             )}
           </div>
         )}
@@ -464,6 +282,3 @@ export default function AdminSupportPage() {
     </div>
   );
 }
-
-const lbl: React.CSSProperties = { fontSize: '0.72rem', fontWeight: 600, color: '#374151', display: 'block', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.04em' };
-const inp: React.CSSProperties = { width: '100%', padding: '9px 12px', borderRadius: 8, border: '1.5px solid #e2e8f0', fontSize: '0.82rem', color: '#0f172a', outline: 'none', boxSizing: 'border-box', background: '#fff' };

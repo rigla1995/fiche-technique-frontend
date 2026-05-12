@@ -67,6 +67,7 @@ export default function HistoriquePromotionsAdmin() {
   const [search, setSearch] = useState('');
   const [filtActive, setFiltActive] = useState('');
   const [filtAppliesTo, setFiltAppliesTo] = useState('');
+  const [page, setPage] = useState(1);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -79,6 +80,7 @@ export default function HistoriquePromotionsAdmin() {
   }, []);
 
   useEffect(() => { load(); }, [load]);
+  useEffect(() => { setPage(1); }, [selectedClientId, filtActive, filtAppliesTo]);
 
   const clients = useMemo(() => {
     const map = new Map<number, { id: number; nom: string; email: string; total: number; activeCount: number }>();
@@ -112,6 +114,10 @@ export default function HistoriquePromotionsAdmin() {
 
   const totalActive = rows.filter(r => r.isActive).length;
   const appliesEntries: [string, string][] = [['', 'Toutes'], ...Object.entries(APPLIES_LABELS)];
+
+  const PAGE_SIZE = 5;
+  const totalPages = Math.max(1, Math.ceil(clientRows.length / PAGE_SIZE));
+  const pagedRows = clientRows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   return (
     <div style={{ display: 'flex', gap: 20, minHeight: 600 }}>
@@ -245,30 +251,41 @@ export default function HistoriquePromotionsAdmin() {
                 <div style={{ fontSize: 13, color: '#9ca3af' }}>Aucune promotion trouvée</div>
               </div>
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {clientRows.map((r) => {
-                  const appColor = APPLIES_COLORS[r.appliesTo] || '#4f46e5';
-                  return (
-                    <div key={r.id} style={{ background: r.isActive ? '#fffbeb' : '#fafafa', borderRadius: 12, border: `1px solid ${r.isActive ? '#fde68a' : '#e5e7eb'}`, borderLeft: `4px solid ${r.isActive ? '#f59e0b' : '#9ca3af'}`, padding: '14px 18px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                        <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 10, background: r.isActive ? '#fef3c7' : '#f3f4f6', color: r.isActive ? '#92400e' : '#9ca3af' }}>
-                          {r.isActive ? 'Actif' : 'Expiré'}
-                        </span>
-                        <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 10, background: appColor + '15', color: appColor }}>
-                          {APPLIES_LABELS[r.appliesTo] || r.appliesTo}
-                        </span>
-                        <span style={{ fontSize: 12, fontWeight: 600, color: '#374151' }}>{TYPE_LABELS[r.type] || r.type}</span>
-                        <span style={{ fontSize: 14, fontWeight: 800, color: '#0f172a', marginLeft: 4 }}>{promoRemise(r)}</span>
-                        <span style={{ fontSize: 11, color: '#9ca3af', marginLeft: 'auto' }}>
-                          {fmtDate(r.dateDebut)} → {r.dateFin ? fmtDate(r.dateFin) : 'Permanent'}
-                          {r.monthsDuration && <span style={{ marginLeft: 4, fontSize: 10 }}>({r.monthsDuration} mois)</span>}
-                        </span>
+              <>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {pagedRows.map((r) => {
+                    const appColor = APPLIES_COLORS[r.appliesTo] || '#4f46e5';
+                    return (
+                      <div key={r.id} style={{ background: r.isActive ? '#fffbeb' : '#fafafa', borderRadius: 12, border: `1px solid ${r.isActive ? '#fde68a' : '#e5e7eb'}`, borderLeft: `4px solid ${r.isActive ? '#f59e0b' : '#9ca3af'}`, padding: '14px 18px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                          <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 10, background: r.isActive ? '#fef3c7' : '#f3f4f6', color: r.isActive ? '#92400e' : '#9ca3af' }}>
+                            {r.isActive ? 'Actif' : 'Expiré'}
+                          </span>
+                          <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 10, background: appColor + '15', color: appColor }}>
+                            {APPLIES_LABELS[r.appliesTo] || r.appliesTo}
+                          </span>
+                          <span style={{ fontSize: 12, fontWeight: 600, color: '#374151' }}>{TYPE_LABELS[r.type] || r.type}</span>
+                          <span style={{ fontSize: 14, fontWeight: 800, color: '#0f172a', marginLeft: 4 }}>{promoRemise(r)}</span>
+                          <span style={{ fontSize: 11, color: '#9ca3af', marginLeft: 'auto' }}>
+                            {fmtDate(r.dateDebut)} → {r.dateFin ? fmtDate(r.dateFin) : 'Permanent'}
+                            {r.monthsDuration && <span style={{ marginLeft: 4, fontSize: 10 }}>({r.monthsDuration} mois)</span>}
+                          </span>
+                        </div>
+                        {r.notes && <div style={{ marginTop: 6, fontSize: 11, color: '#6b7280', fontStyle: 'italic' }}>{r.notes}</div>}
                       </div>
-                      {r.notes && <div style={{ marginTop: 6, fontSize: 11, color: '#6b7280', fontStyle: 'italic' }}>{r.notes}</div>}
-                    </div>
-                  );
-                })}
-              </div>
+                    );
+                  })}
+                </div>
+                {totalPages > 1 && (
+                  <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 12, marginTop: 16 }}>
+                    <button disabled={page === 1} onClick={() => setPage(p => p - 1)}
+                      style={{ padding: '6px 14px', borderRadius: 8, border: '1.5px solid #e2e8f0', background: page === 1 ? '#f8fafc' : '#fff', color: page === 1 ? '#cbd5e1' : '#374151', fontWeight: 600, fontSize: 12, cursor: page === 1 ? 'default' : 'pointer' }}>← Précédent</button>
+                    <span style={{ fontSize: 12, color: '#64748b', fontWeight: 600 }}>Page {page} / {totalPages}</span>
+                    <button disabled={page === totalPages} onClick={() => setPage(p => p + 1)}
+                      style={{ padding: '6px 14px', borderRadius: 8, border: '1.5px solid #e2e8f0', background: page === totalPages ? '#f8fafc' : '#fff', color: page === totalPages ? '#cbd5e1' : '#374151', fontWeight: 600, fontSize: 12, cursor: page === totalPages ? 'default' : 'pointer' }}>Suivant →</button>
+                  </div>
+                )}
+              </>
             )}
           </div>
         )}

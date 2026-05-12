@@ -45,6 +45,7 @@ export default function HistoriquePaiementsAdmin() {
   const [search, setSearch] = useState('');
   const [filtStatut, setFiltStatut] = useState('');
   const [filtMois, setFiltMois] = useState('');
+  const [page, setPage] = useState(1);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -57,6 +58,7 @@ export default function HistoriquePaiementsAdmin() {
   }, []);
 
   useEffect(() => { load(); }, [load]);
+  useEffect(() => { setPage(1); }, [selectedClientId, filtStatut, filtMois]);
 
   const clients = useMemo(() => {
     const map = new Map<number, { id: number; nom: string; email: string; total: number; payeCount: number; montant: number }>();
@@ -89,6 +91,10 @@ export default function HistoriquePaiementsAdmin() {
 
   const totalPayes = rows.filter(r => r.statut === 'payé').length;
   const totalMontant = rows.filter(r => r.statut === 'payé').reduce((s, r) => s + (parseFloat(String(r.montantDt ?? 0)) || 0), 0);
+
+  const PAGE_SIZE = 5;
+  const totalPages = Math.max(1, Math.ceil(clientRows.length / PAGE_SIZE));
+  const pagedRows = clientRows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   return (
     <div style={{ display: 'flex', gap: 20, minHeight: 600 }}>
@@ -215,27 +221,38 @@ export default function HistoriquePaiementsAdmin() {
                 <div style={{ fontSize: 13, color: '#9ca3af' }}>Aucun paiement trouvé</div>
               </div>
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {clientRows.map((r) => {
-                  const color = STATUT_COLORS[r.statut] || '#6b7280';
-                  const label = STATUT_LABELS[r.statut] || r.statut;
-                  return (
-                    <div key={r.id} style={{ background: '#fff', borderRadius: 12, border: '1px solid #e5e7eb', borderLeft: `4px solid ${color}`, padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 16 }}>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontWeight: 700, fontSize: 14, color: '#0f172a' }}>{fmtMois(r.mois)}</div>
-                        {r.dateSaisie && <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 2 }}>Saisi le {fmtDate(r.dateSaisie)}</div>}
-                        {r.notes && <div style={{ fontSize: 11, color: '#6b7280', marginTop: 2, fontStyle: 'italic' }}>{r.notes}</div>}
-                      </div>
-                      <div style={{ textAlign: 'right' }}>
-                        <div style={{ fontSize: 20, fontWeight: 800, color: r.statut === 'gratuit' ? '#16a34a' : '#0f172a' }}>
-                          {r.statut === 'gratuit' ? 'Gratuit' : r.montantDt != null ? `${r.montantDt} DT` : '—'}
+              <>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {pagedRows.map((r) => {
+                    const color = STATUT_COLORS[r.statut] || '#6b7280';
+                    const label = STATUT_LABELS[r.statut] || r.statut;
+                    return (
+                      <div key={r.id} style={{ background: '#fff', borderRadius: 12, border: '1px solid #e5e7eb', borderLeft: `4px solid ${color}`, padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 16 }}>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontWeight: 700, fontSize: 14, color: '#0f172a' }}>{fmtMois(r.mois)}</div>
+                          {r.dateSaisie && <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 2 }}>Saisi le {fmtDate(r.dateSaisie)}</div>}
+                          {r.notes && <div style={{ fontSize: 11, color: '#6b7280', marginTop: 2, fontStyle: 'italic' }}>{r.notes}</div>}
                         </div>
-                        <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 10, background: color + '18', color }}>{label}</span>
+                        <div style={{ textAlign: 'right' }}>
+                          <div style={{ fontSize: 20, fontWeight: 800, color: r.statut === 'gratuit' ? '#16a34a' : '#0f172a' }}>
+                            {r.statut === 'gratuit' ? 'Gratuit' : r.montantDt != null ? `${r.montantDt} DT` : '—'}
+                          </div>
+                          <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 10, background: color + '18', color }}>{label}</span>
+                        </div>
                       </div>
-                    </div>
-                  );
-                })}
-              </div>
+                    );
+                  })}
+                </div>
+                {totalPages > 1 && (
+                  <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 12, marginTop: 16 }}>
+                    <button disabled={page === 1} onClick={() => setPage(p => p - 1)}
+                      style={{ padding: '6px 14px', borderRadius: 8, border: '1.5px solid #e2e8f0', background: page === 1 ? '#f8fafc' : '#fff', color: page === 1 ? '#cbd5e1' : '#374151', fontWeight: 600, fontSize: 12, cursor: page === 1 ? 'default' : 'pointer' }}>← Précédent</button>
+                    <span style={{ fontSize: 12, color: '#64748b', fontWeight: 600 }}>Page {page} / {totalPages}</span>
+                    <button disabled={page === totalPages} onClick={() => setPage(p => p + 1)}
+                      style={{ padding: '6px 14px', borderRadius: 8, border: '1.5px solid #e2e8f0', background: page === totalPages ? '#f8fafc' : '#fff', color: page === totalPages ? '#cbd5e1' : '#374151', fontWeight: 600, fontSize: 12, cursor: page === totalPages ? 'default' : 'pointer' }}>Suivant →</button>
+                  </div>
+                )}
+              </>
             )}
           </div>
         )}
