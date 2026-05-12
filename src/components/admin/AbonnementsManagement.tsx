@@ -294,7 +294,7 @@ export default function AbonnementsManagement() {
   const [confirmResult, setConfirmResult] = useState<{ inviteUrl?: string | null } | null>(null);
 
   const [search, setSearch] = useState('');
-  const [filterMode, setFilterMode] = useState('');
+  const [filterMode, setFilterMode] = useState('actif');
 
   useEffect(() => { fetchList(); }, []);
 
@@ -631,89 +631,102 @@ export default function AbonnementsManagement() {
     )}
     <div style={{ display: 'flex', gap: 24, minHeight: 600 }}>
       {/* List panel */}
-      <div style={{ flex: '0 0 420px', background: '#fff', borderRadius: 12, border: '1px solid #e5e7eb', overflow: 'hidden' }}>
-        <div style={{ padding: '16px 20px', borderBottom: '1px solid #e2e8f0', background: 'linear-gradient(135deg,#f8fafc 0%,#f1f5f9 100%)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+      <div style={{ flex: '0 0 380px', background: '#fff', borderRadius: 16, border: '1px solid #e2e8f0', overflow: 'hidden', boxShadow: '0 4px 24px rgba(30,27,75,0.10)' }}>
+        {/* Hero */}
+        <div style={{ padding: '18px 18px 14px', background: 'linear-gradient(135deg,#1e1b4b 0%,#3730a3 55%,#4f46e5 100%)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+            <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>💳</div>
             <div>
-              <h2 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: '#0f172a' }}>Abonnements</h2>
-              <p style={{ margin: '2px 0 0', fontSize: 12, color: '#64748b' }}>{abonnements.length} client{abonnements.length !== 1 ? 's' : ''} · {filtered.length} affiché{filtered.length !== 1 ? 's' : ''}</p>
+              <h2 style={{ margin: 0, fontSize: 15, fontWeight: 800, color: '#fff' }}>Abonnements</h2>
+              <p style={{ margin: 0, fontSize: 11, color: 'rgba(255,255,255,0.6)' }}>{filtered.length} affiché{filtered.length !== 1 ? 's' : ''} · {abonnements.length} total</p>
             </div>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-              <span style={{ fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Recherche</span>
-              <input
-                placeholder="Nom ou email du client…"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                style={{ padding: '7px 11px', borderRadius: 8, border: '1px solid #cbd5e1', fontSize: 13, outline: 'none', background: '#fff' }}
-              />
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-              <span style={{ fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Statut</span>
-              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                {[
-                  { value: '', label: 'Tous' },
-                  { value: 'actif', label: 'Actif' },
-                  { value: 'read_only', label: 'Lecture Seule' },
-                  { value: 'bloque', label: 'Bloqué' },
-                ].map(({ value, label }) => {
-                  const isActive = filterMode === value;
-                  const modeColor = value ? MODE_LABELS[value]?.color : '#64748b';
-                  return (
-                    <button
-                      key={value}
-                      onClick={() => setFilterMode(value)}
-                      style={{
-                        padding: '5px 12px', borderRadius: 20, fontSize: 12, fontWeight: 600, cursor: 'pointer',
-                        border: `1.5px solid ${isActive ? modeColor : '#e2e8f0'}`,
-                        background: isActive ? (modeColor + '18') : '#fff',
-                        color: isActive ? modeColor : '#64748b',
-                        transition: 'all 0.15s',
-                      }}
-                    >
-                      {label}
-                    </button>
-                  );
-                })}
+          {/* Stats row */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 6, marginBottom: 12 }}>
+            {([
+              { label: 'Total', value: abonnements.length, color: 'rgba(255,255,255,0.9)', bg: 'rgba(255,255,255,0.1)' },
+              { label: 'Actifs', value: abonnements.filter((a) => a.modeCompte === 'actif').length, color: '#86efac', bg: 'rgba(134,239,172,0.15)' },
+              { label: 'Promos', value: abonnements.filter((a) => a.hasActivePromo).length, color: '#fde047', bg: 'rgba(253,224,71,0.15)' },
+            ] as { label: string; value: number; color: string; bg: string }[]).map((s) => (
+              <div key={s.label} style={{ background: s.bg, borderRadius: 8, padding: '7px 0', textAlign: 'center' }}>
+                <div style={{ fontSize: 18, fontWeight: 800, color: s.color, lineHeight: 1 }}>{s.value}</div>
+                <div style={{ fontSize: 9, fontWeight: 600, color: s.color, opacity: 0.75, textTransform: 'uppercase', letterSpacing: '0.06em', marginTop: 2 }}>{s.label}</div>
               </div>
-            </div>
+            ))}
+          </div>
+          {/* Search */}
+          <div style={{ position: 'relative' }}>
+            <span style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', fontSize: 12, pointerEvents: 'none' }}>🔍</span>
+            <input
+              placeholder="Rechercher un client…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              style={{ width: '100%', padding: '8px 10px 8px 30px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.2)', fontSize: 12, outline: 'none', background: 'rgba(255,255,255,0.12)', color: '#fff', boxSizing: 'border-box' }}
+            />
           </div>
         </div>
-        <div style={{ overflowY: 'auto', maxHeight: 600 }}>
+        {/* Filter chips */}
+        <div style={{ padding: '10px 14px', background: '#f8fafc', borderBottom: '1px solid #e2e8f0', display: 'flex', gap: 5, flexWrap: 'wrap' }}>
+          {([
+            { value: 'actif', label: 'Actif' },
+            { value: 'read_only', label: 'Lecture' },
+            { value: 'bloque', label: 'Bloqué' },
+            { value: 'desactive', label: 'Désactivé' },
+            { value: 'archive', label: 'Archivé' },
+          ] as { value: string; label: string }[]).map(({ value, label }) => {
+            const isChipActive = filterMode === value;
+            const modeColor = MODE_LABELS[value]?.color || '#64748b';
+            const count = abonnements.filter((a) => a.modeCompte === value).length;
+            return (
+              <button key={value} onClick={() => setFilterMode(filterMode === value ? '' : value)}
+                style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600, cursor: 'pointer',
+                  border: `1.5px solid ${isChipActive ? modeColor : '#e2e8f0'}`,
+                  background: isChipActive ? (modeColor + '18') : '#fff',
+                  color: isChipActive ? modeColor : '#94a3b8',
+                  transition: 'all 0.15s',
+                }}>
+                {label}
+                {count > 0 && (
+                  <span style={{ background: isChipActive ? modeColor : '#e5e7eb', color: isChipActive ? '#fff' : '#6b7280', borderRadius: 10, padding: '0 5px', fontSize: 9, fontWeight: 800 }}>
+                    {count}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+        {/* Client list */}
+        <div style={{ overflowY: 'auto', maxHeight: 520 }}>
           {loading ? (
             <div style={{ padding: 32, textAlign: 'center', color: '#9ca3af' }}>Chargement...</div>
           ) : filtered.length === 0 ? (
-            <div style={{ padding: 32, textAlign: 'center', color: '#9ca3af' }}>Aucun abonnement</div>
+            <div style={{ padding: 40, textAlign: 'center' }}>
+              <div style={{ fontSize: 32, marginBottom: 8 }}>🔍</div>
+              <div style={{ fontSize: 13, fontWeight: 500, color: '#9ca3af' }}>Aucun abonnement</div>
+              {filterMode && <div style={{ fontSize: 11, color: '#cbd5e1', marginTop: 4 }}>Essayez un autre filtre</div>}
+            </div>
           ) : filtered.map((ab) => {
             const m = MODE_LABELS[ab.modeCompte] || MODE_LABELS.actif;
-            const isActive = selected?.clientId === ab.clientId;
+            const isSelected = selected?.clientId === ab.clientId;
+            const initials = ab.clientNom ? ab.clientNom.trim().split(/\s+/).map((w) => w[0]).slice(0, 2).join('').toUpperCase() : '?';
+            const palette = ['#dbeafe:#1d4ed8','#dcfce7:#166534','#fce7f3:#9d174d','#ede9fe:#6d28d9','#fff7ed:#c2410c','#e0f2fe:#075985'];
+            const parts = palette[(ab.clientNom?.charCodeAt(0) || 0) % palette.length].split(':');
+            const avBg = parts[0], avText = parts[1];
             return (
-              <div
-                key={ab.id}
-                onClick={() => openDetail(ab)}
-                style={{
-                  padding: '14px 20px', cursor: 'pointer', borderBottom: '1px solid #f3f4f6',
-                  background: isActive ? '#eff6ff' : 'transparent',
-                  borderLeft: isActive ? '3px solid #2563eb' : '3px solid transparent',
-                }}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div>
-                    <div style={{ fontWeight: 600, fontSize: 14, color: '#111827' }}>{ab.clientNom}</div>
-                    <div style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>{ab.clientEmail}</div>
-                    <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 2 }}>
-                      {ab.compteType === 'independant' ? 'Indépendant' : 'Entreprise'} — depuis {fmtDate(ab.dateDebut)}
-                    </div>
+              <div key={ab.id} onClick={() => openDetail(ab)}
+                style={{ padding: '12px 14px', cursor: 'pointer', borderBottom: '1px solid #f3f4f6', borderLeft: `3px solid ${isSelected ? '#4f46e5' : 'transparent'}`, background: isSelected ? '#f0f0ff' : 'transparent', transition: 'background 0.1s' }}>
+                <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                  <div style={{ width: 40, height: 40, borderRadius: 11, background: isSelected ? '#e0e7ff' : avBg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 800, color: isSelected ? '#4f46e5' : avText, flexShrink: 0 }}>
+                    {initials}
                   </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-end' }}>
-                    <span style={{
-                      fontSize: 11, fontWeight: 600, padding: '3px 8px', borderRadius: 12,
-                      background: m.color + '20', color: m.color,
-                    }}>{m.label}</span>
-                    {ab.hasActivePromo && (
-                      <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 6px', borderRadius: 8, background: '#fef3c7', color: '#92400e' }}>🏷️ Promo</span>
-                    )}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 700, fontSize: 13, color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ab.clientNom}</div>
+                    <div style={{ fontSize: 11, color: '#6b7280', marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ab.clientEmail}</div>
+                    <div style={{ fontSize: 10, color: '#9ca3af', marginTop: 2 }}>{ab.compteType === 'independant' ? 'Indép.' : 'Entreprise'} · {fmtDate(ab.dateDebut)}</div>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-end', flexShrink: 0 }}>
+                    <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 10, background: m.color + '18', color: m.color, whiteSpace: 'nowrap' }}>{m.label}</span>
+                    {ab.hasActivePromo && <span style={{ fontSize: 9, fontWeight: 700, padding: '2px 6px', borderRadius: 8, background: '#fef3c7', color: '#92400e' }}>🏷️</span>}
                   </div>
                 </div>
               </div>
@@ -733,22 +746,30 @@ export default function AbonnementsManagement() {
         ) : (
           <>
             {/* Header */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
-              <div>
-                <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: '#111827' }}>{selected.clientNom}</h2>
-                <div style={{ color: '#6b7280', fontSize: 14, marginTop: 4 }}>{selected.clientEmail}</div>
-                <div style={{ color: '#9ca3af', fontSize: 12, marginTop: 2 }}>
-                  {selected.compteType === 'independant' ? 'Indépendant' : 'Entreprise'} — depuis {fmtDate(selected.dateDebut)}
+            {(() => {
+              const detailInitials = selected.clientNom ? selected.clientNom.trim().split(/\s+/).map((w) => w[0]).slice(0, 2).join('').toUpperCase() : '?';
+              const detailM = MODE_LABELS[selected.modeCompte] || MODE_LABELS.actif;
+              return (
+                <div style={{ background: 'linear-gradient(135deg,#1e1b4b 0%,#3730a3 55%,#4f46e5 100%)', borderRadius: 14, padding: '18px 20px', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 14 }}>
+                  <div style={{ width: 52, height: 52, borderRadius: 14, background: 'rgba(255,255,255,0.18)', border: '2px solid rgba(255,255,255,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 800, color: '#fff', flexShrink: 0 }}>
+                    {detailInitials}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 17, fontWeight: 800, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{selected.clientNom}</div>
+                    <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.65)', marginTop: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{selected.clientEmail}</div>
+                    <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)', marginTop: 2 }}>{selected.compteType === 'independant' ? 'Indépendant' : 'Entreprise'} · depuis {fmtDate(selected.dateDebut)}</div>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-end', flexShrink: 0 }}>
+                    <span style={{ fontSize: 12, fontWeight: 700, padding: '5px 14px', borderRadius: 20, background: 'rgba(255,255,255,0.15)', color: '#fff', border: `1.5px solid ${detailM.color}60` }}>
+                      {detailM.label}
+                    </span>
+                    {selected.hasActivePromo && (
+                      <span style={{ fontSize: 10, fontWeight: 700, padding: '3px 10px', borderRadius: 20, background: 'rgba(253,224,71,0.2)', color: '#fde047', border: '1px solid rgba(253,224,71,0.3)' }}>🏷️ Promo active</span>
+                    )}
+                  </div>
                 </div>
-              </div>
-              <span style={{
-                fontSize: 13, fontWeight: 700, padding: '6px 14px', borderRadius: 20,
-                background: (MODE_LABELS[selected.modeCompte]?.color || '#6b7280') + '20',
-                color: MODE_LABELS[selected.modeCompte]?.color || '#6b7280',
-              }}>
-                {MODE_LABELS[selected.modeCompte]?.label || selected.modeCompte}
-              </span>
-            </div>
+              );
+            })()}
 
 
             {/* ── Configuration Souscrite ────────────────────────────── */}
