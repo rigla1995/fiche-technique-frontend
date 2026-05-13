@@ -1434,8 +1434,9 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
               <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 10, padding: '12px 14px', fontSize: '0.85rem', color: '#991b1b', lineHeight: 1.6 }}>
                 <p style={{ margin: '0 0 6px', fontWeight: 700 }}>⚠ Attention — impacts de la suppression :</p>
                 <ul style={{ margin: 0, paddingLeft: 18 }}>
-                  <li>Les activités assignées à ce labo ne pourront plus recevoir de transferts.</li>
-                  <li>Le système supprimera automatiquement l'assignation de ce labo sur toutes les activités concernées.</li>
+                  <li>Les activités <strong>franchise</strong> liées à ce labo passeront en <strong>mode gestion séparée</strong> — chaque activité gérera ses ingrédients indépendamment.</li>
+                  <li>Les activités <strong>distinctes</strong> liées à ce labo resteront des activités distinctes sans labo.</li>
+                  <li>Aucune activité ne pourra plus recevoir de transferts depuis ce labo.</li>
                 </ul>
               </div>
               <p style={{ margin: 0, color: '#dc2626', fontSize: '0.85rem', fontWeight: 600 }}>
