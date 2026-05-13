@@ -309,11 +309,15 @@ function GerantSidebarContent({
         <CollapsibleHeader label="Produits" icon="🍔" isOpen={openSections.has('gerant-produits')} locked={false} onToggle={() => toggleSection('gerant-produits')} />
         {openSections.has('gerant-produits') && (
           <>
+            <SubNavLink to={`/client/products?tab=vendable&laboId=${laboId}`} icon="🍔" label="Produits Vendables" isActive={isProductsPage && currentProductTab === 'vendable'} onClick={onClose} />
             {gerantActivites.some(a => a.type === 'franchise') && (
               <SubNavLink to={`/client/products?tab=utilisable&actCtx=franchise&laboId=${laboId}`} icon="🧪" label="Utilisables Franchises" isActive={isProductsPage && currentProductTab === 'utilisable' && currentActCtx === 'franchise'} onClick={onClose} />
             )}
             {gerantActivites.some(a => a.type === 'distincte' || a.type == null) && (
               <SubNavLink to={`/client/products?tab=utilisable&actCtx=distinct&laboId=${laboId}`} icon="🧪" label="Utilisables Distinctes" isActive={isProductsPage && currentProductTab === 'utilisable' && currentActCtx === 'distinct'} onClick={onClose} />
+            )}
+            {!gerantActivites.some(a => a.type === 'franchise') && !gerantActivites.some(a => a.type === 'distincte' || a.type == null) && (
+              <SubNavLink to={`/client/products?tab=utilisable&laboId=${laboId}`} icon="🧪" label="Produits Utilisables" isActive={isProductsPage && currentProductTab === 'utilisable'} onClick={onClose} />
             )}
           </>
         )}
