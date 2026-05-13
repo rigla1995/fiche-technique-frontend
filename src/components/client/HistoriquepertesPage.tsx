@@ -441,6 +441,7 @@ export default function HistoriquepertesPage() {
                 <th>Type</th>
                 <th style={{ textAlign: 'right' }}>Prix Unit.</th>
                 <th style={{ textAlign: 'right' }}>Coût Total</th>
+                <th>Par</th>
                 {canWrite && <th style={{ textAlign: 'center' }}>Actions</th>}
               </tr>
             </thead>
@@ -477,6 +478,9 @@ export default function HistoriquepertesPage() {
                     </td>
                     <td style={{ textAlign: 'right', fontWeight: 600, color: '#c2410c', fontSize: '0.85rem' }}>
                       {entry.prixUnitaire != null ? (entry.quantite * entry.prixUnitaire).toFixed(3) : '—'}
+                    </td>
+                    <td style={{ fontSize: '0.72rem', color: '#7c3aed', fontWeight: 600 }}>
+                      {entry.createdByNom ? `👤 ${entry.createdByNom}` : '—'}
                     </td>
                     {canWrite && (
                       <td style={{ textAlign: 'center', whiteSpace: 'nowrap' }} onClick={(e) => e.stopPropagation()}>

@@ -77,7 +77,11 @@ export default function Header({ onMenuToggle }: HeaderProps) {
           <div style={{ lineHeight: 1.25 }}>
             <div style={{ fontSize: '0.84rem', fontWeight: 700, color: '#fff' }}>{user?.name}</div>
             <div style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.6)', fontWeight: 500, letterSpacing: '0.03em' }}>
-              {user?.role === 'super_admin' ? 'Administrateur' : 'Client'}
+              {user?.role === 'super_admin'
+                ? 'Administrateur'
+                : user?.role === 'gerant'
+                ? (user.gerantActiviteNom || 'Gérant')
+                : 'Client'}
             </div>
           </div>
         </div>

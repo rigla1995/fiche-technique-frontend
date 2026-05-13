@@ -12,6 +12,7 @@ export interface User {
   gerantParentId?: number;
   gerantActiviteId?: number;
   gerantActiviteType?: 'franchise' | 'labo' | 'activite_distincte';
+  gerantActiviteNom?: string | null;
 }
 
 export interface Promotion {
@@ -333,6 +334,7 @@ export interface HistoriqueApproEntry {
   fournisseurNom: string | null;
   refFacture: string | null;
   createdBy?: number | null;
+  createdByNom?: string | null;
 }
 
 export interface FournisseurApproActivite {
@@ -408,6 +410,7 @@ export interface HistoriquePerteEntry {
   datePerte: string;
   createdAt: string;
   createdBy?: number | null;
+  createdByNom?: string | null;
 }
 
 export interface ProduitTransformeStockEntry {

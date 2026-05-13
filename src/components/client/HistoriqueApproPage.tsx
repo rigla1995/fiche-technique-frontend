@@ -865,6 +865,7 @@ export default function HistoriqueApproPage() {
                     <td style={{ fontSize: '0.78rem' }}>
                       <div style={{ color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.fournisseurNom ?? '—'}</div>
                       <div style={{ color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.refFacture ?? '—'}</div>
+                      {r.createdByNom && <div style={{ fontSize: '0.68rem', color: '#7c3aed', fontWeight: 600, marginTop: 2 }}>👤 {r.createdByNom}</div>}
                     </td>
                     <td style={{ whiteSpace: 'nowrap', textAlign: 'right' }}>
                       {!isReadOnly && (!isGerant || r.createdBy === user?.id) && (<>

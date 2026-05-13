@@ -24,6 +24,7 @@ interface HistEntry {
   laboNom?: string;
   activiteNom?: string;
   createdBy?: number | null;
+  createdByNom?: string | null;
 }
 
 interface IngOption { ingredientId: number; nom: string; categorie: string }
@@ -336,6 +337,7 @@ export default function HistoriqueInventairePage() {
                     <th style={{ padding: '12px 14px', textAlign: 'left', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase' }}>Catégorie</th>
                     <th style={{ padding: '12px 14px', textAlign: 'right', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase' }}>Qté réelle</th>
                     <th style={{ padding: '12px 14px', textAlign: 'left', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase' }}>Note</th>
+                    <th style={{ padding: '12px 14px', textAlign: 'left', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase' }}>Par</th>
                     <th style={{ padding: '12px 14px', textAlign: 'center', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase' }}>Action</th>
                   </tr>
                 </thead>
@@ -378,6 +380,9 @@ export default function HistoriqueInventairePage() {
                           {r.note
                             ? <span style={{ background: '#fefce8', border: '1px solid #fde68a', borderRadius: 5, padding: '1px 8px', color: '#854d0e', fontSize: '0.78rem' }}>{r.note}</span>
                             : <span style={{ color: '#cbd5e1' }}>—</span>}
+                        </td>
+                        <td style={{ padding: '10px 14px', fontSize: '0.72rem', color: '#7c3aed', fontWeight: 600 }}>
+                          {r.createdByNom ? `👤 ${r.createdByNom}` : <span style={{ color: '#cbd5e1' }}>—</span>}
                         </td>
                         <td style={{ padding: '10px 14px', textAlign: 'center' }}>
                           {canWrite && (!isGerant || r.createdBy === user?.id) && (
