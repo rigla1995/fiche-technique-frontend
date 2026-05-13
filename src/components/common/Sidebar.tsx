@@ -511,7 +511,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
               <li>
                 <NavLink to="/admin/support" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>
                   <span className="link-icon">💬</span>
-                  <span className="link-label">Support</span>
+                  <span className="link-label">Demandes</span>
                 </NavLink>
               </li>
             </>
