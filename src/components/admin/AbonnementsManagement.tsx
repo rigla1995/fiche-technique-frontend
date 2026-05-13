@@ -1192,16 +1192,24 @@ export default function AbonnementsManagement() {
                           const cfg = selected.config;
                           if (mens.coversAll) {
                             // Show individual component rows + a discount row
+                            const sg = pMontantInfo.breakdown.supplementGerant;
+                            const sl = pMontantInfo.breakdown.supplementLabo;
+                            // Derive activité base robustly: fallback = total minus gérant and labo
+                            const baseActivite = (mens.baseActivite != null && mens.baseActivite > 0)
+                              ? mens.baseActivite
+                              : mens.base - (sg.active ? sg.base : 0) - (sl.active ? sl.base : 0);
                             const compRows = [
-                              { label: cfg ? `Activités (×${cfg.nbActivites})` : 'Activités', base: mens.baseActivite ?? 0, show: true },
-                              { label: cfg && (cfg.nbGerants ?? 0) > 0 ? `Gérant(s) (×${cfg.nbGerants})` : 'Gérant(s)', base: mens.baseGerant ?? 0, show: (mens.baseGerant ?? 0) > 0 },
-                              { label: cfg && (cfg.nbLabos ?? 0) > 0 ? `Labo(s) (×${cfg.nbLabos})` : 'Labo(s)', base: mens.baseLabo ?? 0, show: (mens.baseLabo ?? 0) > 0 },
+                              { label: cfg ? `Activités (×${cfg.nbActivites})` : 'Activités', base: baseActivite, show: true },
+                              { label: cfg && sg.active ? `Gérant(s) (×${cfg.nbGerants})` : 'Gérant(s)', base: sg.base, show: sg.active },
+                              { label: cfg && sl.active ? `Labo(s) (×${cfg.nbLabos})` : 'Labo(s)', base: sl.base, show: sl.active },
                             ].filter((r) => r.show);
-                            const reduction = mens.base - mens.effectif;
                             const isFree = mens.promoType === 'free_months';
+                            const pct = !isFree && mens.promoType === 'percent_off' && mens.base > 0
+                              ? Math.round((1 - mens.effectif / mens.base) * 100)
+                              : null;
                             return (
                               <>
-                                {compRows.map((r, idx) => (
+                                {compRows.map((r) => (
                                   <div key={r.label} style={{ display: 'grid', gridTemplateColumns: '1fr 80px 1fr 90px', padding: '10px 14px', borderBottom: '1px solid #e2e8f0', background: '#fff' }}>
                                     <span style={{ fontSize: 13, fontWeight: 600, color: '#0f172a', display: 'flex', alignItems: 'center' }}>{r.label}</span>
                                     <span style={{ fontSize: 13, color: '#374151', display: 'flex', alignItems: 'center' }}>{r.base} DT</span>
@@ -1216,10 +1224,10 @@ export default function AbonnementsManagement() {
                                   </span>
                                   <span style={{ fontSize: 13, color: '#94a3b8', textDecoration: 'line-through', display: 'flex', alignItems: 'center' }}>{mens.base} DT</span>
                                   <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 6, background: isFree ? '#dcfce7' : '#fef3c7', color: isFree ? '#166534' : '#92400e', display: 'flex', alignItems: 'center', width: 'fit-content' }}>
-                                    {isFree ? '100%' : `-${reduction} DT`}
+                                    {isFree ? '100%' : pct != null ? `-${pct}%` : `-${mens.base - mens.effectif} DT`}
                                   </span>
                                   <span style={{ fontSize: 14, fontWeight: 800, color: isFree ? '#16a34a' : '#d97706', display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
-                                    {isFree ? '0 DT' : `-${reduction} DT`}
+                                    {isFree ? '0 DT' : `${mens.effectif} DT`}
                                   </span>
                                 </div>
                               </>
