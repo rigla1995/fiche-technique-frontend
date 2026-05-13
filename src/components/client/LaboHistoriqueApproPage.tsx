@@ -33,7 +33,7 @@ interface HistEntry {
 }
 
 interface LaboFournisseur { id: number; nom: string; telephone: string | null }
-interface LaboIngredient { id: number; nom: string; unite: string; categorie: string; categorieId: number | null }
+interface LaboIngredient { id: number; nom: string; unite: string; categorie: string; categorieId: number | null; selected?: boolean }
 
 const labelStyle: React.CSSProperties = {
   fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)',
@@ -251,7 +251,7 @@ export default function LaboHistoriqueApproPage() {
     api.get(`/api/labo/${laboId}`).then(({ data }) => setLabo(data)).catch(() => {});
     api.get(`/api/labo/${laboId}/fournisseurs`).then(({ data }) => setFournisseurs(data)).catch(() => {});
     api.get(`/api/labo/${laboId}/ingredients`).then(({ data }) => setLaboIngredients(
-      (data as LaboIngredient[]).filter((i) => i.categorie !== undefined)
+      (data as LaboIngredient[]).filter((i) => i.selected !== false)
     )).catch(() => {});
   }, [laboId]);
 
