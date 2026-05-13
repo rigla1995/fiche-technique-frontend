@@ -29,8 +29,7 @@ interface LaboPerteEntry {
   createdAt: string;
 }
 
-interface Category { id: number; name: string }
-interface Ingredient { id: number; name: string; categorieId: number | null }
+interface LaboIngredient { id: number; nom: string; unite: string; categorie: string; categorieId: number | null }
 
 const labelStyle: React.CSSProperties = {
   fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)',
@@ -44,8 +43,7 @@ export default function LaboHistoriquepertesPage() {
   const [labo, setLabo] = useState<Labo | null>(null);
   const [entries, setEntries] = useState<LaboPerteEntry[]>([]);
   const [loading, setLoading] = useState(false);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [ingredients, setIngredients] = useState<Ingredient[]>([]);
+  const [laboIngredients, setLaboIngredients] = useState<LaboIngredient[]>([]);
   const [page, setPage] = useState(1);
 
   const [fCategorie, setFCategorie] = useState('');
@@ -55,16 +53,18 @@ export default function LaboHistoriquepertesPage() {
   const [fDateFin, setFDateFin] = useState(yearEnd);
   const [fType, setFType] = useState('');
 
+  const categories = Array.from(
+    new Map(laboIngredients.filter((i) => i.categorieId !== null).map((i) => [i.categorieId, { id: i.categorieId as number, nom: i.categorie }])).values()
+  );
+  const ingredientsInCat = fCategorie ? laboIngredients.filter((i) => String(i.categorieId) === fCategorie) : [];
+
   useEffect(() => {
     if (!laboId) return;
     api.get(`/api/labo/${laboId}`).then(({ data }) => setLabo(data)).catch(() => {});
-    api.get('/categories?onlyWithIngredients=true').then(({ data }) => setCategories(data)).catch(() => {});
+    api.get(`/api/labo/${laboId}/ingredients`)
+      .then(({ data }) => setLaboIngredients((data as LaboIngredient[]).filter((i) => (i as any).selected !== false)))
+      .catch(() => {});
   }, [laboId]);
-
-  useEffect(() => {
-    if (!fCategorie) { setIngredients([]); setFIngredient(''); return; }
-    api.get(`/ingredients?categorieId=${fCategorie}`).then(({ data }) => setIngredients(data)).catch(() => {});
-  }, [fCategorie]);
 
   const loadPertes = useCallback(async () => {
     if (!laboId) return;
@@ -158,14 +158,14 @@ export default function LaboHistoriquepertesPage() {
             <label style={labelStyle}>Catégorie</label>
             <select className="input" style={{ width: '100%' }} value={fCategorie} onChange={(e) => { setFCategorie(e.target.value); setFIngredient(''); }}>
               <option value="">— Toutes —</option>
-              {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+              {categories.map((c) => <option key={c.id} value={c.id}>{c.nom}</option>)}
             </select>
           </div>
           <div>
             <label style={labelStyle}>Ingrédient</label>
             <select className="input" style={{ width: '100%' }} value={fIngredient} disabled={!fCategorie} onChange={(e) => setFIngredient(e.target.value)}>
               <option value="">— Tous —</option>
-              {ingredients.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
+              {ingredientsInCat.map((i) => <option key={i.id} value={i.id}>{i.nom}</option>)}
             </select>
           </div>
           <div>

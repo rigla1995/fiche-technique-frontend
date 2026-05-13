@@ -15,8 +15,7 @@ const fmtDate = (iso: string | null | undefined) => {
   return `${d}/${m}/${y}`;
 };
 
-interface Category { id: number; name: string }
-interface Ingredient { id: number; name: string; categorieId: number | null }
+interface ScopedIngredient { id: number; nom: string; unite: string; categorie: string; categorieId: number | null }
 
 // ── Edit modal ────────────────────────────────────────────────────────────────
 
@@ -169,8 +168,7 @@ export default function HistoriquepertesPage() {
   const [entries, setEntries] = useState<HistoriquePerteEntry[]>([]);
   const [loading, setLoading] = useState(false);
   const [activites, setActivites] = useState<Activite[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [ingredients, setIngredients] = useState<Ingredient[]>([]);
+  const [scopedIngredients, setScopedIngredients] = useState<ScopedIngredient[]>([]);
 
   // Filters
   const [fActiviteId, setFActiviteId] = useState(urlActiviteId);
@@ -180,6 +178,11 @@ export default function HistoriquepertesPage() {
   const [fDateDebut, setFDateDebut] = useState(yearStart);
   const [fDateFin, setFDateFin] = useState(yearEnd);
   const [fType, setFType] = useState('');
+
+  const categories = Array.from(
+    new Map(scopedIngredients.filter((i) => i.categorieId !== null).map((i) => [i.categorieId, { id: i.categorieId as number, nom: i.categorie }])).values()
+  );
+  const ingredientsInCat = fCategorie ? scopedIngredients.filter((i) => String(i.categorieId) === fCategorie) : [];
 
   // Selection
   const [selected, setSelected] = useState<Set<number>>(new Set());
@@ -203,16 +206,28 @@ export default function HistoriquepertesPage() {
       }).catch(() => {});
   }, [isEntreprise, type]);
 
-  // Load categories
+  // Load scoped ingredients based on context
   useEffect(() => {
-    api.get('/categories?onlyWithIngredients=true').then(({ data }) => setCategories(data as Category[])).catch(() => {});
-  }, []);
-
-  // Load ingredients when category selected
-  useEffect(() => {
-    if (!fCategorie) { setIngredients([]); setFIngredient(''); return; }
-    api.get(`/ingredients?categorieId=${fCategorie}`).then(({ data }) => setIngredients(data as Ingredient[])).catch(() => {});
-  }, [fCategorie]);
+    setFCategorie('');
+    setFIngredient('');
+    if (!isEntreprise) {
+      api.get('/api/stock/client/ingredient-selections')
+        .then(({ data }) => setScopedIngredients(data as ScopedIngredient[]))
+        .catch(() => {});
+      return;
+    }
+    if (fActiviteId) {
+      api.get(`/api/entreprise/activites/${fActiviteId}/selected-ingredients`)
+        .then(({ data }) => setScopedIngredients(data as ScopedIngredient[]))
+        .catch(() => {});
+    } else {
+      const typeParam = type ? `?type=${type}` : '';
+      api.get(`/api/entreprise/activites/selected-ingredients${typeParam}`)
+        .then(({ data }) => setScopedIngredients(data as ScopedIngredient[]))
+        .catch(() => {});
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isEntreprise, fActiviteId, type]);
 
   const loadPertes = useCallback(async () => {
     setLoading(true);
@@ -242,7 +257,6 @@ export default function HistoriquepertesPage() {
   const totalCout = entries.reduce((s, e) => s + (e.prixUnitaire != null ? e.quantite * e.prixUnitaire : 0), 0);
   const hasCout = entries.some((e) => e.prixUnitaire != null);
 
-  const filteredIngredients = ingredients;
 
   const resetFilters = () => {
     setFActiviteId(''); setFCategorie(''); setFIngredient('');
@@ -350,14 +364,14 @@ export default function HistoriquepertesPage() {
             <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#b91c1c', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>Catégorie</span>
             <select className="input" style={{ width: '100%' }} value={fCategorie} onChange={(e) => { setFCategorie(e.target.value); setFIngredient(''); }}>
               <option value="">— Toutes —</option>
-              {categories.map((c) => <option key={c.id} value={String(c.id)}>{c.name}</option>)}
+              {categories.map((c) => <option key={c.id} value={String(c.id)}>{c.nom}</option>)}
             </select>
           </div>
           <div>
             <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#b91c1c', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>Ingrédient</span>
             <select className="input" style={{ width: '100%' }} value={fIngredient} onChange={(e) => setFIngredient(e.target.value)} disabled={!fCategorie}>
               <option value="">— Tous —</option>
-              {filteredIngredients.map((i) => <option key={i.id} value={String(i.id)}>{i.name}</option>)}
+              {ingredientsInCat.map((i) => <option key={i.id} value={String(i.id)}>{i.nom}</option>)}
             </select>
           </div>
           <div>

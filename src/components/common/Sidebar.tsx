@@ -257,6 +257,11 @@ function GerantSidebarContent({
           </>
         )}
         <Divider />
+        <CollapsibleHeader label="Fournisseurs" icon="🚚" isOpen={openSections.has('gerant-labo-fournisseurs')} locked={false} onToggle={() => toggleSection('gerant-labo-fournisseurs')} />
+        {openSections.has('gerant-labo-fournisseurs') && (
+          <li><NavLink to="/client/fournisseurs-labo" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}><span className="link-icon">🚚</span><span className="link-label">Fournisseurs Labo</span></NavLink></li>
+        )}
+        <Divider />
         <CollapsibleHeader label="Approvisionnements Activités" icon="📋" isOpen={openSections.has('gerant-appros')} locked={false} onToggle={() => toggleSection('gerant-appros')} />
         {openSections.has('gerant-appros') && (
           <>
@@ -289,6 +294,11 @@ function GerantSidebarContent({
             <li><Link to={`/client/inventaire?section=${section}&activiteId=${activiteId}`} className={`sidebar-link ${location.pathname === '/client/inventaire' && new URLSearchParams(location.search).get('section') === section ? 'active' : ''}`} onClick={onClose}><span className="link-icon">🔢</span><span className="link-label">Inventaire</span></Link></li>
             <li><Link to={`/client/inventaire/historique?section=${section}&activiteId=${activiteId}`} className={`sidebar-link ${location.pathname === '/client/inventaire/historique' && new URLSearchParams(location.search).get('section') === section ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📊</span><span className="link-label">Historique Inventaire</span></Link></li>
           </>
+        )}
+        <Divider />
+        <CollapsibleHeader label="Fournisseurs" icon="🚚" isOpen={openSections.has('gerant-act-fournisseurs')} locked={false} onToggle={() => toggleSection('gerant-act-fournisseurs')} />
+        {openSections.has('gerant-act-fournisseurs') && (
+          <li><NavLink to="/client/fournisseurs" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}><span className="link-icon">🚚</span><span className="link-label">Fournisseurs</span></NavLink></li>
         )}
         <Divider />
         <CollapsibleHeader label="Produits" icon="🍔" isOpen={openSections.has('gerant-produits')} locked={false} onToggle={() => toggleSection('gerant-produits')} />
