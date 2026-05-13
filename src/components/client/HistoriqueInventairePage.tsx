@@ -4,6 +4,7 @@ import api from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 import { useNotifications } from '../../context/NotificationContext';
 
+const PAGE_SIZE = 10;
 const currentYear = new Date().getFullYear();
 const fmtDate = (iso: string | null | undefined) => {
   if (!iso || iso.length < 10) return iso ?? '—';
@@ -63,6 +64,8 @@ export default function HistoriqueInventairePage() {
 
   const [ingOptions, setIngOptions] = useState<IngOption[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+  const [page, setPage] = useState(1);
 
   const [editEntry, setEditEntry] = useState<HistEntry | null>(null);
   const [editQty, setEditQty] = useState('');
@@ -131,6 +134,7 @@ export default function HistoriqueInventairePage() {
         : data;
       setHistRows(filtered);
       setSelectedIds(new Set());
+      setPage(1);
     } catch { setErrorMsg('Erreur lors de la recherche.'); }
     setLoading(false);
   }, [laboId, effectiveActiviteId, filters, isClientMode]);
@@ -323,7 +327,10 @@ export default function HistoriqueInventairePage() {
             </div>
           )}
 
-          {!loading && histRows.length > 0 && (
+          {!loading && histRows.length > 0 && (() => {
+            const totalPages = Math.max(1, Math.ceil(histRows.length / PAGE_SIZE));
+            const pagedRows = histRows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+            return (
             <div style={{ borderRadius: 14, overflow: 'hidden', border: '1.5px solid var(--border)', boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.87rem' }}>
                 <thead>
@@ -342,7 +349,7 @@ export default function HistoriqueInventairePage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {histRows.map((r, i) => {
+                  {pagedRows.map((r, i) => {
                     const sel = selectedIds.has(r.id);
                     return (
                       <tr key={r.id} style={{
@@ -420,8 +427,16 @@ export default function HistoriqueInventairePage() {
                   </span>
                 )}
               </div>
+              {totalPages > 1 && (
+                <div style={{ display: 'flex', gap: 8, justifyContent: 'center', padding: '12px 18px', borderTop: '1px solid var(--border)' }}>
+                  <button className="btn btn-ghost btn-sm" disabled={page === 1} onClick={() => setPage((p) => p - 1)}>‹ Préc.</button>
+                  <span style={{ alignSelf: 'center', fontSize: '0.82rem', color: 'var(--text-muted)' }}>{page} / {totalPages}</span>
+                  <button className="btn btn-ghost btn-sm" disabled={page === totalPages} onClick={() => setPage((p) => p + 1)}>Suiv. ›</button>
+                </div>
+              )}
             </div>
-          )}
+            );
+          })()}
         </>
       )}
 
