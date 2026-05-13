@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import api from '../../api/client';
 import type { SupportDemande, DomaineActivite } from '../../types';
 import { useNotifications } from '../../context/NotificationContext';
@@ -47,11 +48,15 @@ export default function SupportPage() {
   const { user } = useAuth();
   const isGerant = user?.role === 'gerant';
   const { clearAllFromDB } = useNotifications();
+  const [searchParams] = useSearchParams();
   const [demandes, setDemandes] = useState<SupportDemande[]>([]);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState<Record<number, boolean>>({});
   const [showForm, setShowForm] = useState(false);
-  const [formType, setFormType] = useState<SupportDemande['type'] | null>(null);
+  const [formType, setFormType] = useState<SupportDemande['type'] | null>(() => {
+    const t = searchParams.get('type');
+    return t && ['supplement', 'ingredient_manquant', 'aide'].includes(t) ? t as SupportDemande['type'] : null;
+  });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);

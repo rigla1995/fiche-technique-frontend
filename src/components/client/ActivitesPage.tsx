@@ -5,6 +5,8 @@ import api from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 import type { Activite, ActiviteIngredient, Labo, AbonnementConfig } from '../../types';
 
+const TUNISIAN_PHONE_RE = /^(\+216[\s-]?)?[2579]\d{7}$/;
+
 type ActiviteForm = { nom: string; adresse: string; telephone: string };
 const emptyForm = (): ActiviteForm => ({ nom: '', adresse: '', telephone: '' });
 type FranchiseStepForm = { telephone: string; adresse: string };
@@ -15,7 +17,7 @@ interface Props {
   minimal?: boolean;
 }
 
-const TUNISIAN_PHONE = /^(\+216[\s-]?)?[2579]\d{7}$/;
+const TUNISIAN_PHONE = TUNISIAN_PHONE_RE;
 
 // ── Labo select/create sub-form ────────────────────────────────────────────────
 interface LaboSelectOrCreateProps {
@@ -127,6 +129,14 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
   const [filterDistinctName, setFilterDistinctName] = useState('');
   // Labo detail popup (click on labo badge in row)
   const [laboPopup, setLaboPopup] = useState<{ nom: string; tel: string | null; adresse: string | null } | null>(null);
+
+  // Standalone labo add/edit modal
+  const [showLaboModal, setShowLaboModal] = useState(false);
+  const [editingLaboId, setEditingLaboId] = useState<number | null>(null);
+  const [laboFormData, setLaboFormData] = useState({ nom: '', refLabo: '', referentTel: '', adresse: '' });
+  const [laboModalStep, setLaboModalStep] = useState<1 | 2>(1);
+  const [laboSaving, setLaboSaving] = useState(false);
+  const [laboError, setLaboError] = useState('');
 
   // Delete confirmation modal
   type DeleteTarget =
@@ -474,6 +484,96 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
 
   const closeIngredients = () => { setIngredientsActivite(null); setIngredients([]); setOpenIngCats(new Set()); };
 
+  // ── Standalone labo modal ────────────────────────────────────────────────────
+  const openAddLabo = () => {
+    setEditingLaboId(null);
+    setLaboFormData({ nom: '', refLabo: '', referentTel: '', adresse: '' });
+    setLaboModalStep(1);
+    setLaboError('');
+    setShowLaboModal(true);
+  };
+
+  const openEditLabo = (labo: Labo) => {
+    setEditingLaboId(labo.id);
+    setLaboFormData({ nom: labo.nom, refLabo: labo.refLabo || '', referentTel: labo.referentTel || '', adresse: labo.adresse || '' });
+    setLaboModalStep(1);
+    setLaboError('');
+    setShowLaboModal(true);
+  };
+
+  const closeLaboModal = () => { setShowLaboModal(false); setEditingLaboId(null); setLaboError(''); };
+
+  const handleLaboNext = () => {
+    if (!laboFormData.nom.trim()) { setLaboError('Nom du labo requis'); return; }
+    if (!editingLaboId && !laboFormData.refLabo.trim()) { setLaboError('Référence (ref labo) requise'); return; }
+    if (!laboFormData.referentTel.trim()) { setLaboError('Téléphone requis'); return; }
+    if (!TUNISIAN_PHONE.test(laboFormData.referentTel.replace(/\s/g, ''))) { setLaboError(t('validation.phone_invalid')); return; }
+    setLaboError('');
+    setLaboModalStep(2);
+  };
+
+  const saveLabo = async () => {
+    setLaboSaving(true);
+    setLaboError('');
+    try {
+      if (editingLaboId) {
+        await api.put(`/api/labo/${editingLaboId}`, {
+          nom: laboFormData.nom.trim(),
+          referentTel: laboFormData.referentTel.trim(),
+          adresse: laboFormData.adresse.trim() || undefined,
+        });
+      } else {
+        await api.post('/api/labo', {
+          nom: laboFormData.nom.trim(),
+          refLabo: laboFormData.refLabo.trim(),
+          referentTel: laboFormData.referentTel.trim(),
+          adresse: laboFormData.adresse.trim() || undefined,
+        });
+        window.dispatchEvent(new Event('labos-changed'));
+      }
+      closeLaboModal();
+      load();
+    } catch (err: unknown) {
+      const errMsg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      setLaboError(errMsg || t('common.error'));
+    }
+    setLaboSaving(false);
+  };
+
+  // ── Recap step for activité modal ────────────────────────────────────────────
+  const handleGoToRecap = () => {
+    if (!form.nom.trim()) { setError(t('validation.name_required')); return; }
+    if (form.telephone && !TUNISIAN_PHONE.test(form.telephone.replace(/\s/g, ''))) {
+      setError(t('validation.phone_invalid')); return;
+    }
+    if (!editingId && !isDuplicate && !isFranchise && configHasLabo && hasLabo === true) {
+      if (!laboAction) { setError('Veuillez sélectionner ou créer un labo'); return; }
+      if (laboAction === 'select' && !selectedLaboId) { setError('Veuillez sélectionner un labo'); return; }
+      if (laboAction === 'create') {
+        if (!laboNom.trim()) { setError('Nom du labo requis'); return; }
+        if (!laboRefLabo.trim()) { setError('Référence du labo requise'); return; }
+        if (!laboTel.trim()) { setError(t('client.labo.labo_fields_required')); return; }
+      }
+    }
+    setError('');
+    setWizardStep(4);
+  };
+
+  const handleFranchiseGoToRecap = () => {
+    const err = validateFranchiseStep(franchiseForms[franchiseStep]);
+    if (err) { setError(err); return; }
+    setError('');
+    setWizardStep(4);
+  };
+
+  const handleFinalSave = () => {
+    if (isFranchise && !editingId && !isDuplicate) {
+      handleFranchiseSave();
+    } else {
+      submit({ preventDefault: () => {} } as React.FormEvent);
+    }
+  };
+
   const toggleIngredient = async (ingredientId: number) => {
     if (!ingredientsActivite) return;
     try {
@@ -561,9 +661,12 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
               </button>
             )}
             {atActiviteLimit && !loading && (
-              <div style={{ background: 'rgba(255,255,255,0.1)', borderRadius: 10, padding: '8px 16px', fontSize: '0.8rem', color: 'rgba(255,255,255,0.7)', border: '1px solid rgba(255,255,255,0.2)' }}>
-                🔒 Limite atteinte ({maxActivites})
-              </div>
+              <button
+                onClick={() => navigate('/client/support?type=supplement')}
+                style={{ background: 'rgba(251,191,36,0.2)', borderRadius: 10, padding: '8px 16px', fontSize: '0.8rem', color: '#fbbf24', border: '1px solid rgba(251,191,36,0.4)', cursor: 'pointer' }}
+              >
+                ➕ Augmenter la capacité
+              </button>
             )}
           </div>
         </div>
@@ -627,9 +730,9 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                   </span>
                 </div>
                 {atActiviteLimit ? (
-                  <span style={{ fontSize: '0.75rem', color: '#6b7280', background: '#f3f4f6', border: '1px solid #e5e7eb', borderRadius: 8, padding: '5px 12px' }}>
-                    🔒 Limite atteinte
-                  </span>
+                  <button className="btn btn-sm" style={{ background: '#fef3c7', color: '#92400e', border: '1px solid #f59e0b', borderRadius: 8, fontSize: '0.75rem', padding: '5px 12px', cursor: 'pointer' }} onClick={() => navigate('/client/support?type=supplement')}>
+                    ➕ Augmenter la capacité
+                  </button>
                 ) : (
                   <button className="btn btn-primary btn-sm" onClick={() => openAdd('franchise')}>
                     + {t('client.entreprise.add_activity')}
@@ -752,9 +855,9 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                   </span>
                 </div>
                 {atActiviteLimit ? (
-                  <span style={{ fontSize: '0.75rem', color: '#6b7280', background: '#f3f4f6', border: '1px solid #e5e7eb', borderRadius: 8, padding: '5px 12px' }}>
-                    🔒 Limite atteinte
-                  </span>
+                  <button className="btn btn-sm" style={{ background: '#fef3c7', color: '#92400e', border: '1px solid #f59e0b', borderRadius: 8, fontSize: '0.75rem', padding: '5px 12px', cursor: 'pointer' }} onClick={() => navigate('/client/support?type=supplement')}>
+                    ➕ Augmenter la capacité
+                  </button>
                 ) : (
                   <button className="btn btn-secondary btn-sm" onClick={() => openAdd('distincte')}>
                     + {t('client.entreprise.add_activity')}
@@ -815,6 +918,60 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
               )}
             </div>
           )}
+          {/* Labos section — visible when config includes labos */}
+          {!isOnboarding && configHasLabo && (
+            <div style={{ marginBottom: 32 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14, padding: '10px 16px', background: 'linear-gradient(135deg,#f5f3ff,#ede9fe)', borderRadius: 12, border: '1px solid #c4b5fd' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <span style={{ fontSize: '1.1rem' }}>🏭</span>
+                  <span style={{ fontSize: '0.9rem', fontWeight: 800, color: '#6d28d9' }}>Espace Labos</span>
+                  <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#7c3aed', background: '#f5f3ff', border: '1px solid #c4b5fd', borderRadius: 20, padding: '2px 10px' }}>
+                    {labos.length} / {maxLabos} labo(s)
+                  </span>
+                </div>
+                {atLaboLimit ? (
+                  <button className="btn btn-sm" style={{ background: '#fef3c7', color: '#92400e', border: '1px solid #f59e0b', borderRadius: 8, fontSize: '0.75rem', padding: '5px 12px', cursor: 'pointer' }} onClick={() => navigate('/client/support?type=supplement')}>
+                    ➕ Augmenter la capacité
+                  </button>
+                ) : (
+                  <button className="btn btn-sm" style={{ background: '#7c3aed', color: '#fff', border: 'none', borderRadius: 8, fontSize: '0.8rem', padding: '6px 14px', cursor: 'pointer', fontWeight: 700 }} onClick={openAddLabo}>
+                    + Nouveau labo
+                  </button>
+                )}
+              </div>
+
+              {labos.length === 0 ? (
+                <p className="text-muted" style={{ fontSize: '0.85rem' }}>Aucun labo créé. {!atLaboLimit && <button style={{ background: 'none', border: 'none', color: 'var(--primary)', cursor: 'pointer', fontSize: '0.85rem', padding: 0, textDecoration: 'underline' }} onClick={openAddLabo}>Créer le premier labo</button>}</p>
+              ) : (
+                <div className="table-responsive card" style={{ marginBottom: 0 }}>
+                  <table className="table">
+                    <thead>
+                      <tr>
+                        <th>Nom</th>
+                        <th style={{ width: 120 }}>Réf.</th>
+                        <th style={{ width: 150 }}>Téléphone référent</th>
+                        <th>Adresse</th>
+                        <th style={{ width: 80, textAlign: 'right' }}></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {labos.map((labo) => (
+                        <tr key={labo.id}>
+                          <td style={{ fontWeight: 700 }}>{labo.nom}</td>
+                          <td style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{labo.refLabo || '—'}</td>
+                          <td style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{labo.referentTel || '—'}</td>
+                          <td style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{labo.adresse || '—'}</td>
+                          <td style={{ textAlign: 'right' }}>
+                            <button className="btn btn-ghost btn-sm" title="Modifier" onClick={() => openEditLabo(labo)}>✏️</button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
         </>
       )}
 
@@ -828,11 +985,13 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
               <div style={{ flex: 1 }}>
                 <h2 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700 }}>
                   {editingId
-                    ? t('client.entreprise.edit_activity')
+                    ? (wizardStep === 4 ? '✅ Récapitulatif' : t('client.entreprise.edit_activity'))
                     : isDuplicate
-                    ? t('client.entreprise.duplicate_activity')
+                    ? (wizardStep === 4 ? '✅ Récapitulatif' : t('client.entreprise.duplicate_activity'))
                     : wizardStep === 0
                     ? t('client.entreprise.add_activity')
+                    : wizardStep === 4
+                    ? '✅ Récapitulatif'
                     : isFranchise
                     ? wizardStep === 1
                       ? '🔗 Nouveau réseau franchise'
@@ -845,8 +1004,8 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                 {isFranchise && !editingId && !isDuplicate && wizardStep >= 1 && (
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10 }}>
                     {(configHasLabo
-                      ? [{ label: 'Réseau', s: 1 }, { label: 'Labo', s: 2 }, { label: 'Détails', s: 3 }]
-                      : [{ label: 'Réseau', s: 1 }, { label: 'Détails', s: 3 }]
+                      ? [{ label: 'Réseau', s: 1 }, { label: 'Labo', s: 2 }, { label: 'Détails', s: 3 }, { label: 'Récap', s: 4 }]
+                      : [{ label: 'Réseau', s: 1 }, { label: 'Détails', s: 3 }, { label: 'Récap', s: 4 }]
                     ).map(({ label, s }, idx, arr) => (
                       <div key={s} style={{ display: 'flex', alignItems: 'center', gap: idx < arr.length - 1 ? 8 : 0 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
@@ -1101,6 +1260,55 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                 </div>
               )}
 
+              {/* ── STEP 4: Recap / Confirmation ── */}
+              {wizardStep === 4 && (() => {
+                const laboNomRecap = hasLabo === true
+                  ? (laboAction === 'create' ? laboNom : labos.find((l) => l.id === Number(selectedLaboId))?.nom || '—')
+                  : null;
+                const fieldLabel: React.CSSProperties = { fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' as const, letterSpacing: '0.05em', marginBottom: 2 };
+                const row = (label: string, value: string) => (
+                  <div key={label} style={{ display: 'flex', flexDirection: 'column', gap: 2, padding: '8px 0', borderBottom: '1px solid #f1f5f9' }}>
+                    <span style={fieldLabel}>{label}</span>
+                    <span style={{ fontSize: '0.9rem', fontWeight: 600, color: '#0f172a' }}>{value || '—'}</span>
+                  </div>
+                );
+                return (
+                  <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    <p style={{ margin: '0 0 8px', fontSize: '0.85rem', color: '#64748b' }}>
+                      Vérifiez les informations avant de confirmer.
+                    </p>
+                    {editingId || isDuplicate ? (
+                      <>
+                        {row('Nom', form.nom)}
+                        {row('Téléphone', form.telephone)}
+                        {row('Adresse', form.adresse)}
+                      </>
+                    ) : isFranchise ? (
+                      <>
+                        {row('Réseau', franchiseName)}
+                        {row("Nombre d'activités", String(franchiseCount))}
+                        {laboNomRecap && row('Labo', laboNomRecap)}
+                        <div style={{ marginTop: 6 }}>
+                          <span style={fieldLabel}>Activités</span>
+                          {franchiseForms.map((f, i) => (
+                            <div key={i} style={{ fontSize: '0.82rem', padding: '4px 0 4px 8px', borderBottom: '1px solid #f1f5f9', color: '#374151' }}>
+                              <strong>{franchiseName} {i + 1}</strong> — {f.telephone}{f.adresse ? ` · ${f.adresse}` : ''}
+                            </div>
+                          ))}
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        {row('Nom', form.nom)}
+                        {row('Téléphone', form.telephone)}
+                        {row('Adresse', form.adresse)}
+                        {laboNomRecap && row('Labo', laboNomRecap)}
+                      </>
+                    )}
+                  </div>
+                );
+              })()}
+
               {error && (
                 <p style={{ margin: '0 20px 12px', color: 'var(--danger, #ef4444)', fontSize: '0.82rem', fontWeight: 500 }}>
                   ⚠ {error}
@@ -1110,7 +1318,14 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
               {/* Footer */}
               <div className="modal-footer">
                 {/* Left: Cancel or Back */}
-                {wizardStep <= 1 ? (
+                {wizardStep === 4 ? (
+                  <button type="button" className="btn btn-secondary" onClick={() => {
+                    setError('');
+                    setWizardStep(isFranchise && !editingId && !isDuplicate ? 3 : 1);
+                  }}>
+                    ‹ {t('client.entreprise.previous')}
+                  </button>
+                ) : wizardStep <= 1 ? (
                   <button type="button" className="btn btn-secondary" onClick={closeForm}>
                     {t('common.cancel')}
                   </button>
@@ -1125,18 +1340,23 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                 )}
 
                 {/* Right: Forward or Save */}
-                {wizardStep === 0 ? null
+                {wizardStep === 4 ? (
+                  <button type="button" className="btn btn-primary" onClick={handleFinalSave} disabled={saving}>
+                    {saving ? t('common.loading') : '✅ Confirmer'}
+                  </button>
+                ) : wizardStep === 0 ? null
                   : wizardStep === 1 && isFranchise && !editingId && !isDuplicate ? (
                   <button type="button" className="btn btn-primary" onClick={handleFranchiseSetupNext}>
                     Suivant ›
                   </button>
                 ) : wizardStep === 1 ? (
                   <button
-                    type="submit"
+                    type="button"
                     className="btn btn-primary"
-                    disabled={saving || distinctNameConflict || !form.nom.trim()}
+                    disabled={distinctNameConflict || !form.nom.trim()}
+                    onClick={handleGoToRecap}
                   >
-                    {saving ? t('common.loading') : t('common.save')}
+                    Suivant ›
                   </button>
                 ) : wizardStep === 2 ? (
                   <button type="button" className="btn btn-primary" onClick={handleLaboStepNext} disabled={hasLabo === null}>
@@ -1148,8 +1368,8 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                     <span style={{ opacity: 0.7, fontSize: '0.78rem' }}>({franchiseStep + 1}/{franchiseCount})</span>
                   </button>
                 ) : (
-                  <button type="button" className="btn btn-primary" onClick={handleFranchiseSave} disabled={saving}>
-                    {saving ? t('common.loading') : t('common.save')}
+                  <button type="button" className="btn btn-primary" onClick={handleFranchiseGoToRecap} disabled={saving}>
+                    Suivant ›
                   </button>
                 )}
               </div>
@@ -1241,6 +1461,91 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
             </div>
             <div className="modal-footer">
               <button className="btn btn-primary" onClick={() => setLaboPopup(null)}>{t('common.close')}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Standalone labo add/edit modal */}
+      {showLaboModal && (
+        <div className="modal-overlay">
+          <div className="modal" style={{ maxWidth: 480 }} onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header modal-header--primary">
+              <div style={{ flex: 1 }}>
+                <h2 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700 }}>
+                  {laboModalStep === 2 ? '✅ Récapitulatif' : editingLaboId ? '🏭 Modifier le labo' : '🏭 Nouveau labo'}
+                </h2>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8 }}>
+                  {[{ label: 'Formulaire', s: 1 }, { label: 'Récap', s: 2 }].map(({ label, s }, idx, arr) => (
+                    <div key={s} style={{ display: 'flex', alignItems: 'center', gap: idx < arr.length - 1 ? 8 : 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                        <span style={{ width: 20, height: 20, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.68rem', fontWeight: 800, background: laboModalStep > s ? '#22c55e' : laboModalStep === s ? 'white' : 'rgba(255,255,255,0.25)', color: laboModalStep > s ? 'white' : laboModalStep === s ? 'var(--primary)' : 'rgba(255,255,255,0.6)' }}>
+                          {laboModalStep > s ? '✓' : idx + 1}
+                        </span>
+                        <span style={{ fontSize: '0.7rem', fontWeight: laboModalStep === s ? 700 : 400, color: laboModalStep >= s ? 'white' : 'rgba(255,255,255,0.55)' }}>{label}</span>
+                      </div>
+                      {idx < arr.length - 1 && <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.35)', marginLeft: 3 }}>›</span>}
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <button className="modal-close" onClick={closeLaboModal}>✕</button>
+            </div>
+
+            {laboModalStep === 1 && (
+              <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                <div className="form-field" style={{ marginBottom: 0 }}>
+                  <label style={{ fontWeight: 600 }}>Nom du labo *</label>
+                  <input type="text" className="input" value={laboFormData.nom} onChange={(e) => setLaboFormData((p) => ({ ...p, nom: e.target.value }))} placeholder="Ex: Labo Central" autoFocus />
+                </div>
+                {!editingLaboId && (
+                  <div className="form-field" style={{ marginBottom: 0 }}>
+                    <label style={{ fontWeight: 600 }}>Référence labo * <span style={{ fontWeight: 400, color: 'var(--text-muted)', fontSize: '0.78rem' }}>(unique)</span></label>
+                    <input type="text" className="input" value={laboFormData.refLabo} onChange={(e) => setLaboFormData((p) => ({ ...p, refLabo: e.target.value }))} placeholder="Ex: LABO-001" />
+                  </div>
+                )}
+                <div className="form-field" style={{ marginBottom: 0 }}>
+                  <label style={{ fontWeight: 600 }}>Téléphone référent * <span style={{ fontWeight: 400, color: 'var(--text-muted)', fontSize: '0.78rem' }}>{t('validation.phone_hint')}</span></label>
+                  <input type="text" className="input" value={laboFormData.referentTel} onChange={(e) => setLaboFormData((p) => ({ ...p, referentTel: e.target.value }))} placeholder="+216 …" />
+                </div>
+                <div className="form-field" style={{ marginBottom: 0 }}>
+                  <label style={{ fontWeight: 600 }}>Adresse</label>
+                  <textarea className="input" rows={2} value={laboFormData.adresse} onChange={(e) => setLaboFormData((p) => ({ ...p, adresse: e.target.value }))} placeholder="Adresse (optionnel)" />
+                </div>
+              </div>
+            )}
+
+            {laboModalStep === 2 && (
+              <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <p style={{ margin: '0 0 8px', fontSize: '0.85rem', color: '#64748b' }}>Vérifiez les informations avant de confirmer.</p>
+                {[
+                  { label: 'Nom', value: laboFormData.nom },
+                  ...(!editingLaboId ? [{ label: 'Référence', value: laboFormData.refLabo }] : []),
+                  { label: 'Téléphone', value: laboFormData.referentTel },
+                  { label: 'Adresse', value: laboFormData.adresse },
+                ].map(({ label, value }) => (
+                  <div key={label} style={{ display: 'flex', flexDirection: 'column', gap: 2, padding: '8px 0', borderBottom: '1px solid #f1f5f9' }}>
+                    <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{label}</span>
+                    <span style={{ fontSize: '0.9rem', fontWeight: 600, color: '#0f172a' }}>{value || '—'}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {laboError && <p style={{ margin: '0 20px 12px', color: 'var(--danger, #ef4444)', fontSize: '0.82rem', fontWeight: 500 }}>⚠ {laboError}</p>}
+
+            <div className="modal-footer">
+              {laboModalStep === 1 ? (
+                <>
+                  <button type="button" className="btn btn-secondary" onClick={closeLaboModal}>{t('common.cancel')}</button>
+                  <button type="button" className="btn btn-primary" onClick={handleLaboNext}>Suivant ›</button>
+                </>
+              ) : (
+                <>
+                  <button type="button" className="btn btn-secondary" onClick={() => { setLaboModalStep(1); setLaboError(''); }}>‹ {t('client.entreprise.previous')}</button>
+                  <button type="button" className="btn btn-primary" onClick={saveLabo} disabled={laboSaving}>{laboSaving ? t('common.loading') : '✅ Confirmer'}</button>
+                </>
+              )}
             </div>
           </div>
         </div>

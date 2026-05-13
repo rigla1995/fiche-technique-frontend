@@ -565,6 +565,16 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                 </li>
               )}
 
+              {/* Gérants — lien direct sous Mes Activités */}
+              {isEntreprise && user?.role === 'client' && step === 0 && (
+                <li>
+                  <NavLink to="/client/gerants" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>
+                    <span className="link-icon">👥</span>
+                    <span className="link-label">Gérants</span>
+                  </NavLink>
+                </li>
+              )}
+
               {/* Independent: Espace sections — same structure as entreprise "distinct" */}
               {!isEntreprise && (
                 <>
@@ -672,6 +682,14 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                     <span style={{ display: 'block', padding: '2px 18px 8px', fontSize: '0.71rem', color: 'var(--text-muted)', lineHeight: 1.45 }}>
                       Sélectionnez vos ingrédients pour débloquer les fonctionnalités
                     </span>
+                  </li>
+
+                  {/* Demandes — sous le Catalogue Global */}
+                  <li>
+                    <NavLink to="/client/support" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>
+                      <span className="link-icon">💬</span>
+                      <span className="link-label">Demandes</span>
+                    </NavLink>
                   </li>
                 </>
               )}
@@ -1089,6 +1107,14 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                       </span>
                     </li>
                   )}
+
+                  {/* Demandes — sous le Catalogue Global */}
+                  <li>
+                    <NavLink to="/client/support" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>
+                      <span className="link-icon">💬</span>
+                      <span className="link-label">Demandes</span>
+                    </NavLink>
+                  </li>
                 </>
               )}
 
@@ -1099,27 +1125,13 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
         {(user?.role === 'client' || user?.role === 'gerant') && (
           <ul className="sidebar-nav" style={{ borderTop: '1px solid var(--border)', paddingTop: 4 }}>
             {user?.role === 'client' && (
-              <>
-                <li>
-                  <NavLink to="/client/abonnement" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>
-                    <span className="link-icon">💳</span>
-                    <span className="link-label">Mon abonnement</span>
-                  </NavLink>
-                </li>
-                <li>
-                  <NavLink to="/client/gerants" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>
-                    <span className="link-icon">👥</span>
-                    <span className="link-label">Gérants</span>
-                  </NavLink>
-                </li>
-              </>
+              <li>
+                <NavLink to="/client/abonnement" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>
+                  <span className="link-icon">💳</span>
+                  <span className="link-label">Mon abonnement</span>
+                </NavLink>
+              </li>
             )}
-            <li>
-              <NavLink to="/client/support" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>
-                <span className="link-icon">💬</span>
-                <span className="link-label">Support</span>
-              </NavLink>
-            </li>
             <li>
               <NavLink
                 to="/client/profile"
