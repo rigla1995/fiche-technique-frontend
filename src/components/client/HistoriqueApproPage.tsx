@@ -17,8 +17,7 @@ const fmtDate = (iso: string | null | undefined) => {
   return `${d}/${m}/${y}`;
 };
 
-interface Ingredient { id: number; name: string; unitName: string; categorieName: string | null }
-interface Category { id: number; name: string }
+interface ScopedIngredient { id: number; nom: string; unite: string; categorie: string; categorieId: number | null }
 interface Fournisseur { id: number; nom: string; isLabo?: boolean }
 
 // ── Edit modal ────────────────────────────────────────────────────────────────
@@ -289,10 +288,8 @@ export default function HistoriqueApproPage() {
   const [selectedFranchiseGroup, setSelectedFranchiseGroup] = useState('');
   const [selectedActiviteId, setSelectedActiviteId] = useState(initActiviteId);
 
-  const [categories, setCategories] = useState<Category[]>([]);
+  const [scopedIngredients, setScopedIngredients] = useState<ScopedIngredient[]>([]);
   const [selectedCategoryId, setSelectedCategoryId] = useState('');
-  const [ingredients, setIngredients] = useState<Ingredient[]>([]);
-  const [ingredientsLoading, setIngredientsLoading] = useState(false);
   const [selectedIngredientId, setSelectedIngredientId] = useState(initIngredientId);
 
   const [fournisseurs, setFournisseurs] = useState<Fournisseur[]>([]);
@@ -301,6 +298,13 @@ export default function HistoriqueApproPage() {
 
   const [startDate, setStartDate] = useState(yearStart);
   const [endDate, setEndDate] = useState(yearEnd);
+
+  const categories = Array.from(
+    new Map(scopedIngredients.filter((i) => i.categorieId !== null).map((i) => [i.categorieId, { id: i.categorieId as number, nom: i.categorie }])).values()
+  );
+  const ingredientsInCat = selectedCategoryId
+    ? scopedIngredients.filter((i) => String(i.categorieId) === selectedCategoryId)
+    : [];
 
   const [results, setResults] = useState<HistoriqueApproEntry[]>([]);
   const [loading, setLoading] = useState(false);
@@ -333,9 +337,39 @@ export default function HistoriqueApproPage() {
     unitTotals[r.uniteNom].entries.push(r);
   }
 
+  const [ptProducts, setPtProducts] = useState<Array<{ id: number; nom: string }>>([]);
+
   useEffect(() => {
-    api.get('/categories?onlyWithIngredients=true').then(({ data }) => setCategories(data as Category[])).catch(() => {});
-  }, []);
+    setSelectedCategoryId('');
+    setSelectedIngredientId('');
+    if (!isEntreprise) {
+      api.get('/api/stock/client/ingredient-selections')
+        .then(({ data }) => setScopedIngredients(data as ScopedIngredient[])).catch(() => {});
+      return;
+    }
+    if (laboId) {
+      api.get(`/api/labo/${laboId}/ingredients`)
+        .then(({ data }) => setScopedIngredients((data as any[]).filter((i) => i.selected !== false)))
+        .catch(() => {});
+    } else if (selectedActiviteId) {
+      api.get(`/api/entreprise/activites/${selectedActiviteId}/selected-ingredients`)
+        .then(({ data }) => setScopedIngredients(data as ScopedIngredient[])).catch(() => {});
+    } else {
+      const typeParam = entType ? `?type=${entType}` : '';
+      api.get(`/api/entreprise/activites/selected-ingredients${typeParam}`)
+        .then(({ data }) => setScopedIngredients(data as ScopedIngredient[])).catch(() => {});
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isEntreprise, laboId, selectedActiviteId, entType]);
+
+  useEffect(() => {
+    if (selectedCategoryId !== 'pt') { setPtProducts([]); return; }
+    const ptUrl = selectedActiviteId ? `/api/stock/pt?activiteId=${selectedActiviteId}` : '/api/stock/pt';
+    api.get(ptUrl)
+      .then(({ data }) => setPtProducts((data as Array<{ produitId: number; nom: string }>).map((p) => ({ id: -(p.produitId), nom: p.nom }))))
+      .catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedCategoryId, selectedActiviteId]);
 
   useEffect(() => {
     if (isEntreprise) {
@@ -368,30 +402,6 @@ export default function HistoriqueApproPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isEntreprise]);
 
-  useEffect(() => {
-    setIngredients([]);
-    setSelectedIngredientId('');
-    if (!selectedCategoryId) return;
-    setIngredientsLoading(true);
-    if (selectedCategoryId === 'pt') {
-      const ptUrl = selectedActiviteId ? `/api/stock/pt?activiteId=${selectedActiviteId}` : '/api/stock/pt';
-      api.get(ptUrl)
-        .then(({ data }) => setIngredients((data as Array<{ produitId: number; nom: string }>).map((p) => ({
-          id: -(p.produitId),
-          name: p.nom,
-          unitName: 'unité',
-          categorieName: 'Produits Transformés',
-        }))))
-        .catch(() => {})
-        .finally(() => setIngredientsLoading(false));
-    } else {
-      api.get(`/ingredients?categorieId=${selectedCategoryId}`)
-        .then(({ data }) => setIngredients(data as Ingredient[]))
-        .catch(() => {})
-        .finally(() => setIngredientsLoading(false));
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedCategoryId, selectedActiviteId]);
 
   useEffect(() => {
     if (initIngredientId && (selectedActiviteId || !isEntreprise)) fetchResults();
@@ -634,7 +644,7 @@ export default function HistoriqueApproPage() {
                 onChange={(e) => { setSelectedCategoryId(e.target.value); setSelectedIngredientId(''); }}
               >
                 <option value="">{t('client.historique_appro.all_categories')}</option>
-                {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                {categories.map((c) => <option key={c.id} value={c.id}>{c.nom}</option>)}
                 {(!isEntreprise || selectedActiviteId) && <option value="pt">Produits Transformés</option>}
               </select>
             </div>
@@ -646,10 +656,12 @@ export default function HistoriqueApproPage() {
                 style={{ width: '100%' }}
                 value={selectedIngredientId}
                 onChange={(e) => setSelectedIngredientId(e.target.value)}
-                disabled={ingredientsLoading || !selectedCategoryId}
+                disabled={!selectedCategoryId}
               >
                 <option value="">{t('client.historique_appro.all_ingredients')}</option>
-                {ingredients.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
+                {selectedCategoryId === 'pt'
+                  ? ptProducts.map((p) => <option key={p.id} value={p.id}>{p.nom}</option>)
+                  : ingredientsInCat.map((i) => <option key={i.id} value={i.id}>{i.nom}</option>)}
               </select>
             </div>
           </div>
