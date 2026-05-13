@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import api from '../../api/client';
 import type { SupportDemande } from '../../types';
 import { useNotifications } from '../../context/NotificationContext';
+import { generateAvenantPdf } from '../../utils/contractPdf';
 
 const TYPE_INFO: Record<string, { label: string; icon: string; color: string; bg: string }> = {
   ingredient_manquant: { label: 'Ingrédient manquant', icon: '🥕', color: '#92400e', bg: '#fef3c7' },
@@ -48,9 +49,8 @@ function DetailsPopup({
 
   // Supplement pricing
   const [pricing, setPricing] = useState<SupplPricing | null>(null);
-  // Avenant PDF preview
+  // Avenant PDF (generated client-side from pricing)
   const [avenantPdfBase64, setAvenantPdfBase64] = useState<string | null>(null);
-  const [avenantPdfUrl, setAvenantPdfUrl] = useState<string | null>(null);
   // Editable ingredient fields
   const [ingNom, setIngNom] = useState(demande.nomIngredient || '');
   const [ingCatNom, setIngCatNom] = useState(demande.categorieNom || '');
@@ -68,26 +68,39 @@ function DetailsPopup({
     if (demande.type === 'supplement') {
       api.get(`/api/abonnements/client/${demande.clientId}/supplement-pricing`)
         .then(({ data }) => setPricing(data)).catch(() => {});
-      api.get(`/api/abonnements/admin/support/${demande.id}/avenant-preview`)
-        .then(({ data }) => setAvenantPdfBase64(data.pdfBase64)).catch(() => {});
     }
     if (demande.type === 'ingredient_manquant') {
       api.get('/api/domaines').then(({ data }) => setDomaines(data)).catch(() => {});
       api.get('/api/categories').then(({ data }) => setCategories(data)).catch(() => {});
       api.get('/api/unites?all=true').then(({ data }) => setUnites(data)).catch(() => {});
     }
-  }, [demande.clientId, demande.type, demande.id]);
+  }, [demande.clientId, demande.type]);
 
+  // Generate avenant PDF client-side once pricing is loaded
   useEffect(() => {
-    if (!avenantPdfBase64) { setAvenantPdfUrl(null); return; }
-    const byteChars = atob(avenantPdfBase64);
-    const byteArr = new Uint8Array(byteChars.length);
-    for (let i = 0; i < byteChars.length; i++) byteArr[i] = byteChars.charCodeAt(i);
-    const blob = new Blob([byteArr], { type: 'application/pdf' });
-    const url = URL.createObjectURL(blob);
-    setAvenantPdfUrl(url);
-    return () => URL.revokeObjectURL(url);
-  }, [avenantPdfBase64]);
+    if (!pricing) return;
+    const nbAAdded = demande.nbActivitesSupp || 0;
+    const nbLAdded = demande.nbLabosSupp     || 0;
+    const nbGAdded = demande.nbGerantsSupp   || 0;
+    const delta = nbAAdded * (pricing.prixActiviteSup || 0)
+                + nbLAdded * (pricing.prixLaboSup     || 0)
+                + nbGAdded * (pricing.prixGerantSup   || 0);
+    const base64 = generateAvenantPdf({
+      clientNom:       demande.clientNom   || 'Client',
+      clientEmail:     demande.clientEmail || '',
+      nbActivitesAdded: nbAAdded,
+      nbLabosAdded:     nbLAdded,
+      nbGerantsAdded:   nbGAdded,
+      nbActivites: (pricing.nbActivites || 1) + nbAAdded,
+      nbLabos:     (pricing.nbLabos     || 0) + nbLAdded,
+      nbGerants:   (pricing.nbGerants   || 0) + nbGAdded,
+      ancienMensuel:   pricing.currentMensuel || 0,
+      nouveauMensuel:  (pricing.currentMensuel || 0) + delta,
+      appName: 'Fiche Technique',
+      dateAvenant: new Date().toISOString(),
+    });
+    setAvenantPdfBase64(base64);
+  }, [pricing, demande]);
 
   const handleAction = async (statut: 'validée' | 'refusée') => {
     setSaving(true);
@@ -186,23 +199,17 @@ function DetailsPopup({
                       <div style={{ fontSize: '1.4rem', fontWeight: 900, color: '#4c1d95' }}>{newTotal.toFixed(0)} DT<span style={{ fontSize: '0.75rem', fontWeight: 500 }}>/mois</span></div>
                     </div>
                   )}
-                  {/* Avenant PDF preview */}
-                  <div>
-                    <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#374151', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
-                      📄 Aperçu du contrat avenant
-                      {avenantPdfBase64 && (
-                        <button onClick={() => { const a = document.createElement('a'); a.href = `data:application/pdf;base64,${avenantPdfBase64}`; a.download = `avenant-${demande.clientNom || demande.clientId}.pdf`; a.click(); }}
-                          style={{ fontSize: '0.7rem', fontWeight: 600, color: '#4338ca', background: '#eef2ff', border: '1px solid #c7d2fe', borderRadius: 6, padding: '2px 10px', cursor: 'pointer' }}>
-                          ⬇ Télécharger
-                        </button>
-                      )}
-                    </div>
-                    {avenantPdfUrl ? (
-                      <iframe src={avenantPdfUrl} title="Aperçu contrat avenant" style={{ width: '100%', height: 360, border: '1.5px solid #e2e8f0', borderRadius: 10, display: 'block' }} />
+                  {/* Avenant PDF download */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 10 }}>
+                    <span style={{ fontSize: '1rem' }}>📄</span>
+                    <span style={{ fontSize: '0.82rem', color: '#374151', fontWeight: 600, flex: 1 }}>Contrat avenant</span>
+                    {avenantPdfBase64 ? (
+                      <button onClick={() => { const a = document.createElement('a'); a.href = `data:application/pdf;base64,${avenantPdfBase64}`; a.download = `avenant-${(demande.clientNom || String(demande.clientId)).replace(/\s+/g, '-').toLowerCase()}.pdf`; a.click(); }}
+                        style={{ fontSize: '0.75rem', fontWeight: 700, color: '#4338ca', background: '#eef2ff', border: '1px solid #c7d2fe', borderRadius: 8, padding: '5px 14px', cursor: 'pointer' }}>
+                        ⬇ Télécharger
+                      </button>
                     ) : (
-                      <div style={{ height: 72, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f8fafc', border: '1.5px dashed #e2e8f0', borderRadius: 10 }}>
-                        <span style={{ fontSize: '0.78rem', color: '#94a3b8' }}>Génération du contrat…</span>
-                      </div>
+                      <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Génération…</span>
                     )}
                   </div>
                   {isPending && (
