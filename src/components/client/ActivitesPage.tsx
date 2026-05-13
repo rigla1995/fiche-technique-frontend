@@ -19,77 +19,6 @@ interface Props {
 
 const TUNISIAN_PHONE = TUNISIAN_PHONE_RE;
 
-// ── Labo select/create sub-form ────────────────────────────────────────────────
-interface LaboSelectOrCreateProps {
-  labos: Labo[];
-  laboAction: 'select' | 'create' | null;
-  setLaboAction: (a: 'select' | 'create') => void;
-  selectedLaboId: number | '';
-  setSelectedLaboId: (id: number | '') => void;
-  laboNom: string; setLaboNom: (v: string) => void;
-  laboRefLabo: string; setLaboRefLabo: (v: string) => void;
-  laboTel: string; setLaboTel: (v: string) => void;
-  laboAdresse: string; setLaboAdresse: (v: string) => void;
-  atLaboLimit?: boolean;
-  maxLabos?: number | null;
-}
-function LaboSelectOrCreate({ labos, laboAction, setLaboAction, selectedLaboId, setSelectedLaboId, laboNom, setLaboNom, laboRefLabo, setLaboRefLabo, laboTel, setLaboTel, laboAdresse, setLaboAdresse, atLaboLimit, maxLabos }: LaboSelectOrCreateProps) {
-  const fieldLabel: React.CSSProperties = { fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 3 };
-  return (
-    <div style={{ background: '#f8fafc', border: '1px solid var(--border)', borderRadius: 10, padding: '14px 16px', marginBottom: 14 }}>
-      {/* Select or Create choice */}
-      <div style={{ display: 'flex', gap: 10, marginBottom: 12 }}>
-        {labos.length > 0 && (
-          <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', padding: '8px 12px', borderRadius: 8, border: `2px solid ${laboAction === 'select' ? 'var(--primary)' : 'var(--border)'}`, background: laboAction === 'select' ? 'var(--primary-light, #eef2ff)' : 'white', fontWeight: 600, fontSize: '0.85rem' }}>
-            <input type="radio" checked={laboAction === 'select'} onChange={() => setLaboAction('select')} style={{ accentColor: 'var(--primary)' }} />
-            Sélectionner un labo existant
-          </label>
-        )}
-        {atLaboLimit ? (
-          <span style={{ fontSize: 12, color: '#6b7280', background: '#f3f4f6', border: '1px solid #e5e7eb', borderRadius: 6, padding: '8px 12px' }}>
-            🔒 Limite de {maxLabos} labo(s) atteinte
-          </span>
-        ) : (
-          <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', padding: '8px 12px', borderRadius: 8, border: `2px solid ${laboAction === 'create' ? 'var(--primary)' : 'var(--border)'}`, background: laboAction === 'create' ? 'var(--primary-light, #eef2ff)' : 'white', fontWeight: 600, fontSize: '0.85rem' }}>
-            <input type="radio" checked={laboAction === 'create'} onChange={() => setLaboAction('create')} style={{ accentColor: 'var(--primary)' }} />
-            Créer un nouveau labo
-          </label>
-        )}
-      </div>
-
-      {laboAction === 'select' && labos.length > 0 && (
-        <div>
-          <label style={fieldLabel}>Labo *</label>
-          <select className="input" style={{ width: '100%' }} value={selectedLaboId} onChange={(e) => setSelectedLaboId(e.target.value === '' ? '' : Number(e.target.value))}>
-            <option value="">— Choisir un labo —</option>
-            {labos.map((l) => <option key={l.id} value={l.id}>🏭 {l.nom}{l.refLabo ? ` (${l.refLabo})` : ''}</option>)}
-          </select>
-        </div>
-      )}
-
-      {laboAction === 'create' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <div>
-            <label style={fieldLabel}>Nom du labo *</label>
-            <input className="input" style={{ width: '100%' }} type="text" value={laboNom} onChange={(e) => setLaboNom(e.target.value)} placeholder="Nom du labo" />
-          </div>
-          <div>
-            <label style={fieldLabel}>Référence labo * <span style={{ textTransform: 'none', fontWeight: 400 }}>(unique par entreprise)</span></label>
-            <input className="input" style={{ width: '100%' }} type="text" value={laboRefLabo} onChange={(e) => setLaboRefLabo(e.target.value)} placeholder="Ex: LABO-001" />
-          </div>
-          <div>
-            <label style={fieldLabel}>Téléphone référent *</label>
-            <input className="input" style={{ width: '100%' }} type="text" value={laboTel} onChange={(e) => setLaboTel(e.target.value)} placeholder="+216 …" />
-          </div>
-          <div>
-            <label style={fieldLabel}>Adresse</label>
-            <textarea className="input" style={{ width: '100%' }} rows={2} value={laboAdresse} onChange={(e) => setLaboAdresse(e.target.value)} placeholder="Adresse (optionnel)" />
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
 
 export default function ActivitesPage({ onCreated, minimal }: Props) {
   const { t } = useTranslation();
@@ -113,13 +42,7 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
   const [franchiseForms, setFranchiseForms] = useState<FranchiseStepForm[]>([]);
   // Labo wizard state
   const [hasLabo, setHasLabo] = useState<boolean | null>(null);
-  const [laboAction, setLaboAction] = useState<'select' | 'create' | null>(null);
   const [selectedLaboId, setSelectedLaboId] = useState<number | ''>('');
-  const [laboNom, setLaboNom] = useState('');
-  const [laboRefLabo, setLaboRefLabo] = useState('');
-  const [laboTel, setLaboTel] = useState('');
-  const [laboAdresse, setLaboAdresse] = useState('');
-  const [laboWizardStep, setLaboWizardStep] = useState<'choice' | 'labo-form' | 'activities'>('choice');
   const [wizardStep, setWizardStep] = useState(1); // 0=type, 1=main, 2=labo, 3=per-activity
   const [labos, setLabos] = useState<Labo[]>([]);
   const [abonnementConfig, setAbonnementConfig] = useState<AbonnementConfig | null>(null);
@@ -129,6 +52,9 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
   const [filterDistinctName, setFilterDistinctName] = useState('');
   // Labo detail popup (click on labo badge in row)
   const [laboPopup, setLaboPopup] = useState<{ nom: string; tel: string | null; adresse: string | null } | null>(null);
+  // Delete labo confirmation
+  const [deleteLaboTarget, setDeleteLaboTarget] = useState<Labo | null>(null);
+  const [deletingLabo, setDeletingLabo] = useState(false);
 
   // Standalone labo add/edit modal
   const [showLaboModal, setShowLaboModal] = useState(false);
@@ -195,18 +121,12 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
     setFranchiseName('');
     setFranchiseStep(0);
     setFranchiseForms([emptyFranchiseStep(), emptyFranchiseStep()]);
-    // Pre-determine labo: if config has no labos → always false; if has labos → preset or ask
+    // Pre-determine labo: if config has no labos → always false
     if (preType === 'franchise_labo') { setHasLabo(true); }
     else if (preType === 'franchise') { setHasLabo(configHasLabo ? null : false); }
     else if (preType === 'distincte') { setHasLabo(configHasLabo ? null : false); }
     else { setHasLabo(null); }
-    setLaboAction(null);
     setSelectedLaboId('');
-    setLaboNom('');
-    setLaboRefLabo('');
-    setLaboTel('');
-    setLaboAdresse('');
-    setLaboWizardStep('choice');
     setError('');
     setWizardStep(preType ? 1 : 0);
     setShowForm(true);
@@ -298,37 +218,14 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
     if (!franchiseName.trim()) { setError(t('validation.name_required')); return; }
     const fn = franchiseName.trim();
 
-    if (hasLabo === true) {
-      if (laboAction === 'create') {
-        if (!laboNom.trim()) { setError('Le nom du labo est requis'); return; }
-        if (!laboRefLabo.trim()) { setError('La référence du labo est requise'); return; }
-        if (!laboTel.trim()) { setError(t('client.labo.labo_fields_required')); return; }
-      } else if (laboAction === 'select') {
-        if (!selectedLaboId) { setError('Veuillez sélectionner un labo'); return; }
-      }
-    }
+    if (hasLabo === true && !selectedLaboId) { setError('Veuillez sélectionner un labo'); return; }
 
     setSaving(true);
     setError('');
     try {
       const isFirst = activites.length === 0;
 
-      // Resolve or create labo
-      let laboId: number | null = null;
-      if (hasLabo === true) {
-        if (laboAction === 'select' && selectedLaboId) {
-          laboId = Number(selectedLaboId);
-        } else if (laboAction === 'create') {
-          const { data: labo } = await api.post('/api/labo', {
-            franchiseGroup: fn,
-            nom: laboNom.trim(),
-            refLabo: laboRefLabo.trim(),
-            referentTel: laboTel.trim(),
-            adresse: laboAdresse.trim() || undefined,
-          });
-          laboId = labo.id;
-        }
-      }
+      const laboId: number | null = hasLabo === true && selectedLaboId ? Number(selectedLaboId) : null;
 
       for (let i = 0; i < franchiseForms.length; i++) {
         const f = franchiseForms[i];
@@ -371,17 +268,9 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
 
   const handleLaboStepNext = () => {
     if (hasLabo === null) { setError('Veuillez choisir une option'); return; }
-    if (hasLabo === true) {
-      if (!laboAction) { setError('Veuillez sélectionner ou créer un labo'); return; }
-      if (laboAction === 'select' && !selectedLaboId) { setError('Veuillez sélectionner un labo'); return; }
-      if (laboAction === 'create') {
-        if (!laboNom.trim()) { setError('Nom du labo requis'); return; }
-        if (!laboRefLabo.trim()) { setError('Référence du labo requise'); return; }
-        if (!laboTel.trim()) { setError('Téléphone du labo requis'); return; }
-      }
-    }
+    if (hasLabo === true && !selectedLaboId) { setError('Veuillez sélectionner un labo'); return; }
     setError('');
-    setWizardStep(3);
+    setWizardStep(isFranchise ? 3 : 4);
   };
 
   const handleActivityBack = () => {
@@ -410,24 +299,8 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
       } else {
         const isFirst = activites.length === 0;
 
-        // Distinct + labo: resolve or create labo first
-        let distinctLaboId: number | null = null;
-        if (!isFranchise && hasLabo === true) {
-          if (laboAction === 'select' && selectedLaboId) {
-            distinctLaboId = Number(selectedLaboId);
-          } else if (laboAction === 'create') {
-            if (!laboNom.trim()) { setError('Le nom du labo est requis'); setSaving(false); return; }
-            if (!laboRefLabo.trim()) { setError('La référence du labo est requise'); setSaving(false); return; }
-            if (!laboTel.trim()) { setError(t('client.labo.labo_fields_required')); setSaving(false); return; }
-            const { data: newLabo } = await api.post('/api/labo', {
-              nom: laboNom.trim(),
-              refLabo: laboRefLabo.trim(),
-              referentTel: laboTel.trim(),
-              adresse: laboAdresse.trim() || undefined,
-            });
-            distinctLaboId = newLabo.id;
-          }
-        }
+        const distinctLaboId: number | null =
+          !isFranchise && hasLabo === true && selectedLaboId ? Number(selectedLaboId) : null;
 
         const payload: Record<string, unknown> = { nom: form.nom, adresse: form.adresse, telephone: form.telephone };
         if (memeActivite !== null) payload.memeActivite = memeActivite;
@@ -503,6 +376,18 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
 
   const closeLaboModal = () => { setShowLaboModal(false); setEditingLaboId(null); setLaboError(''); };
 
+  const confirmDeleteLabo = async () => {
+    if (!deleteLaboTarget) return;
+    setDeletingLabo(true);
+    try {
+      await api.delete(`/api/labo/${deleteLaboTarget.id}`);
+      setDeleteLaboTarget(null);
+      window.dispatchEvent(new Event('labos-changed'));
+      load();
+    } catch { /* ignore */ }
+    setDeletingLabo(false);
+  };
+
   const handleLaboNext = () => {
     if (!laboFormData.nom.trim()) { setLaboError('Nom du labo requis'); return; }
     if (!editingLaboId && !laboFormData.refLabo.trim()) { setLaboError('Référence (ref labo) requise'); return; }
@@ -546,17 +431,9 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
     if (form.telephone && !TUNISIAN_PHONE.test(form.telephone.replace(/\s/g, ''))) {
       setError(t('validation.phone_invalid')); return;
     }
-    if (!editingId && !isDuplicate && !isFranchise && configHasLabo && hasLabo === true) {
-      if (!laboAction) { setError('Veuillez sélectionner ou créer un labo'); return; }
-      if (laboAction === 'select' && !selectedLaboId) { setError('Veuillez sélectionner un labo'); return; }
-      if (laboAction === 'create') {
-        if (!laboNom.trim()) { setError('Nom du labo requis'); return; }
-        if (!laboRefLabo.trim()) { setError('Référence du labo requise'); return; }
-        if (!laboTel.trim()) { setError(t('client.labo.labo_fields_required')); return; }
-      }
-    }
     setError('');
-    setWizardStep(4);
+    // New distinct with labo config → labo selection step first
+    setWizardStep(!editingId && !isDuplicate && !isFranchise && configHasLabo ? 2 : 4);
   };
 
   const handleFranchiseGoToRecap = () => {
@@ -961,8 +838,9 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                           <td style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{labo.refLabo || '—'}</td>
                           <td style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{labo.referentTel || '—'}</td>
                           <td style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{labo.adresse || '—'}</td>
-                          <td style={{ textAlign: 'right' }}>
+                          <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
                             <button className="btn btn-ghost btn-sm" title="Modifier" onClick={() => openEditLabo(labo)}>✏️</button>
+                            <button className="btn btn-danger-ghost btn-sm" title="Supprimer" onClick={() => setDeleteLaboTarget(labo)}>🗑</button>
                           </td>
                         </tr>
                       ))}
@@ -1000,12 +878,14 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                       : `${franchiseName || 'Franchise'} — Activité ${franchiseStep + 1} / ${franchiseCount}`
                     : t('client.entreprise.add_activity')}
                 </h2>
-                {/* Franchise progress indicator */}
-                {isFranchise && !editingId && !isDuplicate && wizardStep >= 1 && (
+                {/* Progress indicator — franchise and distinct new */}
+                {!editingId && !isDuplicate && wizardStep >= 1 && (isFranchise || configHasLabo) && (
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10 }}>
-                    {(configHasLabo
-                      ? [{ label: 'Réseau', s: 1 }, { label: 'Labo', s: 2 }, { label: 'Détails', s: 3 }, { label: 'Récap', s: 4 }]
-                      : [{ label: 'Réseau', s: 1 }, { label: 'Détails', s: 3 }, { label: 'Récap', s: 4 }]
+                    {(isFranchise
+                      ? (configHasLabo
+                          ? [{ label: 'Réseau', s: 1 }, { label: 'Labo', s: 2 }, { label: 'Détails', s: 3 }, { label: 'Récap', s: 4 }]
+                          : [{ label: 'Réseau', s: 1 }, { label: 'Détails', s: 3 }, { label: 'Récap', s: 4 }])
+                      : [{ label: 'Infos', s: 1 }, { label: 'Labo', s: 2 }, { label: 'Récap', s: 4 }]
                     ).map(({ label, s }, idx, arr) => (
                       <div key={s} style={{ display: 'flex', alignItems: 'center', gap: idx < arr.length - 1 ? 8 : 0 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
@@ -1140,78 +1020,64 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                       rows={2}
                     />
                   </div>
-                  {/* Optional labo for distinct new */}
-                  {!editingId && !isDuplicate && configHasLabo && (
-                    <div style={{ background: '#f8fafc', border: '1px solid var(--border)', borderRadius: 12, padding: '14px 16px' }}>
-                      <p style={{ margin: '0 0 10px', fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                        Laboratoire (optionnel)
-                      </p>
-                      <div style={{ display: 'flex', gap: 10, marginBottom: hasLabo === true ? 14 : 0 }}>
-                        <label style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', borderRadius: 10, border: `2px solid ${hasLabo !== true ? 'var(--primary)' : 'var(--border)'}`, background: hasLabo !== true ? 'var(--primary-light, #eef2ff)' : 'var(--surface)', cursor: 'pointer', flex: 1, fontSize: '0.88rem', fontWeight: 600 }}>
-                          <input type="radio" checked={hasLabo !== true} onChange={() => { setHasLabo(false); setLaboAction(null); }} style={{ accentColor: 'var(--primary)' }} />
-                          Sans labo
-                        </label>
-                        <label style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', borderRadius: 10, border: `2px solid ${hasLabo === true ? 'var(--primary)' : 'var(--border)'}`, background: hasLabo === true ? 'var(--primary-light, #eef2ff)' : 'var(--surface)', cursor: 'pointer', flex: 1, fontSize: '0.88rem', fontWeight: 600 }}>
-                          <input type="radio" checked={hasLabo === true} onChange={() => { setHasLabo(true); setLaboAction(null); setSelectedLaboId(''); }} style={{ accentColor: 'var(--primary)' }} />
-                          🏭 Avec labo
-                        </label>
-                      </div>
-                      {hasLabo === true && (
-                        <LaboSelectOrCreate
-                          labos={labos}
-                          laboAction={laboAction}
-                          setLaboAction={setLaboAction}
-                          selectedLaboId={selectedLaboId}
-                          setSelectedLaboId={setSelectedLaboId}
-                          laboNom={laboNom} setLaboNom={setLaboNom}
-                          laboRefLabo={laboRefLabo} setLaboRefLabo={setLaboRefLabo}
-                          laboTel={laboTel} setLaboTel={setLaboTel}
-                          laboAdresse={laboAdresse} setLaboAdresse={setLaboAdresse}
-                          atLaboLimit={atLaboLimit}
-                          maxLabos={maxLabos}
-                        />
-                      )}
-                    </div>
-                  )}
                 </div>
               )}
 
-              {/* ── STEP 2: Franchise labo ── */}
-              {wizardStep === 2 && isFranchise && !editingId && !isDuplicate && (
+              {/* ── STEP 2: Labo selection (franchise + distinct new) ── */}
+              {wizardStep === 2 && !editingId && !isDuplicate && (
                 <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                   <p style={{ margin: 0, fontSize: '0.88rem', color: 'var(--text-muted)' }}>
-                    Le réseau <strong>{franchiseName}</strong> sera-t-il approvisionné par un laboratoire central ?
+                    {isFranchise
+                      ? <>Le réseau <strong>{franchiseName}</strong> sera-t-il approvisionné par un laboratoire central ?</>
+                      : "Cette activité sera-t-elle approvisionnée par un laboratoire ?"
+                    }
                   </p>
                   <div style={{ display: 'flex', gap: 10 }}>
-                    <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '14px 16px', borderRadius: 12, border: `2px solid ${hasLabo === true ? 'var(--primary)' : 'var(--border)'}`, background: hasLabo === true ? 'var(--primary-light, #eef2ff)' : 'var(--surface)', cursor: 'pointer', flex: 1 }}>
-                      <input type="radio" checked={hasLabo === true} onChange={() => { setHasLabo(true); setLaboAction(null); setSelectedLaboId(''); }} style={{ accentColor: 'var(--primary)', marginTop: 3 }} />
+                    <label style={{
+                      display: 'flex', alignItems: 'flex-start', gap: 10, padding: '14px 16px',
+                      borderRadius: 12, flex: 1,
+                      border: `2px solid ${hasLabo === true ? 'var(--primary)' : 'var(--border)'}`,
+                      background: hasLabo === true ? 'var(--primary-light, #eef2ff)' : 'var(--surface)',
+                      cursor: labos.length === 0 ? 'not-allowed' : 'pointer',
+                      opacity: labos.length === 0 ? 0.45 : 1,
+                    }}>
+                      <input type="radio" checked={hasLabo === true} disabled={labos.length === 0}
+                        onChange={() => { setHasLabo(true); setSelectedLaboId(''); }} style={{ accentColor: 'var(--primary)', marginTop: 3 }} />
                       <div>
-                        <div style={{ fontWeight: 700, fontSize: '0.9rem' }}>🏭 Avec labo</div>
-                        <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: 2 }}>Un labo central approvisionne toutes les franchises</div>
+                        <div style={{ fontWeight: 700, fontSize: '0.9rem' }}>
+                          🏭 Avec labo
+                          {labos.length === 0 && <span style={{ fontWeight: 400, fontSize: '0.75rem', color: 'var(--text-muted)', marginLeft: 6 }}>(aucun labo créé)</span>}
+                        </div>
+                        <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: 2 }}>
+                          {isFranchise ? 'Un labo central approvisionne toutes les franchises' : 'Approvisionnement via un laboratoire'}
+                        </div>
                       </div>
                     </label>
-                    <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '14px 16px', borderRadius: 12, border: `2px solid ${hasLabo === false ? 'var(--primary)' : 'var(--border)'}`, background: hasLabo === false ? 'var(--primary-light, #eef2ff)' : 'var(--surface)', cursor: 'pointer', flex: 1 }}>
-                      <input type="radio" checked={hasLabo === false} onChange={() => { setHasLabo(false); setLaboAction(null); }} style={{ accentColor: 'var(--primary)', marginTop: 3 }} />
+                    <label style={{
+                      display: 'flex', alignItems: 'flex-start', gap: 10, padding: '14px 16px',
+                      borderRadius: 12, flex: 1,
+                      border: `2px solid ${hasLabo === false ? 'var(--primary)' : 'var(--border)'}`,
+                      background: hasLabo === false ? 'var(--primary-light, #eef2ff)' : 'var(--surface)',
+                      cursor: 'pointer',
+                    }}>
+                      <input type="radio" checked={hasLabo === false} onChange={() => { setHasLabo(false); setSelectedLaboId(''); }} style={{ accentColor: 'var(--primary)', marginTop: 3 }} />
                       <div>
                         <div style={{ fontWeight: 700, fontSize: '0.9rem' }}>📋 Sans labo</div>
                         <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: 2 }}>Gestion des ingrédients par activité</div>
                       </div>
                     </label>
                   </div>
-                  {hasLabo === true && (
-                    <LaboSelectOrCreate
-                      labos={labos}
-                      laboAction={laboAction}
-                      setLaboAction={setLaboAction}
-                      selectedLaboId={selectedLaboId}
-                      setSelectedLaboId={setSelectedLaboId}
-                      laboNom={laboNom} setLaboNom={setLaboNom}
-                      laboRefLabo={laboRefLabo} setLaboRefLabo={setLaboRefLabo}
-                      laboTel={laboTel} setLaboTel={setLaboTel}
-                      laboAdresse={laboAdresse} setLaboAdresse={setLaboAdresse}
-                      atLaboLimit={atLaboLimit}
-                      maxLabos={maxLabos}
-                    />
+                  {hasLabo === true && labos.length > 0 && (
+                    <div>
+                      <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 4 }}>
+                        Sélectionner un labo *
+                      </label>
+                      <select className="input" style={{ width: '100%' }} value={selectedLaboId}
+                        onChange={(e) => setSelectedLaboId(e.target.value === '' ? '' : Number(e.target.value))}>
+                        <option value="">— Choisir un labo —</option>
+                        {labos.map((l) => <option key={l.id} value={l.id}>🏭 {l.nom}{l.refLabo ? ` (${l.refLabo})` : ''}</option>)}
+                      </select>
+                    </div>
                   )}
                 </div>
               )}
@@ -1321,7 +1187,11 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                 {wizardStep === 4 ? (
                   <button type="button" className="btn btn-secondary" onClick={() => {
                     setError('');
-                    setWizardStep(isFranchise && !editingId && !isDuplicate ? 3 : 1);
+                    setWizardStep(
+                      isFranchise && !editingId && !isDuplicate ? 3
+                      : !isFranchise && !editingId && !isDuplicate && configHasLabo ? 2
+                      : 1
+                    );
                   }}>
                     ‹ {t('client.entreprise.previous')}
                   </button>
@@ -1546,6 +1416,39 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                   <button type="button" className="btn btn-primary" onClick={saveLabo} disabled={laboSaving}>{laboSaving ? t('common.loading') : '✅ Confirmer'}</button>
                 </>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete labo confirmation */}
+      {deleteLaboTarget && (
+        <div className="modal-overlay">
+          <div className="modal" style={{ maxWidth: 480 }} onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2 style={{ color: '#dc2626', margin: 0 }}>⚠️ Supprimer le labo</h2>
+              <button className="btn btn-ghost btn-sm" onClick={() => setDeleteLaboTarget(null)}>✕</button>
+            </div>
+            <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <p style={{ margin: 0, fontWeight: 700, fontSize: '1rem' }}>🏭 {deleteLaboTarget.nom}</p>
+              <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 10, padding: '12px 14px', fontSize: '0.85rem', color: '#991b1b', lineHeight: 1.6 }}>
+                <p style={{ margin: '0 0 6px', fontWeight: 700 }}>⚠ Attention — impacts de la suppression :</p>
+                <ul style={{ margin: 0, paddingLeft: 18 }}>
+                  <li>Les activités assignées à ce labo ne pourront plus recevoir de transferts.</li>
+                  <li>Le système supprimera automatiquement l'assignation de ce labo sur toutes les activités concernées.</li>
+                </ul>
+              </div>
+              <p style={{ margin: 0, color: '#dc2626', fontSize: '0.85rem', fontWeight: 600 }}>
+                {t('client.entreprise.irreversible', 'Cette action est irréversible.')}
+              </p>
+            </div>
+            <div className="modal-footer" style={{ gap: 10 }}>
+              <button className="btn btn-secondary" onClick={() => setDeleteLaboTarget(null)} disabled={deletingLabo}>
+                {t('common.cancel')}
+              </button>
+              <button className="btn btn-danger" onClick={confirmDeleteLabo} disabled={deletingLabo}>
+                {deletingLabo ? '…' : '🗑 Supprimer'}
+              </button>
             </div>
           </div>
         </div>
