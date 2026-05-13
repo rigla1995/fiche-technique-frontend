@@ -430,7 +430,14 @@ export default function SupportPage() {
                   <span style={{ fontSize: '1.25rem' }}>{t.icon}</span>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontSize: '0.88rem', fontWeight: 700, color: '#0f172a' }}>{t.label}</div>
-                    <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: 1 }}>{fmtDate(d.createdAt)}</div>
+                    <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: 1 }}>
+                      {fmtDate(d.createdAt)}
+                      {d.createdBy != null && d.createdBy !== d.clientId && d.createdByNom && (
+                        <span style={{ marginLeft: 8, background: '#f0fdf4', color: '#166534', border: '1px solid #bbf7d0', borderRadius: 6, padding: '1px 7px', fontSize: '0.7rem', fontWeight: 700 }}>
+                          par {d.createdByNom}
+                        </span>
+                      )}
+                    </div>
                   </div>
                   <span style={{ fontSize: '0.75rem', fontWeight: 700, padding: '4px 12px', borderRadius: 20, background: s.bg, color: s.text }}>{s.label}</span>
                   {d.statut === 'en_attente' && (

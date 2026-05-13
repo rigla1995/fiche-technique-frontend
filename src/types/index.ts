@@ -67,6 +67,8 @@ export interface SupportDemande {
   traiteParNom?: string | null;
   traiteLe?: string | null;
   createdAt: string;
+  createdBy?: number | null;
+  createdByNom?: string | null;
 }
 
 export interface Abonnement {

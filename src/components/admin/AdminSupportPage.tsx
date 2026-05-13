@@ -122,6 +122,13 @@ function DetailsPopup({
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 16px', fontSize: '0.83rem' }}>
               <div><span style={{ color: '#94a3b8', fontWeight: 600 }}>Nom : </span><span style={{ fontWeight: 700, color: '#0f172a' }}>{demande.clientNom || '—'}</span></div>
               <div><span style={{ color: '#94a3b8', fontWeight: 600 }}>Email : </span><span style={{ color: '#1e40af' }}>{demande.clientEmail || '—'}</span></div>
+              <div style={{ gridColumn: '1/-1' }}>
+                <span style={{ color: '#94a3b8', fontWeight: 600 }}>Créé par : </span>
+                <span style={{ fontWeight: 700, color: '#0f172a' }}>{demande.createdByNom || demande.clientNom || '—'}</span>
+                {demande.createdBy != null && demande.createdBy !== demande.clientId && (
+                  <span style={{ marginLeft: 6, fontSize: '0.72rem', background: '#f0fdf4', color: '#166534', border: '1px solid #bbf7d0', borderRadius: 6, padding: '1px 7px', fontWeight: 700 }}>gérant</span>
+                )}
+              </div>
             </div>
           </div>
 
@@ -500,6 +507,11 @@ export default function AdminSupportPage() {
                             <span style={{ fontSize: '0.75rem', fontWeight: 700, padding: '3px 10px', borderRadius: 20, background: t.bg, color: t.color }}>{t.icon} {t.label}</span>
                             <span style={{ fontSize: '0.75rem', fontWeight: 700, padding: '3px 10px', borderRadius: 20, background: s.bg, color: s.text }}>{s.label}</span>
                             <span style={{ fontSize: '0.72rem', color: '#94a3b8', marginLeft: 'auto' }}>{fmtDate(d.createdAt)}</span>
+                            {d.createdByNom && (
+                              <span style={{ fontSize: '0.72rem', fontWeight: 700, color: d.createdBy !== d.clientId ? '#166534' : '#374151', background: d.createdBy !== d.clientId ? '#f0fdf4' : '#f8fafc', border: `1px solid ${d.createdBy !== d.clientId ? '#bbf7d0' : '#e5e7eb'}`, borderRadius: 6, padding: '2px 8px' }}>
+                                {d.createdByNom}{d.createdBy !== d.clientId ? ' (gérant)' : ''}
+                              </span>
+                            )}
                             <button onClick={() => setDetailDemande(d)}
                               style={{ padding: '4px 14px', borderRadius: 8, border: '1.5px solid #1e40af', background: '#eff6ff', color: '#1e40af', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer' }}>
                               Détails
