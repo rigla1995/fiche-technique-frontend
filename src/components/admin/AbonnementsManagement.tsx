@@ -246,7 +246,7 @@ interface MontantMoisInfo {
   isGratuit: boolean;
   existing: { montantDt: string | null; statut: string; datePaiement: string | null } | null;
   breakdown: {
-    mensualite: { base: number; effectif: number; hasPromo: boolean; promoType: string | null; coversAll?: boolean };
+    mensualite: { base: number; effectif: number; hasPromo: boolean; promoType: string | null; coversAll?: boolean; baseActivite?: number; baseGerant?: number; baseLabo?: number };
     supplementGerant: { base: number; effectif: number; active: boolean; hasPromo: boolean; promoType: string | null };
     supplementLabo: { base: number; effectif: number; active: boolean; hasPromo: boolean; promoType: string | null };
   };
@@ -1187,55 +1187,67 @@ export default function AbonnementsManagement() {
                         </div>
 
                         {/* Line items */}
-                        {[
-                          { label: pMontantInfo.breakdown.mensualite.coversAll ? 'Total mensuel (activités + labos + gérants)' : (selected.config ? `Activités (×${selected.config.nbActivites})` : 'Activités'), ...pMontantInfo.breakdown.mensualite, show: true },
-                          { label: selected.config && pMontantInfo.breakdown.supplementGerant.active ? `Gérant(s) (×${selected.config.nbGerants})` : 'Gérant(s)', ...pMontantInfo.breakdown.supplementGerant, show: pMontantInfo.breakdown.supplementGerant.active },
-                          { label: selected.config && pMontantInfo.breakdown.supplementLabo.active ? `Labo(s) (×${selected.config.nbLabos})` : 'Labo(s)', ...pMontantInfo.breakdown.supplementLabo, show: pMontantInfo.breakdown.supplementLabo.active },
-                        ].filter((i) => i.show).map((item, idx, arr) => {
-                          const isFree = item.promoType === 'free_months';
-                          const hasDiscount = item.hasPromo && item.effectif !== item.base;
-                          const reduction = item.base - item.effectif;
-                          return (
-                            <div key={item.label} style={{
-                              display: 'grid', gridTemplateColumns: '1fr 80px 1fr 90px', gap: 0,
-                              padding: '10px 14px',
-                              borderBottom: idx < arr.length - 1 ? '1px solid #e2e8f0' : 'none',
-                              background: isFree ? '#f0fdf4' : '#fff',
-                            }}>
-                              {/* Poste */}
-                              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                                <span style={{ fontSize: 13, fontWeight: 600, color: '#0f172a' }}>{item.label}</span>
-                              </div>
-                              {/* Base */}
-                              <div style={{ display: 'flex', alignItems: 'center' }}>
-                                <span style={{
-                                  fontSize: 13, color: hasDiscount || isFree ? '#94a3b8' : '#374151',
-                                  textDecoration: hasDiscount || isFree ? 'line-through' : 'none',
-                                }}>
-                                  {item.base} DT
-                                </span>
-                              </div>
-                              {/* Remise */}
-                              <div style={{ display: 'flex', alignItems: 'center' }}>
-                                {isFree ? (
-                                  <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 6, background: '#dcfce7', color: '#166534' }}>🎁 Gratuit</span>
-                                ) : hasDiscount ? (
-                                  <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 6, background: '#fef3c7', color: '#92400e' }}>
-                                    🏷️ -{reduction} DT
+                        {(() => {
+                          const mens = pMontantInfo.breakdown.mensualite;
+                          const cfg = selected.config;
+                          if (mens.coversAll) {
+                            // Show individual component rows + a discount row
+                            const compRows = [
+                              { label: cfg ? `Activités (×${cfg.nbActivites})` : 'Activités', base: mens.baseActivite ?? 0, show: true },
+                              { label: cfg && (cfg.nbGerants ?? 0) > 0 ? `Gérant(s) (×${cfg.nbGerants})` : 'Gérant(s)', base: mens.baseGerant ?? 0, show: (mens.baseGerant ?? 0) > 0 },
+                              { label: cfg && (cfg.nbLabos ?? 0) > 0 ? `Labo(s) (×${cfg.nbLabos})` : 'Labo(s)', base: mens.baseLabo ?? 0, show: (mens.baseLabo ?? 0) > 0 },
+                            ].filter((r) => r.show);
+                            const reduction = mens.base - mens.effectif;
+                            const isFree = mens.promoType === 'free_months';
+                            return (
+                              <>
+                                {compRows.map((r, idx) => (
+                                  <div key={r.label} style={{ display: 'grid', gridTemplateColumns: '1fr 80px 1fr 90px', padding: '10px 14px', borderBottom: '1px solid #e2e8f0', background: '#fff' }}>
+                                    <span style={{ fontSize: 13, fontWeight: 600, color: '#0f172a', display: 'flex', alignItems: 'center' }}>{r.label}</span>
+                                    <span style={{ fontSize: 13, color: '#374151', display: 'flex', alignItems: 'center' }}>{r.base} DT</span>
+                                    <span style={{ fontSize: 11, color: '#cbd5e1', display: 'flex', alignItems: 'center' }}>—</span>
+                                    <span style={{ fontSize: 14, fontWeight: 700, color: '#374151', display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>{r.base} DT</span>
+                                  </div>
+                                ))}
+                                {/* Discount row */}
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 80px 1fr 90px', padding: '10px 14px', borderBottom: '1px solid #e2e8f0', background: isFree ? '#f0fdf4' : '#fffbeb' }}>
+                                  <span style={{ fontSize: 13, fontWeight: 700, color: isFree ? '#166534' : '#92400e', display: 'flex', alignItems: 'center' }}>
+                                    {isFree ? '🎁 Gratuit (promo mensualité)' : '🏷️ Remise mensualité'}
                                   </span>
-                                ) : (
-                                  <span style={{ fontSize: 11, color: '#cbd5e1' }}>—</span>
-                                )}
+                                  <span style={{ fontSize: 13, color: '#94a3b8', textDecoration: 'line-through', display: 'flex', alignItems: 'center' }}>{mens.base} DT</span>
+                                  <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 6, background: isFree ? '#dcfce7' : '#fef3c7', color: isFree ? '#166534' : '#92400e', display: 'flex', alignItems: 'center', width: 'fit-content' }}>
+                                    {isFree ? '100%' : `-${reduction} DT`}
+                                  </span>
+                                  <span style={{ fontSize: 14, fontWeight: 800, color: isFree ? '#16a34a' : '#d97706', display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
+                                    {isFree ? '0 DT' : `-${reduction} DT`}
+                                  </span>
+                                </div>
+                              </>
+                            );
+                          }
+                          // Normal breakdown (no global promo or per-component promos)
+                          return [
+                            { label: cfg ? `Activités (×${cfg.nbActivites})` : 'Activités', ...mens, show: true },
+                            { label: cfg && pMontantInfo.breakdown.supplementGerant.active ? `Gérant(s) (×${cfg.nbGerants})` : 'Gérant(s)', ...pMontantInfo.breakdown.supplementGerant, show: pMontantInfo.breakdown.supplementGerant.active },
+                            { label: cfg && pMontantInfo.breakdown.supplementLabo.active ? `Labo(s) (×${cfg.nbLabos})` : 'Labo(s)', ...pMontantInfo.breakdown.supplementLabo, show: pMontantInfo.breakdown.supplementLabo.active },
+                          ].filter((i) => i.show).map((item, idx, arr) => {
+                            const isFree = item.promoType === 'free_months';
+                            const hasDiscount = item.hasPromo && item.effectif !== item.base;
+                            const reduction = item.base - item.effectif;
+                            return (
+                              <div key={item.label} style={{ display: 'grid', gridTemplateColumns: '1fr 80px 1fr 90px', gap: 0, padding: '10px 14px', borderBottom: idx < arr.length - 1 ? '1px solid #e2e8f0' : 'none', background: isFree ? '#f0fdf4' : '#fff' }}>
+                                <div style={{ display: 'flex', alignItems: 'center' }}><span style={{ fontSize: 13, fontWeight: 600, color: '#0f172a' }}>{item.label}</span></div>
+                                <div style={{ display: 'flex', alignItems: 'center' }}><span style={{ fontSize: 13, color: hasDiscount || isFree ? '#94a3b8' : '#374151', textDecoration: hasDiscount || isFree ? 'line-through' : 'none' }}>{item.base} DT</span></div>
+                                <div style={{ display: 'flex', alignItems: 'center' }}>
+                                  {isFree ? <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 6, background: '#dcfce7', color: '#166534' }}>🎁 Gratuit</span>
+                                  : hasDiscount ? <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 6, background: '#fef3c7', color: '#92400e' }}>🏷️ -{reduction} DT</span>
+                                  : <span style={{ fontSize: 11, color: '#cbd5e1' }}>—</span>}
+                                </div>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}><span style={{ fontSize: 14, fontWeight: 800, color: isFree ? '#16a34a' : '#0f172a' }}>{item.effectif} DT</span></div>
                               </div>
-                              {/* Montant effectif */}
-                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
-                                <span style={{ fontSize: 14, fontWeight: 800, color: isFree ? '#16a34a' : '#0f172a' }}>
-                                  {item.effectif} DT
-                                </span>
-                              </div>
-                            </div>
-                          );
-                        })}
+                            );
+                          });
+                        })()}
 
                         {/* Total row */}
                         <div style={{
