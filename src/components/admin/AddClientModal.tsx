@@ -416,16 +416,16 @@ export default function AddClientModal({ onClose, onCreated }: Props) {
                     placeholder="email@exemple.com"
                     style={{
                       ...inputStyle,
-                      borderColor: emailExists ? '#fca5a5' : emailCheckFailed ? '#fcd34d' : inputStyle.borderColor,
-                      background: emailExists ? '#fff5f5' : emailCheckFailed ? '#fffbeb' : inputStyle.background,
+                      borderColor: (emailExists || emailCheckFailed) ? '#fca5a5' : inputStyle.borderColor,
+                      background: (emailExists || emailCheckFailed) ? '#fff5f5' : inputStyle.background,
                     }}
                   />
-                  {emailChecking && <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 3 }}>Vérification…</div>}
+                  {emailChecking && <div style={{ fontSize: 11, color: '#6366f1', marginTop: 3, fontWeight: 500 }}>⏳ Vérification en cours…</div>}
                   {!emailChecking && emailExists && (
-                    <div style={{ fontSize: 11, color: '#dc2626', marginTop: 3 }}>Cet email est déjà utilisé.</div>
+                    <div style={{ fontSize: 11, color: '#dc2626', marginTop: 3, fontWeight: 600 }}>❌ Cet email est déjà associé à un compte existant.</div>
                   )}
                   {!emailChecking && emailCheckFailed && (
-                    <div style={{ fontSize: 11, color: '#d97706', marginTop: 3 }}>⚠ Vérification impossible — connexion au serveur requise.</div>
+                    <div style={{ fontSize: 11, color: '#dc2626', marginTop: 3, fontWeight: 600 }}>❌ Impossible de vérifier cet email — réessayez.</div>
                   )}
                 </div>
                 <div>
