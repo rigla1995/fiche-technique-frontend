@@ -18,7 +18,7 @@ export function useEmailCheck(email: string, excludeId?: string | number) {
       try {
         const params: Record<string, string> = { email };
         if (excludeId) params.excludeId = String(excludeId);
-        const { data } = await api.get('/api/auth/check-email', { params });
+        const { data } = await api.get('/auth/check-email', { params });
         setExists(data.exists);
         setCheckFailed(false);
       } catch {
