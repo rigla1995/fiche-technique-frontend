@@ -246,7 +246,7 @@ interface MontantMoisInfo {
   isGratuit: boolean;
   existing: { montantDt: string | null; statut: string; datePaiement: string | null } | null;
   breakdown: {
-    mensualite: { base: number; effectif: number; hasPromo: boolean; promoType: string | null };
+    mensualite: { base: number; effectif: number; hasPromo: boolean; promoType: string | null; coversAll?: boolean };
     supplementGerant: { base: number; effectif: number; active: boolean; hasPromo: boolean; promoType: string | null };
     supplementLabo: { base: number; effectif: number; active: boolean; hasPromo: boolean; promoType: string | null };
   };
@@ -1188,7 +1188,7 @@ export default function AbonnementsManagement() {
 
                         {/* Line items */}
                         {[
-                          { label: selected.config ? `Activités (×${selected.config.nbActivites})` : 'Activités', ...pMontantInfo.breakdown.mensualite, show: true },
+                          { label: pMontantInfo.breakdown.mensualite.coversAll ? 'Total mensuel (activités + labos + gérants)' : (selected.config ? `Activités (×${selected.config.nbActivites})` : 'Activités'), ...pMontantInfo.breakdown.mensualite, show: true },
                           { label: selected.config && pMontantInfo.breakdown.supplementGerant.active ? `Gérant(s) (×${selected.config.nbGerants})` : 'Gérant(s)', ...pMontantInfo.breakdown.supplementGerant, show: pMontantInfo.breakdown.supplementGerant.active },
                           { label: selected.config && pMontantInfo.breakdown.supplementLabo.active ? `Labo(s) (×${selected.config.nbLabos})` : 'Labo(s)', ...pMontantInfo.breakdown.supplementLabo, show: pMontantInfo.breakdown.supplementLabo.active },
                         ].filter((i) => i.show).map((item, idx, arr) => {
