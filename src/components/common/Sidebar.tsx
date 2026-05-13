@@ -373,8 +373,8 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
   const location = useLocation();
   const step = user?.onboardingStep ?? 0;
-  // Include null compteType: new config-based clients have no compteType but should use entreprise layout
-  const isEntreprise = user?.compteType === 'entreprise' || (user?.role === 'client' && !user?.compteType);
+  // Include null compteType: new config-based clients and gérants of entreprise clients have no compteType but should use entreprise layout
+  const isEntreprise = user?.compteType === 'entreprise' || !user?.compteType;
   const isOnboarding = isEntreprise && step > 0;
   const effectiveHasSelections = isEntreprise ? (step === 0) : hasSelections;
 
