@@ -60,7 +60,8 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
   const [showLaboModal, setShowLaboModal] = useState(false);
   const [editingLaboId, setEditingLaboId] = useState<number | null>(null);
   const [laboFormData, setLaboFormData] = useState({ nom: '', refLabo: '', referentTel: '', adresse: '' });
-  const [laboModalStep, setLaboModalStep] = useState<1 | 2>(1);
+  const [laboModalStep, setLaboModalStep] = useState<1 | 2 | 3>(1);
+  const [laboSelectedActivities, setLaboSelectedActivities] = useState<number[]>([]);
   const [laboSaving, setLaboSaving] = useState(false);
   const [laboError, setLaboError] = useState('');
 
@@ -181,7 +182,6 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
     : false;
 
   const franchiseCount = Math.max(0, parseInt(nombreActivites) || 0);
-  const franchiseUnlocked = isFranchise && !editingId && !isDuplicate && franchiseName.trim().length > 0 && franchiseCount > 1 && !franchiseNameConflict;
 
   const handleNombreActivitesChange = (val: string) => {
     setNombreActivites(val);
@@ -362,6 +362,7 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
     setEditingLaboId(null);
     setLaboFormData({ nom: '', refLabo: '', referentTel: '', adresse: '' });
     setLaboModalStep(1);
+    setLaboSelectedActivities([]);
     setLaboError('');
     setShowLaboModal(true);
   };
@@ -394,7 +395,8 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
     if (!laboFormData.referentTel.trim()) { setLaboError('Téléphone requis'); return; }
     if (!TUNISIAN_PHONE.test(laboFormData.referentTel.replace(/\s/g, ''))) { setLaboError(t('validation.phone_invalid')); return; }
     setLaboError('');
-    setLaboModalStep(2);
+    // Edit: skip activities step, go straight to recap; Add: show activities step
+    setLaboModalStep(editingLaboId ? 3 : 2);
   };
 
   const saveLabo = async () => {
@@ -413,6 +415,7 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
           refLabo: laboFormData.refLabo.trim(),
           referentTel: laboFormData.referentTel.trim(),
           adresse: laboFormData.adresse.trim() || undefined,
+          ...(laboSelectedActivities.length > 0 ? { activityIds: laboSelectedActivities } : {}),
         });
         window.dispatchEvent(new Event('labos-changed'));
       }
@@ -612,7 +615,7 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                   </button>
                 ) : (
                   <button className="btn btn-primary btn-sm" onClick={() => openAdd('franchise')}>
-                    + {t('client.entreprise.add_activity')}
+                    + Nouvelle franchise
                   </button>
                 )}
               </div>
@@ -737,7 +740,7 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                   </button>
                 ) : (
                   <button className="btn btn-secondary btn-sm" onClick={() => openAdd('distincte')}>
-                    + {t('client.entreprise.add_activity')}
+                    + Nouvelle activité distincte
                   </button>
                 )}
               </div>
@@ -811,7 +814,13 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                     ➕ Augmenter la capacité
                   </button>
                 ) : (
-                  <button className="btn btn-sm" style={{ background: '#7c3aed', color: '#fff', border: 'none', borderRadius: 8, fontSize: '0.8rem', padding: '6px 14px', cursor: 'pointer', fontWeight: 700 }} onClick={openAddLabo}>
+                  <button
+                    className="btn btn-sm"
+                    style={{ background: activites.length === 0 ? '#e9d5ff' : '#7c3aed', color: activites.length === 0 ? '#a855f7' : '#fff', border: 'none', borderRadius: 8, fontSize: '0.8rem', padding: '6px 14px', cursor: activites.length === 0 ? 'not-allowed' : 'pointer', fontWeight: 700 }}
+                    onClick={activites.length === 0 ? undefined : openAddLabo}
+                    title={activites.length === 0 ? 'Ajoutez d\'abord une activité avant de créer un labo' : undefined}
+                    disabled={activites.length === 0}
+                  >
                     + Nouveau labo
                   </button>
                 )}
@@ -1129,7 +1138,7 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
               {/* ── STEP 4: Recap / Confirmation ── */}
               {wizardStep === 4 && (() => {
                 const laboNomRecap = hasLabo === true
-                  ? (laboAction === 'create' ? laboNom : labos.find((l) => l.id === Number(selectedLaboId))?.nom || '—')
+                  ? (labos.find((l) => l.id === Number(selectedLaboId))?.nom || '—')
                   : null;
                 const fieldLabel: React.CSSProperties = { fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' as const, letterSpacing: '0.05em', marginBottom: 2 };
                 const row = (label: string, value: string) => (
@@ -1343,10 +1352,13 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
             <div className="modal-header modal-header--primary">
               <div style={{ flex: 1 }}>
                 <h2 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700 }}>
-                  {laboModalStep === 2 ? '✅ Récapitulatif' : editingLaboId ? '🏭 Modifier le labo' : '🏭 Nouveau labo'}
+                  {laboModalStep === 3 ? '✅ Récapitulatif' : editingLaboId ? '🏭 Modifier le labo' : '🏭 Nouveau labo'}
                 </h2>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8 }}>
-                  {[{ label: 'Formulaire', s: 1 }, { label: 'Récap', s: 2 }].map(({ label, s }, idx, arr) => (
+                  {(editingLaboId
+                    ? [{ label: 'Formulaire', s: 1 }, { label: 'Récap', s: 3 }]
+                    : [{ label: 'Formulaire', s: 1 }, { label: 'Activités', s: 2 }, { label: 'Récap', s: 3 }]
+                  ).map(({ label, s }, idx, arr) => (
                     <div key={s} style={{ display: 'flex', alignItems: 'center', gap: idx < arr.length - 1 ? 8 : 0 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
                         <span style={{ width: 20, height: 20, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.68rem', fontWeight: 800, background: laboModalStep > s ? '#22c55e' : laboModalStep === s ? 'white' : 'rgba(255,255,255,0.25)', color: laboModalStep > s ? 'white' : laboModalStep === s ? 'var(--primary)' : 'rgba(255,255,255,0.6)' }}>
@@ -1385,7 +1397,47 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
               </div>
             )}
 
-            {laboModalStep === 2 && (
+            {laboModalStep === 2 && !editingLaboId && (
+              <div className="modal-body" style={{ maxHeight: '52vh', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <p style={{ margin: '0 0 4px', fontSize: '0.85rem', color: '#64748b' }}>
+                  Sélectionnez les activités que ce labo va gérer <span style={{ color: '#94a3b8' }}>(optionnel)</span>.
+                </p>
+                {activites.filter((a) => !a.laboId).length === 0 ? (
+                  <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', fontStyle: 'italic' }}>
+                    Toutes les activités ont déjà un labo assigné.
+                  </p>
+                ) : (
+                  activites.filter((a) => !a.laboId).map((act) => (
+                    <label key={act.id} style={{
+                      display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', borderRadius: 8,
+                      cursor: 'pointer',
+                      background: laboSelectedActivities.includes(act.id) ? 'var(--primary-light, #eef2ff)' : '#f8fafc',
+                      border: `1px solid ${laboSelectedActivities.includes(act.id) ? 'var(--primary)' : 'var(--border)'}`,
+                    }}>
+                      <input
+                        type="checkbox"
+                        checked={laboSelectedActivities.includes(act.id)}
+                        onChange={() => setLaboSelectedActivities((prev) =>
+                          prev.includes(act.id) ? prev.filter((id) => id !== act.id) : [...prev, act.id]
+                        )}
+                        style={{ accentColor: 'var(--primary)', flexShrink: 0 }}
+                      />
+                      <span style={{ flex: 1, fontSize: '0.88rem', fontWeight: 600 }}>{act.nom}</span>
+                      <span style={{
+                        fontSize: '0.72rem', borderRadius: 12, padding: '2px 8px',
+                        background: act.type === 'franchise' ? '#eff6ff' : '#f0fdf4',
+                        color: act.type === 'franchise' ? '#1e40af' : '#166534',
+                        border: `1px solid ${act.type === 'franchise' ? '#bfdbfe' : '#bbf7d0'}`,
+                      }}>
+                        {act.type === 'franchise' ? '🔗 Franchise' : '📍 Distincte'}
+                      </span>
+                    </label>
+                  ))
+                )}
+              </div>
+            )}
+
+            {laboModalStep === 3 && (
               <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                 <p style={{ margin: '0 0 8px', fontSize: '0.85rem', color: '#64748b' }}>Vérifiez les informations avant de confirmer.</p>
                 {[
@@ -1399,20 +1451,39 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                     <span style={{ fontSize: '0.9rem', fontWeight: 600, color: '#0f172a' }}>{value || '—'}</span>
                   </div>
                 ))}
+                {!editingLaboId && laboSelectedActivities.length > 0 && (
+                  <div style={{ paddingTop: 6 }}>
+                    <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 4 }}>
+                      Activités assignées ({laboSelectedActivities.length})
+                    </span>
+                    {activites.filter((a) => laboSelectedActivities.includes(a.id)).map((a) => (
+                      <div key={a.id} style={{ fontSize: '0.83rem', padding: '3px 0 3px 4px', color: '#374151', borderBottom: '1px solid #f1f5f9' }}>
+                        {a.type === 'franchise' ? '🔗' : '📍'} {a.nom}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
 
             {laboError && <p style={{ margin: '0 20px 12px', color: 'var(--danger, #ef4444)', fontSize: '0.82rem', fontWeight: 500 }}>⚠ {laboError}</p>}
 
             <div className="modal-footer">
-              {laboModalStep === 1 ? (
+              {laboModalStep === 1 && (
                 <>
                   <button type="button" className="btn btn-secondary" onClick={closeLaboModal}>{t('common.cancel')}</button>
                   <button type="button" className="btn btn-primary" onClick={handleLaboNext}>Suivant ›</button>
                 </>
-              ) : (
+              )}
+              {laboModalStep === 2 && (
                 <>
                   <button type="button" className="btn btn-secondary" onClick={() => { setLaboModalStep(1); setLaboError(''); }}>‹ {t('client.entreprise.previous')}</button>
+                  <button type="button" className="btn btn-primary" onClick={() => setLaboModalStep(3)}>Suivant ›</button>
+                </>
+              )}
+              {laboModalStep === 3 && (
+                <>
+                  <button type="button" className="btn btn-secondary" onClick={() => { setLaboModalStep(editingLaboId ? 1 : 2); setLaboError(''); }}>‹ {t('client.entreprise.previous')}</button>
                   <button type="button" className="btn btn-primary" onClick={saveLabo} disabled={laboSaving}>{laboSaving ? t('common.loading') : '✅ Confirmer'}</button>
                 </>
               )}
