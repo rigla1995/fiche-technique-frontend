@@ -245,7 +245,9 @@ export default function GlobalCataloguePage() {
   const groupActivities = activites.filter(
     (a) => a.type === 'franchise' && (a.franchiseGroup || a.nom).toLowerCase() === selectedGroup.toLowerCase()
   );
-  const isGestionSeparee = !groupLabo;
+  // Find labo for selected distinct activity
+  const selectedDistinctAct = activites.find((a) => a.id === selectedActId) ?? null;
+  const distinctActLabo = selectedDistinctAct?.laboId ? (labos.find((l) => l.id === selectedDistinctAct.laboId) ?? null) : null;
 
   // For gestion séparée: pick first activity of the group as selector
   const [selectedFranchiseActId, setSelectedFranchiseActId] = useState<number | null>(null);
@@ -305,13 +307,19 @@ export default function GlobalCataloguePage() {
       if (!selectedActId) return;
       setLoading(true);
       try {
-        const { data } = await api.get(`/api/entreprise/activites/${selectedActId}/ingredients`);
-        setIngredients((data as ActiviteIngredient[]).map((i) => ({ ...i })));
+        if (distinctActLabo) {
+          // Activity managed by a labo: load from labo ingredient catalogue
+          const { data } = await api.get(`/api/labo/${distinctActLabo.id}/ingredients`);
+          setIngredients((data as GlobalIngredient[]).map((i) => ({ ...i })));
+        } else {
+          const { data } = await api.get(`/api/entreprise/activites/${selectedActId}/ingredients`);
+          setIngredients((data as ActiviteIngredient[]).map((i) => ({ ...i })));
+        }
       } finally {
         setLoading(false);
       }
     }
-  }, [isEntreprise, activeType, selectedGroup, groupLabo, selectedFranchiseActId, selectedActId, t]);
+  }, [isEntreprise, activeType, selectedGroup, groupLabo, selectedFranchiseActId, selectedActId, distinctActLabo, t]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -329,7 +337,8 @@ export default function GlobalCataloguePage() {
           setToggling(null);
           setDeselectModal({ ingId, ingName: ing.nom, approCount: data.approCount ?? 0, inventaireCount: data.inventaireCount ?? 0 });
           return;
-        } else if (activeType !== 'franchise' || !groupLabo) {
+        } else if ((activeType === 'franchise' && !groupLabo) || (activeType !== 'franchise' && !distinctActLabo)) {
+          // Gestion séparée or distinct without labo: check cascade info per activity
           const actId = activeType === 'franchise' ? selectedFranchiseActId : selectedActId;
           if (actId) {
             const { data } = await api.get(`/api/stock/entreprise/${actId}/${ingId}/cascade-info`);
@@ -339,6 +348,7 @@ export default function GlobalCataloguePage() {
           }
           setToggling(null);
         } else {
+          // Labo manages this: deselect directly without cascade prompt
           setToggling(null);
         }
       } catch {
@@ -362,6 +372,10 @@ export default function GlobalCataloguePage() {
         if (deleteHistory) await api.delete(`/api/stock/client/${ingId}/all-history`);
       } else if (activeType === 'franchise' && groupLabo) {
         ({ data } = await api.post(`/api/labo/${groupLabo.id}/ingredients/${ingId}/select`));
+        if (user?.onboardingStep === 3) await advanceOnboarding(0);
+      } else if (activeType !== 'franchise' && distinctActLabo) {
+        // Distinct activity managed by a labo: toggle at labo level
+        ({ data } = await api.post(`/api/labo/${distinctActLabo.id}/ingredients/${ingId}/select`));
         if (user?.onboardingStep === 3) await advanceOnboarding(0);
       } else {
         const actId = activeType === 'franchise' ? selectedFranchiseActId : selectedActId;
@@ -462,12 +476,23 @@ export default function GlobalCataloguePage() {
               {distinctActivities.length === 0 ? (
                 <p className="text-muted">{t('nav.no_distinct_activity', 'Aucune activité distincte')}</p>
               ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                  <label style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-muted)' }}>{t('client.entreprise.activity_nom', 'Activité')}</label>
-                  <select className="input" style={{ maxWidth: 260 }} value={selectedActId ?? ''} onChange={(e) => setSelectedActId(Number(e.target.value))}>
-                    {distinctActivities.map((a) => <option key={a.id} value={a.id}>{a.nom}</option>)}
-                  </select>
-                </div>
+                <>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                    <label style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-muted)' }}>{t('client.entreprise.activity_nom', 'Activité')}</label>
+                    <select className="input" style={{ maxWidth: 260 }} value={selectedActId ?? ''} onChange={(e) => setSelectedActId(Number(e.target.value))}>
+                      {distinctActivities.map((a) => <option key={a.id} value={a.id}>{a.nom}{a.laboId ? ' 🏭' : ''}</option>)}
+                    </select>
+                  </div>
+                  {distinctActLabo ? (
+                    <div style={{ background: '#eef2ff', border: '1px solid #c7d2fe', borderRadius: 8, padding: '8px 14px', fontSize: '0.82rem', color: '#3730a3' }}>
+                      🏭 {t('global_catalogue.labo_mode', 'Assignation au niveau Labo')} — <strong>{distinctActLabo.nom}</strong>
+                    </div>
+                  ) : (
+                    <div style={{ background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: 8, padding: '8px 14px', fontSize: '0.82rem', color: '#c2410c' }}>
+                      📋 {t('global_catalogue.gestion_separee_mode', 'Gestion Séparée — assignation par activité')}
+                    </div>
+                  )}
+                </>
               )}
             </div>
           )}
