@@ -19,7 +19,6 @@ const TUNISIAN_PHONE = /^(\+216[\s-]?)?[2579]\d{7}$/;
 export default function Profile() {
   const { t } = useTranslation();
   const { user, updateUser, advanceOnboarding } = useAuth();
-  const { emailExists: profileEmailExists, emailChecking: profileEmailChecking } = useEmailCheck(form.email, user?.id);
   const navigate = useNavigate();
   const [upgrading, setUpgrading] = useState(false);
   const [upgradeMsg, setUpgradeMsg] = useState('');
@@ -39,6 +38,8 @@ export default function Profile() {
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const { emailExists: profileEmailExists, emailChecking: profileEmailChecking } = useEmailCheck(form.email, user?.id);;
 
   useEffect(() => {
     api.get('/auth/me').then(({ data }) => {
