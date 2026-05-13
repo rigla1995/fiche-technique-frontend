@@ -919,7 +919,7 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
             </div>
           )}
           {/* Labos section — visible when config includes labos */}
-          {!isOnboarding && configHasLabo && (
+          {configHasLabo && (
             <div style={{ marginBottom: 32 }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14, padding: '10px 16px', background: 'linear-gradient(135deg,#f5f3ff,#ede9fe)', borderRadius: 12, border: '1px solid #c4b5fd' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>

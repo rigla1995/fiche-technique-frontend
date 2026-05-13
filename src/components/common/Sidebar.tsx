@@ -567,12 +567,15 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
               {/* Gérants — lien direct sous Mes Activités */}
               {isEntreprise && user?.role === 'client' && step === 0 && (
+                <>
+                <Divider />
                 <li>
                   <NavLink to="/client/gerants" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>
                     <span className="link-icon">👥</span>
                     <span className="link-label">Gérants</span>
                   </NavLink>
                 </li>
+                </>
               )}
 
               {/* Independent: Espace sections — same structure as entreprise "distinct" */}
@@ -685,6 +688,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                   </li>
 
                   {/* Demandes — sous le Catalogue Global */}
+                  <Divider />
                   <li>
                     <NavLink to="/client/support" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>
                       <span className="link-icon">💬</span>
@@ -1109,6 +1113,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                   )}
 
                   {/* Demandes — sous le Catalogue Global */}
+                  <Divider />
                   <li>
                     <NavLink to="/client/support" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>
                       <span className="link-icon">💬</span>
