@@ -48,6 +48,9 @@ function DetailsPopup({
 
   // Supplement pricing
   const [pricing, setPricing] = useState<SupplPricing | null>(null);
+  // Avenant PDF preview
+  const [avenantPdfBase64, setAvenantPdfBase64] = useState<string | null>(null);
+  const [avenantPdfUrl, setAvenantPdfUrl] = useState<string | null>(null);
   // Editable ingredient fields
   const [ingNom, setIngNom] = useState(demande.nomIngredient || '');
   const [ingCatNom, setIngCatNom] = useState(demande.categorieNom || '');
@@ -65,13 +68,26 @@ function DetailsPopup({
     if (demande.type === 'supplement') {
       api.get(`/api/abonnements/client/${demande.clientId}/supplement-pricing`)
         .then(({ data }) => setPricing(data)).catch(() => {});
+      api.get(`/api/abonnements/admin/support/${demande.id}/avenant-preview`)
+        .then(({ data }) => setAvenantPdfBase64(data.pdfBase64)).catch(() => {});
     }
     if (demande.type === 'ingredient_manquant') {
       api.get('/api/domaines').then(({ data }) => setDomaines(data)).catch(() => {});
       api.get('/api/categories').then(({ data }) => setCategories(data)).catch(() => {});
       api.get('/api/unites?all=true').then(({ data }) => setUnites(data)).catch(() => {});
     }
-  }, [demande.clientId, demande.type]);
+  }, [demande.clientId, demande.type, demande.id]);
+
+  useEffect(() => {
+    if (!avenantPdfBase64) { setAvenantPdfUrl(null); return; }
+    const byteChars = atob(avenantPdfBase64);
+    const byteArr = new Uint8Array(byteChars.length);
+    for (let i = 0; i < byteChars.length; i++) byteArr[i] = byteChars.charCodeAt(i);
+    const blob = new Blob([byteArr], { type: 'application/pdf' });
+    const url = URL.createObjectURL(blob);
+    setAvenantPdfUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [avenantPdfBase64]);
 
   const handleAction = async (statut: 'validée' | 'refusée') => {
     setSaving(true);
@@ -170,9 +186,28 @@ function DetailsPopup({
                       <div style={{ fontSize: '1.4rem', fontWeight: 900, color: '#4c1d95' }}>{newTotal.toFixed(0)} DT<span style={{ fontSize: '0.75rem', fontWeight: 500 }}>/mois</span></div>
                     </div>
                   )}
+                  {/* Avenant PDF preview */}
+                  <div>
+                    <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#374151', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
+                      📄 Aperçu du contrat avenant
+                      {avenantPdfBase64 && (
+                        <button onClick={() => { const a = document.createElement('a'); a.href = `data:application/pdf;base64,${avenantPdfBase64}`; a.download = `avenant-${demande.clientNom || demande.clientId}.pdf`; a.click(); }}
+                          style={{ fontSize: '0.7rem', fontWeight: 600, color: '#4338ca', background: '#eef2ff', border: '1px solid #c7d2fe', borderRadius: 6, padding: '2px 10px', cursor: 'pointer' }}>
+                          ⬇ Télécharger
+                        </button>
+                      )}
+                    </div>
+                    {avenantPdfUrl ? (
+                      <iframe src={avenantPdfUrl} title="Aperçu contrat avenant" style={{ width: '100%', height: 360, border: '1.5px solid #e2e8f0', borderRadius: 10, display: 'block' }} />
+                    ) : (
+                      <div style={{ height: 72, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f8fafc', border: '1.5px dashed #e2e8f0', borderRadius: 10 }}>
+                        <span style={{ fontSize: '0.78rem', color: '#94a3b8' }}>Génération du contrat…</span>
+                      </div>
+                    )}
+                  </div>
                   {isPending && (
                     <div style={{ background: '#fef3c7', border: '1px solid #fde68a', borderRadius: 10, padding: '10px 14px', fontSize: '0.8rem', color: '#92400e', fontWeight: 600 }}>
-                      ✉️ Un contrat avenant sera envoyé par email au client lors de la validation.
+                      ✉️ Ce contrat avenant sera envoyé par email au client lors de la validation.
                     </div>
                   )}
                 </div>
