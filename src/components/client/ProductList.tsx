@@ -206,7 +206,6 @@ export default function ProductList() {
   const paginated = searched.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
 
   const isVendable = tab === 'vendable';
-  const emptyKey = isVendable ? 'client.products.no_vendable_products' : 'client.products.no_utilisable_products_tab';
   const addKey = isVendable ? 'client.products.add_vendable' : 'client.products.add_utilisable';
 
   const filterQs = [
@@ -246,11 +245,6 @@ export default function ProductList() {
     const group = p.franchiseGroup || filterFranchiseGroup || null;
     if (!group) return [];
     return franchiseActivities.filter((a) => (a.franchiseGroup || a.nom) === group);
-  };
-
-  const labelStyle: React.CSSProperties = {
-    fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)',
-    textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 3,
   };
 
   const ctxBadge = isFranchiseCtx

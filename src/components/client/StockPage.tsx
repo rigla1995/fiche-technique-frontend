@@ -8,7 +8,6 @@ import type { Activite, StockEntry, StockHistoryEntry, ActiviteTypesSummary, Fou
 
 const currentYear = new Date().getFullYear();
 const yearStart = `${currentYear}-01-01`;
-const yearEnd = `${currentYear}-12-31`;
 const todayStr = () => new Date().toISOString().split('T')[0];
 const fmtDate = (iso: string | null | undefined) => {
   if (!iso || iso.length < 10) return iso ?? '—';
@@ -75,7 +74,7 @@ function PerteModal({ ingredientId, nom, activiteId, onSaveOverride, onAfterSave
   const [loadingPrix, setLoadingPrix] = useState(false);
   const [loadingRange, setLoadingRange] = useState(true);
   const [dateMin, setDateMin] = useState<string | null>(null);
-  const [dateMax, setDateMax] = useState<string | null>(null);
+  const [, setDateMax] = useState<string | null>(null);
 
   // Fetch allowed date range (all-time first appro) on open
   useEffect(() => {
@@ -218,93 +217,6 @@ function PerteModal({ ingredientId, nom, activiteId, onSaveOverride, onAfterSave
             )}
           </div>
         )}
-      </div>
-    </div>
-  );
-}
-
-// ────────────────────────────────────────────────────────────────────────────
-
-interface HistoryPopupProps {
-  ingredientId: number;
-  nom: string;
-  activiteId?: number;
-  isEntreprise: boolean;
-  onClose: () => void;
-}
-
-function HistoryPopup({ ingredientId, nom, activiteId, isEntreprise, onClose }: HistoryPopupProps) {
-  const { t } = useTranslation();
-  const navigate = useNavigate();
-  const [entries, setEntries] = useState<StockHistoryEntry[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const url = isEntreprise && activiteId
-      ? `/api/stock/entreprise/${activiteId}/${ingredientId}/history`
-      : `/api/stock/client/${ingredientId}/history`;
-    api.get(url)
-      .then(({ data }) => setEntries(data as StockHistoryEntry[]))
-      .catch(() => setEntries([]))
-      .finally(() => setLoading(false));
-  }, [ingredientId, activiteId, isEntreprise]);
-
-  const goFullHistory = () => {
-    const params = new URLSearchParams({ ingredientId: String(ingredientId) });
-    if (isEntreprise && activiteId) params.set('activiteId', String(activiteId));
-    navigate(`/client/stock/historique?${params}`);
-    onClose();
-  };
-
-  return (
-    <div className="modal-overlay">
-      <div className="modal" style={{ maxWidth: 600 }} onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header modal-header--info">
-          <h2>{t('client.stock.history_title', { nom })}</h2>
-          <button className="modal-close" onClick={onClose}>×</button>
-        </div>
-        <div className="modal-body">
-          {loading ? (
-            <p className="text-muted">{t('common.loading')}</p>
-          ) : entries.length === 0 ? (
-            <p className="text-muted">{t('client.stock.no_history')}</p>
-          ) : (
-            <div className="table-responsive th-blue" style={{ marginBottom: 0 }}>
-              <table className="table">
-                <thead>
-                  <tr>
-                    <th>{t('client.stock.date_appro')}</th>
-                    <th>Type</th>
-                    <th style={{ textAlign: 'right' }}>{t('client.stock.quantity')}</th>
-                    <th style={{ textAlign: 'right' }}>Prix (U/DT)</th>
-                    <th>Fournisseur</th>
-                    <th>Réf Facture</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {entries.map((e, i) => (
-                    <tr key={i}>
-                      <td style={{ fontWeight: 600, color: 'var(--primary)' }}>{fmtDate(e.dateAppro)}</td>
-                      <td>
-                        <span className={`badge-appro ${e.typeAppro ?? 'manuel'}`}>
-                          {e.typeAppro === 'transfert' ? 'Transfert' : 'Manuel'}
-                        </span>
-                      </td>
-                      <td style={{ textAlign: 'right' }}>{e.quantite ?? '—'}</td>
-                      <td style={{ textAlign: 'right' }}>{e.prixUnitaire != null ? e.prixUnitaire.toFixed(3) : '—'}</td>
-                      <td style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>{e.fournisseurNom ?? '—'}</td>
-                      <td style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>{e.refFacture ?? '—'}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-        <div className="modal-footer">
-          <button className="btn btn-ghost" onClick={goFullHistory}>{t('client.stock.see_all_history')}</button>
-          <button className="btn btn-primary" onClick={onClose}>{t('common.close')}</button>
-        </div>
       </div>
     </div>
   );
@@ -1535,7 +1447,7 @@ function ActivityStockSection({ label, activities, isFranchise, initialActiviteI
 
 export default function StockPage() {
   const { t } = useTranslation();
-  const { user, canWrite } = useAuth();
+  const { user } = useAuth();
   const [searchParams] = useSearchParams();
   const isEntreprise = user?.compteType === 'entreprise' || !user?.compteType;
   const section = searchParams.get('section') as 'franchise' | 'distinct' | null;

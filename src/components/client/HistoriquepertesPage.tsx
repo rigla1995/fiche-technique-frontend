@@ -1,6 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 import type { Activite, HistoriquePerteEntry } from '../../types';
@@ -155,7 +154,6 @@ function DeletePerteModal({ entry, onConfirm, onClose }: DeletePerteModalProps) 
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 export default function HistoriquepertesPage() {
-  const { t } = useTranslation();
   const { user, canWrite } = useAuth();
   const [searchParams] = useSearchParams();
   const isEntreprise = user?.compteType === 'entreprise' || !user?.compteType;

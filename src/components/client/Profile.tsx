@@ -20,8 +20,6 @@ export default function Profile() {
   const { t } = useTranslation();
   const { user, updateUser, advanceOnboarding } = useAuth();
   const navigate = useNavigate();
-  const [upgrading, setUpgrading] = useState(false);
-  const [upgradeMsg, setUpgradeMsg] = useState('');
 
   const PASSWORD_RULES = [
     { test: (v: string) => v.length >= 8, label: t('validation.password_min') },
@@ -102,20 +100,6 @@ export default function Profile() {
     } finally {
       setSaving(false);
     }
-  };
-
-  const handleUpgrade = async () => {
-    if (!window.confirm(t('client.profile.upgrade_confirm'))) return;
-    setUpgrading(true);
-    setUpgradeMsg('');
-    try {
-      await api.post('/auth/upgrade');
-      updateUser({ compteType: 'entreprise' });
-      setUpgradeMsg(t('client.profile.upgrade_success'));
-    } catch {
-      setUpgradeMsg(t('common.error'));
-    }
-    setUpgrading(false);
   };
 
   if (loading) return <div style={{ padding: 40, textAlign: 'center', color: '#9ca3af' }}>{t('common.loading')}</div>;

@@ -25,26 +25,6 @@ function LockedLink({ label, reason }: { label: string; reason?: string }) {
   );
 }
 
-function SectionHeader({ label, locked }: { label: string; locked?: boolean }) {
-  return (
-    <li>
-      <span style={{
-        display: 'block',
-        padding: '10px 19px 4px',
-        fontSize: '0.65rem',
-        fontWeight: 800,
-        letterSpacing: '0.08em',
-        textTransform: 'uppercase',
-        color: 'var(--text-muted)',
-        userSelect: 'none',
-        opacity: locked ? 0.4 : 1,
-      }}>
-        {locked ? '🔒 ' : ''}{label}
-      </span>
-    </li>
-  );
-}
-
 function Divider() {
   return <li style={{ borderTop: '1px solid var(--border)', margin: '8px 16px 4px' }} />;
 }
@@ -117,91 +97,6 @@ function SubNavLink({ to, icon, label, isActive, onClick }: {
   );
 }
 
-function ProductSubLinks({
-  locked,
-  actCtx,
-  ftActCtx,
-  onClick,
-}: {
-  locked: boolean;
-  actCtx?: string;
-  ftActCtx?: string;
-  onClick: () => void;
-}) {
-  const { t } = useTranslation();
-  const location = useLocation();
-  const currentTab = new URLSearchParams(location.search).get('tab') || 'vendable';
-  const currentActCtx = new URLSearchParams(location.search).get('actCtx') || '';
-  const onProducts = location.pathname === '/client/products';
-
-  const subStyle = {
-    display: 'flex', alignItems: 'center', gap: 8,
-    padding: '5px 12px 5px 36px',
-    fontSize: '0.82rem',
-    borderRadius: 6,
-    margin: '1px 8px',
-    textDecoration: 'none',
-    color: 'var(--text)',
-    cursor: locked ? 'not-allowed' : 'pointer',
-    opacity: locked ? 0.4 : 1,
-  };
-
-  const activeSubStyle = { ...subStyle, background: 'var(--primary-light, #e8f0fe)', color: 'var(--primary)', fontWeight: 600 };
-  const resolvedFtCtx = ftActCtx ?? actCtx;
-
-  const mkHref = (tab: string) => {
-    const params = new URLSearchParams({ tab });
-    const ctx = tab === 'fiche-technique' ? resolvedFtCtx : actCtx;
-    if (ctx) params.set('actCtx', ctx);
-    return `/client/products?${params}`;
-  };
-
-  const isTabActive = (tab: string) => {
-    if (!onProducts) return false;
-    if (tab === 'fiche-technique') {
-      if (currentTab !== 'fiche-technique') return false;
-      if (resolvedFtCtx === 'franchise') return currentActCtx === 'franchise';
-      if (resolvedFtCtx === 'distinct') return currentActCtx === 'distinct' || currentActCtx.startsWith('distinct-');
-      return !currentActCtx;
-    }
-    return currentTab === tab && (!actCtx || currentActCtx === actCtx);
-  };
-
-  const items = [
-    { tab: 'vendable', icon: '🍔', label: t('client.products.tab_vendable') },
-    { tab: 'utilisable', icon: '🧪', label: t('client.products.tab_utilisable') },
-    { tab: 'fiche-technique', icon: '📋', label: t('client.products.tab_fiche_technique') },
-  ];
-
-  if (locked) {
-    return (
-      <>
-        {items.map(({ tab, icon, label }) => (
-          <li key={tab}>
-            <span style={subStyle}>
-              <span style={{ fontSize: '0.85rem' }}>{icon}</span>
-              <span>{label}</span>
-            </span>
-          </li>
-        ))}
-      </>
-    );
-  }
-
-  return (
-    <>
-      {items.map(({ tab, icon, label }) => (
-        <li key={tab}>
-          <Link to={mkHref(tab)} style={isTabActive(tab) ? activeSubStyle : subStyle} onClick={onClick}>
-            <span style={{ fontSize: '0.85rem' }}>{icon}</span>
-            <span>{label}</span>
-          </Link>
-        </li>
-      ))}
-    </>
-  );
-}
-
 interface GerantSidebarProps {
   user: User;
   labos: Labo[];
@@ -221,7 +116,7 @@ interface GerantSidebarProps {
 function GerantSidebarContent({
   user, labos, gerantActivites, location, openSections, toggleSection, onClose,
   isHistoriquePage, isHistoriquepertesPage, isProductsPage,
-  currentHistType, currentProductTab, currentActCtx,
+  currentHistType, currentProductTab, currentActCtx: _currentActCtx,
 }: GerantSidebarProps) {
   const gerantActiviteId = user.gerantActiviteId;
   const gerantActiviteType = user.gerantActiviteType;
@@ -321,7 +216,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const { hasSelections } = useSelection();
   const [typesSummary, setTypesSummary] = useState<ActiviteTypesSummary | null>(null);
   const [labos, setLabos] = useState<Labo[]>([]);
-  const [indepHasFournisseurs, setIndepHasFournisseurs] = useState(true);
+  const [, setIndepHasFournisseurs] = useState(true);
   const [indepHasAppros, setIndepHasAppros] = useState(true);
   const [aboConfig, setAboConfig] = useState<AbonnementConfig | null>(null);
   const isAdmin = user?.role === 'super_admin';
@@ -421,15 +316,6 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
     window.addEventListener('fournisseur-created', handler);
     return () => window.removeEventListener('fournisseur-created', handler);
   }, [isEntreprise, user?.role]);
-
-  const adminLinks = [
-    { to: '/admin', label: t('nav.dashboard'), icon: '📊', end: true },
-    { to: '/admin/clients', label: t('nav.clients'), icon: '👥' },
-    { to: '/admin/units', label: t('nav.units'), icon: '📏' },
-    { to: '/admin/categories', label: t('nav.categories'), icon: '🏷️' },
-    { to: '/admin/domaines', label: t('nav.domaines'), icon: '🗂️' },
-    { to: '/admin/ingredients', label: t('nav.ingredients'), icon: '🧂' },
-  ];
 
   const sidebarTitle = isGerant
     ? (isEntreprise && user?.entrepriseName ? `Espace ${user.entrepriseName}` : 'Espace Gérant')

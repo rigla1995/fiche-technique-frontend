@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
-import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
 import type { Activite, ActiviteIngredient } from '../../types';
@@ -9,7 +9,6 @@ type SelectionMap = Record<number, Record<number, { selected: boolean }>>;
 
 export default function FranchiseCatalogPage() {
   const { t } = useTranslation();
-  const location = useLocation();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const justCreated = searchParams.get('created') === '1';

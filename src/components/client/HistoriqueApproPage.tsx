@@ -28,7 +28,7 @@ interface EditModalProps {
   onSave: (id: number, data: { quantite: number | null; prixUnitaire: number | null; fournisseurId: number | null; refFacture: string | null }) => Promise<void>;
   onClose: () => void;
 }
-function EditModal({ entry, fournisseurs, isEntreprise, onSave, onClose }: EditModalProps) {
+function EditModal({ entry, fournisseurs, isEntreprise: _isEntreprise, onSave, onClose }: EditModalProps) {
   const [qty, setQty] = useState(entry.quantite !== null ? String(entry.quantite) : '');
   const [prix, setPrix] = useState(entry.prixUnitaire !== null ? String(entry.prixUnitaire) : '');
   const [fId, setFId] = useState(entry.fournisseurId ? String(entry.fournisseurId) : '');
@@ -530,12 +530,6 @@ export default function HistoriqueApproPage() {
       ? 'Activités distinctes'
       : 'Consultation et export de l\'historique des approvisionnements';
 
-  const qtyColor = (qty: number | null) => {
-    if (qty === null) return 'var(--text-muted)';
-    if (qty <= 0) return '#dc2626';
-    if (qty < 5) return '#d97706';
-    return '#15803d';
-  };
   const prixColor = (prix: number | null) => {
     if (prix === null) return 'var(--text-muted)';
     if (prix === 0) return '#dc2626';

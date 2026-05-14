@@ -7,7 +7,6 @@ import PortionsModal from './PortionsModal';
 
 const currentYear = new Date().getFullYear();
 const yearStart = `${currentYear}-01-01`;
-const yearEnd = `${currentYear}-12-31`;
 const todayStr = () => new Date().toISOString().split('T')[0];
 
 const fmtDate = (iso: string | null | undefined) => {
@@ -102,7 +101,7 @@ export default function StockLaboPage() {
   const [pertePrixLoading, setPertePrixLoading] = useState(false);
   const [perteLoadingRange, setPerteLoadingRange] = useState(false);
   const [perteDateMin, setPerteDateMin] = useState<string | null>(null);
-  const [perteDateMax, setPerteDateMax] = useState<string | null>(null);
+  const [, setPerteDateMax] = useState<string | null>(null);
 
   // Assignment data
   const [assignments, setAssignments] = useState<{ activites: LaboActivite[]; ingredients: AssignIngredient[] } | null>(null);
@@ -239,8 +238,6 @@ export default function StockLaboPage() {
       },
     }));
   };
-
-  const hasFournisseurs = fournisseurs.length > 0;
 
   const canSaveRow = (rs: RowState | undefined, isPT = false): boolean => {
     if (!rs || rs.saving) return false;

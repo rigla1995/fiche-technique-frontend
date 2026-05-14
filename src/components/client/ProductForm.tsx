@@ -42,7 +42,7 @@ export default function ProductForm() {
 
   // ── Activity context ─────────────────────────────────────────────────────
   const [allActivities, setAllActivities] = useState<Activite[]>([]);
-  const [typesSummary, setTypesSummary] = useState<ActiviteTypesSummary | null>(null);
+  const [_typesSummary, setTypesSummary] = useState<ActiviteTypesSummary | null>(null);
 
   // Pre-step state
   const [preFranchiseGroup, setPreFranchiseGroup] = useState('');
