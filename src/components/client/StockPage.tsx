@@ -928,7 +928,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                     <tr>
                       <th style={{ width: 32, fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px' }}></th>
                       <th style={{ fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px' }}>{t('client.stock.ingredient')}</th>
-                      <th style={{ textAlign: 'right', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px' }}>Stock Actuel<br /><span style={{ fontSize: '0.65rem', fontWeight: 400, opacity: 0.75 }}>COUT · PERTES · PT</span></th>
+                      <th style={{ textAlign: 'right', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px' }}>Stock Actuel<br /><span style={{ fontSize: '0.65rem', fontWeight: 400, opacity: 0.75 }}>COUT · PERTES · PT · TRANSFERTS</span></th>
                       <th style={{ textAlign: 'right', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px', minWidth: 90 }}>Inventaire<br /><span style={{ fontSize: '0.65rem', fontWeight: 400, opacity: 0.75 }}>DATE · QTÉ</span></th>
                       <th style={{ textAlign: 'center', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px' }}>Seuil min</th>
                       <th style={{ textAlign: 'right', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px' }}>Nouvelle Qté</th>
@@ -983,10 +983,13 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                                 <div style={{ fontSize: '0.72rem', color: '#1d4ed8', fontWeight: 500 }}>{entry.coutTotal.toFixed(3)} DT</div>
                               )}
                               {entry.pertesDepuisInv != null && entry.pertesDepuisInv > 0 && (
-                                <div style={{ fontSize: '0.68rem', color: '#dc2626', fontWeight: 500 }}>Pertes: {entry.pertesDepuisInv.toFixed(3)}</div>
+                                <div style={{ fontSize: '0.68rem', color: '#dc2626', fontWeight: 500 }}>↘ Pertes: {entry.pertesDepuisInv.toFixed(3)}</div>
                               )}
                               {entry.ptUsageDepuisInv != null && entry.ptUsageDepuisInv > 0 && (
-                                <div style={{ fontSize: '0.68rem', color: '#7c3aed', fontWeight: 500 }}>PT: {entry.ptUsageDepuisInv.toFixed(3)}</div>
+                                <div style={{ fontSize: '0.68rem', color: '#7c3aed', fontWeight: 500 }}>↘ PT: {entry.ptUsageDepuisInv.toFixed(3)}</div>
+                              )}
+                              {entry.transfertsDepuisAppro != null && entry.transfertsDepuisAppro > 0 && (
+                                <div style={{ fontSize: '0.68rem', color: '#0369a1', fontWeight: 500 }}>↗ Transferts: {entry.transfertsDepuisAppro.toFixed(3)}</div>
                               )}
                             </td>
                             <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>

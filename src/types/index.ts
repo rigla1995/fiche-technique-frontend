@@ -301,6 +301,7 @@ export interface StockEntry {
   lastInvQty?: number | null;
   pertesDepuisInv?: number | null;
   ptUsageDepuisInv?: number | null;
+  transfertsDepuisAppro?: number | null;
 }
 
 export interface StockHistoryEntry {
