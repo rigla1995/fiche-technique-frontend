@@ -771,9 +771,6 @@ export default function StockLaboPage() {
                                         {r.coutTotal != null && r.coutTotal > 0 && (
                                           <div style={{ fontSize: '0.72rem', color: '#1d4ed8', fontWeight: 500 }}>{r.coutTotal.toFixed(3)} DT</div>
                                         )}
-                                        {r.totalTransfere > 0 && (
-                                          <div style={{ fontSize: '0.72rem', color: '#7c3aed', fontWeight: 600 }}>↗ {r.totalTransfere.toFixed(3)}</div>
-                                        )}
                                         {r.pertesDepuisInv != null && r.pertesDepuisInv > 0 && (
                                           <div style={{ fontSize: '0.68rem', color: '#dc2626', fontWeight: 500 }}>↘ Pertes: {r.pertesDepuisInv.toFixed(3)}</div>
                                         )}
