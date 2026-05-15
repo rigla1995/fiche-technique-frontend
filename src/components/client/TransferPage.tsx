@@ -103,7 +103,7 @@ export default function TransferPage() {
     try {
       const [laboRes, stockRes, assignRes, transfersRes] = await Promise.all([
         api.get(`/api/labo/${laboId}`),
-        api.get(`/api/labo/${laboId}/stock?assignedOnly=true`),
+        api.get(`/api/labo/${laboId}/stock`),
         api.get(`/api/labo/${laboId}/activity-assignments`),
         api.get(`/api/labo/${laboId}/transfers`),
       ]);
