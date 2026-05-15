@@ -208,7 +208,7 @@ function GerantSidebarContent({
 export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const { t } = useTranslation();
   const { user } = useAuth();
-  const { hasSelections } = useSelection();
+  const { hasSelections: selectionHasSelections } = useSelection();
   const [typesSummary, setTypesSummary] = useState<ActiviteTypesSummary | null>(null);
   const [labos, setLabos] = useState<Labo[]>([]);
   const [, setIndepHasFournisseurs] = useState(true);
@@ -226,7 +226,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   // Include null compteType: new config-based clients and gérants of entreprise clients have no compteType but should use entreprise layout
   const isEntreprise = user?.compteType === 'entreprise' || !user?.compteType;
   const isOnboarding = isEntreprise && step > 0;
-  const effectiveHasSelections = isEntreprise ? (step === 0) : hasSelections;
+  const effectiveHasSelections = isEntreprise ? (step === 0) : selectionHasSelections;
 
   const currentSearch = new URLSearchParams(location.search);
   const currentSection = currentSearch.get('section');
