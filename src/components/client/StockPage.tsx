@@ -451,8 +451,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
     } catch { /* ignore */ }
   };
 
-  // ── Bulk appro selection
-  const [selectedIngIds, setSelectedIngIds] = useState<Set<number>>(new Set());
+  // ── Bulk appro
   const [bulkDate, setBulkDate] = useState(todayStr());
   const [bulkFournisseurId, setBulkFournisseurId] = useState('');
   const [bulkRefFacture, setBulkRefFacture] = useState('');
@@ -470,7 +469,6 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
 
   useEffect(() => {
     setRows(buildInitialRowState(entries));
-    setSelectedIngIds(new Set());
     setTotalOverrides({});
     const initial: Record<number, string> = {};
     for (const e of entries) {
@@ -515,14 +513,14 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
     try {
       let ptResponse: { prixCalcule: number | null; dateAppro: string; totalQuantite: number } | null = null;
       if (id < 0 && onSavePT) {
-        ptResponse = await onSavePT(-id, row.quantite, row.dateAppro);
+        ptResponse = await onSavePT(-id, row.quantite, bulkDate);
       } else {
-        const fId = row.fournisseurId ? Number(row.fournisseurId) : null;
-        const ref = row.refFacture.trim() || null;
-        await onSave(id, row.quantite, row.prixUnitaire, row.dateAppro, fId, ref);
+        const fId = bulkFournisseurId ? Number(bulkFournisseurId) : null;
+        const ref = bulkRefFacture.trim() || null;
+        await onSave(id, row.quantite, row.prixUnitaire, bulkDate, fId, ref);
       }
       const today = todayStr();
-      if (isCurrentMonth(row.dateAppro)) {
+      if (isCurrentMonth(bulkDate)) {
         const added = parseFloat(row.quantite) || 0;
         setTotalOverrides((prev) => {
           const base = prev[id] ?? (entries.find((e) => e.ingredientId === id)?.totalQuantite ?? 0);
@@ -543,12 +541,12 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
       setHistoryData((prev) => {
         const savedPrix = ptResponse ? (ptResponse.prixCalcule ?? 0) : (parseFloat(row.prixUnitaire) || 0);
         const saved = {
-          dateAppro: ptResponse ? ptResponse.dateAppro : row.dateAppro,
+          dateAppro: ptResponse ? ptResponse.dateAppro : bulkDate,
           quantite: parseFloat(row.quantite) || 0,
           prixUnitaire: savedPrix,
           typeAppro: 'manuel',
           fournisseurNom: null,
-          refFacture: row.refFacture || null,
+          refFacture: bulkRefFacture.trim() || null,
           updatedAt: new Date().toISOString(),
         };
         return { ...prev, [id]: [saved, ...(prev[id] || [])] };
@@ -566,16 +564,17 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
     const entry = entries.find((e) => e.ingredientId === id);
     if (!row) return;
     if (entry?.isPT) {
-      if (!row.quantite.trim() || parseFloat(row.quantite) <= 0 || !row.dateAppro.trim() || row.saving) return;
+      if (!row.quantite.trim() || parseFloat(row.quantite) <= 0 || !bulkDate.trim() || row.saving) return;
     } else {
-      if (!canSaveStockRow(row, true)) return;
+      if (!row.quantite.trim() || parseFloat(row.quantite) <= 0 || !row.prixUnitaire.trim() || parseFloat(row.prixUnitaire) <= 0 || row.saving) return;
+      if (!bulkDate.trim() || !bulkFournisseurId || !bulkRefFacture.trim()) return;
     }
 
     // Ensure history is loaded for conflict detection
     const hist = await fetchHistory(id);
-    const conflictEntries = hist.filter((h) => h.dateAppro === row.dateAppro);
+    const conflictEntries = hist.filter((h) => h.dateAppro === bulkDate);
     const hasConflict = conflictEntries.length > 0 ||
-      (entry?.quantite !== null && row.dateAppro === entry?.dateAppro);
+      (entry?.quantite !== null && bulkDate === entry?.dateAppro);
 
     if (hasConflict) {
       const displayEntries = conflictEntries.length > 0 ? conflictEntries : [{
@@ -584,7 +583,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
         fournisseurNom: null, refFacture: null, updatedAt: null,
       }];
       setConflictModal({
-        date: row.dateAppro,
+        date: bulkDate,
         conflicts: [{ ingredientNom: entry?.nom ?? '', entries: displayEntries as StockHistoryEntry[] }],
         newQuantite: parseFloat(row.quantite) || 0,
         onConfirm: () => { setConflictModal(null); doSaveRow(id, row); },
@@ -637,28 +636,19 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
     if (!isOpen) await fetchHistory(id);
   };
 
-  const toggleBulkSelect = (ingredientId: number) => {
-    if (selectedIngIds.has(ingredientId)) {
-      setSelectedIngIds((prev) => { const n = new Set(prev); n.delete(ingredientId); return n; });
-      return;
-    }
-    const allValid = [...selectedIngIds].every((id) => {
-      const rs = rows[id];
-      if (!rs) return false;
-      const qty = parseFloat(rs.quantite);
-      const prix = parseFloat(rs.prixUnitaire);
-      return !isNaN(qty) && qty > 0 && !isNaN(prix) && prix > 0;
-    });
-    if (selectedIngIds.size > 0 && !allValid) return;
-    setSelectedIngIds((prev) => new Set([...prev, ingredientId]));
-  };
-
   const doBulkSave = async () => {
     setBulkSaving(true);
     try {
-      for (const ingId of selectedIngIds) {
-        const row = rows[ingId];
-        if (!row) continue;
+      const readyEntries = Object.entries(rows).filter(([idStr, row]) => {
+        const id = Number(idStr);
+        const entry = entries.find((e) => e.ingredientId === id);
+        if (entry?.isPT) return false;
+        const qty = parseFloat(row.quantite);
+        const prix = parseFloat(row.prixUnitaire);
+        return !isNaN(qty) && qty > 0 && !isNaN(prix) && prix > 0;
+      });
+      for (const [idStr, row] of readyEntries) {
+        const ingId = Number(idStr);
         await onSave(ingId, row.quantite, row.prixUnitaire, bulkDate,
           bulkFournisseurId ? Number(bulkFournisseurId) : null,
           bulkRefFacture.trim() || null);
@@ -670,7 +660,6 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
           });
         }
       }
-      setSelectedIngIds(new Set());
       setBulkDate(todayStr());
       setBulkFournisseurId('');
       setBulkRefFacture('');
@@ -679,21 +668,27 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
   };
 
   const saveBulkMatrix = async () => {
-    if (selectedIngIds.size === 0 || !bulkDate) return;
+    if (!bulkDate) return;
+    const readyIds = Object.entries(rows)
+      .filter(([idStr, row]) => {
+        const id = Number(idStr);
+        const entry = entries.find((e) => e.ingredientId === id);
+        if (entry?.isPT) return false;
+        return parseFloat(row.quantite) > 0 && parseFloat(row.prixUnitaire) > 0;
+      })
+      .map(([idStr]) => Number(idStr));
 
-    // Pre-load history for all selected ingredients to detect conflicts
+    if (readyIds.length === 0) return;
+
     const histMap: Record<number, StockHistoryEntry[]> = {};
-    await Promise.all([...selectedIngIds].map(async (id) => {
-      histMap[id] = await fetchHistory(id);
-    }));
+    await Promise.all(readyIds.map(async (id) => { histMap[id] = await fetchHistory(id); }));
 
     const conflicts: ApproConflictEntry[] = [];
-    for (const ingId of selectedIngIds) {
+    for (const ingId of readyIds) {
       const hist = histMap[ingId] || [];
       const conflictEntries = hist.filter((h) => h.dateAppro === bulkDate);
       const entry = entries.find((e) => e.ingredientId === ingId);
-      const hasConflict = conflictEntries.length > 0 ||
-        (entry?.quantite !== null && bulkDate === entry?.dateAppro);
+      const hasConflict = conflictEntries.length > 0 || (entry?.quantite !== null && bulkDate === entry?.dateAppro);
       if (hasConflict) {
         const displayEntries = conflictEntries.length > 0 ? conflictEntries : [{
           dateAppro: bulkDate, quantite: entry!.quantite, prixUnitaire: entry!.prixUnitaire,
@@ -704,11 +699,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
     }
 
     if (conflicts.length > 0) {
-      setConflictModal({
-        date: bulkDate,
-        conflicts,
-        onConfirm: () => { setConflictModal(null); doBulkSave(); },
-      });
+      setConflictModal({ date: bulkDate, conflicts, onConfirm: () => { setConflictModal(null); doBulkSave(); } });
       return;
     }
     await doBulkSave();
@@ -733,15 +724,16 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
   const nonLaboFournisseurs = fournisseurs.filter((f) => !f.isLabo);
   const hasFournisseurs = nonLaboFournisseurs.length > 0;
 
-  const bulkAllValid = [...selectedIngIds].every((id) => {
-    const rs = rows[id];
-    if (!rs) return false;
-    const qty = parseFloat(rs.quantite);
-    const prix = parseFloat(rs.prixUnitaire);
+  const readyCount = Object.entries(rows).filter(([idStr, row]) => {
+    const id = Number(idStr);
+    const entry = entries.find((e) => e.ingredientId === id);
+    if (entry?.isPT) return false;
+    const qty = parseFloat(row.quantite);
+    const prix = parseFloat(row.prixUnitaire);
     return !isNaN(qty) && qty > 0 && !isNaN(prix) && prix > 0;
-  });
-  const canSaveBulk = selectedIngIds.size > 0 && !!bulkDate.trim() && bulkAllValid
-    && (!!bulkFournisseurId && !!bulkRefFacture.trim());
+  }).length;
+  const canSaveBulk = readyCount > 0 && !!bulkDate.trim()
+    && !!bulkFournisseurId && !!bulkRefFacture.trim();
 
   return (
     <div>
@@ -878,39 +870,46 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
         />
       )}
 
-      {/* Bulk appro form */}
-      {selectedIngIds.size > 0 && (
-        <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end', flexWrap: 'wrap', marginBottom: 16, padding: '12px 16px', background: '#f0fdf4', border: '1px solid #86efac', borderRadius: 10 }}>
-          <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#15803d', textTransform: 'uppercase', letterSpacing: '0.05em', alignSelf: 'center', marginRight: 4 }}>
-            ✓ {selectedIngIds.size} sélectionné{selectedIngIds.size > 1 ? 's' : ''}
-          </div>
+      {/* Approvisionnement bloc */}
+      <div style={{
+        background: 'var(--surface)', borderRadius: 12, padding: '14px 18px', marginBottom: 20,
+        border: '1.5px solid #1e40af', boxShadow: '0 2px 10px rgba(30,64,175,0.10)',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, paddingBottom: 10, borderBottom: '1px solid var(--border)' }}>
+          <span style={{ fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#1e40af' }}>Approvisionnement</span>
+          {readyCount > 0 && (
+            <span style={{ background: '#1e40af', color: '#fff', borderRadius: 20, padding: '1px 9px', fontSize: '0.72rem', fontWeight: 700 }}>{readyCount}</span>
+          )}
+        </div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'flex-end' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-            <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#2563eb', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Date d'appro</span>
+            <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#1e40af', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Date d'appro</span>
             <input type="date" className="input" style={{ maxWidth: 150 }} min={yearStart} max={todayStr()} value={bulkDate} onChange={(e) => setBulkDate(e.target.value)} />
           </div>
-          <>
+          {hasFournisseurs && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-              <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#2563eb', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Fournisseur</span>
+              <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#1e40af', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Fournisseur</span>
               <select className="input" style={{ maxWidth: 200 }} value={bulkFournisseurId} onChange={(e) => setBulkFournisseurId(e.target.value)}>
                 <option value="">— Sélectionner —</option>
                 {nonLaboFournisseurs.map((f) => <option key={f.id} value={String(f.id)}>{f.nom}</option>)}
               </select>
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-              <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#2563eb', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Réf Facture</span>
-              <input type="text" className="input" style={{ maxWidth: 160 }} placeholder="N° facture…" value={bulkRefFacture} onChange={(e) => setBulkRefFacture(e.target.value)} />
-            </div>
-          </>
-          <div style={{ display: 'flex', gap: 8, alignSelf: 'flex-end' }}>
-            <button className="btn btn-primary btn-sm" onClick={saveBulkMatrix} disabled={!canSaveBulk || bulkSaving || !canWrite}>
-              {bulkSaving ? '…' : `Enregistrer (${selectedIngIds.size})`}
+          )}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+            <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#1e40af', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Réf Facture</span>
+            <input type="text" className="input" style={{ maxWidth: 160 }} placeholder="N° facture…" value={bulkRefFacture} onChange={(e) => setBulkRefFacture(e.target.value)} />
+          </div>
+          <div style={{ display: 'flex', gap: 8, alignSelf: 'flex-end', marginLeft: 'auto' }}>
+            <button className="btn btn-primary btn-sm" onClick={saveBulkMatrix} disabled={!canSaveBulk || bulkSaving || !canWrite}
+              style={{ background: canSaveBulk ? 'linear-gradient(135deg, #1e40af, #2563eb)' : undefined, border: 'none', boxShadow: canSaveBulk ? '0 3px 10px rgba(30,64,175,0.3)' : undefined }}>
+              {bulkSaving ? '…' : `Enregistrer (${readyCount})`}
             </button>
-            <button className="btn btn-ghost btn-sm" onClick={() => { setSelectedIngIds(new Set()); setBulkDate(todayStr()); setBulkFournisseurId(''); setBulkRefFacture(''); }}>
-              Annuler
+            <button className="btn btn-ghost btn-sm" onClick={() => { setBulkDate(todayStr()); setBulkFournisseurId(''); setBulkRefFacture(''); }}>
+              Réinitialiser
             </button>
           </div>
         </div>
-      )}
+      </div>
 
       {Object.entries(groups).sort(([a], [b]) => a.localeCompare(b)).map(([cat, items]) => {
         const isOpen = openCats.has(cat);
@@ -926,14 +925,12 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                 <table className="table">
                   <thead style={{ background: '#eff6ff', borderBottom: '2px solid #2563eb', color: '#1e3a5f' }}>
                     <tr>
-                      <th style={{ width: 32, fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px' }}></th>
                       <th style={{ fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px' }}>{t('client.stock.ingredient')}</th>
                       <th style={{ textAlign: 'right', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px' }}>Stock Actuel<br /><span style={{ fontSize: '0.65rem', fontWeight: 400, opacity: 0.75 }}>COUT · PERTES · PT</span></th>
                       <th style={{ textAlign: 'right', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px', minWidth: 90 }}>Inventaire<br /><span style={{ fontSize: '0.65rem', fontWeight: 400, opacity: 0.75 }}>DATE · QTÉ</span></th>
                       <th style={{ textAlign: 'center', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px' }}>Seuil min</th>
                       <th style={{ textAlign: 'right', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px' }}>Nouvelle Qté</th>
                       <th style={{ textAlign: 'right', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px' }}>Prix (U/DT)</th>
-                      <th style={{ fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px' }}>{t('client.stock.date_appro')}</th>
                       <th style={{ fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px' }}></th>
                     </tr>
                   </thead>
@@ -945,34 +942,13 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                       const totalQty = totalOverrides[entry.ingredientId] ?? entry.totalQuantite ?? null;
                       const cls = seuilClass(totalQty, entry.seuilMin ?? null);
                       const totalDisplay = totalQty !== null ? (totalQty as number).toFixed(3) : '—';
-                      const assignedFournisseur = hasFournisseurs && row.fournisseurId
-                        ? fournisseurs.find((f) => String(f.id) === row.fournisseurId)
-                        : null;
-                      const fournisseurValidated = !!assignedFournisseur && row.refFacture.trim() !== '';
-                      // Date conflict warning
+                      // Date conflict warning (using bloc date)
                       const histDatesSet = new Set<string>((hist || []).map((h) => h.dateAppro).filter(Boolean) as string[]);
                       const hasExisting = entry.quantite !== null;
-                      const hasDateConflict = (hasExisting && row.dateAppro === entry.dateAppro) || histDatesSet.has(row.dateAppro);
+                      const hasDateConflict = (hasExisting && bulkDate === entry.dateAppro) || histDatesSet.has(bulkDate);
                       const warnStyle = hasDateConflict ? { borderColor: '#f59e0b', boxShadow: '0 0 0 2px #fef3c7' } : {};
-                      // Show green read-only button only when user picked a labo fournisseur in this session
-                      const laboFournisseur = row.fournisseurId
-                        ? (fournisseurs.find((f) => String(f.id) === row.fournisseurId && f.isLabo) ?? null)
-                        : null;
-                      const isSelected = selectedIngIds.has(entry.ingredientId);
-                      const canSelect = isSelected || bulkAllValid || selectedIngIds.size === 0;
                       return (
                         <React.Fragment key={entry.ingredientId}>
-                          <tr style={isSelected ? { background: '#f0fdf4' } : undefined}>
-                            <td style={{ textAlign: 'center' }}>
-                              <input
-                                type="checkbox"
-                                checked={isSelected}
-                                disabled={!canSelect}
-                                onChange={() => toggleBulkSelect(entry.ingredientId)}
-                                style={{ width: 16, height: 16, cursor: canSelect ? 'pointer' : 'not-allowed', accentColor: 'var(--primary)' }}
-                                title={!canSelect ? 'Remplissez la qté et prix des ingrédients sélectionnés avant d\'en ajouter un autre' : undefined}
-                              />
-                            </td>
                             <td>
                               <div style={{ fontWeight: 600 }}>{entry.nom}</div>
                               <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{entry.unite}</div>
@@ -1044,103 +1020,55 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                               )}
                             </td>
                             <td>
-                              <input
-                                type="date" className="input" style={{ maxWidth: 138, ...warnStyle }}
-                                min={yearStart} max={todayStr()}
-                                value={row.dateAppro}
-                                onChange={(e) => updateRow(entry.ingredientId, 'dateAppro', e.target.value)}
-                                onFocus={() => fetchHistory(entry.ingredientId)}
-                                disabled={isSelected || !canWrite}
-                                title={isSelected ? 'Date définie par le formulaire ci-dessus' : undefined}
-                              />
-                            </td>
-                            <td>
-                              <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'stretch' }}>
+                              <div style={{ display: 'flex', gap: 4, alignItems: 'center', flexWrap: 'wrap' }}>
                                 {row.error && <span style={{ color: 'var(--danger)', fontSize: '0.75rem' }}>!</span>}
-                                {!entry.isPT && (
-                                  isSelected ? (
-                                    <button className="btn btn-sm" disabled style={{ width: '100%', background: '#e5e7eb', color: '#9ca3af', border: '1px solid #d1d5db', fontSize: '0.78rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                      Fournisseur (bulk)
-                                    </button>
-                                  ) : laboFournisseur ? (
-                                    <button className="btn btn-sm" onClick={() => setAffectationModal({ ingredientId: entry.ingredientId, nom: entry.nom })} style={{ width: '100%', background: '#dcfce7', color: '#15803d', border: '1px solid #86efac', fontSize: '0.78rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                      ✓ {laboFournisseur.nom}
-                                    </button>
-                                  ) : nonLaboFournisseurs.length === 0 ? (
-                                    <button className="btn btn-sm" disabled title="Ajoutez d'abord un fournisseur dans la section Fournisseurs" style={{ width: '100%', background: '#fff7ed', color: '#92400e', border: '1px solid #fed7aa', fontSize: '0.78rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', cursor: 'not-allowed' }}>
-                                      ⚠️ Aucun fournisseur
-                                    </button>
-                                  ) : (
-                                    <button className="btn btn-sm" onClick={() => setAffectationModal({ ingredientId: entry.ingredientId, nom: entry.nom })} disabled={!canWrite} style={{ width: '100%', background: fournisseurValidated ? '#dcfce7' : assignedFournisseur ? '#fef9c3' : '#eff6ff', color: fournisseurValidated ? '#15803d' : assignedFournisseur ? '#92400e' : '#2563eb', border: `1px solid ${fournisseurValidated ? '#86efac' : assignedFournisseur ? '#fde68a' : '#bfdbfe'}`, fontSize: '0.78rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                      {fournisseurValidated ? `✓ ${assignedFournisseur!.nom}` : assignedFournisseur ? `${assignedFournisseur.nom}…` : '🚚 Fournisseur'}
-                                    </button>
-                                  )
-                                )}
                                 {entry.isPT && entry.produitId && (
-                                  <div style={{ display: 'flex', gap: 4 }}>
-                                    <button
-                                      className="btn btn-ghost btn-sm"
-                                      title="Stock des ingrédients relatifs"
-                                      onClick={() => { fetchPtRecipe(entry.produitId!); setPtStockModal({ produitId: entry.produitId!, nom: entry.nom }); }}
-                                    >
-                                      📊
-                                    </button>
+                                  <>
+                                    <button className="btn btn-ghost btn-sm" title="Stock des ingrédients relatifs" onClick={() => { fetchPtRecipe(entry.produitId!); setPtStockModal({ produitId: entry.produitId!, nom: entry.nom }); }}>📊</button>
                                     {canWrite && (
-                                      <button
-                                        className="btn btn-ghost btn-sm"
-                                        title="Portions personnalisées pour cette appro"
-                                        onClick={() => setPortionsModal({ produitId: entry.produitId!, nom: entry.nom })}
-                                      >
-                                        ⚙️
-                                      </button>
+                                      <button className="btn btn-ghost btn-sm" title="Portions personnalisées" onClick={() => setPortionsModal({ produitId: entry.produitId!, nom: entry.nom })}>⚙️</button>
                                     )}
-                                  </div>
+                                  </>
                                 )}
-                                <div style={{ display: 'flex', gap: 4 }}>
-                                  {canWrite && ((isEntreprise && activiteId) || (!isEntreprise && onSavePerte)) && (
-                                    <button className="perte-btn" onClick={() => setPertesModal({ ingredientId: entry.ingredientId, nom: entry.nom })} title="Enregistrer une perte">
-                                      📉
-                                    </button>
-                                  )}
-                                  {(() => {
-                                    const ptMaxQty = entry.isPT && entry.produitId && ptRecipes[entry.produitId] && ptRecipes[entry.produitId].length > 0
-                                      ? Math.min(...ptRecipes[entry.produitId].map((r) => {
-                                          const stock = entries.find((e) => e.ingredientId === r.ingredientId)?.totalQuantite ?? 0;
-                                          return r.portion > 0 ? stock / r.portion : Infinity;
-                                        }))
-                                      : null;
-                                    const ptQtyExceeds = ptMaxQty !== null && isFinite(ptMaxQty)
-                                      && row.quantite.trim() !== '' && parseFloat(row.quantite) > ptMaxQty;
-                                    return (
-                                      <>
-                                        {ptQtyExceeds && (
-                                          <span style={{ fontSize: '0.7rem', color: '#b91c1c', fontWeight: 700, alignSelf: 'center' }} title={`Max: ${ptMaxQty!.toFixed(3)}`}>
-                                            Max: {ptMaxQty!.toFixed(3)}
-                                          </span>
-                                        )}
-                                        <button
-                                          className={`btn btn-sm ${row.saved ? 'btn-success' : 'btn-primary'}`}
-                                          onClick={() => saveRow(entry.ingredientId)}
-                                          disabled={entry.isPT
-                                            ? (!row.quantite.trim() || parseFloat(row.quantite) <= 0 || !row.dateAppro.trim() || row.saving || !canWrite || !!ptQtyExceeds)
-                                            : (!canSaveStockRow(row, true) || !canWrite)}
-                                          style={!row.saved ? { background: 'linear-gradient(135deg, #2563eb, #0ea5e9)', boxShadow: '0 3px 10px rgba(37,99,235,0.3)', borderRadius: 8, border: 'none', color: '#fff', fontWeight: 700, flex: 1 } : { flex: 1 }}
-                                        >
-                                          {row.saving ? '…' : row.saved ? '✓' : t('client.stock.save')}
-                                        </button>
-                                      </>
-                                    );
-                                  })()}
-                                  <button className="btn btn-ghost btn-sm" onClick={() => toggleHistory(entry.ingredientId)} title={t('client.stock.history')}>
-                                    {isHistOpen ? '▲' : '▼'}
-                                  </button>
-                                </div>
+                                {canWrite && ((isEntreprise && activiteId) || (!isEntreprise && onSavePerte)) && (
+                                  <button className="perte-btn" onClick={() => setPertesModal({ ingredientId: entry.ingredientId, nom: entry.nom })} title="Enregistrer une perte">📉</button>
+                                )}
+                                {(() => {
+                                  const ptMaxQty = entry.isPT && entry.produitId && ptRecipes[entry.produitId] && ptRecipes[entry.produitId].length > 0
+                                    ? Math.min(...ptRecipes[entry.produitId].map((r) => {
+                                        const stock = entries.find((e) => e.ingredientId === r.ingredientId)?.totalQuantite ?? 0;
+                                        return r.portion > 0 ? stock / r.portion : Infinity;
+                                      }))
+                                    : null;
+                                  const ptQtyExceeds = ptMaxQty !== null && isFinite(ptMaxQty)
+                                    && row.quantite.trim() !== '' && parseFloat(row.quantite) > ptMaxQty;
+                                  return (
+                                    <>
+                                      {ptQtyExceeds && (
+                                        <span style={{ fontSize: '0.7rem', color: '#b91c1c', fontWeight: 700 }} title={`Max: ${ptMaxQty!.toFixed(3)}`}>Max: {ptMaxQty!.toFixed(3)}</span>
+                                      )}
+                                      <button
+                                        className={`btn btn-sm ${row.saved ? 'btn-success' : 'btn-primary'}`}
+                                        onClick={() => saveRow(entry.ingredientId)}
+                                        disabled={entry.isPT
+                                          ? (!row.quantite.trim() || parseFloat(row.quantite) <= 0 || !bulkDate.trim() || row.saving || !canWrite || !!ptQtyExceeds)
+                                          : (!row.quantite.trim() || parseFloat(row.quantite) <= 0 || !row.prixUnitaire.trim() || row.saving || !canWrite || !bulkDate || !bulkFournisseurId || !bulkRefFacture.trim())}
+                                        style={!row.saved ? { background: 'linear-gradient(135deg, #2563eb, #0ea5e9)', boxShadow: '0 3px 10px rgba(37,99,235,0.3)', borderRadius: 8, border: 'none', color: '#fff', fontWeight: 700 } : {}}
+                                      >
+                                        {row.saving ? '…' : row.saved ? '✓' : t('client.stock.save')}
+                                      </button>
+                                    </>
+                                  );
+                                })()}
+                                <button className="btn btn-ghost btn-sm" onClick={() => toggleHistory(entry.ingredientId)} title={t('client.stock.history')}>
+                                  {isHistOpen ? '▲' : '▼'}
+                                </button>
                               </div>
                             </td>
                           </tr>
                           {isHistOpen && (
                             <tr key={`${entry.ingredientId}-hist`}>
-                              <td colSpan={9} style={{ background: '#f8faff', padding: '8px 16px' }}>
+                              <td colSpan={7} style={{ background: '#f8faff', padding: '8px 16px' }}>
                                 {!hist ? (
                                   <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{t('common.loading')}</span>
                                 ) : hist.length === 0 ? (

@@ -91,7 +91,6 @@ export default function StockLaboPage() {
   const [seuilMinSaving, setSeuilMinSaving] = useState<Record<number, boolean>>({});
   const [loading, setLoading] = useState(true);
   const [fournisseurs, setFournisseurs] = useState<Fournisseur[]>([]);
-  const [fournisseurModal, setFournisseurModal] = useState<{ ingredientId: number; nom: string } | null>(null);
   const [perteModal, setPerteModal] = useState<{ ingredientId: number; nom: string } | null>(null);
   const [ptConfirm, setPtConfirm] = useState<{ ingredientId: number; nom: string; dateAppro: string; existingQty: number; newQty: number } | null>(null);
   const [perteQty, setPerteQty] = useState('');
@@ -158,8 +157,7 @@ export default function StockLaboPage() {
     } catch { /* ignore */ }
   };
 
-  // ── Bulk appro selection
-  const [selectedIngIds, setSelectedIngIds] = useState<Set<number>>(new Set());
+  // ── Bulk appro
   const [bulkDate, setBulkDate] = useState(todayStr());
   const [bulkFournisseurId, setBulkFournisseurId] = useState('');
   const [bulkRefFacture, setBulkRefFacture] = useState('');
@@ -243,9 +241,9 @@ export default function StockLaboPage() {
   const canSaveRow = (rs: RowState | undefined, isPT = false): boolean => {
     if (!rs || rs.saving) return false;
     if (!rs.quantite.trim() || parseFloat(rs.quantite) <= 0) return false;
-    if (!isPT && (!rs.prixUnitaire.trim() || parseFloat(rs.prixUnitaire) <= 0 || !rs.dateAppro.trim())) return false;
-    if (!rs.dateAppro.trim()) return false;
-    if (!isPT && (!rs.fournisseurId.trim() || !rs.refFacture.trim())) return false;
+    if (!isPT && (!rs.prixUnitaire.trim() || parseFloat(rs.prixUnitaire) <= 0)) return false;
+    if (!bulkDate.trim()) return false;
+    if (!isPT && (!bulkFournisseurId.trim() || !bulkRefFacture.trim())) return false;
     return true;
   };
 
@@ -255,8 +253,8 @@ export default function StockLaboPage() {
     const isPT = row?.isPT ?? false;
     if (!rs || !canSaveRow(rs, isPT)) return;
 
-    // For PT rows, check for existing appro on the chosen date before accumulating
-    if (isPT && !confirmed) {
+    // Check for existing appro on the chosen date before accumulating
+    if (!confirmed) {
       let history = rs.history;
       if (history.length === 0) {
         try {
@@ -265,37 +263,13 @@ export default function StockLaboPage() {
           setField(ingredientId, 'history', data);
         } catch { /* ignore */ }
       }
-      const existingOnDate = history.filter((h) => h.dateAppro === rs.dateAppro && (h.quantite ?? 0) > 0);
+      const existingOnDate = history.filter((h) => h.dateAppro === bulkDate && (h.quantite ?? 0) > 0);
       if (existingOnDate.length > 0) {
         const existingTotal = existingOnDate.reduce((sum, h) => sum + (h.quantite ?? 0), 0);
         setPtConfirm({
           ingredientId,
           nom: row?.nom ?? '',
-          dateAppro: rs.dateAppro,
-          existingQty: existingTotal,
-          newQty: parseFloat(rs.quantite),
-        });
-        return;
-      }
-    }
-
-    // For ingredient rows, also check for existing appro on chosen date
-    if (!isPT && !confirmed) {
-      let history = rs.history;
-      if (history.length === 0) {
-        try {
-          const { data } = await api.get(`/api/labo/${laboId}/stock/${ingredientId}/history`);
-          history = data;
-          setField(ingredientId, 'history', data);
-        } catch { /* ignore */ }
-      }
-      const existingOnDate = history.filter((h) => h.dateAppro === rs.dateAppro && (h.quantite ?? 0) > 0);
-      if (existingOnDate.length > 0) {
-        const existingTotal = existingOnDate.reduce((sum, h) => sum + (h.quantite ?? 0), 0);
-        setPtConfirm({
-          ingredientId,
-          nom: stock.find((r) => r.ingredientId === ingredientId)?.nom ?? '',
-          dateAppro: rs.dateAppro,
+          dateAppro: bulkDate,
           existingQty: existingTotal,
           newQty: parseFloat(rs.quantite),
         });
@@ -308,9 +282,9 @@ export default function StockLaboPage() {
       await api.put(`/api/labo/${laboId}/stock/${ingredientId}`, {
         quantite: rs.quantite !== '' ? parseFloat(rs.quantite) : null,
         prixUnitaire: rs.prixUnitaire !== '' ? parseFloat(rs.prixUnitaire) : null,
-        dateAppro: rs.dateAppro || today,
-        fournisseurId: rs.fournisseurId ? Number(rs.fournisseurId) : null,
-        refFacture: rs.refFacture.trim() || null,
+        dateAppro: bulkDate || today,
+        fournisseurId: bulkFournisseurId ? Number(bulkFournisseurId) : null,
+        refFacture: bulkRefFacture.trim() || null,
       });
       setRowState((prev) => ({
         ...prev,
@@ -412,31 +386,20 @@ export default function StockLaboPage() {
     } catch { /* ignore */ }
   };
 
-  const toggleBulkSelect = (ingredientId: number) => {
-    if (selectedIngIds.has(ingredientId)) {
-      setSelectedIngIds((prev) => { const n = new Set(prev); n.delete(ingredientId); return n; });
-      return;
-    }
-    // Guard: all currently selected must have qty > 0 AND prix > 0
-    const allValid = [...selectedIngIds].every((id) => {
-      const rs = rowState[id];
-      if (!rs) return false;
-      const qty = parseFloat(rs.quantite);
-      const prix = parseFloat(rs.prixUnitaire);
-      return !isNaN(qty) && qty > 0 && !isNaN(prix) && prix > 0;
-    });
-    if (selectedIngIds.size > 0 && !allValid) return;
-    setSelectedIngIds((prev) => new Set([...prev, ingredientId]));
-  };
-
   const saveBulk = async () => {
-    if (selectedIngIds.size === 0 || !bulkDate) return;
+    if (!bulkDate) return;
     setBulkSaving(true);
     try {
-      for (const ingId of selectedIngIds) {
-        const rs = rowState[ingId];
-        if (!rs) continue;
-        await api.put(`/api/labo/${laboId}/stock/${ingId}`, {
+      const readyEntries = Object.entries(rowState).filter(([idStr, rs]) => {
+        const id = Number(idStr);
+        const stockRow = stock.find((r) => r.ingredientId === id);
+        if (stockRow?.isPT) return false;
+        const qty = parseFloat(rs.quantite);
+        const prix = parseFloat(rs.prixUnitaire);
+        return !isNaN(qty) && qty > 0 && !isNaN(prix) && prix > 0;
+      });
+      for (const [idStr, rs] of readyEntries) {
+        await api.put(`/api/labo/${laboId}/stock/${Number(idStr)}`, {
           quantite: parseFloat(rs.quantite),
           prixUnitaire: parseFloat(rs.prixUnitaire),
           dateAppro: bulkDate,
@@ -444,7 +407,6 @@ export default function StockLaboPage() {
           refFacture: bulkRefFacture.trim() || null,
         });
       }
-      setSelectedIngIds(new Set());
       setBulkDate(todayStr());
       setBulkFournisseurId('');
       setBulkRefFacture('');
@@ -510,15 +472,16 @@ export default function StockLaboPage() {
     ingGroups[ing.categorie].push(ing);
   }
 
-  const bulkAllValid = [...selectedIngIds].every((id) => {
-    const rs = rowState[id];
-    if (!rs) return false;
+  const readyCount = Object.entries(rowState).filter(([idStr, rs]) => {
+    const id = Number(idStr);
+    const stockRow = stock.find((r) => r.ingredientId === id);
+    if (stockRow?.isPT) return false;
     const qty = parseFloat(rs.quantite);
     const prix = parseFloat(rs.prixUnitaire);
     return !isNaN(qty) && qty > 0 && !isNaN(prix) && prix > 0;
-  });
-  const canSaveBulk = selectedIngIds.size > 0 && !!bulkDate.trim() && bulkAllValid
-    && (!!bulkFournisseurId && !!bulkRefFacture.trim());
+  }).length;
+  const canSaveBulk = readyCount > 0 && !!bulkDate.trim()
+    && !!bulkFournisseurId && !!bulkRefFacture.trim();
 
   if (!laboId) return <div className="page"><p className="text-muted">Labo introuvable.</p></div>;
 
@@ -673,39 +636,44 @@ export default function StockLaboPage() {
             </div>
           </div>
 
-          {/* Bulk appro form */}
-          {selectedIngIds.size > 0 && (
-            <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end', flexWrap: 'wrap', marginBottom: 16, padding: '12px 16px', background: '#f0fdf4', border: '1px solid #86efac', borderRadius: 10 }}>
-              <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#15803d', textTransform: 'uppercase', letterSpacing: '0.05em', alignSelf: 'center', marginRight: 4 }}>
-                ✓ {selectedIngIds.size} sélectionné{selectedIngIds.size > 1 ? 's' : ''}
-              </div>
+          {/* Approvisionnement bloc */}
+          <div style={{
+            background: 'var(--surface)', borderRadius: 12, padding: '14px 18px', marginBottom: 20,
+            border: '1.5px solid #7e22ce', boxShadow: '0 2px 10px rgba(126,34,206,0.10)',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, paddingBottom: 10, borderBottom: '1px solid var(--border)' }}>
+              <span style={{ fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#7e22ce' }}>Approvisionnement</span>
+              {readyCount > 0 && (
+                <span style={{ background: '#7e22ce', color: '#fff', borderRadius: 20, padding: '1px 9px', fontSize: '0.72rem', fontWeight: 700 }}>{readyCount}</span>
+              )}
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'flex-end' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
                 <span style={LABEL}>Date d'appro</span>
                 <input type="date" className="input" style={{ maxWidth: 150 }} min={yearStart} max={todayStr()} value={bulkDate} onChange={(e) => setBulkDate(e.target.value)} />
               </div>
-              <>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                  <span style={LABEL}>Fournisseur</span>
-                  <select className="input" style={{ maxWidth: 200 }} value={bulkFournisseurId} onChange={(e) => setBulkFournisseurId(e.target.value)}>
-                    <option value="">— Sélectionner —</option>
-                    {fournisseurs.map((f) => <option key={f.id} value={String(f.id)}>{f.nom}</option>)}
-                  </select>
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                  <span style={LABEL}>Réf Facture</span>
-                  <input type="text" className="input" style={{ maxWidth: 160 }} placeholder="N° facture…" value={bulkRefFacture} onChange={(e) => setBulkRefFacture(e.target.value)} />
-                </div>
-              </>
-              <div style={{ display: 'flex', gap: 8, alignSelf: 'flex-end' }}>
-                <button className="btn btn-primary btn-sm" onClick={saveBulk} disabled={!canSaveBulk || bulkSaving || !canWrite}>
-                  {bulkSaving ? '…' : `Enregistrer (${selectedIngIds.size})`}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                <span style={LABEL}>Fournisseur</span>
+                <select className="input" style={{ maxWidth: 200 }} value={bulkFournisseurId} onChange={(e) => setBulkFournisseurId(e.target.value)}>
+                  <option value="">— Sélectionner —</option>
+                  {fournisseurs.map((f) => <option key={f.id} value={String(f.id)}>{f.nom}</option>)}
+                </select>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                <span style={LABEL}>Réf Facture</span>
+                <input type="text" className="input" style={{ maxWidth: 160 }} placeholder="N° facture…" value={bulkRefFacture} onChange={(e) => setBulkRefFacture(e.target.value)} />
+              </div>
+              <div style={{ display: 'flex', gap: 8, alignSelf: 'flex-end', marginLeft: 'auto' }}>
+                <button className="btn btn-primary btn-sm" onClick={saveBulk} disabled={!canSaveBulk || bulkSaving || !canWrite}
+                  style={{ background: canSaveBulk ? 'linear-gradient(135deg, #7e22ce, #a855f7)' : undefined, border: 'none', boxShadow: canSaveBulk ? '0 3px 10px rgba(126,34,206,0.3)' : undefined }}>
+                  {bulkSaving ? '…' : `Enregistrer (${readyCount})`}
                 </button>
-                <button className="btn btn-ghost btn-sm" onClick={() => { setSelectedIngIds(new Set()); setBulkDate(todayStr()); setBulkFournisseurId(''); setBulkRefFacture(''); }}>
-                  Annuler
+                <button className="btn btn-ghost btn-sm" onClick={() => { setBulkDate(todayStr()); setBulkFournisseurId(''); setBulkRefFacture(''); }}>
+                  Réinitialiser
                 </button>
               </div>
             </div>
-          )}
+          </div>
 
           {loading ? (
             <p className="text-muted">{t('common.loading')}</p>
@@ -740,14 +708,12 @@ export default function StockLaboPage() {
                           <table className="table" style={{ width: '100%' }}>
                             <thead style={{ background: '#eff6ff', borderBottom: '2px solid #2563eb', color: '#1e3a5f' }}>
                               <tr>
-                                <th style={{ width: 32, fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '8px 8px' }}></th>
                                 <th style={{ fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '8px 8px' }}>{t('client.stock.ingredient')}</th>
                                 <th style={{ textAlign: 'right', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '8px 8px' }}>Stock<br /><span style={{ fontSize: '0.65rem', fontWeight: 400, opacity: 0.75 }}>coût · pertes</span></th>
                                 <th style={{ textAlign: 'right', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '8px 8px' }}>Inv.<br /><span style={{ fontSize: '0.65rem', fontWeight: 400, opacity: 0.75 }}>date · qté</span></th>
                                 <th style={{ textAlign: 'center', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '8px 8px' }}>Seuil</th>
                                 <th style={{ textAlign: 'right', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '8px 8px' }}>Qté</th>
                                 <th style={{ textAlign: 'right', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '8px 8px' }}>Prix</th>
-                                <th style={{ fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '8px 8px' }}>Date</th>
                                 <th style={{ fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '8px 8px' }}></th>
                               </tr>
                             </thead>
@@ -757,23 +723,11 @@ export default function StockLaboPage() {
                                 if (!rs) return null;
                                 const cls = seuilLabelClass(r.quantite, r.seuilMin);
                                 const histDates = new Set<string>((rs.history || []).map((h) => h.dateAppro).filter(Boolean) as string[]);
-                                const hasDateConflict = (r.quantite !== null && rs.dateAppro === r.dateAppro) || histDates.has(rs.dateAppro);
+                                const hasDateConflict = (r.quantite !== null && bulkDate === r.dateAppro) || histDates.has(bulkDate);
                                 const warnStyle = hasDateConflict ? { borderColor: '#f59e0b', boxShadow: '0 0 0 2px #fef3c7' } : {};
-                                const isSelected = selectedIngIds.has(r.ingredientId);
-                                const canSelect = isSelected || bulkAllValid || selectedIngIds.size === 0;
                                 return (
                                   <React.Fragment key={r.ingredientId}>
-                                    <tr style={isSelected ? { background: '#f0fdf4' } : r.isPT ? { background: '#f5f3ff' } : undefined}>
-                                      <td style={{ textAlign: 'center' }}>
-                                        <input
-                                          type="checkbox"
-                                          checked={isSelected}
-                                          disabled={!canSelect || !!r.isPT}
-                                          onChange={() => !r.isPT && toggleBulkSelect(r.ingredientId)}
-                                          style={{ width: 16, height: 16, cursor: (canSelect && !r.isPT) ? 'pointer' : 'not-allowed', accentColor: 'var(--primary)' }}
-                                          title={r.isPT ? 'Produit Transformé — appro individuelle' : !canSelect ? 'Remplissez la qté et prix des ingrédients sélectionnés avant d\'en ajouter un autre' : undefined}
-                                        />
-                                      </td>
+                                    <tr style={r.isPT ? { background: '#f5f3ff' } : undefined}>
                                       <td>
                                         <div style={{ fontWeight: 600 }}>
                                           {r.isPT && <span style={{ fontSize: '0.68rem', background: '#7c3aed', color: '#fff', borderRadius: 4, padding: '1px 5px', marginRight: 5, fontWeight: 700 }}>PT</span>}
@@ -839,102 +793,49 @@ export default function StockLaboPage() {
                                         )}
                                       </td>
                                       <td>
-                                        <input type="date" className="input" style={{ width: '100%', minWidth: 110, ...warnStyle }} min={yearStart} max={todayStr()} value={rs.dateAppro} onChange={(e) => setDateApproField(r.ingredientId, e.target.value)} disabled={isSelected} title={isSelected ? 'Date définie par le formulaire ci-dessus' : undefined} />
-                                      </td>
-                                      <td>
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'stretch' }}>
-                                          {!r.isPT && (() => {
-                                            const assignedF = rs.fournisseurId ? fournisseurs.find((f) => String(f.id) === rs.fournisseurId) : null;
-                                            const validated = !!assignedF && rs.refFacture.trim() !== '';
-                                            if (fournisseurs.length === 0) {
-                                              return (
-                                                <button
-                                                  className="btn btn-sm"
-                                                  disabled
-                                                  title="Ajoutez d'abord un fournisseur dans la section Fournisseurs Labo"
-                                                  style={{ width: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', background: '#fff7ed', color: '#92400e', border: '1px solid #fed7aa', cursor: 'not-allowed' }}
-                                                >
-                                                  ⚠️ Aucun fournisseur
-                                                </button>
-                                              );
-                                            }
+                                        <div style={{ display: 'flex', gap: 4, alignItems: 'center', flexWrap: 'wrap' }}>
+                                          {r.isPT && r.produitId && (
+                                            <>
+                                              <button className="btn btn-ghost btn-sm" title="Stock des ingrédients relatifs" onClick={() => { fetchPtRecipe(r.produitId!); setPtStockModal({ produitId: r.produitId!, nom: r.nom }); }}>📊</button>
+                                              {canWrite && (
+                                                <button className="btn btn-ghost btn-sm" title="Portions personnalisées pour cette appro" onClick={() => setPortionsModal({ produitId: r.produitId!, nom: r.nom })}>⚙️</button>
+                                              )}
+                                            </>
+                                          )}
+                                          <button
+                                            className="perte-btn"
+                                            onClick={() => { setPerteModal({ ingredientId: r.ingredientId, nom: r.nom }); setPerteQty(''); setPerteType('avarie'); const d = todayStr(); setPerteDate(d); setPerteDateMin(null); setPerteDateMax(null); fetchPerteDateRange(r.ingredientId).then(() => fetchPertePrix(r.ingredientId, d)); }}
+                                            title="Enregistrer une perte"
+                                            disabled={!canWrite}
+                                          >📉</button>
+                                          {(() => {
+                                            const ptMaxQty = r.isPT && r.produitId && ptRecipes[r.produitId] && ptRecipes[r.produitId].length > 0
+                                              ? Math.min(...ptRecipes[r.produitId].map((rec) => {
+                                                  const st = stock.find((s) => s.ingredientId === rec.ingredientId)?.quantite ?? 0;
+                                                  return rec.portion > 0 ? (st ?? 0) / rec.portion : Infinity;
+                                                }))
+                                              : null;
+                                            const ptQtyExceeds = ptMaxQty !== null && isFinite(ptMaxQty)
+                                              && rs.quantite.trim() !== '' && parseFloat(rs.quantite) > ptMaxQty;
                                             return (
-                                              <button
-                                                className="btn btn-sm"
-                                                onClick={() => !isSelected && setFournisseurModal({ ingredientId: r.ingredientId, nom: r.nom })}
-                                                disabled={isSelected}
-                                                title={isSelected ? 'Fournisseur défini par le formulaire ci-dessus' : undefined}
-                                                style={{
-                                                  width: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                                                  background: isSelected ? '#e5e7eb' : validated ? '#dcfce7' : assignedF ? '#fef9c3' : '#eff6ff',
-                                                  color: isSelected ? '#9ca3af' : validated ? '#15803d' : assignedF ? '#92400e' : '#2563eb',
-                                                  border: `1px solid ${isSelected ? '#d1d5db' : validated ? '#86efac' : assignedF ? '#fde68a' : '#bfdbfe'}`,
-                                                }}
-                                              >
-                                                {isSelected ? 'Fournisseur (bulk)' : validated ? `✓ ${assignedF!.nom}` : assignedF ? `${assignedF.nom}…` : 'Fournisseur'}
-                                              </button>
+                                              <>
+                                                {ptQtyExceeds && (
+                                                  <span style={{ fontSize: '0.7rem', color: '#b91c1c', fontWeight: 700 }} title={`Max: ${ptMaxQty!.toFixed(3)}`}>Max: {ptMaxQty!.toFixed(3)}</span>
+                                                )}
+                                                <button
+                                                  className={`btn btn-sm ${rs.saved ? 'btn-success' : 'btn-primary'}`}
+                                                  onClick={() => saveRow(r.ingredientId)}
+                                                  disabled={!canSaveRow(rs, r.isPT) || !canWrite || !!ptQtyExceeds}
+                                                  style={!rs.saved ? { background: 'linear-gradient(135deg, #2563eb, #0ea5e9)', boxShadow: '0 3px 10px rgba(37,99,235,0.3)', borderRadius: 8, border: 'none', color: '#fff', fontWeight: 700 } : {}}
+                                                >
+                                                  {rs.saving ? '…' : rs.saved ? '✓' : t('common.save')}
+                                                </button>
+                                              </>
                                             );
                                           })()}
-                                          {r.isPT && r.produitId && (
-                                            <div style={{ display: 'flex', gap: 4 }}>
-                                              <button
-                                                className="btn btn-ghost btn-sm"
-                                                title="Stock des ingrédients relatifs"
-                                                onClick={() => { fetchPtRecipe(r.produitId!); setPtStockModal({ produitId: r.produitId!, nom: r.nom }); }}
-                                              >
-                                                📊
-                                              </button>
-                                              {canWrite && (
-                                                <button
-                                                  className="btn btn-ghost btn-sm"
-                                                  title="Portions personnalisées pour cette appro"
-                                                  onClick={() => setPortionsModal({ produitId: r.produitId!, nom: r.nom })}
-                                                >
-                                                  ⚙️
-                                                </button>
-                                              )}
-                                            </div>
-                                          )}
-                                          <div style={{ display: 'flex', gap: 4 }}>
-                                            <button
-                                              className="perte-btn"
-                                              onClick={() => { setPerteModal({ ingredientId: r.ingredientId, nom: r.nom }); setPerteQty(''); setPerteType('avarie'); const d = todayStr(); setPerteDate(d); setPerteDateMin(null); setPerteDateMax(null); fetchPerteDateRange(r.ingredientId).then(() => fetchPertePrix(r.ingredientId, d)); }}
-                                              title="Enregistrer une perte"
-                                              disabled={!canWrite}
-                                            >
-                                              📉
-                                            </button>
-                                            {(() => {
-                                              const ptMaxQty = r.isPT && r.produitId && ptRecipes[r.produitId] && ptRecipes[r.produitId].length > 0
-                                                ? Math.min(...ptRecipes[r.produitId].map((rec) => {
-                                                    const st = stock.find((s) => s.ingredientId === rec.ingredientId)?.quantite ?? 0;
-                                                    return rec.portion > 0 ? (st ?? 0) / rec.portion : Infinity;
-                                                  }))
-                                                : null;
-                                              const ptQtyExceeds = ptMaxQty !== null && isFinite(ptMaxQty)
-                                                && rs.quantite.trim() !== '' && parseFloat(rs.quantite) > ptMaxQty;
-                                              return (
-                                                <>
-                                                  {ptQtyExceeds && (
-                                                    <span style={{ fontSize: '0.7rem', color: '#b91c1c', fontWeight: 700, alignSelf: 'center' }} title={`Max: ${ptMaxQty!.toFixed(3)}`}>
-                                                      Max: {ptMaxQty!.toFixed(3)}
-                                                    </span>
-                                                  )}
-                                                  <button
-                                                    className={`btn btn-sm ${rs.saved ? 'btn-success' : 'btn-primary'}`}
-                                                    onClick={() => saveRow(r.ingredientId)}
-                                                    disabled={!canSaveRow(rs, r.isPT) || !canWrite || !!ptQtyExceeds}
-                                                    style={!rs.saved ? { background: 'linear-gradient(135deg, #2563eb, #0ea5e9)', boxShadow: '0 3px 10px rgba(37,99,235,0.3)', borderRadius: 8, border: 'none', color: '#fff', fontWeight: 700, flex: 1 } : { flex: 1 }}
-                                                  >
-                                                    {rs.saving ? '…' : rs.saved ? '✓' : t('common.save')}
-                                                  </button>
-                                                </>
-                                              );
-                                            })()}
-                                            <button className="btn btn-ghost btn-sm" onClick={() => toggleHistory(r.ingredientId)} title="5 derniers appros">
-                                              {rs.historyOpen ? '📋▲' : '📋'}
-                                            </button>
-                                          </div>
+                                          <button className="btn btn-ghost btn-sm" onClick={() => toggleHistory(r.ingredientId)} title="5 derniers appros">
+                                            {rs.historyOpen ? '📋▲' : '📋'}
+                                          </button>
                                         </div>
                                       </td>
                                     </tr>
@@ -942,7 +843,7 @@ export default function StockLaboPage() {
                                     {/* Appro history collapse */}
                                     {rs.historyOpen && (
                                       <tr>
-                                        <td colSpan={9} style={{ background: 'var(--surface)', padding: '8px 16px' }}>
+                                        <td colSpan={7} style={{ background: 'var(--surface)', padding: '8px 16px' }}>
                                           {rs.history.length === 0 ? (
                                             <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{t('client.stock.no_history')}</span>
                                           ) : (
@@ -1211,30 +1112,6 @@ export default function StockLaboPage() {
         </div>
       )}
 
-      {/* Fournisseur modal */}
-      {fournisseurModal && (
-        <div className="modal-overlay">
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header modal-header--primary">
-              <h2>Fournisseur — {fournisseurModal.nom}</h2>
-              <button className="modal-close" onClick={() => setFournisseurModal(null)}>✕</button>
-            </div>
-            <div className="modal-body">
-              <label style={{ ...LABEL, display: 'block', marginBottom: 6 }}>Fournisseur</label>
-              <select className="input" style={{ width: '100%', fontSize: '0.9rem', marginBottom: 16 }} value={rowState[fournisseurModal.ingredientId]?.fournisseurId ?? ''} onChange={(e) => setField(fournisseurModal.ingredientId, 'fournisseurId', e.target.value)}>
-                <option value="">— Aucun fournisseur —</option>
-                {fournisseurs.map((f) => <option key={f.id} value={String(f.id)}>{f.nom}</option>)}
-              </select>
-              <label style={{ ...LABEL, display: 'block', marginBottom: 6 }}>Réf. Facture / BL</label>
-              <input className="input" style={{ width: '100%', fontSize: '0.9rem', marginBottom: 16 }} type="text" value={rowState[fournisseurModal.ingredientId]?.refFacture ?? ''} onChange={(e) => setField(fournisseurModal.ingredientId, 'refFacture', e.target.value)} placeholder="N° facture ou BL" />
-              <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
-                <button className="btn btn-ghost" onClick={() => setFournisseurModal(null)}>Annuler</button>
-                <button className="btn btn-primary" onClick={() => setFournisseurModal(null)}>Valider</button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
       {/* PT accumulation confirmation modal */}
       {ptConfirm && (
         <div className="modal-overlay">
