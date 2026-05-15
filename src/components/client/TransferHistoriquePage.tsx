@@ -54,6 +54,17 @@ export default function TransferHistoriquePage() {
   // Detail popup
   const [detailPopup, setDetailPopup] = useState<TransferEntry | null>(null);
 
+  // Edit modal
+  const [editTarget, setEditTarget] = useState<TransferEntry | null>(null);
+  const [editQty, setEditQty] = useState('');
+  const [editPrix, setEditPrix] = useState<number | null>(null);
+  const [editPrixLoading, setEditPrixLoading] = useState(false);
+  const [editSaving, setEditSaving] = useState(false);
+
+  // Delete modal
+  const [deleteTarget, setDeleteTarget] = useState<TransferEntry | null>(null);
+  const [deleteSaving, setDeleteSaving] = useState(false);
+
   useEffect(() => {
     if (!laboId) return;
     api.get(`/api/labo/${laboId}`).then(({ data }) => setLabo(data)).catch(() => {});
@@ -102,6 +113,43 @@ export default function TransferHistoriquePage() {
     }
     setLoading(false);
   }, [laboId, startDate, endDate, filterActiviteId]);
+
+  const openEdit = async (r: TransferEntry) => {
+    setEditTarget(r);
+    setEditQty(String(r.quantite));
+    setEditPrix(null);
+    setEditPrixLoading(true);
+    try {
+      const { data } = await api.get(`/api/labo/${laboId}/transfers/${r.id}/prix`);
+      setEditPrix(data.prixUnitaire ?? null);
+    } catch { /* ignore */ }
+    setEditPrixLoading(false);
+  };
+
+  const saveEdit = async () => {
+    if (!editTarget) return;
+    const qty = parseFloat(editQty);
+    if (!qty || qty <= 0) return;
+    setEditSaving(true);
+    try {
+      await api.patch(`/api/labo/${laboId}/transfers/${editTarget.id}`, { quantite: qty });
+      setResults((prev) => prev.map((r) => r.id === editTarget.id ? { ...r, quantite: qty } : r));
+      setEditTarget(null);
+    } catch { /* ignore */ }
+    setEditSaving(false);
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleteSaving(true);
+    try {
+      await api.delete(`/api/labo/${laboId}/transfers/${deleteTarget.id}`);
+      setResults((prev) => prev.filter((r) => r.id !== deleteTarget.id));
+      setSelectedIds((prev) => { const n = new Set(prev); n.delete(deleteTarget.id); return n; });
+      setDeleteTarget(null);
+    } catch { /* ignore */ }
+    setDeleteSaving(false);
+  };
 
   const activites: Activite[] = labo?.activites || [];
 
@@ -337,16 +385,14 @@ export default function TransferHistoriquePage() {
                       <td style={{ textAlign: 'right', fontWeight: 800, color: 'var(--success, #10b981)', padding: '12px 14px' }}>
                         {r.quantite % 1 === 0 ? r.quantite.toFixed(0) : r.quantite} <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem', fontWeight: 400 }}>{r.uniteNom}</span>
                       </td>
-                      <td style={{ textAlign: 'center', padding: '12px 14px' }} onClick={(e) => e.stopPropagation()}>
-                        {r.note ? (
-                          <button
-                            className="btn btn-ghost btn-sm"
-                            style={{ fontSize: '0.78rem', padding: '3px 10px', borderRadius: 20, border: '1px solid #d8b4fe', color: '#7e22ce' }}
-                            onClick={() => setDetailPopup(r)}
-                          >
-                            📝
-                          </button>
-                        ) : null}
+                      <td style={{ textAlign: 'center', padding: '10px 10px' }} onClick={(e) => e.stopPropagation()}>
+                        <div style={{ display: 'flex', gap: 5, justifyContent: 'center', alignItems: 'center' }}>
+                          {r.note && (
+                            <button className="btn btn-ghost btn-sm" style={{ fontSize: '0.78rem', padding: '3px 8px', borderRadius: 20, border: '1px solid #d8b4fe', color: '#7e22ce' }} onClick={() => setDetailPopup(r)}>📝</button>
+                          )}
+                          <button className="btn btn-ghost btn-sm" style={{ fontSize: '0.78rem', padding: '3px 8px', borderRadius: 20, border: '1px solid #bfdbfe', color: '#1d4ed8' }} onClick={() => openEdit(r)}>✏️</button>
+                          <button className="btn btn-ghost btn-sm" style={{ fontSize: '0.78rem', padding: '3px 8px', borderRadius: 20, border: '1px solid #fecaca', color: '#dc2626' }} onClick={() => setDeleteTarget(r)}>🗑️</button>
+                        </div>
                       </td>
                     </tr>
                     );
@@ -368,6 +414,120 @@ export default function TransferHistoriquePage() {
             </>
           )}
         </>
+      )}
+
+      {/* Edit modal */}
+      {editTarget && (
+        <div className="modal-overlay">
+          <div className="modal" style={{ maxWidth: 480 }} onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header" style={{ background: 'linear-gradient(135deg, #1e3a8a, #2563eb)', color: '#fff' }}>
+              <h2 style={{ color: '#fff', margin: 0 }}>✏️ Modifier le transfert</h2>
+              <button className="modal-close" style={{ color: '#fff' }} onClick={() => setEditTarget(null)}>✕</button>
+            </div>
+            <div className="modal-body">
+              <table style={{ width: '100%', fontSize: '0.9rem', borderCollapse: 'collapse', marginBottom: 20 }}>
+                <tbody>
+                  {[
+                    ['Date', fmtDate(editTarget.dateTransfert)],
+                    ['Activité', editTarget.activiteNom],
+                    ['Ingrédient', editTarget.ingredientNom],
+                    ['Catégorie', editTarget.categorieNom],
+                    ['Ancienne quantité', `${editTarget.quantite % 1 === 0 ? editTarget.quantite.toFixed(0) : editTarget.quantite} ${editTarget.uniteNom}`],
+                  ].map(([label, value]) => (
+                    <tr key={label} style={{ borderBottom: '1px solid var(--border)' }}>
+                      <td style={{ padding: '9px 0', fontWeight: 700, color: 'var(--text-muted)', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em', width: 130 }}>{label}</td>
+                      <td style={{ padding: '9px 0', fontWeight: 600 }}>{value}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <div style={{ marginBottom: 16 }}>
+                <label style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#1d4ed8', display: 'block', marginBottom: 6 }}>
+                  Nouvelle quantité ({editTarget.uniteNom})
+                </label>
+                <input
+                  type="number" min="0.001" step="0.001" className="input"
+                  style={{ width: '100%', fontWeight: 700, fontSize: '1.05rem', border: '2px solid #2563eb' }}
+                  value={editQty}
+                  onChange={(e) => setEditQty(e.target.value)}
+                />
+              </div>
+              <div style={{ background: '#eff6ff', borderRadius: 10, padding: '12px 16px', borderLeft: '4px solid #2563eb' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+                  <span style={{ fontSize: '0.78rem', color: '#1d4ed8', fontWeight: 700 }}>Prix unitaire (dernier appro)</span>
+                  <span style={{ fontWeight: 800, color: '#1d4ed8' }}>
+                    {editPrixLoading ? '…' : editPrix !== null ? `${editPrix.toFixed(3)} DT` : '—'}
+                  </span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ fontSize: '0.78rem', color: '#1e3a8a', fontWeight: 700 }}>Coût total estimé</span>
+                  <span style={{ fontWeight: 800, color: '#1e3a8a', fontSize: '1.05rem' }}>
+                    {editPrix !== null && parseFloat(editQty) > 0
+                      ? `${(editPrix * parseFloat(editQty)).toFixed(3)} DT`
+                      : '—'}
+                  </span>
+                </div>
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-ghost" onClick={() => setEditTarget(null)} disabled={editSaving}>{t('common.cancel')}</button>
+              <button
+                className="btn btn-primary"
+                style={{ background: '#2563eb' }}
+                onClick={saveEdit}
+                disabled={editSaving || !parseFloat(editQty) || parseFloat(editQty) <= 0}
+              >
+                {editSaving ? 'Enregistrement…' : '✔ Enregistrer'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete modal */}
+      {deleteTarget && (
+        <div className="modal-overlay">
+          <div className="modal" style={{ maxWidth: 460 }} onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header" style={{ background: 'linear-gradient(135deg, #7f1d1d, #dc2626)', color: '#fff' }}>
+              <h2 style={{ color: '#fff', margin: 0 }}>🗑️ Supprimer le transfert</h2>
+              <button className="modal-close" style={{ color: '#fff' }} onClick={() => setDeleteTarget(null)}>✕</button>
+            </div>
+            <div className="modal-body">
+              <div style={{ background: '#fef2f2', borderRadius: 10, padding: '14px 16px', borderLeft: '4px solid #dc2626', marginBottom: 18 }}>
+                <p style={{ fontWeight: 800, color: '#991b1b', fontSize: '0.88rem', margin: '0 0 6px' }}>⚠️ Attention — impact sur les stocks</p>
+                <p style={{ fontSize: '0.85rem', color: '#7f1d1d', margin: 0, lineHeight: 1.5 }}>
+                  Cette suppression va recalculer le <strong>stock du labo</strong> (la quantité sera restituée) et le <strong>stock de l'activité «{deleteTarget.activiteNom}»</strong> (la quantité transférée sera retirée). Cette action est irréversible.
+                </p>
+              </div>
+              <table style={{ width: '100%', fontSize: '0.9rem', borderCollapse: 'collapse' }}>
+                <tbody>
+                  {[
+                    ['Date', fmtDate(deleteTarget.dateTransfert)],
+                    ['Activité', deleteTarget.activiteNom],
+                    ['Ingrédient', deleteTarget.ingredientNom],
+                    ['Quantité', `${deleteTarget.quantite % 1 === 0 ? deleteTarget.quantite.toFixed(0) : deleteTarget.quantite} ${deleteTarget.uniteNom}`],
+                  ].map(([label, value]) => (
+                    <tr key={label} style={{ borderBottom: '1px solid var(--border)' }}>
+                      <td style={{ padding: '8px 0', fontWeight: 700, color: 'var(--text-muted)', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em', width: 110 }}>{label}</td>
+                      <td style={{ padding: '8px 0', fontWeight: 600 }}>{value}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-ghost" onClick={() => setDeleteTarget(null)} disabled={deleteSaving}>{t('common.cancel')}</button>
+              <button
+                className="btn"
+                style={{ background: '#dc2626', color: '#fff', fontWeight: 700 }}
+                onClick={confirmDelete}
+                disabled={deleteSaving}
+              >
+                {deleteSaving ? 'Suppression…' : '🗑️ Confirmer la suppression'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Detail popup */}
