@@ -185,8 +185,9 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
     } catch (err: unknown) {
       const errMsg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
       setError(errMsg || t('common.error'));
+    } finally {
+      setSaving(false);
     }
-    setSaving(false);
   };
 
   const confirmDelete = async () => {
