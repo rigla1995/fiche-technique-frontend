@@ -536,10 +536,10 @@ export default function TransferPage() {
                     <table className="table">
                       <thead>
                         <tr style={{ background: 'linear-gradient(135deg, #3b0764, #7e22ce)' }}>
-                          <th style={{ minWidth: 140, fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px', color: '#fff' }}>{t('client.stock.ingredient')}</th>
-                          <th style={{ textAlign: 'right', minWidth: 100, fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px', color: '#fff' }}>{t('client.labo.labo_stock')}</th>
+                          <th style={{ minWidth: 140, fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px', color: '#fff', background: 'transparent', borderBottom: 'none' }}>{t('client.stock.ingredient')}</th>
+                          <th style={{ textAlign: 'right', minWidth: 100, fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px', color: '#fff', background: 'transparent', borderBottom: 'none' }}>{t('client.labo.labo_stock')}</th>
                           {activites.map((act) => (
-                            <th key={act.id} style={{ textAlign: 'center', minWidth: 120, fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px', color: '#e9d5ff' }}>↗ {act.nom}</th>
+                            <th key={act.id} style={{ textAlign: 'center', minWidth: 120, fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px', color: '#e9d5ff', background: 'transparent', borderBottom: 'none' }}>↗ {act.nom}</th>
                           ))}
                         </tr>
                       </thead>
