@@ -127,7 +127,6 @@ function GerantSidebarContent({
     const assignedLabo = labos.find(l => l.id === laboId);
     const laboParam = `laboId=${laboId}`;
     const curTab = new URLSearchParams(location.search).get('tab');
-    const isLaboIngredients = location.pathname === '/client/labo/stock' && location.search.includes(laboParam) && curTab === 'ingredients';
     const isLaboStock = location.pathname === '/client/labo/stock' && location.search.includes(laboParam) && curTab !== 'ingredients';
     const isLaboTransfer = location.pathname === '/client/labo/transfer' && location.search.includes(laboParam);
     const isLaboHistoriqueAppro = location.pathname === '/client/labo/historique-appro' && location.search.includes(laboParam);
@@ -141,7 +140,6 @@ function GerantSidebarContent({
         <CollapsibleHeader label={`Espace ${laboLabel}`} icon="🏭" isOpen={openSections.has('gerant-labo')} locked={false} onToggle={() => toggleSection('gerant-labo')} />
         {openSections.has('gerant-labo') && (
           <>
-            <li><Link to={`/client/labo/stock?laboId=${laboId}&tab=ingredients`} className={`sidebar-link ${isLaboIngredients ? 'active' : ''}`} onClick={onClose}><span className="link-icon">🧂</span><span className="link-label">Ingrédients Stock</span></Link></li>
             <li><Link to={`/client/labo/stock?laboId=${laboId}`} className={`sidebar-link ${isLaboStock ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📦</span><span className="link-label">Stock {laboLabel}</span></Link></li>
             <li><Link to={`/client/labo/historique-appro?laboId=${laboId}`} className={`sidebar-link ${isLaboHistoriqueAppro ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📋</span><span className="link-label">Historique Appro</span></Link></li>
             <li><Link to={`/client/labo/historique-pertes?laboId=${laboId}`} className={`sidebar-link ${isLaboHistoriquePertes ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📉</span><span className="link-label">Historique Pertes</span></Link></li>
@@ -641,7 +639,6 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                       {labos.map((labo) => {
                         const laboParam = `laboId=${labo.id}`;
                         const currentTab = new URLSearchParams(location.search).get('tab');
-                        const isLaboIngredients = location.pathname === '/client/labo/stock' && location.search.includes(laboParam) && currentTab === 'ingredients';
                         const isLaboStock = location.pathname === '/client/labo/stock' && location.search.includes(laboParam) && currentTab !== 'ingredients';
                         const isLaboTransfer = location.pathname === '/client/labo/transfer' && location.search.includes(laboParam);
                         const isLaboHistorique = location.pathname === '/client/labo/historique-transferts' && location.search.includes(laboParam);
@@ -653,7 +650,6 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                             <CollapsibleHeader label={`Espace ${labo.nom}`} icon="🏭" isOpen={openSections.has(`labo-${labo.id}`)} locked={!hasLaboIngredients} onToggle={() => toggleSection(`labo-${labo.id}`)} />
                             {openSections.has(`labo-${labo.id}`) && (
                               <>
-                                <li><Link to={`/client/labo/stock?laboId=${labo.id}&tab=ingredients`} className={`sidebar-link ${isLaboIngredients ? 'active' : ''}`} onClick={onClose}><span className="link-icon">🧂</span><span className="link-label">Ingrédients Stock</span></Link></li>
                                 <li><Link to={`/client/labo/stock?laboId=${labo.id}`} className={`sidebar-link ${isLaboStock ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📦</span><span className="link-label">Stock {labo.nom}</span></Link></li>
                                 <li><Link to={`/client/labo/historique-appro?laboId=${labo.id}`} className={`sidebar-link ${isLaboHistoriqueAppro ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📋</span><span className="link-label">Historique Appro</span></Link></li>
                                 <li><Link to={`/client/labo/historique-pertes?laboId=${labo.id}`} className={`sidebar-link ${isLaboHistoriquePertes ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📉</span><span className="link-label">Historique Pertes</span></Link></li>
