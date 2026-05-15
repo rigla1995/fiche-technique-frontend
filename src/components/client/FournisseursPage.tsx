@@ -176,22 +176,22 @@ export default function FournisseursPage() {
 
       {/* Filter panel */}
       <div style={{
-        background: 'var(--surface)', borderRadius: 14, padding: '16px 20px',
+        background: 'var(--surface)', borderRadius: 14, padding: '16px 20px', marginBottom: 24,
         border: '1px solid var(--border)', boxShadow: '0 2px 12px rgba(0,0,0,0.05)',
-        marginBottom: 24,
+        display: 'flex', flexWrap: 'wrap', gap: 14, alignItems: 'flex-end',
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-          <span style={{ fontWeight: 700, fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.09em', color: 'var(--text-muted)' }}>Filtres</span>
+        <div style={{ width: '100%', marginBottom: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span style={{ fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#92400e' }}>Filtres</span>
           {search && (
             <button className="btn btn-ghost btn-sm" style={{ fontSize: '0.78rem' }} onClick={() => { setSearch(''); setFoPage(1); }}>✕ Réinitialiser</button>
           )}
         </div>
         <div>
-          <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 5 }}>Recherche</span>
+          <label style={{ fontSize: '0.68rem', fontWeight: 800, color: '#92400e', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>🔍 Recherche</label>
           <input
-            type="text" className="input" placeholder="Nom, téléphone, adresse…" value={search}
+            type="text" placeholder="Nom, téléphone, adresse…" value={search}
             onChange={(e) => { setSearch(e.target.value); setFoPage(1); }}
-            style={{ maxWidth: 320 }}
+            style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid #92400e', fontSize: '0.88rem', background: '#fffbeb', minWidth: 160 }}
           />
         </div>
       </div>

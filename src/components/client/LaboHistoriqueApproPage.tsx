@@ -365,15 +365,8 @@ export default function LaboHistoriqueApproPage() {
         marginBottom: 24,
       }}>
         {/* Panel header */}
-        <div style={{
-          paddingBottom: 12,
-          marginBottom: 16,
-          borderBottom: '1px solid var(--border)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-        }}>
-          <span style={{ fontWeight: 700, fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.09em', color: 'var(--text-muted)' }}>Filtres</span>
+        <div style={{ width: '100%', marginBottom: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: 12, borderBottom: '1px solid var(--border)' }}>
+          <span style={{ fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#7e22ce' }}>Filtres</span>
         </div>
 
         {/* Section 1: Produit */}
@@ -382,18 +375,18 @@ export default function LaboHistoriqueApproPage() {
             <span style={{ width: 16, height: 2, background: 'var(--primary)', display: 'inline-block', borderRadius: 2 }} />
             Produit
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(190px, 1fr))', gap: '12px 20px' }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14, alignItems: 'flex-end' }}>
             <div>
-              <label style={labelStyle}>Catégorie</label>
-              <select className="input" style={{ width: '100%' }} value={filterCategorieId}
+              <label style={{ fontSize: '0.68rem', fontWeight: 800, color: '#7e22ce', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>🏷️ Catégorie</label>
+              <select style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid #7e22ce', fontSize: '0.88rem', background: '#faf5ff', minWidth: 160 }} value={filterCategorieId}
                 onChange={(e) => { setFilterCategorieId(e.target.value); setFilterIngredientId(''); }}>
                 <option value="">— Toutes —</option>
                 {categories.map((c) => <option key={c.id} value={c.id}>{c.nom}</option>)}
               </select>
             </div>
             <div>
-              <label style={labelStyle}>Ingrédient</label>
-              <select className="input" style={{ width: '100%' }} value={filterIngredientId}
+              <label style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>🧂 Ingrédient</label>
+              <select style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid var(--border)', fontSize: '0.88rem', background: 'var(--background)', minWidth: 160 }} value={filterIngredientId}
                 disabled={!filterCategorieId}
                 onChange={(e) => setFilterIngredientId(e.target.value)}>
                 <option value="">— Tous —</option>
@@ -412,21 +405,21 @@ export default function LaboHistoriqueApproPage() {
             <span style={{ width: 16, height: 2, background: '#7c3aed', display: 'inline-block', borderRadius: 2 }} />
             Période &amp; Fournisseur
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '12px 20px' }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14, alignItems: 'flex-end' }}>
             <div>
-              <label style={dateLabelStyle}>Date début</label>
-              <input type="date" className="input" style={{ width: '100%', border: '1.5px solid #0f766e', background: '#f0fdfa', fontWeight: 600 }} min={yearStart} max={yearEnd}
+              <label style={{ fontSize: '0.68rem', fontWeight: 800, color: '#7e22ce', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>📅 Date début</label>
+              <input type="date" style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid #7e22ce', fontSize: '0.88rem', background: '#faf5ff', minWidth: 160, fontWeight: 600 }} min={yearStart} max={yearEnd}
                 value={startDate} onChange={(e) => setStartDate(e.target.value)} />
             </div>
             <div>
-              <label style={dateLabelStyle}>Date fin</label>
-              <input type="date" className="input" style={{ width: '100%', border: '1.5px solid #0f766e', background: '#f0fdfa', fontWeight: 600 }} min={yearStart} max={yearEnd}
+              <label style={{ fontSize: '0.68rem', fontWeight: 800, color: '#7e22ce', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>📅 Date fin</label>
+              <input type="date" style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid #7e22ce', fontSize: '0.88rem', background: '#faf5ff', minWidth: 160, fontWeight: 600 }} min={yearStart} max={yearEnd}
                 value={endDate} onChange={(e) => setEndDate(e.target.value)} />
             </div>
             {fournisseurs.length > 0 && (
               <div>
-                <label style={labelStyle}>Fournisseur</label>
-                <select className="input" style={{ width: '100%' }} value={filterFournisseurId}
+                <label style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>🚚 Fournisseur</label>
+                <select style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid var(--border)', fontSize: '0.88rem', background: 'var(--background)', minWidth: 160 }} value={filterFournisseurId}
                   onChange={(e) => setFilterFournisseurId(e.target.value)}>
                   <option value="">— Tous —</option>
                   {fournisseurs.map((f) => <option key={f.id} value={f.id}>{f.nom}</option>)}
@@ -434,8 +427,8 @@ export default function LaboHistoriqueApproPage() {
               </div>
             )}
             <div>
-              <label style={labelStyle}>Réf. Facture</label>
-              <input type="text" className="input" style={{ width: '100%' }}
+              <label style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>🧾 Réf. Facture</label>
+              <input type="text" style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid var(--border)', fontSize: '0.88rem', background: 'var(--background)', minWidth: 160 }}
                 placeholder="Rechercher réf…"
                 value={filterRefFacture} onChange={(e) => setFilterRefFacture(e.target.value)} />
             </div>

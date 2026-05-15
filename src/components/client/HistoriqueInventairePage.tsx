@@ -246,28 +246,31 @@ export default function HistoriqueInventairePage() {
             border: '1px solid var(--border)', boxShadow: '0 2px 12px rgba(0,0,0,0.05)',
             display: 'flex', flexWrap: 'wrap', gap: 14, alignItems: 'flex-end',
           }}>
+            <div style={{ width: '100%', marginBottom: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#065f46' }}>Filtres</span>
+            </div>
             <div>
-              <label style={{ ...labelStyle, color: '#0f766e' }}>📅 Date début</label>
+              <label style={{ ...labelStyle, color: '#065f46' }}>📅 Date début</label>
               <input type="date" value={filters.startDate} onChange={(e) => setFilters((p) => ({ ...p, startDate: e.target.value }))}
-                style={{ padding: '9px 12px', borderRadius: 9, border: '1.5px solid #0f766e', fontSize: '0.88rem', background: '#f0fdfa', fontWeight: 600, color: '#134e4a' }} />
+                style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid #065f46', fontSize: '0.88rem', background: '#f0fdf4', fontWeight: 600 }} />
             </div>
             <div>
-              <label style={{ ...labelStyle, color: '#0f766e' }}>📅 Date fin</label>
+              <label style={{ ...labelStyle, color: '#065f46' }}>📅 Date fin</label>
               <input type="date" value={filters.endDate} onChange={(e) => setFilters((p) => ({ ...p, endDate: e.target.value }))}
-                style={{ padding: '9px 12px', borderRadius: 9, border: '1.5px solid #0f766e', fontSize: '0.88rem', background: '#f0fdfa', fontWeight: 600, color: '#134e4a' }} />
+                style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid #065f46', fontSize: '0.88rem', background: '#f0fdf4', fontWeight: 600 }} />
             </div>
             <div>
-              <label style={labelStyle}>🏷 Catégorie</label>
+              <label style={labelStyle}>🏷️ Catégorie</label>
               <select value={filters.categorie} onChange={(e) => setFilters((p) => ({ ...p, categorie: e.target.value, ingredientId: '' }))}
-                style={{ padding: '9px 12px', borderRadius: 9, border: '1.5px solid var(--border)', fontSize: '0.88rem', minWidth: 150, background: 'var(--background)' }}>
+                style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid var(--border)', fontSize: '0.88rem', minWidth: 160, background: 'var(--background)' }}>
                 <option value="">Toutes</option>
                 {categories.map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>
             <div>
-              <label style={labelStyle}>🔎 Ingrédient</label>
+              <label style={labelStyle}>🧂 Ingrédient</label>
               <select value={filters.ingredientId} onChange={(e) => setFilters((p) => ({ ...p, ingredientId: e.target.value }))}
-                style={{ padding: '9px 12px', borderRadius: 9, border: '1.5px solid var(--border)', fontSize: '0.88rem', minWidth: 170, background: 'var(--background)' }}>
+                style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid var(--border)', fontSize: '0.88rem', minWidth: 160, background: 'var(--background)' }}>
                 <option value="">Tous</option>
                 {filteredIngOptions.map((i) => <option key={i.ingredientId} value={i.ingredientId}>{i.nom}</option>)}
               </select>

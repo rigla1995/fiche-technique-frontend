@@ -515,15 +515,8 @@ export default function HistoriqueApproPage() {
         marginBottom: 24,
       }}>
         {/* Panel header */}
-        <div style={{
-          paddingBottom: 12,
-          marginBottom: 16,
-          borderBottom: '1px solid var(--border)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-        }}>
-          <span style={{ fontWeight: 700, fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.09em', color: 'var(--text-muted)' }}>
+        <div style={{ width: '100%', marginBottom: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: 12, borderBottom: '1px solid var(--border)' }}>
+          <span style={{ fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#1e40af' }}>
             Filtres
           </span>
         </div>
@@ -534,17 +527,16 @@ export default function HistoriqueApproPage() {
             <span style={{ width: 16, height: 2, background: 'var(--primary)', display: 'inline-block', borderRadius: 2 }} />
             Entité &amp; Produit
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(190px, 1fr))', gap: '12px 20px' }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14, alignItems: 'flex-end' }}>
             {isEntreprise && activitesLoading ? (
               <div style={{ display: 'flex', alignItems: 'flex-end', paddingBottom: 8 }}>
                 <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>{t('common.loading')}</span>
               </div>
             ) : isEntreprise && !isActiviteGerant && activitiesForDropdown.length > 0 ? (
               <div>
-                <label style={labelStyle}>{t('client.historique_appro.activity')}</label>
+                <label style={{ fontSize: '0.68rem', fontWeight: 800, color: '#1e40af', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>🏪 {t('client.historique_appro.activity')}</label>
                 <select
-                  className="input"
-                  style={{ width: '100%' }}
+                  style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid #1e40af', fontSize: '0.88rem', background: '#eff6ff', minWidth: 160 }}
                   value={selectedActiviteId}
                   onChange={(e) => setSelectedActiviteId(e.target.value)}
                 >
@@ -555,10 +547,9 @@ export default function HistoriqueApproPage() {
             ) : null}
 
             <div>
-              <label style={labelStyle}>{t('client.historique_appro.category')}</label>
+              <label style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>🏷️ {t('client.historique_appro.category')}</label>
               <select
-                className="input"
-                style={{ width: '100%' }}
+                style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid var(--border)', fontSize: '0.88rem', background: 'var(--background)', minWidth: 160 }}
                 value={selectedCategoryId}
                 onChange={(e) => { setSelectedCategoryId(e.target.value); setSelectedIngredientId(''); }}
               >
@@ -569,10 +560,9 @@ export default function HistoriqueApproPage() {
             </div>
 
             <div>
-              <label style={labelStyle}>{t('client.historique_appro.ingredient')}</label>
+              <label style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>🧂 {t('client.historique_appro.ingredient')}</label>
               <select
-                className="input"
-                style={{ width: '100%' }}
+                style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid var(--border)', fontSize: '0.88rem', background: 'var(--background)', minWidth: 160 }}
                 value={selectedIngredientId}
                 onChange={(e) => setSelectedIngredientId(e.target.value)}
                 disabled={!selectedCategoryId}
@@ -595,13 +585,12 @@ export default function HistoriqueApproPage() {
             <span style={{ width: 16, height: 2, background: '#7c3aed', display: 'inline-block', borderRadius: 2 }} />
             Période &amp; Fournisseur
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '12px 20px' }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14, alignItems: 'flex-end' }}>
             <div>
-              <label style={dateLabelStyle}>{t('client.historique_appro.start_date')}</label>
+              <label style={{ fontSize: '0.68rem', fontWeight: 800, color: '#1e40af', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>📅 {t('client.historique_appro.start_date')}</label>
               <input
                 type="date"
-                className="input"
-                style={{ width: '100%', border: '1.5px solid #0f766e', background: '#f0fdfa', fontWeight: 600 }}
+                style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid #1e40af', fontSize: '0.88rem', background: '#eff6ff', minWidth: 160, fontWeight: 600 }}
                 min={yearStart}
                 max={yearEnd}
                 value={startDate}
@@ -609,11 +598,10 @@ export default function HistoriqueApproPage() {
               />
             </div>
             <div>
-              <label style={dateLabelStyle}>{t('client.historique_appro.end_date')}</label>
+              <label style={{ fontSize: '0.68rem', fontWeight: 800, color: '#1e40af', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>📅 {t('client.historique_appro.end_date')}</label>
               <input
                 type="date"
-                className="input"
-                style={{ width: '100%', border: '1.5px solid #0f766e', background: '#f0fdfa', fontWeight: 600 }}
+                style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid #1e40af', fontSize: '0.88rem', background: '#eff6ff', minWidth: 160, fontWeight: 600 }}
                 min={yearStart}
                 max={yearEnd}
                 value={endDate}
@@ -622,10 +610,9 @@ export default function HistoriqueApproPage() {
             </div>
             {fournisseurs.length > 0 && (
               <div>
-                <label style={labelStyle}>Fournisseur</label>
+                <label style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>🚚 Fournisseur</label>
                 <select
-                  className="input"
-                  style={{ width: '100%' }}
+                  style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid var(--border)', fontSize: '0.88rem', background: 'var(--background)', minWidth: 160 }}
                   value={selectedFournisseurId}
                   onChange={(e) => setSelectedFournisseurId(e.target.value)}
                 >
@@ -635,11 +622,10 @@ export default function HistoriqueApproPage() {
               </div>
             )}
             <div>
-              <label style={labelStyle}>Réf. Facture</label>
+              <label style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>🧾 Réf. Facture</label>
               <input
                 type="text"
-                className="input"
-                style={{ width: '100%' }}
+                style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid var(--border)', fontSize: '0.88rem', background: 'var(--background)', minWidth: 160 }}
                 placeholder="Rechercher réf…"
                 value={refFactureFilter}
                 onChange={(e) => setRefFactureFilter(e.target.value)}

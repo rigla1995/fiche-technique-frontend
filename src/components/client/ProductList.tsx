@@ -273,20 +273,22 @@ export default function ProductList() {
         <>
           {/* Search bar */}
           {byTab.length > 0 && (
-            <div style={{ background: 'var(--surface)', borderRadius: 14, padding: '16px 20px', border: '1px solid var(--border)', boxShadow: '0 2px 12px rgba(0,0,0,0.05)', marginBottom: 24 }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-                <span style={{ fontWeight: 700, fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.09em', color: 'var(--text-muted)' }}>Filtres</span>
+            <div style={{
+              background: 'var(--surface)', borderRadius: 14, padding: '16px 20px', marginBottom: 24,
+              border: '1px solid var(--border)', boxShadow: '0 2px 12px rgba(0,0,0,0.05)',
+              display: 'flex', flexWrap: 'wrap', gap: 14, alignItems: 'flex-end',
+            }}>
+              <div style={{ width: '100%', marginBottom: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#9f1239' }}>Filtres</span>
                 {search && (
                   <button className="btn btn-ghost btn-sm" style={{ fontSize: '0.78rem' }} onClick={() => { setSearch(''); setPage(1); }}>✕ Réinitialiser</button>
                 )}
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '12px 20px' }}>
-                <div>
-                  <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 5 }}>Nom</span>
-                  <input type="text" placeholder={t('common.search') + '...'}
-                    value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-                    className="input" style={{ width: '100%' }} />
-                </div>
+              <div>
+                <label style={{ fontSize: '0.68rem', fontWeight: 800, color: '#9f1239', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>🔍 Nom</label>
+                <input type="text" placeholder={t('common.search') + '...'}
+                  value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+                  style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid #9f1239', fontSize: '0.88rem', background: '#fff1f2', minWidth: 160 }} />
               </div>
             </div>
           )}

@@ -132,46 +132,48 @@ export default function LaboHistoriquepertesPage() {
       </div>
 
       {/* Filters */}
-      <div style={{ background: 'var(--surface)', borderRadius: 14, padding: '16px 20px', border: '1px solid var(--border)', boxShadow: '0 2px 12px rgba(0,0,0,0.05)', marginBottom: 24 }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-          <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#dc2626', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Filtres</span>
+      <div style={{
+        background: 'var(--surface)', borderRadius: 14, padding: '16px 20px', marginBottom: 24,
+        border: '1px solid var(--border)', boxShadow: '0 2px 12px rgba(0,0,0,0.05)',
+        display: 'flex', flexWrap: 'wrap', gap: 14, alignItems: 'flex-end',
+      }}>
+        <div style={{ width: '100%', marginBottom: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span style={{ fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#7e22ce' }}>Filtres</span>
           <button className="btn btn-ghost btn-sm" style={{ fontSize: '0.78rem' }} onClick={resetFilters}>✕ Réinitialiser</button>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '12px 20px' }}>
-          <div>
-            <label style={labelStyle}>Du</label>
-            <input type="date" className="input" style={{ width: '100%' }} value={fDateDebut} onChange={(e) => setFDateDebut(e.target.value)} />
-          </div>
-          <div>
-            <label style={labelStyle}>Au</label>
-            <input type="date" className="input" style={{ width: '100%' }} value={fDateFin} onChange={(e) => setFDateFin(e.target.value)} />
-          </div>
-          <div>
-            <label style={labelStyle}>Type</label>
-            <select className="input" style={{ width: '100%' }} value={fType} onChange={(e) => setFType(e.target.value)}>
-              <option value="">— Tous —</option>
-              <option value="avarie">Avarie</option>
-              <option value="dechet">Déchet</option>
-            </select>
-          </div>
-          <div>
-            <label style={labelStyle}>Catégorie</label>
-            <select className="input" style={{ width: '100%' }} value={fCategorie} onChange={(e) => { setFCategorie(e.target.value); setFIngredient(''); }}>
-              <option value="">— Toutes —</option>
-              {categories.map((c) => <option key={c.id} value={c.id}>{c.nom}</option>)}
-            </select>
-          </div>
-          <div>
-            <label style={labelStyle}>Ingrédient</label>
-            <select className="input" style={{ width: '100%' }} value={fIngredient} disabled={!fCategorie} onChange={(e) => setFIngredient(e.target.value)}>
-              <option value="">— Tous —</option>
-              {ingredientsInCat.map((i) => <option key={i.id} value={i.id}>{i.nom}</option>)}
-            </select>
-          </div>
-          <div>
-            <label style={labelStyle}>Nom</label>
-            <input type="text" className="input" style={{ width: '100%' }} placeholder="Rechercher…" value={fNom} onChange={(e) => setFNom(e.target.value)} />
-          </div>
+        <div>
+          <label style={{ fontSize: '0.68rem', fontWeight: 800, color: '#7e22ce', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>📅 Du</label>
+          <input type="date" style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid #7e22ce', fontSize: '0.88rem', background: '#faf5ff', minWidth: 160, fontWeight: 600 }} value={fDateDebut} onChange={(e) => setFDateDebut(e.target.value)} />
+        </div>
+        <div>
+          <label style={{ fontSize: '0.68rem', fontWeight: 800, color: '#7e22ce', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>📅 Au</label>
+          <input type="date" style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid #7e22ce', fontSize: '0.88rem', background: '#faf5ff', minWidth: 160, fontWeight: 600 }} value={fDateFin} onChange={(e) => setFDateFin(e.target.value)} />
+        </div>
+        <div>
+          <label style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>📋 Type</label>
+          <select style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid var(--border)', fontSize: '0.88rem', background: 'var(--background)', minWidth: 160 }} value={fType} onChange={(e) => setFType(e.target.value)}>
+            <option value="">— Tous —</option>
+            <option value="avarie">Avarie</option>
+            <option value="dechet">Déchet</option>
+          </select>
+        </div>
+        <div>
+          <label style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>🏷️ Catégorie</label>
+          <select style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid var(--border)', fontSize: '0.88rem', background: 'var(--background)', minWidth: 160 }} value={fCategorie} onChange={(e) => { setFCategorie(e.target.value); setFIngredient(''); }}>
+            <option value="">— Toutes —</option>
+            {categories.map((c) => <option key={c.id} value={c.id}>{c.nom}</option>)}
+          </select>
+        </div>
+        <div>
+          <label style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>🧂 Ingrédient</label>
+          <select style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid var(--border)', fontSize: '0.88rem', background: 'var(--background)', minWidth: 160 }} value={fIngredient} disabled={!fCategorie} onChange={(e) => setFIngredient(e.target.value)}>
+            <option value="">— Tous —</option>
+            {ingredientsInCat.map((i) => <option key={i.id} value={i.id}>{i.nom}</option>)}
+          </select>
+        </div>
+        <div>
+          <label style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>🔍 Nom</label>
+          <input type="text" style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid var(--border)', fontSize: '0.88rem', background: 'var(--background)', minWidth: 160 }} placeholder="Rechercher…" value={fNom} onChange={(e) => setFNom(e.target.value)} />
         </div>
       </div>
 

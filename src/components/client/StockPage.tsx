@@ -1282,70 +1282,72 @@ function ActivityStockSection({ label, activities, initialActiviteId, onSave }: 
       </div>
 
       {/* Filter panel */}
-      <div style={{ background: 'var(--surface)', borderRadius: 14, padding: '16px 20px', border: '1px solid var(--border)', boxShadow: '0 2px 12px rgba(0,0,0,0.05)', marginBottom: 24 }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-          <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#2563eb', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Filtres</span>
+      <div style={{
+        background: 'var(--surface)', borderRadius: 14, padding: '16px 20px', marginBottom: 24,
+        border: '1px solid var(--border)', boxShadow: '0 2px 12px rgba(0,0,0,0.05)',
+        display: 'flex', flexWrap: 'wrap', gap: 14, alignItems: 'flex-end',
+      }}>
+        <div style={{ width: '100%', marginBottom: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span style={{ fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#1e40af' }}>Filtres</span>
           {(categoryFilter || ingredientFilter !== '' || nameFilter || fournisseurFilter || refFactureFilter) && (
             <button className="btn btn-ghost btn-sm" style={{ fontSize: '0.78rem' }} onClick={() => { setCategoryFilter(''); setIngredientFilter(''); setNameFilter(''); setFournisseurFilter(''); setRefFactureFilter(''); }}>✕ Réinitialiser</button>
           )}
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '12px 20px' }}>
-          {!initialActiviteId && (
-            <div>
-              <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#2563eb', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>Activité</span>
-              <select className="input" style={{ width: '100%' }} value={selectedId} onChange={(e) => setSelectedId(Number(e.target.value))}>
-                {activities.map((a) => <option key={a.id} value={a.id}>{a.nom}</option>)}
-              </select>
-            </div>
-          )}
+        {!initialActiviteId && (
           <div>
-            <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#2563eb', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>Catégorie</span>
-            <select className="input" style={{ width: '100%' }} value={categoryFilter} onChange={(e) => { setCategoryFilter(e.target.value); setIngredientFilter(''); }}>
-              <option value="">{t('client.catalogue_franchise.all_categories')}</option>
-              {allCategories.map((c) => <option key={c} value={c}>{c}</option>)}
+            <label style={{ fontSize: '0.68rem', fontWeight: 800, color: '#1e40af', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>🏪 Activité</label>
+            <select style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid #1e40af', fontSize: '0.88rem', background: '#eff6ff', minWidth: 160 }} value={selectedId} onChange={(e) => setSelectedId(Number(e.target.value))}>
+              {activities.map((a) => <option key={a.id} value={a.id}>{a.nom}</option>)}
             </select>
           </div>
+        )}
+        <div>
+          <label style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>🏷️ Catégorie</label>
+          <select style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid var(--border)', fontSize: '0.88rem', background: 'var(--background)', minWidth: 160 }} value={categoryFilter} onChange={(e) => { setCategoryFilter(e.target.value); setIngredientFilter(''); }}>
+            <option value="">{t('client.catalogue_franchise.all_categories')}</option>
+            {allCategories.map((c) => <option key={c} value={c}>{c}</option>)}
+          </select>
+        </div>
+        <div>
+          <label style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>🧂 Ingrédient</label>
+          <select
+            style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid var(--border)', fontSize: '0.88rem', background: 'var(--background)', minWidth: 160 }} value={ingredientFilter} disabled={!categoryFilter}
+            onChange={(e) => setIngredientFilter(e.target.value === '' ? '' : Number(e.target.value))}
+          >
+            <option value="">— Tous —</option>
+            {entries.filter((e) => e.categorie === categoryFilter).map((e) => (
+              <option key={e.ingredientId} value={e.ingredientId}>{e.nom}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>🔍 Nom</label>
+          <input
+            type="text" style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid var(--border)', fontSize: '0.88rem', background: 'var(--background)', minWidth: 160 }}
+            placeholder={t('client.stock.search_ingredient')}
+            value={nameFilter}
+            onChange={(e) => setNameFilter(e.target.value)}
+          />
+        </div>
+        {fournisseurs.length > 0 && (
           <div>
-            <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#2563eb', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>Ingrédient</span>
-            <select
-              className="input" style={{ width: '100%' }} value={ingredientFilter} disabled={!categoryFilter}
-              onChange={(e) => setIngredientFilter(e.target.value === '' ? '' : Number(e.target.value))}
-            >
+            <label style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>🚚 Fournisseur</label>
+            <select style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid var(--border)', fontSize: '0.88rem', background: 'var(--background)', minWidth: 160 }} value={fournisseurFilter} onChange={(e) => setFournisseurFilter(e.target.value)}>
               <option value="">— Tous —</option>
-              {entries.filter((e) => e.categorie === categoryFilter).map((e) => (
-                <option key={e.ingredientId} value={e.ingredientId}>{e.nom}</option>
+              {fournisseurs.map((f) => (
+                <option key={f.id} value={f.id}>{f.isLabo ? '🏭 ' : '🚚 '}{f.nom}</option>
               ))}
             </select>
           </div>
-          <div>
-            <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#2563eb', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>Nom</span>
-            <input
-              type="text" className="input" style={{ width: '100%' }}
-              placeholder={t('client.stock.search_ingredient')}
-              value={nameFilter}
-              onChange={(e) => setNameFilter(e.target.value)}
-            />
-          </div>
-          {fournisseurs.length > 0 && (
-            <div>
-              <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#2563eb', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>Fournisseur</span>
-              <select className="input" style={{ width: '100%' }} value={fournisseurFilter} onChange={(e) => setFournisseurFilter(e.target.value)}>
-                <option value="">— Tous —</option>
-                {fournisseurs.map((f) => (
-                  <option key={f.id} value={f.id}>{f.isLabo ? '🏭 ' : '🚚 '}{f.nom}</option>
-                ))}
-              </select>
-            </div>
-          )}
-          <div>
-            <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#2563eb', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>Réf. Facture</span>
-            <input
-              type="text" className="input" style={{ width: '100%' }}
-              placeholder="Réf. facture…"
-              value={refFactureFilter}
-              onChange={(e) => setRefFactureFilter(e.target.value)}
-            />
-          </div>
+        )}
+        <div>
+          <label style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>🧾 Réf. Facture</label>
+          <input
+            type="text" style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid var(--border)', fontSize: '0.88rem', background: 'var(--background)', minWidth: 160 }}
+            placeholder="Réf. facture…"
+            value={refFactureFilter}
+            onChange={(e) => setRefFactureFilter(e.target.value)}
+          />
         </div>
       </div>
 
@@ -1510,60 +1512,62 @@ export default function StockPage() {
         ) : (
           <>
             {/* Filter panel */}
-            <div style={{ background: 'var(--surface)', borderRadius: 14, padding: '16px 20px', border: '1px solid var(--border)', boxShadow: '0 2px 12px rgba(0,0,0,0.05)', marginBottom: 24 }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-                <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#2563eb', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Filtres</span>
+            <div style={{
+              background: 'var(--surface)', borderRadius: 14, padding: '16px 20px', marginBottom: 24,
+              border: '1px solid var(--border)', boxShadow: '0 2px 12px rgba(0,0,0,0.05)',
+              display: 'flex', flexWrap: 'wrap', gap: 14, alignItems: 'flex-end',
+            }}>
+              <div style={{ width: '100%', marginBottom: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#1e40af' }}>Filtres</span>
                 {(clientCategoryFilter || clientIngredientFilter !== '' || clientNameFilter || clientFournisseurFilter || clientRefFactureFilter) && (
                   <button className="btn btn-ghost btn-sm" style={{ fontSize: '0.78rem' }} onClick={() => { setClientCategoryFilter(''); setClientIngredientFilter(''); setClientNameFilter(''); setClientFournisseurFilter(''); setClientRefFactureFilter(''); }}>✕ Réinitialiser</button>
                 )}
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '12px 20px' }}>
+              <div>
+                <label style={{ fontSize: '0.68rem', fontWeight: 800, color: '#1e40af', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>🏷️ Catégorie</label>
+                <select style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid #1e40af', fontSize: '0.88rem', background: '#eff6ff', minWidth: 160 }} value={clientCategoryFilter} onChange={(e) => { setClientCategoryFilter(e.target.value); setClientIngredientFilter(''); }}>
+                  <option value="">{t('client.catalogue_franchise.all_categories')}</option>
+                  {clientCategories.map((c) => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
+              <div>
+                <label style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>🧂 Ingrédient</label>
+                <select
+                  style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid var(--border)', fontSize: '0.88rem', background: 'var(--background)', minWidth: 160 }} value={clientIngredientFilter} disabled={!clientCategoryFilter}
+                  onChange={(e) => setClientIngredientFilter(e.target.value === '' ? '' : Number(e.target.value))}
+                >
+                  <option value="">— Tous —</option>
+                  {clientEntries.filter((e) => e.categorie === clientCategoryFilter).map((e) => (
+                    <option key={e.ingredientId} value={e.ingredientId}>{e.nom}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>🔍 Nom</label>
+                <input
+                  type="text" style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid var(--border)', fontSize: '0.88rem', background: 'var(--background)', minWidth: 160 }}
+                  placeholder={t('client.stock.search_ingredient')}
+                  value={clientNameFilter}
+                  onChange={(e) => setClientNameFilter(e.target.value)}
+                />
+              </div>
+              {indepFournisseurs.length > 0 && (
                 <div>
-                  <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#2563eb', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>Catégorie</span>
-                  <select className="input" style={{ width: '100%' }} value={clientCategoryFilter} onChange={(e) => { setClientCategoryFilter(e.target.value); setClientIngredientFilter(''); }}>
-                    <option value="">{t('client.catalogue_franchise.all_categories')}</option>
-                    {clientCategories.map((c) => <option key={c} value={c}>{c}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#2563eb', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>Ingrédient</span>
-                  <select
-                    className="input" style={{ width: '100%' }} value={clientIngredientFilter} disabled={!clientCategoryFilter}
-                    onChange={(e) => setClientIngredientFilter(e.target.value === '' ? '' : Number(e.target.value))}
-                  >
+                  <label style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>🚚 Fournisseur</label>
+                  <select style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid var(--border)', fontSize: '0.88rem', background: 'var(--background)', minWidth: 160 }} value={clientFournisseurFilter} onChange={(e) => setClientFournisseurFilter(e.target.value)}>
                     <option value="">— Tous —</option>
-                    {clientEntries.filter((e) => e.categorie === clientCategoryFilter).map((e) => (
-                      <option key={e.ingredientId} value={e.ingredientId}>{e.nom}</option>
-                    ))}
+                    {indepFournisseurs.map((f) => <option key={f.id} value={String(f.id)}>{f.nom}</option>)}
                   </select>
                 </div>
-                <div>
-                  <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#2563eb', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>Nom</span>
-                  <input
-                    type="text" className="input" style={{ width: '100%' }}
-                    placeholder={t('client.stock.search_ingredient')}
-                    value={clientNameFilter}
-                    onChange={(e) => setClientNameFilter(e.target.value)}
-                  />
-                </div>
-                {indepFournisseurs.length > 0 && (
-                  <div>
-                    <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#2563eb', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>Fournisseur</span>
-                    <select className="input" style={{ width: '100%' }} value={clientFournisseurFilter} onChange={(e) => setClientFournisseurFilter(e.target.value)}>
-                      <option value="">— Tous —</option>
-                      {indepFournisseurs.map((f) => <option key={f.id} value={String(f.id)}>{f.nom}</option>)}
-                    </select>
-                  </div>
-                )}
-                <div>
-                  <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#2563eb', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>Réf. Facture</span>
-                  <input
-                    type="text" className="input" style={{ width: '100%' }}
-                    placeholder="Réf. facture…"
-                    value={clientRefFactureFilter}
-                    onChange={(e) => setClientRefFactureFilter(e.target.value)}
-                  />
-                </div>
+              )}
+              <div>
+                <label style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>🧾 Réf. Facture</label>
+                <input
+                  type="text" style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid var(--border)', fontSize: '0.88rem', background: 'var(--background)', minWidth: 160 }}
+                  placeholder="Réf. facture…"
+                  value={clientRefFactureFilter}
+                  onChange={(e) => setClientRefFactureFilter(e.target.value)}
+                />
               </div>
             </div>
             <StockMatrix

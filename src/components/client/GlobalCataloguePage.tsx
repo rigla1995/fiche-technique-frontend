@@ -285,26 +285,28 @@ function FiltersBar({
   const { t } = useTranslation();
   const hasFilter = filterCategory || filterName;
   return (
-    <div style={{ background: 'var(--surface)', borderRadius: 14, padding: '16px 20px', border: '1px solid var(--border)', boxShadow: '0 2px 12px rgba(0,0,0,0.05)', marginBottom: 20 }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-        <span style={{ fontWeight: 700, fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.09em', color: 'var(--text-muted)' }}>Filtres</span>
+    <div style={{
+      background: 'var(--surface)', borderRadius: 14, padding: '16px 20px', marginBottom: 20,
+      border: '1px solid var(--border)', boxShadow: '0 2px 12px rgba(0,0,0,0.05)',
+      display: 'flex', flexWrap: 'wrap', gap: 14, alignItems: 'flex-end',
+    }}>
+      <div style={{ width: '100%', marginBottom: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <span style={{ fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#92400e' }}>Filtres</span>
         {hasFilter && (
           <button className="btn btn-ghost btn-sm" style={{ fontSize: '0.78rem' }} onClick={() => { onCatChange(''); onNameChange(''); }}>✕ Réinitialiser</button>
         )}
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '12px 20px' }}>
-        <div>
-          <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 5 }}>Catégorie</span>
-          <select className="input" style={{ width: '100%' }} value={filterCategory} onChange={(e) => onCatChange(e.target.value)}>
-            <option value="">{t('common.all_categories', 'Toutes catégories')}</option>
-            {categories.map((c) => <option key={c} value={c}>{c}</option>)}
-          </select>
-        </div>
-        <div>
-          <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 5 }}>Nom</span>
-          <input type="text" className="input" style={{ width: '100%' }} placeholder="Rechercher…"
-            value={filterName} onChange={(e) => onNameChange(e.target.value)} />
-        </div>
+      <div>
+        <label style={{ fontSize: '0.68rem', fontWeight: 800, color: '#92400e', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>🏷️ Catégorie</label>
+        <select style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid #92400e', fontSize: '0.88rem', background: '#fffbeb', minWidth: 160 }} value={filterCategory} onChange={(e) => onCatChange(e.target.value)}>
+          <option value="">{t('common.all_categories', 'Toutes catégories')}</option>
+          {categories.map((c) => <option key={c} value={c}>{c}</option>)}
+        </select>
+      </div>
+      <div>
+        <label style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>🔍 Nom</label>
+        <input type="text" style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid var(--border)', fontSize: '0.88rem', background: 'var(--background)', minWidth: 160 }} placeholder="Rechercher…"
+          value={filterName} onChange={(e) => onNameChange(e.target.value)} />
       </div>
     </div>
   );
