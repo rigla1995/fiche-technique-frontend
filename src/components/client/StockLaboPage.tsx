@@ -52,6 +52,7 @@ interface LaboStockRow {
   lastInvQty?: number | null;
   pertesDepuisInv?: number | null;
   ptUsageDepuisInv?: number | null;
+  transfertsDepuisInv?: number | null;
 }
 
 interface RowState {
@@ -774,10 +775,13 @@ export default function StockLaboPage() {
                                           <div style={{ fontSize: '0.72rem', color: '#7c3aed', fontWeight: 600 }}>↗ {r.totalTransfere.toFixed(3)}</div>
                                         )}
                                         {r.pertesDepuisInv != null && r.pertesDepuisInv > 0 && (
-                                          <div style={{ fontSize: '0.68rem', color: '#dc2626', fontWeight: 500 }}>Pertes: {r.pertesDepuisInv.toFixed(3)}</div>
+                                          <div style={{ fontSize: '0.68rem', color: '#dc2626', fontWeight: 500 }}>↘ Pertes: {r.pertesDepuisInv.toFixed(3)}</div>
                                         )}
                                         {r.ptUsageDepuisInv != null && r.ptUsageDepuisInv > 0 && (
-                                          <div style={{ fontSize: '0.68rem', color: '#7c3aed', fontWeight: 500 }}>PT: {r.ptUsageDepuisInv.toFixed(3)}</div>
+                                          <div style={{ fontSize: '0.68rem', color: '#7c3aed', fontWeight: 500 }}>↘ PT: {r.ptUsageDepuisInv.toFixed(3)}</div>
+                                        )}
+                                        {r.transfertsDepuisInv != null && r.transfertsDepuisInv > 0 && (
+                                          <div style={{ fontSize: '0.68rem', color: '#0369a1', fontWeight: 500 }}>↘ Transférées: {r.transfertsDepuisInv.toFixed(3)}</div>
                                         )}
                                       </td>
                                       <td style={{ textAlign: 'right' }}>
