@@ -230,6 +230,27 @@ export default function TransferHistoriquePage() {
               style={{ width: '100%', border: '1.5px solid #7e22ce', background: '#faf5ff', fontWeight: 600 }}
               min={yearStart} max={yearEnd} value={endDate} onChange={(e) => setEndDate(e.target.value)} />
           </div>
+          <div>
+            <label style={{ fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--text-muted)', display: 'block', marginBottom: 5 }}>
+              Catégorie
+            </label>
+            <select className="input" style={{ width: '100%' }} value={filterCategorie}
+              onChange={(e) => { setFilterCategorie(e.target.value); setPage(1); }}>
+              <option value="">{t('client.catalogue_franchise.all_categories')}</option>
+              {allCategories.map((c) => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </div>
+          <div>
+            <label style={{ fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--text-muted)', display: 'block', marginBottom: 5 }}>
+              {t('client.stock.ingredient')}
+            </label>
+            <input
+              type="text" className="input" style={{ width: '100%' }}
+              placeholder={t('client.stock.search_ingredient')}
+              value={filterNom}
+              onChange={(e) => { setFilterNom(e.target.value); setPage(1); }}
+            />
+          </div>
         </div>
         <div style={{ borderTop: '1px solid var(--border)', paddingTop: 14, display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
           {searched && results.length > 0 && (
@@ -307,36 +328,6 @@ export default function TransferHistoriquePage() {
                 </div>
               );
             })}
-          </div>
-
-          {/* Client-side filters (compact card) */}
-          <div style={{ background: 'var(--surface)', borderRadius: 14, padding: '16px 20px', border: '1px solid var(--border)', boxShadow: '0 2px 12px rgba(0,0,0,0.05)', marginBottom: 16, overflow: 'hidden' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-              <span style={{ fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#7e22ce' }}>Affiner les résultats</span>
-              {(filterCategorie || filterNom) && (
-                <button className="btn btn-ghost btn-sm" style={{ fontSize: '0.75rem' }}
-                  onClick={() => { setFilterCategorie(''); setFilterNom(''); setPage(1); }}>✕ Réinitialiser</button>
-              )}
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '10px 18px' }}>
-              <div>
-                <span style={{ fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--text-muted)', display: 'block', marginBottom: 5 }}>Catégorie</span>
-                <select className="input" style={{ width: '100%' }} value={filterCategorie}
-                  onChange={(e) => { setFilterCategorie(e.target.value); setPage(1); }}>
-                  <option value="">{t('client.catalogue_franchise.all_categories')}</option>
-                  {allCategories.map((c) => <option key={c} value={c}>{c}</option>)}
-                </select>
-              </div>
-              <div>
-                <span style={{ fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--text-muted)', display: 'block', marginBottom: 5 }}>{t('client.stock.ingredient')}</span>
-                <input
-                  type="text" className="input" style={{ width: '100%' }}
-                  placeholder={t('client.stock.search_ingredient')}
-                  value={filterNom}
-                  onChange={(e) => { setFilterNom(e.target.value); setPage(1); }}
-                />
-              </div>
-            </div>
           </div>
 
           {filteredResults.length === 0 ? (
