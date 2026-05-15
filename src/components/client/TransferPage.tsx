@@ -64,7 +64,7 @@ export default function TransferPage() {
   const [qtys, setQtys] = useState<TransferQtys>({});
   const [successMsg, setSuccessMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
-  const [perRowDates, setPerRowDates] = useState<Record<number, string>>({});
+  const [transferDate, setTransferDate] = useState(todayStr());
   const [bulkSaving, setBulkSaving] = useState(false);
   const [transferConfirm, setTransferConfirm] = useState<{
     ingredientId: number; nom: string; date: string; existingTotal: number; newQty: number;
@@ -118,16 +118,13 @@ export default function TransferPage() {
       }
       setAssignedSet(assigned);
       const init: TransferQtys = {};
-      const dateInit: Record<number, string> = {};
       for (const r of stockRes.data as LaboStockRow[]) {
         init[r.ingredientId] = {};
         for (const act of (laboRes.data.activites || []) as Activite[]) {
           init[r.ingredientId][act.id] = '';
         }
-        dateInit[r.ingredientId] = todayStr();
       }
       setQtys(init);
-      setPerRowDates(dateInit);
 
       // Pre-load all transfer histories in parallel so alarm works on first render
       const histResults = await Promise.allSettled(
@@ -199,7 +196,7 @@ export default function TransferPage() {
         ingredientId: row.ingredientId,
         nom: row.nom,
         transfers,
-        dateTransfert: perRowDates[row.ingredientId] || todayStr(),
+        dateTransfert: transferDate,
         quantite: row.quantite,
       });
     }
@@ -245,7 +242,6 @@ export default function TransferPage() {
           ...prev,
           [batch.ingredientId]: Object.fromEntries(Object.keys(prev[batch.ingredientId] || {}).map((a) => [a, ''])),
         }));
-        setPerRowDates((prev) => ({ ...prev, [batch.ingredientId]: todayStr() }));
       }
       setHasTransfers(true);
       // Refresh transfer histories
@@ -436,6 +432,16 @@ export default function TransferPage() {
             </div>
             <div>
               <label style={{ fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>
+                Date de transfert <span style={{ color: 'var(--danger, #ef4444)' }}>*</span>
+              </label>
+              <input type="date" className="input"
+                style={{ border: '1.5px solid #a855f7', background: '#fff', fontWeight: 600 }}
+                min={yearStart} max={yearEnd}
+                value={transferDate}
+                onChange={(e) => setTransferDate(e.target.value)} />
+            </div>
+            <div>
+              <label style={{ fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>
                 {t('client.labo.transfer_note')}
               </label>
               <input type="text" className="input" value={note} onChange={(e) => setNote(e.target.value)}
@@ -533,7 +539,6 @@ export default function TransferPage() {
                           {activites.map((act) => (
                             <th key={act.id} style={{ textAlign: 'center', minWidth: 120, fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px', color: '#e9d5ff' }}>↗ {act.nom}</th>
                           ))}
-                          <th style={{ textAlign: 'center', minWidth: 120, fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px', color: '#fff' }}>Date transfert</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -542,9 +547,7 @@ export default function TransferPage() {
                           const isTransferLoading = transferLoading.has(r.ingredientId);
                           const rowTransfers = transferHistory[r.ingredientId] ?? [];
                           const stockEmpty = r.quantite === null || r.quantite === 0;
-                          const rowDate = perRowDates[r.ingredientId] || todayStr();
-                          const dateConflict = getTransferDates(r.ingredientId).has(rowDate);
-                          const warnStyle = dateConflict ? { borderColor: '#f59e0b', boxShadow: '0 0 0 2px #fef3c7' } : {};
+                          const dateConflict = getTransferDates(r.ingredientId).has(transferDate);
                           return (
                             <React.Fragment key={r.ingredientId}>
                               <tr style={dateConflict ? { borderLeft: '3px solid #f59e0b' } : {}}>
@@ -572,7 +575,7 @@ export default function TransferPage() {
                                     <td key={act.id} style={{ textAlign: 'center', padding: '12px 14px' }}>
                                       {!stockEmpty && isAssigned ? (
                                         <input type="number" min="0" step="0.001" className="input"
-                                          style={{ width: 100, textAlign: 'right', ...warnStyle }}
+                                          style={{ width: 100, textAlign: 'right' }}
                                           value={qtys[r.ingredientId]?.[act.id] ?? ''}
                                           onChange={(e) => setQty(r.ingredientId, act.id, e.target.value)}
                                           placeholder="0" />
@@ -582,20 +585,10 @@ export default function TransferPage() {
                                     </td>
                                   );
                                 })}
-                                <td style={{ textAlign: 'center', padding: '12px 14px' }}>
-                                  <div style={{ display: 'inline-block', background: '#faf5ff', border: '1px solid #d8b4fe', borderRadius: 7, padding: '3px 10px', ...warnStyle }}>
-                                    <input type="date" className="input"
-                                      style={{ maxWidth: 138, fontSize: '0.82rem', border: '1.5px solid #7e22ce', background: '#faf5ff', fontWeight: 600, ...warnStyle }}
-                                      min={yearStart} max={yearEnd}
-                                      value={rowDate}
-                                      onChange={(e) => setPerRowDates((prev) => ({ ...prev, [r.ingredientId]: e.target.value }))}
-                                      disabled={stockEmpty} />
-                                  </div>
-                                </td>
                               </tr>
                               {isTransferOpen && (
                                 <tr>
-                                  <td colSpan={3 + activites.length} style={{ background: '#faf5ff', padding: '8px 16px', borderTop: '1px solid #e9d5ff' }}>
+                                  <td colSpan={2 + activites.length} style={{ background: '#faf5ff', padding: '8px 16px', borderTop: '1px solid #e9d5ff' }}>
                                     <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>
                                       ↗ 5 derniers transferts — {r.nom}
                                     </div>
