@@ -72,19 +72,27 @@ export default function DemandesManagement() {
 
       {/* Filter row */}
       <div style={{
-        background: '#f8fafc', border: '1px solid var(--border)', borderRadius: 8,
-        padding: '10px 16px', display: 'flex', gap: 8, alignItems: 'center', marginBottom: 16,
+        background: 'var(--surface)', borderRadius: 14, padding: '16px 20px', marginBottom: 20,
+        border: '1px solid var(--border)', boxShadow: '0 2px 12px rgba(0,0,0,0.05)',
+        display: 'flex', flexWrap: 'wrap', gap: 14, alignItems: 'flex-end',
       }}>
-        <span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-muted)', marginRight: 4 }}>Statut :</span>
-        {STATUT_OPTIONS.map((opt) => (
-          <button
-            key={opt.value}
-            onClick={() => setFilterStatut(opt.value)}
-            className={`btn btn-sm ${filterStatut === opt.value ? 'btn-primary' : 'btn-ghost'}`}
-          >
-            {opt.label}
-          </button>
-        ))}
+        <div style={{ width: '100%', marginBottom: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span style={{ fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#27272a' }}>Filtres</span>
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column' }}>
+          <label style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>📊 Statut</label>
+          <div style={{ display: 'flex', gap: 8 }}>
+            {STATUT_OPTIONS.map((opt) => (
+              <button
+                key={opt.value}
+                onClick={() => setFilterStatut(opt.value)}
+                className={`btn btn-sm ${filterStatut === opt.value ? 'btn-primary' : 'btn-ghost'}`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
 
       {loading ? (

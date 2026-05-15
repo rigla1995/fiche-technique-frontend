@@ -193,19 +193,23 @@ export default function ClientsManagement() {
       </div>
 
       {/* Filter row */}
-      <div style={{ background: '#f8fafc', border: '1px solid var(--border)', borderRadius: 8, padding: '10px 16px', marginBottom: 16, display: 'flex', gap: 16, flexWrap: 'wrap', alignItems: 'center' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 3, flex: 1, minWidth: 220 }}>
-          <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Recherche</span>
+      <div style={{
+        background: 'var(--surface)', borderRadius: 14, padding: '16px 20px', marginBottom: 20,
+        border: '1px solid var(--border)', boxShadow: '0 2px 12px rgba(0,0,0,0.05)',
+        display: 'flex', flexWrap: 'wrap', gap: 14, alignItems: 'flex-end',
+      }}>
+        <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 220 }}>
+          <label style={{ fontSize: '0.68rem', fontWeight: 800, color: '#27272a', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>🔍 Recherche</label>
           <input
             type="text"
             placeholder="Nom, email, téléphone…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="input"
+            style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid #27272a', fontSize: '0.88rem', background: '#f4f4f5', minWidth: 160 }}
           />
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-          <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Statut</span>
+        <div style={{ display: 'flex', flexDirection: 'column' }}>
+          <label style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>📊 Statut</label>
           <div style={{ display: 'flex', gap: 6 }}>
             {([
               { value: '' as const, label: 'Tous' },

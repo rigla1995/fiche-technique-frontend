@@ -193,25 +193,39 @@ export default function HistoriquePaiementsAdmin() {
             })()}
 
             {/* Filters */}
-            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 16, alignItems: 'center' }}>
-              <span style={{ fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', marginRight: 2 }}>Statut</span>
-              {(['', 'payé', 'en_attente', 'impayé', 'gratuit', 'remisé'] as const).map((v) => {
-                const label = v === '' ? 'Tous' : STATUT_LABELS[v] || v;
-                const color = v ? STATUT_COLORS[v] : '#64748b';
-                const active = filtStatut === v;
-                return (
-                  <button key={v} onClick={() => setFiltStatut(v)}
-                    style={{ padding: '4px 12px', borderRadius: 20, fontSize: 11, fontWeight: 600, cursor: 'pointer', border: `1.5px solid ${active ? color : '#e2e8f0'}`, background: active ? color + '18' : '#fff', color: active ? color : '#94a3b8' }}>
-                    {label}
-                  </button>
-                );
-              })}
-              <input type="month" value={filtMois} onChange={(e) => setFiltMois(e.target.value)}
-                style={{ marginLeft: 'auto', padding: '5px 10px', borderRadius: 8, border: '1.5px solid #e2e8f0', fontSize: 12, color: '#374151' }} />
-              {(filtStatut || filtMois) && (
-                <button onClick={() => { setFiltStatut(''); setFiltMois(''); }}
-                  style={{ padding: '4px 10px', borderRadius: 8, border: '1px solid #fecaca', background: '#fff', color: '#dc2626', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>✕</button>
-              )}
+            <div style={{
+              background: 'var(--surface)', borderRadius: 14, padding: '16px 20px', marginBottom: 20,
+              border: '1px solid var(--border)', boxShadow: '0 2px 12px rgba(0,0,0,0.05)',
+              display: 'flex', flexWrap: 'wrap', gap: 14, alignItems: 'flex-end',
+            }}>
+              <div style={{ width: '100%', marginBottom: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#27272a' }}>Filtres</span>
+                {(filtStatut || filtMois) && (
+                  <button onClick={() => { setFiltStatut(''); setFiltMois(''); }}
+                    style={{ padding: '4px 10px', borderRadius: 8, border: '1px solid #fecaca', background: '#fff', color: '#dc2626', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>✕ Réinitialiser</button>
+                )}
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                <label style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>📊 Statut</label>
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                  {(['', 'payé', 'en_attente', 'impayé', 'gratuit', 'remisé'] as const).map((v) => {
+                    const label = v === '' ? 'Tous' : STATUT_LABELS[v] || v;
+                    const color = v ? STATUT_COLORS[v] : '#64748b';
+                    const active = filtStatut === v;
+                    return (
+                      <button key={v} onClick={() => setFiltStatut(v)}
+                        style={{ padding: '4px 12px', borderRadius: 20, fontSize: 11, fontWeight: 600, cursor: 'pointer', border: `1.5px solid ${active ? color : '#e2e8f0'}`, background: active ? color + '18' : '#fff', color: active ? color : '#94a3b8' }}>
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                <label style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>📅 Période</label>
+                <input type="month" value={filtMois} onChange={(e) => setFiltMois(e.target.value)}
+                  style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid var(--border)', fontSize: '0.88rem', background: 'var(--background)', minWidth: 160 }} />
+              </div>
             </div>
 
             {/* Payment cards */}

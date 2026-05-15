@@ -138,23 +138,35 @@ export default function IngredientsManagement() {
         <button className="btn btn-primary" style={{ marginLeft: 'auto' }} onClick={openAdd}>+ {t('admin.ingredients.add')}</button>
       </div>
 
-      <div style={{ background: '#f8fafc', border: '1px solid var(--border)', borderRadius: 10, padding: '12px 16px', marginBottom: 16, display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-end' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 4, flex: 1, minWidth: 200 }}>
-          <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Recherche</span>
+      <div style={{
+        background: 'var(--surface)', borderRadius: 14, padding: '16px 20px', marginBottom: 20,
+        border: '1px solid var(--border)', boxShadow: '0 2px 12px rgba(0,0,0,0.05)',
+        display: 'flex', flexWrap: 'wrap', gap: 14, alignItems: 'flex-end',
+      }}>
+        <div style={{ width: '100%', marginBottom: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span style={{ fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#27272a' }}>Filtres</span>
+          {(search || filterCat || filterDom) && (
+            <button className="btn btn-ghost btn-sm" onClick={() => { setSearch(''); setFilterCat(''); setFilterDom(''); setPage(1); }}>
+              ✕ Réinitialiser
+            </button>
+          )}
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 200 }}>
+          <label style={{ fontSize: '0.68rem', fontWeight: 800, color: '#27272a', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>🔍 Recherche</label>
           <input
             type="text"
             placeholder="Nom, catégorie, unité…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="input"
+            style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid #27272a', fontSize: '0.88rem', background: '#f4f4f5', minWidth: 160 }}
           />
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 180 }}>
-          <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Catégorie</span>
+        <div style={{ display: 'flex', flexDirection: 'column', minWidth: 180 }}>
+          <label style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>🏷️ Catégorie</label>
           <select
-            className="input"
             value={filterCat}
             onChange={(e) => setFilterCat(e.target.value)}
+            style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid var(--border)', fontSize: '0.88rem', background: 'var(--background)', minWidth: 160 }}
           >
             <option value="">Toutes ({ingredients.length})</option>
             {categories.map((c) => (
@@ -165,12 +177,12 @@ export default function IngredientsManagement() {
             <option value="__none__">Sans catégorie ({ingredients.filter((i) => !i.categorieId).length})</option>
           </select>
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 160 }}>
-          <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Domaine</span>
+        <div style={{ display: 'flex', flexDirection: 'column', minWidth: 160 }}>
+          <label style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>🗂️ Domaine</label>
           <select
-            className="input"
             value={filterDom}
             onChange={(e) => setFilterDom(e.target.value)}
+            style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid var(--border)', fontSize: '0.88rem', background: 'var(--background)', minWidth: 160 }}
           >
             <option value="">Tous les domaines</option>
             {domaines.map((d) => (
@@ -178,11 +190,6 @@ export default function IngredientsManagement() {
             ))}
           </select>
         </div>
-        {(search || filterCat || filterDom) && (
-          <button className="btn btn-ghost btn-sm" onClick={() => { setSearch(''); setFilterCat(''); setFilterDom(''); setPage(1); }} style={{ marginBottom: 1 }}>
-            ✕ Réinitialiser
-          </button>
-        )}
       </div>
 
       {loading ? (

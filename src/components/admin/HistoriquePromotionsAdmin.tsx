@@ -216,32 +216,47 @@ export default function HistoriquePromotionsAdmin() {
             })()}
 
             {/* Filters */}
-            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 16, alignItems: 'center' }}>
-              <span style={{ fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', marginRight: 2 }}>Statut</span>
-              {([['', 'Tous'], ['1', 'Actives'], ['0', 'Expirées']] as [string, string][]).map(([v, label]) => {
-                const active = filtActive === v;
-                return (
-                  <button key={v} onClick={() => setFiltActive(v)}
-                    style={{ padding: '4px 12px', borderRadius: 20, fontSize: 11, fontWeight: 600, cursor: 'pointer', border: `1.5px solid ${active ? '#d97706' : '#e2e8f0'}`, background: active ? '#fef3c7' : '#fff', color: active ? '#92400e' : '#94a3b8' }}>
-                    {label}
-                  </button>
-                );
-              })}
-              <span style={{ fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', marginLeft: 8, marginRight: 2 }}>Catégorie</span>
-              {appliesEntries.map(([v, label]) => {
-                const active = filtAppliesTo === v;
-                const color = v ? (APPLIES_COLORS[v] || '#4f46e5') : '#64748b';
-                return (
-                  <button key={v} onClick={() => setFiltAppliesTo(v)}
-                    style={{ padding: '4px 12px', borderRadius: 20, fontSize: 11, fontWeight: 600, cursor: 'pointer', border: `1.5px solid ${active ? color : '#e2e8f0'}`, background: active ? color + '15' : '#fff', color: active ? color : '#94a3b8' }}>
-                    {label}
-                  </button>
-                );
-              })}
-              {(filtActive || filtAppliesTo) && (
-                <button onClick={() => { setFiltActive(''); setFiltAppliesTo(''); }}
-                  style={{ padding: '4px 10px', borderRadius: 8, border: '1px solid #fecaca', background: '#fff', color: '#dc2626', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>✕</button>
-              )}
+            <div style={{
+              background: 'var(--surface)', borderRadius: 14, padding: '16px 20px', marginBottom: 16,
+              border: '1px solid var(--border)', boxShadow: '0 2px 12px rgba(0,0,0,0.05)',
+              display: 'flex', flexWrap: 'wrap', gap: 14, alignItems: 'flex-end',
+            }}>
+              <div style={{ width: '100%', marginBottom: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#27272a' }}>Filtres</span>
+                {(filtActive || filtAppliesTo) && (
+                  <button onClick={() => { setFiltActive(''); setFiltAppliesTo(''); }}
+                    style={{ padding: '4px 10px', borderRadius: 8, border: '1px solid #fecaca', background: '#fff', color: '#dc2626', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>✕ Réinitialiser</button>
+                )}
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                <label style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>📊 Statut</label>
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                  {([['', 'Tous'], ['1', 'Actives'], ['0', 'Expirées']] as [string, string][]).map(([v, label]) => {
+                    const active = filtActive === v;
+                    return (
+                      <button key={v} onClick={() => setFiltActive(v)}
+                        style={{ padding: '4px 12px', borderRadius: 20, fontSize: 11, fontWeight: 600, cursor: 'pointer', border: `1.5px solid ${active ? '#d97706' : '#e2e8f0'}`, background: active ? '#fef3c7' : '#fff', color: active ? '#92400e' : '#94a3b8' }}>
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                <label style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>🏷️ Catégorie</label>
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                  {appliesEntries.map(([v, label]) => {
+                    const active = filtAppliesTo === v;
+                    const color = v ? (APPLIES_COLORS[v] || '#4f46e5') : '#64748b';
+                    return (
+                      <button key={v} onClick={() => setFiltAppliesTo(v)}
+                        style={{ padding: '4px 12px', borderRadius: 20, fontSize: 11, fontWeight: 600, cursor: 'pointer', border: `1.5px solid ${active ? color : '#e2e8f0'}`, background: active ? color + '15' : '#fff', color: active ? color : '#94a3b8' }}>
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
 
             {/* Promo cards */}
