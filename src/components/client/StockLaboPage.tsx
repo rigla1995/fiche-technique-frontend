@@ -778,7 +778,7 @@ export default function StockLaboPage() {
                                           <div style={{ fontSize: '0.68rem', color: '#7c3aed', fontWeight: 500 }}>↘ PT: {r.ptUsageDepuisInv.toFixed(3)}</div>
                                         )}
                                         {r.transfertsDepuisInv != null && r.transfertsDepuisInv > 0 && (
-                                          <div style={{ fontSize: '0.68rem', color: '#0369a1', fontWeight: 500 }}>↘ Transférées: {r.transfertsDepuisInv.toFixed(3)}</div>
+                                          <div style={{ fontSize: '0.68rem', color: '#0369a1', fontWeight: 500 }}>↘ trans: {r.transfertsDepuisInv.toFixed(3)}</div>
                                         )}
                                       </td>
                                       <td style={{ textAlign: 'right' }}>
