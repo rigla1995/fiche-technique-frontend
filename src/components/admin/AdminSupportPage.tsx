@@ -409,7 +409,7 @@ export default function AdminSupportPage() {
       <div style={{ display: 'flex', gap: 20, minHeight: 600 }}>
         {/* ── Left: client list ─────────────────────────────────────── */}
         <div style={{ flex: '0 0 360px', background: '#fff', borderRadius: 16, border: '1px solid #e2e8f0', overflow: 'hidden', boxShadow: '0 4px 24px rgba(30,27,75,0.10)' }}>
-          <div style={{ padding: '18px 18px 14px', background: 'linear-gradient(135deg,#0f172a 0%,#1e3a5f 55%,#1e40af 100%)' }}>
+          <div style={{ padding: '18px 18px 14px', background: 'linear-gradient(135deg,#18181b 0%,#27272a 55%,#52525b 100%)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
               <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>💬</div>
               <div>

@@ -103,9 +103,9 @@ export default function LaboHistoriquepertesPage() {
   return (
     <div className="page-content">
       <div style={{
-        background: 'linear-gradient(135deg, #7f1d1d 0%, #dc2626 60%, #ef4444 100%)',
+        background: 'linear-gradient(135deg, #7f1d1d 0%, #991b1b 55%, #ef4444 100%)',
         borderRadius: 18, padding: '24px 28px', marginBottom: 24,
-        boxShadow: '0 8px 32px rgba(220,38,38,0.25)',
+        boxShadow: '0 8px 32px rgba(153,27,27,0.28)',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16,
       }}>
         <div>

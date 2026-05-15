@@ -594,7 +594,7 @@ export default function AbonnementsManagement() {
       {/* List panel */}
       <div style={{ flex: '0 0 380px', background: '#fff', borderRadius: 16, border: '1px solid #e2e8f0', overflow: 'hidden', boxShadow: '0 4px 24px rgba(30,27,75,0.10)' }}>
         {/* Hero */}
-        <div style={{ padding: '18px 18px 14px', background: 'linear-gradient(135deg,#1e1b4b 0%,#3730a3 55%,#4f46e5 100%)' }}>
+        <div style={{ padding: '18px 18px 14px', background: 'linear-gradient(135deg,#18181b 0%,#27272a 55%,#52525b 100%)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
             <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>💳</div>
             <div>

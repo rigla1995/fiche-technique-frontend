@@ -127,14 +127,15 @@ export default function IngredientsManagement() {
 
   return (
     <div className="page">
-      <div className="page-header">
-        <div>
-          <h1>{t('admin.ingredients.title')}</h1>
-          <p style={{ margin: '2px 0 0', fontSize: '0.82rem', color: 'var(--text-muted)' }}>
-            {ingredients.length} ingrédient{ingredients.length !== 1 ? 's' : ''} · {totalGroups} catégorie{totalGroups !== 1 ? 's' : ''}
-          </p>
-        </div>
-        <button className="btn btn-primary" onClick={openAdd}>+ {t('admin.ingredients.add')}</button>
+      <div style={{
+        background: 'linear-gradient(135deg, #18181b 0%, #27272a 55%, #52525b 100%)',
+        borderRadius: 18, padding: '24px 28px', marginBottom: 24,
+        boxShadow: '0 8px 32px rgba(39,39,42,0.28)',
+        display: 'flex', alignItems: 'center', gap: 12,
+      }}>
+        <div style={{ background: 'rgba(255,255,255,0.18)', borderRadius: 10, padding: '7px 9px', fontSize: '1.2rem' }}>🧂</div>
+        <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0 }}>{t('admin.ingredients.title')}</h1>
+        <button className="btn btn-primary" style={{ marginLeft: 'auto' }} onClick={openAdd}>+ {t('admin.ingredients.add')}</button>
       </div>
 
       <div style={{ background: '#f8fafc', border: '1px solid var(--border)', borderRadius: 10, padding: '12px 16px', marginBottom: 16, display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-end' }}>

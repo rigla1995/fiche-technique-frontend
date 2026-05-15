@@ -325,9 +325,9 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
     <div className={minimal ? '' : 'page-content'}>
       {!minimal && (
         <div style={{
-          background: 'linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #1d4ed8 100%)',
+          background: 'linear-gradient(135deg, #14532d 0%, #166534 55%, #22c55e 100%)',
           borderRadius: 18, padding: '24px 28px', marginBottom: 24,
-          boxShadow: '0 8px 32px rgba(29,78,216,0.22)',
+          boxShadow: '0 8px 32px rgba(22,101,52,0.28)',
           display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16,
         }}>
           <div>

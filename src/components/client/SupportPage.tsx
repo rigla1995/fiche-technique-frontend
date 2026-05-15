@@ -190,9 +190,9 @@ export default function SupportPage() {
     <div className="page">
       {/* Hero */}
       <div style={{
-        background: 'linear-gradient(135deg, #0f172a 0%, #1e3a5f 55%, #1e40af 100%)',
+        background: 'linear-gradient(135deg, #164e63 0%, #0e7490 55%, #06b6d4 100%)',
         borderRadius: 18, padding: '24px 28px', marginBottom: 24,
-        boxShadow: '0 8px 32px rgba(30,64,175,0.25)',
+        boxShadow: '0 8px 32px rgba(14,116,144,0.28)',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16,
       }}>
         <div>

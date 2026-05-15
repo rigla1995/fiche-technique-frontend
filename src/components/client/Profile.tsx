@@ -110,9 +110,9 @@ export default function Profile() {
     <div className="page" style={{ maxWidth: 620 }}>
       {/* ── Hero ── */}
       <div style={{
-        background: 'linear-gradient(135deg, #1e1b4b 0%, #4338ca 55%, #6366f1 100%)',
+        background: 'linear-gradient(135deg, #164e63 0%, #0e7490 55%, #06b6d4 100%)',
         borderRadius: 18, padding: '24px 28px', marginBottom: 24,
-        boxShadow: '0 8px 32px rgba(67,56,202,0.28)',
+        boxShadow: '0 8px 32px rgba(14,116,144,0.28)',
         display: 'flex', alignItems: 'center', gap: 20, flexWrap: 'wrap',
       }}>
         <div style={{ width: 60, height: 60, borderRadius: '50%', background: 'rgba(255,255,255,0.2)', border: '2px solid rgba(255,255,255,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.5rem', fontWeight: 800, color: '#fff', flexShrink: 0 }}>

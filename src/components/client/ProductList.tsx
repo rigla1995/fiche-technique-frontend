@@ -233,9 +233,9 @@ export default function ProductList() {
     <div className="page">
       {/* ── Hero header ── */}
       <div style={{
-        background: 'linear-gradient(135deg, #1e1b4b 0%, #4338ca 55%, #6366f1 100%)',
+        background: 'linear-gradient(135deg, #881337 0%, #9f1239 55%, #f43f5e 100%)',
         borderRadius: 18, padding: '24px 28px', marginBottom: 24,
-        boxShadow: '0 8px 32px rgba(67,56,202,0.28)',
+        boxShadow: '0 8px 32px rgba(159,18,57,0.28)',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16,
       }}>
         <div>

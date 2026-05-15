@@ -883,9 +883,17 @@ export default function RapportsPage() {
 
   return (
     <div style={{ maxWidth: 1200, margin: '0 auto', padding: '24px 16px' }}>
-      <div style={{ marginBottom: 24 }}>
-        <h1 style={{ fontSize: 22, fontWeight: 800, color: '#111827', margin: 0 }}>Rapports</h1>
-        <p style={{ color: '#6b7280', fontSize: 13, marginTop: 4 }}>Analyse détaillée, graphiques et exports professionnels</p>
+      <div style={{
+        background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 55%, #6366f1 100%)',
+        borderRadius: 18, padding: '24px 28px', marginBottom: 24,
+        boxShadow: '0 8px 32px rgba(49,46,129,0.28)',
+        display: 'flex', alignItems: 'center', gap: 12,
+      }}>
+        <div style={{ background: 'rgba(255,255,255,0.2)', borderRadius: 10, padding: '7px 9px', fontSize: '1.2rem' }}>📊</div>
+        <div>
+          <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0 }}>Rapports</h1>
+          <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.85rem', margin: '2px 0 0' }}>Analyse détaillée, graphiques et exports professionnels</p>
+        </div>
       </div>
 
       {/* Tabs */}
@@ -895,8 +903,8 @@ export default function RapportsPage() {
             style={{
               padding: '10px 18px', background: 'none', border: 'none', cursor: 'pointer',
               fontSize: 13, fontWeight: tab === t.id ? 700 : 500,
-              color: tab === t.id ? '#6366f1' : '#6b7280',
-              borderBottom: tab === t.id ? '2px solid #6366f1' : '2px solid transparent',
+              color: tab === t.id ? '#312e81' : '#6b7280',
+              borderBottom: tab === t.id ? '2px solid #312e81' : '2px solid transparent',
               marginBottom: -2, whiteSpace: 'nowrap', transition: 'color 0.15s',
             }}>
             {t.label}

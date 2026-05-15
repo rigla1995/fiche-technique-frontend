@@ -120,9 +120,9 @@ export default function GerantsPage() {
     <div className="page">
       {/* ── Hero ── */}
       <div style={{
-        background: 'linear-gradient(135deg, #0f172a 0%, #1e3a5f 55%, #0369a1 100%)',
+        background: 'linear-gradient(135deg, #0c4a6e 0%, #0369a1 55%, #0ea5e9 100%)',
         borderRadius: 18, padding: '24px 28px', marginBottom: 24,
-        boxShadow: '0 8px 32px rgba(3,105,161,0.22)',
+        boxShadow: '0 8px 32px rgba(3,105,161,0.28)',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16,
       }}>
         <div>

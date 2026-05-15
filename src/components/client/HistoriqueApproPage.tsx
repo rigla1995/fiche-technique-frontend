@@ -494,9 +494,9 @@ export default function HistoriqueApproPage() {
     <div className="page">
       {/* ── Hero header ───────────────────────────────────────────────────── */}
       <div style={{
-        background: 'linear-gradient(135deg, #134e4a 0%, #0f766e 55%, #0d9488 100%)',
+        background: 'linear-gradient(135deg, #1e3a8a 0%, #1e40af 55%, #3b82f6 100%)',
         borderRadius: 18, padding: '24px 28px', marginBottom: 24,
-        boxShadow: '0 8px 32px rgba(15,118,110,0.28)',
+        boxShadow: '0 8px 32px rgba(30,64,175,0.28)',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16,
       }}>
         <div>

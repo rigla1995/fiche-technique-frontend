@@ -1485,9 +1485,9 @@ export default function StockPage() {
     <div className="page-content">
       {/* Hero header */}
       <div style={{
-        background: 'linear-gradient(135deg, #1e3a5f 0%, #2563eb 60%, #0ea5e9 100%)',
+        background: 'linear-gradient(135deg, #1e3a8a 0%, #1e40af 55%, #3b82f6 100%)',
         borderRadius: 18, padding: '24px 28px', marginBottom: 24,
-        boxShadow: '0 8px 32px rgba(37,99,235,0.25)',
+        boxShadow: '0 8px 32px rgba(30,64,175,0.28)',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16,
       }}>
         <div>

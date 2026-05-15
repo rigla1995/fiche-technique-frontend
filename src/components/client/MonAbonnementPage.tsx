@@ -68,9 +68,9 @@ export default function MonAbonnementPage() {
     <div className="page">
       {/* Hero */}
       <div style={{
-        background: 'linear-gradient(135deg, #1e1b4b 0%, #4338ca 55%, #6366f1 100%)',
+        background: 'linear-gradient(135deg, #164e63 0%, #0e7490 55%, #06b6d4 100%)',
         borderRadius: 18, padding: '24px 28px', marginBottom: 24,
-        boxShadow: '0 8px 32px rgba(67,56,202,0.28)',
+        boxShadow: '0 8px 32px rgba(14,116,144,0.28)',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16,
       }}>
         <div>

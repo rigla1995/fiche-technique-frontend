@@ -340,9 +340,9 @@ export default function LaboHistoriqueApproPage() {
     <div className="page">
       {/* ── Hero header ───────────────────────────────────────────────────── */}
       <div style={{
-        background: 'linear-gradient(135deg, #134e4a 0%, #0f766e 55%, #0d9488 100%)',
+        background: 'linear-gradient(135deg, #3b0764 0%, #7e22ce 55%, #a855f7 100%)',
         borderRadius: 18, padding: '24px 28px', marginBottom: 24,
-        boxShadow: '0 8px 32px rgba(15,118,110,0.28)',
+        boxShadow: '0 8px 32px rgba(126,34,206,0.28)',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16,
       }}>
         <div>

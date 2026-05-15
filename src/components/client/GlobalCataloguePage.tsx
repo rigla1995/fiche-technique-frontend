@@ -453,7 +453,7 @@ export default function GlobalCataloguePage() {
   return (
     <div className="page-content">
       {/* Hero header */}
-      <div style={{ background: 'linear-gradient(135deg, #1e1b4b 0%, #4338ca 55%, #6366f1 100%)', borderRadius: 18, padding: '24px 28px', marginBottom: 24, boxShadow: '0 8px 32px rgba(67,56,202,0.28)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
+      <div style={{ background: 'linear-gradient(135deg, #78350f 0%, #92400e 55%, #f59e0b 100%)', borderRadius: 18, padding: '24px 28px', marginBottom: 24, boxShadow: '0 8px 32px rgba(146,64,14,0.28)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
             <div style={{ background: 'rgba(255,255,255,0.2)', borderRadius: 10, padding: '7px 9px', fontSize: '1.2rem' }}>🏷</div>

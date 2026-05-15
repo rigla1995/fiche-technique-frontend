@@ -133,7 +133,15 @@ export default function EntrepriseProfile() {
 
   return (
     <div className="page-content">
-      <h1>{t('client.entreprise.title')}</h1>
+      <div style={{
+        background: 'linear-gradient(135deg, #164e63 0%, #0e7490 55%, #06b6d4 100%)',
+        borderRadius: 18, padding: '24px 28px', marginBottom: 24,
+        boxShadow: '0 8px 32px rgba(14,116,144,0.28)',
+        display: 'flex', alignItems: 'center', gap: 12,
+      }}>
+        <div style={{ background: 'rgba(255,255,255,0.2)', borderRadius: 10, padding: '7px 9px', fontSize: '1.2rem' }}>🏢</div>
+        <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0 }}>{t('client.entreprise.title')}</h1>
+      </div>
 
       {/* Company Profile */}
       <section className="card" style={{ marginTop: 24, marginBottom: 24 }}>

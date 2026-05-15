@@ -98,11 +98,14 @@ export default function AdminRapportsPage() {
 
   return (
     <div className="page">
-      <div className="page-header">
-        <h1>📊 Rapports</h1>
-        <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-          Vue d'ensemble — {new Date().toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}
-        </span>
+      <div style={{
+        background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 55%, #6366f1 100%)',
+        borderRadius: 18, padding: '24px 28px', marginBottom: 24,
+        boxShadow: '0 8px 32px rgba(49,46,129,0.28)',
+        display: 'flex', alignItems: 'center', gap: 12,
+      }}>
+        <div style={{ background: 'rgba(255,255,255,0.18)', borderRadius: 10, padding: '7px 9px', fontSize: '1.2rem' }}>📊</div>
+        <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0 }}>Rapports</h1>
       </div>
 
       {/* ── KPIs principaux ── */}

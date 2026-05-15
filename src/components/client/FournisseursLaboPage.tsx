@@ -120,9 +120,9 @@ export default function FournisseursLaboPage() {
     <div className="page">
       {/* Hero header */}
       <div style={{
-        background: 'linear-gradient(135deg, #7c2d12 0%, #ea580c 55%, #f97316 100%)',
+        background: 'linear-gradient(135deg, #78350f 0%, #92400e 55%, #f59e0b 100%)',
         borderRadius: 18, padding: '24px 28px', marginBottom: 24,
-        boxShadow: '0 8px 32px rgba(234,88,12,0.28)',
+        boxShadow: '0 8px 32px rgba(146,64,14,0.28)',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16,
       }}>
         <div>

@@ -60,8 +60,14 @@ export default function DemandesManagement() {
 
   return (
     <div className="page">
-      <div className="page-header">
-        <h1>📨 Demandes clients</h1>
+      <div style={{
+        background: 'linear-gradient(135deg, #18181b 0%, #27272a 55%, #52525b 100%)',
+        borderRadius: 18, padding: '24px 28px', marginBottom: 24,
+        boxShadow: '0 8px 32px rgba(39,39,42,0.28)',
+        display: 'flex', alignItems: 'center', gap: 12,
+      }}>
+        <div style={{ background: 'rgba(255,255,255,0.18)', borderRadius: 10, padding: '7px 9px', fontSize: '1.2rem' }}>📨</div>
+        <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0 }}>Demandes clients</h1>
       </div>
 
       {/* Filter row */}

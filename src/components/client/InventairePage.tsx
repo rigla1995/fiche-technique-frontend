@@ -178,9 +178,9 @@ export default function InventairePage() {
 
       {/* ── Hero header ── */}
       <div style={{
-        background: 'linear-gradient(135deg, #1e3a5f 0%, #2563eb 60%, #0ea5e9 100%)',
+        background: 'linear-gradient(135deg, #064e3b 0%, #065f46 55%, #10b981 100%)',
         borderRadius: 18, padding: '24px 28px', marginBottom: 24,
-        boxShadow: '0 8px 32px rgba(37,99,235,0.25)',
+        boxShadow: '0 8px 32px rgba(6,95,70,0.28)',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16,
       }}>
         <div>
