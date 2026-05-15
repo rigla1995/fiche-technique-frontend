@@ -194,7 +194,7 @@ export default function HistoriqueInventairePage() {
   const canSearch = !!laboId || !!effectiveActiviteId || isClientMode;
 
   return (
-    <div style={{ maxWidth: 1120, margin: '0 auto', padding: '24px 16px' }}>
+    <div className="page">
 
       {/* ── Hero header ── */}
       <div style={{

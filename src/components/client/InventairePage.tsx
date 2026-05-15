@@ -174,7 +174,7 @@ export default function InventairePage() {
     : contextNom || 'Inventaire';
 
   return (
-    <div style={{ maxWidth: 980, margin: '0 auto', padding: '24px 16px' }}>
+    <div className="page">
 
       {/* ── Hero header ── */}
       <div style={{
