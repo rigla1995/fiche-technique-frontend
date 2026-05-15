@@ -155,6 +155,7 @@ function EntrepriseIngredientList({
   filterCategory,
   filterName,
   onToggle,
+  onToggleAll,
   readOnly,
 }: {
   ingredients: GlobalIngredient[];
@@ -162,6 +163,7 @@ function EntrepriseIngredientList({
   filterCategory: string;
   filterName: string;
   onToggle: (ingId: number, ctx: IngContext) => void;
+  onToggleAll: (ingId: number, contexts: IngContext[], assign: boolean) => void;
   readOnly?: boolean;
 }) {
   const { t } = useTranslation();
@@ -222,29 +224,56 @@ function EntrepriseIngredientList({
                           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
                             {(ing.contexts ?? []).length === 0 ? (
                               <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>{t('global_catalogue.no_context', 'Aucune activité / labo')}</span>
-                            ) : (ing.contexts ?? []).map((ctx) => {
-                              const key = `${ing.id}:${ctx.type}:${ctx.id}`;
-                              const isToggling = toggling.has(key);
+                            ) : (() => {
+                              const ctxs = ing.contexts ?? [];
+                              const allAssigned = ctxs.length > 0 && ctxs.every((c) => c.assigned);
+                              const noneAssigned = ctxs.every((c) => !c.assigned);
+                              const isBulkToggling = ctxs.some((c) => toggling.has(`${ing.id}:${c.type}:${c.id}`));
                               return (
-                                <button
-                                  key={key}
-                                  disabled={readOnly || isToggling}
-                                  onClick={() => onToggle(ing.id, ctx)}
-                                  style={{
-                                    display: 'flex', alignItems: 'center', gap: 5,
-                                    padding: '4px 10px', borderRadius: 20, fontSize: '0.78rem', fontWeight: 600, cursor: readOnly ? 'default' : 'pointer', border: 'none',
-                                    background: ctx.assigned ? (ctx.type === 'labo' ? '#d1fae5' : '#e0e7ff') : 'var(--border)',
-                                    color: ctx.assigned ? (ctx.type === 'labo' ? '#065f46' : '#3730a3') : 'var(--text-muted)',
-                                    opacity: isToggling ? 0.6 : 1,
-                                    transition: 'all 0.15s',
-                                  }}
-                                >
-                                  {ctx.type === 'labo' ? '🏭' : '📍'}
-                                  {' '}{ctx.nom}
-                                  {' '}{isToggling ? '…' : ctx.assigned ? '✅' : '○'}
-                                </button>
+                                <>
+                                  {!readOnly && ctxs.length > 1 && (
+                                    <button
+                                      disabled={isBulkToggling}
+                                      onClick={() => onToggleAll(ing.id, ctxs, !allAssigned)}
+                                      title={allAssigned ? 'Désélectionner tout' : 'Sélectionner tout'}
+                                      style={{
+                                        padding: '4px 10px', borderRadius: 20, fontSize: '0.75rem', fontWeight: 700,
+                                        cursor: 'pointer', border: '1.5px solid',
+                                        background: allAssigned ? '#fee2e2' : noneAssigned ? '#dcfce7' : '#fef9c3',
+                                        borderColor: allAssigned ? '#fca5a5' : noneAssigned ? '#86efac' : '#fde68a',
+                                        color: allAssigned ? '#b91c1c' : noneAssigned ? '#15803d' : '#92400e',
+                                        opacity: isBulkToggling ? 0.6 : 1,
+                                      }}
+                                    >
+                                      {isBulkToggling ? '…' : allAssigned ? '○ Tout désélectionner' : '✓ Tout sélectionner'}
+                                    </button>
+                                  )}
+                                  {ctxs.map((ctx) => {
+                                    const key = `${ing.id}:${ctx.type}:${ctx.id}`;
+                                    const isToggling = toggling.has(key);
+                                    return (
+                                      <button
+                                        key={key}
+                                        disabled={readOnly || isToggling}
+                                        onClick={() => onToggle(ing.id, ctx)}
+                                        style={{
+                                          display: 'flex', alignItems: 'center', gap: 5,
+                                          padding: '4px 10px', borderRadius: 20, fontSize: '0.78rem', fontWeight: 600, cursor: readOnly ? 'default' : 'pointer', border: 'none',
+                                          background: ctx.assigned ? (ctx.type === 'labo' ? '#d1fae5' : '#e0e7ff') : 'var(--border)',
+                                          color: ctx.assigned ? (ctx.type === 'labo' ? '#065f46' : '#3730a3') : 'var(--text-muted)',
+                                          opacity: isToggling ? 0.6 : 1,
+                                          transition: 'all 0.15s',
+                                        }}
+                                      >
+                                        {ctx.type === 'labo' ? '🏭' : '📍'}
+                                        {' '}{ctx.nom}
+                                        {' '}{isToggling ? '…' : ctx.assigned ? '✅' : '○'}
+                                      </button>
+                                    );
+                                  })}
+                                </>
                               );
-                            })}
+                            })()}
                           </div>
                         </div>
                       );
@@ -406,6 +435,19 @@ export default function GlobalCataloguePage() {
     }
   };
 
+  // Entreprise bulk toggle (all contexts for one ingredient)
+  const toggleContextAll = async (ingId: number, contexts: IngContext[], assign: boolean) => {
+    const targets = contexts.filter((c) => c.assigned !== assign);
+    for (const ctx of targets) {
+      if (assign) {
+        await doToggleContext(ingId, ctx);
+      } else {
+        // For deselect: skip cascade check, deselect directly
+        await doToggleContext(ingId, ctx);
+      }
+    }
+  };
+
   // Entreprise context toggle
   const toggleContext = async (ingId: number, ctx: IngContext) => {
     const key = `${ingId}:${ctx.type}:${ctx.id}`;
@@ -495,6 +537,7 @@ export default function GlobalCataloguePage() {
           filterCategory={filterCategory}
           filterName={filterName}
           onToggle={toggleContext}
+          onToggleAll={toggleContextAll}
           readOnly={!canWrite}
         />
       ) : (
