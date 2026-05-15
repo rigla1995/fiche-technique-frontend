@@ -349,6 +349,28 @@ export default function AddClientModal({ onClose, onCreated }: Props) {
 
   // ── Submit ──
 
+  const mapPromoForApi = (p: PromoForm) => {
+    const today = new Date().toISOString().slice(0, 10);
+    const dateDebut = p.appliesTo === 'onboarding'
+      ? today
+      : (p.moisDebut ? `${p.moisDebut}-01` : `${today.slice(0, 7)}-01`);
+    const isOb = ['onboarding', 'les_deux'].includes(p.appliesTo);
+    const isMens = ['mensualite', 'les_deux'].includes(p.appliesTo);
+    const isSup = p.appliesTo.startsWith('supplement');
+    return {
+      type: p.type,
+      appliesTo: p.appliesTo,
+      dateDebut,
+      monthsDuration: p.months ? parseInt(p.months) : null,
+      discountOnboarding: p.type === 'percent_off' && isOb ? parseFloat(p.discountVal) : null,
+      discountMensualite: p.type === 'percent_off' && isMens ? parseFloat(p.discountVal) : null,
+      discountSupplement: p.type === 'percent_off' && isSup ? parseFloat(p.discountVal) : null,
+      fixedOnboarding: p.type === 'fixed_price' && isOb ? parseFloat(p.fixedVal) : null,
+      fixedMensualite: p.type === 'fixed_price' && isMens ? parseFloat(p.fixedVal) : null,
+      fixedSupplement: p.type === 'fixed_price' && isSup ? parseFloat(p.fixedVal) : null,
+    };
+  };
+
   const handleSubmit = async () => {
     if (!pdfBase64) { setError('Génération du contrat en cours…'); return; }
     setSaving(true);
@@ -360,6 +382,7 @@ export default function AddClientModal({ onClose, onCreated }: Props) {
         nbActivites, nbLabos, nbGerants,
         montantOnboarding: parseFloat(montantOnboarding) || 0,
         contractPdfBase64: pdfBase64,
+        promotions: promos.map(mapPromoForApi),
       });
       onCreated();
       onClose();
