@@ -43,8 +43,11 @@ export default function LaboHistoriquepertesPage() {
   const [labo, setLabo] = useState<Labo | null>(null);
   const [entries, setEntries] = useState<LaboPerteEntry[]>([]);
   const [loading, setLoading] = useState(false);
+  const [searched, setSearched] = useState(false);
   const [laboIngredients, setLaboIngredients] = useState<LaboIngredient[]>([]);
   const [page, setPage] = useState(1);
+  const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [exporting, setExporting] = useState(false);
 
   const [fCategorie, setFCategorie] = useState('');
   const [fIngredient, setFIngredient] = useState('');
@@ -69,6 +72,8 @@ export default function LaboHistoriquepertesPage() {
   const loadPertes = useCallback(async () => {
     if (!laboId) return;
     setLoading(true);
+    setSearched(true);
+    setSelected(new Set());
     try {
       const params = new URLSearchParams();
       if (fDateDebut) params.set('dateDebut', fDateDebut);
@@ -84,7 +89,31 @@ export default function LaboHistoriquepertesPage() {
     setLoading(false);
   }, [laboId, fDateDebut, fDateFin, fType, fCategorie, fIngredient, fNom]);
 
-  useEffect(() => { loadPertes(); }, [loadPertes]);
+  const handleExport = async () => {
+    if (!laboId) return;
+    setExporting(true);
+    try {
+      const params = new URLSearchParams();
+      if (fDateDebut) params.set('dateDebut', fDateDebut);
+      if (fDateFin) params.set('dateFin', fDateFin);
+      if (fType) params.set('typePerte', fType);
+      if (fCategorie) params.set('categorieId', fCategorie);
+      if (fIngredient) params.set('ingredientId', fIngredient);
+      if (fNom.trim()) params.set('search', fNom.trim());
+      if (selected.size > 0) params.set('selectedIds', [...selected].join(','));
+      const { data } = await api.get(`/api/labo/${laboId}/pertes/historique/export-excel?${params}`, { responseType: 'blob' });
+      const url = URL.createObjectURL(new Blob([data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `historique-pertes-labo-${new Date().toISOString().slice(0, 10)}.xlsx`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch { /* ignore */ }
+    setExporting(false);
+  };
+
+  const toggleSelect = (id: number) => setSelected((prev) => { const n = new Set(prev); if (n.has(id)) n.delete(id); else n.add(id); return n; });
+  const toggleSelectAll = () => { if (selected.size === entries.length) setSelected(new Set()); else setSelected(new Set(entries.map((e) => e.id))); };
 
   const resetFilters = () => {
     setFCategorie(''); setFIngredient('');
@@ -175,9 +204,27 @@ export default function LaboHistoriquepertesPage() {
           <label style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>🔍 Nom</label>
           <input type="text" style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid var(--border)', fontSize: '0.88rem', background: 'var(--background)', minWidth: 160 }} placeholder="Rechercher…" value={fNom} onChange={(e) => setFNom(e.target.value)} />
         </div>
+        <div style={{ marginLeft: 'auto', display: 'flex', gap: 10, alignSelf: 'flex-end' }}>
+          <button
+            onClick={loadPertes}
+            disabled={loading || !laboId}
+            style={{ background: 'linear-gradient(135deg, #991b1b 0%, #dc2626 100%)', boxShadow: '0 4px 14px rgba(185,28,28,0.35)', borderRadius: 10, border: 'none', color: '#fff', fontWeight: 800, padding: '10px 24px', cursor: 'pointer', opacity: loading ? 0.6 : 1 }}
+          >
+            {loading ? 'Chargement…' : '🔍 Rechercher'}
+          </button>
+          {searched && entries.length > 0 && (
+            <button
+              onClick={handleExport}
+              disabled={exporting}
+              style={{ background: '#fff', color: '#b91c1c', border: '2px solid #b91c1c', fontWeight: 700, borderRadius: 10, padding: '10px 20px', fontSize: '0.88rem', cursor: 'pointer', opacity: exporting ? 0.6 : 1 }}
+            >
+              {exporting ? '…' : selected.size > 0 ? `📊 Générer Excel (${selected.size} sél.)` : '📊 Générer Hist. Pertes'}
+            </button>
+          )}
+        </div>
       </div>
 
-      {loading ? (
+      {!searched ? null : loading ? (
         <p className="text-muted">Chargement…</p>
       ) : entries.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '48px 24px', color: 'var(--text-muted)' }}>
@@ -186,18 +233,31 @@ export default function LaboHistoriquepertesPage() {
         </div>
       ) : (
         <>
+          {selected.size > 0 && (
+            <div style={{ marginBottom: 8, fontSize: '0.82rem', color: '#b91c1c', fontWeight: 700 }}>
+              {selected.size} sélectionné{selected.size > 1 ? 's' : ''}
+            </div>
+          )}
           <div style={{ borderRadius: 12, overflow: 'hidden', border: '1px solid var(--border)', boxShadow: '0 2px 8px rgba(0,0,0,0.04)', marginBottom: 16 }}>
             <table className="table" style={{ margin: 0 }}>
               <thead>
                 <tr style={{ background: 'linear-gradient(135deg, #7f1d1d, #dc2626)' }}>
+                  <th style={{ width: 40, textAlign: 'center', fontWeight: 800, fontSize: '0.78rem', padding: '12px 14px', color: '#fff', background: 'transparent', borderBottom: 'none' }}>
+                    <input type="checkbox" checked={selected.size === entries.length && entries.length > 0} onChange={toggleSelectAll} style={{ cursor: 'pointer' }} />
+                  </th>
                   {['Date', 'Ingrédient', 'Catégorie', 'Type', 'Quantité', ...(hasCout ? ['Coût'] : [])].map((h) => (
-                    <th key={h} style={{ fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px', color: '#fff' }}>{h}</th>
+                    <th key={h} style={{ fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px', color: '#fff', background: 'transparent', borderBottom: 'none' }}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {paged.map((e, idx) => (
-                  <tr key={e.id} style={{ background: idx % 2 === 0 ? 'var(--surface)' : 'rgba(220,38,38,0.03)' }}>
+                {paged.map((e, idx) => {
+                  const isSelected = selected.has(e.id);
+                  return (
+                  <tr key={e.id} style={{ background: isSelected ? '#fee2e2' : idx % 2 === 0 ? 'var(--surface)' : 'rgba(220,38,38,0.03)', cursor: 'pointer' }} onClick={() => toggleSelect(e.id)}>
+                    <td style={{ textAlign: 'center', padding: '10px 14px' }} onClick={(ev) => ev.stopPropagation()}>
+                      <input type="checkbox" checked={isSelected} onChange={() => toggleSelect(e.id)} style={{ cursor: 'pointer' }} />
+                    </td>
                     <td style={{ padding: '10px 14px', fontSize: '0.85rem' }}>{fmtDate(e.datePerte)}</td>
                     <td style={{ padding: '10px 14px', fontWeight: 600 }}>
                       {e.ingredientNom}
@@ -218,11 +278,12 @@ export default function LaboHistoriquepertesPage() {
                       </td>
                     )}
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
               <tfoot>
                 <tr style={{ background: 'var(--surface-alt, #f9fafb)', borderTop: '2px solid var(--border)' }}>
-                  <td colSpan={3} style={{ padding: '10px 14px', fontWeight: 800, fontSize: '0.82rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Total</td>
+                  <td colSpan={4} style={{ padding: '10px 14px', fontWeight: 800, fontSize: '0.82rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Total</td>
                   <td style={{ padding: '10px 14px' }} />
                   <td style={{ padding: '10px 14px', fontWeight: 800, color: '#dc2626' }}>{totalQty.toFixed(3)}</td>
                   {hasCout && <td style={{ padding: '10px 14px', fontWeight: 800, color: '#dc2626' }}>{totalCout.toFixed(3)} DT</td>}

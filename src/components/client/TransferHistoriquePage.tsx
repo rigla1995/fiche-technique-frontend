@@ -39,6 +39,8 @@ export default function TransferHistoriquePage() {
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
   const [page, setPage] = useState(1);
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [exporting, setExporting] = useState(false);
 
   // Server-side filters
   const [startDate, setStartDate] = useState(yearStart);
@@ -57,11 +59,35 @@ export default function TransferHistoriquePage() {
     api.get(`/api/labo/${laboId}`).then(({ data }) => setLabo(data)).catch(() => {});
   }, [laboId]);
 
+  const exportExcel = async () => {
+    if (!laboId) return;
+    setExporting(true);
+    try {
+      const params = new URLSearchParams();
+      if (startDate) params.set('startDate', startDate);
+      if (endDate) params.set('endDate', endDate);
+      if (filterActiviteId) params.set('activiteId', filterActiviteId);
+      if (selectedIds.size > 0) params.set('selectedIds', [...selectedIds].join(','));
+      const { data } = await api.get(`/api/labo/${laboId}/transfers/export-excel?${params}`, { responseType: 'blob' });
+      const url = URL.createObjectURL(new Blob([data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `historique-transferts-${new Date().toISOString().slice(0, 10)}.xlsx`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch { /* ignore */ }
+    setExporting(false);
+  };
+
+  const toggleSelect = (id: number) => setSelectedIds((prev) => { const n = new Set(prev); if (n.has(id)) n.delete(id); else n.add(id); return n; });
+  const toggleSelectAll = () => { if (selectedIds.size === filteredResults.length) setSelectedIds(new Set()); else setSelectedIds(new Set(filteredResults.map((r) => r.id))); };
+
   const fetchResults = useCallback(async () => {
     if (!laboId) return;
     setLoading(true);
     setSearched(true);
     setPage(1);
+    setSelectedIds(new Set());
     setFilterCategorie('');
     setFilterNom('');
     try {
@@ -158,6 +184,15 @@ export default function TransferHistoriquePage() {
           </div>
         </div>
         <div style={{ borderTop: '1px solid var(--border)', paddingTop: 14, display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+          {searched && results.length > 0 && (
+            <button
+              onClick={exportExcel}
+              disabled={exporting}
+              style={{ background: '#fff', color: '#7e22ce', border: '2px solid #7e22ce', fontWeight: 700, borderRadius: 10, padding: '10px 20px', fontSize: '0.88rem', cursor: 'pointer', opacity: exporting ? 0.6 : 1 }}
+            >
+              {exporting ? '…' : selectedIds.size > 0 ? `📊 Générer Excel (${selectedIds.size} sél.)` : '📊 Générer Hist. Transferts'}
+            </button>
+          )}
           <button
             onClick={fetchResults}
             disabled={loading}
@@ -262,10 +297,18 @@ export default function TransferHistoriquePage() {
               <p style={{ fontSize: '0.9rem', fontWeight: 500 }}>{t('common.no_result')}</p>
             </div>
           ) : (
+            {selectedIds.size > 0 && (
+              <div style={{ marginBottom: 8, fontSize: '0.82rem', color: '#7e22ce', fontWeight: 700 }}>
+                {selectedIds.size} sélectionné{selectedIds.size > 1 ? 's' : ''}
+              </div>
+            )}
             <div className="table-responsive card">
               <table className="table">
                 <thead>
                   <tr style={{ background: 'linear-gradient(135deg, #3b0764, #7e22ce)' }}>
+                    <th style={{ width: 40, textAlign: 'center', fontWeight: 800, fontSize: '0.78rem', padding: '12px 14px', color: '#fff', background: 'transparent', borderBottom: 'none' }}>
+                      <input type="checkbox" checked={selectedIds.size === filteredResults.length && filteredResults.length > 0} onChange={toggleSelectAll} style={{ cursor: 'pointer' }} />
+                    </th>
                     <th style={{ fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px', color: '#fff', background: 'transparent', borderBottom: 'none' }}>{t('client.labo.col_date')}</th>
                     <th style={{ fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px', color: '#fff', background: 'transparent', borderBottom: 'none' }}>{t('client.labo.col_activite')}</th>
                     <th style={{ fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px', color: '#fff', background: 'transparent', borderBottom: 'none' }}>{t('client.historique_appro.col_ingredient')}</th>
@@ -275,8 +318,13 @@ export default function TransferHistoriquePage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {pagedResults.map((r) => (
-                    <tr key={r.id}>
+                  {pagedResults.map((r) => {
+                    const isSelected = selectedIds.has(r.id);
+                    return (
+                    <tr key={r.id} style={{ background: isSelected ? '#f5f3ff' : undefined, cursor: 'pointer' }} onClick={() => toggleSelect(r.id)}>
+                      <td style={{ textAlign: 'center', padding: '12px 14px' }} onClick={(e) => e.stopPropagation()}>
+                        <input type="checkbox" checked={isSelected} onChange={() => toggleSelect(r.id)} style={{ cursor: 'pointer' }} />
+                      </td>
                       <td style={{ padding: '12px 14px' }}>
                         <span style={{ background: '#faf5ff', border: '1px solid #d8b4fe', borderRadius: 7, padding: '3px 10px', fontWeight: 700, fontSize: '0.82rem', color: '#7e22ce' }}>
                           {fmtDate(r.dateTransfert)}
@@ -288,7 +336,7 @@ export default function TransferHistoriquePage() {
                       <td style={{ textAlign: 'right', fontWeight: 800, color: 'var(--success, #10b981)', padding: '12px 14px' }}>
                         {r.quantite % 1 === 0 ? r.quantite.toFixed(0) : r.quantite} <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem', fontWeight: 400 }}>{r.uniteNom}</span>
                       </td>
-                      <td style={{ textAlign: 'center', padding: '12px 14px' }}>
+                      <td style={{ textAlign: 'center', padding: '12px 14px' }} onClick={(e) => e.stopPropagation()}>
                         {r.note ? (
                           <button
                             className="btn btn-ghost btn-sm"
@@ -300,7 +348,8 @@ export default function TransferHistoriquePage() {
                         ) : null}
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
               {/* Pagination */}

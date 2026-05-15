@@ -225,8 +225,11 @@ export default function HistoriquepertesPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isEntreprise, fActiviteId, type]);
 
+  const [searched, setSearched] = useState(false);
+
   const loadPertes = useCallback(async () => {
     setLoading(true);
+    setSearched(true);
     setSelected(new Set());
     try {
       const params = new URLSearchParams();
@@ -247,7 +250,6 @@ export default function HistoriquepertesPage() {
     setLoading(false);
   }, [isEntreprise, fActiviteId, fDateDebut, fDateFin, fType, fCategorie, fIngredient, fNom]);
 
-  useEffect(() => { loadPertes(); }, [loadPertes]);
 
   const totalQty = entries.reduce((s, e) => s + e.quantite, 0);
   const totalCout = entries.reduce((s, e) => s + (e.prixUnitaire != null ? e.quantite * e.prixUnitaire : 0), 0);
@@ -329,13 +331,6 @@ export default function HistoriquepertesPage() {
           </div>
           <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.85rem', margin: 0 }}>Historique complet des pertes et avaries</p>
         </div>
-        <button
-          className="btn btn-sm"
-          onClick={handleExport} disabled={exporting || entries.length === 0}
-          style={{ background: '#fff', color: '#b91c1c', border: 'none', fontWeight: 700, borderRadius: 10, padding: '10px 20px', fontSize: '0.88rem' }}
-        >
-          {exporting ? '…' : selected.size > 0 ? `📊 Export Excel (${selected.size} en surbrillance)` : '📊 Export Excel'}
-        </button>
       </div>
 
       {/* Filter panel */}
@@ -391,8 +386,28 @@ export default function HistoriquepertesPage() {
             <option value="dechet">Déchet</option>
           </select>
         </div>
+        <div style={{ marginLeft: 'auto', display: 'flex', gap: 10, alignSelf: 'flex-end' }}>
+          <button
+            onClick={loadPertes}
+            disabled={loading}
+            style={{ background: 'linear-gradient(135deg, #991b1b 0%, #dc2626 100%)', boxShadow: '0 4px 14px rgba(185,28,28,0.35)', borderRadius: 10, border: 'none', color: '#fff', fontWeight: 800, padding: '10px 24px', cursor: 'pointer', opacity: loading ? 0.6 : 1 }}
+          >
+            {loading ? 'Chargement…' : '🔍 Rechercher'}
+          </button>
+          {searched && entries.length > 0 && (
+            <button
+              onClick={handleExport}
+              disabled={exporting}
+              style={{ background: '#fff', color: '#b91c1c', border: '2px solid #b91c1c', fontWeight: 700, borderRadius: 10, padding: '10px 20px', fontSize: '0.88rem', cursor: 'pointer', opacity: exporting ? 0.6 : 1 }}
+            >
+              {exporting ? '…' : selected.size > 0 ? `📊 Générer Excel (${selected.size} sél.)` : '📊 Générer Hist. Pertes'}
+            </button>
+          )}
+        </div>
       </div>
 
+      {/* Table & results — only after search */}
+      {!searched ? null : <>
       {/* Action bar */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, flexWrap: 'wrap', gap: 10 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
@@ -529,6 +544,8 @@ export default function HistoriquepertesPage() {
           </table>
         </div>
       )}
+
+      </>}
 
       {/* Edit modal */}
       {editModal && (
