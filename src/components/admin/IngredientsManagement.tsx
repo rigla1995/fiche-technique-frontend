@@ -123,7 +123,7 @@ export default function IngredientsManagement() {
   // Paginate on category count (10 groups per page)
   const totalGroups = sortedGroups.length;
   const pagedGroups = sortedGroups.slice((page - 1) * PER_PAGE, page * PER_PAGE);
-  const isPaginated = totalGroups > PER_PAGE;
+
 
   return (
     <div className="page">

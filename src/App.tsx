@@ -9,7 +9,6 @@ import UnitsManagement from './components/admin/UnitsManagement';
 import IngredientsManagement from './components/admin/IngredientsManagement';
 import CategoriesManagement from './components/admin/CategoriesManagement';
 import DomainesManagement from './components/admin/DomainesManagement';
-import ClientDashboard from './components/client/ClientDashboard';
 import ProductList from './components/client/ProductList';
 import ProductForm from './components/client/ProductForm';
 import ClientIngredientsCatalog from './components/client/ClientIngredientsCatalog';

@@ -30,11 +30,6 @@ const APPLIES_LABELS: Record<string, string> = {
 
 const fmtDate = (d: string) => d ? new Date(d).toLocaleDateString('fr-FR') : '—';
 const fmtMois = (d: string) => d ? new Date(d).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' }) : '—';
-const addOneMonth = (ym: string): string => {
-  const [y, m] = ym.slice(0, 7).split('-').map(Number);
-  const next = new Date(y, m, 1);
-  return `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}`;
-};
 
 // ── Confirmation Modal ────────────────────────────────────────────────────────
 interface ConfirmPayload {
@@ -290,8 +285,6 @@ export default function AbonnementsManagement() {
   const [modeSaving, setModeSaving] = useState(false);
 
   // invite
-  const [confirmSending, setConfirmSending] = useState(false);
-  const [confirmResult, setConfirmResult] = useState<{ inviteUrl?: string | null } | null>(null);
 
   const [search, setSearch] = useState('');
   const [filterMode, setFilterMode] = useState('actif');
@@ -310,7 +303,6 @@ export default function AbonnementsManagement() {
 
   const openDetail = useCallback(async (ab: Abonnement) => {
     setDetailLoading(true);
-    setConfirmResult(null);
     setPromoError(null);
     setEditingPromo(null);
     setPromoAppliesTo('mensualite');
@@ -357,21 +349,7 @@ export default function AbonnementsManagement() {
     if (pMois && selected) fetchMontantMois(pMois);
   }, [pMois, selected, fetchMontantMois]);
 
-  const handleConfirmInvite = async () => {
-    if (!selected) return;
-    setConfirmSending(true);
-    setConfirmResult(null);
-    try {
-      const res = await api.post(`/api/abonnements/client/${selected.clientId}/confirm-invite`);
-      setConfirmResult(res.data);
-      setSelected((s) => s ? { ...s, inviteSent: true } : s);
-      setAbonnements((list) => list.map((a) => a.clientId === selected.clientId ? { ...a, inviteSent: true } : a));
-    } catch (err: any) {
-      alert(err?.response?.data?.message || 'Erreur lors de l\'envoi');
-    } finally {
-      setConfirmSending(false);
-    }
-  };
+
 
   const requestOnboarding = () => {
     if (!selected || !obDatePaiement) return;
@@ -550,24 +528,7 @@ export default function AbonnementsManagement() {
   const hideLaboPermanent = !!activeLaboPromo && !activeLaboPromo.dateFin;
   const hideActivitePermanent = !!activeActivitePromo && !activeActivitePromo.dateFin;
 
-  const mensMinMois = activeMensPromo?.dateFin
-    ? addOneMonth(activeMensPromo.dateFin)
-    : selected?.dateDebut?.slice(0, 7);
-  const gerantMinMois = activeGerantPromo?.dateFin
-    ? addOneMonth(activeGerantPromo.dateFin)
-    : selected?.dateDebut?.slice(0, 7);
-  const laboMinMois = activeLaboPromo?.dateFin
-    ? addOneMonth(activeLaboPromo.dateFin)
-    : selected?.dateDebut?.slice(0, 7);
-  const activiteMinMois = activeActivitePromo?.dateFin
-    ? addOneMonth(activeActivitePromo.dateFin)
-    : selected?.dateDebut?.slice(0, 7);
 
-  const promoCurrentMinMois = promoAppliesTo === 'mensualite' ? mensMinMois
-    : promoAppliesTo === 'supplement_gerant' ? gerantMinMois
-    : promoAppliesTo === 'supplement_labo' ? laboMinMois
-    : promoAppliesTo === 'supplement_activite' ? activiteMinMois
-    : undefined;
 
   const paidMonthSet = new Set(
     (selected?.paiements || [])

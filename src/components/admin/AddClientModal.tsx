@@ -334,7 +334,7 @@ export default function AddClientModal({ onClose, onCreated }: Props) {
   // ── Promo management ──
 
   const addPromo = () => {
-    const { type, appliesTo, moisDebut, months, discountVal, fixedVal } = promoForm;
+    const { type, appliesTo, moisDebut, discountVal, fixedVal } = promoForm;
     if (type !== 'free_months') {
       if (appliesTo !== 'onboarding' && !moisDebut) { setPromoError('Mois début requis'); return; }
       if (type === 'percent_off' && !discountVal)   { setPromoError('% requis'); return; }

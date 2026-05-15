@@ -84,11 +84,7 @@ export default function AdminRapportsPage() {
     { name: 'Archivé', value: abonnements.archive },
   ].filter((d) => d.value > 0);
 
-  const paiementsStatusData = [
-    { name: 'Payé', value: paiementsMonth.payeCount },
-    { name: 'Impayé', value: paiementsMonth.impayeCount },
-    { name: 'En attente', value: paiementsMonth.enAttenteCount },
-  ].filter((d) => d.value > 0);
+
 
   const revenueTrendFormatted = revenueTrend.map((r) => ({
     ...r,

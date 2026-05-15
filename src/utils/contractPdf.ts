@@ -319,7 +319,7 @@ export function generateAvenantPdf(params: AvenantPdfParams): string {
     dateAvenant,
   } = params;
 
-  const { doc, PW, PH, ML, MR, CW, RX, setFont, txt, rect, hrule, sectionHeader } = makeDoc();
+  const { doc, PW, PH, ML, CW, RX, setFont, txt, rect, hrule, sectionHeader } = makeDoc();
   const dateFr = dateAvenant
     ? new Date(dateAvenant).toLocaleDateString('fr-FR')
     : todayFr();
