@@ -279,10 +279,10 @@ export default function TransferPage() {
 
   const activites: Activite[] = labo?.activites || [];
 
-  const bulkTotal = stock.reduce((s, r) => {
+  const bulkCount = stock.filter((r) => {
     const map = qtys[r.ingredientId] || {};
-    return s + Object.values(map).reduce((ss, v) => ss + (parseFloat(v) || 0), 0);
-  }, 0);
+    return Object.values(map).some((v) => parseFloat(v) > 0);
+  }).length;
 
   const allCategories = Array.from(new Set(stock.map((r) => r.categorie))).sort();
   const ingredientsInCategory = filterCategorie ? stock.filter((r) => r.categorie === filterCategorie) : stock;
@@ -422,7 +422,7 @@ export default function TransferPage() {
             <div style={{ background: 'linear-gradient(135deg, #7e22ce, #a855f7)', borderRadius: 9, padding: '6px 8px', fontSize: '1rem' }}>✅</div>
             <span style={{ fontSize: '0.75rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#7e22ce' }}>Confirmation</span>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '12px 20px', marginBottom: 18 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '12px 20px', alignItems: 'end' }}>
             <div>
               <label style={{ fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#7e22ce', display: 'block', marginBottom: 4 }}>
                 Réf. Facture / BL <span style={{ color: 'var(--danger, #ef4444)' }}>*</span>
@@ -449,35 +449,30 @@ export default function TransferPage() {
               <input type="text" className="input" value={note} onChange={(e) => setNote(e.target.value)}
                 placeholder={t('client.labo.transfer_note_placeholder')} />
             </div>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)' }}>Total à transférer :</span>
-              <span style={{ fontSize: '1.2rem', fontWeight: 900, color: bulkTotal > 0 ? '#7e22ce' : 'var(--text-muted)' }}>
-                {bulkTotal > 0 ? bulkTotal.toFixed(3) : '—'}
-              </span>
+            <div>
+              <button
+                onClick={() => handleBulkTransfer()}
+                disabled={bulkCount === 0 || bulkSaving}
+                style={{
+                  width: '100%',
+                  background: bulkCount > 0 && !bulkSaving
+                    ? 'linear-gradient(135deg, #7e22ce 0%, #a855f7 100%)'
+                    : 'var(--border)',
+                  boxShadow: bulkCount > 0 && !bulkSaving ? '0 6px 20px rgba(126,34,206,0.4)' : 'none',
+                  borderRadius: 12, border: 'none', color: '#fff', fontWeight: 800,
+                  padding: '13px 20px', cursor: bulkCount > 0 && !bulkSaving ? 'pointer' : 'not-allowed',
+                  fontSize: '0.95rem', transition: 'all 0.2s',
+                  opacity: bulkCount === 0 || bulkSaving ? 0.55 : 1,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                }}>
+                {bulkSaving ? '…' : '↗ Transférer'}
+                {bulkCount > 0 && !bulkSaving && (
+                  <span style={{ background: 'rgba(255,255,255,0.22)', borderRadius: 7, padding: '2px 8px', fontSize: '0.82rem', fontWeight: 700 }}>
+                    {bulkCount}
+                  </span>
+                )}
+              </button>
             </div>
-            <button
-              onClick={() => handleBulkTransfer()}
-              disabled={bulkTotal === 0 || bulkSaving}
-              style={{
-                background: bulkTotal > 0 && !bulkSaving
-                  ? 'linear-gradient(135deg, #7e22ce 0%, #a855f7 100%)'
-                  : 'var(--border)',
-                boxShadow: bulkTotal > 0 && !bulkSaving ? '0 6px 20px rgba(126,34,206,0.4)' : 'none',
-                borderRadius: 12, border: 'none', color: '#fff', fontWeight: 800,
-                padding: '13px 32px', cursor: bulkTotal > 0 && !bulkSaving ? 'pointer' : 'not-allowed',
-                fontSize: '0.95rem', transition: 'all 0.2s',
-                opacity: bulkTotal === 0 || bulkSaving ? 0.55 : 1,
-                display: 'flex', alignItems: 'center', gap: 8,
-              }}>
-              {bulkSaving ? '…' : '↗ Transférer'}
-              {bulkTotal > 0 && !bulkSaving && (
-                <span style={{ background: 'rgba(255,255,255,0.22)', borderRadius: 7, padding: '2px 8px', fontSize: '0.82rem', fontWeight: 700 }}>
-                  {bulkTotal.toFixed(3)}
-                </span>
-              )}
-            </button>
           </div>
         </div>
       )}
