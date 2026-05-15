@@ -198,75 +198,88 @@ export default function TransferHistoriquePage() {
       </div>
 
       {/* Filter panel */}
-      <div style={{ background: 'var(--surface)', borderRadius: 14, padding: '16px 20px', border: '1px solid var(--border)', boxShadow: '0 2px 12px rgba(0,0,0,0.05)', marginBottom: 20, overflow: 'hidden' }}>
-        <div style={{ marginBottom: 14 }}>
+      <div style={{ background: 'var(--surface)', borderRadius: 14, padding: '16px 20px', border: '1px solid var(--border)', boxShadow: '0 2px 12px rgba(0,0,0,0.05)', marginBottom: 24 }}>
+        {/* Panel header */}
+        <div style={{ width: '100%', marginBottom: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: 12, borderBottom: '1px solid var(--border)' }}>
           <span style={{ fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#7e22ce' }}>Filtres</span>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(190px, 1fr))', gap: '12px 20px', marginBottom: 16 }}>
-          {activites.length > 0 && (
+        {/* Section 1: Entité & Produit */}
+        <div style={{ marginBottom: 16, marginTop: 14 }}>
+          <div style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ width: 16, height: 2, background: '#7e22ce', display: 'inline-block', borderRadius: 2 }} />
+            Entité &amp; Produit
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14, alignItems: 'flex-end' }}>
+            {activites.length > 0 && (
+              <div>
+                <label style={{ fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#7e22ce', display: 'block', marginBottom: 5 }}>🏪 {t('client.labo.filter_activite')}</label>
+                <select style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid #7e22ce', fontSize: '0.88rem', background: '#faf5ff', minWidth: 160 }} value={filterActiviteId} onChange={(e) => setFilterActiviteId(e.target.value)}>
+                  <option value="">{t('client.labo.all_activites')}</option>
+                  {activites.map((a) => <option key={a.id} value={a.id}>{a.nom}</option>)}
+                </select>
+              </div>
+            )}
             <div>
-              <label style={{ fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--text-muted)', display: 'block', marginBottom: 5 }}>
-                {t('client.labo.filter_activite')}
-              </label>
-              <select className="input" style={{ width: '100%' }} value={filterActiviteId} onChange={(e) => setFilterActiviteId(e.target.value)}>
-                <option value="">{t('client.labo.all_activites')}</option>
-                {activites.map((a) => <option key={a.id} value={a.id}>{a.nom}</option>)}
+              <label style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>🏷️ Catégorie</label>
+              <select style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid var(--border)', fontSize: '0.88rem', background: 'var(--background)', minWidth: 160 }} value={filterCategorie}
+                onChange={(e) => { setFilterCategorie(e.target.value); setPage(1); }}>
+                <option value="">{t('client.catalogue_franchise.all_categories')}</option>
+                {allCategories.map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>
-          )}
-          <div>
-            <label style={{ fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#7e22ce', display: 'block', marginBottom: 5 }}>
-              {t('client.historique_appro.start_date')}
-            </label>
-            <input type="date" className="input"
-              style={{ width: '100%', border: '1.5px solid #7e22ce', background: '#faf5ff', fontWeight: 600 }}
-              min={yearStart} max={yearEnd} value={startDate} onChange={(e) => setStartDate(e.target.value)} />
-          </div>
-          <div>
-            <label style={{ fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#7e22ce', display: 'block', marginBottom: 5 }}>
-              {t('client.historique_appro.end_date')}
-            </label>
-            <input type="date" className="input"
-              style={{ width: '100%', border: '1.5px solid #7e22ce', background: '#faf5ff', fontWeight: 600 }}
-              min={yearStart} max={yearEnd} value={endDate} onChange={(e) => setEndDate(e.target.value)} />
-          </div>
-          <div>
-            <label style={{ fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--text-muted)', display: 'block', marginBottom: 5 }}>
-              Catégorie
-            </label>
-            <select className="input" style={{ width: '100%' }} value={filterCategorie}
-              onChange={(e) => { setFilterCategorie(e.target.value); setPage(1); }}>
-              <option value="">{t('client.catalogue_franchise.all_categories')}</option>
-              {allCategories.map((c) => <option key={c} value={c}>{c}</option>)}
-            </select>
-          </div>
-          <div>
-            <label style={{ fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--text-muted)', display: 'block', marginBottom: 5 }}>
-              {t('client.stock.ingredient')}
-            </label>
-            <input
-              type="text" className="input" style={{ width: '100%' }}
-              placeholder={t('client.stock.search_ingredient')}
-              value={filterNom}
-              onChange={(e) => { setFilterNom(e.target.value); setPage(1); }}
-            />
+            <div>
+              <label style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>🧂 {t('client.stock.ingredient')}</label>
+              <input type="text" style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid var(--border)', fontSize: '0.88rem', background: 'var(--background)', minWidth: 160 }}
+                placeholder={t('client.stock.search_ingredient')}
+                value={filterNom} onChange={(e) => { setFilterNom(e.target.value); setPage(1); }} />
+            </div>
           </div>
         </div>
-        <div style={{ borderTop: '1px solid var(--border)', paddingTop: 14, display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
-          {searched && results.length > 0 && (
-            <button
-              onClick={exportExcel}
-              disabled={exporting}
-              style={{ background: '#fff', color: '#7e22ce', border: '2px solid #7e22ce', fontWeight: 700, borderRadius: 10, padding: '10px 20px', fontSize: '0.88rem', cursor: 'pointer', opacity: exporting ? 0.6 : 1 }}
-            >
-              {exporting ? '…' : selectedIds.size > 0 ? `📊 Générer Excel (${selectedIds.size} sél.)` : '📊 Générer Hist. Transferts'}
-            </button>
-          )}
+        {/* Divider */}
+        <div style={{ marginBottom: 16, borderTop: '1px dashed var(--border)' }} />
+        {/* Section 2: Période */}
+        <div style={{ marginBottom: 16 }}>
+          <div style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ width: 16, height: 2, background: '#a855f7', display: 'inline-block', borderRadius: 2 }} />
+            Période
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14, alignItems: 'flex-end' }}>
+            <div>
+              <label style={{ fontSize: '0.68rem', fontWeight: 800, color: '#7e22ce', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>📅 {t('client.historique_appro.start_date')}</label>
+              <input type="date" style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid #7e22ce', fontSize: '0.88rem', background: '#faf5ff', minWidth: 160, fontWeight: 600 }}
+                min={yearStart} max={yearEnd} value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+            </div>
+            <div>
+              <label style={{ fontSize: '0.68rem', fontWeight: 800, color: '#7e22ce', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>📅 {t('client.historique_appro.end_date')}</label>
+              <input type="date" style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid #7e22ce', fontSize: '0.88rem', background: '#faf5ff', minWidth: 160, fontWeight: 600 }}
+                min={yearStart} max={yearEnd} value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+            </div>
+          </div>
+        </div>
+        {/* Actions footer */}
+        <div style={{ paddingTop: 16, borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
           <button
             onClick={fetchResults}
             disabled={loading}
-            style={{ background: 'linear-gradient(135deg, #7e22ce 0%, #a855f7 100%)', boxShadow: '0 4px 14px rgba(126,34,206,0.35)', borderRadius: 10, border: 'none', color: '#fff', fontWeight: 800, padding: '10px 24px', cursor: 'pointer', opacity: loading ? 0.6 : 1 }}>
+            style={{ background: 'linear-gradient(135deg, #7e22ce 0%, #a855f7 100%)', boxShadow: '0 4px 14px rgba(126,34,206,0.35)', borderRadius: 10, border: 'none', color: '#fff', fontWeight: 800, padding: '10px 26px', minWidth: 140, cursor: 'pointer', opacity: loading ? 0.6 : 1 }}>
             {loading ? t('common.loading') : '🔍 Rechercher'}
+          </button>
+          <button
+            onClick={exportExcel}
+            disabled={exporting || !searched || results.length === 0}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 8, minWidth: 180,
+              background: (searched && results.length > 0) ? 'linear-gradient(135deg, #16a34a, #22c55e)' : '#e5e7eb',
+              boxShadow: (searched && results.length > 0) ? '0 4px 14px rgba(22,163,74,0.35)' : 'none',
+              borderRadius: 10, border: 'none',
+              color: (searched && results.length > 0) ? '#fff' : 'var(--text-muted)',
+              fontWeight: 800, padding: '10px 20px',
+              cursor: (!searched || results.length === 0) ? 'not-allowed' : 'pointer',
+              opacity: (!searched || results.length === 0) ? 0.55 : 1, transition: 'all 0.15s',
+            }}
+          >
+            <span>📊</span>
+            {selectedIds.size > 0 ? `Générer Excel (${selectedIds.size} sél.)` : 'Générer Hist. Transferts'}
           </button>
         </div>
       </div>

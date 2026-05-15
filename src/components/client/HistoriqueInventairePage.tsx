@@ -244,40 +244,61 @@ export default function HistoriqueInventairePage() {
           <div style={{
             background: 'var(--surface)', borderRadius: 14, padding: '16px 20px', marginBottom: 20,
             border: '1px solid var(--border)', boxShadow: '0 2px 12px rgba(0,0,0,0.05)',
-            display: 'flex', flexWrap: 'wrap', gap: 14, alignItems: 'flex-end',
           }}>
-            <div style={{ width: '100%', marginBottom: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            {/* Panel header */}
+            <div style={{ width: '100%', marginBottom: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: 12, borderBottom: '1px solid var(--border)' }}>
               <span style={{ fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#065f46' }}>Filtres</span>
             </div>
-            <div>
-              <label style={{ ...labelStyle, color: '#065f46' }}>📅 Date début</label>
-              <input type="date" value={filters.startDate} onChange={(e) => setFilters((p) => ({ ...p, startDate: e.target.value }))}
-                style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid #065f46', fontSize: '0.88rem', background: '#f0fdf4', fontWeight: 600 }} />
+            {/* Section 1: Produit */}
+            <div style={{ marginBottom: 16, marginTop: 14 }}>
+              <div style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ width: 16, height: 2, background: '#065f46', display: 'inline-block', borderRadius: 2 }} />
+                Produit
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14, alignItems: 'flex-end' }}>
+                <div>
+                  <label style={{ ...labelStyle, color: '#065f46' }}>🏷️ Catégorie</label>
+                  <select value={filters.categorie} onChange={(e) => setFilters((p) => ({ ...p, categorie: e.target.value, ingredientId: '' }))}
+                    style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid var(--border)', fontSize: '0.88rem', minWidth: 160, background: 'var(--background)' }}>
+                    <option value="">Toutes</option>
+                    {categories.map((c) => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label style={labelStyle}>🧂 Ingrédient</label>
+                  <select value={filters.ingredientId} onChange={(e) => setFilters((p) => ({ ...p, ingredientId: e.target.value }))}
+                    style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid var(--border)', fontSize: '0.88rem', minWidth: 160, background: 'var(--background)' }}>
+                    <option value="">Tous</option>
+                    {filteredIngOptions.map((i) => <option key={i.ingredientId} value={i.ingredientId}>{i.nom}</option>)}
+                  </select>
+                </div>
+              </div>
             </div>
-            <div>
-              <label style={{ ...labelStyle, color: '#065f46' }}>📅 Date fin</label>
-              <input type="date" value={filters.endDate} onChange={(e) => setFilters((p) => ({ ...p, endDate: e.target.value }))}
-                style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid #065f46', fontSize: '0.88rem', background: '#f0fdf4', fontWeight: 600 }} />
+            {/* Divider */}
+            <div style={{ marginBottom: 16, borderTop: '1px dashed var(--border)' }} />
+            {/* Section 2: Période */}
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ width: 16, height: 2, background: '#0d9488', display: 'inline-block', borderRadius: 2 }} />
+                Période
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14, alignItems: 'flex-end' }}>
+                <div>
+                  <label style={{ ...labelStyle, color: '#065f46' }}>📅 Date début</label>
+                  <input type="date" value={filters.startDate} onChange={(e) => setFilters((p) => ({ ...p, startDate: e.target.value }))}
+                    style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid #065f46', fontSize: '0.88rem', background: '#f0fdf4', fontWeight: 600 }} />
+                </div>
+                <div>
+                  <label style={{ ...labelStyle, color: '#065f46' }}>📅 Date fin</label>
+                  <input type="date" value={filters.endDate} onChange={(e) => setFilters((p) => ({ ...p, endDate: e.target.value }))}
+                    style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid #065f46', fontSize: '0.88rem', background: '#f0fdf4', fontWeight: 600 }} />
+                </div>
+              </div>
             </div>
-            <div>
-              <label style={labelStyle}>🏷️ Catégorie</label>
-              <select value={filters.categorie} onChange={(e) => setFilters((p) => ({ ...p, categorie: e.target.value, ingredientId: '' }))}
-                style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid var(--border)', fontSize: '0.88rem', minWidth: 160, background: 'var(--background)' }}>
-                <option value="">Toutes</option>
-                {categories.map((c) => <option key={c} value={c}>{c}</option>)}
-              </select>
-            </div>
-            <div>
-              <label style={labelStyle}>🧂 Ingrédient</label>
-              <select value={filters.ingredientId} onChange={(e) => setFilters((p) => ({ ...p, ingredientId: e.target.value }))}
-                style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid var(--border)', fontSize: '0.88rem', minWidth: 160, background: 'var(--background)' }}>
-                <option value="">Tous</option>
-                {filteredIngOptions.map((i) => <option key={i.ingredientId} value={i.ingredientId}>{i.nom}</option>)}
-              </select>
-            </div>
-            <div style={{ display: 'flex', gap: 10, marginLeft: 'auto', alignItems: 'center' }}>
+            {/* Actions footer */}
+            <div style={{ paddingTop: 16, borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
               <button onClick={search} disabled={loading} style={{
-                padding: '10px 26px', borderRadius: 10, border: 'none',
+                padding: '10px 26px', borderRadius: 10, border: 'none', minWidth: 140,
                 background: 'linear-gradient(135deg, #0f766e 0%, #0d9488 100%)',
                 color: '#fff', fontWeight: 800, fontSize: '0.9rem', cursor: 'pointer',
                 boxShadow: '0 4px 14px rgba(15,118,110,0.35)',
@@ -285,24 +306,21 @@ export default function HistoriqueInventairePage() {
               }}>
                 <span>🔍</span> {loading ? 'Recherche...' : 'Rechercher'}
               </button>
-              {applied && (
-                <button onClick={handleExport} disabled={!canWrite} style={{
-                  padding: '10px 20px', borderRadius: 10,
-                  border: 'none',
-                  background: !canWrite ? '#e5e7eb' : selectedIds.size > 0
-                    ? 'linear-gradient(135deg, #d97706, #f59e0b)'
-                    : 'linear-gradient(135deg, #16a34a, #22c55e)',
-                  color: !canWrite ? '#9ca3af' : '#fff', fontWeight: 800, fontSize: '0.88rem', cursor: !canWrite ? 'not-allowed' : 'pointer',
-                  boxShadow: !canWrite ? 'none' : selectedIds.size > 0
-                    ? '0 4px 14px rgba(217,119,6,0.35)'
-                    : '0 4px 14px rgba(22,163,74,0.35)',
-                  display: 'flex', alignItems: 'center', gap: 7, whiteSpace: 'nowrap',
-                }}>
-                  <span>📥</span>
-                  Générer Historique Inventaire
-                  {selectedIds.size > 0 && <span style={{ background: 'rgba(255,255,255,0.25)', borderRadius: 20, padding: '1px 8px', fontSize: '0.8rem' }}>{selectedIds.size}</span>}
-                </button>
-              )}
+              <button onClick={handleExport} disabled={!canWrite || !applied} style={{
+                padding: '10px 20px', borderRadius: 10, border: 'none', minWidth: 180,
+                background: (canWrite && applied) ? (selectedIds.size > 0
+                  ? 'linear-gradient(135deg, #d97706, #f59e0b)'
+                  : 'linear-gradient(135deg, #16a34a, #22c55e)') : '#e5e7eb',
+                color: (canWrite && applied) ? '#fff' : '#9ca3af', fontWeight: 800, fontSize: '0.88rem',
+                cursor: (!canWrite || !applied) ? 'not-allowed' : 'pointer',
+                boxShadow: (canWrite && applied) ? (selectedIds.size > 0 ? '0 4px 14px rgba(217,119,6,0.35)' : '0 4px 14px rgba(22,163,74,0.35)') : 'none',
+                display: 'flex', alignItems: 'center', gap: 7, whiteSpace: 'nowrap',
+                opacity: (canWrite && applied) ? 1 : 0.55, transition: 'all 0.15s',
+              }}>
+                <span>📥</span>
+                Générer Historique Inventaire
+                {selectedIds.size > 0 && <span style={{ background: 'rgba(255,255,255,0.25)', borderRadius: 20, padding: '1px 8px', fontSize: '0.8rem' }}>{selectedIds.size}</span>}
+              </button>
             </div>
           </div>
 
