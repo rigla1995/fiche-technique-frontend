@@ -261,31 +261,14 @@ export default function HistoriqueApproPage() {
 
   const initIngredientId = searchParams.get('ingredientId') || '';
   const initActiviteId = searchParams.get('activiteId') || '';
-  const lockedType = searchParams.get('type') as 'franchise' | 'distinct' | null;
   const laboId = searchParams.get('laboId') || '';
   const isGerant = user?.role === 'gerant';
   const isReadOnly = isGerant && !!laboId;
   const isActiviteGerant = isGerant && !!initActiviteId && !laboId;
 
-  const [entType, setEntType] = useState<'franchise' | 'distinct'>(lockedType ?? 'franchise');
-
-  useEffect(() => {
-    if (lockedType) {
-      setEntType(lockedType);
-      setSelectedActiviteId('');
-      setSelectedFranchiseGroup('');
-      setResults([]);
-      setSearched(false);
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [lockedType]);
-
-  const [franchiseActivities, setFranchiseActivities] = useState<Activite[]>([]);
-  const [distinctActivities, setDistinctActivities] = useState<Activite[]>([]);
+  const [allActivities, setAllActivities] = useState<Activite[]>([]);
   const [activitesLoading, setActivitesLoading] = useState(false);
 
-  const [franchiseGroups, setFranchiseGroups] = useState<string[]>([]);
-  const [selectedFranchiseGroup, setSelectedFranchiseGroup] = useState('');
   const [selectedActiviteId, setSelectedActiviteId] = useState(initActiviteId);
 
   const [scopedIngredients, setScopedIngredients] = useState<ScopedIngredient[]>([]);
@@ -355,12 +338,11 @@ export default function HistoriqueApproPage() {
       api.get(`/api/entreprise/activites/${selectedActiviteId}/selected-ingredients`)
         .then(({ data }) => setScopedIngredients(data as ScopedIngredient[])).catch(() => {});
     } else {
-      const typeParam = entType ? `?type=${entType}` : '';
-      api.get(`/api/entreprise/activites/selected-ingredients${typeParam}`)
+      api.get('/api/entreprise/activites/selected-ingredients')
         .then(({ data }) => setScopedIngredients(data as ScopedIngredient[])).catch(() => {});
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isEntreprise, laboId, selectedActiviteId, entType]);
+  }, [isEntreprise, laboId, selectedActiviteId]);
 
   useEffect(() => {
     if (selectedCategoryId !== 'pt') { setPtProducts([]); return; }
@@ -386,17 +368,7 @@ export default function HistoriqueApproPage() {
       .then(({ data }) => {
         const all = data as Activite[];
         const filtered = laboId ? all.filter((a) => String((a as any).laboId) === laboId) : all;
-        const franchise = filtered.filter((a) => a.type === 'franchise');
-        const distinct = filtered.filter((a) => a.type === 'distincte' || a.type == null);
-        setFranchiseActivities(franchise);
-        setDistinctActivities(distinct);
-        const groups = Array.from(new Set(franchise.map((a) => a.franchiseGroup || a.nom))).sort();
-        setFranchiseGroups(groups);
-        if (groups.length > 0 && !selectedFranchiseGroup) setSelectedFranchiseGroup(groups[0]);
-        if (initActiviteId) {
-          const act = all.find((a) => String(a.id) === initActiviteId);
-          if (act?.type === 'distincte' || act?.type == null) setEntType('distinct');
-        }
+        setAllActivities(filtered);
       })
       .finally(() => setActivitesLoading(false));
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -408,11 +380,7 @@ export default function HistoriqueApproPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const activitiesForDropdown = isEntreprise
-    ? entType === 'franchise'
-      ? franchiseActivities.filter((a) => !selectedFranchiseGroup || (a.franchiseGroup || a.nom) === selectedFranchiseGroup)
-      : distinctActivities
-    : [];
+  const activitiesForDropdown = isEntreprise ? allActivities : [];
 
   const fetchResults = useCallback(async () => {
     setLoading(true);
@@ -424,10 +392,8 @@ export default function HistoriqueApproPage() {
       if (isEntreprise) {
         if (selectedActiviteId) {
           params.set('activiteId', selectedActiviteId);
-        } else if (selectedFranchiseGroup && entType === 'franchise') {
-          params.set('franchiseGroup', selectedFranchiseGroup);
         } else {
-          params.set('entType', entType);
+          params.set('entType', 'activite');
         }
         if (laboId) params.set('laboId', laboId);
       }
@@ -449,7 +415,7 @@ export default function HistoriqueApproPage() {
     }
     setLoading(false);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isEntreprise, selectedActiviteId, selectedFranchiseGroup, entType, selectedIngredientId, selectedCategoryId, startDate, endDate, selectedFournisseurId, refFactureFilter]);
+  }, [isEntreprise, selectedActiviteId, selectedIngredientId, selectedCategoryId, startDate, endDate, selectedFournisseurId, refFactureFilter]);
 
   const handleEdit = async (id: number, data: { quantite: number | null; prixUnitaire: number | null; fournisseurId: number | null; refFacture: string | null }) => {
     await api.put(`/api/stock/historique/${id}`, { ...data, isEntreprise });
@@ -472,8 +438,7 @@ export default function HistoriqueApproPage() {
     const params = new URLSearchParams();
     if (isEntreprise) {
       if (selectedActiviteId) params.set('activiteId', selectedActiviteId);
-      else if (selectedFranchiseGroup && entType === 'franchise') params.set('franchiseGroup', selectedFranchiseGroup);
-      else params.set('entType', entType);
+      else params.set('entType', 'activite');
     }
     if (selectedCategoryId === 'pt') {
       params.set('ptOnly', 'true');
@@ -516,19 +481,8 @@ export default function HistoriqueApproPage() {
     marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6,
   };
 
-  const showTypeToggle = isEntreprise && !lockedType;
-
-  const pageTitle = lockedType === 'franchise'
-    ? `Historique Appro Franchise — ${currentYear}`
-    : lockedType === 'distinct'
-      ? `Historique Appro Distinct — ${currentYear}`
-      : `${t('client.historique_appro.title')} — ${currentYear}`;
-
-  const contextSubtitle = lockedType === 'franchise'
-    ? 'Toutes les activités franchise consolidées'
-    : lockedType === 'distinct'
-      ? 'Activités distinctes'
-      : 'Consultation et export de l\'historique des approvisionnements';
+  const pageTitle = `${t('client.historique_appro.title')} — ${currentYear}`;
+  const contextSubtitle = 'Consultation et export de l\'historique des approvisionnements';
 
   const prixColor = (prix: number | null) => {
     if (prix === null) return 'var(--text-muted)';
@@ -572,20 +526,6 @@ export default function HistoriqueApproPage() {
           <span style={{ fontWeight: 700, fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.09em', color: 'var(--text-muted)' }}>
             Filtres
           </span>
-          {showTypeToggle && (
-            <div style={{ display: 'flex', gap: 6 }}>
-              {(['franchise', 'distinct'] as const).map((tp) => (
-                <button
-                  key={tp}
-                  className={`btn btn-sm ${entType === tp ? 'btn-primary' : 'btn-ghost'}`}
-                  style={{ padding: '4px 14px', fontSize: '0.8rem' }}
-                  onClick={() => { setEntType(tp); setSelectedActiviteId(''); setResults([]); setSearched(false); }}
-                >
-                  {tp === 'franchise' ? t('client.historique_appro.franchise') : t('client.historique_appro.distinct')}
-                </button>
-              ))}
-            </div>
-          )}
         </div>
 
         {/* Section 1: Entity + Product */}
@@ -595,21 +535,6 @@ export default function HistoriqueApproPage() {
             Entité &amp; Produit
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(190px, 1fr))', gap: '12px 20px' }}>
-            {isEntreprise && !isActiviteGerant && entType === 'franchise' && franchiseGroups.length > 0 && (
-              <div>
-                <label style={labelStyle}>{t('client.historique_appro.franchise_group')}</label>
-                <select
-                  className="input"
-                  style={{ width: '100%' }}
-                  value={selectedFranchiseGroup}
-                  onChange={(e) => { setSelectedFranchiseGroup(e.target.value); setSelectedActiviteId(''); }}
-                >
-                  <option value="">— Tous les groupes —</option>
-                  {franchiseGroups.map((g) => <option key={g} value={g}>{g}</option>)}
-                </select>
-              </div>
-            )}
-
             {isEntreprise && activitesLoading ? (
               <div style={{ display: 'flex', alignItems: 'flex-end', paddingBottom: 8 }}>
                 <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>{t('common.loading')}</span>

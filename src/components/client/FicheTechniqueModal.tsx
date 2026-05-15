@@ -41,11 +41,10 @@ interface Props {
   contextLabel: string;
   activityName: string;
   activities?: ActivityInfo[];
-  franchiseGroup?: string;
   onClose: () => void;
 }
 
-export default function FicheTechniqueModal({ productId, productName, hasIngredients, resolvedActId, contextLabel, activityName, activities, franchiseGroup, onClose }: Props) {
+export default function FicheTechniqueModal({ productId, productName, hasIngredients, resolvedActId, contextLabel, activityName, activities, onClose }: Props) {
   const { t } = useTranslation();
 
   const [mode, setMode] = useState<'stock' | 'manual' | null>(null);
@@ -70,7 +69,7 @@ export default function FicheTechniqueModal({ productId, productName, hasIngredi
   const [openMissingCats, setOpenMissingCats] = useState<Set<string>>(new Set());
 
   // FP Stock
-  const [stockActId, setStockActId] = useState<number | null>(null); // activity chosen for stock mode (franchise products)
+  const [stockActId, setStockActId] = useState<number | null>(null);
   const [stockCheckResult, setStockCheckResult] = useState<StockCheckResult | null>(null);
   const [stockCheckLoading, setStockCheckLoading] = useState(false);
   const [showMissingPopup, setShowMissingPopup] = useState(false);
@@ -106,7 +105,6 @@ export default function FicheTechniqueModal({ productId, productName, hasIngredi
   useEffect(() => {
     if (mode !== 'stock') { setStockCheckResult(null); return; }
     const effectiveActId = resolvedActId || stockActId;
-    // For franchise-wide products, wait until user has chosen an activity
     if (!resolvedActId && !stockActId) { setStockCheckResult(null); return; }
     setMissingCatFilter('');
     setMissingIngFilter('');
@@ -265,7 +263,6 @@ export default function FicheTechniqueModal({ productId, productName, hasIngredi
       const params = new URLSearchParams({ mode });
       const effectiveActId = resolvedActId || (mode === 'stock' ? stockActId : null);
       if (effectiveActId) params.set('activiteId', String(effectiveActId));
-      if (!effectiveActId && franchiseGroup) params.set('fg', franchiseGroup);
       const response = await api.get(`/products/${productId}/export?${params}`, { responseType: 'blob' });
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
@@ -385,7 +382,6 @@ export default function FicheTechniqueModal({ productId, productName, hasIngredi
                       </div>
                     ) : (
                       <div>
-                        {/* Show selected activity for franchise products */}
                         {!resolvedActId && stockActId && (
                           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
                             <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#1e40af' }}>

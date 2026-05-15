@@ -157,7 +157,7 @@ export default function HistoriquepertesPage() {
   const { user, canWrite } = useAuth();
   const [searchParams] = useSearchParams();
   const isEntreprise = user?.compteType === 'entreprise' || !user?.compteType;
-  const type = searchParams.get('type') as 'franchise' | 'distinct' | null;
+  const type = searchParams.get('type');
   const urlActiviteId = searchParams.get('activiteId') || '';
   const isGerant = user?.role === 'gerant';
   const isActiviteGerant = isGerant && !!urlActiviteId;
@@ -198,9 +198,7 @@ export default function HistoriquepertesPage() {
     api.get('/api/entreprise/activites')
       .then(({ data }) => {
         const all = data as Activite[];
-        if (type === 'franchise') setActivites(all.filter((a) => a.type === 'franchise'));
-        else if (type === 'distinct') setActivites(all.filter((a) => a.type === 'distincte' || a.type == null));
-        else setActivites(all);
+        setActivites(all);
       }).catch(() => {});
   }, [isEntreprise, type]);
 
@@ -313,9 +311,7 @@ export default function HistoriquepertesPage() {
     await loadPertes();
   };
 
-  const pageTitle = type === 'franchise' ? 'Historique Pertes — Franchise'
-    : type === 'distinct' ? 'Historique Pertes — Activités Distinctes'
-    : 'Historique Pertes';
+  const pageTitle = 'Historique Pertes';
 
   return (
     <div className="page-content">

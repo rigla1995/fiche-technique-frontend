@@ -29,7 +29,7 @@ interface HistEntry {
 }
 
 interface IngOption { ingredientId: number; nom: string; categorie: string }
-interface Activite { id: number; nom: string; type: string; franchiseGroup: string | null }
+interface Activite { id: number; nom: string }
 
 const labelStyle: React.CSSProperties = {
   fontSize: '0.68rem', fontWeight: 800, color: 'var(--text-muted)',
@@ -82,11 +82,7 @@ export default function HistoriqueInventairePage() {
     if (!section) return;
     api.get('/api/entreprise/activites')
       .then(({ data }) => {
-        const filtered = (data as Activite[]).filter((a) =>
-          section === 'franchise'
-            ? (a.type === 'franchise_avec_labo' || a.type === 'franchise_gestion_separee' || a.franchiseGroup)
-            : a.type === 'distincte' || a.type == null
-        );
+        const filtered = data as Activite[];
         setActivites(filtered);
         if (filtered.length === 1) setSelectedActiviteId(filtered[0].id);
       })
@@ -191,7 +187,7 @@ export default function HistoriqueInventairePage() {
   const contextTitle = laboId
     ? `Labo — ${contextNom}`
     : section
-    ? `${section === 'franchise' ? 'Franchise' : 'Distinct'}${contextNom ? ` — ${contextNom}` : ''}`
+    ? `Activités${contextNom ? ` — ${contextNom}` : ''}`
     : contextNom || '';
 
   const showActiviteSelector = !!section && !activiteId && activites.length > 1;

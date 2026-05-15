@@ -9,8 +9,6 @@ const TUNISIAN_PHONE_RE = /^(\+216[\s-]?)?[2579]\d{7}$/;
 
 type ActiviteForm = { nom: string; adresse: string; telephone: string };
 const emptyForm = (): ActiviteForm => ({ nom: '', adresse: '', telephone: '' });
-type FranchiseStepForm = { telephone: string; adresse: string };
-const emptyFranchiseStep = (): FranchiseStepForm => ({ telephone: '', adresse: '' });
 
 interface Props {
   onCreated?: () => void;
@@ -30,26 +28,18 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState<ActiviteForm>(emptyForm());
-  const [memeActivite, setMemeActivite] = useState<boolean | null>(null);
-  const [nombreActivites, setNombreActivites] = useState('1');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [msg, setMsg] = useState('');
   const [isDuplicate, setIsDuplicate] = useState(false);
-  // Franchise wizard state
-  const [franchiseName, setFranchiseName] = useState('');
-  const [franchiseStep, setFranchiseStep] = useState(0);
-  const [franchiseForms, setFranchiseForms] = useState<FranchiseStepForm[]>([]);
   // Labo wizard state
   const [hasLabo, setHasLabo] = useState<boolean | null>(null);
   const [selectedLaboId, setSelectedLaboId] = useState<number | ''>('');
-  const [wizardStep, setWizardStep] = useState(1); // 0=type, 1=main, 2=labo, 3=per-activity
+  const [wizardStep, setWizardStep] = useState(1); // 1=main, 2=labo, 4=recap
   const [labos, setLabos] = useState<Labo[]>([]);
   const [abonnementConfig, setAbonnementConfig] = useState<AbonnementConfig | null>(null);
-  // List filters
-  const [filterFranchiseGroup, setFilterFranchiseGroup] = useState('');
-  const [filterFranchiseName, setFilterFranchiseName] = useState('');
-  const [filterDistinctName, setFilterDistinctName] = useState('');
+  // List filter
+  const [filterName, setFilterName] = useState('');
   // Labo detail popup (click on labo badge in row)
   const [laboPopup, setLaboPopup] = useState<{ nom: string; tel: string | null; adresse: string | null } | null>(null);
   // Delete labo confirmation
@@ -66,9 +56,7 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
   const [laboError, setLaboError] = useState('');
 
   // Delete confirmation modal
-  type DeleteTarget =
-    | { kind: 'franchise-group'; group: string; laboNom: string | null; acts: Activite[] }
-    | { kind: 'activite'; act: Activite };
+  type DeleteTarget = { kind: 'activite'; act: Activite };
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
   const [deleting, setDeleting] = useState(false);
 
@@ -108,28 +96,14 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
   const atLaboLimit = maxLabos !== null && labos.length >= maxLabos;
   const configHasLabo = maxLabos !== null && maxLabos > 0;
 
-  const isFranchise = memeActivite === true;
-
-  const openAdd = (preType?: 'franchise' | 'franchise_labo' | 'distincte') => {
+  const openAdd = () => {
     setEditingId(null);
     setIsDuplicate(false);
     setForm(emptyForm());
-    // Single-activité config: always distincte, skip type question
-    const forceSingle = maxActivites === 1;
-    const preIsFranchise = preType === 'franchise' || preType === 'franchise_labo';
-    setMemeActivite(forceSingle ? false : preIsFranchise ? true : preType === 'distincte' ? false : null);
-    setNombreActivites('2');
-    setFranchiseName('');
-    setFranchiseStep(0);
-    setFranchiseForms([emptyFranchiseStep(), emptyFranchiseStep()]);
-    // Pre-determine labo: if config has no labos → always false
-    if (preType === 'franchise_labo') { setHasLabo(true); }
-    else if (preType === 'franchise') { setHasLabo(configHasLabo ? null : false); }
-    else if (preType === 'distincte') { setHasLabo(configHasLabo ? null : false); }
-    else { setHasLabo(null); }
+    setHasLabo(configHasLabo ? null : false);
     setSelectedLaboId('');
     setError('');
-    setWizardStep(preType ? 1 : 0);
+    setWizardStep(1);
     setShowForm(true);
   };
 
@@ -137,8 +111,6 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
     setEditingId(act.id);
     setIsDuplicate(false);
     setForm({ nom: act.nom, adresse: act.adresse || '', telephone: act.telephone || '' });
-    setMemeActivite(null);
-    setNombreActivites('1');
     setError('');
     setWizardStep(1);
     setShowForm(true);
@@ -147,15 +119,7 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
   const openDuplicate = (act: Activite) => {
     setEditingId(null);
     setIsDuplicate(true);
-    // For franchise activities, auto-suggest next name: "<group> <count+1>"
-    let suggestedNom = act.nom;
-    if (act.type === 'franchise' && act.franchiseGroup) {
-      const groupCount = activites.filter((a) => a.franchiseGroup === act.franchiseGroup).length;
-      suggestedNom = `${act.franchiseGroup} ${groupCount + 1}`;
-    }
-    setForm({ nom: suggestedNom, adresse: '', telephone: '' });
-    setMemeActivite(null);
-    setNombreActivites('1');
+    setForm({ nom: act.nom, adresse: '', telephone: '' });
     setError('');
     setWizardStep(1);
     setShowForm(true);
@@ -168,123 +132,19 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
     setError('');
   };
 
-  // Derived from activites — needed before franchiseUnlocked to avoid TDZ
-  const franchiseActivitiesEarly = activites.filter((a) => a.type === 'franchise');
-  const distinctActivitiesEarly = activites.filter((a) => a.type !== 'franchise');
-  const franchiseGroupNamesEarly = Array.from(new Set(franchiseActivitiesEarly.map((a) => a.franchiseGroup || a.nom))).sort();
-  const distinctNamesEarly = Array.from(new Set(distinctActivitiesEarly.map((a) => a.nom.toLowerCase())));
-
-  const franchiseNameConflict = !editingId && franchiseName.trim()
-    ? franchiseGroupNamesEarly.some((g) => g.toLowerCase() === franchiseName.trim().toLowerCase())
+  const nameConflict = !editingId && !isDuplicate && form.nom.trim()
+    ? activites.some((a) => a.nom.toLowerCase() === form.nom.trim().toLowerCase())
     : false;
-  const distinctNameConflict = !editingId && !isDuplicate && form.nom.trim()
-    ? distinctNamesEarly.includes(form.nom.trim().toLowerCase())
-    : false;
-
-  const franchiseCount = Math.max(0, parseInt(nombreActivites) || 0);
-
-  const handleNombreActivitesChange = (val: string) => {
-    setNombreActivites(val);
-    const n = Math.max(0, parseInt(val) || 0);
-    setFranchiseForms((prev) => {
-      if (n <= prev.length) return prev.slice(0, n);
-      return [...prev, ...Array.from({ length: n - prev.length }, emptyFranchiseStep)];
-    });
-    setFranchiseStep((s) => Math.min(s, Math.max(0, n - 1)));
-  };
-
-  const updateFranchiseForm = (field: keyof FranchiseStepForm, value: string) => {
-    setFranchiseForms((prev) => prev.map((f, i) => i === franchiseStep ? { ...f, [field]: value } : f));
-  };
-
-  const validateFranchiseStep = (f: FranchiseStepForm | undefined): string | null => {
-    if (!f) return t('common.error');
-    if (!f.telephone.trim()) return t('validation.phone_required');
-    if (!TUNISIAN_PHONE.test(f.telephone.replace(/\s/g, ''))) return t('validation.phone_invalid');
-    if (!f.adresse.trim()) return t('validation.address_required');
-    return null;
-  };
-
-  const handleFranchiseNext = () => {
-    const err = validateFranchiseStep(franchiseForms[franchiseStep]);
-    if (err) { setError(err); return; }
-    setError('');
-    setFranchiseStep((s) => s + 1);
-  };
-
-  const handleFranchiseSave = async () => {
-    const err = validateFranchiseStep(franchiseForms[franchiseStep]);
-    if (err) { setError(err); return; }
-    if (!franchiseName.trim()) { setError(t('validation.name_required')); return; }
-    const fn = franchiseName.trim();
-
-    if (hasLabo === true && !selectedLaboId) { setError('Veuillez sélectionner un labo'); return; }
-
-    setSaving(true);
-    setError('');
-    try {
-      const isFirst = activites.length === 0;
-
-      const laboId: number | null = hasLabo === true && selectedLaboId ? Number(selectedLaboId) : null;
-
-      for (let i = 0; i < franchiseForms.length; i++) {
-        const f = franchiseForms[i];
-        await api.post('/api/entreprise/activites', {
-          nom: `${fn} ${i + 1}`,
-          franchiseName: fn,
-          memeActivite: true,
-          telephone: f.telephone,
-          adresse: f.adresse,
-          ...(laboId ? { laboId } : {}),
-        });
-      }
-      if (onCreated) onCreated();
-      if (isFirst && user?.onboardingStep === 2) await advanceOnboarding(3);
-      closeForm();
-      if (isFirst) {
-        navigate('/client/catalogue-global?created=1');
-        return;
-      }
-      setMsg(t('client.entreprise.activity_created'));
-      setTimeout(() => setMsg(''), 3000);
-      load();
-    } catch (err: unknown) {
-      const errMsg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
-      setError(errMsg || t('common.error'));
-    }
-    setSaving(false);
-  };
-
-  const handleFranchiseSetupNext = () => {
-    if (!franchiseName.trim()) { setError('Nom du réseau requis'); return; }
-    if (franchiseNameConflict) return;
-    if (franchiseCount < 2) { setError('Minimum 2 activités requises'); return; }
-    if (maxActivites !== null && franchiseCount > maxActivites - activites.length) {
-      setError(`Seulement ${maxActivites - activites.length} activité(s) disponible(s)`); return;
-    }
-    setError('');
-    setWizardStep(configHasLabo ? 2 : 3);
-  };
 
   const handleLaboStepNext = () => {
     if (hasLabo === null) { setError('Veuillez choisir une option'); return; }
     if (hasLabo === true && !selectedLaboId) { setError('Veuillez sélectionner un labo'); return; }
     setError('');
-    setWizardStep(isFranchise ? 3 : 4);
-  };
-
-  const handleActivityBack = () => {
-    setError('');
-    if (franchiseStep > 0) {
-      setFranchiseStep((s) => s - 1);
-    } else {
-      setWizardStep(configHasLabo ? 2 : 1);
-    }
+    setWizardStep(4);
   };
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Only handles edit, duplicate, and distinct creation (franchise uses handleFranchiseSave)
     if (!form.nom.trim()) { setError(t('validation.name_required')); return; }
     if (form.telephone && !TUNISIAN_PHONE.test(form.telephone.replace(/\s/g, ''))) {
       setError(t('validation.phone_invalid'));
@@ -298,13 +158,10 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
         setMsg(t('client.entreprise.activity_updated'));
       } else {
         const isFirst = activites.length === 0;
-
-        const distinctLaboId: number | null =
-          !isFranchise && hasLabo === true && selectedLaboId ? Number(selectedLaboId) : null;
-
+        const laboId: number | null =
+          hasLabo === true && selectedLaboId ? Number(selectedLaboId) : null;
         const payload: Record<string, unknown> = { nom: form.nom, adresse: form.adresse, telephone: form.telephone };
-        if (memeActivite !== null) payload.memeActivite = memeActivite;
-        if (distinctLaboId) payload.laboId = distinctLaboId;
+        if (laboId) payload.laboId = laboId;
         await api.post('/api/entreprise/activites', payload);
         if (onCreated) onCreated();
         if (isFirst && user?.onboardingStep === 2) await advanceOnboarding(3);
@@ -332,12 +189,7 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
     if (!deleteTarget) return;
     setDeleting(true);
     try {
-      if (deleteTarget.kind === 'franchise-group') {
-        await api.delete(`/api/entreprise/franchise-groups/${encodeURIComponent(deleteTarget.group)}`);
-        window.dispatchEvent(new Event('labos-changed'));
-      } else {
-        await api.delete(`/api/entreprise/activites/${deleteTarget.act.id}`);
-      }
+      await api.delete(`/api/entreprise/activites/${deleteTarget.act.id}`);
       setDeleteTarget(null);
       load();
     } catch { /* ignore */ }
@@ -435,23 +287,12 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
       setError(t('validation.phone_invalid')); return;
     }
     setError('');
-    // New distinct with labo config → labo selection step first
-    setWizardStep(!editingId && !isDuplicate && !isFranchise && configHasLabo ? 2 : 4);
-  };
-
-  const handleFranchiseGoToRecap = () => {
-    const err = validateFranchiseStep(franchiseForms[franchiseStep]);
-    if (err) { setError(err); return; }
-    setError('');
-    setWizardStep(4);
+    // New activité with labo config → labo selection step first
+    setWizardStep(!editingId && !isDuplicate && configHasLabo ? 2 : 4);
   };
 
   const handleFinalSave = () => {
-    if (isFranchise && !editingId && !isDuplicate) {
-      handleFranchiseSave();
-    } else {
-      submit({ preventDefault: () => {} } as React.FormEvent);
-    }
+    submit({ preventDefault: () => {} } as React.FormEvent);
   };
 
   const toggleIngredient = async (ingredientId: number) => {
@@ -469,22 +310,8 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
     ingredientGroups[cat].push(ing);
   }
 
-  const franchiseActivities = franchiseActivitiesEarly;
-  const distinctActivities = distinctActivitiesEarly;
-  const franchiseGroupNames = franchiseGroupNamesEarly;
-  const filteredFranchise = franchiseActivities.filter((a) => {
-    const g = a.franchiseGroup || a.nom;
-    return (!filterFranchiseGroup || g === filterFranchiseGroup) &&
-      (!filterFranchiseName || a.nom.toLowerCase().includes(filterFranchiseName.toLowerCase()));
-  });
-  const franchiseGrouped: Record<string, Activite[]> = {};
-  for (const a of filteredFranchise) {
-    const g = a.franchiseGroup || a.nom;
-    if (!franchiseGrouped[g]) franchiseGrouped[g] = [];
-    franchiseGrouped[g].push(a);
-  }
-  const filteredDistinct = distinctActivities.filter((a) =>
-    !filterDistinctName || a.nom.toLowerCase().includes(filterDistinctName.toLowerCase())
+  const filteredActivites = activites.filter((a) =>
+    !filterName || a.nom.toLowerCase().includes(filterName.toLowerCase())
   );
 
   const usedLabos = new Set(activites.filter((a) => a.laboId).map((a) => a.laboId)).size;
@@ -504,7 +331,7 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
               <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0 }}>{t('nav.activites')}</h1>
             </div>
             <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.85rem', margin: 0 }}>
-              Gérez vos points de vente, franchises et laboratoires de production
+              Gérez vos points de vente et laboratoires de production
             </p>
           </div>
           <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
@@ -569,8 +396,8 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
             {maxActivites === 1
               ? 'Votre abonnement inclut 1 activité. Renseignez son nom et son adresse pour commencer.'
               : maxLabos
-                ? `Votre abonnement inclut jusqu'à ${maxActivites} activités et ${maxLabos} labo(s). Choisissez le type pour démarrer.`
-                : `Votre abonnement inclut jusqu'à ${maxActivites} activités. Choisissez le type pour démarrer.`
+                ? `Votre abonnement inclut jusqu'à ${maxActivites} activités et ${maxLabos} labo(s).`
+                : `Votre abonnement inclut jusqu'à ${maxActivites} activités.`
             }
           </p>
           <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center' }}>
@@ -578,226 +405,103 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
               <div style={{ fontSize: 13, color: '#6b7280', background: '#f3f4f6', border: '1px solid #e5e7eb', borderRadius: 8, padding: '8px 16px' }}>
                 🔒 Limite de {maxActivites} activité(s) atteinte
               </div>
-            ) : maxActivites === 1 ? (
-              <button className="btn btn-primary" onClick={() => openAdd('distincte')}>
+            ) : (
+              <button className="btn btn-primary" onClick={() => openAdd()}>
                 + Ajouter mon activité
               </button>
-            ) : (
-              <>
-                <button className="btn btn-primary" onClick={() => openAdd('franchise')} style={{ minWidth: 180 }}>
-                  🔗 {maxLabos ? 'Franchise avec Labo' : t('client.entreprise.franchise_yes')}
-                </button>
-                <button className="btn btn-secondary" onClick={() => openAdd('distincte')} style={{ minWidth: 180 }}>
-                  📍 {t('client.entreprise.franchise_no')}
-                </button>
-              </>
             )}
           </div>
         </div>
       ) : (
         <>
-          {/* Franchise section — always visible so user can add a franchise activity */}
+          {/* Activités section */}
           <div style={{ marginBottom: 32 }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14, padding: '10px 16px', background: 'linear-gradient(135deg,#eff6ff,#dbeafe)', borderRadius: 12, border: '1px solid #bfdbfe' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <span style={{ fontSize: '1.1rem' }}>🔗</span>
-                  <span style={{ fontSize: '0.9rem', fontWeight: 800, color: '#1e40af' }}>{t('nav.espace_franchise')}</span>
-                  <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#7c3aed', background: '#ede9fe', border: '1px solid #c4b5fd', borderRadius: 20, padding: '2px 10px' }}>
-                    🏭 {new Set(franchiseActivities.filter((a) => a.laboId).map((a) => a.laboId)).size} labo(s)
-                  </span>
-                  <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#1e40af', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 20, padding: '2px 10px' }}>
-                    🏢 {franchiseActivities.length} activité(s)
-                  </span>
-                </div>
-                {atActiviteLimit ? (
-                  <button className="btn btn-sm" style={{ background: '#fef3c7', color: '#92400e', border: '1px solid #f59e0b', borderRadius: 8, fontSize: '0.75rem', padding: '5px 12px', cursor: 'pointer' }} onClick={() => navigate('/client/support?type=supplement')}>
-                    ➕ Augmenter la capacité
-                  </button>
-                ) : (
-                  <button className="btn btn-primary btn-sm" onClick={() => openAdd('franchise')}>
-                    + Nouvelle franchise
-                  </button>
-                )}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14, padding: '10px 16px', background: 'linear-gradient(135deg,#f0fdf4,#dcfce7)', borderRadius: 12, border: '1px solid #bbf7d0' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span style={{ fontSize: '1.1rem' }}>🏢</span>
+                <span style={{ fontSize: '0.9rem', fontWeight: 800, color: '#166534' }}>{t('nav.activites')}</span>
+                <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#059669', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 20, padding: '2px 10px' }}>
+                  🏢 {activites.length} activité(s)
+                </span>
               </div>
-
-              {franchiseActivities.length === 0 ? (
-                <p className="text-muted" style={{ fontSize: '0.85rem' }}>{t('nav.no_franchise_activity')}</p>
+              {atActiviteLimit ? (
+                <button className="btn btn-sm" style={{ background: '#fef3c7', color: '#92400e', border: '1px solid #f59e0b', borderRadius: 8, fontSize: '0.75rem', padding: '5px 12px', cursor: 'pointer' }} onClick={() => navigate('/client/support?type=supplement')}>
+                  ➕ Augmenter la capacité
+                </button>
               ) : (
-                <>
-                  {/* Franchise filters — always visible */}
-                  <div style={{ display: 'flex', gap: 10, marginBottom: 14, flexWrap: 'wrap', alignItems: 'flex-end' }}>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                      <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('client.entreprise.group_label', 'Groupe')}</span>
-                      <select
-                        className="input"
-                        style={{ maxWidth: 200 }}
-                        value={filterFranchiseGroup}
-                        onChange={(e) => setFilterFranchiseGroup(e.target.value)}
-                      >
-                        <option value="">{t('client.entreprise.all_groups')}</option>
-                        {franchiseGroupNames.map((g) => <option key={g} value={g}>{g}</option>)}
-                      </select>
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 3, flex: '1 1 auto', maxWidth: 260 }}>
-                      <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('common.activity_name', "Nom de l'activité")}</span>
-                      <input
-                        type="text"
-                        className="input"
-                        style={{ minWidth: 140 }}
-                        placeholder={t('common.activity_name', "Nom de l'activité") + '…'}
-                        value={filterFranchiseName}
-                        onChange={(e) => setFilterFranchiseName(e.target.value)}
-                      />
-                    </div>
-                  </div>
-
-                  {filteredFranchise.length === 0 ? (
-                    <p className="text-muted">{t('common.no_result')}</p>
-                  ) : (
-                    Object.entries(franchiseGrouped).sort(([a], [b]) => a.localeCompare(b)).map(([group, acts]) => {
-                      const groupLabo = acts.find((a) => a.laboNom)?.laboNom ?? null;
-                      return (
-                        <div key={group} style={{ marginBottom: 24 }}>
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                            <h3 style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.06em', margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
-                              🏢 {group} <span style={{ fontWeight: 400, fontSize: '0.72rem', opacity: 0.7 }}>({acts.length})</span>
-                            </h3>
-                            <button
-                              className="btn btn-danger-ghost btn-sm"
-                              title={t('client.entreprise.delete_group', 'Supprimer le groupe')}
-                              onClick={() => setDeleteTarget({ kind: 'franchise-group', group, laboNom: groupLabo, acts })}
-                            >
-                              🗑 {t('client.entreprise.delete_group', 'Supprimer le groupe')}
-                            </button>
-                          </div>
-                          <div className="table-responsive card" style={{ marginBottom: 0 }}>
-                            <table className="table">
-                              <thead>
-                                <tr>
-                                  <th>{t('common.name')}</th>
-                                  <th style={{ width: 120 }}>{t('client.entreprise.activity_telephone')}</th>
-                                  <th>{t('client.entreprise.activity_adresse')}</th>
-                                  {acts.some((a) => a.laboId) && (
-                                    <th style={{ width: 130 }}>{t('client.entreprise.labo', 'Labo')}</th>
-                                  )}
-                                  <th style={{ width: 140, textAlign: 'right' }}></th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {acts.map((act) => (
-                                  <tr key={act.id}>
-                                    <td style={{ fontWeight: 700 }}>{act.nom}</td>
-                                    <td style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{act.telephone || '—'}</td>
-                                    <td style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{act.adresse || '—'}</td>
-                                    {acts.some((a) => a.laboId) && (
-                                      <td>
-                                        {act.laboNom ? (
-                                          <button
-                                            style={{ fontSize: '0.78rem', fontWeight: 600, color: '#7c3aed', background: '#ede9fe', border: '1px solid #c4b5fd', borderRadius: 20, padding: '2px 8px', cursor: 'pointer' }}
-                                            onClick={() => setLaboPopup({ nom: act.laboNom!, tel: act.laboTel ?? null, adresse: act.laboAdresse ?? null })}
-                                          >
-                                            🏭 {act.laboNom}
-                                          </button>
-                                        ) : (
-                                          <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>—</span>
-                                        )}
-                                      </td>
-                                    )}
-                                    <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
-                                      {!act.laboId && (
-                                        <button className="btn btn-ghost btn-sm" title={t('client.entreprise.manage_ingredients')} onClick={() => openIngredients(act)}>🧂</button>
-                                      )}
-                                      <button className="btn btn-ghost btn-sm" title={t('common.edit')} onClick={() => openEdit(act)}>✏️</button>
-                                      <button className="btn btn-ghost btn-sm" title={t('client.entreprise.duplicate_activity')} onClick={() => openDuplicate(act)}>⧉</button>
-                                    </td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          </div>
-                        </div>
-                      );
-                    })
-                  )}
-                </>
+                <button className="btn btn-primary btn-sm" onClick={() => openAdd()}>
+                  + Nouvelle activité
+                </button>
               )}
             </div>
 
-          {/* Distinct section — always visible when any activities exist so user can add a distinct activity */}
-          {(distinctActivities.length > 0 || franchiseActivities.length > 0) && (
-            <div style={{ marginBottom: 32 }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14, padding: '10px 16px', background: 'linear-gradient(135deg,#f0fdf4,#dcfce7)', borderRadius: 12, border: '1px solid #bbf7d0' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <span style={{ fontSize: '1.1rem' }}>📍</span>
-                  <span style={{ fontSize: '0.9rem', fontWeight: 800, color: '#166534' }}>{t('nav.espace_distinct')}</span>
-                  <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#059669', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 20, padding: '2px 10px' }}>
-                    🏢 {distinctActivities.length} activité(s)
-                  </span>
-                </div>
-                {atActiviteLimit ? (
-                  <button className="btn btn-sm" style={{ background: '#fef3c7', color: '#92400e', border: '1px solid #f59e0b', borderRadius: 8, fontSize: '0.75rem', padding: '5px 12px', cursor: 'pointer' }} onClick={() => navigate('/client/support?type=supplement')}>
-                    ➕ Augmenter la capacité
-                  </button>
-                ) : (
-                  <button className="btn btn-secondary btn-sm" onClick={() => openAdd('distincte')}>
-                    + Nouvelle activité distincte
-                  </button>
-                )}
+            {/* Filter */}
+            <div style={{ display: 'flex', gap: 10, marginBottom: 14, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 3, flex: '1 1 auto', maxWidth: 260 }}>
+                <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('common.activity_name', "Nom de l'activité")}</span>
+                <input
+                  type="text"
+                  className="input"
+                  style={{ minWidth: 140 }}
+                  placeholder={t('common.activity_name', "Nom de l'activité") + '…'}
+                  value={filterName}
+                  onChange={(e) => setFilterName(e.target.value)}
+                />
               </div>
-
-              {distinctActivities.length === 0 ? (
-                <p className="text-muted" style={{ fontSize: '0.85rem' }}>{t('nav.no_distinct_activity')}</p>
-              ) : (
-                <>
-                  <div style={{ display: 'flex', gap: 10, marginBottom: 14, flexWrap: 'wrap', alignItems: 'flex-end' }}>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 3, flex: '1 1 auto', maxWidth: 260 }}>
-                      <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('common.activity_name', "Nom de l'activité")}</span>
-                      <input
-                        type="text"
-                        className="input"
-                        style={{ minWidth: 140 }}
-                        placeholder={t('common.activity_name', "Nom de l'activité") + '…'}
-                        value={filterDistinctName}
-                        onChange={(e) => setFilterDistinctName(e.target.value)}
-                      />
-                    </div>
-                  </div>
-
-                  {filteredDistinct.length === 0 ? (
-                    <p className="text-muted">{t('common.no_result')}</p>
-                  ) : (
-                    <div className="table-responsive card" style={{ marginBottom: 0 }}>
-                      <table className="table">
-                        <thead>
-                          <tr>
-                            <th>{t('common.name')}</th>
-                            <th style={{ width: 150 }}>{t('client.entreprise.activity_telephone')}</th>
-                            <th>{t('client.entreprise.activity_adresse')}</th>
-                            <th style={{ width: 140, textAlign: 'right' }}></th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {filteredDistinct.map((act) => (
-                            <tr key={act.id}>
-                              <td style={{ fontWeight: 700 }}>{act.nom}</td>
-                              <td style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{act.telephone || '—'}</td>
-                              <td style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{act.adresse || '—'}</td>
-                              <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
-                                <button className="btn btn-ghost btn-sm" title={t('client.entreprise.manage_ingredients')} onClick={() => openIngredients(act)}>🧂</button>
-                                <button className="btn btn-ghost btn-sm" title={t('common.edit')} onClick={() => openEdit(act)}>✏️</button>
-                                <button className="btn btn-ghost btn-sm" title={t('client.entreprise.duplicate_activity')} onClick={() => openDuplicate(act)}>⧉</button>
-                                <button className="btn btn-danger-ghost btn-sm" title={t('common.delete')} onClick={() => setDeleteTarget({ kind: 'activite', act })}>🗑</button>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
-                </>
-              )}
             </div>
-          )}
+
+            {filteredActivites.length === 0 ? (
+              <p className="text-muted">{t('common.no_result')}</p>
+            ) : (
+              <div className="table-responsive card" style={{ marginBottom: 0 }}>
+                <table className="table">
+                  <thead>
+                    <tr>
+                      <th>{t('common.name')}</th>
+                      <th style={{ width: 150 }}>{t('client.entreprise.activity_telephone')}</th>
+                      <th>{t('client.entreprise.activity_adresse')}</th>
+                      {activites.some((a) => a.laboId) && (
+                        <th style={{ width: 130 }}>{t('client.entreprise.labo', 'Labo')}</th>
+                      )}
+                      <th style={{ width: 140, textAlign: 'right' }}></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredActivites.map((act) => (
+                      <tr key={act.id}>
+                        <td style={{ fontWeight: 700 }}>{act.nom}</td>
+                        <td style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{act.telephone || '—'}</td>
+                        <td style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{act.adresse || '—'}</td>
+                        {activites.some((a) => a.laboId) && (
+                          <td>
+                            {act.laboNom ? (
+                              <button
+                                style={{ fontSize: '0.78rem', fontWeight: 600, color: '#7c3aed', background: '#ede9fe', border: '1px solid #c4b5fd', borderRadius: 20, padding: '2px 8px', cursor: 'pointer' }}
+                                onClick={() => setLaboPopup({ nom: act.laboNom!, tel: act.laboTel ?? null, adresse: act.laboAdresse ?? null })}
+                              >
+                                🏭 {act.laboNom}
+                              </button>
+                            ) : (
+                              <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>—</span>
+                            )}
+                          </td>
+                        )}
+                        <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+                          {!act.laboId && (
+                            <button className="btn btn-ghost btn-sm" title={t('client.entreprise.manage_ingredients')} onClick={() => openIngredients(act)}>🧂</button>
+                          )}
+                          <button className="btn btn-ghost btn-sm" title={t('common.edit')} onClick={() => openEdit(act)}>✏️</button>
+                          <button className="btn btn-ghost btn-sm" title={t('client.entreprise.duplicate_activity')} onClick={() => openDuplicate(act)}>⧉</button>
+                          <button className="btn btn-danger-ghost btn-sm" title={t('common.delete')} onClick={() => setDeleteTarget({ kind: 'activite', act })}>🗑</button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+
           {/* Labos section — visible when config includes labos */}
           {configHasLabo && (
             <div style={{ marginBottom: 32 }}>
@@ -875,27 +579,14 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                     ? (wizardStep === 4 ? '✅ Récapitulatif' : t('client.entreprise.edit_activity'))
                     : isDuplicate
                     ? (wizardStep === 4 ? '✅ Récapitulatif' : t('client.entreprise.duplicate_activity'))
-                    : wizardStep === 0
-                    ? t('client.entreprise.add_activity')
                     : wizardStep === 4
                     ? '✅ Récapitulatif'
-                    : isFranchise
-                    ? wizardStep === 1
-                      ? '🔗 Nouveau réseau franchise'
-                      : wizardStep === 2
-                      ? '🏭 Laboratoire'
-                      : `${franchiseName || 'Franchise'} — Activité ${franchiseStep + 1} / ${franchiseCount}`
                     : t('client.entreprise.add_activity')}
                 </h2>
-                {/* Progress indicator — franchise and distinct new */}
-                {!editingId && !isDuplicate && wizardStep >= 1 && (isFranchise || configHasLabo) && (
+                {/* Progress indicator — new activité with labo */}
+                {!editingId && !isDuplicate && wizardStep >= 1 && configHasLabo && (
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10 }}>
-                    {(isFranchise
-                      ? (configHasLabo
-                          ? [{ label: 'Réseau', s: 1 }, { label: 'Labo', s: 2 }, { label: 'Détails', s: 3 }, { label: 'Récap', s: 4 }]
-                          : [{ label: 'Réseau', s: 1 }, { label: 'Détails', s: 3 }, { label: 'Récap', s: 4 }])
-                      : [{ label: 'Infos', s: 1 }, { label: 'Labo', s: 2 }, { label: 'Récap', s: 4 }]
-                    ).map(({ label, s }, idx, arr) => (
+                    {[{ label: 'Infos', s: 1 }, { label: 'Labo', s: 2 }, { label: 'Récap', s: 4 }].map(({ label, s }, idx, arr) => (
                       <div key={s} style={{ display: 'flex', alignItems: 'center', gap: idx < arr.length - 1 ? 8 : 0 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
                           <span style={{
@@ -923,79 +614,8 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
 
             <form onSubmit={submit}>
 
-              {/* ── STEP 0: Type selection ── */}
-              {wizardStep === 0 && !editingId && !isDuplicate && (
-                <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                  <p style={{ margin: '0 0 4px', fontSize: '0.88rem', color: 'var(--text-muted)' }}>
-                    Choisissez le type d'activité à créer
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => { setMemeActivite(true); setHasLabo(configHasLabo ? null : false); setWizardStep(1); }}
-                    style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '16px 18px', borderRadius: 12, border: '2px solid var(--border)', background: 'var(--surface)', cursor: 'pointer', textAlign: 'left', width: '100%' }}
-                  >
-                    <span style={{ fontSize: '1.8rem', flexShrink: 0 }}>🔗</span>
-                    <div>
-                      <div style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text)' }}>Franchise</div>
-                      <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: 3 }}>Plusieurs points de vente partageant les mêmes recettes</div>
-                    </div>
-                    <span style={{ marginLeft: 'auto', color: 'var(--text-muted)', fontSize: '1.1rem' }}>›</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => { setMemeActivite(false); setHasLabo(configHasLabo ? null : false); setWizardStep(1); }}
-                    style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '16px 18px', borderRadius: 12, border: '2px solid var(--border)', background: 'var(--surface)', cursor: 'pointer', textAlign: 'left', width: '100%' }}
-                  >
-                    <span style={{ fontSize: '1.8rem', flexShrink: 0 }}>📍</span>
-                    <div>
-                      <div style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text)' }}>Activité distincte</div>
-                      <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: 3 }}>Point de vente indépendant avec sa propre gestion</div>
-                    </div>
-                    <span style={{ marginLeft: 'auto', color: 'var(--text-muted)', fontSize: '1.1rem' }}>›</span>
-                  </button>
-                </div>
-              )}
-
-              {/* ── STEP 1A: Franchise setup (name + count) ── */}
-              {wizardStep === 1 && isFranchise && !editingId && !isDuplicate && (
-                <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-                  <div className="form-field" style={{ marginBottom: 0 }}>
-                    <label style={{ fontWeight: 600 }}>Nom du réseau *</label>
-                    <input
-                      type="text"
-                      placeholder={t('client.entreprise.franchise_name_placeholder')}
-                      value={franchiseName}
-                      onChange={(e) => setFranchiseName(e.target.value)}
-                      autoFocus
-                      style={franchiseNameConflict ? { borderColor: 'var(--danger, #ef4444)' } : undefined}
-                    />
-                    {franchiseNameConflict && (
-                      <p style={{ color: 'var(--danger, #ef4444)', fontSize: '0.78rem', margin: '4px 0 0' }}>
-                        {t('client.entreprise.franchise_name_exists', { name: franchiseName.trim() })}
-                      </p>
-                    )}
-                  </div>
-                  <div className="form-field" style={{ marginBottom: 0 }}>
-                    <label style={{ fontWeight: 600 }}>
-                      {t('client.entreprise.franchise_count')} *{' '}
-                      <span style={{ fontWeight: 400, color: 'var(--text-muted)', fontSize: '0.78rem' }}>
-                        (min. 2{maxActivites !== null ? `, max. ${maxActivites - activites.length} disponibles` : ''})
-                      </span>
-                    </label>
-                    <input
-                      type="number"
-                      min="2"
-                      max={maxActivites !== null ? maxActivites - activites.length : 20}
-                      value={nombreActivites}
-                      onChange={(e) => handleNombreActivitesChange(e.target.value)}
-                      style={{ width: 90 }}
-                    />
-                  </div>
-                </div>
-              )}
-
-              {/* ── STEP 1B: Distinct new / Edit / Duplicate ── */}
-              {wizardStep === 1 && (!isFranchise || editingId || isDuplicate) && (
+              {/* ── STEP 1: Activity info ── */}
+              {wizardStep === 1 && (
                 <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                   <div className="form-field" style={{ marginBottom: 0 }}>
                     <label style={{ fontWeight: 600 }}>{t('client.entreprise.activity_nom')} *</label>
@@ -1004,9 +624,9 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                       value={form.nom}
                       onChange={(e) => setForm((f) => ({ ...f, nom: e.target.value }))}
                       autoFocus
-                      style={distinctNameConflict ? { borderColor: 'var(--danger, #ef4444)' } : undefined}
+                      style={nameConflict ? { borderColor: 'var(--danger, #ef4444)' } : undefined}
                     />
-                    {distinctNameConflict && (
+                    {nameConflict && (
                       <p style={{ color: 'var(--danger, #ef4444)', fontSize: '0.78rem', margin: '4px 0 0' }}>
                         {t('client.entreprise.activity_name_exists', { name: form.nom.trim() })}
                       </p>
@@ -1032,14 +652,11 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                 </div>
               )}
 
-              {/* ── STEP 2: Labo selection (franchise + distinct new) ── */}
+              {/* ── STEP 2: Labo selection (new activité only) ── */}
               {wizardStep === 2 && !editingId && !isDuplicate && (
                 <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                   <p style={{ margin: 0, fontSize: '0.88rem', color: 'var(--text-muted)' }}>
-                    {isFranchise
-                      ? <>Le réseau <strong>{franchiseName}</strong> sera-t-il approvisionné par un laboratoire central ?</>
-                      : "Cette activité sera-t-elle approvisionnée par un laboratoire ?"
-                    }
+                    Cette activité sera-t-elle approvisionnée par un laboratoire ?
                   </p>
                   <div style={{ display: 'flex', gap: 10 }}>
                     <label style={{
@@ -1058,7 +675,7 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                           {labos.length === 0 && <span style={{ fontWeight: 400, fontSize: '0.75rem', color: 'var(--text-muted)', marginLeft: 6 }}>(aucun labo créé)</span>}
                         </div>
                         <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: 2 }}>
-                          {isFranchise ? 'Un labo central approvisionne toutes les franchises' : 'Approvisionnement via un laboratoire'}
+                          Approvisionnement via un laboratoire
                         </div>
                       </div>
                     </label>
@@ -1091,50 +708,6 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                 </div>
               )}
 
-              {/* ── STEP 3: Per-activity details ── */}
-              {wizardStep === 3 && isFranchise && !editingId && !isDuplicate && (
-                <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                  {/* Progress bar */}
-                  {franchiseCount > 2 && (
-                    <div style={{ display: 'flex', gap: 3, marginBottom: 2 }}>
-                      {Array.from({ length: franchiseCount }, (_, i) => (
-                        <div key={i} style={{ flex: 1, height: 4, borderRadius: 4, background: i < franchiseStep ? '#22c55e' : i === franchiseStep ? 'var(--primary)' : '#e5e7eb' }} />
-                      ))}
-                    </div>
-                  )}
-                  <div className="form-field" style={{ marginBottom: 0 }}>
-                    <label style={{ fontWeight: 400, color: 'var(--text-muted)', fontSize: '0.78rem' }}>Nom de l'activité</label>
-                    <input
-                      type="text"
-                      value={`${franchiseName.trim()} ${franchiseStep + 1}`}
-                      disabled
-                      style={{ background: '#f8fafc', color: 'var(--text-muted)' }}
-                    />
-                  </div>
-                  <div className="form-field" style={{ marginBottom: 0 }}>
-                    <label style={{ fontWeight: 600 }}>
-                      {t('client.entreprise.activity_telephone')} *{' '}
-                      <span style={{ fontWeight: 400, color: 'var(--text-muted)', fontSize: '0.78rem' }}>{t('validation.phone_hint')}</span>
-                    </label>
-                    <input
-                      type="text"
-                      placeholder={t('validation.phone_placeholder')}
-                      value={franchiseForms[franchiseStep]?.telephone ?? ''}
-                      onChange={(e) => updateFranchiseForm('telephone', e.target.value)}
-                      autoFocus
-                    />
-                  </div>
-                  <div className="form-field" style={{ marginBottom: 0 }}>
-                    <label style={{ fontWeight: 600 }}>{t('client.entreprise.activity_adresse')} *</label>
-                    <textarea
-                      value={franchiseForms[franchiseStep]?.adresse ?? ''}
-                      onChange={(e) => updateFranchiseForm('adresse', e.target.value)}
-                      rows={2}
-                    />
-                  </div>
-                </div>
-              )}
-
               {/* ── STEP 4: Recap / Confirmation ── */}
               {wizardStep === 4 && (() => {
                 const laboNomRecap = hasLabo === true
@@ -1152,34 +725,10 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                     <p style={{ margin: '0 0 8px', fontSize: '0.85rem', color: '#64748b' }}>
                       Vérifiez les informations avant de confirmer.
                     </p>
-                    {editingId || isDuplicate ? (
-                      <>
-                        {row('Nom', form.nom)}
-                        {row('Téléphone', form.telephone)}
-                        {row('Adresse', form.adresse)}
-                      </>
-                    ) : isFranchise ? (
-                      <>
-                        {row('Réseau', franchiseName)}
-                        {row("Nombre d'activités", String(franchiseCount))}
-                        {laboNomRecap && row('Labo', laboNomRecap)}
-                        <div style={{ marginTop: 6 }}>
-                          <span style={fieldLabel}>Activités</span>
-                          {franchiseForms.map((f, i) => (
-                            <div key={i} style={{ fontSize: '0.82rem', padding: '4px 0 4px 8px', borderBottom: '1px solid #f1f5f9', color: '#374151' }}>
-                              <strong>{franchiseName} {i + 1}</strong> — {f.telephone}{f.adresse ? ` · ${f.adresse}` : ''}
-                            </div>
-                          ))}
-                        </div>
-                      </>
-                    ) : (
-                      <>
-                        {row('Nom', form.nom)}
-                        {row('Téléphone', form.telephone)}
-                        {row('Adresse', form.adresse)}
-                        {laboNomRecap && row('Labo', laboNomRecap)}
-                      </>
-                    )}
+                    {row('Nom', form.nom)}
+                    {row('Téléphone', form.telephone)}
+                    {row('Adresse', form.adresse)}
+                    {laboNomRecap && row('Labo', laboNomRecap)}
                   </div>
                 );
               })()}
@@ -1196,11 +745,7 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                 {wizardStep === 4 ? (
                   <button type="button" className="btn btn-secondary" onClick={() => {
                     setError('');
-                    setWizardStep(
-                      isFranchise && !editingId && !isDuplicate ? 3
-                      : !isFranchise && !editingId && !isDuplicate && configHasLabo ? 2
-                      : 1
-                    );
+                    setWizardStep(!editingId && !isDuplicate && configHasLabo ? 2 : 1);
                   }}>
                     ‹ {t('client.entreprise.previous')}
                   </button>
@@ -1208,12 +753,8 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                   <button type="button" className="btn btn-secondary" onClick={closeForm}>
                     {t('common.cancel')}
                   </button>
-                ) : wizardStep === 2 ? (
-                  <button type="button" className="btn btn-secondary" onClick={() => { setWizardStep(1); setError(''); }}>
-                    ‹ {t('client.entreprise.previous')}
-                  </button>
                 ) : (
-                  <button type="button" className="btn btn-secondary" onClick={handleActivityBack}>
+                  <button type="button" className="btn btn-secondary" onClick={() => { setWizardStep(1); setError(''); }}>
                     ‹ {t('client.entreprise.previous')}
                   </button>
                 )}
@@ -1223,31 +764,17 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                   <button type="button" className="btn btn-primary" onClick={handleFinalSave} disabled={saving}>
                     {saving ? t('common.loading') : '✅ Confirmer'}
                   </button>
-                ) : wizardStep === 0 ? null
-                  : wizardStep === 1 && isFranchise && !editingId && !isDuplicate ? (
-                  <button type="button" className="btn btn-primary" onClick={handleFranchiseSetupNext}>
-                    Suivant ›
-                  </button>
                 ) : wizardStep === 1 ? (
                   <button
                     type="button"
                     className="btn btn-primary"
-                    disabled={distinctNameConflict || !form.nom.trim()}
+                    disabled={nameConflict || !form.nom.trim()}
                     onClick={handleGoToRecap}
                   >
                     Suivant ›
                   </button>
-                ) : wizardStep === 2 ? (
-                  <button type="button" className="btn btn-primary" onClick={handleLaboStepNext} disabled={hasLabo === null}>
-                    Suivant ›
-                  </button>
-                ) : franchiseStep < franchiseCount - 1 ? (
-                  <button type="button" className="btn btn-primary" onClick={handleFranchiseNext} disabled={saving}>
-                    Suivant ›{' '}
-                    <span style={{ opacity: 0.7, fontSize: '0.78rem' }}>({franchiseStep + 1}/{franchiseCount})</span>
-                  </button>
                 ) : (
-                  <button type="button" className="btn btn-primary" onClick={handleFranchiseGoToRecap} disabled={saving}>
+                  <button type="button" className="btn btn-primary" onClick={handleLaboStepNext} disabled={hasLabo === null}>
                     Suivant ›
                   </button>
                 )}
@@ -1423,14 +950,6 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                         style={{ accentColor: 'var(--primary)', flexShrink: 0 }}
                       />
                       <span style={{ flex: 1, fontSize: '0.88rem', fontWeight: 600 }}>{act.nom}</span>
-                      <span style={{
-                        fontSize: '0.72rem', borderRadius: 12, padding: '2px 8px',
-                        background: act.type === 'franchise' ? '#eff6ff' : '#f0fdf4',
-                        color: act.type === 'franchise' ? '#1e40af' : '#166534',
-                        border: `1px solid ${act.type === 'franchise' ? '#bfdbfe' : '#bbf7d0'}`,
-                      }}>
-                        {act.type === 'franchise' ? '🔗 Franchise' : '📍 Distincte'}
-                      </span>
                     </label>
                   ))
                 )}
@@ -1458,7 +977,7 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                     </span>
                     {activites.filter((a) => laboSelectedActivities.includes(a.id)).map((a) => (
                       <div key={a.id} style={{ fontSize: '0.83rem', padding: '3px 0 3px 4px', color: '#374151', borderBottom: '1px solid #f1f5f9' }}>
-                        {a.type === 'franchise' ? '🔗' : '📍'} {a.nom}
+                        🏢 {a.nom}
                       </div>
                     ))}
                   </div>
@@ -1505,8 +1024,7 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
               <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 10, padding: '12px 14px', fontSize: '0.85rem', color: '#991b1b', lineHeight: 1.6 }}>
                 <p style={{ margin: '0 0 6px', fontWeight: 700 }}>⚠ Attention — impacts de la suppression :</p>
                 <ul style={{ margin: 0, paddingLeft: 18 }}>
-                  <li>Les activités <strong>franchise</strong> liées à ce labo passeront en <strong>mode gestion séparée</strong> — chaque activité gérera ses ingrédients indépendamment.</li>
-                  <li>Les activités <strong>distinctes</strong> liées à ce labo resteront des activités distinctes sans labo.</li>
+                  <li>Les activités liées à ce labo passeront en <strong>mode gestion séparée</strong> — chaque activité gérera ses ingrédients indépendamment.</li>
                   <li>Aucune activité ne pourra plus recevoir de transferts depuis ce labo.</li>
                 </ul>
               </div>
@@ -1534,29 +1052,9 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
               <h2 style={{ color: '#dc2626', margin: 0 }}>⚠️ {t('client.entreprise.confirm_delete_title', 'Confirmer la suppression')}</h2>
             </div>
             <div className="modal-body">
-              {deleteTarget.kind === 'franchise-group' ? (
-                <>
-                  <p style={{ marginBottom: 12 }}>
-                    {t('client.entreprise.delete_group_warning', 'Cette action va supprimer définitivement le groupe franchise et toutes ses dépendances :')}
-                  </p>
-                  <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
-                    <li style={{ fontWeight: 700, fontSize: '1rem' }}>🏢 {deleteTarget.group}</li>
-                    {deleteTarget.laboNom && (
-                      <li style={{ color: '#7c3aed', fontWeight: 600 }}>🏭 {t('client.entreprise.labo', 'Labo')} : {deleteTarget.laboNom}</li>
-                    )}
-                    <li style={{ marginTop: 4, fontWeight: 600, color: 'var(--text-muted)', fontSize: '0.82rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                      {t('client.entreprise.activities_section', 'Activités')} ({deleteTarget.acts.length})
-                    </li>
-                    {deleteTarget.acts.map((a) => (
-                      <li key={a.id} style={{ paddingLeft: 12, color: 'var(--text-muted)', fontSize: '0.88rem' }}>• {a.nom}</li>
-                    ))}
-                  </ul>
-                </>
-              ) : (
-                <p>
-                  {t('client.entreprise.delete_activity_warning', 'Supprimer l\'activité')} <strong>{deleteTarget.act.nom}</strong> ?
-                </p>
-              )}
+              <p>
+                {t('client.entreprise.delete_activity_warning', 'Supprimer l\'activité')} <strong>{deleteTarget.act.nom}</strong> ?
+              </p>
               <p style={{ marginTop: 16, color: '#dc2626', fontSize: '0.85rem', fontWeight: 600 }}>
                 {t('client.entreprise.irreversible', 'Cette action est irréversible.')}
               </p>

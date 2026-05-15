@@ -212,8 +212,6 @@ export default function GlobalCataloguePage() {
   // Entreprise-only state
   const [activites, setActivites] = useState<Activite[]>([]);
   const [labos, setLabos] = useState<Labo[]>([]);
-  const [activeType, setActiveType] = useState<'franchise' | 'distinct'>('franchise');
-  const [selectedGroup, setSelectedGroup] = useState('');
   const [selectedActId, setSelectedActId] = useState<number | null>(null);
 
   // Load entreprise activity/labo data
@@ -222,38 +220,14 @@ export default function GlobalCataloguePage() {
     api.get('/api/entreprise/activites').then(({ data }) => {
       const acts: Activite[] = data;
       setActivites(acts);
-      const franchiseActs = acts.filter((a) => a.type === 'franchise');
-      const groups = Array.from(new Set(franchiseActs.map((a) => a.franchiseGroup || a.nom)));
-      if (groups.length > 0) setSelectedGroup(groups[0]);
-      const distinctActs = acts.filter((a) => a.type !== 'franchise');
-      if (distinctActs.length > 0) setSelectedActId(distinctActs[0].id);
+      if (acts.length > 0) setSelectedActId(acts[0].id);
     });
     api.get('/api/labo').then(({ data }) => setLabos(data));
   }, [isEntreprise]);
 
-  // Derived values for entreprise
-  const franchiseGroups = Array.from(new Set(
-    activites.filter((a) => a.type === 'franchise').map((a) => a.franchiseGroup || a.nom)
-  )).sort();
-
-  const distinctActivities = activites.filter((a) => a.type !== 'franchise');
-
-  // Find labo for selected franchise group
-  const groupLabo = labos.find((l) => l.franchiseGroup?.toLowerCase() === selectedGroup.toLowerCase()) ?? null;
-
-  // Find franchise activities in selected group (for gestion séparée)
-  const groupActivities = activites.filter(
-    (a) => a.type === 'franchise' && (a.franchiseGroup || a.nom).toLowerCase() === selectedGroup.toLowerCase()
-  );
-  // Find labo for selected distinct activity
-  const selectedDistinctAct = activites.find((a) => a.id === selectedActId) ?? null;
-  const distinctActLabo = selectedDistinctAct?.laboId ? (labos.find((l) => l.id === selectedDistinctAct.laboId) ?? null) : null;
-
-  // For gestion séparée: pick first activity of the group as selector
-  const [selectedFranchiseActId, setSelectedFranchiseActId] = useState<number | null>(null);
-  useEffect(() => {
-    if (groupActivities.length > 0) setSelectedFranchiseActId(groupActivities[0].id);
-  }, [selectedGroup, groupActivities.length]);
+  // Find labo for selected activity
+  const selectedAct = activites.find((a) => a.id === selectedActId) ?? null;
+  const selectedActLabo = selectedAct?.laboId ? (labos.find((l) => l.id === selectedAct.laboId) ?? null) : null;
 
   // Load ingredients based on current context
   const load = useCallback(async () => {
@@ -281,45 +255,21 @@ export default function GlobalCataloguePage() {
       return;
     }
 
-    if (activeType === 'franchise') {
-      if (!selectedGroup) return;
-      if (groupLabo) {
-        // Labo case: load all admin ingredients with labo selection state
-        setLoading(true);
-        try {
-          const { data } = await api.get(`/api/labo/${groupLabo.id}/ingredients`);
-          setIngredients((data as GlobalIngredient[]).map((i) => ({ ...i })));
-        } finally {
-          setLoading(false);
-        }
-      } else if (selectedFranchiseActId) {
-        // Gestion séparée: load activity ingredients
-        setLoading(true);
-        try {
-          const { data } = await api.get(`/api/entreprise/activites/${selectedFranchiseActId}/ingredients`);
-          setIngredients((data as ActiviteIngredient[]).map((i) => ({ ...i })));
-        } finally {
-          setLoading(false);
-        }
+    if (!selectedActId) return;
+    setLoading(true);
+    try {
+      if (selectedActLabo) {
+        // Activity managed by a labo: load from labo ingredient catalogue
+        const { data } = await api.get(`/api/labo/${selectedActLabo.id}/ingredients`);
+        setIngredients((data as GlobalIngredient[]).map((i) => ({ ...i })));
+      } else {
+        const { data } = await api.get(`/api/entreprise/activites/${selectedActId}/ingredients`);
+        setIngredients((data as ActiviteIngredient[]).map((i) => ({ ...i })));
       }
-    } else {
-      // Distinct
-      if (!selectedActId) return;
-      setLoading(true);
-      try {
-        if (distinctActLabo) {
-          // Activity managed by a labo: load from labo ingredient catalogue
-          const { data } = await api.get(`/api/labo/${distinctActLabo.id}/ingredients`);
-          setIngredients((data as GlobalIngredient[]).map((i) => ({ ...i })));
-        } else {
-          const { data } = await api.get(`/api/entreprise/activites/${selectedActId}/ingredients`);
-          setIngredients((data as ActiviteIngredient[]).map((i) => ({ ...i })));
-        }
-      } finally {
-        setLoading(false);
-      }
+    } finally {
+      setLoading(false);
     }
-  }, [isEntreprise, activeType, selectedGroup, groupLabo, selectedFranchiseActId, selectedActId, distinctActLabo, t]);
+  }, [isEntreprise, selectedActId, selectedActLabo, t]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -337,13 +287,12 @@ export default function GlobalCataloguePage() {
           setToggling(null);
           setDeselectModal({ ingId, ingName: ing.nom, approCount: data.approCount ?? 0, inventaireCount: data.inventaireCount ?? 0 });
           return;
-        } else if ((activeType === 'franchise' && !groupLabo) || (activeType !== 'franchise' && !distinctActLabo)) {
-          // Gestion séparée or distinct without labo: check cascade info per activity
-          const actId = activeType === 'franchise' ? selectedFranchiseActId : selectedActId;
-          if (actId) {
-            const { data } = await api.get(`/api/stock/entreprise/${actId}/${ingId}/cascade-info`);
+        } else if (!selectedActLabo) {
+          // No labo: check cascade info per activity
+          if (selectedActId) {
+            const { data } = await api.get(`/api/stock/entreprise/${selectedActId}/${ingId}/cascade-info`);
             setToggling(null);
-            setDeselectModal({ ingId, ingName: ing.nom, approCount: data.approCount ?? 0, inventaireCount: data.inventaireCount ?? 0, actId });
+            setDeselectModal({ ingId, ingName: ing.nom, approCount: data.approCount ?? 0, inventaireCount: data.inventaireCount ?? 0, actId: selectedActId });
             return;
           }
           setToggling(null);
@@ -370,19 +319,15 @@ export default function GlobalCataloguePage() {
         refreshSelections();
         if (data.selected && user?.onboardingStep === 3) await advanceOnboarding(0);
         if (deleteHistory) await api.delete(`/api/stock/client/${ingId}/all-history`);
-      } else if (activeType === 'franchise' && groupLabo) {
-        ({ data } = await api.post(`/api/labo/${groupLabo.id}/ingredients/${ingId}/select`));
-        if (user?.onboardingStep === 3) await advanceOnboarding(0);
-      } else if (activeType !== 'franchise' && distinctActLabo) {
-        // Distinct activity managed by a labo: toggle at labo level
-        ({ data } = await api.post(`/api/labo/${distinctActLabo.id}/ingredients/${ingId}/select`));
+      } else if (selectedActLabo) {
+        // Activity managed by a labo: toggle at labo level
+        ({ data } = await api.post(`/api/labo/${selectedActLabo.id}/ingredients/${ingId}/select`));
         if (user?.onboardingStep === 3) await advanceOnboarding(0);
       } else {
-        const actId = activeType === 'franchise' ? selectedFranchiseActId : selectedActId;
-        if (!actId) return;
-        ({ data } = await api.post(`/api/entreprise/activites/${actId}/ingredients/${ingId}/select`));
+        if (!selectedActId) return;
+        ({ data } = await api.post(`/api/entreprise/activites/${selectedActId}/ingredients/${ingId}/select`));
         if (user?.onboardingStep === 3) await advanceOnboarding(0);
-        if (deleteHistory) await api.delete(`/api/stock/entreprise/${actId}/${ingId}/all-history`);
+        if (deleteHistory) await api.delete(`/api/stock/entreprise/${selectedActId}/${ingId}/all-history`);
       }
       setIngredients((prev) => prev.map((i) => (i.id === ingId ? { ...i, selected: data.selected } : i)));
     } finally {
@@ -414,85 +359,27 @@ export default function GlobalCataloguePage() {
         </div>
       </div>
 
-      {/* Entreprise type + context selector */}
+      {/* Entreprise activity selector */}
       {isEntreprise && (
         <div style={{ marginBottom: 20 }}>
-          {/* Type tabs */}
-          <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
-            {(['franchise', 'distinct'] as const).map((type) => (
-              <button
-                key={type}
-                className="btn btn-sm"
-                style={activeType === type
-                  ? { background: 'linear-gradient(135deg, #4338ca, #6366f1)', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 700, padding: '8px 18px' }
-                  : { background: 'var(--surface)', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: 8, fontWeight: 600, padding: '8px 18px' }
-                }
-                onClick={() => { setActiveType(type); setIngredients([]); }}
-              >
-                {type === 'franchise' ? `🔗 ${t('nav.espace_franchise', 'Espace Franchise')}` : `📍 ${t('nav.espace_distinct', 'Espace Distinct')}`}
-              </button>
-            ))}
-          </div>
-
-          {/* Franchise context */}
-          {activeType === 'franchise' && (
+          {activites.length === 0 ? (
+            <p className="text-muted">{t('nav.no_franchise_activity', 'Aucune activité')}</p>
+          ) : (
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'flex-end', marginBottom: 12 }}>
-              {franchiseGroups.length === 0 ? (
-                <p className="text-muted">{t('nav.no_franchise_activity', 'Aucune activité franchise')}</p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                <label style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-muted)' }}>{t('client.entreprise.activity_nom', 'Activité')}</label>
+                <select className="input" style={{ maxWidth: 260 }} value={selectedActId ?? ''} onChange={(e) => setSelectedActId(Number(e.target.value))}>
+                  {activites.map((a) => <option key={a.id} value={a.id}>{a.nom}{a.laboId ? ' 🏭' : ''}</option>)}
+                </select>
+              </div>
+              {selectedActLabo ? (
+                <div style={{ background: '#eef2ff', border: '1px solid #c7d2fe', borderRadius: 8, padding: '8px 14px', fontSize: '0.82rem', color: '#3730a3' }}>
+                  🏭 {t('global_catalogue.labo_mode', 'Assignation au niveau Labo')} — <strong>{selectedActLabo.nom}</strong>
+                </div>
               ) : (
-                <>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                    <label style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-muted)' }}>{t('client.entreprise.franchise_name', 'Franchise')}</label>
-                    <select className="input" style={{ maxWidth: 220 }} value={selectedGroup} onChange={(e) => setSelectedGroup(e.target.value)}>
-                      {franchiseGroups.map((g) => <option key={g} value={g}>{g}</option>)}
-                    </select>
-                  </div>
-
-                  {groupLabo ? (
-                    <div style={{ background: '#eef2ff', border: '1px solid #c7d2fe', borderRadius: 8, padding: '8px 14px', fontSize: '0.82rem', color: '#3730a3' }}>
-                      🏭 {t('global_catalogue.labo_mode', 'Assignation au niveau Labo')} — <strong>{groupLabo.nom}</strong>
-                    </div>
-                  ) : (
-                    <>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                        <label style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-muted)' }}>{t('client.entreprise.activity_nom', 'Activité')}</label>
-                        <select className="input" style={{ maxWidth: 220 }} value={selectedFranchiseActId ?? ''} onChange={(e) => setSelectedFranchiseActId(Number(e.target.value))}>
-                          {groupActivities.map((a) => <option key={a.id} value={a.id}>{a.nom}</option>)}
-                        </select>
-                      </div>
-                      <div style={{ background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: 8, padding: '8px 14px', fontSize: '0.82rem', color: '#c2410c' }}>
-                        📋 {t('global_catalogue.gestion_separee_mode', 'Gestion Séparée — assignation par activité')}
-                      </div>
-                    </>
-                  )}
-                </>
-              )}
-            </div>
-          )}
-
-          {/* Distinct context */}
-          {activeType === 'distinct' && (
-            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'flex-end', marginBottom: 12 }}>
-              {distinctActivities.length === 0 ? (
-                <p className="text-muted">{t('nav.no_distinct_activity', 'Aucune activité distincte')}</p>
-              ) : (
-                <>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                    <label style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-muted)' }}>{t('client.entreprise.activity_nom', 'Activité')}</label>
-                    <select className="input" style={{ maxWidth: 260 }} value={selectedActId ?? ''} onChange={(e) => setSelectedActId(Number(e.target.value))}>
-                      {distinctActivities.map((a) => <option key={a.id} value={a.id}>{a.nom}{a.laboId ? ' 🏭' : ''}</option>)}
-                    </select>
-                  </div>
-                  {distinctActLabo ? (
-                    <div style={{ background: '#eef2ff', border: '1px solid #c7d2fe', borderRadius: 8, padding: '8px 14px', fontSize: '0.82rem', color: '#3730a3' }}>
-                      🏭 {t('global_catalogue.labo_mode', 'Assignation au niveau Labo')} — <strong>{distinctActLabo.nom}</strong>
-                    </div>
-                  ) : (
-                    <div style={{ background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: 8, padding: '8px 14px', fontSize: '0.82rem', color: '#c2410c' }}>
-                      📋 {t('global_catalogue.gestion_separee_mode', 'Gestion Séparée — assignation par activité')}
-                    </div>
-                  )}
-                </>
+                <div style={{ background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: 8, padding: '8px 14px', fontSize: '0.82rem', color: '#c2410c' }}>
+                  📋 {t('global_catalogue.gestion_separee_mode', 'Gestion Séparée — assignation par activité')}
+                </div>
               )}
             </div>
           )}

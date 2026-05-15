@@ -23,7 +23,7 @@ interface InventaireRow {
   recentInventaires: RecentInv[];
   inventaireDates: string[];
 }
-interface Activite { id: number; nom: string; type: string; franchiseGroup: string | null }
+interface Activite { id: number; nom: string }
 
 const catColor = (_cat: string) => '#2563eb';
 
@@ -60,11 +60,7 @@ export default function InventairePage() {
     if (!section) return;
     api.get('/api/entreprise/activites')
       .then(({ data }) => {
-        const filtered = (data as Activite[]).filter((a) =>
-          section === 'franchise'
-            ? (a.type === 'franchise_avec_labo' || a.type === 'franchise_gestion_separee' || a.franchiseGroup)
-            : a.type === 'distincte' || a.type == null
-        );
+        const filtered = data as Activite[];
         setActivites(filtered);
         if (filtered.length === 1) setSelectedActiviteId(filtered[0].id);
       })
@@ -174,7 +170,7 @@ export default function InventairePage() {
   const contextLabel = laboId
     ? `Labo — ${contextNom}`
     : section
-    ? `${section === 'franchise' ? 'Franchise' : 'Distinct'}${contextNom ? ` — ${contextNom}` : ''}`
+    ? `Activités${contextNom ? ` — ${contextNom}` : ''}`
     : contextNom || 'Inventaire';
 
   return (

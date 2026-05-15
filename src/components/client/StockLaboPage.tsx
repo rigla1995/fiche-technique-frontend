@@ -28,7 +28,7 @@ const LABEL: React.CSSProperties = {
   textTransform: 'uppercase', letterSpacing: '0.07em',
 };
 
-interface LaboActivite { id: number; nom: string; type: string | null; franchiseGroup: string | null }
+interface LaboActivite { id: number; nom: string }
 
 interface LaboStockRow {
   ingredientId: number;
@@ -69,7 +69,7 @@ interface RowState {
 
 interface AssignIngredient {
   ingredientId: number; nom: string; unite: string; categorie: string;
-  activities: { activiteId: number; nom: string; type: string | null; franchiseGroup: string | null; assigned: boolean }[];
+  activities: { activiteId: number; nom: string; assigned: boolean }[];
 }
 
 interface Fournisseur { id: number; nom: string }
@@ -83,7 +83,7 @@ export default function StockLaboPage() {
   const laboId = searchParams.get('laboId') || '';
   const tab = searchParams.get('tab') === 'ingredients' ? 'ingredients' : 'stock';
 
-  const [labo, setLabo] = useState<{ nom: string; franchiseGroup: string; referentTel: string; adresse?: string; activites?: LaboActivite[] } | null>(null);
+  const [labo, setLabo] = useState<{ nom: string; referentTel: string; adresse?: string; activites?: LaboActivite[] } | null>(null);
   const [stock, setStock] = useState<LaboStockRow[]>([]);
   const [rowState, setRowState] = useState<Record<number, RowState>>({});
   const [seuilMinEdits, setSeuilMinEdits] = useState<Record<number, string>>({});
@@ -522,7 +522,7 @@ export default function StockLaboPage() {
   if (!laboId) return <div className="page"><p className="text-muted">Labo introuvable.</p></div>;
 
   const subtitle = labo
-    ? `${labo.franchiseGroup} · ☎ ${labo.referentTel}${labo.adresse ? ` · ${labo.adresse}` : ''}`
+    ? `☎ ${labo.referentTel}${labo.adresse ? ` · ${labo.adresse}` : ''}`
     : t('common.loading');
 
   return (
@@ -570,7 +570,6 @@ export default function StockLaboPage() {
                   }}
                 >
                   {act.nom}
-                  {act.type && <span style={{ fontSize: '0.65rem', marginLeft: 4, opacity: 0.7 }}>{act.type === 'franchise' ? 'F' : 'D'}</span>}
                 </button>
               ))}
               <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', alignSelf: 'center', marginLeft: 4 }}>← cliquer pour les détails</span>
@@ -1051,7 +1050,6 @@ export default function StockLaboPage() {
                                 {activites.map((act) => (
                                   <th key={act.id} style={{ textAlign: 'center', minWidth: 100, fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px' }}>
                                     <div>{act.nom}</div>
-                                    {act.type && <div style={{ fontSize: '0.65rem', fontWeight: 400, opacity: 0.75, textTransform: 'uppercase' }}>{act.type === 'franchise' ? 'F' : 'D'}</div>}
                                   </th>
                                 ))}
                               </tr>

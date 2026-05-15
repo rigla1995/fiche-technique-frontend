@@ -11,7 +11,7 @@ export interface User {
   prolongationJours?: number;
   gerantParentId?: number;
   gerantActiviteId?: number;
-  gerantActiviteType?: 'franchise' | 'labo' | 'activite_distincte';
+  gerantActiviteType?: 'labo' | 'activite';
   gerantActiviteNom?: string | null;
   activitesCount?: number;
 }
@@ -149,7 +149,7 @@ export interface Gerant {
   telephone: string;
   parentId: number;
   activiteId: number | null;
-  activiteType: 'franchise' | 'labo' | 'activite_distincte' | null;
+  activiteType: 'labo' | 'activite' | null;
   estGratuit: boolean;
   montantMensuel: number;
   actif: boolean;
@@ -212,8 +212,6 @@ export interface Product {
   subProductsCount?: number;
   userId: number;
   activiteId?: number | null;
-  activiteType?: 'franchise' | 'distincte' | null;
-  franchiseGroup?: string | null;
   createdAt?: string;
   isStockIngredient?: boolean;
 }
@@ -253,8 +251,6 @@ export interface Activite {
   adresse?: string;
   telephone?: string;
   email?: string;
-  type?: 'franchise' | 'distincte';
-  franchiseGroup?: string | null;
   laboId?: number | null;
   laboNom?: string | null;
   laboTel?: string | null;
@@ -266,7 +262,6 @@ export interface Activite {
 export interface Labo {
   id: number;
   entrepriseId: number;
-  franchiseGroup: string | null;
   nom: string;
   refLabo: string | null;
   referentTel: string;
@@ -276,15 +271,11 @@ export interface Labo {
 }
 
 export interface ActiviteTypesSummary {
-  hasFranchise: boolean;
-  hasDistinct: boolean;
-  hasFranchiseSelections: boolean;
-  hasDistinctSelections: boolean;
-  hasFranchiseReady: boolean;
-  hasFranchiseAppro: boolean;
-  hasDistinctAppro: boolean;
-  hasFranchiseFournisseurs: boolean;
-  hasDistinctFournisseurs: boolean;
+  hasActivites: boolean;
+  hasSelections: boolean;
+  hasReady: boolean;
+  hasAppro: boolean;
+  hasFournisseurs: boolean;
 }
 
 export interface StockEntry {

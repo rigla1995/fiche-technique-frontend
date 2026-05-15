@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
 import type { Activite, Product } from '../../types';
@@ -19,29 +18,14 @@ interface ManualPriceGroup {
 
 interface Props {
   isEntreprise: boolean;
-  franchiseActivities: Activite[];
-  distinctActivities: Activite[];
+  allActivities: Activite[];
 }
 
-export default function FicheTechniqueTab({ isEntreprise, franchiseActivities, distinctActivities }: Props) {
+export default function FicheTechniqueTab({ isEntreprise, allActivities }: Props) {
   const { t } = useTranslation();
-  const [searchParams] = useSearchParams();
-  const actCtx = searchParams.get('actCtx') || '';
-  const isFranchiseCtx = actCtx === 'franchise';
-  const isDistinctCtx = actCtx === 'distinct' || actCtx.startsWith('distinct-');
-  const specificDistinctId = actCtx.startsWith('distinct-') ? actCtx.replace('distinct-', '') : '';
 
-  // Step 1a: franchise group picker
-  const franchiseGroups = Array.from(new Set(franchiseActivities.map((a) => a.franchiseGroup || a.nom))).sort();
-  const [selectedFranchiseGroup, setSelectedFranchiseGroup] = useState<string>('');
-  // Step 2: only activities with ingredients assigned
-  const allActivitiesInGroup = franchiseActivities.filter((a) => (a.franchiseGroup || a.nom) === selectedFranchiseGroup);
-  const activitiesInGroup = allActivitiesInGroup.filter((a) => (a.ingredientCount ?? 0) > 0);
-
-  // Step 1b: franchise activity picker within selected group
-  const [selectedFranchiseActId, setSelectedFranchiseActId] = useState<string>('');
-  // Step 1b: distinct activity picker (when actCtx='distinct' without specific ID)
-  const [selectedDistinctActId, setSelectedDistinctActId] = useState<string>(specificDistinctId);
+  // Activity picker for enterprise users
+  const [selectedActId, setSelectedActId] = useState<string>('');
 
   // Product type availability (pre-fetched when activity step is done)
   const [vendableCount, setVendableCount] = useState<number | null>(null);
@@ -88,44 +72,17 @@ export default function FicheTechniqueTab({ isEntreprise, franchiseActivities, d
   const [generating, setGenerating] = useState(false);
 
   // Resolved activity ID for API calls
-  const resolvedActId = (() => {
-    if (!isEntreprise) return 0;
-    if (isFranchiseCtx && selectedFranchiseActId) return parseInt(selectedFranchiseActId);
-    if (isDistinctCtx) {
-      const id = specificDistinctId || selectedDistinctActId;
-      return id ? parseInt(id) : 0;
-    }
-    return 0;
-  })();
+  const resolvedActId = isEntreprise && selectedActId ? parseInt(selectedActId) : 0;
 
   // Whether the activity step is complete
-  const actStepDone = (() => {
-    if (!isEntreprise) return true;
-    if (isFranchiseCtx) {
-      if (!selectedFranchiseGroup) return false;
-      return activitiesInGroup.length <= 1 || !!selectedFranchiseActId;
-    }
-    if (isDistinctCtx) return !!(specificDistinctId || selectedDistinctActId);
-    return false;
-  })();
+  const actStepDone = !isEntreprise || !!selectedActId;
 
-  // Auto-select franchise group if only one
+  // Auto-select if only one activity
   useEffect(() => {
-    if (isFranchiseCtx && franchiseGroups.length === 1 && !selectedFranchiseGroup) {
-      setSelectedFranchiseGroup(franchiseGroups[0]);
+    if (allActivities.length === 1 && !selectedActId) {
+      setSelectedActId(String(allActivities[0].id));
     }
-  }, [isFranchiseCtx, franchiseGroups.length]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Auto-select activity if only one in the selected group
-  useEffect(() => {
-    if (activitiesInGroup.length === 1) {
-      setSelectedFranchiseActId(String(activitiesInGroup[0].id));
-    } else {
-      setSelectedFranchiseActId('');
-    }
-    setMode(null);
-    setSelectedProductId('');
-  }, [selectedFranchiseGroup]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [allActivities.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Pre-fetch product type counts when activity step is done
   useEffect(() => {
@@ -138,8 +95,6 @@ export default function FicheTechniqueTab({ isEntreprise, franchiseActivities, d
   useEffect(() => {
     if (!productType || !actStepDone) { setProducts([]); setSelectedProductId(''); return; }
     setProductsLoading(true);
-    // Only filter by product type (vendable/utilisable); the activity context only
-    // matters for ingredient/price lookups, not which products are selectable here.
     const params = new URLSearchParams({ type: productType });
     api.get(`/products?${params}`)
       .then(({ data }) => setProducts(data as Product[]))
@@ -147,7 +102,7 @@ export default function FicheTechniqueTab({ isEntreprise, franchiseActivities, d
     setSelectedProductId('');
     setMode(null);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [productType, resolvedActId, actStepDone, isFranchiseCtx]);
+  }, [productType, resolvedActId, actStepDone]);
 
   // Load stock check when mode='stock' and product selected
   useEffect(() => {
@@ -335,9 +290,7 @@ export default function FicheTechniqueTab({ isEntreprise, franchiseActivities, d
   const canGenerateManual = mode === 'manual' && allManualPricesFilled;
   const canGenerate = canGenerateStock || canGenerateManual;
 
-  const distinctActivity = specificDistinctId
-    ? distinctActivities.find((a) => String(a.id) === specificDistinctId)
-    : distinctActivities.find((a) => String(a.id) === selectedDistinctActId);
+  const selectedActivity = allActivities.find((a) => String(a.id) === selectedActId);
 
   const cardStyle: React.CSSProperties = {
     background: 'var(--surface)',
@@ -374,80 +327,32 @@ export default function FicheTechniqueTab({ isEntreprise, franchiseActivities, d
   return (
     <div style={{ maxWidth: 700 }}>
 
-      {/* Step 1a: Franchise group picker — always shown */}
-      {isEntreprise && isFranchiseCtx && franchiseGroups.length >= 1 && (
+      {/* Step 1: Activity picker (enterprise only) */}
+      {isEntreprise && allActivities.length > 1 && (
         <div style={{ ...cardStyle, borderLeft: '4px solid var(--primary)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
             <span style={{ width: 22, height: 22, borderRadius: '50%', background: 'var(--primary)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.72rem', fontWeight: 800, flexShrink: 0 }}>1</span>
-            <span style={stepLabel}>Franchise</span>
+            <span style={stepLabel}>Activité</span>
           </div>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            {franchiseGroups.map((g) => (
-              <button
-                key={g}
-                style={chipBtn(selectedFranchiseGroup === g)}
-                onClick={() => setSelectedFranchiseGroup(g)}
-              >
-                🏢 {g}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Step 1b: Block message when group has no activities with ingredients */}
-      {isEntreprise && isFranchiseCtx && selectedFranchiseGroup && allActivitiesInGroup.length > 0 && activitiesInGroup.length === 0 && (
-        <div style={{ ...cardStyle, borderLeft: '4px solid var(--primary)', background: '#fff7ed' }}>
-          <p style={{ margin: 0, color: '#c05621', fontSize: '0.88rem' }}>
-            ⚠️ Aucune activité de ce groupe n'a encore d'ingrédients assignés. Rendez-vous dans le <strong>Catalogue Global</strong> pour en assigner.
-          </p>
-        </div>
-      )}
-
-      {/* Step 1b: Activity within the selected franchise group */}
-      {isEntreprise && isFranchiseCtx && selectedFranchiseGroup && activitiesInGroup.length > 1 && (
-        <div style={{ ...cardStyle, borderLeft: '4px solid var(--primary)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-            <span style={{ width: 22, height: 22, borderRadius: '50%', background: 'var(--primary)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.72rem', fontWeight: 800, flexShrink: 0 }}>{franchiseGroups.length > 1 ? '2' : '1'}</span>
-            <span style={stepLabel}>Activité — {selectedFranchiseGroup}</span>
-          </div>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            {activitiesInGroup.map((a) => (
+            {allActivities.map((a) => (
               <button
                 key={a.id}
-                style={chipBtn(selectedFranchiseActId === String(a.id))}
-                onClick={() => { setSelectedFranchiseActId(String(a.id)); setMode(null); setSelectedProductId(''); }}
+                style={chipBtn(selectedActId === String(a.id))}
+                onClick={() => { setSelectedActId(String(a.id)); setMode(null); setSelectedProductId(''); }}
               >
-                {a.nom}
+                🏪 {a.nom}
               </button>
             ))}
           </div>
         </div>
       )}
 
-      {/* Step 1: Activity selection for generic distinct (no specific ID in URL) */}
-      {isEntreprise && actCtx === 'distinct' && (
-        <div style={cardStyle}>
-          <span style={stepLabel}>Activité distincte</span>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            {distinctActivities.map((a) => (
-              <button
-                key={a.id}
-                style={chipBtn(selectedDistinctActId === String(a.id))}
-                onClick={() => { setSelectedDistinctActId(String(a.id)); setMode(null); setSelectedProductId(''); }}
-              >
-                {a.nom}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Activity badge (when specific distinct ID in URL) */}
-      {isEntreprise && specificDistinctId && distinctActivity && (
+      {/* Activity badge (when only 1 or auto-selected) */}
+      {isEntreprise && allActivities.length === 1 && selectedActivity && (
         <div style={{ ...cardStyle, display: 'flex', alignItems: 'center', gap: 12, padding: '12px 18px' }}>
           <span style={{ ...stepLabel, margin: 0 }}>Activité</span>
-          <span style={{ fontWeight: 700, color: 'var(--primary)' }}>D · {distinctActivity.nom}</span>
+          <span style={{ fontWeight: 700, color: 'var(--primary)' }}>🏪 {selectedActivity.nom}</span>
         </div>
       )}
 
@@ -456,7 +361,7 @@ export default function FicheTechniqueTab({ isEntreprise, franchiseActivities, d
         <div style={{ ...cardStyle, borderLeft: '4px solid #10b981' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
             <span style={{ width: 22, height: 22, borderRadius: '50%', background: '#10b981', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.72rem', fontWeight: 800, flexShrink: 0 }}>
-              {isFranchiseCtx ? (franchiseGroups.length > 1 ? (activitiesInGroup.length > 1 ? '3' : '2') : activitiesInGroup.length > 1 ? '2' : '1') : isDistinctCtx && !specificDistinctId ? '2' : '1'}
+              {isEntreprise && allActivities.length > 1 ? '2' : '1'}
             </span>
             <span style={stepLabel}>Type de produit</span>
           </div>
@@ -500,7 +405,7 @@ export default function FicheTechniqueTab({ isEntreprise, franchiseActivities, d
         <div style={{ ...cardStyle, borderLeft: '4px solid #f59e0b' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
             <span style={{ width: 22, height: 22, borderRadius: '50%', background: '#f59e0b', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.72rem', fontWeight: 800, flexShrink: 0 }}>
-              {isFranchiseCtx ? (franchiseGroups.length > 1 ? (activitiesInGroup.length > 1 ? '4' : '3') : activitiesInGroup.length > 1 ? '3' : '2') : isDistinctCtx && !specificDistinctId ? '3' : '2'}
+              {isEntreprise && allActivities.length > 1 ? '3' : '2'}
             </span>
             <span style={stepLabel}>Produit</span>
           </div>
@@ -529,7 +434,7 @@ export default function FicheTechniqueTab({ isEntreprise, franchiseActivities, d
         <div style={{ ...cardStyle, borderLeft: '4px solid #8b5cf6' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
             <span style={{ width: 22, height: 22, borderRadius: '50%', background: '#8b5cf6', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.72rem', fontWeight: 800, flexShrink: 0 }}>
-              {isFranchiseCtx ? (franchiseGroups.length > 1 ? (activitiesInGroup.length > 1 ? '5' : '4') : activitiesInGroup.length > 1 ? '4' : '3') : isDistinctCtx && !specificDistinctId ? '4' : '3'}
+              {isEntreprise && allActivities.length > 1 ? '4' : '3'}
             </span>
             <span style={stepLabel}>{t('client.fiche_technique.choose_mode')}</span>
           </div>

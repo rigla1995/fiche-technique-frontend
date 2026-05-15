@@ -12,8 +12,6 @@ import DomainesManagement from './components/admin/DomainesManagement';
 import ProductList from './components/client/ProductList';
 import ProductForm from './components/client/ProductForm';
 import ClientIngredientsCatalog from './components/client/ClientIngredientsCatalog';
-import FranchiseCatalogPage from './components/client/FranchiseCatalogPage';
-import DistinctCatalogPage from './components/client/DistinctCatalogPage';
 import Profile from './components/client/Profile';
 import ActivitesPage from './components/client/ActivitesPage';
 import StockPage from './components/client/StockPage';
@@ -108,8 +106,6 @@ export default function App() {
             <Route path="/client/products/:id/edit" element={<ProductForm />} />
             <Route path="/client/catalogue-global" element={<GlobalCataloguePage />} />
             <Route path="/client/ingredients" element={<ClientIngredientsCatalog />} />
-            <Route path="/client/catalogue-franchise" element={<FranchiseCatalogPage />} />
-            <Route path="/client/catalogue-distinct" element={<DistinctCatalogPage />} />
             <Route path="/client/profile" element={<Profile />} />
             <Route path="/client/activites" element={<ActivitesPage />} />
             <Route path="/client/stock" element={<StockPage />} />

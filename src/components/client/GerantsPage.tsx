@@ -9,11 +9,10 @@ interface GerantForm {
   telephone: string;
   email: string;
   activiteId: string;
-  activiteType: 'franchise' | 'labo' | 'activite_distincte' | '';
-  franchiseGroup: string;
+  activiteType: 'labo' | 'activite' | '';
 }
 
-const EMPTY_FORM: GerantForm = { nom: '', telephone: '', email: '', activiteId: '', activiteType: '', franchiseGroup: '' };
+const EMPTY_FORM: GerantForm = { nom: '', telephone: '', email: '', activiteId: '', activiteType: '' };
 
 export default function GerantsPage() {
   const { user } = useAuth();
@@ -111,7 +110,7 @@ export default function GerantsPage() {
       return l ? `Labo : ${l.nom}` : `Labo #${g.activiteId}`;
     }
     const a = activites.find((x) => x.id === g.activiteId);
-    return a ? `${g.activiteType === 'franchise' ? 'Franchise' : 'Distincte'} : ${a.nom}` : `Activité #${g.activiteId}`;
+    return a ? `Activité : ${a.nom}` : `Activité #${g.activiteId}`;
   };
 
   const activeCount = gerants.filter((g) => g.actif).length;
@@ -226,25 +225,12 @@ export default function GerantsPage() {
                 <>
                   <div>
                     <label style={lbl}>Type d'activité assignée</label>
-                    <select value={form.activiteType} onChange={(e) => setForm((f) => ({ ...f, activiteType: e.target.value as GerantForm['activiteType'], activiteId: '', franchiseGroup: '' }))} style={inp}>
+                    <select value={form.activiteType} onChange={(e) => setForm((f) => ({ ...f, activiteType: e.target.value as GerantForm['activiteType'], activiteId: '' }))} style={inp}>
                       <option value="">— Sélectionner —</option>
-                      <option value="franchise">Franchise</option>
-                      <option value="activite_distincte">Activité distincte</option>
+                      <option value="activite">Activité</option>
                       <option value="labo">Labo</option>
                     </select>
                   </div>
-                  {form.activiteType === 'franchise' && (() => {
-                    const groups = Array.from(new Set(activites.filter((a) => a.type === 'franchise').map((a) => (a as any).franchiseGroup || a.nom))).sort();
-                    return groups.length > 1 ? (
-                      <div>
-                        <label style={lbl}>Groupe Franchise</label>
-                        <select value={form.franchiseGroup} onChange={(e) => setForm((f) => ({ ...f, franchiseGroup: e.target.value, activiteId: '' }))} style={inp}>
-                          <option value="">— Tous les groupes —</option>
-                          {groups.map((g) => <option key={g} value={g}>{g}</option>)}
-                        </select>
-                      </div>
-                    ) : null;
-                  })()}
                   {form.activiteType && (
                     <div>
                       <label style={lbl}>{form.activiteType === 'labo' ? 'Labo' : 'Activité'}</label>
@@ -252,9 +238,7 @@ export default function GerantsPage() {
                         <option value="">— Sélectionner —</option>
                         {form.activiteType === 'labo'
                           ? labos.map((l) => <option key={l.id} value={l.id}>{l.nom}</option>)
-                          : activites.filter((a) => a.type === (form.activiteType === 'franchise' ? 'franchise' : 'distincte'))
-                              .filter((a) => !form.franchiseGroup || ((a as any).franchiseGroup || a.nom) === form.franchiseGroup)
-                              .map((a) => <option key={a.id} value={a.id}>{a.nom}</option>)
+                          : activites.map((a) => <option key={a.id} value={a.id}>{a.nom}</option>)
                         }
                       </select>
                     </div>

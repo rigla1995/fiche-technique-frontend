@@ -353,9 +353,7 @@ export default function LaboHistoriqueApproPage() {
             </h1>
           </div>
           <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.85rem', margin: 0 }}>
-            {labo?.franchiseGroup
-              ? `Franchise : ${labo.franchiseGroup} · ${currentYear}`
-              : `Labo — consultation et export des approvisionnements ${currentYear}`}
+            {`Labo — consultation et export des approvisionnements ${currentYear}`}
           </p>
         </div>
       </div>

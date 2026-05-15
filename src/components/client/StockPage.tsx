@@ -1210,38 +1210,16 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
 interface ActivityStockSectionProps {
   label: string;
   activities: Activite[];
-  isFranchise?: boolean;
   initialActiviteId?: number;
   onSave: (activiteId: number, ingredientId: number, quantite: string, prixUnitaire: string, dateAppro: string, fournisseurId?: number | null, refFacture?: string | null) => Promise<void>;
 }
 
-function ActivityStockSection({ label, activities, isFranchise, initialActiviteId, onSave }: ActivityStockSectionProps) {
+function ActivityStockSection({ label, activities, initialActiviteId, onSave }: ActivityStockSectionProps) {
   const { t } = useTranslation();
-  const { canWrite } = useAuth();
+  const { canWrite: _canWrite } = useAuth();
+  void _canWrite;
 
-  const groups = useMemo(() => {
-    const map: Record<string, Activite[]> = {};
-    for (const a of activities) {
-      const g = a.franchiseGroup || a.nom;
-      if (!map[g]) map[g] = [];
-      map[g].push(a);
-    }
-    return map;
-  }, [activities]);
-
-  const groupNames = useMemo(() => Object.keys(groups).sort(), [groups]);
-  const hasMultipleGroups = groupNames.length > 1;
-
-  const [selectedGroup, setSelectedGroup] = useState<string>(() => {
-    if (initialActiviteId) {
-      const act = activities.find((a) => a.id === initialActiviteId);
-      if (act) return act.franchiseGroup || act.nom;
-    }
-    return groupNames[0] ?? '';
-  });
-  const groupActivities = useMemo(() => (selectedGroup ? (groups[selectedGroup] ?? activities) : activities), [groups, selectedGroup, activities]);
-
-  const [selectedId, setSelectedId] = useState<number>(initialActiviteId ?? groupActivities[0]?.id ?? 0);
+  const [selectedId, setSelectedId] = useState<number>(initialActiviteId ?? activities[0]?.id ?? 0);
   const [entries, setEntries] = useState<StockEntry[]>([]);
   const [loading, setLoading] = useState(false);
   const [fournisseurs, setFournisseurs] = useState<Fournisseur[]>([]);
@@ -1250,14 +1228,6 @@ function ActivityStockSection({ label, activities, isFranchise, initialActiviteI
   const [nameFilter, setNameFilter] = useState('');
   const [fournisseurFilter, setFournisseurFilter] = useState('');
   const [refFactureFilter, setRefFactureFilter] = useState('');
-  const [duplicating, setDuplicating] = useState(false);
-  const [dupMsg, setDupMsg] = useState('');
-
-  useEffect(() => {
-    if (initialActiviteId) return; // locked by gérant — don't override
-    const first = groupActivities[0]?.id ?? 0;
-    setSelectedId(first);
-  }, [selectedGroup, initialActiviteId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadStock = useCallback(async (actId: number) => {
     setLoading(true);
@@ -1300,42 +1270,15 @@ function ActivityStockSection({ label, activities, isFranchise, initialActiviteI
     }
   };
 
-  const handleDuplicate = async () => {
-    if (!window.confirm(t('client.stock.duplicate_confirm'))) return;
-    setDuplicating(true);
-    setDupMsg('');
-    try {
-      const { data } = await api.post(`/api/stock/entreprise/${selectedId}/duplicate-franchise`);
-      setDupMsg(t('client.stock.duplicate_done', { count: data.duplicatedTo }));
-      setTimeout(() => setDupMsg(''), 4000);
-    } catch {
-      setDupMsg(t('common.error'));
-    }
-    setDuplicating(false);
-  };
-
   const allCategories = Array.from(new Set(
     entries.map((e) => e.categorie || t('client.ingredients_catalog.no_category'))
   )).sort();
 
-  const groupHasLabo = groupActivities.some((a) => !!a.laboId);
-  const canDuplicate = isFranchise && groupActivities.length > 1 && !groupHasLabo;
-
   return (
     <div style={{ marginBottom: 36 }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14, paddingBottom: 10, borderBottom: '2px solid var(--border)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span style={{ width: 4, height: 22, borderRadius: 4, background: 'linear-gradient(180deg, #2563eb 0%, #0ea5e9 100%)', display: 'inline-block', flexShrink: 0 }} />
-          <h2 style={{ fontSize: '0.9rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--text)', margin: 0 }}>{label}</h2>
-        </div>
-        {canDuplicate && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            {dupMsg && <span style={{ fontSize: '0.8rem', color: 'var(--success)' }}>{dupMsg}</span>}
-            <button className="btn btn-primary btn-sm" onClick={handleDuplicate} disabled={duplicating || !canWrite}>
-              {duplicating ? '...' : `📋 ${t('client.stock.duplicate_franchise')}`}
-            </button>
-          </div>
-        )}
+      <div style={{ display: 'flex', alignItems: 'center', marginBottom: 14, paddingBottom: 10, borderBottom: '2px solid var(--border)' }}>
+        <span style={{ width: 4, height: 22, borderRadius: 4, background: 'linear-gradient(180deg, #2563eb 0%, #0ea5e9 100%)', display: 'inline-block', flexShrink: 0, marginRight: 10 }} />
+        <h2 style={{ fontSize: '0.9rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--text)', margin: 0 }}>{label}</h2>
       </div>
 
       {/* Filter panel */}
@@ -1347,19 +1290,11 @@ function ActivityStockSection({ label, activities, isFranchise, initialActiviteI
           )}
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '12px 20px' }}>
-          {isFranchise && hasMultipleGroups && !initialActiviteId && (
-            <div>
-              <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#2563eb', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>Groupe</span>
-              <select className="input" style={{ width: '100%' }} value={selectedGroup} onChange={(e) => setSelectedGroup(e.target.value)}>
-                {groupNames.map((g) => <option key={g} value={g}>{g}</option>)}
-              </select>
-            </div>
-          )}
           {!initialActiviteId && (
             <div>
               <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#2563eb', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>Activité</span>
               <select className="input" style={{ width: '100%' }} value={selectedId} onChange={(e) => setSelectedId(Number(e.target.value))}>
-                {(isFranchise ? groupActivities : activities).map((a) => <option key={a.id} value={a.id}>{a.nom}</option>)}
+                {activities.map((a) => <option key={a.id} value={a.id}>{a.nom}</option>)}
               </select>
             </div>
           )}
@@ -1450,7 +1385,6 @@ export default function StockPage() {
   const { user } = useAuth();
   const [searchParams] = useSearchParams();
   const isEntreprise = user?.compteType === 'entreprise' || !user?.compteType;
-  const section = searchParams.get('section') as 'franchise' | 'distinct' | null;
   const urlActiviteId = searchParams.get('activiteId') ? Number(searchParams.get('activiteId')) : undefined;
 
   const [clientEntries, setClientEntries] = useState<StockEntry[]>([]);
@@ -1462,8 +1396,7 @@ export default function StockPage() {
   const [clientRefFactureFilter, setClientRefFactureFilter] = useState('');
 
   const [typesSummary, setTypesSummary] = useState<ActiviteTypesSummary | null>(null);
-  const [franchiseActivities, setFranchiseActivities] = useState<Activite[]>([]);
-  const [distinctActivities, setDistinctActivities] = useState<Activite[]>([]);
+  const [allActivities, setAllActivities] = useState<Activite[]>([]);
   const [activitesLoading, setActivitesLoading] = useState(false);
   const [indepFournisseurs, setIndepFournisseurs] = useState<Fournisseur[]>([]);
 
@@ -1493,9 +1426,7 @@ export default function StockPage() {
       api.get('/api/entreprise/activites'),
     ]).then(([summaryRes, activitesRes]) => {
       setTypesSummary(summaryRes.data as ActiviteTypesSummary);
-      const all = activitesRes.data as Activite[];
-      setFranchiseActivities(all.filter((a) => a.type === 'franchise'));
-      setDistinctActivities(all.filter((a) => a.type === 'distincte' || a.type == null));
+      setAllActivities(activitesRes.data as Activite[]);
     }).catch(() => {}).finally(() => setActivitesLoading(false));
   }, [isEntreprise]);
 
@@ -1545,16 +1476,9 @@ export default function StockPage() {
     return a.localeCompare(b);
   });
 
-  const pageTitle = isEntreprise && section === 'franchise'
-    ? t('nav.stock_franchise')
-    : isEntreprise && section === 'distinct'
-    ? t('nav.stock_distinct')
-    : t('client.stock.title');
-
-  const subtitle = isEntreprise && section === 'franchise'
-    ? 'Gestion des approvisionnements franchise'
-    : isEntreprise && section === 'distinct'
-    ? 'Gestion des approvisionnements activités distinctes'
+  const pageTitle = isEntreprise ? t('nav.stock_activite', 'Stock Activités') : t('client.stock.title');
+  const subtitle = isEntreprise
+    ? 'Gestion des approvisionnements et niveaux de stock'
     : 'Gestion des approvisionnements et niveaux de stock';
 
   return (
@@ -1666,24 +1590,14 @@ export default function StockPage() {
           <p className="text-muted">{t('common.loading')}</p>
         ) : (
           <>
-            {(!section || section === 'franchise') && typesSummary?.hasFranchise && franchiseActivities.length > 0 && (
+            {typesSummary?.hasActivites && allActivities.length > 0 ? (
               <ActivityStockSection
-                label={t('client.stock.franchise_section')}
-                activities={franchiseActivities}
-                isFranchise={true}
+                label="Stock Activités"
+                activities={allActivities}
                 initialActiviteId={urlActiviteId}
                 onSave={saveEntrepriseStock}
               />
-            )}
-            {(!section || section === 'distinct') && typesSummary?.hasDistinct && distinctActivities.length > 0 && (
-              <ActivityStockSection
-                label={t('client.stock.distinct_section')}
-                activities={distinctActivities}
-                initialActiviteId={urlActiviteId}
-                onSave={saveEntrepriseStock}
-              />
-            )}
-            {!typesSummary?.hasFranchise && !typesSummary?.hasDistinct && (
+            ) : (
               <div className="alert alert-warning">{t('client.stock.no_activities')}</div>
             )}
           </>

@@ -38,14 +38,12 @@ interface LaboStockRow {
   prixUnitaire: number | null;
   isPT?: boolean;
   activiteId?: number | null;
-  ptFranchiseGroup?: string | null;
   recentTransferDates?: string[];
 }
 
 interface Activite {
   id: number;
   nom: string;
-  franchiseGroup?: string | null;
 }
 
 type TransferQtys = Record<number, Record<number, string>>;
@@ -55,7 +53,7 @@ export default function TransferPage() {
   const [searchParams] = useSearchParams();
   const laboId = searchParams.get('laboId') || '';
 
-  const [labo, setLabo] = useState<{ nom: string; franchiseGroup: string; activites: Activite[] } | null>(null);
+  const [labo, setLabo] = useState<{ nom: string; activites: Activite[] } | null>(null);
   const [stock, setStock] = useState<LaboStockRow[]>([]);
   const [assignedSet, setAssignedSet] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
@@ -319,9 +317,6 @@ export default function TransferPage() {
               {labo ? labo.nom : t('common.loading')} — {t('client.labo.transfer_title')}
             </h1>
           </div>
-          {labo && (
-            <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.85rem', margin: 0 }}>{labo.franchiseGroup}</p>
-          )}
         </div>
         <div style={{ display: 'flex', gap: 10 }}>
           <Link to={`/client/labo/stock?laboId=${laboId}`} className="btn btn-ghost btn-sm"
@@ -468,9 +463,8 @@ export default function TransferPage() {
                                   )}
                                 </td>
                                 {activites.map((act) => {
-                                  // PT: enable for activités with same franchiseGroup; ingredient: check assignment
                                   const isAssigned = r.isPT
-                                    ? (r.ptFranchiseGroup ? act.franchiseGroup === r.ptFranchiseGroup : act.id === r.activiteId)
+                                    ? act.id === r.activiteId
                                     : assignedSet.has(`${r.ingredientId}-${act.id}`);
                                   return (
                                     <td key={act.id} style={{ textAlign: 'center', padding: '12px 14px' }}>

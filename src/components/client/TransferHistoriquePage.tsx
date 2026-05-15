@@ -34,7 +34,7 @@ export default function TransferHistoriquePage() {
   const [searchParams] = useSearchParams();
   const laboId = searchParams.get('laboId') || '';
 
-  const [labo, setLabo] = useState<{ nom: string; franchiseGroup: string; activites: Activite[] } | null>(null);
+  const [labo, setLabo] = useState<{ nom: string; activites: Activite[] } | null>(null);
   const [results, setResults] = useState<TransferEntry[]>([]);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
@@ -116,9 +116,6 @@ export default function TransferHistoriquePage() {
               {labo ? labo.nom : t('common.loading')} — {t('client.labo.transfers_history')} {currentYear}
             </h1>
           </div>
-          {labo && (
-            <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.85rem', margin: 0 }}>{labo.franchiseGroup}</p>
-          )}
         </div>
         <Link to={`/client/labo/transfer?laboId=${laboId}`}
           style={{ background: 'linear-gradient(135deg, #7e22ce 0%, #a855f7 100%)', boxShadow: '0 4px 14px rgba(126,34,206,0.35)', borderRadius: 10, border: 'none', color: '#fff', fontWeight: 800, padding: '10px 24px', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
