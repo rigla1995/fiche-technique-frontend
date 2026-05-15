@@ -48,6 +48,7 @@ import './index.css';
 function ClientDefaultRedirect() {
   const { user } = useAuth();
   if (user?.role === 'gerant') return <Navigate to="/client/stock" replace />;
+  if ((user?.activitesCount ?? 0) === 0) return <Navigate to="/client/activites" replace />;
   return <Navigate to="/client/rapports" replace />;
 }
 
@@ -67,6 +68,8 @@ function RootRedirect() {
   if (user.compteType === 'entreprise' && (user.onboardingStep ?? 0) === 2) {
     return <Navigate to="/client/activites" replace />;
   }
+  // Post-onboarding: redirect based on activités count
+  if ((user.activitesCount ?? 0) === 0) return <Navigate to="/client/activites" replace />;
   return <Navigate to="/client/rapports" replace />;
 }
 
