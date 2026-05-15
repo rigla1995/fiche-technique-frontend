@@ -297,6 +297,7 @@ export default function TransferHistoriquePage() {
               <p style={{ fontSize: '0.9rem', fontWeight: 500 }}>{t('common.no_result')}</p>
             </div>
           ) : (
+            <>
             {selectedIds.size > 0 && (
               <div style={{ marginBottom: 8, fontSize: '0.82rem', color: '#7e22ce', fontWeight: 700 }}>
                 {selectedIds.size} sélectionné{selectedIds.size > 1 ? 's' : ''}
@@ -364,6 +365,7 @@ export default function TransferHistoriquePage() {
                 )}
               </div>
             </div>
+            </>
           )}
         </>
       )}
