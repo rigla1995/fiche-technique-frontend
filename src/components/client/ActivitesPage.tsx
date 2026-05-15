@@ -166,7 +166,11 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
         if (onCreated) onCreated();
         if (isFirst && user?.onboardingStep === 2) await advanceOnboarding(3);
         closeForm();
-        if (isFirst) {
+        // Redirect to Catalogue Global only when all subscription slots are filled
+        const newActCount = activites.length + 1;
+        const allActsFilled = maxActivites !== null ? newActCount >= maxActivites : isFirst;
+        const allLabosFilled = (maxLabos ?? 0) === 0 || labos.length >= (maxLabos ?? 0);
+        if (allActsFilled && allLabosFilled) {
           navigate('/client/catalogue-global?created=1');
           return;
         }
