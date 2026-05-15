@@ -65,7 +65,7 @@ export default function TransferPage() {
   const [successMsg, setSuccessMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
   const [perRowDates, setPerRowDates] = useState<Record<number, string>>({});
-  const [perRowSaving, setPerRowSaving] = useState<Record<number, boolean>>({});
+  const [bulkSaving, setBulkSaving] = useState(false);
   const [transferConfirm, setTransferConfirm] = useState<{
     ingredientId: number; nom: string; date: string; existingTotal: number; newQty: number;
   } | null>(null);
@@ -103,7 +103,7 @@ export default function TransferPage() {
     try {
       const [laboRes, stockRes, assignRes, transfersRes] = await Promise.all([
         api.get(`/api/labo/${laboId}`),
-        api.get(`/api/labo/${laboId}/stock`),
+        api.get(`/api/labo/${laboId}/stock?assignedOnly=true`),
         api.get(`/api/labo/${laboId}/activity-assignments`),
         api.get(`/api/labo/${laboId}/transfers`),
       ]);
@@ -167,61 +167,107 @@ export default function TransferPage() {
     return new Set([...histDates, ...recentDates]);
   };
 
-  const handleRowTransfer = async (ingredientId: number, confirmed = false) => {
+  const handleBulkTransfer = async (confirmed = false) => {
     setErrorMsg('');
     if (!refFacture.trim()) { setErrorMsg('Le N° de BL (Réf. Facture) est obligatoire.'); return; }
-    const activiteMap = qtys[ingredientId] || {};
-    const transfers = Object.entries(activiteMap)
-      .filter(([, v]) => parseFloat(v) > 0)
-      .map(([actId, v]) => ({ activiteId: Number(actId), ingredientId, quantite: parseFloat(v) }));
-    if (transfers.length === 0) return;
 
-    const row = stock.find((r) => r.ingredientId === ingredientId);
-    if (row && row.quantite !== null) {
-      const total = transfers.reduce((s, t) => s + t.quantite, 0);
-      if (total > row.quantite) {
-        setErrorMsg(t('client.labo.transfer_overstock', { nom: row.nom, disponible: row.quantite }));
-        return;
+    // Gather all non-zero transfers per ingredient
+    const ingredientBatches: Array<{
+      ingredientId: number;
+      nom: string;
+      transfers: Array<{ activiteId: number; ingredientId: number; quantite: number }>;
+      dateTransfert: string;
+      quantite: number | null;
+    }> = [];
+
+    for (const row of stock) {
+      const activiteMap = qtys[row.ingredientId] || {};
+      const transfers = Object.entries(activiteMap)
+        .filter(([, v]) => parseFloat(v) > 0)
+        .map(([actId, v]) => ({ activiteId: Number(actId), ingredientId: row.ingredientId, quantite: parseFloat(v) }));
+      if (transfers.length === 0) continue;
+
+      if (row.quantite !== null) {
+        const total = transfers.reduce((s, tr) => s + tr.quantite, 0);
+        if (total > row.quantite) {
+          setErrorMsg(t('client.labo.transfer_overstock', { nom: row.nom, disponible: row.quantite }));
+          return;
+        }
       }
+
+      ingredientBatches.push({
+        ingredientId: row.ingredientId,
+        nom: row.nom,
+        transfers,
+        dateTransfert: perRowDates[row.ingredientId] || todayStr(),
+        quantite: row.quantite,
+      });
     }
 
-    const dateTransfert = perRowDates[ingredientId] || todayStr();
+    if (ingredientBatches.length === 0) {
+      setErrorMsg('Veuillez saisir au moins une quantité à transférer.');
+      return;
+    }
 
     if (!confirmed) {
-      const tDates = getTransferDates(ingredientId);
-      if (tDates.has(dateTransfert)) {
-        // Fetch full history to compute existingTotal (stubs have quantite=0)
-        let history = transferHistory[ingredientId];
-        if (!historyLoaded.has(ingredientId)) {
-          try {
-            const { data } = await api.get(`/api/labo/${laboId}/transfers?ingredientId=${ingredientId}&limit=50`);
-            setTransferHistory((prev) => ({ ...prev, [ingredientId]: data }));
-            setHistoryLoaded((prev) => new Set([...prev, ingredientId]));
-            history = data;
-          } catch { history = []; }
+      for (const batch of ingredientBatches) {
+        const tDates = getTransferDates(batch.ingredientId);
+        if (tDates.has(batch.dateTransfert)) {
+          let history = transferHistory[batch.ingredientId];
+          if (!historyLoaded.has(batch.ingredientId)) {
+            try {
+              const { data } = await api.get(`/api/labo/${laboId}/transfers?ingredientId=${batch.ingredientId}&limit=50`);
+              setTransferHistory((prev) => ({ ...prev, [batch.ingredientId]: data }));
+              setHistoryLoaded((prev) => new Set([...prev, batch.ingredientId]));
+              history = data;
+            } catch { history = []; }
+          }
+          const existingTotal = (history || [])
+            .filter((h) => h.dateTransfert === batch.dateTransfert)
+            .reduce((s, h) => s + h.quantite, 0);
+          const newQty = batch.transfers.reduce((s, tr) => s + tr.quantite, 0);
+          setTransferConfirm({ ingredientId: batch.ingredientId, nom: batch.nom, date: batch.dateTransfert, existingTotal, newQty });
+          return;
         }
-        const existingTotal = (history || [])
-          .filter((h) => h.dateTransfert === dateTransfert)
-          .reduce((s, h) => s + h.quantite, 0);
-        const newQty = transfers.reduce((s, t) => s + t.quantite, 0);
-        setTransferConfirm({ ingredientId, nom: row?.nom ?? '', date: dateTransfert, existingTotal, newQty });
-        return;
       }
     }
 
-    setPerRowSaving((prev) => ({ ...prev, [ingredientId]: true }));
+    setBulkSaving(true);
     try {
-      await api.post(`/api/labo/${laboId}/transfer`, {
-        dateTransfert, note: note || undefined, refFacture: refFacture.trim(), transfers,
-      });
+      for (const batch of ingredientBatches) {
+        await api.post(`/api/labo/${laboId}/transfer`, {
+          dateTransfert: batch.dateTransfert,
+          note: note || undefined,
+          refFacture: refFacture.trim(),
+          transfers: batch.transfers,
+        });
+        setQtys((prev) => ({
+          ...prev,
+          [batch.ingredientId]: Object.fromEntries(Object.keys(prev[batch.ingredientId] || {}).map((a) => [a, ''])),
+        }));
+        setPerRowDates((prev) => ({ ...prev, [batch.ingredientId]: todayStr() }));
+      }
       setHasTransfers(true);
-      setQtys((prev) => ({ ...prev, [ingredientId]: Object.fromEntries(Object.keys(prev[ingredientId]).map((a) => [a, ''])) }));
-      setPerRowDates((prev) => ({ ...prev, [ingredientId]: todayStr() }));
-      // Always refresh history (dynamic update)
+      // Refresh transfer histories
       try {
-        const { data } = await api.get(`/api/labo/${laboId}/transfers?ingredientId=${ingredientId}&limit=5`);
-        setTransferHistory((prev) => ({ ...prev, [ingredientId]: data }));
-        setHistoryLoaded((prev) => new Set([...prev, ingredientId]));
+        const histUpdates = await Promise.allSettled(
+          ingredientBatches.map(async (b) => {
+            const { data } = await api.get(`/api/labo/${laboId}/transfers?ingredientId=${b.ingredientId}&limit=5`);
+            return [b.ingredientId, data] as [number, TransferRecord[]];
+          })
+        );
+        setTransferHistory((prev) => {
+          const next = { ...prev };
+          for (const r of histUpdates) {
+            if (r.status === 'fulfilled') next[r.value[0]] = r.value[1];
+          }
+          return next;
+        });
+        setHistoryLoaded((prev) => {
+          const n = new Set(prev);
+          for (const r of histUpdates) if (r.status === 'fulfilled') n.add(r.value[0]);
+          return n;
+        });
       } catch { /* ignore */ }
       // Reload stock
       const { data } = await api.get(`/api/labo/${laboId}/stock?assignedOnly=true`);
@@ -232,16 +278,15 @@ export default function TransferPage() {
       const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
       setErrorMsg(msg || t('common.error'));
     }
-    setPerRowSaving((prev) => ({ ...prev, [ingredientId]: false }));
-  };
-
-  const rowCanSave = (ingredientId: number, stockEmpty: boolean): boolean => {
-    if (stockEmpty) return false;
-    const activiteMap = qtys[ingredientId] || {};
-    return Object.values(activiteMap).some((v) => parseFloat(v) > 0);
+    setBulkSaving(false);
   };
 
   const activites: Activite[] = labo?.activites || [];
+
+  const bulkTotal = stock.reduce((s, r) => {
+    const map = qtys[r.ingredientId] || {};
+    return s + Object.values(map).reduce((ss, v) => ss + (parseFloat(v) || 0), 0);
+  }, 0);
 
   const allCategories = Array.from(new Set(stock.map((r) => r.categorie))).sort();
   const ingredientsInCategory = filterCategorie ? stock.filter((r) => r.categorie === filterCategorie) : stock;
@@ -261,7 +306,7 @@ export default function TransferPage() {
 
   return (
     <div className="page">
-      {/* Confirmation popup — modern alarming design */}
+      {/* Confirmation popup — date conflict warning */}
       {transferConfirm && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,15,15,0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}
           onClick={() => setTransferConfirm(null)}>
@@ -294,7 +339,7 @@ export default function TransferPage() {
               <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
                 <button className="btn btn-ghost" style={{ fontWeight: 600 }} onClick={() => setTransferConfirm(null)}>Annuler</button>
                 <button style={{ background: 'linear-gradient(135deg, #f59e0b, #d97706)', color: '#fff', border: 'none', borderRadius: 10, padding: '9px 20px', fontWeight: 700, cursor: 'pointer', fontSize: '0.92rem' }}
-                  onClick={() => { const id = transferConfirm.ingredientId; setTransferConfirm(null); handleRowTransfer(id, true); }}>
+                  onClick={() => { setTransferConfirm(null); handleBulkTransfer(true); }}>
                   ✓ Confirmer le transfert
                 </button>
               </div>
@@ -336,30 +381,10 @@ export default function TransferPage() {
         </div>
       </div>
 
-      {/* Global Réf. Facture + note */}
-      <div style={{ background: 'var(--surface)', borderRadius: 14, padding: '16px 20px', border: '1px solid var(--border)', boxShadow: '0 2px 12px rgba(0,0,0,0.05)', marginBottom: 20, display: 'flex', gap: 16, alignItems: 'flex-start', flexWrap: 'wrap' }}>
-        <div style={{ flex: 1, minWidth: 160 }}>
-          <label style={{ fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#7e22ce', display: 'block', marginBottom: 4 }}>
-            Réf. Facture / BL <span style={{ color: 'var(--danger, #ef4444)' }}>*</span>
-          </label>
-          <input type="text" className="input" value={refFacture}
-            style={{ border: '1.5px solid #7e22ce', background: '#faf5ff', fontWeight: 600 }}
-            onChange={(e) => { setRefFacture(e.target.value); if (errorMsg) setErrorMsg(''); }}
-            placeholder="N° bon de livraison…" />
-        </div>
-        <div style={{ flex: 1, minWidth: 160 }}>
-          <label style={{ fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>
-            {t('client.labo.transfer_note')}
-          </label>
-          <input type="text" className="input" value={note} onChange={(e) => setNote(e.target.value)}
-            placeholder={t('client.labo.transfer_note_placeholder')} />
-        </div>
-      </div>
-
       {successMsg && <div style={{ background: 'var(--success, #10b981)', color: '#fff', borderRadius: 10, padding: '10px 18px', marginBottom: 16, fontWeight: 600 }}>✓ {successMsg}</div>}
       {errorMsg && <div style={{ background: 'var(--danger, #ef4444)', color: '#fff', borderRadius: 10, padding: '10px 18px', marginBottom: 16, fontWeight: 600 }}>{errorMsg}</div>}
 
-      {!loading && stock.length > 0 && (
+      {!loading && stock.length > 0 && activites.length > 0 && (
         <div style={{ background: 'var(--surface)', borderRadius: 14, padding: '16px 20px', border: '1px solid var(--border)', boxShadow: '0 2px 12px rgba(0,0,0,0.05)', marginBottom: 20, overflow: 'hidden' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
             <span style={{ fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#7e22ce' }}>Filtres</span>
@@ -392,12 +417,90 @@ export default function TransferPage() {
         </div>
       )}
 
+      {/* Confirmation block — Réf, Remarque + global Transférer button */}
+      {!loading && stock.length > 0 && activites.length > 0 && (
+        <div style={{ background: 'linear-gradient(135deg, #faf5ff, #f3e8ff)', borderRadius: 14, padding: '20px 24px', border: '1.5px solid #d8b4fe', boxShadow: '0 4px 20px rgba(126,34,206,0.12)', marginBottom: 24 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+            <div style={{ background: 'linear-gradient(135deg, #7e22ce, #a855f7)', borderRadius: 9, padding: '6px 8px', fontSize: '1rem' }}>✅</div>
+            <span style={{ fontSize: '0.75rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#7e22ce' }}>Confirmation</span>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '12px 20px', marginBottom: 18 }}>
+            <div>
+              <label style={{ fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#7e22ce', display: 'block', marginBottom: 4 }}>
+                Réf. Facture / BL <span style={{ color: 'var(--danger, #ef4444)' }}>*</span>
+              </label>
+              <input type="text" className="input" value={refFacture}
+                style={{ border: '1.5px solid #7e22ce', background: '#fff', fontWeight: 600 }}
+                onChange={(e) => { setRefFacture(e.target.value); if (errorMsg) setErrorMsg(''); }}
+                placeholder="N° bon de livraison…" />
+            </div>
+            <div>
+              <label style={{ fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>
+                {t('client.labo.transfer_note')}
+              </label>
+              <input type="text" className="input" value={note} onChange={(e) => setNote(e.target.value)}
+                placeholder={t('client.labo.transfer_note_placeholder')} />
+            </div>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)' }}>Total à transférer :</span>
+              <span style={{ fontSize: '1.2rem', fontWeight: 900, color: bulkTotal > 0 ? '#7e22ce' : 'var(--text-muted)' }}>
+                {bulkTotal > 0 ? bulkTotal.toFixed(3) : '—'}
+              </span>
+            </div>
+            <button
+              onClick={() => handleBulkTransfer()}
+              disabled={bulkTotal === 0 || bulkSaving}
+              style={{
+                background: bulkTotal > 0 && !bulkSaving
+                  ? 'linear-gradient(135deg, #7e22ce 0%, #a855f7 100%)'
+                  : 'var(--border)',
+                boxShadow: bulkTotal > 0 && !bulkSaving ? '0 6px 20px rgba(126,34,206,0.4)' : 'none',
+                borderRadius: 12, border: 'none', color: '#fff', fontWeight: 800,
+                padding: '13px 32px', cursor: bulkTotal > 0 && !bulkSaving ? 'pointer' : 'not-allowed',
+                fontSize: '0.95rem', transition: 'all 0.2s',
+                opacity: bulkTotal === 0 || bulkSaving ? 0.55 : 1,
+                display: 'flex', alignItems: 'center', gap: 8,
+              }}>
+              {bulkSaving ? '…' : '↗ Transférer'}
+              {bulkTotal > 0 && !bulkSaving && (
+                <span style={{ background: 'rgba(255,255,255,0.22)', borderRadius: 7, padding: '2px 8px', fontSize: '0.82rem', fontWeight: 700 }}>
+                  {bulkTotal.toFixed(3)}
+                </span>
+              )}
+            </button>
+          </div>
+        </div>
+      )}
+
       {loading ? (
         <p className="text-muted">{t('common.loading')}</p>
       ) : stock.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '48px 24px', color: 'var(--text-muted)' }}>
-          <div style={{ fontSize: '2.5rem', marginBottom: 12 }}>🏭</div>
-          <p style={{ fontSize: '0.95rem', fontWeight: 500 }}>{t('client.labo.empty_stock')}</p>
+        <div style={{
+          background: 'linear-gradient(135deg, #faf5ff, #f3e8ff)',
+          border: '1.5px solid #d8b4fe', borderRadius: 18, padding: '48px 32px',
+          textAlign: 'center', boxShadow: '0 4px 24px rgba(126,34,206,0.08)',
+        }}>
+          <div style={{ fontSize: '3rem', marginBottom: 16 }}>🏭</div>
+          <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#7e22ce', marginBottom: 8 }}>
+            Aucun ingrédient disponible pour le transfert
+          </div>
+          <div style={{ fontSize: '0.9rem', color: 'var(--text-muted)', maxWidth: 460, margin: '0 auto 20px', lineHeight: 1.6 }}>
+            Les activités assignées à ce labo ne sont pas encore configurées.
+            Pour pouvoir effectuer des transferts, accédez au <strong>Catalogue Global</strong> et
+            assignez des ingrédients aux activités liées à ce labo.
+          </div>
+          <Link to="/client/catalogue-global"
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 8,
+              background: 'linear-gradient(135deg, #7e22ce, #a855f7)',
+              color: '#fff', borderRadius: 10, padding: '11px 24px',
+              fontWeight: 700, fontSize: '0.9rem', textDecoration: 'none',
+              boxShadow: '0 4px 16px rgba(126,34,206,0.35)',
+            }}>
+            🌐 Aller au Catalogue Global →
+          </Link>
         </div>
       ) : activites.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '48px 24px', color: 'var(--text-muted)' }}>
@@ -431,7 +534,6 @@ export default function TransferPage() {
                             <th key={act.id} style={{ textAlign: 'center', minWidth: 120, fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px', color: '#e9d5ff' }}>↗ {act.nom}</th>
                           ))}
                           <th style={{ textAlign: 'center', minWidth: 120, fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px', color: '#fff' }}>Date transfert</th>
-                          <th style={{ textAlign: 'center', minWidth: 110, fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px', color: '#fff' }}></th>
                         </tr>
                       </thead>
                       <tbody>
@@ -490,33 +592,25 @@ export default function TransferPage() {
                                       disabled={stockEmpty} />
                                   </div>
                                 </td>
-                                <td style={{ textAlign: 'center', padding: '12px 14px' }}>
-                                  <button
-                                    onClick={() => handleRowTransfer(r.ingredientId)}
-                                    disabled={!rowCanSave(r.ingredientId, stockEmpty) || !!perRowSaving[r.ingredientId]}
-                                    style={{ background: 'linear-gradient(135deg, #7e22ce 0%, #a855f7 100%)', boxShadow: '0 4px 14px rgba(126,34,206,0.35)', borderRadius: 10, border: 'none', color: '#fff', fontWeight: 800, padding: '10px 24px', cursor: 'pointer', minWidth: 90, opacity: (!rowCanSave(r.ingredientId, stockEmpty) || !!perRowSaving[r.ingredientId]) ? 0.5 : 1 }}>
-                                    {perRowSaving[r.ingredientId] ? '…' : '↗ Transférer'}
-                                  </button>
-                                </td>
                               </tr>
                               {isTransferOpen && (
                                 <tr>
-                                  <td colSpan={4 + activites.length} style={{ background: '#faf5ff', padding: '8px 16px', borderTop: '1px solid #e9d5ff' }}>
+                                  <td colSpan={3 + activites.length} style={{ background: '#faf5ff', padding: '8px 16px', borderTop: '1px solid #e9d5ff' }}>
                                     <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>
                                       ↗ 5 derniers transferts — {r.nom}
                                     </div>
                                     {isTransferLoading ? (
                                       <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Chargement…</span>
-                                    ) : rowTransfers.filter(t => t.activiteNom).length === 0 ? (
+                                    ) : rowTransfers.filter(tr => tr.activiteNom).length === 0 ? (
                                       <div style={{ textAlign: 'center', padding: '16px 0', color: 'var(--text-muted)', fontSize: '0.82rem' }}>
                                         <span style={{ display: 'block', fontSize: '1.4rem', marginBottom: 4 }}>📭</span>
                                         Aucun transfert enregistré
                                       </div>
                                     ) : (() => {
-                                      const realTransfers = rowTransfers.filter(t => t.activiteNom);
-                                      const actNames = Array.from(new Set(realTransfers.map((t) => t.activiteNom))).sort();
+                                      const realTransfers = rowTransfers.filter(tr => tr.activiteNom);
+                                      const actNames = Array.from(new Set(realTransfers.map((tr) => tr.activiteNom))).sort();
                                       const actTotals: Record<string, number> = {};
-                                      for (const t of realTransfers) actTotals[t.activiteNom] = (actTotals[t.activiteNom] ?? 0) + t.quantite;
+                                      for (const tr of realTransfers) actTotals[tr.activiteNom] = (actTotals[tr.activiteNom] ?? 0) + tr.quantite;
                                       return (
                                         <div style={{ overflowX: 'auto' }}>
                                           <table style={{ fontSize: '0.8rem', width: '100%', minWidth: 400 }}>
