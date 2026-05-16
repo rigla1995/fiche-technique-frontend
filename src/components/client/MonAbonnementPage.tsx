@@ -12,6 +12,22 @@ const MODE_INFO: Record<string, { label: string; color: string; bg: string; icon
 
 const fmtDate = (d: string) => d ? new Date(d).toLocaleDateString('fr-FR') : '—';
 
+const STATUT_COLORS: Record<string, string> = {
+  payé:       '#16a34a',
+  en_attente: '#d97706',
+  impayé:     '#dc2626',
+  remisé:     '#7c3aed',
+  gratuit:    '#0891b2',
+};
+
+const STATUT_LABELS: Record<string, string> = {
+  payé:       'Payé',
+  en_attente: 'En attente',
+  impayé:     'Impayé',
+  remisé:     'Remisé',
+  gratuit:    'Gratuit',
+};
+
 const promoTypeLabel = (p: Promotion): string => {
   if (p.type === 'free_months') return 'Gratuit';
   if (p.type === 'percent_off') {
