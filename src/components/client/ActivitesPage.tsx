@@ -309,7 +309,6 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
 
   const bizSaveAll = async () => {
     const validActs = bizActForms.filter((f) => f.nom.trim());
-    if (validActs.length === 0) { setBizError('Ajoutez au moins une activité avec un nom'); return; }
     setBizSaving(true);
     setBizError('');
     try {
@@ -329,11 +328,10 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
         if (createdLaboId) payload.laboId = createdLaboId;
         await api.post('/api/entreprise/activites', payload);
       }
-      if (onCreated) onCreated();
-      if (isFirst && user?.onboardingStep === 2) await advanceOnboarding(3);
+      if (validActs.length > 0 && onCreated) onCreated();
+      if (validActs.length > 0 && isFirst && user?.onboardingStep === 2) await advanceOnboarding(3);
       closeBizWizard();
       await load();
-      navigate('/client/catalogue-global?created=1');
     } catch (err: unknown) {
       const errMsg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
       setBizError(errMsg || t('common.error'));
@@ -549,11 +547,7 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                           </td>
                         )}
                         <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
-                          {!act.laboId && (
-                            <button className="btn btn-ghost btn-sm" title={t('client.entreprise.manage_ingredients')} onClick={() => openIngredients(act)}>🧂</button>
-                          )}
                           <button className="btn btn-ghost btn-sm" title={t('common.edit')} onClick={() => openEdit(act)}>✏️</button>
-                          <button className="btn btn-ghost btn-sm" title={t('client.entreprise.duplicate_activity')} onClick={() => openDuplicate(act)}>⧉</button>
                           <button className="btn btn-danger-ghost btn-sm" title={t('common.delete')} onClick={() => setDeleteTarget({ kind: 'activite', act })}>🗑</button>
                         </td>
                       </tr>
