@@ -126,6 +126,8 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
     setEditingId(act.id);
     setIsDuplicate(false);
     setForm({ nom: act.nom, adresse: act.adresse || '' });
+    setHasLabo(act.laboId ? true : false);
+    setSelectedLaboId(act.laboId ?? '');
     setError('');
     setShowForm(true);
   };
@@ -152,9 +154,8 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
   const submit = async (e?: React.FormEvent) => {
     e?.preventDefault();
     if (!form.nom.trim()) { setError(t('validation.name_required')); return; }
-    // Validate labo config if labos exist and creating new
-    const isCreating = !editingId && !isDuplicate;
-    if (isCreating && labos.length > 0) {
+    // Validate labo config if labos exist
+    if (labos.length > 0) {
       if (hasLabo === null) { setError('Veuillez choisir une option pour le labo'); return; }
       if (hasLabo === true && !selectedLaboId) { setError('Veuillez sélectionner un labo'); return; }
     }
@@ -162,7 +163,12 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
     setError('');
     try {
       if (editingId) {
-        await api.put(`/api/entreprise/activites/${editingId}`, { nom: form.nom, adresse: form.adresse });
+        const laboIdValue = labos.length > 0
+          ? (hasLabo === true && selectedLaboId ? Number(selectedLaboId) : null)
+          : undefined;
+        const updatePayload: Record<string, unknown> = { nom: form.nom, adresse: form.adresse };
+        if (typeof laboIdValue !== 'undefined') updatePayload.laboId = laboIdValue;
+        await api.put(`/api/entreprise/activites/${editingId}`, updatePayload);
         setMsg(t('client.entreprise.activity_updated'));
         setTimeout(() => setMsg(''), 3000);
         closeForm();
@@ -689,8 +695,8 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                   />
                 </div>
 
-                {/* Labo config — only when creating and labos exist */}
-                {!editingId && !isDuplicate && labos.length > 0 && (
+                {/* Labo config — when labos exist (create or edit) */}
+                {labos.length > 0 && (
                   <>
                     <div style={dividerStyle} />
                     <div>
