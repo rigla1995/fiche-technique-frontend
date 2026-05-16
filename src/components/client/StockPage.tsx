@@ -988,6 +988,10 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                               {entry.lastInvDate && (
                                 <div style={{ fontSize: '0.68rem', color: '#b45309', fontWeight: 600, marginTop: 2 }}>📦 {entry.lastInvDate.split('-').reverse().join('/')} · {entry.lastInvQty?.toFixed(3) ?? '—'}</div>
                               )}
+                              <button className="btn btn-ghost btn-sm" onClick={() => toggleHistory(entry.ingredientId)} title={t('client.stock.history')}
+                                style={{ fontSize: '0.72rem', color: '#0891b2', marginTop: 4, padding: '2px 6px' }}>
+                                {isHistOpen ? '📋▲ Historique' : '📋 Historique'}
+                              </button>
                             </td>
                             <td style={{ textAlign: 'right' }}>
                               <span className={cls} style={{ fontSize: '1rem', fontWeight: 800 }}>{totalDisplay}</span>
@@ -1054,14 +1058,14 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                                   </>
                                 )}
                                 {onSaveSeuilMin && canWrite && (
-                                  <button className="btn btn-ghost btn-sm" title="Configurer le seuil minimum" onClick={() => { setSeuilEdits((p) => ({ ...p, [entry.ingredientId]: entry.seuilMin !== null ? String(entry.seuilMin) : '' })); setSeuilModal({ ingredientId: entry.ingredientId, nom: entry.nom }); }}>🔧</button>
+                                  <button title="Configurer le seuil minimum" onClick={() => { setSeuilEdits((p) => ({ ...p, [entry.ingredientId]: entry.seuilMin !== null ? String(entry.seuilMin) : '' })); setSeuilModal({ ingredientId: entry.ingredientId, nom: entry.nom }); }}
+                                    style={{ fontSize: '0.75rem', fontWeight: 700, padding: '3px 8px', borderRadius: 6, border: '1px solid #f97316', background: '#fff7ed', color: '#ea580c', cursor: 'pointer' }}>
+                                    🔧 Seuil
+                                  </button>
                                 )}
                                 {canWrite && ((isEntreprise && activiteId) || (!isEntreprise && onSavePerte)) && (
                                   <button className="perte-btn" onClick={() => setPertesModal({ ingredientId: entry.ingredientId, nom: entry.nom })} title="Enregistrer une perte">📉 Perte</button>
                                 )}
-                                <button className="btn btn-ghost btn-sm" onClick={() => toggleHistory(entry.ingredientId)} title={t('client.stock.history')}>
-                                  {isHistOpen ? '📋▲' : '📋'}
-                                </button>
                               </div>
                             </td>
                           </tr>
