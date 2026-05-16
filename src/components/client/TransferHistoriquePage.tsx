@@ -28,6 +28,8 @@ interface TransferEntry {
   prixUnitaire: number | null;
   tauxTva: number | null;
   prixUnitaireTva: number | null;
+  createdBy: number | null;
+  createdByNom: string | null;
 }
 
 interface Activite { id: number; nom: string }
@@ -164,16 +166,11 @@ export default function TransferHistoriquePage() {
     return catOk && nomOk;
   });
 
-  // Totals
   const totalPages = Math.max(1, Math.ceil(filteredResults.length / PAGE_SIZE));
   const pagedResults = filteredResults.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
-  // Qty by unit for summary
-  const qtyByUnit: Record<string, number> = {};
-  for (const r of filteredResults) {
-    qtyByUnit[r.uniteNom] = (qtyByUnit[r.uniteNom] || 0) + r.quantite;
-  }
-  const unitEntries = Object.entries(qtyByUnit).sort(([a], [b]) => a.localeCompare(b));
+  const totalHT = filteredResults.reduce((s, r) => s + r.quantite * (r.prixUnitaire ?? 0), 0);
+  const totalTTC = filteredResults.reduce((s, r) => s + r.quantite * (r.prixUnitaireTva ?? 0), 0);
 
   if (!laboId) return <div className="page"><p className="text-muted">Labo introuvable.</p></div>;
 
@@ -309,22 +306,33 @@ export default function TransferHistoriquePage() {
                 {selectedIds.size} sélectionné{selectedIds.size > 1 ? 's' : ''}
               </div>
             )}
-            <div className="table-responsive card">
-              <table className="table">
+            <div className="card" style={{ overflowX: 'auto' }}>
+              <table className="table" style={{ tableLayout: 'fixed', width: '100%', minWidth: 860 }}>
+                <colgroup>
+                  <col style={{ width: '30px' }} />
+                  <col style={{ width: '100px' }} />
+                  <col style={{ width: '120px' }} />
+                  <col />
+                  <col style={{ width: '84px' }} />
+                  <col style={{ width: '90px' }} />
+                  <col style={{ width: '56px' }} />
+                  <col style={{ width: '90px' }} />
+                  <col style={{ width: '80px' }} />
+                  <col style={{ width: '72px' }} />
+                </colgroup>
                 <thead>
                   <tr style={{ background: 'linear-gradient(135deg, #3b0764, #7e22ce)' }}>
-                    <th style={{ width: 40, textAlign: 'center', fontWeight: 800, fontSize: '0.78rem', padding: '12px 14px', color: '#fff', background: 'transparent', borderBottom: 'none' }}>
-                      <input type="checkbox" checked={selectedIds.size === filteredResults.length && filteredResults.length > 0} onChange={toggleSelectAll} style={{ cursor: 'pointer' }} />
+                    <th style={{ textAlign: 'center', padding: '10px 4px', color: '#fff', background: 'transparent', borderBottom: 'none' }}>
+                      <input type="checkbox" checked={selectedIds.size === filteredResults.length && filteredResults.length > 0} onChange={toggleSelectAll} style={{ cursor: 'pointer', accentColor: '#fff' }} />
                     </th>
-                    <th style={{ fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px', color: '#fff', background: 'transparent', borderBottom: 'none' }}>{t('client.labo.col_date')}</th>
-                    <th style={{ fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px', color: '#fff', background: 'transparent', borderBottom: 'none' }}>{t('client.labo.col_activite')}</th>
-                    <th style={{ fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px', color: '#fff', background: 'transparent', borderBottom: 'none' }}>{t('client.historique_appro.col_ingredient')}</th>
-                    <th style={{ fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px', color: '#fff', background: 'transparent', borderBottom: 'none' }}>{t('client.historique_appro.col_category')}</th>
-                    <th style={{ textAlign: 'right', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px', color: '#fff', background: 'transparent', borderBottom: 'none' }}>{t('client.historique_appro.col_qty')}</th>
-                    <th style={{ textAlign: 'right', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px', color: '#fff', background: 'transparent', borderBottom: 'none' }}>Prix U. HT</th>
-                    <th style={{ textAlign: 'right', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px', color: '#fff', background: 'transparent', borderBottom: 'none' }}>TVA %</th>
-                    <th style={{ textAlign: 'right', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px', color: '#fff', background: 'transparent', borderBottom: 'none' }}>Prix U. TTC</th>
-                    <th style={{ textAlign: 'center', width: 60, fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px', color: '#fff', background: 'transparent', borderBottom: 'none' }}></th>
+                    {([t('client.labo.col_date'), t('client.labo.col_activite'), t('client.historique_appro.col_ingredient')] as const).map((label) => (
+                      <th key={label} style={{ fontWeight: 800, fontSize: '0.75rem', letterSpacing: '0.04em', textTransform: 'uppercase', padding: '10px 10px', color: '#fff', background: 'transparent', borderBottom: 'none' }}>{label}</th>
+                    ))}
+                    {([t('client.historique_appro.col_qty'), 'Prix U. HT', 'TVA %', 'Prix U. TTC'] as const).map((label) => (
+                      <th key={label} style={{ textAlign: 'right', fontWeight: 800, fontSize: '0.75rem', letterSpacing: '0.04em', textTransform: 'uppercase', padding: '10px 10px', color: '#fff', background: 'transparent', borderBottom: 'none' }}>{label}</th>
+                    ))}
+                    <th style={{ fontWeight: 800, fontSize: '0.75rem', letterSpacing: '0.04em', textTransform: 'uppercase', padding: '10px 10px', color: '#fff', background: 'transparent', borderBottom: 'none' }}>Créé par</th>
+                    <th style={{ padding: '10px 6px', color: '#fff', background: 'transparent', borderBottom: 'none' }}></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -332,42 +340,63 @@ export default function TransferHistoriquePage() {
                     const isSelected = selectedIds.has(r.id);
                     return (
                     <tr key={r.id} style={{ background: isSelected ? '#f5f3ff' : undefined, cursor: 'pointer' }} onClick={() => toggleSelect(r.id)}>
-                      <td style={{ textAlign: 'center', padding: '12px 14px' }} onClick={(e) => e.stopPropagation()}>
+                      <td style={{ textAlign: 'center', padding: '8px 4px' }} onClick={(e) => e.stopPropagation()}>
                         <input type="checkbox" checked={isSelected} onChange={() => toggleSelect(r.id)} style={{ cursor: 'pointer' }} />
                       </td>
-                      <td style={{ padding: '12px 14px' }}>
-                        <span style={{ background: '#faf5ff', border: '1px solid #d8b4fe', borderRadius: 7, padding: '3px 10px', fontWeight: 700, fontSize: '0.82rem', color: '#7e22ce' }}>
+                      <td style={{ padding: '8px 10px' }}>
+                        <span style={{ background: '#faf5ff', border: '1px solid #d8b4fe', borderRadius: 6, padding: '2px 8px', fontWeight: 700, fontSize: '0.8rem', color: '#7e22ce', whiteSpace: 'nowrap' }}>
                           {fmtDate(r.dateTransfert)}
                         </span>
                       </td>
-                      <td style={{ fontWeight: 600, padding: '12px 14px' }}>{r.activiteNom}</td>
-                      <td style={{ padding: '12px 14px' }}>{r.ingredientNom}</td>
-                      <td style={{ color: 'var(--text-muted)', fontSize: '0.85rem', padding: '12px 14px' }}>{r.categorieNom}</td>
-                      <td style={{ textAlign: 'right', fontWeight: 800, color: 'var(--success, #10b981)', padding: '12px 14px' }}>
-                        {r.quantite % 1 === 0 ? r.quantite.toFixed(0) : r.quantite} <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem', fontWeight: 400 }}>{r.uniteNom}</span>
+                      <td style={{ fontWeight: 600, padding: '8px 10px', fontSize: '0.86rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.activiteNom}</td>
+                      <td style={{ padding: '8px 10px' }}>
+                        <div style={{ fontWeight: 600, fontSize: '0.86rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.ingredientNom}</div>
+                        <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.categorieNom}</div>
                       </td>
-                      <td style={{ textAlign: 'right', padding: '12px 14px', fontSize: '0.85rem', color: '#374151', fontWeight: 600 }}>
+                      <td style={{ textAlign: 'right', fontWeight: 800, color: '#10b981', padding: '8px 10px', fontSize: '0.85rem', whiteSpace: 'nowrap' }}>
+                        {r.quantite % 1 === 0 ? r.quantite.toFixed(0) : r.quantite} <span style={{ color: 'var(--text-muted)', fontSize: '0.72rem', fontWeight: 400 }}>{r.uniteNom}</span>
+                      </td>
+                      <td style={{ textAlign: 'right', padding: '8px 10px', fontSize: '0.85rem', color: '#374151', fontWeight: 600, whiteSpace: 'nowrap' }}>
                         {r.prixUnitaire != null ? `${r.prixUnitaire.toFixed(3)} DT` : '—'}
                       </td>
-                      <td style={{ textAlign: 'right', padding: '12px 14px', fontSize: '0.85rem', color: '#6b7280' }}>
+                      <td style={{ textAlign: 'right', padding: '8px 10px', fontSize: '0.82rem', color: '#6b7280', whiteSpace: 'nowrap' }}>
                         {r.tauxTva != null ? `${r.tauxTva}%` : '—'}
                       </td>
-                      <td style={{ textAlign: 'right', padding: '12px 14px', fontSize: '0.85rem', color: '#059669', fontWeight: 700 }}>
+                      <td style={{ textAlign: 'right', padding: '8px 10px', fontSize: '0.85rem', color: '#059669', fontWeight: 700, whiteSpace: 'nowrap' }}>
                         {r.prixUnitaireTva != null ? `${r.prixUnitaireTva.toFixed(3)} DT` : '—'}
                       </td>
-                      <td style={{ textAlign: 'center', padding: '10px 10px' }} onClick={(e) => e.stopPropagation()}>
-                        <div style={{ display: 'flex', gap: 5, justifyContent: 'center', alignItems: 'center' }}>
+                      <td style={{ fontSize: '0.73rem', color: r.createdByNom ? '#7c3aed' : 'var(--text-muted)', fontWeight: r.createdByNom ? 600 : 400, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', padding: '8px 10px' }}>
+                        {r.createdByNom ? `👤 ${r.createdByNom}` : '—'}
+                      </td>
+                      <td style={{ textAlign: 'center', padding: '8px 6px' }} onClick={(e) => e.stopPropagation()}>
+                        <div style={{ display: 'flex', gap: 4, justifyContent: 'center', alignItems: 'center' }}>
                           {r.note && (
-                            <button className="btn btn-ghost btn-sm" style={{ fontSize: '0.78rem', padding: '3px 8px', borderRadius: 20, border: '1px solid #d8b4fe', color: '#7e22ce' }} onClick={() => setDetailPopup(r)}>📝</button>
+                            <button className="btn btn-ghost btn-sm" style={{ fontSize: '0.76rem', padding: '2px 6px', borderRadius: 20, border: '1px solid #d8b4fe', color: '#7e22ce' }} onClick={() => setDetailPopup(r)}>📝</button>
                           )}
-                          <button className="btn btn-ghost btn-sm" style={{ fontSize: '0.78rem', padding: '3px 8px', borderRadius: 20, border: '1px solid #bfdbfe', color: '#1d4ed8' }} onClick={() => openEdit(r)}>✏️</button>
-                          <button className="btn btn-ghost btn-sm" style={{ fontSize: '0.78rem', padding: '3px 8px', borderRadius: 20, border: '1px solid #fecaca', color: '#dc2626' }} onClick={() => setDeleteTarget(r)}>🗑️</button>
+                          <button className="btn btn-ghost btn-sm" style={{ fontSize: '0.76rem', padding: '2px 6px', borderRadius: 20, border: '1px solid #bfdbfe', color: '#1d4ed8' }} onClick={() => openEdit(r)}>✏️</button>
+                          <button className="btn btn-ghost btn-sm" style={{ fontSize: '0.76rem', padding: '2px 6px', borderRadius: 20, border: '1px solid #fecaca', color: '#dc2626' }} onClick={() => setDeleteTarget(r)}>🗑️</button>
                         </div>
                       </td>
                     </tr>
                     );
                   })}
                 </tbody>
+                <tfoot>
+                  <tr style={{ background: '#f5f3ff', borderTop: '2px solid #7e22ce' }}>
+                    <td colSpan={4} style={{ padding: '9px 10px', fontSize: '0.76rem', fontWeight: 800, color: '#3b0764', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      Total — {filteredResults.length} transfert{filteredResults.length > 1 ? 's' : ''}
+                    </td>
+                    <td></td>
+                    <td style={{ textAlign: 'right', padding: '9px 10px', fontWeight: 800, color: '#1d4ed8', fontSize: '0.84rem', whiteSpace: 'nowrap' }}>
+                      {totalHT.toFixed(3)} DT
+                    </td>
+                    <td></td>
+                    <td style={{ textAlign: 'right', padding: '9px 10px', fontWeight: 900, color: '#059669', fontSize: '0.86rem', whiteSpace: 'nowrap' }}>
+                      {totalTTC.toFixed(3)} DT
+                    </td>
+                    <td colSpan={2}></td>
+                  </tr>
+                </tfoot>
               </table>
               {/* Pagination */}
               <div style={{ padding: '8px 14px', fontSize: '0.78rem', color: 'var(--text-muted)', borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
