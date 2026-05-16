@@ -808,31 +808,6 @@ export default function StockLaboPage() {
                                             title="Enregistrer une perte"
                                             disabled={!canWrite}
                                           >📉</button>
-                                          {(() => {
-                                            const ptMaxQty = r.isPT && r.produitId && ptRecipes[r.produitId] && ptRecipes[r.produitId].length > 0
-                                              ? Math.min(...ptRecipes[r.produitId].map((rec) => {
-                                                  const st = stock.find((s) => s.ingredientId === rec.ingredientId)?.quantite ?? 0;
-                                                  return rec.portion > 0 ? (st ?? 0) / rec.portion : Infinity;
-                                                }))
-                                              : null;
-                                            const ptQtyExceeds = ptMaxQty !== null && isFinite(ptMaxQty)
-                                              && rs.quantite.trim() !== '' && parseFloat(rs.quantite) > ptMaxQty;
-                                            return (
-                                              <>
-                                                {ptQtyExceeds && (
-                                                  <span style={{ fontSize: '0.7rem', color: '#b91c1c', fontWeight: 700 }} title={`Max: ${ptMaxQty!.toFixed(3)}`}>Max: {ptMaxQty!.toFixed(3)}</span>
-                                                )}
-                                                <button
-                                                  className={`btn btn-sm ${rs.saved ? 'btn-success' : 'btn-primary'}`}
-                                                  onClick={() => saveRow(r.ingredientId)}
-                                                  disabled={!canSaveRow(rs, r.isPT) || !canWrite || !!ptQtyExceeds}
-                                                  style={!rs.saved ? { background: 'linear-gradient(135deg, #2563eb, #0ea5e9)', boxShadow: '0 3px 10px rgba(37,99,235,0.3)', borderRadius: 8, border: 'none', color: '#fff', fontWeight: 700 } : {}}
-                                                >
-                                                  {rs.saving ? '…' : rs.saved ? '✓' : t('common.save')}
-                                                </button>
-                                              </>
-                                            );
-                                          })()}
                                           <button className="btn btn-ghost btn-sm" onClick={() => toggleHistory(r.ingredientId)} title="5 derniers appros">
                                             {rs.historyOpen ? '📋▲' : '📋'}
                                           </button>

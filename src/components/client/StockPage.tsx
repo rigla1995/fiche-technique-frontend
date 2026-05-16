@@ -1034,33 +1034,6 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                                 {canWrite && ((isEntreprise && activiteId) || (!isEntreprise && onSavePerte)) && (
                                   <button className="perte-btn" onClick={() => setPertesModal({ ingredientId: entry.ingredientId, nom: entry.nom })} title="Enregistrer une perte">📉</button>
                                 )}
-                                {(() => {
-                                  const ptMaxQty = entry.isPT && entry.produitId && ptRecipes[entry.produitId] && ptRecipes[entry.produitId].length > 0
-                                    ? Math.min(...ptRecipes[entry.produitId].map((r) => {
-                                        const stock = entries.find((e) => e.ingredientId === r.ingredientId)?.totalQuantite ?? 0;
-                                        return r.portion > 0 ? stock / r.portion : Infinity;
-                                      }))
-                                    : null;
-                                  const ptQtyExceeds = ptMaxQty !== null && isFinite(ptMaxQty)
-                                    && row.quantite.trim() !== '' && parseFloat(row.quantite) > ptMaxQty;
-                                  return (
-                                    <>
-                                      {ptQtyExceeds && (
-                                        <span style={{ fontSize: '0.7rem', color: '#b91c1c', fontWeight: 700 }} title={`Max: ${ptMaxQty!.toFixed(3)}`}>Max: {ptMaxQty!.toFixed(3)}</span>
-                                      )}
-                                      <button
-                                        className={`btn btn-sm ${row.saved ? 'btn-success' : 'btn-primary'}`}
-                                        onClick={() => saveRow(entry.ingredientId)}
-                                        disabled={entry.isPT
-                                          ? (!row.quantite.trim() || parseFloat(row.quantite) <= 0 || !bulkDate.trim() || row.saving || !canWrite || !!ptQtyExceeds)
-                                          : (!row.quantite.trim() || parseFloat(row.quantite) <= 0 || !row.prixUnitaire.trim() || row.saving || !canWrite || !bulkDate || !bulkFournisseurId || !bulkRefFacture.trim())}
-                                        style={!row.saved ? { background: 'linear-gradient(135deg, #2563eb, #0ea5e9)', boxShadow: '0 3px 10px rgba(37,99,235,0.3)', borderRadius: 8, border: 'none', color: '#fff', fontWeight: 700 } : {}}
-                                      >
-                                        {row.saving ? '…' : row.saved ? '✓' : t('client.stock.save')}
-                                      </button>
-                                    </>
-                                  );
-                                })()}
                                 <button className="btn btn-ghost btn-sm" onClick={() => toggleHistory(entry.ingredientId)} title={t('client.stock.history')}>
                                   {isHistOpen ? '▲' : '▼'}
                                 </button>
