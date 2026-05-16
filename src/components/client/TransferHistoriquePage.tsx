@@ -25,6 +25,9 @@ interface TransferEntry {
   categorieNom: string;
   activiteId: number;
   activiteNom: string;
+  prixUnitaire: number | null;
+  tauxTva: number | null;
+  prixUnitaireTva: number | null;
 }
 
 interface Activite { id: number; nom: string }
@@ -367,6 +370,9 @@ export default function TransferHistoriquePage() {
                     <th style={{ fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px', color: '#fff', background: 'transparent', borderBottom: 'none' }}>{t('client.historique_appro.col_ingredient')}</th>
                     <th style={{ fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px', color: '#fff', background: 'transparent', borderBottom: 'none' }}>{t('client.historique_appro.col_category')}</th>
                     <th style={{ textAlign: 'right', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px', color: '#fff', background: 'transparent', borderBottom: 'none' }}>{t('client.historique_appro.col_qty')}</th>
+                    <th style={{ textAlign: 'right', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px', color: '#fff', background: 'transparent', borderBottom: 'none' }}>Prix U. HT</th>
+                    <th style={{ textAlign: 'right', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px', color: '#fff', background: 'transparent', borderBottom: 'none' }}>TVA %</th>
+                    <th style={{ textAlign: 'right', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px', color: '#fff', background: 'transparent', borderBottom: 'none' }}>Prix U. TTC</th>
                     <th style={{ textAlign: 'center', width: 60, fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px', color: '#fff', background: 'transparent', borderBottom: 'none' }}></th>
                   </tr>
                 </thead>
@@ -388,6 +394,15 @@ export default function TransferHistoriquePage() {
                       <td style={{ color: 'var(--text-muted)', fontSize: '0.85rem', padding: '12px 14px' }}>{r.categorieNom}</td>
                       <td style={{ textAlign: 'right', fontWeight: 800, color: 'var(--success, #10b981)', padding: '12px 14px' }}>
                         {r.quantite % 1 === 0 ? r.quantite.toFixed(0) : r.quantite} <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem', fontWeight: 400 }}>{r.uniteNom}</span>
+                      </td>
+                      <td style={{ textAlign: 'right', padding: '12px 14px', fontSize: '0.85rem', color: '#374151', fontWeight: 600 }}>
+                        {r.prixUnitaire != null ? `${r.prixUnitaire.toFixed(3)} DT` : '—'}
+                      </td>
+                      <td style={{ textAlign: 'right', padding: '12px 14px', fontSize: '0.85rem', color: '#6b7280' }}>
+                        {r.tauxTva != null ? `${r.tauxTva}%` : '—'}
+                      </td>
+                      <td style={{ textAlign: 'right', padding: '12px 14px', fontSize: '0.85rem', color: '#059669', fontWeight: 700 }}>
+                        {r.prixUnitaireTva != null ? `${r.prixUnitaireTva.toFixed(3)} DT` : '—'}
                       </td>
                       <td style={{ textAlign: 'center', padding: '10px 10px' }} onClick={(e) => e.stopPropagation()}>
                         <div style={{ display: 'flex', gap: 5, justifyContent: 'center', alignItems: 'center' }}>

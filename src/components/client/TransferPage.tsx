@@ -16,6 +16,9 @@ interface TransferRecord {
   activiteId: number;
   activiteNom: string;
   note: string | null;
+  prixUnitaire: number | null;
+  tauxTva: number | null;
+  prixUnitaireTva: number | null;
 }
 
 const currentYear = new Date().getFullYear();
@@ -460,13 +463,6 @@ export default function TransferPage() {
               <input type="number" min="0" step="0.01" className="input" value={tauxTva} onChange={(e) => setTauxTva(e.target.value)} placeholder="ex: 19" />
             </div>
             <div>
-              <label style={{ fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>
-                {t('client.labo.transfer_note')}
-              </label>
-              <input type="text" className="input" value={note} onChange={(e) => setNote(e.target.value)}
-                placeholder={t('client.labo.transfer_note_placeholder')} />
-            </div>
-            <div>
               <button
                 onClick={() => handleBulkTransfer()}
                 disabled={bulkCount === 0 || bulkSaving}
@@ -630,13 +626,16 @@ export default function TransferPage() {
                                       for (const tr of realTransfers) actTotals[tr.activiteNom] = (actTotals[tr.activiteNom] ?? 0) + tr.quantite;
                                       return (
                                         <div style={{ overflowX: 'auto' }}>
-                                          <table style={{ fontSize: '0.8rem', width: '100%', minWidth: 400 }}>
+                                          <table style={{ fontSize: '0.8rem', width: '100%', minWidth: 500 }}>
                                             <thead>
                                               <tr style={{ background: '#ede9fe' }}>
                                                 <th style={{ textAlign: 'left', color: '#7c3aed', fontWeight: 700, padding: '4px 8px' }}>Date</th>
                                                 {actNames.map((an) => (
                                                   <th key={an} style={{ textAlign: 'right', color: '#7c3aed', fontWeight: 700, padding: '4px 8px' }}>↗ {an}</th>
                                                 ))}
+                                                <th style={{ textAlign: 'right', color: '#7c3aed', fontWeight: 700, padding: '4px 8px' }}>Prix U. HT</th>
+                                                <th style={{ textAlign: 'right', color: '#7c3aed', fontWeight: 700, padding: '4px 8px' }}>TVA %</th>
+                                                <th style={{ textAlign: 'right', color: '#7c3aed', fontWeight: 700, padding: '4px 8px' }}>Prix U. TTC</th>
                                               </tr>
                                             </thead>
                                             <tbody>
@@ -647,6 +646,7 @@ export default function TransferPage() {
                                                     {actTotals[an]?.toFixed(3) ?? '0.000'}
                                                   </td>
                                                 ))}
+                                                <td colSpan={3} />
                                               </tr>
                                               {realTransfers.map((tr, i) => (
                                                 <tr key={i} style={{ borderTop: '1px solid #f3e8ff', fontSize: '0.75rem' }}>
@@ -660,6 +660,15 @@ export default function TransferPage() {
                                                       {tr.activiteNom === an ? tr.quantite.toFixed(3) : '—'}
                                                     </td>
                                                   ))}
+                                                  <td style={{ textAlign: 'right', padding: '2px 8px', color: '#374151', fontWeight: 600 }}>
+                                                    {tr.prixUnitaire != null ? `${tr.prixUnitaire.toFixed(3)} DT` : '—'}
+                                                  </td>
+                                                  <td style={{ textAlign: 'right', padding: '2px 8px', color: '#374151' }}>
+                                                    {tr.tauxTva != null ? `${tr.tauxTva}%` : '—'}
+                                                  </td>
+                                                  <td style={{ textAlign: 'right', padding: '2px 8px', color: '#059669', fontWeight: 700 }}>
+                                                    {tr.prixUnitaireTva != null ? `${tr.prixUnitaireTva.toFixed(3)} DT` : '—'}
+                                                  </td>
                                                 </tr>
                                               ))}
                                             </tbody>
