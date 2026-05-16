@@ -212,22 +212,31 @@ function EntrepriseIngredientList({
                   <span style={{ marginLeft: 'auto', fontSize: '0.8rem', color: 'var(--text-muted)' }}>{isOpen ? '▼' : '▶'}</span>
                 </button>
                 {isOpen && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6, paddingBottom: 8 }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4, paddingBottom: 8 }}>
                     {items.map((ing) => {
                       const hasAny = ing.contexts?.some((c) => c.assigned);
                       return (
-                        <div key={ing.id} style={{ background: hasAny ? 'var(--primary-light)' : 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, padding: '10px 14px', display: 'flex', alignItems: 'flex-start', gap: 14, flexWrap: 'wrap' }}>
+                        <div key={ing.id} style={{
+                          background: 'var(--surface)',
+                          border: '1px solid var(--border)',
+                          borderLeft: hasAny ? '3px solid #2563eb' : '3px solid transparent',
+                          borderRadius: 8,
+                          padding: '10px 14px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 14,
+                          flexWrap: 'wrap',
+                        }}>
                           <div style={{ minWidth: 160, flexShrink: 0 }}>
-                            <div style={{ fontWeight: hasAny ? 700 : 400, fontSize: '0.9rem' }}>{ing.nom}</div>
-                            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{ing.unite}</div>
+                            <div style={{ fontWeight: hasAny ? 700 : 500, fontSize: '0.88rem', color: 'var(--text)' }}>{ing.nom}</div>
+                            <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: 1 }}>{ing.unite}</div>
                           </div>
-                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, alignItems: 'center', flex: 1 }}>
                             {(ing.contexts ?? []).length === 0 ? (
                               <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>{t('global_catalogue.no_context', 'Aucune activité / labo')}</span>
                             ) : (() => {
                               const ctxs = ing.contexts ?? [];
                               const allAssigned = ctxs.length > 0 && ctxs.every((c) => c.assigned);
-                              const noneAssigned = ctxs.every((c) => !c.assigned);
                               const isBulkToggling = ctxs.some((c) => toggling.has(`${ing.id}:${c.type}:${c.id}`));
                               return (
                                 <>
@@ -237,37 +246,54 @@ function EntrepriseIngredientList({
                                       onClick={() => onToggleAll(ing.id, ctxs, !allAssigned)}
                                       title={allAssigned ? 'Désélectionner tout' : 'Sélectionner tout'}
                                       style={{
-                                        padding: '4px 10px', borderRadius: 20, fontSize: '0.75rem', fontWeight: 700,
-                                        cursor: 'pointer', border: '1.5px solid',
-                                        background: allAssigned ? '#fee2e2' : noneAssigned ? '#dcfce7' : '#fef9c3',
-                                        borderColor: allAssigned ? '#fca5a5' : noneAssigned ? '#86efac' : '#fde68a',
-                                        color: allAssigned ? '#b91c1c' : noneAssigned ? '#15803d' : '#92400e',
-                                        opacity: isBulkToggling ? 0.6 : 1,
+                                        padding: '3px 10px', borderRadius: 6, fontSize: '0.72rem', fontWeight: 700,
+                                        cursor: 'pointer',
+                                        border: '1.5px solid #94a3b8',
+                                        background: 'transparent',
+                                        color: '#475569',
+                                        opacity: isBulkToggling ? 0.5 : 1,
+                                        whiteSpace: 'nowrap',
                                       }}
                                     >
-                                      {isBulkToggling ? '…' : allAssigned ? '○ Tout désélectionner' : '✓ Tout sélectionner'}
+                                      {isBulkToggling ? '…' : allAssigned ? '✕ Tout retirer' : '✓ Tout assigner'}
                                     </button>
                                   )}
                                   {ctxs.map((ctx) => {
                                     const key = `${ing.id}:${ctx.type}:${ctx.id}`;
                                     const isToggling = toggling.has(key);
+                                    const isLabo = ctx.type === 'labo';
                                     return (
                                       <button
                                         key={key}
                                         disabled={readOnly || isToggling}
                                         onClick={() => onToggle(ing.id, ctx)}
                                         style={{
-                                          display: 'flex', alignItems: 'center', gap: 5,
-                                          padding: '4px 10px', borderRadius: 20, fontSize: '0.78rem', fontWeight: 600, cursor: readOnly ? 'default' : 'pointer', border: 'none',
-                                          background: ctx.assigned ? (ctx.type === 'labo' ? '#d1fae5' : '#e0e7ff') : 'var(--border)',
-                                          color: ctx.assigned ? (ctx.type === 'labo' ? '#065f46' : '#3730a3') : 'var(--text-muted)',
-                                          opacity: isToggling ? 0.6 : 1,
-                                          transition: 'all 0.15s',
+                                          display: 'inline-flex', alignItems: 'center', gap: 4,
+                                          padding: '3px 10px', borderRadius: 6, fontSize: '0.78rem', fontWeight: 600,
+                                          cursor: readOnly ? 'default' : 'pointer',
+                                          border: '1.5px solid',
+                                          borderColor: ctx.assigned
+                                            ? (isLabo ? '#16a34a' : '#2563eb')
+                                            : '#cbd5e1',
+                                          background: ctx.assigned
+                                            ? (isLabo ? '#f0fdf4' : '#eff6ff')
+                                            : '#f8fafc',
+                                          color: ctx.assigned
+                                            ? (isLabo ? '#15803d' : '#1d4ed8')
+                                            : '#94a3b8',
+                                          opacity: isToggling ? 0.5 : 1,
+                                          transition: 'all 0.12s',
+                                          whiteSpace: 'nowrap',
                                         }}
                                       >
-                                        {ctx.type === 'labo' ? '🏭' : '📍'}
-                                        {' '}{ctx.nom}
-                                        {' '}{isToggling ? '…' : ctx.assigned ? '✅' : '○'}
+                                        <span style={{ fontSize: '0.68rem' }}>{isLabo ? '🏭' : '📍'}</span>
+                                        {ctx.nom}
+                                        {isToggling
+                                          ? <span style={{ fontSize: '0.65rem' }}>…</span>
+                                          : ctx.assigned
+                                            ? <span style={{ fontSize: '0.65rem', color: isLabo ? '#16a34a' : '#2563eb' }}>✔</span>
+                                            : <span style={{ fontSize: '0.65rem' }}>+</span>
+                                        }
                                       </button>
                                     );
                                   })}
