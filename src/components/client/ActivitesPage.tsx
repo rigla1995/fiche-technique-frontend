@@ -5,18 +5,24 @@ import api from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 import type { Activite, ActiviteIngredient, Labo, AbonnementConfig } from '../../types';
 
-const TUNISIAN_PHONE_RE = /^(\+216[\s-]?)?[2579]\d{7}$/;
-
-type ActiviteForm = { nom: string; adresse: string; telephone: string };
-const emptyForm = (): ActiviteForm => ({ nom: '', adresse: '', telephone: '' });
+type ActiviteForm = { nom: string; adresse: string };
+const emptyForm = (): ActiviteForm => ({ nom: '', adresse: '' });
 
 interface Props {
   onCreated?: () => void;
   minimal?: boolean;
 }
 
-const TUNISIAN_PHONE = TUNISIAN_PHONE_RE;
-
+// ── Shared modal styles ──────────────────────────────────────────────────────
+const sectionTitle = (color: string): React.CSSProperties => ({
+  fontSize: '0.7rem', fontWeight: 800, color, textTransform: 'uppercase',
+  letterSpacing: '0.08em', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6,
+});
+const fieldWrap: React.CSSProperties = { display: 'flex', flexDirection: 'column', gap: 5, marginBottom: 0 };
+const fieldLabel: React.CSSProperties = { fontSize: '0.78rem', fontWeight: 700, color: '#374151' };
+const dividerStyle: React.CSSProperties = {
+  borderTop: '1px solid #f1f5f9', margin: '6px 0',
+};
 
 export default function ActivitesPage({ onCreated, minimal }: Props) {
   const { t } = useTranslation();
@@ -27,35 +33,41 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [isDuplicate, setIsDuplicate] = useState(false);
   const [form, setForm] = useState<ActiviteForm>(emptyForm());
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [msg, setMsg] = useState('');
-  const [isDuplicate, setIsDuplicate] = useState(false);
-  // Labo wizard state
+
+  // Labo selection for activité modal (inline section)
   const [hasLabo, setHasLabo] = useState<boolean | null>(null);
   const [selectedLaboId, setSelectedLaboId] = useState<number | ''>('');
-  const [wizardStep, setWizardStep] = useState(1); // 1=main, 2=labo, 4=recap
+
   const [labos, setLabos] = useState<Labo[]>([]);
   const [abonnementConfig, setAbonnementConfig] = useState<AbonnementConfig | null>(null);
-  // List filter
   const [filterName, setFilterName] = useState('');
-  // Labo detail popup (click on labo badge in row)
   const [laboPopup, setLaboPopup] = useState<{ nom: string; tel: string | null; adresse: string | null } | null>(null);
-  // Delete labo confirmation
   const [deleteLaboTarget, setDeleteLaboTarget] = useState<Labo | null>(null);
   const [deletingLabo, setDeletingLabo] = useState(false);
 
-  // Standalone labo add/edit modal
+  // Standalone labo add/edit modal (single step)
   const [showLaboModal, setShowLaboModal] = useState(false);
   const [editingLaboId, setEditingLaboId] = useState<number | null>(null);
-  const [laboFormData, setLaboFormData] = useState({ nom: '', refLabo: '', referentTel: '', adresse: '' });
-  const [laboModalStep, setLaboModalStep] = useState<1 | 2 | 3>(1);
+  const [laboFormData, setLaboFormData] = useState({ nom: '', refLabo: '', adresse: '' });
   const [laboSelectedActivities, setLaboSelectedActivities] = useState<number[]>([]);
   const [laboSaving, setLaboSaving] = useState(false);
   const [laboError, setLaboError] = useState('');
 
-  // Delete confirmation modal
+  // "Créer mon business" multi-step wizard
+  const [showBizWizard, setShowBizWizard] = useState(false);
+  const [bizStep, setBizStep] = useState<1 | 2>(1);
+  const [bizLaboForm, setBizLaboForm] = useState({ nom: '', refLabo: '', adresse: '' });
+  const [bizLaboSkip, setBizLaboSkip] = useState(false);
+  const [bizActForms, setBizActForms] = useState<ActiviteForm[]>([emptyForm()]);
+  const [bizSaving, setBizSaving] = useState(false);
+  const [bizError, setBizError] = useState('');
+
+  // Delete confirmation
   type DeleteTarget = { kind: 'activite'; act: Activite };
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -96,32 +108,30 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
   const atLaboLimit = maxLabos !== null && labos.length >= maxLabos;
   const configHasLabo = maxLabos !== null && maxLabos > 0;
 
+  // ── Activité modal ───────────────────────────────────────────────────────
   const openAdd = () => {
     setEditingId(null);
     setIsDuplicate(false);
     setForm(emptyForm());
-    setHasLabo(configHasLabo ? null : false);
+    setHasLabo(null);
     setSelectedLaboId('');
     setError('');
-    setWizardStep(1);
     setShowForm(true);
   };
 
   const openEdit = (act: Activite) => {
     setEditingId(act.id);
     setIsDuplicate(false);
-    setForm({ nom: act.nom, adresse: act.adresse || '', telephone: act.telephone || '' });
+    setForm({ nom: act.nom, adresse: act.adresse || '' });
     setError('');
-    setWizardStep(1);
     setShowForm(true);
   };
 
   const openDuplicate = (act: Activite) => {
     setEditingId(null);
     setIsDuplicate(true);
-    setForm({ nom: act.nom, adresse: '', telephone: '' });
+    setForm({ nom: act.nom, adresse: '' });
     setError('');
-    setWizardStep(1);
     setShowForm(true);
   };
 
@@ -136,37 +146,33 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
     ? activites.some((a) => a.nom.toLowerCase() === form.nom.trim().toLowerCase())
     : false;
 
-  const handleLaboStepNext = () => {
-    if (hasLabo === null) { setError('Veuillez choisir une option'); return; }
-    if (hasLabo === true && !selectedLaboId) { setError('Veuillez sélectionner un labo'); return; }
-    setError('');
-    setWizardStep(4);
-  };
-
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const submit = async (e?: React.FormEvent) => {
+    e?.preventDefault();
     if (!form.nom.trim()) { setError(t('validation.name_required')); return; }
-    if (form.telephone && !TUNISIAN_PHONE.test(form.telephone.replace(/\s/g, ''))) {
-      setError(t('validation.phone_invalid'));
-      return;
+    // Validate labo config if labos exist and creating new
+    const isCreating = !editingId && !isDuplicate;
+    if (isCreating && labos.length > 0) {
+      if (hasLabo === null) { setError('Veuillez choisir une option pour le labo'); return; }
+      if (hasLabo === true && !selectedLaboId) { setError('Veuillez sélectionner un labo'); return; }
     }
     setSaving(true);
     setError('');
     try {
       if (editingId) {
-        await api.put(`/api/entreprise/activites/${editingId}`, { nom: form.nom, adresse: form.adresse, telephone: form.telephone });
+        await api.put(`/api/entreprise/activites/${editingId}`, { nom: form.nom, adresse: form.adresse });
         setMsg(t('client.entreprise.activity_updated'));
+        setTimeout(() => setMsg(''), 3000);
+        closeForm();
+        load();
       } else {
         const isFirst = activites.length === 0;
-        const laboId: number | null =
-          hasLabo === true && selectedLaboId ? Number(selectedLaboId) : null;
-        const payload: Record<string, unknown> = { nom: form.nom, adresse: form.adresse, telephone: form.telephone };
+        const laboId: number | null = hasLabo === true && selectedLaboId ? Number(selectedLaboId) : null;
+        const payload: Record<string, unknown> = { nom: form.nom, adresse: form.adresse };
         if (laboId) payload.laboId = laboId;
         await api.post('/api/entreprise/activites', payload);
         if (onCreated) onCreated();
         if (isFirst && user?.onboardingStep === 2) await advanceOnboarding(3);
         closeForm();
-        // Redirect to Catalogue Global only when all subscription slots are filled
         const newActCount = activites.length + 1;
         const allActsFilled = maxActivites !== null ? newActCount >= maxActivites : isFirst;
         const allLabosFilled = (maxLabos ?? 0) === 0 || labos.length >= (maxLabos ?? 0);
@@ -177,11 +183,7 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
         setMsg(t('client.entreprise.activity_created'));
         setTimeout(() => setMsg(''), 3000);
         load();
-        return;
       }
-      setTimeout(() => setMsg(''), 3000);
-      closeForm();
-      load();
     } catch (err: unknown) {
       const errMsg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
       setError(errMsg || t('common.error'));
@@ -214,11 +216,10 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
 
   const closeIngredients = () => { setIngredientsActivite(null); setIngredients([]); setOpenIngCats(new Set()); };
 
-  // ── Standalone labo modal ────────────────────────────────────────────────────
+  // ── Labo modal ───────────────────────────────────────────────────────────
   const openAddLabo = () => {
     setEditingLaboId(null);
-    setLaboFormData({ nom: '', refLabo: '', referentTel: '', adresse: '' });
-    setLaboModalStep(1);
+    setLaboFormData({ nom: '', refLabo: '', adresse: '' });
     setLaboSelectedActivities([]);
     setLaboError('');
     setShowLaboModal(true);
@@ -226,8 +227,7 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
 
   const openEditLabo = (labo: Labo) => {
     setEditingLaboId(labo.id);
-    setLaboFormData({ nom: labo.nom, refLabo: labo.refLabo || '', referentTel: labo.referentTel || '', adresse: labo.adresse || '' });
-    setLaboModalStep(1);
+    setLaboFormData({ nom: labo.nom, refLabo: labo.refLabo || '', adresse: labo.adresse || '' });
     setLaboError('');
     setShowLaboModal(true);
   };
@@ -246,31 +246,21 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
     setDeletingLabo(false);
   };
 
-  const handleLaboNext = () => {
-    if (!laboFormData.nom.trim()) { setLaboError('Nom du labo requis'); return; }
-    if (!editingLaboId && !laboFormData.refLabo.trim()) { setLaboError('Référence (ref labo) requise'); return; }
-    if (!laboFormData.referentTel.trim()) { setLaboError('Téléphone requis'); return; }
-    if (!TUNISIAN_PHONE.test(laboFormData.referentTel.replace(/\s/g, ''))) { setLaboError(t('validation.phone_invalid')); return; }
-    setLaboError('');
-    // Edit: skip activities step, go straight to recap; Add: show activities step
-    setLaboModalStep(editingLaboId ? 3 : 2);
-  };
-
   const saveLabo = async () => {
+    if (!laboFormData.nom.trim()) { setLaboError('Nom du labo requis'); return; }
+    if (!editingLaboId && !laboFormData.refLabo.trim()) { setLaboError('Référence requise'); return; }
     setLaboSaving(true);
     setLaboError('');
     try {
       if (editingLaboId) {
         await api.put(`/api/labo/${editingLaboId}`, {
           nom: laboFormData.nom.trim(),
-          referentTel: laboFormData.referentTel.trim(),
           adresse: laboFormData.adresse.trim() || undefined,
         });
       } else {
         await api.post('/api/labo', {
           nom: laboFormData.nom.trim(),
           refLabo: laboFormData.refLabo.trim(),
-          referentTel: laboFormData.referentTel.trim(),
           adresse: laboFormData.adresse.trim() || undefined,
           ...(laboSelectedActivities.length > 0 ? { activityIds: laboSelectedActivities } : {}),
         });
@@ -285,19 +275,70 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
     setLaboSaving(false);
   };
 
-  // ── Recap step for activité modal ────────────────────────────────────────────
-  const handleGoToRecap = () => {
-    if (!form.nom.trim()) { setError(t('validation.name_required')); return; }
-    if (form.telephone && !TUNISIAN_PHONE.test(form.telephone.replace(/\s/g, ''))) {
-      setError(t('validation.phone_invalid')); return;
-    }
-    setError('');
-    // New activité with labo config → labo selection step first
-    setWizardStep(!editingId && !isDuplicate && configHasLabo ? 2 : 4);
+  // ── Business Wizard ──────────────────────────────────────────────────────
+  const openBizWizard = () => {
+    setBizLaboForm({ nom: '', refLabo: '', adresse: '' });
+    setBizLaboSkip(false);
+    setBizActForms([emptyForm()]);
+    setBizError('');
+    setBizStep(configHasLabo ? 1 : 2);
+    setShowBizWizard(true);
   };
 
-  const handleFinalSave = () => {
-    submit({ preventDefault: () => {} } as React.FormEvent);
+  const closeBizWizard = () => { setShowBizWizard(false); setBizError(''); };
+
+  const bizNextStep = () => {
+    if (!bizLaboSkip) {
+      if (!bizLaboForm.nom.trim()) { setBizError('Nom du labo requis'); return; }
+      if (!bizLaboForm.refLabo.trim()) { setBizError('Référence requise'); return; }
+    }
+    setBizError('');
+    setBizStep(2);
+  };
+
+  const bizAddSlot = () => {
+    if (maxActivites === null || bizActForms.length < maxActivites) {
+      setBizActForms((p) => [...p, emptyForm()]);
+    }
+  };
+
+  const bizRemoveSlot = (idx: number) => {
+    if (bizActForms.length <= 1) return;
+    setBizActForms((p) => p.filter((_, i) => i !== idx));
+  };
+
+  const bizSaveAll = async () => {
+    const validActs = bizActForms.filter((f) => f.nom.trim());
+    if (validActs.length === 0) { setBizError('Ajoutez au moins une activité avec un nom'); return; }
+    setBizSaving(true);
+    setBizError('');
+    try {
+      let createdLaboId: number | null = null;
+      if (configHasLabo && !bizLaboSkip && bizLaboForm.nom.trim() && bizLaboForm.refLabo.trim()) {
+        const res = await api.post('/api/labo', {
+          nom: bizLaboForm.nom.trim(),
+          refLabo: bizLaboForm.refLabo.trim(),
+          adresse: bizLaboForm.adresse.trim() || undefined,
+        });
+        createdLaboId = res.data?.id ?? null;
+        window.dispatchEvent(new Event('labos-changed'));
+      }
+      const isFirst = activites.length === 0;
+      for (const act of validActs) {
+        const payload: Record<string, unknown> = { nom: act.nom.trim(), adresse: act.adresse.trim() };
+        if (createdLaboId) payload.laboId = createdLaboId;
+        await api.post('/api/entreprise/activites', payload);
+      }
+      if (onCreated) onCreated();
+      if (isFirst && user?.onboardingStep === 2) await advanceOnboarding(3);
+      closeBizWizard();
+      await load();
+      navigate('/client/catalogue-global?created=1');
+    } catch (err: unknown) {
+      const errMsg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      setBizError(errMsg || t('common.error'));
+    }
+    setBizSaving(false);
   };
 
   const toggleIngredient = async (ingredientId: number) => {
@@ -320,6 +361,11 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
   );
 
   const usedLabos = new Set(activites.filter((a) => a.laboId).map((a) => a.laboId)).size;
+
+  // Show empty-state card only when truly nothing exists
+  const showEmptyCard = !loading && activites.length === 0 && labos.length === 0;
+  // Show full layout when at least one thing exists
+  const showFullLayout = !loading && (activites.length > 0 || labos.length > 0);
 
   return (
     <div className={minimal ? '' : 'page-content'}>
@@ -373,10 +419,8 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
               </button>
             )}
             {atActiviteLimit && !loading && (
-              <button
-                onClick={() => navigate('/client/support?type=supplement')}
-                style={{ background: 'rgba(251,191,36,0.2)', borderRadius: 10, padding: '8px 16px', fontSize: '0.8rem', color: '#fbbf24', border: '1px solid rgba(251,191,36,0.4)', cursor: 'pointer' }}
-              >
+              <button onClick={() => navigate('/client/support?type=supplement')}
+                style={{ background: 'rgba(251,191,36,0.2)', borderRadius: 10, padding: '8px 16px', fontSize: '0.8rem', color: '#fbbf24', border: '1px solid rgba(251,191,36,0.4)', cursor: 'pointer' }}>
                 ➕ Augmenter la capacité
               </button>
             )}
@@ -388,36 +432,48 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
 
       {loading ? (
         <p className="text-muted">{t('common.loading')}</p>
-      ) : activites.length === 0 ? (
+      ) : showEmptyCard ? (
+        /* ── TRUE empty state (0 activités + 0 labos) ── */
         <div style={{
-          background: '#fff', border: '1px solid #e5e7eb', borderRadius: 16,
-          padding: '48px 32px', textAlign: 'center', maxWidth: 560, margin: '0 auto',
+          background: '#fff', border: '1px solid #e5e7eb', borderRadius: 20,
+          padding: '52px 36px', textAlign: 'center', maxWidth: 580, margin: '0 auto',
+          boxShadow: '0 4px 24px rgba(0,0,0,0.06)',
         }}>
-          <div style={{ fontSize: 48, marginBottom: 16 }}>🏢</div>
-          <h2 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#111827', marginBottom: 8 }}>
-            Créez votre première activité
+          <div style={{ fontSize: 52, marginBottom: 18 }}>🚀</div>
+          <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#111827', marginBottom: 10 }}>
+            Démarrez votre activité
           </h2>
-          <p style={{ fontSize: '0.88rem', color: '#6b7280', marginBottom: 28, lineHeight: 1.6 }}>
-            {maxActivites === 1
-              ? 'Votre abonnement inclut 1 activité. Renseignez son nom et son adresse pour commencer.'
-              : maxLabos
-                ? `Votre abonnement inclut jusqu'à ${maxActivites} activités et ${maxLabos} labo(s).`
-                : `Votre abonnement inclut jusqu'à ${maxActivites} activités.`
+          <p style={{ fontSize: '0.88rem', color: '#6b7280', marginBottom: 32, lineHeight: 1.7, maxWidth: 400, margin: '0 auto 32px' }}>
+            {configHasLabo
+              ? `Votre abonnement inclut jusqu'à ${maxActivites} activité(s) et ${maxLabos} labo(s). Configurez votre business en quelques étapes.`
+              : `Votre abonnement inclut jusqu'à ${maxActivites} activité(s). Créez votre première activité pour commencer.`
             }
           </p>
           <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center' }}>
             {atActiviteLimit ? (
               <div style={{ fontSize: 13, color: '#6b7280', background: '#f3f4f6', border: '1px solid #e5e7eb', borderRadius: 8, padding: '8px 16px' }}>
-                🔒 Limite de {maxActivites} activité(s) atteinte
+                🔒 Limite atteinte
               </div>
+            ) : configHasLabo ? (
+              <button
+                style={{
+                  padding: '13px 28px', borderRadius: 12, background: 'linear-gradient(135deg,#166534,#16a34a)',
+                  color: '#fff', fontWeight: 800, fontSize: '0.95rem', cursor: 'pointer',
+                  border: 'none', boxShadow: '0 4px 16px rgba(22,101,52,0.35)',
+                  display: 'flex', alignItems: 'center', gap: 8,
+                }}
+                onClick={openBizWizard}
+              >
+                ✨ Créer mon business
+              </button>
             ) : (
-              <button className="btn btn-primary" onClick={() => openAdd()}>
+              <button className="btn btn-primary" style={{ padding: '11px 26px', fontWeight: 700 }} onClick={() => openAdd()}>
                 + Ajouter mon activité
               </button>
             )}
           </div>
         </div>
-      ) : (
+      ) : showFullLayout ? (
         <>
           {/* Activités section */}
           <div style={{ marginBottom: 32 }}>
@@ -426,7 +482,7 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                 <span style={{ fontSize: '1.1rem' }}>🏢</span>
                 <span style={{ fontSize: '0.9rem', fontWeight: 800, color: '#166534' }}>{t('nav.activites')}</span>
                 <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#059669', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 20, padding: '2px 10px' }}>
-                  🏢 {activites.length} activité(s)
+                  {activites.length} activité(s)
                 </span>
               </div>
               {atActiviteLimit ? (
@@ -440,22 +496,25 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
               )}
             </div>
 
-            {/* Filter */}
             <div style={{ display: 'flex', gap: 10, marginBottom: 14, flexWrap: 'wrap', alignItems: 'flex-end' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 3, flex: '1 1 auto', maxWidth: 260 }}>
-                <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('common.activity_name', "Nom de l'activité")}</span>
+                <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Nom de l'activité</span>
                 <input
-                  type="text"
-                  className="input"
-                  style={{ minWidth: 140 }}
-                  placeholder={t('common.activity_name', "Nom de l'activité") + '…'}
-                  value={filterName}
-                  onChange={(e) => setFilterName(e.target.value)}
+                  type="text" className="input" style={{ minWidth: 140 }}
+                  placeholder="Filtrer par nom…"
+                  value={filterName} onChange={(e) => setFilterName(e.target.value)}
                 />
               </div>
             </div>
 
-            {filteredActivites.length === 0 ? (
+            {activites.length === 0 ? (
+              <div style={{ background: '#f9fafb', border: '1px dashed #d1d5db', borderRadius: 12, padding: '24px', textAlign: 'center' }}>
+                <p style={{ color: '#6b7280', fontSize: '0.88rem', margin: '0 0 12px' }}>Aucune activité créée.</p>
+                {!atActiviteLimit && (
+                  <button className="btn btn-primary btn-sm" onClick={() => openAdd()}>+ Ajouter une activité</button>
+                )}
+              </div>
+            ) : filteredActivites.length === 0 ? (
               <p className="text-muted">{t('common.no_result')}</p>
             ) : (
               <div className="table-responsive card" style={{ marginBottom: 0 }}>
@@ -463,7 +522,6 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                   <thead>
                     <tr>
                       <th>{t('common.name')}</th>
-                      <th style={{ width: 150 }}>{t('client.entreprise.activity_telephone')}</th>
                       <th>{t('client.entreprise.activity_adresse')}</th>
                       {activites.some((a) => a.laboId) && (
                         <th style={{ width: 130 }}>{t('client.entreprise.labo', 'Labo')}</th>
@@ -475,7 +533,6 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                     {filteredActivites.map((act) => (
                       <tr key={act.id}>
                         <td style={{ fontWeight: 700 }}>{act.nom}</td>
-                        <td style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{act.telephone || '—'}</td>
                         <td style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{act.adresse || '—'}</td>
                         {activites.some((a) => a.laboId) && (
                           <td>
@@ -507,7 +564,7 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
             )}
           </div>
 
-          {/* Labos section — visible when config includes labos */}
+          {/* Labos section */}
           {configHasLabo && (
             <div style={{ marginBottom: 32 }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14, padding: '10px 16px', background: 'linear-gradient(135deg,#f5f3ff,#ede9fe)', borderRadius: 12, border: '1px solid #c4b5fd' }}>
@@ -525,10 +582,8 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                 ) : (
                   <button
                     className="btn btn-sm"
-                    style={{ background: activites.length === 0 ? '#e9d5ff' : '#7c3aed', color: activites.length === 0 ? '#a855f7' : '#fff', border: 'none', borderRadius: 8, fontSize: '0.8rem', padding: '6px 14px', cursor: activites.length === 0 ? 'not-allowed' : 'pointer', fontWeight: 700 }}
-                    onClick={activites.length === 0 ? undefined : openAddLabo}
-                    title={activites.length === 0 ? 'Ajoutez d\'abord une activité avant de créer un labo' : undefined}
-                    disabled={activites.length === 0}
+                    style={{ background: '#7c3aed', color: '#fff', border: 'none', borderRadius: 8, fontSize: '0.8rem', padding: '6px 14px', cursor: 'pointer', fontWeight: 700 }}
+                    onClick={openAddLabo}
                   >
                     + Nouveau labo
                   </button>
@@ -536,7 +591,14 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
               </div>
 
               {labos.length === 0 ? (
-                <p className="text-muted" style={{ fontSize: '0.85rem' }}>Aucun labo créé. {!atLaboLimit && <button style={{ background: 'none', border: 'none', color: 'var(--primary)', cursor: 'pointer', fontSize: '0.85rem', padding: 0, textDecoration: 'underline' }} onClick={openAddLabo}>Créer le premier labo</button>}</p>
+                <p className="text-muted" style={{ fontSize: '0.85rem' }}>
+                  Aucun labo créé.{' '}
+                  {!atLaboLimit && (
+                    <button style={{ background: 'none', border: 'none', color: 'var(--primary)', cursor: 'pointer', fontSize: '0.85rem', padding: 0, textDecoration: 'underline' }} onClick={openAddLabo}>
+                      Créer le premier labo
+                    </button>
+                  )}
+                </p>
               ) : (
                 <div className="table-responsive card" style={{ marginBottom: 0 }}>
                   <table className="table">
@@ -544,7 +606,6 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                       <tr>
                         <th>Nom</th>
                         <th style={{ width: 120 }}>Réf.</th>
-                        <th style={{ width: 150 }}>Téléphone référent</th>
                         <th>Adresse</th>
                         <th style={{ width: 80, textAlign: 'right' }}></th>
                       </tr>
@@ -554,7 +615,6 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                         <tr key={labo.id}>
                           <td style={{ fontWeight: 700 }}>{labo.nom}</td>
                           <td style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{labo.refLabo || '—'}</td>
-                          <td style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{labo.referentTel || '—'}</td>
                           <td style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{labo.adresse || '—'}</td>
                           <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
                             <button className="btn btn-ghost btn-sm" title="Modifier" onClick={() => openEditLabo(labo)}>✏️</button>
@@ -569,227 +629,151 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
             </div>
           )}
         </>
-      )}
+      ) : null}
 
-      {/* Add / Edit form modal — step-based wizard */}
+      {/* ── Activité modal (single-step, modern) ── */}
       {showForm && (
         <div className="modal-overlay">
-          <div className="modal" style={{ maxWidth: 500 }} onClick={(e) => e.stopPropagation()}>
+          <div className="modal" style={{ maxWidth: 480, borderRadius: 16, overflow: 'hidden' }} onClick={(e) => e.stopPropagation()}>
 
             {/* Header */}
-            <div className="modal-header modal-header--primary">
-              <div style={{ flex: 1 }}>
-                <h2 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700 }}>
-                  {editingId
-                    ? (wizardStep === 4 ? '✅ Récapitulatif' : t('client.entreprise.edit_activity'))
-                    : isDuplicate
-                    ? (wizardStep === 4 ? '✅ Récapitulatif' : t('client.entreprise.duplicate_activity'))
-                    : wizardStep === 4
-                    ? '✅ Récapitulatif'
-                    : t('client.entreprise.add_activity')}
+            <div style={{
+              background: editingId
+                ? 'linear-gradient(135deg,#1d4ed8,#2563eb)'
+                : 'linear-gradient(135deg,#14532d,#16a34a)',
+              padding: '22px 24px', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between',
+            }}>
+              <div>
+                <div style={{ fontSize: '0.7rem', fontWeight: 700, color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>
+                  {editingId ? 'Modification' : isDuplicate ? 'Duplication' : 'Nouvelle'}
+                </div>
+                <h2 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: '#fff' }}>
+                  {editingId ? t('client.entreprise.edit_activity') : isDuplicate ? t('client.entreprise.duplicate_activity') : t('client.entreprise.add_activity')}
                 </h2>
-                {/* Progress indicator — new activité with labo */}
-                {!editingId && !isDuplicate && wizardStep >= 1 && configHasLabo && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10 }}>
-                    {[{ label: 'Infos', s: 1 }, { label: 'Labo', s: 2 }, { label: 'Récap', s: 4 }].map(({ label, s }, idx, arr) => (
-                      <div key={s} style={{ display: 'flex', alignItems: 'center', gap: idx < arr.length - 1 ? 8 : 0 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                          <span style={{
-                            width: 22, height: 22, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            fontSize: '0.7rem', fontWeight: 800, flexShrink: 0,
-                            background: wizardStep > s ? '#22c55e' : wizardStep === s ? 'white' : 'rgba(255,255,255,0.25)',
-                            color: wizardStep > s ? 'white' : wizardStep === s ? 'var(--primary)' : 'rgba(255,255,255,0.6)',
-                          }}>
-                            {wizardStep > s ? '✓' : idx + 1}
-                          </span>
-                          <span style={{ fontSize: '0.72rem', fontWeight: wizardStep === s ? 700 : 400, color: wizardStep >= s ? 'white' : 'rgba(255,255,255,0.55)' }}>
-                            {label}
-                          </span>
-                        </div>
-                        {idx < arr.length - 1 && (
-                          <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.35)', marginLeft: 3 }}>›</span>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
               </div>
-              <button className="modal-close" onClick={closeForm}>✕</button>
+              <button
+                onClick={closeForm}
+                style={{ background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: 8, color: '#fff', fontSize: '1rem', cursor: 'pointer', padding: '6px 10px', lineHeight: 1 }}
+              >
+                ✕
+              </button>
             </div>
 
             <form onSubmit={submit}>
+              <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 16, padding: '22px 24px' }}>
 
-              {/* ── STEP 1: Activity info ── */}
-              {wizardStep === 1 && (
-                <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                  <div className="form-field" style={{ marginBottom: 0 }}>
-                    <label style={{ fontWeight: 600 }}>{t('client.entreprise.activity_nom')} *</label>
-                    <input
-                      type="text"
-                      value={form.nom}
-                      onChange={(e) => setForm((f) => ({ ...f, nom: e.target.value }))}
-                      autoFocus
-                      style={nameConflict ? { borderColor: 'var(--danger, #ef4444)' } : undefined}
-                    />
-                    {nameConflict && (
-                      <p style={{ color: 'var(--danger, #ef4444)', fontSize: '0.78rem', margin: '4px 0 0' }}>
-                        {t('client.entreprise.activity_name_exists', { name: form.nom.trim() })}
-                      </p>
-                    )}
-                  </div>
-                  <div className="form-field" style={{ marginBottom: 0 }}>
-                    <label style={{ fontWeight: 600 }}>{t('client.entreprise.activity_telephone')}</label>
-                    <input
-                      type="text"
-                      placeholder="+216 …"
-                      value={form.telephone}
-                      onChange={(e) => setForm((f) => ({ ...f, telephone: e.target.value }))}
-                    />
-                  </div>
-                  <div className="form-field" style={{ marginBottom: 0 }}>
-                    <label style={{ fontWeight: 600 }}>{t('client.entreprise.activity_adresse')}</label>
-                    <textarea
-                      value={form.adresse}
-                      onChange={(e) => setForm((f) => ({ ...f, adresse: e.target.value }))}
-                      rows={2}
-                    />
-                  </div>
-                </div>
-              )}
-
-              {/* ── STEP 2: Labo selection (new activité only) ── */}
-              {wizardStep === 2 && !editingId && !isDuplicate && (
-                <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                  <p style={{ margin: 0, fontSize: '0.88rem', color: 'var(--text-muted)' }}>
-                    Cette activité sera-t-elle approvisionnée par un laboratoire ?
-                  </p>
-                  <div style={{ display: 'flex', gap: 10 }}>
-                    <label style={{
-                      display: 'flex', alignItems: 'flex-start', gap: 10, padding: '14px 16px',
-                      borderRadius: 12, flex: 1,
-                      border: `2px solid ${hasLabo === true ? 'var(--primary)' : 'var(--border)'}`,
-                      background: hasLabo === true ? 'var(--primary-light, #eef2ff)' : 'var(--surface)',
-                      cursor: labos.length === 0 ? 'not-allowed' : 'pointer',
-                      opacity: labos.length === 0 ? 0.45 : 1,
-                    }}>
-                      <input type="radio" checked={hasLabo === true} disabled={labos.length === 0}
-                        onChange={() => { setHasLabo(true); setSelectedLaboId(''); }} style={{ accentColor: 'var(--primary)', marginTop: 3 }} />
-                      <div>
-                        <div style={{ fontWeight: 700, fontSize: '0.9rem' }}>
-                          🏭 Avec labo
-                          {labos.length === 0 && <span style={{ fontWeight: 400, fontSize: '0.75rem', color: 'var(--text-muted)', marginLeft: 6 }}>(aucun labo créé)</span>}
-                        </div>
-                        <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: 2 }}>
-                          Approvisionnement via un laboratoire
-                        </div>
-                      </div>
-                    </label>
-                    <label style={{
-                      display: 'flex', alignItems: 'flex-start', gap: 10, padding: '14px 16px',
-                      borderRadius: 12, flex: 1,
-                      border: `2px solid ${hasLabo === false ? 'var(--primary)' : 'var(--border)'}`,
-                      background: hasLabo === false ? 'var(--primary-light, #eef2ff)' : 'var(--surface)',
-                      cursor: 'pointer',
-                    }}>
-                      <input type="radio" checked={hasLabo === false} onChange={() => { setHasLabo(false); setSelectedLaboId(''); }} style={{ accentColor: 'var(--primary)', marginTop: 3 }} />
-                      <div>
-                        <div style={{ fontWeight: 700, fontSize: '0.9rem' }}>📋 Sans labo</div>
-                        <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: 2 }}>Gestion des ingrédients par activité</div>
-                      </div>
-                    </label>
-                  </div>
-                  {hasLabo === true && labos.length > 0 && (
-                    <div>
-                      <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 4 }}>
-                        Sélectionner un labo *
-                      </label>
-                      <select className="input" style={{ width: '100%' }} value={selectedLaboId}
-                        onChange={(e) => setSelectedLaboId(e.target.value === '' ? '' : Number(e.target.value))}>
-                        <option value="">— Choisir un labo —</option>
-                        {labos.map((l) => <option key={l.id} value={l.id}>🏭 {l.nom}{l.refLabo ? ` (${l.refLabo})` : ''}</option>)}
-                      </select>
-                    </div>
+                {/* Nom */}
+                <div style={fieldWrap}>
+                  <label style={fieldLabel}>{t('client.entreprise.activity_nom')} <span style={{ color: '#ef4444' }}>*</span></label>
+                  <input
+                    type="text" className="input"
+                    value={form.nom}
+                    onChange={(e) => setForm((f) => ({ ...f, nom: e.target.value }))}
+                    autoFocus
+                    placeholder="Ex: Point de vente Tunis"
+                    style={nameConflict ? { borderColor: '#ef4444' } : undefined}
+                  />
+                  {nameConflict && (
+                    <span style={{ color: '#ef4444', fontSize: '0.75rem' }}>
+                      {t('client.entreprise.activity_name_exists', { name: form.nom.trim() })}
+                    </span>
                   )}
                 </div>
-              )}
 
-              {/* ── STEP 4: Recap / Confirmation ── */}
-              {wizardStep === 4 && (() => {
-                const laboNomRecap = hasLabo === true
-                  ? (labos.find((l) => l.id === Number(selectedLaboId))?.nom || '—')
-                  : null;
-                const fieldLabel: React.CSSProperties = { fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' as const, letterSpacing: '0.05em', marginBottom: 2 };
-                const row = (label: string, value: string) => (
-                  <div key={label} style={{ display: 'flex', flexDirection: 'column', gap: 2, padding: '8px 0', borderBottom: '1px solid #f1f5f9' }}>
-                    <span style={fieldLabel}>{label}</span>
-                    <span style={{ fontSize: '0.9rem', fontWeight: 600, color: '#0f172a' }}>{value || '—'}</span>
-                  </div>
-                );
-                return (
-                  <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                    <p style={{ margin: '0 0 8px', fontSize: '0.85rem', color: '#64748b' }}>
-                      Vérifiez les informations avant de confirmer.
-                    </p>
-                    {row('Nom', form.nom)}
-                    {row('Téléphone', form.telephone)}
-                    {row('Adresse', form.adresse)}
-                    {laboNomRecap && row('Labo', laboNomRecap)}
-                  </div>
-                );
-              })()}
+                {/* Adresse */}
+                <div style={fieldWrap}>
+                  <label style={fieldLabel}>{t('client.entreprise.activity_adresse')}</label>
+                  <textarea
+                    className="input" rows={2}
+                    value={form.adresse}
+                    onChange={(e) => setForm((f) => ({ ...f, adresse: e.target.value }))}
+                    placeholder="Adresse (optionnel)"
+                    style={{ resize: 'none' }}
+                  />
+                </div>
+
+                {/* Labo config — only when creating and labos exist */}
+                {!editingId && !isDuplicate && labos.length > 0 && (
+                  <>
+                    <div style={dividerStyle} />
+                    <div>
+                      <div style={sectionTitle('#6d28d9')}>
+                        <span>🏭</span> Configuration laboratoire
+                      </div>
+                      <div style={{ display: 'flex', gap: 10 }}>
+                        <label style={{
+                          flex: 1, display: 'flex', alignItems: 'center', gap: 10,
+                          padding: '12px 14px', borderRadius: 10, cursor: 'pointer',
+                          border: `2px solid ${hasLabo === true ? '#7c3aed' : '#e5e7eb'}`,
+                          background: hasLabo === true ? '#faf5ff' : '#f9fafb',
+                          transition: 'all 0.15s',
+                        }}>
+                          <input type="radio" checked={hasLabo === true}
+                            onChange={() => { setHasLabo(true); setSelectedLaboId(''); }}
+                            style={{ accentColor: '#7c3aed', flexShrink: 0 }}
+                          />
+                          <div>
+                            <div style={{ fontWeight: 700, fontSize: '0.88rem', color: '#1f2937' }}>🏭 Avec labo</div>
+                            <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: 1 }}>Approvisionnement via labo</div>
+                          </div>
+                        </label>
+                        <label style={{
+                          flex: 1, display: 'flex', alignItems: 'center', gap: 10,
+                          padding: '12px 14px', borderRadius: 10, cursor: 'pointer',
+                          border: `2px solid ${hasLabo === false ? '#7c3aed' : '#e5e7eb'}`,
+                          background: hasLabo === false ? '#faf5ff' : '#f9fafb',
+                          transition: 'all 0.15s',
+                        }}>
+                          <input type="radio" checked={hasLabo === false}
+                            onChange={() => { setHasLabo(false); setSelectedLaboId(''); }}
+                            style={{ accentColor: '#7c3aed', flexShrink: 0 }}
+                          />
+                          <div>
+                            <div style={{ fontWeight: 700, fontSize: '0.88rem', color: '#1f2937' }}>📋 Sans labo</div>
+                            <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: 1 }}>Gestion par activité</div>
+                          </div>
+                        </label>
+                      </div>
+                      {hasLabo === true && (
+                        <div style={{ marginTop: 10 }}>
+                          <label style={{ fontSize: '0.72rem', fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 5 }}>
+                            Sélectionner un labo *
+                          </label>
+                          <select className="input" style={{ width: '100%' }} value={selectedLaboId}
+                            onChange={(e) => setSelectedLaboId(e.target.value === '' ? '' : Number(e.target.value))}>
+                            <option value="">— Choisir —</option>
+                            {labos.map((l) => <option key={l.id} value={l.id}>🏭 {l.nom}{l.refLabo ? ` (${l.refLabo})` : ''}</option>)}
+                          </select>
+                        </div>
+                      )}
+                    </div>
+                  </>
+                )}
+              </div>
 
               {error && (
-                <p style={{ margin: '0 20px 12px', color: 'var(--danger, #ef4444)', fontSize: '0.82rem', fontWeight: 500 }}>
+                <div style={{ margin: '0 24px 12px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, padding: '8px 12px', color: '#dc2626', fontSize: '0.82rem', fontWeight: 500 }}>
                   ⚠ {error}
-                </p>
+                </div>
               )}
 
-              {/* Footer */}
-              <div className="modal-footer">
-                {/* Left: Cancel or Back */}
-                {wizardStep === 4 ? (
-                  <button type="button" className="btn btn-secondary" onClick={() => {
-                    setError('');
-                    setWizardStep(!editingId && !isDuplicate && configHasLabo ? 2 : 1);
-                  }}>
-                    ‹ {t('client.entreprise.previous')}
-                  </button>
-                ) : wizardStep <= 1 ? (
-                  <button type="button" className="btn btn-secondary" onClick={closeForm}>
-                    {t('common.cancel')}
-                  </button>
-                ) : (
-                  <button type="button" className="btn btn-secondary" onClick={() => { setWizardStep(1); setError(''); }}>
-                    ‹ {t('client.entreprise.previous')}
-                  </button>
-                )}
-
-                {/* Right: Forward or Save */}
-                {wizardStep === 4 ? (
-                  <button type="button" className="btn btn-primary" onClick={handleFinalSave} disabled={saving}>
-                    {saving ? t('common.loading') : '✅ Confirmer'}
-                  </button>
-                ) : wizardStep === 1 ? (
-                  <button
-                    type="button"
-                    className="btn btn-primary"
-                    disabled={nameConflict || !form.nom.trim()}
-                    onClick={handleGoToRecap}
-                  >
-                    Suivant ›
-                  </button>
-                ) : (
-                  <button type="button" className="btn btn-primary" onClick={handleLaboStepNext} disabled={hasLabo === null}>
-                    Suivant ›
-                  </button>
-                )}
+              <div className="modal-footer" style={{ padding: '14px 24px', borderTop: '1px solid #f1f5f9' }}>
+                <button type="button" className="btn btn-secondary" onClick={closeForm}>{t('common.cancel')}</button>
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  disabled={saving || nameConflict || !form.nom.trim()}
+                  style={{ minWidth: 120, fontWeight: 700 }}
+                >
+                  {saving ? t('common.loading') : editingId ? '💾 Enregistrer' : '+ Créer l\'activité'}
+                </button>
               </div>
             </form>
           </div>
         </div>
       )}
 
-      {/* Ingredient assignment modal */}
+      {/* ── Ingredient assignment modal ── */}
       {ingredientsActivite && (
         <div className="modal-overlay">
           <div className="modal modal-lg" onClick={(e) => e.stopPropagation()}>
@@ -807,40 +791,30 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                   const isOpen = openIngCats.has(cat);
                   const selectedCount = items.filter((i) => i.selected).length;
                   return (
-                  <div key={cat} style={{ marginBottom: 8 }}>
-                    <button
-                      type="button"
-                      onClick={() => toggleIngCat(cat)}
-                      style={{
+                    <div key={cat} style={{ marginBottom: 8 }}>
+                      <button type="button" onClick={() => toggleIngCat(cat)} style={{
                         width: '100%', display: 'flex', alignItems: 'center', gap: 8,
                         padding: '6px 10px', borderRadius: 6, marginBottom: isOpen ? 6 : 0,
                         background: isOpen ? 'var(--primary-light, #eef2ff)' : '#f1f5f9',
                         border: `1px solid ${isOpen ? 'var(--primary)' : 'var(--border)'}`,
                         cursor: 'pointer', textAlign: 'left',
-                      }}
-                    >
-                      <span style={{ fontSize: '0.75rem', transition: 'transform 0.15s', display: 'inline-block', transform: isOpen ? 'rotate(90deg)' : 'rotate(0deg)', color: 'var(--primary)' }}>▶</span>
-                      <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--primary)', flex: 1 }}>🏷️ {cat}</span>
-                      <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-                        {selectedCount > 0 ? `${selectedCount}/` : ''}{items.length}
-                      </span>
-                    </button>
-                    {isOpen && (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                      {items.map((ing) => (
-                        <label key={ing.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 8px', borderRadius: 6, cursor: 'pointer', background: ing.selected ? 'var(--primary-light, #eef2ff)' : 'transparent' }}>
-                          <input
-                            type="checkbox"
-                            checked={ing.selected}
-                            onChange={() => toggleIngredient(ing.id)}
-                          />
-                          <span style={{ flex: 1 }}>{ing.nom}</span>
-                          <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{ing.unite}</span>
-                        </label>
-                      ))}
+                      }}>
+                        <span style={{ fontSize: '0.75rem', transition: 'transform 0.15s', display: 'inline-block', transform: isOpen ? 'rotate(90deg)' : 'rotate(0deg)', color: 'var(--primary)' }}>▶</span>
+                        <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--primary)', flex: 1 }}>🏷️ {cat}</span>
+                        <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{selectedCount > 0 ? `${selectedCount}/` : ''}{items.length}</span>
+                      </button>
+                      {isOpen && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                          {items.map((ing) => (
+                            <label key={ing.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 8px', borderRadius: 6, cursor: 'pointer', background: ing.selected ? 'var(--primary-light, #eef2ff)' : 'transparent' }}>
+                              <input type="checkbox" checked={ing.selected} onChange={() => toggleIngredient(ing.id)} />
+                              <span style={{ flex: 1 }}>{ing.nom}</span>
+                              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{ing.unite}</span>
+                            </label>
+                          ))}
+                        </div>
+                      )}
                     </div>
-                    )}
-                  </div>
                   );
                 })
               )}
@@ -852,7 +826,7 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
         </div>
       )}
 
-      {/* Labo detail popup */}
+      {/* ── Labo detail popup ── */}
       {laboPopup && (
         <div className="modal-overlay">
           <div className="modal" style={{ maxWidth: 360 }} onClick={(e) => e.stopPropagation()}>
@@ -862,11 +836,7 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
             </div>
             <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               <div>
-                <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('client.entreprise.activity_telephone')}</span>
-                <p style={{ margin: '2px 0 0', fontWeight: 600 }}>{laboPopup.tel || '—'}</p>
-              </div>
-              <div>
-                <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('client.entreprise.activity_adresse')}</span>
+                <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Adresse</span>
                 <p style={{ margin: '2px 0 0', fontWeight: 600 }}>{laboPopup.adresse || '—'}</p>
               </div>
             </div>
@@ -877,138 +847,294 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
         </div>
       )}
 
-      {/* Standalone labo add/edit modal */}
+      {/* ── Labo add/edit modal (single-step, modern) ── */}
       {showLaboModal && (
         <div className="modal-overlay">
-          <div className="modal" style={{ maxWidth: 480 }} onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header modal-header--primary">
-              <div style={{ flex: 1 }}>
-                <h2 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700 }}>
-                  {laboModalStep === 3 ? '✅ Récapitulatif' : editingLaboId ? '🏭 Modifier le labo' : '🏭 Nouveau labo'}
+          <div className="modal" style={{ maxWidth: 480, borderRadius: 16, overflow: 'hidden' }} onClick={(e) => e.stopPropagation()}>
+
+            <div style={{
+              background: 'linear-gradient(135deg,#4c1d95,#7c3aed)',
+              padding: '22px 24px', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between',
+            }}>
+              <div>
+                <div style={{ fontSize: '0.7rem', fontWeight: 700, color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>
+                  {editingLaboId ? 'Modification' : 'Nouveau'}
+                </div>
+                <h2 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: '#fff' }}>
+                  🏭 {editingLaboId ? 'Modifier le labo' : 'Nouveau labo'}
                 </h2>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8 }}>
-                  {(editingLaboId
-                    ? [{ label: 'Formulaire', s: 1 }, { label: 'Récap', s: 3 }]
-                    : [{ label: 'Formulaire', s: 1 }, { label: 'Activités', s: 2 }, { label: 'Récap', s: 3 }]
-                  ).map(({ label, s }, idx, arr) => (
-                    <div key={s} style={{ display: 'flex', alignItems: 'center', gap: idx < arr.length - 1 ? 8 : 0 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                        <span style={{ width: 20, height: 20, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.68rem', fontWeight: 800, background: laboModalStep > s ? '#22c55e' : laboModalStep === s ? 'white' : 'rgba(255,255,255,0.25)', color: laboModalStep > s ? 'white' : laboModalStep === s ? 'var(--primary)' : 'rgba(255,255,255,0.6)' }}>
-                          {laboModalStep > s ? '✓' : idx + 1}
+              </div>
+              <button
+                onClick={closeLaboModal}
+                style={{ background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: 8, color: '#fff', fontSize: '1rem', cursor: 'pointer', padding: '6px 10px', lineHeight: 1 }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 16, padding: '22px 24px', maxHeight: '62vh', overflowY: 'auto' }}>
+
+              {/* Nom */}
+              <div style={fieldWrap}>
+                <label style={fieldLabel}>Nom du labo <span style={{ color: '#ef4444' }}>*</span></label>
+                <input type="text" className="input" value={laboFormData.nom}
+                  onChange={(e) => setLaboFormData((p) => ({ ...p, nom: e.target.value }))}
+                  placeholder="Ex: Labo Central" autoFocus />
+              </div>
+
+              {/* Ref labo (new only) */}
+              {!editingLaboId && (
+                <div style={fieldWrap}>
+                  <label style={fieldLabel}>
+                    Référence <span style={{ color: '#ef4444' }}>*</span>
+                    <span style={{ fontWeight: 400, color: '#9ca3af', fontSize: '0.72rem', marginLeft: 5 }}>(unique)</span>
+                  </label>
+                  <input type="text" className="input" value={laboFormData.refLabo}
+                    onChange={(e) => setLaboFormData((p) => ({ ...p, refLabo: e.target.value }))}
+                    placeholder="Ex: LABO-001" />
+                </div>
+              )}
+
+              {/* Adresse */}
+              <div style={fieldWrap}>
+                <label style={fieldLabel}>Adresse</label>
+                <textarea className="input" rows={2} value={laboFormData.adresse}
+                  onChange={(e) => setLaboFormData((p) => ({ ...p, adresse: e.target.value }))}
+                  placeholder="Adresse (optionnel)" style={{ resize: 'none' }} />
+              </div>
+
+              {/* Activités assignment — only when creating and activités exist */}
+              {!editingLaboId && activites.length > 0 && (
+                <>
+                  <div style={dividerStyle} />
+                  <div>
+                    <div style={sectionTitle('#1d4ed8')}>
+                      <span>🏢</span> Assigner des activités
+                      <span style={{ fontWeight: 400, color: '#6b7280', textTransform: 'none', fontSize: '0.7rem', marginLeft: 4 }}>(optionnel)</span>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      {activites.filter((a) => !a.laboId).length === 0 ? (
+                        <p style={{ color: '#9ca3af', fontSize: '0.82rem', fontStyle: 'italic', margin: 0 }}>
+                          Toutes les activités ont déjà un labo assigné.
+                        </p>
+                      ) : (
+                        activites.filter((a) => !a.laboId).map((act) => (
+                          <label key={act.id} style={{
+                            display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', borderRadius: 8,
+                            cursor: 'pointer',
+                            background: laboSelectedActivities.includes(act.id) ? '#eff6ff' : '#f8fafc',
+                            border: `1px solid ${laboSelectedActivities.includes(act.id) ? '#93c5fd' : '#e5e7eb'}`,
+                            transition: 'all 0.12s',
+                          }}>
+                            <input type="checkbox"
+                              checked={laboSelectedActivities.includes(act.id)}
+                              onChange={() => setLaboSelectedActivities((prev) =>
+                                prev.includes(act.id) ? prev.filter((id) => id !== act.id) : [...prev, act.id]
+                              )}
+                              style={{ accentColor: '#2563eb', flexShrink: 0 }}
+                            />
+                            <span style={{ flex: 1, fontSize: '0.88rem', fontWeight: 600, color: '#1f2937' }}>🏢 {act.nom}</span>
+                            {act.adresse && <span style={{ fontSize: '0.75rem', color: '#9ca3af' }}>{act.adresse}</span>}
+                          </label>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {laboError && (
+              <div style={{ margin: '0 24px 12px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, padding: '8px 12px', color: '#dc2626', fontSize: '0.82rem', fontWeight: 500 }}>
+                ⚠ {laboError}
+              </div>
+            )}
+
+            <div className="modal-footer" style={{ padding: '14px 24px', borderTop: '1px solid #f1f5f9' }}>
+              <button type="button" className="btn btn-secondary" onClick={closeLaboModal}>{t('common.cancel')}</button>
+              <button type="button" className="btn btn-primary" onClick={saveLabo} disabled={laboSaving} style={{ minWidth: 120, fontWeight: 700, background: '#7c3aed', borderColor: '#7c3aed' }}>
+                {laboSaving ? t('common.loading') : editingLaboId ? '💾 Enregistrer' : '+ Créer le labo'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── "Créer mon business" wizard ── */}
+      {showBizWizard && (
+        <div className="modal-overlay">
+          <div className="modal" style={{ maxWidth: 540, borderRadius: 20, overflow: 'hidden' }} onClick={(e) => e.stopPropagation()}>
+
+            {/* Wizard header */}
+            <div style={{
+              background: 'linear-gradient(135deg,#0f172a,#1e293b)',
+              padding: '24px 28px',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+                <div>
+                  <div style={{ fontSize: '0.68rem', fontWeight: 700, color: 'rgba(255,255,255,0.45)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 5 }}>
+                    Configuration initiale
+                  </div>
+                  <h2 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800, color: '#fff' }}>
+                    ✨ Créer mon business
+                  </h2>
+                </div>
+                <button onClick={closeBizWizard} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: 8, color: '#fff', fontSize: '1rem', cursor: 'pointer', padding: '6px 10px' }}>✕</button>
+              </div>
+
+              {/* Step indicators */}
+              {configHasLabo && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 0 }}>
+                  {[
+                    { step: 1, label: 'Laboratoire', icon: '🏭' },
+                    { step: 2, label: 'Activités', icon: '🏢' },
+                  ].map(({ step, label, icon }, idx) => (
+                    <div key={step} style={{ display: 'flex', alignItems: 'center' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <div style={{
+                          width: 30, height: 30, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          background: bizStep > step ? '#22c55e' : bizStep === step ? '#fff' : 'rgba(255,255,255,0.12)',
+                          fontSize: bizStep > step ? '0.8rem' : '0.72rem', fontWeight: 800,
+                          color: bizStep > step ? '#fff' : bizStep === step ? '#0f172a' : 'rgba(255,255,255,0.4)',
+                          flexShrink: 0,
+                        }}>
+                          {bizStep > step ? '✓' : icon}
+                        </div>
+                        <span style={{ fontSize: '0.78rem', fontWeight: bizStep === step ? 700 : 400, color: bizStep >= step ? '#fff' : 'rgba(255,255,255,0.4)' }}>
+                          {label}
                         </span>
-                        <span style={{ fontSize: '0.7rem', fontWeight: laboModalStep === s ? 700 : 400, color: laboModalStep >= s ? 'white' : 'rgba(255,255,255,0.55)' }}>{label}</span>
                       </div>
-                      {idx < arr.length - 1 && <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.35)', marginLeft: 3 }}>›</span>}
+                      {idx < 1 && (
+                        <div style={{ width: 32, height: 2, background: bizStep > step ? '#22c55e' : 'rgba(255,255,255,0.15)', margin: '0 8px' }} />
+                      )}
                     </div>
                   ))}
                 </div>
-              </div>
-              <button className="modal-close" onClick={closeLaboModal}>✕</button>
+              )}
             </div>
 
-            {laboModalStep === 1 && (
-              <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                <div className="form-field" style={{ marginBottom: 0 }}>
-                  <label style={{ fontWeight: 600 }}>Nom du labo *</label>
-                  <input type="text" className="input" value={laboFormData.nom} onChange={(e) => setLaboFormData((p) => ({ ...p, nom: e.target.value }))} placeholder="Ex: Labo Central" autoFocus />
+            {/* Step 1 — Labo */}
+            {bizStep === 1 && configHasLabo && (
+              <div className="modal-body" style={{ padding: '22px 28px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div style={sectionTitle('#7c3aed')}><span>🏭</span> Créez votre laboratoire</div>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.78rem', color: '#6b7280', cursor: 'pointer' }}>
+                    <input type="checkbox" checked={bizLaboSkip} onChange={(e) => { setBizLaboSkip(e.target.checked); setBizError(''); }}
+                      style={{ accentColor: '#7c3aed' }} />
+                    Passer cette étape
+                  </label>
                 </div>
-                {!editingLaboId && (
-                  <div className="form-field" style={{ marginBottom: 0 }}>
-                    <label style={{ fontWeight: 600 }}>Référence labo * <span style={{ fontWeight: 400, color: 'var(--text-muted)', fontSize: '0.78rem' }}>(unique)</span></label>
-                    <input type="text" className="input" value={laboFormData.refLabo} onChange={(e) => setLaboFormData((p) => ({ ...p, refLabo: e.target.value }))} placeholder="Ex: LABO-001" />
+
+                {!bizLaboSkip && (
+                  <>
+                    <div style={fieldWrap}>
+                      <label style={fieldLabel}>Nom du labo <span style={{ color: '#ef4444' }}>*</span></label>
+                      <input type="text" className="input" value={bizLaboForm.nom}
+                        onChange={(e) => setBizLaboForm((p) => ({ ...p, nom: e.target.value }))}
+                        placeholder="Ex: Labo Central" autoFocus />
+                    </div>
+                    <div style={fieldWrap}>
+                      <label style={fieldLabel}>Référence <span style={{ color: '#ef4444' }}>*</span>
+                        <span style={{ fontWeight: 400, color: '#9ca3af', fontSize: '0.72rem', marginLeft: 5 }}>(unique)</span>
+                      </label>
+                      <input type="text" className="input" value={bizLaboForm.refLabo}
+                        onChange={(e) => setBizLaboForm((p) => ({ ...p, refLabo: e.target.value }))}
+                        placeholder="Ex: LABO-001" />
+                    </div>
+                    <div style={fieldWrap}>
+                      <label style={fieldLabel}>Adresse</label>
+                      <textarea className="input" rows={2} value={bizLaboForm.adresse}
+                        onChange={(e) => setBizLaboForm((p) => ({ ...p, adresse: e.target.value }))}
+                        placeholder="Adresse (optionnel)" style={{ resize: 'none' }} />
+                    </div>
+                  </>
+                )}
+                {bizLaboSkip && (
+                  <div style={{ background: '#f8fafc', border: '1px dashed #d1d5db', borderRadius: 10, padding: '16px', textAlign: 'center', color: '#9ca3af', fontSize: '0.85rem' }}>
+                    Étape ignorée — vous pourrez créer un labo plus tard
                   </div>
                 )}
-                <div className="form-field" style={{ marginBottom: 0 }}>
-                  <label style={{ fontWeight: 600 }}>Téléphone référent * <span style={{ fontWeight: 400, color: 'var(--text-muted)', fontSize: '0.78rem' }}>{t('validation.phone_hint')}</span></label>
-                  <input type="text" className="input" value={laboFormData.referentTel} onChange={(e) => setLaboFormData((p) => ({ ...p, referentTel: e.target.value }))} placeholder="+216 …" />
-                </div>
-                <div className="form-field" style={{ marginBottom: 0 }}>
-                  <label style={{ fontWeight: 600 }}>Adresse</label>
-                  <textarea className="input" rows={2} value={laboFormData.adresse} onChange={(e) => setLaboFormData((p) => ({ ...p, adresse: e.target.value }))} placeholder="Adresse (optionnel)" />
-                </div>
               </div>
             )}
 
-            {laboModalStep === 2 && !editingLaboId && (
-              <div className="modal-body" style={{ maxHeight: '52vh', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <p style={{ margin: '0 0 4px', fontSize: '0.85rem', color: '#64748b' }}>
-                  Sélectionnez les activités que ce labo va gérer <span style={{ color: '#94a3b8' }}>(optionnel)</span>.
-                </p>
-                {activites.filter((a) => !a.laboId).length === 0 ? (
-                  <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', fontStyle: 'italic' }}>
-                    Toutes les activités ont déjà un labo assigné.
-                  </p>
-                ) : (
-                  activites.filter((a) => !a.laboId).map((act) => (
-                    <label key={act.id} style={{
-                      display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', borderRadius: 8,
-                      cursor: 'pointer',
-                      background: laboSelectedActivities.includes(act.id) ? 'var(--primary-light, #eef2ff)' : '#f8fafc',
-                      border: `1px solid ${laboSelectedActivities.includes(act.id) ? 'var(--primary)' : 'var(--border)'}`,
-                    }}>
-                      <input
-                        type="checkbox"
-                        checked={laboSelectedActivities.includes(act.id)}
-                        onChange={() => setLaboSelectedActivities((prev) =>
-                          prev.includes(act.id) ? prev.filter((id) => id !== act.id) : [...prev, act.id]
-                        )}
-                        style={{ accentColor: 'var(--primary)', flexShrink: 0 }}
-                      />
-                      <span style={{ flex: 1, fontSize: '0.88rem', fontWeight: 600 }}>{act.nom}</span>
-                    </label>
-                  ))
-                )}
-              </div>
-            )}
+            {/* Step 2 — Activités */}
+            {bizStep === 2 && (
+              <div className="modal-body" style={{ padding: '22px 28px', display: 'flex', flexDirection: 'column', gap: 14, maxHeight: '55vh', overflowY: 'auto' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div style={sectionTitle('#166534')}><span>🏢</span> Créez vos activités</div>
+                  {maxActivites !== null && (
+                    <span style={{ fontSize: '0.72rem', color: '#6b7280', background: '#f3f4f6', border: '1px solid #e5e7eb', borderRadius: 20, padding: '2px 10px' }}>
+                      {bizActForms.filter(f => f.nom.trim()).length} / {maxActivites}
+                    </span>
+                  )}
+                </div>
 
-            {laboModalStep === 3 && (
-              <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                <p style={{ margin: '0 0 8px', fontSize: '0.85rem', color: '#64748b' }}>Vérifiez les informations avant de confirmer.</p>
-                {[
-                  { label: 'Nom', value: laboFormData.nom },
-                  ...(!editingLaboId ? [{ label: 'Référence', value: laboFormData.refLabo }] : []),
-                  { label: 'Téléphone', value: laboFormData.referentTel },
-                  { label: 'Adresse', value: laboFormData.adresse },
-                ].map(({ label, value }) => (
-                  <div key={label} style={{ display: 'flex', flexDirection: 'column', gap: 2, padding: '8px 0', borderBottom: '1px solid #f1f5f9' }}>
-                    <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{label}</span>
-                    <span style={{ fontSize: '0.9rem', fontWeight: 600, color: '#0f172a' }}>{value || '—'}</span>
+                {bizActForms.map((af, idx) => (
+                  <div key={idx} style={{ background: '#f8fafc', border: '1px solid #e5e7eb', borderRadius: 12, padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2 }}>
+                      <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#16a34a', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
+                        Activité {idx + 1}
+                      </span>
+                      {bizActForms.length > 1 && (
+                        <button type="button" onClick={() => bizRemoveSlot(idx)}
+                          style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '0.8rem', padding: '2px 6px', borderRadius: 4 }}>
+                          ✕ Retirer
+                        </button>
+                      )}
+                    </div>
+                    <div style={fieldWrap}>
+                      <label style={fieldLabel}>Nom <span style={{ color: '#ef4444' }}>*</span></label>
+                      <input type="text" className="input" value={af.nom}
+                        onChange={(e) => setBizActForms((p) => p.map((f, i) => i === idx ? { ...f, nom: e.target.value } : f))}
+                        placeholder="Ex: Point de vente Tunis"
+                        autoFocus={idx === 0} />
+                    </div>
+                    <div style={fieldWrap}>
+                      <label style={fieldLabel}>Adresse</label>
+                      <input type="text" className="input" value={af.adresse}
+                        onChange={(e) => setBizActForms((p) => p.map((f, i) => i === idx ? { ...f, adresse: e.target.value } : f))}
+                        placeholder="Adresse (optionnel)" />
+                    </div>
                   </div>
                 ))}
-                {!editingLaboId && laboSelectedActivities.length > 0 && (
-                  <div style={{ paddingTop: 6 }}>
-                    <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 4 }}>
-                      Activités assignées ({laboSelectedActivities.length})
-                    </span>
-                    {activites.filter((a) => laboSelectedActivities.includes(a.id)).map((a) => (
-                      <div key={a.id} style={{ fontSize: '0.83rem', padding: '3px 0 3px 4px', color: '#374151', borderBottom: '1px solid #f1f5f9' }}>
-                        🏢 {a.nom}
-                      </div>
-                    ))}
-                  </div>
+
+                {(maxActivites === null || bizActForms.length < maxActivites) && (
+                  <button type="button" onClick={bizAddSlot}
+                    style={{ background: 'none', border: '1px dashed #16a34a', color: '#16a34a', borderRadius: 10, padding: '10px', fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer', width: '100%' }}>
+                    + Ajouter une activité
+                  </button>
                 )}
               </div>
             )}
 
-            {laboError && <p style={{ margin: '0 20px 12px', color: 'var(--danger, #ef4444)', fontSize: '0.82rem', fontWeight: 500 }}>⚠ {laboError}</p>}
+            {bizError && (
+              <div style={{ margin: '0 28px 12px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, padding: '8px 12px', color: '#dc2626', fontSize: '0.82rem', fontWeight: 500 }}>
+                ⚠ {bizError}
+              </div>
+            )}
 
-            <div className="modal-footer">
-              {laboModalStep === 1 && (
+            <div className="modal-footer" style={{ padding: '14px 28px', borderTop: '1px solid #f1f5f9', gap: 10 }}>
+              {bizStep === 1 ? (
                 <>
-                  <button type="button" className="btn btn-secondary" onClick={closeLaboModal}>{t('common.cancel')}</button>
-                  <button type="button" className="btn btn-primary" onClick={handleLaboNext}>Suivant ›</button>
+                  <button type="button" className="btn btn-secondary" onClick={closeBizWizard}>{t('common.cancel')}</button>
+                  <button type="button" className="btn btn-primary" onClick={bizNextStep} style={{ minWidth: 130, fontWeight: 700, background: '#7c3aed', borderColor: '#7c3aed' }}>
+                    Activités →
+                  </button>
                 </>
-              )}
-              {laboModalStep === 2 && (
+              ) : (
                 <>
-                  <button type="button" className="btn btn-secondary" onClick={() => { setLaboModalStep(1); setLaboError(''); }}>‹ {t('client.entreprise.previous')}</button>
-                  <button type="button" className="btn btn-primary" onClick={() => setLaboModalStep(3)}>Suivant ›</button>
-                </>
-              )}
-              {laboModalStep === 3 && (
-                <>
-                  <button type="button" className="btn btn-secondary" onClick={() => { setLaboModalStep(editingLaboId ? 1 : 2); setLaboError(''); }}>‹ {t('client.entreprise.previous')}</button>
-                  <button type="button" className="btn btn-primary" onClick={saveLabo} disabled={laboSaving}>{laboSaving ? t('common.loading') : '✅ Confirmer'}</button>
+                  {configHasLabo && (
+                    <button type="button" className="btn btn-secondary" onClick={() => { setBizStep(1); setBizError(''); }}>
+                      ‹ Retour
+                    </button>
+                  )}
+                  {!configHasLabo && (
+                    <button type="button" className="btn btn-secondary" onClick={closeBizWizard}>{t('common.cancel')}</button>
+                  )}
+                  <button type="button" className="btn btn-primary" onClick={bizSaveAll} disabled={bizSaving}
+                    style={{ minWidth: 140, fontWeight: 700, background: 'linear-gradient(135deg,#14532d,#16a34a)', borderColor: '#14532d' }}>
+                    {bizSaving ? '…' : '✅ Enregistrer tout'}
+                  </button>
                 </>
               )}
             </div>
@@ -1016,7 +1142,7 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
         </div>
       )}
 
-      {/* Delete labo confirmation */}
+      {/* ── Delete labo confirmation ── */}
       {deleteLaboTarget && (
         <div className="modal-overlay">
           <div className="modal" style={{ maxWidth: 480 }} onClick={(e) => e.stopPropagation()}>
@@ -1029,7 +1155,7 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
               <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 10, padding: '12px 14px', fontSize: '0.85rem', color: '#991b1b', lineHeight: 1.6 }}>
                 <p style={{ margin: '0 0 6px', fontWeight: 700 }}>⚠ Attention — impacts de la suppression :</p>
                 <ul style={{ margin: 0, paddingLeft: 18 }}>
-                  <li>Les activités liées à ce labo passeront en <strong>mode gestion séparée</strong> — chaque activité gérera ses ingrédients indépendamment.</li>
+                  <li>Les activités liées à ce labo passeront en <strong>mode gestion séparée</strong>.</li>
                   <li>Aucune activité ne pourra plus recevoir de transferts depuis ce labo.</li>
                 </ul>
               </div>
@@ -1038,9 +1164,7 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
               </p>
             </div>
             <div className="modal-footer" style={{ gap: 10 }}>
-              <button className="btn btn-secondary" onClick={() => setDeleteLaboTarget(null)} disabled={deletingLabo}>
-                {t('common.cancel')}
-              </button>
+              <button className="btn btn-secondary" onClick={() => setDeleteLaboTarget(null)} disabled={deletingLabo}>{t('common.cancel')}</button>
               <button className="btn btn-danger" onClick={confirmDeleteLabo} disabled={deletingLabo}>
                 {deletingLabo ? '…' : '🗑 Supprimer'}
               </button>
@@ -1049,7 +1173,7 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
         </div>
       )}
 
-      {/* Delete confirmation modal */}
+      {/* ── Delete activité confirmation ── */}
       {deleteTarget && (
         <div className="modal-overlay">
           <div className="modal" style={{ maxWidth: 480 }}>
@@ -1065,9 +1189,7 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
               </p>
             </div>
             <div className="modal-footer" style={{ gap: 10 }}>
-              <button className="btn btn-secondary" onClick={() => setDeleteTarget(null)} disabled={deleting}>
-                {t('common.cancel')}
-              </button>
+              <button className="btn btn-secondary" onClick={() => setDeleteTarget(null)} disabled={deleting}>{t('common.cancel')}</button>
               <button className="btn btn-danger" onClick={confirmDelete} disabled={deleting}>
                 {deleting ? '…' : t('common.delete')}
               </button>
