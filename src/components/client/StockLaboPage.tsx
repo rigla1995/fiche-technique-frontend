@@ -757,7 +757,12 @@ export default function StockLaboPage() {
                                       </td>
                                       <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
                                         {r.coutTotal != null && r.coutTotal > 0 ? (
-                                          <span style={{ fontSize: '0.88rem', color: '#1d4ed8', fontWeight: 700 }}>{r.coutTotal.toFixed(3)} DT</span>
+                                          <>
+                                            <span style={{ fontSize: '0.88rem', color: '#1d4ed8', fontWeight: 700 }}>{r.coutTotal.toFixed(3)} DT</span>
+                                            {(r.prixCalcule != null && r.prixCalcule > 0 ? r.prixCalcule : r.prixUnitaire != null && r.prixUnitaire > 0 ? r.prixUnitaire : null) != null && (
+                                              <div style={{ fontSize: '0.65rem', color: '#64748b', marginTop: 1 }}>{(r.prixCalcule != null && r.prixCalcule > 0 ? r.prixCalcule : r.prixUnitaire!).toFixed(3)} DT/u</div>
+                                            )}
+                                          </>
                                         ) : <span style={{ fontSize: '0.72rem', color: '#cbd5e1' }}>—</span>}
                                       </td>
                                       <td style={{ textAlign: 'center' }}>

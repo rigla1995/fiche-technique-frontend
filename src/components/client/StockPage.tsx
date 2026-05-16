@@ -968,7 +968,12 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                             </td>
                             <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
                               {entry.coutTotal != null && entry.coutTotal > 0 ? (
-                                <span style={{ fontSize: '0.88rem', color: '#1d4ed8', fontWeight: 700 }}>{entry.coutTotal.toFixed(3)} DT</span>
+                                <>
+                                  <span style={{ fontSize: '0.88rem', color: '#1d4ed8', fontWeight: 700 }}>{entry.coutTotal.toFixed(3)} DT</span>
+                                  {entry.prixUnitaire != null && entry.prixUnitaire > 0 && (
+                                    <div style={{ fontSize: '0.65rem', color: '#64748b', marginTop: 1 }}>{entry.prixUnitaire.toFixed(3)} DT/u</div>
+                                  )}
+                                </>
                               ) : <span style={{ fontSize: '0.72rem', color: '#cbd5e1' }}>—</span>}
                             </td>
                             <td style={{ textAlign: 'center' }}>
