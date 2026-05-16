@@ -17,9 +17,10 @@ const fmtDate = (iso: string | null | undefined) => {
 
 const seuilLabelClass = (restante: number | null, seuil: number | null): string => {
   if (restante === null) return '';
-  if (seuil === null) return restante <= 0 ? 'stock-alert' : 'stock-ok';
+  if (!seuil || seuil <= 0) return restante <= 0 ? 'stock-alert' : 'stock-ok';
   if (restante <= 0) return 'stock-alert';
-  if (restante <= seuil) return 'stock-warn';
+  if (restante <= seuil) return 'stock-alert';
+  if (restante <= seuil * 1.1) return 'stock-warn';
   return 'stock-ok';
 };
 
@@ -161,7 +162,9 @@ export default function StockLaboPage() {
   const [bulkDate, setBulkDate] = useState(todayStr());
   const [bulkFournisseurId, setBulkFournisseurId] = useState('');
   const [bulkRefFacture, setBulkRefFacture] = useState('');
+  const [bulkTauxTva, setBulkTauxTva] = useState('');
   const [bulkSaving, setBulkSaving] = useState(false);
+  const [seuilModal, setSeuilModal] = useState<{ ingredientId: number; nom: string } | null>(null);
 
   const today = todayStr();
 
@@ -285,6 +288,7 @@ export default function StockLaboPage() {
         dateAppro: bulkDate || today,
         fournisseurId: bulkFournisseurId ? Number(bulkFournisseurId) : null,
         refFacture: bulkRefFacture.trim() || null,
+        tauxTva: bulkTauxTva.trim() ? parseFloat(bulkTauxTva) : null,
       });
       setRowState((prev) => ({
         ...prev,
@@ -405,6 +409,7 @@ export default function StockLaboPage() {
           dateAppro: bulkDate,
           fournisseurId: bulkFournisseurId ? Number(bulkFournisseurId) : null,
           refFacture: bulkRefFacture.trim() || null,
+          tauxTva: bulkTauxTva.trim() ? parseFloat(bulkTauxTva) : null,
         });
       }
       setBulkDate(todayStr());
@@ -636,13 +641,34 @@ export default function StockLaboPage() {
             </div>
           </div>
 
-          {/* Approvisionnement bloc */}
+          {/* Seuil min modal */}
+          {seuilModal && (
+            <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 1100, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setSeuilModal(null)}>
+              <div style={{ background: 'var(--surface)', borderRadius: 14, padding: '24px 28px', minWidth: 300, boxShadow: '0 8px 32px rgba(0,0,0,0.18)', border: '1.5px solid var(--border)' }} onClick={(e) => e.stopPropagation()}>
+                <div style={{ fontWeight: 800, fontSize: '0.9rem', marginBottom: 14, color: '#1e3a5f' }}>⚙ Seuil min — {seuilModal.nom}</div>
+                <input
+                  type="number" min="0" step="0.001" placeholder="Seuil minimum…"
+                  value={seuilMinEdits[seuilModal.ingredientId] ?? ''}
+                  onChange={(e) => setSeuilMinEdits((p) => ({ ...p, [seuilModal!.ingredientId]: e.target.value }))}
+                  className="input" style={{ width: '100%', marginBottom: 10 }}
+                  autoFocus
+                />
+                <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: 14 }}>🔴 ≤ seuil &nbsp;·&nbsp; 🟠 seuil + 10% &nbsp;·&nbsp; 🟢 au-dessus</div>
+                <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                  <button className="btn btn-ghost btn-sm" onClick={() => setSeuilModal(null)}>Annuler</button>
+                  <button className="btn btn-primary btn-sm" onClick={async () => { await saveSeuilMin(seuilModal!.ingredientId); setSeuilModal(null); }}>Enregistrer</button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Approvisionnement (TVA) bloc */}
           <div style={{
             background: 'var(--surface)', borderRadius: 12, padding: '14px 18px', marginBottom: 20,
             border: '1.5px solid #7e22ce', boxShadow: '0 2px 10px rgba(126,34,206,0.10)',
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, paddingBottom: 10, borderBottom: '1px solid var(--border)' }}>
-              <span style={{ fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#7e22ce' }}>Approvisionnement</span>
+              <span style={{ fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#7e22ce' }}>Approvisionnement (TVA)</span>
               {readyCount > 0 && (
                 <span style={{ background: '#7e22ce', color: '#fff', borderRadius: 20, padding: '1px 9px', fontSize: '0.72rem', fontWeight: 700 }}>{readyCount}</span>
               )}
@@ -663,12 +689,16 @@ export default function StockLaboPage() {
                 <span style={LABEL}>Réf Facture</span>
                 <input type="text" className="input" style={{ maxWidth: 160 }} placeholder="N° facture…" value={bulkRefFacture} onChange={(e) => setBulkRefFacture(e.target.value)} />
               </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                <span style={LABEL}>Taux TVA %</span>
+                <input type="number" min="0" step="0.01" className="input" style={{ maxWidth: 100 }} placeholder="ex: 19" value={bulkTauxTva} onChange={(e) => setBulkTauxTva(e.target.value)} />
+              </div>
               <div style={{ display: 'flex', gap: 8, alignSelf: 'flex-end', marginLeft: 'auto' }}>
                 <button className="btn btn-primary btn-sm" onClick={saveBulk} disabled={!canSaveBulk || bulkSaving || !canWrite}
                   style={{ background: canSaveBulk ? 'linear-gradient(135deg, #7e22ce, #a855f7)' : undefined, border: 'none', boxShadow: canSaveBulk ? '0 3px 10px rgba(126,34,206,0.3)' : undefined }}>
                   {bulkSaving ? '…' : `Enregistrer (${readyCount})`}
                 </button>
-                <button className="btn btn-ghost btn-sm" onClick={() => { setBulkDate(todayStr()); setBulkFournisseurId(''); setBulkRefFacture(''); }}>
+                <button className="btn btn-ghost btn-sm" onClick={() => { setBulkDate(todayStr()); setBulkFournisseurId(''); setBulkRefFacture(''); setBulkTauxTva(''); }}>
                   Réinitialiser
                 </button>
               </div>
@@ -711,7 +741,6 @@ export default function StockLaboPage() {
                                 <th style={{ fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '8px 8px' }}>{t('client.stock.ingredient')}</th>
                                 <th style={{ textAlign: 'right', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '8px 8px' }}>Stock<br /><span style={{ fontSize: '0.65rem', fontWeight: 400, opacity: 0.75 }}>pertes</span></th>
                                 <th style={{ textAlign: 'right', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '8px 8px' }}>Coût Total</th>
-                                <th style={{ textAlign: 'center', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '8px 8px' }}>Seuil</th>
                                 <th style={{ textAlign: 'right', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '8px 8px' }}>Qté</th>
                                 <th style={{ textAlign: 'right', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '8px 8px' }}>Prix</th>
                                 <th style={{ fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '8px 8px' }}></th>
@@ -765,17 +794,6 @@ export default function StockLaboPage() {
                                           </>
                                         ) : <span style={{ fontSize: '0.72rem', color: '#cbd5e1' }}>—</span>}
                                       </td>
-                                      <td style={{ textAlign: 'center' }}>
-                                        <input
-                                          type="number" min="0" step="0.001" placeholder="—"
-                                          value={seuilMinEdits[r.ingredientId] ?? ''}
-                                          onChange={(e) => setSeuilMinEdits((p) => ({ ...p, [r.ingredientId]: e.target.value }))}
-                                          onBlur={() => saveSeuilMin(r.ingredientId)}
-                                          style={{ width: 72, textAlign: 'right', fontSize: '0.82rem' }}
-                                          className="input"
-                                          title={seuilMinSaving[r.ingredientId] ? 'Enregistrement…' : 'Seuil minimum — auto-save'}
-                                        />
-                                      </td>
                                       <td style={{ textAlign: 'right' }}>
                                         <input type="number" min="0" step="0.001" value={rs.quantite} onChange={(e) => setField(r.ingredientId, 'quantite', e.target.value)} style={{ width: 76, textAlign: 'right', ...warnStyle }} className="input" />
                                       </td>
@@ -796,6 +814,9 @@ export default function StockLaboPage() {
                                       </td>
                                       <td>
                                         <div style={{ display: 'flex', gap: 4, alignItems: 'center', flexWrap: 'wrap' }}>
+                                          {canWrite && (
+                                            <button className="btn btn-ghost btn-sm" title="Configurer seuil min" onClick={() => { setSeuilMinEdits((p) => ({ ...p, [r.ingredientId]: r.seuilMin != null ? String(r.seuilMin) : '' })); setSeuilModal({ ingredientId: r.ingredientId, nom: r.nom }); }}>🔧</button>
+                                          )}
                                           {r.isPT && r.produitId && (
                                             <>
                                               <button className="btn btn-ghost btn-sm" title="Stock des ingrédients relatifs" onClick={() => { fetchPtRecipe(r.produitId!); setPtStockModal({ produitId: r.produitId!, nom: r.nom }); }}>📊</button>
@@ -820,7 +841,7 @@ export default function StockLaboPage() {
                                     {/* Appro history collapse */}
                                     {rs.historyOpen && (
                                       <tr>
-                                        <td colSpan={7} style={{ background: 'var(--surface)', padding: '8px 16px' }}>
+                                        <td colSpan={6} style={{ background: 'var(--surface)', padding: '8px 16px' }}>
                                           {rs.history.length === 0 ? (
                                             <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{t('client.stock.no_history')}</span>
                                           ) : (
@@ -830,7 +851,9 @@ export default function StockLaboPage() {
                                                   <th style={{ textAlign: 'left', color: 'var(--text-muted)', fontWeight: 600, paddingBottom: 4 }}>{t('client.stock.date_appro')}</th>
                                                   <th style={{ textAlign: 'left', color: 'var(--text-muted)', fontWeight: 600, paddingBottom: 4 }}>Type</th>
                                                   <th style={{ textAlign: 'right', color: 'var(--text-muted)', fontWeight: 600, paddingBottom: 4 }}>{t('client.stock.quantity')}</th>
-                                                  <th style={{ textAlign: 'right', color: 'var(--text-muted)', fontWeight: 600, paddingBottom: 4 }}>{t('client.stock.prix_unitaire')}</th>
+                                                  <th style={{ textAlign: 'right', color: 'var(--text-muted)', fontWeight: 600, paddingBottom: 4 }}>Prix HT</th>
+                                                  <th style={{ textAlign: 'right', color: 'var(--text-muted)', fontWeight: 600, paddingBottom: 4 }}>TVA%</th>
+                                                  <th style={{ textAlign: 'right', color: 'var(--text-muted)', fontWeight: 600, paddingBottom: 4 }}>Prix TTC</th>
                                                   <th style={{ textAlign: 'left', color: 'var(--text-muted)', fontWeight: 600, paddingBottom: 4 }}>Fournisseur</th>
                                                   <th style={{ textAlign: 'left', color: 'var(--text-muted)', fontWeight: 600, paddingBottom: 4 }}>Réf Facture</th>
                                                 </tr>
@@ -847,6 +870,8 @@ export default function StockLaboPage() {
                                                     </td>
                                                     <td style={{ textAlign: 'right' }}>{h.quantite ?? '—'}</td>
                                                     <td style={{ textAlign: 'right' }}>{h.prixUnitaire !== null ? h.prixUnitaire.toFixed(3) : '—'}</td>
+                                                    <td style={{ textAlign: 'right' }}>{(h as any).tauxTva != null ? `${(h as any).tauxTva}%` : '—'}</td>
+                                                    <td style={{ textAlign: 'right' }}>{(h as any).prixUnitaireTva != null ? (h as any).prixUnitaireTva.toFixed(3) : '—'}</td>
                                                     <td style={{ color: 'var(--text-muted)' }}>{h.fournisseurNom ?? '—'}</td>
                                                     <td style={{ color: 'var(--text-muted)' }}>{h.refFacture ?? '—'}</td>
                                                   </tr>

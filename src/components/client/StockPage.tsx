@@ -394,9 +394,10 @@ function ApproConflictModal({ date, conflicts, newQuantite, onConfirm, onCancel 
 
 function seuilClass(total: number | null, seuil: number | null): string {
   if (total === null) return '';
-  if (seuil === null) return total === 0 ? 'stock-alert' : 'stock-ok';
+  if (!seuil || seuil <= 0) return total === 0 ? 'stock-alert' : 'stock-ok';
   if (total <= 0) return 'stock-alert';
-  if (total <= seuil) return 'stock-warn';
+  if (total <= seuil) return 'stock-alert';
+  if (total <= seuil * 1.1) return 'stock-warn';
   return 'stock-ok';
 }
 
@@ -410,7 +411,7 @@ interface StockMatrixProps {
   activiteId?: number;
   isEntreprise: boolean;
   fournisseurs?: Fournisseur[];
-  onSave: (ingredientId: number, quantite: string, prixUnitaire: string, dateAppro: string, fournisseurId?: number | null, refFacture?: string | null) => Promise<void>;
+  onSave: (ingredientId: number, quantite: string, prixUnitaire: string, dateAppro: string, fournisseurId?: number | null, refFacture?: string | null, tauxTva?: number | null) => Promise<void>;
   onSavePT?: (produitId: number, quantite: string, dateAppro: string) => Promise<{ prixCalcule: number | null; dateAppro: string; totalQuantite: number }>;
   onSaveSeuilMin?: (ingredientId: number, seuilMin: number | null) => Promise<void>;
   onSavePerte?: (ingredientId: number, quantite: number, typePerte: string, datePerte: string) => Promise<void>;
@@ -455,7 +456,9 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
   const [bulkDate, setBulkDate] = useState(todayStr());
   const [bulkFournisseurId, setBulkFournisseurId] = useState('');
   const [bulkRefFacture, setBulkRefFacture] = useState('');
+  const [bulkTauxTva, setBulkTauxTva] = useState('');
   const [bulkSaving, setBulkSaving] = useState(false);
+  const [seuilModal, setSeuilModal] = useState<{ ingredientId: number; nom: string } | null>(null);
 
   // ── Conflict confirmation modal
   const [conflictModal, setConflictModal] = useState<{
@@ -517,7 +520,8 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
       } else {
         const fId = bulkFournisseurId ? Number(bulkFournisseurId) : null;
         const ref = bulkRefFacture.trim() || null;
-        await onSave(id, row.quantite, row.prixUnitaire, bulkDate, fId, ref);
+        const tva = bulkTauxTva.trim() ? parseFloat(bulkTauxTva) : null;
+        await onSave(id, row.quantite, row.prixUnitaire, bulkDate, fId, ref, tva);
       }
       const today = todayStr();
       if (isCurrentMonth(bulkDate)) {
@@ -651,7 +655,8 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
         const ingId = Number(idStr);
         await onSave(ingId, row.quantite, row.prixUnitaire, bulkDate,
           bulkFournisseurId ? Number(bulkFournisseurId) : null,
-          bulkRefFacture.trim() || null);
+          bulkRefFacture.trim() || null,
+          bulkTauxTva.trim() ? parseFloat(bulkTauxTva) : null);
         if (isCurrentMonth(bulkDate)) {
           const added = parseFloat(row.quantite) || 0;
           setTotalOverrides((prev) => {
@@ -870,13 +875,37 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
         />
       )}
 
-      {/* Approvisionnement bloc */}
+      {/* Seuil min config modal */}
+      {seuilModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1100 }}
+          onClick={() => setSeuilModal(null)}>
+          <div style={{ background: '#fff', borderRadius: 16, padding: '24px', maxWidth: 360, width: '90%', boxShadow: '0 16px 48px rgba(0,0,0,0.2)' }}
+            onClick={(e) => e.stopPropagation()}>
+            <div style={{ fontWeight: 800, fontSize: '1rem', marginBottom: 6 }}>⚙ Seuil min</div>
+            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: 14 }}>{seuilModal.nom}</div>
+            <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: 6 }}>Valeur minimale (laisser vide = désactivé)</label>
+            <input type="number" min="0" step="0.001" className="input" style={{ width: '100%', marginBottom: 18 }}
+              placeholder="0.000"
+              value={seuilEdits[seuilModal.ingredientId] ?? ''}
+              onChange={(e) => setSeuilEdits((p) => ({ ...p, [seuilModal.ingredientId]: e.target.value }))} />
+            <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: 16, lineHeight: 1.5 }}>
+              🔴 ≤ seuil &nbsp;·&nbsp; 🟠 seuil&nbsp;+&nbsp;10% &nbsp;·&nbsp; 🟢 au-dessus
+            </div>
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+              <button className="btn btn-ghost btn-sm" onClick={() => setSeuilModal(null)}>Annuler</button>
+              <button className="btn btn-primary btn-sm" onClick={async () => { await saveSeuilMin(seuilModal.ingredientId); setSeuilModal(null); }}>Enregistrer</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Approvisionnement (TVA) bloc */}
       <div style={{
         background: 'var(--surface)', borderRadius: 12, padding: '14px 18px', marginBottom: 20,
         border: '1.5px solid #1e40af', boxShadow: '0 2px 10px rgba(30,64,175,0.10)',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, paddingBottom: 10, borderBottom: '1px solid var(--border)' }}>
-          <span style={{ fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#1e40af' }}>Approvisionnement</span>
+          <span style={{ fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#1e40af' }}>Approvisionnement (TVA)</span>
           {readyCount > 0 && (
             <span style={{ background: '#1e40af', color: '#fff', borderRadius: 20, padding: '1px 9px', fontSize: '0.72rem', fontWeight: 700 }}>{readyCount}</span>
           )}
@@ -899,12 +928,16 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
             <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#1e40af', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Réf Facture</span>
             <input type="text" className="input" style={{ maxWidth: 160 }} placeholder="N° facture…" value={bulkRefFacture} onChange={(e) => setBulkRefFacture(e.target.value)} />
           </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+            <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#1e40af', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Taux TVA % <span style={{ fontWeight: 400, opacity: 0.7 }}>(optionnel)</span></span>
+            <input type="number" min="0" max="100" step="0.1" className="input" style={{ maxWidth: 100 }} placeholder="ex: 19" value={bulkTauxTva} onChange={(e) => setBulkTauxTva(e.target.value)} />
+          </div>
           <div style={{ display: 'flex', gap: 8, alignSelf: 'flex-end', marginLeft: 'auto' }}>
             <button className="btn btn-primary btn-sm" onClick={saveBulkMatrix} disabled={!canSaveBulk || bulkSaving || !canWrite}
               style={{ background: canSaveBulk ? 'linear-gradient(135deg, #1e40af, #2563eb)' : undefined, border: 'none', boxShadow: canSaveBulk ? '0 3px 10px rgba(30,64,175,0.3)' : undefined }}>
               {bulkSaving ? '…' : `Enregistrer (${readyCount})`}
             </button>
-            <button className="btn btn-ghost btn-sm" onClick={() => { setBulkDate(todayStr()); setBulkFournisseurId(''); setBulkRefFacture(''); }}>
+            <button className="btn btn-ghost btn-sm" onClick={() => { setBulkDate(todayStr()); setBulkFournisseurId(''); setBulkRefFacture(''); setBulkTauxTva(''); }}>
               Réinitialiser
             </button>
           </div>
@@ -928,7 +961,6 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                       <th style={{ fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px' }}>{t('client.stock.ingredient')}</th>
                       <th style={{ textAlign: 'right', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px' }}>Stock Actuel<br /><span style={{ fontSize: '0.65rem', fontWeight: 400, opacity: 0.75 }}>PERTES · PT</span></th>
                       <th style={{ textAlign: 'right', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px', minWidth: 90 }}>Coût Total</th>
-                      <th style={{ textAlign: 'center', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px' }}>Seuil min</th>
                       <th style={{ textAlign: 'right', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px' }}>Nouvelle Qté</th>
                       <th style={{ textAlign: 'right', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px' }}>Prix (U/DT)</th>
                       <th style={{ fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px' }}></th>
@@ -976,18 +1008,6 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                                 </>
                               ) : <span style={{ fontSize: '0.72rem', color: '#cbd5e1' }}>—</span>}
                             </td>
-                            <td style={{ textAlign: 'center' }}>
-                              <input
-                                type="number" min="0" step="0.001" placeholder="—"
-                                value={seuilEdits[entry.ingredientId] ?? ''}
-                                onChange={(e) => setSeuilEdits((p) => ({ ...p, [entry.ingredientId]: e.target.value }))}
-                                onBlur={() => saveSeuilMin(entry.ingredientId)}
-                                style={{ width: 72, textAlign: 'right', fontSize: '0.82rem' }}
-                                className="input"
-                                disabled={!canWrite}
-                                title={seuilSaving[entry.ingredientId] ? 'Enregistrement…' : 'Seuil minimum — auto-save'}
-                              />
-                            </td>
                             <td style={{ textAlign: 'right' }}>
                               <input
                                 type="number" min="0" step="0.001" placeholder="0"
@@ -1033,6 +1053,9 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                                     )}
                                   </>
                                 )}
+                                {onSaveSeuilMin && canWrite && (
+                                  <button className="btn btn-ghost btn-sm" title="Configurer le seuil minimum" onClick={() => { setSeuilEdits((p) => ({ ...p, [entry.ingredientId]: entry.seuilMin !== null ? String(entry.seuilMin) : '' })); setSeuilModal({ ingredientId: entry.ingredientId, nom: entry.nom }); }}>🔧</button>
+                                )}
                                 {canWrite && ((isEntreprise && activiteId) || (!isEntreprise && onSavePerte)) && (
                                   <button className="perte-btn" onClick={() => setPertesModal({ ingredientId: entry.ingredientId, nom: entry.nom })} title="Enregistrer une perte">📉 Perte</button>
                                 )}
@@ -1044,7 +1067,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                           </tr>
                           {isHistOpen && (
                             <tr key={`${entry.ingredientId}-hist`}>
-                              <td colSpan={7} style={{ background: '#f8faff', padding: '8px 16px' }}>
+                              <td colSpan={6} style={{ background: '#f8faff', padding: '8px 16px' }}>
                                 {!hist ? (
                                   <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{t('common.loading')}</span>
                                 ) : hist.length === 0 ? (
@@ -1057,7 +1080,9 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                                           <th style={{ textAlign: 'left', color: 'var(--text-muted)', fontWeight: 600, paddingBottom: 4 }}>{t('client.stock.date_appro')}</th>
                                           <th style={{ textAlign: 'left', color: 'var(--text-muted)', fontWeight: 600, paddingBottom: 4 }}>Type</th>
                                           <th style={{ textAlign: 'right', color: 'var(--text-muted)', fontWeight: 600, paddingBottom: 4 }}>{t('client.stock.quantity')}</th>
-                                          <th style={{ textAlign: 'right', color: 'var(--text-muted)', fontWeight: 600, paddingBottom: 4 }}>Prix (U/DT)</th>
+                                          <th style={{ textAlign: 'right', color: 'var(--text-muted)', fontWeight: 600, paddingBottom: 4 }}>Prix HT</th>
+                                          <th style={{ textAlign: 'right', color: 'var(--text-muted)', fontWeight: 600, paddingBottom: 4 }}>TVA%</th>
+                                          <th style={{ textAlign: 'right', color: 'var(--text-muted)', fontWeight: 600, paddingBottom: 4 }}>Prix TTC</th>
                                           <th style={{ color: 'var(--text-muted)', fontWeight: 600, paddingBottom: 4 }}>Fournisseur</th>
                                           <th style={{ color: 'var(--text-muted)', fontWeight: 600, paddingBottom: 4 }}>Réf. Facture</th>
                                         </tr>
@@ -1073,6 +1098,8 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                                             </td>
                                             <td style={{ textAlign: 'right' }}>{h.quantite ?? '—'}</td>
                                             <td style={{ textAlign: 'right' }}>{h.prixUnitaire != null ? h.prixUnitaire.toFixed(3) : '—'}</td>
+                                            <td style={{ textAlign: 'right', color: (h as any).tauxTva != null ? '#0369a1' : 'var(--text-muted)' }}>{(h as any).tauxTva != null ? `${(h as any).tauxTva}%` : '—'}</td>
+                                            <td style={{ textAlign: 'right', color: '#0369a1', fontWeight: 600 }}>{(h as any).prixUnitaireTva != null ? (h as any).prixUnitaireTva.toFixed(3) : '—'}</td>
                                             <td style={{ color: 'var(--text-muted)' }}>{h.fournisseurNom ?? '—'}</td>
                                             <td style={{ color: 'var(--text-muted)' }}>{h.refFacture ?? '—'}</td>
                                           </tr>
@@ -1115,7 +1142,7 @@ interface ActivityStockSectionProps {
   label: string;
   activities: Activite[];
   initialActiviteId?: number;
-  onSave: (activiteId: number, ingredientId: number, quantite: string, prixUnitaire: string, dateAppro: string, fournisseurId?: number | null, refFacture?: string | null) => Promise<void>;
+  onSave: (activiteId: number, ingredientId: number, quantite: string, prixUnitaire: string, dateAppro: string, fournisseurId?: number | null, refFacture?: string | null, tauxTva?: number | null) => Promise<void>;
 }
 
 function ActivityStockSection({ label, activities, initialActiviteId, onSave }: ActivityStockSectionProps) {
@@ -1155,8 +1182,8 @@ function ActivityStockSection({ label, activities, initialActiviteId, onSave }: 
     if (selectedId) loadStock(selectedId);
   }, [selectedId, loadStock]);
 
-  const handleSave = async (ingredientId: number, quantite: string, prixUnitaire: string, dateAppro: string, fournisseurId?: number | null, refFacture?: string | null) => {
-    await onSave(selectedId, ingredientId, quantite, prixUnitaire, dateAppro, fournisseurId, refFacture);
+  const handleSave = async (ingredientId: number, quantite: string, prixUnitaire: string, dateAppro: string, fournisseurId?: number | null, refFacture?: string | null, tauxTva?: number | null) => {
+    await onSave(selectedId, ingredientId, quantite, prixUnitaire, dateAppro, fournisseurId, refFacture, tauxTva);
     if (selectedId) loadStock(selectedId);
   };
 
@@ -1346,13 +1373,14 @@ export default function StockPage() {
     }).catch(() => {}).finally(() => setActivitesLoading(false));
   }, [isEntreprise]);
 
-  const saveClientStock = async (ingredientId: number, quantite: string, prixUnitaire: string, dateAppro: string, fournisseurId?: number | null, refFacture?: string | null) => {
+  const saveClientStock = async (ingredientId: number, quantite: string, prixUnitaire: string, dateAppro: string, fournisseurId?: number | null, refFacture?: string | null, tauxTva?: number | null) => {
     await api.put(`/api/stock/client/${ingredientId}`, {
       quantite: quantite ? parseFloat(quantite) : null,
       prixUnitaire: prixUnitaire ? parseFloat(prixUnitaire) : null,
       dateAppro,
       fournisseurId: fournisseurId ?? null,
       refFacture: refFacture ?? null,
+      tauxTva: tauxTva ?? null,
     });
   };
 
@@ -1374,13 +1402,14 @@ export default function StockPage() {
     await api.post(`/api/stock/client/pertes`, { ingredientId, quantite, typePerte, datePerte });
   };
 
-  const saveEntrepriseStock = async (activiteId: number, ingredientId: number, quantite: string, prixUnitaire: string, dateAppro: string, fournisseurId?: number | null, refFacture?: string | null) => {
+  const saveEntrepriseStock = async (activiteId: number, ingredientId: number, quantite: string, prixUnitaire: string, dateAppro: string, fournisseurId?: number | null, refFacture?: string | null, tauxTva?: number | null) => {
     await api.put(`/api/stock/entreprise/${activiteId}/${ingredientId}`, {
       quantite: quantite ? parseFloat(quantite) : null,
       prixUnitaire: prixUnitaire ? parseFloat(prixUnitaire) : null,
       dateAppro,
       fournisseurId: fournisseurId ?? null,
       refFacture: refFacture ?? null,
+      tauxTva: tauxTva ?? null,
     });
   };
 

@@ -80,6 +80,8 @@ export default function TransferPage() {
   const [transferHistory, setTransferHistory] = useState<Record<number, TransferRecord[]>>({});
   const [historyLoaded, setHistoryLoaded] = useState<Set<number>>(new Set());
   const [transferLoading, setTransferLoading] = useState<Set<number>>(new Set());
+  const [prixUnitaireMap, setPrixUnitaireMap] = useState<Record<number, string>>({});
+  const [tauxTva, setTauxTva] = useState('');
 
   const toggleTransfers = async (ingredientId: number) => {
     if (openTransfers.has(ingredientId)) {
@@ -172,7 +174,7 @@ export default function TransferPage() {
     const ingredientBatches: Array<{
       ingredientId: number;
       nom: string;
-      transfers: Array<{ activiteId: number; ingredientId: number; quantite: number }>;
+      transfers: Array<{ activiteId: number; ingredientId: number; quantite: number; prixUnitaire: number }>;
       dateTransfert: string;
       quantite: number | null;
     }> = [];
@@ -181,8 +183,16 @@ export default function TransferPage() {
       const activiteMap = qtys[row.ingredientId] || {};
       const transfers = Object.entries(activiteMap)
         .filter(([, v]) => parseFloat(v) > 0)
-        .map(([actId, v]) => ({ activiteId: Number(actId), ingredientId: row.ingredientId, quantite: parseFloat(v) }));
+        .map(([actId, v]) => ({ activiteId: Number(actId), ingredientId: row.ingredientId, quantite: parseFloat(v), prixUnitaire: 0 }));
       if (transfers.length === 0) continue;
+
+      const prixStr = prixUnitaireMap[row.ingredientId]?.trim();
+      if (!prixStr || parseFloat(prixStr) <= 0) {
+        setErrorMsg(`Prix unitaire obligatoire pour "${row.nom}".`);
+        return;
+      }
+      const prixUnit = parseFloat(prixStr);
+      for (const tr of transfers) tr.prixUnitaire = prixUnit;
 
       if (row.quantite !== null) {
         const total = transfers.reduce((s, tr) => s + tr.quantite, 0);
@@ -236,12 +246,14 @@ export default function TransferPage() {
           dateTransfert: batch.dateTransfert,
           note: note || undefined,
           refFacture: refFacture.trim(),
+          tauxTva: tauxTva.trim() ? parseFloat(tauxTva) : null,
           transfers: batch.transfers,
         });
         setQtys((prev) => ({
           ...prev,
           [batch.ingredientId]: Object.fromEntries(Object.keys(prev[batch.ingredientId] || {}).map((a) => [a, ''])),
         }));
+        setPrixUnitaireMap((prev) => ({ ...prev, [batch.ingredientId]: '' }));
       }
       setHasTransfers(true);
       // Refresh transfer histories
@@ -419,8 +431,7 @@ export default function TransferPage() {
       {!loading && stock.length > 0 && activites.length > 0 && (
         <div style={{ background: 'linear-gradient(135deg, #faf5ff, #f3e8ff)', borderRadius: 14, padding: '20px 24px', border: '1.5px solid #d8b4fe', boxShadow: '0 4px 20px rgba(126,34,206,0.12)', marginBottom: 24 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
-            <div style={{ background: 'linear-gradient(135deg, #7e22ce, #a855f7)', borderRadius: 9, padding: '6px 8px', fontSize: '1rem' }}>✅</div>
-            <span style={{ fontSize: '0.75rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#7e22ce' }}>Confirmation</span>
+            <span style={{ fontSize: '0.75rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#7e22ce' }}>Transfert (TVA)</span>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '12px 20px', alignItems: 'end' }}>
             <div>
@@ -441,6 +452,12 @@ export default function TransferPage() {
                 min={yearStart} max={yearEnd}
                 value={transferDate}
                 onChange={(e) => setTransferDate(e.target.value)} />
+            </div>
+            <div>
+              <label style={{ fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>
+                Taux TVA %
+              </label>
+              <input type="number" min="0" step="0.01" className="input" value={tauxTva} onChange={(e) => setTauxTva(e.target.value)} placeholder="ex: 19" />
             </div>
             <div>
               <label style={{ fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>
@@ -533,6 +550,7 @@ export default function TransferPage() {
                         <tr style={{ background: 'linear-gradient(135deg, #3b0764, #7e22ce)' }}>
                           <th style={{ minWidth: 140, fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px', color: '#fff', background: 'transparent', borderBottom: 'none' }}>{t('client.stock.ingredient')}</th>
                           <th style={{ textAlign: 'right', minWidth: 100, fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px', color: '#fff', background: 'transparent', borderBottom: 'none' }}>{t('client.labo.labo_stock')}</th>
+                          <th style={{ textAlign: 'right', minWidth: 110, fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px', color: '#fde68a', background: 'transparent', borderBottom: 'none' }}>Prix U. <span style={{ color: '#ef4444' }}>*</span></th>
                           {activites.map((act) => (
                             <th key={act.id} style={{ textAlign: 'center', minWidth: 120, fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px', color: '#e9d5ff', background: 'transparent', borderBottom: 'none' }}>↗ {act.nom}</th>
                           ))}
@@ -564,6 +582,15 @@ export default function TransferPage() {
                                     <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{r.prixUnitaire.toFixed(3)} DT</div>
                                   )}
                                 </td>
+                                <td style={{ textAlign: 'right', padding: '12px 14px' }}>
+                                  <input
+                                    type="number" min="0" step="0.001" className="input"
+                                    style={{ width: 90, textAlign: 'right', borderColor: (!prixUnitaireMap[r.ingredientId]?.trim() && Object.values(qtys[r.ingredientId] || {}).some((v) => parseFloat(v) > 0)) ? '#ef4444' : undefined }}
+                                    value={prixUnitaireMap[r.ingredientId] ?? ''}
+                                    onChange={(e) => setPrixUnitaireMap((prev) => ({ ...prev, [r.ingredientId]: e.target.value }))}
+                                    placeholder="0.000"
+                                  />
+                                </td>
                                 {activites.map((act) => {
                                   const isAssigned = r.isPT
                                     ? act.id === r.activiteId
@@ -585,7 +612,7 @@ export default function TransferPage() {
                               </tr>
                               {isTransferOpen && (
                                 <tr>
-                                  <td colSpan={2 + activites.length} style={{ background: '#faf5ff', padding: '8px 16px', borderTop: '1px solid #e9d5ff' }}>
+                                  <td colSpan={3 + activites.length} style={{ background: '#faf5ff', padding: '8px 16px', borderTop: '1px solid #e9d5ff' }}>
                                     <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>
                                       ↗ 5 derniers transferts — {r.nom}
                                     </div>
