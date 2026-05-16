@@ -739,7 +739,10 @@ export default function StockLaboPage() {
                             <thead style={{ background: '#eff6ff', borderBottom: '2px solid #2563eb', color: '#1e3a5f' }}>
                               <tr>
                                 <th style={{ fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '8px 8px' }}>{t('client.stock.ingredient')}</th>
-                                <th style={{ textAlign: 'right', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '8px 8px' }}>Stock<br /><span style={{ fontSize: '0.65rem', fontWeight: 400, opacity: 0.75 }}>pertes</span></th>
+                                <th style={{ textAlign: 'right', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '8px 8px' }}>Stock actuel</th>
+                                <th style={{ textAlign: 'right', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '8px 8px', color: '#dc2626' }}>Pertes</th>
+                                <th style={{ textAlign: 'right', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '8px 8px', color: '#7c3aed' }}>PT</th>
+                                <th style={{ textAlign: 'right', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '8px 8px', color: '#0369a1' }}>Transfert</th>
                                 <th style={{ textAlign: 'right', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '8px 8px' }}>Coût Total</th>
                                 <th style={{ textAlign: 'right', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '8px 8px' }}>Qté</th>
                                 <th style={{ textAlign: 'right', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '8px 8px' }}>Prix</th>
@@ -774,14 +777,27 @@ export default function StockLaboPage() {
                                         <span className={cls} style={{ fontSize: '1rem', fontWeight: 800 }}>
                                           {r.quantite !== null ? r.quantite.toFixed(3) : '—'}
                                         </span>
-                                        {r.pertesDepuisInv != null && r.pertesDepuisInv > 0 && (
-                                          <div style={{ fontSize: '0.68rem', color: '#dc2626', fontWeight: 500 }}>↘ Pertes: {r.pertesDepuisInv.toFixed(3)}</div>
+                                        <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontWeight: 400 }}>{r.unite}</div>
+                                      </td>
+                                      <td style={{ textAlign: 'right' }}>
+                                        {r.pertesDepuisInv != null && r.pertesDepuisInv > 0 ? (
+                                          <span style={{ fontSize: '0.88rem', color: '#dc2626', fontWeight: 700 }}>{r.pertesDepuisInv.toFixed(3)}</span>
+                                        ) : (
+                                          <span style={{ fontSize: '0.78rem', color: '#d1d5db' }}>—</span>
                                         )}
-                                        {r.ptUsageDepuisInv != null && r.ptUsageDepuisInv > 0 && (
-                                          <div style={{ fontSize: '0.68rem', color: '#7c3aed', fontWeight: 500 }}>↘ PT: {r.ptUsageDepuisInv.toFixed(3)}</div>
+                                      </td>
+                                      <td style={{ textAlign: 'right' }}>
+                                        {r.ptUsageDepuisInv != null && r.ptUsageDepuisInv > 0 ? (
+                                          <span style={{ fontSize: '0.88rem', color: '#7c3aed', fontWeight: 700 }}>{r.ptUsageDepuisInv.toFixed(3)}</span>
+                                        ) : (
+                                          <span style={{ fontSize: '0.78rem', color: '#d1d5db' }}>—</span>
                                         )}
-                                        {r.transfertsDepuisInv != null && r.transfertsDepuisInv > 0 && (
-                                          <div style={{ fontSize: '0.68rem', color: '#0369a1', fontWeight: 500 }}>↘ trans: {r.transfertsDepuisInv.toFixed(3)}</div>
+                                      </td>
+                                      <td style={{ textAlign: 'right' }}>
+                                        {r.transfertsDepuisInv != null && r.transfertsDepuisInv > 0 ? (
+                                          <span style={{ fontSize: '0.88rem', color: '#0369a1', fontWeight: 700 }}>{r.transfertsDepuisInv.toFixed(3)}</span>
+                                        ) : (
+                                          <span style={{ fontSize: '0.78rem', color: '#d1d5db' }}>—</span>
                                         )}
                                       </td>
                                       <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
@@ -841,7 +857,7 @@ export default function StockLaboPage() {
                                     {/* Appro history collapse */}
                                     {rs.historyOpen && (
                                       <tr>
-                                        <td colSpan={6} style={{ background: 'var(--surface)', padding: '8px 16px' }}>
+                                        <td colSpan={9} style={{ background: 'var(--surface)', padding: '8px 16px' }}>
                                           {rs.history.length === 0 ? (
                                             <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{t('client.stock.no_history')}</span>
                                           ) : (
