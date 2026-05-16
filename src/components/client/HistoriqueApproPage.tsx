@@ -643,7 +643,7 @@ export default function HistoriqueApproPage() {
               <colgroup>
                 <col style={{ width: '30px' }} />
                 <col style={{ width: isEntreprise ? '108px' : '98px' }} />
-                <col />
+                <col style={{ width: '170px' }} />
                 <col style={{ width: '84px' }} />
                 <col style={{ width: '90px' }} />
                 <col style={{ width: '56px' }} />

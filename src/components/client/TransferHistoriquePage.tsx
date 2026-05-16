@@ -312,7 +312,7 @@ export default function TransferHistoriquePage() {
                   <col style={{ width: '30px' }} />
                   <col style={{ width: '100px' }} />
                   <col style={{ width: '120px' }} />
-                  <col />
+                  <col style={{ width: '160px' }} />
                   <col style={{ width: '84px' }} />
                   <col style={{ width: '90px' }} />
                   <col style={{ width: '56px' }} />

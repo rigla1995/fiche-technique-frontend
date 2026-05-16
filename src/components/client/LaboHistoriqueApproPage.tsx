@@ -499,7 +499,7 @@ export default function LaboHistoriqueApproPage() {
               <colgroup>
                 <col style={{ width: '30px' }} />
                 <col style={{ width: '105px' }} />
-                <col />
+                <col style={{ width: '165px' }} />
                 <col style={{ width: '72px' }} />
                 <col style={{ width: '84px' }} />
                 <col style={{ width: '90px' }} />
