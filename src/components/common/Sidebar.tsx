@@ -338,10 +338,6 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
     <>
       {isOpen && <div className="sidebar-overlay" onClick={onClose} />}
       <nav className={`sidebar ${isOpen ? 'sidebar-open' : ''}`}>
-        <div className="sidebar-header">
-          <span className="sidebar-title">{user?.role === 'super_admin' ? t('admin.title') : sidebarTitle}</span>
-        </div>
-
         {sidebarBanner}
 
         <ul className="sidebar-nav" style={{ flex: 1 }}>
