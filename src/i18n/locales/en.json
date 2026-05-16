@@ -65,7 +65,7 @@
     "espace_franchise": "Franchise Space",
     "espace_distinct": "Distinct Space",
     "mon_espace": "My Space",
-    "labo_stock": "Lab Stock",
+    "labo_stock": "Current Stock",
     "labo_transfer": "Transfers",
     "labo_historique": "Transfer History"
   },
@@ -372,7 +372,7 @@
       "transfer_overstock": "Insufficient stock for {{nom}} (available: {{disponible}})",
       "transfer_success": "Transfer completed successfully.",
       "transfers_history": "Transfer History",
-      "labo_stock": "Lab Stock",
+      "labo_stock": "Current Stock",
       "empty_stock": "No ingredients selected for this lab.",
       "no_activites": "No activities linked to this lab.",
       "total_transferts": "Total transfers",

@@ -66,7 +66,7 @@
     "espace_franchise": "Espace Franchise",
     "espace_distinct": "Espace Distinct",
     "mon_espace": "Mon Espace",
-    "labo_stock": "Stock Labo",
+    "labo_stock": "Stock Actuel",
     "labo_transfer": "Transferts",
     "labo_historique": "Historique Transferts"
   },
@@ -375,7 +375,7 @@
       "transfer_overstock": "Stock insuffisant pour {{nom}} (disponible: {{disponible}})",
       "transfer_success": "Transfert effectué avec succès.",
       "transfers_history": "Historique Transferts",
-      "labo_stock": "Stock Labo",
+      "labo_stock": "Stock Actuel",
       "empty_stock": "Aucun ingrédient sélectionné pour ce labo.",
       "no_activites": "Aucune activité liée à ce labo.",
       "total_transferts": "Total transferts",
