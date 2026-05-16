@@ -195,7 +195,7 @@ export default function TarifsConfig() {
     <div className="page">
       {/* Page header */}
       <div style={{
-        background: 'linear-gradient(135deg, #18181b 0%, #27272a 55%, #52525b 100%)',
+        background: 'linear-gradient(135deg, #0f766e 0%, #0d9488 55%, #14b8a6 100%)',
         borderRadius: 18, padding: '22px 28px', marginBottom: 28,
         boxShadow: '0 8px 32px rgba(39,39,42,0.28)',
         display: 'flex', alignItems: 'center', gap: 16,

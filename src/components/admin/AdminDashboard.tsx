@@ -16,9 +16,9 @@ export default function AdminDashboard() {
   return (
     <div className="page">
       <div style={{
-        background: 'linear-gradient(135deg, #18181b 0%, #27272a 55%, #52525b 100%)',
+        background: 'linear-gradient(135deg, #0f766e 0%, #0d9488 55%, #14b8a6 100%)',
         borderRadius: 18, padding: '24px 28px', marginBottom: 24,
-        boxShadow: '0 8px 32px rgba(39,39,42,0.28)',
+        boxShadow: '0 8px 32px rgba(15,118,110,0.28)',
         display: 'flex', alignItems: 'center', gap: 12,
       }}>
         <div style={{ background: 'rgba(255,255,255,0.18)', borderRadius: 10, padding: '7px 9px', fontSize: '1.2rem' }}>⚙️</div>

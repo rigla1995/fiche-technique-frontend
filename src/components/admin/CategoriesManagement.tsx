@@ -61,9 +61,9 @@ export default function CategoriesManagement() {
   return (
     <div className="page">
       <div style={{
-        background: 'linear-gradient(135deg, #18181b 0%, #27272a 55%, #52525b 100%)',
+        background: 'linear-gradient(135deg, #0f766e 0%, #0d9488 55%, #14b8a6 100%)',
         borderRadius: 18, padding: '24px 28px', marginBottom: 24,
-        boxShadow: '0 8px 32px rgba(39,39,42,0.28)',
+        boxShadow: '0 8px 32px rgba(15,118,110,0.28)',
         display: 'flex', alignItems: 'center', gap: 12,
       }}>
         <div style={{ background: 'rgba(255,255,255,0.18)', borderRadius: 10, padding: '7px 9px', fontSize: '1.2rem' }}>🏷️</div>
@@ -78,7 +78,7 @@ export default function CategoriesManagement() {
         display: 'flex', flexWrap: 'wrap', gap: 14, alignItems: 'flex-end',
       }}>
         <div style={{ width: '100%', marginBottom: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span style={{ fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#27272a' }}>Filtres</span>
+          <span style={{ fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#0d9488' }}>Filtres</span>
           {search && (
             <button className="btn btn-ghost btn-sm" onClick={() => setSearch('')}>
               ✕ Réinitialiser
@@ -86,13 +86,13 @@ export default function CategoriesManagement() {
           )}
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 200 }}>
-          <label style={{ fontSize: '0.68rem', fontWeight: 800, color: '#27272a', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>🔍 Recherche</label>
+          <label style={{ fontSize: '0.68rem', fontWeight: 800, color: '#0d9488', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>🔍 Recherche</label>
           <input
             type="text"
             placeholder="Filtrer par nom…"
             value={search}
             onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-            style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid #27272a', fontSize: '0.88rem', background: '#f4f4f5', minWidth: 160 }}
+            style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid #0d9488', fontSize: '0.88rem', background: '#f4f4f5', minWidth: 160 }}
           />
         </div>
       </div>
