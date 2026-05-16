@@ -990,7 +990,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                               )}
                             </td>
                             <td style={{ textAlign: 'right' }}>
-                              <span className={cls} style={{ fontSize: '1rem', fontWeight: 800, color: cls === 'stock-ok' ? '#2563eb' : undefined }}>{totalDisplay}</span>
+                              <span className={cls} style={{ fontSize: '1rem', fontWeight: 800 }}>{totalDisplay}</span>
                               {entry.pertesDepuisInv != null && entry.pertesDepuisInv > 0 && (
                                 <div style={{ fontSize: '0.68rem', color: '#dc2626', fontWeight: 500 }}>↘ Pertes: {entry.pertesDepuisInv.toFixed(3)}</div>
                               )}

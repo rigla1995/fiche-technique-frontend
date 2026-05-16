@@ -771,7 +771,7 @@ export default function StockLaboPage() {
                                         )}
                                       </td>
                                       <td style={{ textAlign: 'right' }}>
-                                        <span className={cls} style={{ fontSize: '1rem', fontWeight: 800, color: cls === 'stock-ok' ? '#2563eb' : undefined }}>
+                                        <span className={cls} style={{ fontSize: '1rem', fontWeight: 800 }}>
                                           {r.quantite !== null ? r.quantite.toFixed(3) : '—'}
                                         </span>
                                         {r.pertesDepuisInv != null && r.pertesDepuisInv > 0 && (
