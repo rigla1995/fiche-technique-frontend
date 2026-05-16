@@ -332,6 +332,8 @@ export interface HistoriqueApproEntry {
   refFacture: string | null;
   createdBy?: number | null;
   createdByNom?: string | null;
+  tauxTva?: number | null;
+  prixUnitaireTva?: number | null;
 }
 
 export interface FournisseurApproActivite {

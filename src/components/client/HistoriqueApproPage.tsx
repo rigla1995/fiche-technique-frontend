@@ -264,6 +264,12 @@ export default function HistoriqueApproPage() {
   const totalPages = Math.max(1, Math.ceil(results.length / PAGE_SIZE));
   const pagedResults = results.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
+  const totalHT = results.reduce((s, r) => s + (r.quantite ?? 0) * (r.prixUnitaire ?? 0), 0);
+  const totalTTC = results.reduce((s, r) => s + (r.quantite ?? 0) * (r.prixUnitaireTva ?? 0), 0);
+  const unitQtyMap: Record<string, number> = {};
+  for (const r of results) { unitQtyMap[r.uniteNom] = (unitQtyMap[r.uniteNom] || 0) + (r.quantite ?? 0); }
+  const unitQtyEntries = Object.entries(unitQtyMap);
+
   const [ptProducts, setPtProducts] = useState<Array<{ id: number; nom: string }>>([]);
 
   useEffect(() => {
@@ -632,42 +638,48 @@ export default function HistoriqueApproPage() {
         </div>
       ) : (
         <>
-          <div className="card" style={{ overflowX: 'hidden' }}>
-            <table className="table" style={{ tableLayout: 'fixed', width: '100%' }}>
+          <div className="table-responsive card">
+            <table className="table">
               <colgroup>
                 <col style={{ width: '36px' }} />
-                <col style={{ width: isEntreprise ? '115px' : '105px' }} />
+                <col style={{ width: isEntreprise ? '110px' : '100px' }} />
                 <col />
-                <col style={{ width: '100px' }} />
-                <col style={{ width: '85px' }} />
-                <col style={{ width: '130px' }} />
-                <col style={{ width: '66px' }} />
+                <col style={{ width: '88px' }} />
+                <col style={{ width: '78px' }} />
+                <col style={{ width: '60px' }} />
+                <col style={{ width: '78px' }} />
+                <col style={{ width: '112px' }} />
+                <col style={{ width: '82px' }} />
+                <col style={{ width: '58px' }} />
               </colgroup>
               <thead>
-                <tr style={{ background: '#f0fdfa', borderBottom: '2px solid #0f766e', color: '#134e4a' }}>
-                  <th style={{ textAlign: 'center', padding: '0 4px', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+                <tr style={{ background: 'linear-gradient(135deg, #1e3a8a, #1e40af)' }}>
+                  <th style={{ textAlign: 'center', padding: '12px 4px', width: 36, color: '#fff', background: 'transparent', borderBottom: 'none' }}>
                     <input
                       type="checkbox"
                       checked={results.length > 0 && selectedIds.size === results.length}
                       onChange={toggleSelectAll}
                       title="Tout sélectionner"
-                      style={{ cursor: 'pointer', accentColor: 'var(--primary)' }}
+                      style={{ cursor: 'pointer', accentColor: '#fff' }}
                     />
                   </th>
-                  <th style={{ fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px' }}>{t('client.historique_appro.col_date')}</th>
-                  <th style={{ fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px' }}>{t('client.historique_appro.col_ingredient')}</th>
-                  <th style={{ textAlign: 'right', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px' }}>{t('client.historique_appro.col_qty')}</th>
-                  <th style={{ textAlign: 'right', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px' }}>Prix/DT</th>
-                  <th style={{ fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px' }}>Fourn. / Réf</th>
-                  <th style={{ padding: '12px 14px' }}></th>
+                  {(['Date', 'Ingrédient'] as const).map((label) => (
+                    <th key={label} style={{ fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px', color: '#fff', background: 'transparent', borderBottom: 'none' }}>{label}</th>
+                  ))}
+                  {(['Quantité', 'Prix U. HT', 'TVA %', 'Prix U. TTC'] as const).map((label) => (
+                    <th key={label} style={{ textAlign: 'right', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px', color: '#fff', background: 'transparent', borderBottom: 'none' }}>{label}</th>
+                  ))}
+                  <th style={{ fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px', color: '#fff', background: 'transparent', borderBottom: 'none' }}>Fourn. / Réf</th>
+                  <th style={{ fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px', color: '#fff', background: 'transparent', borderBottom: 'none' }}>Créé par</th>
+                  <th style={{ padding: '12px 14px', color: '#fff', background: 'transparent', borderBottom: 'none' }}></th>
                 </tr>
               </thead>
               <tbody>
                 {pagedResults.map((r) => {
                   const isSelected = selectedIds.has(r.id);
                   return (
-                  <tr key={r.id} style={isSelected ? { background: 'linear-gradient(90deg, #fef3c7, #fffbeb)', borderLeft: '3px solid #f59e0b' } : undefined}>
-                    <td style={{ textAlign: 'center', padding: '0 4px' }}>
+                  <tr key={r.id} style={{ background: isSelected ? 'linear-gradient(90deg, #fef3c7, #fffbeb)' : undefined, borderLeft: isSelected ? '3px solid #f59e0b' : undefined }}>
+                    <td style={{ textAlign: 'center', padding: '12px 4px' }}>
                       <input
                         type="checkbox"
                         checked={isSelected}
@@ -675,8 +687,8 @@ export default function HistoriqueApproPage() {
                         style={{ cursor: 'pointer', accentColor: '#ea580c' }}
                       />
                     </td>
-                    <td>
-                      <span style={{ background: '#f0fdfa', border: '1px solid #99f6e4', borderRadius: 7, padding: '3px 10px', fontWeight: 700, fontSize: '0.82rem', color: '#0f766e', display: 'inline-block' }}>
+                    <td style={{ padding: '12px 14px' }}>
+                      <span style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 7, padding: '3px 10px', fontWeight: 700, fontSize: '0.82rem', color: '#1e40af', display: 'inline-block' }}>
                         {fmtDate(r.dateAppro)}
                       </span>
                       {isEntreprise && (
@@ -685,23 +697,31 @@ export default function HistoriqueApproPage() {
                         </span>
                       )}
                     </td>
-                    <td>
+                    <td style={{ padding: '12px 14px' }}>
                       <div style={{ fontWeight: 600, fontSize: '0.88rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.ingredientNom}</div>
                       <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.categorieNom}</div>
                     </td>
-                    <td style={{ textAlign: 'right', fontWeight: 800, color: '#0f766e' }}>
+                    <td style={{ textAlign: 'right', fontWeight: 800, color: '#0f766e', padding: '12px 14px' }}>
                       <div>{r.quantite ?? '—'}</div>
                       <div style={{ color: 'var(--text-muted)', fontSize: '0.72rem', fontWeight: 400 }}>{r.uniteNom}</div>
                     </td>
-                    <td style={{ textAlign: 'right', fontWeight: 600, color: prixColor(r.prixUnitaire), fontSize: '0.88rem' }}>
-                      {r.prixUnitaire !== null ? r.prixUnitaire.toFixed(3) : '—'}
+                    <td style={{ textAlign: 'right', fontWeight: 600, color: prixColor(r.prixUnitaire), fontSize: '0.88rem', padding: '12px 14px' }}>
+                      {r.prixUnitaire !== null ? `${r.prixUnitaire.toFixed(3)} DT` : '—'}
                     </td>
-                    <td style={{ fontSize: '0.78rem' }}>
+                    <td style={{ textAlign: 'right', fontSize: '0.85rem', color: r.tauxTva != null ? '#6b7280' : 'var(--text-muted)', padding: '12px 14px' }}>
+                      {r.tauxTva != null ? `${r.tauxTva}%` : '—'}
+                    </td>
+                    <td style={{ textAlign: 'right', fontWeight: 700, color: r.prixUnitaireTva != null ? '#059669' : 'var(--text-muted)', fontSize: '0.88rem', padding: '12px 14px' }}>
+                      {r.prixUnitaireTva != null ? `${r.prixUnitaireTva.toFixed(3)} DT` : '—'}
+                    </td>
+                    <td style={{ fontSize: '0.78rem', padding: '12px 14px' }}>
                       <div style={{ color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.fournisseurNom ?? '—'}</div>
                       <div style={{ color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.refFacture ?? '—'}</div>
-                      {r.createdByNom && <div style={{ fontSize: '0.68rem', color: '#7c3aed', fontWeight: 600, marginTop: 2 }}>👤 {r.createdByNom}</div>}
                     </td>
-                    <td style={{ whiteSpace: 'nowrap', textAlign: 'right' }}>
+                    <td style={{ fontSize: '0.75rem', color: r.createdByNom ? '#7c3aed' : 'var(--text-muted)', fontWeight: r.createdByNom ? 600 : 400, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', padding: '12px 14px' }}>
+                      {r.createdByNom ? `👤 ${r.createdByNom}` : '—'}
+                    </td>
+                    <td style={{ whiteSpace: 'nowrap', textAlign: 'right', padding: '12px 14px' }}>
                       {!isReadOnly && (!isGerant || r.createdBy === user?.id) && (<>
                         <button
                           className="btn btn-ghost btn-sm"
@@ -723,6 +743,24 @@ export default function HistoriqueApproPage() {
                   );
                 })}
               </tbody>
+              <tfoot>
+                <tr style={{ background: '#f0fdf4', borderTop: '2px solid #10b981' }}>
+                  <td colSpan={3} style={{ padding: '10px 14px', fontSize: '0.78rem', fontWeight: 800, color: '#065f46', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    Total — {results.length} enregistrement{results.length > 1 ? 's' : ''}
+                  </td>
+                  <td style={{ textAlign: 'right', padding: '10px 14px', fontWeight: 800, color: '#065f46', fontSize: '0.82rem' }}>
+                    {unitQtyEntries.map(([u, q]) => `${q.toFixed(3)} ${u}`).join(' · ')}
+                  </td>
+                  <td style={{ textAlign: 'right', padding: '10px 14px', fontWeight: 800, color: '#1e40af', fontSize: '0.85rem' }}>
+                    {totalHT.toFixed(3)} DT
+                  </td>
+                  <td></td>
+                  <td style={{ textAlign: 'right', padding: '10px 14px', fontWeight: 900, color: '#059669', fontSize: '0.88rem' }}>
+                    {totalTTC.toFixed(3)} DT
+                  </td>
+                  <td colSpan={3}></td>
+                </tr>
+              </tfoot>
             </table>
 
             <div style={{ padding: '8px 14px', fontSize: '0.78rem', color: 'var(--text-muted)', borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
