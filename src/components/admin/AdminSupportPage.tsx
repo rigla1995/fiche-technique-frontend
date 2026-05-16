@@ -55,7 +55,7 @@ function DetailsPopup({
   const [ingNom, setIngNom] = useState(demande.nomIngredient || '');
   const [ingCatNom, setIngCatNom] = useState(demande.categorieNom || '');
   const [ingUniteNom, setIngUniteNom] = useState(demande.uniteNom || '');
-  const [ingDomaineId, setIngDomaineId] = useState(demande.domaineId ? String(demande.domaineId) : '');
+  const [ingDomaineIds, setIngDomaineIds] = useState<number[]>(demande.domaineId ? [demande.domaineId] : []);
   const [domaines, setDomaines] = useState<DomaineItem[]>([]);
   const [categories, setCategories] = useState<CatItem[]>([]);
   const [unites, setUnites] = useState<UniteItem[]>([]);
@@ -111,7 +111,7 @@ function DetailsPopup({
         extra.nomIngredient = ingNom.trim();
         extra.categorieNom = ingCatNom.trim();
         extra.uniteNom = ingUniteNom.trim();
-        if (ingDomaineId) extra.domaineId = Number(ingDomaineId);
+        if (ingDomaineIds.length > 0) extra.domaineIds = ingDomaineIds;
       }
       await onAction(demande.id, statut, { ...extra, notesAdmin: notesAdmin.trim() || null });
       onClose();
@@ -245,34 +245,55 @@ function DetailsPopup({
                     <div>
                       <label style={lbl}>Catégorie</label>
                       {isPending
-                        ? <input value={ingCatNom} onChange={(e) => setIngCatNom(e.target.value)} list="cats-list" style={inp} placeholder="Ex. Légumes & Salades" />
+                        ? (
+                          <select value={ingCatNom} onChange={(e) => setIngCatNom(e.target.value)} style={inp}>
+                            <option value="">— Sélectionner —</option>
+                            {ingCatNom && !categories.find(c => c.name === ingCatNom) && (
+                              <option value={ingCatNom}>{ingCatNom}</option>
+                            )}
+                            {categories.map((c) => <option key={c.id} value={c.name}>{c.name}</option>)}
+                          </select>
+                        )
                         : <div style={readOnly}>{ingCatNom || '—'}</div>}
-                      {isPending && (
-                        <datalist id="cats-list">
-                          {categories.map((c) => <option key={c.id} value={c.name} />)}
-                        </datalist>
-                      )}
                     </div>
                     <div>
                       <label style={lbl}>Unité</label>
                       {isPending
-                        ? <input value={ingUniteNom} onChange={(e) => setIngUniteNom(e.target.value)} list="units-list" style={inp} placeholder="Ex. kg" />
+                        ? (
+                          <select value={ingUniteNom} onChange={(e) => setIngUniteNom(e.target.value)} style={inp}>
+                            <option value="">— Sélectionner —</option>
+                            {ingUniteNom && !unites.find(u => u.name === ingUniteNom) && (
+                              <option value={ingUniteNom}>{ingUniteNom}</option>
+                            )}
+                            {unites.map((u) => <option key={u.id} value={u.name}>{u.name}</option>)}
+                          </select>
+                        )
                         : <div style={readOnly}>{ingUniteNom || '—'}</div>}
-                      {isPending && (
-                        <datalist id="units-list">
-                          {unites.map((u) => <option key={u.id} value={u.name} />)}
-                        </datalist>
-                      )}
                     </div>
                   </div>
                   <div>
-                    <label style={lbl}>Domaine</label>
+                    <label style={lbl}>Domaines d'activité</label>
                     {isPending
                       ? (
-                        <select value={ingDomaineId} onChange={(e) => setIngDomaineId(e.target.value)} style={inp}>
-                          <option value="">— Sélectionner —</option>
-                          {domaines.map((d) => <option key={d.id} value={d.id}>{d.nom}</option>)}
-                        </select>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, padding: '8px 0' }}>
+                          {domaines.map((d) => {
+                            const checked = ingDomaineIds.includes(d.id);
+                            return (
+                              <label key={d.id} style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', padding: '5px 10px', borderRadius: 8, border: `1.5px solid ${checked ? '#0d9488' : '#e2e8f0'}`, background: checked ? '#f0fdfa' : '#fff', fontSize: '0.82rem', fontWeight: checked ? 700 : 500, color: checked ? '#0f766e' : '#374151' }}>
+                                <input
+                                  type="checkbox"
+                                  checked={checked}
+                                  onChange={(e) => {
+                                    if (e.target.checked) setIngDomaineIds(prev => [...prev, d.id]);
+                                    else setIngDomaineIds(prev => prev.filter(id => id !== d.id));
+                                  }}
+                                  style={{ accentColor: '#0d9488' }}
+                                />
+                                {d.nom}
+                              </label>
+                            );
+                          })}
+                        </div>
                       )
                       : <div style={readOnly}>{demande.domaineNom || '—'}</div>}
                   </div>
