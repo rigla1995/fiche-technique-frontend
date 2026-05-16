@@ -709,8 +709,8 @@ export default function StockLaboPage() {
                             <thead style={{ background: '#eff6ff', borderBottom: '2px solid #2563eb', color: '#1e3a5f' }}>
                               <tr>
                                 <th style={{ fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '8px 8px' }}>{t('client.stock.ingredient')}</th>
-                                <th style={{ textAlign: 'right', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '8px 8px' }}>Stock<br /><span style={{ fontSize: '0.65rem', fontWeight: 400, opacity: 0.75 }}>coût · pertes</span></th>
-                                <th style={{ textAlign: 'right', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '8px 8px' }}>Inv.<br /><span style={{ fontSize: '0.65rem', fontWeight: 400, opacity: 0.75 }}>date · qté</span></th>
+                                <th style={{ textAlign: 'right', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '8px 8px' }}>Stock<br /><span style={{ fontSize: '0.65rem', fontWeight: 400, opacity: 0.75 }}>pertes</span></th>
+                                <th style={{ textAlign: 'right', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '8px 8px' }}>Coût Total</th>
                                 <th style={{ textAlign: 'center', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '8px 8px' }}>Seuil</th>
                                 <th style={{ textAlign: 'right', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '8px 8px' }}>Qté</th>
                                 <th style={{ textAlign: 'right', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '8px 8px' }}>Prix</th>
@@ -737,14 +737,14 @@ export default function StockLaboPage() {
                                         {r.isPT && r.activite && (
                                           <div style={{ fontSize: '0.70rem', color: '#7c3aed', fontWeight: 500, marginTop: 1 }}>📍 {r.activite}</div>
                                         )}
+                                        {r.lastInvDate && (
+                                          <div style={{ fontSize: '0.68rem', color: '#b45309', fontWeight: 600, marginTop: 2 }}>📦 {r.lastInvDate.split('-').reverse().join('/')} · {r.lastInvQty?.toFixed(3) ?? '—'}</div>
+                                        )}
                                       </td>
                                       <td style={{ textAlign: 'right' }}>
                                         <span className={cls} style={{ fontSize: '1rem', fontWeight: 800, color: cls === 'stock-ok' ? '#2563eb' : undefined }}>
                                           {r.quantite !== null ? r.quantite.toFixed(3) : '—'}
                                         </span>
-                                        {r.coutTotal != null && r.coutTotal > 0 && (
-                                          <div style={{ fontSize: '0.72rem', color: '#1d4ed8', fontWeight: 500 }}>{r.coutTotal.toFixed(3)} DT</div>
-                                        )}
                                         {r.pertesDepuisInv != null && r.pertesDepuisInv > 0 && (
                                           <div style={{ fontSize: '0.68rem', color: '#dc2626', fontWeight: 500 }}>↘ Pertes: {r.pertesDepuisInv.toFixed(3)}</div>
                                         )}
@@ -755,12 +755,9 @@ export default function StockLaboPage() {
                                           <div style={{ fontSize: '0.68rem', color: '#0369a1', fontWeight: 500 }}>↘ trans: {r.transfertsDepuisInv.toFixed(3)}</div>
                                         )}
                                       </td>
-                                      <td style={{ textAlign: 'right' }}>
-                                        {r.lastInvDate ? (
-                                          <>
-                                            <div style={{ fontSize: '0.72rem', color: '#1e3a5f', fontWeight: 700 }}>{r.lastInvDate.split('-').reverse().join('/')}</div>
-                                            <div style={{ fontSize: '0.72rem', color: '#64748b' }}>{r.lastInvQty?.toFixed(3) ?? '—'}</div>
-                                          </>
+                                      <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+                                        {r.coutTotal != null && r.coutTotal > 0 ? (
+                                          <span style={{ fontSize: '0.88rem', color: '#1d4ed8', fontWeight: 700 }}>{r.coutTotal.toFixed(3)} DT</span>
                                         ) : <span style={{ fontSize: '0.72rem', color: '#cbd5e1' }}>—</span>}
                                       </td>
                                       <td style={{ textAlign: 'center' }}>
@@ -807,7 +804,7 @@ export default function StockLaboPage() {
                                             onClick={() => { setPerteModal({ ingredientId: r.ingredientId, nom: r.nom }); setPerteQty(''); setPerteType('avarie'); const d = todayStr(); setPerteDate(d); setPerteDateMin(null); setPerteDateMax(null); fetchPerteDateRange(r.ingredientId).then(() => fetchPertePrix(r.ingredientId, d)); }}
                                             title="Enregistrer une perte"
                                             disabled={!canWrite}
-                                          >📉</button>
+                                          >📉 Perte</button>
                                           <button className="btn btn-ghost btn-sm" onClick={() => toggleHistory(r.ingredientId)} title="5 derniers appros">
                                             {rs.historyOpen ? '📋▲' : '📋'}
                                           </button>

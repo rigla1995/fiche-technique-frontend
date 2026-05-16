@@ -926,8 +926,8 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                   <thead style={{ background: '#eff6ff', borderBottom: '2px solid #2563eb', color: '#1e3a5f' }}>
                     <tr>
                       <th style={{ fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px' }}>{t('client.stock.ingredient')}</th>
-                      <th style={{ textAlign: 'right', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px' }}>Stock Actuel<br /><span style={{ fontSize: '0.65rem', fontWeight: 400, opacity: 0.75 }}>COUT · PERTES · PT</span></th>
-                      <th style={{ textAlign: 'right', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px', minWidth: 90 }}>Inventaire<br /><span style={{ fontSize: '0.65rem', fontWeight: 400, opacity: 0.75 }}>DATE · QTÉ</span></th>
+                      <th style={{ textAlign: 'right', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px' }}>Stock Actuel<br /><span style={{ fontSize: '0.65rem', fontWeight: 400, opacity: 0.75 }}>PERTES · PT</span></th>
+                      <th style={{ textAlign: 'right', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px', minWidth: 90 }}>Coût Total</th>
                       <th style={{ textAlign: 'center', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px' }}>Seuil min</th>
                       <th style={{ textAlign: 'right', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px' }}>Nouvelle Qté</th>
                       <th style={{ textAlign: 'right', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px' }}>Prix (U/DT)</th>
@@ -953,12 +953,12 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                             <td>
                               <div style={{ fontWeight: 600 }}>{entry.nom}</div>
                               <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{entry.unite}</div>
+                              {entry.lastInvDate && (
+                                <div style={{ fontSize: '0.68rem', color: '#b45309', fontWeight: 600, marginTop: 2 }}>📦 {entry.lastInvDate.split('-').reverse().join('/')} · {entry.lastInvQty?.toFixed(3) ?? '—'}</div>
+                              )}
                             </td>
                             <td style={{ textAlign: 'right' }}>
                               <span className={cls} style={{ fontSize: '1rem', fontWeight: 800, color: cls === 'stock-ok' ? '#2563eb' : undefined }}>{totalDisplay}</span>
-                              {entry.coutTotal != null && entry.coutTotal > 0 && (
-                                <div style={{ fontSize: '0.72rem', color: '#1d4ed8', fontWeight: 500 }}>{entry.coutTotal.toFixed(3)} DT</div>
-                              )}
                               {entry.pertesDepuisInv != null && entry.pertesDepuisInv > 0 && (
                                 <div style={{ fontSize: '0.68rem', color: '#dc2626', fontWeight: 500 }}>↘ Pertes: {entry.pertesDepuisInv.toFixed(3)}</div>
                               )}
@@ -967,11 +967,8 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                               )}
                             </td>
                             <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
-                              {entry.lastInvDate ? (
-                                <>
-                                  <div style={{ fontSize: '0.72rem', color: '#1e3a5f', fontWeight: 700 }}>{entry.lastInvDate.split('-').reverse().join('/')}</div>
-                                  <div style={{ fontSize: '0.72rem', color: '#64748b' }}>{entry.lastInvQty?.toFixed(3) ?? '—'}</div>
-                                </>
+                              {entry.coutTotal != null && entry.coutTotal > 0 ? (
+                                <span style={{ fontSize: '0.88rem', color: '#1d4ed8', fontWeight: 700 }}>{entry.coutTotal.toFixed(3)} DT</span>
                               ) : <span style={{ fontSize: '0.72rem', color: '#cbd5e1' }}>—</span>}
                             </td>
                             <td style={{ textAlign: 'center' }}>
@@ -1032,10 +1029,10 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                                   </>
                                 )}
                                 {canWrite && ((isEntreprise && activiteId) || (!isEntreprise && onSavePerte)) && (
-                                  <button className="perte-btn" onClick={() => setPertesModal({ ingredientId: entry.ingredientId, nom: entry.nom })} title="Enregistrer une perte">📉</button>
+                                  <button className="perte-btn" onClick={() => setPertesModal({ ingredientId: entry.ingredientId, nom: entry.nom })} title="Enregistrer une perte">📉 Perte</button>
                                 )}
                                 <button className="btn btn-ghost btn-sm" onClick={() => toggleHistory(entry.ingredientId)} title={t('client.stock.history')}>
-                                  {isHistOpen ? '▲' : '▼'}
+                                  {isHistOpen ? '📋▲' : '📋'}
                                 </button>
                               </div>
                             </td>
