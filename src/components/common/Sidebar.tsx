@@ -742,12 +742,20 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
         {(user?.role === 'client' || user?.role === 'gerant') && (
           <ul className="sidebar-nav" style={{ borderTop: '1px solid var(--border)', paddingTop: 4 }}>
             {user?.role === 'client' && (
-              <li>
-                <NavLink to="/client/abonnement" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>
-                  <span className="link-icon">💳</span>
-                  <span className="link-label">Mon abonnement</span>
-                </NavLink>
-              </li>
+              <>
+                <li>
+                  <NavLink to="/client/abonnement" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>
+                    <span className="link-icon">💳</span>
+                    <span className="link-label">Mon abonnement</span>
+                  </NavLink>
+                </li>
+                <li>
+                  <NavLink to="/client/historique-paiement" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>
+                    <span className="link-icon">🧾</span>
+                    <span className="link-label">Historique paiements</span>
+                  </NavLink>
+                </li>
+              </>
             )}
             <li>
               <NavLink

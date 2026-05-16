@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import api from '../../api/client';
-import type { Abonnement } from '../../types';
+import type { Abonnement, Promotion } from '../../types';
 import { useAuth } from '../../context/AuthContext';
 
 const MODE_INFO: Record<string, { label: string; color: string; bg: string; icon: string; desc: string }> = {
@@ -10,15 +10,17 @@ const MODE_INFO: Record<string, { label: string; color: string; bg: string; icon
   archive:   { label: 'Archivé',       color: '#6b7280', bg: '#f3f4f6', icon: '📦', desc: 'Compte archivé suite à non-paiement.' },
 };
 
-const STATUT_COLORS: Record<string, string> = {
-  payé: '#16a34a', impayé: '#dc2626', en_attente: '#d97706', remisé: '#7c3aed', gratuit: '#16a34a',
-};
-const STATUT_LABELS: Record<string, string> = {
-  payé: 'Payé', impayé: 'Impayé', en_attente: 'En attente', remisé: 'Remisé', gratuit: 'Gratuit',
-};
-
 const fmtDate = (d: string) => d ? new Date(d).toLocaleDateString('fr-FR') : '—';
-const fmtMois = (d: string) => d ? new Date(d).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' }) : '—';
+
+const promoTypeLabel = (p: Promotion): string => {
+  if (p.type === 'free_months') return 'Gratuit';
+  if (p.type === 'percent_off') {
+    const taux = p.discountMensualite ?? p.discountOnboarding ?? p.discountSupplement;
+    return taux != null ? `Réduction ${taux}%` : 'Réduction';
+  }
+  const fixed = p.fixedMensualite ?? p.fixedOnboarding ?? p.fixedSupplement;
+  return fixed != null ? `Prix fixe ${fixed} DT` : 'Prix fixe';
+};
 
 interface ConfigBreakdown {
   activite: { nb: number; total: number };
@@ -102,23 +104,19 @@ export default function MonAbonnementPage() {
             </div>
             <div style={{ padding: '16px 20px' }}>
               {[
-                { label: 'Activités', nb: config.nbActivites ?? 0, cost: breakdown?.activite.total, icon: '📍' },
-                { label: 'Labos',     nb: config.nbLabos ?? 0,     cost: breakdown?.labo.total,     icon: '🏭' },
-                { label: 'Gérants',   nb: config.nbGerants ?? 0,   cost: breakdown?.gerant.total,   icon: '👤' },
-              ].map(({ label, nb, cost, icon }) => (
+                { label: 'Activité', nb: config.nbActivites ?? 0, icon: '📍' },
+                { label: 'Labo',     nb: config.nbLabos ?? 0,     icon: '🏭' },
+                { label: 'Gérant',   nb: config.nbGerants ?? 0,   icon: '👤' },
+              ].map(({ label, nb, icon }) => (
                 <div key={label} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid #f3f4f6' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                     <span style={{ fontSize: '1.1rem' }}>{icon}</span>
-                    <div>
-                      <div style={{ fontWeight: 600, fontSize: '0.88rem', color: nb > 0 ? '#111827' : '#9ca3af' }}>
-                        {nb} {label}
-                      </div>
-                    </div>
+                    <span style={{ fontWeight: 600, fontSize: '0.88rem', color: '#374151' }}>{label}</span>
                   </div>
-                  {nb > 0 && cost != null && cost > 0 && (
-                    <span style={{ fontWeight: 700, fontSize: '0.9rem', color: '#4c1d95' }}>{cost.toFixed(2)} DT</span>
-                  )}
-                  {nb === 0 && <span style={{ fontSize: '0.75rem', color: '#9ca3af' }}>Non inclus</span>}
+                  {nb > 0
+                    ? <span style={{ fontWeight: 800, fontSize: '0.95rem', color: '#4c1d95' }}>{nb}</span>
+                    : <span style={{ fontSize: '0.75rem', color: '#9ca3af', fontStyle: 'italic' }}>Non inclus</span>
+                  }
                 </div>
               ))}
               {abo.prolongationJours > 0 && (
@@ -179,7 +177,7 @@ export default function MonAbonnementPage() {
                     </div>
                     {pricing.activePromoMensuel && (
                       <div style={{ marginTop: 8, background: '#f5f3ff', borderRadius: 6, padding: '4px 10px', display: 'inline-block', fontSize: '0.75rem', color: '#7c3aed', fontWeight: 700 }}>
-                        🎉 Promotion appliquée
+                        🎉 Promotion appliquée — {promoTypeLabel(pricing.activePromoMensuel)}
                       </div>
                     )}
                   </div>
@@ -215,6 +213,15 @@ export default function MonAbonnementPage() {
                             background: onbColor + '20', color: onbColor,
                           }}>{onbLabel}</span>
                         </div>
+                        {pricing.activePromoOnboarding && (
+                          <div style={{ marginTop: 6, fontSize: '0.72rem', color: '#7c3aed', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 4 }}>
+                            <span>🎉</span>
+                            <span>Promo : {promoTypeLabel(pricing.activePromoOnboarding)}</span>
+                            {pricing.baseOnboarding != null && pricing.effectifOnboarding != null && pricing.baseOnboarding !== pricing.effectifOnboarding && (
+                              <span style={{ color: '#9ca3af', textDecoration: 'line-through', fontWeight: 400, marginLeft: 4 }}>{pricing.baseOnboarding} DT</span>
+                            )}
+                          </div>
+                        )}
                       </div>
                       <div style={{ fontSize: '1.15rem', fontWeight: 900, color: '#16a34a', textAlign: 'right' }}>
                         {onbMontant} DT
@@ -254,51 +261,6 @@ export default function MonAbonnementPage() {
         </div>
       ))}
 
-      {/* Paiements */}
-      <div style={{ background: '#fff', borderRadius: 16, border: '1px solid #e5e7eb', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
-        <div style={{ background: 'linear-gradient(135deg, #f9fafb, #f3f4f6)', padding: '16px 24px', borderBottom: '1px solid #e5e7eb', display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span style={{ fontSize: '1.1rem' }}>🧾</span>
-          <h3 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 800, color: '#111827' }}>Historique des paiements</h3>
-        </div>
-        {!abo.paiements?.length ? (
-          <div style={{ padding: 32, textAlign: 'center', color: '#9ca3af', fontSize: '0.9rem' }}>
-            <div style={{ fontSize: '2rem', marginBottom: 8 }}>📭</div>
-            Aucun paiement enregistré
-          </div>
-        ) : (
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.88rem' }}>
-              <thead>
-                <tr style={{ background: '#f9fafb' }}>
-                  {['Mois', 'Montant', 'Statut', 'Date'].map((h) => (
-                    <th key={h} style={{ padding: '10px 20px', textAlign: 'left', borderBottom: '1px solid #e5e7eb', fontWeight: 700, color: '#374151', fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {abo.paiements.map((p, i) => (
-                  <tr key={p.id} style={{ borderBottom: '1px solid #f3f4f6', background: i % 2 === 0 ? '#fff' : '#fafafa' }}>
-                    <td style={{ padding: '12px 20px', color: '#111827', fontWeight: 600 }}>{fmtMois(p.mois)}</td>
-                    <td style={{ padding: '12px 20px', color: '#374151', fontWeight: 700 }}>
-                      {p.statut === 'gratuit' ? (
-                        <span style={{ color: '#16a34a', fontWeight: 700 }}>Gratuit</span>
-                      ) : p.montantDt != null ? `${p.montantDt} DT` : '—'}
-                    </td>
-                    <td style={{ padding: '12px 20px' }}>
-                      <span style={{
-                        fontSize: '0.75rem', fontWeight: 700, padding: '3px 10px', borderRadius: 20,
-                        background: (STATUT_COLORS[p.statut] || '#6b7280') + '20',
-                        color: STATUT_COLORS[p.statut] || '#6b7280',
-                      }}>{STATUT_LABELS[p.statut] || p.statut}</span>
-                    </td>
-                    <td style={{ padding: '12px 20px', color: '#6b7280' }}>{p.dateSaisie ? fmtDate(p.dateSaisie) : '—'}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
     </div>
   );
 }

@@ -304,10 +304,12 @@ export default function SupportPage() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                   {supplPricing && (
                     <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 10, padding: '12px 16px', fontSize: '0.82rem', color: '#1e40af', marginBottom: 4 }}>
-                      Abonnement actuel : <strong>{supplPricing.currentMensuel} DT/mois</strong>
-                      {' '}({supplPricing.nbActivites} activité{supplPricing.nbActivites !== 1 ? 's' : ''}
-                      {supplPricing.nbLabos > 0 ? `, ${supplPricing.nbLabos} labo${supplPricing.nbLabos !== 1 ? 's' : ''}` : ''}
-                      {supplPricing.nbGerants > 0 ? `, ${supplPricing.nbGerants} gérant${supplPricing.nbGerants !== 1 ? 's' : ''}` : ''})
+                      Configuration actuelle :{' '}
+                      <strong>
+                        {supplPricing.nbActivites} activité{supplPricing.nbActivites !== 1 ? 's' : ''}
+                        {supplPricing.nbLabos > 0 ? ` · ${supplPricing.nbLabos} labo${supplPricing.nbLabos !== 1 ? 's' : ''}` : ''}
+                        {supplPricing.nbGerants > 0 ? ` · ${supplPricing.nbGerants} gérant${supplPricing.nbGerants !== 1 ? 's' : ''}` : ''}
+                      </strong>
                     </div>
                   )}
                   {([
@@ -321,17 +323,32 @@ export default function SupportPage() {
                     </div>
                   ))}
                   {[
-                    { label: 'Activités supplémentaires', value: nbActivites, set: setNbActivites, prix: supplPricing?.prixActiviteSup, hasPromo: !!supplPricing?.activitePromo },
-                    { label: 'Labos supplémentaires',     value: nbLabos,     set: setNbLabos,     prix: supplPricing?.prixLaboSup,     hasPromo: !!supplPricing?.laboPromo },
-                    { label: 'Gérants supplémentaires',   value: nbGerants,   set: setNbGerants,   prix: supplPricing?.prixGerantSup,   hasPromo: !!supplPricing?.gerantPromo },
-                  ].map(({ label, value, set, prix, hasPromo }) => (
+                    { label: 'Activités supplémentaires', value: nbActivites, set: setNbActivites, prix: supplPricing?.prixActiviteSup, promo: supplPricing?.activitePromo, hasPromo: !!supplPricing?.activitePromo },
+                    { label: 'Labos supplémentaires',     value: nbLabos,     set: setNbLabos,     prix: supplPricing?.prixLaboSup,     promo: supplPricing?.laboPromo,     hasPromo: !!supplPricing?.laboPromo },
+                    { label: 'Gérants supplémentaires',   value: nbGerants,   set: setNbGerants,   prix: supplPricing?.prixGerantSup,   promo: supplPricing?.gerantPromo,   hasPromo: !!supplPricing?.gerantPromo },
+                  ].map(({ label, value, set, prix, promo, hasPromo }) => {
+                    const prixApresPromo = promo && prix != null
+                      ? promo.type === 'free_months' ? 0
+                      : promo.type === 'percent_off' && promo.discount != null ? prix * (1 - promo.discount / 100)
+                      : promo.fixed != null ? promo.fixed
+                      : prix
+                      : prix;
+                    return (
                     <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', background: hasPromo ? '#fffbeb' : '#f8fafc', borderRadius: 10, border: `1px solid ${hasPromo ? '#fde68a' : '#e2e8f0'}` }}>
                       <div style={{ flex: 1 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                           <div style={{ fontSize: '0.85rem', fontWeight: 600, color: '#374151' }}>{label}</div>
-                          {hasPromo && <span style={{ fontSize: '0.68rem', fontWeight: 700, padding: '1px 6px', borderRadius: 8, background: '#fef3c7', color: '#92400e' }}>🏷️ Promo</span>}
+                          {hasPromo && <span style={{ fontSize: '0.68rem', fontWeight: 700, padding: '1px 6px', borderRadius: 8, background: '#fef3c7', color: '#92400e' }}>🏷️ {promoLabel(promo!)}</span>}
                         </div>
-                        {prix != null && <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: 2 }}>{prix} DT / unité / mois</div>}
+                        {prix != null && !hasPromo && <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: 2 }}>{prix} DT / unité / mois</div>}
+                        {prix != null && hasPromo && (
+                          <div style={{ fontSize: '0.75rem', marginTop: 3, display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <span style={{ color: '#9ca3af', textDecoration: 'line-through' }}>{prix} DT</span>
+                            <span style={{ color: '#6b7280' }}>→</span>
+                            <span style={{ color: '#16a34a', fontWeight: 700 }}>{prixApresPromo?.toFixed(2)} DT</span>
+                            <span style={{ color: '#9ca3af' }}>/ unité / mois</span>
+                          </div>
+                        )}
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                         <button onClick={() => set(Math.max(0, value - 1))} disabled={value === 0}
@@ -341,10 +358,10 @@ export default function SupportPage() {
                           style={{ width: 30, height: 30, borderRadius: '50%', border: '1.5px solid #4338ca', background: '#4338ca', color: '#fff', fontSize: '1rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+</button>
                       </div>
                       {value > 0 && prix != null && (
-                        <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#4338ca', minWidth: 60, textAlign: 'right' }}>+{(value * prix).toFixed(0)} DT</span>
+                        <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#4338ca', minWidth: 60, textAlign: 'right' }}>+{(value * (prixApresPromo ?? prix)).toFixed(0)} DT</span>
                       )}
                     </div>
-                  ))}
+                  );})}
                   {supplDelta > 0 && supplPricing && (
                     <div style={{ background: 'linear-gradient(135deg,#f5f3ff,#ede9fe)', border: '1px solid #ddd6fe', borderRadius: 12, padding: '14px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <div>

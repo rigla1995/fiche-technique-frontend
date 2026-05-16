@@ -36,6 +36,7 @@ import DemandesManagement from './components/admin/DemandesManagement';
 import AdminRapportsPage from './components/admin/AdminRapportsPage';
 import AdminSupportPage from './components/admin/AdminSupportPage';
 import MonAbonnementPage from './components/client/MonAbonnementPage';
+import HistoriquePaiementPage from './components/client/HistoriquePaiementPage';
 import GerantsPage from './components/client/GerantsPage';
 import SupportPage from './components/client/SupportPage';
 import UpgradeWizard from './components/client/UpgradeWizard';
@@ -123,6 +124,7 @@ export default function App() {
             <Route path="/client/fournisseurs" element={<FournisseursPage />} />
             <Route path="/client/fournisseurs-labo" element={<FournisseursLaboPage />} />
             <Route path="/client/abonnement" element={<MonAbonnementPage />} />
+            <Route path="/client/historique-paiement" element={<HistoriquePaiementPage />} />
             <Route path="/client/gerants" element={<GerantsPage />} />
             <Route path="/client/upgrade-wizard" element={<UpgradeWizard />} />
             <Route path="/client/rapports" element={<RapportsPage />} />

@@ -769,6 +769,10 @@ export default function StockLaboPage() {
                                         {r.lastInvDate && (
                                           <div style={{ fontSize: '0.68rem', color: '#b45309', fontWeight: 600, marginTop: 2 }}>📦 {r.lastInvDate.split('-').reverse().join('/')} · {r.lastInvQty?.toFixed(3) ?? '—'}</div>
                                         )}
+                                        <button className="btn btn-ghost btn-sm" onClick={() => toggleHistory(r.ingredientId)} title="5 derniers appros"
+                                          style={{ fontSize: '0.72rem', color: '#0891b2', marginTop: 4, padding: '2px 6px' }}>
+                                          {rs.historyOpen ? '📋▲ Historique' : '📋 Historique'}
+                                        </button>
                                       </td>
                                       <td style={{ textAlign: 'right' }}>
                                         <span className={cls} style={{ fontSize: '1rem', fontWeight: 800 }}>
@@ -815,7 +819,10 @@ export default function StockLaboPage() {
                                       <td>
                                         <div style={{ display: 'flex', gap: 4, alignItems: 'center', flexWrap: 'wrap' }}>
                                           {canWrite && (
-                                            <button className="btn btn-ghost btn-sm" title="Configurer seuil min" onClick={() => { setSeuilMinEdits((p) => ({ ...p, [r.ingredientId]: r.seuilMin != null ? String(r.seuilMin) : '' })); setSeuilModal({ ingredientId: r.ingredientId, nom: r.nom }); }}>🔧 Seuil</button>
+                                            <button title="Configurer seuil min" onClick={() => { setSeuilMinEdits((p) => ({ ...p, [r.ingredientId]: r.seuilMin != null ? String(r.seuilMin) : '' })); setSeuilModal({ ingredientId: r.ingredientId, nom: r.nom }); }}
+                                              style={{ fontSize: '0.75rem', fontWeight: 700, padding: '3px 8px', borderRadius: 6, border: '1px solid #f97316', background: '#fff7ed', color: '#ea580c', cursor: 'pointer' }}>
+                                              🔧 Seuil
+                                            </button>
                                           )}
                                           {r.isPT && r.produitId && (
                                             <>
@@ -825,9 +832,6 @@ export default function StockLaboPage() {
                                               )}
                                             </>
                                           )}
-                                          <button className="btn btn-ghost btn-sm" onClick={() => toggleHistory(r.ingredientId)} title="5 derniers appros">
-                                            {rs.historyOpen ? '📋▲ Appros' : '📋 Appros'}
-                                          </button>
                                           <button
                                             className="perte-btn"
                                             onClick={() => { setPerteModal({ ingredientId: r.ingredientId, nom: r.nom }); setPerteQty(''); setPerteType('avarie'); const d = todayStr(); setPerteDate(d); setPerteDateMin(null); setPerteDateMax(null); fetchPerteDateRange(r.ingredientId).then(() => fetchPertePrix(r.ingredientId, d)); }}
