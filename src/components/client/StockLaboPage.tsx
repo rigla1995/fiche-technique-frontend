@@ -815,7 +815,7 @@ export default function StockLaboPage() {
                                       <td>
                                         <div style={{ display: 'flex', gap: 4, alignItems: 'center', flexWrap: 'wrap' }}>
                                           {canWrite && (
-                                            <button className="btn btn-ghost btn-sm" title="Configurer seuil min" onClick={() => { setSeuilMinEdits((p) => ({ ...p, [r.ingredientId]: r.seuilMin != null ? String(r.seuilMin) : '' })); setSeuilModal({ ingredientId: r.ingredientId, nom: r.nom }); }}>🔧</button>
+                                            <button className="btn btn-ghost btn-sm" title="Configurer seuil min" onClick={() => { setSeuilMinEdits((p) => ({ ...p, [r.ingredientId]: r.seuilMin != null ? String(r.seuilMin) : '' })); setSeuilModal({ ingredientId: r.ingredientId, nom: r.nom }); }}>🔧 Seuil</button>
                                           )}
                                           {r.isPT && r.produitId && (
                                             <>
@@ -825,15 +825,15 @@ export default function StockLaboPage() {
                                               )}
                                             </>
                                           )}
+                                          <button className="btn btn-ghost btn-sm" onClick={() => toggleHistory(r.ingredientId)} title="5 derniers appros">
+                                            {rs.historyOpen ? '📋▲ Appros' : '📋 Appros'}
+                                          </button>
                                           <button
                                             className="perte-btn"
                                             onClick={() => { setPerteModal({ ingredientId: r.ingredientId, nom: r.nom }); setPerteQty(''); setPerteType('avarie'); const d = todayStr(); setPerteDate(d); setPerteDateMin(null); setPerteDateMax(null); fetchPerteDateRange(r.ingredientId).then(() => fetchPertePrix(r.ingredientId, d)); }}
                                             title="Enregistrer une perte"
                                             disabled={!canWrite}
                                           >📉 Perte</button>
-                                          <button className="btn btn-ghost btn-sm" onClick={() => toggleHistory(r.ingredientId)} title="5 derniers appros">
-                                            {rs.historyOpen ? '📋▲' : '📋'}
-                                          </button>
                                         </div>
                                       </td>
                                     </tr>
