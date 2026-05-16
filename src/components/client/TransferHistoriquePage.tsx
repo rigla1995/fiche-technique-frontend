@@ -297,55 +297,6 @@ export default function TransferHistoriquePage() {
         </div>
       ) : (
         <>
-          {/* Summary cards */}
-          <div style={{ display: 'flex', gap: 14, marginBottom: 20, flexWrap: 'wrap', alignItems: 'stretch' }}>
-            {/* Total transfers */}
-            <div style={{
-              background: 'linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%)',
-              color: '#fff', borderRadius: 14, padding: '18px 24px',
-              minWidth: 160, display: 'flex', flexDirection: 'column', gap: 6,
-              boxShadow: '0 4px 16px rgba(37,99,235,0.25)',
-            }}>
-              <span style={{ fontSize: '0.65rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', opacity: 0.8 }}>
-                {t('client.labo.total_transferts')}
-              </span>
-              <span style={{ fontSize: '2rem', fontWeight: 800, lineHeight: 1 }}>{filteredResults.length}</span>
-              <span style={{ fontSize: '0.72rem', opacity: 0.7 }}>lignes</span>
-            </div>
-
-            {/* Per-unit totals */}
-            {unitEntries.map(([unit, qty], i) => {
-              const gradients = [
-                'linear-gradient(135deg, #0369a1 0%, #0ea5e9 100%)',
-                'linear-gradient(135deg, #065f46 0%, #10b981 100%)',
-                'linear-gradient(135deg, #7c2d12 0%, #f59e0b 100%)',
-                'linear-gradient(135deg, #4c1d95 0%, #8b5cf6 100%)',
-                'linear-gradient(135deg, #831843 0%, #ec4899 100%)',
-              ];
-              const shadows = [
-                '0 4px 16px rgba(14,165,233,0.25)',
-                '0 4px 16px rgba(16,185,129,0.25)',
-                '0 4px 16px rgba(245,158,11,0.25)',
-                '0 4px 16px rgba(139,92,246,0.25)',
-                '0 4px 16px rgba(236,72,153,0.25)',
-              ];
-              return (
-                <div key={unit} style={{
-                  background: gradients[i % gradients.length],
-                  color: '#fff', borderRadius: 14, padding: '18px 24px',
-                  minWidth: 160, display: 'flex', flexDirection: 'column', gap: 6,
-                  boxShadow: shadows[i % shadows.length],
-                }}>
-                  <span style={{ fontSize: '0.65rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', opacity: 0.8 }}>
-                    Total {unit}
-                  </span>
-                  <span style={{ fontSize: '2rem', fontWeight: 800, lineHeight: 1 }}>{qty % 1 === 0 ? qty.toFixed(0) : qty.toFixed(3)}</span>
-                  <span style={{ fontSize: '0.72rem', opacity: 0.7 }}>{unit}</span>
-                </div>
-              );
-            })}
-          </div>
-
           {filteredResults.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '32px 24px', color: 'var(--text-muted)' }}>
               <div style={{ fontSize: '2rem', marginBottom: 8 }}>🔍</div>
