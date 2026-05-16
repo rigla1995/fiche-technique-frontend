@@ -154,6 +154,8 @@ function EntrepriseIngredientList({
   toggling,
   filterCategory,
   filterName,
+  filterContext,
+  filterIngId,
   onToggle,
   onToggleAll,
   readOnly,
@@ -162,6 +164,8 @@ function EntrepriseIngredientList({
   toggling: Set<string>;
   filterCategory: string;
   filterName: string;
+  filterContext: string;
+  filterIngId: number | '';
   onToggle: (ingId: number, ctx: IngContext) => void;
   onToggleAll: (ingId: number, contexts: IngContext[], assign: boolean) => void;
   readOnly?: boolean;
@@ -174,7 +178,13 @@ function EntrepriseIngredientList({
   const filtered = ingredients.filter((i) => {
     const catOk = !filterCategory || i.categorie === filterCategory;
     const nameOk = !filterName || i.nom.toLowerCase().includes(filterName.toLowerCase());
-    return catOk && nameOk;
+    const ingOk = !filterIngId || i.id === filterIngId;
+    const ctxOk = !filterContext || (() => {
+      const [type, idStr] = filterContext.split(':');
+      const id = Number(idStr);
+      return i.contexts?.some((c) => c.type === type && c.id === id) ?? false;
+    })();
+    return catOk && nameOk && ingOk && ctxOk;
   });
 
   const groups: Record<string, GlobalIngredient[]> = {};
@@ -330,15 +340,32 @@ function FiltersBar({
   filterName,
   onCatChange,
   onNameChange,
+  // entreprise extras
+  contexts,
+  filterContext,
+  onContextChange,
+  ingredientsInCategory,
+  filterIngId,
+  onIngIdChange,
 }: {
   categories: string[];
   filterCategory: string;
   filterName: string;
   onCatChange: (v: string) => void;
   onNameChange: (v: string) => void;
+  contexts?: { key: string; label: string; type: 'activite' | 'labo' }[];
+  filterContext?: string;
+  onContextChange?: (v: string) => void;
+  ingredientsInCategory?: { id: number; nom: string }[];
+  filterIngId?: number | '';
+  onIngIdChange?: (v: number | '') => void;
 }) {
   const { t } = useTranslation();
-  const hasFilter = filterCategory || filterName;
+  const hasFilter = filterCategory || filterName || filterContext || filterIngId;
+
+  const activites = contexts?.filter((c) => c.type === 'activite') ?? [];
+  const labos = contexts?.filter((c) => c.type === 'labo') ?? [];
+
   return (
     <div style={{
       background: 'var(--surface)', borderRadius: 14, padding: '16px 20px', marginBottom: 20,
@@ -348,16 +375,46 @@ function FiltersBar({
       <div style={{ width: '100%', marginBottom: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <span style={{ fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#92400e' }}>Filtres</span>
         {hasFilter && (
-          <button className="btn btn-ghost btn-sm" style={{ fontSize: '0.78rem' }} onClick={() => { onCatChange(''); onNameChange(''); }}>✕ Réinitialiser</button>
+          <button className="btn btn-ghost btn-sm" style={{ fontSize: '0.78rem' }} onClick={() => { onCatChange(''); onNameChange(''); onContextChange?.(''); onIngIdChange?.(''); }}>✕ Réinitialiser</button>
         )}
       </div>
       <div>
         <label style={{ fontSize: '0.68rem', fontWeight: 800, color: '#92400e', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>🏷️ Catégorie</label>
-        <select style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid #92400e', fontSize: '0.88rem', background: '#fffbeb', minWidth: 160 }} value={filterCategory} onChange={(e) => onCatChange(e.target.value)}>
+        <select style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid #92400e', fontSize: '0.88rem', background: '#fffbeb', minWidth: 160 }} value={filterCategory}
+          onChange={(e) => { onCatChange(e.target.value); onIngIdChange?.(''); }}>
           <option value="">{t('common.all_categories', 'Toutes catégories')}</option>
           {categories.map((c) => <option key={c} value={c}>{c}</option>)}
         </select>
       </div>
+      {filterCategory && ingredientsInCategory && ingredientsInCategory.length > 0 && onIngIdChange && (
+        <div>
+          <label style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>🧂 Ingrédient</label>
+          <select style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid var(--border)', fontSize: '0.88rem', background: 'var(--background)', minWidth: 160 }} value={filterIngId ?? ''}
+            onChange={(e) => onIngIdChange(e.target.value === '' ? '' : Number(e.target.value))}>
+            <option value="">— Tous —</option>
+            {ingredientsInCategory.map((i) => <option key={i.id} value={i.id}>{i.nom}</option>)}
+          </select>
+        </div>
+      )}
+      {contexts && contexts.length > 0 && onContextChange && (
+        <div>
+          <label style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>📍 Activité / Labo</label>
+          <select style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid var(--border)', fontSize: '0.88rem', background: 'var(--background)', minWidth: 180 }} value={filterContext ?? ''}
+            onChange={(e) => onContextChange(e.target.value)}>
+            <option value="">— Tous —</option>
+            {activites.length > 0 && (
+              <optgroup label="Activités">
+                {activites.map((c) => <option key={c.key} value={c.key}>{c.label}</option>)}
+              </optgroup>
+            )}
+            {labos.length > 0 && (
+              <optgroup label="Labos">
+                {labos.map((c) => <option key={c.key} value={c.key}>🏭 {c.label}</option>)}
+              </optgroup>
+            )}
+          </select>
+        </div>
+      )}
       <div>
         <label style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>🔍 Nom</label>
         <input type="text" style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid var(--border)', fontSize: '0.88rem', background: 'var(--background)', minWidth: 160 }} placeholder="Rechercher…"
@@ -382,12 +439,14 @@ export default function GlobalCataloguePage() {
   const [filterCategory, setFilterCategory] = useState('');
   const [filterIngId, setFilterIngId] = useState<number | ''>('');
   const [filterName, setFilterName] = useState('');
+  const [filterContext, setFilterContext] = useState('');
 
   const load = useCallback(async () => {
     setIngredients([]);
     setFilterCategory('');
     setFilterIngId('');
     setFilterName('');
+    setFilterContext('');
     setLoading(true);
     try {
       if (isEntreprise) {
@@ -520,6 +579,22 @@ export default function GlobalCataloguePage() {
 
   const categories = Array.from(new Set(ingredients.map((i) => i.categorie))).sort();
 
+  // Collect unique contexts across all ingredients for the filter dropdown
+  const allContexts = (() => {
+    const map = new Map<string, { key: string; label: string; type: 'activite' | 'labo' }>();
+    for (const ing of ingredients) {
+      for (const ctx of ing.contexts ?? []) {
+        const key = `${ctx.type}:${ctx.id}`;
+        if (!map.has(key)) map.set(key, { key, label: ctx.nom, type: ctx.type });
+      }
+    }
+    return Array.from(map.values()).sort((a, b) => a.label.localeCompare(b.label));
+  })();
+
+  const ingredientsInCategory = filterCategory
+    ? ingredients.filter((i) => i.categorie === filterCategory)
+    : [];
+
   return (
     <div className="page-content">
       {/* Hero header */}
@@ -543,8 +618,14 @@ export default function GlobalCataloguePage() {
           categories={categories}
           filterCategory={filterCategory}
           filterName={filterName}
-          onCatChange={setFilterCategory}
+          onCatChange={(v) => { setFilterCategory(v); setFilterIngId(''); }}
           onNameChange={setFilterName}
+          contexts={isEntreprise ? allContexts : undefined}
+          filterContext={filterContext}
+          onContextChange={isEntreprise ? setFilterContext : undefined}
+          ingredientsInCategory={isEntreprise ? ingredientsInCategory : undefined}
+          filterIngId={isEntreprise ? filterIngId : undefined}
+          onIngIdChange={isEntreprise ? setFilterIngId : undefined}
         />
       )}
 
@@ -562,6 +643,8 @@ export default function GlobalCataloguePage() {
           toggling={toggling}
           filterCategory={filterCategory}
           filterName={filterName}
+          filterContext={filterContext}
+          filterIngId={filterIngId}
           onToggle={toggleContext}
           onToggleAll={toggleContextAll}
           readOnly={!canWrite}
