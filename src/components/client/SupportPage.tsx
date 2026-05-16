@@ -52,10 +52,13 @@ export default function SupportPage() {
   const [demandes, setDemandes] = useState<SupportDemande[]>([]);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState<Record<number, boolean>>({});
-  const [showForm, setShowForm] = useState(false);
   const [formType, setFormType] = useState<SupportDemande['type'] | null>(() => {
     const t = searchParams.get('type');
     return t && ['supplement', 'ingredient_manquant', 'aide'].includes(t) ? t as SupportDemande['type'] : null;
+  });
+  const [showForm, setShowForm] = useState(() => {
+    const t = searchParams.get('type');
+    return !!(t && ['supplement', 'ingredient_manquant', 'aide'].includes(t));
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
