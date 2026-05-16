@@ -494,22 +494,23 @@ export default function LaboHistoriqueApproPage() {
         </div>
       ) : (
         <>
-          <div className="table-responsive card">
-            <table className="table">
+          <div className="card" style={{ overflowX: 'auto' }}>
+            <table className="table" style={{ tableLayout: 'fixed', width: '100%', minWidth: 820 }}>
               <colgroup>
-                <col style={{ width: '36px' }} />
-                <col style={{ width: '110px' }} />
+                <col style={{ width: '30px' }} />
+                <col style={{ width: '105px' }} />
                 <col />
-                <col style={{ width: '88px' }} />
-                <col style={{ width: '78px' }} />
-                <col style={{ width: '60px' }} />
-                <col style={{ width: '78px' }} />
-                <col style={{ width: '112px' }} />
-                <col style={{ width: '58px' }} />
+                <col style={{ width: '72px' }} />
+                <col style={{ width: '84px' }} />
+                <col style={{ width: '90px' }} />
+                <col style={{ width: '56px' }} />
+                <col style={{ width: '90px' }} />
+                <col style={{ width: '110px' }} />
+                <col style={{ width: '54px' }} />
               </colgroup>
               <thead>
                 <tr style={{ background: 'linear-gradient(135deg, #3b0764, #7e22ce)' }}>
-                  <th style={{ textAlign: 'center', padding: '12px 4px', width: 36, color: '#fff', background: 'transparent', borderBottom: 'none' }}>
+                  <th style={{ textAlign: 'center', padding: '10px 4px', color: '#fff', background: 'transparent', borderBottom: 'none' }}>
                     <input
                       type="checkbox"
                       checked={results.length > 0 && selectedIds.size === results.length}
@@ -519,13 +520,13 @@ export default function LaboHistoriqueApproPage() {
                     />
                   </th>
                   {(['Date', 'Ingrédient', 'Type'] as const).map((label) => (
-                    <th key={label} style={{ fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px', color: '#fff', background: 'transparent', borderBottom: 'none' }}>{label}</th>
+                    <th key={label} style={{ fontWeight: 800, fontSize: '0.75rem', letterSpacing: '0.04em', textTransform: 'uppercase', padding: '10px 10px', color: '#fff', background: 'transparent', borderBottom: 'none' }}>{label}</th>
                   ))}
                   {(['Quantité', 'Prix U. HT', 'TVA %', 'Prix U. TTC'] as const).map((label) => (
-                    <th key={label} style={{ textAlign: 'right', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px', color: '#fff', background: 'transparent', borderBottom: 'none' }}>{label}</th>
+                    <th key={label} style={{ textAlign: 'right', fontWeight: 800, fontSize: '0.75rem', letterSpacing: '0.04em', textTransform: 'uppercase', padding: '10px 10px', color: '#fff', background: 'transparent', borderBottom: 'none' }}>{label}</th>
                   ))}
-                  <th style={{ fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px', color: '#fff', background: 'transparent', borderBottom: 'none' }}>Fourn. / Réf</th>
-                  <th style={{ padding: '12px 14px', color: '#fff', background: 'transparent', borderBottom: 'none' }}></th>
+                  <th style={{ fontWeight: 800, fontSize: '0.75rem', letterSpacing: '0.04em', textTransform: 'uppercase', padding: '10px 10px', color: '#fff', background: 'transparent', borderBottom: 'none' }}>Fourn. / Réf</th>
+                  <th style={{ padding: '10px 6px', color: '#fff', background: 'transparent', borderBottom: 'none' }}></th>
                 </tr>
               </thead>
               <tbody>
@@ -533,7 +534,7 @@ export default function LaboHistoriqueApproPage() {
                   const isSelected = selectedIds.has(r.id);
                   return (
                   <tr key={r.id} style={{ background: isSelected ? 'linear-gradient(90deg, #fef3c7, #fffbeb)' : undefined, borderLeft: isSelected ? '3px solid #f59e0b' : undefined }}>
-                    <td style={{ textAlign: 'center', padding: '12px 4px' }}>
+                    <td style={{ textAlign: 'center', padding: '8px 4px' }}>
                       <input
                         type="checkbox"
                         checked={isSelected}
@@ -541,59 +542,59 @@ export default function LaboHistoriqueApproPage() {
                         style={{ cursor: 'pointer', accentColor: '#ea580c' }}
                       />
                     </td>
-                    <td style={{ padding: '12px 14px' }}>
-                      <span style={{ background: '#faf5ff', border: '1px solid #d8b4fe', borderRadius: 7, padding: '3px 10px', fontWeight: 700, fontSize: '0.82rem', color: '#7e22ce', display: 'inline-block' }}>
+                    <td style={{ padding: '8px 10px' }}>
+                      <span style={{ background: '#faf5ff', border: '1px solid #d8b4fe', borderRadius: 6, padding: '2px 8px', fontWeight: 700, fontSize: '0.8rem', color: '#7e22ce', display: 'inline-block', whiteSpace: 'nowrap' }}>
                         {fmtDate(r.dateAppro)}
                       </span>
                     </td>
-                    <td style={{ padding: '12px 14px' }}>
-                      <div style={{ fontWeight: 600, fontSize: '0.88rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.ingredientNom}</div>
-                      <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.categorieNom}</div>
+                    <td style={{ padding: '8px 10px' }}>
+                      <div style={{ fontWeight: 600, fontSize: '0.86rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.ingredientNom}</div>
+                      <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.categorieNom}</div>
                     </td>
-                    <td style={{ padding: '12px 14px' }}>
+                    <td style={{ padding: '8px 10px' }}>
                       {r.typeAppro === 'manuel' && (
-                        <span style={{ background: '#dcfce7', color: '#15803d', borderRadius: 6, padding: '2px 8px', fontSize: '0.72rem', fontWeight: 700 }}>Appro</span>
+                        <span style={{ background: '#dcfce7', color: '#15803d', borderRadius: 6, padding: '2px 6px', fontSize: '0.7rem', fontWeight: 700 }}>Appro</span>
                       )}
                       {r.typeAppro === 'transfert' && (
-                        <span style={{ background: '#e0f2fe', color: '#0369a1', borderRadius: 6, padding: '2px 8px', fontSize: '0.72rem', fontWeight: 700 }}>Transfert</span>
+                        <span style={{ background: '#e0f2fe', color: '#0369a1', borderRadius: 6, padding: '2px 6px', fontSize: '0.7rem', fontWeight: 700 }}>Transf.</span>
                       )}
                       {r.typeAppro && r.typeAppro !== 'manuel' && r.typeAppro !== 'transfert' && (
-                        <span style={{ background: '#f3e8ff', color: '#7c3aed', borderRadius: 6, padding: '2px 8px', fontSize: '0.72rem', fontWeight: 700, display: 'inline-block', maxWidth: 80, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={r.typeAppro}>PT</span>
+                        <span style={{ background: '#f3e8ff', color: '#7c3aed', borderRadius: 6, padding: '2px 6px', fontSize: '0.7rem', fontWeight: 700 }}>PT</span>
                       )}
                       {!r.typeAppro && <span style={{ color: 'var(--text-muted)' }}>—</span>}
                     </td>
-                    <td style={{ textAlign: 'right', fontWeight: 800, color: '#0f766e', padding: '12px 14px' }}>
-                      <div>{r.quantite ?? '—'}</div>
-                      <div style={{ color: 'var(--text-muted)', fontSize: '0.72rem', fontWeight: 400 }}>{r.uniteNom}</div>
+                    <td style={{ textAlign: 'right', fontWeight: 800, color: '#0f766e', padding: '8px 10px', fontSize: '0.85rem' }}>
+                      <div style={{ whiteSpace: 'nowrap' }}>{r.quantite ?? '—'}</div>
+                      <div style={{ color: 'var(--text-muted)', fontSize: '0.7rem', fontWeight: 400 }}>{r.uniteNom}</div>
                     </td>
-                    <td style={{ textAlign: 'right', fontWeight: 600, color: r.prixUnitaire ? '#1d4ed8' : 'var(--text-muted)', fontSize: '0.88rem', padding: '12px 14px' }}>
+                    <td style={{ textAlign: 'right', fontWeight: 600, color: r.prixUnitaire ? '#1d4ed8' : 'var(--text-muted)', fontSize: '0.85rem', padding: '8px 10px', whiteSpace: 'nowrap' }}>
                       {r.prixUnitaire !== null ? `${r.prixUnitaire.toFixed(3)} DT` : '—'}
                     </td>
-                    <td style={{ textAlign: 'right', fontSize: '0.85rem', color: r.tauxTva != null ? '#6b7280' : 'var(--text-muted)', padding: '12px 14px' }}>
+                    <td style={{ textAlign: 'right', fontSize: '0.82rem', color: r.tauxTva != null ? '#6b7280' : 'var(--text-muted)', padding: '8px 10px', whiteSpace: 'nowrap' }}>
                       {r.tauxTva != null ? `${r.tauxTva}%` : '—'}
                     </td>
-                    <td style={{ textAlign: 'right', fontWeight: 700, color: r.prixUnitaireTva != null ? '#059669' : 'var(--text-muted)', fontSize: '0.88rem', padding: '12px 14px' }}>
+                    <td style={{ textAlign: 'right', fontWeight: 700, color: r.prixUnitaireTva != null ? '#059669' : 'var(--text-muted)', fontSize: '0.85rem', padding: '8px 10px', whiteSpace: 'nowrap' }}>
                       {r.prixUnitaireTva != null ? `${r.prixUnitaireTva.toFixed(3)} DT` : '—'}
                     </td>
-                    <td style={{ fontSize: '0.78rem', padding: '12px 14px' }}>
+                    <td style={{ fontSize: '0.76rem', padding: '8px 10px' }}>
                       <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.fournisseurNom ?? '—'}</div>
                       <div style={{ color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.refFacture ?? '—'}</div>
                     </td>
-                    <td style={{ whiteSpace: 'nowrap', textAlign: 'right', padding: '12px 14px' }}>
+                    <td style={{ whiteSpace: 'nowrap', textAlign: 'right', padding: '8px 6px' }}>
                       {(!isGerant || r.createdBy === user?.id) && (<>
                         <button
                           className="btn btn-ghost btn-sm"
                           onClick={() => setEditEntry(r)}
                           title="Modifier"
                           disabled={!canWrite}
-                          style={{ marginRight: 2, fontSize: '0.8rem', padding: '2px 6px', opacity: canWrite ? 1 : 0.4 }}
+                          style={{ marginRight: 2, fontSize: '0.78rem', padding: '2px 5px', opacity: canWrite ? 1 : 0.4 }}
                         >✏️</button>
                         <button
                           className="btn btn-ghost btn-sm"
                           onClick={() => setDeleteEntry(r)}
                           title="Supprimer"
                           disabled={!canWrite}
-                          style={{ fontSize: '0.8rem', color: '#dc2626', padding: '2px 6px', opacity: canWrite ? 1 : 0.4 }}
+                          style={{ fontSize: '0.78rem', color: '#dc2626', padding: '2px 5px', opacity: canWrite ? 1 : 0.4 }}
                         >🗑️</button>
                       </>)}
                     </td>
@@ -603,17 +604,14 @@ export default function LaboHistoriqueApproPage() {
               </tbody>
               <tfoot>
                 <tr style={{ background: '#f5f3ff', borderTop: '2px solid #7e22ce' }}>
-                  <td colSpan={4} style={{ padding: '10px 14px', fontSize: '0.78rem', fontWeight: 800, color: '#3b0764', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  <td colSpan={5} style={{ padding: '9px 10px', fontSize: '0.76rem', fontWeight: 800, color: '#3b0764', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                     Total — {results.length} enregistrement{results.length > 1 ? 's' : ''}
                   </td>
-                  <td style={{ textAlign: 'right', padding: '10px 14px', fontWeight: 800, color: '#3b0764', fontSize: '0.82rem' }}>
-                    {unitQtyEntries.map(([u, q]) => `${q.toFixed(3)} ${u}`).join(' · ')}
-                  </td>
-                  <td style={{ textAlign: 'right', padding: '10px 14px', fontWeight: 800, color: '#1d4ed8', fontSize: '0.85rem' }}>
+                  <td style={{ textAlign: 'right', padding: '9px 10px', fontWeight: 800, color: '#1d4ed8', fontSize: '0.84rem', whiteSpace: 'nowrap' }}>
                     {totalHT.toFixed(3)} DT
                   </td>
                   <td></td>
-                  <td style={{ textAlign: 'right', padding: '10px 14px', fontWeight: 900, color: '#059669', fontSize: '0.88rem' }}>
+                  <td style={{ textAlign: 'right', padding: '9px 10px', fontWeight: 900, color: '#059669', fontSize: '0.86rem', whiteSpace: 'nowrap' }}>
                     {totalTTC.toFixed(3)} DT
                   </td>
                   <td colSpan={2}></td>
