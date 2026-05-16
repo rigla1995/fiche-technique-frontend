@@ -1051,7 +1051,7 @@ export default function StockLaboPage() {
                   </select>
                   <label style={{ ...LABEL, display: 'block', marginBottom: 6 }}>Date de perte</label>
                   <input className="input" type="date" style={{ width: '100%', fontSize: '0.9rem' }}
-                    min={perteDateMin} value={perteDate}
+                    min={perteDateMin} max={todayStr()} value={perteDate}
                     onChange={(e) => { setPerteDate(e.target.value); if (perteModal) fetchPertePrix(perteModal.ingredientId, e.target.value); }} />
                   <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: 3, marginBottom: 12 }}>
                     Premier appro : {perteDateMin.split('-').reverse().join('/')}

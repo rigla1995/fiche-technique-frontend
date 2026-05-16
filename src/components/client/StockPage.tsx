@@ -186,7 +186,7 @@ function PerteModal({ ingredientId, nom, activiteId, onSaveOverride, onAfterSave
               <div>
                 <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: 4 }}>Date de la perte</label>
                 <input type="date" className="input" style={{ width: '100%' }}
-                  min={dateMin} value={datePerte} onChange={(e) => setDatePerte(e.target.value)} />
+                  min={dateMin} max={todayStr()} value={datePerte} onChange={(e) => setDatePerte(e.target.value)} />
                 <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: 3 }}>
                   Premier appro : {dateMin.split('-').reverse().join('/')}
                 </p>
