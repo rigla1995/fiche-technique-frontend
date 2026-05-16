@@ -8,6 +8,9 @@ import type { Activite, ActiviteIngredient, Labo, AbonnementConfig } from '../..
 type ActiviteForm = { nom: string; adresse: string };
 const emptyForm = (): ActiviteForm => ({ nom: '', adresse: '' });
 
+type BizActForm = { nom: string; adresse: string; useLabo: boolean | null };
+const emptyBizAct = (): BizActForm => ({ nom: '', adresse: '', useLabo: null });
+
 interface Props {
   onCreated?: () => void;
   minimal?: boolean;
@@ -63,7 +66,7 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
   const [bizStep, setBizStep] = useState<1 | 2>(1);
   const [bizLaboForm, setBizLaboForm] = useState({ nom: '', refLabo: '', adresse: '' });
   const [bizLaboSkip, setBizLaboSkip] = useState(false);
-  const [bizActForms, setBizActForms] = useState<ActiviteForm[]>([emptyForm()]);
+  const [bizActForms, setBizActForms] = useState<BizActForm[]>([emptyBizAct()]);
   const [bizSaving, setBizSaving] = useState(false);
   const [bizError, setBizError] = useState('');
 
@@ -279,7 +282,7 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
   const openBizWizard = () => {
     setBizLaboForm({ nom: '', refLabo: '', adresse: '' });
     setBizLaboSkip(false);
-    setBizActForms([emptyForm()]);
+    setBizActForms([emptyBizAct()]);
     setBizError('');
     setBizStep(configHasLabo ? 1 : 2);
     setShowBizWizard(true);
@@ -298,7 +301,7 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
 
   const bizAddSlot = () => {
     if (maxActivites === null || bizActForms.length < maxActivites) {
-      setBizActForms((p) => [...p, emptyForm()]);
+      setBizActForms((p) => [...p, emptyBizAct()]);
     }
   };
 
@@ -325,7 +328,7 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
       const isFirst = activites.length === 0;
       for (const act of validActs) {
         const payload: Record<string, unknown> = { nom: act.nom.trim(), adresse: act.adresse.trim() };
-        if (createdLaboId) payload.laboId = createdLaboId;
+        if (createdLaboId && act.useLabo === true) payload.laboId = createdLaboId;
         await api.post('/api/entreprise/activites', payload);
       }
       if (validActs.length > 0 && onCreated) onCreated();
@@ -1089,6 +1092,41 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                         onChange={(e) => setBizActForms((p) => p.map((f, i) => i === idx ? { ...f, adresse: e.target.value } : f))}
                         placeholder="Adresse (optionnel)" />
                     </div>
+                    {/* Labo config — only when labo is being created */}
+                    {!bizLaboSkip && bizLaboForm.nom.trim() && (
+                      <div>
+                        <div style={{ fontSize: '0.68rem', fontWeight: 800, color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 6 }}>
+                          🏭 Laboratoire
+                        </div>
+                        <div style={{ display: 'flex', gap: 8 }}>
+                          <label style={{
+                            flex: 1, display: 'flex', alignItems: 'center', gap: 8,
+                            padding: '9px 12px', borderRadius: 8, cursor: 'pointer',
+                            border: `1.5px solid ${af.useLabo === true ? '#7c3aed' : '#e5e7eb'}`,
+                            background: af.useLabo === true ? '#faf5ff' : '#f9fafb',
+                          }}>
+                            <input type="radio" checked={af.useLabo === true}
+                              onChange={() => setBizActForms((p) => p.map((f, i) => i === idx ? { ...f, useLabo: true } : f))}
+                              style={{ accentColor: '#7c3aed', flexShrink: 0 }} />
+                            <div>
+                              <div style={{ fontWeight: 700, fontSize: '0.82rem', color: '#1f2937' }}>🏭 Avec labo</div>
+                              <div style={{ fontSize: '0.72rem', color: '#9ca3af' }}>{bizLaboForm.nom}</div>
+                            </div>
+                          </label>
+                          <label style={{
+                            flex: 1, display: 'flex', alignItems: 'center', gap: 8,
+                            padding: '9px 12px', borderRadius: 8, cursor: 'pointer',
+                            border: `1.5px solid ${af.useLabo === false ? '#7c3aed' : '#e5e7eb'}`,
+                            background: af.useLabo === false ? '#faf5ff' : '#f9fafb',
+                          }}>
+                            <input type="radio" checked={af.useLabo === false}
+                              onChange={() => setBizActForms((p) => p.map((f, i) => i === idx ? { ...f, useLabo: false } : f))}
+                              style={{ accentColor: '#7c3aed', flexShrink: 0 }} />
+                            <div style={{ fontWeight: 700, fontSize: '0.82rem', color: '#1f2937' }}>📋 Sans labo</div>
+                          </label>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ))}
 
