@@ -82,7 +82,7 @@ export default function ClientsManagement() {
       montantOnboarding: abo.config.montantOnboarding,
       totalMensuel: abo.pricing?.effectifMensuel ?? abo.pricing?.baseMensuel ?? 0,
       promos: [],
-      appName: 'Fiche Technique',
+      appName: 'LabFlow',
     });
     const link = document.createElement('a');
     link.href = `data:application/pdf;base64,${base64}`;

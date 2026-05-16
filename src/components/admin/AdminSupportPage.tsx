@@ -96,7 +96,7 @@ function DetailsPopup({
       nbGerants:   (pricing.nbGerants   || 0) + nbGAdded,
       ancienMensuel:   pricing.currentMensuel || 0,
       nouveauMensuel:  (pricing.currentMensuel || 0) + delta,
-      appName: 'Fiche Technique',
+      appName: 'LabFlow',
       dateAvenant: new Date().toISOString(),
     });
     setAvenantPdfBase64(base64);

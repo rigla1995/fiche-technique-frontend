@@ -36,9 +36,9 @@ export default function LoginPage() {
       <div className="login-panel-brand">
         <div className="login-brand-content">
           <span className="login-brand-icon">🍽️</span>
-          <div className="login-brand-title">FicheTech</div>
+          <div className="login-brand-title">LabFlow</div>
           <p className="login-brand-sub">
-            La plateforme de gestion des fiches techniques<br />pour les professionnels de la restauration.
+            La plateforme de gestion pour les professionnels de la restauration.
           </p>
           <div className="login-feature-list">
             {[

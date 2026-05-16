@@ -57,7 +57,7 @@ export default function Header({ onMenuToggle }: HeaderProps) {
         </button>
         <div className="header-brand">
           <span className="brand-icon">🍽️</span>
-          <span className="brand-name">FicheTech</span>
+          <span className="brand-name">LabFlow</span>
         </div>
       </div>
 

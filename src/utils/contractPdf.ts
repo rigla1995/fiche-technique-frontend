@@ -159,7 +159,7 @@ export function generateContractPdf(params: ContractPdfParams): string {
   hrule(y + 26, '#e2e8f0', ML, ML + CW / 2 - 4);
   setFont(7, 'bold', '#6366f1');  txt('PRESTATAIRE', ML + 4, y + 6);
   setFont(9, 'bold', '#0f172a'); txt(appName, ML + 4, y + 13);
-  setFont(7, 'normal', '#64748b'); txt('Plateforme de gestion des fiches techniques', ML + 4, y + 19);
+  setFont(7, 'normal', '#64748b'); txt('Plateforme LabFlow', ML + 4, y + 19);
 
   rect(mid, y, CW / 2 - 4, 26, '#f8fafc');
   hrule(y, '#e2e8f0', mid, mid + CW / 2 - 4);

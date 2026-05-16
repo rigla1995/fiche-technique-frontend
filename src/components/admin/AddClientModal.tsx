@@ -294,7 +294,7 @@ export default function AddClientModal({ onClose, onCreated }: Props) {
           months: p.months, moisDebut: p.moisDebut,
         })),
         preview: preview ?? undefined,
-        appName: 'Fiche Technique',
+        appName: 'LabFlow',
       });
       setPdfBase64(base64);
     }
