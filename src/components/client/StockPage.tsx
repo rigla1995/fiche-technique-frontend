@@ -949,6 +949,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                       const warnStyle = hasDateConflict ? { borderColor: '#f59e0b', boxShadow: '0 0 0 2px #fef3c7' } : {};
                       return (
                         <React.Fragment key={entry.ingredientId}>
+                          <tr>
                             <td>
                               <div style={{ fontWeight: 600 }}>{entry.nom}</div>
                               <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{entry.unite}</div>
