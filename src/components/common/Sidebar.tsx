@@ -137,17 +137,28 @@ function GerantSidebarContent({
 
     return (
       <>
-        <li><Link to={`/client/labo/stock?laboId=${laboId}`} className={`sidebar-link ${isLaboStock ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📦</span><span className="link-label">Stock {laboLabel}</span></Link></li>
-        <li><Link to={`/client/labo/historique-appro?laboId=${laboId}`} className={`sidebar-link ${isLaboHistoriqueAppro ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📋</span><span className="link-label">Historique Appro</span></Link></li>
-        <li><Link to={`/client/labo/historique-pertes?laboId=${laboId}`} className={`sidebar-link ${isLaboHistoriquePertes ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📉</span><span className="link-label">Historique Pertes</span></Link></li>
-        <li><Link to={`/client/labo/transfer?laboId=${laboId}`} className={`sidebar-link ${isLaboTransfer ? 'active' : ''}`} onClick={onClose}><span className="link-icon">↗</span><span className="link-label">Transferts {laboLabel}</span></Link></li>
-        <li><Link to={`/client/labo/historique-transferts?laboId=${laboId}`} className={`sidebar-link ${isLaboHistorique ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📋</span><span className="link-label">Historiques Transferts</span></Link></li>
-        <li><Link to={`/client/labo/inventaire?laboId=${laboId}`} className={`sidebar-link ${isLaboInventaire ? 'active' : ''}`} onClick={onClose}><span className="link-icon">🔢</span><span className="link-label">Inventaire</span></Link></li>
-        <li><Link to={`/client/labo/inventaire/historique?laboId=${laboId}`} className={`sidebar-link ${location.pathname === '/client/labo/inventaire/historique' && location.search.includes(laboParam) ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📊</span><span className="link-label">Historique Inventaire</span></Link></li>
+        <CollapsibleHeader label={`Espace ${laboLabel}`} icon="🏭" isOpen={openSections.has('gerant-labo')} locked={false} onToggle={() => toggleSection('gerant-labo')} />
+        {openSections.has('gerant-labo') && (
+          <>
+            <li><Link to={`/client/labo/stock?laboId=${laboId}`} className={`sidebar-link ${isLaboStock ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📦</span><span className="link-label">Stock {laboLabel}</span></Link></li>
+            <li><Link to={`/client/labo/historique-appro?laboId=${laboId}`} className={`sidebar-link ${isLaboHistoriqueAppro ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📋</span><span className="link-label">Historique Appro</span></Link></li>
+            <li><Link to={`/client/labo/historique-pertes?laboId=${laboId}`} className={`sidebar-link ${isLaboHistoriquePertes ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📉</span><span className="link-label">Historique Pertes</span></Link></li>
+            <li><Link to={`/client/labo/transfer?laboId=${laboId}`} className={`sidebar-link ${isLaboTransfer ? 'active' : ''}`} onClick={onClose}><span className="link-icon">↗</span><span className="link-label">Transferts {laboLabel}</span></Link></li>
+            <li><Link to={`/client/labo/historique-transferts?laboId=${laboId}`} className={`sidebar-link ${isLaboHistorique ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📋</span><span className="link-label">Historiques Transferts</span></Link></li>
+            <li><Link to={`/client/labo/inventaire?laboId=${laboId}`} className={`sidebar-link ${isLaboInventaire ? 'active' : ''}`} onClick={onClose}><span className="link-icon">🔢</span><span className="link-label">Inventaire</span></Link></li>
+            <li><Link to={`/client/labo/inventaire/historique?laboId=${laboId}`} className={`sidebar-link ${location.pathname === '/client/labo/inventaire/historique' && location.search.includes(laboParam) ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📊</span><span className="link-label">Historique Inventaire</span></Link></li>
+          </>
+        )}
         <Divider />
-        <li><NavLink to="/client/fournisseurs-labo" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}><span className="link-icon">🚚</span><span className="link-label">Fournisseurs Labo</span></NavLink></li>
+        <CollapsibleHeader label="Fournisseurs" icon="🚚" isOpen={openSections.has('gerant-labo-fournisseurs')} locked={false} onToggle={() => toggleSection('gerant-labo-fournisseurs')} />
+        {openSections.has('gerant-labo-fournisseurs') && (
+          <li><NavLink to="/client/fournisseurs-labo" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}><span className="link-icon">🚚</span><span className="link-label">Fournisseurs Labo</span></NavLink></li>
+        )}
         <Divider />
-        <li><Link to={`/client/stock/historique?entType=activite&laboId=${laboId}`} className={`sidebar-link ${isHistoriquePage ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📋</span><span className="link-label">Appros Activités</span></Link></li>
+        <CollapsibleHeader label="Approvisionnements Activités" icon="📋" isOpen={openSections.has('gerant-appros')} locked={false} onToggle={() => toggleSection('gerant-appros')} />
+        {openSections.has('gerant-appros') && (
+          <li><Link to={`/client/stock/historique?entType=activite&laboId=${laboId}`} className={`sidebar-link ${isHistoriquePage ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📋</span><span className="link-label">Toutes les activités</span></Link></li>
+        )}
       </>
     );
   }
@@ -161,17 +172,30 @@ function GerantSidebarContent({
 
     return (
       <>
-        <li><NavLink to={`/client/catalogue-global?activiteId=${activiteId}`} className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}><span className="link-icon">🧂</span><span className="link-label">Ingrédients</span></NavLink></li>
-        <li><Link to={`/client/stock?section=activite&activiteId=${activiteId}`} className={`sidebar-link ${location.pathname === '/client/stock' && currentSection === 'activite' ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📦</span><span className="link-label">Stock Activité</span></Link></li>
-        <li><Link to={`/client/stock/historique?activiteId=${activiteId}`} className={`sidebar-link ${isHistoriquePage ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📋</span><span className="link-label">Historique Appro</span></Link></li>
-        <li><Link to={`/client/stock/historique-pertes?activiteId=${activiteId}`} className={`sidebar-link ${isHistoriquepertesPage ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📉</span><span className="link-label">Historique Pertes</span></Link></li>
-        <li><Link to={`/client/inventaire?section=activite&activiteId=${activiteId}`} className={`sidebar-link ${location.pathname === '/client/inventaire' && new URLSearchParams(location.search).get('section') === 'activite' ? 'active' : ''}`} onClick={onClose}><span className="link-icon">🔢</span><span className="link-label">Inventaire</span></Link></li>
-        <li><Link to={`/client/inventaire/historique?section=activite&activiteId=${activiteId}`} className={`sidebar-link ${location.pathname === '/client/inventaire/historique' && new URLSearchParams(location.search).get('section') === 'activite' ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📊</span><span className="link-label">Historique Inventaire</span></Link></li>
+        <CollapsibleHeader label={`Espace ${activiteNom}`} icon="📍" isOpen={openSections.has('gerant-activite')} locked={false} onToggle={() => toggleSection('gerant-activite')} />
+        {openSections.has('gerant-activite') && (
+          <>
+            <li><NavLink to={`/client/catalogue-global?activiteId=${activiteId}`} className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}><span className="link-icon">🧂</span><span className="link-label">Ingrédients</span></NavLink></li>
+            <li><Link to={`/client/stock?section=activite&activiteId=${activiteId}`} className={`sidebar-link ${location.pathname === '/client/stock' && currentSection === 'activite' ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📦</span><span className="link-label">Stock Activité</span></Link></li>
+            <li><Link to={`/client/stock/historique?activiteId=${activiteId}`} className={`sidebar-link ${isHistoriquePage ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📋</span><span className="link-label">Historique Appro</span></Link></li>
+            <li><Link to={`/client/stock/historique-pertes?activiteId=${activiteId}`} className={`sidebar-link ${isHistoriquepertesPage ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📉</span><span className="link-label">Historique Pertes</span></Link></li>
+            <li><Link to={`/client/inventaire?section=activite&activiteId=${activiteId}`} className={`sidebar-link ${location.pathname === '/client/inventaire' && new URLSearchParams(location.search).get('section') === 'activite' ? 'active' : ''}`} onClick={onClose}><span className="link-icon">🔢</span><span className="link-label">Inventaire</span></Link></li>
+            <li><Link to={`/client/inventaire/historique?section=activite&activiteId=${activiteId}`} className={`sidebar-link ${location.pathname === '/client/inventaire/historique' && new URLSearchParams(location.search).get('section') === 'activite' ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📊</span><span className="link-label">Historique Inventaire</span></Link></li>
+          </>
+        )}
         <Divider />
-        <li><NavLink to="/client/fournisseurs" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}><span className="link-icon">🚚</span><span className="link-label">Fournisseurs</span></NavLink></li>
+        <CollapsibleHeader label="Fournisseurs" icon="🚚" isOpen={openSections.has('gerant-act-fournisseurs')} locked={false} onToggle={() => toggleSection('gerant-act-fournisseurs')} />
+        {openSections.has('gerant-act-fournisseurs') && (
+          <li><NavLink to="/client/fournisseurs" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}><span className="link-icon">🚚</span><span className="link-label">Fournisseurs</span></NavLink></li>
+        )}
         <Divider />
-        <SubNavLink to="/client/products?tab=vendable" icon="🍔" label="Produits Vendables" isActive={isProductsPage && currentProductTab === 'vendable'} onClick={onClose} />
-        <SubNavLink to="/client/products?tab=utilisable" icon="🧪" label="Produits Utilisables" isActive={isProductsPage && currentProductTab === 'utilisable'} onClick={onClose} />
+        <CollapsibleHeader label="Produits" icon="🍔" isOpen={openSections.has('gerant-produits')} locked={false} onToggle={() => toggleSection('gerant-produits')} />
+        {openSections.has('gerant-produits') && (
+          <>
+            <SubNavLink to="/client/products?tab=vendable" icon="🍔" label="Produits Vendables" isActive={isProductsPage && currentProductTab === 'vendable'} onClick={onClose} />
+            <SubNavLink to="/client/products?tab=utilisable" icon="🧪" label="Produits Utilisables" isActive={isProductsPage && currentProductTab === 'utilisable'} onClick={onClose} />
+          </>
+        )}
       </>
     );
   }
@@ -291,8 +315,8 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   }, [isEntreprise, user?.role]);
 
   const sidebarTitle = isGerant
-    ? (isEntreprise && user?.entrepriseName ? user.entrepriseName : 'Gérant')
-    : (isEntreprise && user?.entrepriseName ? user.entrepriseName : t('client.title'));
+    ? (isEntreprise && user?.entrepriseName ? `Espace ${user.entrepriseName}` : 'Espace Gérant')
+    : (isEntreprise && user?.entrepriseName ? `Espace ${user.entrepriseName}` : t('client.title'));
 
   const sidebarBanner = isOnboarding ? (
     <div style={{ background: '#fef9c3', borderRadius: 8, padding: '10px 12px', margin: '8px 12px', fontSize: '0.78rem', color: '#854d0e', lineHeight: 1.5 }}>
@@ -451,57 +475,95 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
               {!isEntreprise && (
                 <>
-                  {effectiveHasSelections ? (
-                    <SubNavLink to="/client/ingredients" icon="🧂" label="Ingrédients Activité" isActive={location.pathname === '/client/ingredients'} onClick={onClose} />
-                  ) : (
-                    <LockedLink label="Ingrédients Activité" reason="Sélectionnez d'abord des ingrédients dans le Catalogue Global" />
-                  )}
-                  {effectiveHasSelections ? (
-                    <SubNavLink to="/client/stock" icon="📦" label="Stock Activité" isActive={location.pathname === '/client/stock' && !currentSection} onClick={onClose} />
-                  ) : (
-                    <LockedLink label="Stock Activité" reason="Sélectionnez d'abord des ingrédients dans le Catalogue Global" />
-                  )}
-                  {effectiveHasSelections && indepHasAppros ? (
-                    <SubNavLink to="/client/stock/historique" icon="📋" label={t('nav.historique_appro')} isActive={isHistoriquePage && !currentHistType} onClick={onClose} />
-                  ) : (
-                    <LockedLink label={t('nav.historique_appro')} reason={!effectiveHasSelections ? 'Sélectionnez d\'abord des ingrédients' : 'Aucun approvisionnement enregistré'} />
-                  )}
-                  {effectiveHasSelections ? (
-                    <SubNavLink to="/client/stock/historique-pertes" icon="📉" label="Historique Pertes" isActive={isHistoriquepertesPage && !currentHistType} onClick={onClose} />
-                  ) : (
-                    <LockedLink label="Historique Pertes" reason="Sélectionnez d'abord des ingrédients" />
-                  )}
-                  {effectiveHasSelections ? (
-                    <SubNavLink to="/client/inventaire" icon="🔢" label="Inventaire" isActive={location.pathname === '/client/inventaire' && !currentSearch.get('section')} onClick={onClose} />
-                  ) : (
-                    <LockedLink label="Inventaire" reason="Sélectionnez d'abord des ingrédients" />
-                  )}
-                  {effectiveHasSelections ? (
-                    <SubNavLink to="/client/inventaire/historique" icon="📊" label="Historique Inventaire" isActive={location.pathname === '/client/inventaire/historique' && !currentSearch.get('section')} onClick={onClose} />
-                  ) : (
-                    <LockedLink label="Historique Inventaire" reason="Sélectionnez d'abord des ingrédients" />
+                  {/* ══ ESPACE ACTIVITÉ ══ */}
+                  <CollapsibleHeader label="Espace Activité" icon="📍" isOpen={openSections.has('indep-activite')} locked={!effectiveHasSelections} onToggle={() => toggleSection('indep-activite')} />
+                  {openSections.has('indep-activite') && (
+                    <>
+                      {effectiveHasSelections ? (
+                        <SubNavLink to="/client/ingredients" icon="🧂" label="Ingrédients Activité" isActive={location.pathname === '/client/ingredients'} onClick={onClose} />
+                      ) : (
+                        <LockedLink label="Ingrédients Activité" reason="Sélectionnez d'abord des ingrédients dans le Catalogue Global" />
+                      )}
+                      {effectiveHasSelections ? (
+                        <SubNavLink to="/client/stock" icon="📦" label="Stock Activité" isActive={location.pathname === '/client/stock' && !currentSection} onClick={onClose} />
+                      ) : (
+                        <LockedLink label="Stock Activité" reason="Sélectionnez d'abord des ingrédients dans le Catalogue Global" />
+                      )}
+                      {effectiveHasSelections && indepHasAppros ? (
+                        <SubNavLink
+                          to="/client/stock/historique"
+                          icon="📋"
+                          label={t('nav.historique_appro')}
+                          isActive={isHistoriquePage && !currentHistType}
+                          onClick={onClose}
+                        />
+                      ) : (
+                        <LockedLink label={t('nav.historique_appro')} reason={!effectiveHasSelections ? 'Sélectionnez d\'abord des ingrédients' : 'Aucun approvisionnement enregistré'} />
+                      )}
+                      {effectiveHasSelections ? (
+                        <SubNavLink
+                          to="/client/stock/historique-pertes"
+                          icon="📉"
+                          label="Historique Pertes"
+                          isActive={isHistoriquepertesPage && !currentHistType}
+                          onClick={onClose}
+                        />
+                      ) : (
+                        <LockedLink label="Historique Pertes" reason="Sélectionnez d'abord des ingrédients" />
+                      )}
+                      {effectiveHasSelections ? (
+                        <SubNavLink to="/client/inventaire" icon="🔢" label="Inventaire"
+                          isActive={location.pathname === '/client/inventaire' && !currentSearch.get('section')} onClick={onClose} />
+                      ) : (
+                        <LockedLink label="Inventaire" reason="Sélectionnez d'abord des ingrédients" />
+                      )}
+                      {effectiveHasSelections ? (
+                        <SubNavLink to="/client/inventaire/historique" icon="📊" label="Historique Inventaire"
+                          isActive={location.pathname === '/client/inventaire/historique' && !currentSearch.get('section')} onClick={onClose} />
+                      ) : (
+                        <LockedLink label="Historique Inventaire" reason="Sélectionnez d'abord des ingrédients" />
+                      )}
+                    </>
                   )}
 
                   <Divider />
 
-                  {effectiveHasSelections ? (
+                  {/* ══ ESPACE PRODUITS ══ */}
+                  <CollapsibleHeader
+                    label="Espace Produits"
+                    icon="🍔"
+                    isOpen={openSections.has('indep-produits')}
+                    locked={!effectiveHasSelections}
+                    onToggle={() => toggleSection('indep-produits')}
+                  />
+                  {openSections.has('indep-produits') && (
                     <>
-                      <SubNavLink to="/client/products?tab=vendable" icon="🍔" label="Produits Vendables" isActive={isProductsPage && currentProductTab === 'vendable'} onClick={onClose} />
-                      <SubNavLink to="/client/products?tab=utilisable" icon="🧪" label="Produits Utilisables" isActive={isProductsPage && currentProductTab === 'utilisable'} onClick={onClose} />
-                    </>
-                  ) : (
-                    <>
-                      <LockedLink label="Produits Vendables" />
-                      <LockedLink label="Produits Utilisables" />
+                      {effectiveHasSelections ? (
+                        <>
+                          <SubNavLink to="/client/products?tab=vendable" icon="🍔" label="Produits Vendables" isActive={isProductsPage && currentProductTab === 'vendable'} onClick={onClose} />
+                          <SubNavLink to="/client/products?tab=utilisable" icon="🧪" label="Produits Utilisables" isActive={isProductsPage && currentProductTab === 'utilisable'} onClick={onClose} />
+                        </>
+                      ) : (
+                        <>
+                          <LockedLink label="Produits Vendables" />
+                          <LockedLink label="Produits Utilisables" />
+                        </>
+                      )}
                     </>
                   )}
 
                   <Divider />
 
-                  {effectiveHasSelections ? (
-                    <SubNavLink to="/client/fournisseurs" icon="🚚" label="Fournisseurs Activité" isActive={location.pathname === '/client/fournisseurs'} onClick={onClose} />
-                  ) : (
-                    <LockedLink label="Fournisseurs Activité" reason="Sélectionnez d'abord des ingrédients dans le Catalogue Global" />
+                  {/* ══ ESPACE FOURNISSEURS ══ */}
+                  <CollapsibleHeader label="Espace Fournisseurs" icon="🚚" isOpen={openSections.has('indep-fournisseurs')} locked={!effectiveHasSelections} onToggle={() => toggleSection('indep-fournisseurs')} />
+                  {openSections.has('indep-fournisseurs') && (
+                    <>
+                      {effectiveHasSelections ? (
+                        <SubNavLink to="/client/fournisseurs" icon="🚚" label="Fournisseurs Activité" isActive={location.pathname === '/client/fournisseurs'} onClick={onClose} />
+                      ) : (
+                        <LockedLink label="Fournisseurs Activité" reason="Sélectionnez d'abord des ingrédients dans le Catalogue Global" />
+                      )}
+                    </>
                   )}
 
                   <Divider />
@@ -533,22 +595,38 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
               {/* Entreprise layout */}
               {isEntreprise && (
                 <>
-                  {/* Activités section */}
+                  {/* ══ ESPACE ACTIVITÉS ══ — shown when activités exist */}
                   {(hasActivites || typesSummary === null) && (
                   <>
                   <Divider />
-                  {isOnboarding || !hasActiviteIngredients ? (
+                  <CollapsibleHeader label="Espace Activités" icon="📍" isOpen={openSections.has('activites')} locked={isOnboarding || !hasActiviteIngredients} onToggle={() => toggleSection('activites')} />
+                  {openSections.has('activites') && (
                     <>
-                      <LockedLink label="Stock Activités" />
-                      <LockedLink label="Historique Appro" />
-                    </>
-                  ) : (
-                    <>
-                      <li><NavLink to="/client/stock?section=activite" className={({ isActive }) => `sidebar-link ${isActive && currentSection === 'activite' ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📦</span><span className="link-label">Stock Activités</span></NavLink></li>
-                      <li><Link to="/client/stock/historique?entType=activite" className={`sidebar-link ${isHistoriquePage ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📋</span><span className="link-label">Historique Appro</span></Link></li>
-                      <li><Link to="/client/stock/historique-pertes?entType=activite" className={`sidebar-link ${isHistoriquepertesPage ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📉</span><span className="link-label">Historique Pertes</span></Link></li>
-                      <li><Link to="/client/inventaire?section=activite" className={`sidebar-link ${location.pathname === '/client/inventaire' && currentSearch.get('section') === 'activite' ? 'active' : ''}`} onClick={onClose}><span className="link-icon">🔢</span><span className="link-label">Inventaire</span></Link></li>
-                      <li><Link to="/client/inventaire/historique?section=activite" className={`sidebar-link ${location.pathname === '/client/inventaire/historique' && currentSearch.get('section') === 'activite' ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📊</span><span className="link-label">Historique Inventaire</span></Link></li>
+                      <li>
+                        <NavLink to="/client/stock?section=activite" className={({ isActive }) => `sidebar-link ${isActive && currentSection === 'activite' ? 'active' : ''}`} onClick={onClose}>
+                          <span className="link-icon">📦</span><span className="link-label">Stock Activités</span>
+                        </NavLink>
+                      </li>
+                      <li>
+                        <Link to="/client/stock/historique?entType=activite" className={`sidebar-link ${isHistoriquePage ? 'active' : ''}`} onClick={onClose}>
+                          <span className="link-icon">📋</span><span className="link-label">Historique Appro</span>
+                        </Link>
+                      </li>
+                      <li>
+                        <Link to="/client/stock/historique-pertes?entType=activite" className={`sidebar-link ${isHistoriquepertesPage ? 'active' : ''}`} onClick={onClose}>
+                          <span className="link-icon">📉</span><span className="link-label">Historique Pertes</span>
+                        </Link>
+                      </li>
+                      <li>
+                        <Link to="/client/inventaire?section=activite" className={`sidebar-link ${location.pathname === '/client/inventaire' && currentSearch.get('section') === 'activite' ? 'active' : ''}`} onClick={onClose}>
+                          <span className="link-icon">🔢</span><span className="link-label">Inventaire</span>
+                        </Link>
+                      </li>
+                      <li>
+                        <Link to="/client/inventaire/historique?section=activite" className={`sidebar-link ${location.pathname === '/client/inventaire/historique' && currentSearch.get('section') === 'activite' ? 'active' : ''}`} onClick={onClose}>
+                          <span className="link-icon">📊</span><span className="link-label">Historique Inventaire</span>
+                        </Link>
+                      </li>
                     </>
                   )}
                   </>
@@ -569,9 +647,8 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                         const isLaboInventaire = location.pathname === '/client/labo/inventaire' && location.search.includes(laboParam);
                         return (
                           <React.Fragment key={labo.id}>
-                            {!hasLaboIngredients ? (
-                              <LockedLink label={`Stock ${labo.nom}`} reason="Assignez des ingrédients au labo depuis le Catalogue Global" />
-                            ) : (
+                            <CollapsibleHeader label={`Espace ${labo.nom}`} icon="🏭" isOpen={openSections.has(`labo-${labo.id}`)} locked={!hasLaboIngredients} onToggle={() => toggleSection(`labo-${labo.id}`)} />
+                            {openSections.has(`labo-${labo.id}`) && (
                               <>
                                 <li><Link to={`/client/labo/stock?laboId=${labo.id}`} className={`sidebar-link ${isLaboStock ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📦</span><span className="link-label">Stock {labo.nom}</span></Link></li>
                                 <li><Link to={`/client/labo/historique-appro?laboId=${labo.id}`} className={`sidebar-link ${isLaboHistoriqueAppro ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📋</span><span className="link-label">Historique Appro</span></Link></li>
@@ -590,33 +667,42 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
                   <Divider />
 
-                  {/* Produits */}
-                  {isOnboarding || !hasActiviteIngredients ? (
+                  {/* ══ ESPACE PRODUITS ══ — unlocks when activité has ingredients */}
+                  <CollapsibleHeader label="Espace Produits" icon="🍔" isOpen={openSections.has('produits')} locked={isOnboarding || !hasActiviteIngredients} onToggle={() => toggleSection('produits')} />
+                  {openSections.has('produits') && (
                     <>
-                      <LockedLink label="Produits Vendables" />
-                      <LockedLink label="Produits Utilisables" />
-                    </>
-                  ) : (
-                    <>
-                      <li><Link to="/client/products?tab=vendable" className={`sidebar-link ${isProductsPage && currentProductTab === 'vendable' ? 'active' : ''}`} onClick={onClose}><span className="link-icon">🍔</span><span className="link-label">Produits Vendables</span></Link></li>
-                      <li><Link to="/client/products?tab=utilisable" className={`sidebar-link ${isProductsPage && currentProductTab === 'utilisable' ? 'active' : ''}`} onClick={onClose}><span className="link-icon">🧪</span><span className="link-label">Produits Utilisables</span></Link></li>
+                      <li>
+                        <Link to="/client/products?tab=vendable" className={`sidebar-link ${isProductsPage && currentProductTab === 'vendable' ? 'active' : ''}`} onClick={onClose}>
+                          <span className="link-icon">🍔</span><span className="link-label">Produits Vendables</span>
+                        </Link>
+                      </li>
+                      <li>
+                        <Link to="/client/products?tab=utilisable" className={`sidebar-link ${isProductsPage && currentProductTab === 'utilisable' ? 'active' : ''}`} onClick={onClose}>
+                          <span className="link-icon">🧪</span><span className="link-label">Produits Utilisables</span>
+                        </Link>
+                      </li>
                     </>
                   )}
 
                   <Divider />
 
-                  {/* Fournisseurs */}
-                  {isOnboarding || !hasActivitesOrLabos ? (
-                    <LockedLink label="Fournisseurs" />
-                  ) : (
+                  {/* ══ ESPACE FOURNISSEURS ══ — unlocks when activités or labos exist */}
+                  <CollapsibleHeader label="Espace Fournisseurs" icon="🚚" isOpen={openSections.has('fournisseurs')} locked={isOnboarding || !hasActivitesOrLabos} onToggle={() => toggleSection('fournisseurs')} />
+                  {openSections.has('fournisseurs') && (
                     <>
-                      <li><NavLink to="/client/fournisseurs" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}><span className="link-icon">🚚</span><span className="link-label">Fournisseurs</span></NavLink></li>
+                      <li>
+                        <NavLink to="/client/fournisseurs" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>
+                          <span className="link-icon">🚚</span><span className="link-label">Fournisseurs</span>
+                        </NavLink>
+                      </li>
                       {(labos.length > 0 || (aboConfig?.nbLabos ?? 0) > 0) && (
                         <li>
                           {labos.length === 0 ? (
                             <LockedLink label="Fournisseurs Labos" reason="Créez d'abord un labo depuis Mes Activités" />
                           ) : (
-                            <NavLink to="/client/fournisseurs-labo" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}><span className="link-icon">🏭</span><span className="link-label">Fournisseurs Labos</span></NavLink>
+                            <NavLink to="/client/fournisseurs-labo" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>
+                              <span className="link-icon">🏭</span><span className="link-label">Fournisseurs Labos</span>
+                            </NavLink>
                           )}
                         </li>
                       )}
