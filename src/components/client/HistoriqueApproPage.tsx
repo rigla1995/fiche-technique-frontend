@@ -205,53 +205,6 @@ function DeleteModal({ entry, onConfirm, onClose }: DeleteModalProps) {
   );
 }
 
-// ── Unit totals popup ─────────────────────────────────────────────────────────
-interface UnitTotalsPopupProps {
-  unitNom: string;
-  entries: HistoriqueApproEntry[];
-  onClose: () => void;
-}
-function UnitTotalsPopup({ unitNom, entries, onClose }: UnitTotalsPopupProps) {
-  const byIngredient: Record<string, { nom: string; qty: number; cost: number }> = {};
-  for (const e of entries) {
-    if (!byIngredient[e.ingredientNom]) byIngredient[e.ingredientNom] = { nom: e.ingredientNom, qty: 0, cost: 0 };
-    byIngredient[e.ingredientNom].qty += e.quantite ?? 0;
-    byIngredient[e.ingredientNom].cost += (e.quantite ?? 0) * (e.prixUnitaire ?? 0);
-  }
-  const rows = Object.values(byIngredient).sort((a, b) => b.qty - a.qty);
-
-  return (
-    <div className="modal-overlay">
-      <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 480 }}>
-        <div className="modal-header" style={{ background: 'linear-gradient(135deg, #134e4a, #0f766e)', borderBottom: 'none' }}>
-          <h2 style={{ color: '#fff', margin: 0 }}>Détail — {unitNom}</h2>
-          <button className="modal-close" onClick={onClose} style={{ color: '#fff' }}>✕</button>
-        </div>
-        <div className="modal-body" style={{ maxHeight: '60vh', overflowY: 'auto' }}>
-          <table style={{ width: '100%', fontSize: '0.88rem' }}>
-            <thead>
-              <tr>
-                <th style={{ textAlign: 'left', paddingBottom: 8, color: 'var(--text-muted)', fontWeight: 600 }}>Ingrédient</th>
-                <th style={{ textAlign: 'right', paddingBottom: 8, color: 'var(--text-muted)', fontWeight: 600 }}>Total Qté</th>
-                <th style={{ textAlign: 'right', paddingBottom: 8, color: 'var(--text-muted)', fontWeight: 600 }}>Coût total</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((r) => (
-                <tr key={r.nom}>
-                  <td style={{ paddingBottom: 6, fontWeight: 600 }}>{r.nom}</td>
-                  <td style={{ textAlign: 'right', paddingBottom: 6, color: '#2563eb', fontWeight: 700 }}>{r.qty.toFixed(3)} {unitNom}</td>
-                  <td style={{ textAlign: 'right', paddingBottom: 6, color: '#15803d', fontWeight: 600 }}>{r.cost.toFixed(3)} DT</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 // ── Main page ─────────────────────────────────────────────────────────────────
 export default function HistoriqueApproPage() {
   const { t } = useTranslation();
@@ -296,7 +249,6 @@ export default function HistoriqueApproPage() {
 
   const [editEntry, setEditEntry] = useState<HistoriqueApproEntry | null>(null);
   const [deleteEntry, setDeleteEntry] = useState<HistoriqueApproEntry | null>(null);
-  const [unitPopup, setUnitPopup] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
 
   const toggleSelect = (id: number) => setSelectedIds((prev) => {
@@ -311,14 +263,6 @@ export default function HistoriqueApproPage() {
 
   const totalPages = Math.max(1, Math.ceil(results.length / PAGE_SIZE));
   const pagedResults = results.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
-
-  const unitTotals: Record<string, { qty: number; cost: number; entries: HistoriqueApproEntry[] }> = {};
-  for (const r of results) {
-    if (!unitTotals[r.uniteNom]) unitTotals[r.uniteNom] = { qty: 0, cost: 0, entries: [] };
-    unitTotals[r.uniteNom].qty += r.quantite ?? 0;
-    unitTotals[r.uniteNom].cost += (r.quantite ?? 0) * (r.prixUnitaire ?? 0);
-    unitTotals[r.uniteNom].entries.push(r);
-  }
 
   const [ptProducts, setPtProducts] = useState<Array<{ id: number; nom: string }>>([]);
 
@@ -688,33 +632,6 @@ export default function HistoriqueApproPage() {
         </div>
       ) : (
         <>
-          {/* Totals per unit */}
-          <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
-            {Object.entries(unitTotals).map(([unit, data]) => (
-              <button
-                key={unit}
-                onClick={() => setUnitPopup(unit)}
-                style={{
-                  background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10,
-                  padding: '10px 18px', cursor: 'pointer', textAlign: 'left',
-                  boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
-                  transition: 'box-shadow 0.15s',
-                }}
-                title="Cliquer pour voir le détail"
-              >
-                <div style={{ fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)', marginBottom: 2 }}>
-                  {unit} — {data.entries.length} entrée{data.entries.length > 1 ? 's' : ''}
-                </div>
-                <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#2563eb' }}>
-                  {data.qty.toFixed(3)} <span style={{ fontSize: '0.78rem', fontWeight: 500, color: 'var(--text-muted)' }}>{unit}</span>
-                </div>
-                <div style={{ fontSize: '0.82rem', color: '#15803d', fontWeight: 600 }}>
-                  {data.cost.toFixed(3)} DT
-                </div>
-              </button>
-            ))}
-          </div>
-
           <div className="card" style={{ overflowX: 'hidden' }}>
             <table className="table" style={{ tableLayout: 'fixed', width: '100%' }}>
               <colgroup>
@@ -846,13 +763,6 @@ export default function HistoriqueApproPage() {
           entry={deleteEntry}
           onConfirm={handleDelete}
           onClose={() => setDeleteEntry(null)}
-        />
-      )}
-      {unitPopup && unitTotals[unitPopup] && (
-        <UnitTotalsPopup
-          unitNom={unitPopup}
-          entries={unitTotals[unitPopup].entries}
-          onClose={() => setUnitPopup(null)}
         />
       )}
     </div>

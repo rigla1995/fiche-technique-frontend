@@ -325,13 +325,6 @@ export default function LaboHistoriqueApproPage() {
   const totalPages = Math.max(1, Math.ceil(results.length / PAGE_SIZE));
   const pagedResults = results.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
-  const unitTotals: Record<string, { qty: number; cost: number }> = {};
-  for (const r of results) {
-    if (!unitTotals[r.uniteNom]) unitTotals[r.uniteNom] = { qty: 0, cost: 0 };
-    unitTotals[r.uniteNom].qty += r.quantite ?? 0;
-    unitTotals[r.uniteNom].cost += (r.quantite ?? 0) * (r.prixUnitaire ?? 0);
-  }
-
   const hasFilters = filterCategorieId || filterIngredientId || filterFournisseurId || filterRefFacture;
 
   if (!laboId) return <div className="page"><p className="text-muted">Labo non spécifié.</p></div>;
@@ -493,22 +486,6 @@ export default function LaboHistoriqueApproPage() {
         </div>
       ) : (
         <>
-          {/* Totals per unit */}
-          <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
-            {Object.entries(unitTotals).map(([unit, data]) => (
-              <div key={unit} style={{
-                background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10,
-                padding: '10px 18px', textAlign: 'left', boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
-              }}>
-                <div style={{ fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)', marginBottom: 2 }}>{unit}</div>
-                <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#2563eb' }}>
-                  {data.qty.toFixed(3)} <span style={{ fontSize: '0.78rem', fontWeight: 500, color: 'var(--text-muted)' }}>{unit}</span>
-                </div>
-                <div style={{ fontSize: '0.82rem', color: '#15803d', fontWeight: 600 }}>{data.cost.toFixed(3)} DT</div>
-              </div>
-            ))}
-          </div>
-
           <div className="card" style={{ overflowX: 'hidden' }}>
             <table className="table" style={{ tableLayout: 'fixed', width: '100%' }}>
               <colgroup>
