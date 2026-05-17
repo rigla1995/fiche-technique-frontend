@@ -34,10 +34,10 @@
     stroke-linecap="square" stroke-linejoin="round"/>
 
   <!-- ── Letter "F" ──
-       Vertical + quarter-circle arch at top (arch center = (58,44))
-       + middle horizontal bar
+       Vertical + straight top bar (corner légèrement arrondi au bout)
+       + middle bar — lit clairement F, pas P
   ── -->
-  <path d="M 58,74 L 58,24 A 20,20 0 0,1 78,44"
+  <path d="M 58,74 L 58,24 L 75,24 Q 78,24 78,27"
     fill="none" stroke="white" stroke-width="3.2"
     stroke-linecap="square" stroke-linejoin="round"/>
   <path d="M 58,44 L 74,44"
