@@ -1,13 +1,12 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 70">
   <defs>
-    <!-- Header gradient for icon accent and wordmark -->
-    <linearGradient id="accent" x1="0" y1="0" x2="100" y2="0" gradientUnits="userSpaceOnUse">
+    <!-- Icon gradient: full-width in local (pre-transform) icon space -->
+    <linearGradient id="g" x1="0" y1="0" x2="100" y2="0" gradientUnits="userSpaceOnUse">
       <stop offset="0%"   stop-color="#0ea5e9"/>
-      <stop offset="50%"  stop-color="#6366f1"/>
+      <stop offset="52%"  stop-color="#818cf8"/>
       <stop offset="100%" stop-color="#a855f7"/>
     </linearGradient>
-
-    <!-- Wordmark gradient spans x=82..270 in the logo coordinate space -->
+    <!-- Wordmark gradient in logo root coordinates -->
     <linearGradient id="wm" x1="82" y1="0" x2="270" y2="0" gradientUnits="userSpaceOnUse">
       <stop offset="0%"   stop-color="#6366f1"/>
       <stop offset="45%"  stop-color="#0ea5e9"/>
@@ -15,28 +14,29 @@
     </linearGradient>
   </defs>
 
-  <!-- ── Icon mark: LF monogram scaled at 60%, positioned (5,5)→(65,65) ── -->
+  <!-- ── LF Flow icon (scaled 60%, positioned top-left) ── -->
   <g transform="translate(5,5) scale(0.6)">
     <rect width="100" height="100" rx="20" fill="#1e1b4b"/>
 
-    <!-- Letter L -->
-    <rect x="12" y="18" width="11" height="54" rx="3" fill="white"/>
-    <rect x="12" y="61" width="30" height="11" rx="3" fill="white"/>
+    <!-- L: vertical -->
+    <rect x="13" y="18" width="10" height="55" rx="3" fill="url(#g)"/>
+    <!-- L: short bottom bar -->
+    <rect x="13" y="63" width="24" height="10" rx="3" fill="url(#g)"/>
 
-    <!-- Letter F -->
-    <rect x="58" y="18" width="11" height="54" rx="3" fill="white"/>
-    <rect x="58" y="18" width="30" height="11" rx="3" fill="white"/>
-    <rect x="58" y="42" width="22" height="11" rx="3" fill="white"/>
+    <!-- Flow arc: bottom of L → middle of F (the dual-purpose stroke) -->
+    <path d="M 37,68 C 50,68 50,48 60,48"
+      fill="none" stroke="url(#g)" stroke-width="10" stroke-linecap="round"/>
 
-    <!-- Gradient accent line -->
-    <line x1="12" y1="81" x2="88" y2="81"
-      stroke="url(#accent)" stroke-width="5" stroke-linecap="round"/>
+    <!-- F: vertical -->
+    <rect x="60" y="18" width="10" height="55" rx="3" fill="url(#g)"/>
+    <!-- F: top bar only (arc is the mid bar) -->
+    <rect x="60" y="18" width="28" height="10" rx="3" fill="url(#g)"/>
   </g>
 
-  <!-- ── Thin separator ── -->
+  <!-- Separator -->
   <line x1="74" y1="13" x2="74" y2="57" stroke="#6366f1" stroke-width="1" opacity="0.25"/>
 
-  <!-- ── Wordmark: "Lab" bold + "Flow" light, shared header gradient ── -->
+  <!-- ── Wordmark: "Lab" bold + "Flow" light, header gradient ── -->
   <text x="82" y="48"
     font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif"
     font-size="36"
