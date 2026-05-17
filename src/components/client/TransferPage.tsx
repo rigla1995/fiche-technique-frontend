@@ -605,7 +605,7 @@ export default function TransferPage() {
                                 </td>
                                 <td style={{ textAlign: 'right', padding: '12px 14px' }}>
                                   <span style={{ fontWeight: 800, color: qtyExceedsStock ? '#ef4444' : qtyColor(r.quantite), fontSize: '1rem' }}>
-                                    {r.quantite !== null ? r.quantite : '—'}
+                                    {r.quantite !== null ? parseFloat(r.quantite.toFixed(3)) : '—'}
                                   </span>
                                   {r.prixUnitaire !== null && (
                                     <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{r.prixUnitaire.toFixed(3)} DT</div>
