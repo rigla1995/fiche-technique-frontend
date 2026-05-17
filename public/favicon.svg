@@ -5,34 +5,42 @@
       <stop offset="50%"  stop-color="#6366f1"/>
       <stop offset="100%" stop-color="#a855f7"/>
     </linearGradient>
-
-    <!-- Hairline lift on white glyphs -->
-    <filter id="lift" x="-20%" y="-20%" width="140%" height="140%">
-      <feDropShadow dx="0" dy="1" stdDeviation="1.5"
-        flood-color="#000" flood-opacity="0.2"/>
-    </filter>
   </defs>
 
   <rect width="100" height="100" rx="22" fill="url(#bg)"/>
 
   <!--
-    Style unique : contraste de graisse extrême dans le même signe.
-    "L" → Black (900) — ancré, solide, "Lab"
-    "F" → Thin  (100) — léger, aérien, "Flow"
-    Même corps (56px), même baseline — l'opposition de poids est le concept.
+    Raffiné & Stylé — trois niveaux de lecture :
+    1. Le cercle-sceau  : cadre fin, comme une bague chevalière ou un gravé sur verre
+    2. Les lettres L+F  : trait mince et constant, terminaisons droites "carré"
+       L → angle bas-gauche arrondi (comme dans le sketch original)
+       F → arche quart-de-cercle au sommet (pas de barre droite)
+    3. Deux micro-points aux pôles du cercle : signature de précision
   -->
-  <text
-    x="50" y="67"
-    text-anchor="middle"
-    font-family="system-ui, -apple-system, 'Helvetica Neue', Arial, sans-serif"
-    font-size="56"
-    fill="white"
-    filter="url(#lift)">
-    <tspan font-weight="900" letter-spacing="-1">L</tspan><tspan font-weight="100" opacity="0.9">F</tspan>
-  </text>
 
-  <!-- Thin gradient baseline accent — the "flow" underline -->
-  <line x1="22" y1="75" x2="78" y2="75"
-    stroke="white" stroke-width="2.5"
-    stroke-linecap="round" opacity="0.45"/>
+  <!-- Seal ring -->
+  <circle cx="50" cy="50" r="39"
+    fill="none" stroke="white" stroke-width="1.2" opacity="0.55"/>
+
+  <!-- Precision marker dots at top and bottom of ring -->
+  <circle cx="50" cy="11"  r="1.8" fill="white" opacity="0.55"/>
+  <circle cx="50" cy="89"  r="1.8" fill="white" opacity="0.55"/>
+
+  <!-- ── Letter "L" ──
+       Vertical stroke + rounded bottom-left corner + horizontal bar
+  ── -->
+  <path d="M 26,24 L 26,69 Q 26,74 31,74 L 44,74"
+    fill="none" stroke="white" stroke-width="3.2"
+    stroke-linecap="square" stroke-linejoin="round"/>
+
+  <!-- ── Letter "F" ──
+       Vertical + quarter-circle arch at top (arch center = (58,44))
+       + middle horizontal bar
+  ── -->
+  <path d="M 58,74 L 58,24 A 20,20 0 0,1 78,44"
+    fill="none" stroke="white" stroke-width="3.2"
+    stroke-linecap="square" stroke-linejoin="round"/>
+  <path d="M 58,44 L 74,44"
+    fill="none" stroke="white" stroke-width="3.2"
+    stroke-linecap="square"/>
 </svg>

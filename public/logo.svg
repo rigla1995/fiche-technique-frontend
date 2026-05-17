@@ -6,12 +6,7 @@
       <stop offset="100%" stop-color="#a855f7"/>
     </linearGradient>
 
-    <filter id="lift" x="-20%" y="-20%" width="140%" height="140%">
-      <feDropShadow dx="0" dy="1" stdDeviation="1.5"
-        flood-color="#000" flood-opacity="0.2"/>
-    </filter>
-
-    <!-- Wordmark gradient (root coords) -->
+    <!-- Wordmark gradient -->
     <linearGradient id="wm" x1="82" y1="0" x2="268" y2="0" gradientUnits="userSpaceOnUse">
       <stop offset="0%"   stop-color="#0ea5e9"/>
       <stop offset="50%"  stop-color="#6366f1"/>
@@ -19,34 +14,39 @@
     </linearGradient>
   </defs>
 
-  <!-- Icon mark scaled 60% -->
+  <!-- Icon mark (scaled 60%) -->
   <g transform="translate(5,5) scale(0.6)">
     <rect width="100" height="100" rx="22" fill="url(#bg)"/>
 
-    <text
-      x="50" y="67"
-      text-anchor="middle"
-      font-family="system-ui, -apple-system, 'Helvetica Neue', Arial, sans-serif"
-      font-size="56"
-      fill="white"
-      filter="url(#lift)">
-      <tspan font-weight="900" letter-spacing="-1">L</tspan><tspan font-weight="100" opacity="0.9">F</tspan>
-    </text>
+    <!-- Seal ring -->
+    <circle cx="50" cy="50" r="39"
+      fill="none" stroke="white" stroke-width="1.2" opacity="0.55"/>
+    <circle cx="50" cy="11" r="1.8" fill="white" opacity="0.55"/>
+    <circle cx="50" cy="89" r="1.8" fill="white" opacity="0.55"/>
 
-    <line x1="22" y1="75" x2="78" y2="75"
-      stroke="white" stroke-width="2.5"
-      stroke-linecap="round" opacity="0.45"/>
+    <!-- L -->
+    <path d="M 26,24 L 26,69 Q 26,74 31,74 L 44,74"
+      fill="none" stroke="white" stroke-width="3.2"
+      stroke-linecap="square" stroke-linejoin="round"/>
+
+    <!-- F -->
+    <path d="M 58,74 L 58,24 A 20,20 0 0,1 78,44"
+      fill="none" stroke="white" stroke-width="3.2"
+      stroke-linecap="square" stroke-linejoin="round"/>
+    <path d="M 58,44 L 74,44"
+      fill="none" stroke="white" stroke-width="3.2"
+      stroke-linecap="square"/>
   </g>
 
-  <!-- Separator -->
+  <!-- Thin gradient separator -->
   <line x1="74" y1="12" x2="74" y2="58"
-    stroke="url(#wm)" stroke-width="1.5" opacity="0.35"/>
+    stroke="url(#wm)" stroke-width="1" opacity="0.3"/>
 
-  <!-- Wordmark: "Lab" extra-bold + "Flow" thin, gradient fill -->
+  <!-- Wordmark: refined medium weights (not extreme contrast) -->
   <text x="83" y="48"
     font-family="system-ui, -apple-system, 'Helvetica Neue', Arial, sans-serif"
-    font-size="36"
+    font-size="34"
     fill="url(#wm)">
-    <tspan font-weight="900" letter-spacing="-1">Lab</tspan><tspan font-weight="100" letter-spacing="2">Flow</tspan>
+    <tspan font-weight="700" letter-spacing="-0.5">Lab</tspan><tspan font-weight="300" letter-spacing="2">Flow</tspan>
   </text>
 </svg>
