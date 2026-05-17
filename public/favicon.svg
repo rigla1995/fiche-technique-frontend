@@ -1,35 +1,51 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
   <defs>
-    <!-- Header gradient left→right across the full icon -->
+    <!-- Header spectrum: sky-blue → indigo → purple -->
     <linearGradient id="g" x1="0" y1="0" x2="100" y2="0" gradientUnits="userSpaceOnUse">
       <stop offset="0%"   stop-color="#0ea5e9"/>
       <stop offset="52%"  stop-color="#818cf8"/>
       <stop offset="100%" stop-color="#a855f7"/>
     </linearGradient>
+
+    <!-- Neon glow filter: blurred halo beneath the sharp shapes -->
+    <filter id="glow" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="4.5" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <!-- Subtle radial vignette for the background depth -->
+    <radialGradient id="bg" cx="50%" cy="40%" r="65%">
+      <stop offset="0%"   stop-color="#2d2a6e"/>
+      <stop offset="100%" stop-color="#1e1b4b"/>
+    </radialGradient>
   </defs>
 
-  <!-- Background: deep indigo -->
-  <rect width="100" height="100" rx="20" fill="#1e1b4b"/>
+  <!-- Background with vignette -->
+  <rect width="100" height="100" rx="20" fill="url(#bg)"/>
 
-  <!-- ── Letter "L" ──
-       Vertical stroke → rounded bottom-left corner → horizontal bar
-       Corner: Q control at (16,80) creates a smooth 90° sweep
+  <!-- ── LF pill monogram with neon glow ──
+       All strokes are capsule-shaped (rx = half the stroke width).
+       L and F share the x=44 boundary — the bar of L touches F's vertical,
+       creating a ligature feel without overlapping.
   ── -->
-  <path d="M 16,17 L 16,73 Q 16,80 23,80 L 44,80"
-    fill="none" stroke="url(#g)"
-    stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+  <g filter="url(#glow)">
 
-  <!-- ── Letter "F" ──
-       The top bar is a quarter-circle arch instead of a straight bar.
-       Arch: center at (60,43), radius 26 → from (60,17) to (86,43)
-       This gives a clean rounded cap matching the sketch.
-  ── -->
-  <!-- Vertical stroke + arch (one continuous path) -->
-  <path d="M 60,80 L 60,17 A 26,26 0 0,1 86,43"
-    fill="none" stroke="url(#g)"
-    stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
-  <!-- Middle horizontal bar -->
-  <path d="M 60,43 L 82,43"
-    fill="none" stroke="url(#g)"
-    stroke-width="9" stroke-linecap="round"/>
+    <!-- ── L ── -->
+    <!-- Vertical stroke -->
+    <rect x="12" y="21" width="14" height="58" rx="7" fill="url(#g)"/>
+    <!-- Bottom horizontal bar (right end meets F's left edge) -->
+    <rect x="12" y="65" width="32" height="14" rx="7" fill="url(#g)"/>
+
+    <!-- ── F ── -->
+    <!-- Vertical stroke -->
+    <rect x="44" y="21" width="14" height="58" rx="7" fill="url(#g)"/>
+    <!-- Top bar (wider — visual weight at top) -->
+    <rect x="44" y="21" width="44" height="14" rx="7" fill="url(#g)"/>
+    <!-- Mid bar (shorter — classic F proportion) -->
+    <rect x="44" y="41" width="34" height="14" rx="7" fill="url(#g)"/>
+
+  </g>
 </svg>
