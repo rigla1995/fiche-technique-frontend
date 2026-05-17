@@ -1,44 +1,36 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
   <defs>
-    <!-- Header spectrum: sky-blue → indigo → purple -->
-    <linearGradient id="g" x1="0" y1="0" x2="100" y2="0" gradientUnits="userSpaceOnUse">
+    <!-- The header gradient becomes the icon background — inversion of previous approach -->
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%"   stop-color="#0ea5e9"/>
-      <stop offset="52%"  stop-color="#818cf8"/>
+      <stop offset="50%"  stop-color="#6366f1"/>
       <stop offset="100%" stop-color="#a855f7"/>
     </linearGradient>
 
-    <!-- Soft background gradient: sky-100 → violet-100, diagonal -->
-    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%"   stop-color="#e0f2fe"/>
-      <stop offset="100%" stop-color="#ede9fe"/>
-    </linearGradient>
-
-    <!-- Gentle drop shadow for depth on the light background -->
-    <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%">
-      <feDropShadow dx="0" dy="3" stdDeviation="4"
-        flood-color="#818cf8" flood-opacity="0.28"/>
+    <!-- Hairline shadow: white letters get a subtle lift without hard edges -->
+    <filter id="lift" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="1.5" stdDeviation="1.5"
+        flood-color="#000" flood-opacity="0.18"/>
     </filter>
-
   </defs>
 
-  <!-- Background: soft pastel sky → lavender, calming and bright -->
-  <rect width="100" height="100" rx="20" fill="url(#bg)"/>
+  <!-- Background: the header gradient fills the icon -->
+  <rect width="100" height="100" rx="22" fill="url(#bg)"/>
 
-  <g filter="url(#shadow)">
+  <!-- LF pill monogram — white on gradient, refined proportions -->
+  <!-- Stroke weight 13 px, rx=6.5, letters centered y=22..78 (56 px tall) -->
+  <g filter="url(#lift)">
 
     <!-- ── L ── -->
-    <!-- Vertical stroke -->
-    <rect x="12" y="21" width="14" height="58" rx="7" fill="url(#g)"/>
-    <!-- Bottom horizontal bar (right end meets F's left edge) -->
-    <rect x="12" y="65" width="32" height="14" rx="7" fill="url(#g)"/>
+    <rect x="13" y="22" width="13" height="56" rx="6.5" fill="white"/>
+    <rect x="13" y="65" width="29" height="13" rx="6.5" fill="white"/>
 
     <!-- ── F ── -->
-    <!-- Vertical stroke -->
-    <rect x="44" y="21" width="14" height="58" rx="7" fill="url(#g)"/>
-    <!-- Top bar (wider — visual weight at top) -->
-    <rect x="44" y="21" width="44" height="14" rx="7" fill="url(#g)"/>
-    <!-- Mid bar (shorter — classic F proportion) -->
-    <rect x="44" y="41" width="34" height="14" rx="7" fill="url(#g)"/>
+    <rect x="46" y="22" width="13" height="56" rx="6.5" fill="white"/>
+    <!-- Top bar — full width, anchors the F visually -->
+    <rect x="46" y="22" width="41" height="13" rx="6.5" fill="white"/>
+    <!-- Mid bar — shorter, classic F proportion at ~45 % cap height -->
+    <rect x="46" y="43" width="31" height="13" rx="6.5" fill="white"/>
 
   </g>
 </svg>
