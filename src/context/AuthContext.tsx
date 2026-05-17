@@ -70,7 +70,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     updateUser({ onboardingStep: step });
   };
 
-  const canWrite = !user || user.role === 'super_admin' || (user.modeCompte ?? 'actif') === 'actif';
+  const canWrite = user !== null && (user.role === 'super_admin' || (user.modeCompte ?? 'actif') === 'actif');
 
   return (
     <AuthContext.Provider value={{ user, token, canWrite, login, logout, updateUser, advanceOnboarding, isLoading }}>
