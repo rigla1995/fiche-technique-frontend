@@ -7,26 +7,24 @@
       <stop offset="100%" stop-color="#a855f7"/>
     </linearGradient>
 
-    <!-- Neon glow filter: blurred halo beneath the sharp shapes -->
-    <filter id="glow" x="-60%" y="-60%" width="220%" height="220%">
-      <feGaussianBlur stdDeviation="4.5" result="blur"/>
-      <feMerge>
-        <feMergeNode in="blur"/>
-        <feMergeNode in="SourceGraphic"/>
-      </feMerge>
+    <!-- Soft background gradient: sky-100 → violet-100, diagonal -->
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%"   stop-color="#e0f2fe"/>
+      <stop offset="100%" stop-color="#ede9fe"/>
+    </linearGradient>
+
+    <!-- Gentle drop shadow for depth on the light background -->
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="3" stdDeviation="4"
+        flood-color="#818cf8" flood-opacity="0.28"/>
     </filter>
 
   </defs>
 
-  <!-- Background: near-black neutral — neon pops, no colour competition -->
-  <rect width="100" height="100" rx="20" fill="#0f1117"/>
+  <!-- Background: soft pastel sky → lavender, calming and bright -->
+  <rect width="100" height="100" rx="20" fill="url(#bg)"/>
 
-  <!-- ── LF pill monogram with neon glow ──
-       All strokes are capsule-shaped (rx = half the stroke width).
-       L and F share the x=44 boundary — the bar of L touches F's vertical,
-       creating a ligature feel without overlapping.
-  ── -->
-  <g filter="url(#glow)">
+  <g filter="url(#shadow)">
 
     <!-- ── L ── -->
     <!-- Vertical stroke -->
