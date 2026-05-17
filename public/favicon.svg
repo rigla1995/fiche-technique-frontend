@@ -1,34 +1,46 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-  <!-- Background -->
-  <rect width="100" height="100" rx="18" fill="#0e7490"/>
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%"   stop-color="#0ea5e9"/>
+      <stop offset="50%"  stop-color="#6366f1"/>
+      <stop offset="100%" stop-color="#a855f7"/>
+    </linearGradient>
+  </defs>
 
-  <!-- Precision gauge ring: 300° arc, gap at bottom (6 o'clock) -->
-  <!-- Arc from 60° to 120° going CCW = 300° sweep, large-arc-flag=1, sweep=0 -->
-  <path d="M 66,77.7 A 32,32 0 1,0 34,77.7"
-    fill="none" stroke="#7dd3fc" stroke-width="3" stroke-linecap="round"/>
+  <rect width="100" height="100" rx="22" fill="url(#bg)"/>
 
-  <!-- Major tick marks at 3 cardinal points (top, left, right) -->
-  <!-- Top (270° / 12 o'clock): (50,18) -->
-  <line x1="50" y1="15" x2="50" y2="23" stroke="#7dd3fc" stroke-width="2.5" stroke-linecap="round"/>
-  <!-- Right (0° / 3 o'clock): (82,50) -->
-  <line x1="85" y1="50" x2="77" y2="50" stroke="#7dd3fc" stroke-width="2.5" stroke-linecap="round"/>
-  <!-- Left (180° / 9 o'clock): (18,50) -->
-  <line x1="15" y1="50" x2="23" y2="50" stroke="#7dd3fc" stroke-width="2.5" stroke-linecap="round"/>
+  <!--
+    Raffiné & Stylé — trois niveaux de lecture :
+    1. Le cercle-sceau  : cadre fin, comme une bague chevalière ou un gravé sur verre
+    2. Les lettres L+F  : trait mince et constant, terminaisons droites "carré"
+       L → angle bas-gauche arrondi (comme dans le sketch original)
+       F → arche quart-de-cercle au sommet (pas de barre droite)
+    3. Deux micro-points aux pôles du cercle : signature de précision
+  -->
 
-  <!-- Minor tick marks at 45° intervals: NE (45°), NW (225°), SE (315°) → actually at 315° and 225° -->
-  <!-- 315° (NE): x=50+32*cos(315°)=50+22.6=72.6, y=50+32*sin(315°)=50-22.6=27.4 -->
-  <!-- 225° (NW): x=50+32*cos(225°)=50-22.6=27.4, y=50-22.6=27.4 -->
-  <line x1="74.4" y1="25.6" x2="70.1" y2="29.9" stroke="#7dd3fc" stroke-width="1.5" stroke-linecap="round" opacity="0.7"/>
-  <line x1="25.6" y1="25.6" x2="29.9" y2="29.9" stroke="#7dd3fc" stroke-width="1.5" stroke-linecap="round" opacity="0.7"/>
+  <!-- Seal ring -->
+  <circle cx="50" cy="50" r="39"
+    fill="none" stroke="white" stroke-width="1.2" opacity="0.55"/>
 
-  <!-- S-curve flow wave (the "Flow" element) -->
-  <path d="M 20,50 C 29,28 43,28 50,50 C 57,72 71,72 80,50"
-    fill="none" stroke="white" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Precision marker dots at top and bottom of ring -->
+  <circle cx="50" cy="11"  r="1.8" fill="white" opacity="0.55"/>
+  <circle cx="50" cy="89"  r="1.8" fill="white" opacity="0.55"/>
 
-  <!-- Data-point nodes at wave endpoints -->
-  <circle cx="20" cy="50" r="4.5" fill="#7dd3fc"/>
-  <circle cx="80" cy="50" r="4.5" fill="#7dd3fc"/>
+  <!-- ── Letter "L" ──
+       Vertical stroke + rounded bottom-left corner + horizontal bar
+  ── -->
+  <path d="M 26,24 L 26,69 Q 26,74 31,74 L 44,74"
+    fill="none" stroke="white" stroke-width="3.2"
+    stroke-linecap="square" stroke-linejoin="round"/>
 
-  <!-- Center inflection dot -->
-  <circle cx="50" cy="50" r="2.5" fill="white" opacity="0.5"/>
+  <!-- ── Letter "F" ──
+       Vertical + straight top bar (corner légèrement arrondi au bout)
+       + middle bar — lit clairement F, pas P
+  ── -->
+  <path d="M 58,74 L 58,24 L 75,24 Q 78,24 78,27"
+    fill="none" stroke="white" stroke-width="3.2"
+    stroke-linecap="square" stroke-linejoin="round"/>
+  <path d="M 58,44 L 74,44"
+    fill="none" stroke="white" stroke-width="3.2"
+    stroke-linecap="square"/>
 </svg>

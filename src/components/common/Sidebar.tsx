@@ -374,6 +374,16 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
               <Divider />
 
+              {/* ══ AGENTS IA ══ */}
+              <li>
+                <NavLink to="/admin/active-agents" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>
+                  <span className="link-icon">🤖</span>
+                  <span className="link-label">Agents Actifs</span>
+                </NavLink>
+              </li>
+
+              <Divider />
+
               {/* ══ TARIFS ══ */}
               <li>
                 <NavLink to="/admin/tarifs" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>
@@ -575,12 +585,6 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                       <span className="link-label">Demandes</span>
                     </NavLink>
                   </li>
-                  <li>
-                    <NavLink to="/client/ai-assistant" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>
-                      <span className="link-icon">🤖</span>
-                      <span className="link-label">Assistant IA</span>
-                    </NavLink>
-                  </li>
                 </>
               )}
 
@@ -726,11 +730,6 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                   <li>
                     <NavLink to="/client/support" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>
                       <span className="link-icon">💬</span><span className="link-label">Demandes</span>
-                    </NavLink>
-                  </li>
-                  <li>
-                    <NavLink to="/client/ai-assistant" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>
-                      <span className="link-icon">🤖</span><span className="link-label">Assistant IA</span>
                     </NavLink>
                   </li>
                 </>

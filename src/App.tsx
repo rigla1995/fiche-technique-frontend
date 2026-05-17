@@ -35,11 +35,11 @@ import TarifsConfig from './components/admin/TarifsConfig';
 import DemandesManagement from './components/admin/DemandesManagement';
 import AdminRapportsPage from './components/admin/AdminRapportsPage';
 import AdminSupportPage from './components/admin/AdminSupportPage';
+import ActiveAgentsPage from './components/admin/ActiveAgentsPage';
 import MonAbonnementPage from './components/client/MonAbonnementPage';
 import HistoriquePaiementPage from './components/client/HistoriquePaiementPage';
 import GerantsPage from './components/client/GerantsPage';
 import SupportPage from './components/client/SupportPage';
-import AIAssistantPage from './components/client/AIAssistantPage';
 import UpgradeWizard from './components/client/UpgradeWizard';
 import RapportsPage from './components/client/RapportsPage';
 import './i18n';
@@ -98,6 +98,7 @@ export default function App() {
             <Route path="/admin/tarifs" element={<TarifsConfig />} />
             <Route path="/admin/demandes" element={<DemandesManagement />} />
             <Route path="/admin/support" element={<AdminSupportPage />} />
+            <Route path="/admin/active-agents" element={<ActiveAgentsPage />} />
           </Route>
 
           {/* Client + Gérant routes */}
@@ -130,7 +131,6 @@ export default function App() {
             <Route path="/client/upgrade-wizard" element={<UpgradeWizard />} />
             <Route path="/client/rapports" element={<RapportsPage />} />
             <Route path="/client/support" element={<SupportPage />} />
-            <Route path="/client/ai-assistant" element={<AIAssistantPage />} />
           </Route>
 
           {/* Error pages */}

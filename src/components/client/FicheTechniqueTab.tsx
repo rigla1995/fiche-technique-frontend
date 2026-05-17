@@ -87,8 +87,8 @@ export default function FicheTechniqueTab({ isEntreprise, allActivities }: Props
   // Pre-fetch product type counts when activity step is done
   useEffect(() => {
     if (!actStepDone) { setVendableCount(null); setUtilisableCount(null); return; }
-    api.get('/products?type=vendable').then(({ data }) => setVendableCount((data as unknown[]).length)).catch(() => setVendableCount(0));
-    api.get('/products?type=utilisable').then(({ data }) => setUtilisableCount((data as unknown[]).length)).catch(() => setUtilisableCount(0));
+    api.get('/api/products?type=vendable').then(({ data }) => setVendableCount((data as unknown[]).length)).catch(() => setVendableCount(0));
+    api.get('/api/products?type=utilisable').then(({ data }) => setUtilisableCount((data as unknown[]).length)).catch(() => setUtilisableCount(0));
   }, [actStepDone, resolvedActId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Load products when productType + activity are ready
@@ -96,7 +96,7 @@ export default function FicheTechniqueTab({ isEntreprise, allActivities }: Props
     if (!productType || !actStepDone) { setProducts([]); setSelectedProductId(''); return; }
     setProductsLoading(true);
     const params = new URLSearchParams({ type: productType });
-    api.get(`/products?${params}`)
+    api.get(`/api/products?${params}`)
       .then(({ data }) => setProducts(data as Product[]))
       .finally(() => setProductsLoading(false));
     setSelectedProductId('');
@@ -110,7 +110,7 @@ export default function FicheTechniqueTab({ isEntreprise, allActivities }: Props
     setStockCheckLoading(true);
     const params = new URLSearchParams();
     if (resolvedActId) params.set('activiteId', String(resolvedActId));
-    api.get(`/products/${selectedProductId}/stock-check?${params}`)
+    api.get(`/api/products/${selectedProductId}/stock-check?${params}`)
       .then(({ data }) => {
         const result = data as StockCheckResult;
         setStockCheckResult(result);
@@ -144,7 +144,7 @@ export default function FicheTechniqueTab({ isEntreprise, allActivities }: Props
     setCostLoading(true);
     const params = new URLSearchParams({ mode });
     if (resolvedActId) params.set('activiteId', String(resolvedActId));
-    api.get(`/products/${selectedProductId}/cout?${params}`)
+    api.get(`/api/products/${selectedProductId}/cout?${params}`)
       .then(({ data }) => setRealtimeCost((data as { totalCost: number }).totalCost ?? null))
       .catch(() => setRealtimeCost(null))
       .finally(() => setCostLoading(false));
@@ -157,7 +157,7 @@ export default function FicheTechniqueTab({ isEntreprise, allActivities }: Props
     setManualLoading(true);
     try {
       const qs = resolvedActId ? `?activiteId=${resolvedActId}` : '';
-      const { data } = await api.get(`/products/${selectedProductId}/manual-prices${qs}`);
+      const { data } = await api.get(`/api/products/${selectedProductId}/manual-prices${qs}`);
       const { prices, groups, updatedAt } = data as {
         prices: { ingredientId: number; nom: string; unite: string; prixUnitaire: number | null }[];
         groups: ManualPriceGroup[];
@@ -185,7 +185,7 @@ export default function FicheTechniqueTab({ isEntreprise, allActivities }: Props
           .filter((p) => p.prixUnitaire !== '' && !isNaN(parseFloat(p.prixUnitaire)))
           .map((p) => ({ ingredientId: p.ingredientId, prixUnitaire: parseFloat(p.prixUnitaire) })),
       };
-      const { data } = await api.post(`/products/${selectedProductId}/manual-prices`, payload);
+      const { data } = await api.post(`/api/products/${selectedProductId}/manual-prices`, payload);
       setShowManualPopup(false);
       setShowZeroWarning(false);
       const savedAt = (data as { updatedAt: string | null }).updatedAt;
@@ -219,7 +219,7 @@ export default function FicheTechniqueTab({ isEntreprise, allActivities }: Props
       // Re-check stock
       const params = new URLSearchParams();
       if (resolvedActId) params.set('activiteId', String(resolvedActId));
-      const { data } = await api.get(`/products/${selectedProductId}/stock-check?${params}`);
+      const { data } = await api.get(`/api/products/${selectedProductId}/stock-check?${params}`);
       const result = data as StockCheckResult;
       setStockCheckResult(result);
       if (result.complete) {
@@ -261,7 +261,7 @@ export default function FicheTechniqueTab({ isEntreprise, allActivities }: Props
       const params = new URLSearchParams({ mode });
       if (resolvedActId) params.set('activiteId', String(resolvedActId));
       // FP Stock: always uses latest appro — no date param needed
-      const response = await api.get(`/products/${selectedProductId}/export?${params}`, { responseType: 'blob' });
+      const response = await api.get(`/api/products/${selectedProductId}/export?${params}`, { responseType: 'blob' });
       const selectedProduct = products.find((p) => String(p.id) === selectedProductId);
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');

@@ -284,9 +284,14 @@ export default function AbonnementsManagement() {
   // mode
   const [modeSaving, setModeSaving] = useState(false);
 
-  // AI assistant
+  // AI assistant / Telegram
   const [aiEnabled, setAiEnabled] = useState(false);
+  const [aiTelegramLinked, setAiTelegramLinked] = useState(false);
+  const [aiInviteLink, setAiInviteLink] = useState<string | null>(null);
   const [aiSaving, setAiSaving] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
+  const [aiLinkCopied, setAiLinkCopied] = useState(false);
+  const [aiInviteGenerating, setAiInviteGenerating] = useState(false);
 
   // invite
 
@@ -319,10 +324,14 @@ export default function AbonnementsManagement() {
     try {
       const [abRes, aiRes] = await Promise.all([
         api.get(`/api/abonnements/client/${ab.clientId}?withPricing=1`),
-        api.get(`/api/ai-assistant/config/${ab.clientId}`).catch(() => ({ data: { enabled: false } })),
+        api.get(`/api/ai-assistant/config/${ab.clientId}`).catch(() => ({ data: { enabled: false, telegramLinked: false } })),
       ]);
       setSelected(abRes.data);
       setAiEnabled(aiRes.data.enabled ?? false);
+      setAiTelegramLinked(aiRes.data.telegramLinked ?? false);
+      setAiInviteLink(aiRes.data.inviteLink ?? null);
+      setAiError(null);
+      setAiLinkCopied(false);
       setObDatePaiement(abRes.data.dateOnboarding ? abRes.data.dateOnboarding.slice(0, 10) : '');
       // Default mensualité month to current month
       const now = new Date();
@@ -333,18 +342,40 @@ export default function AbonnementsManagement() {
     }
   }, []);
 
-  const toggleAi = async () => {
+  const saveAiConfig = async (newEnabled: boolean) => {
     if (!selected || aiSaving) return;
+    setAiError(null);
     setAiSaving(true);
     try {
-      const newVal = !aiEnabled;
-      await api.put(`/api/ai-assistant/config/${selected.clientId}`, { enabled: newVal });
-      setAiEnabled(newVal);
-    } catch {
-      // silently fail
+      const res = await api.put(`/api/ai-assistant/config/${selected.clientId}`, { enabled: newEnabled });
+      setAiEnabled(newEnabled);
+      if (res.data.inviteLink) setAiInviteLink(res.data.inviteLink);
+    } catch (err: unknown) {
+      setAiError((err as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Erreur lors de la sauvegarde');
     } finally {
       setAiSaving(false);
     }
+  };
+
+  const generateInviteLink = async () => {
+    if (!selected || aiInviteGenerating) return;
+    setAiInviteGenerating(true);
+    try {
+      const res = await api.post(`/api/ai-assistant/config/${selected.clientId}/invite`);
+      setAiInviteLink(res.data.inviteLink);
+      setAiTelegramLinked(false);
+    } catch (err: unknown) {
+      setAiError((err as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Erreur génération lien');
+    } finally {
+      setAiInviteGenerating(false);
+    }
+  };
+
+  const copyInviteLink = () => {
+    if (!aiInviteLink) return;
+    navigator.clipboard.writeText(aiInviteLink);
+    setAiLinkCopied(true);
+    setTimeout(() => setAiLinkCopied(false), 2000);
   };
 
   // Auto-fetch montant when pMois or selected changes
@@ -1312,34 +1343,89 @@ export default function AbonnementsManagement() {
               );
             })()}
 
-            {/* ── Assistant IA ───────────────────────────────────────── */}
+            {/* ── Agent IA Telegram ───────────────────────────────────── */}
             <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #e2e8f0', overflow: 'hidden' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 18px', background: 'linear-gradient(135deg,#f8fafc 0%,#f1f5f9 100%)', borderBottom: '1px solid #e2e8f0' }}>
-                <span style={{ fontSize: 18 }}>🤖</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 18px', background: 'linear-gradient(135deg,#eff6ff 0%,#dbeafe 100%)', borderBottom: '1px solid #e2e8f0' }}>
+                <span style={{ fontSize: 20 }}>🤖</span>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: '#0f172a' }}>Assistant IA</div>
-                  <div style={{ fontSize: 11, color: '#64748b', marginTop: 1 }}>Activer l'accès à l'assistant IA pour ce client</div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: '#0f172a' }}>Agent IA Telegram</div>
+                  <div style={{ fontSize: 11, color: '#64748b', marginTop: 1 }}>L'agent répond sur Telegram aux questions stock, inventaire, pertes et envoie des rapports par email</div>
                 </div>
-                <button
-                  onClick={toggleAi}
-                  disabled={aiSaving}
-                  style={{
-                    position: 'relative', width: 46, height: 26, borderRadius: 13,
-                    background: aiEnabled ? '#6366f1' : '#e2e8f0',
-                    border: 'none', cursor: aiSaving ? 'not-allowed' : 'pointer',
-                    transition: 'background 0.2s', opacity: aiSaving ? 0.6 : 1,
-                    flexShrink: 0,
-                  }}
-                >
-                  <span style={{
-                    position: 'absolute', top: 3, left: aiEnabled ? 23 : 3,
-                    width: 20, height: 20, borderRadius: '50%', background: '#fff',
-                    boxShadow: '0 1px 3px rgba(0,0,0,0.2)', transition: 'left 0.2s',
-                  }} />
-                </button>
+                <div style={{ padding: '4px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700, background: aiEnabled && aiTelegramLinked ? '#dcfce7' : aiEnabled ? '#fef3c7' : '#f1f5f9', color: aiEnabled && aiTelegramLinked ? '#16a34a' : aiEnabled ? '#92400e' : '#94a3b8' }}>
+                  {aiEnabled && aiTelegramLinked ? '🟢 Actif' : aiEnabled ? '⏳ En attente' : '⭕ Inactif'}
+                </div>
               </div>
-              <div style={{ padding: '12px 18px', fontSize: 12, color: aiEnabled ? '#6366f1' : '#94a3b8', fontWeight: 600 }}>
-                {aiEnabled ? '✅ Activé — le client peut accéder à son assistant IA' : '⭕ Désactivé — le client n\'a pas accès à l\'assistant IA'}
+
+              <div style={{ padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {aiError && (
+                  <div style={{ fontSize: 12, color: '#ef4444', background: '#fee2e2', borderRadius: 8, padding: '8px 12px' }}>
+                    {aiError}
+                  </div>
+                )}
+
+                {/* Action buttons */}
+                <div style={{ display: 'flex', gap: 8 }}>
+                  {!aiEnabled ? (
+                    <button
+                      onClick={() => saveAiConfig(true)}
+                      disabled={aiSaving}
+                      style={{ flex: 1, padding: '10px', borderRadius: 8, border: 'none', background: aiSaving ? '#e2e8f0' : 'linear-gradient(135deg,#3b82f6,#6366f1)', color: aiSaving ? '#94a3b8' : '#fff', fontWeight: 700, fontSize: 13, cursor: aiSaving ? 'not-allowed' : 'pointer' }}
+                    >
+                      {aiSaving ? 'Activation…' : '🟢 Activer l\'agent IA'}
+                    </button>
+                  ) : (
+                    <>
+                      <button
+                        onClick={() => saveAiConfig(true)}
+                        disabled={aiSaving}
+                        style={{ flex: 1, padding: '10px', borderRadius: 8, border: 'none', background: aiSaving ? '#e2e8f0' : '#6366f1', color: aiSaving ? '#94a3b8' : '#fff', fontWeight: 700, fontSize: 13, cursor: aiSaving ? 'not-allowed' : 'pointer' }}
+                      >
+                        💾 Mettre à jour
+                      </button>
+                      <button
+                        onClick={() => saveAiConfig(false)}
+                        disabled={aiSaving}
+                        style={{ padding: '10px 16px', borderRadius: 8, border: '1px solid #fca5a5', background: '#fff', color: '#ef4444', fontWeight: 700, fontSize: 13, cursor: aiSaving ? 'not-allowed' : 'pointer' }}
+                      >
+                        Désactiver
+                      </button>
+                    </>
+                  )}
+                </div>
+
+                {/* Telegram invite link */}
+                {aiEnabled && (
+                  <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {aiTelegramLinked ? (
+                      <div style={{ fontSize: 12, color: '#16a34a', fontWeight: 600 }}>✅ Client lié à Telegram — l'agent est opérationnel</div>
+                    ) : aiInviteLink ? (
+                      <>
+                        <div style={{ fontSize: 12, color: '#374151', fontWeight: 600 }}>📨 Envoyez ce lien au client pour lier Telegram :</div>
+                        <div style={{ display: 'flex', gap: 6 }}>
+                          <code style={{ flex: 1, fontSize: 11, background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 6, padding: '6px 10px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {aiInviteLink}
+                          </code>
+                          <button
+                            onClick={copyInviteLink}
+                            style={{ padding: '6px 12px', borderRadius: 6, border: '1px solid #e2e8f0', background: aiLinkCopied ? '#dcfce7' : '#fff', color: aiLinkCopied ? '#16a34a' : '#374151', fontSize: 11, fontWeight: 600, cursor: 'pointer', flexShrink: 0 }}
+                          >
+                            {aiLinkCopied ? '✅ Copié' : '📋 Copier'}
+                          </button>
+                        </div>
+                        <div style={{ fontSize: 11, color: '#94a3b8' }}>Le client clique → Telegram s'ouvre → clique "Start" → l'agent l'identifie et lui envoie un message de bienvenue.</div>
+                      </>
+                    ) : (
+                      <div style={{ fontSize: 12, color: '#94a3b8' }}>Aucun lien généré</div>
+                    )}
+                    <button
+                      onClick={generateInviteLink}
+                      disabled={aiInviteGenerating}
+                      style={{ fontSize: 11, padding: '6px 12px', borderRadius: 6, border: '1px solid #e2e8f0', background: '#fff', color: '#6366f1', cursor: aiInviteGenerating ? 'not-allowed' : 'pointer', fontWeight: 600, alignSelf: 'flex-start' }}
+                    >
+                      {aiInviteGenerating ? 'Génération…' : '🔗 Générer un nouveau lien'}
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
 
