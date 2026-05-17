@@ -284,9 +284,14 @@ export default function AbonnementsManagement() {
   // mode
   const [modeSaving, setModeSaving] = useState(false);
 
-  // AI assistant
+  // AI assistant / WhatsApp
   const [aiEnabled, setAiEnabled] = useState(false);
+  const [aiWhatsappNumber, setAiWhatsappNumber] = useState('');
+  const [aiWhatsappInput, setAiWhatsappInput] = useState('');
   const [aiSaving, setAiSaving] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
+  const [whatsappStatus, setWhatsappStatus] = useState<{ ready: boolean; hasQR: boolean; qrDataUrl: string | null; botNumber: string | null } | null>(null);
+  const [whatsappStatusLoading, setWhatsappStatusLoading] = useState(false);
 
   // invite
 
@@ -319,10 +324,13 @@ export default function AbonnementsManagement() {
     try {
       const [abRes, aiRes] = await Promise.all([
         api.get(`/api/abonnements/client/${ab.clientId}?withPricing=1`),
-        api.get(`/api/ai-assistant/config/${ab.clientId}`).catch(() => ({ data: { enabled: false } })),
+        api.get(`/api/ai-assistant/config/${ab.clientId}`).catch(() => ({ data: { enabled: false, whatsappNumber: null } })),
       ]);
       setSelected(abRes.data);
       setAiEnabled(aiRes.data.enabled ?? false);
+      setAiWhatsappNumber(aiRes.data.whatsappNumber ?? '');
+      setAiWhatsappInput(aiRes.data.whatsappNumber ?? '');
+      setAiError(null);
       setObDatePaiement(abRes.data.dateOnboarding ? abRes.data.dateOnboarding.slice(0, 10) : '');
       // Default mensualité month to current month
       const now = new Date();
@@ -333,17 +341,37 @@ export default function AbonnementsManagement() {
     }
   }, []);
 
-  const toggleAi = async () => {
+  const saveAiConfig = async (newEnabled: boolean) => {
     if (!selected || aiSaving) return;
+    if (newEnabled && !aiWhatsappInput.trim()) {
+      setAiError('Veuillez saisir le numéro WhatsApp du client avant d\'activer l\'assistant IA');
+      return;
+    }
+    setAiError(null);
     setAiSaving(true);
     try {
-      const newVal = !aiEnabled;
-      await api.put(`/api/ai-assistant/config/${selected.clientId}`, { enabled: newVal });
-      setAiEnabled(newVal);
-    } catch {
-      // silently fail
+      await api.put(`/api/ai-assistant/config/${selected.clientId}`, {
+        enabled: newEnabled,
+        whatsappNumber: aiWhatsappInput.trim() || null,
+      });
+      setAiEnabled(newEnabled);
+      setAiWhatsappNumber(aiWhatsappInput.trim());
+    } catch (err: unknown) {
+      setAiError((err as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Erreur lors de la sauvegarde');
     } finally {
       setAiSaving(false);
+    }
+  };
+
+  const fetchWhatsAppStatus = async () => {
+    setWhatsappStatusLoading(true);
+    try {
+      const res = await api.get('/api/ai-assistant/whatsapp-status');
+      setWhatsappStatus(res.data);
+    } catch {
+      setWhatsappStatus(null);
+    } finally {
+      setWhatsappStatusLoading(false);
     }
   };
 
@@ -1312,34 +1340,131 @@ export default function AbonnementsManagement() {
               );
             })()}
 
-            {/* ── Assistant IA ───────────────────────────────────────── */}
+            {/* ── Assistant IA WhatsApp ───────────────────────────────── */}
             <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #e2e8f0', overflow: 'hidden' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 18px', background: 'linear-gradient(135deg,#f8fafc 0%,#f1f5f9 100%)', borderBottom: '1px solid #e2e8f0' }}>
-                <span style={{ fontSize: 18 }}>🤖</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 18px', background: 'linear-gradient(135deg,#f0fdf4 0%,#dcfce7 100%)', borderBottom: '1px solid #e2e8f0' }}>
+                <span style={{ fontSize: 20 }}>💬</span>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: '#0f172a' }}>Assistant IA</div>
-                  <div style={{ fontSize: 11, color: '#64748b', marginTop: 1 }}>Activer l'accès à l'assistant IA pour ce client</div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: '#0f172a' }}>Agent IA WhatsApp</div>
+                  <div style={{ fontSize: 11, color: '#64748b', marginTop: 1 }}>Le client reçoit un agent IA sur son WhatsApp pour gérer stock, inventaire et rapports</div>
                 </div>
-                <button
-                  onClick={toggleAi}
-                  disabled={aiSaving}
-                  style={{
-                    position: 'relative', width: 46, height: 26, borderRadius: 13,
-                    background: aiEnabled ? '#6366f1' : '#e2e8f0',
-                    border: 'none', cursor: aiSaving ? 'not-allowed' : 'pointer',
-                    transition: 'background 0.2s', opacity: aiSaving ? 0.6 : 1,
-                    flexShrink: 0,
-                  }}
-                >
-                  <span style={{
-                    position: 'absolute', top: 3, left: aiEnabled ? 23 : 3,
-                    width: 20, height: 20, borderRadius: '50%', background: '#fff',
-                    boxShadow: '0 1px 3px rgba(0,0,0,0.2)', transition: 'left 0.2s',
-                  }} />
-                </button>
+                <div style={{
+                  padding: '4px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700,
+                  background: aiEnabled ? '#dcfce7' : '#f1f5f9',
+                  color: aiEnabled ? '#16a34a' : '#94a3b8',
+                }}>
+                  {aiEnabled ? '🟢 Actif' : '⭕ Inactif'}
+                </div>
               </div>
-              <div style={{ padding: '12px 18px', fontSize: 12, color: aiEnabled ? '#6366f1' : '#94a3b8', fontWeight: 600 }}>
-                {aiEnabled ? '✅ Activé — le client peut accéder à son assistant IA' : '⭕ Désactivé — le client n\'a pas accès à l\'assistant IA'}
+
+              <div style={{ padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {/* WhatsApp number input */}
+                <div>
+                  <label style={{ fontSize: 12, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 6 }}>
+                    📱 Numéro WhatsApp du client
+                  </label>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <input
+                      type="tel"
+                      placeholder="+216 XX XXX XXX"
+                      value={aiWhatsappInput}
+                      onChange={(e) => { setAiWhatsappInput(e.target.value); setAiError(null); }}
+                      style={{
+                        flex: 1, border: '1px solid #e2e8f0', borderRadius: 8, padding: '8px 12px',
+                        fontSize: 13, outline: 'none', fontFamily: 'inherit',
+                      }}
+                    />
+                  </div>
+                  {aiWhatsappNumber && aiEnabled && (
+                    <div style={{ fontSize: 11, color: '#16a34a', marginTop: 4 }}>✅ Agent actif sur {aiWhatsappNumber}</div>
+                  )}
+                </div>
+
+                {aiError && (
+                  <div style={{ fontSize: 12, color: '#ef4444', background: '#fee2e2', borderRadius: 8, padding: '8px 12px' }}>
+                    {aiError}
+                  </div>
+                )}
+
+                {/* Action buttons */}
+                <div style={{ display: 'flex', gap: 8 }}>
+                  {!aiEnabled ? (
+                    <button
+                      onClick={() => saveAiConfig(true)}
+                      disabled={aiSaving}
+                      style={{
+                        flex: 1, padding: '10px', borderRadius: 8, border: 'none',
+                        background: aiSaving ? '#e2e8f0' : 'linear-gradient(135deg,#22c55e,#16a34a)',
+                        color: aiSaving ? '#94a3b8' : '#fff', fontWeight: 700, fontSize: 13,
+                        cursor: aiSaving ? 'not-allowed' : 'pointer',
+                      }}
+                    >
+                      {aiSaving ? 'Activation…' : '🟢 Activer l\'agent IA'}
+                    </button>
+                  ) : (
+                    <>
+                      <button
+                        onClick={() => saveAiConfig(true)}
+                        disabled={aiSaving || aiWhatsappInput === aiWhatsappNumber}
+                        style={{
+                          flex: 1, padding: '10px', borderRadius: 8, border: 'none',
+                          background: (aiSaving || aiWhatsappInput === aiWhatsappNumber) ? '#e2e8f0' : '#6366f1',
+                          color: (aiSaving || aiWhatsappInput === aiWhatsappNumber) ? '#94a3b8' : '#fff',
+                          fontWeight: 700, fontSize: 13, cursor: (aiSaving || aiWhatsappInput === aiWhatsappNumber) ? 'not-allowed' : 'pointer',
+                        }}
+                      >
+                        💾 Mettre à jour
+                      </button>
+                      <button
+                        onClick={() => saveAiConfig(false)}
+                        disabled={aiSaving}
+                        style={{
+                          padding: '10px 16px', borderRadius: 8, border: '1px solid #fca5a5',
+                          background: '#fff', color: '#ef4444', fontWeight: 700, fontSize: 13,
+                          cursor: aiSaving ? 'not-allowed' : 'pointer',
+                        }}
+                      >
+                        Désactiver
+                      </button>
+                    </>
+                  )}
+                </div>
+
+                {/* WhatsApp Bot status */}
+                <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: 12 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                    <span style={{ fontSize: 12, fontWeight: 600, color: '#374151' }}>📡 Statut du bot WhatsApp</span>
+                    <button
+                      onClick={fetchWhatsAppStatus}
+                      disabled={whatsappStatusLoading}
+                      style={{ fontSize: 11, color: '#6366f1', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600 }}
+                    >
+                      {whatsappStatusLoading ? 'Chargement…' : '🔄 Actualiser'}
+                    </button>
+                  </div>
+                  {whatsappStatus === null && !whatsappStatusLoading && (
+                    <div style={{ fontSize: 12, color: '#94a3b8' }}>Cliquez sur "Actualiser" pour voir le statut du bot.</div>
+                  )}
+                  {whatsappStatus && (
+                    <>
+                      <div style={{ fontSize: 12, color: whatsappStatus.ready ? '#16a34a' : '#f59e0b', fontWeight: 600, marginBottom: 8 }}>
+                        {whatsappStatus.ready
+                          ? `✅ Bot connecté${whatsappStatus.botNumber ? ` (${whatsappStatus.botNumber})` : ''}`
+                          : whatsappStatus.hasQR
+                          ? '⚠️ En attente de scan — scannez le QR code ci-dessous avec WhatsApp'
+                          : '⏳ Bot en cours d\'initialisation…'}
+                      </div>
+                      {whatsappStatus.qrDataUrl && (
+                        <div style={{ textAlign: 'center' }}>
+                          <img src={whatsappStatus.qrDataUrl} alt="QR WhatsApp" style={{ width: 200, height: 200, borderRadius: 8, border: '1px solid #e2e8f0' }} />
+                          <div style={{ fontSize: 11, color: '#64748b', marginTop: 4 }}>
+                            Ouvrez WhatsApp → Appareils liés → Lier un appareil → Scannez ce QR
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
               </div>
             </div>
 
