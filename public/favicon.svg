@@ -1,4 +1,16 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
   <rect width="100" height="100" rx="18" fill="#0e7490"/>
-  <text x="50" y="72" text-anchor="middle" font-size="58" font-family="Arial, sans-serif">🧪</text>
+  <!-- Flask body -->
+  <rect x="42" y="18" width="16" height="22" rx="3" fill="#e0f2fe"/>
+  <!-- Flask cone -->
+  <polygon points="30,78 70,78 58,40 42,40" fill="#e0f2fe"/>
+  <!-- Liquid inside flask -->
+  <polygon points="34,78 66,78 60,56 40,56" fill="#06b6d4"/>
+  <!-- Bubbles -->
+  <circle cx="43" cy="66" r="4" fill="#fff" opacity="0.6"/>
+  <circle cx="55" cy="70" r="3" fill="#fff" opacity="0.5"/>
+  <!-- Flask neck outline -->
+  <rect x="42" y="18" width="16" height="22" rx="3" fill="none" stroke="#0891b2" stroke-width="2"/>
+  <!-- Flask outline -->
+  <polygon points="30,78 70,78 58,40 42,40" fill="none" stroke="#0891b2" stroke-width="2" stroke-linejoin="round"/>
 </svg>
