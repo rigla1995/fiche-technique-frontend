@@ -1,36 +1,38 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
   <defs>
-    <!-- The header gradient becomes the icon background — inversion of previous approach -->
     <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%"   stop-color="#0ea5e9"/>
       <stop offset="50%"  stop-color="#6366f1"/>
       <stop offset="100%" stop-color="#a855f7"/>
     </linearGradient>
 
-    <!-- Hairline shadow: white letters get a subtle lift without hard edges -->
+    <!-- Hairline lift on white glyphs -->
     <filter id="lift" x="-20%" y="-20%" width="140%" height="140%">
-      <feDropShadow dx="0" dy="1.5" stdDeviation="1.5"
-        flood-color="#000" flood-opacity="0.18"/>
+      <feDropShadow dx="0" dy="1" stdDeviation="1.5"
+        flood-color="#000" flood-opacity="0.2"/>
     </filter>
   </defs>
 
-  <!-- Background: the header gradient fills the icon -->
   <rect width="100" height="100" rx="22" fill="url(#bg)"/>
 
-  <!-- LF pill monogram — white on gradient, refined proportions -->
-  <!-- Stroke weight 13 px, rx=6.5, letters centered y=22..78 (56 px tall) -->
-  <g filter="url(#lift)">
+  <!--
+    Style unique : contraste de graisse extrême dans le même signe.
+    "L" → Black (900) — ancré, solide, "Lab"
+    "F" → Thin  (100) — léger, aérien, "Flow"
+    Même corps (56px), même baseline — l'opposition de poids est le concept.
+  -->
+  <text
+    x="50" y="67"
+    text-anchor="middle"
+    font-family="system-ui, -apple-system, 'Helvetica Neue', Arial, sans-serif"
+    font-size="56"
+    fill="white"
+    filter="url(#lift)">
+    <tspan font-weight="900" letter-spacing="-1">L</tspan><tspan font-weight="100" opacity="0.9">F</tspan>
+  </text>
 
-    <!-- ── L ── -->
-    <rect x="13" y="22" width="13" height="56" rx="6.5" fill="white"/>
-    <rect x="13" y="65" width="29" height="13" rx="6.5" fill="white"/>
-
-    <!-- ── F ── -->
-    <rect x="46" y="22" width="13" height="56" rx="6.5" fill="white"/>
-    <!-- Top bar — full width, anchors the F visually -->
-    <rect x="46" y="22" width="41" height="13" rx="6.5" fill="white"/>
-    <!-- Mid bar — shorter, classic F proportion at ~45 % cap height -->
-    <rect x="46" y="43" width="31" height="13" rx="6.5" fill="white"/>
-
-  </g>
+  <!-- Thin gradient baseline accent — the "flow" underline -->
+  <line x1="22" y1="75" x2="78" y2="75"
+    stroke="white" stroke-width="2.5"
+    stroke-linecap="round" opacity="0.45"/>
 </svg>
