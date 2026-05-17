@@ -52,6 +52,7 @@ const StatusBadge = ({ enabled, telegramLinked }: { enabled: boolean; telegramLi
 export default function ActiveAgentsPage() {
   const [agents, setAgents] = useState<Agent[]>([]);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   const [saving, setSaving] = useState<number | null>(null);
   const [copiedLink, setCopiedLink] = useState<number | null>(null);
   const [filter, setFilter] = useState<'all' | 'active' | 'pending' | 'inactive'>('all');
@@ -59,9 +60,12 @@ export default function ActiveAgentsPage() {
 
   const fetchAgents = useCallback(async () => {
     setLoading(true);
+    setFetchError(null);
     try {
       const res = await api.get('/api/ai-assistant/agents');
       setAgents(res.data);
+    } catch {
+      setFetchError('Impossible de charger les agents. Vérifiez votre connexion.');
     } finally {
       setLoading(false);
     }
@@ -169,6 +173,8 @@ export default function ActiveAgentsPage() {
       {/* Agents list */}
       {loading ? (
         <div className="loading-text">Chargement…</div>
+      ) : fetchError ? (
+        <div className="empty-state" style={{ color: '#ef4444' }}>{fetchError}</div>
       ) : filtered.length === 0 ? (
         <div className="empty-state">Aucun agent trouvé</div>
       ) : (

@@ -40,10 +40,11 @@ export default function Profile() {
   const { emailExists: profileEmailExists, emailChecking: profileEmailChecking } = useEmailCheck(form.email, user?.id);;
 
   useEffect(() => {
-    api.get('/auth/me').then(({ data }) => {
-      setForm((f) => ({ ...f, name: data.name || '', email: data.email || '', phone: data.phone || '' }));
-    }).finally(() => setLoading(false));
-  }, []);
+    if (user) {
+      setForm(f => ({ ...f, name: user.name || '', email: user.email || '', phone: user.phone || '' }));
+    }
+    setLoading(false);
+  }, [user]);
 
   const validate = (): Record<string, string> => {
     const errs: Record<string, string> = {};
