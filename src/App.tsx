@@ -39,6 +39,7 @@ import MonAbonnementPage from './components/client/MonAbonnementPage';
 import HistoriquePaiementPage from './components/client/HistoriquePaiementPage';
 import GerantsPage from './components/client/GerantsPage';
 import SupportPage from './components/client/SupportPage';
+import AIAssistantPage from './components/client/AIAssistantPage';
 import UpgradeWizard from './components/client/UpgradeWizard';
 import RapportsPage from './components/client/RapportsPage';
 import './i18n';
@@ -129,6 +130,7 @@ export default function App() {
             <Route path="/client/upgrade-wizard" element={<UpgradeWizard />} />
             <Route path="/client/rapports" element={<RapportsPage />} />
             <Route path="/client/support" element={<SupportPage />} />
+            <Route path="/client/ai-assistant" element={<AIAssistantPage />} />
           </Route>
 
           {/* Error pages */}

@@ -284,6 +284,10 @@ export default function AbonnementsManagement() {
   // mode
   const [modeSaving, setModeSaving] = useState(false);
 
+  // AI assistant
+  const [aiEnabled, setAiEnabled] = useState(false);
+  const [aiSaving, setAiSaving] = useState(false);
+
   // invite
 
   const [search, setSearch] = useState('');
@@ -313,9 +317,13 @@ export default function AbonnementsManagement() {
     setPromoFixedVal('');
     setPMontantInfo(null);
     try {
-      const res = await api.get(`/api/abonnements/client/${ab.clientId}?withPricing=1`);
-      setSelected(res.data);
-      setObDatePaiement(res.data.dateOnboarding ? res.data.dateOnboarding.slice(0, 10) : '');
+      const [abRes, aiRes] = await Promise.all([
+        api.get(`/api/abonnements/client/${ab.clientId}?withPricing=1`),
+        api.get(`/api/ai-assistant/config/${ab.clientId}`).catch(() => ({ data: { enabled: false } })),
+      ]);
+      setSelected(abRes.data);
+      setAiEnabled(aiRes.data.enabled ?? false);
+      setObDatePaiement(abRes.data.dateOnboarding ? abRes.data.dateOnboarding.slice(0, 10) : '');
       // Default mensualité month to current month
       const now = new Date();
       setPMois(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`);
@@ -324,6 +332,20 @@ export default function AbonnementsManagement() {
       setDetailLoading(false);
     }
   }, []);
+
+  const toggleAi = async () => {
+    if (!selected || aiSaving) return;
+    setAiSaving(true);
+    try {
+      const newVal = !aiEnabled;
+      await api.put(`/api/ai-assistant/config/${selected.clientId}`, { enabled: newVal });
+      setAiEnabled(newVal);
+    } catch {
+      // silently fail
+    } finally {
+      setAiSaving(false);
+    }
+  };
 
   // Auto-fetch montant when pMois or selected changes
   const fetchMontantMois = useCallback(async (mois: string) => {
@@ -1289,6 +1311,37 @@ export default function AbonnementsManagement() {
                 </div>
               );
             })()}
+
+            {/* ── Assistant IA ───────────────────────────────────────── */}
+            <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #e2e8f0', overflow: 'hidden' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 18px', background: 'linear-gradient(135deg,#f8fafc 0%,#f1f5f9 100%)', borderBottom: '1px solid #e2e8f0' }}>
+                <span style={{ fontSize: 18 }}>🤖</span>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: '#0f172a' }}>Assistant IA</div>
+                  <div style={{ fontSize: 11, color: '#64748b', marginTop: 1 }}>Activer l'accès à l'assistant IA pour ce client</div>
+                </div>
+                <button
+                  onClick={toggleAi}
+                  disabled={aiSaving}
+                  style={{
+                    position: 'relative', width: 46, height: 26, borderRadius: 13,
+                    background: aiEnabled ? '#6366f1' : '#e2e8f0',
+                    border: 'none', cursor: aiSaving ? 'not-allowed' : 'pointer',
+                    transition: 'background 0.2s', opacity: aiSaving ? 0.6 : 1,
+                    flexShrink: 0,
+                  }}
+                >
+                  <span style={{
+                    position: 'absolute', top: 3, left: aiEnabled ? 23 : 3,
+                    width: 20, height: 20, borderRadius: '50%', background: '#fff',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.2)', transition: 'left 0.2s',
+                  }} />
+                </button>
+              </div>
+              <div style={{ padding: '12px 18px', fontSize: 12, color: aiEnabled ? '#6366f1' : '#94a3b8', fontWeight: 600 }}>
+                {aiEnabled ? '✅ Activé — le client peut accéder à son assistant IA' : '⭕ Désactivé — le client n\'a pas accès à l\'assistant IA'}
+              </div>
+            </div>
 
             {/* ── Mode compte ────────────────────────────────────────── */}
             {(() => {
