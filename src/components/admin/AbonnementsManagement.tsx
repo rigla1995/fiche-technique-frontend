@@ -288,7 +288,6 @@ export default function AbonnementsManagement() {
   const [aiEnabled, setAiEnabled] = useState(false);
   const [aiTelegramLinked, setAiTelegramLinked] = useState(false);
   const [aiInviteLink, setAiInviteLink] = useState<string | null>(null);
-  const [aiConfidenceThreshold, setAiConfidenceThreshold] = useState(75);
   const [aiSaving, setAiSaving] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
   const [aiLinkCopied, setAiLinkCopied] = useState(false);
@@ -331,7 +330,6 @@ export default function AbonnementsManagement() {
       setAiEnabled(aiRes.data.enabled ?? false);
       setAiTelegramLinked(aiRes.data.telegramLinked ?? false);
       setAiInviteLink(aiRes.data.inviteLink ?? null);
-      setAiConfidenceThreshold(Math.round((aiRes.data.confidenceThreshold ?? 0.75) * 100));
       setAiError(null);
       setAiLinkCopied(false);
       setObDatePaiement(abRes.data.dateOnboarding ? abRes.data.dateOnboarding.slice(0, 10) : '');
@@ -349,10 +347,7 @@ export default function AbonnementsManagement() {
     setAiError(null);
     setAiSaving(true);
     try {
-      const res = await api.put(`/api/ai-assistant/config/${selected.clientId}`, {
-        enabled: newEnabled,
-        confidenceThreshold: aiConfidenceThreshold / 100,
-      });
+      const res = await api.put(`/api/ai-assistant/config/${selected.clientId}`, { enabled: newEnabled });
       setAiEnabled(newEnabled);
       if (res.data.inviteLink) setAiInviteLink(res.data.inviteLink);
     } catch (err: unknown) {
@@ -1367,23 +1362,6 @@ export default function AbonnementsManagement() {
                     {aiError}
                   </div>
                 )}
-
-                {/* Confidence threshold */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <label style={{ fontSize: 12, fontWeight: 600, color: '#374151', flexShrink: 0 }}>Seuil de confiance :</label>
-                  <input
-                    type="range" min={0} max={100} step={5}
-                    value={aiConfidenceThreshold}
-                    onChange={e => setAiConfidenceThreshold(parseInt(e.target.value))}
-                    style={{ flex: 1 }}
-                  />
-                  <span style={{ fontSize: 12, fontWeight: 700, color: aiConfidenceThreshold >= 80 ? '#16a34a' : aiConfidenceThreshold >= 60 ? '#f59e0b' : '#ef4444', minWidth: 36 }}>
-                    {aiConfidenceThreshold}%
-                  </span>
-                </div>
-                <div style={{ fontSize: 11, color: '#94a3b8', marginTop: -6 }}>
-                  Indicateur interne de qualité — visible uniquement par l'admin dans la page Agents Actifs.
-                </div>
 
                 {/* Action buttons */}
                 <div style={{ display: 'flex', gap: 8 }}>
