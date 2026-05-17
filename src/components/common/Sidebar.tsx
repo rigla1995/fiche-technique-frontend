@@ -374,6 +374,16 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
               <Divider />
 
+              {/* ══ AGENTS IA ══ */}
+              <li>
+                <NavLink to="/admin/active-agents" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>
+                  <span className="link-icon">🤖</span>
+                  <span className="link-label">Agents Actifs</span>
+                </NavLink>
+              </li>
+
+              <Divider />
+
               {/* ══ TARIFS ══ */}
               <li>
                 <NavLink to="/admin/tarifs" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>
