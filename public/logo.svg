@@ -1,12 +1,12 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 70">
   <defs>
-    <!-- Icon gradient: full-width in local (pre-transform) icon space -->
+    <!-- Icon gradient: local space 0→100 (applied inside scale group) -->
     <linearGradient id="g" x1="0" y1="0" x2="100" y2="0" gradientUnits="userSpaceOnUse">
       <stop offset="0%"   stop-color="#0ea5e9"/>
       <stop offset="52%"  stop-color="#818cf8"/>
       <stop offset="100%" stop-color="#a855f7"/>
     </linearGradient>
-    <!-- Wordmark gradient in logo root coordinates -->
+    <!-- Wordmark gradient: logo root coordinates -->
     <linearGradient id="wm" x1="82" y1="0" x2="270" y2="0" gradientUnits="userSpaceOnUse">
       <stop offset="0%"   stop-color="#6366f1"/>
       <stop offset="45%"  stop-color="#0ea5e9"/>
@@ -14,29 +14,29 @@
     </linearGradient>
   </defs>
 
-  <!-- ── LF Flow icon (scaled 60%, positioned top-left) ── -->
+  <!-- ── Icon mark: LF outline monogram, scaled 60% ── -->
   <g transform="translate(5,5) scale(0.6)">
     <rect width="100" height="100" rx="20" fill="#1e1b4b"/>
 
-    <!-- L: vertical -->
-    <rect x="13" y="18" width="10" height="55" rx="3" fill="url(#g)"/>
-    <!-- L: short bottom bar -->
-    <rect x="13" y="63" width="24" height="10" rx="3" fill="url(#g)"/>
+    <!-- Letter L -->
+    <path d="M 16,17 L 16,73 Q 16,80 23,80 L 44,80"
+      fill="none" stroke="url(#g)"
+      stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
 
-    <!-- Flow arc: bottom of L → middle of F (the dual-purpose stroke) -->
-    <path d="M 37,68 C 50,68 50,48 60,48"
-      fill="none" stroke="url(#g)" stroke-width="10" stroke-linecap="round"/>
-
-    <!-- F: vertical -->
-    <rect x="60" y="18" width="10" height="55" rx="3" fill="url(#g)"/>
-    <!-- F: top bar only (arc is the mid bar) -->
-    <rect x="60" y="18" width="28" height="10" rx="3" fill="url(#g)"/>
+    <!-- Letter F: vertical + arch -->
+    <path d="M 60,80 L 60,17 A 26,26 0 0,1 86,43"
+      fill="none" stroke="url(#g)"
+      stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+    <!-- Middle bar -->
+    <path d="M 60,43 L 82,43"
+      fill="none" stroke="url(#g)"
+      stroke-width="9" stroke-linecap="round"/>
   </g>
 
   <!-- Separator -->
   <line x1="74" y1="13" x2="74" y2="57" stroke="#6366f1" stroke-width="1" opacity="0.25"/>
 
-  <!-- ── Wordmark: "Lab" bold + "Flow" light, header gradient ── -->
+  <!-- ── Wordmark: "Lab" bold + "Flow" light, shared gradient ── -->
   <text x="82" y="48"
     font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif"
     font-size="36"
