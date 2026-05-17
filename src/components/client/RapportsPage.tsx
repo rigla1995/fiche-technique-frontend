@@ -3,7 +3,7 @@ import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell,
   LineChart, Line, CartesianGrid, Legend,
 } from 'recharts';
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
 import jsPDF from 'jspdf';
 import autoTable, { type RowInput } from 'jspdf-autotable';
 import api from '../../api/client';
@@ -62,6 +62,22 @@ const FilterLabel = ({ label, children }: { label: string; children: React.React
 
 const inputStyle: React.CSSProperties = { padding: '6px 10px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: 13, background: '#fff', color: '#111827' };
 
+async function downloadExcel(rows: Record<string, unknown>[], sheetName: string, filename: string) {
+  const wb = new ExcelJS.Workbook();
+  const ws = wb.addWorksheet(sheetName);
+  if (rows.length > 0) {
+    ws.addRow(Object.keys(rows[0]));
+    rows.forEach(r => ws.addRow(Object.values(r)));
+    ws.getRow(1).font = { bold: true };
+  }
+  const buffer = await wb.xlsx.writeBuffer();
+  const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename; a.click();
+  URL.revokeObjectURL(url);
+}
+
 const ExportButtons = ({ onExcel, onPdf, loading }: { onExcel: () => void; onPdf: () => void; loading?: boolean }) => (
   <div style={{ display: 'flex', gap: 8 }}>
     <button onClick={onExcel} disabled={loading}
@@ -114,14 +130,11 @@ function RapportPertes({ filters }: { filters: FilterOptions }) {
   const totalQte = rows.length;
 
   const exportExcel = () => {
-    const ws = XLSX.utils.json_to_sheet(rows.map((r) => ({
+    downloadExcel(rows.map((r) => ({
       'Ingrédient': r.ingredient_nom, 'Catégorie': r.categorie, 'Unité': r.unite,
       'Activité': r.activite_nom || '—', 'Type': r.type_perte, 'Date': fmtDate(r.date_perte as string),
       'Quantité': r.quantite, 'Prix unit. (DT)': r.prix_unitaire, 'Valeur (DT)': fmt(r.valeur as number),
-    })));
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Pertes');
-    XLSX.writeFile(wb, `rapport-pertes-${dateFrom}-${dateTo}.xlsx`);
+    })), 'Pertes', `rapport-pertes-${dateFrom}-${dateTo}.xlsx`);
   };
 
   const exportPdf = () => {
@@ -291,14 +304,11 @@ function RapportCoutMatiere({ filters }: { filters: FilterOptions }) {
   const total = data?.total ?? 0;
 
   const exportExcel = () => {
-    const ws = XLSX.utils.json_to_sheet(rows.map((r) => ({
+    downloadExcel(rows.map((r) => ({
       'Ingrédient': r.ingredient_nom, 'Catégorie': r.categorie, 'Unité': r.unite,
       'Qté totale': fmt(r.quantite_totale as number), 'Prix moyen (DT)': fmt(r.prix_moyen as number),
       'Coût total (DT)': fmt(r.cout_total as number), '% du total': `${r.pct}%`,
-    })));
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Coût Matière');
-    XLSX.writeFile(wb, `rapport-cout-matiere-${dateFrom}-${dateTo}.xlsx`);
+    })), 'Coût Matière', `rapport-cout-matiere-${dateFrom}-${dateTo}.xlsx`);
   };
 
   const exportPdf = () => {
@@ -468,16 +478,13 @@ function RapportAppros({ filters }: { filters: FilterOptions }) {
   const totalDT = rows.reduce((s, r) => s + parseFloat(String(r.total ?? 0)), 0);
 
   const exportExcel = () => {
-    const ws = XLSX.utils.json_to_sheet(rows.map((r) => ({
+    downloadExcel(rows.map((r) => ({
       'Date': fmtDate(r.date_appro as string), 'Ingrédient': r.ingredient_nom,
       'Catégorie': r.categorie, 'Unité': r.unite, 'Fournisseur': r.fournisseur_nom || '—',
       'Réf. facture': r.ref_facture || '—', 'Type': r.type_appro,
       'Activité': r.activite_nom || '—', 'Quantité': fmt(r.quantite as number),
       'Prix unit. (DT)': fmt(r.prix_unitaire as number), 'Total (DT)': fmt(r.total as number),
-    })));
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Appros');
-    XLSX.writeFile(wb, `rapport-appros-${dateFrom}-${dateTo}.xlsx`);
+    })), 'Appros', `rapport-appros-${dateFrom}-${dateTo}.xlsx`);
   };
 
   const exportPdf = () => {
@@ -636,15 +643,12 @@ function RapportStock({ filters }: { filters: FilterOptions }) {
   const attentions = (data?.rows ?? []).filter((r) => r.alerte === 'attention').length;
 
   const exportExcel = () => {
-    const ws = XLSX.utils.json_to_sheet(rows.map((r) => ({
+    downloadExcel(rows.map((r) => ({
       'Ingrédient': r.ingredient_nom, 'Catégorie': r.categorie, 'Unité': r.unite,
       'Activité': r.activite_nom || '—', 'Quantité': fmt(r.quantite as number),
       'Prix unit. (DT)': fmt(r.prix_unitaire as number), 'Valeur stock (DT)': fmt(r.valeur as number),
       'Seuil min': r.seuil_min ?? '—', 'Alerte': r.alerte,
-    })));
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Stock');
-    XLSX.writeFile(wb, `rapport-stock-${new Date().toISOString().slice(0, 10)}.xlsx`);
+    })), 'Stock', `rapport-stock-${new Date().toISOString().slice(0, 10)}.xlsx`);
   };
 
   const exportPdf = () => {
@@ -784,13 +788,10 @@ function RapportActivites() {
   const rows = data?.rows ?? [];
 
   const exportExcel = () => {
-    const ws = XLSX.utils.json_to_sheet(rows.map((r) => ({
+    downloadExcel(rows.map((r) => ({
       'Activité': r.activite_nom, 'Coût appros (DT)': fmt(r.cout_appros as number),
       'Valeur pertes (DT)': fmt(r.valeur_pertes as number), 'Valeur stock (DT)': fmt(r.valeur_stock as number),
-    })));
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Activités');
-    XLSX.writeFile(wb, `rapport-activites-${new Date().getFullYear()}.xlsx`);
+    })), 'Activités', `rapport-activites-${new Date().getFullYear()}.xlsx`);
   };
 
   const exportPdf = () => {
