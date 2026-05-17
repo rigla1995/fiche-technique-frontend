@@ -268,8 +268,6 @@ export default function HistoriqueApproPage() {
   const totalTTC = results.reduce((s, r) => s + (r.quantite ?? 0) * (r.prixUnitaireTva ?? 0), 0);
   const unitQtyMap: Record<string, number> = {};
   for (const r of results) { unitQtyMap[r.uniteNom] = (unitQtyMap[r.uniteNom] || 0) + (r.quantite ?? 0); }
-  const unitQtyEntries = Object.entries(unitQtyMap);
-
   const [ptProducts, setPtProducts] = useState<Array<{ id: number; nom: string }>>([]);
 
   useEffect(() => {
@@ -415,15 +413,6 @@ export default function HistoriqueApproPage() {
     URL.revokeObjectURL(url);
   };
 
-  const labelStyle: React.CSSProperties = {
-    fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)',
-    textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 5,
-  };
-
-  const dateLabelStyle: React.CSSProperties = {
-    fontSize: '0.68rem', fontWeight: 800, color: '#0f766e',
-    textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5,
-  };
 
   const sectionLabelStyle: React.CSSProperties = {
     fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-muted)',

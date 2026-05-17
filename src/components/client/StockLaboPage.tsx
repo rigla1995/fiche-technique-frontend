@@ -89,7 +89,7 @@ export default function StockLaboPage() {
   const [stock, setStock] = useState<LaboStockRow[]>([]);
   const [rowState, setRowState] = useState<Record<number, RowState>>({});
   const [seuilMinEdits, setSeuilMinEdits] = useState<Record<number, string>>({});
-  const [seuilMinSaving, setSeuilMinSaving] = useState<Record<number, boolean>>({});
+  const [, setSeuilMinSaving] = useState<Record<number, boolean>>({});
   const [loading, setLoading] = useState(true);
   const [fournisseurs, setFournisseurs] = useState<Fournisseur[]>([]);
   const [perteModal, setPerteModal] = useState<{ ingredientId: number; nom: string } | null>(null);
@@ -222,23 +222,6 @@ export default function StockLaboPage() {
 
   const setField = (ingredientId: number, field: keyof RowState, value: unknown) => {
     setRowState((prev) => ({ ...prev, [ingredientId]: { ...prev[ingredientId], [field]: value } }));
-  };
-
-  const setDateApproField = (ingredientId: number, newDate: string) => {
-    const r = stock.find((s) => s.ingredientId === ingredientId);
-    const rs = rowState[ingredientId];
-    if (!r || !rs) return;
-    const histDates = new Set<string>((rs.history || []).map((h) => h.dateAppro).filter(Boolean) as string[]);
-    const hasConflict = (r.quantite !== null && newDate === r.dateAppro) || histDates.has(newDate);
-    setRowState((prev) => ({
-      ...prev,
-      [ingredientId]: {
-        ...prev[ingredientId],
-        dateAppro: newDate,
-        quantite: hasConflict ? '0' : prev[ingredientId].quantite,
-        prixUnitaire: hasConflict ? '0' : prev[ingredientId].prixUnitaire,
-      },
-    }));
   };
 
   const canSaveRow = (rs: RowState | undefined, isPT = false): boolean => {

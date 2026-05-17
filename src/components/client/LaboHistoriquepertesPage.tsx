@@ -31,10 +31,6 @@ interface LaboPerteEntry {
 
 interface LaboIngredient { id: number; nom: string; unite: string; categorie: string; categorieId: number | null }
 
-const labelStyle: React.CSSProperties = {
-  fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)',
-  textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 4,
-};
 
 export default function LaboHistoriquepertesPage() {
   const [searchParams] = useSearchParams();

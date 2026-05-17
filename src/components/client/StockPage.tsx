@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
@@ -43,13 +43,6 @@ function buildInitialRowState(entries: StockEntry[]): Record<number, StockRowSta
     };
   }
   return state;
-}
-
-function canSaveStockRow(row: StockRowState, requireFournisseur = false): boolean {
-  if (row.saving) return false;
-  if (!row.quantite.trim() || !row.prixUnitaire.trim() || parseFloat(row.prixUnitaire) <= 0 || !row.dateAppro.trim()) return false;
-  if (requireFournisseur && (!row.fournisseurId.trim() || !row.refFacture.trim())) return false;
-  return true;
 }
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -418,7 +411,7 @@ interface StockMatrixProps {
   onRefresh?: () => void;
 }
 
-function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fournisseurFilter, refFactureFilter, activiteId, isEntreprise, fournisseurs = [], onSave, onSavePT, onSaveSeuilMin, onSavePerte, onRefresh }: StockMatrixProps) {
+function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fournisseurFilter, refFactureFilter, activiteId, isEntreprise, fournisseurs = [], onSave, onSavePT: _onSavePT, onSaveSeuilMin, onSavePerte, onRefresh }: StockMatrixProps) {
   const { t } = useTranslation();
   const { canWrite } = useAuth();
   const navigate = useNavigate();
@@ -430,7 +423,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
   const [affectationModal, setAffectationModal] = useState<{ ingredientId: number; nom: string } | null>(null);
   const [transfertInfoModal, setTransfertInfoModal] = useState<{ ingredientId: number; nom: string } | null>(null);
   const [seuilEdits, setSeuilEdits] = useState<Record<number, string>>({});
-  const [seuilSaving, setSeuilSaving] = useState<Record<number, boolean>>({});
+  const [, setSeuilSaving] = useState<Record<number, boolean>>({});
   const [totalOverrides, setTotalOverrides] = useState<Record<number, number>>({});
   const [ptRecipes, setPtRecipes] = useState<Record<number, Array<{ ingredientId: number; nom: string; portion: number; unite: string }>>>({});
   const [ptStockModal, setPtStockModal] = useState<{ produitId: number; nom: string } | null>(null);
@@ -509,92 +502,6 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
     const now = new Date();
     const [y, m] = dateStr.split('-');
     return parseInt(y) === now.getFullYear() && parseInt(m) === now.getMonth() + 1;
-  };
-
-  const doSaveRow = async (id: number, row: StockRowState) => {
-    setRows((prev) => ({ ...prev, [id]: { ...prev[id], saving: true, error: '' } }));
-    try {
-      let ptResponse: { prixCalcule: number | null; dateAppro: string; totalQuantite: number } | null = null;
-      if (id < 0 && onSavePT) {
-        ptResponse = await onSavePT(-id, row.quantite, bulkDate);
-      } else {
-        const fId = bulkFournisseurId ? Number(bulkFournisseurId) : null;
-        const ref = bulkRefFacture.trim() || null;
-        const tva = bulkTauxTva.trim() ? parseFloat(bulkTauxTva) : null;
-        await onSave(id, row.quantite, row.prixUnitaire, bulkDate, fId, ref, tva);
-      }
-      const today = todayStr();
-      if (isCurrentMonth(bulkDate)) {
-        const added = parseFloat(row.quantite) || 0;
-        setTotalOverrides((prev) => {
-          const base = prev[id] ?? (entries.find((e) => e.ingredientId === id)?.totalQuantite ?? 0);
-          return { ...prev, [id]: (base as number) + added };
-        });
-      }
-      setRows((prev) => ({
-        ...prev,
-        [id]: {
-          ...prev[id],
-          saving: false, saved: true, hasExisting: true,
-          quantite: '0', prixUnitaire: '0', dateAppro: today,
-          fournisseurId: '', refFacture: '',
-          origQuantite: '0', origPrixUnitaire: '0', origDateAppro: today,
-        },
-      }));
-      // Keep history cache and add saved entry so date-conflict alarm fires next time
-      setHistoryData((prev) => {
-        const savedPrix = ptResponse ? (ptResponse.prixCalcule ?? 0) : (parseFloat(row.prixUnitaire) || 0);
-        const saved = {
-          dateAppro: ptResponse ? ptResponse.dateAppro : bulkDate,
-          quantite: parseFloat(row.quantite) || 0,
-          prixUnitaire: savedPrix,
-          typeAppro: 'manuel',
-          fournisseurNom: null,
-          refFacture: bulkRefFacture.trim() || null,
-          updatedAt: new Date().toISOString(),
-        };
-        return { ...prev, [id]: [saved, ...(prev[id] || [])] };
-      });
-      setHistoryOpen((prev) => ({ ...prev, [id]: false }));
-      setTimeout(() => setRows((prev) => ({ ...prev, [id]: { ...prev[id], saved: false } })), 2500);
-      onRefresh?.();
-    } catch {
-      setRows((prev) => ({ ...prev, [id]: { ...prev[id], saving: false, error: t('common.error') } }));
-    }
-  };
-
-  const saveRow = async (id: number) => {
-    const row = rows[id];
-    const entry = entries.find((e) => e.ingredientId === id);
-    if (!row) return;
-    if (entry?.isPT) {
-      if (!row.quantite.trim() || parseFloat(row.quantite) <= 0 || !bulkDate.trim() || row.saving) return;
-    } else {
-      if (!row.quantite.trim() || parseFloat(row.quantite) <= 0 || !row.prixUnitaire.trim() || parseFloat(row.prixUnitaire) <= 0 || row.saving) return;
-      if (!bulkDate.trim() || !bulkFournisseurId || !bulkRefFacture.trim()) return;
-    }
-
-    // Ensure history is loaded for conflict detection
-    const hist = await fetchHistory(id);
-    const conflictEntries = hist.filter((h) => h.dateAppro === bulkDate);
-    const hasConflict = conflictEntries.length > 0 ||
-      (entry?.quantite !== null && bulkDate === entry?.dateAppro);
-
-    if (hasConflict) {
-      const displayEntries = conflictEntries.length > 0 ? conflictEntries : [{
-        dateAppro: entry!.dateAppro!, quantite: entry!.quantite,
-        prixUnitaire: entry!.prixUnitaire, typeAppro: 'manuel',
-        fournisseurNom: null, refFacture: null, updatedAt: null,
-      }];
-      setConflictModal({
-        date: bulkDate,
-        conflicts: [{ ingredientNom: entry?.nom ?? '', entries: displayEntries as StockHistoryEntry[] }],
-        newQuantite: parseFloat(row.quantite) || 0,
-        onConfirm: () => { setConflictModal(null); doSaveRow(id, row); },
-      });
-      return;
-    }
-    await doSaveRow(id, row);
   };
 
   const saveSeuilMin = async (id: number) => {

@@ -62,7 +62,7 @@ export default function TransferPage() {
   const [loading, setLoading] = useState(true);
   const [hasTransfers, setHasTransfers] = useState(false);
 
-  const [note, setNote] = useState('');
+  const [note] = useState('');
   const [refFacture, setRefFacture] = useState('');
   const [qtys, setQtys] = useState<TransferQtys>({});
   const [successMsg, setSuccessMsg] = useState('');

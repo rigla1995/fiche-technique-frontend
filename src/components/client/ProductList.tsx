@@ -22,7 +22,7 @@ export default function ProductList() {
   const { user, canWrite } = useAuth();
   const isEntreprise = user?.compteType === 'entreprise' || !user?.compteType;
 
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
   const tab = (searchParams.get('tab') as TabType) || 'vendable';
   const laboId = searchParams.get('laboId') || '';
 

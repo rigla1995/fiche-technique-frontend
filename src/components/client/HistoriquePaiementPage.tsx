@@ -16,7 +16,6 @@ const isoMois = (d: string) => d ? d.slice(0, 7) : '';
 function resolveStatut(p: Paiement): string {
   if (p.statut === 'payé' || p.statut === 'remisé' || p.statut === 'gratuit') return p.statut;
   const now = new Date();
-  const mois = new Date(p.mois);
   const moisStr = isoMois(p.mois);
   const currentStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   if (moisStr < currentStr) return 'impayé';

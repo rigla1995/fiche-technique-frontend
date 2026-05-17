@@ -116,7 +116,7 @@ interface GerantSidebarProps {
 function GerantSidebarContent({
   user, labos, gerantActivites, location, openSections, toggleSection, onClose,
   isHistoriquePage, isHistoriquepertesPage, isProductsPage,
-  currentHistType, currentProductTab, currentActCtx: _currentActCtx,
+  currentHistType: _currentHistType, currentProductTab, currentActCtx: _currentActCtx,
 }: GerantSidebarProps) {
   const gerantActiviteId = user.gerantActiviteId;
   const gerantActiviteType = user.gerantActiviteType;
@@ -234,14 +234,8 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const isHistoriquePage = location.pathname === '/client/stock/historique';
   const isHistoriquepertesPage = location.pathname === '/client/stock/historique-pertes';
   const isProductsPage = location.pathname === '/client/products';
-  const isProductActive = (tab: string, actCtx: string) =>
-    isProductsPage && currentProductTab === tab && currentActCtx === actCtx;
-
   const hasActivites = typesSummary === null ? true : typesSummary.hasActivites;
   const hasSelections = typesSummary === null ? true : typesSummary.hasSelections;
-  const hasReady = typesSummary === null ? true : typesSummary.hasReady;
-  const hasAppro = typesSummary === null ? true : typesSummary.hasAppro;
-  const hasFournisseurs = typesSummary === null ? true : typesSummary.hasFournisseurs;
   const hasLaboIngredients = typesSummary === null ? true : (typesSummary.hasLaboIngredients ?? false);
 
   // New progressive-unlock flags (entreprise only, post-onboarding)
@@ -313,10 +307,6 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
     window.addEventListener('fournisseur-created', handler);
     return () => window.removeEventListener('fournisseur-created', handler);
   }, [isEntreprise, user?.role]);
-
-  const sidebarTitle = isGerant
-    ? (isEntreprise && user?.entrepriseName ? `Espace ${user.entrepriseName}` : 'Espace Gérant')
-    : (isEntreprise && user?.entrepriseName ? `Espace ${user.entrepriseName}` : t('client.title'));
 
   const sidebarBanner = isOnboarding ? (
     <div style={{ background: '#fef9c3', borderRadius: 8, padding: '10px 12px', margin: '8px 12px', fontSize: '0.78rem', color: '#854d0e', lineHeight: 1.5 }}>

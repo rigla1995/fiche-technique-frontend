@@ -42,10 +42,6 @@ const labelStyle: React.CSSProperties = {
   textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 4,
 };
 
-const dateLabelStyle: React.CSSProperties = {
-  fontSize: '0.68rem', fontWeight: 800, color: '#0f766e',
-  textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 4,
-};
 
 const warningBanner = (
   <div style={{ background: '#fef3c7', border: '1px solid #fde68a', borderRadius: 8, padding: '8px 12px', marginBottom: 12, fontSize: '0.82rem', color: '#92400e', display: 'flex', gap: 8, alignItems: 'flex-start' }}>
@@ -331,8 +327,6 @@ export default function LaboHistoriqueApproPage() {
   const totalTTC = results.reduce((s, r) => s + (r.quantite ?? 0) * (r.prixUnitaireTva ?? 0), 0);
   const unitQtyMap: Record<string, number> = {};
   for (const r of results) { unitQtyMap[r.uniteNom] = (unitQtyMap[r.uniteNom] || 0) + (r.quantite ?? 0); }
-  const unitQtyEntries = Object.entries(unitQtyMap);
-
   const hasFilters = filterCategorieId || filterIngredientId || filterFournisseurId || filterRefFacture;
 
   if (!laboId) return <div className="page"><p className="text-muted">Labo non spécifié.</p></div>;

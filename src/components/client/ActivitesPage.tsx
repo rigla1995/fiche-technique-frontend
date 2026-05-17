@@ -78,7 +78,7 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
   // Ingredient assignment modal
   const [ingredientsActivite, setIngredientsActivite] = useState<Activite | null>(null);
   const [ingredients, setIngredients] = useState<ActiviteIngredient[]>([]);
-  const [ingredientsLoading, setIngredientsLoading] = useState(false);
+  const [ingredientsLoading] = useState(false);
   const [openIngCats, setOpenIngCats] = useState<Set<string>>(new Set());
 
   const toggleIngCat = (cat: string) =>
@@ -128,14 +128,6 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
     setForm({ nom: act.nom, adresse: act.adresse || '' });
     setHasLabo(act.laboId ? true : false);
     setSelectedLaboId(act.laboId ?? '');
-    setError('');
-    setShowForm(true);
-  };
-
-  const openDuplicate = (act: Activite) => {
-    setEditingId(null);
-    setIsDuplicate(true);
-    setForm({ nom: act.nom, adresse: '' });
     setError('');
     setShowForm(true);
   };
@@ -210,17 +202,6 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
       load();
     } catch { /* ignore */ }
     setDeleting(false);
-  };
-
-  const openIngredients = async (act: Activite) => {
-    setIngredientsActivite(act);
-    setIngredientsLoading(true);
-    setIngredients([]);
-    try {
-      const { data } = await api.get(`/api/entreprise/activites/${act.id}/ingredients`);
-      setIngredients(data);
-    } catch { /* ignore */ }
-    setIngredientsLoading(false);
   };
 
   const closeIngredients = () => { setIngredientsActivite(null); setIngredients([]); setOpenIngCats(new Set()); };
