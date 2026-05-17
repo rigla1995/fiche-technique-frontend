@@ -67,6 +67,7 @@ export default function TransferPage() {
   const [qtys, setQtys] = useState<TransferQtys>({});
   const [successMsg, setSuccessMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
+  const [errorDetail, setErrorDetail] = useState<{ msg: string; disponible?: number; demande?: number } | null>(null);
   const [transferDate, setTransferDate] = useState(todayStr());
   const [bulkSaving, setBulkSaving] = useState(false);
   const [transferConfirm, setTransferConfirm] = useState<{
@@ -171,6 +172,7 @@ export default function TransferPage() {
 
   const handleBulkTransfer = async (confirmed = false) => {
     setErrorMsg('');
+    setErrorDetail(null);
     if (!refFacture.trim()) { setErrorMsg('Le N° de BL (Réf. Facture) est obligatoire.'); return; }
 
     // Gather all non-zero transfers per ingredient
@@ -286,8 +288,12 @@ export default function TransferPage() {
       setSuccessMsg(t('client.labo.transfer_success'));
       setTimeout(() => setSuccessMsg(''), 3000);
     } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
-      setErrorMsg(msg || t('common.error'));
+      const d = (err as { response?: { data?: { message?: string; disponible?: number; demande?: number } } })?.response?.data;
+      if (d?.disponible !== undefined) {
+        setErrorDetail({ msg: d.message || t('common.error'), disponible: d.disponible, demande: d.demande });
+      } else {
+        setErrorMsg(d?.message || t('common.error'));
+      }
     }
     setBulkSaving(false);
   };
@@ -393,7 +399,32 @@ export default function TransferPage() {
       </div>
 
       {successMsg && <div style={{ background: 'var(--success, #10b981)', color: '#fff', borderRadius: 10, padding: '10px 18px', marginBottom: 16, fontWeight: 600 }}>✓ {successMsg}</div>}
-      {errorMsg && <div style={{ background: 'var(--danger, #ef4444)', color: '#fff', borderRadius: 10, padding: '10px 18px', marginBottom: 16, fontWeight: 600 }}>{errorMsg}</div>}
+      {errorMsg && <div style={{ background: 'var(--danger, #ef4444)', color: '#fff', borderRadius: 10, padding: '10px 18px', marginBottom: 16, fontWeight: 600 }}>⚠ {errorMsg}</div>}
+      {errorDetail && (
+        <div style={{ background: '#fef2f2', border: '1.5px solid #fecaca', borderRadius: 12, padding: '14px 18px', marginBottom: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+            <span style={{ fontSize: '1.2rem' }}>⚠️</span>
+            <span style={{ fontWeight: 700, color: '#dc2626', fontSize: '0.92rem' }}>{errorDetail.msg}</span>
+            <button onClick={() => setErrorDetail(null)} style={{ marginLeft: 'auto', background: 'none', border: 'none', color: '#dc2626', cursor: 'pointer', fontSize: '1rem', opacity: 0.7 }}>✕</button>
+          </div>
+          {errorDetail.disponible !== undefined && (
+            <div style={{ display: 'flex', gap: 10 }}>
+              <div style={{ background: '#f0fdf4', border: '1px solid #86efac', borderRadius: 8, padding: '8px 16px', flex: 1, textAlign: 'center' }}>
+                <div style={{ fontSize: '0.65rem', fontWeight: 800, color: '#15803d', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 3 }}>Disponible</div>
+                <div style={{ fontWeight: 900, color: '#15803d', fontSize: '1.15rem' }}>{errorDetail.disponible}</div>
+              </div>
+              <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, padding: '8px 16px', flex: 1, textAlign: 'center' }}>
+                <div style={{ fontSize: '0.65rem', fontWeight: 800, color: '#dc2626', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 3 }}>Demandé</div>
+                <div style={{ fontWeight: 900, color: '#dc2626', fontSize: '1.15rem' }}>{errorDetail.demande}</div>
+              </div>
+              <div style={{ background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: 8, padding: '8px 16px', flex: 1, textAlign: 'center' }}>
+                <div style={{ fontSize: '0.65rem', fontWeight: 800, color: '#c2410c', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 3 }}>Excédent</div>
+                <div style={{ fontWeight: 900, color: '#ea580c', fontSize: '1.15rem' }}>+{((errorDetail.demande ?? 0) - (errorDetail.disponible ?? 0)).toFixed(3)}</div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {!loading && stock.length > 0 && activites.length > 0 && (
         <div style={{
@@ -559,9 +590,11 @@ export default function TransferPage() {
                           const rowTransfers = transferHistory[r.ingredientId] ?? [];
                           const stockEmpty = r.quantite === null || r.quantite === 0;
                           const dateConflict = getTransferDates(r.ingredientId).has(transferDate);
+                          const totalQtyForRow = Object.values(qtys[r.ingredientId] || {}).reduce((s, v) => s + (parseFloat(v) || 0), 0);
+                          const qtyExceedsStock = r.quantite !== null && totalQtyForRow > r.quantite;
                           return (
                             <React.Fragment key={r.ingredientId}>
-                              <tr style={dateConflict ? { borderLeft: '3px solid #f59e0b' } : {}}>
+                              <tr style={qtyExceedsStock ? { borderLeft: '3px solid #ef4444', background: '#fff5f5' } : dateConflict ? { borderLeft: '3px solid #f59e0b' } : {}}>
                                 <td style={{ padding: '12px 14px' }}>
                                   <div style={{ fontWeight: 600 }}>{r.nom}</div>
                                   <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{r.unite}</div>
@@ -571,11 +604,16 @@ export default function TransferPage() {
                                   </button>
                                 </td>
                                 <td style={{ textAlign: 'right', padding: '12px 14px' }}>
-                                  <span style={{ fontWeight: 800, color: qtyColor(r.quantite), fontSize: '1rem' }}>
+                                  <span style={{ fontWeight: 800, color: qtyExceedsStock ? '#ef4444' : qtyColor(r.quantite), fontSize: '1rem' }}>
                                     {r.quantite !== null ? r.quantite : '—'}
                                   </span>
                                   {r.prixUnitaire !== null && (
                                     <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{r.prixUnitaire.toFixed(3)} DT</div>
+                                  )}
+                                  {qtyExceedsStock && (
+                                    <div style={{ fontSize: '0.68rem', color: '#ef4444', fontWeight: 700, marginTop: 2 }}>
+                                      ⚠ -{(totalQtyForRow - r.quantite!).toFixed(3)}
+                                    </div>
                                   )}
                                 </td>
                                 <td style={{ textAlign: 'right', padding: '12px 14px' }}>
@@ -595,9 +633,9 @@ export default function TransferPage() {
                                     <td key={act.id} style={{ textAlign: 'center', padding: '12px 14px' }}>
                                       {!stockEmpty && isAssigned ? (
                                         <input type="number" min="0" step="0.001" className="input"
-                                          style={{ width: 100, textAlign: 'right' }}
+                                          style={{ width: 100, textAlign: 'right', borderColor: qtyExceedsStock ? '#ef4444' : undefined, background: qtyExceedsStock ? '#fef2f2' : undefined }}
                                           value={qtys[r.ingredientId]?.[act.id] ?? ''}
-                                          onChange={(e) => setQty(r.ingredientId, act.id, e.target.value)}
+                                          onChange={(e) => { setQty(r.ingredientId, act.id, e.target.value); setErrorDetail(null); setErrorMsg(''); }}
                                           placeholder="0" />
                                       ) : (
                                         <span style={{ color: 'var(--danger, #ef4444)', fontWeight: 700, fontSize: '1.1rem' }}>—</span>

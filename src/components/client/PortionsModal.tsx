@@ -37,6 +37,7 @@ export default function PortionsModal({ produitNom, recipeUrl, stockMap, onSave,
   const [dateAppro, setDateAppro] = useState(todayStr());
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [errorDetail, setErrorDetail] = useState<{ msg: string; disponible?: number; demande?: number } | null>(null);
   const [done, setDone] = useState(false);
 
   // Filters
@@ -109,6 +110,7 @@ export default function PortionsModal({ produitNom, recipeUrl, stockMap, onSave,
     if (qtyExceedsMax) { setError(`Quantité dépasse le max réalisable (${maxQty!.toFixed(3)})`); return; }
     setSaving(true);
     setError('');
+    setErrorDetail(null);
     try {
       // Only send portions that differ from standard
       const customPortions: CustomPortion[] = recipe
@@ -123,8 +125,12 @@ export default function PortionsModal({ produitNom, recipeUrl, stockMap, onSave,
       onSaved();
       setTimeout(onClose, 1200);
     } catch (e: unknown) {
-      const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message;
-      setError(msg ?? 'Erreur serveur');
+      const d = (e as { response?: { data?: { message?: string; disponible?: number; demande?: number } } })?.response?.data;
+      if (d?.disponible !== undefined) {
+        setErrorDetail({ msg: d.message ?? 'Stock insuffisant', disponible: d.disponible, demande: d.demande });
+      } else {
+        setError(d?.message ?? 'Erreur serveur');
+      }
     }
     setSaving(false);
   };
@@ -259,7 +265,32 @@ export default function PortionsModal({ produitNom, recipeUrl, stockMap, onSave,
                   </tbody>
                 </table>
               </div>
-              {error && <p style={{ color: 'var(--danger)', fontSize: '0.85rem' }}>{error}</p>}
+              {error && <p style={{ color: 'var(--danger)', fontSize: '0.85rem', fontWeight: 600 }}>⚠ {error}</p>}
+              {errorDetail && (
+                <div style={{ background: '#fef2f2', border: '1.5px solid #fecaca', borderRadius: 10, padding: '12px 16px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                    <span style={{ fontSize: '1.1rem' }}>⚠️</span>
+                    <span style={{ fontWeight: 700, color: '#dc2626', fontSize: '0.88rem' }}>{errorDetail.msg}</span>
+                    <button onClick={() => setErrorDetail(null)} style={{ marginLeft: 'auto', background: 'none', border: 'none', color: '#dc2626', cursor: 'pointer', opacity: 0.6, fontSize: '0.9rem' }}>✕</button>
+                  </div>
+                  {errorDetail.disponible !== undefined && (
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <div style={{ background: '#f0fdf4', border: '1px solid #86efac', borderRadius: 8, padding: '7px 12px', flex: 1, textAlign: 'center' }}>
+                        <div style={{ fontSize: '0.6rem', fontWeight: 800, color: '#15803d', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 2 }}>Disponible</div>
+                        <div style={{ fontWeight: 900, color: '#15803d', fontSize: '1.05rem' }}>{errorDetail.disponible}</div>
+                      </div>
+                      <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, padding: '7px 12px', flex: 1, textAlign: 'center' }}>
+                        <div style={{ fontSize: '0.6rem', fontWeight: 800, color: '#dc2626', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 2 }}>Demandé</div>
+                        <div style={{ fontWeight: 900, color: '#dc2626', fontSize: '1.05rem' }}>{errorDetail.demande}</div>
+                      </div>
+                      <div style={{ background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: 8, padding: '7px 12px', flex: 1, textAlign: 'center' }}>
+                        <div style={{ fontSize: '0.6rem', fontWeight: 800, color: '#c2410c', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 2 }}>Excédent</div>
+                        <div style={{ fontWeight: 900, color: '#ea580c', fontSize: '1.05rem' }}>+{((errorDetail.demande ?? 0) - (errorDetail.disponible ?? 0)).toFixed(3)}</div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </>
           )}
         </div>
