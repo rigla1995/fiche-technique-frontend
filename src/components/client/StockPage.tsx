@@ -51,12 +51,13 @@ interface PerteModalProps {
   ingredientId: number;
   nom: string;
   activiteId?: number;
+  stockDisponible?: number | null;
   onSaveOverride?: (ingredientId: number, quantite: number, typePerte: string, datePerte: string) => Promise<void>;
   onAfterSave?: () => void;
   onClose: () => void;
 }
 
-function PerteModal({ ingredientId, nom, activiteId, onSaveOverride, onAfterSave, onClose }: PerteModalProps) {
+function PerteModal({ ingredientId, nom, activiteId, stockDisponible, onSaveOverride, onAfterSave, onClose }: PerteModalProps) {
   const [quantite, setQuantite] = useState('');
   const [typePerte, setTypePerte] = useState<'avarie' | 'dechet'>('avarie');
   const [datePerte, setDatePerte] = useState(todayStr());
@@ -134,8 +135,12 @@ function PerteModal({ ingredientId, nom, activiteId, onSaveOverride, onAfterSave
       onAfterSave?.();
       setTimeout(onClose, 1200);
     } catch (e: unknown) {
-      const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message;
-      setError(msg ?? 'Erreur serveur');
+      const d = (e as { response?: { data?: { message?: string; disponible?: number; demande?: number } } })?.response?.data;
+      if (d?.disponible !== undefined) {
+        setError(`Stock insuffisant — disponible : ${d.disponible} | demandé : ${d.demande}`);
+      } else {
+        setError(d?.message ?? 'Erreur serveur');
+      }
     }
     setSaving(false);
   };
@@ -164,10 +169,24 @@ function PerteModal({ ingredientId, nom, activiteId, onSaveOverride, onAfterSave
             </div>
           ) : (
             <>
+              {stockDisponible !== null && stockDisponible !== undefined && (
+                <div style={{ background: '#f0fdf4', border: '1px solid #86efac', borderRadius: 6, padding: '6px 12px', display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ fontSize: '0.8rem', color: '#14532d', fontWeight: 600 }}>Stock disponible</span>
+                  <span style={{ fontWeight: 700, color: stockDisponible <= 0 ? '#dc2626' : stockDisponible < 5 ? '#d97706' : '#15803d' }}>
+                    {stockDisponible.toFixed(3)}
+                  </span>
+                </div>
+              )}
               <div>
                 <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: 4 }}>Quantité perdue</label>
                 <input type="number" min="0.001" step="0.001" className="input" style={{ width: '100%' }}
-                  value={quantite} onChange={(e) => setQuantite(e.target.value)} placeholder="0.000" />
+                  max={stockDisponible ?? undefined}
+                  value={quantite} onChange={(e) => { setQuantite(e.target.value); setError(''); }} placeholder="0.000" />
+                {stockDisponible !== null && stockDisponible !== undefined && quantite && parseFloat(quantite) > stockDisponible && (
+                  <p style={{ color: '#dc2626', fontSize: '0.78rem', margin: '4px 0 0', fontWeight: 600 }}>
+                    ⚠ Dépasse le stock disponible ({stockDisponible.toFixed(3)})
+                  </p>
+                )}
               </div>
               <div>
                 <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: 4 }}>Type de perte</label>
@@ -204,7 +223,12 @@ function PerteModal({ ingredientId, nom, activiteId, onSaveOverride, onAfterSave
           <div className="modal-footer">
             <button className="btn btn-ghost" onClick={onClose}>Annuler</button>
             {!loadingRange && dateMin && (
-              <button className="btn btn-danger btn-sm" style={{ background: '#be123c', color: '#fff', borderColor: '#be123c' }} onClick={submit} disabled={saving}>
+              <button
+                className="btn btn-danger btn-sm"
+                style={{ background: '#be123c', color: '#fff', borderColor: '#be123c' }}
+                onClick={submit}
+                disabled={saving || (stockDisponible !== null && stockDisponible !== undefined && !!quantite && parseFloat(quantite) > stockDisponible)}
+              >
                 {saving ? '…' : 'Enregistrer la perte'}
               </button>
             )}
@@ -419,7 +443,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
   const [historyOpen, setHistoryOpen] = useState<Record<number, boolean>>({});
   const [historyData, setHistoryData] = useState<Record<number, StockHistoryEntry[]>>({});
   const [openCats, setOpenCats] = useState<Set<string>>(new Set());
-  const [pertesModal, setPertesModal] = useState<{ ingredientId: number; nom: string } | null>(null);
+  const [pertesModal, setPertesModal] = useState<{ ingredientId: number; nom: string; stockDisponible?: number | null } | null>(null);
   const [affectationModal, setAffectationModal] = useState<{ ingredientId: number; nom: string } | null>(null);
   const [transfertInfoModal, setTransfertInfoModal] = useState<{ ingredientId: number; nom: string } | null>(null);
   const [seuilEdits, setSeuilEdits] = useState<Record<number, string>>({});
@@ -664,6 +688,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
           ingredientId={pertesModal.ingredientId}
           nom={pertesModal.nom}
           activiteId={activiteId}
+          stockDisponible={pertesModal.stockDisponible}
           onSaveOverride={!activiteId && onSavePerte ? onSavePerte : undefined}
           onAfterSave={onRefresh}
           onClose={() => setPertesModal(null)}
@@ -971,7 +996,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                                   </button>
                                 )}
                                 {canWrite && ((isEntreprise && activiteId) || (!isEntreprise && onSavePerte)) && (
-                                  <button className="perte-btn" onClick={() => setPertesModal({ ingredientId: entry.ingredientId, nom: entry.nom })} title="Enregistrer une perte">📉 Perte</button>
+                                  <button className="perte-btn" onClick={() => setPertesModal({ ingredientId: entry.ingredientId, nom: entry.nom, stockDisponible: entry.quantite ?? null })} title="Enregistrer une perte">📉 Perte</button>
                                 )}
                               </div>
                             </td>

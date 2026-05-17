@@ -92,7 +92,8 @@ export default function StockLaboPage() {
   const [, setSeuilMinSaving] = useState<Record<number, boolean>>({});
   const [loading, setLoading] = useState(true);
   const [fournisseurs, setFournisseurs] = useState<Fournisseur[]>([]);
-  const [perteModal, setPerteModal] = useState<{ ingredientId: number; nom: string } | null>(null);
+  const [perteModal, setPerteModal] = useState<{ ingredientId: number; nom: string; quantite: number | null } | null>(null);
+  const [perteErrMsg, setPerteErrMsg] = useState('');
   const [ptConfirm, setPtConfirm] = useState<{ ingredientId: number; nom: string; dateAppro: string; existingQty: number; newQty: number } | null>(null);
   const [perteQty, setPerteQty] = useState('');
   const [perteType, setPerteType] = useState<'avarie' | 'dechet'>('avarie');
@@ -340,6 +341,7 @@ export default function StockLaboPage() {
 
   const savePerte = async () => {
     if (!perteModal || !perteQty.trim() || parseFloat(perteQty) <= 0) return;
+    setPerteErrMsg('');
     setPerteSaving(true);
     try {
       await api.post(`/api/labo/${laboId}/stock/${perteModal.ingredientId}/perte`, {
@@ -355,7 +357,14 @@ export default function StockLaboPage() {
       setPerteDateMin(null);
       setPerteDateMax(null);
       loadStock();
-    } catch { /* ignore */ }
+    } catch (err: unknown) {
+      const d = (err as { response?: { data?: { message?: string; disponible?: number; demande?: number } } })?.response?.data;
+      if (d?.disponible !== undefined) {
+        setPerteErrMsg(`Stock insuffisant — disponible : ${d.disponible} | demandé : ${d.demande}`);
+      } else {
+        setPerteErrMsg(d?.message || 'Erreur lors de l\'enregistrement');
+      }
+    }
     setPerteSaving(false);
   };
 
@@ -817,7 +826,7 @@ export default function StockLaboPage() {
                                           )}
                                           <button
                                             className="perte-btn"
-                                            onClick={() => { setPerteModal({ ingredientId: r.ingredientId, nom: r.nom }); setPerteQty(''); setPerteType('avarie'); const d = todayStr(); setPerteDate(d); setPerteDateMin(null); setPerteDateMax(null); fetchPerteDateRange(r.ingredientId).then(() => fetchPertePrix(r.ingredientId, d)); }}
+                                            onClick={() => { setPerteModal({ ingredientId: r.ingredientId, nom: r.nom, quantite: r.quantite ?? null }); setPerteQty(''); setPerteType('avarie'); setPerteErrMsg(''); const d = todayStr(); setPerteDate(d); setPerteDateMin(null); setPerteDateMax(null); fetchPerteDateRange(r.ingredientId).then(() => fetchPertePrix(r.ingredientId, d)); }}
                                             title="Enregistrer une perte"
                                             disabled={!canWrite}
                                           >📉 Perte</button>
@@ -1048,14 +1057,29 @@ export default function StockLaboPage() {
                 </>
               ) : (
                 <>
+                  {perteModal?.quantite !== null && perteModal?.quantite !== undefined && (
+                    <div style={{ background: '#f0fdf4', border: '1px solid #86efac', borderRadius: 6, padding: '6px 12px', display: 'flex', justifyContent: 'space-between', marginBottom: 10 }}>
+                      <span style={{ fontSize: '0.8rem', color: '#14532d', fontWeight: 600 }}>Stock disponible</span>
+                      <span style={{ fontWeight: 700, color: perteModal.quantite <= 0 ? '#dc2626' : perteModal.quantite < 5 ? '#d97706' : '#15803d' }}>
+                        {perteModal.quantite.toFixed(3)}
+                      </span>
+                    </div>
+                  )}
                   <label style={{ ...LABEL, display: 'block', marginBottom: 6 }}>Quantité perdue</label>
                   <input
                     className="input" type="number" min="0.001" step="0.001"
-                    style={{ width: '100%', fontSize: '0.9rem', marginBottom: 16 }}
-                    value={perteQty} onChange={(e) => setPerteQty(e.target.value)}
+                    max={perteModal?.quantite ?? undefined}
+                    style={{ width: '100%', fontSize: '0.9rem', marginBottom: 4 }}
+                    value={perteQty} onChange={(e) => { setPerteQty(e.target.value); setPerteErrMsg(''); }}
                     placeholder="Ex: 2.5"
                     autoFocus
                   />
+                  {perteModal?.quantite !== null && perteModal?.quantite !== undefined && perteQty && parseFloat(perteQty) > perteModal.quantite && (
+                    <p style={{ color: '#dc2626', fontSize: '0.78rem', margin: '0 0 10px', fontWeight: 600 }}>
+                      ⚠ Dépasse le stock disponible ({perteModal.quantite.toFixed(3)})
+                    </p>
+                  )}
+                  {!perteQty || parseFloat(perteQty) <= (perteModal?.quantite ?? Infinity) ? <div style={{ marginBottom: 12 }} /> : null}
                   <label style={{ ...LABEL, display: 'block', marginBottom: 6 }}>Type de perte</label>
                   <select className="input" style={{ width: '100%', fontSize: '0.9rem', marginBottom: 16 }} value={perteType} onChange={(e) => setPerteType(e.target.value as 'avarie' | 'dechet')}>
                     <option value="avarie">Avarie</option>
@@ -1084,12 +1108,20 @@ export default function StockLaboPage() {
                       )}
                     </div>
                   )}
+                  {perteErrMsg && (
+                    <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 6, padding: '8px 12px', marginBottom: 10 }}>
+                      <p style={{ color: '#dc2626', fontSize: '0.82rem', margin: 0, fontWeight: 600 }}>⚠ {perteErrMsg}</p>
+                    </div>
+                  )}
                   <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
                     <button className="btn btn-ghost" onClick={() => setPerteModal(null)}>Annuler</button>
                     <button
                       className="btn btn-danger"
                       onClick={savePerte}
-                      disabled={!perteQty.trim() || parseFloat(perteQty) <= 0 || perteSaving}
+                      disabled={
+                        !perteQty.trim() || parseFloat(perteQty) <= 0 || perteSaving ||
+                        (perteModal?.quantite !== null && perteModal?.quantite !== undefined && parseFloat(perteQty) > perteModal.quantite)
+                      }
                     >
                       {perteSaving ? '…' : 'Enregistrer la perte'}
                     </button>
