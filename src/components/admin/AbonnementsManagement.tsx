@@ -1382,7 +1382,7 @@ export default function AbonnementsManagement() {
                   </span>
                 </div>
                 <div style={{ fontSize: 11, color: '#94a3b8', marginTop: -6 }}>
-                  En dessous de ce seuil, l'agent avertit le client que sa réponse est incertaine.
+                  Indicateur interne de qualité — visible uniquement par l'admin dans la page Agents Actifs.
                 </div>
 
                 {/* Action buttons */}
