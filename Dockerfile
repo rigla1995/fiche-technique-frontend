@@ -1,7 +1,8 @@
 FROM node:20-alpine AS build
 WORKDIR /app
 COPY package*.json ./
-RUN npm ci
+# Force devDependencies install even if NODE_ENV=production is set in CI/Coolify
+RUN npm ci --include=dev
 COPY . .
 ARG VITE_API_URL=https://api.labflow-tn.com
 ENV VITE_API_URL=$VITE_API_URL
