@@ -20,7 +20,7 @@ export default function CategoriesManagement() {
 
   const fetchCategories = () => {
     setLoading(true);
-    api.get('/categories').then(({ data }) => setCategories(data)).finally(() => setLoading(false));
+    api.get('/api/categories').then(({ data }) => setCategories(data)).finally(() => setLoading(false));
   };
 
   useEffect(() => { fetchCategories(); }, []);
@@ -36,9 +36,9 @@ export default function CategoriesManagement() {
     setError('');
     try {
       if (editId) {
-        await api.put(`/categories/${editId}`, { name });
+        await api.put(`/api/categories/${editId}`, { name });
       } else {
-        await api.post('/categories', { name });
+        await api.post('/api/categories', { name });
       }
       closeModal();
       fetchCategories();
@@ -51,7 +51,7 @@ export default function CategoriesManagement() {
 
   const handleDelete = async (id: number) => {
     if (!window.confirm(t('admin.categories.delete_confirm'))) return;
-    await api.delete(`/categories/${id}`);
+    await api.delete(`/api/categories/${id}`);
     fetchCategories();
   };
 

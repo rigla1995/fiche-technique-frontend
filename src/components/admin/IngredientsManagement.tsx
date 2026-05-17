@@ -41,7 +41,7 @@ export default function IngredientsManagement() {
 
   const fetchData = () => {
     setLoading(true);
-    Promise.all([api.get('/ingredients'), api.get('/units'), api.get('/categories'), api.get('/api/domaines')])
+    Promise.all([api.get('/api/ingredients'), api.get('/api/unites'), api.get('/api/categories'), api.get('/api/domaines')])
       .then(([ing, u, cat, dom]) => { setIngredients(ing.data); setUnits(u.data); setCategories(cat.data); setDomaines(dom.data); })
       .finally(() => setLoading(false));
   };
@@ -72,9 +72,9 @@ export default function IngredientsManagement() {
         domaineIds: form.domaineIds,
       };
       if (editId) {
-        await api.put(`/ingredients/${editId}`, payload);
+        await api.put(`/api/ingredients/${editId}`, payload);
       } else {
-        await api.post('/ingredients', payload);
+        await api.post('/api/ingredients', payload);
       }
       closeModal();
       fetchData();
@@ -85,7 +85,7 @@ export default function IngredientsManagement() {
 
   const handleDelete = async (id: number) => {
     if (!window.confirm(t('admin.ingredients.delete_confirm'))) return;
-    await api.delete(`/ingredients/${id}`);
+    await api.delete(`/api/ingredients/${id}`);
     fetchData();
   };
 

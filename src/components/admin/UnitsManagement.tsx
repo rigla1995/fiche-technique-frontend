@@ -20,7 +20,7 @@ export default function UnitsManagement() {
 
   const fetchUnits = () => {
     setLoading(true);
-    api.get('/units').then(({ data }) => setUnits(data)).finally(() => setLoading(false));
+    api.get('/api/unites').then(({ data }) => setUnits(data)).finally(() => setLoading(false));
   };
 
   useEffect(() => { fetchUnits(); }, []);
@@ -36,9 +36,9 @@ export default function UnitsManagement() {
     setError('');
     try {
       if (editId) {
-        await api.put(`/units/${editId}`, { name });
+        await api.put(`/api/unites/${editId}`, { name });
       } else {
-        await api.post('/units', { name });
+        await api.post('/api/unites', { name });
       }
       closeModal();
       fetchUnits();
@@ -51,7 +51,7 @@ export default function UnitsManagement() {
 
   const handleDelete = async (id: number) => {
     if (!window.confirm(t('admin.units.delete_confirm'))) return;
-    await api.delete(`/units/${id}`);
+    await api.delete(`/api/unites/${id}`);
     fetchUnits();
   };
 
