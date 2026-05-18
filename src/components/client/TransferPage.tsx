@@ -486,7 +486,7 @@ export default function TransferPage() {
               </select>
             </div>
             {(filterCategorie || filterIngredientId !== '' || filterNom || filterActiviteId !== '') && (
-              <button className="btn btn-ghost btn-sm" style={{ fontSize: '0.72rem', alignSelf: 'flex-end' }} onClick={() => { setFilterCategorie(''); setFilterIngredientId(''); setFilterNom(''); setFilterActiviteId(''); }}>✕ Réinitialiser</button>
+              <button className="btn btn-ghost btn-sm" style={{ fontSize: '0.72rem', alignSelf: 'flex-end', marginLeft: 'auto' }} onClick={() => { setFilterCategorie(''); setFilterIngredientId(''); setFilterNom(''); setFilterActiviteId(''); }}>✕ Réinitialiser</button>
             )}
           </div>
         </div>
