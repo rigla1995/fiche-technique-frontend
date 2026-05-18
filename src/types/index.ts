@@ -3,7 +3,6 @@ export interface User {
   name: string;
   email: string;
   role: 'super_admin' | 'client' | 'gerant';
-  compteType?: 'independant' | 'entreprise' | null;
   onboardingStep?: number;
   phone?: string;
   entrepriseName?: string | null;

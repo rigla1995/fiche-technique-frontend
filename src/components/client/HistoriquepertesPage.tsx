@@ -156,7 +156,7 @@ function DeletePerteModal({ entry, onConfirm, onClose }: DeletePerteModalProps) 
 export default function HistoriquepertesPage() {
   const { user, canWrite } = useAuth();
   const [searchParams] = useSearchParams();
-  const isEntreprise = user?.compteType === 'entreprise' || !user?.compteType;
+  const isEntreprise = true;
   const type = searchParams.get('type');
   const urlActiviteId = searchParams.get('activiteId') || '';
   const isGerant = user?.role === 'gerant';
@@ -194,7 +194,6 @@ export default function HistoriquepertesPage() {
 
   // Load activités for entreprise
   useEffect(() => {
-    if (!isEntreprise) return;
     api.get('/api/entreprise/activites')
       .then(({ data }) => {
         const all = data as Activite[];
@@ -206,12 +205,6 @@ export default function HistoriquepertesPage() {
   useEffect(() => {
     setFCategorie('');
     setFIngredient('');
-    if (!isEntreprise) {
-      api.get('/api/stock/client/ingredient-selections')
-        .then(({ data }) => setScopedIngredients(data as ScopedIngredient[]))
-        .catch(() => {});
-      return;
-    }
     if (fActiviteId) {
       api.get(`/api/entreprise/activites/${fActiviteId}/selected-ingredients`)
         .then(({ data }) => setScopedIngredients(data as ScopedIngredient[]))

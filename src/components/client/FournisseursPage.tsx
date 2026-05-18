@@ -25,7 +25,7 @@ const thStyle: React.CSSProperties = {
 
 export default function FournisseursPage() {
   const { user, canWrite } = useAuth();
-  const isIndep = user?.compteType === 'independant';
+  const isIndep = false;
 
   const [fournisseurs, setFournisseurs] = useState<Fournisseur[]>([]);
   const [activites, setActivites] = useState<Activite[]>([]);

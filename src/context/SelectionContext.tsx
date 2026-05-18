@@ -1,6 +1,4 @@
-import { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { useAuth } from './AuthContext';
-import api from '../api/client';
+import { createContext, useContext, useState, useCallback } from 'react';
 
 interface SelectionContextType {
   hasSelections: boolean | null;
@@ -13,22 +11,11 @@ const SelectionContext = createContext<SelectionContextType>({
 });
 
 export function SelectionProvider({ children }: { children: React.ReactNode }) {
-  const { user } = useAuth();
-  const [hasSelections, setHasSelections] = useState<boolean | null>(null);
-
-  const isIndep = user?.role === 'client' && user?.compteType === 'independant';
+  const [hasSelections] = useState<boolean | null>(null);
 
   const refreshSelections = useCallback(() => {
-    if (isIndep) {
-      api.get('/ingredients/has-selections')
-        .then(({ data }) => setHasSelections(data.hasSelections))
-        .catch(() => setHasSelections(false));
-    }
-  }, [isIndep]);
-
-  useEffect(() => {
-    refreshSelections();
-  }, [refreshSelections]);
+    // No-op: client accounts manage selections via activités/labos
+  }, []);
 
   return (
     <SelectionContext.Provider value={{ hasSelections, refreshSelections }}>

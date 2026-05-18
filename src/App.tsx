@@ -62,14 +62,13 @@ function RootRedirect() {
   if (!user) return <Navigate to="/login" replace />;
   if (user.role === 'super_admin') return <Navigate to="/admin" replace />;
   if (user.role === 'gerant') return <Navigate to="/client/stock" replace />;
-  // Entreprise user with pending onboarding → send to profile to change password
-  if (user.compteType === 'entreprise' && (user.onboardingStep ?? 0) === 50) {
+  if ((user.onboardingStep ?? 0) === 50) {
     return <Navigate to="/client/upgrade-wizard" replace />;
   }
-  if (user.compteType === 'entreprise' && (user.onboardingStep ?? 0) === 1) {
+  if ((user.onboardingStep ?? 0) === 1) {
     return <Navigate to="/client/profile" replace />;
   }
-  if (user.compteType === 'entreprise' && (user.onboardingStep ?? 0) === 2) {
+  if ((user.onboardingStep ?? 0) === 2) {
     return <Navigate to="/client/activites" replace />;
   }
   // Post-onboarding: redirect based on activités count

@@ -431,7 +431,7 @@ export default function GlobalCataloguePage() {
   const { user, canWrite, advanceOnboarding } = useAuth();
   const { refreshSelections } = useSelection();
 
-  const isEntreprise = user?.compteType === 'entreprise' || !user?.compteType;
+  const isEntreprise = true;
 
   const [ingredients, setIngredients] = useState<GlobalIngredient[]>([]);
   const [loading, setLoading] = useState(false);
@@ -449,19 +449,8 @@ export default function GlobalCataloguePage() {
     setFilterContext('');
     setLoading(true);
     try {
-      if (isEntreprise) {
-        const { data } = await api.get('/api/entreprise/catalogue-global-ingredients');
-        setIngredients(data as GlobalIngredient[]);
-      } else {
-        const { data } = await api.get('/ingredients');
-        setIngredients((data as Array<{ id: number; nom?: string; name?: string; unite?: string; unitName?: string; categorieName?: string; selected: boolean }>).map((i) => ({
-          id: i.id,
-          nom: i.nom ?? i.name ?? '',
-          unite: i.unite ?? i.unitName ?? '',
-          categorie: i.categorieName ?? t('client.ingredients_catalog.no_category', 'Sans catégorie'),
-          selected: !!i.selected,
-        })));
-      }
+      const { data } = await api.get('/api/entreprise/catalogue-global-ingredients');
+      setIngredients(data as GlobalIngredient[]);
     } finally {
       setLoading(false);
     }
@@ -637,7 +626,7 @@ export default function GlobalCataloguePage() {
           <span className="empty-icon">🧂</span>
           <p>{t('global_catalogue.no_ingredients', 'Aucun ingrédient disponible.')}</p>
         </div>
-      ) : isEntreprise ? (
+      ) : (
         <EntrepriseIngredientList
           ingredients={ingredients}
           toggling={toggling}
@@ -649,26 +638,6 @@ export default function GlobalCataloguePage() {
           onToggleAll={toggleContextAll}
           readOnly={!canWrite}
         />
-      ) : (
-        <IndepIngredientList
-          ingredients={ingredients}
-          toggling={toggling}
-          filterCategory={filterCategory}
-          filterIngId={filterIngId}
-          filterName={filterName}
-          onToggle={toggleIndep}
-          readOnly={!canWrite}
-        />
-      )}
-
-      {/* Link to catalogue pages (indépendant only) */}
-      {!isEntreprise && (
-        <div style={{ marginTop: 20, padding: '12px 16px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, fontSize: '0.85rem' }}>
-          📋 {t('global_catalogue.view_catalogue_hint', 'Voir les ingrédients sélectionnés dans')} →{' '}
-          <Link to="/client/ingredients" style={{ color: 'var(--primary)', fontWeight: 600 }}>
-            {t('nav.ingredients_catalog', 'Catalogue Ingrédients')}
-          </Link>
-        </div>
       )}
 
       {/* Deselect confirmation modal */}

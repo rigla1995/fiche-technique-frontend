@@ -49,7 +49,7 @@ interface ConfigBreakdown {
 
 export default function MonAbonnementPage() {
   const { user } = useAuth();
-  const isIndep = user?.compteType === 'independant';
+  const isIndep = false;
   const [abo, setAbo] = useState<Abonnement | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -97,7 +97,7 @@ export default function MonAbonnementPage() {
             <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0 }}>Mon Abonnement</h1>
           </div>
           <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.85rem', margin: 0 }}>
-            {isIndep ? 'Compte Indépendant' : 'Compte Entreprise'} — depuis {fmtDate(abo.dateDebut)}
+            Compte Entreprise — depuis {fmtDate(abo.dateDebut)}
           </p>
         </div>
         <div style={{ background: mode.bg, borderRadius: 12, padding: '10px 20px', display: 'flex', alignItems: 'center', gap: 10 }}>

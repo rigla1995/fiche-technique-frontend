@@ -3,7 +3,6 @@ import { NavLink, Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { useSelection } from '../../context/SelectionContext';
 import api from '../../api/client';
 import type { Activite, ActiviteTypesSummary, Labo, User, AbonnementConfig } from '../../types';
 
@@ -206,11 +205,8 @@ function GerantSidebarContent({
 export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const { t } = useTranslation();
   const { user } = useAuth();
-  const { hasSelections: selectionHasSelections } = useSelection();
   const [typesSummary, setTypesSummary] = useState<ActiviteTypesSummary | null>(null);
   const [labos, setLabos] = useState<Labo[]>([]);
-  const [, setIndepHasFournisseurs] = useState(true);
-  const [indepHasAppros, setIndepHasAppros] = useState(true);
   const [aboConfig, setAboConfig] = useState<AbonnementConfig | null>(null);
   const isAdmin = user?.role === 'super_admin';
   const isGerant = user?.role === 'gerant';
@@ -221,10 +217,8 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
   const location = useLocation();
   const step = user?.onboardingStep ?? 0;
-  // Include null compteType: new config-based clients and gérants of entreprise clients have no compteType but should use entreprise layout
-  const isEntreprise = user?.compteType === 'entreprise' || !user?.compteType;
+  const isEntreprise = user?.role === 'client' || user?.role === 'gerant';
   const isOnboarding = isEntreprise && step > 0;
-  const effectiveHasSelections = isEntreprise ? (step === 0) : selectionHasSelections;
 
   const currentSearch = new URLSearchParams(location.search);
   const currentSection = currentSearch.get('section');
@@ -277,14 +271,6 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
         .then(({ data }) => { if (data?.config) setAboConfig(data.config); })
         .catch(() => {});
     }
-    if (!isEntreprise && user?.role === 'client') {
-      api.get('/api/stock/client/summary')
-        .then(({ data }) => {
-          setIndepHasFournisseurs(data.hasFournisseurs);
-          setIndepHasAppros(data.hasAppros);
-        })
-        .catch(() => {});
-    }
   }, [isEntreprise, step, location.pathname, user?.role]);
 
   useEffect(() => {
@@ -296,19 +282,6 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
     return () => window.removeEventListener('labos-changed', handler);
   }, [isEntreprise]);
 
-  useEffect(() => {
-    if (isEntreprise || user?.role !== 'client') return;
-    const handler = () => {
-      api.get('/api/stock/client/summary')
-        .then(({ data }) => {
-          setIndepHasFournisseurs(data.hasFournisseurs);
-          setIndepHasAppros(data.hasAppros);
-        })
-        .catch(() => {});
-    };
-    window.addEventListener('fournisseur-created', handler);
-    return () => window.removeEventListener('fournisseur-created', handler);
-  }, [isEntreprise, user?.role]);
 
   const sidebarBanner = isOnboarding ? (
     <div style={{ background: '#fef9c3', borderRadius: 8, padding: '10px 12px', margin: '8px 12px', fontSize: '0.78rem', color: '#854d0e', lineHeight: 1.5 }}>
@@ -478,125 +451,6 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                     <LockedLink label="Gérants" reason="Créez d'abord une activité ou un labo" />
                   )}
                 </li>
-                </>
-              )}
-
-              {!isEntreprise && (
-                <>
-                  {/* ══ ESPACE ACTIVITÉ ══ */}
-                  <CollapsibleHeader label="Espace Activité" icon="📍" isOpen={openSections.has('indep-activite')} locked={!effectiveHasSelections} onToggle={() => toggleSection('indep-activite')} />
-                  {openSections.has('indep-activite') && (
-                    <>
-                      {effectiveHasSelections ? (
-                        <SubNavLink to="/client/ingredients" icon="🧂" label="Ingrédients Activité" isActive={location.pathname === '/client/ingredients'} onClick={onClose} />
-                      ) : (
-                        <LockedLink label="Ingrédients Activité" reason="Sélectionnez d'abord des ingrédients dans le Catalogue Global" />
-                      )}
-                      {effectiveHasSelections ? (
-                        <SubNavLink to="/client/stock" icon="📦" label="Stock Activité" isActive={location.pathname === '/client/stock' && !currentSection} onClick={onClose} />
-                      ) : (
-                        <LockedLink label="Stock Activité" reason="Sélectionnez d'abord des ingrédients dans le Catalogue Global" />
-                      )}
-                      {effectiveHasSelections && indepHasAppros ? (
-                        <SubNavLink
-                          to="/client/stock/historique"
-                          icon="📋"
-                          label={t('nav.historique_appro')}
-                          isActive={isHistoriquePage && !currentHistType}
-                          onClick={onClose}
-                        />
-                      ) : (
-                        <LockedLink label={t('nav.historique_appro')} reason={!effectiveHasSelections ? 'Sélectionnez d\'abord des ingrédients' : 'Aucun approvisionnement enregistré'} />
-                      )}
-                      {effectiveHasSelections ? (
-                        <SubNavLink
-                          to="/client/stock/historique-pertes"
-                          icon="📉"
-                          label="Historique Pertes"
-                          isActive={isHistoriquepertesPage && !currentHistType}
-                          onClick={onClose}
-                        />
-                      ) : (
-                        <LockedLink label="Historique Pertes" reason="Sélectionnez d'abord des ingrédients" />
-                      )}
-                      {effectiveHasSelections ? (
-                        <SubNavLink to="/client/inventaire" icon="🔢" label="Inventaire"
-                          isActive={location.pathname === '/client/inventaire' && !currentSearch.get('section')} onClick={onClose} />
-                      ) : (
-                        <LockedLink label="Inventaire" reason="Sélectionnez d'abord des ingrédients" />
-                      )}
-                      {effectiveHasSelections ? (
-                        <SubNavLink to="/client/inventaire/historique" icon="📊" label="Historique Inventaire"
-                          isActive={location.pathname === '/client/inventaire/historique' && !currentSearch.get('section')} onClick={onClose} />
-                      ) : (
-                        <LockedLink label="Historique Inventaire" reason="Sélectionnez d'abord des ingrédients" />
-                      )}
-                    </>
-                  )}
-
-                  <Divider />
-
-                  {/* ══ ESPACE PRODUITS ══ */}
-                  <CollapsibleHeader
-                    label="Espace Produits"
-                    icon="🍔"
-                    isOpen={openSections.has('indep-produits')}
-                    locked={!effectiveHasSelections}
-                    onToggle={() => toggleSection('indep-produits')}
-                  />
-                  {openSections.has('indep-produits') && (
-                    <>
-                      {effectiveHasSelections ? (
-                        <>
-                          <SubNavLink to="/client/products?tab=vendable" icon="🍔" label="Produits Vendables" isActive={isProductsPage && currentProductTab === 'vendable'} onClick={onClose} />
-                          <SubNavLink to="/client/products?tab=utilisable" icon="🧪" label="Produits Utilisables" isActive={isProductsPage && currentProductTab === 'utilisable'} onClick={onClose} />
-                        </>
-                      ) : (
-                        <>
-                          <LockedLink label="Produits Vendables" />
-                          <LockedLink label="Produits Utilisables" />
-                        </>
-                      )}
-                    </>
-                  )}
-
-                  <Divider />
-
-                  {/* ══ ESPACE FOURNISSEURS ══ */}
-                  <CollapsibleHeader label="Espace Fournisseurs" icon="🚚" isOpen={openSections.has('indep-fournisseurs')} locked={!effectiveHasSelections} onToggle={() => toggleSection('indep-fournisseurs')} />
-                  {openSections.has('indep-fournisseurs') && (
-                    <>
-                      {effectiveHasSelections ? (
-                        <SubNavLink to="/client/fournisseurs" icon="🚚" label="Fournisseurs Activité" isActive={location.pathname === '/client/fournisseurs'} onClick={onClose} />
-                      ) : (
-                        <LockedLink label="Fournisseurs Activité" reason="Sélectionnez d'abord des ingrédients dans le Catalogue Global" />
-                      )}
-                    </>
-                  )}
-
-                  <Divider />
-
-                  {/* ══ CATALOGUE GLOBAL ══ */}
-                  <li>
-                    <NavLink to="/client/catalogue-global" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>
-                      <span className="link-icon">🌐</span>
-                      <span className="link-label">Catalogue Global</span>
-                    </NavLink>
-                  </li>
-                  <li>
-                    <span style={{ display: 'block', padding: '2px 18px 8px', fontSize: '0.71rem', color: 'var(--text-muted)', lineHeight: 1.45 }}>
-                      Sélectionnez vos ingrédients pour débloquer les fonctionnalités
-                    </span>
-                  </li>
-
-                  {/* Demandes — sous le Catalogue Global */}
-                  <Divider />
-                  <li>
-                    <NavLink to="/client/support" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>
-                      <span className="link-icon">💬</span>
-                      <span className="link-label">Demandes</span>
-                    </NavLink>
-                  </li>
                 </>
               )}
 

@@ -24,7 +24,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const storedToken = localStorage.getItem('token');
     if (storedToken) {
       setToken(storedToken);
-      // Always refresh from server so onboardingStep and compteType are never stale
+      // Always refresh from server so onboardingStep is never stale
       api.get('/auth/me')
         .then(({ data }) => {
           setUser(data);

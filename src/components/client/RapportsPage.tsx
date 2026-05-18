@@ -102,7 +102,7 @@ const ChartBox = ({ title, children }: { title: string; children: React.ReactNod
 
 function RapportPertes({ filters }: { filters: FilterOptions }) {
   const { user } = useAuth();
-  const isEntreprise = user?.compteType === 'entreprise' || !user?.compteType;
+  const isEntreprise = true;
   const [dateFrom, setDateFrom] = useState(() => { const d = new Date(); d.setMonth(d.getMonth() - 3); return d.toISOString().slice(0, 10); });
   const [dateTo, setDateTo] = useState(() => new Date().toISOString().slice(0, 10));
   const [categorieId, setCategorieId] = useState('');
@@ -277,7 +277,7 @@ function RapportPertes({ filters }: { filters: FilterOptions }) {
 
 function RapportCoutMatiere({ filters }: { filters: FilterOptions }) {
   const { user } = useAuth();
-  const isEntreprise = user?.compteType === 'entreprise' || !user?.compteType;
+  const isEntreprise = true;
   const [dateFrom, setDateFrom] = useState(() => { const d = new Date(); d.setMonth(d.getMonth() - 3); return d.toISOString().slice(0, 10); });
   const [dateTo, setDateTo] = useState(() => new Date().toISOString().slice(0, 10));
   const [categorieId, setCategorieId] = useState('');
@@ -449,7 +449,7 @@ function RapportCoutMatiere({ filters }: { filters: FilterOptions }) {
 
 function RapportAppros({ filters }: { filters: FilterOptions }) {
   const { user } = useAuth();
-  const isEntreprise = user?.compteType === 'entreprise' || !user?.compteType;
+  const isEntreprise = true;
   const [dateFrom, setDateFrom] = useState(() => { const d = new Date(); d.setMonth(d.getMonth() - 3); return d.toISOString().slice(0, 10); });
   const [dateTo, setDateTo] = useState(() => new Date().toISOString().slice(0, 10));
   const [fournisseurId, setFournisseurId] = useState('');
@@ -620,7 +620,7 @@ function RapportAppros({ filters }: { filters: FilterOptions }) {
 
 function RapportStock({ filters }: { filters: FilterOptions }) {
   const { user } = useAuth();
-  const isEntreprise = user?.compteType === 'entreprise' || !user?.compteType;
+  const isEntreprise = true;
   const [activiteId, setActiviteId] = useState('');
   const [alerteFilter, setAlerteFilter] = useState('');
   const [data, setData] = useState<{ rows: Record<string, unknown>[]; byCategorie: { categorie: string; valeur: number }[]; totalValeur: number } | null>(null);
@@ -870,7 +870,7 @@ type TabId = typeof TABS[number]['id'] | 'activites';
 
 export default function RapportsPage() {
   const { user } = useAuth();
-  const isEntreprise = user?.compteType === 'entreprise' || !user?.compteType;
+  const isEntreprise = true;
   const [tab, setTab] = useState<TabId>('pertes');
   const [filters, setFilters] = useState<FilterOptions>({ categories: [], fournisseurs: [], activites: [] });
 

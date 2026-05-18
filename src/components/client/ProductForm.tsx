@@ -23,7 +23,7 @@ export default function ProductForm() {
   const { id } = useParams();
   const [searchParams] = useSearchParams();
   const isEdit = Boolean(id);
-  const isEntreprise = user?.compteType === 'entreprise' || !user?.compteType;
+  const isEntreprise = true;
 
   const buildBackUrl = (tab: string) => {
     const params = new URLSearchParams();

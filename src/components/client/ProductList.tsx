@@ -20,7 +20,7 @@ const PAGE_SIZE = 10;
 export default function ProductList() {
   const { t } = useTranslation();
   const { user, canWrite } = useAuth();
-  const isEntreprise = user?.compteType === 'entreprise' || !user?.compteType;
+  const isEntreprise = true;
 
   const [searchParams] = useSearchParams();
   const tab = (searchParams.get('tab') as TabType) || 'vendable';
@@ -45,7 +45,6 @@ export default function ProductList() {
 
   // Load all activities for enterprise users (filtered by laboId if present)
   useEffect(() => {
-    if (!isEntreprise) return;
     api.get('/api/entreprise/activites')
       .then(({ data }) => {
         const all = data as Activite[];

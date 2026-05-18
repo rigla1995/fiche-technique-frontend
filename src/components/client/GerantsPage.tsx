@@ -16,7 +16,7 @@ const EMPTY_FORM: GerantForm = { nom: '', telephone: '', email: '', activiteId: 
 
 export default function GerantsPage() {
   const { user } = useAuth();
-  const isEntreprise = user?.compteType === 'entreprise' || !user?.compteType;
+  const isEntreprise = true;
 
   const [gerants, setGerants] = useState<Gerant[]>([]);
   const [activites, setActivites] = useState<Activite[]>([]);

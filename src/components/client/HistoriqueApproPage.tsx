@@ -210,7 +210,7 @@ export default function HistoriqueApproPage() {
   const { t } = useTranslation();
   const { user, canWrite } = useAuth();
   const [searchParams] = useSearchParams();
-  const isEntreprise = user?.compteType === 'entreprise' || !user?.compteType;
+  const isEntreprise = true;
 
   const initIngredientId = searchParams.get('ingredientId') || '';
   const initActiviteId = searchParams.get('activiteId') || '';
@@ -273,11 +273,6 @@ export default function HistoriqueApproPage() {
   useEffect(() => {
     setSelectedCategoryId('');
     setSelectedIngredientId('');
-    if (!isEntreprise) {
-      api.get('/api/stock/client/ingredient-selections')
-        .then(({ data }) => setScopedIngredients(data as ScopedIngredient[])).catch(() => {});
-      return;
-    }
     if (laboId) {
       api.get(`/api/labo/${laboId}/ingredients`)
         .then(({ data }) => setScopedIngredients((data as any[]).filter((i) => i.selected !== false)))
@@ -302,15 +297,10 @@ export default function HistoriqueApproPage() {
   }, [selectedCategoryId, selectedActiviteId]);
 
   useEffect(() => {
-    if (isEntreprise) {
-      api.get('/api/entreprise/fournisseurs').then(({ data }) => setFournisseurs(data as Fournisseur[])).catch(() => {});
-    } else {
-      api.get('/api/fournisseurs').then(({ data }) => setFournisseurs(data as Fournisseur[])).catch(() => {});
-    }
-  }, [isEntreprise]);
+    api.get('/api/entreprise/fournisseurs').then(({ data }) => setFournisseurs(data as Fournisseur[])).catch(() => {});
+  }, []);
 
   useEffect(() => {
-    if (!isEntreprise) return;
     setActivitesLoading(true);
     api.get('/api/entreprise/activites')
       .then(({ data }) => {
@@ -324,7 +314,7 @@ export default function HistoriqueApproPage() {
 
 
   useEffect(() => {
-    if (initIngredientId && (selectedActiviteId || !isEntreprise)) fetchResults();
+    if (initIngredientId && selectedActiviteId) fetchResults();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

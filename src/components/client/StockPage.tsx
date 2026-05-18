@@ -1263,7 +1263,7 @@ export default function StockPage() {
   const { t } = useTranslation();
   const { user } = useAuth();
   const [searchParams] = useSearchParams();
-  const isEntreprise = user?.compteType === 'entreprise' || !user?.compteType;
+  const isEntreprise = true;
   const urlActiviteId = searchParams.get('activiteId') ? Number(searchParams.get('activiteId')) : undefined;
 
   const [clientEntries, setClientEntries] = useState<StockEntry[]>([]);
@@ -1291,14 +1291,6 @@ export default function StockPage() {
   }, []);
 
   useEffect(() => {
-    if (!isEntreprise) {
-      loadClientStock();
-      api.get('/api/fournisseurs').then(({ data }) => setIndepFournisseurs(data)).catch(() => setIndepFournisseurs([]));
-    }
-  }, [isEntreprise, loadClientStock]);
-
-  useEffect(() => {
-    if (!isEntreprise) return;
     setActivitesLoading(true);
     Promise.all([
       api.get('/api/entreprise/activites/types-summary'),
@@ -1380,111 +1372,21 @@ export default function StockPage() {
         </div>
       </div>
 
-      {!isEntreprise && (
-        clientLoading ? (
-          <p className="text-muted">{t('common.loading')}</p>
-        ) : clientEntries.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-muted)' }}>
-            <div style={{ fontSize: '2.5rem', marginBottom: 8 }}>📦</div>
-            <p>{t('client.stock.empty_stock')}</p>
-          </div>
-        ) : (
-          <>
-            {/* Filter panel */}
-            <div style={{
-              background: 'var(--surface)', borderRadius: 14, padding: '16px 20px', marginBottom: 24,
-              border: '1px solid var(--border)', boxShadow: '0 2px 12px rgba(0,0,0,0.05)',
-              display: 'flex', flexWrap: 'wrap', gap: 14, alignItems: 'flex-end',
-            }}>
-              <div style={{ width: '100%', marginBottom: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#1e40af' }}>Filtres</span>
-                {(clientCategoryFilter || clientIngredientFilter !== '' || clientNameFilter || clientFournisseurFilter || clientRefFactureFilter) && (
-                  <button className="btn btn-ghost btn-sm" style={{ fontSize: '0.78rem' }} onClick={() => { setClientCategoryFilter(''); setClientIngredientFilter(''); setClientNameFilter(''); setClientFournisseurFilter(''); setClientRefFactureFilter(''); }}>✕ Réinitialiser</button>
-                )}
-              </div>
-              <div>
-                <label style={{ fontSize: '0.68rem', fontWeight: 800, color: '#1e40af', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>🏷️ Catégorie</label>
-                <select style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid #1e40af', fontSize: '0.88rem', background: '#eff6ff', minWidth: 160 }} value={clientCategoryFilter} onChange={(e) => { setClientCategoryFilter(e.target.value); setClientIngredientFilter(''); }}>
-                  <option value="">{t('client.catalogue_franchise.all_categories')}</option>
-                  {clientCategories.map((c) => <option key={c} value={c}>{c}</option>)}
-                </select>
-              </div>
-              <div>
-                <label style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>🧂 Ingrédient</label>
-                <select
-                  style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid var(--border)', fontSize: '0.88rem', background: 'var(--background)', minWidth: 160 }} value={clientIngredientFilter} disabled={!clientCategoryFilter}
-                  onChange={(e) => setClientIngredientFilter(e.target.value === '' ? '' : Number(e.target.value))}
-                >
-                  <option value="">— Tous —</option>
-                  {clientEntries.filter((e) => e.categorie === clientCategoryFilter).map((e) => (
-                    <option key={e.ingredientId} value={e.ingredientId}>{e.nom}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>🔍 Nom</label>
-                <input
-                  type="text" style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid var(--border)', fontSize: '0.88rem', background: 'var(--background)', minWidth: 160 }}
-                  placeholder={t('client.stock.search_ingredient')}
-                  value={clientNameFilter}
-                  onChange={(e) => setClientNameFilter(e.target.value)}
-                />
-              </div>
-              {indepFournisseurs.length > 0 && (
-                <div>
-                  <label style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>🚚 Fournisseur</label>
-                  <select style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid var(--border)', fontSize: '0.88rem', background: 'var(--background)', minWidth: 160 }} value={clientFournisseurFilter} onChange={(e) => setClientFournisseurFilter(e.target.value)}>
-                    <option value="">— Tous —</option>
-                    {indepFournisseurs.map((f) => <option key={f.id} value={String(f.id)}>{f.nom}</option>)}
-                  </select>
-                </div>
-              )}
-              <div>
-                <label style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>🧾 Réf. Facture</label>
-                <input
-                  type="text" style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid var(--border)', fontSize: '0.88rem', background: 'var(--background)', minWidth: 160 }}
-                  placeholder="Réf. facture…"
-                  value={clientRefFactureFilter}
-                  onChange={(e) => setClientRefFactureFilter(e.target.value)}
-                />
-              </div>
-            </div>
-            <StockMatrix
-              entries={clientEntries}
-              categoryFilter={clientCategoryFilter}
-              ingredientFilter={clientIngredientFilter}
-              nameFilter={clientNameFilter}
-              fournisseurFilter={clientFournisseurFilter}
-              refFactureFilter={clientRefFactureFilter}
-              isEntreprise={false}
-              fournisseurs={indepFournisseurs}
-              onSave={saveClientStock}
-              onSavePT={saveClientStockPT}
-              onSaveSeuilMin={saveClientSeuilMin}
-              onSavePerte={saveClientPerte}
-              onRefresh={loadClientStock}
+      {activitesLoading ? (
+        <p className="text-muted">{t('common.loading')}</p>
+      ) : (
+        <>
+          {typesSummary?.hasActivites && allActivities.length > 0 ? (
+            <ActivityStockSection
+              label="Stock Activités"
+              activities={allActivities}
+              initialActiviteId={urlActiviteId}
+              onSave={saveEntrepriseStock}
             />
-          </>
-        )
-      )}
-
-      {isEntreprise && (
-        activitesLoading ? (
-          <p className="text-muted">{t('common.loading')}</p>
-        ) : (
-          <>
-            {typesSummary?.hasActivites && allActivities.length > 0 ? (
-              <ActivityStockSection
-                label="Stock Activités"
-                activities={allActivities}
-                initialActiviteId={urlActiviteId}
-                onSave={saveEntrepriseStock}
-              />
-            ) : (
-              <div className="alert alert-warning">{t('client.stock.no_activities')}</div>
-            )}
-          </>
-        )
+          ) : (
+            <div className="alert alert-warning">{t('client.stock.no_activities')}</div>
+          )}
+        </>
       )}
     </div>
   );
