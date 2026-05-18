@@ -62,6 +62,7 @@ interface RowState {
   dateAppro: string;
   fournisseurId: string;
   refFacture: string;
+  tauxTva: string;
   hasExisting: boolean;
   saving: boolean;
   saved: boolean;
@@ -163,7 +164,6 @@ export default function StockLaboPage() {
   const [bulkDate, setBulkDate] = useState(todayStr());
   const [bulkFournisseurId, setBulkFournisseurId] = useState('');
   const [bulkRefFacture, setBulkRefFacture] = useState('');
-  const [bulkTauxTva, setBulkTauxTva] = useState('');
   const [bulkSaving, setBulkSaving] = useState(false);
   const [seuilModal, setSeuilModal] = useState<{ ingredientId: number; nom: string } | null>(null);
 
@@ -189,7 +189,7 @@ export default function StockLaboPage() {
       for (const r of rows) {
         init[r.ingredientId] = {
           quantite: '0', prixUnitaire: '0', dateAppro: today,
-          fournisseurId: '', refFacture: '',
+          fournisseurId: '', refFacture: '', tauxTva: '',
           hasExisting: r.quantite !== null,
           saving: false, saved: false, historyOpen: false,
           history: (r.recentDates || []).map((d) => ({ dateAppro: d, quantite: null, prixUnitaire: null, fournisseurNom: null, refFacture: null })),
@@ -230,7 +230,8 @@ export default function StockLaboPage() {
     if (!rs.quantite.trim() || parseFloat(rs.quantite) <= 0) return false;
     if (!isPT && (!rs.prixUnitaire.trim() || parseFloat(rs.prixUnitaire) <= 0)) return false;
     if (!bulkDate.trim()) return false;
-    if (!isPT && (!bulkFournisseurId.trim() || !bulkRefFacture.trim())) return false;
+    if (!isPT && !bulkRefFacture.trim()) return false;
+    if (!isPT && fournisseurs.length > 0 && !bulkFournisseurId.trim()) return false;
     return true;
   };
 
@@ -272,7 +273,7 @@ export default function StockLaboPage() {
         dateAppro: bulkDate || today,
         fournisseurId: bulkFournisseurId ? Number(bulkFournisseurId) : null,
         refFacture: bulkRefFacture.trim() || null,
-        tauxTva: bulkTauxTva.trim() ? parseFloat(bulkTauxTva) : null,
+        tauxTva: rs.tauxTva?.trim() ? parseFloat(rs.tauxTva) : null,
       });
       setRowState((prev) => ({
         ...prev,
@@ -280,7 +281,7 @@ export default function StockLaboPage() {
           ...prev[ingredientId],
           saving: false, saved: true, hasExisting: true,
           quantite: '0', prixUnitaire: '0', dateAppro: today,
-          fournisseurId: '', refFacture: '',
+          fournisseurId: '', refFacture: '', tauxTva: '',
           historyOpen: false, history: [],
         },
       }));
@@ -401,12 +402,17 @@ export default function StockLaboPage() {
           dateAppro: bulkDate,
           fournisseurId: bulkFournisseurId ? Number(bulkFournisseurId) : null,
           refFacture: bulkRefFacture.trim() || null,
-          tauxTva: bulkTauxTva.trim() ? parseFloat(bulkTauxTva) : null,
+          tauxTva: rs.tauxTva?.trim() ? parseFloat(rs.tauxTva) : null,
         });
       }
       setBulkDate(todayStr());
       setBulkFournisseurId('');
       setBulkRefFacture('');
+      setRowState((prev) => {
+        const next = { ...prev };
+        for (const id of Object.keys(next)) next[Number(id)] = { ...next[Number(id)], tauxTva: '' };
+        return next;
+      });
       loadStock();
     } catch { /* ignore */ }
     setBulkSaving(false);
@@ -477,8 +483,9 @@ export default function StockLaboPage() {
     const prix = parseFloat(rs.prixUnitaire);
     return !isNaN(qty) && qty > 0 && !isNaN(prix) && prix > 0;
   }).length;
+  const hasFournisseurs = fournisseurs.length > 0;
   const canSaveBulk = readyCount > 0 && !!bulkDate.trim()
-    && !!bulkFournisseurId && !!bulkRefFacture.trim();
+    && (!hasFournisseurs || !!bulkFournisseurId) && !!bulkRefFacture.trim();
 
   if (!laboId) return <div className="page"><p className="text-muted">Labo introuvable.</p></div>;
 
@@ -568,68 +575,59 @@ export default function StockLaboPage() {
             </div>
           )}
 
-          {/* Filter panel */}
+          {/* Filter panel — compact single-row layout */}
           <div style={{
-            background: 'var(--surface)', borderRadius: 14, padding: '16px 20px', marginBottom: 24,
-            border: '1px solid var(--border)', boxShadow: '0 2px 12px rgba(0,0,0,0.05)',
+            background: 'var(--surface)', borderRadius: 10, padding: '10px 14px', marginBottom: 20,
+            border: '1px solid var(--border)', boxShadow: '0 1px 6px rgba(0,0,0,0.04)',
           }}>
-            {/* Panel header */}
-            <div style={{ width: '100%', marginBottom: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: 12, borderBottom: '1px solid var(--border)' }}>
-              <span style={{ fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#7e22ce' }}>Filtres</span>
-              {(sFilterCat || sFilterIngId || sFilterNom || sFilterFournisseur || sFilterRefFacture) && (
-                <button className="btn btn-ghost btn-sm" style={{ fontSize: '0.78rem' }} onClick={() => { setSFilterCat(''); setSFilterIngId(''); setSFilterNom(''); setSFilterFournisseur(''); setSFilterRefFacture(''); }}>✕ Réinitialiser</button>
-              )}
-            </div>
-            {/* Section 1: Produit */}
-            <div style={{ marginBottom: 16, marginTop: 14 }}>
-              <div style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
-                <span style={{ width: 16, height: 2, background: '#7e22ce', display: 'inline-block', borderRadius: 2 }} />
-                Produit
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'flex-end' }}>
+              {/* Catégorie */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <label style={{ fontSize: '0.62rem', fontWeight: 800, color: '#7e22ce', textTransform: 'uppercase', letterSpacing: '0.07em' }}>🏷️ Catégorie</label>
+                <select style={{ padding: '6px 10px', borderRadius: 7, border: '1.5px solid #7e22ce', fontSize: '0.82rem', background: '#faf5ff', minWidth: 140 }} value={sFilterCat} onChange={(e) => { setSFilterCat(e.target.value); setSFilterIngId(''); }}>
+                  <option value="">{t('client.catalogue_franchise.all_categories')}</option>
+                  {allStockCats.map((c) => <option key={c} value={c}>{c}</option>)}
+                </select>
               </div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14, alignItems: 'flex-end' }}>
-                <div>
-                  <label style={{ fontSize: '0.68rem', fontWeight: 800, color: '#7e22ce', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>🏷️ Catégorie</label>
-                  <select style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid #7e22ce', fontSize: '0.88rem', background: '#faf5ff', minWidth: 160 }} value={sFilterCat} onChange={(e) => { setSFilterCat(e.target.value); setSFilterIngId(''); }}>
-                    <option value="">{t('client.catalogue_franchise.all_categories')}</option>
-                    {allStockCats.map((c) => <option key={c} value={c}>{c}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>🧂 Ingrédient</label>
-                  <select style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid var(--border)', fontSize: '0.88rem', background: 'var(--background)', minWidth: 160 }} value={sFilterIngId} disabled={!sFilterCat} onChange={(e) => setSFilterIngId(e.target.value)}>
+              {/* Ingrédient */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <label style={{ fontSize: '0.62rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>🧂 Ingrédient</label>
+                <select style={{ padding: '6px 10px', borderRadius: 7, border: '1.5px solid var(--border)', fontSize: '0.82rem', background: 'var(--background)', minWidth: 140 }} value={sFilterIngId} disabled={!sFilterCat} onChange={(e) => setSFilterIngId(e.target.value)}>
+                  <option value="">— Tous —</option>
+                  {stockInCat.map((r) => <option key={r.ingredientId} value={String(r.ingredientId)}>{r.nom}</option>)}
+                </select>
+              </div>
+              {/* Nom */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <label style={{ fontSize: '0.62rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>🔍 Nom</label>
+                <input type="text" style={{ padding: '6px 10px', borderRadius: 7, border: '1.5px solid var(--border)', fontSize: '0.82rem', background: 'var(--background)', minWidth: 130 }} placeholder="Rechercher…" value={sFilterNom} onChange={(e) => setSFilterNom(e.target.value)} />
+              </div>
+              {/* Fournisseur — always visible */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <label style={{ fontSize: '0.62rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>🚚 Fournisseur</label>
+                {hasFournisseurs ? (
+                  <select style={{ padding: '6px 10px', borderRadius: 7, border: '1.5px solid var(--border)', fontSize: '0.82rem', background: 'var(--background)', minWidth: 140 }} value={sFilterFournisseur} onChange={(e) => setSFilterFournisseur(e.target.value)}>
                     <option value="">— Tous —</option>
-                    {stockInCat.map((r) => <option key={r.ingredientId} value={String(r.ingredientId)}>{r.nom}</option>)}
+                    {fournisseurs.map((f) => <option key={f.id} value={String(f.id)}>{f.nom}</option>)}
                   </select>
-                </div>
-                <div>
-                  <label style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>🔍 Nom ingrédient</label>
-                  <input type="text" style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid var(--border)', fontSize: '0.88rem', background: 'var(--background)', minWidth: 160 }} placeholder="Rechercher…" value={sFilterNom} onChange={(e) => setSFilterNom(e.target.value)} />
-                </div>
-              </div>
-            </div>
-            {/* Divider */}
-            <div style={{ marginBottom: 16, borderTop: '1px dashed var(--border)' }} />
-            {/* Section 2: Fournisseur */}
-            <div>
-              <div style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
-                <span style={{ width: 16, height: 2, background: '#a855f7', display: 'inline-block', borderRadius: 2 }} />
-                Fournisseur
-              </div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14, alignItems: 'flex-end' }}>
-                {fournisseurs.length > 0 && (
-                  <div>
-                    <label style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>🚚 Fournisseur</label>
-                    <select style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid var(--border)', fontSize: '0.88rem', background: 'var(--background)', minWidth: 160 }} value={sFilterFournisseur} onChange={(e) => setSFilterFournisseur(e.target.value)}>
-                      <option value="">— Tous —</option>
-                      {fournisseurs.map((f) => <option key={f.id} value={String(f.id)}>{f.nom}</option>)}
-                    </select>
-                  </div>
+                ) : (
+                  <select style={{ padding: '6px 10px', borderRadius: 7, border: '2px solid #f97316', fontSize: '0.82rem', background: '#fff7ed', minWidth: 140, color: '#9a3412', fontStyle: 'italic' }} disabled>
+                    <option>⚠ Aucun fournisseur</option>
+                  </select>
                 )}
-                <div>
-                  <label style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>🧾 Réf Facture</label>
-                  <input type="text" style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid var(--border)', fontSize: '0.88rem', background: 'var(--background)', minWidth: 160 }} placeholder="N° facture…" value={sFilterRefFacture} onChange={(e) => setSFilterRefFacture(e.target.value)} />
-                </div>
               </div>
+              {/* Réf. Facture */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <label style={{ fontSize: '0.62rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>🧾 Réf. Facture</label>
+                <input type="text" style={{ padding: '6px 10px', borderRadius: 7, border: '1.5px solid var(--border)', fontSize: '0.82rem', background: 'var(--background)', minWidth: 130 }} placeholder="Réf. facture…" value={sFilterRefFacture} onChange={(e) => setSFilterRefFacture(e.target.value)} />
+              </div>
+              {/* Reset */}
+              {(sFilterCat || sFilterIngId || sFilterNom || sFilterFournisseur || sFilterRefFacture) && (
+                <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', gap: 2 }}>
+                  <label style={{ fontSize: '0.62rem', opacity: 0 }}>x</label>
+                  <button className="btn btn-ghost btn-sm" style={{ fontSize: '0.78rem' }} onClick={() => { setSFilterCat(''); setSFilterIngId(''); setSFilterNom(''); setSFilterFournisseur(''); setSFilterRefFacture(''); }}>✕ Réinitialiser</button>
+                </div>
+              )}
             </div>
           </div>
 
@@ -672,25 +670,27 @@ export default function StockLaboPage() {
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
                 <span style={LABEL}>Fournisseur</span>
-                <select className="input" style={{ maxWidth: 200 }} value={bulkFournisseurId} onChange={(e) => setBulkFournisseurId(e.target.value)}>
-                  <option value="">— Sélectionner —</option>
-                  {fournisseurs.map((f) => <option key={f.id} value={String(f.id)}>{f.nom}</option>)}
-                </select>
+                {hasFournisseurs ? (
+                  <select className="input" style={{ maxWidth: 200 }} value={bulkFournisseurId} onChange={(e) => setBulkFournisseurId(e.target.value)}>
+                    <option value="">— Sélectionner —</option>
+                    {fournisseurs.map((f) => <option key={f.id} value={String(f.id)}>{f.nom}</option>)}
+                  </select>
+                ) : (
+                  <select className="input" style={{ maxWidth: 240, color: '#9a3412', fontStyle: 'italic', border: '2px solid #f97316', background: '#fff7ed' }} disabled>
+                    <option>⚠ Aucun fournisseur pour ce labo</option>
+                  </select>
+                )}
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
                 <span style={LABEL}>Réf Facture</span>
                 <input type="text" className="input" style={{ maxWidth: 160 }} placeholder="N° facture…" value={bulkRefFacture} onChange={(e) => setBulkRefFacture(e.target.value)} />
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                <span style={LABEL}>Taux TVA %</span>
-                <input type="number" min="0" step="0.01" className="input" style={{ maxWidth: 100 }} placeholder="ex: 19" value={bulkTauxTva} onChange={(e) => setBulkTauxTva(e.target.value)} />
               </div>
               <div style={{ display: 'flex', gap: 8, alignSelf: 'flex-end', marginLeft: 'auto' }}>
                 <button className="btn btn-primary btn-sm" onClick={saveBulk} disabled={!canSaveBulk || bulkSaving || !canWrite}
                   style={{ background: canSaveBulk ? 'linear-gradient(135deg, #7e22ce, #a855f7)' : undefined, border: 'none', boxShadow: canSaveBulk ? '0 3px 10px rgba(126,34,206,0.3)' : undefined }}>
                   {bulkSaving ? '…' : `Enregistrer (${readyCount})`}
                 </button>
-                <button className="btn btn-ghost btn-sm" onClick={() => { setBulkDate(todayStr()); setBulkFournisseurId(''); setBulkRefFacture(''); setBulkTauxTva(''); }}>
+                <button className="btn btn-ghost btn-sm" onClick={() => { setBulkDate(todayStr()); setBulkFournisseurId(''); setBulkRefFacture(''); }}>
                   Réinitialiser
                 </button>
               </div>
@@ -735,6 +735,7 @@ export default function StockLaboPage() {
                                 <th style={{ textAlign: 'right', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '8px 8px' }}>Coût Total</th>
                                 <th style={{ textAlign: 'right', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '8px 8px' }}>Qté</th>
                                 <th style={{ textAlign: 'right', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '8px 8px' }}>Prix</th>
+                                <th style={{ textAlign: 'right', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '8px 8px' }}>TVA %<br /><span style={{ fontSize: '0.65rem', fontWeight: 400, opacity: 0.75 }}>optionnel</span></th>
                                 <th style={{ fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '8px 8px' }}></th>
                               </tr>
                             </thead>
@@ -808,6 +809,17 @@ export default function StockLaboPage() {
                                           <input type="number" min="0" step="0.001" value={rs.prixUnitaire} onChange={(e) => setField(r.ingredientId, 'prixUnitaire', e.target.value)} style={{ width: 84, textAlign: 'right', ...warnStyle }} className="input" />
                                         )}
                                       </td>
+                                      <td style={{ textAlign: 'right' }}>
+                                        {!r.isPT && (
+                                          <input type="number" min="0" max="100" step="0.1" placeholder="—"
+                                            value={rs.tauxTva}
+                                            onChange={(e) => setField(r.ingredientId, 'tauxTva', e.target.value)}
+                                            style={{ width: 60, textAlign: 'right' }}
+                                            className="input"
+                                            disabled={!canWrite}
+                                          />
+                                        )}
+                                      </td>
                                       <td>
                                         <div style={{ display: 'flex', gap: 4, alignItems: 'center', flexWrap: 'wrap' }}>
                                           {canWrite && (
@@ -837,7 +849,7 @@ export default function StockLaboPage() {
                                     {/* Appro history collapse */}
                                     {rs.historyOpen && (
                                       <tr>
-                                        <td colSpan={6} style={{ background: 'var(--surface)', padding: '8px 16px' }}>
+                                        <td colSpan={7} style={{ background: 'var(--surface)', padding: '8px 16px' }}>
                                           {rs.history.length === 0 ? (
                                             <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{t('client.stock.no_history')}</span>
                                           ) : (

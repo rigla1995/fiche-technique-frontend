@@ -878,8 +878,8 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                 {nonLaboFournisseurs.map((f) => <option key={f.id} value={String(f.id)}>{f.nom}</option>)}
               </select>
             ) : (
-              <select className="input" style={{ maxWidth: 220, color: 'var(--text-muted)', fontStyle: 'italic' }} disabled>
-                <option>Aucun fournisseur pour cette activité</option>
+              <select className="input" style={{ maxWidth: 240, color: '#9a3412', fontStyle: 'italic', border: '2px solid #f97316', background: '#fff7ed' }} disabled>
+                <option>⚠ Aucun fournisseur pour cette activité</option>
               </select>
             )}
           </div>
@@ -1244,8 +1244,8 @@ function ActivityStockSection({ label, activities, initialActiviteId, onSave }: 
                 ))}
               </select>
             ) : (
-              <select style={{ padding: '6px 10px', borderRadius: 7, border: '1.5px solid var(--border)', fontSize: '0.82rem', background: 'var(--background)', minWidth: 140, color: 'var(--text-muted)', fontStyle: 'italic' }} disabled>
-                <option>Aucun fournisseur</option>
+              <select style={{ padding: '6px 10px', borderRadius: 7, border: '2px solid #f97316', fontSize: '0.82rem', background: '#fff7ed', minWidth: 140, color: '#9a3412', fontStyle: 'italic' }} disabled>
+                <option>⚠ Aucun fournisseur</option>
               </select>
             )}
           </div>
