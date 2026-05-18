@@ -1,52 +1,33 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 70">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 280 64">
   <defs>
-    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%"   stop-color="#0ea5e9"/>
-      <stop offset="50%"  stop-color="#6366f1"/>
-      <stop offset="100%" stop-color="#a855f7"/>
-    </linearGradient>
-
-    <!-- Wordmark gradient -->
-    <linearGradient id="wm" x1="82" y1="0" x2="268" y2="0" gradientUnits="userSpaceOnUse">
+    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%"   stop-color="#0ea5e9"/>
       <stop offset="50%"  stop-color="#6366f1"/>
       <stop offset="100%" stop-color="#a855f7"/>
     </linearGradient>
   </defs>
 
-  <!-- Icon mark (scaled 60%) -->
-  <g transform="translate(5,5) scale(0.6)">
-    <rect width="100" height="100" rx="22" fill="url(#bg)"/>
+  <!-- Icon: white rounded square -->
+  <rect x="2" y="2" width="60" height="60" rx="14" fill="white"/>
 
-    <!-- Seal ring -->
-    <circle cx="50" cy="50" r="39"
-      fill="none" stroke="white" stroke-width="1.2" opacity="0.55"/>
-    <circle cx="50" cy="11" r="1.8" fill="white" opacity="0.55"/>
-    <circle cx="50" cy="89" r="1.8" fill="white" opacity="0.55"/>
+  <!-- L -->
+  <path d="M 18,16 L 18,50 Q 18,54 22,54 L 34,54"
+    fill="none" stroke="url(#grad)" stroke-width="3.2"
+    stroke-linecap="square" stroke-linejoin="round"/>
 
-    <!-- L -->
-    <path d="M 26,24 L 26,69 Q 26,74 31,74 L 44,74"
-      fill="none" stroke="white" stroke-width="3.2"
-      stroke-linecap="square" stroke-linejoin="round"/>
+  <!-- F -->
+  <path d="M 44,54 L 44,16 L 58,16 Q 61,16 61,19"
+    fill="none" stroke="url(#grad)" stroke-width="3.2"
+    stroke-linecap="square" stroke-linejoin="round"/>
+  <path d="M 44,33 L 58,33"
+    fill="none" stroke="url(#grad)" stroke-width="3.2"
+    stroke-linecap="square"/>
 
-    <!-- F -->
-    <path d="M 58,74 L 58,24 L 75,24 Q 78,24 78,27"
-      fill="none" stroke="white" stroke-width="3.2"
-      stroke-linecap="square" stroke-linejoin="round"/>
-    <path d="M 58,44 L 74,44"
-      fill="none" stroke="white" stroke-width="3.2"
-      stroke-linecap="square"/>
-  </g>
-
-  <!-- Thin gradient separator -->
-  <line x1="74" y1="12" x2="74" y2="58"
-    stroke="url(#wm)" stroke-width="1" opacity="0.3"/>
-
-  <!-- Wordmark: refined medium weights (not extreme contrast) -->
-  <text x="83" y="48"
+  <!-- Wordmark -->
+  <text x="76" y="44"
     font-family="system-ui, -apple-system, 'Helvetica Neue', Arial, sans-serif"
-    font-size="34"
+    font-size="32"
     fill="white">
-    <tspan font-weight="700" letter-spacing="-0.5">Lab</tspan><tspan font-weight="300" letter-spacing="2">Flow</tspan>
+    <tspan font-weight="800" letter-spacing="-0.5">Lab</tspan><tspan font-weight="300" letter-spacing="1.5">Flow</tspan>
   </text>
 </svg>

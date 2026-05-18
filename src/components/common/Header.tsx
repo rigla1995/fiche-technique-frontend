@@ -56,7 +56,7 @@ export default function Header({ onMenuToggle }: HeaderProps) {
           <span /><span /><span />
         </button>
         <div className="header-brand">
-          <img src="/logo.svg" alt="LabFlow" style={{ height: 36 }} />
+          <img src="/logo.svg" alt="LabFlow" style={{ height: 38, width: 'auto' }} />
         </div>
       </div>
 
