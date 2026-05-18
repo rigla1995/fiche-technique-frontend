@@ -35,22 +35,49 @@ export default function LoginPage() {
       {/* Brand panel */}
       <div className="login-panel-brand">
         <div className="login-brand-content">
-          <img src="/logo.svg" alt="LabFlow" style={{ height: 56, marginBottom: 12 }} />
+          <img src="/logo.svg" alt="LabFlow" style={{ height: 52, marginBottom: 28 }} />
+
+          <h1 className="login-brand-headline">
+            Pilotez votre restauration.<br />
+            <span className="login-brand-headline-accent">L'IA fait le reste.</span>
+          </h1>
+
           <p className="login-brand-sub">
-            La plateforme de gestion pour les professionnels de la restauration.
+            LabFlow centralise vos fiches techniques, stocks et finances — et intègre un agent IA qui vous conseille, anticipe vos besoins et maximise votre rentabilité au quotidien.
           </p>
-          <div className="login-feature-list">
+
+          <div className="login-features-grid">
             {[
-              'Fiches techniques précises et rentables',
-              'Gestion du stock en temps réel',
-              'Suivi multi-activités et labos',
-              'Rapports et analyses avancés',
-            ].map((f) => (
-              <div key={f} className="login-feature">
-                <span className="login-feature-dot" />
-                <span>{f}</span>
+              { icon: '🧾', title: 'Fiches techniques rentables', desc: 'Coûts précis, marges calculées automatiquement pour chaque plat.' },
+              { icon: '📦', title: 'Stock & approvisionnement', desc: 'Suivez chaque ingrédient, évitez les ruptures, réduisez le gaspillage.' },
+              { icon: '🤖', title: 'Agent IA intégré', desc: 'Posez vos questions métier, obtenez des recommandations et optimisez vos achats.' },
+              { icon: '📊', title: 'Rapports & analyses', desc: 'Ventes, pertes, tendances : toutes les données pour décider vite et bien.' },
+            ].map(({ icon, title, desc }) => (
+              <div key={title} className="login-feat-card">
+                <span className="login-feat-icon">{icon}</span>
+                <div>
+                  <div className="login-feat-title">{title}</div>
+                  <div className="login-feat-desc">{desc}</div>
+                </div>
               </div>
             ))}
+          </div>
+
+          <div className="login-stats-row">
+            <div className="login-stat">
+              <span className="login-stat-num">3×</span>
+              <span className="login-stat-label">plus rapide</span>
+            </div>
+            <div className="login-stat-sep" />
+            <div className="login-stat">
+              <span className="login-stat-num">−30%</span>
+              <span className="login-stat-label">de gaspillage</span>
+            </div>
+            <div className="login-stat-sep" />
+            <div className="login-stat">
+              <span className="login-stat-num">100%</span>
+              <span className="login-stat-label">en ligne</span>
+            </div>
           </div>
         </div>
       </div>

@@ -389,10 +389,22 @@ select.input { cursor: pointer; }
   width: 200px; height: 200px; border-radius: 50%;
   background: rgba(255,255,255,0.05);
 }
-.login-brand-content { position: relative; z-index: 1; text-align: center; max-width: 360px; }
+.login-brand-content { position: relative; z-index: 1; text-align: center; max-width: 380px; }
 .login-brand-icon { font-size: 3.5rem; display: block; margin-bottom: 16px; }
 .login-brand-title { font-size: 2.2rem; font-weight: 800; color: #fff; letter-spacing: -1px; margin-bottom: 10px; }
-.login-brand-sub { font-size: 0.95rem; color: rgba(255,255,255,0.7); line-height: 1.6; margin-bottom: 40px; }
+.login-brand-sub { font-size: 0.875rem; color: rgba(255,255,255,0.68); line-height: 1.65; margin-bottom: 24px; }
+.login-brand-headline { font-size: 1.75rem; font-weight: 800; color: #fff; letter-spacing: -0.5px; line-height: 1.2; margin-bottom: 14px; }
+.login-brand-headline-accent { background: linear-gradient(90deg, #a5f3fc, #c4b5fd); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+.login-features-grid { display: flex; flex-direction: column; gap: 10px; margin-bottom: 28px; text-align: left; }
+.login-feat-card { display: flex; align-items: flex-start; gap: 12px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12); border-radius: 12px; padding: 11px 14px; backdrop-filter: blur(4px); }
+.login-feat-icon { font-size: 1.25rem; flex-shrink: 0; margin-top: 1px; }
+.login-feat-title { font-size: 0.845rem; font-weight: 700; color: #fff; margin-bottom: 2px; }
+.login-feat-desc { font-size: 0.76rem; color: rgba(255,255,255,0.62); line-height: 1.45; }
+.login-stats-row { display: flex; align-items: center; justify-content: center; gap: 20px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.12); }
+.login-stat { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.login-stat-num { font-size: 1.25rem; font-weight: 800; color: #fff; }
+.login-stat-label { font-size: 0.68rem; color: rgba(255,255,255,0.55); text-transform: uppercase; letter-spacing: 0.5px; }
+.login-stat-sep { width: 1px; height: 30px; background: rgba(255,255,255,0.15); }
 .login-feature-list { display: flex; flex-direction: column; gap: 10px; text-align: left; }
 .login-feature { display: flex; align-items: center; gap: 10px; font-size: 0.88rem; color: rgba(255,255,255,0.82); }
 .login-feature-dot { width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,0.7); flex-shrink: 0; }
