@@ -457,11 +457,6 @@ export default function TransferPage() {
       {!loading && stock.length > 0 && activites.length > 0 && (
         <div style={{ background: 'var(--surface)', borderRadius: 10, padding: '10px 14px', marginBottom: 20, border: '1px solid var(--border)', boxShadow: '0 1px 6px rgba(0,0,0,0.04)' }}>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'flex-end' }}>
-            {(filterCategorie || filterIngredientId !== '' || filterNom || filterActiviteId !== '') && (
-              <div style={{ width: '100%', marginBottom: 2, display: 'flex', justifyContent: 'flex-end' }}>
-                <button className="btn btn-ghost btn-sm" style={{ fontSize: '0.72rem' }} onClick={() => { setFilterCategorie(''); setFilterIngredientId(''); setFilterNom(''); setFilterActiviteId(''); }}>✕ Réinitialiser</button>
-              </div>
-            )}
             <div>
               <label style={{ fontSize: '0.62rem', fontWeight: 700, color: '#7e22ce', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 3 }}>🏷️ Catégorie</label>
               <select style={{ padding: '6px 10px', borderRadius: 7, border: '1.5px solid #7e22ce', fontSize: '0.82rem', background: '#faf5ff', minWidth: 150 }} value={filterCategorie} onChange={(e) => { setFilterCategorie(e.target.value); setFilterIngredientId(''); }}>
@@ -490,6 +485,9 @@ export default function TransferPage() {
                 {activites.map((a) => <option key={a.id} value={a.id}>{a.nom}</option>)}
               </select>
             </div>
+            {(filterCategorie || filterIngredientId !== '' || filterNom || filterActiviteId !== '') && (
+              <button className="btn btn-ghost btn-sm" style={{ fontSize: '0.72rem', alignSelf: 'flex-end' }} onClick={() => { setFilterCategorie(''); setFilterIngredientId(''); setFilterNom(''); setFilterActiviteId(''); }}>✕ Réinitialiser</button>
+            )}
           </div>
         </div>
       )}
