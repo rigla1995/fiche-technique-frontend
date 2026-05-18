@@ -915,20 +915,34 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
             {isOpen && (
               <div className="table-responsive card th-blue" style={{ marginBottom: 0 }}>
                 <table className="table">
-                  <thead style={{ background: '#eff6ff', borderBottom: '2px solid #2563eb', color: '#1e3a5f' }}>
-                    <tr style={{ verticalAlign: 'top' }}>
+                  <thead style={{ background: '#eff6ff', color: '#1e3a5f' }}>
+                    <tr style={{ borderBottom: '1px solid #bfdbfe' }}>
                       {[
-                        { label: t('client.stock.ingredient'), sub: '', align: 'left' as const, minWidth: 180 },
-                        { label: 'Stock', sub: 'pertes · pt', align: 'right' as const, minWidth: 110 },
-                        { label: 'Coût Total', sub: '', align: 'right' as const, minWidth: 100 },
-                        { label: 'Qté', sub: 'nouvelle', align: 'right' as const, minWidth: 90 },
-                        { label: 'Prix U. (DT)', sub: '', align: 'right' as const, minWidth: 100 },
-                        { label: 'TVA %', sub: 'optionnel', align: 'right' as const, minWidth: 80 },
-                        { label: 'Actions', sub: '', align: 'right' as const, minWidth: 150 },
-                      ].map(({ label, sub, align, minWidth }) => (
-                        <th key={label} style={{ fontWeight: 800, fontSize: '0.75rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '10px 14px', minWidth, textAlign: align }}>
-                          <div>{label}</div>
-                          <div style={{ fontSize: '0.62rem', fontWeight: 400, opacity: 0.65, minHeight: '1em', marginTop: 2 }}>{sub}</div>
+                        { label: t('client.stock.ingredient'), minWidth: 180 },
+                        { label: 'Stock Actuel', minWidth: 110 },
+                        { label: 'Coût Total', minWidth: 100 },
+                        { label: 'Quantité', minWidth: 90 },
+                        { label: 'Prix (U/HT)', minWidth: 100 },
+                        { label: 'TVA %', minWidth: 80 },
+                        { label: 'Actions', minWidth: 150 },
+                      ].map(({ label, minWidth }) => (
+                        <th key={label} style={{ fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.06em', textTransform: 'uppercase', padding: '10px 14px 4px', minWidth, textAlign: 'center' }}>
+                          {label}
+                        </th>
+                      ))}
+                    </tr>
+                    <tr style={{ borderBottom: '2px solid #2563eb' }}>
+                      {[
+                        { sub: '' },
+                        { sub: 'Pertes · PT · Transfert' },
+                        { sub: '' },
+                        { sub: 'Nouvelle' },
+                        { sub: '' },
+                        { sub: 'Optionnel' },
+                        { sub: '' },
+                      ].map(({ sub }, i) => (
+                        <th key={i} style={{ fontWeight: 400, fontSize: '0.62rem', color: '#3b82f6', letterSpacing: '0.04em', padding: '2px 14px 8px', textAlign: 'center', opacity: 0.85 }}>
+                          {sub}
                         </th>
                       ))}
                     </tr>
@@ -949,7 +963,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                       return (
                         <React.Fragment key={entry.ingredientId}>
                           <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
-                            <td style={{ padding: '10px 14px', verticalAlign: 'middle' }}>
+                            <td style={{ padding: '10px 14px', verticalAlign: 'middle', textAlign: 'center' }}>
                               <div style={{ fontWeight: 700, fontSize: '0.88rem', color: 'var(--text)' }}>{entry.nom}</div>
                               <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 3 }}>
                                 <span style={{ fontSize: '0.7rem', background: '#eff6ff', color: '#1e40af', borderRadius: 4, padding: '1px 7px', fontWeight: 600 }}>{entry.unite}</span>
@@ -962,7 +976,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                                 <div style={{ fontSize: '0.67rem', color: '#b45309', fontWeight: 600, marginTop: 3 }}>📦 {entry.lastInvDate.split('-').reverse().join('/')} · {entry.lastInvQty?.toFixed(3) ?? '—'}</div>
                               )}
                             </td>
-                            <td style={{ textAlign: 'right', padding: '10px 14px', verticalAlign: 'middle' }}>
+                            <td style={{ textAlign: 'center', padding: '10px 14px', verticalAlign: 'middle' }}>
                               <span className={cls} style={{ fontSize: '1rem', fontWeight: 800 }}>{totalDisplay}</span>
                               {entry.pertesDepuisInv != null && entry.pertesDepuisInv > 0 && (
                                 <div style={{ fontSize: '0.67rem', color: '#dc2626', fontWeight: 500, marginTop: 2 }}>↘ {entry.pertesDepuisInv.toFixed(3)}</div>
@@ -982,7 +996,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                                 </>
                               ) : <span style={{ color: '#cbd5e1', fontSize: '0.8rem' }}>—</span>}
                             </td>
-                            <td style={{ textAlign: 'right', padding: '10px 14px', verticalAlign: 'middle' }}>
+                            <td style={{ textAlign: 'center', padding: '10px 14px', verticalAlign: 'middle' }}>
                               <input
                                 type="number" min="0" step="0.001" placeholder="0"
                                 value={row.quantite}
@@ -999,7 +1013,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                                 </div>
                               )}
                             </td>
-                            <td style={{ textAlign: 'right', padding: '10px 14px', verticalAlign: 'middle' }}>
+                            <td style={{ textAlign: 'center', padding: '10px 14px', verticalAlign: 'middle' }}>
                               {entry.isPT ? (
                                 <span style={{ fontWeight: 700, color: '#1d4ed8', fontSize: '0.88rem' }}>
                                   {entry.prixUnitaire != null && entry.prixUnitaire > 0 ? entry.prixUnitaire.toFixed(3) : '—'}
@@ -1016,7 +1030,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                                 />
                               )}
                             </td>
-                            <td style={{ textAlign: 'right', padding: '10px 14px', verticalAlign: 'middle' }}>
+                            <td style={{ textAlign: 'center', padding: '10px 14px', verticalAlign: 'middle' }}>
                               {!entry.isPT && (
                                 <input
                                   type="number" min="0" max="100" step="0.1" placeholder="—"
@@ -1028,8 +1042,8 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                                 />
                               )}
                             </td>
-                            <td style={{ padding: '10px 14px', verticalAlign: 'middle', textAlign: 'right' }}>
-                              <div style={{ display: 'flex', gap: 5, alignItems: 'center', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+                            <td style={{ padding: '10px 14px', verticalAlign: 'middle', textAlign: 'center' }}>
+                              <div style={{ display: 'flex', gap: 5, alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap' }}>
                                 {row.error && <span style={{ color: 'var(--danger)', fontSize: '0.75rem', fontWeight: 700 }}>⚠</span>}
                                 {entry.isPT && entry.produitId && (
                                   <>
