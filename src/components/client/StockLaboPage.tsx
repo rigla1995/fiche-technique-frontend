@@ -489,9 +489,7 @@ export default function StockLaboPage() {
 
   if (!laboId) return <div className="page"><p className="text-muted">Labo introuvable.</p></div>;
 
-  const subtitle = labo
-    ? `☎ ${labo.referentTel}${labo.adresse ? ` · ${labo.adresse}` : ''}`
-    : t('common.loading');
+  const laboActivites: LaboActivite[] = labo?.activites ?? [];
 
   return (
     <div className="page" onClick={() => activityPopup && setActivityPopup(null)}>
@@ -509,7 +507,15 @@ export default function StockLaboPage() {
               Stock Labo{labo ? ` — ${labo.nom}` : ''}
             </h1>
           </div>
-          <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.85rem', margin: 0 }}>{subtitle}</p>
+          {laboActivites.length > 0 && (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 4 }}>
+              {laboActivites.map((a) => (
+                <span key={a.id} style={{ background: 'rgba(255,255,255,0.18)', color: '#fff', borderRadius: 20, padding: '2px 10px', fontSize: '0.78rem', fontWeight: 600, border: '1px solid rgba(255,255,255,0.3)' }}>
+                  🏪 {a.nom}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
         {tab === 'stock' && (
           <Link

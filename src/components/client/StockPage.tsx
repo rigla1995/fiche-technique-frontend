@@ -1119,9 +1119,10 @@ interface ActivityStockSectionProps {
   activities: Activite[];
   initialActiviteId?: number;
   onSave: (activiteId: number, ingredientId: number, quantite: string, prixUnitaire: string, dateAppro: string, fournisseurId?: number | null, refFacture?: string | null, tauxTva?: number | null) => Promise<void>;
+  onActiviteChange?: (nom: string) => void;
 }
 
-function ActivityStockSection({ label, activities, initialActiviteId, onSave }: ActivityStockSectionProps) {
+function ActivityStockSection({ label, activities, initialActiviteId, onSave, onActiviteChange }: ActivityStockSectionProps) {
   const { t } = useTranslation();
   const { canWrite: _canWrite } = useAuth();
   void _canWrite;
@@ -1204,7 +1205,7 @@ function ActivityStockSection({ label, activities, initialActiviteId, onSave }: 
           {!initialActiviteId && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
               <label style={{ fontSize: '0.62rem', fontWeight: 800, color: '#1e40af', textTransform: 'uppercase', letterSpacing: '0.07em' }}>🏪 Activité</label>
-              <select style={{ padding: '6px 10px', borderRadius: 7, border: '1.5px solid #1e40af', fontSize: '0.82rem', background: '#eff6ff', minWidth: 140 }} value={selectedId} onChange={(e) => setSelectedId(Number(e.target.value))}>
+              <select style={{ padding: '6px 10px', borderRadius: 7, border: '1.5px solid #1e40af', fontSize: '0.82rem', background: '#eff6ff', minWidth: 140 }} value={selectedId} onChange={(e) => { const id = Number(e.target.value); setSelectedId(id); onActiviteChange?.(activities.find((a) => a.id === id)?.nom ?? ''); }}>
                 {activities.map((a) => <option key={a.id} value={a.id}>{a.nom}</option>)}
               </select>
             </div>
@@ -1311,6 +1312,7 @@ export default function StockPage() {
   const [allActivities, setAllActivities] = useState<Activite[]>([]);
   const [activitesLoading, setActivitesLoading] = useState(false);
   const [activitesError, setActivitesError] = useState('');
+  const [selectedActiviteNom, setSelectedActiviteNom] = useState('');
 
   useEffect(() => {
     setActivitesLoading(true);
@@ -1320,7 +1322,11 @@ export default function StockPage() {
       api.get('/api/entreprise/activites'),
     ]).then(([summaryRes, activitesRes]) => {
       setTypesSummary(summaryRes.data as ActiviteTypesSummary);
-      setAllActivities(activitesRes.data as Activite[]);
+      const acts = activitesRes.data as Activite[];
+      setAllActivities(acts);
+      const initId = searchParams.get('activiteId') ? Number(searchParams.get('activiteId')) : undefined;
+      const initAct = initId ? acts.find((a) => a.id === initId) : acts[0];
+      if (initAct) setSelectedActiviteNom(initAct.nom);
     }).catch(() => {
       setActivitesError('Impossible de charger les activités. Veuillez recharger la page.');
     }).finally(() => setActivitesLoading(false));
@@ -1338,7 +1344,6 @@ export default function StockPage() {
   };
 
   const pageTitle = t('nav.stock_activite', 'Stock Activités');
-  const subtitle = 'Gestion des approvisionnements et niveaux de stock';
 
   return (
     <div className="page-content">
@@ -1354,7 +1359,13 @@ export default function StockPage() {
             <div style={{ background: 'rgba(255,255,255,0.2)', borderRadius: 10, padding: '7px 9px', fontSize: '1.2rem' }}>📦</div>
             <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0 }}>{pageTitle}</h1>
           </div>
-          <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.85rem', margin: 0 }}>{subtitle}</p>
+          {selectedActiviteNom && (
+            <div style={{ marginTop: 4 }}>
+              <span style={{ background: 'rgba(255,255,255,0.18)', color: '#fff', borderRadius: 20, padding: '2px 10px', fontSize: '0.78rem', fontWeight: 600, border: '1px solid rgba(255,255,255,0.3)' }}>
+                🏪 {selectedActiviteNom}
+              </span>
+            </div>
+          )}
         </div>
       </div>
 
@@ -1370,6 +1381,7 @@ export default function StockPage() {
               activities={allActivities}
               initialActiviteId={urlActiviteId}
               onSave={saveEntrepriseStock}
+              onActiviteChange={setSelectedActiviteNom}
             />
           ) : (
             <div className="alert alert-warning">{t('client.stock.no_activities')}</div>

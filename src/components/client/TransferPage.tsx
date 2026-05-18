@@ -398,6 +398,15 @@ export default function TransferPage() {
               {labo ? labo.nom : t('common.loading')} — {t('client.labo.transfer_title')}
             </h1>
           </div>
+          {activites.length > 0 && (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 4 }}>
+              {activites.map((a) => (
+                <span key={a.id} style={{ background: 'rgba(255,255,255,0.18)', color: '#fff', borderRadius: 20, padding: '2px 10px', fontSize: '0.78rem', fontWeight: 600, border: '1px solid rgba(255,255,255,0.3)' }}>
+                  🏪 {a.nom}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
         <div style={{ display: 'flex', gap: 10 }}>
           <Link to={`/client/labo/stock?laboId=${laboId}`} className="btn btn-ghost btn-sm"
@@ -448,12 +457,11 @@ export default function TransferPage() {
       {!loading && stock.length > 0 && activites.length > 0 && (
         <div style={{ background: 'var(--surface)', borderRadius: 10, padding: '10px 14px', marginBottom: 20, border: '1px solid var(--border)', boxShadow: '0 1px 6px rgba(0,0,0,0.04)' }}>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'flex-end' }}>
-            <div style={{ width: '100%', marginBottom: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: '0.62rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#7e22ce' }}>Filtres</span>
-              {(filterCategorie || filterIngredientId !== '' || filterNom || filterActiviteId !== '') && (
+            {(filterCategorie || filterIngredientId !== '' || filterNom || filterActiviteId !== '') && (
+              <div style={{ width: '100%', marginBottom: 2, display: 'flex', justifyContent: 'flex-end' }}>
                 <button className="btn btn-ghost btn-sm" style={{ fontSize: '0.72rem' }} onClick={() => { setFilterCategorie(''); setFilterIngredientId(''); setFilterNom(''); setFilterActiviteId(''); }}>✕ Réinitialiser</button>
-              )}
-            </div>
+              </div>
+            )}
             <div>
               <label style={{ fontSize: '0.62rem', fontWeight: 700, color: '#7e22ce', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 3 }}>🏷️ Catégorie</label>
               <select style={{ padding: '6px 10px', borderRadius: 7, border: '1.5px solid #7e22ce', fontSize: '0.82rem', background: '#faf5ff', minWidth: 150 }} value={filterCategorie} onChange={(e) => { setFilterCategorie(e.target.value); setFilterIngredientId(''); }}>
