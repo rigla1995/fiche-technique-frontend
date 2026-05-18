@@ -24,7 +24,7 @@ const thStyle: React.CSSProperties = {
 };
 
 export default function FournisseursPage() {
-  const { user, canWrite } = useAuth();
+  const { canWrite } = useAuth();
   const isIndep = false;
 
   const [fournisseurs, setFournisseurs] = useState<Fournisseur[]>([]);

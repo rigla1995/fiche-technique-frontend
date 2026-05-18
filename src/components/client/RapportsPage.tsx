@@ -7,7 +7,6 @@ import ExcelJS from 'exceljs';
 import jsPDF from 'jspdf';
 import autoTable, { type RowInput } from 'jspdf-autotable';
 import api from '../../api/client';
-import { useAuth } from '../../context/AuthContext';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -101,7 +100,6 @@ const ChartBox = ({ title, children }: { title: string; children: React.ReactNod
 // ── RAPPORT PERTES ───────────────────────────────────────────────────────────
 
 function RapportPertes({ filters }: { filters: FilterOptions }) {
-  const { user } = useAuth();
   const isEntreprise = true;
   const [dateFrom, setDateFrom] = useState(() => { const d = new Date(); d.setMonth(d.getMonth() - 3); return d.toISOString().slice(0, 10); });
   const [dateTo, setDateTo] = useState(() => new Date().toISOString().slice(0, 10));
@@ -276,7 +274,6 @@ function RapportPertes({ filters }: { filters: FilterOptions }) {
 // ── RAPPORT COÛT MATIÈRE ─────────────────────────────────────────────────────
 
 function RapportCoutMatiere({ filters }: { filters: FilterOptions }) {
-  const { user } = useAuth();
   const isEntreprise = true;
   const [dateFrom, setDateFrom] = useState(() => { const d = new Date(); d.setMonth(d.getMonth() - 3); return d.toISOString().slice(0, 10); });
   const [dateTo, setDateTo] = useState(() => new Date().toISOString().slice(0, 10));
@@ -448,7 +445,6 @@ function RapportCoutMatiere({ filters }: { filters: FilterOptions }) {
 // ── RAPPORT APPROS ────────────────────────────────────────────────────────────
 
 function RapportAppros({ filters }: { filters: FilterOptions }) {
-  const { user } = useAuth();
   const isEntreprise = true;
   const [dateFrom, setDateFrom] = useState(() => { const d = new Date(); d.setMonth(d.getMonth() - 3); return d.toISOString().slice(0, 10); });
   const [dateTo, setDateTo] = useState(() => new Date().toISOString().slice(0, 10));
@@ -619,7 +615,6 @@ function RapportAppros({ filters }: { filters: FilterOptions }) {
 // ── RAPPORT STOCK ─────────────────────────────────────────────────────────────
 
 function RapportStock({ filters }: { filters: FilterOptions }) {
-  const { user } = useAuth();
   const isEntreprise = true;
   const [activiteId, setActiviteId] = useState('');
   const [alerteFilter, setAlerteFilter] = useState('');
@@ -869,7 +864,6 @@ const TABS = [
 type TabId = typeof TABS[number]['id'] | 'activites';
 
 export default function RapportsPage() {
-  const { user } = useAuth();
   const isEntreprise = true;
   const [tab, setTab] = useState<TabId>('pertes');
   const [filters, setFilters] = useState<FilterOptions>({ categories: [], fournisseurs: [], activites: [] });

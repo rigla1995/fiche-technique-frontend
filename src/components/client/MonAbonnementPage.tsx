@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import api from '../../api/client';
 import type { Abonnement, Promotion } from '../../types';
-import { useAuth } from '../../context/AuthContext';
 
 const MODE_INFO: Record<string, { label: string; color: string; bg: string; icon: string; desc: string }> = {
   actif:     { label: 'Actif',         color: '#16a34a', bg: '#dcfce7', icon: '✅', desc: 'Votre compte est pleinement opérationnel.' },
@@ -48,8 +47,6 @@ interface ConfigBreakdown {
 }
 
 export default function MonAbonnementPage() {
-  const { user } = useAuth();
-  const isIndep = false;
   const [abo, setAbo] = useState<Abonnement | null>(null);
   const [loading, setLoading] = useState(true);
 

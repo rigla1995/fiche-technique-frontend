@@ -19,7 +19,7 @@ const PAGE_SIZE = 10;
 
 export default function ProductList() {
   const { t } = useTranslation();
-  const { user, canWrite } = useAuth();
+  const { canWrite } = useAuth();
   const isEntreprise = true;
 
   const [searchParams] = useSearchParams();

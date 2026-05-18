@@ -1289,34 +1289,12 @@ function ActivityStockSection({ label, activities, initialActiviteId, onSave }: 
 
 export default function StockPage() {
   const { t } = useTranslation();
-  const { user } = useAuth();
   const [searchParams] = useSearchParams();
-  const isEntreprise = true;
   const urlActiviteId = searchParams.get('activiteId') ? Number(searchParams.get('activiteId')) : undefined;
-
-  const [clientEntries, setClientEntries] = useState<StockEntry[]>([]);
-  const [clientLoading, setClientLoading] = useState(false);
-  const [clientCategoryFilter, setClientCategoryFilter] = useState('');
-  const [clientIngredientFilter, setClientIngredientFilter] = useState<number | ''>('');
-  const [clientNameFilter, setClientNameFilter] = useState('');
-  const [clientFournisseurFilter, setClientFournisseurFilter] = useState('');
-  const [clientRefFactureFilter, setClientRefFactureFilter] = useState('');
 
   const [typesSummary, setTypesSummary] = useState<ActiviteTypesSummary | null>(null);
   const [allActivities, setAllActivities] = useState<Activite[]>([]);
   const [activitesLoading, setActivitesLoading] = useState(false);
-  const [indepFournisseurs, setIndepFournisseurs] = useState<Fournisseur[]>([]);
-
-  const loadClientStock = useCallback(async () => {
-    setClientLoading(true);
-    setClientCategoryFilter('');
-    setClientNameFilter('');
-    try {
-      const { data } = await api.get('/api/stock/client');
-      setClientEntries(data);
-    } catch { /* ignore */ }
-    setClientLoading(false);
-  }, []);
 
   useEffect(() => {
     setActivitesLoading(true);
@@ -1327,36 +1305,7 @@ export default function StockPage() {
       setTypesSummary(summaryRes.data as ActiviteTypesSummary);
       setAllActivities(activitesRes.data as Activite[]);
     }).catch(() => {}).finally(() => setActivitesLoading(false));
-  }, [isEntreprise]);
-
-  const saveClientStock = async (ingredientId: number, quantite: string, prixUnitaire: string, dateAppro: string, fournisseurId?: number | null, refFacture?: string | null, tauxTva?: number | null) => {
-    await api.put(`/api/stock/client/${ingredientId}`, {
-      quantite: quantite ? parseFloat(quantite) : null,
-      prixUnitaire: prixUnitaire ? parseFloat(prixUnitaire) : null,
-      dateAppro,
-      fournisseurId: fournisseurId ?? null,
-      refFacture: refFacture ?? null,
-      tauxTva: tauxTva ?? null,
-    });
-  };
-
-  const saveClientStockPT = async (produitId: number, quantite: string, dateAppro: string) => {
-    const { data } = await api.put(`/api/stock/pt/${produitId}`, { quantite: parseFloat(quantite), dateAppro });
-    loadClientStock();
-    return data;
-  };
-
-  const saveClientSeuilMin = async (ingredientId: number, seuilMin: number | null) => {
-    if (ingredientId < 0) {
-      await api.put(`/api/stock/pt/${-ingredientId}/seuil-min`, { seuilMin });
-    } else {
-      await api.put(`/api/stock/client/${ingredientId}/seuil-min`, { seuilMin });
-    }
-  };
-
-  const saveClientPerte = async (ingredientId: number, quantite: number, typePerte: string, datePerte: string) => {
-    await api.post(`/api/stock/client/pertes`, { ingredientId, quantite, typePerte, datePerte });
-  };
+  }, []);
 
   const saveEntrepriseStock = async (activiteId: number, ingredientId: number, quantite: string, prixUnitaire: string, dateAppro: string, fournisseurId?: number | null, refFacture?: string | null, tauxTva?: number | null) => {
     await api.put(`/api/stock/entreprise/${activiteId}/${ingredientId}`, {
@@ -1369,20 +1318,8 @@ export default function StockPage() {
     });
   };
 
-  const clientCategories = useMemo(() =>
-    Array.from(new Set(
-      clientEntries.map((e) => e.categorie || t('client.ingredients_catalog.no_category'))
-    )).sort((a, b) => {
-      if (a === 'Produits Transformés') return 1;
-      if (b === 'Produits Transformés') return -1;
-      return a.localeCompare(b);
-    })
-  , [clientEntries, t]);
-
-  const pageTitle = isEntreprise ? t('nav.stock_activite', 'Stock Activités') : t('client.stock.title');
-  const subtitle = isEntreprise
-    ? 'Gestion des approvisionnements et niveaux de stock'
-    : 'Gestion des approvisionnements et niveaux de stock';
+  const pageTitle = t('nav.stock_activite', 'Stock Activités');
+  const subtitle = 'Gestion des approvisionnements et niveaux de stock';
 
   return (
     <div className="page-content">

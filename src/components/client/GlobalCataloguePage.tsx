@@ -1,5 +1,4 @@
 import { useEffect, useState, useCallback } from 'react';
-import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
@@ -32,119 +31,6 @@ interface DeselectModal {
   inventaireCount: number;
   contextType?: 'activite';
   contextId?: number;
-}
-
-// ─── Indépendant ingredient list (unchanged behavior) ────────────────────────
-
-function IndepIngredientList({
-  ingredients,
-  toggling,
-  filterCategory,
-  filterIngId,
-  filterName,
-  onToggle,
-  readOnly,
-}: {
-  ingredients: GlobalIngredient[];
-  toggling: Set<string>;
-  filterCategory: string;
-  filterIngId: number | '';
-  filterName: string;
-  onToggle: (id: number) => void;
-  readOnly?: boolean;
-}) {
-  const { t } = useTranslation();
-  const [openCats, setOpenCats] = useState<Set<string>>(new Set());
-  const [catPage, setCatPage] = useState(1);
-  const CAT_PAGE_SIZE = 10;
-
-  const filtered = ingredients.filter((i) => {
-    const catOk = !filterCategory || i.categorie === filterCategory;
-    const ingOk = !filterIngId || i.id === filterIngId;
-    const nameOk = !filterName || i.nom.toLowerCase().includes(filterName.toLowerCase());
-    return catOk && ingOk && nameOk;
-  });
-
-  const groups: Record<string, GlobalIngredient[]> = {};
-  for (const i of filtered) {
-    if (!groups[i.categorie]) groups[i.categorie] = [];
-    groups[i.categorie].push(i);
-  }
-
-  const selectedCount = ingredients.filter((i) => i.selected).length;
-  const toggleCat = (cat: string) => setOpenCats((prev) => { const n = new Set(prev); n.has(cat) ? n.delete(cat) : n.add(cat); return n; });
-
-  return (
-    <>
-      <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginBottom: 12 }}>
-        {selectedCount} / {ingredients.length} {t('global_catalogue.selected_count', 'ingrédient(s) sélectionné(s)')}
-      </p>
-      {filtered.length === 0 ? (
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 24px' }}>
-          <span style={{ fontSize: '2rem', marginBottom: 8 }}>🏷</span>
-          <p style={{ color: 'var(--text-muted)', textAlign: 'center', margin: 0 }}>{t('common.no_result')}</p>
-        </div>
-      ) : (() => {
-        const sortedGroups = Object.entries(groups).sort(([a], [b]) => a.localeCompare(b));
-        const totalCatPages = Math.max(1, Math.ceil(sortedGroups.length / CAT_PAGE_SIZE));
-        const pagedGroups = sortedGroups.slice((catPage - 1) * CAT_PAGE_SIZE, catPage * CAT_PAGE_SIZE);
-        return (<>
-          {pagedGroups.map(([cat, items]) => {
-            const isOpen = openCats.has(cat);
-            return (
-              <div key={cat} style={{ marginBottom: 8 }}>
-                <button onClick={() => toggleCat(cat)} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0', width: '100%', textAlign: 'left', borderBottom: '2px solid #c7d2fe', marginBottom: isOpen ? 8 : 0 }}>
-                  <span style={{ fontSize: '0.78rem', fontWeight: 800, color: '#4338ca', textTransform: 'uppercase', letterSpacing: '0.06em' }}>🏷 {cat}</span>
-                  <span style={{ fontWeight: 400, fontSize: '0.72rem', color: 'var(--text-muted)' }}>({items.filter((i) => i.selected).length}/{items.length})</span>
-                  <span style={{ marginLeft: 'auto', fontSize: '0.8rem', color: 'var(--text-muted)' }}>{isOpen ? '▼' : '▶'}</span>
-                </button>
-                {isOpen && (
-                  <div className="table-responsive card" style={{ marginBottom: 0 }}>
-                    <table className="table">
-                      <thead style={{ background: 'linear-gradient(135deg, #1e1b4b, #4338ca)' }}>
-                        <tr>
-                          <th style={{ width: 40, color: '#fff', fontWeight: 800, fontSize: '0.78rem' }}></th>
-                          <th style={{ color: '#fff', fontWeight: 800, fontSize: '0.78rem', textTransform: 'uppercase' }}>{t('common.name')}</th>
-                          <th style={{ width: 100, color: '#fff', fontWeight: 800, fontSize: '0.78rem', textTransform: 'uppercase' }}>{t('common.unit')}</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {items.map((ing) => (
-                          <tr key={ing.id} style={{ background: ing.selected ? 'var(--primary-light)' : undefined }}>
-                            <td style={{ textAlign: 'center' }}>
-                              {readOnly ? (
-                                <span style={{ fontSize: '1.1rem', color: ing.selected ? 'var(--success)' : 'var(--text-muted)' }}>
-                                  {ing.selected ? '✅' : '○'}
-                                </span>
-                              ) : (
-                                <button className="btn btn-ghost btn-sm" style={{ fontSize: '1.1rem', padding: '2px 6px', color: ing.selected ? 'var(--success)' : 'var(--text-muted)' }}
-                                  disabled={toggling.has(String(ing.id))} onClick={() => onToggle(ing.id)}>
-                                  {toggling.has(String(ing.id)) ? '…' : ing.selected ? '✅' : '○'}
-                                </button>
-                              )}
-                            </td>
-                            <td style={{ fontWeight: ing.selected ? 600 : 400 }}>{ing.nom}</td>
-                            <td style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{ing.unite}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
-            );
-          })}
-          {totalCatPages > 1 && (
-            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 10, marginTop: 8, fontSize: '0.82rem' }}>
-              <button className="btn btn-ghost btn-sm" disabled={catPage === 1} onClick={() => setCatPage((p) => Math.max(1, p - 1))}>‹</button>
-              <span style={{ fontWeight: 600 }}>{catPage} / {totalCatPages}</span>
-              <button className="btn btn-ghost btn-sm" disabled={catPage === totalCatPages} onClick={() => setCatPage((p) => Math.min(totalCatPages, p + 1))}>›</button>
-            </div>
-          )}
-        </>);
-      })()}
-    </>
-  );
 }
 
 // ─── Entreprise ingredient list with per-context toggles ──────────────────────
@@ -465,35 +351,6 @@ export default function GlobalCataloguePage() {
     on ? n.add(key) : n.delete(key);
     return n;
   });
-
-  // Indépendant toggle
-  const toggleIndep = async (ingId: number) => {
-    const ing = ingredients.find((i) => i.id === ingId);
-    if (!ing) return;
-    const key = String(ingId);
-    if (ing.selected) {
-      setTogglingKey(key, true);
-      try {
-        const { data } = await api.get(`/api/stock/client/${ingId}/cascade-info`);
-        setTogglingKey(key, false);
-        setDeselectModal({ ingId, ingName: ing.nom, approCount: data.approCount ?? 0, inventaireCount: data.inventaireCount ?? 0 });
-        return;
-      } catch {
-        setTogglingKey(key, false);
-        setDeselectModal({ ingId, ingName: ing.nom, approCount: 0, inventaireCount: 0 });
-        return;
-      }
-    }
-    setTogglingKey(key, true);
-    try {
-      const { data } = await api.post(`/ingredients/${ingId}/select`);
-      refreshSelections();
-      if (data.selected && user?.onboardingStep === 3) await advanceOnboarding(0);
-      setIngredients((prev) => prev.map((i) => i.id === ingId ? { ...i, selected: data.selected } : i));
-    } finally {
-      setTogglingKey(key, false);
-    }
-  };
 
   const doToggleIndep = async (ingId: number, deleteHistory = false) => {
     const key = String(ingId);

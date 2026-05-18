@@ -2,12 +2,10 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
-import { useAuth } from '../../context/AuthContext';
 import type { Product } from '../../types';
 
 export default function ClientDashboard() {
   const { t } = useTranslation();
-  const { user } = useAuth();
   const isEntreprise = true;
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);

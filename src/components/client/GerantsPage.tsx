@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import api from '../../api/client';
 import type { Gerant, Activite, Labo, AbonnementConfig } from '../../types';
-import { useAuth } from '../../context/AuthContext';
 import { useEmailCheck } from '../../hooks/useEmailCheck';
 
 interface GerantForm {
@@ -15,7 +14,6 @@ interface GerantForm {
 const EMPTY_FORM: GerantForm = { nom: '', telephone: '', email: '', activiteId: '', activiteType: '' };
 
 export default function GerantsPage() {
-  const { user } = useAuth();
   const isEntreprise = true;
 
   const [gerants, setGerants] = useState<Gerant[]>([]);

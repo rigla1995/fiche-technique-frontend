@@ -18,7 +18,7 @@ interface SubProductLine {
 
 export default function ProductForm() {
   const { t } = useTranslation();
-  const { user, canWrite } = useAuth();
+  const { canWrite } = useAuth();
   const navigate = useNavigate();
   const { id } = useParams();
   const [searchParams] = useSearchParams();
