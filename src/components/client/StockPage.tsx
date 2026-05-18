@@ -879,7 +879,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
               </select>
             ) : (
               <select className="input" style={{ maxWidth: 240, color: '#9a3412', fontStyle: 'italic', border: '2px solid #f97316', background: '#fff7ed' }} disabled>
-                <option>⚠ Aucun fournisseur pour cette activité</option>
+                <option>⚠ Aucun fournisseur</option>
               </select>
             )}
           </div>

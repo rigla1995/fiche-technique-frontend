@@ -677,7 +677,7 @@ export default function StockLaboPage() {
                   </select>
                 ) : (
                   <select className="input" style={{ maxWidth: 240, color: '#9a3412', fontStyle: 'italic', border: '2px solid #f97316', background: '#fff7ed' }} disabled>
-                    <option>⚠ Aucun fournisseur pour ce labo</option>
+                    <option>⚠ Aucun fournisseur</option>
                   </select>
                 )}
               </div>
