@@ -27,7 +27,7 @@ const confColor = (v: number | null) => {
 };
 
 const ConfBadge = ({ value, label }: { value: number | null; label: string }) => {
-  const { color, bg } = confColor(value);
+  const { color } = confColor(value);
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
       <span style={{ fontSize: 18, fontWeight: 800, color }}>
