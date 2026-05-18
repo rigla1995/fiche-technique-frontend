@@ -965,7 +965,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                           <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
                             <td style={{ padding: '10px 14px', verticalAlign: 'middle', textAlign: 'center' }}>
                               <div style={{ fontWeight: 700, fontSize: '0.88rem', color: 'var(--text)' }}>{entry.nom}</div>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 3 }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 3, justifyContent: 'center' }}>
                                 <span style={{ fontSize: '0.7rem', background: '#eff6ff', color: '#1e40af', borderRadius: 4, padding: '1px 7px', fontWeight: 600 }}>{entry.unite}</span>
                                 <button onClick={() => toggleHistory(entry.ingredientId)}
                                   style={{ fontSize: '0.7rem', color: '#0891b2', background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: 3 }}>
@@ -985,7 +985,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                                 <div style={{ fontSize: '0.67rem', color: '#7c3aed', fontWeight: 500, marginTop: 1 }}>PT {entry.ptUsageDepuisInv.toFixed(3)}</div>
                               )}
                             </td>
-                            <td style={{ textAlign: 'right', padding: '10px 14px', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
+                            <td style={{ textAlign: 'center', padding: '10px 14px', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
                               {entry.coutTotal != null && entry.coutTotal > 0 ? (
                                 <>
                                   <span style={{ fontSize: '0.88rem', color: '#1d4ed8', fontWeight: 700 }}>{entry.coutTotal.toFixed(3)}</span>
