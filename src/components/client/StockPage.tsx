@@ -922,8 +922,8 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                         { label: 'Stock Actuel', minWidth: 110 },
                         { label: 'Coût Total', minWidth: 100 },
                         { label: 'Quantité', minWidth: 90 },
-                        { label: 'Prix (U/HT)', minWidth: 100 },
-                        { label: 'TVA %', minWidth: 80 },
+                        { label: 'Prix', minWidth: 100 },
+                        { label: 'TVA (%)', minWidth: 80 },
                         { label: 'Actions', minWidth: 150 },
                       ].map(({ label, minWidth }) => (
                         <th key={label} style={{ fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.06em', textTransform: 'uppercase', padding: '10px 14px 4px', minWidth, textAlign: 'center' }}>
@@ -933,11 +933,11 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                     </tr>
                     <tr style={{ borderBottom: '2px solid #2563eb' }}>
                       {[
-                        { sub: '' },
+                        { sub: 'Hist.Appro · Unité' },
                         { sub: 'Pertes · PT · Transfert' },
-                        { sub: '' },
+                        { sub: 'HT · TTC' },
                         { sub: 'Nouvelle' },
-                        { sub: '' },
+                        { sub: 'HT / Unité' },
                         { sub: 'Optionnel' },
                         { sub: '' },
                       ].map(({ sub }, i) => (
