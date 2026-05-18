@@ -40,31 +40,13 @@ export default function IngredientsManagement() {
       return next;
     });
 
-  // Auto-expand all visible categories when a filter is applied or changed
+  // Collapse all categories when a filter changes
   useEffect(() => {
     const prev = prevFilter.current;
     const changed = search !== prev.search || filterCat !== prev.filterCat || filterDom !== prev.filterDom;
     prevFilter.current = { search, filterCat, filterDom };
-    if (!changed) return;
-    if (search || filterCat || filterDom) {
-      const noCategory = t('client.ingredients_catalog.no_category');
-      const names = new Set(
-        ingredients
-          .filter((i) => {
-            const q = search.toLowerCase();
-            const ingDomaines = (i as { domaineIds?: number[] }).domaineIds || [];
-            const matchSearch = i.name.toLowerCase().includes(q) || (i.categorieName || '').toLowerCase().includes(q) || (i.unit?.name || '').toLowerCase().includes(q);
-            const matchCat = filterCat === '' || (filterCat === '__none__' && !i.categorieId) || String(i.categorieId) === filterCat;
-            const matchDom = filterDom === '' || ingDomaines.length === 0 || ingDomaines.includes(parseInt(filterDom));
-            return matchSearch && matchCat && matchDom;
-          })
-          .map((i) => i.categorieName || noCategory)
-      );
-      setOpenCats(names);
-    } else {
-      setOpenCats(new Set());
-    }
-  }, [search, filterCat, filterDom, ingredients, t]);
+    if (changed) setOpenCats(new Set());
+  }, [search, filterCat, filterDom]);
 
   const fetchData = () => {
     setLoading(true);
