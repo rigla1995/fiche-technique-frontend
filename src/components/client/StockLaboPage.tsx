@@ -45,6 +45,7 @@ interface LaboStockRow {
   dateAppro: string | null;
   seuilMin: number | null;
   coutTotal: number | null;
+  coutTotalTTC?: number | null;
   totalTransfere: number;
   lastFournisseurId: number | null;
   lastRefFacture: string | null;
@@ -814,10 +815,14 @@ export default function StockLaboPage() {
                                       <td style={{ textAlign: 'center', padding: '10px 14px', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
                                         {r.coutTotal != null && r.coutTotal > 0 ? (
                                           <>
-                                            <span style={{ fontSize: '0.88rem', color: '#1d4ed8', fontWeight: 700 }}>{r.coutTotal.toFixed(3)}</span>
-                                            <span style={{ fontSize: '0.72rem', color: '#64748b', marginLeft: 2 }}>DT</span>
-                                            {(r.prixCalcule != null && r.prixCalcule > 0 ? r.prixCalcule : r.prixUnitaire != null && r.prixUnitaire > 0 ? r.prixUnitaire : null) != null && (
-                                              <div style={{ fontSize: '0.65rem', color: '#94a3b8', marginTop: 1 }}>{(r.prixCalcule != null && r.prixCalcule > 0 ? r.prixCalcule : r.prixUnitaire!).toFixed(3)} /u</div>
+                                            <div>
+                                              <span style={{ fontSize: '0.88rem', color: '#1d4ed8', fontWeight: 700 }}>{r.coutTotal.toFixed(3)}</span>
+                                              <span style={{ fontSize: '0.72rem', color: '#64748b', marginLeft: 2 }}>DT</span>
+                                            </div>
+                                            {r.coutTotalTTC != null && r.coutTotalTTC > 0 && r.coutTotalTTC !== r.coutTotal && (
+                                              <div style={{ fontSize: '0.72rem', color: '#7c3aed', marginTop: 2 }}>
+                                                {r.coutTotalTTC.toFixed(3)} <span style={{ fontSize: '0.65rem', color: '#a78bfa' }}>TTC</span>
+                                              </div>
                                             )}
                                           </>
                                         ) : <span style={{ color: '#cbd5e1', fontSize: '0.8rem' }}>—</span>}

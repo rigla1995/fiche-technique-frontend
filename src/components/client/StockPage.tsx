@@ -988,10 +988,14 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                             <td style={{ textAlign: 'center', padding: '10px 14px', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
                               {entry.coutTotal != null && entry.coutTotal > 0 ? (
                                 <>
-                                  <span style={{ fontSize: '0.88rem', color: '#1d4ed8', fontWeight: 700 }}>{entry.coutTotal.toFixed(3)}</span>
-                                  <span style={{ fontSize: '0.72rem', color: '#64748b', marginLeft: 2 }}>DT</span>
-                                  {entry.prixUnitaire != null && entry.prixUnitaire > 0 && (
-                                    <div style={{ fontSize: '0.65rem', color: '#94a3b8', marginTop: 1 }}>{entry.prixUnitaire.toFixed(3)} /u</div>
+                                  <div>
+                                    <span style={{ fontSize: '0.88rem', color: '#1d4ed8', fontWeight: 700 }}>{entry.coutTotal.toFixed(3)}</span>
+                                    <span style={{ fontSize: '0.72rem', color: '#64748b', marginLeft: 2 }}>DT</span>
+                                  </div>
+                                  {entry.coutTotalTTC != null && entry.coutTotalTTC > 0 && entry.coutTotalTTC !== entry.coutTotal && (
+                                    <div style={{ fontSize: '0.72rem', color: '#7c3aed', marginTop: 2 }}>
+                                      {entry.coutTotalTTC.toFixed(3)} <span style={{ fontSize: '0.65rem', color: '#a78bfa' }}>TTC</span>
+                                    </div>
                                   )}
                                 </>
                               ) : <span style={{ color: '#cbd5e1', fontSize: '0.8rem' }}>—</span>}

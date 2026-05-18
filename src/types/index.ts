@@ -285,6 +285,7 @@ export interface StockEntry {
   isPT?: boolean;
   prixPartiel?: boolean;       // PT: true if any recipe ingredient has no price
   coutTotal?: number | null;
+  coutTotalTTC?: number | null;
   nom: string;
   unite: string;
   categorie: string;
