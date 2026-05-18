@@ -72,8 +72,6 @@ export default function LaboVentesPage() {
 
   useEffect(() => { loadData(); }, [loadData]);
 
-  const selectedLabo = labos.find(l => l.id === selectedLaboId);
-
   return (
     <div style={{ padding: '24px', maxWidth: 1100, margin: '0 auto' }}>
       <h1 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: 4 }}>Ventes Labo</h1>

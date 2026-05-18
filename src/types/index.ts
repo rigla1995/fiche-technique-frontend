@@ -248,6 +248,7 @@ export interface Activite {
   id: number;
   entrepriseId: number;
   nom: string;
+  type?: string;
   adresse?: string;
   telephone?: string;
   email?: string;
