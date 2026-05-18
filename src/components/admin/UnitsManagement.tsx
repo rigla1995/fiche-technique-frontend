@@ -15,6 +15,7 @@ export default function UnitsManagement() {
   const [editId, setEditId] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [deleteError, setDeleteError] = useState('');
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
 
@@ -50,9 +51,14 @@ export default function UnitsManagement() {
   };
 
   const handleDelete = async (id: number) => {
-    if (!window.confirm(t('admin.units.delete_confirm'))) return;
-    await api.delete(`/api/unites/${id}`);
-    fetchUnits();
+    if (!window.confirm('Supprimer cette unité ?')) return;
+    setDeleteError('');
+    try {
+      await api.delete(`/api/unites/${id}`);
+      fetchUnits();
+    } catch (err: unknown) {
+      setDeleteError((err as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Erreur lors de la suppression');
+    }
   };
 
   const filtered = units.filter((u) => u.name.toLowerCase().includes(search.toLowerCase()));
@@ -96,6 +102,13 @@ export default function UnitsManagement() {
           />
         </div>
       </div>
+
+      {deleteError && (
+        <div style={{ background: '#fee2e2', color: '#dc2626', border: '1px solid #fecaca', borderRadius: 8, padding: '10px 14px', marginBottom: 14, fontSize: '0.85rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <span>⚠️ {deleteError}</span>
+          <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#dc2626', fontWeight: 700 }} onClick={() => setDeleteError('')}>✕</button>
+        </div>
+      )}
 
       {loading ? (
         <div className="loading-text">{t('common.loading')}</div>
