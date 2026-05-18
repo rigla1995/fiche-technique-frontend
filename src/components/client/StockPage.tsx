@@ -916,14 +916,21 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
               <div className="table-responsive card th-blue" style={{ marginBottom: 0 }}>
                 <table className="table">
                   <thead style={{ background: '#eff6ff', borderBottom: '2px solid #2563eb', color: '#1e3a5f' }}>
-                    <tr>
-                      <th style={{ fontWeight: 800, fontSize: '0.75rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '10px 14px', minWidth: 180 }}>{t('client.stock.ingredient')}</th>
-                      <th style={{ textAlign: 'right', fontWeight: 800, fontSize: '0.75rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '10px 14px', minWidth: 110 }}>Stock<br /><span style={{ fontSize: '0.62rem', fontWeight: 400, opacity: 0.7 }}>pertes · pt</span></th>
-                      <th style={{ textAlign: 'right', fontWeight: 800, fontSize: '0.75rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '10px 14px', minWidth: 100 }}>Coût Total</th>
-                      <th style={{ textAlign: 'right', fontWeight: 800, fontSize: '0.75rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '10px 14px', minWidth: 90 }}>Qté</th>
-                      <th style={{ textAlign: 'right', fontWeight: 800, fontSize: '0.75rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '10px 14px', minWidth: 100 }}>Prix U. (DT)</th>
-                      <th style={{ textAlign: 'right', fontWeight: 800, fontSize: '0.75rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '10px 14px', minWidth: 80 }}>TVA %<br /><span style={{ fontSize: '0.62rem', fontWeight: 400, opacity: 0.7 }}>optionnel</span></th>
-                      <th style={{ fontWeight: 800, fontSize: '0.75rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '10px 14px', minWidth: 150, textAlign: 'right' }}>Actions</th>
+                    <tr style={{ verticalAlign: 'top' }}>
+                      {[
+                        { label: t('client.stock.ingredient'), sub: '', align: 'left' as const, minWidth: 180 },
+                        { label: 'Stock', sub: 'pertes · pt', align: 'right' as const, minWidth: 110 },
+                        { label: 'Coût Total', sub: '', align: 'right' as const, minWidth: 100 },
+                        { label: 'Qté', sub: 'nouvelle', align: 'right' as const, minWidth: 90 },
+                        { label: 'Prix U. (DT)', sub: '', align: 'right' as const, minWidth: 100 },
+                        { label: 'TVA %', sub: 'optionnel', align: 'right' as const, minWidth: 80 },
+                        { label: 'Actions', sub: '', align: 'right' as const, minWidth: 150 },
+                      ].map(({ label, sub, align, minWidth }) => (
+                        <th key={label} style={{ fontWeight: 800, fontSize: '0.75rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '10px 14px', minWidth, textAlign: align }}>
+                          <div>{label}</div>
+                          <div style={{ fontSize: '0.62rem', fontWeight: 400, opacity: 0.65, minHeight: '1em', marginTop: 2 }}>{sub}</div>
+                        </th>
+                      ))}
                     </tr>
                   </thead>
                   <tbody>
