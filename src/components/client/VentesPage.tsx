@@ -93,7 +93,7 @@ export default function VentesPage() {
 
   useEffect(() => {
     api.get('/api/entreprise/activites').then(({ data }) => {
-      const acts: Activite[] = (data as Activite[]).filter(a => a.type !== 'labo');
+      const acts: Activite[] = (data as Activite[]).filter(a => !a.laboId);
       setActivites(acts);
       const paramId = searchParams.get('activiteId');
       const found = acts.find(a => String(a.id) === paramId);
@@ -123,9 +123,9 @@ export default function VentesPage() {
 
   useEffect(() => {
     if (!showAddArticle || !selectedActiviteId) return;
-    api.get('/api/produits').then(({ data }) => setAllProduits(data.map((p: { id: number; name: string }) => ({ id: p.id, nom: p.name })))).catch(() => {});
-    api.get('/api/stock/client/ingredient-selections')
-      .then(({ data }) => setAllIngredients(data.map((i: { id: number; nom: string; unite: string }) => ({ id: i.id, nom: i.nom, unite_nom: i.unite }))))
+    api.get('/api/produits').then(({ data }) => setAllProduits((data as { id: number; name: string }[]).map(p => ({ id: p.id, nom: p.name })))).catch(() => {});
+    api.get(`/api/stock/entreprise/${selectedActiviteId}`)
+      .then(({ data }) => setAllIngredients((data as { ingredientId: number; nom: string; unite: string }[]).map(i => ({ id: i.ingredientId, nom: i.nom, unite_nom: i.unite }))))
       .catch(() => {});
   }, [showAddArticle, selectedActiviteId]);
 
