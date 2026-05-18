@@ -264,13 +264,15 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
       api.get('/api/labo').then(({ data }) => setLabos(data)).catch(() => setLabos([]));
       return;
     }
+    if (isEntreprise) {
+      api.get('/api/labo')
+        .then(({ data }) => setLabos(data))
+        .catch(() => setLabos([]));
+    }
     if (isEntreprise && (step === 0 || step === 3)) {
       api.get('/api/entreprise/activites/types-summary')
         .then(({ data }) => setTypesSummary(data))
         .catch(() => setTypesSummary(null));
-      api.get('/api/labo')
-        .then(({ data }) => setLabos(data))
-        .catch(() => setLabos([]));
       api.get('/api/abonnements/mon-abonnement')
         .then(({ data }) => { if (data?.config) setAboConfig(data.config); })
         .catch(() => {});
@@ -725,15 +727,15 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
                   {/* ══ CATALOGUE GLOBAL ══ — unlocks when activités or labos exist */}
                   <li>
-                    {isOnboarding || !hasActivitesOrLabos ? (
-                      <LockedLink label="Catalogue Global" reason={!hasActivitesOrLabos && !isOnboarding ? "Créez d'abord une activité ou un labo" : undefined} />
+                    {!hasActivitesOrLabos ? (
+                      <LockedLink label="Catalogue Global" reason="Créez d'abord une activité ou un labo" />
                     ) : (
                       <NavLink to="/client/catalogue-global" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>
                         <span className="link-icon">🌐</span><span className="link-label">Catalogue Global</span>
                       </NavLink>
                     )}
                   </li>
-                  {hasActivitesOrLabos && !isOnboarding && (
+                  {hasActivitesOrLabos && (
                     <li>
                       <span style={{ display: 'block', padding: '2px 18px 8px', fontSize: '0.71rem', color: 'var(--text-muted)', lineHeight: 1.45 }}>
                         Assignez les ingrédients à vos activités et labos
