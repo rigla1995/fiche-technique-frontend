@@ -49,7 +49,8 @@ export default function LoginPage() {
           <div className="login-features-grid">
             {[
               { icon: '🧾', title: 'Fiches techniques rentables', desc: 'Coûts précis, marges calculées automatiquement pour chaque plat.' },
-              { icon: '📦', title: 'Stock & approvisionnement', desc: 'Suivez chaque ingrédient, évitez les ruptures, réduisez le gaspillage.' },
+              { icon: '📦', title: 'Stock, inventaire & approvisionnement', desc: 'Gérez vos niveaux de stock, effectuez vos inventaires et anticipez les commandes fournisseurs.' },
+              { icon: '🛒', title: 'Module vente', desc: 'Suivez vos ventes par activité, analysez vos produits phares et pilotez votre chiffre d\'affaires.' },
               { icon: '🤖', title: 'Agent IA intégré', desc: 'Posez vos questions métier, obtenez des recommandations et optimisez vos achats.' },
               { icon: '📊', title: 'Rapports & analyses', desc: 'Ventes, pertes, tendances : toutes les données pour décider vite et bien.' },
             ].map(({ icon, title, desc }) => (
