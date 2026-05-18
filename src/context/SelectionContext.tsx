@@ -16,13 +16,15 @@ export function SelectionProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const [hasSelections, setHasSelections] = useState<boolean | null>(null);
 
+  const isIndep = user?.role === 'client' && user?.compteType === 'independant';
+
   const refreshSelections = useCallback(() => {
-    if (user?.role === 'client') {
+    if (isIndep) {
       api.get('/ingredients/has-selections')
         .then(({ data }) => setHasSelections(data.hasSelections))
         .catch(() => setHasSelections(false));
     }
-  }, [user]);
+  }, [isIndep]);
 
   useEffect(() => {
     refreshSelections();
