@@ -21,6 +21,7 @@ interface StockRowState {
   dateAppro: string;
   fournisseurId: string;
   refFacture: string;
+  tauxTva: string;
   origQuantite: string;
   origPrixUnitaire: string;
   origDateAppro: string;
@@ -37,7 +38,7 @@ function buildInitialRowState(entries: StockEntry[]): Record<number, StockRowSta
     const hasExisting = e.quantite !== null;
     state[e.ingredientId] = {
       quantite: '0', prixUnitaire: '0', dateAppro: today,
-      fournisseurId: '', refFacture: '',
+      fournisseurId: '', refFacture: '', tauxTva: '',
       origQuantite: '0', origPrixUnitaire: '0', origDateAppro: today,
       hasExisting, saving: false, saved: false, error: '',
     };
@@ -475,7 +476,6 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
   const [bulkDate, setBulkDate] = useState(todayStr());
   const [bulkFournisseurId, setBulkFournisseurId] = useState('');
   const [bulkRefFacture, setBulkRefFacture] = useState('');
-  const [bulkTauxTva, setBulkTauxTva] = useState('');
   const [bulkSaving, setBulkSaving] = useState(false);
   const [bulkError, setBulkError] = useState('');
   const [seuilModal, setSeuilModal] = useState<{ ingredientId: number; nom: string; error?: string } | null>(null);
@@ -599,7 +599,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
         await onSave(ingId, row.quantite, row.prixUnitaire, bulkDate,
           bulkFournisseurId ? Number(bulkFournisseurId) : null,
           bulkRefFacture.trim() || null,
-          bulkTauxTva.trim() ? parseFloat(bulkTauxTva) : null);
+          row.tauxTva.trim() ? parseFloat(row.tauxTva) : null);
         if (isCurrentMonth(bulkDate)) {
           const added = parseFloat(row.quantite) || 0;
           setTotalOverrides((prev) => {
@@ -611,6 +611,13 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
       setBulkDate(todayStr());
       setBulkFournisseurId('');
       setBulkRefFacture('');
+      setRows((prev) => {
+        const next = { ...prev };
+        for (const id of Object.keys(next)) {
+          next[Number(id)] = { ...next[Number(id)], tauxTva: '' };
+        }
+        return next;
+      });
     } catch (e: unknown) {
       const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Erreur lors de l\'enregistrement';
       setBulkError(msg);
@@ -684,7 +691,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
     return !isNaN(qty) && qty > 0 && !isNaN(prix) && prix > 0;
   }).length;
   const canSaveBulk = readyCount > 0 && !!bulkDate.trim()
-    && !!bulkFournisseurId && !!bulkRefFacture.trim();
+    && (!hasFournisseurs || !!bulkFournisseurId) && !!bulkRefFacture.trim();
 
   return (
     <div>
@@ -863,22 +870,22 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
             <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#1e40af', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Date d'appro</span>
             <input type="date" className="input" style={{ maxWidth: 150 }} min={yearStart} max={todayStr()} value={bulkDate} onChange={(e) => setBulkDate(e.target.value)} />
           </div>
-          {hasFournisseurs && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-              <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#1e40af', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Fournisseur</span>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+            <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#1e40af', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Fournisseur</span>
+            {hasFournisseurs ? (
               <select className="input" style={{ maxWidth: 200 }} value={bulkFournisseurId} onChange={(e) => setBulkFournisseurId(e.target.value)}>
                 <option value="">— Sélectionner —</option>
                 {nonLaboFournisseurs.map((f) => <option key={f.id} value={String(f.id)}>{f.nom}</option>)}
               </select>
-            </div>
-          )}
+            ) : (
+              <select className="input" style={{ maxWidth: 220, color: 'var(--text-muted)', fontStyle: 'italic' }} disabled>
+                <option>Aucun fournisseur pour cette activité</option>
+              </select>
+            )}
+          </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
             <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#1e40af', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Réf Facture</span>
             <input type="text" className="input" style={{ maxWidth: 160 }} placeholder="N° facture…" value={bulkRefFacture} onChange={(e) => setBulkRefFacture(e.target.value)} />
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-            <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#1e40af', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Taux TVA % <span style={{ fontWeight: 400, opacity: 0.7 }}>(optionnel)</span></span>
-            <input type="number" min="0" max="100" step="0.1" className="input" style={{ maxWidth: 100 }} placeholder="ex: 19" value={bulkTauxTva} onChange={(e) => setBulkTauxTva(e.target.value)} />
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignSelf: 'flex-end', marginLeft: 'auto' }}>
             <div style={{ display: 'flex', gap: 8 }}>
@@ -886,7 +893,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                 style={{ background: canSaveBulk ? 'linear-gradient(135deg, #1e40af, #2563eb)' : undefined, border: 'none', boxShadow: canSaveBulk ? '0 3px 10px rgba(30,64,175,0.3)' : undefined }}>
                 {bulkSaving ? '…' : `Enregistrer (${readyCount})`}
               </button>
-              <button className="btn btn-ghost btn-sm" onClick={() => { setBulkDate(todayStr()); setBulkFournisseurId(''); setBulkRefFacture(''); setBulkTauxTva(''); setBulkError(''); }}>
+              <button className="btn btn-ghost btn-sm" onClick={() => { setBulkDate(todayStr()); setBulkFournisseurId(''); setBulkRefFacture(''); setBulkError(''); }}>
                 Réinitialiser
               </button>
             </div>
@@ -914,6 +921,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                       <th style={{ textAlign: 'right', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px', minWidth: 90 }}>Coût Total</th>
                       <th style={{ textAlign: 'right', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px' }}>Nouvelle Qté</th>
                       <th style={{ textAlign: 'right', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px' }}>Prix (U/DT)</th>
+                      <th style={{ textAlign: 'right', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px' }}>TVA %<br /><span style={{ fontSize: '0.65rem', fontWeight: 400, opacity: 0.75 }}>optionnel</span></th>
                       <th style={{ fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px' }}></th>
                     </tr>
                   </thead>
@@ -997,6 +1005,18 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                                 />
                               )}
                             </td>
+                            <td style={{ textAlign: 'right' }}>
+                              {!entry.isPT && (
+                                <input
+                                  type="number" min="0" max="100" step="0.1" placeholder="—"
+                                  value={row.tauxTva}
+                                  onChange={(e) => updateRow(entry.ingredientId, 'tauxTva', e.target.value)}
+                                  style={{ width: 60, textAlign: 'right' }}
+                                  className="input"
+                                  disabled={!canWrite}
+                                />
+                              )}
+                            </td>
                             <td>
                               <div style={{ display: 'flex', gap: 4, alignItems: 'center', flexWrap: 'wrap' }}>
                                 {row.error && <span style={{ color: 'var(--danger)', fontSize: '0.75rem' }}>!</span>}
@@ -1022,7 +1042,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                           </tr>
                           {isHistOpen && (
                             <tr key={`${entry.ingredientId}-hist`}>
-                              <td colSpan={6} style={{ background: '#f8faff', padding: '8px 16px' }}>
+                              <td colSpan={7} style={{ background: '#f8faff', padding: '8px 16px' }}>
                                 {!hist ? (
                                   <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{t('common.loading')}</span>
                                 ) : hist.length === 0 ? (
@@ -1173,83 +1193,75 @@ function ActivityStockSection({ label, activities, initialActiviteId, onSave }: 
         <h2 style={{ fontSize: '0.9rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--text)', margin: 0 }}>{label}</h2>
       </div>
 
-      {/* Filter panel */}
+      {/* Filter panel — compact single-row layout */}
       <div style={{
-        background: 'var(--surface)', borderRadius: 14, padding: '16px 20px', marginBottom: 24,
-        border: '1px solid var(--border)', boxShadow: '0 2px 12px rgba(0,0,0,0.05)',
+        background: 'var(--surface)', borderRadius: 10, padding: '10px 14px', marginBottom: 20,
+        border: '1px solid var(--border)', boxShadow: '0 1px 6px rgba(0,0,0,0.04)',
       }}>
-        {/* Panel header */}
-        <div style={{ width: '100%', marginBottom: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: 12, borderBottom: '1px solid var(--border)' }}>
-          <span style={{ fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#1e40af' }}>Filtres</span>
-          {(categoryFilter || ingredientFilter !== '' || nameFilter || fournisseurFilter || refFactureFilter) && (
-            <button className="btn btn-ghost btn-sm" style={{ fontSize: '0.78rem' }} onClick={() => { setCategoryFilter(''); setIngredientFilter(''); setNameFilter(''); setFournisseurFilter(''); setRefFactureFilter(''); }}>✕ Réinitialiser</button>
-          )}
-        </div>
-        {/* Section 1: Entité & Produit */}
-        <div style={{ marginBottom: 16, marginTop: 14 }}>
-          <div style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span style={{ width: 16, height: 2, background: '#1e40af', display: 'inline-block', borderRadius: 2 }} />
-            Entité &amp; Produit
-          </div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14, alignItems: 'flex-end' }}>
-            {!initialActiviteId && (
-              <div>
-                <label style={{ fontSize: '0.68rem', fontWeight: 800, color: '#1e40af', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>🏪 Activité</label>
-                <select style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid #1e40af', fontSize: '0.88rem', background: '#eff6ff', minWidth: 160 }} value={selectedId} onChange={(e) => setSelectedId(Number(e.target.value))}>
-                  {activities.map((a) => <option key={a.id} value={a.id}>{a.nom}</option>)}
-                </select>
-              </div>
-            )}
-            <div>
-              <label style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>🏷️ Catégorie</label>
-              <select style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid var(--border)', fontSize: '0.88rem', background: 'var(--background)', minWidth: 160 }} value={categoryFilter} onChange={(e) => { setCategoryFilter(e.target.value); setIngredientFilter(''); }}>
-                <option value="">{t('client.catalogue_franchise.all_categories')}</option>
-                {allCategories.map((c) => <option key={c} value={c}>{c}</option>)}
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'flex-end' }}>
+          {/* Activité selector (only when multiple) */}
+          {!initialActiviteId && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <label style={{ fontSize: '0.62rem', fontWeight: 800, color: '#1e40af', textTransform: 'uppercase', letterSpacing: '0.07em' }}>🏪 Activité</label>
+              <select style={{ padding: '6px 10px', borderRadius: 7, border: '1.5px solid #1e40af', fontSize: '0.82rem', background: '#eff6ff', minWidth: 140 }} value={selectedId} onChange={(e) => setSelectedId(Number(e.target.value))}>
+                {activities.map((a) => <option key={a.id} value={a.id}>{a.nom}</option>)}
               </select>
             </div>
-            <div>
-              <label style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>🧂 Ingrédient</label>
-              <select style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid var(--border)', fontSize: '0.88rem', background: 'var(--background)', minWidth: 160 }} value={ingredientFilter} disabled={!categoryFilter}
-                onChange={(e) => setIngredientFilter(e.target.value === '' ? '' : Number(e.target.value))}>
+          )}
+          {/* Catégorie */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <label style={{ fontSize: '0.62rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>🏷️ Catégorie</label>
+            <select style={{ padding: '6px 10px', borderRadius: 7, border: '1.5px solid var(--border)', fontSize: '0.82rem', background: 'var(--background)', minWidth: 140 }} value={categoryFilter} onChange={(e) => { setCategoryFilter(e.target.value); setIngredientFilter(''); }}>
+              <option value="">{t('client.catalogue_franchise.all_categories')}</option>
+              {allCategories.map((c) => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </div>
+          {/* Ingrédient */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <label style={{ fontSize: '0.62rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>🧂 Ingrédient</label>
+            <select style={{ padding: '6px 10px', borderRadius: 7, border: '1.5px solid var(--border)', fontSize: '0.82rem', background: 'var(--background)', minWidth: 140 }} value={ingredientFilter} disabled={!categoryFilter}
+              onChange={(e) => setIngredientFilter(e.target.value === '' ? '' : Number(e.target.value))}>
+              <option value="">— Tous —</option>
+              {entries.filter((e) => e.categorie === categoryFilter).map((e) => (
+                <option key={e.ingredientId} value={e.ingredientId}>{e.nom}</option>
+              ))}
+            </select>
+          </div>
+          {/* Nom */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <label style={{ fontSize: '0.62rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>🔍 Nom</label>
+            <input type="text" style={{ padding: '6px 10px', borderRadius: 7, border: '1.5px solid var(--border)', fontSize: '0.82rem', background: 'var(--background)', minWidth: 130 }}
+              placeholder={t('client.stock.search_ingredient')} value={nameFilter} onChange={(e) => setNameFilter(e.target.value)} />
+          </div>
+          {/* Fournisseur — always visible */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <label style={{ fontSize: '0.62rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>🚚 Fournisseur</label>
+            {fournisseurs.length > 0 ? (
+              <select style={{ padding: '6px 10px', borderRadius: 7, border: '1.5px solid var(--border)', fontSize: '0.82rem', background: 'var(--background)', minWidth: 140 }} value={fournisseurFilter} onChange={(e) => setFournisseurFilter(e.target.value)}>
                 <option value="">— Tous —</option>
-                {entries.filter((e) => e.categorie === categoryFilter).map((e) => (
-                  <option key={e.ingredientId} value={e.ingredientId}>{e.nom}</option>
+                {fournisseurs.map((f) => (
+                  <option key={f.id} value={f.id}>{f.isLabo ? '🏭 ' : '🚚 '}{f.nom}</option>
                 ))}
               </select>
-            </div>
-            <div>
-              <label style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>🔍 Nom</label>
-              <input type="text" style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid var(--border)', fontSize: '0.88rem', background: 'var(--background)', minWidth: 160 }}
-                placeholder={t('client.stock.search_ingredient')} value={nameFilter} onChange={(e) => setNameFilter(e.target.value)} />
-            </div>
-          </div>
-        </div>
-        {/* Divider */}
-        <div style={{ marginBottom: 16, borderTop: '1px dashed var(--border)' }} />
-        {/* Section 2: Fournisseur */}
-        <div>
-          <div style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span style={{ width: 16, height: 2, background: '#3b82f6', display: 'inline-block', borderRadius: 2 }} />
-            Fournisseur
-          </div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14, alignItems: 'flex-end' }}>
-            {fournisseurs.length > 0 && (
-              <div>
-                <label style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>🚚 Fournisseur</label>
-                <select style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid var(--border)', fontSize: '0.88rem', background: 'var(--background)', minWidth: 160 }} value={fournisseurFilter} onChange={(e) => setFournisseurFilter(e.target.value)}>
-                  <option value="">— Tous —</option>
-                  {fournisseurs.map((f) => (
-                    <option key={f.id} value={f.id}>{f.isLabo ? '🏭 ' : '🚚 '}{f.nom}</option>
-                  ))}
-                </select>
-              </div>
+            ) : (
+              <select style={{ padding: '6px 10px', borderRadius: 7, border: '1.5px solid var(--border)', fontSize: '0.82rem', background: 'var(--background)', minWidth: 140, color: 'var(--text-muted)', fontStyle: 'italic' }} disabled>
+                <option>Aucun fournisseur</option>
+              </select>
             )}
-            <div>
-              <label style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>🧾 Réf. Facture</label>
-              <input type="text" style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid var(--border)', fontSize: '0.88rem', background: 'var(--background)', minWidth: 160 }}
-                placeholder="Réf. facture…" value={refFactureFilter} onChange={(e) => setRefFactureFilter(e.target.value)} />
-            </div>
           </div>
+          {/* Réf. Facture */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <label style={{ fontSize: '0.62rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>🧾 Réf. Facture</label>
+            <input type="text" style={{ padding: '6px 10px', borderRadius: 7, border: '1.5px solid var(--border)', fontSize: '0.82rem', background: 'var(--background)', minWidth: 130 }}
+              placeholder="Réf. facture…" value={refFactureFilter} onChange={(e) => setRefFactureFilter(e.target.value)} />
+          </div>
+          {/* Reset */}
+          {(categoryFilter || ingredientFilter !== '' || nameFilter || fournisseurFilter || refFactureFilter) && (
+            <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', gap: 2 }}>
+              <label style={{ fontSize: '0.62rem', opacity: 0 }}>x</label>
+              <button className="btn btn-ghost btn-sm" style={{ fontSize: '0.78rem' }} onClick={() => { setCategoryFilter(''); setIngredientFilter(''); setNameFilter(''); setFournisseurFilter(''); setRefFactureFilter(''); }}>✕ Réinitialiser</button>
+            </div>
+          )}
         </div>
       </div>
 
