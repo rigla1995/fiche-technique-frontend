@@ -77,6 +77,7 @@ export default function TransferPage() {
   const [filterCategorie, setFilterCategorie] = useState('');
   const [filterNom, setFilterNom] = useState('');
   const [filterIngredientId, setFilterIngredientId] = useState<number | ''>('');
+  const [filterActiviteId, setFilterActiviteId] = useState<number | ''>('');
   const [openCats, setOpenCats] = useState<Set<string>>(new Set());
   const toggleCat = (cat: string) => setOpenCats((prev) => { const n = new Set(prev); if (n.has(cat)) n.delete(cat); else n.add(cat); return n; });
 
@@ -328,7 +329,8 @@ export default function TransferPage() {
     const catOk = !filterCategorie || r.categorie === filterCategorie;
     const ingOk = !filterIngredientId || r.ingredientId === filterIngredientId;
     const nomOk = !filterNom || r.nom.toLowerCase().includes(filterNom.toLowerCase());
-    return catOk && ingOk && nomOk;
+    const actOk = !filterActiviteId || (r.isPT ? r.activiteId === filterActiviteId : assignedSet.has(`${r.ingredientId}-${filterActiviteId}`));
+    return catOk && ingOk && nomOk && actOk;
   });
   const groups: Record<string, LaboStockRow[]> = {};
   for (const r of filtered) {
@@ -448,8 +450,8 @@ export default function TransferPage() {
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'flex-end' }}>
             <div style={{ width: '100%', marginBottom: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span style={{ fontSize: '0.62rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#7e22ce' }}>Filtres</span>
-              {(filterCategorie || filterIngredientId !== '' || filterNom) && (
-                <button className="btn btn-ghost btn-sm" style={{ fontSize: '0.72rem' }} onClick={() => { setFilterCategorie(''); setFilterIngredientId(''); setFilterNom(''); }}>✕ Réinitialiser</button>
+              {(filterCategorie || filterIngredientId !== '' || filterNom || filterActiviteId !== '') && (
+                <button className="btn btn-ghost btn-sm" style={{ fontSize: '0.72rem' }} onClick={() => { setFilterCategorie(''); setFilterIngredientId(''); setFilterNom(''); setFilterActiviteId(''); }}>✕ Réinitialiser</button>
               )}
             </div>
             <div>
@@ -471,6 +473,14 @@ export default function TransferPage() {
               <label style={{ fontSize: '0.62rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 3 }}>🔍 Nom</label>
               <input type="text" style={{ padding: '6px 10px', borderRadius: 7, border: '1.5px solid var(--border)', fontSize: '0.82rem', background: 'var(--background)', minWidth: 150 }} placeholder="Rechercher…"
                 value={filterNom} onChange={(e) => setFilterNom(e.target.value)} />
+            </div>
+            <div>
+              <label style={{ fontSize: '0.62rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 3 }}>↗ Activité</label>
+              <select style={{ padding: '6px 10px', borderRadius: 7, border: '1.5px solid var(--border)', fontSize: '0.82rem', background: 'var(--background)', minWidth: 150 }} value={filterActiviteId}
+                onChange={(e) => setFilterActiviteId(e.target.value === '' ? '' : Number(e.target.value))}>
+                <option value="">— Toutes —</option>
+                {activites.map((a) => <option key={a.id} value={a.id}>{a.nom}</option>)}
+              </select>
             </div>
           </div>
         </div>
