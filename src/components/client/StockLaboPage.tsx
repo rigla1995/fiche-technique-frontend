@@ -777,54 +777,57 @@ export default function StockLaboPage() {
                                 const warnStyle = hasDateConflict ? { borderColor: '#f59e0b', boxShadow: '0 0 0 2px #fef3c7' } : {};
                                 return (
                                   <React.Fragment key={r.ingredientId}>
-                                    <tr style={r.isPT ? { background: '#f5f3ff' } : undefined}>
-                                      <td>
-                                        <div style={{ fontWeight: 600 }}>
+                                    <tr style={{ borderBottom: '1px solid #f1f5f9', ...(r.isPT ? { background: '#f5f3ff' } : {}) }}>
+                                      <td style={{ padding: '10px 14px', verticalAlign: 'middle', textAlign: 'center' }}>
+                                        <div style={{ fontWeight: 700, fontSize: '0.88rem' }}>
                                           {r.isPT && <span style={{ fontSize: '0.68rem', background: '#7c3aed', color: '#fff', borderRadius: 4, padding: '1px 5px', marginRight: 5, fontWeight: 700 }}>PT</span>}
                                           {r.nom}
                                         </div>
-                                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{r.unite}</div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 3, justifyContent: 'center' }}>
+                                          <span style={{ fontSize: '0.7rem', background: '#f5f3ff', color: '#7e22ce', borderRadius: 4, padding: '1px 7px', fontWeight: 600 }}>{r.unite}</span>
+                                          <button className="btn btn-ghost btn-sm" onClick={() => toggleHistory(r.ingredientId)} title="5 derniers appros"
+                                            style={{ fontSize: '0.7rem', color: '#0891b2', background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: 3 }}>
+                                            {rs.historyOpen ? '📋 ▲' : '📋 Historique'}
+                                          </button>
+                                        </div>
                                         {r.isPT && r.activite && (
-                                          <div style={{ fontSize: '0.70rem', color: '#7c3aed', fontWeight: 500, marginTop: 1 }}>📍 {r.activite}</div>
+                                          <div style={{ fontSize: '0.70rem', color: '#7c3aed', fontWeight: 500, marginTop: 3 }}>📍 {r.activite}</div>
                                         )}
                                         {r.lastInvDate && (
-                                          <div style={{ fontSize: '0.68rem', color: '#b45309', fontWeight: 600, marginTop: 2 }}>📦 {r.lastInvDate.split('-').reverse().join('/')} · {r.lastInvQty?.toFixed(3) ?? '—'}</div>
+                                          <div style={{ fontSize: '0.68rem', color: '#b45309', fontWeight: 600, marginTop: 3 }}>📦 {r.lastInvDate.split('-').reverse().join('/')} · {r.lastInvQty?.toFixed(3) ?? '—'}</div>
                                         )}
-                                        <button className="btn btn-ghost btn-sm" onClick={() => toggleHistory(r.ingredientId)} title="5 derniers appros"
-                                          style={{ fontSize: '0.72rem', color: '#0891b2', marginTop: 4, padding: '2px 6px' }}>
-                                          {rs.historyOpen ? '📋▲ Historique' : '📋 Historique'}
-                                        </button>
                                       </td>
-                                      <td style={{ textAlign: 'center' }}>
+                                      <td style={{ textAlign: 'center', padding: '10px 14px', verticalAlign: 'middle' }}>
                                         <span className={cls} style={{ fontSize: '1rem', fontWeight: 800 }}>
                                           {r.quantite !== null ? r.quantite.toFixed(3) : '—'}
                                         </span>
                                         {r.pertesDepuisInv != null && r.pertesDepuisInv > 0 && (
-                                          <div style={{ fontSize: '0.68rem', color: '#dc2626', fontWeight: 500 }}>↘ Pertes: {r.pertesDepuisInv.toFixed(3)}</div>
+                                          <div style={{ fontSize: '0.68rem', color: '#dc2626', fontWeight: 500, marginTop: 2 }}>↘ Pertes: {r.pertesDepuisInv.toFixed(3)}</div>
                                         )}
                                         {r.ptUsageDepuisInv != null && r.ptUsageDepuisInv > 0 && (
-                                          <div style={{ fontSize: '0.68rem', color: '#7c3aed', fontWeight: 500 }}>↘ PT: {r.ptUsageDepuisInv.toFixed(3)}</div>
+                                          <div style={{ fontSize: '0.68rem', color: '#7c3aed', fontWeight: 500, marginTop: 1 }}>↘ PT: {r.ptUsageDepuisInv.toFixed(3)}</div>
                                         )}
                                         {r.transfertsDepuisInv != null && r.transfertsDepuisInv > 0 && (
-                                          <div style={{ fontSize: '0.68rem', color: '#0369a1', fontWeight: 500 }}>↘ Transfert: {r.transfertsDepuisInv.toFixed(3)}</div>
+                                          <div style={{ fontSize: '0.68rem', color: '#0369a1', fontWeight: 500, marginTop: 1 }}>↘ Transfert: {r.transfertsDepuisInv.toFixed(3)}</div>
                                         )}
                                       </td>
-                                      <td style={{ textAlign: 'center', whiteSpace: 'nowrap' }}>
+                                      <td style={{ textAlign: 'center', padding: '10px 14px', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
                                         {r.coutTotal != null && r.coutTotal > 0 ? (
                                           <>
-                                            <span style={{ fontSize: '0.88rem', color: '#1d4ed8', fontWeight: 700 }}>{r.coutTotal.toFixed(3)} DT</span>
+                                            <span style={{ fontSize: '0.88rem', color: '#1d4ed8', fontWeight: 700 }}>{r.coutTotal.toFixed(3)}</span>
+                                            <span style={{ fontSize: '0.72rem', color: '#64748b', marginLeft: 2 }}>DT</span>
                                             {(r.prixCalcule != null && r.prixCalcule > 0 ? r.prixCalcule : r.prixUnitaire != null && r.prixUnitaire > 0 ? r.prixUnitaire : null) != null && (
-                                              <div style={{ fontSize: '0.65rem', color: '#64748b', marginTop: 1 }}>{(r.prixCalcule != null && r.prixCalcule > 0 ? r.prixCalcule : r.prixUnitaire!).toFixed(3)} DT/u</div>
+                                              <div style={{ fontSize: '0.65rem', color: '#94a3b8', marginTop: 1 }}>{(r.prixCalcule != null && r.prixCalcule > 0 ? r.prixCalcule : r.prixUnitaire!).toFixed(3)} /u</div>
                                             )}
                                           </>
-                                        ) : <span style={{ fontSize: '0.72rem', color: '#cbd5e1' }}>—</span>}
+                                        ) : <span style={{ color: '#cbd5e1', fontSize: '0.8rem' }}>—</span>}
                                       </td>
-                                      <td style={{ textAlign: 'center' }}>
-                                        <input type="number" min="0" step="0.001" value={rs.quantite} onChange={(e) => setField(r.ingredientId, 'quantite', e.target.value)} style={{ width: 76, textAlign: 'right', ...warnStyle }} className="input" />
+                                      <td style={{ textAlign: 'center', padding: '10px 14px', verticalAlign: 'middle' }}>
+                                        <input type="number" min="0" step="0.001" value={rs.quantite} onChange={(e) => setField(r.ingredientId, 'quantite', e.target.value)} style={{ width: 76, textAlign: 'right', padding: '5px 8px', borderRadius: 7, fontSize: '0.85rem', ...warnStyle }} className="input" />
                                       </td>
-                                      <td style={{ textAlign: 'center' }}>
+                                      <td style={{ textAlign: 'center', padding: '10px 14px', verticalAlign: 'middle' }}>
                                         {r.isPT ? (
-                                          <div style={{ textAlign: 'center', padding: '4px 0' }} title="Calculé automatiquement depuis les prix des ingrédients du labo">
+                                          <span title="Calculé automatiquement depuis les prix des ingrédients du labo">
                                             {r.prixCalcule != null && r.prixCalcule > 0 ? (
                                               <span style={{ fontSize: '0.88rem', color: '#7c3aed', fontWeight: 600 }}>{r.prixCalcule.toFixed(3)}</span>
                                             ) : r.prixUnitaire != null ? (
@@ -832,24 +835,24 @@ export default function StockLaboPage() {
                                             ) : (
                                               <span style={{ fontSize: '0.78rem', color: '#9ca3af' }}>—</span>
                                             )}
-                                          </div>
+                                          </span>
                                         ) : (
-                                          <input type="number" min="0" step="0.001" value={rs.prixUnitaire} onChange={(e) => setField(r.ingredientId, 'prixUnitaire', e.target.value)} style={{ width: 84, textAlign: 'right', ...warnStyle }} className="input" />
+                                          <input type="number" min="0" step="0.001" value={rs.prixUnitaire} onChange={(e) => setField(r.ingredientId, 'prixUnitaire', e.target.value)} style={{ width: 84, textAlign: 'right', padding: '5px 8px', borderRadius: 7, fontSize: '0.85rem', ...warnStyle }} className="input" />
                                         )}
                                       </td>
-                                      <td style={{ textAlign: 'center' }}>
+                                      <td style={{ textAlign: 'center', padding: '10px 14px', verticalAlign: 'middle' }}>
                                         {!r.isPT && (
                                           <input type="number" min="0" max="100" step="0.1" placeholder="—"
                                             value={rs.tauxTva}
                                             onChange={(e) => setField(r.ingredientId, 'tauxTva', e.target.value)}
-                                            style={{ width: 60, textAlign: 'right' }}
+                                            style={{ width: 62, textAlign: 'right', padding: '5px 8px', borderRadius: 7, fontSize: '0.85rem' }}
                                             className="input"
                                             disabled={!canWrite}
                                           />
                                         )}
                                       </td>
-                                      <td>
-                                        <div style={{ display: 'flex', gap: 4, alignItems: 'center', flexWrap: 'wrap' }}>
+                                      <td style={{ padding: '10px 14px', verticalAlign: 'middle', textAlign: 'center' }}>
+                                        <div style={{ display: 'flex', gap: 5, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'center' }}>
                                           {canWrite && (
                                             <button title="Configurer seuil min" onClick={() => { setSeuilMinEdits((p) => ({ ...p, [r.ingredientId]: r.seuilMin != null ? String(r.seuilMin) : '' })); setSeuilModal({ ingredientId: r.ingredientId, nom: r.nom }); }}
                                               style={{ fontSize: '0.75rem', fontWeight: 700, padding: '3px 8px', borderRadius: 6, border: '1px solid #f97316', background: '#fff7ed', color: '#ea580c', cursor: 'pointer' }}>

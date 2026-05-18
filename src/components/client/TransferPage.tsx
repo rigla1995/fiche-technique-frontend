@@ -605,7 +605,7 @@ export default function TransferPage() {
                         <tr style={{ background: 'linear-gradient(135deg, #3b0764, #7e22ce)', borderBottom: '1px solid rgba(255,255,255,0.2)' }}>
                           <th style={{ minWidth: 140, fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '10px 14px 4px', color: '#fff', background: 'transparent', borderBottom: 'none', textAlign: 'center' }}>{t('client.stock.ingredient')}</th>
                           <th style={{ textAlign: 'center', minWidth: 100, fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '10px 14px 4px', color: '#fff', background: 'transparent', borderBottom: 'none' }}>{t('client.labo.labo_stock')}</th>
-                          <th style={{ textAlign: 'center', minWidth: 110, fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '10px 14px 4px', color: '#fde68a', background: 'transparent', borderBottom: 'none' }}>Prix U. <span style={{ color: '#ef4444' }}>*</span></th>
+                          <th style={{ textAlign: 'center', minWidth: 110, fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '10px 14px 4px', color: '#fff', background: 'transparent', borderBottom: 'none' }}>Prix <span style={{ color: '#ef4444' }}>*</span></th>
                           <th style={{ textAlign: 'center', minWidth: 80, fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '10px 14px 4px', color: '#e9d5ff', background: 'transparent', borderBottom: 'none' }}>TVA (%)</th>
                           {activites.map((act) => (
                             <th key={act.id} style={{ textAlign: 'center', minWidth: 120, fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '10px 14px 4px', color: '#e9d5ff', background: 'transparent', borderBottom: 'none' }}>{act.nom}</th>
@@ -640,21 +640,23 @@ export default function TransferPage() {
                           const qtyExceedsStock = r.quantite !== null && totalQtyForRow > r.quantite;
                           return (
                             <React.Fragment key={r.ingredientId}>
-                              <tr style={qtyExceedsStock ? { borderLeft: '3px solid #ef4444', background: '#fff5f5' } : dateConflict ? { borderLeft: '3px solid #f59e0b' } : {}}>
-                                <td style={{ padding: '12px 14px' }}>
-                                  <div style={{ fontWeight: 600 }}>{r.nom}</div>
-                                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{r.unite}</div>
-                                  <button className="btn btn-ghost btn-sm" onClick={() => toggleTransfers(r.ingredientId)}
-                                    style={{ fontSize: '0.72rem', color: '#7c3aed', marginTop: 4, padding: '2px 6px' }}>
-                                    {isTransferOpen ? '↗▲' : '↗ historique'}
-                                  </button>
+                              <tr style={{ borderBottom: '1px solid #f1f5f9', ...(qtyExceedsStock ? { borderLeft: '3px solid #ef4444', background: '#fff5f5' } : dateConflict ? { borderLeft: '3px solid #f59e0b' } : {}) }}>
+                                <td style={{ padding: '10px 14px', verticalAlign: 'middle', textAlign: 'center' }}>
+                                  <div style={{ fontWeight: 700, fontSize: '0.88rem' }}>{r.nom}</div>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 3, justifyContent: 'center' }}>
+                                    <span style={{ fontSize: '0.7rem', background: '#f5f3ff', color: '#7e22ce', borderRadius: 4, padding: '1px 7px', fontWeight: 600 }}>{r.unite}</span>
+                                    <button className="btn btn-ghost btn-sm" onClick={() => toggleTransfers(r.ingredientId)}
+                                      style={{ fontSize: '0.7rem', color: '#7c3aed', background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: 3 }}>
+                                      {isTransferOpen ? '📋 ▲' : '📋 Historique'}
+                                    </button>
+                                  </div>
                                 </td>
-                                <td style={{ textAlign: 'center', padding: '12px 14px' }}>
+                                <td style={{ textAlign: 'center', padding: '10px 14px', verticalAlign: 'middle' }}>
                                   <span style={{ fontWeight: 800, color: qtyExceedsStock ? '#ef4444' : qtyColor(r.quantite), fontSize: '1rem' }}>
                                     {r.quantite !== null ? parseFloat(r.quantite.toFixed(3)) : '—'}
                                   </span>
                                   {r.prixUnitaire !== null && (
-                                    <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{r.prixUnitaire.toFixed(3)} DT</div>
+                                    <div style={{ fontSize: '0.67rem', color: 'var(--text-muted)', marginTop: 2 }}>{r.prixUnitaire.toFixed(3)} DT</div>
                                   )}
                                   {qtyExceedsStock && (
                                     <div style={{ fontSize: '0.68rem', color: '#ef4444', fontWeight: 700, marginTop: 2 }}>
@@ -662,19 +664,19 @@ export default function TransferPage() {
                                     </div>
                                   )}
                                 </td>
-                                <td style={{ textAlign: 'center', padding: '12px 14px' }}>
+                                <td style={{ textAlign: 'center', padding: '10px 14px', verticalAlign: 'middle' }}>
                                   <input
                                     type="number" min="0" step="0.001" className="input"
-                                    style={{ width: 90, textAlign: 'right', borderColor: (!prixUnitaireMap[r.ingredientId]?.trim() && Object.values(qtys[r.ingredientId] || {}).some((v) => parseFloat(v) > 0)) ? '#ef4444' : undefined }}
+                                    style={{ width: 90, textAlign: 'right', padding: '5px 8px', borderRadius: 7, fontSize: '0.85rem', borderColor: (!prixUnitaireMap[r.ingredientId]?.trim() && Object.values(qtys[r.ingredientId] || {}).some((v) => parseFloat(v) > 0)) ? '#ef4444' : undefined }}
                                     value={prixUnitaireMap[r.ingredientId] ?? ''}
                                     onChange={(e) => setPrixUnitaireMap((prev) => ({ ...prev, [r.ingredientId]: e.target.value }))}
                                     placeholder="0.000"
                                   />
                                 </td>
-                                <td style={{ textAlign: 'center', padding: '12px 14px' }}>
+                                <td style={{ textAlign: 'center', padding: '10px 14px', verticalAlign: 'middle' }}>
                                   <input
                                     type="number" min="0" max="100" step="0.1" className="input"
-                                    style={{ width: 60, textAlign: 'right' }}
+                                    style={{ width: 62, textAlign: 'right', padding: '5px 8px', borderRadius: 7, fontSize: '0.85rem' }}
                                     value={tauxTvaMap[r.ingredientId] ?? ''}
                                     onChange={(e) => setTauxTvaMap((prev) => ({ ...prev, [r.ingredientId]: e.target.value }))}
                                     placeholder="—"
@@ -685,7 +687,7 @@ export default function TransferPage() {
                                     ? act.id === r.activiteId
                                     : assignedSet.has(`${r.ingredientId}-${act.id}`);
                                   return (
-                                    <td key={act.id} style={{ textAlign: 'center', padding: '12px 14px' }}>
+                                    <td key={act.id} style={{ textAlign: 'center', padding: '10px 14px', verticalAlign: 'middle' }}>
                                       {!stockEmpty && isAssigned ? (
                                         <input type="number" min="0" step="0.001" className="input"
                                           style={{ width: 100, textAlign: 'right', borderColor: qtyExceedsStock ? '#ef4444' : undefined, background: qtyExceedsStock ? '#fef2f2' : undefined }}
