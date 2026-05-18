@@ -35,8 +35,7 @@ export default function LoginPage() {
       {/* Brand panel */}
       <div className="login-panel-brand">
         <div className="login-brand-content">
-          <span className="login-brand-icon">🍽️</span>
-          <div className="login-brand-title">LabFlow</div>
+          <img src="/logo.svg" alt="LabFlow" style={{ height: 56, marginBottom: 12 }} />
           <p className="login-brand-sub">
             La plateforme de gestion pour les professionnels de la restauration.
           </p>
