@@ -85,7 +85,7 @@ export default function TransferPage() {
   const [historyLoaded, setHistoryLoaded] = useState<Set<number>>(new Set());
   const [transferLoading, setTransferLoading] = useState<Set<number>>(new Set());
   const [prixUnitaireMap, setPrixUnitaireMap] = useState<Record<number, string>>({});
-  const [tauxTva, setTauxTva] = useState('');
+  const [tauxTvaMap, setTauxTvaMap] = useState<Record<number, string>>({});
 
   const toggleTransfers = async (ingredientId: number) => {
     if (openTransfers.has(ingredientId)) {
@@ -251,7 +251,7 @@ export default function TransferPage() {
           dateTransfert: batch.dateTransfert,
           note: note || undefined,
           refFacture: refFacture.trim(),
-          tauxTva: tauxTva.trim() ? parseFloat(tauxTva) : null,
+          tauxTva: tauxTvaMap[batch.ingredientId]?.trim() ? parseFloat(tauxTvaMap[batch.ingredientId]) : null,
           transfers: batch.transfers,
         });
         setQtys((prev) => ({
@@ -259,6 +259,7 @@ export default function TransferPage() {
           [batch.ingredientId]: Object.fromEntries(Object.keys(prev[batch.ingredientId] || {}).map((a) => [a, ''])),
         }));
         setPrixUnitaireMap((prev) => ({ ...prev, [batch.ingredientId]: '' }));
+        setTauxTvaMap((prev) => ({ ...prev, [batch.ingredientId]: '' }));
       }
       setHasTransfers(true);
       // Refresh transfer histories
@@ -296,6 +297,22 @@ export default function TransferPage() {
       }
     }
     setBulkSaving(false);
+  };
+
+  const handleReset = () => {
+    setRefFacture('');
+    setTransferDate(todayStr());
+    setQtys((prev) => {
+      const next: TransferQtys = {};
+      for (const id of Object.keys(prev)) {
+        next[Number(id)] = Object.fromEntries(Object.keys(prev[Number(id)]).map((a) => [a, '']));
+      }
+      return next;
+    });
+    setPrixUnitaireMap({});
+    setTauxTvaMap({});
+    setErrorMsg('');
+    setErrorDetail(null);
   };
 
   const activites: Activite[] = labo?.activites || [];
@@ -427,94 +444,88 @@ export default function TransferPage() {
       )}
 
       {!loading && stock.length > 0 && activites.length > 0 && (
-        <div style={{
-          background: 'var(--surface)', borderRadius: 14, padding: '16px 20px', marginBottom: 20,
-          border: '1px solid var(--border)', boxShadow: '0 2px 12px rgba(0,0,0,0.05)',
-          display: 'flex', flexWrap: 'wrap', gap: 14, alignItems: 'flex-end',
-        }}>
-          <div style={{ width: '100%', marginBottom: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#7e22ce' }}>Filtres</span>
-            {(filterCategorie || filterIngredientId !== '' || filterNom) && (
-              <button className="btn btn-ghost btn-sm" style={{ fontSize: '0.78rem' }} onClick={() => { setFilterCategorie(''); setFilterIngredientId(''); setFilterNom(''); }}>✕ Réinitialiser</button>
-            )}
-          </div>
-          <div>
-            <label style={{ fontSize: '0.68rem', fontWeight: 800, color: '#7e22ce', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>🏷️ Catégorie</label>
-            <select style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid #7e22ce', fontSize: '0.88rem', background: '#faf5ff', minWidth: 160 }} value={filterCategorie} onChange={(e) => { setFilterCategorie(e.target.value); setFilterIngredientId(''); }}>
-              <option value="">{t('client.catalogue_franchise.all_categories')}</option>
-              {allCategories.map((c) => <option key={c} value={c}>{c}</option>)}
-            </select>
-          </div>
-          <div>
-            <label style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>🧂 Ingrédient</label>
-            <select style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid var(--border)', fontSize: '0.88rem', background: 'var(--background)', minWidth: 160 }} value={filterIngredientId} disabled={!filterCategorie}
-              onChange={(e) => setFilterIngredientId(e.target.value === '' ? '' : Number(e.target.value))}>
-              <option value="">— Tous —</option>
-              {ingredientsInCategory.map((r) => <option key={r.ingredientId} value={r.ingredientId}>{r.nom}</option>)}
-            </select>
-          </div>
-          <div>
-            <label style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>🔍 Nom</label>
-            <input type="text" style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid var(--border)', fontSize: '0.88rem', background: 'var(--background)', minWidth: 160 }} placeholder="Rechercher…"
-              value={filterNom} onChange={(e) => setFilterNom(e.target.value)} />
+        <div style={{ background: 'var(--surface)', borderRadius: 10, padding: '10px 14px', marginBottom: 20, border: '1px solid var(--border)', boxShadow: '0 1px 6px rgba(0,0,0,0.04)' }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'flex-end' }}>
+            <div style={{ width: '100%', marginBottom: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: '0.62rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#7e22ce' }}>Filtres</span>
+              {(filterCategorie || filterIngredientId !== '' || filterNom) && (
+                <button className="btn btn-ghost btn-sm" style={{ fontSize: '0.72rem' }} onClick={() => { setFilterCategorie(''); setFilterIngredientId(''); setFilterNom(''); }}>✕ Réinitialiser</button>
+              )}
+            </div>
+            <div>
+              <label style={{ fontSize: '0.62rem', fontWeight: 700, color: '#7e22ce', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 3 }}>🏷️ Catégorie</label>
+              <select style={{ padding: '6px 10px', borderRadius: 7, border: '1.5px solid #7e22ce', fontSize: '0.82rem', background: '#faf5ff', minWidth: 150 }} value={filterCategorie} onChange={(e) => { setFilterCategorie(e.target.value); setFilterIngredientId(''); }}>
+                <option value="">{t('client.catalogue_franchise.all_categories')}</option>
+                {allCategories.map((c) => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
+            <div>
+              <label style={{ fontSize: '0.62rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 3 }}>🧂 Ingrédient</label>
+              <select style={{ padding: '6px 10px', borderRadius: 7, border: '1.5px solid var(--border)', fontSize: '0.82rem', background: 'var(--background)', minWidth: 150 }} value={filterIngredientId} disabled={!filterCategorie}
+                onChange={(e) => setFilterIngredientId(e.target.value === '' ? '' : Number(e.target.value))}>
+                <option value="">— Tous —</option>
+                {ingredientsInCategory.map((r) => <option key={r.ingredientId} value={r.ingredientId}>{r.nom}</option>)}
+              </select>
+            </div>
+            <div>
+              <label style={{ fontSize: '0.62rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 3 }}>🔍 Nom</label>
+              <input type="text" style={{ padding: '6px 10px', borderRadius: 7, border: '1.5px solid var(--border)', fontSize: '0.82rem', background: 'var(--background)', minWidth: 150 }} placeholder="Rechercher…"
+                value={filterNom} onChange={(e) => setFilterNom(e.target.value)} />
+            </div>
           </div>
         </div>
       )}
 
-      {/* Confirmation block — Réf, Remarque + global Transférer button */}
+      {/* Confirmation block — Réf, Date + Transférer / Réinitialiser buttons */}
       {!loading && stock.length > 0 && activites.length > 0 && (
-        <div style={{ background: 'linear-gradient(135deg, #faf5ff, #f3e8ff)', borderRadius: 14, padding: '20px 24px', border: '1.5px solid #d8b4fe', boxShadow: '0 4px 20px rgba(126,34,206,0.12)', marginBottom: 24 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
-            <span style={{ fontSize: '0.75rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#7e22ce' }}>Transfert (TVA)</span>
+        <div style={{ background: 'linear-gradient(135deg, #faf5ff, #f3e8ff)', borderRadius: 14, padding: '18px 20px', border: '1.5px solid #d8b4fe', boxShadow: '0 4px 20px rgba(126,34,206,0.12)', marginBottom: 24 }}>
+          <div style={{ marginBottom: 10 }}>
+            <span style={{ fontSize: '0.68rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#7e22ce' }}>Transfert (TVA)</span>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '12px 20px', alignItems: 'end' }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'flex-end' }}>
             <div>
-              <label style={{ fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#7e22ce', display: 'block', marginBottom: 4 }}>
-                Réf. Facture / BL <span style={{ color: 'var(--danger, #ef4444)' }}>*</span>
+              <label style={{ fontSize: '0.62rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#7e22ce', display: 'block', marginBottom: 3 }}>
+                Réf. Facture / BL <span style={{ color: '#ef4444' }}>*</span>
               </label>
               <input type="text" className="input" value={refFacture}
-                style={{ border: '1.5px solid #7e22ce', background: '#fff', fontWeight: 600 }}
+                style={{ padding: '6px 10px', borderRadius: 7, fontSize: '0.82rem', border: '1.5px solid #7e22ce', background: '#fff', fontWeight: 600 }}
                 onChange={(e) => { setRefFacture(e.target.value); if (errorMsg) setErrorMsg(''); }}
                 placeholder="N° bon de livraison…" />
             </div>
             <div>
-              <label style={{ fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>
-                Date de transfert <span style={{ color: 'var(--danger, #ef4444)' }}>*</span>
+              <label style={{ fontSize: '0.62rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--text-muted)', display: 'block', marginBottom: 3 }}>
+                Date <span style={{ color: '#ef4444' }}>*</span>
               </label>
               <input type="date" className="input"
-                style={{ border: '1.5px solid #a855f7', background: '#fff', fontWeight: 600 }}
+                style={{ padding: '6px 10px', borderRadius: 7, fontSize: '0.82rem', border: '1.5px solid #a855f7', background: '#fff', fontWeight: 600 }}
                 min={yearStart} max={yearEnd}
                 value={transferDate}
                 onChange={(e) => setTransferDate(e.target.value)} />
             </div>
-            <div>
-              <label style={{ fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>
-                Taux TVA %
-              </label>
-              <input type="number" min="0" step="0.01" className="input" value={tauxTva} onChange={(e) => setTauxTva(e.target.value)} placeholder="ex: 19" />
-            </div>
-            <div>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
               <button
                 onClick={() => handleBulkTransfer()}
                 disabled={bulkCount === 0 || bulkSaving}
                 style={{
-                  width: '100%',
-                  background: bulkCount > 0 && !bulkSaving
-                    ? 'linear-gradient(135deg, #7e22ce 0%, #a855f7 100%)'
-                    : 'var(--border)',
-                  boxShadow: bulkCount > 0 && !bulkSaving ? '0 6px 20px rgba(126,34,206,0.4)' : 'none',
-                  borderRadius: 12, border: 'none', color: '#fff', fontWeight: 800,
-                  padding: '13px 20px', cursor: bulkCount > 0 && !bulkSaving ? 'pointer' : 'not-allowed',
-                  fontSize: '0.95rem', transition: 'all 0.2s',
-                  opacity: bulkCount === 0 || bulkSaving ? 0.55 : 1,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                  background: bulkCount > 0 && !bulkSaving ? 'linear-gradient(135deg, #7e22ce 0%, #a855f7 100%)' : 'var(--border)',
+                  boxShadow: bulkCount > 0 && !bulkSaving ? '0 4px 14px rgba(126,34,206,0.38)' : 'none',
+                  borderRadius: 9, border: 'none', color: '#fff', fontWeight: 800,
+                  padding: '7px 16px', cursor: bulkCount > 0 && !bulkSaving ? 'pointer' : 'not-allowed',
+                  fontSize: '0.88rem', opacity: bulkCount === 0 || bulkSaving ? 0.55 : 1,
+                  display: 'flex', alignItems: 'center', gap: 6,
                 }}>
                 {bulkSaving ? '…' : '↗ Transférer'}
                 {bulkCount > 0 && !bulkSaving && (
-                  <span style={{ background: 'rgba(255,255,255,0.22)', borderRadius: 7, padding: '2px 8px', fontSize: '0.82rem', fontWeight: 700 }}>
+                  <span style={{ background: 'rgba(255,255,255,0.22)', borderRadius: 6, padding: '1px 6px', fontSize: '0.78rem', fontWeight: 700 }}>
                     {bulkCount}
                   </span>
                 )}
+              </button>
+              <button
+                onClick={handleReset}
+                className="btn btn-ghost btn-sm"
+                style={{ fontSize: '0.8rem', padding: '7px 12px', borderRadius: 9 }}>
+                ↺ Réinitialiser
               </button>
             </div>
           </div>
@@ -578,6 +589,7 @@ export default function TransferPage() {
                           <th style={{ minWidth: 140, fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px', color: '#fff', background: 'transparent', borderBottom: 'none' }}>{t('client.stock.ingredient')}</th>
                           <th style={{ textAlign: 'right', minWidth: 100, fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px', color: '#fff', background: 'transparent', borderBottom: 'none' }}>{t('client.labo.labo_stock')}</th>
                           <th style={{ textAlign: 'right', minWidth: 110, fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px', color: '#fde68a', background: 'transparent', borderBottom: 'none' }}>Prix U. <span style={{ color: '#ef4444' }}>*</span></th>
+                          <th style={{ textAlign: 'right', minWidth: 80, fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px', color: '#e9d5ff', background: 'transparent', borderBottom: 'none' }}>TVA %</th>
                           {activites.map((act) => (
                             <th key={act.id} style={{ textAlign: 'center', minWidth: 120, fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px', color: '#e9d5ff', background: 'transparent', borderBottom: 'none' }}>↗ {act.nom}</th>
                           ))}
@@ -625,6 +637,15 @@ export default function TransferPage() {
                                     placeholder="0.000"
                                   />
                                 </td>
+                                <td style={{ textAlign: 'right', padding: '12px 14px' }}>
+                                  <input
+                                    type="number" min="0" max="100" step="0.1" className="input"
+                                    style={{ width: 60, textAlign: 'right' }}
+                                    value={tauxTvaMap[r.ingredientId] ?? ''}
+                                    onChange={(e) => setTauxTvaMap((prev) => ({ ...prev, [r.ingredientId]: e.target.value }))}
+                                    placeholder="—"
+                                  />
+                                </td>
                                 {activites.map((act) => {
                                   const isAssigned = r.isPT
                                     ? act.id === r.activiteId
@@ -646,7 +667,7 @@ export default function TransferPage() {
                               </tr>
                               {isTransferOpen && (
                                 <tr>
-                                  <td colSpan={3 + activites.length} style={{ background: '#faf5ff', padding: '8px 16px', borderTop: '1px solid #e9d5ff' }}>
+                                  <td colSpan={4 + activites.length} style={{ background: '#faf5ff', padding: '8px 16px', borderTop: '1px solid #e9d5ff' }}>
                                     <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>
                                       ↗ 5 derniers transferts — {r.nom}
                                     </div>
