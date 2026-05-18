@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
 import type { Category, DomaineActivite, Ingredient, Unit } from '../../types';
@@ -31,6 +31,7 @@ export default function IngredientsManagement() {
   const [filterDom, setFilterDom] = useState('');
   const [page, setPage] = useState(1);
   const [openCats, setOpenCats] = useState<Set<string>>(new Set());
+  const prevFilter = useRef({ search: '', filterCat: '', filterDom: '' });
 
   const toggleCat = (cat: string) =>
     setOpenCats((prev) => {
@@ -38,6 +39,32 @@ export default function IngredientsManagement() {
       if (next.has(cat)) next.delete(cat); else next.add(cat);
       return next;
     });
+
+  // Auto-expand all visible categories when a filter is applied or changed
+  useEffect(() => {
+    const prev = prevFilter.current;
+    const changed = search !== prev.search || filterCat !== prev.filterCat || filterDom !== prev.filterDom;
+    prevFilter.current = { search, filterCat, filterDom };
+    if (!changed) return;
+    if (search || filterCat || filterDom) {
+      const noCategory = t('client.ingredients_catalog.no_category');
+      const names = new Set(
+        ingredients
+          .filter((i) => {
+            const q = search.toLowerCase();
+            const ingDomaines = (i as { domaineIds?: number[] }).domaineIds || [];
+            const matchSearch = i.name.toLowerCase().includes(q) || (i.categorieName || '').toLowerCase().includes(q) || (i.unit?.name || '').toLowerCase().includes(q);
+            const matchCat = filterCat === '' || (filterCat === '__none__' && !i.categorieId) || String(i.categorieId) === filterCat;
+            const matchDom = filterDom === '' || ingDomaines.length === 0 || ingDomaines.includes(parseInt(filterDom));
+            return matchSearch && matchCat && matchDom;
+          })
+          .map((i) => i.categorieName || noCategory)
+      );
+      setOpenCats(names);
+    } else {
+      setOpenCats(new Set());
+    }
+  }, [search, filterCat, filterDom, ingredients, t]);
 
   const fetchData = () => {
     setLoading(true);
@@ -146,7 +173,7 @@ export default function IngredientsManagement() {
         <div style={{ width: '100%', marginBottom: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <span style={{ fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#0d9488' }}>Filtres</span>
           {(search || filterCat || filterDom) && (
-            <button className="btn btn-ghost btn-sm" onClick={() => { setSearch(''); setFilterCat(''); setFilterDom(''); setPage(1); }}>
+            <button className="btn btn-ghost btn-sm" onClick={() => { setSearch(''); setFilterCat(''); setFilterDom(''); setPage(1); setOpenCats(new Set()); }}>
               ✕ Réinitialiser
             </button>
           )}
@@ -202,8 +229,7 @@ export default function IngredientsManagement() {
       ) : (
         <>
         {pagedGroups.map(([cat, items]) => {
-          // Auto-open when a filter is active; otherwise respect user toggle
-          const isOpen = search || filterCat || filterDom ? true : openCats.has(cat);
+          const isOpen = openCats.has(cat);
           return (
           <div key={cat} style={{ marginBottom: 12 }}>
             <button
