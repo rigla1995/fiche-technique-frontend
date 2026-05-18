@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
@@ -1137,9 +1137,11 @@ function ActivityStockSection({ label, activities, initialActiviteId, onSave }: 
     }
   };
 
-  const allCategories = Array.from(new Set(
-    entries.map((e) => e.categorie || t('client.ingredients_catalog.no_category'))
-  )).sort();
+  const allCategories = useMemo(() =>
+    Array.from(new Set(
+      entries.map((e) => e.categorie || t('client.ingredients_catalog.no_category'))
+    )).sort()
+  , [entries, t]);
 
   return (
     <div style={{ marginBottom: 36 }}>
@@ -1341,13 +1343,15 @@ export default function StockPage() {
     });
   };
 
-  const clientCategories = Array.from(new Set(
-    clientEntries.map((e) => e.categorie || t('client.ingredients_catalog.no_category'))
-  )).sort((a, b) => {
-    if (a === 'Produits Transformés') return 1;
-    if (b === 'Produits Transformés') return -1;
-    return a.localeCompare(b);
-  });
+  const clientCategories = useMemo(() =>
+    Array.from(new Set(
+      clientEntries.map((e) => e.categorie || t('client.ingredients_catalog.no_category'))
+    )).sort((a, b) => {
+      if (a === 'Produits Transformés') return 1;
+      if (b === 'Produits Transformés') return -1;
+      return a.localeCompare(b);
+    })
+  , [clientEntries, t]);
 
   const pageTitle = isEntreprise ? t('nav.stock_activite', 'Stock Activités') : t('client.stock.title');
   const subtitle = isEntreprise
