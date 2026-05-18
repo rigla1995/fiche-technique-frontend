@@ -494,11 +494,11 @@ export default function TransferPage() {
           </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'flex-end' }}>
             <div>
-              <label style={{ fontSize: '0.62rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--text-muted)', display: 'block', marginBottom: 3 }}>
+              <label style={{ fontSize: '0.62rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#7e22ce', display: 'block', marginBottom: 3 }}>
                 Date Transfert <span style={{ color: '#ef4444' }}>*</span>
               </label>
               <input type="date" className="input"
-                style={{ padding: '6px 10px', borderRadius: 7, fontSize: '0.82rem', border: '1.5px solid #a855f7', background: '#fff', fontWeight: 600 }}
+                style={{ padding: '6px 10px', borderRadius: 7, fontSize: '0.82rem', border: '1.5px solid #7e22ce', background: '#fff', fontWeight: 600 }}
                 min={yearStart} max={yearEnd}
                 value={transferDate}
                 onChange={(e) => setTransferDate(e.target.value)} />
