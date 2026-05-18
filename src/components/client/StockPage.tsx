@@ -466,7 +466,9 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
           unite: r.unitName || r.unite || '',
         })),
       }));
-    } catch { /* ignore */ }
+    } catch {
+      setPtRecipes((prev) => ({ ...prev, [produitId]: [] }));
+    }
   };
 
   // ── Bulk appro
@@ -1295,16 +1297,20 @@ export default function StockPage() {
   const [typesSummary, setTypesSummary] = useState<ActiviteTypesSummary | null>(null);
   const [allActivities, setAllActivities] = useState<Activite[]>([]);
   const [activitesLoading, setActivitesLoading] = useState(false);
+  const [activitesError, setActivitesError] = useState('');
 
   useEffect(() => {
     setActivitesLoading(true);
+    setActivitesError('');
     Promise.all([
       api.get('/api/entreprise/activites/types-summary'),
       api.get('/api/entreprise/activites'),
     ]).then(([summaryRes, activitesRes]) => {
       setTypesSummary(summaryRes.data as ActiviteTypesSummary);
       setAllActivities(activitesRes.data as Activite[]);
-    }).catch(() => {}).finally(() => setActivitesLoading(false));
+    }).catch(() => {
+      setActivitesError('Impossible de charger les activités. Veuillez recharger la page.');
+    }).finally(() => setActivitesLoading(false));
   }, []);
 
   const saveEntrepriseStock = async (activiteId: number, ingredientId: number, quantite: string, prixUnitaire: string, dateAppro: string, fournisseurId?: number | null, refFacture?: string | null, tauxTva?: number | null) => {
@@ -1341,6 +1347,8 @@ export default function StockPage() {
 
       {activitesLoading ? (
         <p className="text-muted">{t('common.loading')}</p>
+      ) : activitesError ? (
+        <div className="alert alert-danger">⚠️ {activitesError}</div>
       ) : (
         <>
           {typesSummary?.hasActivites && allActivities.length > 0 ? (

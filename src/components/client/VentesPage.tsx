@@ -3,6 +3,9 @@ import { useSearchParams } from 'react-router-dom';
 import api from '../../api/client';
 import type { Activite } from '../../types';
 
+const apiMsg = (e: unknown, fallback = 'Erreur serveur') =>
+  (e as { response?: { data?: { message?: string } } })?.response?.data?.message ?? fallback;
+
 const fmtDate = (iso: string | null | undefined) => {
   if (!iso || iso.length < 10) return iso ?? '—';
   const [y, m, d] = iso.split('-');
@@ -120,9 +123,9 @@ export default function VentesPage() {
 
   useEffect(() => {
     if (!showAddArticle || !selectedActiviteId) return;
-    api.get('/api/produits').then(({ data }) => setAllProduits(data.map((p: any) => ({ id: p.id, nom: p.name })))).catch(() => {});
+    api.get('/api/produits').then(({ data }) => setAllProduits(data.map((p: { id: number; name: string }) => ({ id: p.id, nom: p.name })))).catch(() => {});
     api.get('/api/stock/client/ingredient-selections')
-      .then(({ data }) => setAllIngredients(data.map((i: any) => ({ id: i.id, nom: i.nom, unite_nom: i.unite }))))
+      .then(({ data }) => setAllIngredients(data.map((i: { id: number; nom: string; unite: string }) => ({ id: i.id, nom: i.nom, unite_nom: i.unite }))))
       .catch(() => {});
   }, [showAddArticle, selectedActiviteId]);
 
@@ -159,8 +162,8 @@ export default function VentesPage() {
       setLignes([]); setTypeVente('directe'); setPrestataireId(''); setNotes('');
       setDateVente(new Date().toISOString().slice(0, 10));
       loadData();
-    } catch (e: any) {
-      setSaveError(e.response?.data?.message || 'Erreur lors de la sauvegarde');
+    } catch (e: unknown) {
+      setSaveError(apiMsg(e, 'Erreur lors de la sauvegarde'));
     } finally {
       setSaving(false);
     }
@@ -171,8 +174,8 @@ export default function VentesPage() {
     try {
       await api.delete(`/api/ventes/${id}`);
       loadData();
-    } catch (e: any) {
-      alert(e.response?.data?.message || 'Erreur');
+    } catch (e: unknown) {
+      alert(apiMsg(e));
     }
   };
 
@@ -189,8 +192,8 @@ export default function VentesPage() {
       setShowAddArticle(false);
       setNewArticleId(''); setNewPrixVente('');
       loadData();
-    } catch (e: any) {
-      alert(e.response?.data?.message || 'Erreur');
+    } catch (e: unknown) {
+      alert(apiMsg(e));
     } finally {
       setCatalogueSaving(false);
     }

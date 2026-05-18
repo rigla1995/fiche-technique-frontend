@@ -97,7 +97,7 @@ export default function HistoriqueInventairePage() {
       ? '/api/stock/client/inventaire'
       : `/api/stock/entreprise/${effectiveActiviteId}/inventaire`;
     api.get(url).then(({ data }) => {
-      setIngOptions(data.map((r: any) => ({ ingredientId: r.ingredientId, nom: r.nom, categorie: r.categorie })));
+      setIngOptions(data.map((r: { ingredientId: number; nom: string; categorie: string }) => ({ ingredientId: r.ingredientId, nom: r.nom, categorie: r.categorie })));
       if (laboId) {
         api.get(`/api/labo/${laboId}`).then(({ data: l }) => setContextNom(l?.nom || 'Labo')).catch(() => {});
       }
