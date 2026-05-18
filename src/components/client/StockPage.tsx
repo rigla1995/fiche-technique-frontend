@@ -917,13 +917,13 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                 <table className="table">
                   <thead style={{ background: '#eff6ff', borderBottom: '2px solid #2563eb', color: '#1e3a5f' }}>
                     <tr>
-                      <th style={{ fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px' }}>{t('client.stock.ingredient')}</th>
-                      <th style={{ textAlign: 'right', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px' }}>Stock Actuel<br /><span style={{ fontSize: '0.65rem', fontWeight: 400, opacity: 0.75 }}>PERTES · PT</span></th>
-                      <th style={{ textAlign: 'right', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px', minWidth: 90 }}>Coût Total</th>
-                      <th style={{ textAlign: 'right', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px' }}>Nouvelle Qté</th>
-                      <th style={{ textAlign: 'right', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px' }}>Prix (U/DT)</th>
-                      <th style={{ textAlign: 'right', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px' }}>TVA %<br /><span style={{ fontSize: '0.65rem', fontWeight: 400, opacity: 0.75 }}>optionnel</span></th>
-                      <th style={{ fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px' }}></th>
+                      <th style={{ fontWeight: 800, fontSize: '0.75rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '10px 14px', minWidth: 180 }}>{t('client.stock.ingredient')}</th>
+                      <th style={{ textAlign: 'right', fontWeight: 800, fontSize: '0.75rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '10px 14px', minWidth: 110 }}>Stock<br /><span style={{ fontSize: '0.62rem', fontWeight: 400, opacity: 0.7 }}>pertes · pt</span></th>
+                      <th style={{ textAlign: 'right', fontWeight: 800, fontSize: '0.75rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '10px 14px', minWidth: 100 }}>Coût Total</th>
+                      <th style={{ textAlign: 'right', fontWeight: 800, fontSize: '0.75rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '10px 14px', minWidth: 90 }}>Qté</th>
+                      <th style={{ textAlign: 'right', fontWeight: 800, fontSize: '0.75rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '10px 14px', minWidth: 100 }}>Prix U. (DT)</th>
+                      <th style={{ textAlign: 'right', fontWeight: 800, fontSize: '0.75rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '10px 14px', minWidth: 80 }}>TVA %<br /><span style={{ fontSize: '0.62rem', fontWeight: 400, opacity: 0.7 }}>optionnel</span></th>
+                      <th style={{ fontWeight: 800, fontSize: '0.75rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '10px 14px', minWidth: 150, textAlign: 'right' }}>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -941,102 +941,105 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                       const warnStyle = hasDateConflict ? { borderColor: '#f59e0b', boxShadow: '0 0 0 2px #fef3c7' } : {};
                       return (
                         <React.Fragment key={entry.ingredientId}>
-                          <tr>
-                            <td>
-                              <div style={{ fontWeight: 600 }}>{entry.nom}</div>
-                              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{entry.unite}</div>
+                          <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
+                            <td style={{ padding: '10px 14px', verticalAlign: 'middle' }}>
+                              <div style={{ fontWeight: 700, fontSize: '0.88rem', color: 'var(--text)' }}>{entry.nom}</div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 3 }}>
+                                <span style={{ fontSize: '0.7rem', background: '#eff6ff', color: '#1e40af', borderRadius: 4, padding: '1px 7px', fontWeight: 600 }}>{entry.unite}</span>
+                                <button onClick={() => toggleHistory(entry.ingredientId)}
+                                  style={{ fontSize: '0.7rem', color: '#0891b2', background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: 3 }}>
+                                  {isHistOpen ? '📋 ▲' : '📋 Historique'}
+                                </button>
+                              </div>
                               {entry.lastInvDate && (
-                                <div style={{ fontSize: '0.68rem', color: '#b45309', fontWeight: 600, marginTop: 2 }}>📦 {entry.lastInvDate.split('-').reverse().join('/')} · {entry.lastInvQty?.toFixed(3) ?? '—'}</div>
+                                <div style={{ fontSize: '0.67rem', color: '#b45309', fontWeight: 600, marginTop: 3 }}>📦 {entry.lastInvDate.split('-').reverse().join('/')} · {entry.lastInvQty?.toFixed(3) ?? '—'}</div>
                               )}
-                              <button className="btn btn-ghost btn-sm" onClick={() => toggleHistory(entry.ingredientId)} title={t('client.stock.history')}
-                                style={{ fontSize: '0.72rem', color: '#0891b2', marginTop: 4, padding: '2px 6px' }}>
-                                {isHistOpen ? '📋▲ Historique' : '📋 Historique'}
-                              </button>
                             </td>
-                            <td style={{ textAlign: 'right' }}>
+                            <td style={{ textAlign: 'right', padding: '10px 14px', verticalAlign: 'middle' }}>
                               <span className={cls} style={{ fontSize: '1rem', fontWeight: 800 }}>{totalDisplay}</span>
                               {entry.pertesDepuisInv != null && entry.pertesDepuisInv > 0 && (
-                                <div style={{ fontSize: '0.68rem', color: '#dc2626', fontWeight: 500 }}>↘ Pertes: {entry.pertesDepuisInv.toFixed(3)}</div>
+                                <div style={{ fontSize: '0.67rem', color: '#dc2626', fontWeight: 500, marginTop: 2 }}>↘ {entry.pertesDepuisInv.toFixed(3)}</div>
                               )}
                               {entry.ptUsageDepuisInv != null && entry.ptUsageDepuisInv > 0 && (
-                                <div style={{ fontSize: '0.68rem', color: '#7c3aed', fontWeight: 500 }}>↘ PT: {entry.ptUsageDepuisInv.toFixed(3)}</div>
+                                <div style={{ fontSize: '0.67rem', color: '#7c3aed', fontWeight: 500, marginTop: 1 }}>PT {entry.ptUsageDepuisInv.toFixed(3)}</div>
                               )}
                             </td>
-                            <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+                            <td style={{ textAlign: 'right', padding: '10px 14px', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
                               {entry.coutTotal != null && entry.coutTotal > 0 ? (
                                 <>
-                                  <span style={{ fontSize: '0.88rem', color: '#1d4ed8', fontWeight: 700 }}>{entry.coutTotal.toFixed(3)} DT</span>
+                                  <span style={{ fontSize: '0.88rem', color: '#1d4ed8', fontWeight: 700 }}>{entry.coutTotal.toFixed(3)}</span>
+                                  <span style={{ fontSize: '0.72rem', color: '#64748b', marginLeft: 2 }}>DT</span>
                                   {entry.prixUnitaire != null && entry.prixUnitaire > 0 && (
-                                    <div style={{ fontSize: '0.65rem', color: '#64748b', marginTop: 1 }}>{entry.prixUnitaire.toFixed(3)} DT/u</div>
+                                    <div style={{ fontSize: '0.65rem', color: '#94a3b8', marginTop: 1 }}>{entry.prixUnitaire.toFixed(3)} /u</div>
                                   )}
                                 </>
-                              ) : <span style={{ fontSize: '0.72rem', color: '#cbd5e1' }}>—</span>}
+                              ) : <span style={{ color: '#cbd5e1', fontSize: '0.8rem' }}>—</span>}
                             </td>
-                            <td style={{ textAlign: 'right' }}>
+                            <td style={{ textAlign: 'right', padding: '10px 14px', verticalAlign: 'middle' }}>
                               <input
                                 type="number" min="0" step="0.001" placeholder="0"
                                 value={row.quantite}
                                 onChange={(e) => updateRow(entry.ingredientId, 'quantite', e.target.value)}
-                                style={{ width: 76, textAlign: 'right', ...warnStyle }}
+                                style={{ width: 80, textAlign: 'right', padding: '5px 8px', borderRadius: 7, fontSize: '0.85rem', ...warnStyle }}
                                 className="input"
                                 disabled={!canWrite}
                                 title={entry.isPT && entry.prixPartiel ? '⚠️ Prix incomplet pour certains ingrédients — calcul partiel' : undefined}
                               />
                               {entry.isPT && (entry.prixUnitaire ?? 0) > 0 && parseFloat(row.quantite) > 0 && (
-                                <div style={{ fontSize: '0.72rem', color: '#2563eb', marginTop: 2 }}>
+                                <div style={{ fontSize: '0.7rem', color: '#2563eb', marginTop: 2 }}>
                                   ≈ {(parseFloat(row.quantite) * (entry.prixUnitaire || 0)).toFixed(3)} DT
                                   {entry.prixPartiel && ' ⚠️'}
                                 </div>
                               )}
                             </td>
-                            <td style={{ textAlign: 'right' }}>
+                            <td style={{ textAlign: 'right', padding: '10px 14px', verticalAlign: 'middle' }}>
                               {entry.isPT ? (
-                                <span style={{ fontWeight: 600, color: '#1d4ed8', fontSize: '0.88rem' }}>
-                                  {entry.prixUnitaire != null && entry.prixUnitaire > 0 ? `${entry.prixUnitaire.toFixed(3)}` : '—'}
-                                  {entry.prixPartiel && <span style={{ fontSize: '0.7rem', color: '#d97706', marginLeft: 4 }}>⚠️ partiel</span>}
+                                <span style={{ fontWeight: 700, color: '#1d4ed8', fontSize: '0.88rem' }}>
+                                  {entry.prixUnitaire != null && entry.prixUnitaire > 0 ? entry.prixUnitaire.toFixed(3) : '—'}
+                                  {entry.prixPartiel && <span style={{ fontSize: '0.68rem', color: '#d97706', marginLeft: 4 }}>⚠️</span>}
                                 </span>
                               ) : (
                                 <input
                                   type="number" min="0" step="0.001" placeholder="0.000"
                                   value={row.prixUnitaire}
                                   onChange={(e) => updateRow(entry.ingredientId, 'prixUnitaire', e.target.value)}
-                                  style={{ width: 84, textAlign: 'right', ...warnStyle }}
+                                  style={{ width: 88, textAlign: 'right', padding: '5px 8px', borderRadius: 7, fontSize: '0.85rem', ...warnStyle }}
                                   className="input"
                                   disabled={!canWrite}
                                 />
                               )}
                             </td>
-                            <td style={{ textAlign: 'right' }}>
+                            <td style={{ textAlign: 'right', padding: '10px 14px', verticalAlign: 'middle' }}>
                               {!entry.isPT && (
                                 <input
                                   type="number" min="0" max="100" step="0.1" placeholder="—"
                                   value={row.tauxTva}
                                   onChange={(e) => updateRow(entry.ingredientId, 'tauxTva', e.target.value)}
-                                  style={{ width: 60, textAlign: 'right' }}
+                                  style={{ width: 62, textAlign: 'right', padding: '5px 8px', borderRadius: 7, fontSize: '0.85rem' }}
                                   className="input"
                                   disabled={!canWrite}
                                 />
                               )}
                             </td>
-                            <td>
-                              <div style={{ display: 'flex', gap: 4, alignItems: 'center', flexWrap: 'wrap' }}>
-                                {row.error && <span style={{ color: 'var(--danger)', fontSize: '0.75rem' }}>!</span>}
+                            <td style={{ padding: '10px 14px', verticalAlign: 'middle', textAlign: 'right' }}>
+                              <div style={{ display: 'flex', gap: 5, alignItems: 'center', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+                                {row.error && <span style={{ color: 'var(--danger)', fontSize: '0.75rem', fontWeight: 700 }}>⚠</span>}
                                 {entry.isPT && entry.produitId && (
                                   <>
-                                    <button className="btn btn-ghost btn-sm" title="Stock des ingrédients relatifs" onClick={() => { fetchPtRecipe(entry.produitId!); setPtStockModal({ produitId: entry.produitId!, nom: entry.nom }); }}>📊</button>
+                                    <button className="btn btn-ghost btn-sm" title="Stock des ingrédients relatifs" style={{ fontSize: '0.78rem', padding: '3px 8px' }} onClick={() => { fetchPtRecipe(entry.produitId!); setPtStockModal({ produitId: entry.produitId!, nom: entry.nom }); }}>📊</button>
                                     {canWrite && (
-                                      <button className="btn btn-ghost btn-sm" title="Portions personnalisées" onClick={() => setPortionsModal({ produitId: entry.produitId!, nom: entry.nom })}>⚙️</button>
+                                      <button className="btn btn-ghost btn-sm" title="Portions personnalisées" style={{ fontSize: '0.78rem', padding: '3px 8px' }} onClick={() => setPortionsModal({ produitId: entry.produitId!, nom: entry.nom })}>⚙️</button>
                                     )}
                                   </>
                                 )}
                                 {onSaveSeuilMin && canWrite && (
                                   <button title="Configurer le seuil minimum" onClick={() => { setSeuilEdits((p) => ({ ...p, [entry.ingredientId]: entry.seuilMin !== null ? String(entry.seuilMin) : '' })); setSeuilModal({ ingredientId: entry.ingredientId, nom: entry.nom }); }}
-                                    style={{ fontSize: '0.75rem', fontWeight: 700, padding: '3px 8px', borderRadius: 6, border: '1px solid #f97316', background: '#fff7ed', color: '#ea580c', cursor: 'pointer' }}>
+                                    style={{ fontSize: '0.75rem', fontWeight: 700, padding: '4px 10px', borderRadius: 6, border: '1px solid #f97316', background: '#fff7ed', color: '#ea580c', cursor: 'pointer', whiteSpace: 'nowrap' }}>
                                     🔧 Seuil
                                   </button>
                                 )}
                                 {canWrite && ((isEntreprise && activiteId) || (!isEntreprise && onSavePerte)) && (
-                                  <button className="perte-btn" onClick={() => setPertesModal({ ingredientId: entry.ingredientId, nom: entry.nom, stockDisponible: entry.quantite ?? null })} title="Enregistrer une perte">📉 Perte</button>
+                                  <button className="perte-btn" style={{ whiteSpace: 'nowrap' }} onClick={() => setPertesModal({ ingredientId: entry.ingredientId, nom: entry.nom, stockDisponible: entry.quantite ?? null })} title="Enregistrer une perte">📉 Perte</button>
                                 )}
                               </div>
                             </td>
