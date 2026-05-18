@@ -43,6 +43,9 @@ import SupportPage from './components/client/SupportPage';
 import AIAssistantPage from './components/client/AIAssistantPage';
 import UpgradeWizard from './components/client/UpgradeWizard';
 import RapportsPage from './components/client/RapportsPage';
+import VentesPage from './components/client/VentesPage';
+import LaboVentesPage from './components/client/LaboVentesPage';
+import PrestatairesManagement from './components/admin/PrestatairesManagement';
 import './i18n';
 import './index.css';
 
@@ -100,6 +103,7 @@ export default function App() {
             <Route path="/admin/demandes" element={<DemandesManagement />} />
             <Route path="/admin/support" element={<AdminSupportPage />} />
             <Route path="/admin/active-agents" element={<ActiveAgentsPage />} />
+            <Route path="/admin/prestataires" element={<PrestatairesManagement />} />
           </Route>
 
           {/* Client + Gérant routes */}
@@ -133,6 +137,8 @@ export default function App() {
             <Route path="/client/rapports" element={<RapportsPage />} />
             <Route path="/client/support" element={<SupportPage />} />
             <Route path="/client/ai-assistant" element={<AIAssistantPage />} />
+            <Route path="/client/ventes" element={<VentesPage />} />
+            <Route path="/client/labo/ventes" element={<LaboVentesPage />} />
           </Route>
 
           {/* Error pages */}

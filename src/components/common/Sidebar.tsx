@@ -401,6 +401,16 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                   <span className="link-label">Demandes</span>
                 </NavLink>
               </li>
+
+              <Divider />
+
+              {/* ══ PRESTATAIRES ══ */}
+              <li>
+                <NavLink to="/admin/prestataires" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>
+                  <span className="link-icon">🛵</span>
+                  <span className="link-label">Prestataires</span>
+                </NavLink>
+              </li>
             </>
           ) : isGerant ? (
             <GerantSidebarContent
@@ -623,6 +633,11 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                           <span className="link-icon">📊</span><span className="link-label">Historique Inventaire</span>
                         </Link>
                       </li>
+                      <li>
+                        <NavLink to="/client/ventes" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>
+                          <span className="link-icon">🛒</span><span className="link-label">Ventes</span>
+                        </NavLink>
+                      </li>
                     </>
                   )}
                   </>
@@ -653,6 +668,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                                 <li><Link to={`/client/labo/historique-transferts?laboId=${labo.id}`} className={`sidebar-link ${isLaboHistorique ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📋</span><span className="link-label">Historiques Transferts</span></Link></li>
                                 <li><Link to={`/client/labo/inventaire?laboId=${labo.id}`} className={`sidebar-link ${isLaboInventaire ? 'active' : ''}`} onClick={onClose}><span className="link-icon">🔢</span><span className="link-label">Inventaire</span></Link></li>
                                 <li><Link to={`/client/labo/inventaire/historique?laboId=${labo.id}`} className={`sidebar-link ${location.pathname === '/client/labo/inventaire/historique' && location.search.includes(`laboId=${labo.id}`) ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📊</span><span className="link-label">Historique Inventaire</span></Link></li>
+                                <li><Link to={`/client/labo/ventes?laboId=${labo.id}`} className={`sidebar-link ${location.pathname === '/client/labo/ventes' && location.search.includes(`laboId=${labo.id}`) ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📤</span><span className="link-label">Ventes {labo.nom}</span></Link></li>
                               </>
                             )}
                           </React.Fragment>
