@@ -735,15 +735,36 @@ export default function StockLaboPage() {
                       {isOpen && (
                         <div className="table-responsive card th-indigo" style={{ marginBottom: 0 }}>
                           <table className="table" style={{ width: '100%' }}>
-                            <thead style={{ background: '#eff6ff', borderBottom: '2px solid #2563eb', color: '#1e3a5f' }}>
-                              <tr>
-                                <th style={{ fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '8px 8px' }}>{t('client.stock.ingredient')}</th>
-                                <th style={{ textAlign: 'right', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '8px 8px' }}>Stock Actuel<br /><span style={{ fontSize: '0.65rem', fontWeight: 400, opacity: 0.75 }}>pertes · PT · transfert</span></th>
-                                <th style={{ textAlign: 'right', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '8px 8px' }}>Coût Total</th>
-                                <th style={{ textAlign: 'right', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '8px 8px' }}>Qté</th>
-                                <th style={{ textAlign: 'right', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '8px 8px' }}>Prix</th>
-                                <th style={{ textAlign: 'right', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '8px 8px' }}>TVA %<br /><span style={{ fontSize: '0.65rem', fontWeight: 400, opacity: 0.75 }}>optionnel</span></th>
-                                <th style={{ fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '8px 8px' }}></th>
+                            <thead style={{ background: '#f5f3ff', color: '#3b0764' }}>
+                              <tr style={{ borderBottom: '1px solid #d8b4fe' }}>
+                                {[
+                                  { label: t('client.stock.ingredient'), minWidth: 180 },
+                                  { label: 'Stock Actuel', minWidth: 110 },
+                                  { label: 'Coût Total', minWidth: 100 },
+                                  { label: 'Quantité', minWidth: 90 },
+                                  { label: 'Prix', minWidth: 100 },
+                                  { label: 'TVA (%)', minWidth: 80 },
+                                  { label: 'Actions', minWidth: 150 },
+                                ].map(({ label, minWidth }) => (
+                                  <th key={label} style={{ fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.06em', textTransform: 'uppercase', padding: '10px 14px 4px', minWidth, textAlign: 'center' }}>
+                                    {label}
+                                  </th>
+                                ))}
+                              </tr>
+                              <tr style={{ borderBottom: '2px solid #7e22ce' }}>
+                                {[
+                                  { sub: 'Hist.Appro · Unité' },
+                                  { sub: 'Pertes · PT · Transfert' },
+                                  { sub: 'HT · TTC' },
+                                  { sub: 'Nouvelle' },
+                                  { sub: 'HT / Unité' },
+                                  { sub: 'Optionnel' },
+                                  { sub: '' },
+                                ].map(({ sub }, i) => (
+                                  <th key={i} style={{ fontWeight: 400, fontSize: '0.62rem', color: '#a855f7', letterSpacing: '0.04em', padding: '2px 14px 8px', textAlign: 'center', opacity: 0.85 }}>
+                                    {sub}
+                                  </th>
+                                ))}
                               </tr>
                             </thead>
                             <tbody>
@@ -774,7 +795,7 @@ export default function StockLaboPage() {
                                           {rs.historyOpen ? '📋▲ Historique' : '📋 Historique'}
                                         </button>
                                       </td>
-                                      <td style={{ textAlign: 'right' }}>
+                                      <td style={{ textAlign: 'center' }}>
                                         <span className={cls} style={{ fontSize: '1rem', fontWeight: 800 }}>
                                           {r.quantite !== null ? r.quantite.toFixed(3) : '—'}
                                         </span>
@@ -788,7 +809,7 @@ export default function StockLaboPage() {
                                           <div style={{ fontSize: '0.68rem', color: '#0369a1', fontWeight: 500 }}>↘ Transfert: {r.transfertsDepuisInv.toFixed(3)}</div>
                                         )}
                                       </td>
-                                      <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+                                      <td style={{ textAlign: 'center', whiteSpace: 'nowrap' }}>
                                         {r.coutTotal != null && r.coutTotal > 0 ? (
                                           <>
                                             <span style={{ fontSize: '0.88rem', color: '#1d4ed8', fontWeight: 700 }}>{r.coutTotal.toFixed(3)} DT</span>
@@ -798,12 +819,12 @@ export default function StockLaboPage() {
                                           </>
                                         ) : <span style={{ fontSize: '0.72rem', color: '#cbd5e1' }}>—</span>}
                                       </td>
-                                      <td style={{ textAlign: 'right' }}>
+                                      <td style={{ textAlign: 'center' }}>
                                         <input type="number" min="0" step="0.001" value={rs.quantite} onChange={(e) => setField(r.ingredientId, 'quantite', e.target.value)} style={{ width: 76, textAlign: 'right', ...warnStyle }} className="input" />
                                       </td>
-                                      <td style={{ textAlign: 'right' }}>
+                                      <td style={{ textAlign: 'center' }}>
                                         {r.isPT ? (
-                                          <div style={{ textAlign: 'right', padding: '4px 0' }} title="Calculé automatiquement depuis les prix des ingrédients du labo">
+                                          <div style={{ textAlign: 'center', padding: '4px 0' }} title="Calculé automatiquement depuis les prix des ingrédients du labo">
                                             {r.prixCalcule != null && r.prixCalcule > 0 ? (
                                               <span style={{ fontSize: '0.88rem', color: '#7c3aed', fontWeight: 600 }}>{r.prixCalcule.toFixed(3)}</span>
                                             ) : r.prixUnitaire != null ? (
@@ -816,7 +837,7 @@ export default function StockLaboPage() {
                                           <input type="number" min="0" step="0.001" value={rs.prixUnitaire} onChange={(e) => setField(r.ingredientId, 'prixUnitaire', e.target.value)} style={{ width: 84, textAlign: 'right', ...warnStyle }} className="input" />
                                         )}
                                       </td>
-                                      <td style={{ textAlign: 'right' }}>
+                                      <td style={{ textAlign: 'center' }}>
                                         {!r.isPT && (
                                           <input type="number" min="0" max="100" step="0.1" placeholder="—"
                                             value={rs.tauxTva}

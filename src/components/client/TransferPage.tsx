@@ -602,13 +602,30 @@ export default function TransferPage() {
                   <div className="table-responsive card" style={{ marginBottom: 0 }}>
                     <table className="table">
                       <thead>
-                        <tr style={{ background: 'linear-gradient(135deg, #3b0764, #7e22ce)' }}>
-                          <th style={{ minWidth: 140, fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px', color: '#fff', background: 'transparent', borderBottom: 'none' }}>{t('client.stock.ingredient')}</th>
-                          <th style={{ textAlign: 'right', minWidth: 100, fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px', color: '#fff', background: 'transparent', borderBottom: 'none' }}>{t('client.labo.labo_stock')}</th>
-                          <th style={{ textAlign: 'right', minWidth: 110, fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px', color: '#fde68a', background: 'transparent', borderBottom: 'none' }}>Prix U. <span style={{ color: '#ef4444' }}>*</span></th>
-                          <th style={{ textAlign: 'right', minWidth: 80, fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px', color: '#e9d5ff', background: 'transparent', borderBottom: 'none' }}>TVA %</th>
+                        <tr style={{ background: 'linear-gradient(135deg, #3b0764, #7e22ce)', borderBottom: '1px solid rgba(255,255,255,0.2)' }}>
+                          <th style={{ minWidth: 140, fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '10px 14px 4px', color: '#fff', background: 'transparent', borderBottom: 'none', textAlign: 'center' }}>{t('client.stock.ingredient')}</th>
+                          <th style={{ textAlign: 'center', minWidth: 100, fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '10px 14px 4px', color: '#fff', background: 'transparent', borderBottom: 'none' }}>{t('client.labo.labo_stock')}</th>
+                          <th style={{ textAlign: 'center', minWidth: 110, fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '10px 14px 4px', color: '#fde68a', background: 'transparent', borderBottom: 'none' }}>Prix U. <span style={{ color: '#ef4444' }}>*</span></th>
+                          <th style={{ textAlign: 'center', minWidth: 80, fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '10px 14px 4px', color: '#e9d5ff', background: 'transparent', borderBottom: 'none' }}>TVA (%)</th>
                           {activites.map((act) => (
-                            <th key={act.id} style={{ textAlign: 'center', minWidth: 120, fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px', color: '#e9d5ff', background: 'transparent', borderBottom: 'none' }}>↗ {act.nom}</th>
+                            <th key={act.id} style={{ textAlign: 'center', minWidth: 120, fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '10px 14px 4px', color: '#e9d5ff', background: 'transparent', borderBottom: 'none' }}>{act.nom}</th>
+                          ))}
+                        </tr>
+                        <tr style={{ background: 'linear-gradient(135deg, #3b0764, #7e22ce)', borderBottom: '2px solid rgba(255,255,255,0.35)' }}>
+                          {[
+                            { sub: 'Hist.Transfert · Unité' },
+                            { sub: 'Disponible' },
+                            { sub: 'HT / Unité' },
+                            { sub: 'Optionnel' },
+                          ].map(({ sub }, i) => (
+                            <th key={i} style={{ fontWeight: 400, fontSize: '0.62rem', color: 'rgba(255,255,255,0.65)', letterSpacing: '0.04em', padding: '2px 14px 8px', textAlign: 'center', background: 'transparent', borderBottom: 'none' }}>
+                              {sub}
+                            </th>
+                          ))}
+                          {activites.map((act) => (
+                            <th key={act.id} style={{ fontWeight: 400, fontSize: '0.62rem', color: 'rgba(255,255,255,0.65)', letterSpacing: '0.04em', padding: '2px 14px 8px', textAlign: 'center', background: 'transparent', borderBottom: 'none' }}>
+                              Quantité
+                            </th>
                           ))}
                         </tr>
                       </thead>
@@ -632,7 +649,7 @@ export default function TransferPage() {
                                     {isTransferOpen ? '↗▲' : '↗ historique'}
                                   </button>
                                 </td>
-                                <td style={{ textAlign: 'right', padding: '12px 14px' }}>
+                                <td style={{ textAlign: 'center', padding: '12px 14px' }}>
                                   <span style={{ fontWeight: 800, color: qtyExceedsStock ? '#ef4444' : qtyColor(r.quantite), fontSize: '1rem' }}>
                                     {r.quantite !== null ? parseFloat(r.quantite.toFixed(3)) : '—'}
                                   </span>
@@ -645,7 +662,7 @@ export default function TransferPage() {
                                     </div>
                                   )}
                                 </td>
-                                <td style={{ textAlign: 'right', padding: '12px 14px' }}>
+                                <td style={{ textAlign: 'center', padding: '12px 14px' }}>
                                   <input
                                     type="number" min="0" step="0.001" className="input"
                                     style={{ width: 90, textAlign: 'right', borderColor: (!prixUnitaireMap[r.ingredientId]?.trim() && Object.values(qtys[r.ingredientId] || {}).some((v) => parseFloat(v) > 0)) ? '#ef4444' : undefined }}
@@ -654,7 +671,7 @@ export default function TransferPage() {
                                     placeholder="0.000"
                                   />
                                 </td>
-                                <td style={{ textAlign: 'right', padding: '12px 14px' }}>
+                                <td style={{ textAlign: 'center', padding: '12px 14px' }}>
                                   <input
                                     type="number" min="0" max="100" step="0.1" className="input"
                                     style={{ width: 60, textAlign: 'right' }}
