@@ -46,7 +46,7 @@
   <text x="83" y="48"
     font-family="system-ui, -apple-system, 'Helvetica Neue', Arial, sans-serif"
     font-size="34"
-    fill="url(#wm)">
+    fill="white">
     <tspan font-weight="700" letter-spacing="-0.5">Lab</tspan><tspan font-weight="300" letter-spacing="2">Flow</tspan>
   </text>
 </svg>
