@@ -476,13 +476,23 @@ export default function TransferPage() {
         </div>
       )}
 
-      {/* Confirmation block — Réf, Date + Transférer / Réinitialiser buttons */}
+      {/* Confirmation block — Date, Réf + Transférer / Réinitialiser buttons */}
       {!loading && stock.length > 0 && activites.length > 0 && (
         <div style={{ background: 'linear-gradient(135deg, #faf5ff, #f3e8ff)', borderRadius: 14, padding: '18px 20px', border: '1.5px solid #d8b4fe', boxShadow: '0 4px 20px rgba(126,34,206,0.12)', marginBottom: 24 }}>
-          <div style={{ marginBottom: 10 }}>
+          <div style={{ marginBottom: 10, paddingBottom: 10, borderBottom: '1px solid #d8b4fe' }}>
             <span style={{ fontSize: '0.68rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#7e22ce' }}>Transfert (TVA)</span>
           </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'flex-end' }}>
+            <div>
+              <label style={{ fontSize: '0.62rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--text-muted)', display: 'block', marginBottom: 3 }}>
+                Date Transfert <span style={{ color: '#ef4444' }}>*</span>
+              </label>
+              <input type="date" className="input"
+                style={{ padding: '6px 10px', borderRadius: 7, fontSize: '0.82rem', border: '1.5px solid #a855f7', background: '#fff', fontWeight: 600 }}
+                min={yearStart} max={yearEnd}
+                value={transferDate}
+                onChange={(e) => setTransferDate(e.target.value)} />
+            </div>
             <div>
               <label style={{ fontSize: '0.62rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#7e22ce', display: 'block', marginBottom: 3 }}>
                 Réf. Facture / BL <span style={{ color: '#ef4444' }}>*</span>
@@ -492,16 +502,7 @@ export default function TransferPage() {
                 onChange={(e) => { setRefFacture(e.target.value); if (errorMsg) setErrorMsg(''); }}
                 placeholder="N° bon de livraison…" />
             </div>
-            <div>
-              <label style={{ fontSize: '0.62rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--text-muted)', display: 'block', marginBottom: 3 }}>
-                Date <span style={{ color: '#ef4444' }}>*</span>
-              </label>
-              <input type="date" className="input"
-                style={{ padding: '6px 10px', borderRadius: 7, fontSize: '0.82rem', border: '1.5px solid #a855f7', background: '#fff', fontWeight: 600 }}
-                min={yearStart} max={yearEnd}
-                value={transferDate}
-                onChange={(e) => setTransferDate(e.target.value)} />
-            </div>
+            <div style={{ flex: 1 }} />
             <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
               <button
                 onClick={() => handleBulkTransfer()}
