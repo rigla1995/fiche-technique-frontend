@@ -475,7 +475,8 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
   const [bulkRefFacture, setBulkRefFacture] = useState('');
   const [bulkTauxTva, setBulkTauxTva] = useState('');
   const [bulkSaving, setBulkSaving] = useState(false);
-  const [seuilModal, setSeuilModal] = useState<{ ingredientId: number; nom: string } | null>(null);
+  const [bulkError, setBulkError] = useState('');
+  const [seuilModal, setSeuilModal] = useState<{ ingredientId: number; nom: string; error?: string } | null>(null);
 
   // ── Conflict confirmation modal
   const [conflictModal, setConflictModal] = useState<{
@@ -528,13 +529,21 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
     return parseInt(y) === now.getFullYear() && parseInt(m) === now.getMonth() + 1;
   };
 
-  const saveSeuilMin = async (id: number) => {
-    if (!onSaveSeuilMin) return;
+  const saveSeuilMin = async (id: number): Promise<boolean> => {
+    if (!onSaveSeuilMin) return false;
     const raw = seuilEdits[id]?.trim();
     const val = raw ? parseFloat(raw) : null;
     setSeuilSaving((p) => ({ ...p, [id]: true }));
-    try { await onSaveSeuilMin(id, val); } catch { /* ignore */ }
-    setSeuilSaving((p) => ({ ...p, [id]: false }));
+    try {
+      await onSaveSeuilMin(id, val);
+      setSeuilSaving((p) => ({ ...p, [id]: false }));
+      return true;
+    } catch (e: unknown) {
+      const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Erreur serveur';
+      setSeuilSaving((p) => ({ ...p, [id]: false }));
+      setSeuilModal((prev) => prev ? { ...prev, error: msg } : prev);
+      return false;
+    }
   };
 
   const fetchHistory = async (id: number): Promise<StockHistoryEntry[]> => {
@@ -573,6 +582,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
 
   const doBulkSave = async () => {
     setBulkSaving(true);
+    setBulkError('');
     try {
       const readyEntries = Object.entries(rows).filter(([idStr, row]) => {
         const id = Number(idStr);
@@ -599,7 +609,10 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
       setBulkDate(todayStr());
       setBulkFournisseurId('');
       setBulkRefFacture('');
-    } catch { /* ignore */ }
+    } catch (e: unknown) {
+      const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Erreur lors de l\'enregistrement';
+      setBulkError(msg);
+    }
     setBulkSaving(false);
   };
 
@@ -823,9 +836,10 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
             <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: 16, lineHeight: 1.5 }}>
               🔴 ≤ seuil &nbsp;·&nbsp; 🟠 seuil&nbsp;+&nbsp;10% &nbsp;·&nbsp; 🟢 au-dessus
             </div>
+            {seuilModal.error && <p style={{ color: 'var(--danger)', fontSize: '0.8rem', margin: '0 0 8px' }}>{seuilModal.error}</p>}
             <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
               <button className="btn btn-ghost btn-sm" onClick={() => setSeuilModal(null)}>Annuler</button>
-              <button className="btn btn-primary btn-sm" onClick={async () => { await saveSeuilMin(seuilModal.ingredientId); setSeuilModal(null); }}>Enregistrer</button>
+              <button className="btn btn-primary btn-sm" onClick={async () => { const ok = await saveSeuilMin(seuilModal.ingredientId); if (ok) setSeuilModal(null); }}>Enregistrer</button>
             </div>
           </div>
         </div>
@@ -864,14 +878,17 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
             <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#1e40af', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Taux TVA % <span style={{ fontWeight: 400, opacity: 0.7 }}>(optionnel)</span></span>
             <input type="number" min="0" max="100" step="0.1" className="input" style={{ maxWidth: 100 }} placeholder="ex: 19" value={bulkTauxTva} onChange={(e) => setBulkTauxTva(e.target.value)} />
           </div>
-          <div style={{ display: 'flex', gap: 8, alignSelf: 'flex-end', marginLeft: 'auto' }}>
-            <button className="btn btn-primary btn-sm" onClick={saveBulkMatrix} disabled={!canSaveBulk || bulkSaving || !canWrite}
-              style={{ background: canSaveBulk ? 'linear-gradient(135deg, #1e40af, #2563eb)' : undefined, border: 'none', boxShadow: canSaveBulk ? '0 3px 10px rgba(30,64,175,0.3)' : undefined }}>
-              {bulkSaving ? '…' : `Enregistrer (${readyCount})`}
-            </button>
-            <button className="btn btn-ghost btn-sm" onClick={() => { setBulkDate(todayStr()); setBulkFournisseurId(''); setBulkRefFacture(''); setBulkTauxTva(''); }}>
-              Réinitialiser
-            </button>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignSelf: 'flex-end', marginLeft: 'auto' }}>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button className="btn btn-primary btn-sm" onClick={saveBulkMatrix} disabled={!canSaveBulk || bulkSaving || !canWrite}
+                style={{ background: canSaveBulk ? 'linear-gradient(135deg, #1e40af, #2563eb)' : undefined, border: 'none', boxShadow: canSaveBulk ? '0 3px 10px rgba(30,64,175,0.3)' : undefined }}>
+                {bulkSaving ? '…' : `Enregistrer (${readyCount})`}
+              </button>
+              <button className="btn btn-ghost btn-sm" onClick={() => { setBulkDate(todayStr()); setBulkFournisseurId(''); setBulkRefFacture(''); setBulkTauxTva(''); setBulkError(''); }}>
+                Réinitialiser
+              </button>
+            </div>
+            {bulkError && <p style={{ color: 'var(--danger)', fontSize: '0.8rem', margin: 0, textAlign: 'right' }}>{bulkError}</p>}
           </div>
         </div>
       </div>
@@ -1089,6 +1106,7 @@ function ActivityStockSection({ label, activities, initialActiviteId, onSave }: 
   const [selectedId, setSelectedId] = useState<number>(initialActiviteId ?? activities[0]?.id ?? 0);
   const [entries, setEntries] = useState<StockEntry[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState('');
   const [fournisseurs, setFournisseurs] = useState<Fournisseur[]>([]);
   const [categoryFilter, setCategoryFilter] = useState('');
   const [ingredientFilter, setIngredientFilter] = useState<number | ''>('');
@@ -1098,6 +1116,7 @@ function ActivityStockSection({ label, activities, initialActiviteId, onSave }: 
 
   const loadStock = useCallback(async (actId: number) => {
     setLoading(true);
+    setLoadError('');
     setEntries([]);
     setCategoryFilter('');
     setNameFilter('');
@@ -1110,7 +1129,9 @@ function ActivityStockSection({ label, activities, initialActiviteId, onSave }: 
       ]);
       setEntries(stockRes.data);
       setFournisseurs(foRes.data as Fournisseur[]);
-    } catch { /* ignore */ }
+    } catch {
+      setLoadError('Impossible de charger le stock. Veuillez réessayer.');
+    }
     setLoading(false);
   }, []);
 
@@ -1232,6 +1253,11 @@ function ActivityStockSection({ label, activities, initialActiviteId, onSave }: 
 
       {loading ? (
         <p className="text-muted">{t('common.loading')}</p>
+      ) : loadError ? (
+        <div className="alert alert-danger" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span>⚠️ {loadError}</span>
+          <button className="btn btn-ghost btn-sm" onClick={() => loadStock(selectedId)}>Réessayer</button>
+        </div>
       ) : entries.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-muted)' }}>
           <div style={{ fontSize: '2.5rem', marginBottom: 8 }}>📦</div>
