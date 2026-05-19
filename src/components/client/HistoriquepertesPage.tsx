@@ -326,78 +326,58 @@ export default function HistoriquepertesPage() {
         </div>
       </div>
 
+      {/* Activité selector pills */}
+      {isEntreprise && !isActiviteGerant && activites.length > 0 && (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16, padding: '10px 14px', background: 'var(--card-bg)', borderRadius: 10, border: '1px solid var(--border)' }}>
+          <button onClick={() => setFActiviteId('')} style={{ padding: '4px 14px', borderRadius: 20, cursor: 'pointer', fontSize: '0.82rem', border: !fActiviteId ? '1.5px solid #991b1b' : '1.5px solid var(--border)', background: !fActiviteId ? '#991b1b' : 'var(--bg)', color: !fActiviteId ? '#fff' : 'var(--text)', fontWeight: !fActiviteId ? 700 : 400 }}>Toutes</button>
+          {activites.map((a) => (
+            <button key={a.id} onClick={() => setFActiviteId(String(a.id))} style={{ padding: '4px 14px', borderRadius: 20, cursor: 'pointer', fontSize: '0.82rem', border: fActiviteId === String(a.id) ? '1.5px solid #991b1b' : '1.5px solid var(--border)', background: fActiviteId === String(a.id) ? '#991b1b' : 'var(--bg)', color: fActiviteId === String(a.id) ? '#fff' : 'var(--text)', fontWeight: fActiviteId === String(a.id) ? 700 : 400 }}>🏪 {a.nom}</button>
+          ))}
+          <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', alignSelf: 'center', marginLeft: 4 }}>← sélectionner l'activité</span>
+        </div>
+      )}
+
       {/* Filter panel */}
       <div style={{
-        background: 'var(--surface)', borderRadius: 14, padding: '16px 20px', marginBottom: 24,
+        background: 'var(--surface)', borderRadius: 14, padding: '12px 16px', marginBottom: 24,
         border: '1px solid var(--border)', boxShadow: '0 2px 12px rgba(0,0,0,0.05)',
       }}>
-        {/* Panel header */}
-        <div style={{ width: '100%', marginBottom: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: 12, borderBottom: '1px solid var(--border)' }}>
-          <span style={{ fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#991b1b' }}>Filtres</span>
-          <button className="btn btn-ghost btn-sm" style={{ fontSize: '0.78rem' }} onClick={resetFilters}>✕ Réinitialiser</button>
-        </div>
-        {/* Section 1: Entité & Produit */}
-        <div style={{ marginBottom: 16, marginTop: 14 }}>
-          <div style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span style={{ width: 16, height: 2, background: '#991b1b', display: 'inline-block', borderRadius: 2 }} />
-            Entité &amp; Produit
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'flex-end' }}>
+          <div>
+            <label style={{ fontSize: '0.62rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 4 }}>🏷️ Catégorie</label>
+            <select style={{ padding: '6px 10px', borderRadius: 7, border: '1.5px solid var(--border)', fontSize: '0.82rem', background: 'var(--background)', minWidth: 140 }} value={fCategorie} onChange={(e) => { setFCategorie(e.target.value); setFIngredient(''); }}>
+              <option value="">— Toutes —</option>
+              {categories.map((c) => <option key={c.id} value={String(c.id)}>{c.nom}</option>)}
+            </select>
           </div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14, alignItems: 'flex-end' }}>
-            {isEntreprise && !isActiviteGerant && activites.length > 0 && (
-              <div>
-                <label style={{ fontSize: '0.68rem', fontWeight: 800, color: '#991b1b', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>🏪 Activité</label>
-                <select style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid #991b1b', fontSize: '0.88rem', background: '#fff5f5', minWidth: 160 }} value={fActiviteId} onChange={(e) => setFActiviteId(e.target.value)}>
-                  <option value="">— Toutes —</option>
-                  {activites.map((a) => <option key={a.id} value={String(a.id)}>{a.nom}</option>)}
-                </select>
-              </div>
-            )}
-            <div>
-              <label style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>🏷️ Catégorie</label>
-              <select style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid var(--border)', fontSize: '0.88rem', background: 'var(--background)', minWidth: 160 }} value={fCategorie} onChange={(e) => { setFCategorie(e.target.value); setFIngredient(''); }}>
-                <option value="">— Toutes —</option>
-                {categories.map((c) => <option key={c.id} value={String(c.id)}>{c.nom}</option>)}
-              </select>
-            </div>
-            <div>
-              <label style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>🧂 Ingrédient</label>
-              <select style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid var(--border)', fontSize: '0.88rem', background: 'var(--background)', minWidth: 160 }} value={fIngredient} onChange={(e) => setFIngredient(e.target.value)} disabled={!fCategorie}>
-                <option value="">— Tous —</option>
-                {ingredientsInCat.map((i) => <option key={i.id} value={String(i.id)}>{i.nom}</option>)}
-              </select>
-            </div>
-            <div>
-              <label style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>🔍 Nom</label>
-              <input type="text" style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid var(--border)', fontSize: '0.88rem', background: 'var(--background)', minWidth: 160 }} placeholder="Recherche…" value={fNom} onChange={(e) => setFNom(e.target.value)} />
-            </div>
+          <div>
+            <label style={{ fontSize: '0.62rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 4 }}>🧂 Ingrédient</label>
+            <select style={{ padding: '6px 10px', borderRadius: 7, border: '1.5px solid var(--border)', fontSize: '0.82rem', background: 'var(--background)', minWidth: 140 }} value={fIngredient} onChange={(e) => setFIngredient(e.target.value)} disabled={!fCategorie}>
+              <option value="">— Tous —</option>
+              {ingredientsInCat.map((i) => <option key={i.id} value={String(i.id)}>{i.nom}</option>)}
+            </select>
           </div>
-        </div>
-        {/* Divider */}
-        <div style={{ marginBottom: 16, borderTop: '1px dashed var(--border)' }} />
-        {/* Section 2: Période & Type */}
-        <div style={{ marginBottom: 16 }}>
-          <div style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span style={{ width: 16, height: 2, background: '#dc2626', display: 'inline-block', borderRadius: 2 }} />
-            Période &amp; Type
+          <div>
+            <label style={{ fontSize: '0.62rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 4 }}>🔍 Nom</label>
+            <input type="text" style={{ padding: '6px 10px', borderRadius: 7, border: '1.5px solid var(--border)', fontSize: '0.82rem', background: 'var(--background)', minWidth: 130 }} placeholder="Recherche…" value={fNom} onChange={(e) => setFNom(e.target.value)} />
           </div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14, alignItems: 'flex-end' }}>
-            <div>
-              <label style={{ fontSize: '0.68rem', fontWeight: 800, color: '#991b1b', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>📅 Du</label>
-              <input type="date" style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid #991b1b', fontSize: '0.88rem', background: '#fff5f5', minWidth: 160, fontWeight: 600 }} min={yearStart} max={yearEnd} value={fDateDebut} onChange={(e) => setFDateDebut(e.target.value)} />
-            </div>
-            <div>
-              <label style={{ fontSize: '0.68rem', fontWeight: 800, color: '#991b1b', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>📅 Au</label>
-              <input type="date" style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid #991b1b', fontSize: '0.88rem', background: '#fff5f5', minWidth: 160, fontWeight: 600 }} min={yearStart} max={yearEnd} value={fDateFin} onChange={(e) => setFDateFin(e.target.value)} />
-            </div>
-            <div>
-              <label style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>📋 Type de perte</label>
-              <select style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid var(--border)', fontSize: '0.88rem', background: 'var(--background)', minWidth: 160 }} value={fType} onChange={(e) => setFType(e.target.value)}>
-                <option value="">— Tous —</option>
-                <option value="avarie">Avarie</option>
-                <option value="dechet">Déchet</option>
-              </select>
-            </div>
+          <div>
+            <label style={{ fontSize: '0.62rem', fontWeight: 700, color: '#991b1b', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 4 }}>📅 Du</label>
+            <input type="date" style={{ padding: '6px 10px', borderRadius: 7, border: '1.5px solid #991b1b', fontSize: '0.82rem', background: '#fff5f5', fontWeight: 600 }} value={fDateDebut} onChange={(e) => setFDateDebut(e.target.value)} />
           </div>
+          <div>
+            <label style={{ fontSize: '0.62rem', fontWeight: 700, color: '#991b1b', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 4 }}>📅 Au</label>
+            <input type="date" style={{ padding: '6px 10px', borderRadius: 7, border: '1.5px solid #991b1b', fontSize: '0.82rem', background: '#fff5f5', fontWeight: 600 }} value={fDateFin} onChange={(e) => setFDateFin(e.target.value)} />
+          </div>
+          <div>
+            <label style={{ fontSize: '0.62rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 4 }}>📋 Type</label>
+            <select style={{ padding: '6px 10px', borderRadius: 7, border: '1.5px solid var(--border)', fontSize: '0.82rem', background: 'var(--background)', minWidth: 120 }} value={fType} onChange={(e) => setFType(e.target.value)}>
+              <option value="">— Tous —</option>
+              <option value="avarie">Avarie</option>
+              <option value="dechet">Déchet</option>
+            </select>
+          </div>
+          <button className="btn btn-ghost btn-sm" style={{ fontSize: '0.78rem', alignSelf: 'flex-end' }} onClick={resetFilters}>✕ Réinit.</button>
         </div>
         {/* Actions footer */}
         <div style={{ paddingTop: 16, borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12 }}>

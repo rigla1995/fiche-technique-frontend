@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import api from '../../api/client';
 import type { Labo } from '../../types';
 
@@ -35,8 +35,10 @@ interface LaboIngredient { id: number; nom: string; unite: string; categorie: st
 export default function LaboHistoriquepertesPage() {
   const [searchParams] = useSearchParams();
   const laboId = searchParams.get('laboId') || '';
+  const navigate = useNavigate();
 
   const [labo, setLabo] = useState<Labo | null>(null);
+  const [allLabos, setAllLabos] = useState<Labo[]>([]);
   const [entries, setEntries] = useState<LaboPerteEntry[]>([]);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
@@ -56,6 +58,10 @@ export default function LaboHistoriquepertesPage() {
     new Map(laboIngredients.filter((i) => i.categorieId !== null).map((i) => [i.categorieId, { id: i.categorieId as number, nom: i.categorie }])).values()
   );
   const ingredientsInCat = fCategorie ? laboIngredients.filter((i) => String(i.categorieId) === fCategorie) : [];
+
+  useEffect(() => {
+    api.get('/api/labo').then(({ data }) => setAllLabos(data)).catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (!laboId) return;
@@ -156,93 +162,74 @@ export default function LaboHistoriquepertesPage() {
         )}
       </div>
 
+      {/* ── Labo selector ─────────────────────────────────────────────────── */}
+      {allLabos.length > 0 && (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16, alignItems: 'center' }}>
+          {allLabos.map((l) => (
+            <button key={l.id} onClick={() => navigate(`/client/labo/historique-pertes?laboId=${l.id}`)}
+              style={{
+                padding: '6px 14px', borderRadius: 20, border: '2px solid #7e22ce', fontWeight: 700,
+                fontSize: '0.82rem', cursor: 'pointer', transition: 'all 0.15s',
+                background: laboId === String(l.id) ? '#7e22ce' : 'var(--bg)',
+                color: laboId === String(l.id) ? '#fff' : '#7e22ce',
+              }}>
+              🏭 {l.nom}
+            </button>
+          ))}
+          <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginLeft: 4 }}>← sélectionner le labo</span>
+        </div>
+      )}
+
       {/* Filters */}
       <div style={{
-        background: 'var(--surface)', borderRadius: 14, padding: '16px 20px', marginBottom: 24,
+        background: 'var(--surface)', borderRadius: 14, padding: '14px 18px', marginBottom: 24,
         border: '1px solid var(--border)', boxShadow: '0 2px 12px rgba(0,0,0,0.05)',
       }}>
-        {/* Panel header */}
-        <div style={{ width: '100%', marginBottom: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: 12, borderBottom: '1px solid var(--border)' }}>
-          <span style={{ fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#7e22ce' }}>Filtres</span>
-          <button className="btn btn-ghost btn-sm" style={{ fontSize: '0.78rem' }} onClick={resetFilters}>✕ Réinitialiser</button>
-        </div>
-        {/* Section 1: Produit */}
-        <div style={{ marginBottom: 16, marginTop: 14 }}>
-          <div style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span style={{ width: 16, height: 2, background: '#7e22ce', display: 'inline-block', borderRadius: 2 }} />
-            Produit
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'flex-end', marginBottom: 12 }}>
+          <div>
+            <label style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 3 }}>🏷️ Catégorie</label>
+            <select style={{ padding: '6px 10px', borderRadius: 8, border: '1.5px solid var(--border)', fontSize: '0.83rem', background: 'var(--bg)', minWidth: 130 }} value={fCategorie} onChange={(e) => { setFCategorie(e.target.value); setFIngredient(''); }}>
+              <option value="">— Toutes —</option>
+              {categories.map((c) => <option key={c.id} value={c.id}>{c.nom}</option>)}
+            </select>
           </div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14, alignItems: 'flex-end' }}>
-            <div>
-              <label style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>🏷️ Catégorie</label>
-              <select style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid var(--border)', fontSize: '0.88rem', background: 'var(--background)', minWidth: 160 }} value={fCategorie} onChange={(e) => { setFCategorie(e.target.value); setFIngredient(''); }}>
-                <option value="">— Toutes —</option>
-                {categories.map((c) => <option key={c.id} value={c.id}>{c.nom}</option>)}
-              </select>
-            </div>
-            <div>
-              <label style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>🧂 Ingrédient</label>
-              <select style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid var(--border)', fontSize: '0.88rem', background: 'var(--background)', minWidth: 160 }} value={fIngredient} disabled={!fCategorie} onChange={(e) => setFIngredient(e.target.value)}>
-                <option value="">— Tous —</option>
-                {ingredientsInCat.map((i) => <option key={i.id} value={i.id}>{i.nom}</option>)}
-              </select>
-            </div>
-            <div>
-              <label style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>🔍 Nom</label>
-              <input type="text" style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid var(--border)', fontSize: '0.88rem', background: 'var(--background)', minWidth: 160 }} placeholder="Rechercher…" value={fNom} onChange={(e) => setFNom(e.target.value)} />
-            </div>
+          <div>
+            <label style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 3 }}>🧂 Ingrédient</label>
+            <select style={{ padding: '6px 10px', borderRadius: 8, border: '1.5px solid var(--border)', fontSize: '0.83rem', background: 'var(--bg)', minWidth: 130 }} value={fIngredient} disabled={!fCategorie} onChange={(e) => setFIngredient(e.target.value)}>
+              <option value="">— Tous —</option>
+              {ingredientsInCat.map((i) => <option key={i.id} value={i.id}>{i.nom}</option>)}
+            </select>
           </div>
-        </div>
-        {/* Divider */}
-        <div style={{ marginBottom: 16, borderTop: '1px dashed var(--border)' }} />
-        {/* Section 2: Période & Type */}
-        <div style={{ marginBottom: 16 }}>
-          <div style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span style={{ width: 16, height: 2, background: '#dc2626', display: 'inline-block', borderRadius: 2 }} />
-            Période &amp; Type
+          <div>
+            <label style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 3 }}>🔍 Nom</label>
+            <input type="text" style={{ padding: '6px 10px', borderRadius: 8, border: '1.5px solid var(--border)', fontSize: '0.83rem', background: 'var(--bg)', minWidth: 120 }} placeholder="Rechercher…" value={fNom} onChange={(e) => setFNom(e.target.value)} />
           </div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14, alignItems: 'flex-end' }}>
-            <div>
-              <label style={{ fontSize: '0.68rem', fontWeight: 800, color: '#7e22ce', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>📅 Du</label>
-              <input type="date" style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid #7e22ce', fontSize: '0.88rem', background: '#faf5ff', minWidth: 160, fontWeight: 600 }} value={fDateDebut} onChange={(e) => setFDateDebut(e.target.value)} />
-            </div>
-            <div>
-              <label style={{ fontSize: '0.68rem', fontWeight: 800, color: '#7e22ce', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>📅 Au</label>
-              <input type="date" style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid #7e22ce', fontSize: '0.88rem', background: '#faf5ff', minWidth: 160, fontWeight: 600 }} value={fDateFin} onChange={(e) => setFDateFin(e.target.value)} />
-            </div>
-            <div>
-              <label style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>📋 Type</label>
-              <select style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid var(--border)', fontSize: '0.88rem', background: 'var(--background)', minWidth: 160 }} value={fType} onChange={(e) => setFType(e.target.value)}>
-                <option value="">— Tous —</option>
-                <option value="avarie">Avarie</option>
-                <option value="dechet">Déchet</option>
-              </select>
-            </div>
+          <div>
+            <label style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 3 }}>📅 Du</label>
+            <input type="date" style={{ padding: '6px 10px', borderRadius: 8, border: '1.5px solid var(--border)', fontSize: '0.83rem', background: 'var(--bg)', minWidth: 130, fontWeight: 600 }} value={fDateDebut} onChange={(e) => setFDateDebut(e.target.value)} />
+          </div>
+          <div>
+            <label style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 3 }}>📅 Au</label>
+            <input type="date" style={{ padding: '6px 10px', borderRadius: 8, border: '1.5px solid var(--border)', fontSize: '0.83rem', background: 'var(--bg)', minWidth: 130, fontWeight: 600 }} value={fDateFin} onChange={(e) => setFDateFin(e.target.value)} />
+          </div>
+          <div>
+            <label style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 3 }}>📋 Type</label>
+            <select style={{ padding: '6px 10px', borderRadius: 8, border: '1.5px solid var(--border)', fontSize: '0.83rem', background: 'var(--bg)', minWidth: 120 }} value={fType} onChange={(e) => setFType(e.target.value)}>
+              <option value="">— Tous —</option>
+              <option value="avarie">Avarie</option>
+              <option value="dechet">Déchet</option>
+            </select>
           </div>
         </div>
-        {/* Actions footer */}
-        <div style={{ paddingTop: 16, borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
-          <button
-            onClick={loadPertes}
-            disabled={loading || !laboId}
-            style={{ background: 'linear-gradient(135deg, #991b1b 0%, #dc2626 100%)', boxShadow: '0 4px 14px rgba(185,28,28,0.35)', borderRadius: 10, border: 'none', color: '#fff', fontWeight: 800, padding: '10px 26px', minWidth: 140, cursor: 'pointer', opacity: loading ? 0.6 : 1 }}
-          >
+
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
+          <button className="btn btn-ghost btn-sm" onClick={resetFilters}>✕ Réinitialiser</button>
+          <button onClick={loadPertes} disabled={loading || !laboId}
+            style={{ background: 'linear-gradient(135deg, #991b1b 0%, #dc2626 100%)', boxShadow: '0 4px 14px rgba(185,28,28,0.35)', borderRadius: 10, border: 'none', color: '#fff', fontWeight: 800, padding: '9px 22px', minWidth: 130, cursor: 'pointer', opacity: loading ? 0.6 : 1 }}>
             {loading ? 'Chargement…' : '🔍 Rechercher'}
           </button>
-          <button
-            onClick={handleExport}
-            disabled={exporting || !searched || entries.length === 0}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 8, minWidth: 180,
-              background: (searched && entries.length > 0) ? 'linear-gradient(135deg, #16a34a, #22c55e)' : '#e5e7eb',
-              boxShadow: (searched && entries.length > 0) ? '0 4px 14px rgba(22,163,74,0.35)' : 'none',
-              borderRadius: 10, border: 'none',
-              color: (searched && entries.length > 0) ? '#fff' : 'var(--text-muted)',
-              fontWeight: 800, padding: '10px 20px',
-              cursor: (!searched || entries.length === 0) ? 'not-allowed' : 'pointer',
-              opacity: (!searched || entries.length === 0) ? 0.55 : 1, transition: 'all 0.15s',
-            }}
-          >
+          <button onClick={handleExport} disabled={exporting || !searched || entries.length === 0}
+            style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 170, background: (searched && entries.length > 0) ? 'linear-gradient(135deg, #16a34a, #22c55e)' : '#e5e7eb', boxShadow: (searched && entries.length > 0) ? '0 4px 14px rgba(22,163,74,0.35)' : 'none', borderRadius: 10, border: 'none', color: (searched && entries.length > 0) ? '#fff' : 'var(--text-muted)', fontWeight: 800, padding: '9px 18px', cursor: (!searched || entries.length === 0) ? 'not-allowed' : 'pointer', opacity: (!searched || entries.length === 0) ? 0.55 : 1, transition: 'all 0.15s' }}>
             <span>📊</span>
             {selected.size > 0 ? `Générer Excel (${selected.size} sél.)` : 'Générer Hist. Pertes'}
           </button>

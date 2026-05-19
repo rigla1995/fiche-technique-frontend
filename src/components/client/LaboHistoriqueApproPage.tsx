@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import api from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 import type { Labo } from '../../types';
@@ -212,8 +212,10 @@ export default function LaboHistoriqueApproPage() {
   const isGerant = user?.role === 'gerant';
   const [searchParams] = useSearchParams();
   const laboId = searchParams.get('laboId');
+  const navigate = useNavigate();
 
   const [labo, setLabo] = useState<Labo | null>(null);
+  const [allLabos, setAllLabos] = useState<Labo[]>([]);
   const [fournisseurs, setFournisseurs] = useState<LaboFournisseur[]>([]);
   const [laboIngredients, setLaboIngredients] = useState<LaboIngredient[]>([]);
 
@@ -243,6 +245,10 @@ export default function LaboHistoriqueApproPage() {
     if (selectedIds.size === results.length) setSelectedIds(new Set());
     else setSelectedIds(new Set(results.map((r) => r.id)));
   };
+
+  useEffect(() => {
+    api.get('/api/labo').then(({ data }) => setAllLabos(data)).catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (!laboId) return;
@@ -348,126 +354,93 @@ export default function LaboHistoriqueApproPage() {
             </h1>
           </div>
           <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.85rem', margin: 0 }}>
-            {`Labo — consultation et export des approvisionnements ${currentYear}`}
+            Labo — consultation et export des approvisionnements
           </p>
         </div>
       </div>
 
+      {/* ── Labo selector ─────────────────────────────────────────────────── */}
+      {allLabos.length > 0 && (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16, alignItems: 'center' }}>
+          {allLabos.map((l) => (
+            <button key={l.id} onClick={() => navigate(`/client/labo/historique-appro?laboId=${l.id}`)}
+              style={{
+                padding: '6px 14px', borderRadius: 20, border: '2px solid #7e22ce', fontWeight: 700,
+                fontSize: '0.82rem', cursor: 'pointer', transition: 'all 0.15s',
+                background: laboId === String(l.id) ? '#7e22ce' : 'var(--bg)',
+                color: laboId === String(l.id) ? '#fff' : '#7e22ce',
+              }}>
+              🏭 {l.nom}
+            </button>
+          ))}
+          <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginLeft: 4 }}>← sélectionner le labo</span>
+        </div>
+      )}
+
       {/* ── Filter/toolbar bar ─────────────────────────────────────────────── */}
       <div style={{
-        background: 'var(--surface)', borderRadius: 14, padding: '16px 20px',
+        background: 'var(--surface)', borderRadius: 14, padding: '14px 18px',
         border: '1px solid var(--border)', boxShadow: '0 2px 12px rgba(0,0,0,0.05)',
         marginBottom: 24,
       }}>
-        {/* Panel header */}
-        <div style={{ width: '100%', marginBottom: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: 12, borderBottom: '1px solid var(--border)' }}>
-          <span style={{ fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#7e22ce' }}>Filtres</span>
-        </div>
-
-        {/* Section 1: Produit */}
-        <div style={{ marginBottom: 16 }}>
-          <div style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span style={{ width: 16, height: 2, background: 'var(--primary)', display: 'inline-block', borderRadius: 2 }} />
-            Produit
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'flex-end', marginBottom: 12 }}>
+          <div>
+            <label style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 3 }}>🏷️ Catégorie</label>
+            <select style={{ padding: '6px 10px', borderRadius: 8, border: '1.5px solid var(--border)', fontSize: '0.83rem', background: 'var(--bg)', minWidth: 130 }} value={filterCategorieId}
+              onChange={(e) => { setFilterCategorieId(e.target.value); setFilterIngredientId(''); }}>
+              <option value="">— Toutes —</option>
+              {categories.map((c) => <option key={c.id} value={c.id}>{c.nom}</option>)}
+            </select>
           </div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14, alignItems: 'flex-end' }}>
+          <div>
+            <label style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 3 }}>🧂 Ingrédient</label>
+            <select style={{ padding: '6px 10px', borderRadius: 8, border: '1.5px solid var(--border)', fontSize: '0.83rem', background: 'var(--bg)', minWidth: 130 }} value={filterIngredientId}
+              disabled={!filterCategorieId} onChange={(e) => setFilterIngredientId(e.target.value)}>
+              <option value="">— Tous —</option>
+              {ingredientsInCat.map((i) => <option key={i.id} value={i.id}>{i.nom}</option>)}
+            </select>
+          </div>
+          <div>
+            <label style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 3 }}>📅 Du</label>
+            <input type="date" style={{ padding: '6px 10px', borderRadius: 8, border: '1.5px solid var(--border)', fontSize: '0.83rem', background: 'var(--bg)', minWidth: 130, fontWeight: 600 }}
+              value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+          </div>
+          <div>
+            <label style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 3 }}>📅 Au</label>
+            <input type="date" style={{ padding: '6px 10px', borderRadius: 8, border: '1.5px solid var(--border)', fontSize: '0.83rem', background: 'var(--bg)', minWidth: 130, fontWeight: 600 }}
+              value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+          </div>
+          {fournisseurs.length > 0 && (
             <div>
-              <label style={{ fontSize: '0.68rem', fontWeight: 800, color: '#7e22ce', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>🏷️ Catégorie</label>
-              <select style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid #7e22ce', fontSize: '0.88rem', background: '#faf5ff', minWidth: 160 }} value={filterCategorieId}
-                onChange={(e) => { setFilterCategorieId(e.target.value); setFilterIngredientId(''); }}>
-                <option value="">— Toutes —</option>
-                {categories.map((c) => <option key={c.id} value={c.id}>{c.nom}</option>)}
-              </select>
-            </div>
-            <div>
-              <label style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>🧂 Ingrédient</label>
-              <select style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid var(--border)', fontSize: '0.88rem', background: 'var(--background)', minWidth: 160 }} value={filterIngredientId}
-                disabled={!filterCategorieId}
-                onChange={(e) => setFilterIngredientId(e.target.value)}>
+              <label style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 3 }}>🚚 Fournisseur</label>
+              <select style={{ padding: '6px 10px', borderRadius: 8, border: '1.5px solid var(--border)', fontSize: '0.83rem', background: 'var(--bg)', minWidth: 130 }} value={filterFournisseurId}
+                onChange={(e) => setFilterFournisseurId(e.target.value)}>
                 <option value="">— Tous —</option>
-                {ingredientsInCat.map((i) => <option key={i.id} value={i.id}>{i.nom}</option>)}
+                {fournisseurs.map((f) => <option key={f.id} value={f.id}>{f.nom}</option>)}
               </select>
             </div>
+          )}
+          <div>
+            <label style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 3 }}>🧾 Réf.</label>
+            <input type="text" style={{ padding: '6px 10px', borderRadius: 8, border: '1.5px solid var(--border)', fontSize: '0.83rem', background: 'var(--bg)', minWidth: 120 }}
+              placeholder="Rechercher réf…" value={filterRefFacture} onChange={(e) => setFilterRefFacture(e.target.value)} />
           </div>
         </div>
 
-        {/* Divider */}
-        <div style={{ marginBottom: 16, borderTop: '1px dashed var(--border)' }} />
-
-        {/* Section 2: Période & Fournisseur */}
-        <div style={{ marginBottom: 16 }}>
-          <div style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span style={{ width: 16, height: 2, background: '#7c3aed', display: 'inline-block', borderRadius: 2 }} />
-            Période &amp; Fournisseur
-          </div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14, alignItems: 'flex-end' }}>
-            <div>
-              <label style={{ fontSize: '0.68rem', fontWeight: 800, color: '#7e22ce', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>📅 Date début</label>
-              <input type="date" style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid #7e22ce', fontSize: '0.88rem', background: '#faf5ff', minWidth: 160, fontWeight: 600 }} min={yearStart} max={yearEnd}
-                value={startDate} onChange={(e) => setStartDate(e.target.value)} />
-            </div>
-            <div>
-              <label style={{ fontSize: '0.68rem', fontWeight: 800, color: '#7e22ce', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>📅 Date fin</label>
-              <input type="date" style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid #7e22ce', fontSize: '0.88rem', background: '#faf5ff', minWidth: 160, fontWeight: 600 }} min={yearStart} max={yearEnd}
-                value={endDate} onChange={(e) => setEndDate(e.target.value)} />
-            </div>
-            {fournisseurs.length > 0 && (
-              <div>
-                <label style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>🚚 Fournisseur</label>
-                <select style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid var(--border)', fontSize: '0.88rem', background: 'var(--background)', minWidth: 160 }} value={filterFournisseurId}
-                  onChange={(e) => setFilterFournisseurId(e.target.value)}>
-                  <option value="">— Tous —</option>
-                  {fournisseurs.map((f) => <option key={f.id} value={f.id}>{f.nom}</option>)}
-                </select>
-              </div>
-            )}
-            <div>
-              <label style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>🧾 Réf. Facture</label>
-              <input type="text" style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid var(--border)', fontSize: '0.88rem', background: 'var(--background)', minWidth: 160 }}
-                placeholder="Rechercher réf…"
-                value={filterRefFacture} onChange={(e) => setFilterRefFacture(e.target.value)} />
-            </div>
-          </div>
-        </div>
-
-        {/* Actions footer */}
-        <div style={{ paddingTop: 16, borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
           {hasFilters && (
             <button className="btn btn-ghost btn-sm"
               onClick={() => { setFilterCategorieId(''); setFilterIngredientId(''); setFilterFournisseurId(''); setFilterRefFacture(''); }}>
               ✕ Réinitialiser
             </button>
           )}
-          <button
-            onClick={fetchResults}
-            disabled={loading}
-            style={{
-              background: 'linear-gradient(135deg, #0f766e 0%, #0d9488 100%)',
-              boxShadow: '0 4px 14px rgba(15,118,110,0.35)',
-              borderRadius: 10, border: 'none', color: '#fff', fontWeight: 800,
-              padding: '10px 26px', minWidth: 140,
-              cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.7 : 1,
-            }}
-          >
+          <button onClick={fetchResults} disabled={loading}
+            style={{ background: 'linear-gradient(135deg, #0f766e 0%, #0d9488 100%)', boxShadow: '0 4px 14px rgba(15,118,110,0.35)', borderRadius: 10, border: 'none', color: '#fff', fontWeight: 800, padding: '9px 22px', minWidth: 130, cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.7 : 1 }}>
             {loading ? 'Chargement…' : '🔍 Rechercher'}
           </button>
-          <button
-            onClick={exportExcel}
-            disabled={results.length === 0}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 8,
-              background: results.length > 0 ? 'linear-gradient(135deg, #16a34a, #22c55e)' : 'var(--bg-secondary, #e5e7eb)',
-              boxShadow: results.length > 0 ? '0 4px 14px rgba(22,163,74,0.35)' : 'none',
-              borderRadius: 10, border: 'none',
-              color: results.length > 0 ? '#fff' : 'var(--text-muted)',
-              fontWeight: 800, padding: '10px 20px',
-              cursor: results.length === 0 ? 'not-allowed' : 'pointer',
-              opacity: results.length === 0 ? 0.55 : 1,
-              transition: 'all 0.15s',
-              minWidth: 180,
-            }}
-          >
-            <span style={{ fontSize: '1rem' }}>📊</span>
+          <button onClick={exportExcel} disabled={results.length === 0}
+            style={{ display: 'flex', alignItems: 'center', gap: 8, background: results.length > 0 ? 'linear-gradient(135deg, #16a34a, #22c55e)' : 'var(--bg-secondary, #e5e7eb)', boxShadow: results.length > 0 ? '0 4px 14px rgba(22,163,74,0.35)' : 'none', borderRadius: 10, border: 'none', color: results.length > 0 ? '#fff' : 'var(--text-muted)', fontWeight: 800, padding: '9px 18px', cursor: results.length === 0 ? 'not-allowed' : 'pointer', opacity: results.length === 0 ? 0.55 : 1, transition: 'all 0.15s', minWidth: 170 }}>
+            <span>📊</span>
             {selectedIds.size > 0 ? `Générer (${selectedIds.size} sél.)` : 'Générer Hist. Appro'}
           </button>
         </div>

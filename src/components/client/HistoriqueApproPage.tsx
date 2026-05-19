@@ -220,7 +220,7 @@ export default function HistoriqueApproPage() {
   const isActiviteGerant = isGerant && !!initActiviteId && !laboId;
 
   const [allActivities, setAllActivities] = useState<Activite[]>([]);
-  const [activitesLoading, setActivitesLoading] = useState(false);
+  const [_activitesLoading, setActivitesLoading] = useState(false);
 
   const [selectedActiviteId, setSelectedActiviteId] = useState(initActiviteId);
 
@@ -404,13 +404,7 @@ export default function HistoriqueApproPage() {
   };
 
 
-  const sectionLabelStyle: React.CSSProperties = {
-    fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-muted)',
-    textTransform: 'uppercase', letterSpacing: '0.1em',
-    marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6,
-  };
-
-  const pageTitle = `${t('client.historique_appro.title')} — ${currentYear}`;
+  const pageTitle = t('client.historique_appro.title');
   const contextSubtitle = 'Consultation et export de l\'historique des approvisionnements';
 
   const prixColor = (prix: number | null) => {
@@ -437,129 +431,73 @@ export default function HistoriqueApproPage() {
         </div>
       </div>
 
+      {/* Activité selector pills */}
+      {isEntreprise && !isActiviteGerant && activitiesForDropdown.length > 0 && (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16, padding: '10px 14px', background: 'var(--card-bg)', borderRadius: 10, border: '1px solid var(--border)' }}>
+          <button
+            onClick={() => setSelectedActiviteId('')}
+            style={{ padding: '4px 14px', borderRadius: 20, cursor: 'pointer', fontSize: '0.82rem', border: !selectedActiviteId ? '1.5px solid #1e40af' : '1.5px solid var(--border)', background: !selectedActiviteId ? '#1e40af' : 'var(--bg)', color: !selectedActiviteId ? '#fff' : 'var(--text)', fontWeight: !selectedActiviteId ? 700 : 400 }}
+          >
+            Toutes
+          </button>
+          {activitiesForDropdown.map((a) => (
+            <button key={a.id}
+              onClick={() => setSelectedActiviteId(String(a.id))}
+              style={{ padding: '4px 14px', borderRadius: 20, cursor: 'pointer', fontSize: '0.82rem', border: selectedActiviteId === String(a.id) ? '1.5px solid #1e40af' : '1.5px solid var(--border)', background: selectedActiviteId === String(a.id) ? '#1e40af' : 'var(--bg)', color: selectedActiviteId === String(a.id) ? '#fff' : 'var(--text)', fontWeight: selectedActiviteId === String(a.id) ? 700 : 400 }}
+            >🏪 {a.nom}</button>
+          ))}
+          <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', alignSelf: 'center', marginLeft: 4 }}>← sélectionner l'activité</span>
+        </div>
+      )}
+
       {/* ── Filter/toolbar bar ─────────────────────────────────────────────── */}
       <div style={{
-        background: 'var(--surface)', borderRadius: 14, padding: '16px 20px',
+        background: 'var(--surface)', borderRadius: 14, padding: '12px 16px',
         border: '1px solid var(--border)', boxShadow: '0 2px 12px rgba(0,0,0,0.05)',
         marginBottom: 24,
       }}>
-        {/* Panel header */}
-        <div style={{ width: '100%', marginBottom: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: 12, borderBottom: '1px solid var(--border)' }}>
-          <span style={{ fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#1e40af' }}>
-            Filtres
-          </span>
-        </div>
-
-        {/* Section 1: Entity + Product */}
-        <div style={{ marginBottom: 16 }}>
-          <div style={sectionLabelStyle}>
-            <span style={{ width: 16, height: 2, background: 'var(--primary)', display: 'inline-block', borderRadius: 2 }} />
-            Entité &amp; Produit
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'flex-end' }}>
+          <div>
+            <label style={{ fontSize: '0.62rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 4 }}>🏷️ Catégorie</label>
+            <select style={{ padding: '6px 10px', borderRadius: 7, border: '1.5px solid var(--border)', fontSize: '0.82rem', background: 'var(--background)', minWidth: 140 }}
+              value={selectedCategoryId} onChange={(e) => { setSelectedCategoryId(e.target.value); setSelectedIngredientId(''); }}>
+              <option value="">{t('client.historique_appro.all_categories')}</option>
+              {categories.map((c) => <option key={c.id} value={c.id}>{c.nom}</option>)}
+              {(!isEntreprise || selectedActiviteId) && <option value="pt">Produits Transformés</option>}
+            </select>
           </div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14, alignItems: 'flex-end' }}>
-            {isEntreprise && activitesLoading ? (
-              <div style={{ display: 'flex', alignItems: 'flex-end', paddingBottom: 8 }}>
-                <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>{t('common.loading')}</span>
-              </div>
-            ) : isEntreprise && !isActiviteGerant && activitiesForDropdown.length > 0 ? (
-              <div>
-                <label style={{ fontSize: '0.68rem', fontWeight: 800, color: '#1e40af', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>🏪 {t('client.historique_appro.activity')}</label>
-                <select
-                  style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid #1e40af', fontSize: '0.88rem', background: '#eff6ff', minWidth: 160 }}
-                  value={selectedActiviteId}
-                  onChange={(e) => setSelectedActiviteId(e.target.value)}
-                >
-                  <option value="">— Toutes les activités —</option>
-                  {activitiesForDropdown.map((a) => <option key={a.id} value={a.id}>{a.nom}</option>)}
-                </select>
-              </div>
-            ) : null}
-
+          <div>
+            <label style={{ fontSize: '0.62rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 4 }}>🧂 Ingrédient</label>
+            <select style={{ padding: '6px 10px', borderRadius: 7, border: '1.5px solid var(--border)', fontSize: '0.82rem', background: 'var(--background)', minWidth: 140 }}
+              value={selectedIngredientId} onChange={(e) => setSelectedIngredientId(e.target.value)} disabled={!selectedCategoryId}>
+              <option value="">{t('client.historique_appro.all_ingredients')}</option>
+              {selectedCategoryId === 'pt' ? ptProducts.map((p) => <option key={p.id} value={p.id}>{p.nom}</option>) : ingredientsInCat.map((i) => <option key={i.id} value={i.id}>{i.nom}</option>)}
+            </select>
+          </div>
+          <div>
+            <label style={{ fontSize: '0.62rem', fontWeight: 700, color: '#1e40af', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 4 }}>📅 Du</label>
+            <input type="date" style={{ padding: '6px 10px', borderRadius: 7, border: '1.5px solid #1e40af', fontSize: '0.82rem', background: '#eff6ff', fontWeight: 600 }}
+              value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+          </div>
+          <div>
+            <label style={{ fontSize: '0.62rem', fontWeight: 700, color: '#1e40af', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 4 }}>📅 Au</label>
+            <input type="date" style={{ padding: '6px 10px', borderRadius: 7, border: '1.5px solid #1e40af', fontSize: '0.82rem', background: '#eff6ff', fontWeight: 600 }}
+              value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+          </div>
+          {fournisseurs.length > 0 && (
             <div>
-              <label style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>🏷️ {t('client.historique_appro.category')}</label>
-              <select
-                style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid var(--border)', fontSize: '0.88rem', background: 'var(--background)', minWidth: 160 }}
-                value={selectedCategoryId}
-                onChange={(e) => { setSelectedCategoryId(e.target.value); setSelectedIngredientId(''); }}
-              >
-                <option value="">{t('client.historique_appro.all_categories')}</option>
-                {categories.map((c) => <option key={c.id} value={c.id}>{c.nom}</option>)}
-                {(!isEntreprise || selectedActiviteId) && <option value="pt">Produits Transformés</option>}
+              <label style={{ fontSize: '0.62rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 4 }}>🚚 Fournisseur</label>
+              <select style={{ padding: '6px 10px', borderRadius: 7, border: '1.5px solid var(--border)', fontSize: '0.82rem', background: 'var(--background)', minWidth: 140 }}
+                value={selectedFournisseurId} onChange={(e) => setSelectedFournisseurId(e.target.value)}>
+                <option value="">— Tous —</option>
+                {fournisseurs.map((f) => <option key={f.id} value={f.id}>{f.nom}</option>)}
               </select>
             </div>
-
-            <div>
-              <label style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>🧂 {t('client.historique_appro.ingredient')}</label>
-              <select
-                style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid var(--border)', fontSize: '0.88rem', background: 'var(--background)', minWidth: 160 }}
-                value={selectedIngredientId}
-                onChange={(e) => setSelectedIngredientId(e.target.value)}
-                disabled={!selectedCategoryId}
-              >
-                <option value="">{t('client.historique_appro.all_ingredients')}</option>
-                {selectedCategoryId === 'pt'
-                  ? ptProducts.map((p) => <option key={p.id} value={p.id}>{p.nom}</option>)
-                  : ingredientsInCat.map((i) => <option key={i.id} value={i.id}>{i.nom}</option>)}
-              </select>
-            </div>
-          </div>
-        </div>
-
-        {/* Divider */}
-        <div style={{ marginBottom: 16, borderTop: '1px dashed var(--border)' }} />
-
-        {/* Section 2: Period + Supplier */}
-        <div style={{ marginBottom: 16 }}>
-          <div style={sectionLabelStyle}>
-            <span style={{ width: 16, height: 2, background: '#7c3aed', display: 'inline-block', borderRadius: 2 }} />
-            Période &amp; Fournisseur
-          </div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14, alignItems: 'flex-end' }}>
-            <div>
-              <label style={{ fontSize: '0.68rem', fontWeight: 800, color: '#1e40af', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>📅 {t('client.historique_appro.start_date')}</label>
-              <input
-                type="date"
-                style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid #1e40af', fontSize: '0.88rem', background: '#eff6ff', minWidth: 160, fontWeight: 600 }}
-                min={yearStart}
-                max={yearEnd}
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-              />
-            </div>
-            <div>
-              <label style={{ fontSize: '0.68rem', fontWeight: 800, color: '#1e40af', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>📅 {t('client.historique_appro.end_date')}</label>
-              <input
-                type="date"
-                style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid #1e40af', fontSize: '0.88rem', background: '#eff6ff', minWidth: 160, fontWeight: 600 }}
-                min={yearStart}
-                max={yearEnd}
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-              />
-            </div>
-            {fournisseurs.length > 0 && (
-              <div>
-                <label style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>🚚 Fournisseur</label>
-                <select
-                  style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid var(--border)', fontSize: '0.88rem', background: 'var(--background)', minWidth: 160 }}
-                  value={selectedFournisseurId}
-                  onChange={(e) => setSelectedFournisseurId(e.target.value)}
-                >
-                  <option value="">— Tous —</option>
-                  {fournisseurs.map((f) => <option key={f.id} value={f.id}>{f.nom}</option>)}
-                </select>
-              </div>
-            )}
-            <div>
-              <label style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>🧾 Réf. Facture</label>
-              <input
-                type="text"
-                style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid var(--border)', fontSize: '0.88rem', background: 'var(--background)', minWidth: 160 }}
-                placeholder="Rechercher réf…"
-                value={refFactureFilter}
-                onChange={(e) => setRefFactureFilter(e.target.value)}
-              />
-            </div>
+          )}
+          <div>
+            <label style={{ fontSize: '0.62rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 4 }}>🧾 Réf. Facture</label>
+            <input type="text" style={{ padding: '6px 10px', borderRadius: 7, border: '1.5px solid var(--border)', fontSize: '0.82rem', background: 'var(--background)', minWidth: 130 }}
+              placeholder="Réf…" value={refFactureFilter} onChange={(e) => setRefFactureFilter(e.target.value)} />
           </div>
         </div>
 
