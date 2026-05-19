@@ -465,11 +465,6 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                   {openSections.has('activites') && (
                     <>
                       <li>
-                        <NavLink to="/client/ingredients-activite" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>
-                          <span className="link-icon">🛒</span><span className="link-label">Catalogue Vente</span>
-                        </NavLink>
-                      </li>
-                      <li>
                         <NavLink to="/client/stock?section=activite" className={({ isActive }) => `sidebar-link ${isActive && currentSection === 'activite' ? 'active' : ''}`} onClick={onClose}>
                           <span className="link-icon">📦</span><span className="link-label">Stock Activités</span>
                         </NavLink>
@@ -494,47 +489,44 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                           <span className="link-icon">📊</span><span className="link-label">Historique Inventaire</span>
                         </Link>
                       </li>
-                      <li>
-                        <NavLink to="/client/ventes" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>
-                          <span className="link-icon">🛒</span><span className="link-label">Ventes</span>
-                        </NavLink>
-                      </li>
                     </>
                   )}
                   </>
                   )}
 
-                  {/* ══ ESPACE LABO(S) ══ — shown when labos exist */}
+                  {/* ══ ESPACE LABO ══ — shown when labos exist */}
                   {!isOnboarding && labos.length > 0 && (
                     <>
                       <Divider />
-                      {labos.map((labo) => {
-                        const laboParam = `laboId=${labo.id}`;
-                        const currentTab = new URLSearchParams(location.search).get('tab');
-                        const isLaboStock = location.pathname === '/client/labo/stock' && location.search.includes(laboParam) && currentTab !== 'ingredients';
-                        const isLaboTransfer = location.pathname === '/client/labo/transfer' && location.search.includes(laboParam);
-                        const isLaboHistorique = location.pathname === '/client/labo/historique-transferts' && location.search.includes(laboParam);
-                        const isLaboHistoriqueAppro = location.pathname === '/client/labo/historique-appro' && location.search.includes(laboParam);
-                        const isLaboHistoriquePertes = location.pathname === '/client/labo/historique-pertes' && location.search.includes(laboParam);
-                        const isLaboInventaire = location.pathname === '/client/labo/inventaire' && location.search.includes(laboParam);
-                        return (
-                          <React.Fragment key={labo.id}>
-                            <CollapsibleHeader label={`Espace ${labo.nom}`} icon="🏭" isOpen={openSections.has(`labo-${labo.id}`)} locked={!hasLaboIngredients} onToggle={() => toggleSection(`labo-${labo.id}`)} />
-                            {openSections.has(`labo-${labo.id}`) && (
-                              <>
-                                <li><Link to={`/client/labo/stock?laboId=${labo.id}`} className={`sidebar-link ${isLaboStock ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📦</span><span className="link-label">Stock {labo.nom}</span></Link></li>
-                                <li><Link to={`/client/labo/historique-appro?laboId=${labo.id}`} className={`sidebar-link ${isLaboHistoriqueAppro ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📋</span><span className="link-label">Historique Appro</span></Link></li>
-                                <li><Link to={`/client/labo/historique-pertes?laboId=${labo.id}`} className={`sidebar-link ${isLaboHistoriquePertes ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📉</span><span className="link-label">Historique Pertes</span></Link></li>
-                                <li><Link to={`/client/labo/transfer?laboId=${labo.id}`} className={`sidebar-link ${isLaboTransfer ? 'active' : ''}`} onClick={onClose}><span className="link-icon">↗</span><span className="link-label">Transferts {labo.nom}</span></Link></li>
-                                <li><Link to={`/client/labo/historique-transferts?laboId=${labo.id}`} className={`sidebar-link ${isLaboHistorique ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📋</span><span className="link-label">Historiques Transferts</span></Link></li>
-                                <li><Link to={`/client/labo/inventaire?laboId=${labo.id}`} className={`sidebar-link ${isLaboInventaire ? 'active' : ''}`} onClick={onClose}><span className="link-icon">🔢</span><span className="link-label">Inventaire</span></Link></li>
-                                <li><Link to={`/client/labo/inventaire/historique?laboId=${labo.id}`} className={`sidebar-link ${location.pathname === '/client/labo/inventaire/historique' && location.search.includes(`laboId=${labo.id}`) ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📊</span><span className="link-label">Historique Inventaire</span></Link></li>
-                                <li><Link to={`/client/labo/ventes?laboId=${labo.id}`} className={`sidebar-link ${location.pathname === '/client/labo/ventes' && location.search.includes(`laboId=${labo.id}`) ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📤</span><span className="link-label">Ventes {labo.nom}</span></Link></li>
-                              </>
-                            )}
-                          </React.Fragment>
-                        );
-                      })}
+                      <CollapsibleHeader label="Espace Labo" icon="🏭" isOpen={openSections.has('labo')} locked={!hasLaboIngredients} onToggle={() => toggleSection('labo')} />
+                      {openSections.has('labo') && (
+                        <>
+                          <li><NavLink to="/client/labo/stock" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📦</span><span className="link-label">Stock Labo</span></NavLink></li>
+                          <li><NavLink to="/client/labo/historique-appro" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📋</span><span className="link-label">Historique Appro</span></NavLink></li>
+                          <li><NavLink to="/client/labo/historique-pertes" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📉</span><span className="link-label">Historique Pertes</span></NavLink></li>
+                          <li><NavLink to="/client/labo/transfer" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}><span className="link-icon">↗</span><span className="link-label">Transferts</span></NavLink></li>
+                          <li><NavLink to="/client/labo/historique-transferts" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📋</span><span className="link-label">Historique Transferts</span></NavLink></li>
+                          <li><NavLink to="/client/labo/inventaire" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}><span className="link-icon">🔢</span><span className="link-label">Inventaire</span></NavLink></li>
+                          <li><NavLink to="/client/labo/inventaire/historique" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📊</span><span className="link-label">Historique Inventaire</span></NavLink></li>
+                        </>
+                      )}
+                    </>
+                  )}
+
+                  {/* ══ ESPACE VENTE ══ */}
+                  {!isOnboarding && hasActiviteIngredients && (
+                    <>
+                      <Divider />
+                      <CollapsibleHeader label="Espace Vente" icon="🛒" isOpen={openSections.has('vente')} locked={false} onToggle={() => toggleSection('vente')} />
+                      {openSections.has('vente') && (
+                        <>
+                          <li><NavLink to="/client/ingredients-activite" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}><span className="link-icon">🏷️</span><span className="link-label">Catalogue Vente</span></NavLink></li>
+                          <li><NavLink to="/client/ventes" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}><span className="link-icon">💰</span><span className="link-label">Ventes Activités</span></NavLink></li>
+                          {labos.length > 0 && (
+                            <li><NavLink to="/client/labo/ventes" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📤</span><span className="link-label">Ventes Labo</span></NavLink></li>
+                          )}
+                        </>
+                      )}
                     </>
                   )}
 
