@@ -498,30 +498,31 @@ export default function StockLaboPage() {
         )}
       </div>
 
+      {/* Labo selector row — always visible */}
+      {allLabos.length > 0 && (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16, padding: '10px 14px', background: 'var(--card-bg)', borderRadius: 10, border: '1px solid var(--border)' }}>
+          {allLabos.map((l) => (
+            <button
+              key={l.id}
+              onClick={() => navigate(`/client/labo/stock?laboId=${l.id}`)}
+              style={{
+                padding: '4px 14px', borderRadius: 20, cursor: 'pointer', fontSize: '0.82rem',
+                border: laboId === String(l.id) ? '1.5px solid #7e22ce' : '1.5px solid var(--border)',
+                background: laboId === String(l.id) ? '#7e22ce' : 'var(--bg)',
+                color: laboId === String(l.id) ? '#fff' : 'var(--text)',
+                fontWeight: laboId === String(l.id) ? 700 : 400,
+              }}
+            >
+              🏭 {l.nom}
+            </button>
+          ))}
+          <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', alignSelf: 'center', marginLeft: 4 }}>← sélectionner le labo</span>
+        </div>
+      )}
+
       {/* ══ STOCK TAB ══ */}
       {tab === 'stock' && (
         <>
-          {/* Labo selector row */}
-          {allLabos.length > 1 && (
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16, padding: '10px 14px', background: 'var(--card-bg)', borderRadius: 10, border: '1px solid var(--border)' }}>
-              {allLabos.map((l) => (
-                <button
-                  key={l.id}
-                  onClick={() => navigate(`/client/labo/stock?laboId=${l.id}`)}
-                  style={{
-                    padding: '4px 14px', borderRadius: 20, cursor: 'pointer', fontSize: '0.82rem',
-                    border: laboId === String(l.id) ? '1.5px solid #7e22ce' : '1.5px solid var(--border)',
-                    background: laboId === String(l.id) ? '#7e22ce' : 'var(--bg)',
-                    color: laboId === String(l.id) ? '#fff' : 'var(--text)',
-                    fontWeight: laboId === String(l.id) ? 700 : 400,
-                  }}
-                >
-                  🏭 {l.nom}
-                </button>
-              ))}
-              <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', alignSelf: 'center', marginLeft: 4 }}>← cliquer pour les détails</span>
-            </div>
-          )}
 
 
           {/* Filter panel — compact single-row layout */}

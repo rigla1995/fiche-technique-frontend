@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { useSearchParams, Link } from 'react-router-dom';
+import { useSearchParams, Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
 
@@ -54,7 +54,9 @@ type TransferQtys = Record<number, Record<number, string>>;
 export default function TransferPage() {
   const { t } = useTranslation();
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const laboId = searchParams.get('laboId') || '';
+  const [allLabos, setAllLabos] = useState<{ id: number; nom: string }[]>([]);
 
   const [labo, setLabo] = useState<{ nom: string; activites: Activite[] } | null>(null);
   const [stock, setStock] = useState<LaboStockRow[]>([]);
@@ -156,6 +158,7 @@ export default function TransferPage() {
   }, [laboId]);
 
   useEffect(() => { load(); }, [load]);
+  useEffect(() => { api.get('/api/labo').then(({ data }) => setAllLabos(data)).catch(() => {}); }, []);
 
   const setQty = (ingredientId: number, activiteId: number, value: string) => {
     setQtys((prev) => ({
@@ -398,15 +401,9 @@ export default function TransferPage() {
               {labo ? labo.nom : t('common.loading')} — {t('client.labo.transfer_title')}
             </h1>
           </div>
-          {activites.length > 0 && (
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 4 }}>
-              {activites.map((a) => (
-                <span key={a.id} style={{ background: 'rgba(255,255,255,0.18)', color: '#fff', borderRadius: 20, padding: '2px 10px', fontSize: '0.78rem', fontWeight: 600, border: '1px solid rgba(255,255,255,0.3)' }}>
-                  🏪 {a.nom}
-                </span>
-              ))}
-            </div>
-          )}
+          <span style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.82rem' }}>
+            Transférez les ingrédients du labo vers vos activités
+          </span>
         </div>
         <div style={{ display: 'flex', gap: 10 }}>
           <Link to={`/client/labo/stock?laboId=${laboId}`} className="btn btn-ghost btn-sm"
@@ -425,6 +422,28 @@ export default function TransferPage() {
           )}
         </div>
       </div>
+
+      {/* Labo selector row */}
+      {allLabos.length > 0 && (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16, padding: '10px 14px', background: 'var(--card-bg)', borderRadius: 10, border: '1px solid var(--border)' }}>
+          {allLabos.map((l) => (
+            <button
+              key={l.id}
+              onClick={() => navigate(`/client/labo/transfer?laboId=${l.id}`)}
+              style={{
+                padding: '4px 14px', borderRadius: 20, cursor: 'pointer', fontSize: '0.82rem',
+                border: laboId === String(l.id) ? '1.5px solid #7e22ce' : '1.5px solid var(--border)',
+                background: laboId === String(l.id) ? '#7e22ce' : 'var(--bg)',
+                color: laboId === String(l.id) ? '#fff' : 'var(--text)',
+                fontWeight: laboId === String(l.id) ? 700 : 400,
+              }}
+            >
+              🏭 {l.nom}
+            </button>
+          ))}
+          <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', alignSelf: 'center', marginLeft: 4 }}>← sélectionner le labo</span>
+        </div>
+      )}
 
       {successMsg && <div style={{ background: 'var(--success, #10b981)', color: '#fff', borderRadius: 10, padding: '10px 18px', marginBottom: 16, fontWeight: 600 }}>✓ {successMsg}</div>}
       {errorMsg && <div style={{ background: 'var(--danger, #ef4444)', color: '#fff', borderRadius: 10, padding: '10px 18px', marginBottom: 16, fontWeight: 600 }}>⚠ {errorMsg}</div>}
@@ -458,6 +477,14 @@ export default function TransferPage() {
         <div style={{ background: 'var(--surface)', borderRadius: 10, padding: '10px 14px', marginBottom: 20, border: '1px solid var(--border)', boxShadow: '0 1px 6px rgba(0,0,0,0.04)' }}>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'flex-end' }}>
             <div>
+              <label style={{ fontSize: '0.62rem', fontWeight: 700, color: '#7e22ce', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 3 }}>🏪 Activité</label>
+              <select style={{ padding: '6px 10px', borderRadius: 7, border: '1.5px solid #7e22ce', fontSize: '0.82rem', background: '#faf5ff', minWidth: 150 }} value={filterActiviteId}
+                onChange={(e) => setFilterActiviteId(e.target.value === '' ? '' : Number(e.target.value))}>
+                <option value="">— Toutes —</option>
+                {activites.map((a) => <option key={a.id} value={a.id}>{a.nom}</option>)}
+              </select>
+            </div>
+            <div>
               <label style={{ fontSize: '0.62rem', fontWeight: 700, color: '#7e22ce', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 3 }}>🏷️ Catégorie</label>
               <select style={{ padding: '6px 10px', borderRadius: 7, border: '1.5px solid #7e22ce', fontSize: '0.82rem', background: '#faf5ff', minWidth: 150 }} value={filterCategorie} onChange={(e) => { setFilterCategorie(e.target.value); setFilterIngredientId(''); }}>
                 <option value="">{t('client.catalogue_franchise.all_categories')}</option>
@@ -476,14 +503,6 @@ export default function TransferPage() {
               <label style={{ fontSize: '0.62rem', fontWeight: 700, color: '#7e22ce', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 3 }}>🔍 Nom</label>
               <input type="text" style={{ padding: '6px 10px', borderRadius: 7, border: '1.5px solid #7e22ce', fontSize: '0.82rem', background: '#faf5ff', minWidth: 150 }} placeholder="Rechercher…"
                 value={filterNom} onChange={(e) => setFilterNom(e.target.value)} />
-            </div>
-            <div>
-              <label style={{ fontSize: '0.62rem', fontWeight: 700, color: '#7e22ce', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 3 }}>🏪 Activité</label>
-              <select style={{ padding: '6px 10px', borderRadius: 7, border: '1.5px solid #7e22ce', fontSize: '0.82rem', background: '#faf5ff', minWidth: 150 }} value={filterActiviteId}
-                onChange={(e) => setFilterActiviteId(e.target.value === '' ? '' : Number(e.target.value))}>
-                <option value="">— Toutes —</option>
-                {activites.map((a) => <option key={a.id} value={a.id}>{a.nom}</option>)}
-              </select>
             </div>
             {(filterCategorie || filterIngredientId !== '' || filterNom || filterActiviteId !== '') && (
               <button className="btn btn-ghost btn-sm" style={{ fontSize: '0.72rem', alignSelf: 'flex-end', marginLeft: 'auto' }} onClick={() => { setFilterCategorie(''); setFilterIngredientId(''); setFilterNom(''); setFilterActiviteId(''); }}>✕ Réinitialiser</button>

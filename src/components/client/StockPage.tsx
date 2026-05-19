@@ -1236,7 +1236,7 @@ function ActivityStockSection({ label: _label, activities, initialActiviteId, on
               🏪 {a.nom}
             </button>
           ))}
-          <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', alignSelf: 'center', marginLeft: 4 }}>← cliquer pour les détails</span>
+          <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', alignSelf: 'center', marginLeft: 4 }}>← sélectionner l'activité</span>
         </div>
       )}
 
