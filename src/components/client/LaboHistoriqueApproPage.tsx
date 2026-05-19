@@ -241,10 +241,6 @@ export default function LaboHistoriqueApproPage() {
     if (next.has(id)) next.delete(id); else next.add(id);
     return next;
   });
-  const toggleSelectAll = () => {
-    if (selectedIds.size === results.length) setSelectedIds(new Set());
-    else setSelectedIds(new Set(results.map((r) => r.id)));
-  };
 
   useEffect(() => {
     api.get('/api/labo').then(({ data }) => setAllLabos(data)).catch(() => {});
@@ -295,8 +291,7 @@ export default function LaboHistoriqueApproPage() {
     setLoading(false);
   }, [laboId, startDate, endDate, filterIngredientId, filterCategorieId, filterFournisseurId, filterRefFacture]);
 
-  const exportExcel = async () => {
-    if (!laboId) return;
+  const buildLaboApproParams = () => {
     const params = new URLSearchParams();
     if (startDate) params.set('startDate', startDate);
     if (endDate) params.set('endDate', endDate);
@@ -305,17 +300,32 @@ export default function LaboHistoriqueApproPage() {
     if (filterFournisseurId) params.set('fournisseurId', filterFournisseurId);
     if (filterRefFacture.trim()) params.set('refFacture', filterRefFacture.trim());
     if (selectedIds.size > 0) params.set('selectedIds', [...selectedIds].join(','));
+    return params;
+  };
 
-    const { data } = await api.get(
-      `/api/labo/${laboId}/historique/export-excel?${params}`,
-      { responseType: 'blob' },
-    );
+  const exportExcel = async () => {
+    if (!laboId) return;
+    const params = buildLaboApproParams();
+    const { data } = await api.get(`/api/labo/${laboId}/historique/export-excel?${params}`, { responseType: 'blob' });
     const url = URL.createObjectURL(new Blob([data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
-    const a = document.createElement('a');
-    a.href = url;
+    const a = document.createElement('a'); a.href = url;
     a.download = `historique-labo-${labo?.nom ?? 'appro'}-${new Date().toISOString().slice(0, 10)}.xlsx`;
-    a.click();
-    URL.revokeObjectURL(url);
+    a.click(); URL.revokeObjectURL(url);
+  };
+
+  const [exportingPdf, setExportingPdf] = useState(false);
+  const exportPdf = async () => {
+    if (!laboId) return;
+    setExportingPdf(true);
+    try {
+      const params = buildLaboApproParams();
+      const { data } = await api.get(`/api/labo/${laboId}/historique/export-pdf?${params}`, { responseType: 'blob' });
+      const url = URL.createObjectURL(new Blob([data], { type: 'application/pdf' }));
+      const a = document.createElement('a'); a.href = url;
+      a.download = `historique-labo-${labo?.nom ?? 'appro'}-${new Date().toISOString().slice(0, 10)}.pdf`;
+      a.click(); URL.revokeObjectURL(url);
+    } catch { /* ignore */ }
+    setExportingPdf(false);
   };
 
   const handleSaved = (id: number, updated: Partial<HistEntry>) => {
@@ -385,6 +395,16 @@ export default function LaboHistoriqueApproPage() {
       }}>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'flex-end', marginBottom: 12 }}>
           <div>
+            <label style={{ fontSize: '0.65rem', fontWeight: 800, color: '#7e22ce', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 3 }}>📅 Du</label>
+            <input type="date" style={{ padding: '6px 10px', borderRadius: 8, border: '1.5px solid #7e22ce', fontSize: '0.83rem', background: '#faf5ff', minWidth: 130, fontWeight: 600 }}
+              value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+          </div>
+          <div>
+            <label style={{ fontSize: '0.65rem', fontWeight: 800, color: '#7e22ce', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 3 }}>📅 Au</label>
+            <input type="date" style={{ padding: '6px 10px', borderRadius: 8, border: '1.5px solid #7e22ce', fontSize: '0.83rem', background: '#faf5ff', minWidth: 130, fontWeight: 600 }}
+              value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+          </div>
+          <div>
             <label style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 3 }}>🏷️ Catégorie</label>
             <select style={{ padding: '6px 10px', borderRadius: 8, border: '1.5px solid var(--border)', fontSize: '0.83rem', background: 'var(--bg)', minWidth: 130 }} value={filterCategorieId}
               onChange={(e) => { setFilterCategorieId(e.target.value); setFilterIngredientId(''); }}>
@@ -400,20 +420,10 @@ export default function LaboHistoriqueApproPage() {
               {ingredientsInCat.map((i) => <option key={i.id} value={i.id}>{i.nom}</option>)}
             </select>
           </div>
-          <div>
-            <label style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 3 }}>📅 Du</label>
-            <input type="date" style={{ padding: '6px 10px', borderRadius: 8, border: '1.5px solid var(--border)', fontSize: '0.83rem', background: 'var(--bg)', minWidth: 130, fontWeight: 600 }}
-              value={startDate} onChange={(e) => setStartDate(e.target.value)} />
-          </div>
-          <div>
-            <label style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 3 }}>📅 Au</label>
-            <input type="date" style={{ padding: '6px 10px', borderRadius: 8, border: '1.5px solid var(--border)', fontSize: '0.83rem', background: 'var(--bg)', minWidth: 130, fontWeight: 600 }}
-              value={endDate} onChange={(e) => setEndDate(e.target.value)} />
-          </div>
           {fournisseurs.length > 0 && (
             <div>
-              <label style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 3 }}>🚚 Fournisseur</label>
-              <select style={{ padding: '6px 10px', borderRadius: 8, border: '1.5px solid var(--border)', fontSize: '0.83rem', background: 'var(--bg)', minWidth: 130 }} value={filterFournisseurId}
+              <label style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 3 }}>🚚 Fourn.</label>
+              <select style={{ padding: '6px 10px', borderRadius: 8, border: '1.5px solid var(--border)', fontSize: '0.83rem', background: 'var(--bg)', minWidth: 120 }} value={filterFournisseurId}
                 onChange={(e) => setFilterFournisseurId(e.target.value)}>
                 <option value="">— Tous —</option>
                 {fournisseurs.map((f) => <option key={f.id} value={f.id}>{f.nom}</option>)}
@@ -422,26 +432,28 @@ export default function LaboHistoriqueApproPage() {
           )}
           <div>
             <label style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 3 }}>🧾 Réf.</label>
-            <input type="text" style={{ padding: '6px 10px', borderRadius: 8, border: '1.5px solid var(--border)', fontSize: '0.83rem', background: 'var(--bg)', minWidth: 120 }}
+            <input type="text" style={{ padding: '6px 10px', borderRadius: 8, border: '1.5px solid var(--border)', fontSize: '0.83rem', background: 'var(--bg)', minWidth: 110 }}
               placeholder="Rechercher réf…" value={filterRefFacture} onChange={(e) => setFilterRefFacture(e.target.value)} />
           </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, flexWrap: 'wrap' }}>
           {hasFilters && (
-            <button className="btn btn-ghost btn-sm"
-              onClick={() => { setFilterCategorieId(''); setFilterIngredientId(''); setFilterFournisseurId(''); setFilterRefFacture(''); }}>
-              ✕ Réinitialiser
+            <button className="btn btn-ghost btn-sm" onClick={() => { setFilterCategorieId(''); setFilterIngredientId(''); setFilterFournisseurId(''); setFilterRefFacture(''); }}>
+              ✕ Réinit.
             </button>
           )}
           <button onClick={fetchResults} disabled={loading}
-            style={{ background: 'linear-gradient(135deg, #0f766e 0%, #0d9488 100%)', boxShadow: '0 4px 14px rgba(15,118,110,0.35)', borderRadius: 10, border: 'none', color: '#fff', fontWeight: 800, padding: '9px 22px', minWidth: 130, cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.7 : 1 }}>
-            {loading ? 'Chargement…' : '🔍 Rechercher'}
+            style={{ background: 'linear-gradient(135deg, #3b0764 0%, #7e22ce 100%)', boxShadow: '0 4px 14px rgba(126,34,206,0.35)', borderRadius: 9, border: 'none', color: '#fff', fontWeight: 800, padding: '8px 20px', cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.7 : 1, display: 'flex', alignItems: 'center', gap: 6 }}>
+            🔍 {loading ? 'Chargement…' : 'Rechercher'}
           </button>
           <button onClick={exportExcel} disabled={results.length === 0}
-            style={{ display: 'flex', alignItems: 'center', gap: 8, background: results.length > 0 ? 'linear-gradient(135deg, #16a34a, #22c55e)' : 'var(--bg-secondary, #e5e7eb)', boxShadow: results.length > 0 ? '0 4px 14px rgba(22,163,74,0.35)' : 'none', borderRadius: 10, border: 'none', color: results.length > 0 ? '#fff' : 'var(--text-muted)', fontWeight: 800, padding: '9px 18px', cursor: results.length === 0 ? 'not-allowed' : 'pointer', opacity: results.length === 0 ? 0.55 : 1, transition: 'all 0.15s', minWidth: 170 }}>
-            <span>📊</span>
-            {selectedIds.size > 0 ? `Générer (${selectedIds.size} sél.)` : 'Générer Hist. Appro'}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, background: results.length > 0 ? 'linear-gradient(135deg, #3b0764 0%, #7e22ce 100%)' : '#e5e7eb', boxShadow: results.length > 0 ? '0 4px 14px rgba(126,34,206,0.3)' : 'none', borderRadius: 9, border: 'none', color: results.length > 0 ? '#fff' : 'var(--text-muted)', fontWeight: 800, padding: '8px 18px', cursor: results.length === 0 ? 'not-allowed' : 'pointer', opacity: results.length === 0 ? 0.55 : 1, transition: 'all 0.15s' }}>
+            <span>📊</span> Exporter{selectedIds.size > 0 ? ` (${selectedIds.size})` : ''}
+          </button>
+          <button onClick={exportPdf} disabled={exportingPdf || results.length === 0}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, background: results.length > 0 ? 'linear-gradient(135deg, #3b0764 0%, #7e22ce 100%)' : '#e5e7eb', boxShadow: results.length > 0 ? '0 4px 14px rgba(126,34,206,0.3)' : 'none', borderRadius: 9, border: 'none', color: results.length > 0 ? '#fff' : 'var(--text-muted)', fontWeight: 800, padding: '8px 18px', cursor: (exportingPdf || results.length === 0) ? 'not-allowed' : 'pointer', opacity: (exportingPdf || results.length === 0) ? 0.55 : 1, transition: 'all 0.15s' }}>
+            <span>🔴</span> {exportingPdf ? '…' : 'PDF'}
           </button>
         </div>
       </div>
@@ -464,29 +476,21 @@ export default function LaboHistoriqueApproPage() {
           <div className="card" style={{ overflowX: 'auto' }}>
             <table className="table" style={{ tableLayout: 'fixed', width: '100%', minWidth: 820 }}>
               <colgroup>
-                <col style={{ width: '30px' }} />
-                <col style={{ width: '105px' }} />
-                <col style={{ width: '165px' }} />
+                <col style={{ width: '28px' }} />
+                <col style={{ width: '175px' }} />
+                <col style={{ width: '95px' }} />
                 <col style={{ width: '72px' }} />
-                <col style={{ width: '84px' }} />
-                <col style={{ width: '90px' }} />
+                <col style={{ width: '80px' }} />
+                <col style={{ width: '88px' }} />
                 <col style={{ width: '56px' }} />
-                <col style={{ width: '90px' }} />
+                <col style={{ width: '88px' }} />
                 <col style={{ width: '110px' }} />
                 <col style={{ width: '54px' }} />
               </colgroup>
               <thead>
                 <tr style={{ background: 'linear-gradient(135deg, #3b0764, #7e22ce)' }}>
-                  <th style={{ textAlign: 'center', padding: '10px 4px', color: '#fff', background: 'transparent', borderBottom: 'none' }}>
-                    <input
-                      type="checkbox"
-                      checked={results.length > 0 && selectedIds.size === results.length}
-                      onChange={toggleSelectAll}
-                      title="Tout sélectionner"
-                      style={{ cursor: 'pointer', accentColor: '#fff' }}
-                    />
-                  </th>
-                  {(['Date', 'Ingrédient', 'Type'] as const).map((label) => (
+                  <th style={{ width: 28, padding: '10px 4px', color: '#fff', background: 'transparent', borderBottom: 'none' }} />
+                  {(['Ingrédient', 'Date', 'Type'] as const).map((label) => (
                     <th key={label} style={{ fontWeight: 800, fontSize: '0.75rem', letterSpacing: '0.04em', textTransform: 'uppercase', padding: '10px 10px', color: '#fff', background: 'transparent', borderBottom: 'none' }}>{label}</th>
                   ))}
                   {(['Quantité', 'Prix U. HT', 'TVA %', 'Prix U. TTC'] as const).map((label) => (
@@ -510,13 +514,13 @@ export default function LaboHistoriqueApproPage() {
                       />
                     </td>
                     <td style={{ padding: '8px 10px' }}>
+                      <div style={{ fontWeight: 700, fontSize: '0.86rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.ingredientNom}</div>
+                      <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.uniteNom} · {r.categorieNom}</div>
+                    </td>
+                    <td style={{ padding: '8px 10px' }}>
                       <span style={{ background: '#faf5ff', border: '1px solid #d8b4fe', borderRadius: 6, padding: '2px 8px', fontWeight: 700, fontSize: '0.8rem', color: '#7e22ce', display: 'inline-block', whiteSpace: 'nowrap' }}>
                         {fmtDate(r.dateAppro)}
                       </span>
-                    </td>
-                    <td style={{ padding: '8px 10px' }}>
-                      <div style={{ fontWeight: 600, fontSize: '0.86rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.ingredientNom}</div>
-                      <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.categorieNom}</div>
                     </td>
                     <td style={{ padding: '8px 10px' }}>
                       {r.typeAppro === 'manuel' && (
@@ -530,9 +534,8 @@ export default function LaboHistoriqueApproPage() {
                       )}
                       {!r.typeAppro && <span style={{ color: 'var(--text-muted)' }}>—</span>}
                     </td>
-                    <td style={{ textAlign: 'right', fontWeight: 800, color: '#0f766e', padding: '8px 10px', fontSize: '0.85rem' }}>
-                      <div style={{ whiteSpace: 'nowrap' }}>{r.quantite ?? '—'}</div>
-                      <div style={{ color: 'var(--text-muted)', fontSize: '0.7rem', fontWeight: 400 }}>{r.uniteNom}</div>
+                    <td style={{ textAlign: 'right', fontWeight: 800, color: '#0f766e', padding: '8px 10px', fontSize: '0.85rem', whiteSpace: 'nowrap' }}>
+                      {r.quantite ?? '—'}
                     </td>
                     <td style={{ textAlign: 'right', fontWeight: 600, color: r.prixUnitaire ? '#1d4ed8' : 'var(--text-muted)', fontSize: '0.85rem', padding: '8px 10px', whiteSpace: 'nowrap' }}>
                       {r.prixUnitaire !== null ? `${r.prixUnitaire.toFixed(3)} DT` : '—'}

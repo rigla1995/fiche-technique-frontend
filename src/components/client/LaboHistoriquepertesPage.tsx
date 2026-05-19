@@ -46,6 +46,7 @@ export default function LaboHistoriquepertesPage() {
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [exporting, setExporting] = useState(false);
+  const [exportingPdf, setExportingPdf] = useState(false);
 
   const [fCategorie, setFCategorie] = useState('');
   const [fIngredient, setFIngredient] = useState('');
@@ -71,51 +72,66 @@ export default function LaboHistoriquepertesPage() {
       .catch(() => {});
   }, [laboId]);
 
+  const buildParams = () => {
+    const params = new URLSearchParams();
+    if (fDateDebut) params.set('dateDebut', fDateDebut);
+    if (fDateFin) params.set('dateFin', fDateFin);
+    if (fType) params.set('typePerte', fType);
+    if (fCategorie) params.set('categorieId', fCategorie);
+    if (fIngredient) params.set('ingredientId', fIngredient);
+    if (fNom.trim()) params.set('search', fNom.trim());
+    return params;
+  };
+
   const loadPertes = useCallback(async () => {
     if (!laboId) return;
     setLoading(true);
     setSearched(true);
     setSelected(new Set());
     try {
-      const params = new URLSearchParams();
-      if (fDateDebut) params.set('dateDebut', fDateDebut);
-      if (fDateFin) params.set('dateFin', fDateFin);
-      if (fType) params.set('typePerte', fType);
-      if (fCategorie) params.set('categorieId', fCategorie);
-      if (fIngredient) params.set('ingredientId', fIngredient);
-      if (fNom.trim()) params.set('search', fNom.trim());
-      const { data } = await api.get(`/api/labo/${laboId}/pertes/historique?${params}`);
+      const { data } = await api.get(`/api/labo/${laboId}/pertes/historique?${buildParams()}`);
       setEntries(data as LaboPerteEntry[]);
       setPage(1);
     } catch { /* ignore */ }
     setLoading(false);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [laboId, fDateDebut, fDateFin, fType, fCategorie, fIngredient, fNom]);
 
   const handleExport = async () => {
     if (!laboId) return;
     setExporting(true);
     try {
-      const params = new URLSearchParams();
-      if (fDateDebut) params.set('dateDebut', fDateDebut);
-      if (fDateFin) params.set('dateFin', fDateFin);
-      if (fType) params.set('typePerte', fType);
-      if (fCategorie) params.set('categorieId', fCategorie);
-      if (fIngredient) params.set('ingredientId', fIngredient);
-      if (fNom.trim()) params.set('search', fNom.trim());
+      const params = buildParams();
       if (selected.size > 0) params.set('selectedIds', [...selected].join(','));
       const { data } = await api.get(`/api/labo/${laboId}/pertes/historique/export-excel?${params}`, { responseType: 'blob' });
       const url = URL.createObjectURL(new Blob([data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
       const a = document.createElement('a');
       a.href = url;
-      a.download = `historique-pertes-labo-${new Date().toISOString().slice(0, 10)}.xlsx`;
+      a.download = `historique-pertes-labo-${labo?.nom ?? laboId}-${new Date().toISOString().slice(0, 10)}.xlsx`;
       a.click();
       URL.revokeObjectURL(url);
     } catch { /* ignore */ }
     setExporting(false);
   };
 
+  const handleExportPdf = async () => {
+    if (!laboId) return;
+    setExportingPdf(true);
+    try {
+      const params = buildParams();
+      if (selected.size > 0) params.set('selectedIds', [...selected].join(','));
+      const { data } = await api.get(`/api/labo/${laboId}/pertes/historique/export-pdf?${params}`, { responseType: 'blob' });
+      const url = URL.createObjectURL(new Blob([data], { type: 'application/pdf' }));
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `historique-pertes-labo-${labo?.nom ?? laboId}-${new Date().toISOString().slice(0, 10)}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch { /* ignore */ }
+    setExportingPdf(false);
+  };
+
   const toggleSelect = (id: number) => setSelected((prev) => { const n = new Set(prev); if (n.has(id)) n.delete(id); else n.add(id); return n; });
-  const toggleSelectAll = () => { if (selected.size === entries.length) setSelected(new Set()); else setSelected(new Set(entries.map((e) => e.id))); };
 
   const resetFilters = () => {
     setFCategorie(''); setFIngredient('');
@@ -130,13 +146,26 @@ export default function LaboHistoriquepertesPage() {
   const paged = entries.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   const laboLabel = labo?.nom || `Labo #${laboId}`;
+  const canExport = searched && entries.length > 0;
+  const purpleBtn: React.CSSProperties = {
+    display: 'flex', alignItems: 'center', gap: 6,
+    background: 'linear-gradient(135deg, #3b0764 0%, #7e22ce 100%)',
+    boxShadow: '0 4px 14px rgba(126,34,206,0.35)',
+    borderRadius: 9, border: 'none', color: '#fff', fontWeight: 800,
+    padding: '8px 18px', cursor: 'pointer', transition: 'all 0.15s',
+  };
+  const purpleBtnDisabled: React.CSSProperties = {
+    ...purpleBtn,
+    background: '#e5e7eb', boxShadow: 'none',
+    color: 'var(--text-muted)', cursor: 'not-allowed', opacity: 0.55,
+  };
 
   return (
     <div className="page-content">
       <div style={{
-        background: 'linear-gradient(135deg, #7f1d1d 0%, #991b1b 55%, #ef4444 100%)',
+        background: 'linear-gradient(135deg, #3b0764 0%, #7e22ce 55%, #a855f7 100%)',
         borderRadius: 18, padding: '24px 28px', marginBottom: 24,
-        boxShadow: '0 8px 32px rgba(153,27,27,0.28)',
+        boxShadow: '0 8px 32px rgba(126,34,206,0.28)',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16,
       }}>
         <div>
@@ -144,7 +173,7 @@ export default function LaboHistoriquepertesPage() {
             <div style={{ background: 'rgba(255,255,255,0.2)', borderRadius: 10, padding: '7px 9px', fontSize: '1.2rem' }}>📉</div>
             <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0 }}>Historique Pertes — {laboLabel}</h1>
           </div>
-          <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.85rem', margin: 0 }}>Avaries et déchets enregistrés</p>
+          <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.85rem', margin: 0 }}>Labo — avaries et déchets enregistrés</p>
         </div>
         {entries.length > 0 && (
           <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
@@ -187,6 +216,14 @@ export default function LaboHistoriquepertesPage() {
       }}>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'flex-end', marginBottom: 12 }}>
           <div>
+            <label style={{ fontSize: '0.65rem', fontWeight: 800, color: '#7e22ce', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 3 }}>📅 Du</label>
+            <input type="date" style={{ padding: '6px 10px', borderRadius: 8, border: '1.5px solid #7e22ce', fontSize: '0.83rem', background: '#faf5ff', minWidth: 130, fontWeight: 600 }} value={fDateDebut} onChange={(e) => setFDateDebut(e.target.value)} />
+          </div>
+          <div>
+            <label style={{ fontSize: '0.65rem', fontWeight: 800, color: '#7e22ce', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 3 }}>📅 Au</label>
+            <input type="date" style={{ padding: '6px 10px', borderRadius: 8, border: '1.5px solid #7e22ce', fontSize: '0.83rem', background: '#faf5ff', minWidth: 130, fontWeight: 600 }} value={fDateFin} onChange={(e) => setFDateFin(e.target.value)} />
+          </div>
+          <div>
             <label style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 3 }}>🏷️ Catégorie</label>
             <select style={{ padding: '6px 10px', borderRadius: 8, border: '1.5px solid var(--border)', fontSize: '0.83rem', background: 'var(--bg)', minWidth: 130 }} value={fCategorie} onChange={(e) => { setFCategorie(e.target.value); setFIngredient(''); }}>
               <option value="">— Toutes —</option>
@@ -205,14 +242,6 @@ export default function LaboHistoriquepertesPage() {
             <input type="text" style={{ padding: '6px 10px', borderRadius: 8, border: '1.5px solid var(--border)', fontSize: '0.83rem', background: 'var(--bg)', minWidth: 120 }} placeholder="Rechercher…" value={fNom} onChange={(e) => setFNom(e.target.value)} />
           </div>
           <div>
-            <label style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 3 }}>📅 Du</label>
-            <input type="date" style={{ padding: '6px 10px', borderRadius: 8, border: '1.5px solid var(--border)', fontSize: '0.83rem', background: 'var(--bg)', minWidth: 130, fontWeight: 600 }} value={fDateDebut} onChange={(e) => setFDateDebut(e.target.value)} />
-          </div>
-          <div>
-            <label style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 3 }}>📅 Au</label>
-            <input type="date" style={{ padding: '6px 10px', borderRadius: 8, border: '1.5px solid var(--border)', fontSize: '0.83rem', background: 'var(--bg)', minWidth: 130, fontWeight: 600 }} value={fDateFin} onChange={(e) => setFDateFin(e.target.value)} />
-          </div>
-          <div>
             <label style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 3 }}>📋 Type</label>
             <select style={{ padding: '6px 10px', borderRadius: 8, border: '1.5px solid var(--border)', fontSize: '0.83rem', background: 'var(--bg)', minWidth: 120 }} value={fType} onChange={(e) => setFType(e.target.value)}>
               <option value="">— Tous —</option>
@@ -222,16 +251,18 @@ export default function LaboHistoriquepertesPage() {
           </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, flexWrap: 'wrap' }}>
           <button className="btn btn-ghost btn-sm" onClick={resetFilters}>✕ Réinitialiser</button>
-          <button onClick={loadPertes} disabled={loading || !laboId}
-            style={{ background: 'linear-gradient(135deg, #991b1b 0%, #dc2626 100%)', boxShadow: '0 4px 14px rgba(185,28,28,0.35)', borderRadius: 10, border: 'none', color: '#fff', fontWeight: 800, padding: '9px 22px', minWidth: 130, cursor: 'pointer', opacity: loading ? 0.6 : 1 }}>
-            {loading ? 'Chargement…' : '🔍 Rechercher'}
+          <button onClick={loadPertes} disabled={loading || !laboId} style={{ ...purpleBtn, opacity: (loading || !laboId) ? 0.7 : 1, cursor: (loading || !laboId) ? 'not-allowed' : 'pointer' }}>
+            🔍 {loading ? 'Chargement…' : 'Rechercher'}
           </button>
-          <button onClick={handleExport} disabled={exporting || !searched || entries.length === 0}
-            style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 170, background: (searched && entries.length > 0) ? 'linear-gradient(135deg, #16a34a, #22c55e)' : '#e5e7eb', boxShadow: (searched && entries.length > 0) ? '0 4px 14px rgba(22,163,74,0.35)' : 'none', borderRadius: 10, border: 'none', color: (searched && entries.length > 0) ? '#fff' : 'var(--text-muted)', fontWeight: 800, padding: '9px 18px', cursor: (!searched || entries.length === 0) ? 'not-allowed' : 'pointer', opacity: (!searched || entries.length === 0) ? 0.55 : 1, transition: 'all 0.15s' }}>
-            <span>📊</span>
-            {selected.size > 0 ? `Générer Excel (${selected.size} sél.)` : 'Générer Hist. Pertes'}
+          <button onClick={handleExport} disabled={exporting || !canExport}
+            style={canExport ? purpleBtn : purpleBtnDisabled}>
+            <span>📊</span> {selected.size > 0 ? `Exporter (${selected.size})` : 'Exporter'}
+          </button>
+          <button onClick={handleExportPdf} disabled={exportingPdf || !canExport}
+            style={canExport ? purpleBtn : purpleBtnDisabled}>
+            <span>🔴</span> {exportingPdf ? '…' : 'PDF'}
           </button>
         </div>
       </div>
@@ -246,18 +277,16 @@ export default function LaboHistoriquepertesPage() {
       ) : (
         <>
           {selected.size > 0 && (
-            <div style={{ marginBottom: 8, fontSize: '0.82rem', color: '#b91c1c', fontWeight: 700 }}>
+            <div style={{ marginBottom: 8, fontSize: '0.82rem', color: '#7e22ce', fontWeight: 700 }}>
               {selected.size} sélectionné{selected.size > 1 ? 's' : ''}
             </div>
           )}
           <div style={{ borderRadius: 12, overflow: 'hidden', border: '1px solid var(--border)', boxShadow: '0 2px 8px rgba(0,0,0,0.04)', marginBottom: 16 }}>
             <table className="table" style={{ margin: 0 }}>
               <thead>
-                <tr style={{ background: 'linear-gradient(135deg, #7f1d1d, #dc2626)' }}>
-                  <th style={{ width: 40, textAlign: 'center', fontWeight: 800, fontSize: '0.78rem', padding: '12px 14px', color: '#fff', background: 'transparent', borderBottom: 'none' }}>
-                    <input type="checkbox" checked={selected.size === entries.length && entries.length > 0} onChange={toggleSelectAll} style={{ cursor: 'pointer' }} />
-                  </th>
-                  {['Date', 'Ingrédient', 'Catégorie', 'Type', 'Quantité', ...(hasCout ? ['Coût'] : [])].map((h) => (
+                <tr style={{ background: 'linear-gradient(135deg, #3b0764, #7e22ce)' }}>
+                  <th style={{ width: 40, textAlign: 'center', padding: '12px 14px', color: '#fff', background: 'transparent', borderBottom: 'none' }} />
+                  {['Ingrédient', 'Date', 'Type', 'Quantité', ...(hasCout ? ['Coût'] : [])].map((h) => (
                     <th key={h} style={{ fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px', color: '#fff', background: 'transparent', borderBottom: 'none' }}>{h}</th>
                   ))}
                 </tr>
@@ -266,16 +295,15 @@ export default function LaboHistoriquepertesPage() {
                 {paged.map((e, idx) => {
                   const isSelected = selected.has(e.id);
                   return (
-                  <tr key={e.id} style={{ background: isSelected ? '#fee2e2' : idx % 2 === 0 ? 'var(--surface)' : 'rgba(220,38,38,0.03)', cursor: 'pointer' }} onClick={() => toggleSelect(e.id)}>
+                  <tr key={e.id} style={{ background: isSelected ? '#f3e8ff' : idx % 2 === 0 ? 'var(--surface)' : 'rgba(126,34,206,0.03)', cursor: 'pointer' }} onClick={() => toggleSelect(e.id)}>
                     <td style={{ textAlign: 'center', padding: '10px 14px' }} onClick={(ev) => ev.stopPropagation()}>
-                      <input type="checkbox" checked={isSelected} onChange={() => toggleSelect(e.id)} style={{ cursor: 'pointer' }} />
+                      <input type="checkbox" checked={isSelected} onChange={() => toggleSelect(e.id)} style={{ cursor: 'pointer', accentColor: '#7e22ce' }} />
+                    </td>
+                    <td style={{ padding: '10px 14px' }}>
+                      <div style={{ fontWeight: 700, fontSize: '0.86rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.ingredientNom}</div>
+                      <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.uniteNom}{e.categorieNom ? ` · ${e.categorieNom}` : ''}</div>
                     </td>
                     <td style={{ padding: '10px 14px', fontSize: '0.85rem' }}>{fmtDate(e.datePerte)}</td>
-                    <td style={{ padding: '10px 14px', fontWeight: 600 }}>
-                      {e.ingredientNom}
-                      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginLeft: 4 }}>{e.uniteNom}</span>
-                    </td>
-                    <td style={{ padding: '10px 14px', fontSize: '0.82rem', color: 'var(--text-muted)' }}>{e.categorieNom ?? '—'}</td>
                     <td style={{ padding: '10px 14px' }}>
                       <span style={{ fontSize: '0.78rem', fontWeight: 700, padding: '3px 8px', borderRadius: 6,
                         background: e.typePerte === 'avarie' ? '#fee2e2' : '#fef9c3',
@@ -283,7 +311,7 @@ export default function LaboHistoriquepertesPage() {
                         {e.typePerte === 'avarie' ? 'Avarie' : 'Déchet'}
                       </span>
                     </td>
-                    <td style={{ padding: '10px 14px', fontWeight: 700, color: '#dc2626' }}>{e.quantite.toFixed(3)}</td>
+                    <td style={{ padding: '10px 14px', fontWeight: 700, color: '#7e22ce' }}>{e.quantite.toFixed(3)}</td>
                     {hasCout && (
                       <td style={{ padding: '10px 14px', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
                         {e.prixUnitaire != null ? `${(e.quantite * e.prixUnitaire).toFixed(3)} DT` : '—'}
@@ -294,11 +322,12 @@ export default function LaboHistoriquepertesPage() {
                 })}
               </tbody>
               <tfoot>
-                <tr style={{ background: 'var(--surface-alt, #f9fafb)', borderTop: '2px solid var(--border)' }}>
-                  <td colSpan={4} style={{ padding: '10px 14px', fontWeight: 800, fontSize: '0.82rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Total</td>
-                  <td style={{ padding: '10px 14px' }} />
-                  <td style={{ padding: '10px 14px', fontWeight: 800, color: '#dc2626' }}>{totalQty.toFixed(3)}</td>
-                  {hasCout && <td style={{ padding: '10px 14px', fontWeight: 800, color: '#dc2626' }}>{totalCout.toFixed(3)} DT</td>}
+                <tr style={{ background: '#f5f3ff', borderTop: '2px solid #7e22ce' }}>
+                  <td colSpan={4} style={{ padding: '10px 14px', fontWeight: 800, fontSize: '0.82rem', color: '#3b0764', textTransform: 'uppercase' }}>
+                    Total — {entries.length} entrée{entries.length > 1 ? 's' : ''}
+                  </td>
+                  <td style={{ padding: '10px 14px', fontWeight: 800, color: '#7e22ce' }}>{totalQty.toFixed(3)}</td>
+                  {hasCout && <td style={{ padding: '10px 14px', fontWeight: 800, color: '#7e22ce' }}>{totalCout.toFixed(3)} DT</td>}
                 </tr>
               </tfoot>
             </table>
