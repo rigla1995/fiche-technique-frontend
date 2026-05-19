@@ -466,7 +466,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                     <>
                       <li>
                         <NavLink to="/client/ingredients-activite" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>
-                          <span className="link-icon">🧂</span><span className="link-label">Ingrédients activités</span>
+                          <span className="link-icon">🛒</span><span className="link-label">Catalogue Vente</span>
                         </NavLink>
                       </li>
                       <li>
