@@ -1218,10 +1218,27 @@ function ActivityStockSection({ label, activities, initialActiviteId, onSave, on
 
   return (
     <div style={{ marginBottom: 36 }}>
-      <div style={{ display: 'flex', alignItems: 'center', marginBottom: 14, paddingBottom: 10, borderBottom: '2px solid var(--border)' }}>
-        <span style={{ width: 4, height: 22, borderRadius: 4, background: 'linear-gradient(180deg, #2563eb 0%, #0ea5e9 100%)', display: 'inline-block', flexShrink: 0, marginRight: 10 }} />
-        <h2 style={{ fontSize: '0.9rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--text)', margin: 0 }}>{label}</h2>
-      </div>
+      {/* Activité selector pills */}
+      {activities.length > 1 && (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16, padding: '10px 14px', background: 'var(--card-bg)', borderRadius: 10, border: '1px solid var(--border)' }}>
+          {activities.map((a) => (
+            <button
+              key={a.id}
+              onClick={() => { setSelectedId(a.id); onActiviteChange?.(a.nom); }}
+              style={{
+                padding: '4px 14px', borderRadius: 20, cursor: 'pointer', fontSize: '0.82rem',
+                border: selectedId === a.id ? '1.5px solid #1e40af' : '1.5px solid var(--border)',
+                background: selectedId === a.id ? '#1e40af' : 'var(--bg)',
+                color: selectedId === a.id ? '#fff' : 'var(--text)',
+                fontWeight: selectedId === a.id ? 700 : 400,
+              }}
+            >
+              🏪 {a.nom}
+            </button>
+          ))}
+          <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', alignSelf: 'center', marginLeft: 4 }}>← cliquer pour les détails</span>
+        </div>
+      )}
 
       {/* Filter panel — compact single-row layout */}
       <div style={{
@@ -1229,15 +1246,7 @@ function ActivityStockSection({ label, activities, initialActiviteId, onSave, on
         border: '1px solid var(--border)', boxShadow: '0 1px 6px rgba(0,0,0,0.04)',
       }}>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'flex-end' }}>
-          {/* Activité selector (only when multiple) */}
-          {!initialActiviteId && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-              <label style={{ fontSize: '0.62rem', fontWeight: 800, color: '#1e40af', textTransform: 'uppercase', letterSpacing: '0.07em' }}>🏪 Activité</label>
-              <select style={{ padding: '6px 10px', borderRadius: 7, border: '1.5px solid #1e40af', fontSize: '0.82rem', background: '#eff6ff', minWidth: 140 }} value={selectedId} onChange={(e) => { const id = Number(e.target.value); setSelectedId(id); onActiviteChange?.(activities.find((a) => a.id === id)?.nom ?? ''); }}>
-                {activities.map((a) => <option key={a.id} value={a.id}>{a.nom}</option>)}
-              </select>
-            </div>
-          )}
+          {/* (activité moved to pills above) */}
           {/* Catégorie */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             <label style={{ fontSize: '0.62rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>🏷️ Catégorie</label>
@@ -1385,15 +1394,13 @@ export default function StockPage() {
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
             <div style={{ background: 'rgba(255,255,255,0.2)', borderRadius: 10, padding: '7px 9px', fontSize: '1.2rem' }}>📦</div>
-            <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0 }}>{pageTitle}</h1>
+            <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0 }}>
+              {pageTitle}{selectedActiviteNom ? ` — ${selectedActiviteNom}` : ''}
+            </h1>
           </div>
-          {selectedActiviteNom && (
-            <div style={{ marginTop: 4 }}>
-              <span style={{ background: 'rgba(255,255,255,0.18)', color: '#fff', borderRadius: 20, padding: '2px 10px', fontSize: '0.78rem', fontWeight: 600, border: '1px solid rgba(255,255,255,0.3)' }}>
-                🏪 {selectedActiviteNom}
-              </span>
-            </div>
-          )}
+          <span style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.82rem' }}>
+            Gérez les stocks et approvisionnements de vos activités
+          </span>
         </div>
       </div>
 

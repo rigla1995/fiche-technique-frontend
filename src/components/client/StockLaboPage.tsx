@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { useSearchParams, Link } from 'react-router-dom';
+import { useSearchParams, Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
@@ -84,8 +84,10 @@ export default function StockLaboPage() {
   const { canWrite, user } = useAuth();
   const isGerantLabo = user?.role === 'gerant';
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const laboId = searchParams.get('laboId') || '';
   const tab = searchParams.get('tab') === 'ingredients' ? 'ingredients' : 'stock';
+  const [allLabos, setAllLabos] = useState<{ id: number; nom: string }[]>([]);
 
   const [labo, setLabo] = useState<{ nom: string; referentTel: string; adresse?: string; activites?: LaboActivite[] } | null>(null);
   const [stock, setStock] = useState<LaboStockRow[]>([]);
@@ -221,6 +223,10 @@ export default function StockLaboPage() {
       api.get(`/api/labo/${laboId}/fournisseurs`).then(({ data }) => setFournisseurs(data)).catch(() => {});
     }
   }, [loadLabo, loadStock, loadAssignments, laboId]);
+
+  useEffect(() => {
+    api.get('/api/labo').then(({ data }) => setAllLabos(data)).catch(() => {});
+  }, []);
 
   const setField = (ingredientId: number, field: keyof RowState, value: unknown) => {
     setRowState((prev) => ({ ...prev, [ingredientId]: { ...prev[ingredientId], [field]: value } }));
@@ -508,15 +514,9 @@ export default function StockLaboPage() {
               Stock Labo{labo ? ` — ${labo.nom}` : ''}
             </h1>
           </div>
-          {laboActivites.length > 0 && (
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 4 }}>
-              {laboActivites.map((a) => (
-                <span key={a.id} style={{ background: 'rgba(255,255,255,0.18)', color: '#fff', borderRadius: 20, padding: '2px 10px', fontSize: '0.78rem', fontWeight: 600, border: '1px solid rgba(255,255,255,0.3)' }}>
-                  🏪 {a.nom}
-                </span>
-              ))}
-            </div>
-          )}
+          <span style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.82rem' }}>
+            Gérez les stocks et approvisionnements de vos laboratoires
+          </span>
         </div>
         {tab === 'stock' && (
           <Link
@@ -531,20 +531,22 @@ export default function StockLaboPage() {
       {/* ══ STOCK TAB ══ */}
       {tab === 'stock' && (
         <>
-          {/* Activity pills row */}
-          {activites.length > 0 && (
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16, padding: '10px 14px', background: 'var(--primary-light, #eef2ff)', borderRadius: 10, border: '1px solid #c7d2fe' }}>
-              {activites.map((act) => (
+          {/* Labo selector row */}
+          {allLabos.length > 1 && (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16, padding: '10px 14px', background: 'var(--card-bg)', borderRadius: 10, border: '1px solid var(--border)' }}>
+              {allLabos.map((l) => (
                 <button
-                  key={act.id}
-                  onClick={(e) => { e.stopPropagation(); openActivityPopup(e, act); }}
+                  key={l.id}
+                  onClick={() => navigate(`/client/labo/stock?laboId=${l.id}`)}
                   style={{
-                    padding: '4px 12px', borderRadius: 20, border: '1px solid var(--primary)',
-                    background: 'white', color: 'var(--primary)', fontWeight: 600,
-                    fontSize: '0.82rem', cursor: 'pointer',
+                    padding: '4px 14px', borderRadius: 20, cursor: 'pointer', fontSize: '0.82rem',
+                    border: laboId === String(l.id) ? '1.5px solid #7e22ce' : '1.5px solid var(--border)',
+                    background: laboId === String(l.id) ? '#7e22ce' : 'var(--bg)',
+                    color: laboId === String(l.id) ? '#fff' : 'var(--text)',
+                    fontWeight: laboId === String(l.id) ? 700 : 400,
                   }}
                 >
-                  {act.nom}
+                  🏭 {l.nom}
                 </button>
               ))}
               <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', alignSelf: 'center', marginLeft: 4 }}>← cliquer pour les détails</span>
