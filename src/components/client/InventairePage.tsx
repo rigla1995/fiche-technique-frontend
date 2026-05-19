@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, Link, useNavigate } from 'react-router-dom';
 import api from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 
@@ -27,11 +27,13 @@ interface Activite { id: number; nom: string }
 
 export default function InventairePage() {
   const { canWrite } = useAuth();
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const laboId = searchParams.get('laboId');
   const activiteId = searchParams.get('activiteId');
   const section = searchParams.get('section');
 
+  const [allLabos, setAllLabos] = useState<{ id: number; nom: string }[]>([]);
   const [rows, setRows] = useState<InventaireRow[]>([]);
   const [qtys, setQtys] = useState<Record<number, string>>({});
   const [date, setDate] = useState(todayStr());
@@ -54,6 +56,10 @@ export default function InventairePage() {
   const [confirmPopup, setConfirmPopup] = useState<{ entries: ConfirmEntry[] } | null>(null);
 
   useEffect(() => {
+    api.get('/api/labo').then(({ data }) => setAllLabos(data)).catch(() => {});
+  }, []);
+
+  useEffect(() => {
     if (!section) return;
     api.get('/api/entreprise/activites')
       .then(({ data }) => {
@@ -65,6 +71,15 @@ export default function InventairePage() {
   }, [section]);
 
   const isClientMode = !laboId && !section && !activiteId;
+  const isLaboMode = !!laboId;
+  const themeColor = isLaboMode ? '#7e22ce' : '#1e40af';
+  const themeDark = isLaboMode ? '#3b0764' : '#1e3a8a';
+  const themeLight = isLaboMode ? '#faf5ff' : '#eff6ff';
+  const themeBorder = isLaboMode ? '#7e22ce' : '#93c5fd';
+  const heroGradient = isLaboMode
+    ? 'linear-gradient(135deg, #3b0764 0%, #7e22ce 55%, #a855f7 100%)'
+    : 'linear-gradient(135deg, #1e3a8a 0%, #1e40af 55%, #3b82f6 100%)';
+  const heroShadow = isLaboMode ? '0 8px 32px rgba(126,34,206,0.28)' : '0 8px 32px rgba(30,64,175,0.28)';
 
   const loadStock = useCallback(async () => {
     if (!laboId && !effectiveActiviteId && !isClientMode) return;
@@ -180,25 +195,36 @@ export default function InventairePage() {
 
       {/* ── Hero header ── */}
       <div style={{
-        background: 'linear-gradient(135deg, #1e3a8a 0%, #1e40af 55%, #3b82f6 100%)',
-        borderRadius: 18, padding: '24px 28px', marginBottom: 24,
-        boxShadow: '0 8px 32px rgba(30,64,175,0.28)',
+        background: heroGradient,
+        borderRadius: 18, padding: '24px 28px', marginBottom: 16,
+        boxShadow: heroShadow,
         display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16,
       }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
             <div style={{ background: 'rgba(255,255,255,0.2)', borderRadius: 10, padding: '7px 9px', fontSize: '1.2rem', lineHeight: 1 }}>🔢</div>
-            <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0, letterSpacing: '-0.02em' }}>Inventaire</h1>
+            <div>
+              <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0, letterSpacing: '-0.02em' }}>
+                Inventaire{contextNom ? ` — ${contextNom}` : ''}
+              </h1>
+              <p style={{ color: 'rgba(255,255,255,0.72)', fontSize: '0.82rem', margin: '4px 0 0' }}>
+                Saisissez les quantités réelles pour mettre à jour les stocks
+              </p>
+            </div>
           </div>
-          <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.85rem', margin: 0 }}>{contextLabel}</p>
         </div>
-        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-          {rows.length > 0 && (
+        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
+          {isLaboMode && laboId ? (
+            <Link to={`/client/labo/inventaire/historique?laboId=${laboId}`}
+              style={{ background: 'rgba(255,255,255,0.18)', backdropFilter: 'blur(8px)', border: '1.5px solid rgba(255,255,255,0.4)', borderRadius: 10, padding: '8px 18px', color: '#fff', fontWeight: 700, fontSize: '0.85rem', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+              📋 Historique Inventaires
+            </Link>
+          ) : rows.length > 0 ? (
             <div style={{ background: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(8px)', borderRadius: 12, padding: '10px 18px', textAlign: 'center' }}>
               <div style={{ fontSize: '1.4rem', fontWeight: 900, color: '#fff', lineHeight: 1 }}>{rows.length}</div>
               <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.75)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Ingrédients</div>
             </div>
-          )}
+          ) : null}
           {alarmTotal > 0 && (
             <div style={{ background: 'rgba(245,158,11,0.25)', backdropFilter: 'blur(8px)', border: '1px solid rgba(245,158,11,0.5)', borderRadius: 12, padding: '10px 18px', textAlign: 'center' }}>
               <div style={{ fontSize: '1.4rem', fontWeight: 900, color: '#fbbf24', lineHeight: 1 }}>{alarmTotal}</div>
@@ -206,13 +232,26 @@ export default function InventairePage() {
             </div>
           )}
           {filledCount > 0 && (
-            <div style={{ background: 'rgba(59,130,246,0.25)', backdropFilter: 'blur(8px)', border: '1px solid rgba(59,130,246,0.4)', borderRadius: 12, padding: '10px 18px', textAlign: 'center' }}>
-              <div style={{ fontSize: '1.4rem', fontWeight: 900, color: '#93c5fd', lineHeight: 1 }}>{filledCount}</div>
-              <div style={{ fontSize: '0.7rem', color: '#bfdbfe', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Saisis</div>
+            <div style={{ background: 'rgba(255,255,255,0.18)', backdropFilter: 'blur(8px)', border: '1px solid rgba(255,255,255,0.3)', borderRadius: 12, padding: '10px 18px', textAlign: 'center' }}>
+              <div style={{ fontSize: '1.4rem', fontWeight: 900, color: '#fff', lineHeight: 1 }}>{filledCount}</div>
+              <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.75)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Saisis</div>
             </div>
           )}
         </div>
       </div>
+
+      {/* ── Labo selector ── */}
+      {isLaboMode && allLabos.length > 0 && (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16, padding: '10px 14px', background: 'var(--card-bg)', borderRadius: 10, border: '1px solid var(--border)' }}>
+          {allLabos.map((l) => (
+            <button key={l.id} onClick={() => navigate(`/client/labo/inventaire?laboId=${l.id}`)}
+              style={{ padding: '4px 14px', borderRadius: 20, cursor: 'pointer', fontSize: '0.82rem', border: laboId === String(l.id) ? '1.5px solid #7e22ce' : '1.5px solid var(--border)', background: laboId === String(l.id) ? '#7e22ce' : 'var(--bg)', color: laboId === String(l.id) ? '#fff' : 'var(--text)', fontWeight: laboId === String(l.id) ? 700 : 400 }}>
+              🏭 {l.nom}
+            </button>
+          ))}
+          <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', alignSelf: 'center', marginLeft: 4 }}>← sélectionner le labo</span>
+        </div>
+      )}
 
       {/* ── Activite selector ── */}
       {section && !activiteId && activites.length > 1 && (
@@ -231,13 +270,13 @@ export default function InventairePage() {
           {/* ── Bloc unifié Filtres + Inventaire sur la même ligne ── */}
           <div style={{
             background: 'var(--surface)', borderRadius: 14, padding: '14px 20px', marginBottom: 20,
-            border: '1.5px solid #93c5fd', boxShadow: '0 2px 12px rgba(30,64,175,0.08)',
+            border: `1.5px solid ${themeBorder}`, boxShadow: isLaboMode ? '0 2px 12px rgba(126,34,206,0.08)' : '0 2px 12px rgba(30,64,175,0.08)',
             display: 'flex', flexWrap: 'wrap', gap: 14, alignItems: 'flex-end', justifyContent: 'center',
           }}>
             <div>
               <label style={{ fontSize: '0.62rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 4 }}>🏷️ Catégorie</label>
               <select value={filterCategory} onChange={(e) => { setFilterCategory(e.target.value); setFilterIngredient(''); }}
-                style={{ padding: '7px 11px', borderRadius: 7, border: '1.5px solid #93c5fd', fontSize: '0.82rem', background: '#eff6ff', minWidth: 160 }}>
+                style={{ padding: '7px 11px', borderRadius: 7, border: `1.5px solid ${themeBorder}`, fontSize: '0.82rem', background: themeLight, minWidth: 160 }}>
                 <option value="">— Toutes —</option>
                 {categories.map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
@@ -246,20 +285,20 @@ export default function InventairePage() {
               <label style={{ fontSize: '0.62rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 4 }}>🧂 Ingrédient</label>
               <select value={filterIngredient} onChange={(e) => setFilterIngredient(e.target.value)}
                 disabled={!filterCategory}
-                style={{ padding: '7px 11px', borderRadius: 7, border: '1.5px solid #93c5fd', fontSize: '0.82rem', background: '#eff6ff', minWidth: 160 }}>
+                style={{ padding: '7px 11px', borderRadius: 7, border: `1.5px solid ${themeBorder}`, fontSize: '0.82rem', background: themeLight, minWidth: 160 }}>
                 <option value="">— Tous —</option>
                 {ingredientsInCat.map((r) => <option key={r.ingredientId} value={String(r.ingredientId)}>{r.nom}</option>)}
               </select>
             </div>
             <div>
-              <label style={{ fontSize: '0.62rem', fontWeight: 700, color: '#1e40af', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 4 }}>📅 Date inventaire</label>
+              <label style={{ fontSize: '0.62rem', fontWeight: 700, color: themeColor, textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 4 }}>📅 Date inventaire</label>
               <input type="date" value={date} onChange={(e) => setDate(e.target.value)}
                 max={todayStr()}
-                style={{ padding: '7px 11px', borderRadius: 7, border: '1.5px solid #93c5fd', fontSize: '0.82rem', fontWeight: 700, color: '#1e3a5f', background: '#eff6ff' }} />
+                style={{ padding: '7px 11px', borderRadius: 7, border: `1.5px solid ${themeBorder}`, fontSize: '0.82rem', fontWeight: 700, color: themeDark, background: themeLight }} />
             </div>
             <button onClick={handleSave} disabled={saving || !hasAnyQty || !canWrite} style={{
-              background: hasAnyQty && canWrite ? 'linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%)' : '#e5e7eb',
-              boxShadow: hasAnyQty && canWrite ? '0 4px 14px rgba(30,64,175,0.35)' : 'none',
+              background: hasAnyQty && canWrite ? `linear-gradient(135deg, ${themeDark} 0%, ${themeColor} 100%)` : '#e5e7eb',
+              boxShadow: hasAnyQty && canWrite ? `0 4px 14px rgba(${isLaboMode ? '126,34,206' : '30,64,175'},0.35)` : 'none',
               borderRadius: 9, border: 'none', color: hasAnyQty && canWrite ? '#fff' : '#9ca3af',
               fontWeight: 800, padding: '7px 22px', cursor: hasAnyQty && canWrite ? 'pointer' : 'not-allowed',
               opacity: saving ? 0.7 : 1, fontSize: '0.88rem', transition: 'all 0.15s', alignSelf: 'flex-end',
@@ -278,7 +317,7 @@ export default function InventairePage() {
             </div>
           )}
           {successMsg && (
-            <div style={{ background: 'linear-gradient(90deg, #eff6ff, #fff)', border: '1.5px solid #93c5fd', borderRadius: 10, padding: '11px 16px', marginBottom: 14, fontSize: '0.85rem', color: '#1e40af', display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{ background: `linear-gradient(90deg, ${themeLight}, #fff)`, border: `1.5px solid ${themeBorder}`, borderRadius: 10, padding: '11px 16px', marginBottom: 14, fontSize: '0.85rem', color: themeColor, display: 'flex', alignItems: 'center', gap: 8 }}>
               <span>✅</span> {successMsg}
             </div>
           )}
@@ -298,10 +337,10 @@ export default function InventairePage() {
             <div style={{ background: 'var(--surface)', borderRadius: 14, overflow: 'hidden', border: '1.5px solid var(--border)', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
-                  <tr style={{ background: 'linear-gradient(90deg, #eff6ff, #dbeafe)', borderBottom: '2px solid #93c5fd' }}>
-                    <th style={{ padding: '10px 16px', textAlign: 'left', fontSize: '0.68rem', fontWeight: 800, color: '#1e40af', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Ingrédient</th>
-                    <th style={{ padding: '10px 16px', textAlign: 'right', fontSize: '0.68rem', fontWeight: 800, color: '#1e40af', textTransform: 'uppercase', letterSpacing: '0.07em', width: 120 }}>Stock actuel</th>
-                    <th style={{ padding: '10px 16px', textAlign: 'center', fontSize: '0.68rem', fontWeight: 800, color: '#1e40af', textTransform: 'uppercase', letterSpacing: '0.07em', width: 160 }}>Qté réelle</th>
+                  <tr style={{ background: isLaboMode ? 'linear-gradient(90deg, #faf5ff, #ede9fe)' : 'linear-gradient(90deg, #eff6ff, #dbeafe)', borderBottom: `2px solid ${themeBorder}` }}>
+                    <th style={{ padding: '10px 16px', textAlign: 'left', fontSize: '0.68rem', fontWeight: 800, color: themeColor, textTransform: 'uppercase', letterSpacing: '0.07em' }}>Ingrédient</th>
+                    <th style={{ padding: '10px 16px', textAlign: 'right', fontSize: '0.68rem', fontWeight: 800, color: themeColor, textTransform: 'uppercase', letterSpacing: '0.07em', width: 120 }}>Stock actuel</th>
+                    <th style={{ padding: '10px 16px', textAlign: 'center', fontSize: '0.68rem', fontWeight: 800, color: themeColor, textTransform: 'uppercase', letterSpacing: '0.07em', width: 160 }}>Qté réelle</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -313,15 +352,15 @@ export default function InventairePage() {
                     return (
                       <>
                         {/* Collapsible category header row */}
-                        <tr key={`cat-${cat}`} onClick={() => toggleCategory(cat)} style={{ cursor: 'pointer', background: isOpen ? 'linear-gradient(90deg, #eff6ff, #dbeafe)' : '#f8fafc', borderTop: '1px solid var(--border)', borderBottom: '1px solid var(--border)' }}>
+                        <tr key={`cat-${cat}`} onClick={() => toggleCategory(cat)} style={{ cursor: 'pointer', background: isOpen ? (isLaboMode ? 'linear-gradient(90deg, #faf5ff, #ede9fe)' : 'linear-gradient(90deg, #eff6ff, #dbeafe)') : '#f8fafc', borderTop: '1px solid var(--border)', borderBottom: '1px solid var(--border)' }}>
                           <td colSpan={3} style={{ padding: '9px 16px' }}>
-                            <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#1e40af', textTransform: 'uppercase', letterSpacing: '0.07em', marginRight: 6 }}>
+                            <span style={{ fontSize: '0.72rem', fontWeight: 800, color: themeColor, textTransform: 'uppercase', letterSpacing: '0.07em', marginRight: 6 }}>
                               {isOpen ? '▼' : '▶'}
                             </span>
-                            <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#1e40af', textTransform: 'uppercase', letterSpacing: '0.07em' }}>🏷 {cat}</span>
+                            <span style={{ fontSize: '0.72rem', fontWeight: 800, color: themeColor, textTransform: 'uppercase', letterSpacing: '0.07em' }}>🏷 {cat}</span>
                             <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', fontWeight: 500, marginLeft: 8 }}>
                               {catRows.length} ingrédient{catRows.length > 1 ? 's' : ''}
-                              {filledInCat > 0 && <span style={{ color: '#1e40af', fontWeight: 700 }}> · {filledInCat} saisi{filledInCat > 1 ? 's' : ''}</span>}
+                              {filledInCat > 0 && <span style={{ color: themeColor, fontWeight: 700 }}> · {filledInCat} saisi{filledInCat > 1 ? 's' : ''}</span>}
                               {alarmInCat > 0 && <span style={{ color: '#d97706', fontWeight: 700 }}> · ⚠ {alarmInCat}</span>}
                             </span>
                           </td>
@@ -337,10 +376,10 @@ export default function InventairePage() {
                                 background: alarm
                                   ? 'linear-gradient(90deg, #fffbeb 0%, #fffdf7 100%)'
                                   : filled
-                                  ? 'linear-gradient(90deg, #eff6ff 0%, #fff 80%)'
+                                  ? `linear-gradient(90deg, ${themeLight} 0%, #fff 80%)`
                                   : idx % 2 === 0 ? 'var(--background)' : 'var(--surface)',
                                 borderBottom: histOpen ? 'none' : '1px solid var(--border)',
-                                borderLeft: `4px solid ${alarm ? '#f59e0b' : filled ? '#2563eb' : 'transparent'}`,
+                                borderLeft: `4px solid ${alarm ? '#f59e0b' : filled ? themeColor : 'transparent'}`,
                                 transition: 'background 0.1s',
                               }}>
                                 {/* Ingredient + history link */}
@@ -351,8 +390,8 @@ export default function InventairePage() {
                                     {r.nom}
                                   </div>
                                   <div style={{ fontSize: '0.71rem', marginTop: 4, display: 'flex', gap: 7, alignItems: 'center' }}>
-                                    <span style={{ background: '#dbeafe', color: '#1e40af', borderRadius: 5, padding: '1px 6px', fontWeight: 700, fontSize: '0.67rem' }}>{r.unite}</span>
-                                    <button onClick={(e) => { e.stopPropagation(); toggleHistory(r.ingredientId); }} style={{ fontSize: '0.7rem', color: histOpen ? '#1e40af' : 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontWeight: 600, textDecoration: histOpen ? 'none' : 'underline', textDecorationStyle: 'dotted' }}>
+                                    <span style={{ background: isLaboMode ? '#ede9fe' : '#dbeafe', color: themeColor, borderRadius: 5, padding: '1px 6px', fontWeight: 700, fontSize: '0.67rem' }}>{r.unite}</span>
+                                    <button onClick={(e) => { e.stopPropagation(); toggleHistory(r.ingredientId); }} style={{ fontSize: '0.7rem', color: histOpen ? themeColor : 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontWeight: 600, textDecoration: histOpen ? 'none' : 'underline', textDecorationStyle: 'dotted' }}>
                                       📋 {histOpen ? 'masquer' : '5 derniers inv.'}
                                     </button>
                                   </div>
@@ -361,9 +400,9 @@ export default function InventairePage() {
                                 <td style={{ padding: '11px 16px', textAlign: 'right' }}>
                                   <div style={{
                                     padding: '5px 10px', borderRadius: 8, fontSize: '0.88rem', fontWeight: 800, textAlign: 'right', display: 'inline-block', minWidth: 80,
-                                    background: r.totalStock !== null && r.totalStock > 0 ? '#eff6ff' : '#f8fafc',
-                                    border: r.totalStock !== null && r.totalStock > 0 ? '1.5px solid #93c5fd' : '1.5px solid #e2e8f0',
-                                    color: r.totalStock !== null && r.totalStock > 0 ? '#1e40af' : '#9ca3af',
+                                    background: r.totalStock !== null && r.totalStock > 0 ? themeLight : '#f8fafc',
+                                    border: r.totalStock !== null && r.totalStock > 0 ? `1.5px solid ${themeBorder}` : '1.5px solid #e2e8f0',
+                                    color: r.totalStock !== null && r.totalStock > 0 ? themeColor : '#9ca3af',
                                   }}>
                                     {r.totalStock !== null ? r.totalStock.toFixed(3) : '—'}
                                   </div>
@@ -377,9 +416,9 @@ export default function InventairePage() {
                                     placeholder="0.000"
                                     style={{
                                       width: '100%', padding: '7px 11px', borderRadius: 8, fontSize: '0.9rem',
-                                      border: alarm ? '2px solid #f59e0b' : filled ? '2px solid #2563eb' : '1.5px solid var(--border)',
-                                      background: alarm ? '#fffbeb' : filled ? '#eff6ff' : 'var(--background)',
-                                      boxShadow: alarm ? '0 0 0 3px #fef3c7' : filled ? '0 0 0 3px #dbeafe' : 'none',
+                                      border: alarm ? '2px solid #f59e0b' : filled ? `2px solid ${themeColor}` : '1.5px solid var(--border)',
+                                      background: alarm ? '#fffbeb' : filled ? themeLight : 'var(--background)',
+                                      boxShadow: alarm ? '0 0 0 3px #fef3c7' : filled ? `0 0 0 3px ${isLaboMode ? '#ede9fe' : '#dbeafe'}` : 'none',
                                       outline: 'none', transition: 'all 0.15s', fontWeight: 700,
                                     }}
                                   />
