@@ -50,7 +50,6 @@ export default function LaboHistoriquepertesPage() {
 
   const [fCategorie, setFCategorie] = useState('');
   const [fIngredient, setFIngredient] = useState('');
-  const [fNom, setFNom] = useState('');
   const [fDateDebut, setFDateDebut] = useState(yearStart);
   const [fDateFin, setFDateFin] = useState(yearEnd);
   const [fType, setFType] = useState('');
@@ -79,7 +78,6 @@ export default function LaboHistoriquepertesPage() {
     if (fType) params.set('typePerte', fType);
     if (fCategorie) params.set('categorieId', fCategorie);
     if (fIngredient) params.set('ingredientId', fIngredient);
-    if (fNom.trim()) params.set('search', fNom.trim());
     return params;
   };
 
@@ -95,7 +93,7 @@ export default function LaboHistoriquepertesPage() {
     } catch { /* ignore */ }
     setLoading(false);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [laboId, fDateDebut, fDateFin, fType, fCategorie, fIngredient, fNom]);
+  }, [laboId, fDateDebut, fDateFin, fType, fCategorie, fIngredient]);
 
   const handleExport = async () => {
     if (!laboId) return;
@@ -135,7 +133,7 @@ export default function LaboHistoriquepertesPage() {
 
   const resetFilters = () => {
     setFCategorie(''); setFIngredient('');
-    setFNom(''); setFDateDebut(yearStart); setFDateFin(yearEnd); setFType('');
+    setFDateDebut(yearStart); setFDateFin(yearEnd); setFType('');
   };
 
   const totalQty = entries.reduce((s, e) => s + e.quantite, 0);
@@ -238,10 +236,6 @@ export default function LaboHistoriquepertesPage() {
             </select>
           </div>
           <div>
-            <label style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 3 }}>🔍 Nom</label>
-            <input type="text" style={{ padding: '6px 10px', borderRadius: 8, border: '1.5px solid var(--border)', fontSize: '0.83rem', background: 'var(--bg)', minWidth: 120 }} placeholder="Rechercher…" value={fNom} onChange={(e) => setFNom(e.target.value)} />
-          </div>
-          <div>
             <label style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 3 }}>📋 Type</label>
             <select style={{ padding: '6px 10px', borderRadius: 8, border: '1.5px solid var(--border)', fontSize: '0.83rem', background: 'var(--bg)', minWidth: 120 }} value={fType} onChange={(e) => setFType(e.target.value)}>
               <option value="">— Tous —</option>
@@ -249,10 +243,10 @@ export default function LaboHistoriquepertesPage() {
               <option value="dechet">Déchet</option>
             </select>
           </div>
+          <button className="btn btn-ghost btn-sm" style={{ alignSelf: 'flex-end', marginLeft: 'auto' }} onClick={resetFilters}>✕ Réinit.</button>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, flexWrap: 'wrap' }}>
-          <button className="btn btn-ghost btn-sm" onClick={resetFilters}>✕ Réinitialiser</button>
           <button onClick={loadPertes} disabled={loading || !laboId} style={{ ...purpleBtn, opacity: (loading || !laboId) ? 0.7 : 1, cursor: (loading || !laboId) ? 'not-allowed' : 'pointer' }}>
             🔍 {loading ? 'Chargement…' : 'Rechercher'}
           </button>

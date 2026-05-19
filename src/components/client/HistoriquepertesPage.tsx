@@ -172,7 +172,6 @@ export default function HistoriquepertesPage() {
   const [fActiviteId, setFActiviteId] = useState(urlActiviteId);
   const [fCategorie, setFCategorie] = useState('');
   const [fIngredient, setFIngredient] = useState('');
-  const [fNom, setFNom] = useState('');
   const [fDateDebut, setFDateDebut] = useState(yearStart);
   const [fDateFin, setFDateFin] = useState(yearEnd);
   const [fType, setFType] = useState('');
@@ -231,7 +230,6 @@ export default function HistoriquepertesPage() {
       if (fType) params.set('typePerte', fType);
       if (fCategorie) params.set('categorieId', fCategorie);
       if (fIngredient) params.set('ingredientId', fIngredient);
-      if (fNom.trim()) params.set('search', fNom.trim());
       if (isEntreprise && fActiviteId) params.set('activiteId', fActiviteId);
 
       const url = isEntreprise
@@ -241,7 +239,7 @@ export default function HistoriquepertesPage() {
       setEntries(data as HistoriquePerteEntry[]);
     } catch { /* ignore */ }
     setLoading(false);
-  }, [isEntreprise, fActiviteId, fDateDebut, fDateFin, fType, fCategorie, fIngredient, fNom]);
+  }, [isEntreprise, fActiviteId, fDateDebut, fDateFin, fType, fCategorie, fIngredient]);
 
 
   const totalQty = entries.reduce((s, e) => s + e.quantite, 0);
@@ -251,7 +249,7 @@ export default function HistoriquepertesPage() {
 
   const resetFilters = () => {
     setFActiviteId(''); setFCategorie(''); setFIngredient('');
-    setFNom(''); setFDateDebut(yearStart); setFDateFin(yearEnd); setFType('');
+    setFDateDebut(yearStart); setFDateFin(yearEnd); setFType('');
   };
 
   const toggleSelect = (id: number) => {
@@ -269,7 +267,6 @@ export default function HistoriquepertesPage() {
     if (fType) params.set('typePerte', fType);
     if (fCategorie) params.set('categorieId', fCategorie);
     if (fIngredient) params.set('ingredientId', fIngredient);
-    if (fNom.trim()) params.set('search', fNom.trim());
     if (isEntreprise && fActiviteId) params.set('activiteId', fActiviteId);
     if (selected.size > 0) params.set('selectedIds', [...selected].join(','));
     return params;
@@ -380,10 +377,6 @@ export default function HistoriquepertesPage() {
             </select>
           </div>
           <div>
-            <label style={{ fontSize: '0.62rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 4 }}>🔍 Nom</label>
-            <input type="text" style={{ padding: '6px 10px', borderRadius: 7, border: '1.5px solid var(--border)', fontSize: '0.82rem', background: 'var(--background)', minWidth: 110 }} placeholder="Recherche…" value={fNom} onChange={(e) => setFNom(e.target.value)} />
-          </div>
-          <div>
             <label style={{ fontSize: '0.62rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 4 }}>📋 Type</label>
             <select style={{ padding: '6px 10px', borderRadius: 7, border: '1.5px solid var(--border)', fontSize: '0.82rem', background: 'var(--background)', minWidth: 110 }} value={fType} onChange={(e) => setFType(e.target.value)}>
               <option value="">— Tous —</option>
@@ -391,7 +384,7 @@ export default function HistoriquepertesPage() {
               <option value="dechet">Déchet</option>
             </select>
           </div>
-          <button className="btn btn-ghost btn-sm" style={{ fontSize: '0.78rem', alignSelf: 'flex-end' }} onClick={resetFilters}>✕ Réinit.</button>
+          <button className="btn btn-ghost btn-sm" style={{ fontSize: '0.78rem', alignSelf: 'flex-end', marginLeft: 'auto' }} onClick={resetFilters}>✕ Réinit.</button>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, flexWrap: 'wrap' }}>
           <button onClick={loadPertes} disabled={loading}

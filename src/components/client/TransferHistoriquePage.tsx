@@ -55,7 +55,6 @@ export default function TransferHistoriquePage() {
 
   // Client-side filters
   const [filterCategorie, setFilterCategorie] = useState('');
-  const [filterNom, setFilterNom] = useState('');
 
   // Detail popup
   const [detailPopup, setDetailPopup] = useState<TransferEntry | null>(null);
@@ -127,7 +126,6 @@ export default function TransferHistoriquePage() {
     setPage(1);
     setSelectedIds(new Set());
     setFilterCategorie('');
-    setFilterNom('');
     try {
       const params = new URLSearchParams();
       if (startDate) params.set('startDate', startDate);
@@ -182,11 +180,7 @@ export default function TransferHistoriquePage() {
 
   // Client-side filtering
   const allCategories = Array.from(new Set(results.map((r) => r.categorieNom))).sort();
-  const filteredResults = results.filter((r) => {
-    const catOk = !filterCategorie || r.categorieNom === filterCategorie;
-    const nomOk = !filterNom || r.ingredientNom.toLowerCase().includes(filterNom.toLowerCase());
-    return catOk && nomOk;
-  });
+  const filteredResults = results.filter((r) => !filterCategorie || r.categorieNom === filterCategorie);
 
   const totalPages = Math.max(1, Math.ceil(filteredResults.length / PAGE_SIZE));
   const pagedResults = filteredResults.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
@@ -249,12 +243,10 @@ export default function TransferHistoriquePage() {
               {allCategories.map((c) => <option key={c} value={c}>{c}</option>)}
             </select>
           </div>
-          <div>
-            <label style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 3 }}>🧂 {t('client.stock.ingredient')}</label>
-            <input type="text" style={{ padding: '6px 10px', borderRadius: 8, border: '1.5px solid var(--border)', fontSize: '0.83rem', background: 'var(--bg)', minWidth: 120 }}
-              placeholder={t('client.stock.search_ingredient')}
-              value={filterNom} onChange={(e) => { setFilterNom(e.target.value); setPage(1); }} />
-          </div>
+          <button className="btn btn-ghost btn-sm" style={{ alignSelf: 'flex-end', marginLeft: 'auto' }}
+            onClick={() => { setStartDate(yearStart); setEndDate(yearEnd); setFilterActiviteId(''); setFilterCategorie(''); setPage(1); }}>
+            ✕ Réinit.
+          </button>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, flexWrap: 'wrap' }}>
           <button onClick={fetchResults} disabled={loading}
