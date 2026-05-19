@@ -233,7 +233,7 @@ export default function CatalogueVentePage() {
                 <button
                   onClick={() => toggleCat(cat)}
                   style={{
-                    background: 'none', border: 'none', cursor: 'pointer',
+                    border: 'none', cursor: 'pointer',
                     display: 'flex', alignItems: 'center', gap: 8,
                     padding: '8px 12px', width: '100%', textAlign: 'left',
                     borderLeft: `4px solid ${VENTE_COLOR}`,
