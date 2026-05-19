@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, Link, useNavigate } from 'react-router-dom';
 import api from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 import { useNotifications } from '../../context/NotificationContext';
@@ -39,12 +39,14 @@ const labelStyle: React.CSSProperties = {
 export default function HistoriqueInventairePage() {
   const { user, canWrite } = useAuth();
   const { clearByEventType } = useNotifications();
+  const navigate = useNavigate();
   const isGerant = user?.role === 'gerant';
   const [searchParams] = useSearchParams();
   const laboId = searchParams.get('laboId');
   const activiteId = searchParams.get('activiteId');
   const section = searchParams.get('section');
 
+  const [allLabos, setAllLabos] = useState<{ id: number; nom: string }[]>([]);
   const [histRows, setHistRows] = useState<HistEntry[]>([]);
   const [loading, setLoading] = useState(false);
   const [applied, setApplied] = useState(false);
@@ -72,6 +74,10 @@ export default function HistoriqueInventairePage() {
   const [editSaving, setEditSaving] = useState(false);
 
   const isClientMode = !laboId && !section && !activiteId;
+
+  useEffect(() => {
+    api.get('/api/labo').then(({ data }) => setAllLabos(data)).catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (!isGerant) clearByEventType('new_inventaire');
@@ -193,8 +199,18 @@ export default function HistoriqueInventairePage() {
     setEditSaving(false);
   };
 
+  const isLaboMode = !!laboId;
+  const themeColor = isLaboMode ? '#7e22ce' : '#1e40af';
+  const themeDark = isLaboMode ? '#3b0764' : '#1e3a8a';
+  const themeLight = isLaboMode ? '#faf5ff' : '#eff6ff';
+  const themeBorder = isLaboMode ? '#7e22ce' : '#93c5fd';
+  const heroGradient = isLaboMode
+    ? 'linear-gradient(135deg, #3b0764 0%, #7e22ce 55%, #a855f7 100%)'
+    : 'linear-gradient(135deg, #1e3a8a 0%, #1e40af 55%, #3b82f6 100%)';
+  const heroShadow = isLaboMode ? '0 8px 32px rgba(126,34,206,0.28)' : '0 8px 32px rgba(30,64,175,0.28)';
+
   const contextTitle = laboId
-    ? `Labo — ${contextNom}`
+    ? contextNom
     : section
     ? contextNom || 'Activités'
     : contextNom || '';
@@ -202,15 +218,16 @@ export default function HistoriqueInventairePage() {
   const showActiviteSelector = !!section && !activiteId && activites.length > 1;
   const canSearch = !!laboId || !!effectiveActiviteId || isClientMode;
   const canExport = canWrite && applied && histRows.length > 0;
-  const greenBtn: React.CSSProperties = {
+  const primaryBtn: React.CSSProperties = {
     display: 'flex', alignItems: 'center', gap: 6,
-    background: 'linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%)',
-    boxShadow: '0 4px 14px rgba(30,64,175,0.35)',
+    background: `linear-gradient(135deg, ${themeDark} 0%, ${themeColor} 100%)`,
+    boxShadow: `0 4px 14px rgba(${isLaboMode ? '126,34,206' : '30,64,175'},0.35)`,
     borderRadius: 9, border: 'none', color: '#fff', fontWeight: 800,
     padding: '8px 18px', cursor: 'pointer', transition: 'all 0.15s',
   };
+  const greenBtn = primaryBtn;
   const greenBtnDisabled: React.CSSProperties = {
-    ...greenBtn,
+    ...primaryBtn,
     background: '#e5e7eb', boxShadow: 'none',
     color: 'var(--text-muted)', cursor: 'not-allowed', opacity: 0.55,
   };
@@ -219,27 +236,52 @@ export default function HistoriqueInventairePage() {
     <div className="page">
       {/* ── Hero header ── */}
       <div style={{
-        background: 'linear-gradient(135deg, #1e3a8a 0%, #1e40af 55%, #3b82f6 100%)',
-        borderRadius: 18, padding: '24px 28px', marginBottom: 24,
-        boxShadow: '0 8px 32px rgba(30,64,175,0.28)',
+        background: heroGradient,
+        borderRadius: 18, padding: '24px 28px', marginBottom: 16,
+        boxShadow: heroShadow,
         display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16,
       }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
             <div style={{ background: 'rgba(255,255,255,0.2)', borderRadius: 10, padding: '7px 9px', fontSize: '1.2rem', lineHeight: 1 }}>📊</div>
-            <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0, letterSpacing: '-0.02em' }}>Historique Inventaire</h1>
+            <div>
+              <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0, letterSpacing: '-0.02em' }}>
+                Historique Inventaire{contextTitle ? ` — ${contextTitle}` : ''}
+              </h1>
+              <p style={{ color: 'rgba(255,255,255,0.72)', fontSize: '0.82rem', margin: '4px 0 0' }}>
+                Consultez et exportez l'historique des inventaires enregistrés
+              </p>
+            </div>
           </div>
-          {contextTitle && <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.85rem', margin: 0 }}>{contextTitle}</p>}
         </div>
-        {applied && histRows.length > 0 && (
-          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
+          {isLaboMode && laboId ? (
+            <Link to={`/client/labo/inventaire?laboId=${laboId}`}
+              style={{ background: 'rgba(255,255,255,0.18)', backdropFilter: 'blur(8px)', border: '1.5px solid rgba(255,255,255,0.4)', borderRadius: 10, padding: '8px 18px', color: '#fff', fontWeight: 700, fontSize: '0.85rem', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+              🔢 Inventaire
+            </Link>
+          ) : null}
+          {applied && histRows.length > 0 && (
             <div style={{ background: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(8px)', borderRadius: 12, padding: '10px 18px', textAlign: 'center' }}>
               <div style={{ fontSize: '1.4rem', fontWeight: 900, color: '#fff', lineHeight: 1 }}>{histRows.length}</div>
               <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.75)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Entrées</div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
+
+      {/* ── Labo selector ── */}
+      {isLaboMode && allLabos.length > 0 && (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16, padding: '10px 14px', background: 'var(--card-bg)', borderRadius: 10, border: '1px solid var(--border)' }}>
+          {allLabos.map((l) => (
+            <button key={l.id} onClick={() => navigate(`/client/labo/inventaire/historique?laboId=${l.id}`)}
+              style={{ padding: '4px 14px', borderRadius: 20, cursor: 'pointer', fontSize: '0.82rem', border: laboId === String(l.id) ? '1.5px solid #7e22ce' : '1.5px solid var(--border)', background: laboId === String(l.id) ? '#7e22ce' : 'var(--bg)', color: laboId === String(l.id) ? '#fff' : 'var(--text)', fontWeight: laboId === String(l.id) ? 700 : 400 }}>
+              🏭 {l.nom}
+            </button>
+          ))}
+          <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', alignSelf: 'center', marginLeft: 4 }}>← sélectionner le labo</span>
+        </div>
+      )}
 
       {/* ── Activite selector ── */}
       {showActiviteSelector && (
@@ -263,27 +305,27 @@ export default function HistoriqueInventairePage() {
           }}>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'flex-end', justifyContent: 'center', marginBottom: 12 }}>
               <div>
-                <label style={{ fontSize: '0.65rem', fontWeight: 800, color: '#1e40af', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 3 }}>📅 Du</label>
+                <label style={{ fontSize: '0.65rem', fontWeight: 800, color: themeColor, textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 3 }}>📅 Du</label>
                 <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)}
-                  style={{ padding: '6px 10px', borderRadius: 8, border: '1.5px solid #93c5fd', fontSize: '0.83rem', background: '#eff6ff', minWidth: 130, fontWeight: 600 }} />
+                  style={{ padding: '6px 10px', borderRadius: 8, border: `1.5px solid ${themeBorder}`, fontSize: '0.83rem', background: themeLight, minWidth: 130, fontWeight: 600 }} />
               </div>
               <div>
-                <label style={{ fontSize: '0.65rem', fontWeight: 800, color: '#1e40af', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 3 }}>📅 Au</label>
+                <label style={{ fontSize: '0.65rem', fontWeight: 800, color: themeColor, textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 3 }}>📅 Au</label>
                 <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)}
-                  style={{ padding: '6px 10px', borderRadius: 8, border: '1.5px solid #93c5fd', fontSize: '0.83rem', background: '#eff6ff', minWidth: 130, fontWeight: 600 }} />
+                  style={{ padding: '6px 10px', borderRadius: 8, border: `1.5px solid ${themeBorder}`, fontSize: '0.83rem', background: themeLight, minWidth: 130, fontWeight: 600 }} />
               </div>
               <div>
-                <label style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 3 }}>🏷️ Catégorie</label>
+                <label style={{ fontSize: '0.65rem', fontWeight: 800, color: themeColor, textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 3 }}>🏷️ Catégorie</label>
                 <select value={filterCategorie} onChange={(e) => setFilterCategorie(e.target.value)}
-                  style={{ padding: '6px 10px', borderRadius: 8, border: '1.5px solid #93c5fd', fontSize: '0.83rem', background: '#eff6ff', minWidth: 140 }}>
+                  style={{ padding: '6px 10px', borderRadius: 8, border: `1.5px solid ${themeBorder}`, fontSize: '0.83rem', background: themeLight, minWidth: 140 }}>
                   <option value="">Toutes</option>
                   {categories.map((c) => <option key={c} value={c}>{c}</option>)}
                 </select>
               </div>
               <div>
-                <label style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 3 }}>🧂 Ingrédient</label>
+                <label style={{ fontSize: '0.65rem', fontWeight: 800, color: themeColor, textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 3 }}>🧂 Ingrédient</label>
                 <select value={filterIngredientId} onChange={(e) => setFilterIngredientId(e.target.value)}
-                  style={{ padding: '6px 10px', borderRadius: 8, border: '1.5px solid #93c5fd', fontSize: '0.83rem', background: '#eff6ff', minWidth: 140 }}>
+                  style={{ padding: '6px 10px', borderRadius: 8, border: `1.5px solid ${themeBorder}`, fontSize: '0.83rem', background: themeLight, minWidth: 140 }}>
                   <option value="">Tous</option>
                   {filteredIngOptions.map((i) => <option key={i.ingredientId} value={i.ingredientId}>{i.nom}</option>)}
                 </select>
@@ -335,7 +377,7 @@ export default function HistoriqueInventairePage() {
             <div style={{ borderRadius: 14, overflow: 'hidden', border: '1.5px solid var(--border)', boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.87rem' }}>
                 <thead>
-                  <tr style={{ background: 'linear-gradient(135deg, #1e3a8a, #1e40af)' }}>
+                  <tr style={{ background: `linear-gradient(135deg, ${themeDark}, ${themeColor})` }}>
                     <th style={{ padding: '12px 14px', textAlign: 'center', width: 40, color: '#fff', background: 'transparent', borderBottom: 'none' }} />
                     {['Ingrédient', 'Date', 'Qté réelle', 'Note', 'Par'].map((h) => (
                       <th key={h} style={{ padding: '12px 14px', textAlign: h === 'Qté réelle' ? 'right' : 'left', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', color: '#fff', background: 'transparent', borderBottom: 'none' }}>{h}</th>
@@ -354,7 +396,7 @@ export default function HistoriqueInventairePage() {
                       }}>
                         <td style={{ padding: '10px 14px', textAlign: 'center' }}>
                           <input type="checkbox" checked={sel} onChange={() => toggleSelect(r.id)}
-                            style={{ width: 16, height: 16, cursor: 'pointer', accentColor: '#1e40af' }} />
+                            style={{ width: 16, height: 16, cursor: 'pointer', accentColor: themeColor }} />
                         </td>
                         <td style={{ padding: '10px 14px' }}>
                           <div style={{ fontWeight: 700, fontSize: '0.86rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -364,12 +406,12 @@ export default function HistoriqueInventairePage() {
                           <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.unite} · {r.categorie}</div>
                         </td>
                         <td style={{ padding: '10px 14px' }}>
-                          <span style={{ background: '#eff6ff', border: '1px solid #93c5fd', borderRadius: 7, padding: '3px 10px', fontWeight: 700, fontSize: '0.82rem', color: '#1e40af', whiteSpace: 'nowrap' }}>
+                          <span style={{ background: themeLight, border: `1px solid ${themeBorder}`, borderRadius: 7, padding: '3px 10px', fontWeight: 700, fontSize: '0.82rem', color: themeColor, whiteSpace: 'nowrap' }}>
                             {fmtDate(r.dateInventaire)}
                           </span>
                         </td>
                         <td style={{ padding: '10px 14px', textAlign: 'right' }}>
-                          <span style={{ fontWeight: 800, color: '#1e40af', fontSize: '0.93rem' }}>{r.quantiteReelle.toFixed(3)}</span>
+                          <span style={{ fontWeight: 800, color: themeColor, fontSize: '0.93rem' }}>{r.quantiteReelle.toFixed(3)}</span>
                         </td>
                         <td style={{ padding: '10px 14px', color: 'var(--text-muted)', fontSize: '0.82rem', maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {r.note
@@ -382,7 +424,7 @@ export default function HistoriqueInventairePage() {
                         <td style={{ padding: '10px 14px', textAlign: 'center' }}>
                           {canWrite && (!isGerant || r.createdBy === user?.id) && (
                             <button onClick={() => { setEditEntry(r); setEditQty(String(r.quantiteReelle)); setEditNote(r.note || ''); }}
-                              style={{ padding: '5px 14px', borderRadius: 8, border: '1.5px solid #1e40af', background: '#eff6ff', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 700, color: '#1e40af', transition: 'all 0.15s' }}>
+                              style={{ padding: '5px 14px', borderRadius: 8, border: `1.5px solid ${themeColor}`, background: themeLight, cursor: 'pointer', fontSize: '0.8rem', fontWeight: 700, color: themeColor, transition: 'all 0.15s' }}>
                               ✏️ Modifier
                             </button>
                           )}
@@ -392,8 +434,8 @@ export default function HistoriqueInventairePage() {
                   })}
                 </tbody>
                 <tfoot>
-                  <tr style={{ background: '#eff6ff', borderTop: '2px solid #1e40af' }}>
-                    <td colSpan={2} style={{ padding: '10px 14px', fontWeight: 800, fontSize: '0.78rem', color: '#1e3a8a', textTransform: 'uppercase' }}>
+                  <tr style={{ background: themeLight, borderTop: `2px solid ${themeColor}` }}>
+                    <td colSpan={2} style={{ padding: '10px 14px', fontWeight: 800, fontSize: '0.78rem', color: themeDark, textTransform: 'uppercase' }}>
                       Total — {histRows.length} entrée{histRows.length > 1 ? 's' : ''}
                     </td>
                     <td colSpan={5}></td>
@@ -402,8 +444,8 @@ export default function HistoriqueInventairePage() {
               </table>
               <div style={{ padding: '10px 18px', borderTop: '1px solid var(--border)', fontSize: '0.8rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ color: 'var(--text-muted)' }}>
-                  <strong style={{ color: '#1e40af' }}>{histRows.length}</strong> enregistrement{histRows.length > 1 ? 's' : ''}
-                  {selectedIds.size > 0 && <span style={{ marginLeft: 8, color: '#1e40af', fontWeight: 700 }}>· {selectedIds.size} sélectionné{selectedIds.size > 1 ? 's' : ''}</span>}
+                  <strong style={{ color: themeColor }}>{histRows.length}</strong> enregistrement{histRows.length > 1 ? 's' : ''}
+                  {selectedIds.size > 0 && <span style={{ marginLeft: 8, color: themeColor, fontWeight: 700 }}>· {selectedIds.size} sélectionné{selectedIds.size > 1 ? 's' : ''}</span>}
                 </span>
                 {totalPages > 1 && (
                   <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
@@ -423,7 +465,7 @@ export default function HistoriqueInventairePage() {
       {editEntry && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <div style={{ background: '#fff', borderRadius: 18, padding: 0, maxWidth: 430, width: '90%', overflow: 'hidden', boxShadow: '0 20px 60px rgba(0,0,0,0.35)' }}>
-            <div style={{ background: 'linear-gradient(135deg, #1e3a8a, #1e40af)', padding: '20px 26px' }}>
+            <div style={{ background: `linear-gradient(135deg, ${themeDark}, ${themeColor})`, padding: '20px 26px' }}>
               <h3 style={{ fontSize: '1.05rem', fontWeight: 900, color: '#fff', margin: 0, marginBottom: 4 }}>✏️ Modifier l'inventaire</h3>
               <p style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.78)', margin: 0 }}>
                 {editEntry.ingredientNom} · {fmtDate(editEntry.dateInventaire)}
@@ -436,7 +478,7 @@ export default function HistoriqueInventairePage() {
               <div style={{ marginBottom: 14 }}>
                 <label style={labelStyle}>Quantité réelle ({editEntry.unite})</label>
                 <input type="number" min="0" step="0.001" value={editQty} onChange={(e) => setEditQty(e.target.value)}
-                  style={{ width: '100%', padding: '10px 13px', borderRadius: 9, border: '1.5px solid #1e40af', fontSize: '0.93rem', fontWeight: 700, background: '#eff6ff', boxSizing: 'border-box' }} />
+                  style={{ width: '100%', padding: '10px 13px', borderRadius: 9, border: `1.5px solid ${themeColor}`, fontSize: '0.93rem', fontWeight: 700, background: themeLight, boxSizing: 'border-box' }} />
               </div>
               <div style={{ marginBottom: 22 }}>
                 <label style={labelStyle}>Note</label>
@@ -447,7 +489,7 @@ export default function HistoriqueInventairePage() {
                 <button onClick={() => setEditEntry(null)} style={{ padding: '10px 22px', borderRadius: 9, border: '1.5px solid var(--border)', background: 'none', cursor: 'pointer', fontSize: '0.9rem', fontWeight: 600 }}>
                   Annuler
                 </button>
-                <button onClick={handleEditSave} disabled={editSaving} style={{ padding: '10px 26px', borderRadius: 9, border: 'none', background: 'linear-gradient(135deg, #1e3a8a, #1e40af)', color: '#fff', fontWeight: 800, cursor: 'pointer', fontSize: '0.9rem', opacity: editSaving ? 0.6 : 1, boxShadow: '0 4px 14px rgba(30,64,175,0.35)' }}>
+                <button onClick={handleEditSave} disabled={editSaving} style={{ padding: '10px 26px', borderRadius: 9, border: 'none', background: `linear-gradient(135deg, ${themeDark}, ${themeColor})`, color: '#fff', fontWeight: 800, cursor: 'pointer', fontSize: '0.9rem', opacity: editSaving ? 0.6 : 1, boxShadow: `0 4px 14px rgba(${isLaboMode ? '126,34,206' : '30,64,175'},0.35)` }}>
                   {editSaving ? '...' : '✓ Enregistrer'}
                 </button>
               </div>
