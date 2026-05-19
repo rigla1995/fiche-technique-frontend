@@ -182,12 +182,6 @@ export default function InventairePage() {
   const hasAnyQty = filledCount > 0;
   const needsActiviteSelector = false;
 
-  const contextLabel = laboId
-    ? `Labo — ${contextNom}`
-    : section
-    ? contextNom || 'Activités'
-    : contextNom || 'Inventaire';
-
   const resetFilters = () => { setFilterCategory(''); setFilterIngredient(''); };
 
   return (
