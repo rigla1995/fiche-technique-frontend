@@ -72,12 +72,33 @@ export default function LaboVentesPage() {
 
   useEffect(() => { loadData(); }, [loadData]);
 
+  const selectedLabo = labos.find(l => l.id === selectedLaboId);
+
   return (
-    <div style={{ padding: '24px', maxWidth: 1100, margin: '0 auto' }}>
-      <h1 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: 4 }}>Ventes Labo</h1>
-      <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', marginBottom: 20 }}>
-        Transferts vers les activités — valorisés au prix de revient
-      </p>
+    <div className="page-content">
+      {/* Hero header — vente theme */}
+      <div style={{
+        background: 'linear-gradient(135deg, #065f46 0%, #059669 55%, #10b981 100%)',
+        borderRadius: 18, padding: '24px 28px', marginBottom: 24,
+        boxShadow: '0 8px 32px rgba(5,150,105,0.28)',
+        display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap',
+      }}>
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+            <div style={{ background: 'rgba(255,255,255,0.2)', borderRadius: 10, padding: '7px 9px', fontSize: '1.2rem' }}>📤</div>
+            <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0 }}>Ventes Labo</h1>
+          </div>
+          {selectedLabo && (
+            <span style={{
+              background: 'rgba(255,255,255,0.18)', color: '#fff',
+              borderRadius: 20, padding: '2px 10px', fontSize: '0.78rem', fontWeight: 600,
+              border: '1px solid rgba(255,255,255,0.3)',
+            }}>
+              🏭 {selectedLabo.nom}
+            </span>
+          )}
+        </div>
+      </div>
 
       {labos.length > 1 && (
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 20 }}>
@@ -85,8 +106,8 @@ export default function LaboVentesPage() {
             <button key={l.id} onClick={() => setSelectedLaboId(l.id)}
               style={{
                 padding: '6px 14px', borderRadius: 20, fontSize: '0.85rem', cursor: 'pointer',
-                border: '1.5px solid var(--border)',
-                background: selectedLaboId === l.id ? 'var(--primary)' : 'var(--card-bg)',
+                border: selectedLaboId === l.id ? '1.5px solid #059669' : '1.5px solid var(--border)',
+                background: selectedLaboId === l.id ? '#059669' : 'var(--card-bg)',
                 color: selectedLaboId === l.id ? '#fff' : 'var(--text)',
                 fontWeight: selectedLaboId === l.id ? 600 : 400,
               }}>

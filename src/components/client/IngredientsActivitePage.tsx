@@ -3,6 +3,11 @@ import { useSearchParams } from 'react-router-dom';
 import api from '../../api/client';
 import type { Activite } from '../../types';
 
+// Vente theme color — vert émeraude (cohérent sur tous les écrans vente)
+const VENTE_GRADIENT = 'linear-gradient(135deg, #065f46 0%, #059669 55%, #10b981 100%)';
+const VENTE_SHADOW = '0 8px 32px rgba(5,150,105,0.28)';
+const VENTE_COLOR = '#059669';
+
 interface IngredientRow {
   ingredient_id: number;
   nom: string;
@@ -47,48 +52,61 @@ function PrixModal({
       display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16,
     }}>
       <div style={{
-        background: 'var(--card-bg)', borderRadius: 16, padding: '28px 24px',
+        background: 'var(--card-bg)', borderRadius: 16, padding: '0',
         width: '100%', maxWidth: 380, border: '1px solid var(--border)',
+        overflow: 'hidden',
       }}>
-        <h2 style={{ fontSize: '1.05rem', fontWeight: 700, marginBottom: 6 }}>
-          Activer la vente
-        </h2>
-        <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: 20 }}>
-          <strong>{ingredient.nom}</strong> sera ajouté au catalogue vendable
-          en tant qu'article vendu à l'unité ({ingredient.unite_nom}).
-        </p>
+        {/* Modal header — vente gradient */}
+        <div style={{
+          background: VENTE_GRADIENT, padding: '18px 22px',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ background: 'rgba(255,255,255,0.2)', borderRadius: 10, padding: '6px 8px', fontSize: '1.1rem' }}>🛒</div>
+            <div>
+              <div style={{ color: '#fff', fontWeight: 700, fontSize: '1rem' }}>Activer la vente</div>
+              <div style={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.8rem', marginTop: 2 }}>{ingredient.nom}</div>
+            </div>
+          </div>
+        </div>
 
-        <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, marginBottom: 6 }}>
-          Prix de vente (DT / {ingredient.unite_nom})
-        </label>
-        <input
-          type="number" min="0.01" step="0.01" autoFocus
-          value={prix} onChange={e => { setPrix(e.target.value); setError(''); }}
-          onKeyDown={e => e.key === 'Enter' && handleConfirm()}
-          placeholder="Ex : 3.50"
-          style={{
-            width: '100%', padding: '9px 12px', borderRadius: 8, fontSize: '0.95rem',
-            border: error ? '1px solid #dc2626' : '1px solid var(--border)',
-            background: 'var(--bg)', color: 'var(--text)', outline: 'none',
-            boxSizing: 'border-box',
-          }}
-        />
-        {error && <div style={{ color: '#dc2626', fontSize: '0.8rem', marginTop: 6 }}>{error}</div>}
+        <div style={{ padding: '20px 22px' }}>
+          <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: 18 }}>
+            Cet ingrédient sera ajouté au catalogue vendable et pourra être vendu
+            à l'unité ({ingredient.unite_nom}).
+          </p>
 
-        <div style={{ display: 'flex', gap: 10, marginTop: 20, justifyContent: 'flex-end' }}>
-          <button onClick={onClose}
-            style={{ padding: '8px 18px', borderRadius: 8, border: '1px solid var(--border)', background: 'none', cursor: 'pointer' }}>
-            Annuler
-          </button>
-          <button onClick={handleConfirm} disabled={saving || !prix}
+          <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, marginBottom: 6 }}>
+            Prix de vente (DT / {ingredient.unite_nom})
+          </label>
+          <input
+            type="number" min="0.01" step="0.01" autoFocus
+            value={prix} onChange={e => { setPrix(e.target.value); setError(''); }}
+            onKeyDown={e => e.key === 'Enter' && handleConfirm()}
+            placeholder="Ex : 3.50"
             style={{
-              padding: '8px 18px', borderRadius: 8, border: 'none',
-              background: saving || !prix ? 'var(--border)' : 'var(--primary)',
-              color: saving || !prix ? 'var(--text-muted)' : '#fff',
-              cursor: saving || !prix ? 'not-allowed' : 'pointer', fontWeight: 600,
-            }}>
-            {saving ? 'Enregistrement…' : 'Confirmer'}
-          </button>
+              width: '100%', padding: '9px 12px', borderRadius: 8, fontSize: '0.95rem',
+              border: error ? '1px solid #dc2626' : '1px solid var(--border)',
+              background: 'var(--bg)', color: 'var(--text)', outline: 'none',
+              boxSizing: 'border-box',
+            }}
+          />
+          {error && <div style={{ color: '#dc2626', fontSize: '0.8rem', marginTop: 6 }}>{error}</div>}
+
+          <div style={{ display: 'flex', gap: 10, marginTop: 20, justifyContent: 'flex-end' }}>
+            <button onClick={onClose}
+              style={{ padding: '8px 18px', borderRadius: 8, border: '1px solid var(--border)', background: 'none', cursor: 'pointer' }}>
+              Annuler
+            </button>
+            <button onClick={handleConfirm} disabled={saving || !prix}
+              style={{
+                padding: '8px 20px', borderRadius: 8, border: 'none',
+                background: saving || !prix ? 'var(--border)' : VENTE_COLOR,
+                color: saving || !prix ? 'var(--text-muted)' : '#fff',
+                cursor: saving || !prix ? 'not-allowed' : 'pointer', fontWeight: 600,
+              }}>
+              {saving ? 'Enregistrement…' : 'Confirmer'}
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -104,6 +122,8 @@ export default function IngredientsActivitePage() {
   const [loading, setLoading] = useState(false);
   const [modalIngredient, setModalIngredient] = useState<IngredientRow | null>(null);
   const [filterCat, setFilterCat] = useState('');
+
+  const selectedActivite = activites.find(a => a.id === selectedId);
 
   useEffect(() => {
     api.get('/api/entreprise/activites').then(({ data }) => {
@@ -132,8 +152,6 @@ export default function IngredientsActivitePage() {
 
   const vendableMap = new Map(vendables.map(v => [v.article_id, v]));
 
-  const handleToggleOn = (ing: IngredientRow) => setModalIngredient(ing);
-
   const handleConfirmVendable = async (prix: number) => {
     if (!modalIngredient || !selectedId) return;
     await api.post('/api/articles-vendables', {
@@ -159,11 +177,39 @@ export default function IngredientsActivitePage() {
   const vendableCount = vendables.length;
 
   return (
-    <div style={{ padding: '24px', maxWidth: 1100, margin: '0 auto' }}>
-      <h1 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: 4 }}>Ingrédients Activités</h1>
-      <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', marginBottom: 20 }}>
-        Ingrédients assignés à vos activités — activez la vente au détail sur chacun
-      </p>
+    <div className="page-content">
+
+      {/* Hero header — vente theme */}
+      <div style={{
+        background: VENTE_GRADIENT,
+        borderRadius: 18, padding: '24px 28px', marginBottom: 24,
+        boxShadow: VENTE_SHADOW,
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16,
+      }}>
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+            <div style={{ background: 'rgba(255,255,255,0.2)', borderRadius: 10, padding: '7px 9px', fontSize: '1.2rem' }}>🧂</div>
+            <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0 }}>Ingrédients Activités</h1>
+          </div>
+          {selectedActivite && (
+            <span style={{
+              background: 'rgba(255,255,255,0.18)', color: '#fff',
+              borderRadius: 20, padding: '2px 10px', fontSize: '0.78rem', fontWeight: 600,
+              border: '1px solid rgba(255,255,255,0.3)',
+            }}>
+              🏪 {selectedActivite.nom}
+            </span>
+          )}
+        </div>
+        {vendableCount > 0 && (
+          <div style={{
+            background: 'rgba(255,255,255,0.18)', border: '1px solid rgba(255,255,255,0.3)',
+            borderRadius: 12, padding: '8px 16px', color: '#fff', fontSize: '0.88rem', fontWeight: 600,
+          }}>
+            🛒 {vendableCount} vendable{vendableCount > 1 ? 's' : ''}
+          </div>
+        )}
+      </div>
 
       {/* Activité selector */}
       {activites.length > 1 && (
@@ -173,8 +219,8 @@ export default function IngredientsActivitePage() {
               onClick={() => { setSelectedId(a.id); setSearchParams({ activiteId: String(a.id) }); setFilterCat(''); }}
               style={{
                 padding: '6px 14px', borderRadius: 20, fontSize: '0.85rem', cursor: 'pointer',
-                border: '1.5px solid var(--border)',
-                background: selectedId === a.id ? 'var(--primary)' : 'var(--card-bg)',
+                border: selectedId === a.id ? `1.5px solid ${VENTE_COLOR}` : '1.5px solid var(--border)',
+                background: selectedId === a.id ? VENTE_COLOR : 'var(--card-bg)',
                 color: selectedId === a.id ? '#fff' : 'var(--text)',
                 fontWeight: selectedId === a.id ? 600 : 400,
               }}>
@@ -185,91 +231,113 @@ export default function IngredientsActivitePage() {
       )}
 
       {!selectedId ? (
-        <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '60px 0' }}>
-          Aucune activité disponible
-        </div>
+        <p className="text-muted">Aucune activité disponible.</p>
       ) : loading ? (
-        <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '40px 0' }}>Chargement…</div>
+        <p className="text-muted">Chargement…</p>
       ) : ingredients.length === 0 ? (
-        <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '60px 0' }}>
-          Aucun ingrédient assigné à cette activité.<br />
+        <p className="text-muted">
+          Aucun ingrédient assigné à cette activité.{' '}
           <span style={{ fontSize: '0.82rem' }}>Assignez des ingrédients depuis le Catalogue Global.</span>
-        </div>
+        </p>
       ) : (
         <>
-          {/* Filtres catégories + compteur vendables */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12, marginBottom: 16 }}>
-            {categories.length > 1 && (
-              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
-                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Catégorie :</span>
-                {[{ label: `Tous (${ingredients.length})`, value: '' }, ...categories.map(c => ({ label: `${c} (${ingredients.filter(i => i.categorie === c).length})`, value: c }))].map(opt => (
-                  <button key={opt.value}
-                    onClick={() => setFilterCat(opt.value)}
-                    style={{
-                      padding: '4px 12px', borderRadius: 20, fontSize: '0.8rem', cursor: 'pointer',
-                      border: filterCat === opt.value ? '1.5px solid var(--primary)' : '1px solid var(--border)',
-                      background: filterCat === opt.value ? 'var(--primary)' : 'var(--card-bg)',
-                      color: filterCat === opt.value ? '#fff' : 'var(--text)',
-                      fontWeight: filterCat === opt.value ? 600 : 400,
-                    }}>
-                    {opt.label}
-                  </button>
-                ))}
-              </div>
-            )}
-            {vendableCount > 0 && (
-              <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
-                🛒 {vendableCount} ingrédient{vendableCount > 1 ? 's' : ''} vendable{vendableCount > 1 ? 's' : ''}
-              </span>
-            )}
-          </div>
+          {/* Filtres catégories */}
+          {categories.length > 1 && (
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center', marginBottom: 16 }}>
+              <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Catégorie :</span>
+              {[{ label: `Tous (${ingredients.length})`, value: '' }, ...categories.map(c => ({ label: `${c} (${ingredients.filter(i => i.categorie === c).length})`, value: c }))].map(opt => (
+                <button key={opt.value}
+                  onClick={() => setFilterCat(opt.value)}
+                  style={{
+                    padding: '4px 12px', borderRadius: 20, fontSize: '0.8rem', cursor: 'pointer',
+                    border: filterCat === opt.value ? `1.5px solid ${VENTE_COLOR}` : '1px solid var(--border)',
+                    background: filterCat === opt.value ? VENTE_COLOR : 'var(--card-bg)',
+                    color: filterCat === opt.value ? '#fff' : 'var(--text)',
+                    fontWeight: filterCat === opt.value ? 600 : 400,
+                  }}>
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          )}
 
-          {/* Table */}
-          <div style={{ background: 'var(--card-bg)', borderRadius: 12, border: '1px solid var(--border)', overflow: 'hidden' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead>
-                <tr style={{ background: 'var(--bg)', borderBottom: '1px solid var(--border)' }}>
-                  {['Ingrédient', 'Catégorie', 'Unité', 'Prix de vente', 'Vendable'].map(h => (
-                    <th key={h} style={{ padding: '10px 14px', textAlign: 'left', fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-muted)' }}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map(ing => {
-                  const vendable = vendableMap.get(ing.ingredient_id);
-                  return (
-                    <tr key={ing.ingredient_id} style={{ borderBottom: '1px solid var(--border)' }}>
-                      <td style={{ padding: '10px 14px', fontWeight: 600, fontSize: '0.9rem' }}>{ing.nom}</td>
-                      <td style={{ padding: '10px 14px', fontSize: '0.85rem', color: 'var(--text-muted)' }}>{ing.categorie}</td>
-                      <td style={{ padding: '10px 14px', fontSize: '0.85rem', color: 'var(--text-muted)' }}>{ing.unite_nom}</td>
-                      <td style={{ padding: '10px 14px', fontSize: '0.9rem' }}>
-                        {vendable
-                          ? <span style={{ fontWeight: 600 }}>{vendable.prix_vente.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} DT</span>
-                          : <span style={{ color: 'var(--text-muted)', fontSize: '0.82rem' }}>—</span>}
-                      </td>
-                      <td style={{ padding: '10px 14px' }}>
-                        <button
-                          onClick={() => vendable ? handleToggleOff(ing.ingredient_id) : handleToggleOn(ing)}
-                          style={{
-                            width: 44, height: 24, borderRadius: 12, border: 'none', cursor: 'pointer',
-                            background: vendable ? 'var(--primary)' : 'var(--border)',
-                            position: 'relative', transition: 'background 0.2s', display: 'inline-block', verticalAlign: 'middle',
-                          }}
-                          title={vendable ? 'Désactiver la vente' : 'Activer la vente'}
-                        >
-                          <span style={{
-                            position: 'absolute', top: 3, left: vendable ? 23 : 3,
-                            width: 18, height: 18, borderRadius: '50%', background: '#fff',
-                            transition: 'left 0.2s', display: 'block',
-                            boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
-                          }} />
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+          {/* Grille de cards */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 12 }}>
+            {filtered.map(ing => {
+              const vendable = vendableMap.get(ing.ingredient_id);
+              return (
+                <div key={ing.ingredient_id} style={{
+                  background: 'var(--card-bg)',
+                  borderRadius: 14,
+                  border: vendable ? `1.5px solid ${VENTE_COLOR}` : '1px solid var(--border)',
+                  padding: '16px 18px',
+                  position: 'relative',
+                }}>
+                  {/* Badge */}
+                  {vendable && (
+                    <span style={{
+                      position: 'absolute', top: 12, right: 14,
+                      background: VENTE_COLOR, color: '#fff',
+                      borderRadius: 20, padding: '2px 9px', fontSize: '0.7rem', fontWeight: 700,
+                      letterSpacing: '0.04em',
+                    }}>
+                      VENDABLE
+                    </span>
+                  )}
+
+                  {/* Nom + tags */}
+                  <div style={{ paddingRight: vendable ? 76 : 0, marginBottom: 10 }}>
+                    <div style={{ fontWeight: 700, fontSize: '0.95rem', marginBottom: 4 }}>{ing.nom}</div>
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      <span style={{
+                        background: 'var(--bg)', borderRadius: 6, padding: '2px 8px',
+                        fontSize: '0.75rem', color: 'var(--text-muted)',
+                      }}>{ing.unite_nom}</span>
+                      <span style={{
+                        background: 'var(--bg)', borderRadius: 6, padding: '2px 8px',
+                        fontSize: '0.75rem', color: 'var(--text-muted)',
+                      }}>{ing.categorie}</span>
+                    </div>
+                  </div>
+
+                  {/* Prix si vendable */}
+                  {vendable && (
+                    <div style={{
+                      background: 'var(--bg)', borderRadius: 8, padding: '6px 10px',
+                      marginBottom: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                    }}>
+                      <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Prix de vente</span>
+                      <span style={{ fontWeight: 700, fontSize: '0.95rem', color: VENTE_COLOR }}>
+                        {vendable.prix_vente.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} DT
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Toggle */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+                      {vendable ? 'Vendu au détail' : 'Activer la vente'}
+                    </span>
+                    <button
+                      onClick={() => vendable ? handleToggleOff(ing.ingredient_id) : setModalIngredient(ing)}
+                      title={vendable ? 'Désactiver' : 'Activer'}
+                      style={{
+                        width: 44, height: 24, borderRadius: 12, border: 'none', cursor: 'pointer',
+                        background: vendable ? VENTE_COLOR : 'var(--border)',
+                        position: 'relative', transition: 'background 0.2s',
+                      }}
+                    >
+                      <span style={{
+                        position: 'absolute', top: 3, left: vendable ? 23 : 3,
+                        width: 18, height: 18, borderRadius: '50%', background: '#fff',
+                        transition: 'left 0.2s', display: 'block',
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                      }} />
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </>
       )}

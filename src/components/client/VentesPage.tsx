@@ -210,12 +210,33 @@ export default function VentesPage() {
   const selectedActivite = activites.find(a => a.id === selectedActiviteId);
   const totalCA = lignes.reduce((s, l) => s + l.quantite * l.prix_unitaire, 0);
 
+  const selectedActivite = activites.find(a => a.id === selectedActiviteId);
+
   return (
-    <div style={{ padding: '24px', maxWidth: 1100, margin: '0 auto' }}>
-      <h1 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: 4 }}>Ventes</h1>
-      <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', marginBottom: 20 }}>
-        Saisie des ventes directes et via prestataires de livraison
-      </p>
+    <div className="page-content">
+      {/* Hero header — vente theme */}
+      <div style={{
+        background: 'linear-gradient(135deg, #065f46 0%, #059669 55%, #10b981 100%)',
+        borderRadius: 18, padding: '24px 28px', marginBottom: 24,
+        boxShadow: '0 8px 32px rgba(5,150,105,0.28)',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16,
+      }}>
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+            <div style={{ background: 'rgba(255,255,255,0.2)', borderRadius: 10, padding: '7px 9px', fontSize: '1.2rem' }}>🛒</div>
+            <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0 }}>Ventes</h1>
+          </div>
+          {selectedActivite && (
+            <span style={{
+              background: 'rgba(255,255,255,0.18)', color: '#fff',
+              borderRadius: 20, padding: '2px 10px', fontSize: '0.78rem', fontWeight: 600,
+              border: '1px solid rgba(255,255,255,0.3)',
+            }}>
+              🏪 {selectedActivite.nom}
+            </span>
+          )}
+        </div>
+      </div>
 
       {/* Activité selector */}
       {activites.length > 1 && (
