@@ -210,8 +210,6 @@ export default function VentesPage() {
   const selectedActivite = activites.find(a => a.id === selectedActiviteId);
   const totalCA = lignes.reduce((s, l) => s + l.quantite * l.prix_unitaire, 0);
 
-  const selectedActivite = activites.find(a => a.id === selectedActiviteId);
-
   return (
     <div className="page-content">
       {/* Hero header — vente theme */}
