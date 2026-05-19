@@ -1150,7 +1150,7 @@ interface ActivityStockSectionProps {
   onActiviteChange?: (nom: string) => void;
 }
 
-function ActivityStockSection({ label, activities, initialActiviteId, onSave, onActiviteChange }: ActivityStockSectionProps) {
+function ActivityStockSection({ label: _label, activities, initialActiviteId, onSave, onActiviteChange }: ActivityStockSectionProps) {
   const { t } = useTranslation();
   const { canWrite: _canWrite } = useAuth();
   void _canWrite;

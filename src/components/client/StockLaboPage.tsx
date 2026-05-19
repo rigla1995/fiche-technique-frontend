@@ -135,12 +135,6 @@ export default function StockLaboPage() {
   const [iFilterIngId, setIFilterIngId] = useState('');
   const [iFilterNom, setIFilterNom] = useState('');
 
-  // ── Activity popup (Stock tab)
-  const [activityPopup, setActivityPopup] = useState<{
-    activite: LaboActivite;
-    unitTotals: { unite: string; qty: number; value: number }[];
-    anchor: { x: number; y: number };
-  } | null>(null);
 
   // ── PT recipe / stock popup
   const [ptRecipes, setPtRecipes] = useState<Record<number, Array<{ ingredientId: number; nom: string; portion: number; unite: string }>>>({});
@@ -425,28 +419,6 @@ export default function StockLaboPage() {
     setBulkSaving(false);
   };
 
-  // Activity popup: compute unit totals for an activity
-  const openActivityPopup = (e: React.MouseEvent, act: LaboActivite) => {
-    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    const assignedIngIds = new Set(
-      (assignments?.ingredients ?? [])
-        .filter((ing) => ing.activities.some((a) => a.activiteId === act.id && a.assigned))
-        .map((ing) => ing.ingredientId)
-    );
-    // Aggregate by unit from stock data
-    const unitMap = new Map<string, { qty: number; value: number }>();
-    for (const row of stock) {
-      if (!assignedIngIds.has(row.ingredientId)) continue;
-      if (row.quantite === null || row.quantite <= 0) continue;
-      const key = row.unite;
-      const existing = unitMap.get(key) ?? { qty: 0, value: 0 };
-      existing.qty += row.quantite;
-      existing.value += row.quantite * (row.prixUnitaire ?? 0);
-      unitMap.set(key, existing);
-    }
-    const unitTotals = Array.from(unitMap.entries()).map(([unite, v]) => ({ unite, qty: v.qty, value: v.value }));
-    setActivityPopup({ activite: act, unitTotals, anchor: { x: rect.left + rect.width / 2, y: rect.bottom + window.scrollY + 8 } });
-  };
 
   const activites: LaboActivite[] = assignments?.activites ?? [];
 
@@ -496,10 +468,8 @@ export default function StockLaboPage() {
 
   if (!laboId) return <div className="page"><p className="text-muted">Labo introuvable.</p></div>;
 
-  const laboActivites: LaboActivite[] = labo?.activites ?? [];
-
   return (
-    <div className="page" onClick={() => activityPopup && setActivityPopup(null)}>
+    <div className="page">
       {/* Hero header */}
       <div style={{
         background: 'linear-gradient(135deg, #3b0764 0%, #7e22ce 55%, #a855f7 100%)',
@@ -553,36 +523,6 @@ export default function StockLaboPage() {
             </div>
           )}
 
-          {/* Activity popup */}
-          {activityPopup && (
-            <div
-              onClick={(e) => e.stopPropagation()}
-              style={{
-                position: 'fixed',
-                top: Math.min(activityPopup.anchor.y - window.scrollY, window.innerHeight - 200),
-                left: Math.min(activityPopup.anchor.x, window.innerWidth - 200),
-                transform: 'translateX(-50%)',
-                background: 'white', border: '1px solid var(--border)',
-                borderRadius: 10, boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
-                padding: '14px 18px', zIndex: 1000, minWidth: 180,
-              }}
-            >
-              <div style={{ fontWeight: 700, fontSize: '0.82rem', color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10 }}>
-                {activityPopup.activite.nom}
-              </div>
-              {activityPopup.unitTotals.length === 0 ? (
-                <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>Aucun stock disponible</p>
-              ) : (
-                activityPopup.unitTotals.map(({ unite, qty, value }) => (
-                  <div key={unite} style={{ marginBottom: 8, padding: '6px 10px', background: 'var(--surface)', borderRadius: 8, border: '1px solid var(--border)' }}>
-                    <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{unite}</div>
-                    <div style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--primary)' }}>{qty.toFixed(3)} {unite}</div>
-                    <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>{value.toFixed(3)} DT</div>
-                  </div>
-                ))
-              )}
-            </div>
-          )}
 
           {/* Filter panel — compact single-row layout */}
           <div style={{
