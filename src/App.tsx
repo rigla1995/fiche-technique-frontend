@@ -46,6 +46,7 @@ import RapportsPage from './components/client/RapportsPage';
 import VentesPage from './components/client/VentesPage';
 import LaboVentesPage from './components/client/LaboVentesPage';
 import PrestatairesManagement from './components/admin/PrestatairesManagement';
+import IngredientsActivitePage from './components/client/IngredientsActivitePage';
 import './i18n';
 import './index.css';
 
@@ -138,6 +139,7 @@ export default function App() {
             <Route path="/client/ai-assistant" element={<AIAssistantPage />} />
             <Route path="/client/ventes" element={<VentesPage />} />
             <Route path="/client/labo/ventes" element={<LaboVentesPage />} />
+            <Route path="/client/ingredients-activite" element={<IngredientsActivitePage />} />
           </Route>
 
           {/* Error pages */}

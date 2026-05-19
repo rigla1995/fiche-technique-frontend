@@ -465,6 +465,11 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                   {openSections.has('activites') && (
                     <>
                       <li>
+                        <NavLink to="/client/ingredients-activite" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>
+                          <span className="link-icon">🧂</span><span className="link-label">Ingrédients activités</span>
+                        </NavLink>
+                      </li>
+                      <li>
                         <NavLink to="/client/stock?section=activite" className={({ isActive }) => `sidebar-link ${isActive && currentSection === 'activite' ? 'active' : ''}`} onClick={onClose}>
                           <span className="link-icon">📦</span><span className="link-label">Stock Activités</span>
                         </NavLink>
