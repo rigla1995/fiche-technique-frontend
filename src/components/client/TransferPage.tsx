@@ -505,7 +505,7 @@ export default function TransferPage() {
                 value={filterNom} onChange={(e) => setFilterNom(e.target.value)} />
             </div>
             {(filterCategorie || filterIngredientId !== '' || filterNom || filterActiviteId !== '') && (
-              <button className="btn btn-ghost btn-sm" style={{ fontSize: '0.72rem', alignSelf: 'flex-end', marginLeft: 'auto' }} onClick={() => { setFilterCategorie(''); setFilterIngredientId(''); setFilterNom(''); setFilterActiviteId(''); }}>✕ Réinitialiser</button>
+              <button onClick={() => { setFilterCategorie(''); setFilterIngredientId(''); setFilterNom(''); setFilterActiviteId(''); }} style={{ alignSelf: 'flex-end', marginLeft: 'auto', background: 'transparent', border: '1.5px solid var(--border)', borderRadius: 7, padding: '5px 9px', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '0.85rem', lineHeight: 1, fontWeight: 700 }} title="Réinitialiser">✕</button>
             )}
           </div>
         </div>

@@ -288,9 +288,11 @@ export default function HistoriqueInventairePage() {
                   {filteredIngOptions.map((i) => <option key={i.ingredientId} value={i.ingredientId}>{i.nom}</option>)}
                 </select>
               </div>
-              <button onClick={() => { setStartDate(`${currentYear}-01-01`); setEndDate(`${currentYear}-12-31`); setFilterIngredientId(''); setFilterCategorie(''); }}
-                style={{ alignSelf: 'flex-end', marginLeft: 'auto', background: 'transparent', border: '1.5px solid var(--border)', borderRadius: 7, padding: '5px 9px', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '0.85rem', lineHeight: 1, fontWeight: 700 }}
-                title="Réinitialiser">✕</button>
+              {(startDate !== `${currentYear}-01-01` || endDate !== `${currentYear}-12-31` || filterIngredientId || filterCategorie) && (
+                <button onClick={() => { setStartDate(`${currentYear}-01-01`); setEndDate(`${currentYear}-12-31`); setFilterIngredientId(''); setFilterCategorie(''); }}
+                  style={{ alignSelf: 'flex-end', marginLeft: 'auto', background: 'transparent', border: '1.5px solid var(--border)', borderRadius: 7, padding: '5px 9px', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '0.85rem', lineHeight: 1, fontWeight: 700 }}
+                  title="Réinitialiser">✕</button>
+              )}
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, flexWrap: 'wrap' }}>

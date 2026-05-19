@@ -575,7 +575,7 @@ export default function StockLaboPage() {
               {(sFilterCat || sFilterIngId || sFilterNom || sFilterFournisseur || sFilterRefFacture) && (
                 <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', gap: 2 }}>
                   <label style={{ fontSize: '0.62rem', opacity: 0 }}>x</label>
-                  <button className="btn btn-ghost btn-sm" style={{ fontSize: '0.78rem' }} onClick={() => { setSFilterCat(''); setSFilterIngId(''); setSFilterNom(''); setSFilterFournisseur(''); setSFilterRefFacture(''); }}>✕ Réinitialiser</button>
+                  <button onClick={() => { setSFilterCat(''); setSFilterIngId(''); setSFilterNom(''); setSFilterFournisseur(''); setSFilterRefFacture(''); }} style={{ alignSelf: 'flex-end', background: 'transparent', border: '1.5px solid var(--border)', borderRadius: 7, padding: '5px 9px', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '0.85rem', lineHeight: 1, fontWeight: 700 }} title="Réinitialiser">✕</button>
                 </div>
               )}
             </div>
@@ -905,7 +905,7 @@ export default function StockLaboPage() {
             <div style={{ width: '100%', marginBottom: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: 12, borderBottom: '1px solid var(--border)' }}>
               <span style={{ fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#7e22ce' }}>Filtres</span>
               {(iFilterCat || iFilterIngId || iFilterNom) && (
-                <button className="btn btn-ghost btn-sm" style={{ fontSize: '0.78rem' }} onClick={() => { setIFilterCat(''); setIFilterIngId(''); setIFilterNom(''); }}>✕ Réinitialiser</button>
+                <button onClick={() => { setIFilterCat(''); setIFilterIngId(''); setIFilterNom(''); }} style={{ background: 'transparent', border: '1.5px solid var(--border)', borderRadius: 7, padding: '5px 9px', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '0.85rem', lineHeight: 1, fontWeight: 700 }} title="Réinitialiser">✕</button>
               )}
             </div>
             {/* Section: Produit */}
