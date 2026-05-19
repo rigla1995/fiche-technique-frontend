@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { useSearchParams, Link } from 'react-router-dom';
+import { useSearchParams, Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
 
@@ -36,9 +36,11 @@ interface Activite { id: number; nom: string }
 
 export default function TransferHistoriquePage() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const laboId = searchParams.get('laboId') || '';
 
+  const [allLabos, setAllLabos] = useState<{ id: number; nom: string }[]>([]);
   const [labo, setLabo] = useState<{ nom: string; activites: Activite[] } | null>(null);
   const [results, setResults] = useState<TransferEntry[]>([]);
   const [loading, setLoading] = useState(false);
@@ -69,6 +71,10 @@ export default function TransferHistoriquePage() {
   // Delete modal
   const [deleteTarget, setDeleteTarget] = useState<TransferEntry | null>(null);
   const [deleteSaving, setDeleteSaving] = useState(false);
+
+  useEffect(() => {
+    api.get('/api/labo').then(({ data }) => setAllLabos(data)).catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (!laboId) return;
@@ -195,16 +201,19 @@ export default function TransferHistoriquePage() {
       {/* Hero header */}
       <div style={{
         background: 'linear-gradient(135deg, #3b0764 0%, #7e22ce 55%, #a855f7 100%)',
-        borderRadius: 18, padding: '24px 28px', marginBottom: 24,
+        borderRadius: 18, padding: '24px 28px', marginBottom: 16,
         boxShadow: '0 8px 32px rgba(126,34,206,0.28)',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16,
       }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
             <div style={{ background: 'rgba(255,255,255,0.2)', borderRadius: 10, padding: '7px 9px', fontSize: '1.2rem' }}>📋</div>
-            <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0 }}>
-              {labo ? labo.nom : t('common.loading')} — {t('client.labo.transfers_history')} {currentYear}
-            </h1>
+            <div>
+              <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0, letterSpacing: '-0.02em' }}>
+                Historique Transfert{labo ? ` — ${labo.nom}` : ''}
+              </h1>
+              <p style={{ color: 'rgba(255,255,255,0.72)', fontSize: '0.82rem', margin: '4px 0 0' }}>Consultez et exportez l'historique des transferts vers les activités</p>
+            </div>
           </div>
         </div>
         <Link to={`/client/labo/transfer?laboId=${laboId}`}
@@ -213,31 +222,44 @@ export default function TransferHistoriquePage() {
         </Link>
       </div>
 
+      {/* Labo selector */}
+      {allLabos.length > 0 && (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16, padding: '10px 14px', background: 'var(--card-bg)', borderRadius: 10, border: '1px solid var(--border)' }}>
+          {allLabos.map((l) => (
+            <button key={l.id} onClick={() => navigate(`/client/labo/historique-transferts?laboId=${l.id}`)}
+              style={{ padding: '4px 14px', borderRadius: 20, cursor: 'pointer', fontSize: '0.82rem', border: laboId === String(l.id) ? '1.5px solid #7e22ce' : '1.5px solid var(--border)', background: laboId === String(l.id) ? '#7e22ce' : 'var(--bg)', color: laboId === String(l.id) ? '#fff' : 'var(--text)', fontWeight: laboId === String(l.id) ? 700 : 400 }}>
+              🏭 {l.nom}
+            </button>
+          ))}
+          <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', alignSelf: 'center', marginLeft: 4 }}>← sélectionner le labo</span>
+        </div>
+      )}
+
       {/* Filter panel */}
       <div style={{ background: 'var(--surface)', borderRadius: 14, padding: '14px 18px', border: '1px solid var(--border)', boxShadow: '0 2px 12px rgba(0,0,0,0.05)', marginBottom: 24 }}>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'flex-end', justifyContent: 'center', marginBottom: 12 }}>
           <div>
-            <label style={{ fontSize: '0.65rem', fontWeight: 800, color: '#1e40af', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 3 }}>📅 Du</label>
-            <input type="date" style={{ padding: '6px 10px', borderRadius: 8, border: '1.5px solid #93c5fd', fontSize: '0.83rem', background: '#eff6ff', minWidth: 130, fontWeight: 600 }}
+            <label style={{ fontSize: '0.65rem', fontWeight: 800, color: '#7e22ce', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 3 }}>📅 Du</label>
+            <input type="date" style={{ padding: '6px 10px', borderRadius: 8, border: '1.5px solid #7e22ce', fontSize: '0.83rem', background: '#faf5ff', minWidth: 130, fontWeight: 600 }}
               value={startDate} onChange={(e) => setStartDate(e.target.value)} />
           </div>
           <div>
-            <label style={{ fontSize: '0.65rem', fontWeight: 800, color: '#1e40af', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 3 }}>📅 Au</label>
-            <input type="date" style={{ padding: '6px 10px', borderRadius: 8, border: '1.5px solid #93c5fd', fontSize: '0.83rem', background: '#eff6ff', minWidth: 130, fontWeight: 600 }}
+            <label style={{ fontSize: '0.65rem', fontWeight: 800, color: '#7e22ce', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 3 }}>📅 Au</label>
+            <input type="date" style={{ padding: '6px 10px', borderRadius: 8, border: '1.5px solid #7e22ce', fontSize: '0.83rem', background: '#faf5ff', minWidth: 130, fontWeight: 600 }}
               value={endDate} onChange={(e) => setEndDate(e.target.value)} />
           </div>
           {activites.length > 0 && (
             <div>
-              <label style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 3 }}>🏪 {t('client.labo.filter_activite')}</label>
-              <select style={{ padding: '6px 10px', borderRadius: 8, border: '1.5px solid #93c5fd', fontSize: '0.83rem', background: '#eff6ff', minWidth: 140 }} value={filterActiviteId} onChange={(e) => setFilterActiviteId(e.target.value)}>
+              <label style={{ fontSize: '0.65rem', fontWeight: 800, color: '#7e22ce', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 3 }}>🏪 {t('client.labo.filter_activite')}</label>
+              <select style={{ padding: '6px 10px', borderRadius: 8, border: '1.5px solid #7e22ce', fontSize: '0.83rem', background: '#faf5ff', minWidth: 140 }} value={filterActiviteId} onChange={(e) => setFilterActiviteId(e.target.value)}>
                 <option value="">{t('client.labo.all_activites')}</option>
                 {activites.map((a) => <option key={a.id} value={a.id}>{a.nom}</option>)}
               </select>
             </div>
           )}
           <div>
-            <label style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 3 }}>🏷️ Catégorie</label>
-            <select style={{ padding: '6px 10px', borderRadius: 8, border: '1.5px solid #93c5fd', fontSize: '0.83rem', background: '#eff6ff', minWidth: 130 }} value={filterCategorie}
+            <label style={{ fontSize: '0.65rem', fontWeight: 800, color: '#7e22ce', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 3 }}>🏷️ Catégorie</label>
+            <select style={{ padding: '6px 10px', borderRadius: 8, border: '1.5px solid #7e22ce', fontSize: '0.83rem', background: '#faf5ff', minWidth: 130 }} value={filterCategorie}
               onChange={(e) => { setFilterCategorie(e.target.value); setPage(1); }}>
               <option value="">{t('client.catalogue_franchise.all_categories')}</option>
               {allCategories.map((c) => <option key={c} value={c}>{c}</option>)}
