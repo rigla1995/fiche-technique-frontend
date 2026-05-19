@@ -212,7 +212,7 @@ export default function LaboHistoriquepertesPage() {
         background: 'var(--surface)', borderRadius: 14, padding: '14px 18px', marginBottom: 24,
         border: '1px solid var(--border)', boxShadow: '0 2px 12px rgba(0,0,0,0.05)',
       }}>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'flex-end', marginBottom: 12 }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'flex-end', justifyContent: 'center', marginBottom: 12 }}>
           <div>
             <label style={{ fontSize: '0.65rem', fontWeight: 800, color: '#7e22ce', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 3 }}>📅 Du</label>
             <input type="date" style={{ padding: '6px 10px', borderRadius: 8, border: '1.5px solid #7e22ce', fontSize: '0.83rem', background: '#faf5ff', minWidth: 130, fontWeight: 600 }} value={fDateDebut} onChange={(e) => setFDateDebut(e.target.value)} />
@@ -243,7 +243,7 @@ export default function LaboHistoriquepertesPage() {
               <option value="dechet">Déchet</option>
             </select>
           </div>
-          <button className="btn btn-ghost btn-sm" style={{ alignSelf: 'flex-end', marginLeft: 'auto' }} onClick={resetFilters}>✕ Réinit.</button>
+          <button onClick={resetFilters} style={{ alignSelf: 'flex-end', marginLeft: 'auto', background: 'transparent', border: '1.5px solid var(--border)', borderRadius: 7, padding: '5px 9px', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '0.85rem', lineHeight: 1, fontWeight: 700 }} title="Réinitialiser">✕</button>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, flexWrap: 'wrap' }}>

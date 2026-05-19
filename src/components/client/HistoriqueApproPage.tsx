@@ -464,7 +464,7 @@ export default function HistoriqueApproPage() {
         border: '1px solid var(--border)', boxShadow: '0 2px 12px rgba(0,0,0,0.05)',
         marginBottom: 24,
       }}>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'flex-end', marginBottom: 12 }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'flex-end', justifyContent: 'center', marginBottom: 12 }}>
           <div>
             <label style={{ fontSize: '0.62rem', fontWeight: 700, color: '#1e40af', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 4 }}>📅 Du</label>
             <input type="date" style={{ padding: '6px 10px', borderRadius: 7, border: '1.5px solid #1e40af', fontSize: '0.82rem', background: '#eff6ff', fontWeight: 600 }}
@@ -507,6 +507,9 @@ export default function HistoriqueApproPage() {
             <input type="text" style={{ padding: '6px 10px', borderRadius: 7, border: '1.5px solid var(--border)', fontSize: '0.82rem', background: 'var(--background)', minWidth: 110 }}
               placeholder="Réf…" value={refFactureFilter} onChange={(e) => setRefFactureFilter(e.target.value)} />
           </div>
+          <button onClick={() => { setSelectedCategoryId(''); setSelectedIngredientId(''); setSelectedFournisseurId(''); setRefFactureFilter(''); setStartDate(yearStart); setEndDate(yearEnd); }}
+            style={{ alignSelf: 'flex-end', background: 'transparent', border: '1.5px solid var(--border)', borderRadius: 7, padding: '5px 9px', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '0.85rem', lineHeight: 1, fontWeight: 700 }}
+            title="Réinitialiser">✕</button>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, flexWrap: 'wrap' }}>

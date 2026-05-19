@@ -83,7 +83,7 @@ export default function HistoriqueInventairePage() {
       .then(({ data }) => {
         const filtered = data as Activite[];
         setActivites(filtered);
-        if (filtered.length === 1) setSelectedActiviteId(filtered[0].id);
+        if (filtered.length >= 1) setSelectedActiviteId(filtered[0].id);
       })
       .catch(() => {});
   }, [section]);
@@ -196,7 +196,7 @@ export default function HistoriqueInventairePage() {
   const contextTitle = laboId
     ? `Labo — ${contextNom}`
     : section
-    ? `Activités${contextNom ? ` — ${contextNom}` : ''}`
+    ? contextNom || 'Activités'
     : contextNom || '';
 
   const showActiviteSelector = !!section && !activiteId && activites.length > 1;
@@ -243,13 +243,14 @@ export default function HistoriqueInventairePage() {
 
       {/* ── Activite selector ── */}
       {showActiviteSelector && (
-        <div style={{ marginBottom: 20, background: 'var(--surface)', borderRadius: 12, padding: '14px 18px', border: '1px solid var(--border)' }}>
-          <label style={labelStyle}>Activité</label>
-          <select value={selectedActiviteId ?? ''} onChange={(e) => { setSelectedActiviteId(Number(e.target.value) || null); setApplied(false); setHistRows([]); }}
-            style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid var(--border)', fontSize: '0.9rem', minWidth: 240, fontWeight: 600, background: 'var(--background)' }}>
-            <option value="">— Choisir une activité —</option>
-            {activites.map((a) => <option key={a.id} value={a.id}>{a.nom}</option>)}
-          </select>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16, padding: '10px 14px', background: 'var(--card-bg)', borderRadius: 10, border: '1px solid var(--border)' }}>
+          {activites.map((a) => (
+            <button key={a.id} onClick={() => { setSelectedActiviteId(a.id); setApplied(false); setHistRows([]); }}
+              style={{ padding: '4px 14px', borderRadius: 20, cursor: 'pointer', fontSize: '0.82rem', border: selectedActiviteId === a.id ? '1.5px solid #065f46' : '1.5px solid var(--border)', background: selectedActiviteId === a.id ? '#065f46' : 'var(--bg)', color: selectedActiviteId === a.id ? '#fff' : 'var(--text)', fontWeight: selectedActiviteId === a.id ? 700 : 400 }}>
+              🏪 {a.nom}
+            </button>
+          ))}
+          <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', alignSelf: 'center', marginLeft: 4 }}>← sélectionner l'activité</span>
         </div>
       )}
 
@@ -260,7 +261,7 @@ export default function HistoriqueInventairePage() {
             background: 'var(--surface)', borderRadius: 14, padding: '14px 18px', marginBottom: 20,
             border: '1px solid var(--border)', boxShadow: '0 2px 12px rgba(0,0,0,0.05)',
           }}>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'flex-end', marginBottom: 12 }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'flex-end', justifyContent: 'center', marginBottom: 12 }}>
               <div>
                 <label style={{ fontSize: '0.65rem', fontWeight: 800, color: '#065f46', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 3 }}>📅 Du</label>
                 <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)}
@@ -287,6 +288,9 @@ export default function HistoriqueInventairePage() {
                   {filteredIngOptions.map((i) => <option key={i.ingredientId} value={i.ingredientId}>{i.nom}</option>)}
                 </select>
               </div>
+              <button onClick={() => { setStartDate(`${currentYear}-01-01`); setEndDate(`${currentYear}-12-31`); setFilterIngredientId(''); setFilterCategorie(''); }}
+                style={{ alignSelf: 'flex-end', marginLeft: 'auto', background: 'transparent', border: '1.5px solid var(--border)', borderRadius: 7, padding: '5px 9px', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '0.85rem', lineHeight: 1, fontWeight: 700 }}
+                title="Réinitialiser">✕</button>
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, flexWrap: 'wrap' }}>

@@ -62,7 +62,7 @@ export default function InventairePage() {
       .then(({ data }) => {
         const filtered = data as Activite[];
         setActivites(filtered);
-        if (filtered.length === 1) setSelectedActiviteId(filtered[0].id);
+        if (filtered.length >= 1) setSelectedActiviteId(filtered[0].id);
       })
       .catch(() => {});
   }, [section]);
@@ -165,12 +165,12 @@ export default function InventairePage() {
   const filledCount = rows.filter((r) => qtys[r.ingredientId] !== '').length;
   const alarmTotal = rows.filter((r) => isAlarm(r)).length;
   const hasAnyQty = filledCount > 0;
-  const needsActiviteSelector = !isClientMode && !!section && !activiteId && activites.length > 1 && !selectedActiviteId;
+  const needsActiviteSelector = false;
 
   const contextLabel = laboId
     ? `Labo — ${contextNom}`
     : section
-    ? `Activités${contextNom ? ` — ${contextNom}` : ''}`
+    ? contextNom || 'Activités'
     : contextNom || 'Inventaire';
 
   return (
@@ -214,13 +214,14 @@ export default function InventairePage() {
 
       {/* ── Activite selector ── */}
       {section && !activiteId && activites.length > 1 && (
-        <div style={{ marginBottom: 20, background: 'var(--surface)', borderRadius: 12, padding: '14px 18px', border: '1px solid var(--border)' }}>
-          <label style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 6 }}>Activité</label>
-          <select value={selectedActiviteId ?? ''} onChange={(e) => setSelectedActiviteId(Number(e.target.value) || null)}
-            style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid var(--border)', fontSize: '0.9rem', minWidth: 240, fontWeight: 600, background: 'var(--background)' }}>
-            <option value="">— Choisir une activité —</option>
-            {activites.map((a) => <option key={a.id} value={a.id}>{a.nom}</option>)}
-          </select>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16, padding: '10px 14px', background: 'var(--card-bg)', borderRadius: 10, border: '1px solid var(--border)' }}>
+          {activites.map((a) => (
+            <button key={a.id} onClick={() => setSelectedActiviteId(a.id)}
+              style={{ padding: '4px 14px', borderRadius: 20, cursor: 'pointer', fontSize: '0.82rem', border: selectedActiviteId === a.id ? '1.5px solid #065f46' : '1.5px solid var(--border)', background: selectedActiviteId === a.id ? '#065f46' : 'var(--bg)', color: selectedActiviteId === a.id ? '#fff' : 'var(--text)', fontWeight: selectedActiviteId === a.id ? 700 : 400 }}>
+              🏪 {a.nom}
+            </button>
+          ))}
+          <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', alignSelf: 'center', marginLeft: 4 }}>← sélectionner l'activité</span>
         </div>
       )}
 
@@ -251,6 +252,9 @@ export default function InventairePage() {
                 {categories.map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>
+            <button onClick={() => { setSearchName(''); setFilterCategory(''); }}
+              style={{ alignSelf: 'flex-end', background: 'transparent', border: '1.5px solid var(--border)', borderRadius: 7, padding: '5px 9px', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '0.85rem', lineHeight: 1, fontWeight: 700 }}
+              title="Réinitialiser">✕</button>
             <div style={{ marginLeft: 'auto' }}>
               <button onClick={handleSave} disabled={saving || !hasAnyQty || !canWrite} style={{
                 padding: '10px 28px', borderRadius: 10, border: 'none',
