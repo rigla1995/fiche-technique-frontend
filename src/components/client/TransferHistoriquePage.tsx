@@ -46,6 +46,7 @@ export default function TransferHistoriquePage() {
   const [page, setPage] = useState(1);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [exporting, setExporting] = useState(false);
+  const [exportingPdf, setExportingPdf] = useState(false);
 
   // Server-side filters
   const [startDate, setStartDate] = useState(yearStart);
@@ -75,14 +76,19 @@ export default function TransferHistoriquePage() {
     api.get(`/api/labo/${laboId}`).then(({ data }) => setLabo(data)).catch(() => {});
   }, [laboId]);
 
+  const buildParams = () => {
+    const params = new URLSearchParams();
+    if (startDate) params.set('startDate', startDate);
+    if (endDate) params.set('endDate', endDate);
+    if (filterActiviteId) params.set('activiteId', filterActiviteId);
+    return params;
+  };
+
   const exportExcel = async () => {
     if (!laboId) return;
     setExporting(true);
     try {
-      const params = new URLSearchParams();
-      if (startDate) params.set('startDate', startDate);
-      if (endDate) params.set('endDate', endDate);
-      if (filterActiviteId) params.set('activiteId', filterActiviteId);
+      const params = buildParams();
       if (selectedIds.size > 0) params.set('selectedIds', [...selectedIds].join(','));
       const { data } = await api.get(`/api/labo/${laboId}/transfers/export-excel?${params}`, { responseType: 'blob' });
       const url = URL.createObjectURL(new Blob([data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
@@ -95,8 +101,24 @@ export default function TransferHistoriquePage() {
     setExporting(false);
   };
 
+  const exportPdf = async () => {
+    if (!laboId) return;
+    setExportingPdf(true);
+    try {
+      const params = buildParams();
+      if (selectedIds.size > 0) params.set('selectedIds', [...selectedIds].join(','));
+      const { data } = await api.get(`/api/labo/${laboId}/transfers/export-pdf?${params}`, { responseType: 'blob' });
+      const url = URL.createObjectURL(new Blob([data], { type: 'application/pdf' }));
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `historique-transferts-${new Date().toISOString().slice(0, 10)}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch { /* ignore */ }
+    setExportingPdf(false);
+  };
+
   const toggleSelect = (id: number) => setSelectedIds((prev) => { const n = new Set(prev); if (n.has(id)) n.delete(id); else n.add(id); return n; });
-  const toggleSelectAll = () => { if (selectedIds.size === filteredResults.length) setSelectedIds(new Set()); else setSelectedIds(new Set(filteredResults.map((r) => r.id))); };
 
   const fetchResults = useCallback(async () => {
     if (!laboId) return;
@@ -198,88 +220,54 @@ export default function TransferHistoriquePage() {
       </div>
 
       {/* Filter panel */}
-      <div style={{ background: 'var(--surface)', borderRadius: 14, padding: '16px 20px', border: '1px solid var(--border)', boxShadow: '0 2px 12px rgba(0,0,0,0.05)', marginBottom: 24 }}>
-        {/* Panel header */}
-        <div style={{ width: '100%', marginBottom: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: 12, borderBottom: '1px solid var(--border)' }}>
-          <span style={{ fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#7e22ce' }}>Filtres</span>
-        </div>
-        {/* Section 1: Entité & Produit */}
-        <div style={{ marginBottom: 16, marginTop: 14 }}>
-          <div style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span style={{ width: 16, height: 2, background: '#7e22ce', display: 'inline-block', borderRadius: 2 }} />
-            Entité &amp; Produit
+      <div style={{ background: 'var(--surface)', borderRadius: 14, padding: '14px 18px', border: '1px solid var(--border)', boxShadow: '0 2px 12px rgba(0,0,0,0.05)', marginBottom: 24 }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'flex-end', marginBottom: 12 }}>
+          <div>
+            <label style={{ fontSize: '0.65rem', fontWeight: 800, color: '#7e22ce', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 3 }}>📅 Du</label>
+            <input type="date" style={{ padding: '6px 10px', borderRadius: 8, border: '1.5px solid #7e22ce', fontSize: '0.83rem', background: '#faf5ff', minWidth: 130, fontWeight: 600 }}
+              value={startDate} onChange={(e) => setStartDate(e.target.value)} />
           </div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14, alignItems: 'flex-end' }}>
-            {activites.length > 0 && (
-              <div>
-                <label style={{ fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#7e22ce', display: 'block', marginBottom: 5 }}>🏪 {t('client.labo.filter_activite')}</label>
-                <select style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid #7e22ce', fontSize: '0.88rem', background: '#faf5ff', minWidth: 160 }} value={filterActiviteId} onChange={(e) => setFilterActiviteId(e.target.value)}>
-                  <option value="">{t('client.labo.all_activites')}</option>
-                  {activites.map((a) => <option key={a.id} value={a.id}>{a.nom}</option>)}
-                </select>
-              </div>
-            )}
+          <div>
+            <label style={{ fontSize: '0.65rem', fontWeight: 800, color: '#7e22ce', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 3 }}>📅 Au</label>
+            <input type="date" style={{ padding: '6px 10px', borderRadius: 8, border: '1.5px solid #7e22ce', fontSize: '0.83rem', background: '#faf5ff', minWidth: 130, fontWeight: 600 }}
+              value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+          </div>
+          {activites.length > 0 && (
             <div>
-              <label style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>🏷️ Catégorie</label>
-              <select style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid var(--border)', fontSize: '0.88rem', background: 'var(--background)', minWidth: 160 }} value={filterCategorie}
-                onChange={(e) => { setFilterCategorie(e.target.value); setPage(1); }}>
-                <option value="">{t('client.catalogue_franchise.all_categories')}</option>
-                {allCategories.map((c) => <option key={c} value={c}>{c}</option>)}
+              <label style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 3 }}>🏪 {t('client.labo.filter_activite')}</label>
+              <select style={{ padding: '6px 10px', borderRadius: 8, border: '1.5px solid var(--border)', fontSize: '0.83rem', background: 'var(--bg)', minWidth: 140 }} value={filterActiviteId} onChange={(e) => setFilterActiviteId(e.target.value)}>
+                <option value="">{t('client.labo.all_activites')}</option>
+                {activites.map((a) => <option key={a.id} value={a.id}>{a.nom}</option>)}
               </select>
             </div>
-            <div>
-              <label style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>🧂 {t('client.stock.ingredient')}</label>
-              <input type="text" style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid var(--border)', fontSize: '0.88rem', background: 'var(--background)', minWidth: 160 }}
-                placeholder={t('client.stock.search_ingredient')}
-                value={filterNom} onChange={(e) => { setFilterNom(e.target.value); setPage(1); }} />
-            </div>
+          )}
+          <div>
+            <label style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 3 }}>🏷️ Catégorie</label>
+            <select style={{ padding: '6px 10px', borderRadius: 8, border: '1.5px solid var(--border)', fontSize: '0.83rem', background: 'var(--bg)', minWidth: 130 }} value={filterCategorie}
+              onChange={(e) => { setFilterCategorie(e.target.value); setPage(1); }}>
+              <option value="">{t('client.catalogue_franchise.all_categories')}</option>
+              {allCategories.map((c) => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </div>
+          <div>
+            <label style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 3 }}>🧂 {t('client.stock.ingredient')}</label>
+            <input type="text" style={{ padding: '6px 10px', borderRadius: 8, border: '1.5px solid var(--border)', fontSize: '0.83rem', background: 'var(--bg)', minWidth: 120 }}
+              placeholder={t('client.stock.search_ingredient')}
+              value={filterNom} onChange={(e) => { setFilterNom(e.target.value); setPage(1); }} />
           </div>
         </div>
-        {/* Divider */}
-        <div style={{ marginBottom: 16, borderTop: '1px dashed var(--border)' }} />
-        {/* Section 2: Période */}
-        <div style={{ marginBottom: 16 }}>
-          <div style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span style={{ width: 16, height: 2, background: '#a855f7', display: 'inline-block', borderRadius: 2 }} />
-            Période
-          </div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14, alignItems: 'flex-end' }}>
-            <div>
-              <label style={{ fontSize: '0.68rem', fontWeight: 800, color: '#7e22ce', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>📅 {t('client.historique_appro.start_date')}</label>
-              <input type="date" style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid #7e22ce', fontSize: '0.88rem', background: '#faf5ff', minWidth: 160, fontWeight: 600 }}
-                min={yearStart} max={yearEnd} value={startDate} onChange={(e) => setStartDate(e.target.value)} />
-            </div>
-            <div>
-              <label style={{ fontSize: '0.68rem', fontWeight: 800, color: '#7e22ce', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>📅 {t('client.historique_appro.end_date')}</label>
-              <input type="date" style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid #7e22ce', fontSize: '0.88rem', background: '#faf5ff', minWidth: 160, fontWeight: 600 }}
-                min={yearStart} max={yearEnd} value={endDate} onChange={(e) => setEndDate(e.target.value)} />
-            </div>
-          </div>
-        </div>
-        {/* Actions footer */}
-        <div style={{ paddingTop: 16, borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
-          <button
-            onClick={fetchResults}
-            disabled={loading}
-            style={{ background: 'linear-gradient(135deg, #7e22ce 0%, #a855f7 100%)', boxShadow: '0 4px 14px rgba(126,34,206,0.35)', borderRadius: 10, border: 'none', color: '#fff', fontWeight: 800, padding: '10px 26px', minWidth: 140, cursor: 'pointer', opacity: loading ? 0.6 : 1 }}>
-            {loading ? t('common.loading') : '🔍 Rechercher'}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, flexWrap: 'wrap' }}>
+          <button onClick={fetchResults} disabled={loading}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'linear-gradient(135deg, #3b0764 0%, #7e22ce 100%)', boxShadow: '0 4px 14px rgba(126,34,206,0.35)', borderRadius: 9, border: 'none', color: '#fff', fontWeight: 800, padding: '8px 20px', cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.7 : 1 }}>
+            🔍 {loading ? t('common.loading') : 'Rechercher'}
           </button>
-          <button
-            onClick={exportExcel}
-            disabled={exporting || !searched || results.length === 0}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 8, minWidth: 180,
-              background: (searched && results.length > 0) ? 'linear-gradient(135deg, #16a34a, #22c55e)' : '#e5e7eb',
-              boxShadow: (searched && results.length > 0) ? '0 4px 14px rgba(22,163,74,0.35)' : 'none',
-              borderRadius: 10, border: 'none',
-              color: (searched && results.length > 0) ? '#fff' : 'var(--text-muted)',
-              fontWeight: 800, padding: '10px 20px',
-              cursor: (!searched || results.length === 0) ? 'not-allowed' : 'pointer',
-              opacity: (!searched || results.length === 0) ? 0.55 : 1, transition: 'all 0.15s',
-            }}
-          >
-            <span>📊</span>
-            {selectedIds.size > 0 ? `Générer Excel (${selectedIds.size} sél.)` : 'Générer Hist. Transferts'}
+          <button onClick={exportExcel} disabled={exporting || !searched || results.length === 0}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, background: (searched && results.length > 0) ? 'linear-gradient(135deg, #3b0764 0%, #7e22ce 100%)' : '#e5e7eb', boxShadow: (searched && results.length > 0) ? '0 4px 14px rgba(126,34,206,0.3)' : 'none', borderRadius: 9, border: 'none', color: (searched && results.length > 0) ? '#fff' : 'var(--text-muted)', fontWeight: 800, padding: '8px 18px', cursor: (!searched || results.length === 0) ? 'not-allowed' : 'pointer', opacity: (!searched || results.length === 0) ? 0.55 : 1, transition: 'all 0.15s' }}>
+            <span>📊</span> {selectedIds.size > 0 ? `Exporter (${selectedIds.size})` : 'Exporter'}
+          </button>
+          <button onClick={exportPdf} disabled={exportingPdf || !searched || results.length === 0}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, background: (searched && results.length > 0) ? 'linear-gradient(135deg, #3b0764 0%, #7e22ce 100%)' : '#e5e7eb', boxShadow: (searched && results.length > 0) ? '0 4px 14px rgba(126,34,206,0.3)' : 'none', borderRadius: 9, border: 'none', color: (searched && results.length > 0) ? '#fff' : 'var(--text-muted)', fontWeight: 800, padding: '8px 18px', cursor: (exportingPdf || !searched || results.length === 0) ? 'not-allowed' : 'pointer', opacity: (exportingPdf || !searched || results.length === 0) ? 0.55 : 1, transition: 'all 0.15s' }}>
+            <span>🔴</span> {exportingPdf ? '…' : 'PDF'}
           </button>
         </div>
       </div>
@@ -309,23 +297,21 @@ export default function TransferHistoriquePage() {
             <div className="card" style={{ overflowX: 'auto' }}>
               <table className="table" style={{ tableLayout: 'fixed', width: '100%', minWidth: 860 }}>
                 <colgroup>
-                  <col style={{ width: '30px' }} />
-                  <col style={{ width: '100px' }} />
-                  <col style={{ width: '120px' }} />
-                  <col style={{ width: '160px' }} />
-                  <col style={{ width: '84px' }} />
-                  <col style={{ width: '90px' }} />
-                  <col style={{ width: '56px' }} />
-                  <col style={{ width: '90px' }} />
+                  <col style={{ width: '28px' }} />
+                  <col style={{ width: '175px' }} />
+                  <col style={{ width: '95px' }} />
+                  <col style={{ width: '115px' }} />
                   <col style={{ width: '80px' }} />
-                  <col style={{ width: '72px' }} />
+                  <col style={{ width: '88px' }} />
+                  <col style={{ width: '52px' }} />
+                  <col style={{ width: '88px' }} />
+                  <col style={{ width: '78px' }} />
+                  <col style={{ width: '62px' }} />
                 </colgroup>
                 <thead>
                   <tr style={{ background: 'linear-gradient(135deg, #3b0764, #7e22ce)' }}>
-                    <th style={{ textAlign: 'center', padding: '10px 4px', color: '#fff', background: 'transparent', borderBottom: 'none' }}>
-                      <input type="checkbox" checked={selectedIds.size === filteredResults.length && filteredResults.length > 0} onChange={toggleSelectAll} style={{ cursor: 'pointer', accentColor: '#fff' }} />
-                    </th>
-                    {([t('client.labo.col_date'), t('client.labo.col_activite'), t('client.historique_appro.col_ingredient')] as const).map((label) => (
+                    <th style={{ width: 28, padding: '10px 4px', color: '#fff', background: 'transparent', borderBottom: 'none' }} />
+                    {(['Ingrédient', 'Date', t('client.labo.col_activite')] as const).map((label) => (
                       <th key={label} style={{ fontWeight: 800, fontSize: '0.75rem', letterSpacing: '0.04em', textTransform: 'uppercase', padding: '10px 10px', color: '#fff', background: 'transparent', borderBottom: 'none' }}>{label}</th>
                     ))}
                     {([t('client.historique_appro.col_qty'), 'Prix U. HT', 'TVA %', 'Prix U. TTC'] as const).map((label) => (
@@ -341,7 +327,11 @@ export default function TransferHistoriquePage() {
                     return (
                     <tr key={r.id} style={{ background: isSelected ? '#f5f3ff' : undefined, cursor: 'pointer' }} onClick={() => toggleSelect(r.id)}>
                       <td style={{ textAlign: 'center', padding: '8px 4px' }} onClick={(e) => e.stopPropagation()}>
-                        <input type="checkbox" checked={isSelected} onChange={() => toggleSelect(r.id)} style={{ cursor: 'pointer' }} />
+                        <input type="checkbox" checked={isSelected} onChange={() => toggleSelect(r.id)} style={{ cursor: 'pointer', accentColor: '#7e22ce' }} />
+                      </td>
+                      <td style={{ padding: '8px 10px' }}>
+                        <div style={{ fontWeight: 700, fontSize: '0.86rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.ingredientNom}</div>
+                        <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.uniteNom} · {r.categorieNom}</div>
                       </td>
                       <td style={{ padding: '8px 10px' }}>
                         <span style={{ background: '#faf5ff', border: '1px solid #d8b4fe', borderRadius: 6, padding: '2px 8px', fontWeight: 700, fontSize: '0.8rem', color: '#7e22ce', whiteSpace: 'nowrap' }}>
@@ -349,12 +339,8 @@ export default function TransferHistoriquePage() {
                         </span>
                       </td>
                       <td style={{ fontWeight: 600, padding: '8px 10px', fontSize: '0.86rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.activiteNom}</td>
-                      <td style={{ padding: '8px 10px' }}>
-                        <div style={{ fontWeight: 600, fontSize: '0.86rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.ingredientNom}</div>
-                        <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.categorieNom}</div>
-                      </td>
                       <td style={{ textAlign: 'right', fontWeight: 800, color: '#10b981', padding: '8px 10px', fontSize: '0.85rem', whiteSpace: 'nowrap' }}>
-                        {r.quantite % 1 === 0 ? r.quantite.toFixed(0) : r.quantite} <span style={{ color: 'var(--text-muted)', fontSize: '0.72rem', fontWeight: 400 }}>{r.uniteNom}</span>
+                        {r.quantite % 1 === 0 ? r.quantite.toFixed(0) : r.quantite}
                       </td>
                       <td style={{ textAlign: 'right', padding: '8px 10px', fontSize: '0.85rem', color: '#374151', fontWeight: 600, whiteSpace: 'nowrap' }}>
                         {r.prixUnitaire != null ? `${r.prixUnitaire.toFixed(3)} DT` : '—'}
