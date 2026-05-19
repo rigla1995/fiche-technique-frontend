@@ -217,19 +217,19 @@ export default function TransferHistoriquePage() {
       <div style={{ background: 'var(--surface)', borderRadius: 14, padding: '14px 18px', border: '1px solid var(--border)', boxShadow: '0 2px 12px rgba(0,0,0,0.05)', marginBottom: 24 }}>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'flex-end', justifyContent: 'center', marginBottom: 12 }}>
           <div>
-            <label style={{ fontSize: '0.65rem', fontWeight: 800, color: '#7e22ce', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 3 }}>📅 Du</label>
-            <input type="date" style={{ padding: '6px 10px', borderRadius: 8, border: '1.5px solid #7e22ce', fontSize: '0.83rem', background: '#faf5ff', minWidth: 130, fontWeight: 600 }}
+            <label style={{ fontSize: '0.65rem', fontWeight: 800, color: '#1e40af', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 3 }}>📅 Du</label>
+            <input type="date" style={{ padding: '6px 10px', borderRadius: 8, border: '1.5px solid #93c5fd', fontSize: '0.83rem', background: '#eff6ff', minWidth: 130, fontWeight: 600 }}
               value={startDate} onChange={(e) => setStartDate(e.target.value)} />
           </div>
           <div>
-            <label style={{ fontSize: '0.65rem', fontWeight: 800, color: '#7e22ce', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 3 }}>📅 Au</label>
-            <input type="date" style={{ padding: '6px 10px', borderRadius: 8, border: '1.5px solid #7e22ce', fontSize: '0.83rem', background: '#faf5ff', minWidth: 130, fontWeight: 600 }}
+            <label style={{ fontSize: '0.65rem', fontWeight: 800, color: '#1e40af', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 3 }}>📅 Au</label>
+            <input type="date" style={{ padding: '6px 10px', borderRadius: 8, border: '1.5px solid #93c5fd', fontSize: '0.83rem', background: '#eff6ff', minWidth: 130, fontWeight: 600 }}
               value={endDate} onChange={(e) => setEndDate(e.target.value)} />
           </div>
           {activites.length > 0 && (
             <div>
               <label style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 3 }}>🏪 {t('client.labo.filter_activite')}</label>
-              <select style={{ padding: '6px 10px', borderRadius: 8, border: '1.5px solid var(--border)', fontSize: '0.83rem', background: 'var(--bg)', minWidth: 140 }} value={filterActiviteId} onChange={(e) => setFilterActiviteId(e.target.value)}>
+              <select style={{ padding: '6px 10px', borderRadius: 8, border: '1.5px solid #93c5fd', fontSize: '0.83rem', background: '#eff6ff', minWidth: 140 }} value={filterActiviteId} onChange={(e) => setFilterActiviteId(e.target.value)}>
                 <option value="">{t('client.labo.all_activites')}</option>
                 {activites.map((a) => <option key={a.id} value={a.id}>{a.nom}</option>)}
               </select>
@@ -237,7 +237,7 @@ export default function TransferHistoriquePage() {
           )}
           <div>
             <label style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 3 }}>🏷️ Catégorie</label>
-            <select style={{ padding: '6px 10px', borderRadius: 8, border: '1.5px solid var(--border)', fontSize: '0.83rem', background: 'var(--bg)', minWidth: 130 }} value={filterCategorie}
+            <select style={{ padding: '6px 10px', borderRadius: 8, border: '1.5px solid #93c5fd', fontSize: '0.83rem', background: '#eff6ff', minWidth: 130 }} value={filterCategorie}
               onChange={(e) => { setFilterCategorie(e.target.value); setPage(1); }}>
               <option value="">{t('client.catalogue_franchise.all_categories')}</option>
               {allCategories.map((c) => <option key={c} value={c}>{c}</option>)}

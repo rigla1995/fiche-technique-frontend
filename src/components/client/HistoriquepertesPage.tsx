@@ -323,9 +323,9 @@ export default function HistoriquepertesPage() {
     <div className="page-content">
       {/* Hero */}
       <div style={{
-        background: 'linear-gradient(135deg, #7f1d1d 0%, #991b1b 55%, #ef4444 100%)',
+        background: 'linear-gradient(135deg, #1e3a8a 0%, #1e40af 55%, #3b82f6 100%)',
         borderRadius: 18, padding: '24px 28px', marginBottom: 24,
-        boxShadow: '0 8px 32px rgba(153,27,27,0.28)',
+        boxShadow: '0 8px 32px rgba(30,64,175,0.28)',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16,
       }}>
         <div>
@@ -340,9 +340,9 @@ export default function HistoriquepertesPage() {
       {/* Activité selector pills */}
       {isEntreprise && !isActiviteGerant && activites.length > 0 && (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16, padding: '10px 14px', background: 'var(--card-bg)', borderRadius: 10, border: '1px solid var(--border)' }}>
-          <button onClick={() => setFActiviteId('')} style={{ padding: '4px 14px', borderRadius: 20, cursor: 'pointer', fontSize: '0.82rem', border: !fActiviteId ? '1.5px solid #991b1b' : '1.5px solid var(--border)', background: !fActiviteId ? '#991b1b' : 'var(--bg)', color: !fActiviteId ? '#fff' : 'var(--text)', fontWeight: !fActiviteId ? 700 : 400 }}>Toutes</button>
+          <button onClick={() => setFActiviteId('')} style={{ padding: '4px 14px', borderRadius: 20, cursor: 'pointer', fontSize: '0.82rem', border: !fActiviteId ? '1.5px solid #1e40af' : '1.5px solid var(--border)', background: !fActiviteId ? '#1e40af' : 'var(--bg)', color: !fActiviteId ? '#fff' : 'var(--text)', fontWeight: !fActiviteId ? 700 : 400 }}>Toutes</button>
           {activites.map((a) => (
-            <button key={a.id} onClick={() => setFActiviteId(String(a.id))} style={{ padding: '4px 14px', borderRadius: 20, cursor: 'pointer', fontSize: '0.82rem', border: fActiviteId === String(a.id) ? '1.5px solid #991b1b' : '1.5px solid var(--border)', background: fActiviteId === String(a.id) ? '#991b1b' : 'var(--bg)', color: fActiviteId === String(a.id) ? '#fff' : 'var(--text)', fontWeight: fActiviteId === String(a.id) ? 700 : 400 }}>🏪 {a.nom}</button>
+            <button key={a.id} onClick={() => setFActiviteId(String(a.id))} style={{ padding: '4px 14px', borderRadius: 20, cursor: 'pointer', fontSize: '0.82rem', border: fActiviteId === String(a.id) ? '1.5px solid #1e40af' : '1.5px solid var(--border)', background: fActiviteId === String(a.id) ? '#1e40af' : 'var(--bg)', color: fActiviteId === String(a.id) ? '#fff' : 'var(--text)', fontWeight: fActiviteId === String(a.id) ? 700 : 400 }}>🏪 {a.nom}</button>
           ))}
           <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', alignSelf: 'center', marginLeft: 4 }}>← sélectionner l'activité</span>
         </div>
@@ -355,30 +355,30 @@ export default function HistoriquepertesPage() {
       }}>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'flex-end', justifyContent: 'center', marginBottom: 12 }}>
           <div>
-            <label style={{ fontSize: '0.62rem', fontWeight: 700, color: '#991b1b', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 4 }}>📅 Du</label>
-            <input type="date" style={{ padding: '6px 10px', borderRadius: 7, border: '1.5px solid #991b1b', fontSize: '0.82rem', background: '#fff5f5', fontWeight: 600 }} value={fDateDebut} onChange={(e) => setFDateDebut(e.target.value)} />
+            <label style={{ fontSize: '0.62rem', fontWeight: 700, color: '#1e40af', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 4 }}>📅 Du</label>
+            <input type="date" style={{ padding: '6px 10px', borderRadius: 7, border: '1.5px solid #93c5fd', fontSize: '0.82rem', background: '#eff6ff', fontWeight: 600 }} value={fDateDebut} onChange={(e) => setFDateDebut(e.target.value)} />
           </div>
           <div>
-            <label style={{ fontSize: '0.62rem', fontWeight: 700, color: '#991b1b', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 4 }}>📅 Au</label>
-            <input type="date" style={{ padding: '6px 10px', borderRadius: 7, border: '1.5px solid #991b1b', fontSize: '0.82rem', background: '#fff5f5', fontWeight: 600 }} value={fDateFin} onChange={(e) => setFDateFin(e.target.value)} />
+            <label style={{ fontSize: '0.62rem', fontWeight: 700, color: '#1e40af', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 4 }}>📅 Au</label>
+            <input type="date" style={{ padding: '6px 10px', borderRadius: 7, border: '1.5px solid #93c5fd', fontSize: '0.82rem', background: '#eff6ff', fontWeight: 600 }} value={fDateFin} onChange={(e) => setFDateFin(e.target.value)} />
           </div>
           <div>
             <label style={{ fontSize: '0.62rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 4 }}>🏷️ Catégorie</label>
-            <select style={{ padding: '6px 10px', borderRadius: 7, border: '1.5px solid var(--border)', fontSize: '0.82rem', background: 'var(--background)', minWidth: 130 }} value={fCategorie} onChange={(e) => { setFCategorie(e.target.value); setFIngredient(''); }}>
+            <select style={{ padding: '6px 10px', borderRadius: 7, border: '1.5px solid #93c5fd', fontSize: '0.82rem', background: '#eff6ff', minWidth: 130 }} value={fCategorie} onChange={(e) => { setFCategorie(e.target.value); setFIngredient(''); }}>
               <option value="">— Toutes —</option>
               {categories.map((c) => <option key={c.id} value={String(c.id)}>{c.nom}</option>)}
             </select>
           </div>
           <div>
             <label style={{ fontSize: '0.62rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 4 }}>🧂 Ingrédient</label>
-            <select style={{ padding: '6px 10px', borderRadius: 7, border: '1.5px solid var(--border)', fontSize: '0.82rem', background: 'var(--background)', minWidth: 130 }} value={fIngredient} onChange={(e) => setFIngredient(e.target.value)} disabled={!fCategorie}>
+            <select style={{ padding: '6px 10px', borderRadius: 7, border: '1.5px solid #93c5fd', fontSize: '0.82rem', background: '#eff6ff', minWidth: 130 }} value={fIngredient} onChange={(e) => setFIngredient(e.target.value)} disabled={!fCategorie}>
               <option value="">— Tous —</option>
               {ingredientsInCat.map((i) => <option key={i.id} value={String(i.id)}>{i.nom}</option>)}
             </select>
           </div>
           <div>
             <label style={{ fontSize: '0.62rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 4 }}>📋 Type</label>
-            <select style={{ padding: '6px 10px', borderRadius: 7, border: '1.5px solid var(--border)', fontSize: '0.82rem', background: 'var(--background)', minWidth: 110 }} value={fType} onChange={(e) => setFType(e.target.value)}>
+            <select style={{ padding: '6px 10px', borderRadius: 7, border: '1.5px solid #93c5fd', fontSize: '0.82rem', background: '#eff6ff', minWidth: 110 }} value={fType} onChange={(e) => setFType(e.target.value)}>
               <option value="">— Tous —</option>
               <option value="avarie">Avarie</option>
               <option value="dechet">Déchet</option>
@@ -390,15 +390,15 @@ export default function HistoriquepertesPage() {
         </div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, flexWrap: 'wrap' }}>
           <button onClick={loadPertes} disabled={loading}
-            style={{ background: 'linear-gradient(135deg, #7f1d1d 0%, #991b1b 100%)', boxShadow: '0 4px 14px rgba(153,27,27,0.35)', borderRadius: 9, border: 'none', color: '#fff', fontWeight: 800, padding: '8px 20px', cursor: 'pointer', opacity: loading ? 0.6 : 1, display: 'flex', alignItems: 'center', gap: 6 }}>
+            style={{ background: 'linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%)', boxShadow: '0 4px 14px rgba(30,64,175,0.35)', borderRadius: 9, border: 'none', color: '#fff', fontWeight: 800, padding: '8px 20px', cursor: 'pointer', opacity: loading ? 0.6 : 1, display: 'flex', alignItems: 'center', gap: 6 }}>
             🔍 {loading ? 'Chargement…' : 'Rechercher'}
           </button>
           <button onClick={handleExport} disabled={exporting || !searched || entries.length === 0}
-            style={{ display: 'flex', alignItems: 'center', gap: 6, background: (searched && entries.length > 0) ? 'linear-gradient(135deg, #7f1d1d 0%, #991b1b 100%)' : '#e5e7eb', boxShadow: (searched && entries.length > 0) ? '0 4px 14px rgba(153,27,27,0.3)' : 'none', borderRadius: 9, border: 'none', color: (searched && entries.length > 0) ? '#fff' : 'var(--text-muted)', fontWeight: 800, padding: '8px 18px', cursor: (!searched || entries.length === 0) ? 'not-allowed' : 'pointer', opacity: (!searched || entries.length === 0) ? 0.55 : 1, transition: 'all 0.15s' }}>
+            style={{ display: 'flex', alignItems: 'center', gap: 6, background: (searched && entries.length > 0) ? 'linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%)' : '#e5e7eb', boxShadow: (searched && entries.length > 0) ? '0 4px 14px rgba(30,64,175,0.3)' : 'none', borderRadius: 9, border: 'none', color: (searched && entries.length > 0) ? '#fff' : 'var(--text-muted)', fontWeight: 800, padding: '8px 18px', cursor: (!searched || entries.length === 0) ? 'not-allowed' : 'pointer', opacity: (!searched || entries.length === 0) ? 0.55 : 1, transition: 'all 0.15s' }}>
             <span>📊</span> Exporter{selected.size > 0 ? ` (${selected.size})` : ''}
           </button>
           <button onClick={handleExportPdf} disabled={exportingPdf || !searched || entries.length === 0}
-            style={{ display: 'flex', alignItems: 'center', gap: 6, background: (searched && entries.length > 0) ? 'linear-gradient(135deg, #7f1d1d 0%, #991b1b 100%)' : '#e5e7eb', boxShadow: (searched && entries.length > 0) ? '0 4px 14px rgba(153,27,27,0.3)' : 'none', borderRadius: 9, border: 'none', color: (searched && entries.length > 0) ? '#fff' : 'var(--text-muted)', fontWeight: 800, padding: '8px 18px', cursor: (!searched || entries.length === 0) ? 'not-allowed' : 'pointer', opacity: (!searched || entries.length === 0) ? 0.55 : 1, transition: 'all 0.15s' }}>
+            style={{ display: 'flex', alignItems: 'center', gap: 6, background: (searched && entries.length > 0) ? 'linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%)' : '#e5e7eb', boxShadow: (searched && entries.length > 0) ? '0 4px 14px rgba(30,64,175,0.3)' : 'none', borderRadius: 9, border: 'none', color: (searched && entries.length > 0) ? '#fff' : 'var(--text-muted)', fontWeight: 800, padding: '8px 18px', cursor: (!searched || entries.length === 0) ? 'not-allowed' : 'pointer', opacity: (!searched || entries.length === 0) ? 0.55 : 1, transition: 'all 0.15s' }}>
             <span>🔴</span> {exportingPdf ? '…' : 'PDF'}
           </button>
         </div>
@@ -410,7 +410,7 @@ export default function HistoriquepertesPage() {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, flexWrap: 'wrap', gap: 10 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
           {selected.size > 0 && (
-            <span style={{ fontSize: '0.82rem', color: '#b91c1c', fontWeight: 700 }}>
+            <span style={{ fontSize: '0.82rem', color: '#1e40af', fontWeight: 700 }}>
               {selected.size} sélectionné{selected.size > 1 ? 's' : ''}
             </span>
           )}
@@ -419,15 +419,15 @@ export default function HistoriquepertesPage() {
           </span>
         </div>
         {entries.length > 0 && (
-          <div style={{ background: '#fff1f2', border: '1px solid #fecdd3', borderRadius: 10, padding: '6px 16px', display: 'flex', gap: 24, flexWrap: 'wrap' }}>
+          <div style={{ background: '#eff6ff', border: '1px solid #93c5fd', borderRadius: 10, padding: '6px 16px', display: 'flex', gap: 24, flexWrap: 'wrap' }}>
             <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-              <span style={{ fontSize: '0.78rem', color: '#9f1239', fontWeight: 700 }}>Total quantité</span>
-              <span style={{ fontSize: '0.85rem', fontWeight: 900, color: '#b91c1c' }}>{totalQty.toFixed(3)}</span>
+              <span style={{ fontSize: '0.78rem', color: '#1e3a8a', fontWeight: 700 }}>Total quantité</span>
+              <span style={{ fontSize: '0.85rem', fontWeight: 900, color: '#1e40af' }}>{totalQty.toFixed(3)}</span>
             </div>
             {hasCout && (
               <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                <span style={{ fontSize: '0.78rem', color: '#9f1239', fontWeight: 700 }}>Coût total</span>
-                <span style={{ fontSize: '0.85rem', fontWeight: 900, color: '#c2410c' }}>{totalCout.toFixed(3)} DT</span>
+                <span style={{ fontSize: '0.78rem', color: '#1e3a8a', fontWeight: 700 }}>Coût total</span>
+                <span style={{ fontSize: '0.85rem', fontWeight: 900, color: '#2563eb' }}>{totalCout.toFixed(3)} DT</span>
               </div>
             )}
           </div>
@@ -446,7 +446,7 @@ export default function HistoriquepertesPage() {
         <div className="table-responsive th-blue" style={{ borderRadius: 12, overflow: 'hidden', boxShadow: '0 2px 16px rgba(0,0,0,0.07)' }}>
           <table className="table" style={{ minWidth: 700 }}>
             <thead>
-              <tr style={{ background: '#7f1d1d' }}>
+              <tr style={{ background: 'linear-gradient(135deg, #1e3a8a, #1e40af)' }}>
                 <th style={{ width: 32, textAlign: 'center' }} />
                 {isEntreprise && <th>Activité</th>}
                 <th>Ingrédient</th>
@@ -469,20 +469,20 @@ export default function HistoriquepertesPage() {
                 return (
                   <tr key={entry.id} style={{ background: rowBg, cursor: 'pointer' }} onClick={() => toggleSelect(entry.id)}>
                     <td style={{ textAlign: 'center' }} onClick={(e) => e.stopPropagation()}>
-                      <input type="checkbox" checked={isSelected} onChange={() => toggleSelect(entry.id)} style={{ cursor: 'pointer', accentColor: '#991b1b' }} />
+                      <input type="checkbox" checked={isSelected} onChange={() => toggleSelect(entry.id)} style={{ cursor: 'pointer', accentColor: '#1e40af' }} />
                     </td>
                     {isEntreprise && <td style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{entry.activiteNom ?? '—'}</td>}
                     <td>
                       <div style={{ fontWeight: 700, fontSize: '0.86rem' }}>{entry.ingredientNom}</div>
                       <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{entry.uniteNom} · {entry.categorieNom ?? '—'}</div>
                     </td>
-                    <td style={{ fontWeight: 600, color: '#b91c1c', whiteSpace: 'nowrap', fontSize: '0.85rem' }}>{fmtDate(entry.datePerte)}</td>
+                    <td style={{ fontWeight: 600, color: '#1e40af', whiteSpace: 'nowrap', fontSize: '0.85rem' }}>{fmtDate(entry.datePerte)}</td>
                     <td>
                       <span style={{ display: 'inline-block', padding: '2px 10px', borderRadius: 20, fontSize: '0.75rem', fontWeight: 700, background: isAvarie ? '#fee2e2' : '#ffedd5', color: isAvarie ? '#991b1b' : '#c2410c', border: `1px solid ${isAvarie ? '#fca5a5' : '#fed7aa'}` }}>
                         {isAvarie ? 'Avarie' : 'Déchet'}
                       </span>
                     </td>
-                    <td style={{ textAlign: 'right', fontWeight: 700, color: '#991b1b' }}>
+                    <td style={{ textAlign: 'right', fontWeight: 700, color: '#1e40af' }}>
                       {entry.quantite.toFixed(3)}
                     </td>
                     <td style={{ textAlign: 'right', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
@@ -517,12 +517,12 @@ export default function HistoriquepertesPage() {
               })}
             </tbody>
             <tfoot>
-              <tr style={{ background: '#fef2f2', borderTop: '2px solid #fecaca' }}>
+              <tr style={{ background: '#eff6ff', borderTop: '2px solid #93c5fd' }}>
                 <td colSpan={isEntreprise ? (canWrite ? 5 : 4) : (canWrite ? 4 : 3)} />
-                <td style={{ textAlign: 'right', fontWeight: 900, color: '#b91c1c', fontSize: '0.95rem' }}>{totalQty.toFixed(3)}</td>
-                <td style={{ fontWeight: 700, fontSize: '0.75rem', color: '#9f1239', textTransform: 'uppercase' }}>Total</td>
+                <td style={{ textAlign: 'right', fontWeight: 900, color: '#1e40af', fontSize: '0.95rem' }}>{totalQty.toFixed(3)}</td>
+                <td style={{ fontWeight: 700, fontSize: '0.75rem', color: '#1e3a8a', textTransform: 'uppercase' }}>Total</td>
                 <td />
-                <td style={{ textAlign: 'right', fontWeight: 900, color: '#c2410c', fontSize: '0.95rem' }}>
+                <td style={{ textAlign: 'right', fontWeight: 900, color: '#2563eb', fontSize: '0.95rem' }}>
                   {hasCout ? totalCout.toFixed(3) : '—'}
                 </td>
                 {canWrite && <td />}

@@ -228,55 +228,62 @@ export default function InventairePage() {
 
       {!needsActiviteSelector && (
         <>
-          {/* ── Bloc Filtres (sans titre ni séparateur) ── */}
+          {/* ── Bloc unifié Filtres + Inventaire ── */}
           <div style={{
-            background: 'var(--surface)', borderRadius: 14, padding: '12px 20px', marginBottom: 12,
-            border: '1px solid var(--border)', boxShadow: '0 2px 12px rgba(0,0,0,0.05)',
-            display: 'flex', flexWrap: 'wrap', gap: 14, alignItems: 'flex-end', justifyContent: 'center',
-          }}>
-            <div>
-              <label style={{ fontSize: '0.62rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 4 }}>🏷️ Catégorie</label>
-              <select value={filterCategory} onChange={(e) => { setFilterCategory(e.target.value); setFilterIngredient(''); }}
-                style={{ padding: '6px 10px', borderRadius: 7, border: '1.5px solid var(--border)', fontSize: '0.82rem', background: 'var(--background)', minWidth: 160 }}>
-                <option value="">— Toutes —</option>
-                {categories.map((c) => <option key={c} value={c}>{c}</option>)}
-              </select>
-            </div>
-            <div>
-              <label style={{ fontSize: '0.62rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 4 }}>🧂 Ingrédient</label>
-              <select value={filterIngredient} onChange={(e) => setFilterIngredient(e.target.value)}
-                disabled={!filterCategory}
-                style={{ padding: '6px 10px', borderRadius: 7, border: '1.5px solid var(--border)', fontSize: '0.82rem', background: 'var(--background)', minWidth: 160 }}>
-                <option value="">— Tous —</option>
-                {ingredientsInCat.map((r) => <option key={r.ingredientId} value={String(r.ingredientId)}>{r.nom}</option>)}
-              </select>
-            </div>
-            {(filterCategory || filterIngredient) && (
-              <button onClick={resetFilters} style={{ alignSelf: 'flex-end', background: 'transparent', border: '1.5px solid var(--border)', borderRadius: 7, padding: '5px 9px', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '0.85rem', lineHeight: 1, fontWeight: 700 }} title="Réinitialiser">✕</button>
-            )}
-          </div>
-
-          {/* ── Bloc Inventaire (date + enregistrer, compact) ── */}
-          <div style={{
-            background: 'var(--surface)', borderRadius: 14, padding: '12px 20px', marginBottom: 20,
+            background: 'var(--surface)', borderRadius: 14, padding: '16px 20px', marginBottom: 20,
             border: '1.5px solid #93c5fd', boxShadow: '0 2px 12px rgba(30,64,175,0.08)',
-            display: 'flex', flexWrap: 'wrap', gap: 16, alignItems: 'center', justifyContent: 'center',
           }}>
-            <div>
-              <label style={{ fontSize: '0.62rem', fontWeight: 700, color: '#1e40af', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 4 }}>📅 Date inventaire</label>
-              <input type="date" value={date} onChange={(e) => setDate(e.target.value)}
-                max={todayStr()}
-                style={{ padding: '7px 12px', borderRadius: 8, border: '1.5px solid #93c5fd', fontSize: '0.88rem', fontWeight: 700, color: '#1e3a5f', background: '#eff6ff' }} />
+            {/* Section Filtres */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+              <span style={{ fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#1e40af' }}>Filtres</span>
+              {(filterCategory || filterIngredient) && (
+                <button onClick={resetFilters} style={{ background: 'transparent', border: '1.5px solid var(--border)', borderRadius: 7, padding: '5px 9px', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '0.85rem', lineHeight: 1, fontWeight: 700 }} title="Réinitialiser">✕</button>
+              )}
             </div>
-            <button onClick={handleSave} disabled={saving || !hasAnyQty || !canWrite} style={{
-              background: hasAnyQty && canWrite ? 'linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%)' : '#e5e7eb',
-              boxShadow: hasAnyQty && canWrite ? '0 4px 14px rgba(30,64,175,0.35)' : 'none',
-              borderRadius: 9, border: 'none', color: hasAnyQty && canWrite ? '#fff' : '#9ca3af',
-              fontWeight: 800, padding: '8px 22px', cursor: hasAnyQty && canWrite ? 'pointer' : 'not-allowed',
-              opacity: saving ? 0.7 : 1, fontSize: '0.9rem', transition: 'all 0.15s', alignSelf: 'flex-end',
-            }}>
-              {saving ? 'Enregistrement...' : `Enregistrer${filledCount > 0 ? ` (${filledCount})` : ''}`}
-            </button>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14, alignItems: 'flex-end', justifyContent: 'center', marginBottom: 14 }}>
+              <div>
+                <label style={{ fontSize: '0.62rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 4 }}>🏷️ Catégorie</label>
+                <select value={filterCategory} onChange={(e) => { setFilterCategory(e.target.value); setFilterIngredient(''); }}
+                  style={{ padding: '7px 11px', borderRadius: 7, border: '1.5px solid #93c5fd', fontSize: '0.82rem', background: '#eff6ff', minWidth: 160 }}>
+                  <option value="">— Toutes —</option>
+                  {categories.map((c) => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
+              <div>
+                <label style={{ fontSize: '0.62rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 4 }}>🧂 Ingrédient</label>
+                <select value={filterIngredient} onChange={(e) => setFilterIngredient(e.target.value)}
+                  disabled={!filterCategory}
+                  style={{ padding: '7px 11px', borderRadius: 7, border: '1.5px solid #93c5fd', fontSize: '0.82rem', background: '#eff6ff', minWidth: 160 }}>
+                  <option value="">— Tous —</option>
+                  {ingredientsInCat.map((r) => <option key={r.ingredientId} value={String(r.ingredientId)}>{r.nom}</option>)}
+                </select>
+              </div>
+            </div>
+
+            {/* Séparateur */}
+            <div style={{ borderTop: '1px solid #93c5fd', marginBottom: 14 }} />
+
+            {/* Section Inventaire */}
+            <div style={{ marginBottom: 12 }}>
+              <span style={{ fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#1e40af' }}>Inventaire</span>
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14, alignItems: 'flex-end', justifyContent: 'center' }}>
+              <div>
+                <label style={{ fontSize: '0.62rem', fontWeight: 700, color: '#1e40af', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 4 }}>📅 Date inventaire</label>
+                <input type="date" value={date} onChange={(e) => setDate(e.target.value)}
+                  max={todayStr()}
+                  style={{ padding: '7px 11px', borderRadius: 7, border: '1.5px solid #93c5fd', fontSize: '0.82rem', fontWeight: 700, color: '#1e3a5f', background: '#eff6ff' }} />
+              </div>
+              <button onClick={handleSave} disabled={saving || !hasAnyQty || !canWrite} style={{
+                background: hasAnyQty && canWrite ? 'linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%)' : '#e5e7eb',
+                boxShadow: hasAnyQty && canWrite ? '0 4px 14px rgba(30,64,175,0.35)' : 'none',
+                borderRadius: 9, border: 'none', color: hasAnyQty && canWrite ? '#fff' : '#9ca3af',
+                fontWeight: 800, padding: '7px 22px', cursor: hasAnyQty && canWrite ? 'pointer' : 'not-allowed',
+                opacity: saving ? 0.7 : 1, fontSize: '0.88rem', transition: 'all 0.15s', alignSelf: 'flex-end',
+              }}>
+                {saving ? 'Enregistrement...' : `Enregistrer${filledCount > 0 ? ` (${filledCount})` : ''}`}
+              </button>
+            </div>
           </div>
 
           {/* ── Messages ── */}
