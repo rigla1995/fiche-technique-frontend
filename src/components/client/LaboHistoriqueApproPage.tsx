@@ -343,8 +343,6 @@ export default function LaboHistoriqueApproPage() {
   const totalTTC = results.reduce((s, r) => s + (r.quantite ?? 0) * (r.prixUnitaireTva ?? 0), 0);
   const unitQtyMap: Record<string, number> = {};
   for (const r of results) { unitQtyMap[r.uniteNom] = (unitQtyMap[r.uniteNom] || 0) + (r.quantite ?? 0); }
-  const hasFilters = filterCategorieId || filterIngredientId || filterFournisseurId || filterRefFacture;
-
   if (!laboId) return <div className="page"><p className="text-muted">Labo non spécifié.</p></div>;
 
   return (
