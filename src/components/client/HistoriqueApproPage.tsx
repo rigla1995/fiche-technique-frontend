@@ -256,11 +256,6 @@ export default function HistoriqueApproPage() {
     if (next.has(id)) next.delete(id); else next.add(id);
     return next;
   });
-  const toggleSelectAll = () => {
-    if (selectedIds.size === results.length) setSelectedIds(new Set());
-    else setSelectedIds(new Set(results.map((r) => r.id)));
-  };
-
   const totalPages = Math.max(1, Math.ceil(results.length / PAGE_SIZE));
   const pagedResults = results.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
@@ -372,7 +367,7 @@ export default function HistoriqueApproPage() {
     setResults((prev) => prev.filter((r) => r.id !== id));
   };
 
-  const exportExcel = async () => {
+  const buildApproParams = () => {
     const params = new URLSearchParams();
     if (isEntreprise) {
       if (selectedActiviteId) params.set('activiteId', selectedActiviteId);
@@ -390,17 +385,30 @@ export default function HistoriqueApproPage() {
     if (selectedFournisseurId) params.set('fournisseurId', selectedFournisseurId);
     if (refFactureFilter.trim()) params.set('refFacture', refFactureFilter.trim());
     if (selectedIds.size > 0) params.set('selectedIds', [...selectedIds].join(','));
+    return params;
+  };
 
-    const { data } = await api.get(
-      `/api/stock/historique/export-excel?${params}`,
-      { responseType: 'blob' },
-    );
+  const exportExcel = async () => {
+    const params = buildApproParams();
+    const { data } = await api.get(`/api/stock/historique/export-excel?${params}`, { responseType: 'blob' });
     const url = URL.createObjectURL(new Blob([data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
-    const a = document.createElement('a');
-    a.href = url;
+    const a = document.createElement('a'); a.href = url;
     a.download = `historique-appro-${new Date().toISOString().slice(0, 10)}.xlsx`;
-    a.click();
-    URL.revokeObjectURL(url);
+    a.click(); URL.revokeObjectURL(url);
+  };
+
+  const [exportingPdf, setExportingPdf] = useState(false);
+  const exportPdf = async () => {
+    setExportingPdf(true);
+    try {
+      const params = buildApproParams();
+      const { data } = await api.get(`/api/stock/historique/export-pdf?${params}`, { responseType: 'blob' });
+      const url = URL.createObjectURL(new Blob([data], { type: 'application/pdf' }));
+      const a = document.createElement('a'); a.href = url;
+      a.download = `historique-appro-${new Date().toISOString().slice(0, 10)}.pdf`;
+      a.click(); URL.revokeObjectURL(url);
+    } catch { /* ignore */ }
+    setExportingPdf(false);
   };
 
 
@@ -456,24 +464,7 @@ export default function HistoriqueApproPage() {
         border: '1px solid var(--border)', boxShadow: '0 2px 12px rgba(0,0,0,0.05)',
         marginBottom: 24,
       }}>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'flex-end' }}>
-          <div>
-            <label style={{ fontSize: '0.62rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 4 }}>🏷️ Catégorie</label>
-            <select style={{ padding: '6px 10px', borderRadius: 7, border: '1.5px solid var(--border)', fontSize: '0.82rem', background: 'var(--background)', minWidth: 140 }}
-              value={selectedCategoryId} onChange={(e) => { setSelectedCategoryId(e.target.value); setSelectedIngredientId(''); }}>
-              <option value="">{t('client.historique_appro.all_categories')}</option>
-              {categories.map((c) => <option key={c.id} value={c.id}>{c.nom}</option>)}
-              {(!isEntreprise || selectedActiviteId) && <option value="pt">Produits Transformés</option>}
-            </select>
-          </div>
-          <div>
-            <label style={{ fontSize: '0.62rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 4 }}>🧂 Ingrédient</label>
-            <select style={{ padding: '6px 10px', borderRadius: 7, border: '1.5px solid var(--border)', fontSize: '0.82rem', background: 'var(--background)', minWidth: 140 }}
-              value={selectedIngredientId} onChange={(e) => setSelectedIngredientId(e.target.value)} disabled={!selectedCategoryId}>
-              <option value="">{t('client.historique_appro.all_ingredients')}</option>
-              {selectedCategoryId === 'pt' ? ptProducts.map((p) => <option key={p.id} value={p.id}>{p.nom}</option>) : ingredientsInCat.map((i) => <option key={i.id} value={i.id}>{i.nom}</option>)}
-            </select>
-          </div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'flex-end', marginBottom: 12 }}>
           <div>
             <label style={{ fontSize: '0.62rem', fontWeight: 700, color: '#1e40af', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 4 }}>📅 Du</label>
             <input type="date" style={{ padding: '6px 10px', borderRadius: 7, border: '1.5px solid #1e40af', fontSize: '0.82rem', background: '#eff6ff', fontWeight: 600 }}
@@ -484,10 +475,27 @@ export default function HistoriqueApproPage() {
             <input type="date" style={{ padding: '6px 10px', borderRadius: 7, border: '1.5px solid #1e40af', fontSize: '0.82rem', background: '#eff6ff', fontWeight: 600 }}
               value={endDate} onChange={(e) => setEndDate(e.target.value)} />
           </div>
+          <div>
+            <label style={{ fontSize: '0.62rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 4 }}>🏷️ Catégorie</label>
+            <select style={{ padding: '6px 10px', borderRadius: 7, border: '1.5px solid var(--border)', fontSize: '0.82rem', background: 'var(--background)', minWidth: 130 }}
+              value={selectedCategoryId} onChange={(e) => { setSelectedCategoryId(e.target.value); setSelectedIngredientId(''); }}>
+              <option value="">{t('client.historique_appro.all_categories')}</option>
+              {categories.map((c) => <option key={c.id} value={c.id}>{c.nom}</option>)}
+              {(!isEntreprise || selectedActiviteId) && <option value="pt">Produits Transformés</option>}
+            </select>
+          </div>
+          <div>
+            <label style={{ fontSize: '0.62rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 4 }}>🧂 Ingrédient</label>
+            <select style={{ padding: '6px 10px', borderRadius: 7, border: '1.5px solid var(--border)', fontSize: '0.82rem', background: 'var(--background)', minWidth: 130 }}
+              value={selectedIngredientId} onChange={(e) => setSelectedIngredientId(e.target.value)} disabled={!selectedCategoryId}>
+              <option value="">{t('client.historique_appro.all_ingredients')}</option>
+              {selectedCategoryId === 'pt' ? ptProducts.map((p) => <option key={p.id} value={p.id}>{p.nom}</option>) : ingredientsInCat.map((i) => <option key={i.id} value={i.id}>{i.nom}</option>)}
+            </select>
+          </div>
           {fournisseurs.length > 0 && (
             <div>
-              <label style={{ fontSize: '0.62rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 4 }}>🚚 Fournisseur</label>
-              <select style={{ padding: '6px 10px', borderRadius: 7, border: '1.5px solid var(--border)', fontSize: '0.82rem', background: 'var(--background)', minWidth: 140 }}
+              <label style={{ fontSize: '0.62rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 4 }}>🚚 Fourn.</label>
+              <select style={{ padding: '6px 10px', borderRadius: 7, border: '1.5px solid var(--border)', fontSize: '0.82rem', background: 'var(--background)', minWidth: 130 }}
                 value={selectedFournisseurId} onChange={(e) => setSelectedFournisseurId(e.target.value)}>
                 <option value="">— Tous —</option>
                 {fournisseurs.map((f) => <option key={f.id} value={f.id}>{f.nom}</option>)}
@@ -495,52 +503,24 @@ export default function HistoriqueApproPage() {
             </div>
           )}
           <div>
-            <label style={{ fontSize: '0.62rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 4 }}>🧾 Réf. Facture</label>
-            <input type="text" style={{ padding: '6px 10px', borderRadius: 7, border: '1.5px solid var(--border)', fontSize: '0.82rem', background: 'var(--background)', minWidth: 130 }}
+            <label style={{ fontSize: '0.62rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 4 }}>🧾 Réf.</label>
+            <input type="text" style={{ padding: '6px 10px', borderRadius: 7, border: '1.5px solid var(--border)', fontSize: '0.82rem', background: 'var(--background)', minWidth: 110 }}
               placeholder="Réf…" value={refFactureFilter} onChange={(e) => setRefFactureFilter(e.target.value)} />
           </div>
         </div>
 
-        {/* Actions footer */}
-        <div style={{
-          paddingTop: 16,
-          borderTop: '1px solid var(--border)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: 12,
-        }}>
-          <button
-            onClick={fetchResults}
-            disabled={loading}
-            style={{
-              background: 'linear-gradient(135deg, #0f766e 0%, #0d9488 100%)',
-              boxShadow: '0 4px 14px rgba(15,118,110,0.35)',
-              borderRadius: 10, border: 'none', color: '#fff', fontWeight: 800,
-              padding: '10px 26px', minWidth: 140,
-              cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.7 : 1,
-            }}
-          >
-            {loading ? t('common.loading') : '🔍 Rechercher'}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, flexWrap: 'wrap' }}>
+          <button onClick={fetchResults} disabled={loading}
+            style={{ background: 'linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%)', boxShadow: '0 4px 14px rgba(30,64,175,0.35)', borderRadius: 9, border: 'none', color: '#fff', fontWeight: 800, padding: '8px 20px', cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.7 : 1, display: 'flex', alignItems: 'center', gap: 6 }}>
+            🔍 {loading ? t('common.loading') : 'Rechercher'}
           </button>
-          <button
-            onClick={exportExcel}
-            disabled={results.length === 0 || !canWrite}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 8,
-              background: (results.length > 0 && canWrite) ? 'linear-gradient(135deg, #16a34a, #22c55e)' : 'var(--bg-secondary, #e5e7eb)',
-              boxShadow: (results.length > 0 && canWrite) ? '0 4px 14px rgba(22,163,74,0.35)' : 'none',
-              borderRadius: 10, border: 'none',
-              color: (results.length > 0 && canWrite) ? '#fff' : 'var(--text-muted)',
-              fontWeight: 800, padding: '10px 20px',
-              cursor: (results.length === 0 || !canWrite) ? 'not-allowed' : 'pointer',
-              opacity: (results.length === 0 || !canWrite) ? 0.55 : 1,
-              transition: 'all 0.15s',
-              minWidth: 180,
-            }}
-          >
-            <span style={{ fontSize: '1rem' }}>📊</span>
-            {selectedIds.size > 0 ? `Générer (${selectedIds.size} sél.)` : 'Générer Hist. Appro'}
+          <button onClick={exportExcel} disabled={results.length === 0 || !canWrite}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, background: (results.length > 0 && canWrite) ? 'linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%)' : '#e5e7eb', boxShadow: (results.length > 0 && canWrite) ? '0 4px 14px rgba(30,64,175,0.3)' : 'none', borderRadius: 9, border: 'none', color: (results.length > 0 && canWrite) ? '#fff' : 'var(--text-muted)', fontWeight: 800, padding: '8px 18px', cursor: (results.length === 0 || !canWrite) ? 'not-allowed' : 'pointer', opacity: (results.length === 0 || !canWrite) ? 0.55 : 1, transition: 'all 0.15s' }}>
+            <span>📊</span> Exporter{selectedIds.size > 0 ? ` (${selectedIds.size})` : ''}
+          </button>
+          <button onClick={exportPdf} disabled={exportingPdf || results.length === 0}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, background: results.length > 0 ? 'linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%)' : '#e5e7eb', boxShadow: results.length > 0 ? '0 4px 14px rgba(30,64,175,0.3)' : 'none', borderRadius: 9, border: 'none', color: results.length > 0 ? '#fff' : 'var(--text-muted)', fontWeight: 800, padding: '8px 18px', cursor: (exportingPdf || results.length === 0) ? 'not-allowed' : 'pointer', opacity: (exportingPdf || results.length === 0) ? 0.55 : 1, transition: 'all 0.15s' }}>
+            <span>🔴</span> {exportingPdf ? '…' : 'PDF'}
           </button>
         </div>
       </div>
@@ -571,16 +551,8 @@ export default function HistoriqueApproPage() {
               </colgroup>
               <thead>
                 <tr style={{ background: 'linear-gradient(135deg, #1e3a8a, #1e40af)' }}>
-                  <th style={{ textAlign: 'center', padding: '10px 4px', color: '#fff', background: 'transparent', borderBottom: 'none' }}>
-                    <input
-                      type="checkbox"
-                      checked={results.length > 0 && selectedIds.size === results.length}
-                      onChange={toggleSelectAll}
-                      title="Tout sélectionner"
-                      style={{ cursor: 'pointer', accentColor: '#fff' }}
-                    />
-                  </th>
-                  {(['Date', 'Ingrédient'] as const).map((label) => (
+                  <th style={{ width: 28, padding: '10px 4px', color: '#fff', background: 'transparent', borderBottom: 'none' }} />
+                  {(['Ingrédient', 'Date'] as const).map((label) => (
                     <th key={label} style={{ fontWeight: 800, fontSize: '0.75rem', letterSpacing: '0.04em', textTransform: 'uppercase', padding: '10px 10px', color: '#fff', background: 'transparent', borderBottom: 'none' }}>{label}</th>
                   ))}
                   {(['Quantité', 'Prix U. HT', 'TVA %', 'Prix U. TTC'] as const).map((label) => (
@@ -597,12 +569,11 @@ export default function HistoriqueApproPage() {
                   return (
                   <tr key={r.id} style={{ background: isSelected ? 'linear-gradient(90deg, #fef3c7, #fffbeb)' : undefined, borderLeft: isSelected ? '3px solid #f59e0b' : undefined }}>
                     <td style={{ textAlign: 'center', padding: '8px 4px' }}>
-                      <input
-                        type="checkbox"
-                        checked={isSelected}
-                        onChange={() => toggleSelect(r.id)}
-                        style={{ cursor: 'pointer', accentColor: '#ea580c' }}
-                      />
+                      <input type="checkbox" checked={isSelected} onChange={() => toggleSelect(r.id)} style={{ cursor: 'pointer', accentColor: '#1e40af' }} />
+                    </td>
+                    <td style={{ padding: '8px 10px' }}>
+                      <div style={{ fontWeight: 700, fontSize: '0.86rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.ingredientNom}</div>
+                      <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.uniteNom} · {r.categorieNom}</div>
                     </td>
                     <td style={{ padding: '8px 10px' }}>
                       <span style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 6, padding: '2px 8px', fontWeight: 700, fontSize: '0.8rem', color: '#1e40af', display: 'inline-block', whiteSpace: 'nowrap' }}>
@@ -613,10 +584,6 @@ export default function HistoriqueApproPage() {
                           {r.typeAppro === 'transfert' ? 'Transfert' : 'Manuel'}
                         </span>
                       )}
-                    </td>
-                    <td style={{ padding: '8px 10px' }}>
-                      <div style={{ fontWeight: 600, fontSize: '0.86rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.ingredientNom}</div>
-                      <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.categorieNom}</div>
                     </td>
                     <td style={{ textAlign: 'right', fontWeight: 800, color: '#0f766e', padding: '8px 10px', fontSize: '0.85rem' }}>
                       <div style={{ whiteSpace: 'nowrap' }}>{r.quantite ?? '—'}</div>

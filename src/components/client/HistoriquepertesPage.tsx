@@ -262,36 +262,50 @@ export default function HistoriquepertesPage() {
     });
   };
 
-  const toggleSelectAll = () => {
-    if (selected.size === entries.length) setSelected(new Set());
-    else setSelected(new Set(entries.map((e) => e.id)));
+  const buildPertesParams = () => {
+    const params = new URLSearchParams();
+    if (fDateDebut) params.set('dateDebut', fDateDebut);
+    if (fDateFin) params.set('dateFin', fDateFin);
+    if (fType) params.set('typePerte', fType);
+    if (fCategorie) params.set('categorieId', fCategorie);
+    if (fIngredient) params.set('ingredientId', fIngredient);
+    if (fNom.trim()) params.set('search', fNom.trim());
+    if (isEntreprise && fActiviteId) params.set('activiteId', fActiviteId);
+    if (selected.size > 0) params.set('selectedIds', [...selected].join(','));
+    return params;
   };
 
   const handleExport = async () => {
     setExporting(true);
     try {
-      const params = new URLSearchParams();
-      if (fDateDebut) params.set('dateDebut', fDateDebut);
-      if (fDateFin) params.set('dateFin', fDateFin);
-      if (fType) params.set('typePerte', fType);
-      if (fCategorie) params.set('categorieId', fCategorie);
-      if (fIngredient) params.set('ingredientId', fIngredient);
-      if (fNom.trim()) params.set('search', fNom.trim());
-      if (isEntreprise && fActiviteId) params.set('activiteId', fActiviteId);
-      if (selected.size > 0) params.set('selectedIds', [...selected].join(','));
-
+      const params = buildPertesParams();
       const url = isEntreprise
         ? `/api/entreprise/pertes/export-excel?${params}`
         : `/api/stock/client/pertes/export-excel?${params}`;
       const { data } = await api.get(url, { responseType: 'blob' });
       const blobUrl = URL.createObjectURL(new Blob([data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
-      const a = document.createElement('a');
-      a.href = blobUrl;
+      const a = document.createElement('a'); a.href = blobUrl;
       a.download = `historique-pertes-${new Date().toISOString().slice(0, 10)}.xlsx`;
-      a.click();
-      URL.revokeObjectURL(blobUrl);
+      a.click(); URL.revokeObjectURL(blobUrl);
     } catch { /* ignore */ }
     setExporting(false);
+  };
+
+  const [exportingPdf, setExportingPdf] = useState(false);
+  const handleExportPdf = async () => {
+    setExportingPdf(true);
+    try {
+      const params = buildPertesParams();
+      const url = isEntreprise
+        ? `/api/entreprise/pertes/export-pdf?${params}`
+        : `/api/stock/client/pertes/export-pdf?${params}`;
+      const { data } = await api.get(url, { responseType: 'blob' });
+      const blobUrl = URL.createObjectURL(new Blob([data], { type: 'application/pdf' }));
+      const a = document.createElement('a'); a.href = blobUrl;
+      a.download = `historique-pertes-${new Date().toISOString().slice(0, 10)}.pdf`;
+      a.click(); URL.revokeObjectURL(blobUrl);
+    } catch { /* ignore */ }
+    setExportingPdf(false);
   };
 
   const handleUpdate = async (id: number, quantite: number, typePerte: 'avarie' | 'dechet') => {
@@ -342,25 +356,7 @@ export default function HistoriquepertesPage() {
         background: 'var(--surface)', borderRadius: 14, padding: '12px 16px', marginBottom: 24,
         border: '1px solid var(--border)', boxShadow: '0 2px 12px rgba(0,0,0,0.05)',
       }}>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'flex-end' }}>
-          <div>
-            <label style={{ fontSize: '0.62rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 4 }}>🏷️ Catégorie</label>
-            <select style={{ padding: '6px 10px', borderRadius: 7, border: '1.5px solid var(--border)', fontSize: '0.82rem', background: 'var(--background)', minWidth: 140 }} value={fCategorie} onChange={(e) => { setFCategorie(e.target.value); setFIngredient(''); }}>
-              <option value="">— Toutes —</option>
-              {categories.map((c) => <option key={c.id} value={String(c.id)}>{c.nom}</option>)}
-            </select>
-          </div>
-          <div>
-            <label style={{ fontSize: '0.62rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 4 }}>🧂 Ingrédient</label>
-            <select style={{ padding: '6px 10px', borderRadius: 7, border: '1.5px solid var(--border)', fontSize: '0.82rem', background: 'var(--background)', minWidth: 140 }} value={fIngredient} onChange={(e) => setFIngredient(e.target.value)} disabled={!fCategorie}>
-              <option value="">— Tous —</option>
-              {ingredientsInCat.map((i) => <option key={i.id} value={String(i.id)}>{i.nom}</option>)}
-            </select>
-          </div>
-          <div>
-            <label style={{ fontSize: '0.62rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 4 }}>🔍 Nom</label>
-            <input type="text" style={{ padding: '6px 10px', borderRadius: 7, border: '1.5px solid var(--border)', fontSize: '0.82rem', background: 'var(--background)', minWidth: 130 }} placeholder="Recherche…" value={fNom} onChange={(e) => setFNom(e.target.value)} />
-          </div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'flex-end', marginBottom: 12 }}>
           <div>
             <label style={{ fontSize: '0.62rem', fontWeight: 700, color: '#991b1b', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 4 }}>📅 Du</label>
             <input type="date" style={{ padding: '6px 10px', borderRadius: 7, border: '1.5px solid #991b1b', fontSize: '0.82rem', background: '#fff5f5', fontWeight: 600 }} value={fDateDebut} onChange={(e) => setFDateDebut(e.target.value)} />
@@ -370,8 +366,26 @@ export default function HistoriquepertesPage() {
             <input type="date" style={{ padding: '6px 10px', borderRadius: 7, border: '1.5px solid #991b1b', fontSize: '0.82rem', background: '#fff5f5', fontWeight: 600 }} value={fDateFin} onChange={(e) => setFDateFin(e.target.value)} />
           </div>
           <div>
+            <label style={{ fontSize: '0.62rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 4 }}>🏷️ Catégorie</label>
+            <select style={{ padding: '6px 10px', borderRadius: 7, border: '1.5px solid var(--border)', fontSize: '0.82rem', background: 'var(--background)', minWidth: 130 }} value={fCategorie} onChange={(e) => { setFCategorie(e.target.value); setFIngredient(''); }}>
+              <option value="">— Toutes —</option>
+              {categories.map((c) => <option key={c.id} value={String(c.id)}>{c.nom}</option>)}
+            </select>
+          </div>
+          <div>
+            <label style={{ fontSize: '0.62rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 4 }}>🧂 Ingrédient</label>
+            <select style={{ padding: '6px 10px', borderRadius: 7, border: '1.5px solid var(--border)', fontSize: '0.82rem', background: 'var(--background)', minWidth: 130 }} value={fIngredient} onChange={(e) => setFIngredient(e.target.value)} disabled={!fCategorie}>
+              <option value="">— Tous —</option>
+              {ingredientsInCat.map((i) => <option key={i.id} value={String(i.id)}>{i.nom}</option>)}
+            </select>
+          </div>
+          <div>
+            <label style={{ fontSize: '0.62rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 4 }}>🔍 Nom</label>
+            <input type="text" style={{ padding: '6px 10px', borderRadius: 7, border: '1.5px solid var(--border)', fontSize: '0.82rem', background: 'var(--background)', minWidth: 110 }} placeholder="Recherche…" value={fNom} onChange={(e) => setFNom(e.target.value)} />
+          </div>
+          <div>
             <label style={{ fontSize: '0.62rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 4 }}>📋 Type</label>
-            <select style={{ padding: '6px 10px', borderRadius: 7, border: '1.5px solid var(--border)', fontSize: '0.82rem', background: 'var(--background)', minWidth: 120 }} value={fType} onChange={(e) => setFType(e.target.value)}>
+            <select style={{ padding: '6px 10px', borderRadius: 7, border: '1.5px solid var(--border)', fontSize: '0.82rem', background: 'var(--background)', minWidth: 110 }} value={fType} onChange={(e) => setFType(e.target.value)}>
               <option value="">— Tous —</option>
               <option value="avarie">Avarie</option>
               <option value="dechet">Déchet</option>
@@ -379,31 +393,18 @@ export default function HistoriquepertesPage() {
           </div>
           <button className="btn btn-ghost btn-sm" style={{ fontSize: '0.78rem', alignSelf: 'flex-end' }} onClick={resetFilters}>✕ Réinit.</button>
         </div>
-        {/* Actions footer */}
-        <div style={{ paddingTop: 16, borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
-          <button
-            onClick={loadPertes}
-            disabled={loading}
-            style={{ background: 'linear-gradient(135deg, #991b1b 0%, #dc2626 100%)', boxShadow: '0 4px 14px rgba(185,28,28,0.35)', borderRadius: 10, border: 'none', color: '#fff', fontWeight: 800, padding: '10px 26px', minWidth: 140, cursor: 'pointer', opacity: loading ? 0.6 : 1 }}
-          >
-            {loading ? 'Chargement…' : '🔍 Rechercher'}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, flexWrap: 'wrap' }}>
+          <button onClick={loadPertes} disabled={loading}
+            style={{ background: 'linear-gradient(135deg, #7f1d1d 0%, #991b1b 100%)', boxShadow: '0 4px 14px rgba(153,27,27,0.35)', borderRadius: 9, border: 'none', color: '#fff', fontWeight: 800, padding: '8px 20px', cursor: 'pointer', opacity: loading ? 0.6 : 1, display: 'flex', alignItems: 'center', gap: 6 }}>
+            🔍 {loading ? 'Chargement…' : 'Rechercher'}
           </button>
-          <button
-            onClick={handleExport}
-            disabled={exporting || !searched || entries.length === 0}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 8, minWidth: 180,
-              background: (searched && entries.length > 0) ? 'linear-gradient(135deg, #16a34a, #22c55e)' : '#e5e7eb',
-              boxShadow: (searched && entries.length > 0) ? '0 4px 14px rgba(22,163,74,0.35)' : 'none',
-              borderRadius: 10, border: 'none',
-              color: (searched && entries.length > 0) ? '#fff' : 'var(--text-muted)',
-              fontWeight: 800, padding: '10px 20px',
-              cursor: (!searched || entries.length === 0) ? 'not-allowed' : 'pointer',
-              opacity: (!searched || entries.length === 0) ? 0.55 : 1, transition: 'all 0.15s',
-            }}
-          >
-            <span>📊</span>
-            {selected.size > 0 ? `Générer Excel (${selected.size} sél.)` : 'Générer Hist. Pertes'}
+          <button onClick={handleExport} disabled={exporting || !searched || entries.length === 0}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, background: (searched && entries.length > 0) ? 'linear-gradient(135deg, #7f1d1d 0%, #991b1b 100%)' : '#e5e7eb', boxShadow: (searched && entries.length > 0) ? '0 4px 14px rgba(153,27,27,0.3)' : 'none', borderRadius: 9, border: 'none', color: (searched && entries.length > 0) ? '#fff' : 'var(--text-muted)', fontWeight: 800, padding: '8px 18px', cursor: (!searched || entries.length === 0) ? 'not-allowed' : 'pointer', opacity: (!searched || entries.length === 0) ? 0.55 : 1, transition: 'all 0.15s' }}>
+            <span>📊</span> Exporter{selected.size > 0 ? ` (${selected.size})` : ''}
+          </button>
+          <button onClick={handleExportPdf} disabled={exportingPdf || !searched || entries.length === 0}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, background: (searched && entries.length > 0) ? 'linear-gradient(135deg, #7f1d1d 0%, #991b1b 100%)' : '#e5e7eb', boxShadow: (searched && entries.length > 0) ? '0 4px 14px rgba(153,27,27,0.3)' : 'none', borderRadius: 9, border: 'none', color: (searched && entries.length > 0) ? '#fff' : 'var(--text-muted)', fontWeight: 800, padding: '8px 18px', cursor: (!searched || entries.length === 0) ? 'not-allowed' : 'pointer', opacity: (!searched || entries.length === 0) ? 0.55 : 1, transition: 'all 0.15s' }}>
+            <span>🔴</span> {exportingPdf ? '…' : 'PDF'}
           </button>
         </div>
       </div>
@@ -451,21 +452,12 @@ export default function HistoriquepertesPage() {
           <table className="table" style={{ minWidth: 700 }}>
             <thead>
               <tr style={{ background: '#7f1d1d' }}>
-                <th style={{ width: 40, textAlign: 'center' }}>
-                  <input
-                    type="checkbox"
-                    checked={selected.size === entries.length && entries.length > 0}
-                    onChange={toggleSelectAll}
-                    style={{ cursor: 'pointer' }}
-                  />
-                </th>
-                <th>Date</th>
+                <th style={{ width: 32, textAlign: 'center' }} />
                 {isEntreprise && <th>Activité</th>}
                 <th>Ingrédient</th>
-                <th>Catégorie</th>
-                <th style={{ textAlign: 'right' }}>Quantité</th>
-                <th>Unité</th>
+                <th>Date</th>
                 <th>Type</th>
+                <th style={{ textAlign: 'right' }}>Quantité</th>
                 <th style={{ textAlign: 'right' }}>Prix Unit.</th>
                 <th style={{ textAlign: 'right' }}>Coût Total</th>
                 <th>Par</th>
@@ -482,23 +474,21 @@ export default function HistoriquepertesPage() {
                 return (
                   <tr key={entry.id} style={{ background: rowBg, cursor: 'pointer' }} onClick={() => toggleSelect(entry.id)}>
                     <td style={{ textAlign: 'center' }} onClick={(e) => e.stopPropagation()}>
-                      <input type="checkbox" checked={isSelected} onChange={() => toggleSelect(entry.id)} style={{ cursor: 'pointer' }} />
+                      <input type="checkbox" checked={isSelected} onChange={() => toggleSelect(entry.id)} style={{ cursor: 'pointer', accentColor: '#991b1b' }} />
                     </td>
-                    <td style={{ fontWeight: 600, color: '#b91c1c', whiteSpace: 'nowrap' }}>{fmtDate(entry.datePerte)}</td>
                     {isEntreprise && <td style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{entry.activiteNom ?? '—'}</td>}
-                    <td style={{ fontWeight: 600 }}>{entry.ingredientNom}</td>
-                    <td style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>{entry.categorieNom ?? '—'}</td>
-                    <td style={{ textAlign: 'right', fontWeight: 700, color: '#991b1b' }}>{entry.quantite.toFixed(3)}</td>
-                    <td style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>{entry.uniteNom}</td>
                     <td>
-                      <span style={{
-                        display: 'inline-block', padding: '2px 10px', borderRadius: 20, fontSize: '0.75rem', fontWeight: 700,
-                        background: isAvarie ? '#fee2e2' : '#ffedd5',
-                        color: isAvarie ? '#991b1b' : '#c2410c',
-                        border: `1px solid ${isAvarie ? '#fca5a5' : '#fed7aa'}`,
-                      }}>
+                      <div style={{ fontWeight: 700, fontSize: '0.86rem' }}>{entry.ingredientNom}</div>
+                      <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{entry.uniteNom} · {entry.categorieNom ?? '—'}</div>
+                    </td>
+                    <td style={{ fontWeight: 600, color: '#b91c1c', whiteSpace: 'nowrap', fontSize: '0.85rem' }}>{fmtDate(entry.datePerte)}</td>
+                    <td>
+                      <span style={{ display: 'inline-block', padding: '2px 10px', borderRadius: 20, fontSize: '0.75rem', fontWeight: 700, background: isAvarie ? '#fee2e2' : '#ffedd5', color: isAvarie ? '#991b1b' : '#c2410c', border: `1px solid ${isAvarie ? '#fca5a5' : '#fed7aa'}` }}>
                         {isAvarie ? 'Avarie' : 'Déchet'}
                       </span>
+                    </td>
+                    <td style={{ textAlign: 'right', fontWeight: 700, color: '#991b1b' }}>
+                      {entry.quantite.toFixed(3)}
                     </td>
                     <td style={{ textAlign: 'right', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
                       {entry.prixUnitaire != null ? entry.prixUnitaire.toFixed(3) : '—'}
