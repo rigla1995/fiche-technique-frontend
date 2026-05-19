@@ -45,6 +45,7 @@ export default function InventairePage() {
   const [selectedActiviteId, setSelectedActiviteId] = useState<number | null>(null);
   const effectiveActiviteId = activiteId ? Number(activiteId) : selectedActiviteId;
 
+  const [openCategories, setOpenCategories] = useState<Set<string>>(new Set());
   const [openHistory, setOpenHistory] = useState<Set<number>>(new Set());
   const [filterCategory, setFilterCategory] = useState('');
   const [filterIngredient, setFilterIngredient] = useState('');
@@ -89,6 +90,7 @@ export default function InventairePage() {
         initQtys[r.ingredientId] = '';
       }
       setQtys(initQtys);
+      setOpenCategories(new Set());
     } catch { setErrorMsg('Erreur lors du chargement.'); }
     setLoading(false);
   }, [laboId, effectiveActiviteId, activites, isClientMode]);
@@ -115,6 +117,9 @@ export default function InventairePage() {
     [filteredRows]
   );
 
+  const toggleCategory = (cat: string) => setOpenCategories((prev) => {
+    const n = new Set(prev); n.has(cat) ? n.delete(cat) : n.add(cat); return n;
+  });
   const toggleHistory = (id: number) => setOpenHistory((prev) => {
     const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n;
   });
@@ -175,9 +180,9 @@ export default function InventairePage() {
 
       {/* ── Hero header ── */}
       <div style={{
-        background: 'linear-gradient(135deg, #064e3b 0%, #065f46 55%, #10b981 100%)',
+        background: 'linear-gradient(135deg, #1e3a8a 0%, #1e40af 55%, #3b82f6 100%)',
         borderRadius: 18, padding: '24px 28px', marginBottom: 24,
-        boxShadow: '0 8px 32px rgba(6,95,70,0.28)',
+        boxShadow: '0 8px 32px rgba(30,64,175,0.28)',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16,
       }}>
         <div>
@@ -201,9 +206,9 @@ export default function InventairePage() {
             </div>
           )}
           {filledCount > 0 && (
-            <div style={{ background: 'rgba(16,185,129,0.2)', backdropFilter: 'blur(8px)', border: '1px solid rgba(16,185,129,0.4)', borderRadius: 12, padding: '10px 18px', textAlign: 'center' }}>
-              <div style={{ fontSize: '1.4rem', fontWeight: 900, color: '#34d399', lineHeight: 1 }}>{filledCount}</div>
-              <div style={{ fontSize: '0.7rem', color: '#6ee7b7', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Saisis</div>
+            <div style={{ background: 'rgba(59,130,246,0.25)', backdropFilter: 'blur(8px)', border: '1px solid rgba(59,130,246,0.4)', borderRadius: 12, padding: '10px 18px', textAlign: 'center' }}>
+              <div style={{ fontSize: '1.4rem', fontWeight: 900, color: '#93c5fd', lineHeight: 1 }}>{filledCount}</div>
+              <div style={{ fontSize: '0.7rem', color: '#bfdbfe', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Saisis</div>
             </div>
           )}
         </div>
@@ -214,7 +219,7 @@ export default function InventairePage() {
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16, padding: '10px 14px', background: 'var(--card-bg)', borderRadius: 10, border: '1px solid var(--border)' }}>
           {activites.map((a) => (
             <button key={a.id} onClick={() => setSelectedActiviteId(a.id)}
-              style={{ padding: '4px 14px', borderRadius: 20, cursor: 'pointer', fontSize: '0.82rem', border: selectedActiviteId === a.id ? '1.5px solid #065f46' : '1.5px solid var(--border)', background: selectedActiviteId === a.id ? '#065f46' : 'var(--bg)', color: selectedActiviteId === a.id ? '#fff' : 'var(--text)', fontWeight: selectedActiviteId === a.id ? 700 : 400 }}>
+              style={{ padding: '4px 14px', borderRadius: 20, cursor: 'pointer', fontSize: '0.82rem', border: selectedActiviteId === a.id ? '1.5px solid #1e40af' : '1.5px solid var(--border)', background: selectedActiviteId === a.id ? '#1e40af' : 'var(--bg)', color: selectedActiviteId === a.id ? '#fff' : 'var(--text)', fontWeight: selectedActiviteId === a.id ? 700 : 400 }}>
               🏪 {a.nom}
             </button>
           ))}
@@ -223,65 +228,55 @@ export default function InventairePage() {
 
       {!needsActiviteSelector && (
         <>
-          {/* ── Bloc Filtres ── */}
+          {/* ── Bloc Filtres (sans titre ni séparateur) ── */}
           <div style={{
-            background: 'var(--surface)', borderRadius: 14, padding: '16px 20px', marginBottom: 14,
+            background: 'var(--surface)', borderRadius: 14, padding: '12px 20px', marginBottom: 12,
             border: '1px solid var(--border)', boxShadow: '0 2px 12px rgba(0,0,0,0.05)',
+            display: 'flex', flexWrap: 'wrap', gap: 14, alignItems: 'flex-end', justifyContent: 'center',
           }}>
-            <div style={{ width: '100%', marginBottom: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: 10, borderBottom: '1px solid var(--border)' }}>
-              <span style={{ fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#065f46' }}>Filtres</span>
-              {(filterCategory || filterIngredient) && (
-                <button onClick={resetFilters} style={{ background: 'transparent', border: '1.5px solid var(--border)', borderRadius: 7, padding: '5px 9px', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '0.85rem', lineHeight: 1, fontWeight: 700 }} title="Réinitialiser">✕</button>
-              )}
+            <div>
+              <label style={{ fontSize: '0.62rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 4 }}>🏷️ Catégorie</label>
+              <select value={filterCategory} onChange={(e) => { setFilterCategory(e.target.value); setFilterIngredient(''); }}
+                style={{ padding: '6px 10px', borderRadius: 7, border: '1.5px solid var(--border)', fontSize: '0.82rem', background: 'var(--background)', minWidth: 160 }}>
+                <option value="">— Toutes —</option>
+                {categories.map((c) => <option key={c} value={c}>{c}</option>)}
+              </select>
             </div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14, alignItems: 'flex-end', justifyContent: 'center' }}>
-              <div>
-                <label style={{ fontSize: '0.62rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 4 }}>🏷️ Catégorie</label>
-                <select value={filterCategory} onChange={(e) => { setFilterCategory(e.target.value); setFilterIngredient(''); }}
-                  style={{ padding: '6px 10px', borderRadius: 7, border: '1.5px solid var(--border)', fontSize: '0.82rem', background: 'var(--background)', minWidth: 160 }}>
-                  <option value="">— Toutes —</option>
-                  {categories.map((c) => <option key={c} value={c}>{c}</option>)}
-                </select>
-              </div>
-              <div>
-                <label style={{ fontSize: '0.62rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 4 }}>🧂 Ingrédient</label>
-                <select value={filterIngredient} onChange={(e) => setFilterIngredient(e.target.value)}
-                  disabled={!filterCategory}
-                  style={{ padding: '6px 10px', borderRadius: 7, border: '1.5px solid var(--border)', fontSize: '0.82rem', background: 'var(--background)', minWidth: 160 }}>
-                  <option value="">— Tous —</option>
-                  {ingredientsInCat.map((r) => <option key={r.ingredientId} value={String(r.ingredientId)}>{r.nom}</option>)}
-                </select>
-              </div>
+            <div>
+              <label style={{ fontSize: '0.62rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 4 }}>🧂 Ingrédient</label>
+              <select value={filterIngredient} onChange={(e) => setFilterIngredient(e.target.value)}
+                disabled={!filterCategory}
+                style={{ padding: '6px 10px', borderRadius: 7, border: '1.5px solid var(--border)', fontSize: '0.82rem', background: 'var(--background)', minWidth: 160 }}>
+                <option value="">— Tous —</option>
+                {ingredientsInCat.map((r) => <option key={r.ingredientId} value={String(r.ingredientId)}>{r.nom}</option>)}
+              </select>
             </div>
+            {(filterCategory || filterIngredient) && (
+              <button onClick={resetFilters} style={{ alignSelf: 'flex-end', background: 'transparent', border: '1.5px solid var(--border)', borderRadius: 7, padding: '5px 9px', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '0.85rem', lineHeight: 1, fontWeight: 700 }} title="Réinitialiser">✕</button>
+            )}
           </div>
 
-          {/* ── Bloc Inventaire (date + enregistrer) ── */}
+          {/* ── Bloc Inventaire (date + enregistrer, compact) ── */}
           <div style={{
-            background: 'linear-gradient(135deg, #f0fdf4, #dcfce7)', borderRadius: 14, padding: '16px 20px', marginBottom: 20,
-            border: '1.5px solid #86efac', boxShadow: '0 4px 20px rgba(6,95,70,0.1)',
+            background: 'var(--surface)', borderRadius: 14, padding: '12px 20px', marginBottom: 20,
+            border: '1.5px solid #93c5fd', boxShadow: '0 2px 12px rgba(30,64,175,0.08)',
+            display: 'flex', flexWrap: 'wrap', gap: 16, alignItems: 'center', justifyContent: 'center',
           }}>
-            <div style={{ width: '100%', marginBottom: 12, paddingBottom: 10, borderBottom: '1px solid #86efac' }}>
-              <span style={{ fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#065f46' }}>Inventaire</span>
+            <div>
+              <label style={{ fontSize: '0.62rem', fontWeight: 700, color: '#1e40af', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 4 }}>📅 Date inventaire</label>
+              <input type="date" value={date} onChange={(e) => setDate(e.target.value)}
+                max={todayStr()}
+                style={{ padding: '7px 12px', borderRadius: 8, border: '1.5px solid #93c5fd', fontSize: '0.88rem', fontWeight: 700, color: '#1e3a5f', background: '#eff6ff' }} />
             </div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14, alignItems: 'flex-end', justifyContent: 'center' }}>
-              <div>
-                <label style={{ fontSize: '0.62rem', fontWeight: 700, color: '#065f46', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 4 }}>📅 Date inventaire</label>
-                <input type="date" value={date} onChange={(e) => setDate(e.target.value)}
-                  max={todayStr()}
-                  style={{ padding: '8px 12px', borderRadius: 8, border: '1.5px solid #34d399', fontSize: '0.88rem', fontWeight: 700, color: '#065f46', background: '#fff' }} />
-              </div>
-              <button onClick={handleSave} disabled={saving || !hasAnyQty || !canWrite} style={{
-                padding: '9px 26px', borderRadius: 9, border: 'none',
-                background: hasAnyQty && canWrite ? 'linear-gradient(135deg, #065f46 0%, #10b981 100%)' : '#e5e7eb',
-                color: hasAnyQty && canWrite ? '#fff' : '#9ca3af', fontWeight: 800, fontSize: '0.9rem',
-                cursor: hasAnyQty && canWrite ? 'pointer' : 'not-allowed',
-                boxShadow: hasAnyQty && canWrite ? '0 4px 14px rgba(6,95,70,0.35)' : 'none',
-                transition: 'all 0.15s', display: 'flex', alignItems: 'center', gap: 7,
-              }}>
-                <span style={{ fontSize: '1rem' }}>💾</span>
-                {saving ? 'Enregistrement...' : `Enregistrer${filledCount > 0 ? ` (${filledCount})` : ''}`}
-              </button>
-            </div>
+            <button onClick={handleSave} disabled={saving || !hasAnyQty || !canWrite} style={{
+              background: hasAnyQty && canWrite ? 'linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%)' : '#e5e7eb',
+              boxShadow: hasAnyQty && canWrite ? '0 4px 14px rgba(30,64,175,0.35)' : 'none',
+              borderRadius: 9, border: 'none', color: hasAnyQty && canWrite ? '#fff' : '#9ca3af',
+              fontWeight: 800, padding: '8px 22px', cursor: hasAnyQty && canWrite ? 'pointer' : 'not-allowed',
+              opacity: saving ? 0.7 : 1, fontSize: '0.9rem', transition: 'all 0.15s', alignSelf: 'flex-end',
+            }}>
+              {saving ? 'Enregistrement...' : `Enregistrer${filledCount > 0 ? ` (${filledCount})` : ''}`}
+            </button>
           </div>
 
           {/* ── Messages ── */}
@@ -291,12 +286,12 @@ export default function InventairePage() {
             </div>
           )}
           {successMsg && (
-            <div style={{ background: 'linear-gradient(90deg, #f0fdf4, #fff)', border: '1.5px solid #86efac', borderRadius: 10, padding: '11px 16px', marginBottom: 14, fontSize: '0.85rem', color: '#166534', display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{ background: 'linear-gradient(90deg, #eff6ff, #fff)', border: '1.5px solid #93c5fd', borderRadius: 10, padding: '11px 16px', marginBottom: 14, fontSize: '0.85rem', color: '#1e40af', display: 'flex', alignItems: 'center', gap: 8 }}>
               <span>✅</span> {successMsg}
             </div>
           )}
 
-          {/* ── Inventory table ── */}
+          {/* ── Table inventaire ── */}
           {loading ? (
             <div style={{ textAlign: 'center', padding: '60px 0' }}>
               <div style={{ fontSize: '2rem', marginBottom: 12 }}>⚙️</div>
@@ -311,31 +306,36 @@ export default function InventairePage() {
             <div style={{ background: 'var(--surface)', borderRadius: 14, overflow: 'hidden', border: '1.5px solid var(--border)', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
-                  <tr style={{ background: 'linear-gradient(90deg, #f0fdf4, #dcfce7)', borderBottom: '2px solid #86efac' }}>
-                    <th style={{ padding: '11px 16px', textAlign: 'left', fontSize: '0.68rem', fontWeight: 800, color: '#065f46', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Ingrédient</th>
-                    <th style={{ padding: '11px 16px', textAlign: 'right', fontSize: '0.68rem', fontWeight: 800, color: '#065f46', textTransform: 'uppercase', letterSpacing: '0.07em', width: 110 }}>Stock actuel</th>
-                    <th style={{ padding: '11px 16px', textAlign: 'center', fontSize: '0.68rem', fontWeight: 800, color: '#065f46', textTransform: 'uppercase', letterSpacing: '0.07em', width: 160 }}>Qté réelle</th>
-                    <th style={{ padding: '11px 16px', textAlign: 'center', fontSize: '0.68rem', fontWeight: 800, color: '#065f46', textTransform: 'uppercase', letterSpacing: '0.07em', width: 72 }}>Hist.</th>
+                  <tr style={{ background: 'linear-gradient(90deg, #eff6ff, #dbeafe)', borderBottom: '2px solid #93c5fd' }}>
+                    <th style={{ padding: '10px 16px', textAlign: 'left', fontSize: '0.68rem', fontWeight: 800, color: '#1e40af', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Ingrédient</th>
+                    <th style={{ padding: '10px 16px', textAlign: 'right', fontSize: '0.68rem', fontWeight: 800, color: '#1e40af', textTransform: 'uppercase', letterSpacing: '0.07em', width: 120 }}>Stock actuel</th>
+                    <th style={{ padding: '10px 16px', textAlign: 'center', fontSize: '0.68rem', fontWeight: 800, color: '#1e40af', textTransform: 'uppercase', letterSpacing: '0.07em', width: 160 }}>Qté réelle</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredCategories.map((cat) => {
                     const catRows = filteredRows.filter((r) => r.categorie === cat);
+                    const isOpen = openCategories.has(cat);
+                    const filledInCat = catRows.filter((r) => qtys[r.ingredientId] !== '').length;
+                    const alarmInCat = catRows.filter((r) => isAlarm(r)).length;
                     return (
                       <>
-                        {/* Category header row */}
-                        <tr key={`cat-${cat}`}>
-                          <td colSpan={4} style={{ padding: '8px 16px', background: 'linear-gradient(90deg, #f8fafc, #f1f5f9)', borderTop: '1px solid var(--border)', borderBottom: '1px solid var(--border)' }}>
-                            <span style={{ fontSize: '0.71rem', fontWeight: 800, color: '#065f46', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                              🏷 {cat}
+                        {/* Collapsible category header row */}
+                        <tr key={`cat-${cat}`} onClick={() => toggleCategory(cat)} style={{ cursor: 'pointer', background: isOpen ? 'linear-gradient(90deg, #eff6ff, #dbeafe)' : '#f8fafc', borderTop: '1px solid var(--border)', borderBottom: '1px solid var(--border)' }}>
+                          <td colSpan={3} style={{ padding: '9px 16px' }}>
+                            <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#1e40af', textTransform: 'uppercase', letterSpacing: '0.07em', marginRight: 6 }}>
+                              {isOpen ? '▼' : '▶'}
                             </span>
+                            <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#1e40af', textTransform: 'uppercase', letterSpacing: '0.07em' }}>🏷 {cat}</span>
                             <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', fontWeight: 500, marginLeft: 8 }}>
                               {catRows.length} ingrédient{catRows.length > 1 ? 's' : ''}
+                              {filledInCat > 0 && <span style={{ color: '#1e40af', fontWeight: 700 }}> · {filledInCat} saisi{filledInCat > 1 ? 's' : ''}</span>}
+                              {alarmInCat > 0 && <span style={{ color: '#d97706', fontWeight: 700 }}> · ⚠ {alarmInCat}</span>}
                             </span>
                           </td>
                         </tr>
-                        {/* Ingredient rows */}
-                        {catRows.map((r, idx) => {
+                        {/* Ingredient rows (only when open) */}
+                        {isOpen && catRows.map((r, idx) => {
                           const alarm = isAlarm(r);
                           const filled = qtys[r.ingredientId] !== '';
                           const histOpen = openHistory.has(r.ingredientId);
@@ -345,73 +345,62 @@ export default function InventairePage() {
                                 background: alarm
                                   ? 'linear-gradient(90deg, #fffbeb 0%, #fffdf7 100%)'
                                   : filled
-                                  ? 'linear-gradient(90deg, #f0fdf4 0%, #fff 80%)'
+                                  ? 'linear-gradient(90deg, #eff6ff 0%, #fff 80%)'
                                   : idx % 2 === 0 ? 'var(--background)' : 'var(--surface)',
-                                borderBottom: '1px solid var(--border)',
-                                borderLeft: `4px solid ${alarm ? '#f59e0b' : filled ? '#10b981' : 'transparent'}`,
+                                borderBottom: histOpen ? 'none' : '1px solid var(--border)',
+                                borderLeft: `4px solid ${alarm ? '#f59e0b' : filled ? '#2563eb' : 'transparent'}`,
                                 transition: 'background 0.1s',
                               }}>
-                                {/* Name */}
-                                <td style={{ padding: '12px 16px' }}>
+                                {/* Ingredient + history link */}
+                                <td style={{ padding: '11px 16px' }}>
                                   <div style={{ fontWeight: 700, fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: 6, color: alarm ? '#92400e' : 'var(--text)' }}>
                                     {alarm && <span style={{ background: '#fef3c7', border: '1px solid #f59e0b', borderRadius: 5, padding: '1px 5px', fontSize: '0.67rem', fontWeight: 800, color: '#d97706' }}>⚠ DATE</span>}
                                     {r.isPT && <span style={{ background: '#ede9fe', border: '1px solid #a78bfa', borderRadius: 5, padding: '1px 5px', fontSize: '0.67rem', fontWeight: 800, color: '#7c3aed' }}>PT</span>}
                                     {r.nom}
                                   </div>
-                                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: 3 }}>
-                                    <span style={{ background: '#dcfce7', color: '#065f46', borderRadius: 5, padding: '1px 6px', fontWeight: 700, fontSize: '0.67rem' }}>{r.unite}</span>
+                                  <div style={{ fontSize: '0.71rem', marginTop: 4, display: 'flex', gap: 7, alignItems: 'center' }}>
+                                    <span style={{ background: '#dbeafe', color: '#1e40af', borderRadius: 5, padding: '1px 6px', fontWeight: 700, fontSize: '0.67rem' }}>{r.unite}</span>
+                                    <button onClick={(e) => { e.stopPropagation(); toggleHistory(r.ingredientId); }} style={{ fontSize: '0.7rem', color: histOpen ? '#1e40af' : 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontWeight: 600, textDecoration: histOpen ? 'none' : 'underline', textDecorationStyle: 'dotted' }}>
+                                      📋 {histOpen ? 'masquer' : '5 derniers inv.'}
+                                    </button>
                                   </div>
                                 </td>
-                                {/* Total Stock */}
-                                <td style={{ padding: '12px 16px', textAlign: 'right' }}>
+                                {/* Stock */}
+                                <td style={{ padding: '11px 16px', textAlign: 'right' }}>
                                   <div style={{
-                                    padding: '6px 10px', borderRadius: 8, fontSize: '0.88rem', fontWeight: 800, textAlign: 'right',
-                                    background: r.totalStock !== null && r.totalStock > 0 ? '#f0fdf4' : '#f8fafc',
-                                    border: r.totalStock !== null && r.totalStock > 0 ? '1.5px solid #86efac' : '1.5px solid #e2e8f0',
-                                    color: r.totalStock !== null && r.totalStock > 0 ? '#15803d' : '#9ca3af',
+                                    padding: '5px 10px', borderRadius: 8, fontSize: '0.88rem', fontWeight: 800, textAlign: 'right', display: 'inline-block', minWidth: 80,
+                                    background: r.totalStock !== null && r.totalStock > 0 ? '#eff6ff' : '#f8fafc',
+                                    border: r.totalStock !== null && r.totalStock > 0 ? '1.5px solid #93c5fd' : '1.5px solid #e2e8f0',
+                                    color: r.totalStock !== null && r.totalStock > 0 ? '#1e40af' : '#9ca3af',
                                   }}>
                                     {r.totalStock !== null ? r.totalStock.toFixed(3) : '—'}
                                   </div>
                                 </td>
                                 {/* Qty input */}
-                                <td style={{ padding: '12px 16px' }}>
+                                <td style={{ padding: '11px 16px' }}>
                                   <input
                                     type="number" min="0" step="0.001"
                                     value={qtys[r.ingredientId] ?? ''}
                                     onChange={(e) => setQtys((prev) => ({ ...prev, [r.ingredientId]: e.target.value }))}
                                     placeholder="0.000"
                                     style={{
-                                      width: '100%', padding: '8px 11px', borderRadius: 8, fontSize: '0.9rem',
-                                      border: alarm ? '2px solid #f59e0b' : filled ? '2px solid #10b981' : '1.5px solid var(--border)',
-                                      background: alarm ? '#fffbeb' : filled ? '#f0fdf4' : 'var(--background)',
-                                      boxShadow: alarm ? '0 0 0 3px #fef3c7' : filled ? '0 0 0 3px #dcfce7' : 'none',
+                                      width: '100%', padding: '7px 11px', borderRadius: 8, fontSize: '0.9rem',
+                                      border: alarm ? '2px solid #f59e0b' : filled ? '2px solid #2563eb' : '1.5px solid var(--border)',
+                                      background: alarm ? '#fffbeb' : filled ? '#eff6ff' : 'var(--background)',
+                                      boxShadow: alarm ? '0 0 0 3px #fef3c7' : filled ? '0 0 0 3px #dbeafe' : 'none',
                                       outline: 'none', transition: 'all 0.15s', fontWeight: 700,
                                     }}
                                   />
-                                </td>
-                                {/* History toggle */}
-                                <td style={{ padding: '12px 16px', textAlign: 'center' }}>
-                                  <button onClick={() => toggleHistory(r.ingredientId)} style={{
-                                    padding: '6px 10px', borderRadius: 8,
-                                    border: `1.5px solid ${histOpen ? '#065f46' : 'var(--border)'}`,
-                                    background: histOpen ? '#dcfce7' : 'var(--background)',
-                                    cursor: 'pointer', fontSize: '0.75rem',
-                                    color: histOpen ? '#065f46' : 'var(--text-muted)',
-                                    fontWeight: 700, whiteSpace: 'nowrap', transition: 'all 0.15s',
-                                  }}>
-                                    📋 {histOpen ? '▲' : '▼'}
-                                  </button>
                                 </td>
                               </tr>
                               {/* History row */}
                               {histOpen && (
                                 <tr key={`${r.ingredientId}-hist`}>
-                                  <td colSpan={4} style={{ padding: '0 16px 14px 32px', background: '#f8fafc', borderBottom: '1px solid var(--border)' }}>
+                                  <td colSpan={3} style={{ padding: '0 16px 12px 32px', background: '#f8fafc', borderBottom: '1px solid var(--border)' }}>
                                     {r.recentInventaires.length === 0 ? (
                                       <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontStyle: 'italic', margin: '8px 0' }}>Aucun inventaire enregistré</p>
                                     ) : (
                                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, paddingTop: 10 }}>
-                                        <div style={{ width: '100%', fontSize: '0.67rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 4, letterSpacing: '0.07em' }}>5 derniers inventaires</div>
                                         {r.recentInventaires.map((inv) => {
                                           const isCurrent = inv.date === date;
                                           return (
@@ -421,7 +410,6 @@ export default function InventairePage() {
                                               border: isCurrent ? '1.5px solid #f59e0b' : '1px solid #e2e8f0',
                                               fontSize: '0.79rem', fontWeight: 600,
                                               color: isCurrent ? '#92400e' : 'var(--text)',
-                                              boxShadow: isCurrent ? '0 2px 8px rgba(245,158,11,0.2)' : '0 1px 3px rgba(0,0,0,0.06)',
                                             }}>
                                               {isCurrent && <span style={{ marginRight: 4 }}>⚠</span>}
                                               {fmtDate(inv.date)} — <strong>{inv.qty.toFixed(3)}</strong> {r.unite}
@@ -457,7 +445,7 @@ export default function InventairePage() {
               <div style={{
                 background: hasReplacements
                   ? 'linear-gradient(135deg, #991b1b 0%, #dc2626 60%, #ef4444 100%)'
-                  : 'linear-gradient(135deg, #064e3b 0%, #065f46 60%, #10b981 100%)',
+                  : 'linear-gradient(135deg, #1e3a8a 0%, #1e40af 60%, #3b82f6 100%)',
                 padding: '22px 28px',
               }}>
                 <div style={{ fontSize: '1.15rem', fontWeight: 900, color: '#fff', letterSpacing: '-0.01em' }}>
@@ -501,7 +489,7 @@ export default function InventairePage() {
                 {newEntries.length > 0 && (
                   <div style={{ marginBottom: 18 }}>
                     {hasReplacements && (
-                      <div style={{ fontSize: '0.67rem', fontWeight: 800, color: '#16a34a', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 7 }}>✨ Nouveaux</div>
+                      <div style={{ fontSize: '0.67rem', fontWeight: 800, color: '#1e40af', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 7 }}>✨ Nouveaux</div>
                     )}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 4, maxHeight: 180, overflowY: 'auto' }}>
                       {newEntries.map((e) => (
@@ -511,7 +499,7 @@ export default function InventairePage() {
                           background: '#f8fafc', border: '1px solid #e2e8f0', fontSize: '0.87rem',
                         }}>
                           <span style={{ fontWeight: 600 }}>{e.nom}</span>
-                          <span style={{ fontWeight: 800, color: '#065f46' }}>{e.qty.toFixed(3)}</span>
+                          <span style={{ fontWeight: 800, color: '#1e40af' }}>{e.qty.toFixed(3)}</span>
                         </div>
                       ))}
                     </div>
@@ -526,9 +514,9 @@ export default function InventairePage() {
                     padding: '10px 28px', borderRadius: 10, border: 'none',
                     background: hasReplacements
                       ? 'linear-gradient(135deg, #dc2626, #b91c1c)'
-                      : 'linear-gradient(135deg, #065f46, #10b981)',
+                      : 'linear-gradient(135deg, #1e3a8a, #1e40af)',
                     color: '#fff', fontWeight: 800, cursor: 'pointer', fontSize: '0.9rem',
-                    boxShadow: hasReplacements ? '0 4px 14px rgba(220,38,38,0.4)' : '0 4px 14px rgba(6,95,70,0.4)',
+                    boxShadow: hasReplacements ? '0 4px 14px rgba(220,38,38,0.4)' : '0 4px 14px rgba(30,64,175,0.4)',
                   }}>
                     {hasReplacements ? '🔄 Remplacer' : '✓ Enregistrer'}
                   </button>
