@@ -15,6 +15,7 @@ interface IngredientRow {
 interface ArticleVendable {
   id: string;
   article_id: number;
+  article_type: string;
   prix_vente: number;
 }
 
@@ -36,69 +37,55 @@ function PrixModal({
     if (!p || p <= 0) { setError('Prix de vente requis'); return; }
     setSaving(true);
     try { await onConfirm(p); }
-    catch { setError('Erreur lors de l\'enregistrement'); }
+    catch { setError("Erreur lors de l'enregistrement"); }
     finally { setSaving(false); }
   };
 
   return (
     <div style={{
-      position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 200,
+      position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 200,
       display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16,
     }}>
       <div style={{
-        background: 'var(--card-bg)', borderRadius: 18, padding: '32px 28px',
-        width: '100%', maxWidth: 380, boxShadow: '0 20px 60px rgba(0,0,0,0.25)',
+        background: 'var(--card-bg)', borderRadius: 16, padding: '28px 24px',
+        width: '100%', maxWidth: 380, border: '1px solid var(--border)',
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
-          <div style={{
-            width: 44, height: 44, borderRadius: 12, background: 'linear-gradient(135deg, var(--primary), #6366f1)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.3rem',
-          }}>🛒</div>
-          <div>
-            <div style={{ fontWeight: 700, fontSize: '1rem' }}>Activer comme vendable</div>
-            <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>{ingredient.nom}</div>
-          </div>
-        </div>
-
-        <div style={{
-          background: 'var(--bg)', borderRadius: 10, padding: '12px 14px',
-          fontSize: '0.83rem', color: 'var(--text-muted)', marginBottom: 20,
-          borderLeft: '3px solid var(--primary)',
-        }}>
-          Cet ingrédient sera ajouté à votre catalogue vendable et pourra être vendu à l'unité ({ingredient.unite_nom}).
-        </div>
+        <h2 style={{ fontSize: '1.05rem', fontWeight: 700, marginBottom: 6 }}>
+          Activer la vente
+        </h2>
+        <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: 20 }}>
+          <strong>{ingredient.nom}</strong> sera ajouté au catalogue vendable
+          en tant qu'article vendu à l'unité ({ingredient.unite_nom}).
+        </p>
 
         <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, marginBottom: 6 }}>
           Prix de vente (DT / {ingredient.unite_nom})
         </label>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-          <input
-            type="number" min="0.01" step="0.01" autoFocus
-            value={prix} onChange={e => { setPrix(e.target.value); setError(''); }}
-            onKeyDown={e => e.key === 'Enter' && handleConfirm()}
-            placeholder="Ex : 3.50"
-            style={{
-              flex: 1, padding: '10px 12px', borderRadius: 9, fontSize: '1rem', fontWeight: 600,
-              border: error ? '2px solid #dc2626' : '1.5px solid var(--border)',
-              background: 'var(--bg)', color: 'var(--text)', outline: 'none',
-            }}
-          />
-          <span style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-muted)' }}>DT</span>
-        </div>
-        {error && <div style={{ color: '#dc2626', fontSize: '0.8rem', marginBottom: 8 }}>{error}</div>}
+        <input
+          type="number" min="0.01" step="0.01" autoFocus
+          value={prix} onChange={e => { setPrix(e.target.value); setError(''); }}
+          onKeyDown={e => e.key === 'Enter' && handleConfirm()}
+          placeholder="Ex : 3.50"
+          style={{
+            width: '100%', padding: '9px 12px', borderRadius: 8, fontSize: '0.95rem',
+            border: error ? '1px solid #dc2626' : '1px solid var(--border)',
+            background: 'var(--bg)', color: 'var(--text)', outline: 'none',
+            boxSizing: 'border-box',
+          }}
+        />
+        {error && <div style={{ color: '#dc2626', fontSize: '0.8rem', marginTop: 6 }}>{error}</div>}
 
-        <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
+        <div style={{ display: 'flex', gap: 10, marginTop: 20, justifyContent: 'flex-end' }}>
           <button onClick={onClose}
-            style={{ flex: 1, padding: '10px 0', borderRadius: 9, border: '1.5px solid var(--border)', background: 'none', cursor: 'pointer', fontWeight: 500, fontSize: '0.9rem' }}>
+            style={{ padding: '8px 18px', borderRadius: 8, border: '1px solid var(--border)', background: 'none', cursor: 'pointer' }}>
             Annuler
           </button>
           <button onClick={handleConfirm} disabled={saving || !prix}
             style={{
-              flex: 2, padding: '10px 0', borderRadius: 9, border: 'none',
+              padding: '8px 18px', borderRadius: 8, border: 'none',
               background: saving || !prix ? 'var(--border)' : 'var(--primary)',
               color: saving || !prix ? 'var(--text-muted)' : '#fff',
-              cursor: saving || !prix ? 'not-allowed' : 'pointer', fontWeight: 700, fontSize: '0.9rem',
-              transition: 'all 0.15s',
+              cursor: saving || !prix ? 'not-allowed' : 'pointer', fontWeight: 600,
             }}>
             {saving ? 'Enregistrement…' : 'Confirmer'}
           </button>
@@ -136,14 +123,14 @@ export default function IngredientsActivitePage() {
       api.get(`/api/articles-vendables?activiteId=${selectedId}`),
     ]).then(([ingRes, vendRes]) => {
       setIngredients(ingRes.data as IngredientRow[]);
-      setVendables((vendRes.data as ArticleVendable[]).filter((a: any) => a.article_type === 'ingredient'));
+      setVendables((vendRes.data as ArticleVendable[]).filter(a => a.article_type === 'ingredient'));
     }).catch(() => {})
       .finally(() => setLoading(false));
   }, [selectedId]);
 
   useEffect(() => { loadData(); }, [loadData]);
 
-  const isVendable = (ingId: number) => vendables.find(v => v.article_id === ingId);
+  const vendableMap = new Map(vendables.map(v => [v.article_id, v]));
 
   const handleToggleOn = (ing: IngredientRow) => setModalIngredient(ing);
 
@@ -161,7 +148,7 @@ export default function IngredientsActivitePage() {
   };
 
   const handleToggleOff = async (ingId: number) => {
-    const article = isVendable(ingId);
+    const article = vendableMap.get(ingId);
     if (!article) return;
     await api.delete(`/api/articles-vendables/${article.id}`).catch(() => {});
     loadData();
@@ -173,28 +160,10 @@ export default function IngredientsActivitePage() {
 
   return (
     <div style={{ padding: '24px', maxWidth: 1100, margin: '0 auto' }}>
-
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
-        <div>
-          <h1 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: 4, letterSpacing: '-0.02em' }}>
-            Ingrédients Activités
-          </h1>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem' }}>
-            Gérez les ingrédients de vos activités et activez la vente au détail
-          </p>
-        </div>
-        {vendableCount > 0 && (
-          <div style={{
-            background: 'linear-gradient(135deg, var(--primary), #6366f1)',
-            borderRadius: 12, padding: '10px 18px', color: '#fff',
-            fontSize: '0.85rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8,
-          }}>
-            <span>🛒</span>
-            <span>{vendableCount} vendable{vendableCount > 1 ? 's' : ''}</span>
-          </div>
-        )}
-      </div>
+      <h1 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: 4 }}>Ingrédients Activités</h1>
+      <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', marginBottom: 20 }}>
+        Ingrédients assignés à vos activités — activez la vente au détail sur chacun
+      </p>
 
       {/* Activité selector */}
       {activites.length > 1 && (
@@ -203,12 +172,11 @@ export default function IngredientsActivitePage() {
             <button key={a.id}
               onClick={() => { setSelectedId(a.id); setSearchParams({ activiteId: String(a.id) }); setFilterCat(''); }}
               style={{
-                padding: '7px 16px', borderRadius: 20, fontSize: '0.85rem', cursor: 'pointer',
-                border: '1.5px solid var(--border)', transition: 'all 0.15s',
+                padding: '6px 14px', borderRadius: 20, fontSize: '0.85rem', cursor: 'pointer',
+                border: '1.5px solid var(--border)',
                 background: selectedId === a.id ? 'var(--primary)' : 'var(--card-bg)',
                 color: selectedId === a.id ? '#fff' : 'var(--text)',
-                fontWeight: selectedId === a.id ? 700 : 400,
-                boxShadow: selectedId === a.id ? '0 2px 12px rgba(var(--primary-rgb,99,102,241),0.25)' : 'none',
+                fontWeight: selectedId === a.id ? 600 : 400,
               }}>
               {a.nom}
             </button>
@@ -217,130 +185,95 @@ export default function IngredientsActivitePage() {
       )}
 
       {!selectedId ? (
-        <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '80px 0' }}>
-          <div style={{ fontSize: '2.5rem', marginBottom: 12 }}>🧂</div>
-          <div style={{ fontSize: '1rem', fontWeight: 600 }}>Aucune activité disponible</div>
+        <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '60px 0' }}>
+          Aucune activité disponible
         </div>
       ) : loading ? (
-        <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '60px 0' }}>Chargement…</div>
+        <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '40px 0' }}>Chargement…</div>
       ) : ingredients.length === 0 ? (
-        <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '80px 0' }}>
-          <div style={{ fontSize: '2.5rem', marginBottom: 12 }}>🧂</div>
-          <div style={{ fontSize: '1rem', fontWeight: 600, marginBottom: 8 }}>Aucun ingrédient assigné</div>
-          <div style={{ fontSize: '0.85rem' }}>Assignez des ingrédients à cette activité depuis le Catalogue Global</div>
+        <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '60px 0' }}>
+          Aucun ingrédient assigné à cette activité.<br />
+          <span style={{ fontSize: '0.82rem' }}>Assignez des ingrédients depuis le Catalogue Global.</span>
         </div>
       ) : (
         <>
-          {/* Filtres catégories */}
-          {categories.length > 1 && (
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 20, alignItems: 'center' }}>
-              <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 600 }}>Catégorie :</span>
-              <button
-                onClick={() => setFilterCat('')}
-                style={{
-                  padding: '4px 12px', borderRadius: 20, fontSize: '0.8rem', cursor: 'pointer',
-                  border: '1px solid var(--border)',
-                  background: !filterCat ? 'var(--text)' : 'var(--card-bg)',
-                  color: !filterCat ? 'var(--card-bg)' : 'var(--text)',
-                  fontWeight: !filterCat ? 600 : 400,
-                }}>
-                Tous ({ingredients.length})
-              </button>
-              {categories.map(cat => (
-                <button key={cat}
-                  onClick={() => setFilterCat(cat)}
-                  style={{
-                    padding: '4px 12px', borderRadius: 20, fontSize: '0.8rem', cursor: 'pointer',
-                    border: '1px solid var(--border)',
-                    background: filterCat === cat ? 'var(--text)' : 'var(--card-bg)',
-                    color: filterCat === cat ? 'var(--card-bg)' : 'var(--text)',
-                    fontWeight: filterCat === cat ? 600 : 400,
-                  }}>
-                  {cat} ({ingredients.filter(i => i.categorie === cat).length})
-                </button>
-              ))}
-            </div>
-          )}
-
-          {/* Liste */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 12 }}>
-            {filtered.map(ing => {
-              const vendable = isVendable(ing.ingredient_id);
-              return (
-                <div key={ing.ingredient_id} style={{
-                  background: 'var(--card-bg)', borderRadius: 14, padding: '16px 18px',
-                  border: vendable ? '1.5px solid var(--primary)' : '1px solid var(--border)',
-                  transition: 'all 0.2s', position: 'relative',
-                  boxShadow: vendable ? '0 2px 16px rgba(var(--primary-rgb,99,102,241),0.12)' : '0 1px 4px rgba(0,0,0,0.04)',
-                }}>
-                  {/* Badge vendable */}
-                  {vendable && (
-                    <div style={{
-                      position: 'absolute', top: 12, right: 14,
-                      background: 'var(--primary)', color: '#fff',
-                      borderRadius: 20, padding: '2px 10px', fontSize: '0.72rem', fontWeight: 700,
-                      letterSpacing: '0.04em',
+          {/* Filtres catégories + compteur vendables */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12, marginBottom: 16 }}>
+            {categories.length > 1 && (
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Catégorie :</span>
+                {[{ label: `Tous (${ingredients.length})`, value: '' }, ...categories.map(c => ({ label: `${c} (${ingredients.filter(i => i.categorie === c).length})`, value: c }))].map(opt => (
+                  <button key={opt.value}
+                    onClick={() => setFilterCat(opt.value)}
+                    style={{
+                      padding: '4px 12px', borderRadius: 20, fontSize: '0.8rem', cursor: 'pointer',
+                      border: filterCat === opt.value ? '1.5px solid var(--primary)' : '1px solid var(--border)',
+                      background: filterCat === opt.value ? 'var(--primary)' : 'var(--card-bg)',
+                      color: filterCat === opt.value ? '#fff' : 'var(--text)',
+                      fontWeight: filterCat === opt.value ? 600 : 400,
                     }}>
-                      VENDABLE
-                    </div>
-                  )}
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            )}
+            {vendableCount > 0 && (
+              <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
+                🛒 {vendableCount} ingrédient{vendableCount > 1 ? 's' : ''} vendable{vendableCount > 1 ? 's' : ''}
+              </span>
+            )}
+          </div>
 
-                  {/* Nom + catégorie */}
-                  <div style={{ marginBottom: 10, paddingRight: vendable ? 80 : 0 }}>
-                    <div style={{ fontWeight: 700, fontSize: '0.97rem', marginBottom: 2 }}>{ing.nom}</div>
-                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                      <span style={{
-                        background: 'var(--bg)', borderRadius: 6, padding: '2px 8px',
-                        fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 500,
-                      }}>{ing.unite_nom}</span>
-                      <span style={{
-                        background: 'var(--bg)', borderRadius: 6, padding: '2px 8px',
-                        fontSize: '0.75rem', color: 'var(--text-muted)',
-                      }}>{ing.categorie}</span>
-                    </div>
-                  </div>
-
-                  {/* Prix de vente si vendable */}
-                  {vendable && (
-                    <div style={{
-                      background: 'var(--bg)', borderRadius: 8, padding: '6px 10px',
-                      marginBottom: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                    }}>
-                      <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Prix de vente</span>
-                      <span style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--primary)' }}>
-                        {vendable.prix_vente.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} DT
-                      </span>
-                    </div>
-                  )}
-
-                  {/* Toggle vendable */}
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <span style={{ fontSize: '0.83rem', color: 'var(--text-muted)', fontWeight: 500 }}>
-                      {vendable ? 'Vendu au détail' : 'Activer la vente'}
-                    </span>
-                    <button
-                      onClick={() => vendable ? handleToggleOff(ing.ingredient_id) : handleToggleOn(ing)}
-                      style={{
-                        width: 48, height: 26, borderRadius: 13, border: 'none', cursor: 'pointer',
-                        background: vendable ? 'var(--primary)' : 'var(--border)',
-                        position: 'relative', transition: 'background 0.2s', flexShrink: 0,
-                      }}
-                    >
-                      <div style={{
-                        position: 'absolute', top: 3, left: vendable ? 25 : 3,
-                        width: 20, height: 20, borderRadius: '50%', background: '#fff',
-                        transition: 'left 0.2s', boxShadow: '0 1px 4px rgba(0,0,0,0.2)',
-                      }} />
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
+          {/* Table */}
+          <div style={{ background: 'var(--card-bg)', borderRadius: 12, border: '1px solid var(--border)', overflow: 'hidden' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr style={{ background: 'var(--bg)', borderBottom: '1px solid var(--border)' }}>
+                  {['Ingrédient', 'Catégorie', 'Unité', 'Prix de vente', 'Vendable'].map(h => (
+                    <th key={h} style={{ padding: '10px 14px', textAlign: 'left', fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-muted)' }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map(ing => {
+                  const vendable = vendableMap.get(ing.ingredient_id);
+                  return (
+                    <tr key={ing.ingredient_id} style={{ borderBottom: '1px solid var(--border)' }}>
+                      <td style={{ padding: '10px 14px', fontWeight: 600, fontSize: '0.9rem' }}>{ing.nom}</td>
+                      <td style={{ padding: '10px 14px', fontSize: '0.85rem', color: 'var(--text-muted)' }}>{ing.categorie}</td>
+                      <td style={{ padding: '10px 14px', fontSize: '0.85rem', color: 'var(--text-muted)' }}>{ing.unite_nom}</td>
+                      <td style={{ padding: '10px 14px', fontSize: '0.9rem' }}>
+                        {vendable
+                          ? <span style={{ fontWeight: 600 }}>{vendable.prix_vente.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} DT</span>
+                          : <span style={{ color: 'var(--text-muted)', fontSize: '0.82rem' }}>—</span>}
+                      </td>
+                      <td style={{ padding: '10px 14px' }}>
+                        <button
+                          onClick={() => vendable ? handleToggleOff(ing.ingredient_id) : handleToggleOn(ing)}
+                          style={{
+                            width: 44, height: 24, borderRadius: 12, border: 'none', cursor: 'pointer',
+                            background: vendable ? 'var(--primary)' : 'var(--border)',
+                            position: 'relative', transition: 'background 0.2s', display: 'inline-block', verticalAlign: 'middle',
+                          }}
+                          title={vendable ? 'Désactiver la vente' : 'Activer la vente'}
+                        >
+                          <span style={{
+                            position: 'absolute', top: 3, left: vendable ? 23 : 3,
+                            width: 18, height: 18, borderRadius: '50%', background: '#fff',
+                            transition: 'left 0.2s', display: 'block',
+                            boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                          }} />
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         </>
       )}
 
-      {/* Modal prix */}
       {modalIngredient && (
         <PrixModal
           ingredient={modalIngredient}
