@@ -214,6 +214,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
     isAdmin ? new Set(['admin-ref']) : new Set()
   );
   const [gerantActivites, setGerantActivites] = useState<Activite[]>([]);
+  const [moduleVenteActif, setModuleVenteActif] = useState(false);
 
   const location = useLocation();
   const step = user?.onboardingStep ?? 0;
@@ -269,6 +270,9 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
         .catch(() => setTypesSummary(null));
       api.get('/api/abonnements/mon-abonnement')
         .then(({ data }) => { if (data?.config) setAboConfig(data.config); })
+        .catch(() => {});
+      api.get('/api/entreprise')
+        .then(({ data }) => setModuleVenteActif(!!data?.module_vente_actif))
         .catch(() => {});
     }
   }, [isEntreprise, step, location.pathname, user?.role]);
@@ -517,14 +521,16 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                   })()}
 
                   {/* ══ ESPACE VENTE ══ */}
-                  {!isOnboarding && hasActiviteIngredients && (
+                  {!isOnboarding && hasActiviteIngredients && moduleVenteActif && (
                     <>
                       <Divider />
                       <CollapsibleHeader label="Espace Vente" icon="🛒" isOpen={openSections.has('vente')} locked={false} onToggle={() => toggleSection('vente')} />
                       {openSections.has('vente') && (
                         <>
-                          <li><NavLink to="/client/ingredients-activite" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}><span className="link-icon">🏷️</span><span className="link-label">Catalogue Vente</span></NavLink></li>
+                          <li><NavLink to="/client/ventes/catalogue" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}><span className="link-icon">🧾</span><span className="link-label">Catalogue Vente</span></NavLink></li>
+                          <li><NavLink to="/client/ventes/configuration" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}><span className="link-icon">⚙️</span><span className="link-label">Configuration Vente</span></NavLink></li>
                           <li><NavLink to="/client/ventes" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}><span className="link-icon">💰</span><span className="link-label">Ventes Activités</span></NavLink></li>
+                          <li><NavLink to="/client/ventes/rapport" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📊</span><span className="link-label">Rapport Vente</span></NavLink></li>
                           {labos.length > 0 && (
                             <li><Link to={`/client/labo/ventes?laboId=${labos[0].id}`} className={`sidebar-link ${location.pathname === '/client/labo/ventes' ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📤</span><span className="link-label">Ventes Labo</span></Link></li>
                           )}
