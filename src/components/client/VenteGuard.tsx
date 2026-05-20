@@ -17,7 +17,7 @@ export default function VenteGuard() {
   useEffect(() => {
     Promise.all([
       api.get('/api/entreprise'),
-      api.get('/api/demandes'),
+      api.get('/api/abonnements/demandes'),
     ]).then(([pe, dem]) => {
       const actif = !!pe.data?.module_vente_actif;
       const pending = (dem.data as { typeDemande: string; statut: string }[])
@@ -30,7 +30,7 @@ export default function VenteGuard() {
   const handleRequest = async () => {
     setRequesting(true); setError('');
     try {
-      await api.post('/api/demandes', { typeDemande: 'activer_module_vente' });
+      await api.post('/api/abonnements/demandes', { typeDemande: 'activer_module_vente' });
       setRequested(true); setHasPending(true);
     } catch (e: unknown) {
       setError((e as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Erreur');

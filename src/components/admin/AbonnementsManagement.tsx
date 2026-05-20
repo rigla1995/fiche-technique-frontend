@@ -284,6 +284,10 @@ export default function AbonnementsManagement() {
   // mode
   const [modeSaving, setModeSaving] = useState(false);
 
+  // module vente
+  const [moduleVenteSaving, setModuleVenteSaving] = useState(false);
+  const [moduleVenteError, setModuleVenteError] = useState<string | null>(null);
+
   // AI assistant / Telegram
   const [aiEnabled, setAiEnabled] = useState(false);
   const [aiTelegramLinked, setAiTelegramLinked] = useState(false);
@@ -313,6 +317,7 @@ export default function AbonnementsManagement() {
   const openDetail = useCallback(async (ab: Abonnement) => {
     setDetailLoading(true);
     setPromoError(null);
+    setModuleVenteError(null);
     setEditingPromo(null);
     setPromoAppliesTo('mensualite');
     setPromoType('percent_off');
@@ -341,6 +346,21 @@ export default function AbonnementsManagement() {
       setDetailLoading(false);
     }
   }, []);
+
+  const toggleModuleVente = async (newActif: boolean) => {
+    if (!selected || moduleVenteSaving) return;
+    setModuleVenteError(null);
+    setModuleVenteSaving(true);
+    try {
+      await api.put(`/api/abonnements/client/${selected.clientId}/module-vente`, { actif: newActif });
+      setSelected(s => s ? { ...s, moduleVenteActif: newActif } : s);
+      fetchList();
+    } catch (err: unknown) {
+      setModuleVenteError((err as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Erreur');
+    } finally {
+      setModuleVenteSaving(false);
+    }
+  };
 
   const saveAiConfig = async (newEnabled: boolean) => {
     if (!selected || aiSaving) return;
@@ -1342,6 +1362,34 @@ export default function AbonnementsManagement() {
                 </div>
               );
             })()}
+
+            {/* ── Module Vente ────────────────────────────────────────── */}
+            <div style={{ background: '#fff', borderRadius: 12, border: '1.5px solid #fcd34d', overflow: 'hidden' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 18px', background: 'linear-gradient(135deg,#fffbeb 0%,#fef3c7 100%)', borderBottom: '1px solid #fcd34d' }}>
+                <span style={{ fontSize: 20 }}>🛒</span>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: '#78350f' }}>Module Vente</div>
+                  <div style={{ fontSize: 11, color: '#92400e', marginTop: 1 }}>Catalogue vendable, prestataires, rapport de rentabilité</div>
+                </div>
+                <span style={{ padding: '4px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700, background: selected.moduleVenteActif ? '#dcfce7' : '#fee2e2', color: selected.moduleVenteActif ? '#166534' : '#991b1b' }}>
+                  {selected.moduleVenteActif ? '✅ Actif' : '🔒 Inactif'}
+                </span>
+              </div>
+              <div style={{ padding: '14px 18px', display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+                {selected.moduleVenteActif ? (
+                  <button onClick={() => toggleModuleVente(false)} disabled={moduleVenteSaving}
+                    style={{ fontSize: 12, padding: '7px 16px', borderRadius: 8, border: '1.5px solid #dc2626', background: '#fff', color: '#dc2626', cursor: moduleVenteSaving ? 'default' : 'pointer', fontWeight: 700, opacity: moduleVenteSaving ? 0.7 : 1 }}>
+                    {moduleVenteSaving ? '…' : '🔒 Désactiver'}
+                  </button>
+                ) : (
+                  <button onClick={() => toggleModuleVente(true)} disabled={moduleVenteSaving}
+                    style={{ fontSize: 12, padding: '7px 16px', borderRadius: 8, border: 'none', background: 'linear-gradient(135deg,#78350f,#b45309)', color: '#fff', cursor: moduleVenteSaving ? 'default' : 'pointer', fontWeight: 700, opacity: moduleVenteSaving ? 0.7 : 1 }}>
+                    {moduleVenteSaving ? '…' : '🚀 Activer'}
+                  </button>
+                )}
+                {moduleVenteError && <span style={{ fontSize: 11, color: '#dc2626' }}>{moduleVenteError}</span>}
+              </div>
+            </div>
 
             {/* ── Agent IA Telegram ───────────────────────────────────── */}
             <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #e2e8f0', overflow: 'hidden' }}>

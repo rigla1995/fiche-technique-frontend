@@ -67,7 +67,7 @@ export default function MonAbonnementPage() {
     try {
       const [entRes, demRes, tarifRes] = await Promise.all([
         api.get('/api/entreprise'),
-        api.get('/api/demandes'),
+        api.get('/api/abonnements/demandes'),
         api.get('/api/tarifs'),
       ]);
       setModuleVenteActif(!!entRes.data?.module_vente_actif);
@@ -93,7 +93,7 @@ export default function MonAbonnementPage() {
   const handleRequestVente = async () => {
     setRequestingVente(true); setRequestErrorVente('');
     try {
-      await api.post('/api/demandes', { typeDemande: 'activer_module_vente' });
+      await api.post('/api/abonnements/demandes', { typeDemande: 'activer_module_vente' });
       setRequestedVente(true); setHasPendingVente(true);
     } catch (e: unknown) {
       setRequestErrorVente((e as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Erreur');
