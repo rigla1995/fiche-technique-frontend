@@ -346,8 +346,6 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
               {openSections.has('admin-abo') && (
                 <>
                   <SubNavLink to="/admin/abonnements" icon="💳" label="Abonnements" isActive={location.pathname === '/admin/abonnements'} onClick={onClose} />
-                  <SubNavLink to="/admin/abonnements/paiements" icon="💰" label="Hist. paiements" isActive={location.pathname === '/admin/abonnements/paiements'} onClick={onClose} />
-                  <SubNavLink to="/admin/abonnements/promotions" icon="🎁" label="Hist. promotions" isActive={location.pathname === '/admin/abonnements/promotions'} onClick={onClose} />
                 </>
               )}
 

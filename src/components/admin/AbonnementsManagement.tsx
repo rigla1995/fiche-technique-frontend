@@ -284,6 +284,11 @@ export default function AbonnementsManagement() {
   // mode
   const [modeSaving, setModeSaving] = useState(false);
 
+  // detail tabs
+  const [activeDetailTab, setActiveDetailTab] = useState<'configuration' | 'paiements' | 'activation' | 'promotions' | 'paiement'>('configuration');
+  const [promoFilterApplies, setPromoFilterApplies] = useState<string>('');
+  const [paiementFilterStatut, setPaiementFilterStatut] = useState<string>('');
+
   // module vente
   const [moduleVenteSaving, setModuleVenteSaving] = useState(false);
   const [moduleVenteError, setModuleVenteError] = useState<string | null>(null);
@@ -319,6 +324,7 @@ export default function AbonnementsManagement() {
     setPromoError(null);
     setModuleVenteError(null);
     setEditingPromo(null);
+    setActiveDetailTab('configuration');
     setPromoAppliesTo('mensualite');
     setPromoType('percent_off');
     setPromoMoisDebut('');
@@ -804,6 +810,40 @@ export default function AbonnementsManagement() {
             })()}
 
 
+            {/* ── Tab bar ────────────────────────────────────────────── */}
+            {(() => {
+              const TAB_COLOR = '#0d9488';
+              const tabs: { key: typeof activeDetailTab; label: string }[] = [
+                { key: 'configuration', label: 'Configuration' },
+                { key: 'paiements', label: 'Paiements et Promotions' },
+                { key: 'activation', label: 'Activation' },
+                { key: 'promotions', label: 'Promotions' },
+                { key: 'paiement', label: 'Paiement' },
+              ];
+              return (
+                <div style={{ display: 'flex', gap: 2, borderBottom: '2px solid #e2e8f0', marginBottom: 20 }}>
+                  {tabs.map((t) => {
+                    const isActive = activeDetailTab === t.key;
+                    return (
+                      <button key={t.key} onClick={() => setActiveDetailTab(t.key)} style={{
+                        padding: '8px 16px', fontSize: '0.85rem', cursor: 'pointer',
+                        background: 'none', border: 'none',
+                        borderBottom: isActive ? `3px solid ${TAB_COLOR}` : 'none',
+                        color: isActive ? TAB_COLOR : 'var(--text-muted)',
+                        fontWeight: isActive ? 700 : 400,
+                        marginBottom: -2,
+                      }}>
+                        {t.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              );
+            })()}
+
+            {/* ── Tab 1: Configuration ───────────────────────────────── */}
+            {activeDetailTab === 'configuration' && (
+              <>
             {/* ── Configuration Souscrite ────────────────────────────── */}
             {selected.config && (() => {
               const cfg = selected.config!;
@@ -859,6 +899,12 @@ export default function AbonnementsManagement() {
               );
             })()}
 
+              </>
+            )}
+
+            {/* ── Tab 2: Paiements et Promotions ─────────────────────── */}
+            {activeDetailTab === 'paiements' && (
+              <>
             {/* ── Promotions ─────────────────────────────────────────── */}
             <div style={{ background: '#fffbeb', borderRadius: 10, padding: 16, border: '1px solid #fde68a', marginBottom: 20 }}>
               <div style={{ fontSize: 13, fontWeight: 700, color: '#92400e', marginBottom: 14 }}>🏷️ Promotions</div>
@@ -1061,6 +1107,8 @@ export default function AbonnementsManagement() {
               )}
             </div>
 
+            {/* ── Mensualité + Onboarding 2-col grid ─────────────────── */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
             {/* ── Onboarding ─────────────────────────────────────────── */}
             {(() => {
               const activeObPromoFull = selected.pricing?.activePromoOnboarding;
@@ -1363,8 +1411,15 @@ export default function AbonnementsManagement() {
               );
             })()}
 
+            </div>{/* end 2-col grid */}
+              </>
+            )}
+
+            {/* ── Tab 3: Activation ──────────────────────────────────── */}
+            {activeDetailTab === 'activation' && (
+              <>
             {/* ── Module Vente ────────────────────────────────────────── */}
-            <div style={{ background: '#fff', borderRadius: 12, border: '1.5px solid #fcd34d', overflow: 'hidden' }}>
+            <div style={{ background: '#fff', borderRadius: 12, border: '1.5px solid #fcd34d', overflow: 'hidden', marginBottom: 20 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 18px', background: 'linear-gradient(135deg,#fffbeb 0%,#fef3c7 100%)', borderBottom: '1px solid #fcd34d' }}>
                 <span style={{ fontSize: 20 }}>🛒</span>
                 <div style={{ flex: 1 }}>
@@ -1397,7 +1452,7 @@ export default function AbonnementsManagement() {
             </div>
 
             {/* ── Agent IA Telegram ───────────────────────────────────── */}
-            <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #e2e8f0', overflow: 'hidden' }}>
+            <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #e2e8f0', overflow: 'hidden', marginBottom: 20 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 18px', background: 'linear-gradient(135deg,#eff6ff 0%,#dbeafe 100%)', borderBottom: '1px solid #e2e8f0' }}>
                 <span style={{ fontSize: 20 }}>🤖</span>
                 <div style={{ flex: 1 }}>
@@ -1482,8 +1537,113 @@ export default function AbonnementsManagement() {
               </div>
             </div>
 
-            {/* ── Mode compte ────────────────────────────────────────── */}
-            {(() => {
+            {/* ── Agent IA Guide (placeholder) ───────────────────────── */}
+            <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #e2e8f0', overflow: 'hidden' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 18px', background: 'linear-gradient(135deg,#f0fdf4,#dcfce7)', borderBottom: '1px solid #e2e8f0' }}>
+                <span style={{ fontSize: 20 }}>🧭</span>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: '#166534' }}>Agent IA Guide</div>
+                  <div style={{ fontSize: 11, color: '#166534', marginTop: 1 }}>Prochainement — agent guidé pour onboarding et formations</div>
+                </div>
+              </div>
+              <div style={{ padding: '24px', textAlign: 'center', fontSize: 13, color: '#6b7280' }}>
+                🚧 En développement
+              </div>
+            </div>
+              </>
+            )}
+
+            {/* ── Tab 4: Promotions ──────────────────────────────────── */}
+            {activeDetailTab === 'promotions' && (
+              <>
+              {/* Filter buttons */}
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 16 }}>
+                {(['', 'mensualite', 'onboarding', 'supplement_gerant', 'supplement_labo', 'supplement_activite'] as const).map((val) => {
+                  const labelMap: Record<string, string> = { '': 'Toutes', mensualite: 'Mensualité', onboarding: 'Onboarding', supplement_gerant: 'Supplément Gérant', supplement_labo: 'Supplément Labo', supplement_activite: 'Supplément Activité' };
+                  const isActive = promoFilterApplies === val;
+                  return (
+                    <button key={val} onClick={() => setPromoFilterApplies(val)} style={{ padding: '4px 12px', borderRadius: 20, fontSize: 11, fontWeight: 600, cursor: 'pointer', border: `1.5px solid ${isActive ? '#0d9488' : '#e2e8f0'}`, background: isActive ? '#0d948818' : '#fff', color: isActive ? '#0d9488' : '#94a3b8' }}>
+                      {labelMap[val] ?? val}
+                    </button>
+                  );
+                })}
+              </div>
+              {/* Promo cards */}
+              {(() => {
+                const promos = (selected.promotions || []).filter((p) => !promoFilterApplies || p.appliesTo === promoFilterApplies);
+                if (promos.length === 0) return <div style={{ fontSize: 13, color: '#9ca3af', textAlign: 'center', padding: '32px 0' }}>Aucune promotion</div>;
+                return promos.map((p) => {
+                  const isFuture = p.dateDebut > todayStr;
+                  const badge = isFuture ? 'Planifié' : p.statutPromo === 'expiré' ? 'Expiré' : 'Actif';
+                  const badgeBg = isFuture ? '#6366f1' : p.statutPromo === 'expiré' ? '#9ca3af' : '#f59e0b';
+                  let remiseStr = '';
+                  if (p.type === 'free_months') remiseStr = 'Gratuit (100%)';
+                  else if (p.type === 'percent_off') { const v = p.discountSupplement ?? p.discountMensualite ?? p.discountOnboarding; remiseStr = v ? `-${v}%` : '—'; }
+                  else { const v = p.fixedSupplement ?? p.fixedMensualite ?? p.fixedOnboarding; remiseStr = v ? `-${v} DT` : '—'; }
+                  return (
+                    <div key={p.id} style={{ background: '#fafafa', borderRadius: 10, border: '1px solid #e2e8f0', padding: '12px 16px', marginBottom: 10, display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center' }}>
+                      <span style={{ fontSize: 10, fontWeight: 700, borderRadius: 6, padding: '2px 8px', background: badgeBg, color: '#fff', flexShrink: 0 }}>{badge}</span>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: '#374151' }}>{APPLIES_LABELS[p.appliesTo] || p.appliesTo}</span>
+                      <span style={{ fontSize: 12, color: '#6b7280' }}>{p.type === 'percent_off' ? '% Réduction' : p.type === 'free_months' ? 'Gratuit' : 'Prix fixe'} · {remiseStr}</span>
+                      <span style={{ fontSize: 11, color: '#9ca3af', marginLeft: 'auto' }}>{fmtDate(p.dateDebut)} → {p.dateFin ? fmtDate(p.dateFin) : 'Permanent'}</span>
+                    </div>
+                  );
+                });
+              })()}
+              <div style={{ marginTop: 8 }}>
+                <button onClick={() => setActiveDetailTab('paiements')} style={{ padding: '8px 18px', borderRadius: 8, border: 'none', background: '#0d9488', color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
+                  + Ajouter une promotion
+                </button>
+              </div>
+              </>
+            )}
+
+            {/* ── Tab 5: Paiement ────────────────────────────────────── */}
+            {activeDetailTab === 'paiement' && (
+              <>
+              {/* Filter buttons */}
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 16 }}>
+                {(['', 'payé', 'impayé', 'en_attente', 'remisé', 'gratuit'] as const).map((val) => {
+                  const labelMap: Record<string, string> = { '': 'Tous', payé: 'Payé', impayé: 'Impayé', en_attente: 'En attente', remisé: 'Remisé', gratuit: 'Gratuit' };
+                  const isActive = paiementFilterStatut === val;
+                  return (
+                    <button key={val} onClick={() => setPaiementFilterStatut(val)} style={{ padding: '4px 12px', borderRadius: 20, fontSize: 11, fontWeight: 600, cursor: 'pointer', border: `1.5px solid ${isActive ? '#0d9488' : '#e2e8f0'}`, background: isActive ? '#0d948818' : '#fff', color: isActive ? '#0d9488' : '#94a3b8' }}>
+                      {labelMap[val] ?? val}
+                    </button>
+                  );
+                })}
+              </div>
+              {/* Table */}
+              {(() => {
+                const paiements = (selected.paiements || []).filter((p) => !paiementFilterStatut || p.statut === paiementFilterStatut);
+                if (paiements.length === 0) return <div style={{ fontSize: 13, color: '#9ca3af', textAlign: 'center', padding: '32px 0' }}>Aucun paiement</div>;
+                return (
+                  <div style={{ background: '#fff', borderRadius: 10, border: '1px solid #e2e8f0', overflow: 'hidden' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 90px 100px 110px 1fr', padding: '8px 14px', background: '#f1f5f9', borderBottom: '1px solid #e2e8f0' }}>
+                      {['Date (mois)', 'Montant', 'Statut', 'Date paiement', 'Notes'].map((h) => (
+                        <div key={h} style={{ fontSize: 10, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{h}</div>
+                      ))}
+                    </div>
+                    {paiements.map((p, idx) => {
+                      const sc = STATUT_COLORS[p.statut] || { bg: '#f3f4f6', text: '#374151', label: p.statut };
+                      return (
+                        <div key={idx} style={{ display: 'grid', gridTemplateColumns: '1fr 90px 100px 110px 1fr', padding: '10px 14px', borderBottom: '1px solid #f1f5f9', background: '#fff', alignItems: 'center' }}>
+                          <span style={{ fontSize: 13, color: '#0f172a', fontWeight: 600 }}>{fmtMois(p.mois)}</span>
+                          <span style={{ fontSize: 13, color: '#374151' }}>{p.montantDt != null ? `${p.montantDt} DT` : '—'}</span>
+                          <span style={{ display: 'inline-block', fontSize: 11, fontWeight: 700, padding: '3px 9px', borderRadius: 12, background: sc.bg, color: sc.text, whiteSpace: 'nowrap' }}>{sc.label}</span>
+                          <span style={{ fontSize: 12, color: '#6b7280' }}>{p.datePaiement ? fmtDate(p.datePaiement) : '—'}</span>
+                          <span style={{ fontSize: 11, color: '#9ca3af' }}>{p.notes || '—'}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
+              </>
+            )}
+
+            {/* ── Tab 1 continued: Mode compte ───────────────────────── */}
+            {activeDetailTab === 'configuration' && (() => {
               const modeConfig: Record<string, { icon: string; desc: string }> = {
                 actif:     { icon: '✅', desc: 'Accès complet à toutes les fonctionnalités' },
                 read_only: { icon: '👁️', desc: 'Consultation uniquement, aucune modification' },
