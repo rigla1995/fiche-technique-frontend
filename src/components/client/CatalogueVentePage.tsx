@@ -101,7 +101,6 @@ export default function CatalogueVentePage() {
   useEffect(() => { loadData(); }, [loadData]);
 
   const handleToggle = async (ing: MergedIngredient) => {
-    // Portion is required to activate
     if (!ing.actif && !portionEdits[ing.id]) {
       setToggleError(prev => ({ ...prev, [ing.id]: 'Saisir la portion avant d\'activer' }));
       return;
@@ -203,13 +202,7 @@ export default function CatalogueVentePage() {
 
       {/* Activité selector */}
       <div style={{ background: 'var(--card-bg)', borderRadius: 10, border: '1px solid var(--border)', padding: '10px 14px', marginBottom: 16 }}>
-        <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-          Activité
-        </div>
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          {activites.length === 0 && (
-            <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Aucune activité disponible</span>
-          )}
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
           {activites.map(a => (
             <button key={a.id}
               onClick={() => { setSelectedActiviteId(a.id); setSearchParams({ activiteId: String(a.id) }); }}
@@ -224,6 +217,10 @@ export default function CatalogueVentePage() {
               {a.nom}
             </button>
           ))}
+          {activites.length === 0 && <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Aucune activité disponible</span>}
+          {activites.length > 0 && (
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginLeft: 4 }}>← sélectionner l'activité</span>
+          )}
         </div>
       </div>
 
@@ -301,10 +298,9 @@ export default function CatalogueVentePage() {
                     }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                       <span style={{ fontSize: '1rem', fontWeight: 800, color: CD }}>{cat}</span>
-                      <span style={{
-                        fontSize: '0.72rem', fontWeight: 700,
-                        background: C, color: '#fff', borderRadius: 20, padding: '2px 9px',
-                      }}>{items.length}</span>
+                      <span style={{ fontSize: '0.72rem', fontWeight: 700, background: C, color: '#fff', borderRadius: 20, padding: '2px 9px' }}>
+                        {items.length}
+                      </span>
                       <span style={{ fontSize: '0.75rem', color: C, fontWeight: 600 }}>
                         {items.filter(i => i.actif).length} actif{items.filter(i => i.actif).length !== 1 ? 's' : ''}
                       </span>
@@ -317,76 +313,105 @@ export default function CatalogueVentePage() {
                   {!collapsedCats[cat] && (
                     <div style={{
                       display: 'grid',
-                      gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
-                      gap: 12, padding: 14,
+                      gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))',
+                      gap: 14, padding: 16,
                     }}>
                       {items.map(ing => {
                         const hasErr = !!toggleError[ing.id];
+                        const isSavingPortion = savingPortion === ing.id;
+                        const isToggling = toggling === ing.id;
                         return (
                           <div key={ing.id} style={{
-                            borderRadius: 12,
-                            border: `1.5px solid ${ing.actif ? C : 'var(--border)'}`,
-                            background: ing.actif ? CL : 'var(--bg)',
-                            padding: '14px 16px',
-                            display: 'flex', flexDirection: 'column', gap: 10,
-                            transition: 'border-color 0.15s, background 0.15s',
-                            boxShadow: ing.actif ? `0 2px 10px rgba(180,83,9,0.1)` : 'none',
+                            background: '#fff',
+                            borderRadius: 14,
+                            border: `1.5px solid ${ing.actif ? C : '#e5e7eb'}`,
+                            boxShadow: ing.actif
+                              ? `0 4px 16px rgba(180,83,9,0.13), inset 3px 0 0 ${C}`
+                              : '0 1px 4px rgba(0,0,0,0.06)',
+                            padding: '16px 16px 14px',
+                            display: 'flex', flexDirection: 'column', gap: 12,
+                            transition: 'border-color 0.2s, box-shadow 0.2s',
+                            position: 'relative',
                           }}>
-                            {/* Top row: name + toggle */}
-                            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
+                            {/* Active accent top strip */}
+                            {ing.actif && (
+                              <div style={{
+                                position: 'absolute', top: 0, left: 0, right: 0, height: 3,
+                                background: `linear-gradient(90deg, ${CD}, ${C}, #d97706)`,
+                                borderRadius: '14px 14px 0 0',
+                              }} />
+                            )}
+
+                            {/* Row 1: name + toggle */}
+                            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
                               <div style={{ flex: 1, minWidth: 0 }}>
-                                <div style={{ fontWeight: 700, fontSize: '0.95rem', color: ing.actif ? CD : 'var(--text)', lineHeight: 1.3 }}>
+                                <div style={{
+                                  fontWeight: 700, fontSize: '0.97rem',
+                                  color: ing.actif ? CD : 'var(--text)',
+                                  lineHeight: 1.3,
+                                  whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                                }}>
                                   {ing.nom}
                                 </div>
                                 <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: 2 }}>
                                   {ing.unite}
                                 </div>
                               </div>
+
                               {/* Toggle switch */}
                               <button
                                 onClick={() => handleToggle(ing)}
-                                disabled={toggling === ing.id}
+                                disabled={isToggling}
                                 title={ing.actif ? 'Désactiver' : 'Activer pour la vente'}
                                 style={{
-                                  width: 44, height: 24, borderRadius: 12, border: 'none', cursor: 'pointer',
-                                  background: ing.actif ? C : '#d1d5db',
-                                  position: 'relative', transition: 'background 0.2s',
-                                  opacity: toggling === ing.id ? 0.6 : 1, flexShrink: 0, padding: 0,
+                                  width: 46, height: 26, borderRadius: 13, border: 'none', cursor: 'pointer',
+                                  background: ing.actif ? C : '#e2e8f0',
+                                  position: 'relative', transition: 'background 0.25s',
+                                  opacity: isToggling ? 0.6 : 1, flexShrink: 0, padding: 0,
+                                  boxShadow: ing.actif ? `0 0 0 3px ${C}33` : 'none',
                                 }}>
                                 <span style={{
-                                  position: 'absolute', top: 2,
-                                  left: ing.actif ? 22 : 2,
+                                  position: 'absolute', top: 3,
+                                  left: ing.actif ? 23 : 3,
                                   width: 20, height: 20, borderRadius: '50%',
-                                  background: '#fff', transition: 'left 0.2s',
-                                  boxShadow: '0 1px 3px rgba(0,0,0,0.2)', display: 'block',
+                                  background: '#fff', transition: 'left 0.25s',
+                                  boxShadow: '0 1px 4px rgba(0,0,0,0.25)', display: 'block',
                                 }} />
                               </button>
                             </div>
 
-                            {/* Status badge */}
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            {/* Row 2: status badge */}
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', minHeight: 20 }}>
                               <span style={{
-                                padding: '2px 10px', borderRadius: 12, fontSize: '0.72rem', fontWeight: 700,
-                                background: ing.actif ? '#dcfce7' : '#f3f4f6',
-                                color: ing.actif ? '#166534' : '#6b7280',
+                                display: 'inline-flex', alignItems: 'center', gap: 4,
+                                padding: '3px 10px', borderRadius: 20, fontSize: '0.72rem', fontWeight: 700,
+                                background: ing.actif ? '#dcfce7' : '#f1f5f9',
+                                color: ing.actif ? '#15803d' : '#94a3b8',
+                                border: `1px solid ${ing.actif ? '#bbf7d0' : '#e2e8f0'}`,
                               }}>
-                                {ing.actif ? '✓ Actif' : 'Inactif'}
+                                <span style={{ width: 6, height: 6, borderRadius: '50%', background: ing.actif ? '#22c55e' : '#cbd5e1', display: 'inline-block' }} />
+                                {ing.actif ? 'Actif pour la vente' : 'Inactif'}
                               </span>
-                              {savingPortion === ing.id && (
-                                <span style={{ fontSize: '0.72rem', color: C, fontStyle: 'italic' }}>Sauvegarde…</span>
+                              {isSavingPortion && (
+                                <span style={{ fontSize: '0.7rem', color: C, fontStyle: 'italic' }}>Sauvegarde…</span>
                               )}
                             </div>
 
-                            {/* Portion input */}
-                            <div>
-                              <label style={{ fontSize: '0.75rem', fontWeight: 700, color: CD, display: 'block', marginBottom: 4 }}>
-                                Portion{' '}
-                                <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}>({ing.unite})</span>
-                                <span style={{ color: '#dc2626', marginLeft: 2 }}>*</span>
-                              </label>
+                            {/* Row 3: portion */}
+                            <div style={{
+                              background: hasErr ? '#fef2f2' : '#f8fafc',
+                              borderRadius: 10, padding: '10px 12px',
+                              border: `1.5px solid ${hasErr ? '#fca5a5' : '#e2e8f0'}`,
+                            }}>
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                                <label style={{ fontSize: '0.72rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                  Portion <span style={{ color: '#dc2626' }}>*</span>
+                                </label>
+                                <span style={{ fontSize: '0.7rem', color: '#94a3b8' }}>{ing.unite}</span>
+                              </div>
                               <input
                                 type="number" min="0" step="0.001"
-                                placeholder="ex: 0.250"
+                                placeholder="0.000"
                                 value={portionEdits[ing.id] ?? ''}
                                 onChange={e => {
                                   setPortionEdits(prev => ({ ...prev, [ing.id]: e.target.value }));
@@ -394,15 +419,19 @@ export default function CatalogueVentePage() {
                                 }}
                                 onBlur={() => handleSavePortion(ing)}
                                 style={{
-                                  width: '100%', padding: '7px 10px', borderRadius: 8,
-                                  border: `1.5px solid ${hasErr ? '#dc2626' : CB}`,
-                                  background: hasErr ? '#fef2f2' : '#fff',
-                                  fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box',
+                                  width: '100%', padding: '7px 10px', borderRadius: 7,
+                                  border: `1.5px solid ${hasErr ? '#f87171' : portionEdits[ing.id] ? C : '#cbd5e1'}`,
+                                  background: '#fff',
+                                  fontSize: '1rem', fontWeight: 600,
+                                  color: portionEdits[ing.id] ? CD : '#94a3b8',
+                                  outline: 'none', boxSizing: 'border-box',
+                                  textAlign: 'center',
+                                  transition: 'border-color 0.15s',
                                 }}
                               />
                               {hasErr && (
-                                <div style={{ color: '#dc2626', fontSize: '0.72rem', marginTop: 3 }}>
-                                  {toggleError[ing.id]}
+                                <div style={{ color: '#dc2626', fontSize: '0.72rem', marginTop: 5, textAlign: 'center' }}>
+                                  ⚠ {toggleError[ing.id]}
                                 </div>
                               )}
                             </div>
