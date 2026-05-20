@@ -68,7 +68,7 @@ export default function MonAbonnementPage() {
       const [entRes, demRes, tarifRes] = await Promise.all([
         api.get('/api/entreprise'),
         api.get('/api/abonnements/demandes'),
-        api.get('/api/tarifs'),
+        api.get('/api/abonnements/tarifs'),
       ]);
       setModuleVenteActif(!!entRes.data?.module_vente_actif);
       const pending = (demRes.data as { typeDemande: string; statut: string }[])
