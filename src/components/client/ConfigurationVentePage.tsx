@@ -102,13 +102,13 @@ export default function ConfigurationVentePage() {
 
   useEffect(() => {
     api.get('/api/entreprise/activites').then(({ data }) => {
-      const acts: Activite[] = (data as Activite[]).filter(a => !a.laboId);
+      const acts = data as Activite[];
       setActivites(acts);
       const paramId = searchParams.get('activiteId');
       const found = acts.find(a => String(a.id) === paramId);
       setSelectedActiviteId(found ? found.id : acts[0]?.id ?? null);
     }).catch(() => {});
-    api.get('/api/admin/prestataires').then(({ data }) => setAllPrestataires(data)).catch(() => {});
+    api.get('/api/prestataires').then(({ data }) => setAllPrestataires(data)).catch(() => {});
   }, []);
 
   const loadAll = useCallback(() => {
@@ -246,23 +246,25 @@ export default function ConfigurationVentePage() {
       </div>
 
       {/* Activité selector */}
-      {activites.length > 1 && (
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 20, background: 'var(--card-bg)', borderRadius: 10, border: '1px solid var(--border)', padding: '10px 14px' }}>
+      <div style={{ background: 'var(--card-bg)', borderRadius: 10, border: '1px solid var(--border)', padding: '10px 14px', marginBottom: 20 }}>
+        <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Activité</div>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           {activites.map(a => (
             <button key={a.id} onClick={() => { setSelectedActiviteId(a.id); setSearchParams({ activiteId: String(a.id) }); }}
               style={{
-                padding: '4px 14px', borderRadius: 20, cursor: 'pointer', fontSize: '0.82rem',
-                border: selectedActiviteId === a.id ? `1.5px solid ${C}` : '1.5px solid var(--border)',
+                padding: '5px 16px', borderRadius: 20, cursor: 'pointer', fontSize: '0.85rem',
+                border: selectedActiviteId === a.id ? `2px solid ${C}` : '1.5px solid var(--border)',
                 background: selectedActiviteId === a.id ? C : 'var(--bg)',
                 color: selectedActiviteId === a.id ? '#fff' : 'var(--text)',
                 fontWeight: selectedActiviteId === a.id ? 700 : 400,
+                transition: 'all 0.15s',
               }}>
               {a.nom}
             </button>
           ))}
-          <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', alignSelf: 'center', marginLeft: 4 }}>← sélectionner l'activité</span>
+          {activites.length === 0 && <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Aucune activité disponible</span>}
         </div>
-      )}
+      </div>
 
       {!selectedActiviteId ? (
         <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '60px 0' }}>Aucune activité disponible</div>

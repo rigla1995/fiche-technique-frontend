@@ -45,7 +45,7 @@ export default function CatalogueVentePage() {
   const [loading, setLoading] = useState(false);
   const [toggling, setToggling] = useState<number | null>(null);
   const [savingPortion, setSavingPortion] = useState<number | null>(null);
-  const [toggleError, setToggleError] = useState<string | null>(null);
+  const [toggleError, setToggleError] = useState<Record<number, string>>({});
   const [portionEdits, setPortionEdits] = useState<Record<number, string>>({});
 
   const [filterSearch, setFilterSearch] = useState('');
@@ -55,7 +55,7 @@ export default function CatalogueVentePage() {
 
   useEffect(() => {
     api.get('/api/entreprise/activites').then(({ data }) => {
-      const acts: Activite[] = (data as Activite[]).filter(a => !a.laboId);
+      const acts = data as Activite[];
       setActivites(acts);
       const paramId = searchParams.get('activiteId');
       const found = acts.find(a => String(a.id) === paramId);
@@ -101,8 +101,13 @@ export default function CatalogueVentePage() {
   useEffect(() => { loadData(); }, [loadData]);
 
   const handleToggle = async (ing: MergedIngredient) => {
+    // Portion is required to activate
+    if (!ing.actif && !portionEdits[ing.id]) {
+      setToggleError(prev => ({ ...prev, [ing.id]: 'Saisir la portion avant d\'activer' }));
+      return;
+    }
     setToggling(ing.id);
-    setToggleError(null);
+    setToggleError(prev => { const n = { ...prev }; delete n[ing.id]; return n; });
     try {
       if (!ing.articleId) {
         await api.post('/api/articles-vendables', {
@@ -110,7 +115,7 @@ export default function CatalogueVentePage() {
           article_type: 'ingredient',
           article_id: ing.id,
           prix_vente: 0,
-          portion: portionEdits[ing.id] ? parseFloat(portionEdits[ing.id]) : null,
+          portion: parseFloat(portionEdits[ing.id]),
           actif: true,
         });
       } else {
@@ -118,7 +123,7 @@ export default function CatalogueVentePage() {
       }
       await loadData();
     } catch (e: unknown) {
-      setToggleError(apiMsg(e));
+      setToggleError(prev => ({ ...prev, [ing.id]: apiMsg(e) }));
     }
     setToggling(null);
   };
@@ -162,7 +167,6 @@ export default function CatalogueVentePage() {
   }, {});
 
   const toggleCat = (cat: string) => setCollapsedCats(prev => ({ ...prev, [cat]: !prev[cat] }));
-
   const activeCount = ingredients.filter(i => i.actif).length;
 
   return (
@@ -179,7 +183,9 @@ export default function CatalogueVentePage() {
             <div>
               <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0 }}>Catalogue Vente</h1>
               <p style={{ color: 'rgba(255,255,255,0.82)', margin: 0, fontSize: '0.85rem' }}>
-                {activeCount > 0 ? `${activeCount} ingrédient${activeCount !== 1 ? 's' : ''} actif${activeCount !== 1 ? 's' : ''}` : 'Activez les ingrédients et définissez les portions'}
+                {activeCount > 0
+                  ? `${activeCount} ingrédient${activeCount !== 1 ? 's' : ''} actif${activeCount !== 1 ? 's' : ''}`
+                  : 'Activez les ingrédients et définissez les portions'}
               </p>
             </div>
           </div>
@@ -227,7 +233,7 @@ export default function CatalogueVentePage() {
         <>
           {/* Filters */}
           <div style={{
-            background: CL, borderRadius: 12, border: `1.5px solid ${CB}`,
+            background: 'var(--card-bg)', borderRadius: 12, border: `1.5px solid ${CB}`,
             padding: '14px 18px', marginBottom: 20,
             display: 'flex', gap: 14, flexWrap: 'wrap', alignItems: 'center',
           }}>
@@ -240,7 +246,7 @@ export default function CatalogueVentePage() {
                 onChange={e => setFilterSearch(e.target.value)}
                 style={{
                   flex: 1, padding: '6px 10px', borderRadius: 8,
-                  border: `1.5px solid ${CB}`, background: '#fff',
+                  border: `1.5px solid ${CB}`, background: CL,
                   fontSize: '0.85rem', outline: 'none',
                 }}
               />
@@ -250,7 +256,7 @@ export default function CatalogueVentePage() {
               <select value={filterCategorie} onChange={e => setFilterCategorie(e.target.value)}
                 style={{
                   flex: 1, padding: '6px 10px', borderRadius: 8,
-                  border: `1.5px solid ${CB}`, background: '#fff',
+                  border: `1.5px solid ${CB}`, background: CL,
                   fontSize: '0.85rem', outline: 'none',
                 }}>
                 <option value="">Toutes</option>
@@ -263,7 +269,7 @@ export default function CatalogueVentePage() {
                   style={{
                     padding: '5px 12px', borderRadius: 20, fontSize: '0.78rem', cursor: 'pointer',
                     border: filterActif === v ? `2px solid ${C}` : `1.5px solid ${CB}`,
-                    background: filterActif === v ? C : '#fff',
+                    background: filterActif === v ? C : 'var(--bg)',
                     color: filterActif === v ? '#fff' : CD,
                     fontWeight: filterActif === v ? 700 : 500,
                   }}>
@@ -272,12 +278,6 @@ export default function CatalogueVentePage() {
               ))}
             </div>
           </div>
-
-          {toggleError && (
-            <div style={{ color: '#dc2626', background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: 8, padding: '8px 14px', marginBottom: 14, fontSize: '0.85rem' }}>
-              {toggleError}
-            </div>
-          )}
 
           {loading ? (
             <div style={{ textAlign: 'center', padding: 40, color: 'var(--text-muted)' }}>Chargement…</div>
@@ -289,22 +289,23 @@ export default function CatalogueVentePage() {
                 : 'Aucun résultat pour ces filtres'}
             </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               {Object.entries(grouped).map(([cat, items]) => (
-                <div key={cat} style={{ background: 'var(--card-bg)', borderRadius: 12, border: `1.5px solid ${CB}`, overflow: 'hidden' }}>
+                <div key={cat} style={{ background: 'var(--card-bg)', borderRadius: 14, border: `1.5px solid ${CB}`, overflow: 'hidden' }}>
                   {/* Category header */}
                   <button onClick={() => toggleCat(cat)}
                     style={{
                       width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                      padding: '12px 16px', background: CL, border: 'none', cursor: 'pointer',
-                      borderBottom: collapsedCats[cat] ? 'none' : `1px solid ${CB}`,
+                      padding: '13px 18px', background: CL, border: 'none', cursor: 'pointer',
+                      borderBottom: collapsedCats[cat] ? 'none' : `1.5px solid ${CB}`,
                     }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <span style={{ fontSize: '0.95rem', fontWeight: 800, color: CD }}>{cat}</span>
-                      <span style={{ fontSize: '0.72rem', fontWeight: 700, background: C, color: '#fff', borderRadius: 20, padding: '1px 8px' }}>
-                        {items.length}
-                      </span>
-                      <span style={{ fontSize: '0.72rem', color: CD }}>
+                      <span style={{ fontSize: '1rem', fontWeight: 800, color: CD }}>{cat}</span>
+                      <span style={{
+                        fontSize: '0.72rem', fontWeight: 700,
+                        background: C, color: '#fff', borderRadius: 20, padding: '2px 9px',
+                      }}>{items.length}</span>
+                      <span style={{ fontSize: '0.75rem', color: C, fontWeight: 600 }}>
                         {items.filter(i => i.actif).length} actif{items.filter(i => i.actif).length !== 1 ? 's' : ''}
                       </span>
                     </div>
@@ -314,77 +315,100 @@ export default function CatalogueVentePage() {
                   </button>
 
                   {!collapsedCats[cat] && (
-                    <div>
-                      {items.map((ing, idx) => (
-                        <div key={ing.id} style={{
-                          display: 'flex', alignItems: 'center', gap: 12, padding: '10px 16px',
-                          borderBottom: idx < items.length - 1 ? '1px solid var(--border)' : 'none',
-                          background: ing.actif ? 'rgba(254,243,199,0.25)' : 'transparent',
-                          transition: 'background 0.15s',
-                        }}>
-                          {/* Toggle switch */}
-                          <button
-                            onClick={() => handleToggle(ing)}
-                            disabled={toggling === ing.id}
-                            title={ing.actif ? 'Désactiver' : 'Activer pour la vente'}
-                            style={{
-                              width: 44, height: 24, borderRadius: 12, border: 'none', cursor: 'pointer',
-                              background: ing.actif ? C : '#d1d5db',
-                              position: 'relative', transition: 'background 0.2s',
-                              opacity: toggling === ing.id ? 0.6 : 1, flexShrink: 0,
-                              padding: 0,
-                            }}>
-                            <span style={{
-                              position: 'absolute', top: 2,
-                              left: ing.actif ? 22 : 2,
-                              width: 20, height: 20, borderRadius: '50%',
-                              background: '#fff', transition: 'left 0.2s',
-                              boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
-                              display: 'block',
-                            }} />
-                          </button>
-
-                          {/* Name & unit */}
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ fontWeight: 600, fontSize: '0.9rem', color: ing.actif ? CD : 'var(--text)' }}>
-                              {ing.nom}
-                            </div>
-                            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{ing.unite}</div>
-                          </div>
-
-                          {/* Status badge */}
-                          <span style={{
-                            padding: '2px 10px', borderRadius: 12, fontSize: '0.72rem', fontWeight: 700,
-                            background: ing.actif ? '#dcfce7' : '#f3f4f6',
-                            color: ing.actif ? '#166534' : '#6b7280',
-                            flexShrink: 0,
+                    <div style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
+                      gap: 12, padding: 14,
+                    }}>
+                      {items.map(ing => {
+                        const hasErr = !!toggleError[ing.id];
+                        return (
+                          <div key={ing.id} style={{
+                            borderRadius: 12,
+                            border: `1.5px solid ${ing.actif ? C : 'var(--border)'}`,
+                            background: ing.actif ? CL : 'var(--bg)',
+                            padding: '14px 16px',
+                            display: 'flex', flexDirection: 'column', gap: 10,
+                            transition: 'border-color 0.15s, background 0.15s',
+                            boxShadow: ing.actif ? `0 2px 10px rgba(180,83,9,0.1)` : 'none',
                           }}>
-                            {ing.actif ? '✓ Actif' : 'Inactif'}
-                          </span>
+                            {/* Top row: name + toggle */}
+                            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <div style={{ fontWeight: 700, fontSize: '0.95rem', color: ing.actif ? CD : 'var(--text)', lineHeight: 1.3 }}>
+                                  {ing.nom}
+                                </div>
+                                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: 2 }}>
+                                  {ing.unite}
+                                </div>
+                              </div>
+                              {/* Toggle switch */}
+                              <button
+                                onClick={() => handleToggle(ing)}
+                                disabled={toggling === ing.id}
+                                title={ing.actif ? 'Désactiver' : 'Activer pour la vente'}
+                                style={{
+                                  width: 44, height: 24, borderRadius: 12, border: 'none', cursor: 'pointer',
+                                  background: ing.actif ? C : '#d1d5db',
+                                  position: 'relative', transition: 'background 0.2s',
+                                  opacity: toggling === ing.id ? 0.6 : 1, flexShrink: 0, padding: 0,
+                                }}>
+                                <span style={{
+                                  position: 'absolute', top: 2,
+                                  left: ing.actif ? 22 : 2,
+                                  width: 20, height: 20, borderRadius: '50%',
+                                  background: '#fff', transition: 'left 0.2s',
+                                  boxShadow: '0 1px 3px rgba(0,0,0,0.2)', display: 'block',
+                                }} />
+                              </button>
+                            </div>
 
-                          {/* Portion input */}
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-                            <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
-                              Portion
-                            </span>
-                            <input
-                              type="number" min="0" step="0.001"
-                              placeholder="—"
-                              value={portionEdits[ing.id] ?? ''}
-                              onChange={e => setPortionEdits(prev => ({ ...prev, [ing.id]: e.target.value }))}
-                              onBlur={() => handleSavePortion(ing)}
-                              style={{
-                                width: 80, padding: '4px 8px', borderRadius: 7,
-                                border: `1.5px solid ${CB}`, background: CL,
-                                fontSize: '0.85rem', textAlign: 'center', outline: 'none',
-                              }}
-                            />
-                            {savingPortion === ing.id && (
-                              <span style={{ fontSize: '0.72rem', color: C, minWidth: 10 }}>…</span>
-                            )}
+                            {/* Status badge */}
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                              <span style={{
+                                padding: '2px 10px', borderRadius: 12, fontSize: '0.72rem', fontWeight: 700,
+                                background: ing.actif ? '#dcfce7' : '#f3f4f6',
+                                color: ing.actif ? '#166534' : '#6b7280',
+                              }}>
+                                {ing.actif ? '✓ Actif' : 'Inactif'}
+                              </span>
+                              {savingPortion === ing.id && (
+                                <span style={{ fontSize: '0.72rem', color: C, fontStyle: 'italic' }}>Sauvegarde…</span>
+                              )}
+                            </div>
+
+                            {/* Portion input */}
+                            <div>
+                              <label style={{ fontSize: '0.75rem', fontWeight: 700, color: CD, display: 'block', marginBottom: 4 }}>
+                                Portion{' '}
+                                <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}>({ing.unite})</span>
+                                <span style={{ color: '#dc2626', marginLeft: 2 }}>*</span>
+                              </label>
+                              <input
+                                type="number" min="0" step="0.001"
+                                placeholder="ex: 0.250"
+                                value={portionEdits[ing.id] ?? ''}
+                                onChange={e => {
+                                  setPortionEdits(prev => ({ ...prev, [ing.id]: e.target.value }));
+                                  if (toggleError[ing.id]) setToggleError(prev => { const n = { ...prev }; delete n[ing.id]; return n; });
+                                }}
+                                onBlur={() => handleSavePortion(ing)}
+                                style={{
+                                  width: '100%', padding: '7px 10px', borderRadius: 8,
+                                  border: `1.5px solid ${hasErr ? '#dc2626' : CB}`,
+                                  background: hasErr ? '#fef2f2' : '#fff',
+                                  fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box',
+                                }}
+                              />
+                              {hasErr && (
+                                <div style={{ color: '#dc2626', fontSize: '0.72rem', marginTop: 3 }}>
+                                  {toggleError[ing.id]}
+                                </div>
+                              )}
+                            </div>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
                 </div>
