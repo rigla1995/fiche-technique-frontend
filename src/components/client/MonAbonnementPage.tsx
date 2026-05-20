@@ -51,7 +51,6 @@ export default function MonAbonnementPage() {
   const [loading, setLoading] = useState(true);
   const [moduleVenteActif, setModuleVenteActif] = useState(false);
   const [hasPendingVente, setHasPendingVente] = useState(false);
-  const [moduleVenteTarif, setModuleVenteTarif] = useState<number | null>(null);
   const [requestingVente, setRequestingVente] = useState(false);
   const [requestedVente, setRequestedVente] = useState(false);
   const [requestErrorVente, setRequestErrorVente] = useState('');
@@ -65,17 +64,14 @@ export default function MonAbonnementPage() {
     }
     // supplementary calls — failures must not block the main page
     try {
-      const [entRes, demRes, tarifRes] = await Promise.all([
+      const [entRes, demRes] = await Promise.all([
         api.get('/api/entreprise'),
         api.get('/api/abonnements/demandes'),
-        api.get('/api/abonnements/tarifs'),
       ]);
       setModuleVenteActif(!!entRes.data?.module_vente_actif);
       const pending = (demRes.data as { typeDemande: string; statut: string }[])
         .some(d => d.typeDemande === 'activer_module_vente' && d.statut === 'en_attente');
       setHasPendingVente(pending);
-      const tarifs = tarifRes.data as Record<string, { valeur: number }>;
-      setModuleVenteTarif(tarifs?.module_vente?.valeur ?? null);
     } catch { /* module vente section simply won't show */ }
   }, []);
 
@@ -323,11 +319,6 @@ export default function MonAbonnementPage() {
         <div style={{ padding: '16px 20px' }}>
           <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: 14, lineHeight: 1.6 }}>
             Gérez votre catalogue vendable, vos prestataires de livraison et suivez vos ventes avec le rapport de rentabilité.
-            {moduleVenteTarif != null && !moduleVenteActif && (
-              <span style={{ display: 'block', marginTop: 6, color: '#b45309', fontWeight: 600 }}>
-                Supplément : {moduleVenteTarif} DT/mois
-              </span>
-            )}
           </p>
           {moduleVenteActif ? (
             <div style={{ background: '#dcfce7', borderRadius: 10, padding: '10px 16px', color: '#166534', fontWeight: 600, fontSize: '0.88rem' }}>
