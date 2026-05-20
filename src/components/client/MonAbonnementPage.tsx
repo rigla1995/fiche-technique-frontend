@@ -58,22 +58,25 @@ export default function MonAbonnementPage() {
 
   const fetchAll = useCallback(async () => {
     try {
-      const [aboRes, entRes, demRes, tarifRes] = await Promise.all([
-        api.get('/api/abonnements/mon-abonnement'),
+      const aboRes = await api.get('/api/abonnements/mon-abonnement');
+      setAbo(aboRes.data);
+    } finally {
+      setLoading(false);
+    }
+    // supplementary calls — failures must not block the main page
+    try {
+      const [entRes, demRes, tarifRes] = await Promise.all([
         api.get('/api/entreprise'),
         api.get('/api/demandes'),
         api.get('/api/tarifs'),
       ]);
-      setAbo(aboRes.data);
       setModuleVenteActif(!!entRes.data?.module_vente_actif);
       const pending = (demRes.data as { typeDemande: string; statut: string }[])
         .some(d => d.typeDemande === 'activer_module_vente' && d.statut === 'en_attente');
       setHasPendingVente(pending);
       const tarifs = tarifRes.data as Record<string, { valeur: number }>;
       setModuleVenteTarif(tarifs?.module_vente?.valeur ?? null);
-    } finally {
-      setLoading(false);
-    }
+    } catch { /* module vente section simply won't show */ }
   }, []);
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
