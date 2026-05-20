@@ -48,6 +48,7 @@ import LaboVentesPage from './components/client/LaboVentesPage';
 import CatalogueVentePage from './components/client/CatalogueVentePage';
 import ConfigurationVentePage from './components/client/ConfigurationVentePage';
 import RapportVentePage from './components/client/RapportVentePage';
+import VenteGuard from './components/client/VenteGuard';
 import PrestatairesManagement from './components/admin/PrestatairesManagement';
 import IngredientsActivitePage from './components/client/IngredientsActivitePage';
 import './i18n';
@@ -140,11 +141,13 @@ export default function App() {
             <Route path="/client/rapports" element={<RapportsPage />} />
             <Route path="/client/support" element={<SupportPage />} />
             <Route path="/client/ai-assistant" element={<AIAssistantPage />} />
-            <Route path="/client/ventes" element={<VentesPage />} />
-            <Route path="/client/ventes/catalogue" element={<CatalogueVentePage />} />
-            <Route path="/client/ventes/configuration" element={<ConfigurationVentePage />} />
-            <Route path="/client/ventes/rapport" element={<RapportVentePage />} />
-            <Route path="/client/labo/ventes" element={<LaboVentesPage />} />
+            <Route element={<VenteGuard />}>
+              <Route path="/client/ventes" element={<VentesPage />} />
+              <Route path="/client/ventes/catalogue" element={<CatalogueVentePage />} />
+              <Route path="/client/ventes/configuration" element={<ConfigurationVentePage />} />
+              <Route path="/client/ventes/rapport" element={<RapportVentePage />} />
+              <Route path="/client/labo/ventes" element={<LaboVentesPage />} />
+            </Route>
             <Route path="/client/ingredients-activite" element={<IngredientsActivitePage />} />
           </Route>
 

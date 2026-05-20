@@ -130,7 +130,7 @@ export interface Demande {
   demandeurId: number;
   demandeurNom: string;
   demandeurType: string;
-  typeDemande: 'gerant_sup' | 'labo_sup' | 'upgrade_entreprise';
+  typeDemande: 'gerant_sup' | 'labo_sup' | 'upgrade_entreprise' | 'activer_module_vente';
   statut: 'en_attente' | 'validée' | 'refusée';
   montantMensuelDt: number | null;
   montantOnboardingClient?: number | null;

@@ -9,9 +9,10 @@ const STATUT_COLORS: Record<string, { bg: string; color: string }> = {
 };
 
 const TYPE_LABELS: Record<string, string> = {
-  gerant_sup:         'Gérant supplémentaire',
-  labo_sup:           'Labo supplémentaire',
-  upgrade_entreprise: 'Passage compte Entreprise',
+  gerant_sup:           'Gérant supplémentaire',
+  labo_sup:             'Labo supplémentaire',
+  upgrade_entreprise:   'Passage compte Entreprise',
+  activer_module_vente: 'Activation Module Vente',
 };
 
 const STATUT_OPTIONS = [

@@ -49,11 +49,28 @@ interface ConfigBreakdown {
 export default function MonAbonnementPage() {
   const [abo, setAbo] = useState<Abonnement | null>(null);
   const [loading, setLoading] = useState(true);
+  const [moduleVenteActif, setModuleVenteActif] = useState(false);
+  const [hasPendingVente, setHasPendingVente] = useState(false);
+  const [moduleVenteTarif, setModuleVenteTarif] = useState<number | null>(null);
+  const [requestingVente, setRequestingVente] = useState(false);
+  const [requestedVente, setRequestedVente] = useState(false);
+  const [requestErrorVente, setRequestErrorVente] = useState('');
 
   const fetchAll = useCallback(async () => {
     try {
-      const aboRes = await api.get('/api/abonnements/mon-abonnement');
+      const [aboRes, entRes, demRes, tarifRes] = await Promise.all([
+        api.get('/api/abonnements/mon-abonnement'),
+        api.get('/api/entreprise'),
+        api.get('/api/demandes'),
+        api.get('/api/tarifs'),
+      ]);
       setAbo(aboRes.data);
+      setModuleVenteActif(!!entRes.data?.module_vente_actif);
+      const pending = (demRes.data as { typeDemande: string; statut: string }[])
+        .some(d => d.typeDemande === 'activer_module_vente' && d.statut === 'en_attente');
+      setHasPendingVente(pending);
+      const tarifs = tarifRes.data as Record<string, { valeur: number }>;
+      setModuleVenteTarif(tarifs?.module_vente?.valeur ?? null);
     } finally {
       setLoading(false);
     }
@@ -69,6 +86,18 @@ export default function MonAbonnementPage() {
 
   if (loading) return <div style={{ padding: 40, textAlign: 'center', color: '#9ca3af' }}>Chargement…</div>;
   if (!abo) return <div style={{ padding: 40, textAlign: 'center', color: '#9ca3af' }}>Abonnement introuvable</div>;
+
+  const handleRequestVente = async () => {
+    setRequestingVente(true); setRequestErrorVente('');
+    try {
+      await api.post('/api/demandes', { typeDemande: 'activer_module_vente' });
+      setRequestedVente(true); setHasPendingVente(true);
+    } catch (e: unknown) {
+      setRequestErrorVente((e as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Erreur');
+    } finally {
+      setRequestingVente(false);
+    }
+  };
 
   const mode = MODE_INFO[abo.modeCompte] || MODE_INFO.actif;
   const pricing = abo.pricing;
@@ -273,6 +302,57 @@ export default function MonAbonnementPage() {
           <span style={{ fontSize: '0.72rem', fontWeight: 700, padding: '4px 10px', borderRadius: 20, background: '#fef3c7', color: '#92400e', border: '1px solid #fde68a' }}>Active</span>
         </div>
       ))}
+
+      {/* Module Vente */}
+      <div style={{ background: 'var(--card-bg)', borderRadius: 16, border: '1.5px solid #fcd34d', overflow: 'hidden', marginBottom: 16, boxShadow: '0 2px 8px rgba(180,83,9,0.08)' }}>
+        <div style={{ background: 'linear-gradient(135deg, #fffbeb, #fef3c7)', padding: '14px 20px', borderBottom: '1px solid #fcd34d', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ fontWeight: 800, fontSize: '0.9rem', color: '#78350f', display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span>🛒</span> Module Vente
+          </div>
+          <span style={{
+            fontSize: '0.75rem', fontWeight: 700, padding: '3px 10px', borderRadius: 20,
+            background: moduleVenteActif ? '#dcfce7' : '#fee2e2',
+            color: moduleVenteActif ? '#166534' : '#991b1b',
+          }}>
+            {moduleVenteActif ? '✅ Actif' : '🔒 Inactif'}
+          </span>
+        </div>
+        <div style={{ padding: '16px 20px' }}>
+          <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: 14, lineHeight: 1.6 }}>
+            Gérez votre catalogue vendable, vos prestataires de livraison et suivez vos ventes avec le rapport de rentabilité.
+            {moduleVenteTarif != null && !moduleVenteActif && (
+              <span style={{ display: 'block', marginTop: 6, color: '#b45309', fontWeight: 600 }}>
+                Supplément : {moduleVenteTarif} DT/mois
+              </span>
+            )}
+          </p>
+          {moduleVenteActif ? (
+            <div style={{ background: '#dcfce7', borderRadius: 10, padding: '10px 16px', color: '#166534', fontWeight: 600, fontSize: '0.88rem' }}>
+              ✅ Module activé — accédez à l'espace Vente depuis le menu
+            </div>
+          ) : (hasPendingVente || requestedVente) ? (
+            <div style={{ background: '#fef9c3', borderRadius: 10, padding: '10px 16px', color: '#854d0e', fontWeight: 600, fontSize: '0.88rem' }}>
+              ⏳ Demande en attente de validation par l'administrateur
+            </div>
+          ) : (
+            <>
+              <button
+                onClick={handleRequestVente}
+                disabled={requestingVente}
+                style={{
+                  background: 'linear-gradient(135deg, #78350f 0%, #b45309 100%)',
+                  color: '#fff', border: 'none', borderRadius: 10, padding: '10px 22px',
+                  cursor: requestingVente ? 'default' : 'pointer', fontWeight: 700, fontSize: '0.9rem',
+                  opacity: requestingVente ? 0.7 : 1,
+                  boxShadow: '0 4px 14px rgba(180,83,9,0.3)',
+                }}>
+                {requestingVente ? 'Envoi…' : '🚀 Demander l\'activation'}
+              </button>
+              {requestErrorVente && <div style={{ color: '#dc2626', fontSize: '0.82rem', marginTop: 8 }}>{requestErrorVente}</div>}
+            </>
+          )}
+        </div>
+      </div>
 
     </div>
   );
