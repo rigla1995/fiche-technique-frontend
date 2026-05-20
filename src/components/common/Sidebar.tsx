@@ -342,12 +342,12 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
               <Divider />
 
               {/* ══ ABONNEMENTS ══ */}
-              <CollapsibleHeader label="Abonnements" icon="💳" isOpen={openSections.has('admin-abo')} locked={false} onToggle={() => toggleSection('admin-abo')} />
-              {openSections.has('admin-abo') && (
-                <>
-                  <SubNavLink to="/admin/abonnements" icon="💳" label="Abonnements" isActive={location.pathname === '/admin/abonnements'} onClick={onClose} />
-                </>
-              )}
+              <li>
+                <NavLink to="/admin/abonnements" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>
+                  <span className="link-icon">💳</span>
+                  <span className="link-label">Abonnements</span>
+                </NavLink>
+              </li>
 
               <Divider />
 
