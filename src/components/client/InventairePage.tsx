@@ -256,6 +256,7 @@ export default function InventairePage() {
               🏪 {a.nom}
             </button>
           ))}
+          <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', alignSelf: 'center', marginLeft: 4 }}>← sélectionner l'activité</span>
         </div>
       )}
 

@@ -369,19 +369,18 @@ export default function LaboHistoriqueApproPage() {
 
       {/* ── Labo selector ─────────────────────────────────────────────────── */}
       {allLabos.length > 0 && (
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16, alignItems: 'center' }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16, padding: '10px 14px', background: 'var(--card-bg)', borderRadius: 10, border: '1px solid var(--border)' }}>
           {allLabos.map((l) => (
             <button key={l.id} onClick={() => navigate(`/client/labo/historique-appro?laboId=${l.id}`)}
-              style={{
-                padding: '6px 14px', borderRadius: 20, border: '2px solid #7e22ce', fontWeight: 700,
-                fontSize: '0.82rem', cursor: 'pointer', transition: 'all 0.15s',
+              style={{ padding: '4px 14px', borderRadius: 20, cursor: 'pointer', fontSize: '0.82rem',
+                border: laboId === String(l.id) ? '1.5px solid #7e22ce' : '1.5px solid var(--border)',
                 background: laboId === String(l.id) ? '#7e22ce' : 'var(--bg)',
-                color: laboId === String(l.id) ? '#fff' : '#7e22ce',
-              }}>
+                color: laboId === String(l.id) ? '#fff' : 'var(--text)',
+                fontWeight: laboId === String(l.id) ? 700 : 400 }}>
               🏭 {l.nom}
             </button>
           ))}
-          <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginLeft: 4 }}>← sélectionner le labo</span>
+          <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', alignSelf: 'center', marginLeft: 4 }}>← sélectionner le labo</span>
         </div>
       )}
 
