@@ -12,6 +12,7 @@ const TARIF_KEYS = [
   'gerant_sup_mensuel',
   'onboarding_sans_labo',
   'onboarding_avec_labo',
+  'module_vente',
 ] as const;
 
 type TarifKey = typeof TARIF_KEYS[number];
@@ -25,6 +26,7 @@ const DEFAULTS: Record<TarifKey, number> = {
   gerant_sup_mensuel:          80,
   onboarding_sans_labo:        500,
   onboarding_avec_labo:        700,
+  module_vente:                100,
 };
 
 // ── Calculation helpers ──────────────────────────────────────────────────────
@@ -275,6 +277,12 @@ export default function TarifsConfig() {
             {sectionHeader('🎯', 'Frais d\'intégration — Onboarding', 'Versement unique à l\'activation du compte', 'linear-gradient(135deg,#f0f9ff,#bae6fd)', '#0369a1')}
             <TarifField cle="onboarding_sans_labo" label="Onboarding — Client sans Labo" hint="Versement unique · pas de labo sur le compte" unit="DT" min={0} step={50} accentColor="#0ea5e9" {...fieldProps} />
             <TarifField cle="onboarding_avec_labo" label="Onboarding — Client avec Labo" hint="Versement unique · au moins 1 labo sur le compte" unit="DT" min={0} step={50} accentColor="#0ea5e9" {...fieldProps} />
+          </div>
+
+          {/* ── 6. Module Vente ────────────────────────────────────── */}
+          <div style={cardStyle}>
+            {sectionHeader('🛒', 'Module Vente', 'Supplément mensuel activé manuellement par l\'admin', 'linear-gradient(135deg,#fffbeb,#fef3c7)', '#78350f')}
+            <TarifField cle="module_vente" label="Module Vente" hint="Supplément mensuel ajouté à la facture du client" unit="DT/mois" min={0} step={10} accentColor="#b45309" {...fieldProps} />
           </div>
 
         </div>

@@ -352,8 +352,8 @@ export default function AbonnementsManagement() {
     setModuleVenteError(null);
     setModuleVenteSaving(true);
     try {
-      await api.put(`/api/abonnements/client/${selected.clientId}/module-vente`, { actif: newActif });
-      setSelected(s => s ? { ...s, moduleVenteActif: newActif } : s);
+      const res = await api.put(`/api/abonnements/client/${selected.clientId}/module-vente`, { actif: newActif });
+      setSelected(s => s ? { ...s, moduleVenteActif: newActif, moduleVenteActivatedAt: res.data.moduleVenteActivatedAt ?? null } : s);
       fetchList();
     } catch (err: unknown) {
       setModuleVenteError((err as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Erreur');
@@ -1386,6 +1386,11 @@ export default function AbonnementsManagement() {
                     style={{ fontSize: 12, padding: '7px 16px', borderRadius: 8, border: 'none', background: 'linear-gradient(135deg,#78350f,#b45309)', color: '#fff', cursor: moduleVenteSaving ? 'default' : 'pointer', fontWeight: 700, opacity: moduleVenteSaving ? 0.7 : 1 }}>
                     {moduleVenteSaving ? '…' : '🚀 Activer'}
                   </button>
+                )}
+                {selected.moduleVenteActivatedAt && (
+                  <span style={{ fontSize: 11, color: '#92400e' }}>
+                    Activé le {fmtDate(selected.moduleVenteActivatedAt)}
+                  </span>
                 )}
                 {moduleVenteError && <span style={{ fontSize: 11, color: '#dc2626' }}>{moduleVenteError}</span>}
               </div>

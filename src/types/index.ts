@@ -87,6 +87,7 @@ export interface Abonnement {
   hasActivePromo?: boolean;
   inviteSent?: boolean;
   moduleVenteActif?: boolean;
+  moduleVenteActivatedAt?: string | null;
   config?: AbonnementConfig | null;
   paiements?: Paiement[];
   promotions?: Promotion[];
