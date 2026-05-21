@@ -122,7 +122,7 @@ export default function ConfigurationVentePage() {
       api.get(`/api/charges-fixes?activiteId=${selectedActiviteId}`),
     ]).then(([ap, av, pp, ch]) => {
       setActivitePrestataires(ap.data);
-      setArticlesVendables((av.data as ArticleVendable[]).filter(a => a.article_type === 'ingredient'));
+      setArticlesVendables(av.data as ArticleVendable[]);
       setPrixPrestataires(pp.data);
       const chData = ch.data as ChargesFixes | null;
       setCharges(chData);

@@ -194,6 +194,10 @@ export default function VentesPage() {
           </p>
         </div>
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+          <Link to={`/client/ventes/catalogue${selectedActiviteId ? `?activiteId=${selectedActiviteId}` : ''}`}
+            style={{ background: 'rgba(255,255,255,0.18)', color: '#fff', borderRadius: 20, padding: '5px 14px', fontSize: '0.82rem', fontWeight: 600, textDecoration: 'none', border: '1px solid rgba(255,255,255,0.3)' }}>
+            🛒 Catalogue
+          </Link>
           <Link to={`/client/ventes/configuration${selectedActiviteId ? `?activiteId=${selectedActiviteId}` : ''}`}
             style={{ background: 'rgba(255,255,255,0.18)', color: '#fff', borderRadius: 20, padding: '5px 14px', fontSize: '0.82rem', fontWeight: 600, textDecoration: 'none', border: '1px solid rgba(255,255,255,0.3)' }}>
             ⚙️ Configuration
