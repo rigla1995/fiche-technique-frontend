@@ -361,80 +361,48 @@ export default function ConfigurationVentePage() {
             const ingredientsActifs = articlesVendables.filter(a => a.article_type === 'ingredient' && a.actif);
             const items = prixSubTab === 'produits' ? produitsActifs : ingredientsActifs;
 
-            const PrixCard = ({ av }: { av: ArticleVendable }) => {
-              const pvKey = av.id;
-              const isDirtyPV = pvKey in editingPrixVente;
-              const pvVal = isDirtyPV ? editingPrixVente[pvKey] : String(av.prix_vente);
-
+            const PrixInput = ({ articleId, currentPrixVente }: { articleId: string; currentPrixVente: number }) => {
+              const isDirty = articleId in editingPrixVente;
+              const val = isDirty ? editingPrixVente[articleId] : String(currentPrixVente);
               return (
-                <div style={{ background: '#fff', borderRadius: 12, border: `1.5px solid ${CB}`, padding: '16px 18px', boxShadow: '0 1px 6px rgba(180,83,9,0.07)' }}>
-                  {/* Header */}
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-                    <div>
-                      <div style={{ fontWeight: 700, fontSize: '0.95rem', color: CD }}>{av.nom}</div>
-                      {av.unite_nom && <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: 1 }}>{av.unite_nom}</div>}
-                    </div>
-                    <span style={{ fontSize: '0.72rem', fontWeight: 700, padding: '2px 8px', borderRadius: 10, background: '#dcfce7', color: '#166534' }}>✓ Actif</span>
+                <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                  <div style={{ position: 'relative' }}>
+                    <input type="number" min="0" step="0.01" value={val}
+                      onChange={e => setEditingPrixVente(prev => ({ ...prev, [articleId]: e.target.value }))}
+                      style={{ width: 90, padding: '6px 28px 6px 8px', borderRadius: 7, border: `1.5px solid ${isDirty ? C : CB}`, background: isDirty ? CL : '#fafafa', fontSize: '0.85rem', fontWeight: 700, color: CD, outline: 'none' }} />
+                    <span style={{ position: 'absolute', right: 7, top: '50%', transform: 'translateY(-50%)', fontSize: '0.65rem', color: C, pointerEvents: 'none', fontWeight: 700 }}>DT</span>
                   </div>
+                  {isDirty && (
+                    <button onClick={() => handleSavePrixVente(articleId)} disabled={saving}
+                      style={{ padding: '5px 8px', borderRadius: 6, border: 'none', background: C, color: '#fff', cursor: 'pointer', fontSize: '0.72rem', fontWeight: 700 }}>✓</button>
+                  )}
+                </div>
+              );
+            };
 
-                  {/* Prix vente directe */}
-                  <div style={{ marginBottom: 14 }}>
-                    <div style={{ fontSize: '0.68rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 5 }}>Prix vente directe</div>
-                    <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                      <div style={{ position: 'relative', flex: 1 }}>
-                        <input type="number" min="0" step="0.01" value={pvVal}
-                          onChange={e => setEditingPrixVente(prev => ({ ...prev, [pvKey]: e.target.value }))}
-                          style={{ width: '100%', padding: '8px 36px 8px 10px', borderRadius: 8, border: `1.5px solid ${isDirtyPV ? C : CB}`, background: isDirtyPV ? CL : '#fafafa', fontSize: '0.9rem', fontWeight: 600, color: CD, outline: 'none', boxSizing: 'border-box' }} />
-                        <span style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', fontSize: '0.75rem', color: C, fontWeight: 700, pointerEvents: 'none' }}>DT</span>
-                      </div>
-                      {isDirtyPV && (
-                        <button onClick={() => handleSavePrixVente(av.id)} disabled={saving}
-                          style={{ padding: '7px 12px', borderRadius: 8, border: 'none', background: `linear-gradient(135deg, ${CD} 0%, ${C} 100%)`, color: '#fff', cursor: 'pointer', fontWeight: 700, fontSize: '0.82rem' }}>
-                          ✓
-                        </button>
-                      )}
+            const PrestInput = ({ av, ap }: { av: ArticleVendable; ap: typeof activePrests[0] }) => {
+              const key = getPrixKey(av.id, ap.id);
+              const existingRecord = prixPrestataires.find(p => p.article_vendable_id === av.id && p.activite_prestataire_id === ap.id);
+              const autoCalc = av.prix_vente * (1 - ap.taux_commission / 100);
+              const currentVal = key in editingPrix ? editingPrix[key] : (existingRecord?.prix_vente != null ? String(existingRecord.prix_vente) : '');
+              const isDirty = key in editingPrix;
+              return (
+                <div>
+                  <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                    <div style={{ position: 'relative' }}>
+                      <input type="number" min="0" step="0.01"
+                        value={currentVal} placeholder={autoCalc.toFixed(2)}
+                        onChange={e => setEditingPrix(prev => ({ ...prev, [key]: e.target.value }))}
+                        style={{ width: 90, padding: '6px 28px 6px 8px', borderRadius: 7, border: `1.5px solid ${isDirty ? C : CB}`, background: isDirty ? CL : '#fafafa', fontSize: '0.85rem', fontWeight: 700, color: CD, outline: 'none' }} />
+                      <span style={{ position: 'absolute', right: 7, top: '50%', transform: 'translateY(-50%)', fontSize: '0.65rem', color: C, pointerEvents: 'none', fontWeight: 700 }}>DT</span>
                     </div>
+                    {isDirty && (
+                      <button onClick={() => handleSavePrix(av.id, ap.id)} disabled={saving}
+                        style={{ padding: '5px 8px', borderRadius: 6, border: 'none', background: C, color: '#fff', cursor: 'pointer', fontSize: '0.72rem', fontWeight: 700 }}>✓</button>
+                    )}
                   </div>
-
-                  {/* Prix prestataires */}
-                  {activePrests.length > 0 && (
-                    <div>
-                      <div style={{ fontSize: '0.68rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 8 }}>Prix prestataires</div>
-                      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                        {activePrests.map(ap => {
-                          const key = getPrixKey(av.id, ap.id);
-                          const existingRecord = prixPrestataires.find(p => p.article_vendable_id === av.id && p.activite_prestataire_id === ap.id);
-                          const autoCalc = av.prix_vente * (1 - ap.taux_commission / 100);
-                          const currentVal = key in editingPrix ? editingPrix[key] : (existingRecord?.prix_vente != null ? String(existingRecord.prix_vente) : '');
-                          const isDirty = key in editingPrix;
-                          return (
-                            <div key={ap.id} style={{ background: CL, borderRadius: 10, border: `1px solid ${CB}`, padding: '10px 12px', minWidth: 120 }}>
-                              <div style={{ fontSize: '0.72rem', fontWeight: 700, color: CD, marginBottom: 2 }}>🛵 {ap.prestataire_nom}</div>
-                              <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginBottom: 6 }}>-{ap.taux_commission}%</div>
-                              <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-                                <div style={{ position: 'relative' }}>
-                                  <input type="number" min="0" step="0.01"
-                                    value={currentVal}
-                                    placeholder={autoCalc.toFixed(2)}
-                                    onChange={e => setEditingPrix(prev => ({ ...prev, [key]: e.target.value }))}
-                                    style={{ width: 80, padding: '5px 28px 5px 7px', borderRadius: 7, border: `1.5px solid ${isDirty ? C : CB}`, background: isDirty ? '#fff' : CL, fontSize: '0.82rem', fontWeight: 600, color: CD, outline: 'none' }} />
-                                  <span style={{ position: 'absolute', right: 6, top: '50%', transform: 'translateY(-50%)', fontSize: '0.65rem', color: C, pointerEvents: 'none' }}>DT</span>
-                                </div>
-                                {isDirty && (
-                                  <button onClick={() => handleSavePrix(av.id, ap.id)} disabled={saving}
-                                    style={{ padding: '4px 7px', borderRadius: 6, border: 'none', background: C, color: '#fff', cursor: 'pointer', fontSize: '0.72rem', fontWeight: 700 }}>✓</button>
-                                )}
-                              </div>
-                              {!isDirty && (
-                                <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginTop: 3 }}>
-                                  auto: {autoCalc.toFixed(2)} DT
-                                </div>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
+                  {!isDirty && (
+                    <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginTop: 2 }}>auto: {autoCalc.toFixed(2)}</div>
                   )}
                 </div>
               );
@@ -484,8 +452,41 @@ export default function ConfigurationVentePage() {
                         : 'Aucun ingrédient vendable actif — configurez le Catalogue Vente.'}
                     </div>
                   ) : (
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 14 }}>
-                      {items.map(av => <PrixCard key={av.id} av={av} />)}
+                    <div style={{ overflowX: 'auto' }}>
+                      <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 400 }}>
+                        <thead>
+                          <tr style={{ background: CL, borderBottom: `2px solid ${CB}` }}>
+                            <th style={{ padding: '10px 14px', textAlign: 'left', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>Article</th>
+                            <th style={{ padding: '10px 14px', textAlign: 'center', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>
+                              🏪 Vente directe
+                            </th>
+                            {activePrests.map(ap => (
+                              <th key={ap.id} style={{ padding: '10px 14px', textAlign: 'center', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>
+                                🛵 {ap.prestataire_nom}
+                                <div style={{ fontSize: '0.68rem', fontWeight: 500, color: 'var(--text-muted)', textTransform: 'none', letterSpacing: 0 }}>-{ap.taux_commission}%</div>
+                              </th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {items.map((av, idx) => (
+                            <tr key={av.id} style={{ borderBottom: `1px solid ${CB}`, background: idx % 2 === 0 ? '#fff' : '#fffdf7' }}>
+                              <td style={{ padding: '12px 14px' }}>
+                                <div style={{ fontWeight: 700, fontSize: '0.9rem', color: CD }}>{av.nom}</div>
+                                {av.unite_nom && <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{av.unite_nom}</div>}
+                              </td>
+                              <td style={{ padding: '10px 14px', textAlign: 'center' }}>
+                                <PrixInput articleId={av.id} currentPrixVente={av.prix_vente} />
+                              </td>
+                              {activePrests.map(ap => (
+                                <td key={ap.id} style={{ padding: '10px 14px', textAlign: 'center' }}>
+                                  <PrestInput av={av} ap={ap} />
+                                </td>
+                              ))}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
                     </div>
                   )}
                 </div>
