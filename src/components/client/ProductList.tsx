@@ -49,7 +49,7 @@ export default function ProductList() {
     api.get('/api/entreprise/activites')
       .then(({ data }) => {
         const all = data as Activite[];
-        const scoped = laboId ? all.filter((a) => String((a as any).laboId) === laboId) : all.filter((a) => !a.laboId);
+        const scoped = laboId ? all.filter((a) => String((a as any).laboId) === laboId) : all;
         setAllActivities(scoped);
         if (scoped.length > 0) setSelectedActiviteId(scoped[0].id);
       });
@@ -266,7 +266,7 @@ export default function ProductList() {
       </div>
 
       {/* Activity selector */}
-      {tab !== 'fiche-technique' && !laboId && allActivities.length > 1 && (
+      {tab !== 'fiche-technique' && !laboId && allActivities.length > 0 && (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center', marginBottom: 16, padding: '10px 14px', background: '#fff', borderRadius: 10, border: '1px solid #fda4af' }}>
           {allActivities.map((a) => (
             <button key={a.id} onClick={() => { setSelectedActiviteId(a.id); setPage(1); }}
