@@ -35,8 +35,9 @@ interface PrestataireGlobal {
 interface ArticleVendable {
   id: string;
   nom: string;
-  article_type: string;
+  article_type: 'produit' | 'ingredient';
   prix_vente: number;
+  actif: boolean;
   unite_nom?: string | null;
 }
 
