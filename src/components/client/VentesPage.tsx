@@ -207,24 +207,20 @@ export default function VentesPage() {
 
       {/* Activité selector */}
       {activites.length > 0 && (
-        <div style={{ background: '#fff', borderRadius: 12, border: `1.5px solid ${CB}`, padding: '14px 18px', marginBottom: 20 }}>
-          <div style={{ fontSize: '0.72rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 10 }}>
-            Sélectionner activité
-          </div>
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-            {activites.map(a => (
-              <button key={a.id} onClick={() => { setSelectedActiviteId(a.id); setSearchParams({ activiteId: String(a.id) }); }}
-                style={{
-                  padding: '5px 14px', borderRadius: 20, cursor: 'pointer', fontSize: '0.83rem',
-                  border: selectedActiviteId === a.id ? `1.5px solid ${C}` : `1px solid ${CB}`,
-                  background: selectedActiviteId === a.id ? C : CL,
-                  color: selectedActiviteId === a.id ? '#fff' : CD,
-                  fontWeight: selectedActiviteId === a.id ? 700 : 500, transition: 'all 0.15s',
-                }}>
-                {a.nom}
-              </button>
-            ))}
-          </div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center', marginBottom: 16, padding: '10px 14px', background: '#fff', borderRadius: 10, border: `1px solid ${CB}` }}>
+          {activites.map(a => (
+            <button key={a.id} onClick={() => { setSelectedActiviteId(a.id); setSearchParams({ activiteId: String(a.id) }); }}
+              style={{
+                padding: '4px 14px', borderRadius: 20, cursor: 'pointer', fontSize: '0.82rem',
+                border: selectedActiviteId === a.id ? `1.5px solid ${C}` : `1.5px solid ${CB}`,
+                background: selectedActiviteId === a.id ? C : CL,
+                color: selectedActiviteId === a.id ? '#fff' : CD,
+                fontWeight: selectedActiviteId === a.id ? 700 : 400,
+              }}>
+              {a.nom}
+            </button>
+          ))}
+          <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', alignSelf: 'center', marginLeft: 4 }}>← sélectionner l'activité</span>
         </div>
       )}
 
