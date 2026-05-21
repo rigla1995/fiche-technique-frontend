@@ -42,14 +42,16 @@ export default function ProductList() {
   const [loadingDetail, setLoadingDetail] = useState(false);
 
   const [allActivities, setAllActivities] = useState<Activite[]>([]);
+  const [selectedActiviteId, setSelectedActiviteId] = useState<number | null>(null);
 
   // Load all activities for enterprise users (filtered by laboId if present)
   useEffect(() => {
     api.get('/api/entreprise/activites')
       .then(({ data }) => {
         const all = data as Activite[];
-        const scoped = laboId ? all.filter((a) => String((a as any).laboId) === laboId) : all;
+        const scoped = laboId ? all.filter((a) => String((a as any).laboId) === laboId) : all.filter((a) => !a.laboId);
         setAllActivities(scoped);
+        if (scoped.length > 0) setSelectedActiviteId(scoped[0].id);
       });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isEntreprise, laboId]);
@@ -139,7 +141,7 @@ export default function ProductList() {
     }
   };
 
-  const byTab = products.filter((p) => p.type === tab);
+  const byTab = products.filter((p) => p.type === tab && (!selectedActiviteId || p.activiteId === selectedActiviteId));
   const searched = byTab.filter((p) => p.name.toLowerCase().includes(search.toLowerCase()));
   const totalPages = Math.max(1, Math.ceil(searched.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
@@ -248,13 +250,13 @@ export default function ProductList() {
                   : t('client.products.tab_vendable')}
             </h1>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-            {tab !== 'fiche-technique' && byTab.length > 0 && (
-              <span style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.75)', fontWeight: 500 }}>
-                {byTab.length} produit{byTab.length > 1 ? 's' : ''}
-              </span>
-            )}
-          </div>
+          <p style={{ color: 'rgba(255,255,255,0.78)', margin: '4px 0 0', fontSize: '0.85rem' }}>
+            {tab === 'fiche-technique'
+              ? 'Exportez et consultez vos fiches techniques par produit'
+              : tab === 'utilisable'
+                ? 'Produits semi-finis utilisés dans la composition de vos recettes'
+                : 'Produits finis destinés à la vente, définis par leurs fiches techniques'}
+          </p>
         </div>
         {tab !== 'fiche-technique' && (
           canWrite
@@ -262,6 +264,26 @@ export default function ProductList() {
             : <button className="btn btn-primary" disabled style={{ background: 'linear-gradient(135deg, #4338ca, #6366f1)', borderRadius: 10, border: 'none', color: '#fff', fontWeight: 800, padding: '10px 22px', whiteSpace: 'nowrap', opacity: 0.45, cursor: 'not-allowed' }}>+ {t(addKey)}</button>
         )}
       </div>
+
+      {/* Activity selector */}
+      {tab !== 'fiche-technique' && !laboId && allActivities.length > 1 && (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center', marginBottom: 16, padding: '10px 14px', background: '#fff', borderRadius: 10, border: '1px solid #fda4af' }}>
+          {allActivities.map((a) => (
+            <button key={a.id} onClick={() => { setSelectedActiviteId(a.id); setPage(1); }}
+              style={{
+                padding: '4px 14px', borderRadius: 20, cursor: 'pointer', fontSize: '0.82rem',
+                border: selectedActiviteId === a.id ? '1.5px solid #9f1239' : '1.5px solid #fda4af',
+                background: selectedActiviteId === a.id ? '#9f1239' : '#fff1f2',
+                color: selectedActiviteId === a.id ? '#fff' : '#881337',
+                fontWeight: selectedActiviteId === a.id ? 700 : 400,
+                transition: 'all 0.15s',
+              }}>
+              {a.nom}
+            </button>
+          ))}
+          <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', alignSelf: 'center', marginLeft: 4 }}>← sélectionner l'activité</span>
+        </div>
+      )}
 
       {tab === 'fiche-technique' ? (
         <FicheTechniqueTab
