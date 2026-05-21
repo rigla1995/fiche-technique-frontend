@@ -8,6 +8,8 @@ const apiMsg = (e: unknown, fallback = 'Erreur') =>
 
 const C = '#b45309';
 const CD = '#78350f';
+const CL = '#fffbeb';
+const CB = '#fcd34d';
 
 const LABEL: React.CSSProperties = {
   fontSize: '0.68rem', fontWeight: 800, color: C,
@@ -199,22 +201,26 @@ export default function CatalogueVentePage() {
 
       {/* Activité selector */}
       {activites.length > 0 && (
-        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 20, alignItems: 'center' }}>
-          <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 600, marginRight: 4 }}>Activité :</span>
-          {activites.map(a => (
-            <button key={a.id}
-              onClick={() => { setSelectedActiviteId(a.id); setSearchParams({ activiteId: String(a.id) }); }}
-              style={{
-                padding: '5px 14px', borderRadius: 20, fontSize: '0.83rem', cursor: 'pointer',
-                border: selectedActiviteId === a.id ? `1.5px solid ${C}` : '1px solid var(--border)',
-                background: selectedActiviteId === a.id ? C : 'var(--card-bg)',
-                color: selectedActiviteId === a.id ? '#fff' : 'var(--text)',
-                fontWeight: selectedActiviteId === a.id ? 700 : 400,
-                transition: 'all 0.15s',
-              }}>
-              {a.nom}
-            </button>
-          ))}
+        <div style={{ background: '#fff', borderRadius: 12, border: `1.5px solid ${CB}`, padding: '14px 18px', marginBottom: 20 }}>
+          <div style={{ fontSize: '0.72rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 10 }}>
+            Sélectionner activité
+          </div>
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            {activites.map(a => (
+              <button key={a.id}
+                onClick={() => { setSelectedActiviteId(a.id); setSearchParams({ activiteId: String(a.id) }); }}
+                style={{
+                  padding: '5px 14px', borderRadius: 20, fontSize: '0.83rem', cursor: 'pointer',
+                  border: selectedActiviteId === a.id ? `1.5px solid ${C}` : `1px solid ${CB}`,
+                  background: selectedActiviteId === a.id ? C : CL,
+                  color: selectedActiviteId === a.id ? '#fff' : CD,
+                  fontWeight: selectedActiviteId === a.id ? 700 : 500,
+                  transition: 'all 0.15s',
+                }}>
+                {a.nom}
+              </button>
+            ))}
+          </div>
         </div>
       )}
 
@@ -246,12 +252,12 @@ export default function CatalogueVentePage() {
               <label style={LABEL}>Recherche</label>
               <input type="text" placeholder="Nom de l'ingrédient…" value={filterSearch}
                 onChange={e => setFilterSearch(e.target.value)}
-                style={{ padding: '6px 10px', borderRadius: 7, border: '1.5px solid var(--border)', background: 'var(--bg)', fontSize: '0.82rem', outline: 'none', width: 200 }} />
+                style={{ padding: '6px 10px', borderRadius: 7, border: `1.5px solid ${CB}`, background: CL, fontSize: '0.82rem', outline: 'none', width: 200 }} />
             </div>
             <div>
               <label style={LABEL}>Catégorie</label>
               <select value={filterCategorie} onChange={e => setFilterCategorie(e.target.value)}
-                style={{ padding: '6px 10px', borderRadius: 7, border: '1.5px solid var(--border)', background: 'var(--bg)', fontSize: '0.82rem', outline: 'none' }}>
+                style={{ padding: '6px 10px', borderRadius: 7, border: `1.5px solid ${CB}`, background: CL, fontSize: '0.82rem', outline: 'none' }}>
                 <option value="">Toutes</option>
                 {categories.map(c => <option key={c} value={c}>{c}</option>)}
               </select>
@@ -263,8 +269,8 @@ export default function CatalogueVentePage() {
                   <button key={v} onClick={() => setFilterActif(v)}
                     style={{
                       padding: '5px 11px', borderRadius: 6, fontSize: '0.78rem', cursor: 'pointer',
-                      border: filterActif === v ? `1.5px solid ${C}` : '1.5px solid var(--border)',
-                      background: filterActif === v ? C : 'var(--bg)',
+                      border: filterActif === v ? `1.5px solid ${C}` : `1.5px solid ${CB}`,
+                      background: filterActif === v ? C : CL,
                       color: filterActif === v ? '#fff' : 'var(--text)',
                       fontWeight: filterActif === v ? 700 : 400,
                     }}>
