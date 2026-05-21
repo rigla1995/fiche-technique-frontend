@@ -613,8 +613,9 @@ export default function ProductList() {
 
           {/* ── Add product modal (3 steps) ── */}
           {addModal && (() => {
-            const cats = Array.from(new Set(addIngredients.map((i) => i.categorie || 'Sans catégorie')));
-            const filtered = addIngredients.filter((i) => {
+            const selectedIngredients = addIngredients.filter((i) => i.selected);
+            const cats = Array.from(new Set(selectedIngredients.map((i) => i.categorie || 'Sans catégorie')));
+            const filtered = selectedIngredients.filter((i) => {
               const cat = i.categorie || 'Sans catégorie';
               if (addIngCatFilter && cat !== addIngCatFilter) return false;
               if (addIngSearch && !i.nom.toLowerCase().includes(addIngSearch.toLowerCase())) return false;
@@ -670,8 +671,10 @@ export default function ProductList() {
               setAddSaving(false);
             };
 
+            const selectedActName = allActivities.find((a) => a.id === selectedActiviteId)?.nom ?? '';
+
             return (
-              <div className="modal-overlay" onClick={() => setAddModal(null)}>
+              <div className="modal-overlay">
                 <div className="modal" style={{ maxWidth: 560, width: '95vw', maxHeight: '90vh', overflow: 'auto' }} onClick={(e) => e.stopPropagation()}>
                   {/* Header */}
                   <div style={{ background: 'linear-gradient(135deg, #881337 0%, #9f1239 100%)', padding: '18px 22px', borderRadius: '12px 12px 0 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -679,6 +682,11 @@ export default function ProductList() {
                       <div style={{ color: '#fff', fontWeight: 800, fontSize: '1rem' }}>
                         {addModal === 3 ? '✅ Produit créé' : `${isVendable ? 'Produit vendable' : 'Produit utilisable'}`}
                       </div>
+                      {addModal !== 3 && selectedActName && (
+                        <div style={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.78rem', marginTop: 3 }}>
+                          📍 {selectedActName}
+                        </div>
+                      )}
                       {addModal !== 3 && (
                         <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
                           {([1, 2] as const).map((s) => (
