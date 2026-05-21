@@ -94,6 +94,8 @@ export default function ConfigurationVentePage() {
 
   // Prix edit
   const [editingPrix, setEditingPrix] = useState<Record<string, string>>({});
+  const [editingPrixVente, setEditingPrixVente] = useState<Record<string, string>>({});
+  const [prixSubTab, setPrixSubTab] = useState<'produits' | 'ingredients'>('ingredients');
 
   // Charges form
   const [chargesForm, setChargesForm] = useState<ChargesFixes>({ mode: 'global' });
@@ -190,6 +192,21 @@ export default function ConfigurationVentePage() {
     }
   };
 
+  const handleSavePrixVente = async (articleId: string) => {
+    const val = editingPrixVente[articleId];
+    if (val == null) return;
+    setSaving(true);
+    try {
+      await api.put(`/api/articles-vendables/${articleId}`, { prix_vente: parseFloat(val) || 0 });
+      const next = { ...editingPrixVente };
+      delete next[articleId];
+      setEditingPrixVente(next);
+      loadAll();
+    } catch {} finally {
+      setSaving(false);
+    }
+  };
+
   const handleSaveCharges = async () => {
     if (!selectedActiviteId) return;
     setChargesSaving(true); setChargesError('');
@@ -267,7 +284,7 @@ export default function ConfigurationVentePage() {
           {/* Section tabs */}
           <div style={{ display: 'flex', gap: 8, marginBottom: 24, flexWrap: 'wrap' }}>
             {sectionBtn('prestataires', '🛵 Prestataires')}
-            {sectionBtn('prix', '💲 Prix prestataires')}
+            {sectionBtn('prix', '💲 Prix Vente')}
             {sectionBtn('charges', '🏗️ Charges fixes')}
           </div>
 
@@ -336,78 +353,144 @@ export default function ConfigurationVentePage() {
             </div>
           )}
 
-          {/* ── PRIX PAR PRESTATAIRE ── */}
-          {activeSection === 'prix' && (
-            <div style={{ background: '#fff', borderRadius: 14, border: `1.5px solid ${CB}`, padding: 24, boxShadow: '0 2px 12px rgba(180,83,9,0.08)' }}>
-              <h2 style={{ fontSize: '1.05rem', fontWeight: 700, color: C, marginBottom: 6 }}>💲 Prix par prestataire</h2>
-              <p style={{ color: 'var(--text-muted)', fontSize: '0.82rem', marginBottom: 18 }}>
-                Le prix est calculé automatiquement depuis le prix de base et la commission. Vous pouvez le modifier manuellement.
-              </p>
+          {/* ── PRIX VENTE ── */}
+          {activeSection === 'prix' && (() => {
+            const activePrests = activitePrestataires.filter(ap => ap.actif);
+            const produitsActifs = articlesVendables.filter(a => a.article_type === 'produit' && a.actif);
+            const ingredientsActifs = articlesVendables.filter(a => a.article_type === 'ingredient' && a.actif);
+            const items = prixSubTab === 'produits' ? produitsActifs : ingredientsActifs;
 
-              {activitePrestataires.length === 0 ? (
-                <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '30px 0' }}>
-                  Configurez d'abord vos prestataires dans l'onglet Prestataires.
-                </div>
-              ) : articlesVendables.length === 0 ? (
-                <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '30px 0' }}>
-                  Configurez d'abord votre catalogue vendable.
-                </div>
-              ) : (
-                <div style={{ overflowX: 'auto' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 500 }}>
-                    <thead>
-                      <tr style={{ background: CL, borderBottom: `1.5px solid ${CB}` }}>
-                        <th style={{ padding: '10px 14px', textAlign: 'left', fontSize: '0.82rem', fontWeight: 700, color: C }}>Ingrédient</th>
-                        <th style={{ padding: '10px 14px', textAlign: 'right', fontSize: '0.82rem', fontWeight: 700, color: C }}>Prix base</th>
-                        {activitePrestataires.filter(ap => ap.actif).map(ap => (
-                          <th key={ap.id} style={{ padding: '10px 14px', textAlign: 'center', fontSize: '0.82rem', fontWeight: 700, color: C }}>
-                            {ap.prestataire_nom}<br />
-                            <span style={{ fontSize: '0.72rem', fontWeight: 400 }}>(-{ap.taux_commission}%)</span>
-                          </th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {articlesVendables.map(av => (
-                        <tr key={av.id} style={{ borderBottom: '1px solid var(--border)' }}>
-                          <td style={{ padding: '10px 14px', fontWeight: 600 }}>
-                            {av.nom}
-                            {av.unite_nom && <span style={{ color: 'var(--text-muted)', fontSize: '0.78rem' }}> ({av.unite_nom})</span>}
-                          </td>
-                          <td style={{ padding: '10px 14px', textAlign: 'right', fontWeight: 600, color: C }}>{fmtMoney(av.prix_vente)}</td>
-                          {activitePrestataires.filter(ap => ap.actif).map(ap => {
-                            const key = getPrixKey(av.id, ap.id);
-                            const existingRecord = prixPrestataires.find(p => p.article_vendable_id === av.id && p.activite_prestataire_id === ap.id);
-                            const autoCalc = av.prix_vente * (1 - ap.taux_commission / 100);
-                            const currentVal = key in editingPrix ? editingPrix[key] : (existingRecord?.prix_vente != null ? String(existingRecord.prix_vente) : '');
-                            const isDirty = key in editingPrix;
-                            return (
-                              <td key={ap.id} style={{ padding: '8px 14px', textAlign: 'center' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 4, justifyContent: 'center' }}>
+            const PrixCard = ({ av }: { av: ArticleVendable }) => {
+              const pvKey = av.id;
+              const isDirtyPV = pvKey in editingPrixVente;
+              const pvVal = isDirtyPV ? editingPrixVente[pvKey] : String(av.prix_vente);
+
+              return (
+                <div style={{ background: '#fff', borderRadius: 12, border: `1.5px solid ${CB}`, padding: '16px 18px', boxShadow: '0 1px 6px rgba(180,83,9,0.07)' }}>
+                  {/* Header */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+                    <div>
+                      <div style={{ fontWeight: 700, fontSize: '0.95rem', color: CD }}>{av.nom}</div>
+                      {av.unite_nom && <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: 1 }}>{av.unite_nom}</div>}
+                    </div>
+                    <span style={{ fontSize: '0.72rem', fontWeight: 700, padding: '2px 8px', borderRadius: 10, background: '#dcfce7', color: '#166534' }}>✓ Actif</span>
+                  </div>
+
+                  {/* Prix vente directe */}
+                  <div style={{ marginBottom: 14 }}>
+                    <div style={{ fontSize: '0.68rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 5 }}>Prix vente directe</div>
+                    <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                      <div style={{ position: 'relative', flex: 1 }}>
+                        <input type="number" min="0" step="0.01" value={pvVal}
+                          onChange={e => setEditingPrixVente(prev => ({ ...prev, [pvKey]: e.target.value }))}
+                          style={{ width: '100%', padding: '8px 36px 8px 10px', borderRadius: 8, border: `1.5px solid ${isDirtyPV ? C : CB}`, background: isDirtyPV ? CL : '#fafafa', fontSize: '0.9rem', fontWeight: 600, color: CD, outline: 'none', boxSizing: 'border-box' }} />
+                        <span style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', fontSize: '0.75rem', color: C, fontWeight: 700, pointerEvents: 'none' }}>DT</span>
+                      </div>
+                      {isDirtyPV && (
+                        <button onClick={() => handleSavePrixVente(av.id)} disabled={saving}
+                          style={{ padding: '7px 12px', borderRadius: 8, border: 'none', background: `linear-gradient(135deg, ${CD} 0%, ${C} 100%)`, color: '#fff', cursor: 'pointer', fontWeight: 700, fontSize: '0.82rem' }}>
+                          ✓
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Prix prestataires */}
+                  {activePrests.length > 0 && (
+                    <div>
+                      <div style={{ fontSize: '0.68rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 8 }}>Prix prestataires</div>
+                      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                        {activePrests.map(ap => {
+                          const key = getPrixKey(av.id, ap.id);
+                          const existingRecord = prixPrestataires.find(p => p.article_vendable_id === av.id && p.activite_prestataire_id === ap.id);
+                          const autoCalc = av.prix_vente * (1 - ap.taux_commission / 100);
+                          const currentVal = key in editingPrix ? editingPrix[key] : (existingRecord?.prix_vente != null ? String(existingRecord.prix_vente) : '');
+                          const isDirty = key in editingPrix;
+                          return (
+                            <div key={ap.id} style={{ background: CL, borderRadius: 10, border: `1px solid ${CB}`, padding: '10px 12px', minWidth: 120 }}>
+                              <div style={{ fontSize: '0.72rem', fontWeight: 700, color: CD, marginBottom: 2 }}>🛵 {ap.prestataire_nom}</div>
+                              <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginBottom: 6 }}>-{ap.taux_commission}%</div>
+                              <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                                <div style={{ position: 'relative' }}>
                                   <input type="number" min="0" step="0.01"
                                     value={currentVal}
                                     placeholder={autoCalc.toFixed(2)}
                                     onChange={e => setEditingPrix(prev => ({ ...prev, [key]: e.target.value }))}
-                                    style={{ width: 80, padding: '4px 6px', borderRadius: 6, border: `1px solid ${isDirty ? C : CB}`, background: isDirty ? CL : 'var(--bg)', textAlign: 'right', fontSize: '0.85rem' }} />
-                                  {isDirty && (
-                                    <button onClick={() => handleSavePrix(av.id, ap.id)} disabled={saving}
-                                      style={{ padding: '3px 8px', borderRadius: 5, border: 'none', background: C, color: '#fff', cursor: 'pointer', fontSize: '0.72rem', fontWeight: 700 }}>✓</button>
-                                  )}
+                                    style={{ width: 80, padding: '5px 28px 5px 7px', borderRadius: 7, border: `1.5px solid ${isDirty ? C : CB}`, background: isDirty ? '#fff' : CL, fontSize: '0.82rem', fontWeight: 600, color: CD, outline: 'none' }} />
+                                  <span style={{ position: 'absolute', right: 6, top: '50%', transform: 'translateY(-50%)', fontSize: '0.65rem', color: C, pointerEvents: 'none' }}>DT</span>
                                 </div>
-                                {!isDirty && existingRecord?.prix_vente == null && (
-                                  <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>auto: {autoCalc.toFixed(2)}</div>
+                                {isDirty && (
+                                  <button onClick={() => handleSavePrix(av.id, ap.id)} disabled={saving}
+                                    style={{ padding: '4px 7px', borderRadius: 6, border: 'none', background: C, color: '#fff', cursor: 'pointer', fontSize: '0.72rem', fontWeight: 700 }}>✓</button>
                                 )}
-                              </td>
-                            );
-                          })}
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                              </div>
+                              {!isDirty && (
+                                <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginTop: 3 }}>
+                                  auto: {autoCalc.toFixed(2)} DT
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
-          )}
+              );
+            };
+
+            return (
+              <div style={{ background: '#fff', borderRadius: 14, border: `1.5px solid ${CB}`, overflow: 'hidden', boxShadow: '0 2px 12px rgba(180,83,9,0.08)' }}>
+                {/* Header */}
+                <div style={{ background: `linear-gradient(135deg, ${CD}18 0%, ${C}12 100%)`, borderBottom: `1.5px solid ${CB}`, padding: '16px 24px', display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <div style={{ background: C + '22', borderRadius: 8, padding: '6px 8px', fontSize: '1rem' }}>💲</div>
+                  <div>
+                    <div style={{ fontSize: '1rem', fontWeight: 800, color: CD }}>Prix Vente</div>
+                    <div style={{ fontSize: '0.72rem', color: C, fontWeight: 500 }}>Prix directs + calcul automatique prestataires</div>
+                  </div>
+                </div>
+
+                <div style={{ padding: 24 }}>
+                  {/* Sub-tabs */}
+                  <div style={{ display: 'flex', gap: 6, marginBottom: 20 }}>
+                    {(['ingredients', 'produits'] as const).map(tab => (
+                      <button key={tab} onClick={() => setPrixSubTab(tab)}
+                        style={{
+                          padding: '7px 16px', borderRadius: 8, cursor: 'pointer', fontSize: '0.85rem',
+                          background: prixSubTab === tab ? C : '#fff',
+                          color: prixSubTab === tab ? '#fff' : CD,
+                          border: prixSubTab === tab ? `1.5px solid ${C}` : `1.5px solid ${CB}`,
+                          fontWeight: prixSubTab === tab ? 700 : 500,
+                          boxShadow: prixSubTab === tab ? `0 2px 6px ${C}44` : 'none',
+                          transition: 'all 0.15s',
+                        }}>
+                        {tab === 'produits' ? '📦 Produits vendables' : '🧪 Ingrédients vendables'}
+                      </button>
+                    ))}
+                  </div>
+
+                  {activitePrestataires.length === 0 && (
+                    <div style={{ background: '#fef9c3', borderRadius: 9, padding: '10px 14px', fontSize: '0.82rem', color: '#854d0e', marginBottom: 16 }}>
+                      💡 Aucun prestataire actif — les prix prestataires ne s'afficheront pas.
+                    </div>
+                  )}
+
+                  {items.length === 0 ? (
+                    <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '40px 0' }}>
+                      <div style={{ fontSize: '2rem', marginBottom: 10 }}>💲</div>
+                      {prixSubTab === 'produits'
+                        ? 'Aucun produit vendable actif pour cette activité.'
+                        : 'Aucun ingrédient vendable actif — configurez le Catalogue Vente.'}
+                    </div>
+                  ) : (
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 14 }}>
+                      {items.map(av => <PrixCard key={av.id} av={av} />)}
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })()}
 
           {/* ── CHARGES FIXES ── */}
           {activeSection === 'charges' && (
