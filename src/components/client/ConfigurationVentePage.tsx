@@ -219,10 +219,12 @@ export default function ConfigurationVentePage() {
   const sectionBtn = (key: typeof activeSection, label: string) => (
     <button onClick={() => setActiveSection(key)}
       style={{
-        padding: '8px 18px', background: activeSection === key ? C : 'var(--card-bg)',
-        color: activeSection === key ? '#fff' : 'var(--text)',
-        border: activeSection === key ? `1.5px solid ${C}` : '1.5px solid var(--border)',
-        borderRadius: 9, cursor: 'pointer', fontWeight: activeSection === key ? 700 : 400, fontSize: '0.88rem',
+        padding: '8px 18px', background: activeSection === key ? C : '#fff',
+        color: activeSection === key ? '#fff' : CD,
+        border: activeSection === key ? `1.5px solid ${C}` : `1.5px solid ${CB}`,
+        borderRadius: 9, cursor: 'pointer', fontWeight: activeSection === key ? 700 : 500, fontSize: '0.88rem',
+        boxShadow: activeSection === key ? `0 2px 8px ${C}44` : 'none',
+        transition: 'all 0.15s',
       }}>
       {label}
     </button>
@@ -277,14 +279,21 @@ export default function ConfigurationVentePage() {
 
           {/* ── PRESTATAIRES ── */}
           {activeSection === 'prestataires' && (
-            <div style={{ background: 'var(--card-bg)', borderRadius: 14, border: `1.5px solid ${CB}`, padding: 24 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
-                <h2 style={{ fontSize: '1.05rem', fontWeight: 700, color: C, margin: 0 }}>🛵 Prestataires de l'activité</h2>
+            <div style={{ background: '#fff', borderRadius: 14, border: `1.5px solid ${CB}`, overflow: 'hidden', boxShadow: '0 2px 12px rgba(180,83,9,0.08)' }}>
+              <div style={{ background: `linear-gradient(135deg, ${CD}18 0%, ${C}12 100%)`, borderBottom: `1.5px solid ${CB}`, padding: '16px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <div style={{ background: C + '22', borderRadius: 8, padding: '6px 8px', fontSize: '1rem' }}>🛵</div>
+                  <div>
+                    <div style={{ fontSize: '1rem', fontWeight: 800, color: CD }}>Prestataires de l'activité</div>
+                    <div style={{ fontSize: '0.72rem', color: C, fontWeight: 500 }}>{activitePrestataires.length} prestataire{activitePrestataires.length !== 1 ? 's' : ''} configuré{activitePrestataires.length !== 1 ? 's' : ''}</div>
+                  </div>
+                </div>
                 <button onClick={() => { setShowAddPrest(true); setAddPrestError(''); }}
-                  style={{ background: `linear-gradient(135deg, ${CD} 0%, ${C} 100%)`, color: '#fff', border: 'none', borderRadius: 8, padding: '7px 16px', cursor: 'pointer', fontWeight: 600, fontSize: '0.85rem' }}>
+                  style={{ background: `linear-gradient(135deg, ${CD} 0%, ${C} 100%)`, color: '#fff', border: 'none', borderRadius: 9, padding: '8px 18px', cursor: 'pointer', fontWeight: 700, fontSize: '0.85rem', boxShadow: `0 2px 8px ${C}55` }}>
                   + Ajouter
                 </button>
               </div>
+              <div style={{ padding: 24 }}>
 
               {activitePrestataires.length === 0 ? (
                 <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '30px 0' }}>
@@ -293,7 +302,7 @@ export default function ConfigurationVentePage() {
               ) : (
                 <div style={{ display: 'grid', gap: 10 }}>
                   {activitePrestataires.map(ap => (
-                    <div key={ap.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', background: ap.actif ? CL : 'var(--bg)', borderRadius: 10, border: `1px solid ${ap.actif ? CB : 'var(--border)'}` }}>
+                    <div key={ap.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', background: ap.actif ? CL : '#fafafa', borderRadius: 10, border: `1px solid ${ap.actif ? CB : '#e5e7eb'}` }}>
                       <div style={{ width: 36, height: 36, borderRadius: 8, background: C + '22', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem' }}>🛵</div>
                       <div style={{ flex: 1 }}>
                         <div style={{ fontWeight: 700, fontSize: '0.92rem' }}>{ap.prestataire_nom}</div>
@@ -329,12 +338,13 @@ export default function ConfigurationVentePage() {
                   ))}
                 </div>
               )}
+              </div>
             </div>
           )}
 
           {/* ── PRIX PAR PRESTATAIRE ── */}
           {activeSection === 'prix' && (
-            <div style={{ background: 'var(--card-bg)', borderRadius: 14, border: `1.5px solid ${CB}`, padding: 24 }}>
+            <div style={{ background: '#fff', borderRadius: 14, border: `1.5px solid ${CB}`, padding: 24, boxShadow: '0 2px 12px rgba(180,83,9,0.08)' }}>
               <h2 style={{ fontSize: '1.05rem', fontWeight: 700, color: C, marginBottom: 6 }}>💲 Prix par prestataire</h2>
               <p style={{ color: 'var(--text-muted)', fontSize: '0.82rem', marginBottom: 18 }}>
                 Le prix est calculé automatiquement depuis le prix de base et la commission. Vous pouvez le modifier manuellement.
@@ -407,7 +417,7 @@ export default function ConfigurationVentePage() {
 
           {/* ── CHARGES FIXES ── */}
           {activeSection === 'charges' && (
-            <div style={{ background: 'var(--card-bg)', borderRadius: 14, border: `1.5px solid ${CB}`, padding: 24 }}>
+            <div style={{ background: '#fff', borderRadius: 14, border: `1.5px solid ${CB}`, padding: 24, boxShadow: '0 2px 12px rgba(180,83,9,0.08)' }}>
               <h2 style={{ fontSize: '1.05rem', fontWeight: 700, color: C, marginBottom: 6 }}>🏗️ Charges fixes annuelles</h2>
               <p style={{ color: 'var(--text-muted)', fontSize: '0.82rem', marginBottom: 20 }}>
                 Utilisées pour calculer le seuil de rentabilité et le rapport vente.
