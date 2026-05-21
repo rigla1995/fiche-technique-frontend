@@ -312,8 +312,8 @@ export default function ConfigurationVentePage() {
                           <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginTop: 2, display: 'flex', gap: 8, alignItems: 'center' }}>
                             Commission : <strong style={{ color: C }}>{ap.taux_commission}%</strong>
                             <button onClick={() => { setEditTauxId(ap.id); setEditTauxVal(String(ap.taux_commission)); }}
-                              style={{ padding: '1px 8px', borderRadius: 5, border: `1px solid ${CB}`, background: CL, color: CD, cursor: 'pointer', fontSize: '0.72rem', fontWeight: 600 }}>
-                              Modifier
+                              style={{ padding: '3px 10px', borderRadius: 6, border: `1.5px solid ${C}`, background: CL, color: C, cursor: 'pointer', fontSize: '0.78rem', fontWeight: 700 }}>
+                              ✏️ Modifier
                             </button>
                           </div>
                         )}
@@ -321,16 +321,10 @@ export default function ConfigurationVentePage() {
                       <span style={{ padding: '2px 8px', borderRadius: 12, fontSize: '0.75rem', background: ap.actif ? '#dcfce7' : '#f3f4f6', color: ap.actif ? '#166534' : '#6b7280' }}>
                         {ap.actif ? '✓ Actif' : 'Inactif'}
                       </span>
-                      <div style={{ display: 'flex', gap: 6 }}>
-                        <button onClick={() => handleTogglePrestataire(ap.id, ap.actif)}
-                          style={{ padding: '3px 10px', borderRadius: 6, border: '1px solid var(--border)', background: 'none', cursor: 'pointer', fontSize: '0.78rem' }}>
-                          {ap.actif ? 'Désactiver' : 'Activer'}
-                        </button>
-                        <button onClick={() => handleRemovePrestataire(ap.id)}
-                          style={{ padding: '3px 10px', borderRadius: 6, border: '1px solid #dc2626', color: '#dc2626', background: 'none', cursor: 'pointer', fontSize: '0.78rem' }}>
-                          Retirer
-                        </button>
-                      </div>
+                      <button onClick={() => handleRemovePrestataire(ap.id)}
+                        style={{ padding: '3px 10px', borderRadius: 6, border: '1px solid #dc2626', color: '#dc2626', background: 'none', cursor: 'pointer', fontSize: '0.78rem' }}>
+                        Retirer
+                      </button>
                     </div>
                   ))}
                 </div>
@@ -481,35 +475,59 @@ export default function ConfigurationVentePage() {
 
       {/* Modal ajout prestataire */}
       {showAddPrest && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-          <div style={{ background: 'var(--card-bg)', borderRadius: 16, padding: 28, width: '100%', maxWidth: 380 }}>
-            <h2 style={{ fontSize: '1.1rem', fontWeight: 700, color: C, marginBottom: 20 }}>Ajouter un prestataire</h2>
-            <div style={{ marginBottom: 14 }}>
-              <label style={{ fontSize: '0.82rem', fontWeight: 600, display: 'block', marginBottom: 4 }}>Prestataire</label>
-              <select value={newPrestId} onChange={e => setNewPrestId(e.target.value)}
-                style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: `1.5px solid ${CB}`, background: CL }}>
-                <option value="">-- Sélectionner --</option>
-                {availablePrestataires.map(p => <option key={p.id} value={p.id}>{p.nom}</option>)}
-              </select>
-              {availablePrestataires.length === 0 && (
-                <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: 4 }}>Tous les prestataires actifs sont déjà configurés.</p>
-              )}
-            </div>
-            <div style={{ marginBottom: 20 }}>
-              <label style={{ fontSize: '0.82rem', fontWeight: 600, display: 'block', marginBottom: 4 }}>Taux de commission (%)</label>
-              <input type="number" min="0" max="100" step="0.1" value={newTaux} onChange={e => setNewTaux(e.target.value)}
-                style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: `1.5px solid ${CB}`, background: CL }} />
-            </div>
-            {addPrestError && <div style={{ color: '#dc2626', fontSize: '0.85rem', marginBottom: 10 }}>{addPrestError}</div>}
-            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
+          onClick={e => { if (e.target === e.currentTarget) setShowAddPrest(false); }}>
+          <div style={{ background: '#fff', borderRadius: 20, width: '100%', maxWidth: 420, boxShadow: '0 24px 64px rgba(120,53,15,0.28)', overflow: 'hidden' }}>
+            {/* Header */}
+            <div style={{ background: `linear-gradient(135deg, ${CD} 0%, ${C} 100%)`, padding: '20px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{ background: 'rgba(255,255,255,0.2)', borderRadius: 9, padding: '7px 9px', fontSize: '1.1rem' }}>🛵</div>
+                <div>
+                  <div style={{ color: '#fff', fontWeight: 800, fontSize: '1.05rem' }}>Ajouter un prestataire</div>
+                  <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.75rem' }}>Lier un prestataire de livraison à cette activité</div>
+                </div>
+              </div>
               <button onClick={() => setShowAddPrest(false)}
-                style={{ padding: '8px 18px', borderRadius: 8, border: '1px solid var(--border)', background: 'none', cursor: 'pointer' }}>
-                Annuler
+                style={{ background: 'rgba(255,255,255,0.18)', border: 'none', borderRadius: 8, color: '#fff', cursor: 'pointer', padding: '5px 9px', fontSize: '1rem', fontWeight: 700, lineHeight: 1 }}>
+                ✕
               </button>
-              <button onClick={handleAddPrestataire} disabled={saving || !newPrestId}
-                style={{ padding: '9px 20px', borderRadius: 9, border: 'none', background: `linear-gradient(135deg, ${CD} 0%, ${C} 100%)`, color: '#fff', cursor: 'pointer', fontWeight: 700, opacity: saving || !newPrestId ? 0.6 : 1 }}>
-                {saving ? 'Enregistrement…' : 'Ajouter'}
-              </button>
+            </div>
+            {/* Body */}
+            <div style={{ padding: '24px 24px 20px' }}>
+              <div style={{ marginBottom: 18 }}>
+                <label style={{ fontSize: '0.72rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 7 }}>Prestataire</label>
+                <select value={newPrestId} onChange={e => setNewPrestId(e.target.value)}
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: `1.5px solid ${CB}`, background: CL, color: CD, fontSize: '0.9rem', fontWeight: 500, outline: 'none' }}>
+                  <option value="">— Sélectionner un prestataire —</option>
+                  {availablePrestataires.map(p => <option key={p.id} value={p.id}>{p.nom}</option>)}
+                </select>
+                {availablePrestataires.length === 0 && (
+                  <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: 5 }}>Tous les prestataires actifs sont déjà configurés.</p>
+                )}
+              </div>
+              <div style={{ marginBottom: 22 }}>
+                <label style={{ fontSize: '0.72rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 7 }}>Taux de commission</label>
+                <div style={{ position: 'relative' }}>
+                  <input type="number" min="0" max="100" step="0.1" value={newTaux} onChange={e => setNewTaux(e.target.value)}
+                    style={{ width: '100%', padding: '10px 40px 10px 12px', borderRadius: 10, border: `1.5px solid ${CB}`, background: CL, color: CD, fontSize: '1rem', fontWeight: 700, outline: 'none', boxSizing: 'border-box' }} />
+                  <span style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', color: C, fontWeight: 700, fontSize: '0.95rem', pointerEvents: 'none' }}>%</span>
+                </div>
+              </div>
+              {addPrestError && (
+                <div style={{ background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: 9, padding: '9px 13px', color: '#dc2626', fontSize: '0.82rem', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  ⚠️ {addPrestError}
+                </div>
+              )}
+              <div style={{ display: 'flex', gap: 10 }}>
+                <button onClick={() => setShowAddPrest(false)}
+                  style={{ flex: 1, padding: '10px 0', borderRadius: 10, border: `1.5px solid ${CB}`, background: CL, color: CD, cursor: 'pointer', fontWeight: 600, fontSize: '0.9rem' }}>
+                  Annuler
+                </button>
+                <button onClick={handleAddPrestataire} disabled={saving || !newPrestId}
+                  style={{ flex: 2, padding: '10px 0', borderRadius: 10, border: 'none', background: saving || !newPrestId ? '#d1d5db' : `linear-gradient(135deg, ${CD} 0%, ${C} 100%)`, color: '#fff', cursor: saving || !newPrestId ? 'not-allowed' : 'pointer', fontWeight: 700, fontSize: '0.9rem' }}>
+                  {saving ? 'Ajout en cours…' : '🛵 Ajouter le prestataire'}
+                </button>
+              </div>
             </div>
           </div>
         </div>
