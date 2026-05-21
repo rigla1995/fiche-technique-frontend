@@ -241,7 +241,7 @@ export default function CatalogueVentePage() {
           )}
 
           {/* Filtres */}
-          <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', alignItems: 'flex-end', marginBottom: 18, background: 'var(--card-bg)', borderRadius: 10, border: '1px solid var(--border)', padding: '12px 16px' }}>
+          <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', alignItems: 'flex-end', marginBottom: 18, background: '#fff', borderRadius: 10, border: '1px solid var(--border)', padding: '14px 18px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
             <div>
               <label style={LABEL}>Recherche</label>
               <input type="text" placeholder="Nom de l'ingrédient…" value={filterSearch}
@@ -299,7 +299,7 @@ export default function CatalogueVentePage() {
                         borderLeft: `4px solid ${C}`,
                         borderBottom: isOpen ? 'none' : '1px solid var(--border)',
                         marginBottom: 0, borderRadius: isOpen ? '4px 4px 0 0' : 4,
-                        background: 'var(--card-bg)',
+                        background: '#fff',
                       } as React.CSSProperties}>
                       <span style={{ fontSize: '0.82rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
                         🏷️ {cat}
@@ -321,7 +321,7 @@ export default function CatalogueVentePage() {
                       <div style={{
                         border: `1px solid var(--border)`, borderTop: `1px solid ${C}30`,
                         borderRadius: '0 0 8px 8px', padding: 12,
-                        background: 'var(--card-bg)',
+                        background: '#fff',
                         display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 10,
                       }}>
                         {items.map(ing => {
@@ -333,7 +333,7 @@ export default function CatalogueVentePage() {
                               borderRadius: 10,
                               border: ing.actif ? `1.5px solid ${C}` : '1px solid var(--border)',
                               padding: '12px 14px',
-                              background: ing.actif ? `${C}08` : 'var(--card-bg)',
+                              background: ing.actif ? `${C}08` : '#fff',
                               position: 'relative',
                               transition: 'border-color 0.15s, background 0.15s',
                             }}>
