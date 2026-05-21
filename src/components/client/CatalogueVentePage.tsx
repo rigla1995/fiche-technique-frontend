@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import api from '../../api/client';
 import type { Activite } from '../../types';
@@ -8,8 +8,12 @@ const apiMsg = (e: unknown, fallback = 'Erreur') =>
 
 const C = '#b45309';
 const CD = '#78350f';
-const CL = '#fffbeb';
-const CB = '#fcd34d';
+
+const LABEL: React.CSSProperties = {
+  fontSize: '0.68rem', fontWeight: 800, color: C,
+  textTransform: 'uppercase', letterSpacing: '0.07em',
+  display: 'block', marginBottom: 5,
+};
 
 interface ArticleVendable {
   id: string;
@@ -51,7 +55,7 @@ export default function CatalogueVentePage() {
   const [filterSearch, setFilterSearch] = useState('');
   const [filterCategorie, setFilterCategorie] = useState('');
   const [filterActif, setFilterActif] = useState<'all' | 'actif' | 'inactif'>('all');
-  const [collapsedCats, setCollapsedCats] = useState<Record<string, boolean>>({});
+  const [openCats, setOpenCats] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     api.get('/api/entreprise/activites').then(({ data }) => {
@@ -67,6 +71,7 @@ export default function CatalogueVentePage() {
   const loadData = useCallback(async () => {
     if (!selectedActiviteId) return;
     setLoading(true);
+    setOpenCats(new Set());
     try {
       const [selRes, artRes] = await Promise.all([
         api.get(`/api/entreprise/activites/${selectedActiviteId}/selected-ingredients`),
@@ -87,13 +92,6 @@ export default function CatalogueVentePage() {
         merged.forEach(m => { next[m.id] = prev[m.id] !== undefined ? prev[m.id] : (m.portion != null ? String(m.portion) : ''); });
         return next;
       });
-
-      setCollapsedCats(prev => {
-        const cats = [...new Set(merged.map(m => m.categorie))];
-        const next: Record<string, boolean> = {};
-        cats.forEach(c => { next[c] = prev[c] !== undefined ? prev[c] : true; });
-        return next;
-      });
     } catch {}
     setLoading(false);
   }, [selectedActiviteId]);
@@ -110,12 +108,8 @@ export default function CatalogueVentePage() {
     try {
       if (!ing.articleId) {
         await api.post('/api/articles-vendables', {
-          activite_id: selectedActiviteId,
-          article_type: 'ingredient',
-          article_id: ing.id,
-          prix_vente: 0,
-          portion: parseFloat(portionEdits[ing.id]),
-          actif: true,
+          activite_id: selectedActiviteId, article_type: 'ingredient', article_id: ing.id,
+          prix_vente: 0, portion: parseFloat(portionEdits[ing.id]), actif: true,
         });
       } else {
         await api.put(`/api/articles-vendables/${ing.articleId}`, { actif: !ing.actif });
@@ -134,12 +128,8 @@ export default function CatalogueVentePage() {
     try {
       if (!ing.articleId) {
         await api.post('/api/articles-vendables', {
-          activite_id: selectedActiviteId,
-          article_type: 'ingredient',
-          article_id: ing.id,
-          prix_vente: 0,
-          portion: portionVal,
-          actif: false,
+          activite_id: selectedActiviteId, article_type: 'ingredient', article_id: ing.id,
+          prix_vente: 0, portion: portionVal, actif: false,
         });
       } else {
         await api.put(`/api/articles-vendables/${ing.articleId}`, { portion: portionVal });
@@ -147,6 +137,10 @@ export default function CatalogueVentePage() {
       await loadData();
     } catch {}
     setSavingPortion(null);
+  };
+
+  const toggleCat = (cat: string) => {
+    setOpenCats(prev => { const n = new Set(prev); n.has(cat) ? n.delete(cat) : n.add(cat); return n; });
   };
 
   const categories = [...new Set(ingredients.map(i => i.categorie))].sort();
@@ -159,14 +153,14 @@ export default function CatalogueVentePage() {
     return true;
   });
 
-  const grouped = categories.reduce<Record<string, MergedIngredient[]>>((acc, cat) => {
+  const groups = categories.reduce<Record<string, MergedIngredient[]>>((acc, cat) => {
     const items = filtered.filter(i => i.categorie === cat);
     if (items.length > 0) acc[cat] = items;
     return acc;
   }, {});
 
-  const toggleCat = (cat: string) => setCollapsedCats(prev => ({ ...prev, [cat]: !prev[cat] }));
   const activeCount = ingredients.filter(i => i.actif).length;
+  const selectedActivite = activites.find(a => a.id === selectedActiviteId);
 
   return (
     <div className="page-content">
@@ -175,41 +169,45 @@ export default function CatalogueVentePage() {
         background: `linear-gradient(135deg, ${CD} 0%, ${C} 55%, #d97706 100%)`,
         borderRadius: 18, padding: '24px 28px', marginBottom: 24,
         boxShadow: '0 8px 32px rgba(180,83,9,0.28)',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16,
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
             <div style={{ background: 'rgba(255,255,255,0.2)', borderRadius: 10, padding: '7px 9px', fontSize: '1.2rem' }}>🧾</div>
-            <div>
-              <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0 }}>Catalogue Vente</h1>
-              <p style={{ color: 'rgba(255,255,255,0.82)', margin: 0, fontSize: '0.85rem' }}>
-                {activeCount > 0
-                  ? `${activeCount} ingrédient${activeCount !== 1 ? 's' : ''} actif${activeCount !== 1 ? 's' : ''}`
-                  : 'Activez les ingrédients et définissez les portions'}
-              </p>
-            </div>
+            <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0 }}>Catalogue Vente</h1>
           </div>
+          <p style={{ color: 'rgba(255,255,255,0.82)', margin: 0, fontSize: '0.85rem' }}>
+            Activez les ingrédients pour la vente et définissez les portions
+          </p>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+          {activeCount > 0 && (
+            <div style={{ background: 'rgba(255,255,255,0.18)', border: '1px solid rgba(255,255,255,0.3)', borderRadius: 12, padding: '8px 16px', color: '#fff', fontSize: '0.88rem', fontWeight: 600 }}>
+              🛒 {activeCount} actif{activeCount !== 1 ? 's' : ''}
+            </div>
+          )}
           <Link to="/client/ventes/configuration"
             style={{
-              display: 'inline-flex', alignItems: 'center', gap: 6,
-              background: 'rgba(255,255,255,0.18)', border: '1.5px solid rgba(255,255,255,0.4)',
-              color: '#fff', borderRadius: 10, padding: '8px 16px',
-              fontWeight: 700, fontSize: '0.88rem', textDecoration: 'none',
+              background: 'rgba(255,255,255,0.18)', border: '1px solid rgba(255,255,255,0.3)',
+              color: '#fff', borderRadius: 20, padding: '5px 14px',
+              fontSize: '0.82rem', fontWeight: 600, textDecoration: 'none',
             }}>
-            ⚙️ Configuration Vente
+            ⚙️ Configuration
           </Link>
         </div>
       </div>
 
       {/* Activité selector */}
-      <div style={{ background: 'var(--card-bg)', borderRadius: 10, border: '1px solid var(--border)', padding: '10px 14px', marginBottom: 16 }}>
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+      {activites.length > 0 && (
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 20, alignItems: 'center' }}>
+          <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 600, marginRight: 4 }}>Activité :</span>
           {activites.map(a => (
             <button key={a.id}
               onClick={() => { setSelectedActiviteId(a.id); setSearchParams({ activiteId: String(a.id) }); }}
               style={{
-                padding: '5px 16px', borderRadius: 20, cursor: 'pointer', fontSize: '0.85rem',
-                border: selectedActiviteId === a.id ? `2px solid ${C}` : '1.5px solid var(--border)',
-                background: selectedActiviteId === a.id ? C : 'var(--bg)',
+                padding: '5px 14px', borderRadius: 20, fontSize: '0.83rem', cursor: 'pointer',
+                border: selectedActiviteId === a.id ? `1.5px solid ${C}` : '1px solid var(--border)',
+                background: selectedActiviteId === a.id ? C : 'var(--card-bg)',
                 color: selectedActiviteId === a.id ? '#fff' : 'var(--text)',
                 fontWeight: selectedActiviteId === a.id ? 700 : 400,
                 transition: 'all 0.15s',
@@ -217,231 +215,201 @@ export default function CatalogueVentePage() {
               {a.nom}
             </button>
           ))}
-          {activites.length === 0 && <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Aucune activité disponible</span>}
-          {activites.length > 0 && (
-            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginLeft: 4 }}>← sélectionner l'activité</span>
-          )}
         </div>
-      </div>
+      )}
 
       {!selectedActiviteId ? (
-        <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '60px 0' }}>Aucune activité disponible</div>
+        <p className="text-muted">Aucune activité disponible.</p>
+      ) : loading ? (
+        <p className="text-muted">Chargement…</p>
+      ) : ingredients.length === 0 ? (
+        <p className="text-muted">Aucun ingrédient sélectionné pour cette activité.</p>
       ) : (
         <>
-          {/* Filters */}
-          <div style={{
-            background: 'var(--card-bg)', borderRadius: 12, border: `1.5px solid ${CB}`,
-            padding: '14px 18px', marginBottom: 20,
-            display: 'flex', gap: 14, flexWrap: 'wrap', alignItems: 'center',
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: '1 1 200px' }}>
-              <span style={{ fontSize: '0.78rem', fontWeight: 700, color: CD, whiteSpace: 'nowrap' }}>Recherche</span>
-              <input
-                type="text"
-                placeholder="Nom de l'ingrédient…"
-                value={filterSearch}
-                onChange={e => setFilterSearch(e.target.value)}
-                style={{
-                  flex: 1, padding: '6px 10px', borderRadius: 8,
-                  border: `1.5px solid ${CB}`, background: CL,
-                  fontSize: '0.85rem', outline: 'none',
-                }}
-              />
+          {/* Bandeau activité */}
+          {selectedActivite && (
+            <div style={{
+              background: CD, borderRadius: 8, padding: '8px 16px',
+              marginBottom: 16, display: 'flex', alignItems: 'center', gap: 10,
+            }}>
+              <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.9rem' }}>—</span>
+              <span style={{ color: '#fff', fontSize: '0.88rem', fontWeight: 700 }}>{selectedActivite.nom}</span>
+              <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.78rem', marginLeft: 4 }}>
+                {ingredients.length} ingrédient{ingredients.length !== 1 ? 's' : ''} · {activeCount} actif{activeCount !== 1 ? 's' : ''}
+              </span>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: '0 1 200px' }}>
-              <span style={{ fontSize: '0.78rem', fontWeight: 700, color: CD, whiteSpace: 'nowrap' }}>Catégorie</span>
+          )}
+
+          {/* Filtres */}
+          <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', alignItems: 'flex-end', marginBottom: 18 }}>
+            <div>
+              <label style={LABEL}>Recherche</label>
+              <input type="text" placeholder="Nom de l'ingrédient…" value={filterSearch}
+                onChange={e => setFilterSearch(e.target.value)}
+                style={{ padding: '6px 10px', borderRadius: 7, border: '1.5px solid var(--border)', background: 'var(--bg)', fontSize: '0.82rem', outline: 'none', width: 200 }} />
+            </div>
+            <div>
+              <label style={LABEL}>Catégorie</label>
               <select value={filterCategorie} onChange={e => setFilterCategorie(e.target.value)}
-                style={{
-                  flex: 1, padding: '6px 10px', borderRadius: 8,
-                  border: `1.5px solid ${CB}`, background: CL,
-                  fontSize: '0.85rem', outline: 'none',
-                }}>
+                style={{ padding: '6px 10px', borderRadius: 7, border: '1.5px solid var(--border)', background: 'var(--bg)', fontSize: '0.82rem', outline: 'none' }}>
                 <option value="">Toutes</option>
                 {categories.map(c => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>
-            <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
-              {(['all', 'actif', 'inactif'] as const).map(v => (
-                <button key={v} onClick={() => setFilterActif(v)}
-                  style={{
-                    padding: '5px 12px', borderRadius: 20, fontSize: '0.78rem', cursor: 'pointer',
-                    border: filterActif === v ? `2px solid ${C}` : `1.5px solid ${CB}`,
-                    background: filterActif === v ? C : 'var(--bg)',
-                    color: filterActif === v ? '#fff' : CD,
-                    fontWeight: filterActif === v ? 700 : 500,
-                  }}>
-                  {v === 'all' ? 'Tous' : v === 'actif' ? '✓ Actifs' : '○ Inactifs'}
-                </button>
-              ))}
+            <div>
+              <label style={LABEL}>Statut</label>
+              <div style={{ display: 'flex', gap: 4 }}>
+                {(['all', 'actif', 'inactif'] as const).map(v => (
+                  <button key={v} onClick={() => setFilterActif(v)}
+                    style={{
+                      padding: '5px 11px', borderRadius: 6, fontSize: '0.78rem', cursor: 'pointer',
+                      border: filterActif === v ? `1.5px solid ${C}` : '1.5px solid var(--border)',
+                      background: filterActif === v ? C : 'var(--bg)',
+                      color: filterActif === v ? '#fff' : 'var(--text)',
+                      fontWeight: filterActif === v ? 700 : 400,
+                    }}>
+                    {v === 'all' ? 'Tous' : v === 'actif' ? '✓ Actifs' : '○ Inactifs'}
+                  </button>
+                ))}
+              </div>
             </div>
+            {(filterSearch || filterCategorie || filterActif !== 'all') && (
+              <button onClick={() => { setFilterSearch(''); setFilterCategorie(''); setFilterActif('all'); }}
+                style={{ padding: '5px 10px', borderRadius: 6, border: '1.5px solid var(--border)', background: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '0.82rem', fontWeight: 700, alignSelf: 'flex-end' }}>
+                ✕
+              </button>
+            )}
           </div>
 
-          {loading ? (
-            <div style={{ textAlign: 'center', padding: 40, color: 'var(--text-muted)' }}>Chargement…</div>
-          ) : Object.keys(grouped).length === 0 ? (
-            <div style={{ textAlign: 'center', padding: 60, color: 'var(--text-muted)' }}>
-              <div style={{ fontSize: '2.5rem', marginBottom: 12 }}>🧾</div>
-              {ingredients.length === 0
-                ? 'Aucun ingrédient sélectionné pour cette activité'
-                : 'Aucun résultat pour ces filtres'}
-            </div>
+          {Object.keys(groups).length === 0 ? (
+            <p className="text-muted" style={{ textAlign: 'center', padding: '40px 0' }}>Aucun résultat pour ces filtres.</p>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              {Object.entries(grouped).map(([cat, items]) => (
-                <div key={cat} style={{ background: 'var(--card-bg)', borderRadius: 14, border: `1.5px solid ${CB}`, overflow: 'hidden' }}>
-                  {/* Category header */}
-                  <button onClick={() => toggleCat(cat)}
-                    style={{
-                      width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                      padding: '13px 18px', background: CL, border: 'none', cursor: 'pointer',
-                      borderBottom: collapsedCats[cat] ? 'none' : `1.5px solid ${CB}`,
-                    }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <span style={{ fontSize: '1rem', fontWeight: 800, color: CD }}>{cat}</span>
-                      <span style={{ fontSize: '0.72rem', fontWeight: 700, background: C, color: '#fff', borderRadius: 20, padding: '2px 9px' }}>
-                        {items.length}
+            <div>
+              {Object.entries(groups).map(([cat, items]) => {
+                const isOpen = openCats.has(cat);
+                const catActifs = items.filter(i => i.actif).length;
+                return (
+                  <div key={cat} style={{ marginBottom: 8 }}>
+                    {/* Category header */}
+                    <button onClick={() => toggleCat(cat)}
+                      style={{
+                        border: 'none', cursor: 'pointer',
+                        display: 'flex', alignItems: 'center', gap: 8,
+                        padding: '8px 12px', width: '100%', textAlign: 'left',
+                        borderLeft: `4px solid ${C}`,
+                        borderBottom: isOpen ? 'none' : '1px solid var(--border)',
+                        marginBottom: 0, borderRadius: isOpen ? '4px 4px 0 0' : 4,
+                        background: isOpen ? 'var(--card-bg)' : 'var(--bg)',
+                      } as React.CSSProperties}>
+                      <span style={{ fontSize: '0.82rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                        🏷️ {cat}
                       </span>
-                      <span style={{ fontSize: '0.75rem', color: C, fontWeight: 600 }}>
-                        {items.filter(i => i.actif).length} actif{items.filter(i => i.actif).length !== 1 ? 's' : ''}
+                      <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 400 }}>
+                        ({items.length})
                       </span>
-                    </div>
-                    <span style={{ color: C, fontSize: '0.85rem', fontWeight: 700 }}>
-                      {collapsedCats[cat] ? '▼' : '▲'}
-                    </span>
-                  </button>
+                      {catActifs > 0 && (
+                        <span style={{ fontSize: '0.72rem', color: C, fontWeight: 600, background: `${C}18`, borderRadius: 10, padding: '1px 8px' }}>
+                          🛒 {catActifs}
+                        </span>
+                      )}
+                      <span style={{ marginLeft: 'auto', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                        {isOpen ? '▼' : '▶'}
+                      </span>
+                    </button>
 
-                  {!collapsedCats[cat] && (
-                    <div style={{
-                      display: 'grid',
-                      gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))',
-                      gap: 14, padding: 16,
-                    }}>
-                      {items.map(ing => {
-                        const hasErr = !!toggleError[ing.id];
-                        const isSavingPortion = savingPortion === ing.id;
-                        const isToggling = toggling === ing.id;
-                        return (
-                          <div key={ing.id} style={{
-                            background: '#fff',
-                            borderRadius: 14,
-                            border: `1.5px solid ${ing.actif ? C : '#e5e7eb'}`,
-                            boxShadow: ing.actif
-                              ? `0 4px 16px rgba(180,83,9,0.13), inset 3px 0 0 ${C}`
-                              : '0 1px 4px rgba(0,0,0,0.06)',
-                            padding: '16px 16px 14px',
-                            display: 'flex', flexDirection: 'column', gap: 12,
-                            transition: 'border-color 0.2s, box-shadow 0.2s',
-                            position: 'relative',
-                          }}>
-                            {/* Active accent top strip */}
-                            {ing.actif && (
-                              <div style={{
-                                position: 'absolute', top: 0, left: 0, right: 0, height: 3,
-                                background: `linear-gradient(90deg, ${CD}, ${C}, #d97706)`,
-                                borderRadius: '14px 14px 0 0',
-                              }} />
-                            )}
-
-                            {/* Row 1: name + toggle */}
-                            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
-                              <div style={{ flex: 1, minWidth: 0 }}>
-                                <div style={{
-                                  fontWeight: 700, fontSize: '0.97rem',
-                                  color: ing.actif ? CD : 'var(--text)',
-                                  lineHeight: 1.3,
-                                  whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-                                }}>
-                                  {ing.nom}
-                                </div>
-                                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: 2 }}>
-                                  {ing.unite}
-                                </div>
-                              </div>
-
-                              {/* Toggle switch */}
-                              <button
-                                onClick={() => handleToggle(ing)}
-                                disabled={isToggling}
-                                title={ing.actif ? 'Désactiver' : 'Activer pour la vente'}
-                                style={{
-                                  width: 46, height: 26, borderRadius: 13, border: 'none', cursor: 'pointer',
-                                  background: ing.actif ? C : '#e2e8f0',
-                                  position: 'relative', transition: 'background 0.25s',
-                                  opacity: isToggling ? 0.6 : 1, flexShrink: 0, padding: 0,
-                                  boxShadow: ing.actif ? `0 0 0 3px ${C}33` : 'none',
-                                }}>
-                                <span style={{
-                                  position: 'absolute', top: 3,
-                                  left: ing.actif ? 23 : 3,
-                                  width: 20, height: 20, borderRadius: '50%',
-                                  background: '#fff', transition: 'left 0.25s',
-                                  boxShadow: '0 1px 4px rgba(0,0,0,0.25)', display: 'block',
-                                }} />
-                              </button>
-                            </div>
-
-                            {/* Row 2: status badge */}
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', minHeight: 20 }}>
-                              <span style={{
-                                display: 'inline-flex', alignItems: 'center', gap: 4,
-                                padding: '3px 10px', borderRadius: 20, fontSize: '0.72rem', fontWeight: 700,
-                                background: ing.actif ? '#dcfce7' : '#f1f5f9',
-                                color: ing.actif ? '#15803d' : '#94a3b8',
-                                border: `1px solid ${ing.actif ? '#bbf7d0' : '#e2e8f0'}`,
-                              }}>
-                                <span style={{ width: 6, height: 6, borderRadius: '50%', background: ing.actif ? '#22c55e' : '#cbd5e1', display: 'inline-block' }} />
-                                {ing.actif ? 'Actif pour la vente' : 'Inactif'}
-                              </span>
-                              {isSavingPortion && (
-                                <span style={{ fontSize: '0.7rem', color: C, fontStyle: 'italic' }}>Sauvegarde…</span>
-                              )}
-                            </div>
-
-                            {/* Row 3: portion */}
-                            <div style={{
-                              background: hasErr ? '#fef2f2' : '#f8fafc',
-                              borderRadius: 10, padding: '10px 12px',
-                              border: `1.5px solid ${hasErr ? '#fca5a5' : '#e2e8f0'}`,
+                    {isOpen && (
+                      <div style={{
+                        border: `1px solid var(--border)`, borderTop: `1px solid ${C}30`,
+                        borderRadius: '0 0 8px 8px', padding: 12,
+                        background: 'var(--card-bg)',
+                        display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 10,
+                      }}>
+                        {items.map(ing => {
+                          const hasErr = !!toggleError[ing.id];
+                          const isSaving = savingPortion === ing.id;
+                          const isToggling = toggling === ing.id;
+                          return (
+                            <div key={ing.id} style={{
+                              borderRadius: 10,
+                              border: ing.actif ? `1.5px solid ${C}` : '1px solid var(--border)',
+                              padding: '12px 14px',
+                              background: ing.actif ? `${C}08` : 'var(--bg)',
+                              position: 'relative',
+                              transition: 'border-color 0.15s, background 0.15s',
                             }}>
-                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                                <label style={{ fontSize: '0.72rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                                  Portion <span style={{ color: '#dc2626' }}>*</span>
-                                </label>
-                                <span style={{ fontSize: '0.7rem', color: '#94a3b8' }}>{ing.unite}</span>
-                              </div>
-                              <input
-                                type="number" min="0" step="0.001"
-                                placeholder="0.000"
-                                value={portionEdits[ing.id] ?? ''}
-                                onChange={e => {
-                                  setPortionEdits(prev => ({ ...prev, [ing.id]: e.target.value }));
-                                  if (toggleError[ing.id]) setToggleError(prev => { const n = { ...prev }; delete n[ing.id]; return n; });
-                                }}
-                                onBlur={() => handleSavePortion(ing)}
-                                style={{
-                                  width: '100%', padding: '7px 10px', borderRadius: 7,
-                                  border: `1.5px solid ${hasErr ? '#f87171' : portionEdits[ing.id] ? C : '#cbd5e1'}`,
-                                  background: '#fff',
-                                  fontSize: '1rem', fontWeight: 600,
-                                  color: portionEdits[ing.id] ? CD : '#94a3b8',
-                                  outline: 'none', boxSizing: 'border-box',
-                                  textAlign: 'center',
-                                  transition: 'border-color 0.15s',
-                                }}
-                              />
-                              {hasErr && (
-                                <div style={{ color: '#dc2626', fontSize: '0.72rem', marginTop: 5, textAlign: 'center' }}>
-                                  ⚠ {toggleError[ing.id]}
-                                </div>
+                              {/* Active badge */}
+                              {ing.actif && (
+                                <span style={{
+                                  position: 'absolute', top: 10, right: 10,
+                                  background: C, color: '#fff',
+                                  borderRadius: 20, padding: '1px 8px', fontSize: '0.68rem', fontWeight: 700, letterSpacing: '0.04em',
+                                }}>ACTIF</span>
                               )}
+
+                              {/* Name + unit */}
+                              <div style={{ paddingRight: ing.actif ? 60 : 0, marginBottom: 10 }}>
+                                <div style={{ fontWeight: 700, fontSize: '0.92rem', marginBottom: 3 }}>{ing.nom}</div>
+                                <span style={{ background: 'var(--border)', borderRadius: 5, padding: '1px 7px', fontSize: '0.73rem', color: 'var(--text-muted)' }}>
+                                  {ing.unite}
+                                </span>
+                              </div>
+
+                              {/* Portion input */}
+                              <div style={{ marginBottom: 10 }}>
+                                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, marginBottom: 4, color: 'var(--text-muted)' }}>
+                                  Portion ({ing.unite}) <span style={{ color: '#dc2626' }}>*</span>
+                                  {isSaving && <span style={{ color: C, fontStyle: 'italic', marginLeft: 6 }}>…</span>}
+                                </label>
+                                <input
+                                  type="number" min="0" step="0.001" placeholder="0.000"
+                                  value={portionEdits[ing.id] ?? ''}
+                                  onChange={e => {
+                                    setPortionEdits(prev => ({ ...prev, [ing.id]: e.target.value }));
+                                    if (toggleError[ing.id]) setToggleError(prev => { const n = { ...prev }; delete n[ing.id]; return n; });
+                                  }}
+                                  onBlur={() => handleSavePortion(ing)}
+                                  style={{
+                                    width: '100%', padding: '7px 10px', borderRadius: 7,
+                                    border: `1px solid ${hasErr ? '#dc2626' : portionEdits[ing.id] ? C : 'var(--border)'}`,
+                                    background: 'var(--bg)', fontSize: '0.9rem',
+                                    outline: 'none', boxSizing: 'border-box',
+                                    transition: 'border-color 0.15s',
+                                  }}
+                                />
+                                {hasErr && (
+                                  <div style={{ color: '#dc2626', fontSize: '0.72rem', marginTop: 3 }}>
+                                    ⚠ {toggleError[ing.id]}
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Toggle row */}
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                <span style={{ fontSize: '0.78rem', color: ing.actif ? C : 'var(--text-muted)' }}>
+                                  {ing.actif ? 'Vendu au détail' : 'Activer la vente'}
+                                </span>
+                                <button onClick={() => handleToggle(ing)} disabled={isToggling}
+                                  style={{
+                                    width: 40, height: 22, borderRadius: 11, border: 'none', cursor: 'pointer',
+                                    background: ing.actif ? C : 'var(--border)',
+                                    position: 'relative', transition: 'background 0.2s',
+                                    opacity: isToggling ? 0.6 : 1, padding: 0,
+                                  }}>
+                                  <span style={{
+                                    position: 'absolute', top: 3, left: ing.actif ? 21 : 3,
+                                    width: 16, height: 16, borderRadius: '50%', background: '#fff',
+                                    transition: 'left 0.2s', display: 'block', boxShadow: '0 1px 3px rgba(0,0,0,0.25)',
+                                  }} />
+                                </button>
+                              </div>
                             </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              ))}
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
         </>

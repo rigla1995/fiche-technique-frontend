@@ -100,22 +100,22 @@ export default function LaboVentesPage() {
       </div>
 
       {/* Labo selector */}
-      {labos.length > 1 && (
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 20, background: 'var(--card-bg)', borderRadius: 10, border: '1px solid var(--border)', padding: '10px 14px' }}>
+      {labos.length > 0 && (
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 20, alignItems: 'center' }}>
+          <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 600, marginRight: 4 }}>Labo :</span>
           {labos.map(l => (
             <button key={l.id}
               onClick={() => { setSelectedLaboId(l.id); navigate(`/client/labo/ventes?laboId=${l.id}`); }}
               style={{
-                padding: '4px 14px', borderRadius: 20, cursor: 'pointer', fontSize: '0.82rem',
-                border: selectedLaboId === l.id ? `1.5px solid ${C}` : '1.5px solid var(--border)',
-                background: selectedLaboId === l.id ? C : 'var(--bg)',
+                padding: '5px 14px', borderRadius: 20, cursor: 'pointer', fontSize: '0.83rem',
+                border: selectedLaboId === l.id ? `1.5px solid ${C}` : '1px solid var(--border)',
+                background: selectedLaboId === l.id ? C : 'var(--card-bg)',
                 color: selectedLaboId === l.id ? '#fff' : 'var(--text)',
-                fontWeight: selectedLaboId === l.id ? 700 : 400,
+                fontWeight: selectedLaboId === l.id ? 700 : 400, transition: 'all 0.15s',
               }}>
               🏭 {l.nom}
             </button>
           ))}
-          <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', alignSelf: 'center', marginLeft: 4 }}>← sélectionner le labo</span>
         </div>
       )}
 

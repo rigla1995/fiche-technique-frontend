@@ -246,25 +246,23 @@ export default function ConfigurationVentePage() {
       </div>
 
       {/* Activité selector */}
-      <div style={{ background: 'var(--card-bg)', borderRadius: 10, border: '1px solid var(--border)', padding: '10px 14px', marginBottom: 20 }}>
-        <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Activité</div>
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+      {activites.length > 0 && (
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 20, alignItems: 'center' }}>
+          <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 600, marginRight: 4 }}>Activité :</span>
           {activites.map(a => (
             <button key={a.id} onClick={() => { setSelectedActiviteId(a.id); setSearchParams({ activiteId: String(a.id) }); }}
               style={{
-                padding: '5px 16px', borderRadius: 20, cursor: 'pointer', fontSize: '0.85rem',
-                border: selectedActiviteId === a.id ? `2px solid ${C}` : '1.5px solid var(--border)',
-                background: selectedActiviteId === a.id ? C : 'var(--bg)',
+                padding: '5px 14px', borderRadius: 20, cursor: 'pointer', fontSize: '0.83rem',
+                border: selectedActiviteId === a.id ? `1.5px solid ${C}` : '1px solid var(--border)',
+                background: selectedActiviteId === a.id ? C : 'var(--card-bg)',
                 color: selectedActiviteId === a.id ? '#fff' : 'var(--text)',
-                fontWeight: selectedActiviteId === a.id ? 700 : 400,
-                transition: 'all 0.15s',
+                fontWeight: selectedActiviteId === a.id ? 700 : 400, transition: 'all 0.15s',
               }}>
               {a.nom}
             </button>
           ))}
-          {activites.length === 0 && <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Aucune activité disponible</span>}
         </div>
-      </div>
+      )}
 
       {!selectedActiviteId ? (
         <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '60px 0' }}>Aucune activité disponible</div>

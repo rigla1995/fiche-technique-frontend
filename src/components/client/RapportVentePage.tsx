@@ -95,21 +95,21 @@ export default function RapportVentePage() {
       </div>
 
       {/* Activité selector */}
-      {activites.length > 1 && (
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 20, background: 'var(--card-bg)', borderRadius: 10, border: '1px solid var(--border)', padding: '10px 14px' }}>
+      {activites.length > 0 && (
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 20, alignItems: 'center' }}>
+          <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 600, marginRight: 4 }}>Activité :</span>
           {activites.map(a => (
             <button key={a.id} onClick={() => { setSelectedActiviteId(a.id); setSearchParams({ activiteId: String(a.id) }); }}
               style={{
-                padding: '4px 14px', borderRadius: 20, cursor: 'pointer', fontSize: '0.82rem',
-                border: selectedActiviteId === a.id ? `1.5px solid ${C}` : '1.5px solid var(--border)',
-                background: selectedActiviteId === a.id ? C : 'var(--bg)',
+                padding: '5px 14px', borderRadius: 20, cursor: 'pointer', fontSize: '0.83rem',
+                border: selectedActiviteId === a.id ? `1.5px solid ${C}` : '1px solid var(--border)',
+                background: selectedActiviteId === a.id ? C : 'var(--card-bg)',
                 color: selectedActiviteId === a.id ? '#fff' : 'var(--text)',
-                fontWeight: selectedActiviteId === a.id ? 700 : 400,
+                fontWeight: selectedActiviteId === a.id ? 700 : 400, transition: 'all 0.15s',
               }}>
               {a.nom}
             </button>
           ))}
-          <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', alignSelf: 'center', marginLeft: 4 }}>← sélectionner l'activité</span>
         </div>
       )}
 
