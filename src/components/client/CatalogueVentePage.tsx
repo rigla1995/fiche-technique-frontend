@@ -241,7 +241,7 @@ export default function CatalogueVentePage() {
           )}
 
           {/* Filtres */}
-          <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', alignItems: 'flex-end', marginBottom: 18 }}>
+          <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', alignItems: 'flex-end', marginBottom: 18, background: 'var(--card-bg)', borderRadius: 10, border: '1px solid var(--border)', padding: '12px 16px' }}>
             <div>
               <label style={LABEL}>Recherche</label>
               <input type="text" placeholder="Nom de l'ingrédient…" value={filterSearch}
@@ -299,7 +299,7 @@ export default function CatalogueVentePage() {
                         borderLeft: `4px solid ${C}`,
                         borderBottom: isOpen ? 'none' : '1px solid var(--border)',
                         marginBottom: 0, borderRadius: isOpen ? '4px 4px 0 0' : 4,
-                        background: isOpen ? 'var(--card-bg)' : 'var(--bg)',
+                        background: 'var(--card-bg)',
                       } as React.CSSProperties}>
                       <span style={{ fontSize: '0.82rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
                         🏷️ {cat}
@@ -333,7 +333,7 @@ export default function CatalogueVentePage() {
                               borderRadius: 10,
                               border: ing.actif ? `1.5px solid ${C}` : '1px solid var(--border)',
                               padding: '12px 14px',
-                              background: ing.actif ? `${C}08` : 'var(--bg)',
+                              background: ing.actif ? `${C}08` : 'var(--card-bg)',
                               position: 'relative',
                               transition: 'border-color 0.15s, background 0.15s',
                             }}>
