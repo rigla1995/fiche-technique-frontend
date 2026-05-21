@@ -159,12 +159,6 @@ export default function ConfigurationVentePage() {
     }
   };
 
-  const handleTogglePrestataire = async (id: string, actif: boolean) => {
-    try {
-      await api.put(`/api/activite-prestataires/${id}`, { actif: !actif });
-      loadAll();
-    } catch {}
-  };
 
   const handleRemovePrestataire = async (id: string) => {
     if (!confirm('Retirer ce prestataire de cette activité ?')) return;
