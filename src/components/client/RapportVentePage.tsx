@@ -69,9 +69,7 @@ export default function RapportVentePage() {
   const resultatMois = stats && chargesMensuelles != null
     ? stats.marge_mois - chargesMensuelles
     : null;
-  const caMensuelSeuil = stats && chargesMensuelles != null && stats.ca_mois > 0
-    ? (chargesMensuelles / stats.ca_mois) * stats.ca_mois
-    : null;
+  const showSeuilRentabilite = stats != null && chargesMensuelles != null && stats.ca_mois > 0 && stats.marge_mois > 0;
 
   const selectedActivite = activites.find(a => a.id === selectedActiviteId);
 
@@ -157,7 +155,7 @@ export default function RapportVentePage() {
                     </div>
                   </div>
                 )}
-                {caMensuelSeuil != null && stats.ca_mois > 0 && (
+                {showSeuilRentabilite && (
                   <div style={{ padding: '14px 18px', background: CL, borderRadius: 10, border: `1px solid ${CB}` }}>
                     <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: 4 }}>Seuil de rentabilité (CA)</div>
                     <div style={{ fontSize: '1.1rem', fontWeight: 700, color: CD }}>{fmtMoney(chargesMensuelles / (stats.marge_mois > 0 ? stats.marge_mois / stats.ca_mois : 1))}</div>

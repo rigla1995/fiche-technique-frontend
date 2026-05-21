@@ -96,7 +96,6 @@ export default function ConfigurationVentePage() {
   // Prix edit
   const [editingPrix, setEditingPrix] = useState<Record<string, string>>({});
   const [editingPrixVente, setEditingPrixVente] = useState<Record<string, string>>({});
-  const [prixSubTab, setPrixSubTab] = useState<'produits' | 'ingredients'>('ingredients');
 
   // Charges form
   const [chargesForm, setChargesForm] = useState<ChargesFixes>({ mode: 'global' });
@@ -357,9 +356,7 @@ export default function ConfigurationVentePage() {
           {/* ── PRIX VENTE ── */}
           {activeSection === 'prix' && (() => {
             const activePrests = activitePrestataires.filter(ap => ap.actif);
-            const produitsActifs = articlesVendables.filter(a => a.article_type === 'produit' && a.actif);
-            const ingredientsActifs = articlesVendables.filter(a => a.article_type === 'ingredient' && a.actif);
-            const items = prixSubTab === 'produits' ? produitsActifs : ingredientsActifs;
+            const items = articlesVendables.filter(a => a.article_type === 'produit' && a.actif);
 
             const PrixInput = ({ articleId, currentPrixVente }: { articleId: string; currentPrixVente: number }) => {
               const isDirty = articleId in editingPrixVente;
@@ -420,24 +417,6 @@ export default function ConfigurationVentePage() {
                 </div>
 
                 <div style={{ padding: 24 }}>
-                  {/* Sub-tabs */}
-                  <div style={{ display: 'flex', gap: 6, marginBottom: 20 }}>
-                    {(['ingredients', 'produits'] as const).map(tab => (
-                      <button key={tab} onClick={() => setPrixSubTab(tab)}
-                        style={{
-                          padding: '7px 16px', borderRadius: 8, cursor: 'pointer', fontSize: '0.85rem',
-                          background: prixSubTab === tab ? C : '#fff',
-                          color: prixSubTab === tab ? '#fff' : CD,
-                          border: prixSubTab === tab ? `1.5px solid ${C}` : `1.5px solid ${CB}`,
-                          fontWeight: prixSubTab === tab ? 700 : 500,
-                          boxShadow: prixSubTab === tab ? `0 2px 6px ${C}44` : 'none',
-                          transition: 'all 0.15s',
-                        }}>
-                        {tab === 'produits' ? '📦 Produits vendables' : '🧪 Ingrédients vendables'}
-                      </button>
-                    ))}
-                  </div>
-
                   {activitePrestataires.length === 0 && (
                     <div style={{ background: '#fef9c3', borderRadius: 9, padding: '10px 14px', fontSize: '0.82rem', color: '#854d0e', marginBottom: 16 }}>
                       💡 Aucun prestataire actif — les prix prestataires ne s'afficheront pas.
@@ -447,9 +426,7 @@ export default function ConfigurationVentePage() {
                   {items.length === 0 ? (
                     <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '40px 0' }}>
                       <div style={{ fontSize: '2rem', marginBottom: 10 }}>💲</div>
-                      {prixSubTab === 'produits'
-                        ? 'Aucun produit vendable actif pour cette activité.'
-                        : 'Aucun ingrédient vendable actif — configurez le Catalogue Vente.'}
+                      Aucun produit vendable actif pour cette activité.
                     </div>
                   ) : (
                     <div style={{ overflowX: 'auto' }}>

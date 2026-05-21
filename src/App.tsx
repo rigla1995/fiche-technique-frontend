@@ -45,7 +45,6 @@ import UpgradeWizard from './components/client/UpgradeWizard';
 import RapportsPage from './components/client/RapportsPage';
 import VentesPage from './components/client/VentesPage';
 import LaboVentesPage from './components/client/LaboVentesPage';
-import CatalogueVentePage from './components/client/CatalogueVentePage';
 import ConfigurationVentePage from './components/client/ConfigurationVentePage';
 import RapportVentePage from './components/client/RapportVentePage';
 import VenteGuard from './components/client/VenteGuard';
@@ -143,7 +142,6 @@ export default function App() {
             <Route path="/client/ai-assistant" element={<AIAssistantPage />} />
             <Route element={<VenteGuard />}>
               <Route path="/client/ventes" element={<VentesPage />} />
-              <Route path="/client/ventes/catalogue" element={<CatalogueVentePage />} />
               <Route path="/client/ventes/configuration" element={<ConfigurationVentePage />} />
               <Route path="/client/ventes/rapport" element={<RapportVentePage />} />
               <Route path="/client/labo/ventes" element={<LaboVentesPage />} />

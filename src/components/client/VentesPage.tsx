@@ -194,10 +194,6 @@ export default function VentesPage() {
           </p>
         </div>
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-          <Link to={`/client/ventes/catalogue${selectedActiviteId ? `?activiteId=${selectedActiviteId}` : ''}`}
-            style={{ background: 'rgba(255,255,255,0.18)', color: '#fff', borderRadius: 20, padding: '5px 14px', fontSize: '0.82rem', fontWeight: 600, textDecoration: 'none', border: '1px solid rgba(255,255,255,0.3)' }}>
-            🧾 Catalogue
-          </Link>
           <Link to={`/client/ventes/configuration${selectedActiviteId ? `?activiteId=${selectedActiviteId}` : ''}`}
             style={{ background: 'rgba(255,255,255,0.18)', color: '#fff', borderRadius: 20, padding: '5px 14px', fontSize: '0.82rem', fontWeight: 600, textDecoration: 'none', border: '1px solid rgba(255,255,255,0.3)' }}>
             ⚙️ Configuration
@@ -444,8 +440,7 @@ export default function VentesPage() {
                 })}
                 {articles.filter(a => a.actif).length === 0 && (
                   <div style={{ padding: 16, textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-                    Aucun article vendable.{' '}
-                    <Link to={`/client/ventes/catalogue?activiteId=${selectedActiviteId}`} style={{ color: C }}>Configurer le catalogue</Link>
+                    Aucun article vendable. Configurez vos produits dans l'espace Produits.
                   </div>
                 )}
               </div>
