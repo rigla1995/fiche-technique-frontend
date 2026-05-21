@@ -111,13 +111,13 @@ export default function ProductForm() {
       const params = new URLSearchParams();
       if (selectedActId) params.set('activiteId', selectedActId);
       const qs = params.toString();
-      return api.get(qs ? `/products?${qs}` : '/products');
+      return api.get(qs ? `/api/products?${qs}` : '/api/products');
     };
 
     const fetches: Promise<{ data: unknown }>[] = [
       buildIngredientsFetch(),
       buildProductFetch(),
-      api.get('/categories'),
+      api.get('/api/categories'),
     ];
     if (isEdit && id) fetches.push(api.get(`/products/${id}`));
 
