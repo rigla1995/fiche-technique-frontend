@@ -215,6 +215,8 @@ export interface Product {
   activiteId?: number | null;
   createdAt?: string;
   isStockIngredient?: boolean;
+  isSupplement?: boolean;
+  refProduit?: string | null;
 }
 
 export interface Client {

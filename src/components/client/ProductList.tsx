@@ -1,9 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
-import type { Product, Activite } from '../../types';
+import type { Product, Activite, ActiviteIngredient } from '../../types';
 import FicheTechniqueTab from './FicheTechniqueTab';
 import FicheTechniqueModal from './FicheTechniqueModal';
 
@@ -44,6 +44,21 @@ export default function ProductList() {
   const [allActivities, setAllActivities] = useState<Activite[]>([]);
   const [selectedActiviteId, setSelectedActiviteId] = useState<number | null>(null);
 
+  // Add product modal state
+  type AddStep = 1 | 2 | 3;
+  interface IngLine { ingredientId: string; portion: string; }
+  const [addModal, setAddModal] = useState<AddStep | null>(null);
+  const [addName, setAddName] = useState('');
+  const [addRef, setAddRef] = useState('');
+  const [addIsSupplement, setAddIsSupplement] = useState(false);
+  const [addIngLines, setAddIngLines] = useState<IngLine[]>([]);
+  const [addIngredients, setAddIngredients] = useState<ActiviteIngredient[]>([]);
+  const [addIngCatFilter, setAddIngCatFilter] = useState('');
+  const [addIngSearch, setAddIngSearch] = useState('');
+  const [addSaving, setAddSaving] = useState(false);
+  const [addSavedName, setAddSavedName] = useState('');
+  const [addOpenCats, setAddOpenCats] = useState<Set<string>>(new Set());
+
   // Load all activities for enterprise users (filtered by laboId if present)
   useEffect(() => {
     api.get('/api/entreprise/activites')
@@ -68,6 +83,18 @@ export default function ProductList() {
       .finally(() => setLoading(false));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isEntreprise, laboId]);
+
+  const openAddModal = useCallback(() => {
+    setAddName(''); setAddRef(''); setAddIsSupplement(false);
+    setAddIngLines([]); setAddIngCatFilter(''); setAddIngSearch('');
+    setAddOpenCats(new Set()); setAddSavedName('');
+    setAddModal(1);
+    if (selectedActiviteId) {
+      api.get(`/api/entreprise/activites/${selectedActiviteId}/ingredients`)
+        .then(({ data }) => setAddIngredients(data as ActiviteIngredient[]))
+        .catch(() => setAddIngredients([]));
+    }
+  }, [selectedActiviteId]);
 
   const openPopup = async (type: PopupType, product: Product) => {
     setPopup({ type, productId: product.id, productName: product.name });
@@ -148,11 +175,6 @@ export default function ProductList() {
   const paginated = searched.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
 
   const isVendable = tab === 'vendable';
-  const addKey = isVendable ? 'client.products.add_vendable' : 'client.products.add_utilisable';
-  const addPath = isVendable
-    ? `/client/products/new?type=vendable`
-    : `/client/products/new?type=utilisable`;
-
   const getProductResolvedActId = (p: Product): number => {
     if (!isEntreprise) return 0;
     return p.activiteId || 0;
@@ -237,32 +259,29 @@ export default function ProductList() {
         background: 'linear-gradient(135deg, #881337 0%, #9f1239 55%, #f43f5e 100%)',
         borderRadius: 18, padding: '24px 28px', marginBottom: 24,
         boxShadow: '0 8px 32px rgba(159,18,57,0.28)',
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16,
       }}>
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
-            <div style={{ background: 'rgba(255,255,255,0.2)', borderRadius: 10, padding: '7px 9px', fontSize: '1.2rem' }}>📦</div>
-            <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0 }}>
-              {tab === 'fiche-technique'
-                ? t('client.products.tab_fiche_technique')
-                : tab === 'utilisable'
-                  ? t('client.products.tab_utilisable')
-                  : t('client.products.tab_vendable')}
-            </h1>
-          </div>
-          <p style={{ color: 'rgba(255,255,255,0.78)', margin: '4px 0 0', fontSize: '0.85rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+          <div style={{ background: 'rgba(255,255,255,0.2)', borderRadius: 10, padding: '7px 9px', fontSize: '1.2rem' }}>📦</div>
+          <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0 }}>
             {tab === 'fiche-technique'
-              ? 'Exportez et consultez vos fiches techniques par produit'
+              ? t('client.products.tab_fiche_technique')
               : tab === 'utilisable'
-                ? 'Produits semi-finis utilisés dans la composition de vos recettes'
-                : 'Produits finis destinés à la vente, définis par leurs fiches techniques'}
-          </p>
+                ? t('client.products.tab_utilisable')
+                : t('client.products.tab_vendable')}
+          </h1>
+          {tab !== 'fiche-technique' && byTab.length > 0 && (
+            <span style={{ background: 'rgba(255,255,255,0.22)', borderRadius: 20, padding: '2px 12px', fontSize: '0.85rem', fontWeight: 700, color: '#fff', marginLeft: 4 }}>
+              {byTab.length}
+            </span>
+          )}
         </div>
-        {tab !== 'fiche-technique' && (
-          canWrite
-            ? <Link to={addPath} className="btn btn-primary" style={{ background: 'linear-gradient(135deg, #4338ca, #6366f1)', boxShadow: '0 4px 14px rgba(67,56,202,0.35)', borderRadius: 10, border: 'none', color: '#fff', fontWeight: 800, padding: '10px 22px', whiteSpace: 'nowrap' }}>+ {t(addKey)}</Link>
-            : <button className="btn btn-primary" disabled style={{ background: 'linear-gradient(135deg, #4338ca, #6366f1)', borderRadius: 10, border: 'none', color: '#fff', fontWeight: 800, padding: '10px 22px', whiteSpace: 'nowrap', opacity: 0.45, cursor: 'not-allowed' }}>+ {t(addKey)}</button>
-        )}
+        <p style={{ color: 'rgba(255,255,255,0.78)', margin: 0, fontSize: '0.85rem' }}>
+          {tab === 'fiche-technique'
+            ? 'Exportez et consultez vos fiches techniques par produit'
+            : tab === 'utilisable'
+              ? 'Produits semi-finis utilisés dans la composition de vos recettes'
+              : 'Produits finis destinés à la vente, définis par leurs fiches techniques'}
+        </p>
       </div>
 
       {/* Activity selector */}
@@ -282,6 +301,12 @@ export default function ProductList() {
             </button>
           ))}
           <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', alignSelf: 'center', marginLeft: 4 }}>← sélectionner l'activité</span>
+          {canWrite && (
+            <button onClick={openAddModal}
+              style={{ marginLeft: 'auto', padding: '5px 16px', borderRadius: 20, cursor: 'pointer', fontSize: '0.82rem', border: 'none', background: 'linear-gradient(135deg, #881337, #9f1239)', color: '#fff', fontWeight: 700, boxShadow: '0 2px 8px rgba(159,18,57,0.25)' }}>
+              + {isVendable ? 'Produit vendable' : 'Produit utilisable'}
+            </button>
+          )}
         </div>
       )}
 
@@ -585,6 +610,239 @@ export default function ProductList() {
               </div>
             </div>
           )}
+
+          {/* ── Add product modal (3 steps) ── */}
+          {addModal && (() => {
+            const cats = Array.from(new Set(addIngredients.map((i) => i.categorie || 'Sans catégorie')));
+            const filtered = addIngredients.filter((i) => {
+              const cat = i.categorie || 'Sans catégorie';
+              if (addIngCatFilter && cat !== addIngCatFilter) return false;
+              if (addIngSearch && !i.nom.toLowerCase().includes(addIngSearch.toLowerCase())) return false;
+              return true;
+            });
+            const filteredByCat = cats.filter((c) => {
+              if (addIngCatFilter && c !== addIngCatFilter) return false;
+              return filtered.some((i) => (i.categorie || 'Sans catégorie') === c);
+            });
+            const selectedIngIds = new Set(addIngLines.map((l) => l.ingredientId).filter(Boolean));
+
+            const toggleIngredient = (ing: ActiviteIngredient) => {
+              const sid = String(ing.id);
+              if (addIsSupplement) {
+                setAddIngLines([{ ingredientId: sid, portion: '' }]);
+              } else if (selectedIngIds.has(sid)) {
+                setAddIngLines((prev) => prev.filter((l) => l.ingredientId !== sid));
+              } else {
+                setAddIngLines((prev) => [...prev, { ingredientId: sid, portion: '' }]);
+              }
+            };
+
+            const updatePortion = (ingId: string, val: string) => {
+              setAddIngLines((prev) => prev.map((l) => l.ingredientId === ingId ? { ...l, portion: val } : l));
+            };
+
+            const canGoStep2 = addName.trim().length > 0;
+            const canGoStep3 = addIngLines.some((l) => l.ingredientId && l.portion);
+
+            const handleSave = async () => {
+              setAddSaving(true);
+              try {
+                const payload = {
+                  name: addName.trim(),
+                  refProduit: addRef.trim() || null,
+                  type: tab === 'utilisable' ? 'utilisable' : 'vendable',
+                  isSupplement: addIsSupplement,
+                  activiteId: selectedActiviteId,
+                  ingredients: addIngLines
+                    .filter((l) => l.ingredientId && l.portion)
+                    .map((l) => ({ ingredientId: parseInt(l.ingredientId), portion: parseFloat(l.portion) })),
+                  subProducts: [],
+                };
+                await api.post('/api/products', payload);
+                setAddSavedName(addName.trim());
+                setAddModal(3);
+                // Refresh list
+                const params = new URLSearchParams();
+                if (laboId) params.set('laboId', laboId);
+                const qs = params.toString();
+                api.get(`/products${qs ? `?${qs}` : ''}`).then(({ data }) => setProducts(data as Product[]));
+              } catch { /* ignore */ }
+              setAddSaving(false);
+            };
+
+            return (
+              <div className="modal-overlay" onClick={() => setAddModal(null)}>
+                <div className="modal" style={{ maxWidth: 560, width: '95vw', maxHeight: '90vh', overflow: 'auto' }} onClick={(e) => e.stopPropagation()}>
+                  {/* Header */}
+                  <div style={{ background: 'linear-gradient(135deg, #881337 0%, #9f1239 100%)', padding: '18px 22px', borderRadius: '12px 12px 0 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div>
+                      <div style={{ color: '#fff', fontWeight: 800, fontSize: '1rem' }}>
+                        {addModal === 3 ? '✅ Produit créé' : `${isVendable ? 'Produit vendable' : 'Produit utilisable'}`}
+                      </div>
+                      {addModal !== 3 && (
+                        <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                          {([1, 2] as const).map((s) => (
+                            <div key={s} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                              <div style={{ width: 22, height: 22, borderRadius: '50%', background: addModal >= s ? '#fff' : 'rgba(255,255,255,0.3)', color: addModal >= s ? '#9f1239' : '#fff', fontWeight: 800, fontSize: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{s}</div>
+                              <span style={{ fontSize: '0.72rem', color: addModal >= s ? '#fff' : 'rgba(255,255,255,0.6)', fontWeight: addModal === s ? 700 : 400 }}>
+                                {s === 1 ? 'Identité' : 'Ingrédients'}
+                              </span>
+                              {s < 2 && <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.7rem' }}>›</span>}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    <button onClick={() => setAddModal(null)} style={{ background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: 8, color: '#fff', fontWeight: 900, fontSize: '1.1rem', cursor: 'pointer', padding: '2px 9px', lineHeight: 1 }}>×</button>
+                  </div>
+
+                  <div style={{ padding: '20px 22px' }}>
+                    {/* Step 1 */}
+                    {addModal === 1 && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                        <div>
+                          <label style={{ display: 'block', fontWeight: 700, fontSize: '0.82rem', color: '#881337', marginBottom: 6 }}>
+                            Nom du produit <span style={{ color: '#ef4444' }}>*</span>
+                          </label>
+                          <input className="input" placeholder="Ex. Burger Classic, Pizza Margherita…" value={addName}
+                            onChange={(e) => setAddName(e.target.value)} autoFocus
+                            style={{ width: '100%', borderColor: '#fda4af' }} />
+                        </div>
+                        <div>
+                          <label style={{ display: 'block', fontWeight: 700, fontSize: '0.82rem', color: '#881337', marginBottom: 6 }}>
+                            Réf. produit <span style={{ fontSize: '0.75rem', fontWeight: 400, color: 'var(--text-muted)' }}>(optionnel)</span>
+                          </label>
+                          <input className="input" placeholder="Ex. BRG-001" value={addRef}
+                            onChange={(e) => setAddRef(e.target.value)}
+                            style={{ width: '100%', maxWidth: 280, borderColor: '#fda4af' }} />
+                        </div>
+                        {isVendable && (
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: addIsSupplement ? '#fff1f2' : '#f9fafb', borderRadius: 10, padding: '12px 16px', border: `1.5px solid ${addIsSupplement ? '#fda4af' : 'var(--border)'}` }}>
+                            <div>
+                              <div style={{ fontWeight: 700, fontSize: '0.88rem', color: addIsSupplement ? '#881337' : 'var(--text)' }}>Supplément</div>
+                              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: 2 }}>Un supplément ne contient qu'un seul ingrédient</div>
+                            </div>
+                            <button type="button"
+                              onClick={() => setAddIsSupplement((v) => !v)}
+                              style={{ width: 44, height: 24, borderRadius: 12, border: 'none', cursor: 'pointer', background: addIsSupplement ? '#9f1239' : '#d1d5db', transition: 'background 0.2s', position: 'relative', flexShrink: 0 }}>
+                              <span style={{ position: 'absolute', top: 3, left: addIsSupplement ? 23 : 3, width: 18, height: 18, borderRadius: '50%', background: '#fff', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
+                            </button>
+                          </div>
+                        )}
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, paddingTop: 8 }}>
+                          <button className="btn btn-ghost" onClick={() => setAddModal(null)}>Annuler</button>
+                          <button disabled={!canGoStep2}
+                            onClick={() => setAddModal(2)}
+                            style={{ background: canGoStep2 ? 'linear-gradient(135deg, #881337, #9f1239)' : '#e5e7eb', border: 'none', borderRadius: 10, color: canGoStep2 ? '#fff' : '#9ca3af', fontWeight: 700, padding: '9px 22px', cursor: canGoStep2 ? 'pointer' : 'not-allowed' }}>
+                            Suivant →
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Step 2 */}
+                    {addModal === 2 && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                        {addIsSupplement && (
+                          <div style={{ background: '#fff1f2', border: '1px solid #fda4af', borderRadius: 8, padding: '8px 12px', fontSize: '0.82rem', color: '#881337', fontWeight: 600 }}>
+                            Mode supplément — sélectionnez un seul ingrédient
+                          </div>
+                        )}
+                        {/* Filters */}
+                        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                          <input className="input" placeholder="🔍 Nom ingrédient…" value={addIngSearch}
+                            onChange={(e) => setAddIngSearch(e.target.value)}
+                            style={{ flex: 1, minWidth: 140, fontSize: '0.82rem', borderColor: '#fda4af' }} />
+                          <select className="input" value={addIngCatFilter}
+                            onChange={(e) => setAddIngCatFilter(e.target.value)}
+                            style={{ minWidth: 130, fontSize: '0.82rem', borderColor: '#fda4af' }}>
+                            <option value="">Toutes catégories</option>
+                            {cats.map((c) => <option key={c} value={c}>{c}</option>)}
+                          </select>
+                        </div>
+
+                        {/* Categories collapsible */}
+                        <div style={{ maxHeight: 340, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                          {filteredByCat.length === 0 && (
+                            <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '24px 0', fontSize: '0.85rem' }}>Aucun ingrédient trouvé</div>
+                          )}
+                          {filteredByCat.map((cat) => {
+                            const catIngs = filtered.filter((i) => (i.categorie || 'Sans catégorie') === cat);
+                            const isOpen = addOpenCats.has(cat);
+                            return (
+                              <div key={cat} style={{ border: '1px solid #fda4af', borderRadius: 8, overflow: 'hidden' }}>
+                                <button type="button"
+                                  onClick={() => setAddOpenCats((prev) => {
+                                    const next = new Set(prev);
+                                    if (next.has(cat)) next.delete(cat); else next.add(cat);
+                                    return next;
+                                  })}
+                                  style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: '#fff1f2', border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: '0.82rem', color: '#881337' }}>
+                                  <span>🏷️ {cat} <span style={{ fontWeight: 400, color: 'var(--text-muted)', fontSize: '0.75rem' }}>({catIngs.length})</span></span>
+                                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{isOpen ? '▲' : '▼'}</span>
+                                </button>
+                                {isOpen && (
+                                  <div style={{ padding: '6px 8px', display: 'flex', flexDirection: 'column', gap: 4 }}>
+                                    {catIngs.map((ing) => {
+                                      const sid = String(ing.id);
+                                      const selected = selectedIngIds.has(sid);
+                                      const line = addIngLines.find((l) => l.ingredientId === sid);
+                                      return (
+                                        <div key={ing.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 8px', borderRadius: 7, background: selected ? '#fff1f2' : 'transparent', border: selected ? '1px solid #fda4af' : '1px solid transparent' }}>
+                                          <input type="checkbox" checked={selected}
+                                            onChange={() => toggleIngredient(ing)}
+                                            style={{ accentColor: '#9f1239', width: 15, height: 15, flexShrink: 0 }} />
+                                          <span style={{ flex: 1, fontSize: '0.83rem', fontWeight: selected ? 600 : 400, color: selected ? '#881337' : 'var(--text)' }}>{ing.nom}</span>
+                                          <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', flexShrink: 0 }}>{ing.unite}</span>
+                                          {selected && (
+                                            <input type="number" step="0.001" min="0" placeholder="qtité"
+                                              value={line?.portion || ''}
+                                              onChange={(e) => updatePortion(sid, e.target.value)}
+                                              style={{ width: 72, padding: '3px 6px', borderRadius: 6, border: '1.5px solid #fda4af', fontSize: '0.82rem', textAlign: 'right' }} />
+                                          )}
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+
+                        <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 8 }}>
+                          <button className="btn btn-ghost" onClick={() => setAddModal(1)}>← Retour</button>
+                          <button disabled={!canGoStep3 || addSaving}
+                            onClick={handleSave}
+                            style={{ background: canGoStep3 ? 'linear-gradient(135deg, #881337, #9f1239)' : '#e5e7eb', border: 'none', borderRadius: 10, color: canGoStep3 ? '#fff' : '#9ca3af', fontWeight: 700, padding: '9px 22px', cursor: canGoStep3 && !addSaving ? 'pointer' : 'not-allowed' }}>
+                            {addSaving ? '…' : 'Créer le produit →'}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Step 3 — Success */}
+                    {addModal === 3 && (
+                      <div style={{ textAlign: 'center', padding: '16px 0 8px' }}>
+                        <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'linear-gradient(135deg, #22c55e, #16a34a)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.6rem', margin: '0 auto 14px' }}>✓</div>
+                        <div style={{ fontWeight: 700, fontSize: '1rem', color: '#166534', marginBottom: 6 }}>Produit créé avec succès</div>
+                        <div style={{ fontSize: '0.88rem', color: 'var(--text-muted)', marginBottom: 22 }}>
+                          <strong>{addSavedName}</strong> a été ajouté à votre liste.
+                        </div>
+                        <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
+                          <button className="btn btn-ghost" onClick={() => setAddModal(null)}>Fermer</button>
+                          <button onClick={openAddModal}
+                            style={{ background: 'linear-gradient(135deg, #881337, #9f1239)', border: 'none', borderRadius: 10, color: '#fff', fontWeight: 700, padding: '9px 22px', cursor: 'pointer' }}>
+                            + Ajouter un autre
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
         </>
       )}
     </div>
