@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, Link } from 'react-router-dom';
 import api from '../../api/client';
 import type { Activite } from '../../types';
 
@@ -357,6 +357,7 @@ export default function ConfigurationVentePage() {
           {activeSection === 'prix' && (() => {
             const activePrests = activitePrestataires.filter(ap => ap.actif);
             const items = articlesVendables.filter(a => a.article_type === 'produit' && a.actif);
+            const ingItems = articlesVendables.filter(a => a.article_type === 'ingredient' && a.actif);
 
             const PrixInput = ({ articleId, currentPrixVente }: { articleId: string; currentPrixVente: number }) => {
               const isDirty = articleId in editingPrixVente;
@@ -423,13 +424,17 @@ export default function ConfigurationVentePage() {
                     </div>
                   )}
 
+                  {/* ── Bloc 2 : Produits vendables ── */}
+                  <div style={{ fontWeight: 800, fontSize: '0.85rem', color: CD, marginBottom: 10, display: 'flex', alignItems: 'center', gap: 8 }}>
+                    🛍️ Produits vendables (fiches techniques)
+                    <span style={{ fontWeight: 400, fontSize: '0.75rem', color: 'var(--text-muted)' }}>({items.length})</span>
+                  </div>
                   {items.length === 0 ? (
-                    <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '40px 0' }}>
-                      <div style={{ fontSize: '2rem', marginBottom: 10 }}>💲</div>
+                    <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '24px 0', fontSize: '0.85rem', marginBottom: 24 }}>
                       Aucun produit vendable actif pour cette activité.
                     </div>
                   ) : (
-                    <div style={{ overflowX: 'auto' }}>
+                    <div style={{ overflowX: 'auto', marginBottom: 28 }}>
                       <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 400 }}>
                         <thead>
                           <tr style={{ background: CL, borderBottom: `2px solid ${CB}` }}>
@@ -466,6 +471,59 @@ export default function ConfigurationVentePage() {
                       </table>
                     </div>
                   )}
+
+                  {/* ── Bloc 3 : Ingrédients vendables ── */}
+                  <div style={{ borderTop: `1.5px solid ${CB}`, paddingTop: 20 }}>
+                    <div style={{ fontWeight: 800, fontSize: '0.85rem', color: CD, marginBottom: 10, display: 'flex', alignItems: 'center', gap: 8 }}>
+                      🧂 Ingrédients vendables (catalogue)
+                      <span style={{ fontWeight: 400, fontSize: '0.75rem', color: 'var(--text-muted)' }}>({ingItems.length})</span>
+                    </div>
+                    {ingItems.length === 0 ? (
+                      <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '24px 0', fontSize: '0.85rem' }}>
+                        Aucun ingrédient vendable actif.{' '}
+                        <Link to={`/client/ventes/catalogue${selectedActiviteId ? `?activiteId=${selectedActiviteId}` : ''}`} style={{ color: C, fontWeight: 600 }}>
+                          Configurer le catalogue →
+                        </Link>
+                      </div>
+                    ) : (
+                      <div style={{ overflowX: 'auto' }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 400 }}>
+                          <thead>
+                            <tr style={{ background: CL, borderBottom: `2px solid ${CB}` }}>
+                              <th style={{ padding: '10px 14px', textAlign: 'left', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>Ingrédient</th>
+                              <th style={{ padding: '10px 14px', textAlign: 'center', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>
+                                🏪 Vente directe
+                              </th>
+                              {activePrests.map(ap => (
+                                <th key={ap.id} style={{ padding: '10px 14px', textAlign: 'center', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>
+                                  🛵 {ap.prestataire_nom}
+                                  <div style={{ fontSize: '0.68rem', fontWeight: 500, color: 'var(--text-muted)', textTransform: 'none', letterSpacing: 0 }}>-{ap.taux_commission}%</div>
+                                </th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {ingItems.map((av, idx) => (
+                              <tr key={av.id} style={{ borderBottom: `1px solid ${CB}`, background: idx % 2 === 0 ? '#fff' : '#fffdf7' }}>
+                                <td style={{ padding: '12px 14px' }}>
+                                  <div style={{ fontWeight: 700, fontSize: '0.9rem', color: CD }}>{av.nom}</div>
+                                  {av.unite_nom && <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{av.unite_nom}</div>}
+                                </td>
+                                <td style={{ padding: '10px 14px', textAlign: 'center' }}>
+                                  <PrixInput articleId={av.id} currentPrixVente={av.prix_vente} />
+                                </td>
+                                {activePrests.map(ap => (
+                                  <td key={ap.id} style={{ padding: '10px 14px', textAlign: 'center' }}>
+                                    <PrestInput av={av} ap={ap} />
+                                  </td>
+                                ))}
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             );
