@@ -89,11 +89,9 @@ export default function CatalogueVentePage() {
       });
       setIngredients(merged);
 
-      setPortionEdits(prev => {
-        const next: Record<number, string> = {};
-        merged.forEach(m => { next[m.id] = prev[m.id] !== undefined ? prev[m.id] : (m.portion != null ? String(m.portion) : ''); });
-        return next;
-      });
+      const nextEdits: Record<number, string> = {};
+      merged.forEach(m => { nextEdits[m.id] = m.portion != null ? String(m.portion) : ''; });
+      setPortionEdits(nextEdits);
     } catch {}
     setLoading(false);
   }, [selectedActiviteId]);
