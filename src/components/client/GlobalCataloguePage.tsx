@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
@@ -60,6 +60,23 @@ function EntrepriseIngredientList({
   const [openCats, setOpenCats] = useState<Set<string>>(new Set());
   const [catPage, setCatPage] = useState(1);
   const CAT_PAGE_SIZE = 10;
+  const prevFilters = useRef({ filterName, filterCategory, filterContext, filterIngId });
+
+  useEffect(() => {
+    const prev = prevFilters.current;
+    const changed = prev.filterName !== filterName || prev.filterCategory !== filterCategory || prev.filterContext !== filterContext || prev.filterIngId !== filterIngId;
+    if (!changed) return;
+    prevFilters.current = { filterName, filterCategory, filterContext, filterIngId };
+    setCatPage(1);
+    if (filterName) {
+      const matchedCats = new Set(
+        ingredients
+          .filter(i => i.nom.toLowerCase().includes(filterName.toLowerCase()))
+          .map(i => i.categorie)
+      );
+      setOpenCats(matchedCats);
+    }
+  });
 
   const filtered = ingredients.filter((i) => {
     const catOk = !filterCategory || i.categorie === filterCategory;
