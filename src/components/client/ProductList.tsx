@@ -78,7 +78,7 @@ export default function ProductList() {
     const params = new URLSearchParams();
     if (laboId) params.set('laboId', laboId);
     const qs = params.toString();
-    api.get(`/products${qs ? `?${qs}` : ''}`)
+    api.get(`/api/products${qs ? `?${qs}` : ''}`)
       .then(({ data }) => setProducts(data as Product[]))
       .finally(() => setLoading(false));
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -101,7 +101,7 @@ export default function ProductList() {
     setDetail(null);
     setLoadingDetail(true);
     try {
-      const { data } = await api.get(`/products/${product.id}`);
+      const { data } = await api.get(`/api/products/${product.id}`);
       setDetail(data);
     } finally {
       setLoadingDetail(false);
@@ -133,7 +133,7 @@ export default function ProductList() {
       if (product.type === 'utilisable' && product.isStockIngredient) {
         await api.delete(`/api/produits/${product.id}/stock-pt-history`);
       }
-      await api.delete(`/products/${product.id}`);
+      await api.delete(`/api/products/${product.id}`);
       setProducts((p) => p.filter((x) => x.id !== product.id));
       setDeleteModal(null);
     } catch { /* ignore */ }
@@ -666,7 +666,7 @@ export default function ProductList() {
                 const params = new URLSearchParams();
                 if (laboId) params.set('laboId', laboId);
                 const qs = params.toString();
-                api.get(`/products${qs ? `?${qs}` : ''}`).then(({ data }) => setProducts(data as Product[]));
+                api.get(`/api/products${qs ? `?${qs}` : ''}`).then(({ data }) => setProducts(data as Product[]));
               } catch { /* ignore */ }
               setAddSaving(false);
             };
@@ -801,12 +801,14 @@ export default function ProductList() {
                                             onChange={() => toggleIngredient(ing)}
                                             style={{ accentColor: '#9f1239', width: 15, height: 15, flexShrink: 0 }} />
                                           <span style={{ flex: 1, fontSize: '0.83rem', fontWeight: selected ? 600 : 400, color: selected ? '#881337' : 'var(--text)' }}>{ing.nom}</span>
-                                          <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', flexShrink: 0 }}>{ing.unite}</span>
                                           {selected && (
-                                            <input type="number" step="0.001" min="0" placeholder="qtité"
-                                              value={line?.portion || ''}
-                                              onChange={(e) => updatePortion(sid, e.target.value)}
-                                              style={{ width: 72, padding: '3px 6px', borderRadius: 6, border: '1.5px solid #fda4af', fontSize: '0.82rem', textAlign: 'right' }} />
+                                            <>
+                                              <input type="number" step="0.001" min="0" placeholder="portion"
+                                                value={line?.portion || ''}
+                                                onChange={(e) => updatePortion(sid, e.target.value)}
+                                                style={{ width: 72, padding: '3px 6px', borderRadius: 6, border: '1.5px solid #fda4af', fontSize: '0.82rem', textAlign: 'right' }} />
+                                              <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', flexShrink: 0 }}>{ing.unite}</span>
+                                            </>
                                           )}
                                         </div>
                                       );
