@@ -129,7 +129,7 @@ function RapportPertes({ filters }: { filters: FilterOptions }) {
 
   const exportExcel = () => {
     downloadExcel(rows.map((r) => ({
-      'Ingrédient': r.ingredient_nom, 'Catégorie': r.categorie, 'Unité': r.unite,
+      'Article': r.ingredient_nom, 'Catégorie': r.categorie, 'Unité': r.unite,
       'Activité': r.activite_nom || '—', 'Type': r.type_perte, 'Date': fmtDate(r.date_perte as string),
       'Quantité': r.quantite, 'Prix unit. (DT)': r.prix_unitaire, 'Valeur (DT)': fmt(r.valeur as number),
     })), 'Pertes', `rapport-pertes-${dateFrom}-${dateTo}.xlsx`);
@@ -141,7 +141,7 @@ function RapportPertes({ filters }: { filters: FilterOptions }) {
     doc.setFontSize(10); doc.setTextColor(100); doc.text(`Période : ${fmtDate(dateFrom)} — ${fmtDate(dateTo)}`, 14, 26);
     autoTable(doc, {
       startY: 32,
-      head: [['Ingrédient', 'Catégorie', 'Unité', 'Type', 'Date', 'Qté', 'Valeur (DT)']],
+      head: [['Article', 'Catégorie', 'Unité', 'Type', 'Date', 'Qté', 'Valeur (DT)']],
       body: rows.map((r) => [r.ingredient_nom, r.categorie, r.unite, r.type_perte, fmtDate(r.date_perte as string), fmt(r.quantite as number), fmt(r.valeur as number)]) as RowInput[],
       styles: { fontSize: 9 }, headStyles: { fillColor: [99, 102, 241] },
       foot: [['', '', '', '', 'TOTAL', totalQte + ' lignes', fmt(totalValeur) + ' DT']],
@@ -232,7 +232,7 @@ function RapportPertes({ filters }: { filters: FilterOptions }) {
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
               <thead>
                 <tr style={{ background: '#f9fafb' }}>
-                  {['Ingrédient', 'Catégorie', 'Unité', isEntreprise ? 'Activité' : null, 'Type', 'Date', 'Quantité', 'Prix unit. (DT)', 'Valeur (DT)']
+                  {['Article', 'Catégorie', 'Unité', isEntreprise ? 'Activité' : null, 'Type', 'Date', 'Quantité', 'Prix unit. (DT)', 'Valeur (DT)']
                     .filter(Boolean).map((h) => (
                       <th key={h!} style={{ padding: '9px 12px', textAlign: 'left', borderBottom: '1px solid #e5e7eb', fontWeight: 600, color: '#374151', fontSize: 12, whiteSpace: 'nowrap' }}>{h}</th>
                     ))}
@@ -302,7 +302,7 @@ function RapportCoutMatiere({ filters }: { filters: FilterOptions }) {
 
   const exportExcel = () => {
     downloadExcel(rows.map((r) => ({
-      'Ingrédient': r.ingredient_nom, 'Catégorie': r.categorie, 'Unité': r.unite,
+      'Article': r.ingredient_nom, 'Catégorie': r.categorie, 'Unité': r.unite,
       'Qté totale': fmt(r.quantite_totale as number), 'Prix moyen (DT)': fmt(r.prix_moyen as number),
       'Coût total (DT)': fmt(r.cout_total as number), '% du total': `${r.pct}%`,
     })), 'Coût Matière', `rapport-cout-matiere-${dateFrom}-${dateTo}.xlsx`);
@@ -314,7 +314,7 @@ function RapportCoutMatiere({ filters }: { filters: FilterOptions }) {
     doc.setFontSize(10); doc.setTextColor(100); doc.text(`Période : ${fmtDate(dateFrom)} — ${fmtDate(dateTo)}`, 14, 26);
     autoTable(doc, {
       startY: 32,
-      head: [['Ingrédient', 'Catégorie', 'Unité', 'Qté', 'Prix moy.', 'Coût (DT)', '%']],
+      head: [['Article', 'Catégorie', 'Unité', 'Qté', 'Prix moy.', 'Coût (DT)', '%']],
       body: rows.map((r) => [r.ingredient_nom, r.categorie, r.unite, fmt(r.quantite_totale as number), fmt(r.prix_moyen as number), fmt(r.cout_total as number), `${r.pct}%`]) as RowInput[],
       styles: { fontSize: 9 }, headStyles: { fillColor: [99, 102, 241] },
       foot: [['', '', '', '', '', fmt(total) + ' DT', '100%']],
@@ -348,8 +348,8 @@ function RapportCoutMatiere({ filters }: { filters: FilterOptions }) {
 
       <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 20 }}>
         <KpiCard label="Coût total matière" value={`${fmt(total)} DT`} color="#6366f1" />
-        <KpiCard label="Nb ingrédients" value={String(rows.length)} color="#f59e0b" />
-        {rows[0] && <KpiCard label="Top ingrédient" value={rows[0].ingredient_nom as string} sub={`${fmt(rows[0].cout_total as number)} DT — ${rows[0].pct as number}%`} color="#8b5cf6" />}
+        <KpiCard label="Nb articles" value={String(rows.length)} color="#f59e0b" />
+        {rows[0] && <KpiCard label="Top article" value={rows[0].ingredient_nom as string} sub={`${fmt(rows[0].cout_total as number)} DT — ${rows[0].pct as number}%`} color="#8b5cf6" />}
         {data?.byCategorie?.[0] && <KpiCard label="Top catégorie" value={data.byCategorie[0].categorie} sub={`${fmt(data.byCategorie[0].cout_total)} DT`} color="#10b981" />}
       </div>
 
@@ -372,7 +372,7 @@ function RapportCoutMatiere({ filters }: { filters: FilterOptions }) {
                 </ResponsiveContainer>
               </ChartBox>
             )}
-            <ChartBox title="Top 10 ingrédients par coût">
+            <ChartBox title="Top 10 articles par coût">
               <ResponsiveContainer width="100%" height={200}>
                 <BarChart data={rows.slice(0, 10)} layout="vertical" margin={{ left: 10, right: 10 }}>
                   <XAxis type="number" tick={{ fontSize: 10 }} tickFormatter={(v) => `${v} DT`} />
@@ -397,12 +397,12 @@ function RapportCoutMatiere({ filters }: { filters: FilterOptions }) {
             )}
           </div>
 
-          <SectionTitle>Détail ({rows.length} ingrédients)</SectionTitle>
+          <SectionTitle>Détail ({rows.length} articles)</SectionTitle>
           <div style={{ overflowX: 'auto', background: '#fff', borderRadius: 10, border: '1px solid #e5e7eb' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
               <thead>
                 <tr style={{ background: '#f9fafb' }}>
-                  {['Ingrédient', 'Catégorie', 'Unité', 'Qté totale', 'Prix moyen (DT)', 'Coût total (DT)', '% du total'].map((h) => (
+                  {['Article', 'Catégorie', 'Unité', 'Qté totale', 'Prix moyen (DT)', 'Coût total (DT)', '% du total'].map((h) => (
                     <th key={h} style={{ padding: '9px 12px', textAlign: h.startsWith('%') || h.startsWith('Qté') || h.startsWith('Prix') || h.startsWith('Coût') ? 'right' : 'left', borderBottom: '1px solid #e5e7eb', fontWeight: 600, color: '#374151', fontSize: 12, whiteSpace: 'nowrap' }}>{h}</th>
                   ))}
                 </tr>
@@ -475,7 +475,7 @@ function RapportAppros({ filters }: { filters: FilterOptions }) {
 
   const exportExcel = () => {
     downloadExcel(rows.map((r) => ({
-      'Date': fmtDate(r.date_appro as string), 'Ingrédient': r.ingredient_nom,
+      'Date': fmtDate(r.date_appro as string), 'Article': r.ingredient_nom,
       'Catégorie': r.categorie, 'Unité': r.unite, 'Fournisseur': r.fournisseur_nom || '—',
       'Réf. facture': r.ref_facture || '—', 'Type': r.type_appro,
       'Activité': r.activite_nom || '—', 'Quantité': fmt(r.quantite as number),
@@ -489,7 +489,7 @@ function RapportAppros({ filters }: { filters: FilterOptions }) {
     doc.setFontSize(10); doc.setTextColor(100); doc.text(`Période : ${fmtDate(dateFrom)} — ${fmtDate(dateTo)}`, 14, 26);
     autoTable(doc, {
       startY: 32,
-      head: [['Date', 'Ingrédient', 'Catégorie', 'Fournisseur', 'Réf.', 'Qté', 'Prix unit.', 'Total (DT)']],
+      head: [['Date', 'Article', 'Catégorie', 'Fournisseur', 'Réf.', 'Qté', 'Prix unit.', 'Total (DT)']],
       body: rows.map((r) => [fmtDate(r.date_appro as string), r.ingredient_nom, r.categorie, r.fournisseur_nom || '—', r.ref_facture || '—', fmt(r.quantite as number), fmt(r.prix_unitaire as number), fmt(r.total as number)]) as RowInput[],
       styles: { fontSize: 8 }, headStyles: { fillColor: [16, 185, 129] },
       foot: [['', '', '', '', '', '', 'TOTAL', fmt(totalDT) + ' DT']],
@@ -572,7 +572,7 @@ function RapportAppros({ filters }: { filters: FilterOptions }) {
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
               <thead>
                 <tr style={{ background: '#f9fafb' }}>
-                  {['Date', 'Ingrédient', 'Catégorie', 'Unité', 'Fournisseur', 'Réf. facture', 'Type', isEntreprise ? 'Activité' : null, 'Quantité', 'Prix unit.', 'Total (DT)']
+                  {['Date', 'Article', 'Catégorie', 'Unité', 'Fournisseur', 'Réf. facture', 'Type', isEntreprise ? 'Activité' : null, 'Quantité', 'Prix unit.', 'Total (DT)']
                     .filter(Boolean).map((h) => (
                       <th key={h!} style={{ padding: '9px 12px', textAlign: ['Quantité', 'Prix unit.', 'Total (DT)'].includes(h!) ? 'right' : 'left', borderBottom: '1px solid #e5e7eb', fontWeight: 600, color: '#374151', fontSize: 12, whiteSpace: 'nowrap' }}>{h}</th>
                     ))}
@@ -639,7 +639,7 @@ function RapportStock({ filters }: { filters: FilterOptions }) {
 
   const exportExcel = () => {
     downloadExcel(rows.map((r) => ({
-      'Ingrédient': r.ingredient_nom, 'Catégorie': r.categorie, 'Unité': r.unite,
+      'Article': r.ingredient_nom, 'Catégorie': r.categorie, 'Unité': r.unite,
       'Activité': r.activite_nom || '—', 'Quantité': fmt(r.quantite as number),
       'Prix unit. (DT)': fmt(r.prix_unitaire as number), 'Valeur stock (DT)': fmt(r.valeur as number),
       'Seuil min': r.seuil_min ?? '—', 'Alerte': r.alerte,
@@ -652,7 +652,7 @@ function RapportStock({ filters }: { filters: FilterOptions }) {
     doc.setFontSize(10); doc.setTextColor(100); doc.text(`Généré le ${fmtDate(new Date().toISOString())}`, 14, 26);
     autoTable(doc, {
       startY: 32,
-      head: [['Ingrédient', 'Catégorie', 'Unité', 'Quantité', 'Prix unit.', 'Valeur (DT)', 'Alerte']],
+      head: [['Article', 'Catégorie', 'Unité', 'Quantité', 'Prix unit.', 'Valeur (DT)', 'Alerte']],
       body: rows.map((r) => [r.ingredient_nom, r.categorie, r.unite, fmt(r.quantite as number), fmt(r.prix_unitaire as number), fmt(r.valeur as number), r.alerte]) as RowInput[],
       styles: { fontSize: 9 }, headStyles: { fillColor: [245, 158, 11] },
       foot: [['', '', '', '', '', fmt(data?.totalValeur ?? 0) + ' DT', '']],
@@ -691,7 +691,7 @@ function RapportStock({ filters }: { filters: FilterOptions }) {
 
       <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 20 }}>
         <KpiCard label="Valeur totale stock" value={`${fmt(data?.totalValeur ?? 0)} DT`} color="#f59e0b" />
-        <KpiCard label="Nb ingrédients" value={String(data?.rows?.length ?? 0)} />
+        <KpiCard label="Nb articles" value={String(data?.rows?.length ?? 0)} />
         <KpiCard label="⛔ Critiques" value={String(critiques)} color="#ef4444" />
         <KpiCard label="⚠️ Attentions" value={String(attentions)} color="#d97706" />
       </div>
@@ -719,12 +719,12 @@ function RapportStock({ filters }: { filters: FilterOptions }) {
             </div>
           )}
 
-          <SectionTitle>Stock actuel ({rows.length} ingrédients)</SectionTitle>
+          <SectionTitle>Stock actuel ({rows.length} articles)</SectionTitle>
           <div style={{ overflowX: 'auto', background: '#fff', borderRadius: 10, border: '1px solid #e5e7eb' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
               <thead>
                 <tr style={{ background: '#f9fafb' }}>
-                  {['Ingrédient', 'Catégorie', 'Unité', isEntreprise ? 'Activité' : null, 'Quantité', 'Prix unit. (DT)', 'Valeur (DT)', 'Seuil min', 'Statut']
+                  {['Article', 'Catégorie', 'Unité', isEntreprise ? 'Activité' : null, 'Quantité', 'Prix unit. (DT)', 'Valeur (DT)', 'Seuil min', 'Statut']
                     .filter(Boolean).map((h) => (
                       <th key={h!} style={{ padding: '9px 12px', textAlign: ['Quantité', 'Prix unit. (DT)', 'Valeur (DT)', 'Seuil min'].includes(h!) ? 'right' : 'left', borderBottom: '1px solid #e5e7eb', fontWeight: 600, color: '#374151', fontSize: 12, whiteSpace: 'nowrap' }}>{h}</th>
                     ))}

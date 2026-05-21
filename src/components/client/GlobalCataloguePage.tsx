@@ -102,7 +102,7 @@ function EntrepriseIngredientList({
   return (
     <>
       <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginBottom: 12 }}>
-        {totalAssigned} / {ingredients.length} {t('global_catalogue.selected_count', 'ingrédient(s) avec au moins une assignation')}
+        {totalAssigned} / {ingredients.length} {t('global_catalogue.selected_count', 'article(s) avec au moins une assignation')}
       </p>
       {filtered.length === 0 ? (
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 24px' }}>
@@ -291,7 +291,7 @@ function FiltersBar({
       </div>
       {filterCategory && ingredientsInCategory && ingredientsInCategory.length > 0 && onIngIdChange && (
         <div>
-          <label style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>🧂 Ingrédient</label>
+          <label style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>🧂 Article</label>
           <select style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid var(--border)', fontSize: '0.88rem', background: 'var(--background)', minWidth: 160 }} value={filterIngId ?? ''}
             onChange={(e) => onIngIdChange(e.target.value === '' ? '' : Number(e.target.value))}>
             <option value="">— Tous —</option>
@@ -469,8 +469,8 @@ export default function GlobalCataloguePage() {
           </div>
           <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.88rem', margin: 0 }}>
             {isEntreprise
-              ? t('global_catalogue.subtitle_ent', 'Sélectionnez les ingrédients par activité et par labo.')
-              : t('global_catalogue.subtitle', 'Sélectionnez les ingrédients à inclure dans votre catalogue.')}
+              ? t('global_catalogue.subtitle_ent', 'Assignez vos articles par activité et par labo.')
+              : t('global_catalogue.subtitle', 'Assignez vos articles à vos activités.')}
           </p>
         </div>
       </div>
@@ -498,7 +498,7 @@ export default function GlobalCataloguePage() {
       ) : ingredients.length === 0 && !loading ? (
         <div className="empty-state">
           <span className="empty-icon">🧂</span>
-          <p>{t('global_catalogue.no_ingredients', 'Aucun ingrédient disponible.')}</p>
+          <p>{t('global_catalogue.no_ingredients', 'Aucun article disponible.')}</p>
         </div>
       ) : (
         <EntrepriseIngredientList

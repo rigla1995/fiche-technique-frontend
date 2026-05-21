@@ -370,7 +370,7 @@ export default function HistoriquepertesPage() {
             </select>
           </div>
           <div>
-            <label style={{ fontSize: '0.62rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 4 }}>🧂 Ingrédient</label>
+            <label style={{ fontSize: '0.62rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 4 }}>🧂 Article</label>
             <select style={{ padding: '6px 10px', borderRadius: 7, border: '1.5px solid #93c5fd', fontSize: '0.82rem', background: '#eff6ff', minWidth: 130 }} value={fIngredient} onChange={(e) => setFIngredient(e.target.value)} disabled={!fCategorie}>
               <option value="">— Tous —</option>
               {ingredientsInCat.map((i) => <option key={i.id} value={String(i.id)}>{i.nom}</option>)}
@@ -449,7 +449,7 @@ export default function HistoriquepertesPage() {
               <tr style={{ background: 'linear-gradient(135deg, #1e3a8a, #1e40af)' }}>
                 <th style={{ width: 32, textAlign: 'center' }} />
                 {isEntreprise && <th>Activité</th>}
-                <th>Ingrédient</th>
+                <th>Article</th>
                 <th>Date</th>
                 <th>Type</th>
                 <th style={{ textAlign: 'right' }}>Quantité</th>

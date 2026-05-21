@@ -171,20 +171,34 @@ export interface Unit {
 export interface Category {
   id: number;
   name: string;
+  familleId?: number | null;
+  familleName?: string | null;
+  clientId?: number | null;
 }
 
-export interface Ingredient {
+export interface Famille {
+  id: number;
+  name: string;
+  clientId: number;
+}
+
+export interface Article {
   id: number;
   name: string;
   price: number | null;
-  clientPrice: number | null;
-  effectivePrice: number | null;
-  selected?: boolean;
+  seuilMin?: number | null;
   unit: Unit;
   unitId: number;
+  unitName?: string;
   categorieId?: number | null;
   categorieName?: string | null;
+  familleId?: number | null;
+  familleName?: string | null;
+  clientId?: number | null;
 }
+
+// Legacy alias for backward compatibility during migration
+export type Ingredient = Article;
 
 export interface ProductIngredient {
   id?: number;

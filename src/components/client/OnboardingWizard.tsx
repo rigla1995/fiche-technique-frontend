@@ -4,13 +4,12 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../api/client';
 import ActivitesPage from './ActivitesPage';
-import ClientIngredientsCatalog from './ClientIngredientsCatalog';
 
-// Steps: 1=change password, 2=activites, 3=catalogue, 4=done
+// Steps: 1=change password, 2=activites, 3=referentiel articles, 4=done
 const STEPS = [
   { step: 1, label: 'Mot de passe', icon: '🔒' },
   { step: 2, label: 'Mes activités', icon: '🏢' },
-  { step: 3, label: 'Ingrédients', icon: '🧂' },
+  { step: 3, label: 'Mes articles', icon: '🧂' },
 ];
 
 function StepIndicator({ current }: { current: number }) {
@@ -131,6 +130,74 @@ function ActivitesStep({ onDone }: { onDone: () => void }) {
   );
 }
 
+function ArticlesStep({ onDone }: { onDone: () => void }) {
+  const [count, setCount] = useState(0);
+
+  useEffect(() => {
+    api.get('/api/articles/has-articles').then(({ data }) => setCount(data.count || 0)).catch(() => {});
+  }, []);
+
+  const refresh = () => {
+    api.get('/api/articles/has-articles').then(({ data }) => setCount(data.count || 0)).catch(() => {});
+  };
+
+  return (
+    <div style={{ maxWidth: 600, margin: '0 auto' }}>
+      <h2 style={{ marginBottom: 8 }}>Créez vos premiers articles</h2>
+      <p className="text-muted" style={{ marginBottom: 24 }}>
+        Votre référentiel d'articles est votre catalogue personnel. Créez les articles que vous utilisez dans votre activité (ingrédients, matières premières, etc.).
+      </p>
+
+      <div style={{ background: '#fff', borderRadius: 14, border: '1.5px solid #e2e8f0', padding: 24, marginBottom: 20 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 16 }}>
+          <div style={{ width: 48, height: 48, borderRadius: 12, background: '#e0e7ff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24 }}>🧂</div>
+          <div>
+            <div style={{ fontWeight: 700, color: '#1e293b', fontSize: 16 }}>Référentiel Articles</div>
+            <div style={{ color: '#64748b', fontSize: 13 }}>{count} article{count !== 1 ? 's' : ''} créé{count !== 1 ? 's' : ''}</div>
+          </div>
+        </div>
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+          <a
+            href="/client/referentiel/familles"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ background: '#f1f5f9', color: '#475569', borderRadius: 9, padding: '9px 16px', fontSize: 13, fontWeight: 600, textDecoration: 'none', display: 'inline-block' }}
+            onClick={refresh}
+          >
+            🗂️ Gérer les familles
+          </a>
+          <a
+            href="/client/referentiel/categories"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ background: '#f1f5f9', color: '#475569', borderRadius: 9, padding: '9px 16px', fontSize: 13, fontWeight: 600, textDecoration: 'none', display: 'inline-block' }}
+          >
+            🏷️ Gérer les catégories
+          </a>
+          <a
+            href="/client/referentiel/articles"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ background: '#6366f1', color: '#fff', borderRadius: 9, padding: '9px 16px', fontSize: 13, fontWeight: 600, textDecoration: 'none', display: 'inline-block' }}
+            onClick={refresh}
+          >
+            🧂 Créer des articles →
+          </a>
+        </div>
+      </div>
+
+      <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+        <button onClick={refresh} style={{ background: '#f1f5f9', color: '#475569', border: 'none', borderRadius: 9, padding: '9px 18px', fontWeight: 600, cursor: 'pointer' }}>
+          Actualiser
+        </button>
+        <button onClick={onDone} style={{ background: '#6366f1', color: '#fff', border: 'none', borderRadius: 9, padding: '9px 24px', fontWeight: 700, cursor: 'pointer' }}>
+          {count > 0 ? `Continuer (${count} article${count > 1 ? 's' : ''}) →` : 'Ignorer et continuer →'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function OnboardingWizard() {
   const { user, advanceOnboarding } = useAuth();
   const navigate = useNavigate();
@@ -157,15 +224,7 @@ export default function OnboardingWizard() {
       <div style={{ marginTop: 32 }}>
         {step === 1 && <PasswordStep onDone={() => goNext(2)} />}
         {step === 2 && <ActivitesStep onDone={() => goNext(3)} />}
-        {step === 3 && (
-          <div>
-            <h2 style={{ marginBottom: 8 }}>Sélectionnez vos ingrédients</h2>
-            <p className="text-muted" style={{ marginBottom: 24 }}>
-              Choisissez les ingrédients avec lesquels vous travaillez.
-            </p>
-            <ClientIngredientsCatalog embedded onSelectionDone={() => goNext(0)} />
-          </div>
-        )}
+        {step === 3 && <ArticlesStep onDone={() => goNext(0)} />}
       </div>
     </div>
   );

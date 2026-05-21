@@ -58,7 +58,7 @@ function PrixModal({
         </div>
         <div style={{ padding: '20px 22px' }}>
           <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: 18 }}>
-            Cet ingrédient sera ajouté au catalogue vendable et pourra être vendu à l'unité ({ingredient.unite_nom}).
+            Cet article sera ajouté au catalogue vendable et pourra être vendu à l'unité ({ingredient.unite_nom}).
           </p>
           <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, marginBottom: 6 }}>Prix de vente (DT / {ingredient.unite_nom})</label>
           <input
@@ -168,7 +168,7 @@ export default function CatalogueVentePage() {
             <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0 }}>Catalogue Vente</h1>
           </div>
           <p style={{ color: 'rgba(255,255,255,0.82)', fontSize: '0.85rem', margin: 0 }}>
-            Activez la vente au détail sur les ingrédients de vos activités
+            Activez la vente au détail sur les articles de vos activités
           </p>
         </div>
         {vendableCount > 0 && (
@@ -204,7 +204,7 @@ export default function CatalogueVentePage() {
       ) : loading ? (
         <p className="text-muted">Chargement…</p>
       ) : ingredients.length === 0 ? (
-        <p className="text-muted">Aucun ingrédient assigné à cette activité. Assignez des ingrédients depuis le Catalogue Global.</p>
+        <p className="text-muted">Aucun article assigné à cette activité.</p>
       ) : (
         <>
           {/* Bandeau nom d'activité — style section sombre */}

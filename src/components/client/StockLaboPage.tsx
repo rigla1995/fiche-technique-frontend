@@ -541,7 +541,7 @@ export default function StockLaboPage() {
               </div>
               {/* Ingrédient */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                <label style={{ fontSize: '0.62rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>🧂 Ingrédient</label>
+                <label style={{ fontSize: '0.62rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>🧂 Article</label>
                 <select style={{ padding: '6px 10px', borderRadius: 7, border: '1.5px solid var(--border)', fontSize: '0.82rem', background: 'var(--background)', minWidth: 140 }} value={sFilterIngId} disabled={!sFilterCat} onChange={(e) => setSFilterIngId(e.target.value)}>
                   <option value="">— Tous —</option>
                   {stockInCat.map((r) => <option key={r.ingredientId} value={String(r.ingredientId)}>{r.nom}</option>)}
@@ -775,7 +775,7 @@ export default function StockLaboPage() {
                                       </td>
                                       <td style={{ textAlign: 'center', padding: '10px 14px', verticalAlign: 'middle' }}>
                                         {r.isPT ? (
-                                          <span title="Calculé automatiquement depuis les prix des ingrédients du labo">
+                                          <span title="Calculé automatiquement depuis les prix des articles du labo">
                                             {r.prixCalcule != null && r.prixCalcule > 0 ? (
                                               <span style={{ fontSize: '0.88rem', color: '#7c3aed', fontWeight: 600 }}>{r.prixCalcule.toFixed(3)}</span>
                                             ) : r.prixUnitaire != null ? (
@@ -809,7 +809,7 @@ export default function StockLaboPage() {
                                           )}
                                           {r.isPT && r.produitId && (
                                             <>
-                                              <button className="btn btn-ghost btn-sm" title="Stock des ingrédients relatifs" onClick={() => { fetchPtRecipe(r.produitId!); setPtStockModal({ produitId: r.produitId!, nom: r.nom }); }}>📊</button>
+                                              <button className="btn btn-ghost btn-sm" title="Stock des articles relatifs" onClick={() => { fetchPtRecipe(r.produitId!); setPtStockModal({ produitId: r.produitId!, nom: r.nom }); }}>📊</button>
                                               {canWrite && (
                                                 <button className="btn btn-ghost btn-sm" title="Portions personnalisées pour cette appro" onClick={() => setPortionsModal({ produitId: r.produitId!, nom: r.nom })}>⚙️</button>
                                               )}
@@ -923,14 +923,14 @@ export default function StockLaboPage() {
                   </select>
                 </div>
                 <div>
-                  <label style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>🧂 Ingrédient</label>
+                  <label style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>🧂 Article</label>
                   <select style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid var(--border)', fontSize: '0.88rem', background: 'var(--background)', minWidth: 160 }} value={iFilterIngId} disabled={!iFilterCat} onChange={(e) => setIFilterIngId(e.target.value)}>
                     <option value="">— Tous —</option>
                     {ingInCat.map((i) => <option key={i.ingredientId} value={String(i.ingredientId)}>{i.nom}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>🔍 Nom ingrédient</label>
+                  <label style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>🔍 Nom article</label>
                   <input type="text" style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid var(--border)', fontSize: '0.88rem', background: 'var(--background)', minWidth: 160 }} placeholder="Rechercher…" value={iFilterNom} onChange={(e) => setIFilterNom(e.target.value)} />
                 </div>
               </div>
@@ -942,7 +942,7 @@ export default function StockLaboPage() {
           ) : (assignments?.ingredients ?? []).length === 0 ? (
             <div className="empty-state">
               <span className="empty-icon">🧂</span>
-              <p style={{ color: 'var(--text-muted)' }}>Aucun ingrédient assigné à ce labo. Utilisez le Catalogue Global pour en ajouter.</p>
+              <p style={{ color: 'var(--text-muted)' }}>Aucun article assigné à ce labo.</p>
             </div>
           ) : activites.length === 0 ? (
             <div className="empty-state">
@@ -1036,7 +1036,7 @@ export default function StockLaboPage() {
                 <>
                   <div style={{ background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: 8, padding: '14px 16px', textAlign: 'center', marginBottom: 16 }}>
                     <p style={{ margin: 0, color: '#92400e', fontWeight: 600, fontSize: '0.9rem' }}>
-                      Aucun approvisionnement enregistré pour cet ingrédient cette année.
+                      Aucun approvisionnement enregistré pour cet article cette année.
                     </p>
                     <p style={{ margin: '6px 0 0', color: '#b45309', fontSize: '0.8rem' }}>
                       Enregistrez d'abord un appro avant de déclarer une perte.
@@ -1181,7 +1181,7 @@ export default function StockLaboPage() {
                     <table className="table" style={{ fontSize: '0.85rem' }}>
                       <thead>
                         <tr>
-                          <th>Ingrédient</th>
+                          <th>Article</th>
                           <th style={{ textAlign: 'right' }}>Portion</th>
                           <th style={{ textAlign: 'right' }}>Stock actuel</th>
                           <th style={{ textAlign: 'right' }}>Max PT</th>

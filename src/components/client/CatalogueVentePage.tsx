@@ -6,11 +6,6 @@ import type { Activite, ActiviteIngredient } from '../../types';
 const apiMsg = (e: unknown, fallback = 'Erreur') =>
   (e as { response?: { data?: { message?: string } } })?.response?.data?.message ?? fallback;
 
-const fmtMoney = (n: number | null | undefined) => {
-  if (n == null) return '—';
-  return n.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' DT';
-};
-
 const C = '#b45309';
 const CD = '#78350f';
 const CL = '#fffbeb';

@@ -323,7 +323,7 @@ export default function HistoriqueInventairePage() {
                 </select>
               </div>
               <div>
-                <label style={{ fontSize: '0.65rem', fontWeight: 800, color: themeColor, textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 3 }}>🧂 Ingrédient</label>
+                <label style={{ fontSize: '0.65rem', fontWeight: 800, color: themeColor, textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 3 }}>🧂 Article</label>
                 <select value={filterIngredientId} onChange={(e) => setFilterIngredientId(e.target.value)}
                   style={{ padding: '6px 10px', borderRadius: 8, border: `1.5px solid ${themeBorder}`, fontSize: '0.83rem', background: themeLight, minWidth: 140 }}>
                   <option value="">Tous</option>
@@ -379,7 +379,7 @@ export default function HistoriqueInventairePage() {
                 <thead>
                   <tr style={{ background: `linear-gradient(135deg, ${themeDark}, ${themeColor})` }}>
                     <th style={{ padding: '12px 14px', textAlign: 'center', width: 40, color: '#fff', background: 'transparent', borderBottom: 'none' }} />
-                    {['Ingrédient', 'Date', 'Qté réelle', 'Note', 'Par'].map((h) => (
+                    {['Article', 'Date', 'Qté réelle', 'Note', 'Par'].map((h) => (
                       <th key={h} style={{ padding: '12px 14px', textAlign: h === 'Qté réelle' ? 'right' : 'left', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', color: '#fff', background: 'transparent', borderBottom: 'none' }}>{h}</th>
                     ))}
                     <th style={{ padding: '12px 14px', textAlign: 'center', fontWeight: 800, fontSize: '0.78rem', textTransform: 'uppercase', color: '#fff', background: 'transparent', borderBottom: 'none' }}>Action</th>

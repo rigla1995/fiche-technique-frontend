@@ -472,15 +472,15 @@ export default function ConfigurationVentePage() {
                     </div>
                   )}
 
-                  {/* ── Bloc 3 : Ingrédients vendables ── */}
+                  {/* ── Bloc 3 : Articles vendables ── */}
                   <div style={{ borderTop: `1.5px solid ${CB}`, paddingTop: 20 }}>
                     <div style={{ fontWeight: 800, fontSize: '0.85rem', color: CD, marginBottom: 10, display: 'flex', alignItems: 'center', gap: 8 }}>
-                      🧂 Ingrédients vendables (catalogue)
+                      🧂 Articles vendables (catalogue)
                       <span style={{ fontWeight: 400, fontSize: '0.75rem', color: 'var(--text-muted)' }}>({ingItems.length})</span>
                     </div>
                     {ingItems.length === 0 ? (
                       <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '24px 0', fontSize: '0.85rem' }}>
-                        Aucun ingrédient vendable actif.{' '}
+                        Aucun article vendable actif.{' '}
                         <Link to={`/client/ventes/catalogue${selectedActiviteId ? `?activiteId=${selectedActiviteId}` : ''}`} style={{ color: C, fontWeight: 600 }}>
                           Configurer le catalogue →
                         </Link>
@@ -490,7 +490,7 @@ export default function ConfigurationVentePage() {
                         <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 400 }}>
                           <thead>
                             <tr style={{ background: CL, borderBottom: `2px solid ${CB}` }}>
-                              <th style={{ padding: '10px 14px', textAlign: 'left', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>Ingrédient</th>
+                              <th style={{ padding: "10px 14px", textAlign: "left", fontSize: "0.78rem", fontWeight: 800, color: C, textTransform: "uppercase", letterSpacing: "0.05em", whiteSpace: "nowrap" }}>Article</th>
                               <th style={{ padding: '10px 14px', textAlign: 'center', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>
                                 🏪 Vente directe
                               </th>

@@ -172,7 +172,7 @@ function DeleteModal({ entry, onConfirm, onClose }: DeleteModalProps) {
         <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           <div style={{ background: '#f8faff', borderRadius: 8, padding: '12px 14px', border: '1px solid #e2e8f0' }}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px 12px', fontSize: '0.83rem' }}>
-              <span style={{ color: 'var(--text-muted)', fontWeight: 600 }}>Ingrédient</span>
+              <span style={{ color: 'var(--text-muted)', fontWeight: 600 }}>Article</span>
               <span style={{ fontWeight: 700 }}>{entry.ingredientNom}</span>
               <span style={{ color: 'var(--text-muted)', fontWeight: 600 }}>Date</span>
               <span style={{ fontWeight: 700 }}>{fmtDate(entry.dateAppro)}</span>
@@ -181,7 +181,7 @@ function DeleteModal({ entry, onConfirm, onClose }: DeleteModalProps) {
             </div>
           </div>
           <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 8, padding: '8px 12px', fontSize: '0.82rem', color: '#1e40af', fontWeight: 600 }}>
-            📊 Impact stock : le stock de cet ingrédient sera recalculé après suppression.
+            📊 Impact stock : le stock de cet article sera recalculé après suppression.
           </div>
           {entry.typeAppro === 'transfert' && (
             <div style={{ background: '#fef3c7', border: '1px solid #fde68a', borderRadius: 8, padding: '8px 12px', fontSize: '0.82rem', color: '#92400e' }}>
@@ -485,7 +485,7 @@ export default function HistoriqueApproPage() {
             </select>
           </div>
           <div>
-            <label style={{ fontSize: '0.62rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 4 }}>🧂 Ingrédient</label>
+            <label style={{ fontSize: '0.62rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 4 }}>🧂 Article</label>
             <select style={{ padding: '6px 10px', borderRadius: 7, border: '1.5px solid #93c5fd', fontSize: '0.82rem', background: '#eff6ff', minWidth: 130 }}
               value={selectedIngredientId} onChange={(e) => setSelectedIngredientId(e.target.value)} disabled={!selectedCategoryId}>
               <option value="">{t('client.historique_appro.all_ingredients')}</option>
@@ -557,7 +557,7 @@ export default function HistoriqueApproPage() {
               <thead>
                 <tr style={{ background: 'linear-gradient(135deg, #1e3a8a, #1e40af)' }}>
                   <th style={{ width: 28, padding: '10px 4px', color: '#fff', background: 'transparent', borderBottom: 'none' }} />
-                  {(['Ingrédient', 'Date'] as const).map((label) => (
+                  {(['Article', 'Date'] as const).map((label) => (
                     <th key={label} style={{ fontWeight: 800, fontSize: '0.75rem', letterSpacing: '0.04em', textTransform: 'uppercase', padding: '10px 10px', color: '#fff', background: 'transparent', borderBottom: 'none' }}>{label}</th>
                   ))}
                   {(['Quantité', 'Prix U. HT', 'TVA %', 'Prix U. TTC'] as const).map((label) => (

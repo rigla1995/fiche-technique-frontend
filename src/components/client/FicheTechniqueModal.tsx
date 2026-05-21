@@ -360,7 +360,7 @@ export default function FicheTechniqueModal({ productId, productName, hasIngredi
                   📦 FP Stock
                 </div>
                 <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: mode === 'stock' ? 8 : 0 }}>
-                  {!hasIngredients ? 'Aucun ingrédient' : 'Utilise les derniers prix d\'appro'}
+                  {!hasIngredients ? 'Aucun article' : 'Utilise les derniers prix d\'appro'}
                 </div>
                 {mode === 'stock' && (
                   <div style={{ marginTop: 4 }} onClick={(e) => e.stopPropagation()}>
@@ -405,7 +405,7 @@ export default function FicheTechniqueModal({ productId, productName, hasIngredi
                         ) : stockCheckResult && !stockCheckResult.complete ? (
                           <div>
                             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: '0.78rem', fontWeight: 600, color: '#b45309', background: '#fef3c7', borderRadius: 20, padding: '3px 10px', marginBottom: 6 }}>
-                              ⚠ {stockCheckResult.missing.length} ingrédient(s) manquant(s)
+                              ⚠ {stockCheckResult.missing.length} article(s) manquant(s)
                             </span>
                             <button
                               className="btn btn-sm"
@@ -434,7 +434,7 @@ export default function FicheTechniqueModal({ productId, productName, hasIngredi
                   ✏️ FP Manuel
                 </div>
                 <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: mode === 'manual' ? 10 : 0 }}>
-                  {!hasIngredients ? 'Aucun ingrédient' : 'Saisissez vos prix manuellement'}
+                  {!hasIngredients ? 'Aucun article' : 'Saisissez vos prix manuellement'}
                 </div>
                 {mode === 'manual' && (
                   <div>
@@ -514,7 +514,7 @@ export default function FicheTechniqueModal({ productId, productName, hasIngredi
         <div className="modal-overlay" style={{ zIndex: 1050 }}>
           <div className="modal" style={{ maxWidth: 560 }} onClick={(e) => e.stopPropagation()}>
             <div className="modal-header modal-header--primary">
-              <h2>Prix Ingrédients — {productName}</h2>
+              <h2>Prix Articles — {productName}</h2>
               <button className="modal-close" onClick={() => setShowManualPopup(false)}>×</button>
             </div>
             <div className="modal-body">
@@ -666,7 +666,7 @@ export default function FicheTechniqueModal({ productId, productName, hasIngredi
                       </select>
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                      <span style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Ingrédient (liste)</span>
+                      <span style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Article (liste)</span>
                       <select className="input" style={{ maxWidth: 200, fontSize: '0.85rem' }}
                         value={missingIngFilter}
                         disabled={!missingCatFilter}
@@ -678,7 +678,7 @@ export default function FicheTechniqueModal({ productId, productName, hasIngredi
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
                       <span style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Recherche</span>
                       <input type="text" className="input" style={{ maxWidth: 180, fontSize: '0.85rem' }}
-                        placeholder="Nom d'ingrédient…"
+                        placeholder="Nom d'article…"
                         value={missingNameFilter}
                         onChange={(e) => setMissingNameFilter(e.target.value)} />
                     </div>
@@ -707,7 +707,7 @@ export default function FicheTechniqueModal({ productId, productName, hasIngredi
                   if (missingIngFilter !== '') filtered = filtered.filter((i) => i.ingredientId === missingIngFilter);
                   if (missingNameFilter) filtered = filtered.filter((i) => i.nom.toLowerCase().includes(missingNameFilter.toLowerCase()));
 
-                  if (filtered.length === 0) return <p style={{ color: 'var(--text-muted)', textAlign: 'center', padding: 20 }}>Aucun ingrédient trouvé.</p>;
+                  if (filtered.length === 0) return <p style={{ color: 'var(--text-muted)', textAlign: 'center', padding: 20 }}>Aucun article trouvé.</p>;
 
                   // Group by category
                   const catMap: Record<string, typeof filtered> = {};
@@ -838,7 +838,7 @@ export default function FicheTechniqueModal({ productId, productName, hasIngredi
                                       }}
                                     />
                                   </th>
-                                  <th>Ingrédient</th>
+                                  <th>Article</th>
                                   <th style={{ textAlign: 'right' }}>Qté</th>
                                   <th style={{ textAlign: 'right' }}>Prix (DT)</th>
                                   <th>Date d'appro</th>
@@ -868,7 +868,7 @@ export default function FicheTechniqueModal({ productId, productName, hasIngredi
                     <button className="btn btn-primary"
                       style={{ background: allFilled ? 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)' : '#d1d5db', borderColor: 'transparent', cursor: allFilled ? 'pointer' : 'not-allowed' }}
                       disabled={savingMissing || !allFilled}
-                      title={!allFilled ? 'Renseignez la quantité et le prix (> 0) pour tous les ingrédients' : undefined}
+                      title={!allFilled ? 'Renseignez la quantité et le prix (> 0) pour tous les articles' : undefined}
                       onClick={saveMissingStock}>
                       {savingMissing ? t('common.loading') : t('common.save')}
                     </button>
@@ -889,7 +889,7 @@ export default function FicheTechniqueModal({ productId, productName, hasIngredi
                 <span style={{ fontSize: '1.6rem', lineHeight: 1 }}>⚠️</span>
                 <div>
                   <div style={{ fontWeight: 700, fontSize: '1rem', color: '#fff' }}>Prix incomplets</div>
-                  <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.85)', marginTop: 2 }}>Ces ingrédients ont un prix à 0 — corrigez-les avant d'enregistrer.</div>
+                  <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.85)', marginTop: 2 }}>Ces articles ont un prix à 0 — corrigez-les avant d'enregistrer.</div>
                 </div>
               </div>
               <button onClick={() => setShowZeroWarning(false)} style={{ background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: 8, color: '#fff', fontWeight: 700, fontSize: '1rem', padding: '2px 8px', cursor: 'pointer', lineHeight: 1.4 }}>×</button>

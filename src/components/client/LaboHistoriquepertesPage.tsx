@@ -228,7 +228,7 @@ export default function LaboHistoriquepertesPage() {
             </select>
           </div>
           <div>
-            <label style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 3 }}>🧂 Ingrédient</label>
+            <label style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 3 }}>🧂 Article</label>
             <select style={{ padding: '6px 10px', borderRadius: 8, border: '1.5px solid var(--border)', fontSize: '0.83rem', background: 'var(--bg)', minWidth: 130 }} value={fIngredient} disabled={!fCategorie} onChange={(e) => setFIngredient(e.target.value)}>
               <option value="">— Tous —</option>
               {ingredientsInCat.map((i) => <option key={i.id} value={i.id}>{i.nom}</option>)}
@@ -281,7 +281,7 @@ export default function LaboHistoriquepertesPage() {
               <thead>
                 <tr style={{ background: 'linear-gradient(135deg, #3b0764, #7e22ce)' }}>
                   <th style={{ width: 40, textAlign: 'center', padding: '12px 14px', color: '#fff', background: 'transparent', borderBottom: 'none' }} />
-                  {['Ingrédient', 'Date', 'Type', 'Quantité', ...(hasCout ? ['Coût'] : [])].map((h) => (
+                  {['Article', 'Date', 'Type', 'Quantité', ...(hasCout ? ['Coût'] : [])].map((h) => (
                     <th key={h} style={{ fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px', color: '#fff', background: 'transparent', borderBottom: 'none' }}>{h}</th>
                   ))}
                 </tr>

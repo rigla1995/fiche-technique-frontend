@@ -88,10 +88,7 @@ export default function ProductForm() {
     const mapActiviteIngredient = (i: import('../../types').ActiviteIngredient): Ingredient => ({
       id: i.id,
       name: i.nom,
-      price: i.prix,
-      clientPrice: i.prixUnitaire,
-      effectivePrice: i.prixUnitaire ?? i.prix,
-      selected: true,
+      price: i.prix ?? i.prixUnitaire ?? null,
       unit: { id: 0, name: i.unite },
       unitId: 0,
       categorieId: i.categorieId,
@@ -128,7 +125,7 @@ export default function ProductForm() {
         if (selectedActId) {
           ingData = (ing.data as import('../../types').ActiviteIngredient[]).map(mapActiviteIngredient);
         } else {
-          ingData = (ing.data as Ingredient[]).filter((i) => i.selected);
+          ingData = ing.data as Ingredient[];
         }
         setProducts((prod.data as Product[]).filter((p) => p.type === 'utilisable' && (!id || String(p.id) !== id)));
 
@@ -144,9 +141,6 @@ export default function ProductForm() {
                 id: ing.ingredientId,
                 name: ing.ingredientName || String(ing.ingredientId),
                 price: ing.unitPrice ?? 0,
-                clientPrice: null,
-                effectivePrice: ing.unitPrice ?? 0,
-                selected: true,
                 unit: { id: ing.unitId || 0, name: ing.unitName || '' },
                 unitId: ing.unitId || 0,
                 categorieId: null,
@@ -378,9 +372,9 @@ export default function ProductForm() {
       {hasNoIngredients ? (
         <div style={{ maxWidth: 540, background: '#fef3c7', border: '1px solid #fde68a', borderRadius: 14, padding: '28px 32px', textAlign: 'center' }}>
           <div style={{ fontSize: '2rem', marginBottom: 12 }}>⚠️</div>
-          <div style={{ fontWeight: 700, fontSize: '1rem', color: '#92400e', marginBottom: 8 }}>Aucun ingrédient disponible</div>
+          <div style={{ fontWeight: 700, fontSize: '1rem', color: '#92400e', marginBottom: 8 }}>Aucun article disponible</div>
           <div style={{ fontSize: '0.88rem', color: '#78350f', lineHeight: 1.5 }}>
-            Aucun ingrédient n'est encore disponible pour cette activité. Rendez-vous dans le Catalogue Ingrédients pour en ajouter.
+            Aucun article disponible pour cette activité. Créez des articles dans votre référentiel.
           </div>
           <button className="btn btn-ghost" style={{ marginTop: 20 }} onClick={() => navigate(buildBackUrl(productType))}>
             ← Retour à la liste
@@ -426,7 +420,7 @@ export default function ProductForm() {
             </div>
           </div>
 
-          {/* ── Card: Ingrédients ── */}
+          {/* ── Card: Articles ── */}
           <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
             <div style={{ padding: '14px 24px', borderBottom: '1px solid var(--border)', background: 'linear-gradient(135deg,#f0fdf4,#dcfce7)', display: 'flex', alignItems: 'center', gap: 10 }}>
               <div style={{ width: 32, height: 32, borderRadius: 9, background: 'linear-gradient(135deg,#22c55e,#16a34a)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem' }}>🧂</div>

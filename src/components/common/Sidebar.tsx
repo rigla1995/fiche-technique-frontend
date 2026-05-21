@@ -174,7 +174,7 @@ function GerantSidebarContent({
         <CollapsibleHeader label={`Espace ${activiteNom}`} icon="📍" isOpen={openSections.has('gerant-activite')} locked={false} onToggle={() => toggleSection('gerant-activite')} />
         {openSections.has('gerant-activite') && (
           <>
-            <li><NavLink to={`/client/catalogue-global?activiteId=${activiteId}`} className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}><span className="link-icon">🧂</span><span className="link-label">Ingrédients</span></NavLink></li>
+            <li><NavLink to={`/client/catalogue-global?activiteId=${activiteId}`} className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}><span className="link-icon">🧂</span><span className="link-label">Articles</span></NavLink></li>
             <li><Link to={`/client/stock?section=activite&activiteId=${activiteId}`} className={`sidebar-link ${location.pathname === '/client/stock' && currentSection === 'activite' ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📦</span><span className="link-label">Stock Activité</span></Link></li>
             <li><Link to={`/client/stock/historique?activiteId=${activiteId}`} className={`sidebar-link ${isHistoriquePage ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📋</span><span className="link-label">Historique Appro</span></Link></li>
             <li><Link to={`/client/stock/historique-pertes?activiteId=${activiteId}`} className={`sidebar-link ${isHistoriquepertesPage ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📉</span><span className="link-label">Historique Pertes</span></Link></li>
@@ -299,7 +299,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
     </div>
   ) : isEntreprise && hasActivitesOrLabos && !hasIngredientsAnywhere ? (
     <div style={{ background: '#e0f2fe', borderRadius: 8, padding: '10px 12px', margin: '8px 12px', fontSize: '0.78rem', color: '#0369a1', lineHeight: 1.5 }}>
-      🌐 Assignez vos ingrédients via le <strong>Catalogue Global</strong> pour débloquer les fonctionnalités.
+      🧂 Assignez vos articles depuis votre référentiel pour débloquer les fonctionnalités.
     </div>
   ) : null;
 
@@ -583,22 +583,14 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
                   <Divider />
 
-                  {/* ══ CATALOGUE GLOBAL ══ — unlocks when activités or labos exist */}
-                  <li>
-                    {!hasActivitesOrLabos ? (
-                      <LockedLink label="Catalogue Global" reason="Créez d'abord une activité ou un labo" />
-                    ) : (
-                      <NavLink to="/client/catalogue-global" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>
-                        <span className="link-icon">🌐</span><span className="link-label">Catalogue Global</span>
-                      </NavLink>
-                    )}
-                  </li>
-                  {hasActivitesOrLabos && (
-                    <li>
-                      <span style={{ display: 'block', padding: '2px 18px 8px', fontSize: '0.71rem', color: 'var(--text-muted)', lineHeight: 1.45 }}>
-                        Assignez les ingrédients à vos activités et labos
-                      </span>
-                    </li>
+                  {/* ══ RÉFÉRENTIEL ══ */}
+                  <CollapsibleHeader label="Référentiel" icon="📚" isOpen={openSections.has('referentiel')} locked={false} onToggle={() => toggleSection('referentiel')} />
+                  {openSections.has('referentiel') && (
+                    <>
+                      <li><NavLink to="/client/referentiel/familles" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}><span className="link-icon">🗂️</span><span className="link-label">Familles</span></NavLink></li>
+                      <li><NavLink to="/client/referentiel/categories" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}><span className="link-icon">🏷️</span><span className="link-label">Catégories</span></NavLink></li>
+                      <li><NavLink to="/client/referentiel/articles" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}><span className="link-icon">🧂</span><span className="link-label">Articles</span></NavLink></li>
+                    </>
                   )}
 
                   {/* Demandes — toujours actif */}

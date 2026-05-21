@@ -6,12 +6,13 @@ import LoginPage from './components/auth/LoginPage';
 import InvitePage from './components/auth/InvitePage';
 import ClientsManagement from './components/admin/ClientsManagement';
 import UnitsManagement from './components/admin/UnitsManagement';
-import IngredientsManagement from './components/admin/IngredientsManagement';
 import CategoriesManagement from './components/admin/CategoriesManagement';
 import DomainesManagement from './components/admin/DomainesManagement';
 import ProductList from './components/client/ProductList';
 import ProductForm from './components/client/ProductForm';
-import ClientIngredientsCatalog from './components/client/ClientIngredientsCatalog';
+import ReferentielFamillesPage from './components/client/ReferentielFamillesPage';
+import ReferentielCategoriesPage from './components/client/ReferentielCategoriesPage';
+import ReferentielArticlesPage from './components/client/ReferentielArticlesPage';
 import Profile from './components/client/Profile';
 import ActivitesPage from './components/client/ActivitesPage';
 import StockPage from './components/client/StockPage';
@@ -96,7 +97,7 @@ export default function App() {
             <Route path="/admin" element={<Navigate to="/admin/rapports" replace />} />
             <Route path="/admin/clients" element={<ClientsManagement />} />
             <Route path="/admin/units" element={<UnitsManagement />} />
-            <Route path="/admin/ingredients" element={<IngredientsManagement />} />
+            {/* /admin/ingredients supprimé — admin ne gère plus les articles */}
             <Route path="/admin/categories" element={<CategoriesManagement />} />
             <Route path="/admin/domaines" element={<DomainesManagement />} />
             <Route path="/admin/rapports" element={<AdminRapportsPage />} />
@@ -117,7 +118,9 @@ export default function App() {
             <Route path="/client/products/new" element={<ProductForm />} />
             <Route path="/client/products/:id/edit" element={<ProductForm />} />
             <Route path="/client/catalogue-global" element={<GlobalCataloguePage />} />
-            <Route path="/client/ingredients" element={<ClientIngredientsCatalog />} />
+            <Route path="/client/referentiel/familles" element={<ReferentielFamillesPage />} />
+            <Route path="/client/referentiel/categories" element={<ReferentielCategoriesPage />} />
+            <Route path="/client/referentiel/articles" element={<ReferentielArticlesPage />} />
             <Route path="/client/profile" element={<Profile />} />
             <Route path="/client/activites" element={<ActivitesPage />} />
             <Route path="/client/stock" element={<StockPage />} />

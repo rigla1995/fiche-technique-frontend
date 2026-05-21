@@ -162,7 +162,7 @@ function PerteModal({ ingredientId, nom, activiteId, stockDisponible, onSaveOver
           ) : !dateMin ? (
             <div style={{ background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: 8, padding: '14px 16px', textAlign: 'center' }}>
               <p style={{ margin: 0, color: '#92400e', fontWeight: 600, fontSize: '0.9rem' }}>
-                Aucun approvisionnement enregistré pour cet ingrédient.
+                Aucun approvisionnement enregistré pour cet article.
               </p>
               <p style={{ margin: '6px 0 0', color: '#b45309', fontSize: '0.8rem' }}>
                 Enregistrez d'abord un appro avant de déclarer une perte.
@@ -774,7 +774,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                     <table className="table" style={{ fontSize: '0.85rem' }}>
                       <thead>
                         <tr>
-                          <th>Ingrédient</th>
+                          <th>Article</th>
                           <th style={{ textAlign: 'right' }}>Portion</th>
                           <th style={{ textAlign: 'right' }}>Stock actuel</th>
                           <th style={{ textAlign: 'right' }}>Max PT</th>
@@ -1008,7 +1008,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                                 style={{ width: 80, textAlign: 'right', padding: '5px 8px', borderRadius: 7, fontSize: '0.85rem', ...warnStyle }}
                                 className="input"
                                 disabled={!canWrite}
-                                title={entry.isPT && entry.prixPartiel ? '⚠️ Prix incomplet pour certains ingrédients — calcul partiel' : undefined}
+                                title={entry.isPT && entry.prixPartiel ? '⚠️ Prix incomplet pour certains articles — calcul partiel' : undefined}
                               />
                               {entry.isPT && (entry.prixUnitaire ?? 0) > 0 && parseFloat(row.quantite) > 0 && (
                                 <div style={{ fontSize: '0.7rem', color: '#2563eb', marginTop: 2 }}>
@@ -1051,7 +1051,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                                 {row.error && <span style={{ color: 'var(--danger)', fontSize: '0.75rem', fontWeight: 700 }}>⚠</span>}
                                 {entry.isPT && entry.produitId && (
                                   <>
-                                    <button className="btn btn-ghost btn-sm" title="Stock des ingrédients relatifs" style={{ fontSize: '0.78rem', padding: '3px 8px' }} onClick={() => { fetchPtRecipe(entry.produitId!); setPtStockModal({ produitId: entry.produitId!, nom: entry.nom }); }}>📊</button>
+                                    <button className="btn btn-ghost btn-sm" title="Stock des articles relatifs" style={{ fontSize: '0.78rem', padding: '3px 8px' }} onClick={() => { fetchPtRecipe(entry.produitId!); setPtStockModal({ produitId: entry.produitId!, nom: entry.nom }); }}>📊</button>
                                     {canWrite && (
                                       <button className="btn btn-ghost btn-sm" title="Portions personnalisées" style={{ fontSize: '0.78rem', padding: '3px 8px' }} onClick={() => setPortionsModal({ produitId: entry.produitId!, nom: entry.nom })}>⚙️</button>
                                     )}
@@ -1257,7 +1257,7 @@ function ActivityStockSection({ label: _label, activities, initialActiviteId, on
           </div>
           {/* Ingrédient */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            <label style={{ fontSize: '0.62rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>🧂 Ingrédient</label>
+            <label style={{ fontSize: '0.62rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>🧂 Article</label>
             <select style={{ padding: '6px 10px', borderRadius: 7, border: '1.5px solid var(--border)', fontSize: '0.82rem', background: 'var(--background)', minWidth: 140 }} value={ingredientFilter} disabled={!categoryFilter}
               onChange={(e) => setIngredientFilter(e.target.value === '' ? '' : Number(e.target.value))}>
               <option value="">— Tous —</option>
