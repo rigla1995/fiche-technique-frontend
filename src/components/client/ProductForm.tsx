@@ -126,7 +126,7 @@ export default function ProductForm() {
         setCategories(cat.data as Category[]);
         let ingData: Ingredient[];
         if (selectedActId) {
-          ingData = (ing.data as import('../../types').ActiviteIngredient[]).filter((i) => i.selected).map(mapActiviteIngredient);
+          ingData = (ing.data as import('../../types').ActiviteIngredient[]).map(mapActiviteIngredient);
         } else {
           ingData = (ing.data as Ingredient[]).filter((i) => i.selected);
         }
@@ -380,7 +380,7 @@ export default function ProductForm() {
           <div style={{ fontSize: '2rem', marginBottom: 12 }}>⚠️</div>
           <div style={{ fontWeight: 700, fontSize: '1rem', color: '#92400e', marginBottom: 8 }}>Aucun ingrédient disponible</div>
           <div style={{ fontSize: '0.88rem', color: '#78350f', lineHeight: 1.5 }}>
-            Aucun ingrédient n'est encore sélectionné pour cette activité. Rendez-vous dans le Catalogue Ingrédients pour les sélectionner.
+            Aucun ingrédient n'est encore disponible pour cette activité. Rendez-vous dans le Catalogue Ingrédients pour en ajouter.
           </div>
           <button className="btn btn-ghost" style={{ marginTop: 20 }} onClick={() => navigate(buildBackUrl(productType))}>
             ← Retour à la liste
