@@ -44,7 +44,7 @@ export default function ProductList() {
   const [selectedActiviteId, setSelectedActiviteId] = useState<number | null>(null);
 
   // Add product modal state
-  type AddStep = 1 | 2 | 3;
+  type AddStep = 1 | 2 | 3 | 4 | 5;
   interface IngLine { ingredientId: string; portion: string; }
   const [addModal, setAddModal] = useState<AddStep | null>(null);
   const [addName, setAddName] = useState('');
@@ -56,6 +56,7 @@ export default function ProductList() {
   const [addSaving, setAddSaving] = useState(false);
   const [addSavedName, setAddSavedName] = useState('');
   const [addOpenCats, setAddOpenCats] = useState<Set<string>>(new Set());
+  const [addAffectationActiviteId, setAddAffectationActiviteId] = useState<number | null>(null);
 
   // Load activities — for gerant users use their assigned activité directly
   useEffect(() => {
@@ -92,6 +93,7 @@ export default function ProductList() {
     setAddName(''); setAddRef(''); setAddIsSupplement(false);
     setAddIngLines([]); setAddIngSearch('');
     setAddOpenCats(new Set()); setAddSavedName('');
+    setAddAffectationActiviteId(selectedActiviteId);
     setAddModal(1);
     if (selectedActiviteId) {
       api.get(`/api/entreprise/activites/${selectedActiviteId}/ingredients`)
@@ -630,7 +632,7 @@ export default function ProductList() {
             </div>
           )}
 
-          {/* ── Add product modal (3 steps) ── */}
+          {/* ── Add product modal (4 steps) ── */}
           {addModal && (() => {
             const selectedIngredients = addIngredients.filter((i) => i.selected);
             const selectedIngIds = new Set(addIngLines.map((l) => l.ingredientId).filter(Boolean));
@@ -652,6 +654,7 @@ export default function ProductList() {
 
             const canGoStep2 = addName.trim().length > 0;
             const canGoStep3 = addIngLines.some((l) => l.ingredientId && l.portion);
+            const canGoStep4 = addAffectationActiviteId != null;
 
             const handleSave = async () => {
               setAddSaving(true);
@@ -661,7 +664,7 @@ export default function ProductList() {
                   refProduit: addRef.trim() || null,
                   type: tab === 'utilisable' ? 'utilisable' : 'vendable',
                   isSupplement: addIsSupplement,
-                  activiteId: selectedActiviteId,
+                  activiteId: addAffectationActiviteId ?? selectedActiviteId,
                   ingredients: addIngLines
                     .filter((l) => l.ingredientId && l.portion)
                     .map((l) => ({ ingredientId: parseInt(l.ingredientId), portion: parseFloat(l.portion) })),
@@ -669,8 +672,7 @@ export default function ProductList() {
                 };
                 await api.post('/api/products', payload);
                 setAddSavedName(addName.trim());
-                setAddModal(3);
-                // Refresh list
+                setAddModal(5);
                 const params = new URLSearchParams();
                 if (laboId) params.set('laboId', laboId);
                 const qs = params.toString();
@@ -679,41 +681,43 @@ export default function ProductList() {
               setAddSaving(false);
             };
 
-            const selectedActName = allActivities.find((a) => a.id === selectedActiviteId)?.nom ?? '';
+            const STEPS = [
+              { n: 1, label: 'Identité' },
+              { n: 2, label: 'Articles' },
+              { n: 3, label: 'Affectation' },
+              { n: 4, label: 'Récap' },
+            ];
 
             return (
               <div className="modal-overlay">
                 <div className="modal" style={{ maxWidth: 560, width: '95vw', maxHeight: '90vh', overflow: 'auto' }} onClick={(e) => e.stopPropagation()}>
                   {/* Header */}
-                  <div style={{ background: 'linear-gradient(135deg, #881337 0%, #9f1239 100%)', padding: '18px 22px', borderRadius: '12px 12px 0 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <div>
-                      <div style={{ color: '#fff', fontWeight: 800, fontSize: '1rem' }}>
-                        {addModal === 3 ? '✅ Produit créé' : `${isVendable ? 'Produit vendable' : 'Produit utilisable'}`}
+                  <div style={{ background: 'linear-gradient(135deg, #881337 0%, #9f1239 100%)', padding: '18px 22px 14px', borderRadius: '12px 12px 0 0', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ color: '#fff', fontWeight: 800, fontSize: '1rem', marginBottom: addModal !== 5 ? 12 : 0 }}>
+                        {addModal === 5 ? '✅ Produit créé' : `Nouveau ${isVendable ? 'produit vendable' : 'produit utilisable'}`}
                       </div>
-                      {addModal !== 3 && selectedActName && (
-                        <div style={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.78rem', marginTop: 3 }}>
-                          📍 {selectedActName}
-                        </div>
-                      )}
-                      {addModal !== 3 && (
-                        <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-                          {([1, 2] as const).map((s) => (
-                            <div key={s} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                              <div style={{ width: 22, height: 22, borderRadius: '50%', background: addModal >= s ? '#fff' : 'rgba(255,255,255,0.3)', color: addModal >= s ? '#9f1239' : '#fff', fontWeight: 800, fontSize: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{s}</div>
-                              <span style={{ fontSize: '0.72rem', color: addModal >= s ? '#fff' : 'rgba(255,255,255,0.6)', fontWeight: addModal === s ? 700 : 400 }}>
-                                {s === 1 ? 'Identité' : 'Articles'}
-                              </span>
-                              {s < 2 && <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.7rem' }}>›</span>}
+                      {addModal !== 5 && (
+                        <div style={{ display: 'flex', gap: 10, width: '100%' }}>
+                          {STEPS.map((s) => (
+                            <div key={s.n} style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                              <div style={{ height: 4, borderRadius: 4, background: s.n <= addModal ? '#fff' : 'rgba(255,255,255,0.28)', transition: 'background 0.2s' }} />
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                                <div style={{ width: 18, height: 18, borderRadius: '50%', flexShrink: 0, background: s.n <= addModal ? '#fff' : 'rgba(255,255,255,0.28)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.62rem', fontWeight: 800, color: s.n <= addModal ? '#9f1239' : 'rgba(255,255,255,0.55)' }}>
+                                  {s.n < addModal ? '✓' : s.n}
+                                </div>
+                                <span style={{ fontSize: '0.68rem', color: s.n <= addModal ? '#fff' : 'rgba(255,255,255,0.5)', fontWeight: 600 }}>{s.label}</span>
+                              </div>
                             </div>
                           ))}
                         </div>
                       )}
                     </div>
-                    <button onClick={() => setAddModal(null)} style={{ background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: 8, color: '#fff', fontWeight: 900, fontSize: '1.1rem', cursor: 'pointer', padding: '2px 9px', lineHeight: 1 }}>×</button>
+                    <button onClick={() => setAddModal(null)} style={{ background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: 8, color: '#fff', fontWeight: 900, fontSize: '1.1rem', cursor: 'pointer', padding: '2px 9px', lineHeight: 1, flexShrink: 0 }}>×</button>
                   </div>
 
                   <div style={{ padding: '20px 22px' }}>
-                    {/* Step 1 */}
+                    {/* Step 1 — Identité */}
                     {addModal === 1 && (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                         <div>
@@ -758,7 +762,6 @@ export default function ProductList() {
 
                     {/* Step 2 — Articles */}
                     {addModal === 2 && (() => {
-                      // Group selected articles by famille > catégorie
                       type PFamGroup = { famKey: string; famNom: string | null; cats: { catKey: string; catNom: string; items: ActiviteIngredient[] }[] };
                       const famMap2 = new Map<string, PFamGroup>();
                       const famGrouped: PFamGroup[] = [];
@@ -777,7 +780,6 @@ export default function ProductList() {
                         if (!cg) { cg = { catKey: ck, catNom: cn, items: [] }; fg.cats.push(cg); }
                         cg.items.push(ing);
                       }
-
                       return (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                           {addIsSupplement && (
@@ -785,13 +787,10 @@ export default function ProductList() {
                               Mode supplément — sélectionnez un seul article
                             </div>
                           )}
-                          {/* Search */}
                           <input className="input" placeholder="🔍 Rechercher un article…" value={addIngSearch}
                             onChange={(e) => setAddIngSearch(e.target.value)}
                             style={{ fontSize: '0.82rem', borderColor: '#fda4af' }} />
-
-                          {/* Famille > Catégorie collapsible */}
-                          <div style={{ maxHeight: 360, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 10 }}>
+                          <div style={{ maxHeight: 340, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 10 }}>
                             {articlesPool.length === 0 && (
                               <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '24px 0', fontSize: '0.85rem' }}>Aucun article trouvé</div>
                             )}
@@ -806,9 +805,8 @@ export default function ProductList() {
                                 )}
                                 {fg.cats.map((cg, ci) => {
                                   const isOpen = addOpenCats.has(cg.catKey);
-                                  const isLast = ci === fg.cats.length - 1;
                                   return (
-                                    <div key={cg.catKey} style={{ borderBottom: isLast ? 'none' : '1px solid #fecdd3' }}>
+                                    <div key={cg.catKey} style={{ borderBottom: ci < fg.cats.length - 1 ? '1px solid #fecdd3' : 'none' }}>
                                       <button type="button"
                                         onClick={() => setAddOpenCats((prev) => { const n = new Set(prev); if (n.has(cg.catKey)) n.delete(cg.catKey); else n.add(cg.catKey); return n; })}
                                         style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: 'transparent', border: 'none', cursor: 'pointer', textAlign: 'left' }}>
@@ -827,9 +825,7 @@ export default function ProductList() {
                                             const line = addIngLines.find((l) => l.ingredientId === sid);
                                             return (
                                               <div key={ing.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 8px', borderRadius: 7, background: selected ? '#fff1f2' : 'transparent', border: selected ? '1px solid #fda4af' : '1px solid transparent' }}>
-                                                <input type="checkbox" checked={selected}
-                                                  onChange={() => toggleIngredient(ing)}
-                                                  style={{ accentColor: '#9f1239', width: 15, height: 15, flexShrink: 0 }} />
+                                                <input type="checkbox" checked={selected} onChange={() => toggleIngredient(ing)} style={{ accentColor: '#9f1239', width: 15, height: 15, flexShrink: 0 }} />
                                                 <span style={{ flex: 1, fontSize: '0.83rem', fontWeight: selected ? 600 : 400, color: selected ? '#881337' : 'var(--text)' }}>{ing.nom}</span>
                                                 {selected && (
                                                   <>
@@ -851,27 +847,106 @@ export default function ProductList() {
                               </div>
                             ))}
                           </div>
-
                           {addIngLines.some(l => l.ingredientId) && (
                             <div style={{ fontSize: '0.78rem', color: '#9f1239', fontWeight: 600 }}>
                               {addIngLines.filter(l => l.ingredientId).length} article{addIngLines.filter(l => l.ingredientId).length !== 1 ? 's' : ''} sélectionné{addIngLines.filter(l => l.ingredientId).length !== 1 ? 's' : ''}
                             </div>
                           )}
-
                           <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 8 }}>
                             <button className="btn btn-ghost" onClick={() => setAddModal(1)}>← Retour</button>
-                            <button disabled={!canGoStep3 || addSaving}
-                              onClick={handleSave}
-                              style={{ background: canGoStep3 ? 'linear-gradient(135deg, #881337, #9f1239)' : '#e5e7eb', border: 'none', borderRadius: 10, color: canGoStep3 ? '#fff' : '#9ca3af', fontWeight: 700, padding: '9px 22px', cursor: canGoStep3 && !addSaving ? 'pointer' : 'not-allowed' }}>
-                              {addSaving ? '…' : 'Créer le produit →'}
+                            <button disabled={!canGoStep3}
+                              onClick={() => setAddModal(3)}
+                              style={{ background: canGoStep3 ? 'linear-gradient(135deg, #881337, #9f1239)' : '#e5e7eb', border: 'none', borderRadius: 10, color: canGoStep3 ? '#fff' : '#9ca3af', fontWeight: 700, padding: '9px 22px', cursor: canGoStep3 ? 'pointer' : 'not-allowed' }}>
+                              Suivant →
                             </button>
                           </div>
                         </div>
                       );
                     })()}
 
-                    {/* Step 3 — Success */}
+                    {/* Step 3 — Affectation */}
                     {addModal === 3 && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                        <div style={{ fontSize: '0.82rem', color: '#64748b', marginBottom: 4 }}>
+                          Affectez ce produit à une activité.
+                        </div>
+                        {allActivities.length === 0 ? (
+                          <div style={{ padding: 16, borderRadius: 8, background: '#fff1f2', border: '1px solid #fda4af', fontSize: '0.85rem', color: '#881337', textAlign: 'center' }}>
+                            Aucune activité disponible.
+                          </div>
+                        ) : (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 320, overflowY: 'auto' }}>
+                            {allActivities.map((act) => {
+                              const sel = addAffectationActiviteId === act.id;
+                              return (
+                                <button key={act.id} type="button"
+                                  onClick={() => setAddAffectationActiviteId(act.id)}
+                                  style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', borderRadius: 10, cursor: 'pointer', textAlign: 'left', border: sel ? '2px solid #9f1239' : '1.5px solid var(--border)', background: sel ? '#fff1f2' : 'var(--surface)', transition: 'all 0.15s' }}>
+                                  <div style={{ width: 32, height: 32, borderRadius: 8, flexShrink: 0, background: sel ? '#ffe4e6' : '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>📍</div>
+                                  <div style={{ flex: 1 }}>
+                                    <div style={{ fontWeight: 600, fontSize: '0.88rem', color: sel ? '#881337' : '#0f172a' }}>{act.nom}</div>
+                                    <div style={{ fontSize: '0.75rem', color: '#64748b' }}>Activité</div>
+                                  </div>
+                                  <div style={{ width: 18, height: 18, borderRadius: 4, flexShrink: 0, border: sel ? 'none' : '1.5px solid #cbd5e1', background: sel ? '#9f1239' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                    {sel && <span style={{ color: '#fff', fontSize: 11, fontWeight: 700 }}>✓</span>}
+                                  </div>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 8 }}>
+                          <button className="btn btn-ghost" onClick={() => setAddModal(2)}>← Retour</button>
+                          <button disabled={!canGoStep4}
+                            onClick={() => setAddModal(4)}
+                            style={{ background: canGoStep4 ? 'linear-gradient(135deg, #881337, #9f1239)' : '#e5e7eb', border: 'none', borderRadius: 10, color: canGoStep4 ? '#fff' : '#9ca3af', fontWeight: 700, padding: '9px 22px', cursor: canGoStep4 ? 'pointer' : 'not-allowed' }}>
+                            Suivant →
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Step 4 — Récap & Confirmation */}
+                    {addModal === 4 && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                        <div style={{ fontSize: '0.82rem', color: '#64748b' }}>Vérifiez les informations avant de créer le produit.</div>
+                        <div style={{ background: '#f9fafb', border: '1px solid var(--border)', borderRadius: 10, padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
+                            <span style={{ color: '#64748b', fontWeight: 600 }}>Nom</span>
+                            <span style={{ fontWeight: 700, color: '#0f172a' }}>{addName}</span>
+                          </div>
+                          {addRef && (
+                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
+                              <span style={{ color: '#64748b', fontWeight: 600 }}>Référence</span>
+                              <span style={{ fontWeight: 600, color: '#374151' }}>{addRef}</span>
+                            </div>
+                          )}
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
+                            <span style={{ color: '#64748b', fontWeight: 600 }}>Type</span>
+                            <span style={{ fontWeight: 600, color: '#374151' }}>{isVendable ? 'Produit vendable' : 'Produit utilisable'}{addIsSupplement ? ' · Supplément' : ''}</span>
+                          </div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
+                            <span style={{ color: '#64748b', fontWeight: 600 }}>Articles</span>
+                            <span style={{ fontWeight: 600, color: '#374151' }}>{addIngLines.filter(l => l.ingredientId && l.portion).length} article{addIngLines.filter(l => l.ingredientId && l.portion).length !== 1 ? 's' : ''}</span>
+                          </div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
+                            <span style={{ color: '#64748b', fontWeight: 600 }}>Activité</span>
+                            <span style={{ fontWeight: 700, color: '#881337' }}>📍 {allActivities.find(a => a.id === addAffectationActiviteId)?.nom ?? '—'}</span>
+                          </div>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 4 }}>
+                          <button className="btn btn-ghost" onClick={() => setAddModal(3)}>← Retour</button>
+                          <button disabled={addSaving}
+                            onClick={handleSave}
+                            style={{ background: 'linear-gradient(135deg, #881337, #9f1239)', border: 'none', borderRadius: 10, color: '#fff', fontWeight: 700, padding: '9px 22px', cursor: addSaving ? 'not-allowed' : 'pointer', opacity: addSaving ? 0.7 : 1 }}>
+                            {addSaving ? '…' : 'Créer le produit ✓'}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Step 5 — Succès */}
+                    {addModal === 5 && (
                       <div style={{ textAlign: 'center', padding: '16px 0 8px' }}>
                         <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'linear-gradient(135deg, #22c55e, #16a34a)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.6rem', margin: '0 auto 14px' }}>✓</div>
                         <div style={{ fontWeight: 700, fontSize: '1rem', color: '#166534', marginBottom: 6 }}>Produit créé avec succès</div>
