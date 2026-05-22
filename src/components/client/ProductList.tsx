@@ -510,7 +510,7 @@ export default function ProductList() {
                   );
                 };
 
-                const renderGroup = (label: string, icon: string, items: Product[], accent: string, labelBg: string) => (
+                const renderGroup = (label: string, icon: string, items: Product[], accent: string) => (
                   <div style={{ marginBottom: 24 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
                       <div style={{ width: 6, height: 28, borderRadius: 3, background: accent, flexShrink: 0 }} />
@@ -527,8 +527,8 @@ export default function ProductList() {
                   <div>
                     {hasGroups ? (
                       <>
-                        {regulars.length > 0 && renderGroup('Produits', '🍔', regulars, '#9f1239', '#fff1f2')}
-                        {supplements.length > 0 && renderGroup('Suppléments', '➕', supplements, '#be185d', '#fdf2f8')}
+                        {regulars.length > 0 && renderGroup('Produits', '🍔', regulars, '#9f1239')}
+                        {supplements.length > 0 && renderGroup('Suppléments', '➕', supplements, '#be185d')}
                       </>
                     ) : (
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 14 }}>
