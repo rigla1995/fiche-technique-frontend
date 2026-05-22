@@ -56,6 +56,7 @@ export default function ProductList() {
   const [addIngSearch, setAddIngSearch] = useState('');
   const [addFamilleFilter, setAddFamilleFilter] = useState('');
   const [addCatFilter, setAddCatFilter] = useState('');
+  const [addIngVisible, setAddIngVisible] = useState(20);
   const [addSaving, setAddSaving] = useState(false);
   const [addSavedName, setAddSavedName] = useState('');
   const [addAffectationActiviteIds, setAddAffectationActiviteIds] = useState<number[]>([]);
@@ -94,7 +95,7 @@ export default function ProductList() {
   const openAddModal = useCallback(() => {
     setAddName(''); setAddRef(''); setAddIsSupplement(false);
     setAddIngLines([]); setAddIngSearch('');
-    setAddSavedName(''); setAddFamilleFilter(''); setAddCatFilter('');
+    setAddSavedName(''); setAddFamilleFilter(''); setAddCatFilter(''); setAddIngVisible(20);
     setAddAffectationActiviteIds(selectedActiviteId ? [selectedActiviteId] : []);
     setAddModal(1);
     if (selectedActiviteId) {
@@ -655,14 +656,14 @@ export default function ProductList() {
             };
 
             const canGoStep2 = addName.trim().length > 0;
-            const canGoStep3 = addIngLines.some((l) => l.ingredientId && l.portion);
+            const canGoStep3 = addIngLines.some((l) => l.ingredientId && parseFloat(l.portion) > 0);
             const canGoStep4 = addAffectationActiviteIds.length > 0;
 
             const handleSave = async () => {
               setAddSaving(true);
               try {
                 const baseIngredients = addIngLines
-                  .filter((l) => l.ingredientId && l.portion)
+                  .filter((l) => l.ingredientId && parseFloat(l.portion) > 0)
                   .map((l) => ({ ingredientId: parseInt(l.ingredientId), portion: parseFloat(l.portion) }));
                 await Promise.all(addAffectationActiviteIds.map((actId) =>
                   api.post('/api/products', {
@@ -797,34 +798,43 @@ export default function ProductList() {
                           )}
                           {/* Search */}
                           <input className="input" placeholder="🔍 Rechercher…" value={addIngSearch}
-                            onChange={(e) => setAddIngSearch(e.target.value)}
+                            onChange={(e) => { setAddIngSearch(e.target.value); setAddIngVisible(20); }}
                             style={{ fontSize: '0.82rem' }} />
                           {/* Filters row */}
                           <div style={{ display: 'flex', gap: 8 }}>
                             <select value={addFamilleFilter}
-                              onChange={(e) => { setAddFamilleFilter(e.target.value); setAddCatFilter(''); }}
+                              onChange={(e) => { setAddFamilleFilter(e.target.value); setAddCatFilter(''); setAddIngVisible(20); }}
                               style={{ flex: 1, padding: '6px 10px', borderRadius: 8, border: '1px solid var(--border)', fontSize: '0.8rem', background: addFamilleFilter ? '#f0f9ff' : '#fff', color: '#374151', cursor: 'pointer' }}>
                               <option value="">Toutes les familles</option>
                               {famOptions.map(f => <option key={f.key} value={f.key}>{f.label}</option>)}
                             </select>
                             <select value={addCatFilter}
-                              onChange={(e) => setAddCatFilter(e.target.value)}
+                              onChange={(e) => { setAddCatFilter(e.target.value); setAddIngVisible(20); }}
                               style={{ flex: 1, padding: '6px 10px', borderRadius: 8, border: '1px solid var(--border)', fontSize: '0.8rem', background: addCatFilter ? '#f0f9ff' : '#fff', color: '#374151', cursor: 'pointer' }}>
                               <option value="">Toutes les catégories</option>
                               {filteredCats.map(c => <option key={c.key} value={c.key}>{c.label}</option>)}
                             </select>
                           </div>
-                          {/* Article list */}
-                          <div style={{ maxHeight: 300, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 2, border: '1px solid var(--border)', borderRadius: 10, padding: '6px' }}>
+                          {/* Article list — scroll lazy-load, ~5 rows visible */}
+                          <div
+                            style={{ height: 210, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 2, border: '1px solid var(--border)', borderRadius: 10, padding: '6px' }}
+                            onScroll={(e) => {
+                              const el = e.currentTarget;
+                              if (el.scrollHeight - el.scrollTop - el.clientHeight < 60) {
+                                setAddIngVisible(v => v + 20);
+                              }
+                            }}
+                          >
                             {articlesFiltered.length === 0 && (
                               <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '24px 0', fontSize: '0.85rem' }}>Aucun article trouvé</div>
                             )}
-                            {articlesFiltered.map((ing) => {
+                            {articlesFiltered.slice(0, addIngVisible).map((ing) => {
                               const sid = String(ing.id);
                               const sel = selectedIngIds.has(sid);
                               const line = addIngLines.find((l) => l.ingredientId === sid);
+                              const portionValid = sel && parseFloat(line?.portion || '0') > 0;
                               return (
-                                <div key={ing.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '7px 10px', borderRadius: 8, background: sel ? '#fff7ed' : 'transparent', cursor: 'pointer', transition: 'background 0.12s' }}
+                                <div key={ing.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '7px 10px', borderRadius: 8, background: sel ? (portionValid ? '#fff7ed' : '#fff1f2') : 'transparent', cursor: 'pointer', transition: 'background 0.12s' }}
                                   onClick={() => toggleIngredient(ing)}>
                                   <input type="checkbox" checked={sel} onChange={() => toggleIngredient(ing)}
                                     onClick={e => e.stopPropagation()}
@@ -835,20 +845,25 @@ export default function ProductList() {
                                   )}
                                   {sel && (
                                     <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }} onClick={e => e.stopPropagation()}>
-                                      <input type="number" step="0.001" min="0" placeholder="qté"
+                                      <input type="number" step="0.001" min="0" placeholder="portion"
                                         value={line?.portion || ''}
                                         onChange={(e) => updatePortion(sid, e.target.value)}
-                                        style={{ width: 68, padding: '3px 6px', borderRadius: 6, border: '1.5px solid #fda4af', fontSize: '0.82rem', textAlign: 'right' }} />
+                                        style={{ width: 72, padding: '3px 6px', borderRadius: 6, border: `1.5px solid ${portionValid ? '#fda4af' : '#ef4444'}`, fontSize: '0.82rem', textAlign: 'right' }} />
                                       <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{ing.unite}</span>
                                     </div>
                                   )}
                                 </div>
                               );
                             })}
+                            {articlesFiltered.length > addIngVisible && (
+                              <div style={{ textAlign: 'center', padding: '8px 0', fontSize: '0.73rem', color: '#94a3b8' }}>
+                                ↓ {articlesFiltered.length - addIngVisible} article{articlesFiltered.length - addIngVisible > 1 ? 's' : ''} de plus — faites défiler
+                              </div>
+                            )}
                           </div>
                           {addIngLines.some(l => l.ingredientId) && (
                             <div style={{ fontSize: '0.78rem', color: '#9f1239', fontWeight: 600 }}>
-                              {addIngLines.filter(l => l.ingredientId).length} article{addIngLines.filter(l => l.ingredientId).length !== 1 ? 's' : ''} sélectionné{addIngLines.filter(l => l.ingredientId).length !== 1 ? 's' : ''}
+                              {addIngLines.filter(l => l.ingredientId && parseFloat(l.portion) > 0).length} article{addIngLines.filter(l => l.ingredientId && parseFloat(l.portion) > 0).length !== 1 ? 's' : ''} valide{addIngLines.filter(l => l.ingredientId && parseFloat(l.portion) > 0).length !== 1 ? 's' : ''} (portion &gt; 0)
                             </div>
                           )}
                           <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 4 }}>
@@ -926,7 +941,7 @@ export default function ProductList() {
 
                     {/* Step 4 — Récap & Confirmation */}
                     {addModal === 4 && (() => {
-                      const ingCount = addIngLines.filter(l => l.ingredientId && l.portion).length;
+                      const ingCount = addIngLines.filter(l => l.ingredientId && parseFloat(l.portion) > 0).length;
                       const selActs = allActivities.filter(a => addAffectationActiviteIds.includes(a.id));
                       return (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -969,7 +984,7 @@ export default function ProductList() {
                           <div>
                             <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#64748b', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Articles sélectionnés</div>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 4, maxHeight: 140, overflowY: 'auto' }}>
-                              {addIngLines.filter(l => l.ingredientId && l.portion).map(l => {
+                              {addIngLines.filter(l => l.ingredientId && parseFloat(l.portion) > 0).map(l => {
                                 const ing = addIngredients.find(i => String(i.id) === l.ingredientId);
                                 return (
                                   <div key={l.ingredientId} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '5px 10px', borderRadius: 7, background: '#f8fafc', fontSize: '0.82rem' }}>
