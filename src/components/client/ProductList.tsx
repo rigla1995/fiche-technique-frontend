@@ -61,7 +61,7 @@ export default function ProductList() {
   const [addSavedName, setAddSavedName] = useState('');
   const [addAffectationActiviteIds, setAddAffectationActiviteIds] = useState<number[]>([]);
 
-  // Edit product modal state
+  // Edit product modal state — steps: 2=Articles, 3=Récap, 4=Succès (step 1 is skipped)
   type EditStep = 1 | 2 | 3 | 4;
   const [editModal, setEditModal] = useState<EditStep | null>(null);
   const [editProductId, setEditProductId] = useState<number | null>(null);
@@ -116,7 +116,7 @@ export default function ProductList() {
     setEditIngLines([]); setEditIngredients([]); setEditIngSearch('');
     setEditFamilleFilter(''); setEditCatFilter(''); setEditIngVisible(20);
     setEditLoadingData(true);
-    setEditModal(1);
+    setEditModal(2);
     try {
       const actId = p.activiteId;
       const [productRes, ingRes] = await Promise.all([
@@ -700,7 +700,6 @@ export default function ProductList() {
               setEditIngLines((prev) => prev.map((l) => l.ingredientId === ingId ? { ...l, portion: val } : l));
             };
 
-            const canGoEditStep2 = editName.trim().length > 0;
             const canGoEditStep3 = editIngLines.some((l) => l.ingredientId && parseFloat(l.portion) > 0);
 
             const handleEditSave = async () => {
@@ -726,9 +725,8 @@ export default function ProductList() {
             };
 
             const EDIT_STEPS = [
-              { n: 1, label: 'Identité' },
-              { n: 2, label: 'Articles' },
-              { n: 3, label: 'Récap' },
+              { n: 2, display: 1, label: 'Articles' },
+              { n: 3, display: 2, label: 'Récap' },
             ];
 
             const isEditVendable = editProductType === 'vendable';
@@ -770,7 +768,7 @@ export default function ProductList() {
                               <div style={{ height: 4, borderRadius: 4, background: s.n <= editModal ? '#fff' : 'rgba(255,255,255,0.28)', transition: 'background 0.2s' }} />
                               <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
                                 <div style={{ width: 18, height: 18, borderRadius: '50%', flexShrink: 0, background: s.n <= editModal ? '#fff' : 'rgba(255,255,255,0.28)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.62rem', fontWeight: 800, color: s.n <= editModal ? '#1e40af' : 'rgba(255,255,255,0.55)' }}>
-                                  {s.n < editModal ? '✓' : s.n}
+                                  {s.n < editModal ? '✓' : s.display}
                                 </div>
                                 <span style={{ fontSize: '0.68rem', color: s.n <= editModal ? '#fff' : 'rgba(255,255,255,0.5)', fontWeight: 600 }}>{s.label}</span>
                               </div>
@@ -783,55 +781,13 @@ export default function ProductList() {
                   </div>
 
                   <div style={{ padding: '20px 22px' }}>
-                    {/* Step 1 — Identité */}
-                    {editModal === 1 && (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                        {editLoadingData && (
-                          <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '8px 0', fontSize: '0.85rem' }}>Chargement…</div>
-                        )}
-                        <div>
-                          <label style={{ display: 'block', fontWeight: 700, fontSize: '0.82rem', color: '#1e40af', marginBottom: 6 }}>
-                            Nom du produit <span style={{ color: '#ef4444' }}>*</span>
-                          </label>
-                          <input className="input" placeholder="Ex. Burger Classic…" value={editName}
-                            onChange={(e) => setEditName(e.target.value)} autoFocus
-                            style={{ width: '100%', borderColor: '#93c5fd' }} />
-                        </div>
-                        <div>
-                          <label style={{ display: 'block', fontWeight: 700, fontSize: '0.82rem', color: '#1e40af', marginBottom: 6 }}>
-                            Réf. produit <span style={{ fontSize: '0.75rem', fontWeight: 400, color: 'var(--text-muted)' }}>(optionnel)</span>
-                          </label>
-                          <input className="input" placeholder="Ex. BRG-001" value={editRef}
-                            onChange={(e) => setEditRef(e.target.value)}
-                            style={{ width: '100%', maxWidth: 280, borderColor: '#93c5fd' }} />
-                        </div>
-                        {isEditVendable && (
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: editIsSupplement ? '#eff6ff' : '#f9fafb', borderRadius: 10, padding: '12px 16px', border: `1.5px solid ${editIsSupplement ? '#93c5fd' : 'var(--border)'}` }}>
-                            <div>
-                              <div style={{ fontWeight: 700, fontSize: '0.88rem', color: editIsSupplement ? '#1e40af' : 'var(--text)' }}>Supplément</div>
-                              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: 2 }}>Un supplément ne contient qu'un seul ingrédient</div>
-                            </div>
-                            <button type="button"
-                              onClick={() => setEditIsSupplement((v) => !v)}
-                              style={{ width: 44, height: 24, borderRadius: 12, border: 'none', cursor: 'pointer', background: editIsSupplement ? '#3b82f6' : '#d1d5db', transition: 'background 0.2s', position: 'relative', flexShrink: 0 }}>
-                              <span style={{ position: 'absolute', top: 3, left: editIsSupplement ? 23 : 3, width: 18, height: 18, borderRadius: '50%', background: '#fff', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
-                            </button>
-                          </div>
-                        )}
-                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, paddingTop: 8 }}>
-                          <button className="btn btn-ghost" onClick={() => setEditModal(null)}>Annuler</button>
-                          <button disabled={!canGoEditStep2 || editLoadingData}
-                            onClick={() => setEditModal(2)}
-                            style={{ background: canGoEditStep2 && !editLoadingData ? 'linear-gradient(135deg, #1e40af, #3b82f6)' : '#e5e7eb', border: 'none', borderRadius: 10, color: canGoEditStep2 && !editLoadingData ? '#fff' : '#9ca3af', fontWeight: 700, padding: '9px 22px', cursor: canGoEditStep2 && !editLoadingData ? 'pointer' : 'not-allowed' }}>
-                            Suivant →
-                          </button>
-                        </div>
-                      </div>
-                    )}
-
                     {/* Step 2 — Articles */}
                     {editModal === 2 && (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                        <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#1e1b4b', marginBottom: 2 }}>
+                          {editName || '…'}
+                          {editRef && <span style={{ fontSize: '0.75rem', fontWeight: 400, color: '#64748b', marginLeft: 6 }}>— {editRef}</span>}
+                        </div>
                         {editIsSupplement && (
                           <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, padding: '8px 12px', fontSize: '0.82rem', color: '#475569', fontWeight: 600 }}>
                             Mode supplément — sélectionnez un seul article
@@ -861,10 +817,13 @@ export default function ProductList() {
                             if (el.scrollHeight - el.scrollTop - el.clientHeight < 60) setEditIngVisible((v) => v + 20);
                           }}
                         >
-                          {eArticlesFiltered.length === 0 && (
+                          {editLoadingData && (
+                            <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '32px 0', fontSize: '0.85rem' }}>⏳ Chargement des articles…</div>
+                          )}
+                          {!editLoadingData && eArticlesFiltered.length === 0 && (
                             <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '24px 0', fontSize: '0.85rem' }}>Aucun article trouvé</div>
                           )}
-                          {eArticlesFiltered.slice(0, editIngVisible).map((ing) => {
+                          {!editLoadingData && eArticlesFiltered.slice(0, editIngVisible).map((ing) => {
                             const sid = String(ing.id);
                             const sel = editIngIds.has(sid);
                             const line = editIngLines.find((l) => l.ingredientId === sid);
@@ -903,10 +862,10 @@ export default function ProductList() {
                           </div>
                         )}
                         <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 4 }}>
-                          <button className="btn btn-ghost" onClick={() => setEditModal(1)}>← Retour</button>
-                          <button disabled={!canGoEditStep3}
+                          <button className="btn btn-ghost" onClick={() => setEditModal(null)}>Annuler</button>
+                          <button disabled={!canGoEditStep3 || editLoadingData}
                             onClick={() => setEditModal(3)}
-                            style={{ background: canGoEditStep3 ? 'linear-gradient(135deg, #1e40af, #3b82f6)' : '#e5e7eb', border: 'none', borderRadius: 10, color: canGoEditStep3 ? '#fff' : '#9ca3af', fontWeight: 700, padding: '9px 22px', cursor: canGoEditStep3 ? 'pointer' : 'not-allowed' }}>
+                            style={{ background: canGoEditStep3 && !editLoadingData ? 'linear-gradient(135deg, #1e40af, #3b82f6)' : '#e5e7eb', border: 'none', borderRadius: 10, color: canGoEditStep3 && !editLoadingData ? '#fff' : '#9ca3af', fontWeight: 700, padding: '9px 22px', cursor: canGoEditStep3 && !editLoadingData ? 'pointer' : 'not-allowed' }}>
                             Suivant →
                           </button>
                         </div>
