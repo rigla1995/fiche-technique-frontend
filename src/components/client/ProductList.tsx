@@ -260,28 +260,43 @@ export default function ProductList() {
         borderRadius: 18, padding: '24px 28px', marginBottom: 24,
         boxShadow: '0 8px 32px rgba(159,18,57,0.28)',
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
-          <div style={{ background: 'rgba(255,255,255,0.2)', borderRadius: 10, padding: '7px 9px', fontSize: '1.2rem' }}>📦</div>
-          <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0 }}>
-            {tab === 'fiche-technique'
-              ? t('client.products.tab_fiche_technique')
-              : tab === 'utilisable'
-                ? t('client.products.tab_utilisable')
-                : t('client.products.tab_vendable')}
-          </h1>
-          {tab !== 'fiche-technique' && byTab.length > 0 && (
-            <span style={{ background: 'rgba(255,255,255,0.22)', borderRadius: 20, padding: '2px 12px', fontSize: '0.85rem', fontWeight: 700, color: '#fff', marginLeft: 4 }}>
-              {byTab.length}
-            </span>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+              <div style={{ background: 'rgba(255,255,255,0.2)', borderRadius: 10, padding: '7px 9px', fontSize: '1.2rem' }}>📦</div>
+              <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0 }}>
+                {tab === 'fiche-technique'
+                  ? t('client.products.tab_fiche_technique')
+                  : tab === 'utilisable'
+                    ? t('client.products.tab_utilisable')
+                    : t('client.products.tab_vendable')}
+              </h1>
+              {tab !== 'fiche-technique' && selectedActiviteId && (() => {
+                const actNom = allActivities.find(a => a.id === selectedActiviteId)?.nom;
+                return actNom ? (
+                  <span style={{ background: 'rgba(255,255,255,0.18)', borderRadius: 10, padding: '3px 12px', fontSize: '0.82rem', fontWeight: 700, color: '#fff' }}>
+                    📍 {actNom}
+                  </span>
+                ) : null;
+              })()}
+            </div>
+            <p style={{ color: 'rgba(255,255,255,0.78)', margin: 0, fontSize: '0.85rem' }}>
+              {tab === 'fiche-technique'
+                ? 'Exportez et consultez vos fiches techniques par produit'
+                : tab === 'utilisable'
+                  ? 'Produits semi-finis utilisés dans la composition de vos recettes'
+                  : 'Produits finis destinés à la vente, définis par leurs fiches techniques'}
+            </p>
+          </div>
+          {tab !== 'fiche-technique' && (
+            <div style={{ background: 'rgba(255,255,255,0.15)', border: '1.5px solid rgba(255,255,255,0.3)', borderRadius: 14, padding: '10px 20px', textAlign: 'center', minWidth: 80, flexShrink: 0 }}>
+              <div style={{ fontSize: '1.8rem', fontWeight: 900, color: '#fff', lineHeight: 1 }}>{byTab.length}</div>
+              <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.75)', marginTop: 2 }}>
+                produit{byTab.length !== 1 ? 's' : ''}
+              </div>
+            </div>
           )}
         </div>
-        <p style={{ color: 'rgba(255,255,255,0.78)', margin: 0, fontSize: '0.85rem' }}>
-          {tab === 'fiche-technique'
-            ? 'Exportez et consultez vos fiches techniques par produit'
-            : tab === 'utilisable'
-              ? 'Produits semi-finis utilisés dans la composition de vos recettes'
-              : 'Produits finis destinés à la vente, définis par leurs fiches techniques'}
-        </p>
       </div>
 
       {/* Activity selector */}
@@ -693,7 +708,7 @@ export default function ProductList() {
                             <div key={s} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                               <div style={{ width: 22, height: 22, borderRadius: '50%', background: addModal >= s ? '#fff' : 'rgba(255,255,255,0.3)', color: addModal >= s ? '#9f1239' : '#fff', fontWeight: 800, fontSize: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{s}</div>
                               <span style={{ fontSize: '0.72rem', color: addModal >= s ? '#fff' : 'rgba(255,255,255,0.6)', fontWeight: addModal === s ? 700 : 400 }}>
-                                {s === 1 ? 'Identité' : 'Ingrédients'}
+                                {s === 1 ? 'Identité' : 'Articles'}
                               </span>
                               {s < 2 && <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.7rem' }}>›</span>}
                             </div>
@@ -748,88 +763,119 @@ export default function ProductList() {
                       </div>
                     )}
 
-                    {/* Step 2 */}
-                    {addModal === 2 && (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                        {addIsSupplement && (
-                          <div style={{ background: '#fff1f2', border: '1px solid #fda4af', borderRadius: 8, padding: '8px 12px', fontSize: '0.82rem', color: '#881337', fontWeight: 600 }}>
-                            Mode supplément — sélectionnez un seul ingrédient
-                          </div>
-                        )}
-                        {/* Filters */}
-                        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                          <input className="input" placeholder="🔍 Nom ingrédient…" value={addIngSearch}
-                            onChange={(e) => setAddIngSearch(e.target.value)}
-                            style={{ flex: 1, minWidth: 140, fontSize: '0.82rem', borderColor: '#fda4af' }} />
-                          <select className="input" value={addIngCatFilter}
-                            onChange={(e) => setAddIngCatFilter(e.target.value)}
-                            style={{ minWidth: 130, fontSize: '0.82rem', borderColor: '#fda4af' }}>
-                            <option value="">Toutes catégories</option>
-                            {cats.map((c) => <option key={c} value={c}>{c}</option>)}
-                          </select>
-                        </div>
+                    {/* Step 2 — Articles */}
+                    {addModal === 2 && (() => {
+                      // Group selected articles by famille > catégorie
+                      type PFamGroup = { famKey: string; famNom: string | null; cats: { catKey: string; catNom: string; items: ActiviteIngredient[] }[] };
+                      const famMap2 = new Map<string, PFamGroup>();
+                      const famGrouped: PFamGroup[] = [];
+                      const articlesPool = selectedIngredients.filter((i) => {
+                        if (addIngSearch && !i.nom.toLowerCase().includes(addIngSearch.toLowerCase())) return false;
+                        return true;
+                      });
+                      for (const ing of articlesPool) {
+                        const fk = ing.familleId != null ? String(ing.familleId) : '__none__';
+                        const fn = ing.familleNom || null;
+                        const ck = `${fk}::${ing.categorieId ?? '__none__'}`;
+                        const cn = ing.categorie || 'Sans catégorie';
+                        if (!famMap2.has(fk)) { const fg: PFamGroup = { famKey: fk, famNom: fn, cats: [] }; famMap2.set(fk, fg); famGrouped.push(fg); }
+                        const fg = famMap2.get(fk)!;
+                        let cg = fg.cats.find(c => c.catKey === ck);
+                        if (!cg) { cg = { catKey: ck, catNom: cn, items: [] }; fg.cats.push(cg); }
+                        cg.items.push(ing);
+                      }
 
-                        {/* Categories collapsible */}
-                        <div style={{ maxHeight: 340, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 8 }}>
-                          {filteredByCat.length === 0 && (
-                            <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '24px 0', fontSize: '0.85rem' }}>Aucun ingrédient trouvé</div>
+                      return (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                          {addIsSupplement && (
+                            <div style={{ background: '#fff1f2', border: '1px solid #fda4af', borderRadius: 8, padding: '8px 12px', fontSize: '0.82rem', color: '#881337', fontWeight: 600 }}>
+                              Mode supplément — sélectionnez un seul article
+                            </div>
                           )}
-                          {filteredByCat.map((cat) => {
-                            const catIngs = filtered.filter((i) => (i.categorie || 'Sans catégorie') === cat);
-                            const isOpen = addOpenCats.has(cat);
-                            return (
-                              <div key={cat} style={{ border: '1px solid #fda4af', borderRadius: 8, overflow: 'hidden' }}>
-                                <button type="button"
-                                  onClick={() => setAddOpenCats((prev) => {
-                                    const next = new Set(prev);
-                                    if (next.has(cat)) next.delete(cat); else next.add(cat);
-                                    return next;
-                                  })}
-                                  style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: '#fff1f2', border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: '0.82rem', color: '#881337' }}>
-                                  <span>🏷️ {cat} <span style={{ fontWeight: 400, color: 'var(--text-muted)', fontSize: '0.75rem' }}>({catIngs.length})</span></span>
-                                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{isOpen ? '▲' : '▼'}</span>
-                                </button>
-                                {isOpen && (
-                                  <div style={{ padding: '6px 8px', display: 'flex', flexDirection: 'column', gap: 4 }}>
-                                    {catIngs.map((ing) => {
-                                      const sid = String(ing.id);
-                                      const selected = selectedIngIds.has(sid);
-                                      const line = addIngLines.find((l) => l.ingredientId === sid);
-                                      return (
-                                        <div key={ing.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 8px', borderRadius: 7, background: selected ? '#fff1f2' : 'transparent', border: selected ? '1px solid #fda4af' : '1px solid transparent' }}>
-                                          <input type="checkbox" checked={selected}
-                                            onChange={() => toggleIngredient(ing)}
-                                            style={{ accentColor: '#9f1239', width: 15, height: 15, flexShrink: 0 }} />
-                                          <span style={{ flex: 1, fontSize: '0.83rem', fontWeight: selected ? 600 : 400, color: selected ? '#881337' : 'var(--text)' }}>{ing.nom}</span>
-                                          {selected && (
-                                            <>
-                                              <input type="number" step="0.001" min="0" placeholder="portion"
-                                                value={line?.portion || ''}
-                                                onChange={(e) => updatePortion(sid, e.target.value)}
-                                                style={{ width: 72, padding: '3px 6px', borderRadius: 6, border: '1.5px solid #fda4af', fontSize: '0.82rem', textAlign: 'right' }} />
-                                              <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', flexShrink: 0 }}>{ing.unite}</span>
-                                            </>
-                                          )}
-                                        </div>
-                                      );
-                                    })}
+                          {/* Search */}
+                          <input className="input" placeholder="🔍 Rechercher un article…" value={addIngSearch}
+                            onChange={(e) => setAddIngSearch(e.target.value)}
+                            style={{ fontSize: '0.82rem', borderColor: '#fda4af' }} />
+
+                          {/* Famille > Catégorie collapsible */}
+                          <div style={{ maxHeight: 360, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 10 }}>
+                            {articlesPool.length === 0 && (
+                              <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '24px 0', fontSize: '0.85rem' }}>Aucun article trouvé</div>
+                            )}
+                            {famGrouped.map((fg) => (
+                              <div key={fg.famKey} style={{ border: '1px solid #fda4af', borderRadius: 10, overflow: 'hidden' }}>
+                                {fg.famNom && (
+                                  <div style={{ padding: '7px 12px', background: 'linear-gradient(90deg,#fff1f2,#ffe4e6)', display: 'flex', alignItems: 'center', gap: 6, borderBottom: '1px solid #fda4af' }}>
+                                    <span style={{ fontSize: '0.9rem' }}>🗂️</span>
+                                    <span style={{ fontWeight: 800, fontSize: '0.82rem', color: '#881337' }}>{fg.famNom}</span>
+                                    <span style={{ marginLeft: 'auto', fontSize: '0.72rem', color: '#9f1239', fontWeight: 600 }}>{fg.cats.length} catégorie{fg.cats.length !== 1 ? 's' : ''}</span>
                                   </div>
                                 )}
+                                {fg.cats.map((cg, ci) => {
+                                  const isOpen = addOpenCats.has(cg.catKey);
+                                  const isLast = ci === fg.cats.length - 1;
+                                  return (
+                                    <div key={cg.catKey} style={{ borderBottom: isLast ? 'none' : '1px solid #fecdd3' }}>
+                                      <button type="button"
+                                        onClick={() => setAddOpenCats((prev) => { const n = new Set(prev); if (n.has(cg.catKey)) n.delete(cg.catKey); else n.add(cg.catKey); return n; })}
+                                        style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: 'transparent', border: 'none', cursor: 'pointer', textAlign: 'left' }}>
+                                        <span style={{ fontSize: '0.6rem', color: '#9f1239', transform: isOpen ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s', display: 'inline-block' }}>▶</span>
+                                        <span style={{ fontSize: '0.85rem' }}>🏷️</span>
+                                        <span style={{ fontWeight: 700, fontSize: '0.82rem', color: '#374151', flex: 1 }}>{cg.catNom}</span>
+                                        <span style={{ background: '#fff1f2', color: '#881337', borderRadius: 10, padding: '1px 7px', fontSize: '0.72rem', fontWeight: 600 }}>
+                                          {cg.items.length} article{cg.items.length !== 1 ? 's' : ''}
+                                        </span>
+                                      </button>
+                                      {isOpen && (
+                                        <div style={{ padding: '4px 8px 8px 28px', display: 'flex', flexDirection: 'column', gap: 3 }}>
+                                          {cg.items.map((ing) => {
+                                            const sid = String(ing.id);
+                                            const selected = selectedIngIds.has(sid);
+                                            const line = addIngLines.find((l) => l.ingredientId === sid);
+                                            return (
+                                              <div key={ing.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 8px', borderRadius: 7, background: selected ? '#fff1f2' : 'transparent', border: selected ? '1px solid #fda4af' : '1px solid transparent' }}>
+                                                <input type="checkbox" checked={selected}
+                                                  onChange={() => toggleIngredient(ing)}
+                                                  style={{ accentColor: '#9f1239', width: 15, height: 15, flexShrink: 0 }} />
+                                                <span style={{ flex: 1, fontSize: '0.83rem', fontWeight: selected ? 600 : 400, color: selected ? '#881337' : 'var(--text)' }}>{ing.nom}</span>
+                                                {selected && (
+                                                  <>
+                                                    <input type="number" step="0.001" min="0" placeholder="portion"
+                                                      value={line?.portion || ''}
+                                                      onChange={(e) => updatePortion(sid, e.target.value)}
+                                                      style={{ width: 72, padding: '3px 6px', borderRadius: 6, border: '1.5px solid #fda4af', fontSize: '0.82rem', textAlign: 'right' }} />
+                                                    <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', flexShrink: 0 }}>{ing.unite}</span>
+                                                  </>
+                                                )}
+                                              </div>
+                                            );
+                                          })}
+                                        </div>
+                                      )}
+                                    </div>
+                                  );
+                                })}
                               </div>
-                            );
-                          })}
-                        </div>
+                            ))}
+                          </div>
 
-                        <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 8 }}>
-                          <button className="btn btn-ghost" onClick={() => setAddModal(1)}>← Retour</button>
-                          <button disabled={!canGoStep3 || addSaving}
-                            onClick={handleSave}
-                            style={{ background: canGoStep3 ? 'linear-gradient(135deg, #881337, #9f1239)' : '#e5e7eb', border: 'none', borderRadius: 10, color: canGoStep3 ? '#fff' : '#9ca3af', fontWeight: 700, padding: '9px 22px', cursor: canGoStep3 && !addSaving ? 'pointer' : 'not-allowed' }}>
-                            {addSaving ? '…' : 'Créer le produit →'}
-                          </button>
+                          {addIngLines.some(l => l.ingredientId) && (
+                            <div style={{ fontSize: '0.78rem', color: '#9f1239', fontWeight: 600 }}>
+                              {addIngLines.filter(l => l.ingredientId).length} article{addIngLines.filter(l => l.ingredientId).length !== 1 ? 's' : ''} sélectionné{addIngLines.filter(l => l.ingredientId).length !== 1 ? 's' : ''}
+                            </div>
+                          )}
+
+                          <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 8 }}>
+                            <button className="btn btn-ghost" onClick={() => setAddModal(1)}>← Retour</button>
+                            <button disabled={!canGoStep3 || addSaving}
+                              onClick={handleSave}
+                              style={{ background: canGoStep3 ? 'linear-gradient(135deg, #881337, #9f1239)' : '#e5e7eb', border: 'none', borderRadius: 10, color: canGoStep3 ? '#fff' : '#9ca3af', fontWeight: 700, padding: '9px 22px', cursor: canGoStep3 && !addSaving ? 'pointer' : 'not-allowed' }}>
+                              {addSaving ? '…' : 'Créer le produit →'}
+                            </button>
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      );
+                    })()}
 
                     {/* Step 3 — Success */}
                     {addModal === 3 && (

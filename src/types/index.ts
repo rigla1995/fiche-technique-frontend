@@ -403,7 +403,8 @@ export interface ActiviteIngredient {
   unite: string;
   categorie: string;
   categorieId: number | null;
-  prix: number | null;
+  familleId: number | null;
+  familleNom: string | null;
   prixUnitaire: number | null;
   selected: boolean;
 }
