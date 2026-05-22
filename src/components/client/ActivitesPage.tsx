@@ -174,6 +174,7 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
         await api.post('/api/entreprise/activites', payload);
         if (onCreated) onCreated();
         if (isFirst && user?.onboardingStep === 2) await advanceOnboarding(3);
+        window.dispatchEvent(new Event('activites-changed'));
         closeForm();
         const newActCount = activites.length + 1;
         const allActsFilled = maxActivites !== null ? newActCount >= maxActivites : isFirst;
@@ -200,6 +201,7 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
     try {
       await api.delete(`/api/entreprise/activites/${deleteTarget.act.id}`);
       setDeleteTarget(null);
+      window.dispatchEvent(new Event('activites-changed'));
       load();
     } catch { /* ignore */ }
     setDeleting(false);
@@ -326,6 +328,7 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
       }
       if (validActs.length > 0 && onCreated) onCreated();
       if (validActs.length > 0 && isFirst && user?.onboardingStep === 2) await advanceOnboarding(3);
+      if (validActs.length > 0) window.dispatchEvent(new Event('activites-changed'));
       closeBizWizard();
       await load();
     } catch (err: unknown) {

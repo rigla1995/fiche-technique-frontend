@@ -87,6 +87,7 @@ export default function ReferentielArticlesPage() {
         await api.put(`/api/articles/${editItem.id}`, payload);
       } else {
         await api.post('/api/articles', payload);
+        window.dispatchEvent(new Event('articles-changed'));
       }
       closeForm();
       load();
@@ -101,6 +102,7 @@ export default function ReferentielArticlesPage() {
     try {
       await api.delete(`/api/articles/${id}`);
       setDeleteId(null);
+      window.dispatchEvent(new Event('articles-changed'));
       load();
     } catch (e: any) {
       alert(e?.response?.data?.message || 'Impossible de supprimer cet article');

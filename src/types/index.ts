@@ -295,6 +295,7 @@ export interface ActiviteTypesSummary {
   hasAppro: boolean;
   hasFournisseurs: boolean;
   hasLaboIngredients: boolean;
+  hasArticles: boolean;
 }
 
 export interface StockEntry {

@@ -1,7 +1,6 @@
-import { useState } from 'react';
-import { NavLink, Link, useLocation } from 'react-router-dom';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { NavLink, Link, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../api/client';
 import type { Activite, ActiviteTypesSummary, Labo, User, AbonnementConfig } from '../../types';
@@ -217,6 +216,7 @@ function GerantSidebarContent({
 export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const { t } = useTranslation();
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [typesSummary, setTypesSummary] = useState<ActiviteTypesSummary | null>(null);
   const [labos, setLabos] = useState<Labo[]>([]);
   const [aboConfig, setAboConfig] = useState<AbonnementConfig | null>(null);
@@ -242,14 +242,17 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const isHistoriquepertesPage = location.pathname === '/client/stock/historique-pertes';
   const isProductsPage = location.pathname === '/client/products';
   const hasActivites = typesSummary === null ? true : typesSummary.hasActivites;
-  const hasSelections = typesSummary === null ? true : typesSummary.hasSelections;
-  const hasLaboIngredients = typesSummary === null ? true : (typesSummary.hasLaboIngredients ?? false);
 
-  // New progressive-unlock flags (entreprise only, post-onboarding)
-  const hasActivitesOrLabos = hasActivites || labos.length > 0;
+  // Progressive-unlock flags (post-onboarding, entreprise only)
   const noActivitesOrLabos = typesSummary !== null && !hasActivites && labos.length === 0;
-  const hasActiviteIngredients = hasSelections;
-  const hasIngredientsAnywhere = hasActiviteIngredients || hasLaboIngredients;
+  const hasArticles = !isOnboarding && typesSummary !== null && (typesSummary.hasArticles ?? false);
+  // Level 0: no activités/labos → only Mes Activités accessible
+  const lockLevel0 = !isOnboarding && noActivitesOrLabos;
+  // Level 1: has activités/labos but no articles → only Référentiel + Mes Activités
+  const lockLevel1 = !isOnboarding && !noActivitesOrLabos && !hasArticles && typesSummary !== null;
+  // Lock all espaces until articles exist
+  const lockEspaces = lockLevel0 || lockLevel1;
+
   const showGerants = !aboConfig || (aboConfig.nbGerants ?? 0) > 0;
 
   const toggleSection = (key: string) => setOpenSections((prev) => {
@@ -257,6 +260,16 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
     n.has(key) ? n.delete(key) : n.add(key);
     return n;
   });
+
+  const fetchSummary = useCallback(() => {
+    api.get('/api/entreprise/activites/types-summary')
+      .then(({ data }) => setTypesSummary(data))
+      .catch(() => setTypesSummary(null));
+  }, []);
+
+  const fetchLabos = useCallback(() => {
+    api.get('/api/labo').then(({ data }) => setLabos(data)).catch(() => setLabos([]));
+  }, []);
 
   useEffect(() => {
     if (isGerant && isEntreprise) {
@@ -267,19 +280,10 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   }, [isGerant, isEntreprise]);
 
   useEffect(() => {
-    if (isGerant && isEntreprise) {
-      api.get('/api/labo').then(({ data }) => setLabos(data)).catch(() => setLabos([]));
-      return;
-    }
-    if (isEntreprise) {
-      api.get('/api/labo')
-        .then(({ data }) => setLabos(data))
-        .catch(() => setLabos([]));
-    }
-    if (isEntreprise && (step === 0 || step === 3)) {
-      api.get('/api/entreprise/activites/types-summary')
-        .then(({ data }) => setTypesSummary(data))
-        .catch(() => setTypesSummary(null));
+    if (!isEntreprise) return;
+    fetchLabos();
+    if (!isGerant) {
+      fetchSummary();
       api.get('/api/abonnements/mon-abonnement')
         .then(({ data }) => { if (data?.config) setAboConfig(data.config); })
         .catch(() => {});
@@ -287,16 +291,31 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
         .then(({ data }) => setModuleVenteActif(!!data?.module_vente_actif))
         .catch(() => {});
     }
-  }, [isEntreprise, step, location.pathname, user?.role]);
+  }, [isEntreprise, isGerant, location.pathname, user?.role, fetchLabos, fetchSummary]);
+
+  // Auto-redirect to Référentiel when first activité/labo is created (level 0 → level 1 transition)
+  const prevNoActivitesOrLabos = useRef<boolean | null>(null);
+  useEffect(() => {
+    if (!isEntreprise || isOnboarding) return;
+    if (prevNoActivitesOrLabos.current === true && !noActivitesOrLabos) {
+      navigate('/client/referentiel/unites');
+    }
+    prevNoActivitesOrLabos.current = noActivitesOrLabos;
+  }, [noActivitesOrLabos, isEntreprise, isOnboarding, navigate]);
 
   useEffect(() => {
     if (!isEntreprise) return;
-    const handler = () => {
-      api.get('/api/labo').then(({ data }) => setLabos(data)).catch(() => setLabos([]));
+    const onLabosOrActivites = () => { fetchLabos(); fetchSummary(); };
+    const onArticles = () => { fetchSummary(); };
+    window.addEventListener('labos-changed', onLabosOrActivites);
+    window.addEventListener('activites-changed', onLabosOrActivites);
+    window.addEventListener('articles-changed', onArticles);
+    return () => {
+      window.removeEventListener('labos-changed', onLabosOrActivites);
+      window.removeEventListener('activites-changed', onLabosOrActivites);
+      window.removeEventListener('articles-changed', onArticles);
     };
-    window.addEventListener('labos-changed', handler);
-    return () => window.removeEventListener('labos-changed', handler);
-  }, [isEntreprise]);
+  }, [isEntreprise, fetchLabos, fetchSummary]);
 
 
   const sidebarBanner = isOnboarding ? (
@@ -305,13 +324,13 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
       {step === 2 && '🏢 Créez votre première activité pour continuer.'}
       {step === 3 && '🧂 Assignez des ingrédients à vos activités dans le Catalogue pour débloquer les produits et le stock.'}
     </div>
-  ) : isEntreprise && noActivitesOrLabos ? (
+  ) : isEntreprise && lockLevel0 ? (
     <div style={{ background: '#fef9c3', borderRadius: 8, padding: '10px 12px', margin: '8px 12px', fontSize: '0.78rem', color: '#854d0e', lineHeight: 1.5 }}>
-      🏢 Créez vos activités ou votre labo pour débloquer les fonctionnalités.
+      🏢 Créez vos activités ou votre labo pour débloquer le référentiel.
     </div>
-  ) : isEntreprise && hasActivitesOrLabos && !hasIngredientsAnywhere ? (
-    <div style={{ background: '#e0f2fe', borderRadius: 8, padding: '10px 12px', margin: '8px 12px', fontSize: '0.78rem', color: '#0369a1', lineHeight: 1.5 }}>
-      🧂 Assignez vos articles depuis votre référentiel pour débloquer les fonctionnalités.
+  ) : isEntreprise && lockLevel1 ? (
+    <div style={{ background: '#f0fdf4', borderRadius: 8, padding: '10px 12px', margin: '8px 12px', fontSize: '0.78rem', color: '#166534', lineHeight: 1.5 }}>
+      📚 Créez vos articles dans le référentiel pour débloquer les espaces.
     </div>
   ) : null;
 
@@ -408,7 +427,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
             <>
               {/* Rapports */}
               <li>
-                {isOnboarding || !hasIngredientsAnywhere ? (
+                {isOnboarding || lockEspaces ? (
                   <LockedLink label={t('nav.rapports', 'Rapports')} />
                 ) : (
                   <NavLink
@@ -442,7 +461,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
               {isEntreprise && (
                 <>
                   <Divider />
-                  <CollapsibleHeader label="Référentiel" icon="📚" isOpen={openSections.has('referentiel')} locked={false} onToggle={() => toggleSection('referentiel')} />
+                  <CollapsibleHeader label="Référentiel" icon="📚" isOpen={openSections.has('referentiel')} locked={isOnboarding || lockLevel0} onToggle={() => toggleSection('referentiel')} />
                   {openSections.has('referentiel') && (
                     <>
                       <SubNavLink to="/client/referentiel/unites" icon="📏" label="Unités" isActive={location.pathname === '/client/referentiel/unites'} onClick={onClose} />
@@ -454,18 +473,18 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                 </>
               )}
 
-              {/* Gérants — visible only if subscription allows; active only when activités or labos exist */}
+              {/* Gérants — visible only if subscription allows; unlocks at level 2 */}
               {isEntreprise && user?.role === 'client' && showGerants && (
                 <>
                 <Divider />
                 <li>
-                  {hasActivitesOrLabos ? (
+                  {!isOnboarding && hasArticles ? (
                     <NavLink to="/client/gerants" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>
                       <span className="link-icon">👥</span>
                       <span className="link-label">Gérants</span>
                     </NavLink>
                   ) : (
-                    <LockedLink label="Gérants" reason="Créez d'abord une activité ou un labo" />
+                    <LockedLink label="Gérants" reason="Créez vos articles dans le référentiel pour débloquer" />
                   )}
                 </li>
                 </>
@@ -478,7 +497,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                   {(hasActivites || typesSummary === null) && (
                   <>
                   <Divider />
-                  <CollapsibleHeader label="Espace Activités" icon="📍" isOpen={openSections.has('activites')} locked={isOnboarding || !hasActiviteIngredients} onToggle={() => toggleSection('activites')} />
+                  <CollapsibleHeader label="Espace Activités" icon="📍" isOpen={openSections.has('activites')} locked={isOnboarding || lockEspaces} onToggle={() => toggleSection('activites')} />
                   {openSections.has('activites') && (
                     <>
                       <li>
@@ -517,7 +536,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                     return (
                       <>
                         <Divider />
-                        <CollapsibleHeader label="Espace Labo" icon="🏭" isOpen={openSections.has('labo')} locked={!hasLaboIngredients} onToggle={() => toggleSection('labo')} />
+                        <CollapsibleHeader label="Espace Labo" icon="🏭" isOpen={openSections.has('labo')} locked={lockEspaces} onToggle={() => toggleSection('labo')} />
                         {openSections.has('labo') && (
                           <>
                             <li><Link to={`/client/labo/stock?laboId=${firstLaboId}`} className={`sidebar-link ${location.pathname === '/client/labo/stock' ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📦</span><span className="link-label">Stock Labo</span></Link></li>
@@ -534,7 +553,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                   })()}
 
                   {/* ══ ESPACE VENTE ══ */}
-                  {!isOnboarding && hasActiviteIngredients && moduleVenteActif && (
+                  {!isOnboarding && !lockEspaces && moduleVenteActif && (
                     <>
                       <Divider />
                       <CollapsibleHeader label="Espace Vente" icon="🛒" isOpen={openSections.has('vente')} locked={false} onToggle={() => toggleSection('vente')} />
@@ -554,8 +573,8 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
                   <Divider />
 
-                  {/* ══ ESPACE PRODUITS ══ — unlocks when activité has ingredients */}
-                  <CollapsibleHeader label="Espace Produits" icon="🍔" isOpen={openSections.has('produits')} locked={isOnboarding || !hasActiviteIngredients} onToggle={() => toggleSection('produits')} />
+                  {/* ══ ESPACE PRODUITS ══ — unlocks at level 2 */}
+                  <CollapsibleHeader label="Espace Produits" icon="🍔" isOpen={openSections.has('produits')} locked={isOnboarding || lockEspaces} onToggle={() => toggleSection('produits')} />
                   {openSections.has('produits') && (
                     <>
                       <li>
@@ -573,8 +592,8 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
                   <Divider />
 
-                  {/* ══ ESPACE FOURNISSEURS ══ — unlocks when activités or labos exist */}
-                  <CollapsibleHeader label="Espace Fournisseurs" icon="🚚" isOpen={openSections.has('fournisseurs')} locked={isOnboarding || !hasActivitesOrLabos} onToggle={() => toggleSection('fournisseurs')} />
+                  {/* ══ ESPACE FOURNISSEURS ══ — unlocks at level 2 */}
+                  <CollapsibleHeader label="Espace Fournisseurs" icon="🚚" isOpen={openSections.has('fournisseurs')} locked={isOnboarding || lockEspaces} onToggle={() => toggleSection('fournisseurs')} />
                   {openSections.has('fournisseurs') && (
                     <>
                       <li>
