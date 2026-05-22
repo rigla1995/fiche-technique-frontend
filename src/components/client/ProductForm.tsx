@@ -88,7 +88,7 @@ export default function ProductForm() {
     const mapActiviteIngredient = (i: import('../../types').ActiviteIngredient): Ingredient => ({
       id: i.id,
       name: i.nom,
-      price: i.prix ?? i.prixUnitaire ?? null,
+      price: i.prixUnitaire ?? null,
       unit: { id: 0, name: i.unite },
       unitId: 0,
       categorieId: i.categorieId,

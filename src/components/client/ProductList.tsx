@@ -629,17 +629,6 @@ export default function ProductList() {
           {/* ── Add product modal (3 steps) ── */}
           {addModal && (() => {
             const selectedIngredients = addIngredients.filter((i) => i.selected);
-            const cats = Array.from(new Set(selectedIngredients.map((i) => i.categorie || 'Sans catégorie')));
-            const filtered = selectedIngredients.filter((i) => {
-              const cat = i.categorie || 'Sans catégorie';
-              if (addIngCatFilter && cat !== addIngCatFilter) return false;
-              if (addIngSearch && !i.nom.toLowerCase().includes(addIngSearch.toLowerCase())) return false;
-              return true;
-            });
-            const filteredByCat = cats.filter((c) => {
-              if (addIngCatFilter && c !== addIngCatFilter) return false;
-              return filtered.some((i) => (i.categorie || 'Sans catégorie') === c);
-            });
             const selectedIngIds = new Set(addIngLines.map((l) => l.ingredientId).filter(Boolean));
 
             const toggleIngredient = (ing: ActiviteIngredient) => {
