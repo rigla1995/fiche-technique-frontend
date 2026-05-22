@@ -54,10 +54,11 @@ export default function ProductList() {
   const [addIngLines, setAddIngLines] = useState<IngLine[]>([]);
   const [addIngredients, setAddIngredients] = useState<ActiviteIngredient[]>([]);
   const [addIngSearch, setAddIngSearch] = useState('');
+  const [addFamilleFilter, setAddFamilleFilter] = useState('');
+  const [addCatFilter, setAddCatFilter] = useState('');
   const [addSaving, setAddSaving] = useState(false);
   const [addSavedName, setAddSavedName] = useState('');
-  const [addOpenCats, setAddOpenCats] = useState<Set<string>>(new Set());
-  const [addAffectationActiviteId, setAddAffectationActiviteId] = useState<number | null>(null);
+  const [addAffectationActiviteIds, setAddAffectationActiviteIds] = useState<number[]>([]);
 
   // Load activities — for gerant users use their assigned activité directly
   useEffect(() => {
@@ -93,8 +94,8 @@ export default function ProductList() {
   const openAddModal = useCallback(() => {
     setAddName(''); setAddRef(''); setAddIsSupplement(false);
     setAddIngLines([]); setAddIngSearch('');
-    setAddOpenCats(new Set()); setAddSavedName('');
-    setAddAffectationActiviteId(selectedActiviteId);
+    setAddSavedName(''); setAddFamilleFilter(''); setAddCatFilter('');
+    setAddAffectationActiviteIds(selectedActiviteId ? [selectedActiviteId] : []);
     setAddModal(1);
     if (selectedActiviteId) {
       api.get(`/api/entreprise/activites/${selectedActiviteId}/ingredients`)
@@ -655,23 +656,25 @@ export default function ProductList() {
 
             const canGoStep2 = addName.trim().length > 0;
             const canGoStep3 = addIngLines.some((l) => l.ingredientId && l.portion);
-            const canGoStep4 = addAffectationActiviteId != null;
+            const canGoStep4 = addAffectationActiviteIds.length > 0;
 
             const handleSave = async () => {
               setAddSaving(true);
               try {
-                const payload = {
-                  name: addName.trim(),
-                  refProduit: addRef.trim() || null,
-                  type: tab === 'utilisable' ? 'utilisable' : 'vendable',
-                  isSupplement: addIsSupplement,
-                  activiteId: addAffectationActiviteId ?? selectedActiviteId,
-                  ingredients: addIngLines
-                    .filter((l) => l.ingredientId && l.portion)
-                    .map((l) => ({ ingredientId: parseInt(l.ingredientId), portion: parseFloat(l.portion) })),
-                  subProducts: [],
-                };
-                await api.post('/api/products', payload);
+                const baseIngredients = addIngLines
+                  .filter((l) => l.ingredientId && l.portion)
+                  .map((l) => ({ ingredientId: parseInt(l.ingredientId), portion: parseFloat(l.portion) }));
+                await Promise.all(addAffectationActiviteIds.map((actId) =>
+                  api.post('/api/products', {
+                    name: addName.trim(),
+                    refProduit: addRef.trim() || null,
+                    type: tab === 'utilisable' ? 'utilisable' : 'vendable',
+                    isSupplement: addIsSupplement,
+                    activiteId: actId,
+                    ingredients: baseIngredients,
+                    subProducts: [],
+                  })
+                ));
                 setAddSavedName(addName.trim());
                 setAddModal(5);
                 const params = new URLSearchParams();
@@ -763,97 +766,92 @@ export default function ProductList() {
 
                     {/* Step 2 — Articles */}
                     {addModal === 2 && (() => {
-                      type PFamGroup = { famKey: string; famNom: string | null; cats: { catKey: string; catNom: string; items: ActiviteIngredient[] }[] };
-                      const famMap2 = new Map<string, PFamGroup>();
-                      const famGrouped: PFamGroup[] = [];
-                      const articlesPool = selectedIngredients.filter((i) => {
+                      // Build famille + catégorie option lists from available articles
+                      const famOptions: { key: string; label: string }[] = [];
+                      const famSeen = new Set<string>();
+                      const catOptions: { key: string; label: string; famKey: string }[] = [];
+                      const catSeen = new Set<string>();
+                      for (const ing of selectedIngredients) {
+                        const fk = ing.familleId != null ? String(ing.familleId) : '';
+                        const fl = ing.familleNom ?? '';
+                        if (fk && !famSeen.has(fk)) { famSeen.add(fk); famOptions.push({ key: fk, label: fl }); }
+                        const ck = String(ing.categorieId ?? '');
+                        const cl = ing.categorie || 'Sans catégorie';
+                        if (!catSeen.has(ck)) { catSeen.add(ck); catOptions.push({ key: ck, label: cl, famKey: fk }); }
+                      }
+                      const filteredCats = addFamilleFilter ? catOptions.filter(c => c.famKey === addFamilleFilter) : catOptions;
+
+                      const articlesFiltered = selectedIngredients.filter((i) => {
                         if (addIngSearch && !i.nom.toLowerCase().includes(addIngSearch.toLowerCase())) return false;
+                        if (addFamilleFilter && String(i.familleId ?? '') !== addFamilleFilter) return false;
+                        if (addCatFilter && String(i.categorieId ?? '') !== addCatFilter) return false;
                         return true;
                       });
-                      for (const ing of articlesPool) {
-                        const fk = ing.familleId != null ? String(ing.familleId) : '__none__';
-                        const fn = ing.familleNom || null;
-                        const ck = `${fk}::${ing.categorieId ?? '__none__'}`;
-                        const cn = ing.categorie || 'Sans catégorie';
-                        if (!famMap2.has(fk)) { const fg: PFamGroup = { famKey: fk, famNom: fn, cats: [] }; famMap2.set(fk, fg); famGrouped.push(fg); }
-                        const fg = famMap2.get(fk)!;
-                        let cg = fg.cats.find(c => c.catKey === ck);
-                        if (!cg) { cg = { catKey: ck, catNom: cn, items: [] }; fg.cats.push(cg); }
-                        cg.items.push(ing);
-                      }
+
                       return (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                           {addIsSupplement && (
-                            <div style={{ background: '#fff1f2', border: '1px solid #fda4af', borderRadius: 8, padding: '8px 12px', fontSize: '0.82rem', color: '#881337', fontWeight: 600 }}>
+                            <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, padding: '8px 12px', fontSize: '0.82rem', color: '#475569', fontWeight: 600 }}>
                               Mode supplément — sélectionnez un seul article
                             </div>
                           )}
-                          <input className="input" placeholder="🔍 Rechercher un article…" value={addIngSearch}
+                          {/* Search */}
+                          <input className="input" placeholder="🔍 Rechercher…" value={addIngSearch}
                             onChange={(e) => setAddIngSearch(e.target.value)}
-                            style={{ fontSize: '0.82rem', borderColor: '#fda4af' }} />
-                          <div style={{ maxHeight: 340, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 10 }}>
-                            {articlesPool.length === 0 && (
+                            style={{ fontSize: '0.82rem' }} />
+                          {/* Filters row */}
+                          <div style={{ display: 'flex', gap: 8 }}>
+                            <select value={addFamilleFilter}
+                              onChange={(e) => { setAddFamilleFilter(e.target.value); setAddCatFilter(''); }}
+                              style={{ flex: 1, padding: '6px 10px', borderRadius: 8, border: '1px solid var(--border)', fontSize: '0.8rem', background: addFamilleFilter ? '#f0f9ff' : '#fff', color: '#374151', cursor: 'pointer' }}>
+                              <option value="">Toutes les familles</option>
+                              {famOptions.map(f => <option key={f.key} value={f.key}>{f.label}</option>)}
+                            </select>
+                            <select value={addCatFilter}
+                              onChange={(e) => setAddCatFilter(e.target.value)}
+                              style={{ flex: 1, padding: '6px 10px', borderRadius: 8, border: '1px solid var(--border)', fontSize: '0.8rem', background: addCatFilter ? '#f0f9ff' : '#fff', color: '#374151', cursor: 'pointer' }}>
+                              <option value="">Toutes les catégories</option>
+                              {filteredCats.map(c => <option key={c.key} value={c.key}>{c.label}</option>)}
+                            </select>
+                          </div>
+                          {/* Article list */}
+                          <div style={{ maxHeight: 300, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 2, border: '1px solid var(--border)', borderRadius: 10, padding: '6px' }}>
+                            {articlesFiltered.length === 0 && (
                               <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '24px 0', fontSize: '0.85rem' }}>Aucun article trouvé</div>
                             )}
-                            {famGrouped.map((fg) => (
-                              <div key={fg.famKey} style={{ border: '1px solid #fda4af', borderRadius: 10, overflow: 'hidden' }}>
-                                {fg.famNom && (
-                                  <div style={{ padding: '7px 12px', background: 'linear-gradient(90deg,#fff1f2,#ffe4e6)', display: 'flex', alignItems: 'center', gap: 6, borderBottom: '1px solid #fda4af' }}>
-                                    <span style={{ fontSize: '0.9rem' }}>🗂️</span>
-                                    <span style={{ fontWeight: 800, fontSize: '0.82rem', color: '#881337' }}>{fg.famNom}</span>
-                                    <span style={{ marginLeft: 'auto', fontSize: '0.72rem', color: '#9f1239', fontWeight: 600 }}>{fg.cats.length} catégorie{fg.cats.length !== 1 ? 's' : ''}</span>
-                                  </div>
-                                )}
-                                {fg.cats.map((cg, ci) => {
-                                  const isOpen = addOpenCats.has(cg.catKey);
-                                  return (
-                                    <div key={cg.catKey} style={{ borderBottom: ci < fg.cats.length - 1 ? '1px solid #fecdd3' : 'none' }}>
-                                      <button type="button"
-                                        onClick={() => setAddOpenCats((prev) => { const n = new Set(prev); if (n.has(cg.catKey)) n.delete(cg.catKey); else n.add(cg.catKey); return n; })}
-                                        style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: 'transparent', border: 'none', cursor: 'pointer', textAlign: 'left' }}>
-                                        <span style={{ fontSize: '0.6rem', color: '#9f1239', transform: isOpen ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s', display: 'inline-block' }}>▶</span>
-                                        <span style={{ fontSize: '0.85rem' }}>🏷️</span>
-                                        <span style={{ fontWeight: 700, fontSize: '0.82rem', color: '#374151', flex: 1 }}>{cg.catNom}</span>
-                                        <span style={{ background: '#fff1f2', color: '#881337', borderRadius: 10, padding: '1px 7px', fontSize: '0.72rem', fontWeight: 600 }}>
-                                          {cg.items.length} article{cg.items.length !== 1 ? 's' : ''}
-                                        </span>
-                                      </button>
-                                      {isOpen && (
-                                        <div style={{ padding: '4px 8px 8px 28px', display: 'flex', flexDirection: 'column', gap: 3 }}>
-                                          {cg.items.map((ing) => {
-                                            const sid = String(ing.id);
-                                            const selected = selectedIngIds.has(sid);
-                                            const line = addIngLines.find((l) => l.ingredientId === sid);
-                                            return (
-                                              <div key={ing.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 8px', borderRadius: 7, background: selected ? '#fff1f2' : 'transparent', border: selected ? '1px solid #fda4af' : '1px solid transparent' }}>
-                                                <input type="checkbox" checked={selected} onChange={() => toggleIngredient(ing)} style={{ accentColor: '#9f1239', width: 15, height: 15, flexShrink: 0 }} />
-                                                <span style={{ flex: 1, fontSize: '0.83rem', fontWeight: selected ? 600 : 400, color: selected ? '#881337' : 'var(--text)' }}>{ing.nom}</span>
-                                                {selected && (
-                                                  <>
-                                                    <input type="number" step="0.001" min="0" placeholder="portion"
-                                                      value={line?.portion || ''}
-                                                      onChange={(e) => updatePortion(sid, e.target.value)}
-                                                      style={{ width: 72, padding: '3px 6px', borderRadius: 6, border: '1.5px solid #fda4af', fontSize: '0.82rem', textAlign: 'right' }} />
-                                                    <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', flexShrink: 0 }}>{ing.unite}</span>
-                                                  </>
-                                                )}
-                                              </div>
-                                            );
-                                          })}
-                                        </div>
-                                      )}
+                            {articlesFiltered.map((ing) => {
+                              const sid = String(ing.id);
+                              const sel = selectedIngIds.has(sid);
+                              const line = addIngLines.find((l) => l.ingredientId === sid);
+                              return (
+                                <div key={ing.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '7px 10px', borderRadius: 8, background: sel ? '#fff7ed' : 'transparent', cursor: 'pointer', transition: 'background 0.12s' }}
+                                  onClick={() => toggleIngredient(ing)}>
+                                  <input type="checkbox" checked={sel} onChange={() => toggleIngredient(ing)}
+                                    onClick={e => e.stopPropagation()}
+                                    style={{ accentColor: '#9f1239', width: 15, height: 15, flexShrink: 0, cursor: 'pointer' }} />
+                                  <span style={{ flex: 1, fontSize: '0.84rem', fontWeight: sel ? 600 : 400, color: sel ? '#881337' : '#374151' }}>{ing.nom}</span>
+                                  {ing.categorie && (
+                                    <span style={{ fontSize: '0.68rem', color: '#64748b', background: '#f1f5f9', borderRadius: 6, padding: '1px 6px', flexShrink: 0 }}>{ing.categorie}</span>
+                                  )}
+                                  {sel && (
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }} onClick={e => e.stopPropagation()}>
+                                      <input type="number" step="0.001" min="0" placeholder="qté"
+                                        value={line?.portion || ''}
+                                        onChange={(e) => updatePortion(sid, e.target.value)}
+                                        style={{ width: 68, padding: '3px 6px', borderRadius: 6, border: '1.5px solid #fda4af', fontSize: '0.82rem', textAlign: 'right' }} />
+                                      <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{ing.unite}</span>
                                     </div>
-                                  );
-                                })}
-                              </div>
-                            ))}
+                                  )}
+                                </div>
+                              );
+                            })}
                           </div>
                           {addIngLines.some(l => l.ingredientId) && (
                             <div style={{ fontSize: '0.78rem', color: '#9f1239', fontWeight: 600 }}>
                               {addIngLines.filter(l => l.ingredientId).length} article{addIngLines.filter(l => l.ingredientId).length !== 1 ? 's' : ''} sélectionné{addIngLines.filter(l => l.ingredientId).length !== 1 ? 's' : ''}
                             </div>
                           )}
-                          <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 8 }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 4 }}>
                             <button className="btn btn-ghost" onClick={() => setAddModal(1)}>← Retour</button>
                             <button disabled={!canGoStep3}
                               onClick={() => setAddModal(3)}
@@ -865,86 +863,134 @@ export default function ProductList() {
                       );
                     })()}
 
-                    {/* Step 3 — Affectation */}
-                    {addModal === 3 && (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                        <div style={{ fontSize: '0.82rem', color: '#64748b', marginBottom: 4 }}>
-                          Affectez ce produit à une activité.
-                        </div>
-                        {allActivities.length === 0 ? (
-                          <div style={{ padding: 16, borderRadius: 8, background: '#fff1f2', border: '1px solid #fda4af', fontSize: '0.85rem', color: '#881337', textAlign: 'center' }}>
-                            Aucune activité disponible.
+                    {/* Step 3 — Affectation (multi-select) */}
+                    {addModal === 3 && (() => {
+                      const allSel = allActivities.length > 0 && allActivities.every(a => addAffectationActiviteIds.includes(a.id));
+                      const toggleAct = (id: number) => setAddAffectationActiviteIds(prev =>
+                        prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+                      );
+                      return (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                          <div style={{ fontSize: '0.82rem', color: '#64748b' }}>
+                            Sélectionnez une ou plusieurs activités. Le produit sera créé pour chacune d'elles.
                           </div>
-                        ) : (
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 320, overflowY: 'auto' }}>
-                            {allActivities.map((act) => {
-                              const sel = addAffectationActiviteId === act.id;
-                              return (
-                                <button key={act.id} type="button"
-                                  onClick={() => setAddAffectationActiviteId(act.id)}
-                                  style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', borderRadius: 10, cursor: 'pointer', textAlign: 'left', border: sel ? '2px solid #9f1239' : '1.5px solid var(--border)', background: sel ? '#fff1f2' : 'var(--surface)', transition: 'all 0.15s' }}>
-                                  <div style={{ width: 32, height: 32, borderRadius: 8, flexShrink: 0, background: sel ? '#ffe4e6' : '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>📍</div>
-                                  <div style={{ flex: 1 }}>
-                                    <div style={{ fontWeight: 600, fontSize: '0.88rem', color: sel ? '#881337' : '#0f172a' }}>{act.nom}</div>
-                                    <div style={{ fontSize: '0.75rem', color: '#64748b' }}>Activité</div>
-                                  </div>
-                                  <div style={{ width: 18, height: 18, borderRadius: 4, flexShrink: 0, border: sel ? 'none' : '1.5px solid #cbd5e1', background: sel ? '#9f1239' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                    {sel && <span style={{ color: '#fff', fontSize: 11, fontWeight: 700 }}>✓</span>}
-                                  </div>
-                                </button>
-                              );
-                            })}
+                          {allActivities.length === 0 ? (
+                            <div style={{ padding: 16, borderRadius: 8, background: '#fff1f2', border: '1px solid #fda4af', fontSize: '0.85rem', color: '#881337', textAlign: 'center' }}>
+                              Aucune activité disponible.
+                            </div>
+                          ) : (
+                            <>
+                              {/* Select all row */}
+                              <button type="button" onClick={() => setAddAffectationActiviteIds(allSel ? [] : allActivities.map(a => a.id))}
+                                style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 14px', borderRadius: 8, cursor: 'pointer', border: '1.5px solid var(--border)', background: allSel ? '#fff1f2' : 'transparent', textAlign: 'left' }}>
+                                <div style={{ width: 18, height: 18, borderRadius: 4, flexShrink: 0, border: allSel ? 'none' : '1.5px solid #cbd5e1', background: allSel ? '#9f1239' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                  {allSel && <span style={{ color: '#fff', fontSize: 11, fontWeight: 700 }}>✓</span>}
+                                </div>
+                                <span style={{ fontSize: '0.84rem', fontWeight: 600, color: '#374151' }}>Tout sélectionner</span>
+                                <span style={{ marginLeft: 'auto', fontSize: '0.75rem', color: '#94a3b8' }}>{addAffectationActiviteIds.length}/{allActivities.length}</span>
+                              </button>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 280, overflowY: 'auto' }}>
+                                {allActivities.map((act) => {
+                                  const sel = addAffectationActiviteIds.includes(act.id);
+                                  return (
+                                    <button key={act.id} type="button" onClick={() => toggleAct(act.id)}
+                                      style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', borderRadius: 10, cursor: 'pointer', textAlign: 'left', border: sel ? '2px solid #9f1239' : '1.5px solid var(--border)', background: sel ? '#fff1f2' : 'var(--surface)', transition: 'all 0.15s' }}>
+                                      <div style={{ width: 32, height: 32, borderRadius: 8, flexShrink: 0, background: sel ? '#ffe4e6' : '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>📍</div>
+                                      <div style={{ flex: 1 }}>
+                                        <div style={{ fontWeight: 600, fontSize: '0.88rem', color: sel ? '#881337' : '#0f172a' }}>{act.nom}</div>
+                                        <div style={{ fontSize: '0.75rem', color: '#64748b' }}>Activité</div>
+                                      </div>
+                                      <div style={{ width: 18, height: 18, borderRadius: 4, flexShrink: 0, border: sel ? 'none' : '1.5px solid #cbd5e1', background: sel ? '#9f1239' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                        {sel && <span style={{ color: '#fff', fontSize: 11, fontWeight: 700 }}>✓</span>}
+                                      </div>
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                              {addAffectationActiviteIds.length === 0 && (
+                                <div style={{ fontSize: '0.78rem', color: '#ef4444' }}>Au moins une activité est requise</div>
+                              )}
+                            </>
+                          )}
+                          <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 8 }}>
+                            <button className="btn btn-ghost" onClick={() => setAddModal(2)}>← Retour</button>
+                            <button disabled={!canGoStep4}
+                              onClick={() => setAddModal(4)}
+                              style={{ background: canGoStep4 ? 'linear-gradient(135deg, #881337, #9f1239)' : '#e5e7eb', border: 'none', borderRadius: 10, color: canGoStep4 ? '#fff' : '#9ca3af', fontWeight: 700, padding: '9px 22px', cursor: canGoStep4 ? 'pointer' : 'not-allowed' }}>
+                              Suivant →
+                            </button>
                           </div>
-                        )}
-                        <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 8 }}>
-                          <button className="btn btn-ghost" onClick={() => setAddModal(2)}>← Retour</button>
-                          <button disabled={!canGoStep4}
-                            onClick={() => setAddModal(4)}
-                            style={{ background: canGoStep4 ? 'linear-gradient(135deg, #881337, #9f1239)' : '#e5e7eb', border: 'none', borderRadius: 10, color: canGoStep4 ? '#fff' : '#9ca3af', fontWeight: 700, padding: '9px 22px', cursor: canGoStep4 ? 'pointer' : 'not-allowed' }}>
-                            Suivant →
-                          </button>
                         </div>
-                      </div>
-                    )}
+                      );
+                    })()}
 
                     {/* Step 4 — Récap & Confirmation */}
-                    {addModal === 4 && (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                        <div style={{ fontSize: '0.82rem', color: '#64748b' }}>Vérifiez les informations avant de créer le produit.</div>
-                        <div style={{ background: '#f9fafb', border: '1px solid var(--border)', borderRadius: 10, padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
-                            <span style={{ color: '#64748b', fontWeight: 600 }}>Nom</span>
-                            <span style={{ fontWeight: 700, color: '#0f172a' }}>{addName}</span>
-                          </div>
-                          {addRef && (
-                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
-                              <span style={{ color: '#64748b', fontWeight: 600 }}>Référence</span>
-                              <span style={{ fontWeight: 600, color: '#374151' }}>{addRef}</span>
+                    {addModal === 4 && (() => {
+                      const ingCount = addIngLines.filter(l => l.ingredientId && l.portion).length;
+                      const selActs = allActivities.filter(a => addAffectationActiviteIds.includes(a.id));
+                      return (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                          {/* Product identity card */}
+                          <div style={{ background: 'linear-gradient(135deg,#fff1f2,#ffe4e6)', border: '1.5px solid #fda4af', borderRadius: 14, padding: '16px 18px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+                              <div style={{ width: 42, height: 42, borderRadius: 10, background: '#9f1239', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.3rem', flexShrink: 0 }}>📦</div>
+                              <div>
+                                <div style={{ fontWeight: 800, fontSize: '1.05rem', color: '#881337' }}>{addName}</div>
+                                {addRef && <div style={{ fontSize: '0.75rem', color: '#9f1239', marginTop: 1 }}>Réf : {addRef}</div>}
+                              </div>
+                              <div style={{ marginLeft: 'auto', background: '#9f1239', color: '#fff', borderRadius: 20, padding: '3px 10px', fontSize: '0.72rem', fontWeight: 700 }}>
+                                {isVendable ? 'Vendable' : 'Utilisable'}{addIsSupplement ? ' · Suppl.' : ''}
+                              </div>
                             </div>
-                          )}
-                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
-                            <span style={{ color: '#64748b', fontWeight: 600 }}>Type</span>
-                            <span style={{ fontWeight: 600, color: '#374151' }}>{isVendable ? 'Produit vendable' : 'Produit utilisable'}{addIsSupplement ? ' · Supplément' : ''}</span>
+                            {/* Stats row */}
+                            <div style={{ display: 'flex', gap: 10 }}>
+                              <div style={{ flex: 1, background: 'rgba(255,255,255,0.6)', borderRadius: 8, padding: '8px 10px', textAlign: 'center' }}>
+                                <div style={{ fontSize: '1.2rem', fontWeight: 900, color: '#881337' }}>{ingCount}</div>
+                                <div style={{ fontSize: '0.7rem', color: '#9f1239' }}>article{ingCount !== 1 ? 's' : ''}</div>
+                              </div>
+                              <div style={{ flex: 1, background: 'rgba(255,255,255,0.6)', borderRadius: 8, padding: '8px 10px', textAlign: 'center' }}>
+                                <div style={{ fontSize: '1.2rem', fontWeight: 900, color: '#881337' }}>{selActs.length}</div>
+                                <div style={{ fontSize: '0.7rem', color: '#9f1239' }}>activité{selActs.length !== 1 ? 's' : ''}</div>
+                              </div>
+                            </div>
                           </div>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
-                            <span style={{ color: '#64748b', fontWeight: 600 }}>Articles</span>
-                            <span style={{ fontWeight: 600, color: '#374151' }}>{addIngLines.filter(l => l.ingredientId && l.portion).length} article{addIngLines.filter(l => l.ingredientId && l.portion).length !== 1 ? 's' : ''}</span>
+                          {/* Activités list */}
+                          <div>
+                            <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#64748b', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Activités cibles</div>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                              {selActs.map(a => (
+                                <span key={a.id} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: '#fff1f2', border: '1.5px solid #fda4af', borderRadius: 20, padding: '4px 12px', fontSize: '0.8rem', fontWeight: 600, color: '#881337' }}>
+                                  📍 {a.nom}
+                                </span>
+                              ))}
+                            </div>
                           </div>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
-                            <span style={{ color: '#64748b', fontWeight: 600 }}>Activité</span>
-                            <span style={{ fontWeight: 700, color: '#881337' }}>📍 {allActivities.find(a => a.id === addAffectationActiviteId)?.nom ?? '—'}</span>
+                          {/* Articles list preview */}
+                          <div>
+                            <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#64748b', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Articles sélectionnés</div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 4, maxHeight: 140, overflowY: 'auto' }}>
+                              {addIngLines.filter(l => l.ingredientId && l.portion).map(l => {
+                                const ing = addIngredients.find(i => String(i.id) === l.ingredientId);
+                                return (
+                                  <div key={l.ingredientId} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '5px 10px', borderRadius: 7, background: '#f8fafc', fontSize: '0.82rem' }}>
+                                    <span style={{ color: '#374151', fontWeight: 500 }}>{ing?.nom ?? l.ingredientId}</span>
+                                    <span style={{ color: '#64748b', fontWeight: 600 }}>{l.portion} {ing?.unite}</span>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 4, borderTop: '1px solid var(--border)' }}>
+                            <button className="btn btn-ghost" onClick={() => setAddModal(3)}>← Retour</button>
+                            <button disabled={addSaving}
+                              onClick={handleSave}
+                              style={{ background: 'linear-gradient(135deg, #881337, #9f1239)', border: 'none', borderRadius: 10, color: '#fff', fontWeight: 700, padding: '10px 28px', cursor: addSaving ? 'not-allowed' : 'pointer', opacity: addSaving ? 0.7 : 1, fontSize: '0.9rem' }}>
+                              {addSaving ? 'Création…' : `Créer ${selActs.length > 1 ? `${selActs.length}×` : ''} le produit ✓`}
+                            </button>
                           </div>
                         </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 4 }}>
-                          <button className="btn btn-ghost" onClick={() => setAddModal(3)}>← Retour</button>
-                          <button disabled={addSaving}
-                            onClick={handleSave}
-                            style={{ background: 'linear-gradient(135deg, #881337, #9f1239)', border: 'none', borderRadius: 10, color: '#fff', fontWeight: 700, padding: '9px 22px', cursor: addSaving ? 'not-allowed' : 'pointer', opacity: addSaving ? 0.7 : 1 }}>
-                            {addSaving ? '…' : 'Créer le produit ✓'}
-                          </button>
-                        </div>
-                      </div>
-                    )}
+                      );
+                    })()}
 
                     {/* Step 5 — Succès */}
                     {addModal === 5 && (
