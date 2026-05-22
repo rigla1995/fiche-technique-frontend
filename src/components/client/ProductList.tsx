@@ -8,7 +8,7 @@ import FicheTechniqueTab from './FicheTechniqueTab';
 import FicheTechniqueModal from './FicheTechniqueModal';
 
 interface ProductDetail {
-  ingredients: { ingredientName: string; portion: number; unitName: string; unitPrice: number }[];
+  ingredients: { ingredientName: string; portion: number; unitName: string; unitPrice: number; categorieName?: string | null }[];
   subProducts: { subProductName: string; portion: number; unitCost: number; totalLineCost: number }[];
 }
 
@@ -484,20 +484,32 @@ export default function ProductList() {
                     <div className="loading-text">{t('common.loading')}</div>
                   ) : popup.type === 'ingredients' ? (
                     detail?.ingredients && detail.ingredients.length > 0 ? (
-                      <table className="table">
+                      <table className="table" style={{ borderCollapse: 'separate', borderSpacing: 0 }}>
                         <thead style={{ background: 'linear-gradient(135deg, #1e1b4b, #4338ca)' }}>
                           <tr>
                             <th style={{ color: '#fff', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase' }}>{t('client.products.popup_col_ingredient')}</th>
+                            <th style={{ color: '#fff', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase' }}>Catégorie</th>
                             <th style={{ textAlign: 'right', color: '#fff', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase' }}>{t('client.products.popup_col_portion')}</th>
                             <th style={{ color: '#fff', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase' }}>{t('client.products.popup_col_unit')}</th>
                           </tr>
                         </thead>
                         <tbody>
                           {detail.ingredients.map((ing, i) => (
-                            <tr key={i}>
-                              <td>{ing.ingredientName}</td>
-                              <td style={{ textAlign: 'right' }}>{ing.portion}</td>
-                              <td>{ing.unitName}</td>
+                            <tr key={i} style={{ background: i % 2 === 0 ? '#f8fafc' : '#fff', transition: 'background 0.12s' }}
+                              onMouseEnter={e => (e.currentTarget.style.background = '#eef2ff')}
+                              onMouseLeave={e => (e.currentTarget.style.background = i % 2 === 0 ? '#f8fafc' : '#fff')}>
+                              <td style={{ fontWeight: 600, color: '#1e1b4b' }}>{ing.ingredientName}</td>
+                              <td>
+                                {ing.categorieName ? (
+                                  <span style={{ background: '#ede9fe', color: '#5b21b6', borderRadius: 6, padding: '2px 8px', fontSize: '0.75rem', fontWeight: 600 }}>
+                                    {ing.categorieName}
+                                  </span>
+                                ) : (
+                                  <span style={{ color: '#94a3b8', fontSize: '0.75rem' }}>—</span>
+                                )}
+                              </td>
+                              <td style={{ textAlign: 'right', fontWeight: 700, color: '#374151' }}>{ing.portion}</td>
+                              <td style={{ color: '#64748b', fontSize: '0.85rem' }}>{ing.unitName}</td>
                             </tr>
                           ))}
                         </tbody>
