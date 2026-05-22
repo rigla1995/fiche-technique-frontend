@@ -7,19 +7,20 @@
     </linearGradient>
   </defs>
 
-  <!-- Icon mark -->
-  <g transform="translate(2,2) scale(0.657)">
-    <rect width="100" height="100" rx="22" fill="url(#bg)"/>
-    <!-- Bold L -->
-    <path d="M 21,22 L 21,74 L 43,74"
-      fill="none" stroke="white" stroke-width="8"
+  <!-- Icon mark (scaled to fit 66×66 at offset 2,2) -->
+  <g transform="translate(2,2) scale(0.66)">
+    <rect width="100" height="100" rx="26" fill="url(#bg)"/>
+    <!-- L -->
+    <path d="M 20 22 L 20 71 Q 20 79 28 79 L 44 79"
+      fill="none" stroke="white" stroke-width="9"
       stroke-linecap="round" stroke-linejoin="round"/>
-    <!-- Bold F -->
-    <path d="M 57,74 L 57,22 L 79,22"
-      fill="none" stroke="white" stroke-width="8"
+    <!-- F vertical + top bar -->
+    <path d="M 57 79 L 57 22 L 80 22"
+      fill="none" stroke="white" stroke-width="9"
       stroke-linecap="round" stroke-linejoin="round"/>
-    <line x1="57" y1="48" x2="76" y2="48"
-      stroke="white" stroke-width="8" stroke-linecap="round"/>
+    <!-- F middle bar -->
+    <line x1="57" y1="49" x2="77" y2="49"
+      stroke="white" stroke-width="9" stroke-linecap="round"/>
   </g>
 
   <!-- Wordmark -->
