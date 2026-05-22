@@ -296,6 +296,7 @@ select.input { cursor: pointer; }
   text-transform: uppercase; letter-spacing: 0.07em;
   border-bottom: 2px solid var(--border);
 }
+.table thead[style] th { background: inherit; color: inherit; border-bottom-color: rgba(255,255,255,0.15); }
 .table td { padding: 11px 14px; border-bottom: 1px solid var(--border-light); font-size: 0.88rem; vertical-align: middle; }
 .table tr:last-child td { border-bottom: none; }
 .table tr:hover td { background: #f9fafb; }
