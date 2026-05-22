@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react';
 import api from '../../api/client';
 import type { Category, Famille } from '../../types';
 
-const COLOR = '#6366f1';
-const GRADIENT = 'linear-gradient(135deg, #3730a3 0%, #6366f1 55%, #818cf8 100%)';
+const COLOR = '#16a34a';
+const GRADIENT = 'linear-gradient(135deg, #14532d 0%, #16a34a 55%, #4ade80 100%)';
 
 export default function ReferentielCategoriesPage() {
   const [categories, setCategories] = useState<Category[]>([]);
@@ -74,7 +74,7 @@ export default function ReferentielCategoriesPage() {
       {/* ── Hero ── */}
       <div style={{
         background: GRADIENT, borderRadius: 18, padding: '24px 28px', marginBottom: 24,
-        boxShadow: '0 8px 32px rgba(99,102,241,0.28)',
+        boxShadow: '0 8px 32px rgba(22,163,74,0.28)',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16, marginBottom: familles.length > 0 ? 14 : 0 }}>
           <div>

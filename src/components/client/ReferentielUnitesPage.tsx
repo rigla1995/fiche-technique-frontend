@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import api from '../../api/client';
 import type { Unit } from '../../types';
 
-const GRADIENT = 'linear-gradient(135deg, #0f766e 0%, #0d9488 55%, #14b8a6 100%)';
+const GRADIENT = 'linear-gradient(135deg, #14532d 0%, #16a34a 55%, #4ade80 100%)';
 
 export default function ReferentielUnitesPage() {
   const [units, setUnits] = useState<Unit[]>([]);
@@ -63,7 +63,7 @@ export default function ReferentielUnitesPage() {
       {/* ── Hero ── */}
       <div style={{
         background: GRADIENT, borderRadius: 18, padding: '24px 28px', marginBottom: 24,
-        boxShadow: '0 8px 32px rgba(13,148,136,0.28)',
+        boxShadow: '0 8px 32px rgba(22,163,74,0.28)',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16,
       }}>
         <div>
