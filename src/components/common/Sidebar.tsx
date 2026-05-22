@@ -587,10 +587,10 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                   <CollapsibleHeader label="Référentiel" icon="📚" isOpen={openSections.has('referentiel')} locked={false} onToggle={() => toggleSection('referentiel')} />
                   {openSections.has('referentiel') && (
                     <>
-                      <li><NavLink to="/client/referentiel/unites" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📏</span><span className="link-label">Unités</span></NavLink></li>
-                      <li><NavLink to="/client/referentiel/familles" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}><span className="link-icon">🗂️</span><span className="link-label">Familles</span></NavLink></li>
-                      <li><NavLink to="/client/referentiel/categories" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}><span className="link-icon">🏷️</span><span className="link-label">Catégories</span></NavLink></li>
-                      <li><NavLink to="/client/referentiel/articles" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}><span className="link-icon">🧂</span><span className="link-label">Articles</span></NavLink></li>
+                      <SubNavLink to="/client/referentiel/unites" icon="📏" label="Unités" isActive={location.pathname === '/client/referentiel/unites'} onClick={onClose} />
+                      <SubNavLink to="/client/referentiel/familles" icon="🗂️" label="Familles" isActive={location.pathname === '/client/referentiel/familles'} onClick={onClose} />
+                      <SubNavLink to="/client/referentiel/categories" icon="🏷️" label="Catégories" isActive={location.pathname === '/client/referentiel/categories'} onClick={onClose} />
+                      <SubNavLink to="/client/referentiel/articles" icon="🧂" label="Articles" isActive={location.pathname === '/client/referentiel/articles'} onClick={onClose} />
                     </>
                   )}
 
