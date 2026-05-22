@@ -488,7 +488,6 @@ export default function ProductList() {
                         <thead style={{ background: 'linear-gradient(135deg, #1e1b4b, #4338ca)' }}>
                           <tr>
                             <th style={{ color: '#fff', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase' }}>{t('client.products.popup_col_ingredient')}</th>
-                            <th style={{ color: '#fff', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase' }}>Catégorie</th>
                             <th style={{ textAlign: 'right', color: '#fff', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase' }}>{t('client.products.popup_col_portion')}</th>
                             <th style={{ color: '#fff', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase' }}>{t('client.products.popup_col_unit')}</th>
                           </tr>
@@ -498,14 +497,12 @@ export default function ProductList() {
                             <tr key={i} style={{ background: i % 2 === 0 ? '#f8fafc' : '#fff', transition: 'background 0.12s' }}
                               onMouseEnter={e => (e.currentTarget.style.background = '#eef2ff')}
                               onMouseLeave={e => (e.currentTarget.style.background = i % 2 === 0 ? '#f8fafc' : '#fff')}>
-                              <td style={{ fontWeight: 600, color: '#1e1b4b' }}>{ing.ingredientName}</td>
                               <td>
-                                {ing.categorieName ? (
-                                  <span style={{ background: '#ede9fe', color: '#5b21b6', borderRadius: 6, padding: '2px 8px', fontSize: '0.75rem', fontWeight: 600 }}>
+                                <div style={{ fontWeight: 600, color: '#1e1b4b' }}>{ing.ingredientName}</div>
+                                {ing.categorieName && (
+                                  <span style={{ background: '#ede9fe', color: '#5b21b6', borderRadius: 6, padding: '1px 7px', fontSize: '0.72rem', fontWeight: 600, marginTop: 2, display: 'inline-block' }}>
                                     {ing.categorieName}
                                   </span>
-                                ) : (
-                                  <span style={{ color: '#94a3b8', fontSize: '0.75rem' }}>—</span>
                                 )}
                               </td>
                               <td style={{ textAlign: 'right', fontWeight: 700, color: '#374151' }}>{ing.portion}</td>
