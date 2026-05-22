@@ -120,7 +120,7 @@ export default function ProductList() {
     try {
       const actId = p.activiteId;
       const [productRes, ingRes] = await Promise.all([
-        api.get(`/products/${p.id}`),
+        api.get(`/api/products/${p.id}`),
         actId ? api.get(`/api/entreprise/activites/${actId}/ingredients`) : Promise.resolve({ data: [] }),
       ]);
       const pdata = productRes.data as {
@@ -683,7 +683,7 @@ export default function ProductList() {
           {/* ── Edit product modal (3 steps) ── */}
           {editModal && (() => {
             const editIngIds = new Set(editIngLines.map((l) => l.ingredientId).filter(Boolean));
-            const availableEditIngs = editIngredients.filter((i) => i.selected);
+            const availableEditIngs = editIngredients.filter((i) => i.selected || editIngIds.has(String(i.id)));
 
             const editToggleIng = (ing: ActiviteIngredient) => {
               const sid = String(ing.id);
@@ -706,7 +706,7 @@ export default function ProductList() {
               if (!editProductId) return;
               setEditSaving(true);
               try {
-                await api.put(`/products/${editProductId}`, {
+                await api.put(`/api/products/${editProductId}`, {
                   name: editName.trim(),
                   refProduit: editRef.trim() || null,
                   isSupplement: editIsSupplement,
