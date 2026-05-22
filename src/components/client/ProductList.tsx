@@ -348,12 +348,11 @@ export default function ProductList() {
               border: '1px solid var(--border)', boxShadow: '0 2px 12px rgba(0,0,0,0.05)',
               display: 'flex', flexWrap: 'wrap', gap: 14, alignItems: 'flex-end',
             }}>
-              <div style={{ width: '100%', marginBottom: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#9f1239' }}>Filtres</span>
-                {search && (
+              {search && (
+                <div style={{ width: '100%', display: 'flex', justifyContent: 'flex-end', marginBottom: 4 }}>
                   <button className="btn btn-ghost btn-sm" style={{ fontSize: '0.78rem' }} onClick={() => { setSearch(''); setPage(1); }}>✕ Réinitialiser</button>
-                )}
-              </div>
+                </div>
+              )}
               <div>
                 <label style={{ fontSize: '0.68rem', fontWeight: 800, color: '#9f1239', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>🔍 Nom</label>
                 <input type="text" placeholder={t('common.search') + '...'}
@@ -391,7 +390,7 @@ export default function ProductList() {
                   <thead style={{ background: 'linear-gradient(135deg, #1e1b4b, #4338ca)' }}>
                     <tr>
                       <th style={{ color: '#fff', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase' }}>{t('common.name')}</th>
-                      <th style={{ textAlign: 'center', color: '#fff', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase' }}>🧂 {t('nav.ingredients')}</th>
+                      <th style={{ textAlign: 'center', color: '#fff', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase' }}>🧂 Articles</th>
                       {isVendable && <th style={{ textAlign: 'center', color: '#fff', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase' }}>📦 P.Utilisables</th>}
                       {!isVendable && <th style={{ width: 60, textAlign: 'center', color: '#fff', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase' }}>📦 Stock</th>}
                       <th style={{ textAlign: 'right', color: '#fff', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase' }}>{t('common.actions')}</th>

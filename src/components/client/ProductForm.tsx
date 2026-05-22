@@ -18,7 +18,7 @@ interface SubProductLine {
 
 export default function ProductForm() {
   const { t } = useTranslation();
-  const { canWrite } = useAuth();
+  const { canWrite, user } = useAuth();
   const navigate = useNavigate();
   const { id } = useParams();
   const [searchParams] = useSearchParams();
@@ -64,6 +64,13 @@ export default function ProductForm() {
   // ── Load activities (enterprise) ─────────────────────────────────────────
   useEffect(() => {
     if (!isEntreprise) return;
+    // For gerant users, synthesize activity from user object
+    if (user?.role === 'gerant' && user.gerantActiviteType === 'activite' && user.gerantActiviteId) {
+      const act = { id: user.gerantActiviteId, nom: user.gerantActiviteNom ?? 'Activité', entrepriseId: 0 } as Activite;
+      setAllActivities([act]);
+      setSelectedActId(String(act.id));
+      return;
+    }
     Promise.all([
       api.get('/api/entreprise/activites/types-summary'),
       api.get('/api/entreprise/activites'),
@@ -73,13 +80,12 @@ export default function ProductForm() {
       setTypesSummary(summary);
       setAllActivities(acts);
 
-      if (!isEdit && acts.length === 1) {
-        // Auto-select when only one activity
+      if (acts.length === 1) {
         setSelectedActId(String(acts[0].id));
       }
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isEntreprise]);
+  }, [isEntreprise, user?.role, user?.gerantActiviteId]);
 
   // ── Load ingredients + product data ──────────────────────────────────────
   useEffect(() => {
