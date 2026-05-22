@@ -185,7 +185,7 @@ export default function ReferentielCategoriesPage() {
       {showForm && (
         <div className="modal-overlay">
           <div className="modal modal-sm" onClick={e => e.stopPropagation()}>
-            <div className="modal-header modal-header--primary">
+            <div className="modal-header" style={{ background: GRADIENT }}>
               <h2>{editItem ? 'Modifier la catégorie' : 'Nouvelle catégorie'}</h2>
               <button className="modal-close" onClick={closeForm}>×</button>
             </div>

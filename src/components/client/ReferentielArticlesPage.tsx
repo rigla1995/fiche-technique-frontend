@@ -251,7 +251,7 @@ export default function ReferentielArticlesPage() {
       {showForm && (
         <div className="modal-overlay">
           <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 460 }}>
-            <div className="modal-header modal-header--primary">
+            <div className="modal-header" style={{ background: GRADIENT }}>
               <h2>{editItem ? 'Modifier l\'article' : 'Nouvel article'}</h2>
               <button className="modal-close" onClick={closeForm}>×</button>
             </div>
