@@ -715,7 +715,7 @@ export default function ProductList() {
                     .map((l) => ({ ingredientId: parseInt(l.ingredientId), portion: parseFloat(l.portion) })),
                   subProducts: [],
                 });
-                setEditModal(4);
+                setEditModal(null);
                 const params = new URLSearchParams();
                 if (laboId) params.set('laboId', laboId);
                 const qs = params.toString();
