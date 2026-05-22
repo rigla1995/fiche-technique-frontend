@@ -52,6 +52,7 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
   const [laboPopup, setLaboPopup] = useState<{ nom: string; tel: string | null; adresse: string | null } | null>(null);
   const [deleteLaboTarget, setDeleteLaboTarget] = useState<Labo | null>(null);
   const [deletingLabo, setDeletingLabo] = useState(false);
+  const [deleteLaboError, setDeleteLaboError] = useState('');
 
   // Standalone labo add/edit modal (single step)
   const [showLaboModal, setShowLaboModal] = useState(false);
@@ -227,12 +228,17 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
   const confirmDeleteLabo = async () => {
     if (!deleteLaboTarget) return;
     setDeletingLabo(true);
+    setDeleteLaboError('');
     try {
       await api.delete(`/api/labo/${deleteLaboTarget.id}`);
       setDeleteLaboTarget(null);
+      setDeleteLaboError('');
       window.dispatchEvent(new Event('labos-changed'));
       load();
-    } catch { /* ignore */ }
+    } catch (e: unknown) {
+      const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      setDeleteLaboError(msg || 'Erreur lors de la suppression');
+    }
     setDeletingLabo(false);
   };
 
@@ -1178,9 +1184,14 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
               <p style={{ margin: 0, color: '#dc2626', fontSize: '0.85rem', fontWeight: 600 }}>
                 {t('client.entreprise.irreversible', 'Cette action est irréversible.')}
               </p>
+              {deleteLaboError && (
+                <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, padding: '8px 12px', color: '#dc2626', fontSize: '0.82rem', fontWeight: 500 }}>
+                  ⚠ {deleteLaboError}
+                </div>
+              )}
             </div>
             <div className="modal-footer" style={{ gap: 10 }}>
-              <button className="btn btn-secondary" onClick={() => setDeleteLaboTarget(null)} disabled={deletingLabo}>{t('common.cancel')}</button>
+              <button className="btn btn-secondary" onClick={() => { setDeleteLaboTarget(null); setDeleteLaboError(''); }} disabled={deletingLabo}>{t('common.cancel')}</button>
               <button className="btn btn-danger" onClick={confirmDeleteLabo} disabled={deletingLabo}>
                 {deletingLabo ? '…' : '🗑 Supprimer'}
               </button>
