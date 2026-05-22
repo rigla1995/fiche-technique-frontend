@@ -359,9 +359,9 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
     <div className={minimal ? '' : 'page-content'}>
       {!minimal && (
         <div style={{
-          background: 'linear-gradient(135deg, #14532d 0%, #166534 55%, #22c55e 100%)',
+          background: 'linear-gradient(135deg, #1e3a8a 0%, #4338ca 45%, #7e22ce 80%, #a855f7 100%)',
           borderRadius: 18, padding: '24px 28px', marginBottom: 24,
-          boxShadow: '0 8px 32px rgba(22,101,52,0.28)',
+          boxShadow: '0 8px 32px rgba(67,56,202,0.28)',
           display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16,
         }}>
           <div>
@@ -404,12 +404,6 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
               <button onClick={() => openAdd()}
                 style={{ padding: '10px 22px', borderRadius: 10, background: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(4px)', color: '#fff', fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer', border: '1px solid rgba(255,255,255,0.25)' } as React.CSSProperties}>
                 + Nouvelle activité
-              </button>
-            )}
-            {atActiviteLimit && !loading && (
-              <button onClick={() => navigate('/client/support?type=supplement')}
-                style={{ background: 'rgba(251,191,36,0.2)', borderRadius: 10, padding: '8px 16px', fontSize: '0.8rem', color: '#fbbf24', border: '1px solid rgba(251,191,36,0.4)', cursor: 'pointer' }}>
-                ➕ Augmenter la capacité
               </button>
             )}
           </div>
@@ -465,19 +459,15 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
         <>
           {/* Activités section */}
           <div style={{ marginBottom: 32 }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14, padding: '10px 16px', background: 'linear-gradient(135deg,#f0fdf4,#dcfce7)', borderRadius: 12, border: '1px solid #bbf7d0' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14, padding: '10px 16px', background: 'linear-gradient(135deg,#eff6ff,#dbeafe)', borderRadius: 12, border: '1px solid #bfdbfe' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <span style={{ fontSize: '1.1rem' }}>🏢</span>
-                <span style={{ fontSize: '0.9rem', fontWeight: 800, color: '#166534' }}>{t('nav.activites')}</span>
-                <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#059669', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 20, padding: '2px 10px' }}>
+                <span style={{ fontSize: '0.9rem', fontWeight: 800, color: '#1e40af' }}>{t('nav.activites')}</span>
+                <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#2563eb', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 20, padding: '2px 10px' }}>
                   {activites.length} activité(s)
                 </span>
               </div>
-              {atActiviteLimit ? (
-                <button className="btn btn-sm" style={{ background: '#fef3c7', color: '#92400e', border: '1px solid #f59e0b', borderRadius: 8, fontSize: '0.75rem', padding: '5px 12px', cursor: 'pointer' }} onClick={() => navigate('/client/support?type=supplement')}>
-                  ➕ Augmenter la capacité
-                </button>
-              ) : (
+              {!atActiviteLimit && (
                 <button className="btn btn-primary btn-sm" onClick={() => openAdd()}>
                   + Nouvelle activité
                 </button>
@@ -551,22 +541,18 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
           {/* Labos section */}
           {configHasLabo && (
             <div style={{ marginBottom: 32 }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14, padding: '10px 16px', background: 'linear-gradient(135deg,#f5f3ff,#ede9fe)', borderRadius: 12, border: '1px solid #c4b5fd' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14, padding: '10px 16px', background: 'linear-gradient(135deg,#faf5ff,#ede9fe)', borderRadius: 12, border: '1px solid #a78bfa' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                   <span style={{ fontSize: '1.1rem' }}>🏭</span>
-                  <span style={{ fontSize: '0.9rem', fontWeight: 800, color: '#6d28d9' }}>Espace Labos</span>
-                  <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#7c3aed', background: '#f5f3ff', border: '1px solid #c4b5fd', borderRadius: 20, padding: '2px 10px' }}>
+                  <span style={{ fontSize: '0.9rem', fontWeight: 800, color: '#7e22ce' }}>Espace Labos</span>
+                  <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#7c3aed', background: '#faf5ff', border: '1px solid #a78bfa', borderRadius: 20, padding: '2px 10px' }}>
                     {labos.length} / {maxLabos} labo(s)
                   </span>
                 </div>
-                {atLaboLimit ? (
-                  <button className="btn btn-sm" style={{ background: '#fef3c7', color: '#92400e', border: '1px solid #f59e0b', borderRadius: 8, fontSize: '0.75rem', padding: '5px 12px', cursor: 'pointer' }} onClick={() => navigate('/client/support?type=supplement')}>
-                    ➕ Augmenter la capacité
-                  </button>
-                ) : (
+                {!atLaboLimit && (
                   <button
                     className="btn btn-sm"
-                    style={{ background: '#7c3aed', color: '#fff', border: 'none', borderRadius: 8, fontSize: '0.8rem', padding: '6px 14px', cursor: 'pointer', fontWeight: 700 }}
+                    style={{ background: '#7e22ce', color: '#fff', border: 'none', borderRadius: 8, fontSize: '0.8rem', padding: '6px 14px', cursor: 'pointer', fontWeight: 700 }}
                     onClick={openAddLabo}
                   >
                     + Nouveau labo
