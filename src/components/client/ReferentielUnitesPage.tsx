@@ -4,6 +4,11 @@ import type { Unit } from '../../types';
 
 const GRADIENT = 'linear-gradient(135deg, #14532d 0%, #16a34a 55%, #4ade80 100%)';
 
+const LABEL: React.CSSProperties = {
+  fontSize: '0.68rem', fontWeight: 700, color: 'var(--text-muted)',
+  textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 3, display: 'block',
+};
+
 export default function ReferentielUnitesPage() {
   const [units, setUnits] = useState<Unit[]>([]);
   const [loading, setLoading] = useState(true);
@@ -71,26 +76,43 @@ export default function ReferentielUnitesPage() {
             <div style={{ background: 'rgba(255,255,255,0.15)', borderRadius: 10, padding: '7px 9px', fontSize: '1.2rem' }}>📏</div>
             <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0 }}>Unités de mesure</h1>
           </div>
-          <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.85rem', margin: 0 }}>
-            {units.length} unité{units.length !== 1 ? 's' : ''} dans votre référentiel
+          <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.85rem', margin: 0 }}>
+            {units.length === 0
+              ? 'Définissez vos unités de mesure : kg, L, g, pièce, portion…'
+              : 'Unités utilisées pour quantifier vos articles et stocks'}
           </p>
         </div>
-        <button
-          onClick={openCreate}
-          style={{ background: 'rgba(255,255,255,0.18)', color: '#fff', border: '1.5px solid rgba(255,255,255,0.35)', borderRadius: 10, padding: '9px 20px', fontWeight: 600, fontSize: '0.9rem', cursor: 'pointer' }}
-        >
-          + Nouvelle unité
-        </button>
+        <div style={{
+          background: 'rgba(255,255,255,0.15)', border: '1.5px solid rgba(255,255,255,0.3)',
+          borderRadius: 14, padding: '10px 20px', textAlign: 'center', minWidth: 80,
+        }}>
+          <div style={{ fontSize: '1.8rem', fontWeight: 900, color: '#fff', lineHeight: 1 }}>{units.length}</div>
+          <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.75)', marginTop: 2 }}>
+            unité{units.length !== 1 ? 's' : ''}
+          </div>
+        </div>
       </div>
 
-      {/* ── Filter ── */}
-      <div style={{ background: 'var(--surface)', borderRadius: 14, padding: '14px 18px', marginBottom: 20, border: '1px solid var(--border)', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
-        <input
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          placeholder="Rechercher une unité…"
-          style={{ width: '100%', padding: '9px 13px', borderRadius: 9, border: '1.5px solid var(--border)', fontSize: '0.88rem', background: '#f8fafc', boxSizing: 'border-box' }}
-        />
+      {/* ── Filter bar ── */}
+      <div style={{
+        background: 'var(--surface)', borderRadius: 14, padding: '14px 18px', marginBottom: 20,
+        border: '1px solid var(--border)', boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+        display: 'flex', alignItems: 'flex-end', gap: 12, flexWrap: 'wrap',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 180 }}>
+          <span style={{ fontSize: '1.1rem', flexShrink: 0 }}>🔍</span>
+          <div style={{ flex: 1 }}>
+            <span style={LABEL}>Recherche</span>
+            <input
+              value={search} onChange={e => setSearch(e.target.value)}
+              placeholder="Filtrer les unités…"
+              style={{ width: '100%', padding: '8px 11px', borderRadius: 8, border: '1.5px solid var(--border)', fontSize: '0.88rem', background: '#f8fafc', boxSizing: 'border-box' }}
+            />
+          </div>
+        </div>
+        <button className="btn btn-primary" onClick={openCreate} style={{ flexShrink: 0 }}>
+          + Nouvelle unité
+        </button>
       </div>
 
       {/* ── List ── */}
@@ -149,9 +171,7 @@ export default function ReferentielUnitesPage() {
               <div className="form-group">
                 <label>Nom *</label>
                 <input
-                  className="input"
-                  autoFocus
-                  value={nom}
+                  className="input" autoFocus value={nom}
                   placeholder="Ex: kg, L, pièce, portion…"
                   onChange={e => setNom(e.target.value)}
                   onKeyDown={e => e.key === 'Enter' && handleSave()}

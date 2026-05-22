@@ -5,6 +5,11 @@ import type { Article, Category, Famille, Unit } from '../../types';
 const COLOR = '#16a34a';
 const GRADIENT = 'linear-gradient(135deg, #14532d 0%, #16a34a 55%, #4ade80 100%)';
 
+const LABEL: React.CSSProperties = {
+  fontSize: '0.68rem', fontWeight: 700, color: 'var(--text-muted)',
+  textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 3, display: 'block',
+};
+
 interface ArticleForm {
   nom: string;
   prix: string;
@@ -49,12 +54,7 @@ export default function ReferentielArticlesPage() {
 
   useEffect(() => { load(); }, [load]);
 
-  const openCreate = () => {
-    setEditItem(null);
-    setForm(emptyForm);
-    setError('');
-    setShowForm(true);
-  };
+  const openCreate = () => { setEditItem(null); setForm(emptyForm); setError(''); setShowForm(true); };
 
   const openEdit = (a: Article) => {
     setEditItem(a);
@@ -91,8 +91,8 @@ export default function ReferentielArticlesPage() {
       }
       closeForm();
       load();
-    } catch (e: any) {
-      setError(e?.response?.data?.message || 'Erreur lors de l\'enregistrement');
+    } catch (e: unknown) {
+      setError((e as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Erreur lors de l\'enregistrement');
     } finally {
       setSaving(false);
     }
@@ -104,8 +104,8 @@ export default function ReferentielArticlesPage() {
       setDeleteId(null);
       window.dispatchEvent(new Event('articles-changed'));
       load();
-    } catch (e: any) {
-      alert(e?.response?.data?.message || 'Impossible de supprimer cet article');
+    } catch (e: unknown) {
+      alert((e as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Impossible de supprimer cet article');
     }
   };
 
@@ -126,44 +126,74 @@ export default function ReferentielArticlesPage() {
       <div style={{
         background: GRADIENT, borderRadius: 18, padding: '24px 28px', marginBottom: 24,
         boxShadow: '0 8px 32px rgba(22,163,74,0.28)',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16,
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16, marginBottom: 14 }}>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
-              <div style={{ background: 'rgba(255,255,255,0.15)', borderRadius: 10, padding: '7px 9px', fontSize: '1.2rem' }}>🧂</div>
-              <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0 }}>Articles</h1>
-            </div>
-            <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.85rem', margin: 0 }}>
-              {articles.length} article{articles.length !== 1 ? 's' : ''} dans votre référentiel
-            </p>
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+            <div style={{ background: 'rgba(255,255,255,0.15)', borderRadius: 10, padding: '7px 9px', fontSize: '1.2rem' }}>🧂</div>
+            <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0 }}>Articles</h1>
           </div>
-          <button
-            onClick={openCreate}
-            style={{ background: 'rgba(255,255,255,0.18)', color: '#fff', border: '1.5px solid rgba(255,255,255,0.35)', borderRadius: 10, padding: '9px 20px', fontWeight: 600, fontSize: '0.9rem', cursor: 'pointer' }}
-          >
-            + Nouvel article
-          </button>
+          <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.85rem', margin: 0 }}>
+            {articles.length === 0
+              ? 'Matières premières et ingrédients utilisés dans votre production'
+              : 'Articles de votre référentiel — stock, fiches techniques et approvisionnements'}
+          </p>
         </div>
-        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-          <input
-            value={search} onChange={e => setSearch(e.target.value)} placeholder="Rechercher…"
-            style={{ flex: 1, minWidth: 160, padding: '8px 12px', borderRadius: 9, border: 'none', fontSize: 13, outline: 'none' }}
-          />
-          {familles.length > 0 && (
-            <select value={filterFamille} onChange={e => { setFilterFamille(e.target.value); setFilterCat(''); }}
-              style={{ padding: '8px 10px', borderRadius: 9, border: 'none', fontSize: 13, maxWidth: 160 }}>
-              <option value="">Toutes les familles</option>
+        <div style={{
+          background: 'rgba(255,255,255,0.15)', border: '1.5px solid rgba(255,255,255,0.3)',
+          borderRadius: 14, padding: '10px 20px', textAlign: 'center', minWidth: 80,
+        }}>
+          <div style={{ fontSize: '1.8rem', fontWeight: 900, color: '#fff', lineHeight: 1 }}>{articles.length}</div>
+          <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.75)', marginTop: 2 }}>
+            article{articles.length !== 1 ? 's' : ''}
+          </div>
+        </div>
+      </div>
+
+      {/* ── Filter bar ── */}
+      <div style={{
+        background: 'var(--surface)', borderRadius: 14, padding: '14px 18px', marginBottom: 20,
+        border: '1px solid var(--border)', boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+        display: 'flex', alignItems: 'flex-end', gap: 12, flexWrap: 'wrap',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 180 }}>
+          <span style={{ fontSize: '1.1rem', flexShrink: 0 }}>🔍</span>
+          <div style={{ flex: 1 }}>
+            <span style={LABEL}>Recherche</span>
+            <input
+              value={search} onChange={e => setSearch(e.target.value)}
+              placeholder="Filtrer les articles…"
+              style={{ width: '100%', padding: '8px 11px', borderRadius: 8, border: '1.5px solid var(--border)', fontSize: '0.88rem', background: '#f8fafc', boxSizing: 'border-box' }}
+            />
+          </div>
+        </div>
+        {familles.length > 0 && (
+          <div style={{ minWidth: 150 }}>
+            <span style={LABEL}>🗂️ Famille</span>
+            <select
+              value={filterFamille} onChange={e => { setFilterFamille(e.target.value); setFilterCat(''); }}
+              style={{ width: '100%', padding: '8px 11px', borderRadius: 8, border: '1.5px solid var(--border)', fontSize: '0.88rem', background: '#f8fafc' }}
+            >
+              <option value="">Toutes</option>
               {familles.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
             </select>
-          )}
-          {filteredCats.length > 0 && (
-            <select value={filterCat} onChange={e => setFilterCat(e.target.value)}
-              style={{ padding: '8px 10px', borderRadius: 9, border: 'none', fontSize: 13, maxWidth: 180 }}>
-              <option value="">Toutes les catégories</option>
+          </div>
+        )}
+        {filteredCats.length > 0 && (
+          <div style={{ minWidth: 165 }}>
+            <span style={LABEL}>🏷️ Catégorie</span>
+            <select
+              value={filterCat} onChange={e => setFilterCat(e.target.value)}
+              style={{ width: '100%', padding: '8px 11px', borderRadius: 8, border: '1.5px solid var(--border)', fontSize: '0.88rem', background: '#f8fafc' }}
+            >
+              <option value="">Toutes</option>
               {filteredCats.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
-          )}
-        </div>
+          </div>
+        )}
+        <button className="btn btn-primary" onClick={openCreate} style={{ flexShrink: 0 }}>
+          + Nouvel article
+        </button>
       </div>
 
       {/* ── Table ── */}

@@ -5,6 +5,11 @@ import type { Famille } from '../../types';
 const COLOR = '#16a34a';
 const GRADIENT = 'linear-gradient(135deg, #14532d 0%, #16a34a 55%, #4ade80 100%)';
 
+const LABEL: React.CSSProperties = {
+  fontSize: '0.68rem', fontWeight: 700, color: 'var(--text-muted)',
+  textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 3, display: 'block',
+};
+
 export default function ReferentielFamillesPage() {
   const [familles, setFamilles] = useState<Famille[]>([]);
   const [loading, setLoading] = useState(true);
@@ -14,6 +19,7 @@ export default function ReferentielFamillesPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [deleteId, setDeleteId] = useState<number | null>(null);
+  const [search, setSearch] = useState('');
 
   const load = () => {
     setLoading(true);
@@ -54,6 +60,10 @@ export default function ReferentielFamillesPage() {
     }
   };
 
+  const filtered = search
+    ? familles.filter(f => f.name.toLowerCase().includes(search.toLowerCase()))
+    : familles;
+
   return (
     <div className="page">
       {/* ── Hero ── */}
@@ -67,14 +77,41 @@ export default function ReferentielFamillesPage() {
             <div style={{ background: 'rgba(255,255,255,0.15)', borderRadius: 10, padding: '7px 9px', fontSize: '1.2rem' }}>🗂️</div>
             <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0 }}>Familles</h1>
           </div>
-          <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.85rem', margin: 0 }}>
-            {familles.length} famille{familles.length !== 1 ? 's' : ''} dans votre référentiel
+          <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.85rem', margin: 0 }}>
+            {familles.length === 0
+              ? 'Groupez vos catégories par famille : Viandes, Épicerie, Boissons…'
+              : 'Familles pour organiser vos catégories et articles'}
           </p>
         </div>
-        <button
-          onClick={openCreate}
-          style={{ background: 'rgba(255,255,255,0.18)', color: '#fff', border: '1.5px solid rgba(255,255,255,0.35)', borderRadius: 10, padding: '9px 20px', fontWeight: 600, fontSize: '0.9rem', cursor: 'pointer' }}
-        >
+        <div style={{
+          background: 'rgba(255,255,255,0.15)', border: '1.5px solid rgba(255,255,255,0.3)',
+          borderRadius: 14, padding: '10px 20px', textAlign: 'center', minWidth: 80,
+        }}>
+          <div style={{ fontSize: '1.8rem', fontWeight: 900, color: '#fff', lineHeight: 1 }}>{familles.length}</div>
+          <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.75)', marginTop: 2 }}>
+            famille{familles.length !== 1 ? 's' : ''}
+          </div>
+        </div>
+      </div>
+
+      {/* ── Filter bar ── */}
+      <div style={{
+        background: 'var(--surface)', borderRadius: 14, padding: '14px 18px', marginBottom: 20,
+        border: '1px solid var(--border)', boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+        display: 'flex', alignItems: 'flex-end', gap: 12, flexWrap: 'wrap',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 180 }}>
+          <span style={{ fontSize: '1.1rem', flexShrink: 0 }}>🔍</span>
+          <div style={{ flex: 1 }}>
+            <span style={LABEL}>Recherche</span>
+            <input
+              value={search} onChange={e => setSearch(e.target.value)}
+              placeholder="Filtrer les familles…"
+              style={{ width: '100%', padding: '8px 11px', borderRadius: 8, border: '1.5px solid var(--border)', fontSize: '0.88rem', background: '#f8fafc', boxSizing: 'border-box' }}
+            />
+          </div>
+        </div>
+        <button className="btn btn-primary" onClick={openCreate} style={{ flexShrink: 0 }}>
           + Nouvelle famille
         </button>
       </div>
@@ -82,12 +119,16 @@ export default function ReferentielFamillesPage() {
       {/* ── List ── */}
       {loading ? (
         <div className="loading-text">Chargement…</div>
-      ) : familles.length === 0 ? (
+      ) : filtered.length === 0 ? (
         <div className="empty-state">
           <span className="empty-icon">🗂️</span>
-          <p>Aucune famille définie.</p>
-          <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: '0 0 12px' }}>Créez votre première famille pour organiser vos catégories et articles.</p>
-          <button className="btn btn-primary" onClick={openCreate}>+ Créer une famille</button>
+          <p>{familles.length === 0 ? 'Aucune famille définie.' : 'Aucun résultat pour cette recherche.'}</p>
+          {familles.length === 0 && (
+            <>
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: '0 0 12px' }}>Créez votre première famille pour organiser vos catégories et articles.</p>
+              <button className="btn btn-primary" onClick={openCreate}>+ Créer une famille</button>
+            </>
+          )}
         </div>
       ) : (
         <div className="table-responsive card">
@@ -99,7 +140,7 @@ export default function ReferentielFamillesPage() {
               </tr>
             </thead>
             <tbody>
-              {familles.map(f => (
+              {filtered.map(f => (
                 <tr key={f.id}>
                   <td>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -131,9 +172,7 @@ export default function ReferentielFamillesPage() {
               <div className="form-group">
                 <label>Nom *</label>
                 <input
-                  className="input"
-                  autoFocus
-                  value={nom}
+                  className="input" autoFocus value={nom}
                   placeholder="Ex: Produits laitiers"
                   onChange={e => setNom(e.target.value)}
                   onKeyDown={e => e.key === 'Enter' && handleSave()}

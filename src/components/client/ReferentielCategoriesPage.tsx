@@ -5,6 +5,11 @@ import type { Category, Famille } from '../../types';
 const COLOR = '#16a34a';
 const GRADIENT = 'linear-gradient(135deg, #14532d 0%, #16a34a 55%, #4ade80 100%)';
 
+const LABEL: React.CSSProperties = {
+  fontSize: '0.68rem', fontWeight: 700, color: 'var(--text-muted)',
+  textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 3, display: 'block',
+};
+
 export default function ReferentielCategoriesPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [familles, setFamilles] = useState<Famille[]>([]);
@@ -16,6 +21,7 @@ export default function ReferentielCategoriesPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [deleteId, setDeleteId] = useState<number | null>(null);
+  const [search, setSearch] = useState('');
   const [filterFamille, setFilterFamille] = useState<string>('');
 
   const load = () => {
@@ -48,8 +54,8 @@ export default function ReferentielCategoriesPage() {
       }
       closeForm();
       load();
-    } catch (e: any) {
-      setError(e?.response?.data?.message || 'Erreur lors de l\'enregistrement');
+    } catch (e: unknown) {
+      setError((e as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Erreur lors de l\'enregistrement');
     } finally {
       setSaving(false);
     }
@@ -60,14 +66,16 @@ export default function ReferentielCategoriesPage() {
       await api.delete(`/api/categories/${id}`);
       setDeleteId(null);
       load();
-    } catch (e: any) {
-      alert(e?.response?.data?.message || 'Impossible de supprimer cette catégorie');
+    } catch (e: unknown) {
+      alert((e as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Impossible de supprimer cette catégorie');
     }
   };
 
-  const filtered = filterFamille
-    ? categories.filter(c => String(c.familleId) === filterFamille)
-    : categories;
+  const filtered = categories.filter(c => {
+    if (search && !c.name.toLowerCase().includes(search.toLowerCase())) return false;
+    if (filterFamille && String(c.familleId) !== filterFamille) return false;
+    return true;
+  });
 
   return (
     <div className="page">
@@ -75,32 +83,62 @@ export default function ReferentielCategoriesPage() {
       <div style={{
         background: GRADIENT, borderRadius: 18, padding: '24px 28px', marginBottom: 24,
         boxShadow: '0 8px 32px rgba(22,163,74,0.28)',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16,
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16, marginBottom: familles.length > 0 ? 14 : 0 }}>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
-              <div style={{ background: 'rgba(255,255,255,0.15)', borderRadius: 10, padding: '7px 9px', fontSize: '1.2rem' }}>🏷️</div>
-              <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0 }}>Catégories</h1>
-            </div>
-            <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.85rem', margin: 0 }}>
-              {categories.length} catégorie{categories.length !== 1 ? 's' : ''} dans votre référentiel
-            </p>
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+            <div style={{ background: 'rgba(255,255,255,0.15)', borderRadius: 10, padding: '7px 9px', fontSize: '1.2rem' }}>🏷️</div>
+            <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0 }}>Catégories</h1>
           </div>
-          <button
-            onClick={openCreate}
-            style={{ background: 'rgba(255,255,255,0.18)', color: '#fff', border: '1.5px solid rgba(255,255,255,0.35)', borderRadius: 10, padding: '9px 20px', fontWeight: 600, fontSize: '0.9rem', cursor: 'pointer' }}
-          >
-            + Nouvelle catégorie
-          </button>
+          <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.85rem', margin: 0 }}>
+            {categories.length === 0
+              ? 'Organisez vos articles par catégorie au sein de chaque famille'
+              : 'Catégories pour classer vos articles dans votre référentiel'}
+          </p>
+        </div>
+        <div style={{
+          background: 'rgba(255,255,255,0.15)', border: '1.5px solid rgba(255,255,255,0.3)',
+          borderRadius: 14, padding: '10px 20px', textAlign: 'center', minWidth: 80,
+        }}>
+          <div style={{ fontSize: '1.8rem', fontWeight: 900, color: '#fff', lineHeight: 1 }}>{categories.length}</div>
+          <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.75)', marginTop: 2 }}>
+            catégorie{categories.length !== 1 ? 's' : ''}
+          </div>
+        </div>
+      </div>
+
+      {/* ── Filter bar ── */}
+      <div style={{
+        background: 'var(--surface)', borderRadius: 14, padding: '14px 18px', marginBottom: 20,
+        border: '1px solid var(--border)', boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+        display: 'flex', alignItems: 'flex-end', gap: 12, flexWrap: 'wrap',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 180 }}>
+          <span style={{ fontSize: '1.1rem', flexShrink: 0 }}>🔍</span>
+          <div style={{ flex: 1 }}>
+            <span style={LABEL}>Recherche</span>
+            <input
+              value={search} onChange={e => setSearch(e.target.value)}
+              placeholder="Filtrer les catégories…"
+              style={{ width: '100%', padding: '8px 11px', borderRadius: 8, border: '1.5px solid var(--border)', fontSize: '0.88rem', background: '#f8fafc', boxSizing: 'border-box' }}
+            />
+          </div>
         </div>
         {familles.length > 0 && (
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <button onClick={() => setFilterFamille('')} style={{ background: !filterFamille ? 'rgba(255,255,255,0.35)' : 'rgba(255,255,255,0.12)', color: '#fff', border: '1.5px solid rgba(255,255,255,0.3)', borderRadius: 20, padding: '5px 14px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Toutes</button>
-            {familles.map(f => (
-              <button key={f.id} onClick={() => setFilterFamille(String(f.id))} style={{ background: filterFamille === String(f.id) ? 'rgba(255,255,255,0.35)' : 'rgba(255,255,255,0.12)', color: '#fff', border: '1.5px solid rgba(255,255,255,0.3)', borderRadius: 20, padding: '5px 14px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>{f.name}</button>
-            ))}
+          <div style={{ minWidth: 160 }}>
+            <span style={LABEL}>🗂️ Famille</span>
+            <select
+              value={filterFamille} onChange={e => setFilterFamille(e.target.value)}
+              style={{ width: '100%', padding: '8px 11px', borderRadius: 8, border: '1.5px solid var(--border)', fontSize: '0.88rem', background: '#f8fafc' }}
+            >
+              <option value="">Toutes les familles</option>
+              {familles.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
+            </select>
           </div>
         )}
+        <button className="btn btn-primary" onClick={openCreate} style={{ flexShrink: 0 }}>
+          + Nouvelle catégorie
+        </button>
       </div>
 
       {/* ── List ── */}
@@ -109,9 +147,13 @@ export default function ReferentielCategoriesPage() {
       ) : filtered.length === 0 ? (
         <div className="empty-state">
           <span className="empty-icon">🏷️</span>
-          <p>Aucune catégorie définie.</p>
-          {familles.length === 0 && <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: '0 0 12px' }}>Conseil : créez d'abord des familles pour organiser vos catégories.</p>}
-          <button className="btn btn-primary" onClick={openCreate}>+ Créer une catégorie</button>
+          <p>{categories.length === 0 ? 'Aucune catégorie définie.' : 'Aucun résultat pour cette recherche.'}</p>
+          {categories.length === 0 && (
+            <>
+              {familles.length === 0 && <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: '0 0 12px' }}>Conseil : créez d'abord des familles pour organiser vos catégories.</p>}
+              <button className="btn btn-primary" onClick={openCreate}>+ Créer une catégorie</button>
+            </>
+          )}
         </div>
       ) : (
         <div className="table-responsive card">
