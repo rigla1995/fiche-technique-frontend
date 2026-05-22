@@ -70,113 +70,121 @@ export default function ReferentielCategoriesPage() {
     : categories;
 
   return (
-    <div style={{ minHeight: '100vh', background: '#f8fafc', padding: '0 0 40px 0' }}>
-      <div style={{ background: GRADIENT, color: '#fff', padding: '28px 24px 22px', borderRadius: '0 0 18px 18px', marginBottom: 24, boxShadow: `0 8px 32px rgba(99,102,241,0.22)` }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
+    <div className="page">
+      {/* ── Hero ── */}
+      <div style={{
+        background: GRADIENT, borderRadius: 18, padding: '24px 28px', marginBottom: 24,
+        boxShadow: '0 8px 32px rgba(99,102,241,0.28)',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16, marginBottom: familles.length > 0 ? 14 : 0 }}>
           <div>
-            <h2 style={{ margin: 0, fontSize: 22, fontWeight: 700 }}>Catégories</h2>
-            <p style={{ margin: '4px 0 0', opacity: 0.85, fontSize: 14 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+              <div style={{ background: 'rgba(255,255,255,0.15)', borderRadius: 10, padding: '7px 9px', fontSize: '1.2rem' }}>🏷️</div>
+              <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0 }}>Catégories</h1>
+            </div>
+            <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.85rem', margin: 0 }}>
               {categories.length} catégorie{categories.length !== 1 ? 's' : ''} dans votre référentiel
             </p>
           </div>
-          <button onClick={openCreate} style={{ background: 'rgba(255,255,255,0.2)', color: '#fff', border: '1.5px solid rgba(255,255,255,0.4)', borderRadius: 10, padding: '9px 20px', fontWeight: 600, fontSize: 14, cursor: 'pointer' }}>
+          <button
+            onClick={openCreate}
+            style={{ background: 'rgba(255,255,255,0.18)', color: '#fff', border: '1.5px solid rgba(255,255,255,0.35)', borderRadius: 10, padding: '9px 20px', fontWeight: 600, fontSize: '0.9rem', cursor: 'pointer' }}
+          >
             + Nouvelle catégorie
           </button>
         </div>
-
         {familles.length > 0 && (
-          <div style={{ display: 'flex', gap: 8, marginTop: 14, flexWrap: 'wrap' }}>
-            <button
-              onClick={() => setFilterFamille('')}
-              style={{ background: !filterFamille ? 'rgba(255,255,255,0.35)' : 'rgba(255,255,255,0.12)', color: '#fff', border: '1.5px solid rgba(255,255,255,0.3)', borderRadius: 20, padding: '5px 14px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
-            >Toutes</button>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <button onClick={() => setFilterFamille('')} style={{ background: !filterFamille ? 'rgba(255,255,255,0.35)' : 'rgba(255,255,255,0.12)', color: '#fff', border: '1.5px solid rgba(255,255,255,0.3)', borderRadius: 20, padding: '5px 14px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Toutes</button>
             {familles.map(f => (
-              <button
-                key={f.id}
-                onClick={() => setFilterFamille(String(f.id))}
-                style={{ background: filterFamille === String(f.id) ? 'rgba(255,255,255,0.35)' : 'rgba(255,255,255,0.12)', color: '#fff', border: '1.5px solid rgba(255,255,255,0.3)', borderRadius: 20, padding: '5px 14px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
-              >{f.name}</button>
+              <button key={f.id} onClick={() => setFilterFamille(String(f.id))} style={{ background: filterFamille === String(f.id) ? 'rgba(255,255,255,0.35)' : 'rgba(255,255,255,0.12)', color: '#fff', border: '1.5px solid rgba(255,255,255,0.3)', borderRadius: 20, padding: '5px 14px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>{f.name}</button>
             ))}
           </div>
         )}
       </div>
 
-      <div style={{ maxWidth: 640, margin: '0 auto', padding: '0 16px' }}>
-        {loading ? (
-          <div style={{ textAlign: 'center', padding: 40, color: '#94a3b8' }}>Chargement…</div>
-        ) : filtered.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: 48, color: '#94a3b8', background: '#fff', borderRadius: 14, border: '1.5px dashed #e2e8f0' }}>
-            <div style={{ fontSize: 40, marginBottom: 12 }}>🏷️</div>
-            <div style={{ fontSize: 16, fontWeight: 600, color: '#64748b', marginBottom: 8 }}>Aucune catégorie</div>
-            {familles.length === 0 && <div style={{ fontSize: 13, color: '#94a3b8', marginBottom: 12 }}>Conseil : créez d'abord des familles pour organiser vos catégories.</div>}
-            <button onClick={openCreate} style={{ background: COLOR, color: '#fff', border: 'none', borderRadius: 10, padding: '10px 24px', fontWeight: 600, cursor: 'pointer' }}>
-              + Créer une catégorie
-            </button>
-          </div>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {filtered.map(c => (
-              <div key={c.id} style={{ background: '#fff', borderRadius: 12, border: '1.5px solid #e2e8f0', padding: '14px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
-                <div>
-                  <div style={{ fontWeight: 600, color: '#1e293b', fontSize: 15 }}>{c.name}</div>
-                  {c.familleName && <div style={{ fontSize: 12, color: '#6366f1', marginTop: 2, fontWeight: 600 }}>🗂️ {c.familleName}</div>}
-                </div>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <button onClick={() => openEdit(c)} style={{ background: '#f1f5f9', color: '#475569', border: 'none', borderRadius: 8, padding: '6px 14px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Modifier</button>
-                  <button onClick={() => setDeleteId(c.id)} style={{ background: '#fee2e2', color: '#dc2626', border: 'none', borderRadius: 8, padding: '6px 14px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Supprimer</button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+      {/* ── List ── */}
+      {loading ? (
+        <div className="loading-text">Chargement…</div>
+      ) : filtered.length === 0 ? (
+        <div className="empty-state">
+          <span className="empty-icon">🏷️</span>
+          <p>Aucune catégorie définie.</p>
+          {familles.length === 0 && <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: '0 0 12px' }}>Conseil : créez d'abord des familles pour organiser vos catégories.</p>}
+          <button className="btn btn-primary" onClick={openCreate}>+ Créer une catégorie</button>
+        </div>
+      ) : (
+        <div className="table-responsive card">
+          <table className="table">
+            <thead>
+              <tr>
+                <th>Nom</th>
+                <th>Famille</th>
+                <th style={{ textAlign: 'right' }}>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map(c => (
+                <tr key={c.id}>
+                  <td style={{ fontWeight: 600, color: '#0f172a' }}>{c.name}</td>
+                  <td>{c.familleName ? <span style={{ fontSize: '0.82rem', color: COLOR, fontWeight: 600 }}>🗂️ {c.familleName}</span> : <span style={{ color: 'var(--text-muted)', fontSize: '0.82rem' }}>—</span>}</td>
+                  <td className="actions-cell" style={{ justifyContent: 'flex-end' }}>
+                    <button className="btn btn-ghost btn-sm" onClick={() => openEdit(c)}>✏️ Modifier</button>
+                    <button className="btn btn-danger btn-sm" onClick={() => setDeleteId(c.id)}>🗑️</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
+      {/* ── Create/Edit Modal ── */}
       {showForm && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-          <div style={{ background: '#fff', borderRadius: 16, padding: 28, width: '100%', maxWidth: 420, boxShadow: '0 20px 60px rgba(0,0,0,0.18)' }}>
-            <h3 style={{ margin: '0 0 20px', color: '#1e293b', fontSize: 18 }}>{editItem ? 'Modifier la catégorie' : 'Nouvelle catégorie'}</h3>
-
-            <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#374151', marginBottom: 6 }}>Nom *</label>
-            <input
-              value={nom} onChange={e => setNom(e.target.value)} placeholder="Ex: Viandes & Volailles"
-              autoFocus
-              style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1.5px solid #d1d5db', fontSize: 14, boxSizing: 'border-box', marginBottom: 14 }}
-              onKeyDown={e => e.key === 'Enter' && handleSave()}
-            />
-
-            {familles.length > 0 && (
-              <>
-                <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#374151', marginBottom: 6 }}>Famille (optionnel)</label>
-                <select
-                  value={familleId} onChange={e => setFamilleId(e.target.value)}
-                  style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1.5px solid #d1d5db', fontSize: 14, boxSizing: 'border-box', marginBottom: 14 }}
-                >
-                  <option value="">— Aucune famille —</option>
-                  {familles.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
-                </select>
-              </>
-            )}
-
-            {error && <p style={{ color: '#dc2626', fontSize: 13, margin: '0 0 12px' }}>{error}</p>}
-            <div style={{ display: 'flex', gap: 10 }}>
-              <button onClick={closeForm} style={{ flex: 1, background: '#f1f5f9', color: '#475569', border: 'none', borderRadius: 9, padding: '10px', fontWeight: 600, cursor: 'pointer' }}>Annuler</button>
-              <button onClick={handleSave} disabled={saving} style={{ flex: 1, background: COLOR, color: '#fff', border: 'none', borderRadius: 9, padding: '10px', fontWeight: 600, cursor: 'pointer', opacity: saving ? 0.7 : 1 }}>
-                {saving ? 'Enregistrement…' : 'Enregistrer'}
-              </button>
+        <div className="modal-overlay">
+          <div className="modal modal-sm" onClick={e => e.stopPropagation()}>
+            <div className="modal-header modal-header--primary">
+              <h2>{editItem ? 'Modifier la catégorie' : 'Nouvelle catégorie'}</h2>
+              <button className="modal-close" onClick={closeForm}>×</button>
+            </div>
+            <div className="modal-body">
+              {error && <div style={{ background: '#fee2e2', color: '#dc2626', border: '1px solid #fecaca', borderRadius: 6, padding: '8px 12px', marginBottom: 12, fontSize: '0.85rem' }}>{error}</div>}
+              <div className="form-group">
+                <label>Nom *</label>
+                <input className="input" autoFocus value={nom} placeholder="Ex: Viandes & Volailles" onChange={e => setNom(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSave()} />
+              </div>
+              {familles.length > 0 && (
+                <div className="form-group">
+                  <label>Famille (optionnel)</label>
+                  <select className="input" value={familleId} onChange={e => setFamilleId(e.target.value)}>
+                    <option value="">— Aucune famille —</option>
+                    {familles.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
+                  </select>
+                </div>
+              )}
+              <div className="modal-footer">
+                <button className="btn btn-ghost" onClick={closeForm}>Annuler</button>
+                <button className="btn btn-primary" disabled={saving || !nom.trim()} onClick={handleSave}>
+                  {saving ? 'Enregistrement…' : 'Enregistrer'}
+                </button>
+              </div>
             </div>
           </div>
         </div>
       )}
 
+      {/* ── Delete Modal ── */}
       {deleteId !== null && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-          <div style={{ background: '#fff', borderRadius: 16, padding: 28, maxWidth: 380, textAlign: 'center', boxShadow: '0 20px 60px rgba(0,0,0,0.18)' }}>
-            <div style={{ fontSize: 36, marginBottom: 12 }}>⚠️</div>
-            <h3 style={{ margin: '0 0 10px', color: '#1e293b' }}>Supprimer cette catégorie ?</h3>
-            <p style={{ color: '#64748b', margin: '0 0 20px', fontSize: 14 }}>Les articles liés perdront leur catégorie.</p>
-            <div style={{ display: 'flex', gap: 10 }}>
-              <button onClick={() => setDeleteId(null)} style={{ flex: 1, background: '#f1f5f9', color: '#475569', border: 'none', borderRadius: 9, padding: '10px', fontWeight: 600, cursor: 'pointer' }}>Annuler</button>
-              <button onClick={() => handleDelete(deleteId)} style={{ flex: 1, background: '#dc2626', color: '#fff', border: 'none', borderRadius: 9, padding: '10px', fontWeight: 600, cursor: 'pointer' }}>Supprimer</button>
+        <div className="modal-overlay">
+          <div className="modal modal-sm" onClick={e => e.stopPropagation()} style={{ textAlign: 'center' }}>
+            <div className="modal-body" style={{ padding: '28px 24px' }}>
+              <div style={{ fontSize: 36, marginBottom: 12 }}>⚠️</div>
+              <h3 style={{ margin: '0 0 10px' }}>Supprimer cette catégorie ?</h3>
+              <p style={{ color: 'var(--text-muted)', margin: '0 0 20px', fontSize: '0.9rem' }}>Les articles liés perdront leur catégorie.</p>
+              <div className="modal-footer">
+                <button className="btn btn-ghost" onClick={() => setDeleteId(null)}>Annuler</button>
+                <button className="btn btn-danger" onClick={() => handleDelete(deleteId!)}>Supprimer</button>
+              </div>
             </div>
           </div>
         </div>

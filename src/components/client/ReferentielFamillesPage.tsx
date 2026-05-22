@@ -37,8 +37,8 @@ export default function ReferentielFamillesPage() {
       }
       closeForm();
       load();
-    } catch (e: any) {
-      setError(e?.response?.data?.message || 'Erreur lors de l\'enregistrement');
+    } catch (e: unknown) {
+      setError((e as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Erreur lors de l\'enregistrement');
     } finally {
       setSaving(false);
     }
@@ -49,91 +49,119 @@ export default function ReferentielFamillesPage() {
       await api.delete(`/api/familles/${id}`);
       setDeleteId(null);
       load();
-    } catch (e: any) {
-      alert(e?.response?.data?.message || 'Impossible de supprimer cette famille');
+    } catch (e: unknown) {
+      alert((e as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Impossible de supprimer cette famille');
     }
   };
 
   return (
-    <div style={{ minHeight: '100vh', background: '#f8fafc', padding: '0 0 40px 0' }}>
-      {/* Hero */}
-      <div style={{ background: GRADIENT, color: '#fff', padding: '28px 24px 22px', borderRadius: '0 0 18px 18px', marginBottom: 24, boxShadow: `0 8px 32px rgba(99,102,241,0.22)` }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
-          <div>
-            <h2 style={{ margin: 0, fontSize: 22, fontWeight: 700 }}>Familles</h2>
-            <p style={{ margin: '4px 0 0', opacity: 0.85, fontSize: 14 }}>
-              {familles.length} famille{familles.length !== 1 ? 's' : ''} dans votre référentiel
-            </p>
+    <div className="page">
+      {/* ── Hero ── */}
+      <div style={{
+        background: GRADIENT, borderRadius: 18, padding: '24px 28px', marginBottom: 24,
+        boxShadow: '0 8px 32px rgba(99,102,241,0.28)',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16,
+      }}>
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+            <div style={{ background: 'rgba(255,255,255,0.15)', borderRadius: 10, padding: '7px 9px', fontSize: '1.2rem' }}>🗂️</div>
+            <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0 }}>Familles</h1>
           </div>
-          <button onClick={openCreate} style={{ background: 'rgba(255,255,255,0.2)', color: '#fff', border: '1.5px solid rgba(255,255,255,0.4)', borderRadius: 10, padding: '9px 20px', fontWeight: 600, fontSize: 14, cursor: 'pointer' }}>
-            + Nouvelle famille
-          </button>
+          <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.85rem', margin: 0 }}>
+            {familles.length} famille{familles.length !== 1 ? 's' : ''} dans votre référentiel
+          </p>
         </div>
+        <button
+          onClick={openCreate}
+          style={{ background: 'rgba(255,255,255,0.18)', color: '#fff', border: '1.5px solid rgba(255,255,255,0.35)', borderRadius: 10, padding: '9px 20px', fontWeight: 600, fontSize: '0.9rem', cursor: 'pointer' }}
+        >
+          + Nouvelle famille
+        </button>
       </div>
 
-      <div style={{ maxWidth: 640, margin: '0 auto', padding: '0 16px' }}>
-        {loading ? (
-          <div style={{ textAlign: 'center', padding: 40, color: '#94a3b8' }}>Chargement…</div>
-        ) : familles.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: 48, color: '#94a3b8', background: '#fff', borderRadius: 14, border: '1.5px dashed #e2e8f0' }}>
-            <div style={{ fontSize: 40, marginBottom: 12 }}>🗂️</div>
-            <div style={{ fontSize: 16, fontWeight: 600, color: '#64748b', marginBottom: 8 }}>Aucune famille</div>
-            <div style={{ fontSize: 14, marginBottom: 20 }}>Créez votre première famille pour organiser vos catégories et articles.</div>
-            <button onClick={openCreate} style={{ background: COLOR, color: '#fff', border: 'none', borderRadius: 10, padding: '10px 24px', fontWeight: 600, cursor: 'pointer' }}>
-              + Créer une famille
-            </button>
-          </div>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {familles.map(f => (
-              <div key={f.id} style={{ background: '#fff', borderRadius: 12, border: '1.5px solid #e2e8f0', padding: '14px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <div style={{ width: 36, height: 36, borderRadius: 9, background: `${COLOR}18`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>🗂️</div>
-                  <span style={{ fontWeight: 600, color: '#1e293b', fontSize: 15 }}>{f.name}</span>
-                </div>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <button onClick={() => openEdit(f)} style={{ background: '#f1f5f9', color: '#475569', border: 'none', borderRadius: 8, padding: '6px 14px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Modifier</button>
-                  <button onClick={() => setDeleteId(f.id)} style={{ background: '#fee2e2', color: '#dc2626', border: 'none', borderRadius: 8, padding: '6px 14px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Supprimer</button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+      {/* ── List ── */}
+      {loading ? (
+        <div className="loading-text">Chargement…</div>
+      ) : familles.length === 0 ? (
+        <div className="empty-state">
+          <span className="empty-icon">🗂️</span>
+          <p>Aucune famille définie.</p>
+          <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: '0 0 12px' }}>Créez votre première famille pour organiser vos catégories et articles.</p>
+          <button className="btn btn-primary" onClick={openCreate}>+ Créer une famille</button>
+        </div>
+      ) : (
+        <div className="table-responsive card">
+          <table className="table">
+            <thead>
+              <tr>
+                <th>Nom</th>
+                <th style={{ textAlign: 'right' }}>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {familles.map(f => (
+                <tr key={f.id}>
+                  <td>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <div style={{ width: 32, height: 32, borderRadius: 8, background: `${COLOR}18`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, flexShrink: 0 }}>🗂️</div>
+                      <span style={{ fontWeight: 600, color: '#0f172a' }}>{f.name}</span>
+                    </div>
+                  </td>
+                  <td className="actions-cell" style={{ justifyContent: 'flex-end' }}>
+                    <button className="btn btn-ghost btn-sm" onClick={() => openEdit(f)}>✏️ Modifier</button>
+                    <button className="btn btn-danger btn-sm" onClick={() => setDeleteId(f.id)}>🗑️</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
-      {/* Form Modal */}
+      {/* ── Create/Edit Modal ── */}
       {showForm && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-          <div style={{ background: '#fff', borderRadius: 16, padding: 28, width: '100%', maxWidth: 420, boxShadow: '0 20px 60px rgba(0,0,0,0.18)' }}>
-            <h3 style={{ margin: '0 0 20px', color: '#1e293b', fontSize: 18 }}>{editItem ? 'Modifier la famille' : 'Nouvelle famille'}</h3>
-            <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#374151', marginBottom: 6 }}>Nom *</label>
-            <input
-              value={nom} onChange={e => setNom(e.target.value)} placeholder="Ex: Produits laitiers"
-              autoFocus
-              style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1.5px solid #d1d5db', fontSize: 14, boxSizing: 'border-box', outline: 'none' }}
-              onKeyDown={e => e.key === 'Enter' && handleSave()}
-            />
-            {error && <p style={{ color: '#dc2626', fontSize: 13, margin: '8px 0 0' }}>{error}</p>}
-            <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
-              <button onClick={closeForm} style={{ flex: 1, background: '#f1f5f9', color: '#475569', border: 'none', borderRadius: 9, padding: '10px', fontWeight: 600, cursor: 'pointer' }}>Annuler</button>
-              <button onClick={handleSave} disabled={saving} style={{ flex: 1, background: COLOR, color: '#fff', border: 'none', borderRadius: 9, padding: '10px', fontWeight: 600, cursor: 'pointer', opacity: saving ? 0.7 : 1 }}>
-                {saving ? 'Enregistrement…' : 'Enregistrer'}
-              </button>
+        <div className="modal-overlay">
+          <div className="modal modal-sm" onClick={e => e.stopPropagation()}>
+            <div className="modal-header modal-header--primary">
+              <h2>{editItem ? 'Modifier la famille' : 'Nouvelle famille'}</h2>
+              <button className="modal-close" onClick={closeForm}>×</button>
+            </div>
+            <div className="modal-body">
+              {error && <div style={{ background: '#fee2e2', color: '#dc2626', border: '1px solid #fecaca', borderRadius: 6, padding: '8px 12px', marginBottom: 12, fontSize: '0.85rem' }}>{error}</div>}
+              <div className="form-group">
+                <label>Nom *</label>
+                <input
+                  className="input"
+                  autoFocus
+                  value={nom}
+                  placeholder="Ex: Produits laitiers"
+                  onChange={e => setNom(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && handleSave()}
+                />
+              </div>
+              <div className="modal-footer">
+                <button className="btn btn-ghost" onClick={closeForm}>Annuler</button>
+                <button className="btn btn-primary" disabled={saving || !nom.trim()} onClick={handleSave}>
+                  {saving ? 'Enregistrement…' : 'Enregistrer'}
+                </button>
+              </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* Delete confirm */}
+      {/* ── Delete Modal ── */}
       {deleteId !== null && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-          <div style={{ background: '#fff', borderRadius: 16, padding: 28, maxWidth: 380, textAlign: 'center', boxShadow: '0 20px 60px rgba(0,0,0,0.18)' }}>
-            <div style={{ fontSize: 36, marginBottom: 12 }}>⚠️</div>
-            <h3 style={{ margin: '0 0 10px', color: '#1e293b' }}>Supprimer cette famille ?</h3>
-            <p style={{ color: '#64748b', margin: '0 0 20px', fontSize: 14 }}>Les catégories liées perdront leur famille.</p>
-            <div style={{ display: 'flex', gap: 10 }}>
-              <button onClick={() => setDeleteId(null)} style={{ flex: 1, background: '#f1f5f9', color: '#475569', border: 'none', borderRadius: 9, padding: '10px', fontWeight: 600, cursor: 'pointer' }}>Annuler</button>
-              <button onClick={() => handleDelete(deleteId)} style={{ flex: 1, background: '#dc2626', color: '#fff', border: 'none', borderRadius: 9, padding: '10px', fontWeight: 600, cursor: 'pointer' }}>Supprimer</button>
+        <div className="modal-overlay">
+          <div className="modal modal-sm" onClick={e => e.stopPropagation()} style={{ textAlign: 'center' }}>
+            <div className="modal-body" style={{ padding: '28px 24px' }}>
+              <div style={{ fontSize: 36, marginBottom: 12 }}>⚠️</div>
+              <h3 style={{ margin: '0 0 10px' }}>Supprimer cette famille ?</h3>
+              <p style={{ color: 'var(--text-muted)', margin: '0 0 20px', fontSize: '0.9rem' }}>Les catégories liées perdront leur famille.</p>
+              <div className="modal-footer">
+                <button className="btn btn-ghost" onClick={() => setDeleteId(null)}>Annuler</button>
+                <button className="btn btn-danger" onClick={() => handleDelete(deleteId!)}>Supprimer</button>
+              </div>
             </div>
           </div>
         </div>
