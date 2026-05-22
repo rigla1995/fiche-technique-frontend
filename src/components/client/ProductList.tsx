@@ -19,8 +19,7 @@ const PAGE_SIZE = 10;
 
 export default function ProductList() {
   const { t } = useTranslation();
-  const { canWrite } = useAuth();
-  const isEntreprise = true;
+  const { canWrite, user } = useAuth();
 
   const [searchParams] = useSearchParams();
   const tab = (searchParams.get('tab') as TabType) || 'vendable';
@@ -58,8 +57,14 @@ export default function ProductList() {
   const [addSavedName, setAddSavedName] = useState('');
   const [addOpenCats, setAddOpenCats] = useState<Set<string>>(new Set());
 
-  // Load all activities for enterprise users (filtered by laboId if present)
+  // Load activities — for gerant users use their assigned activité directly
   useEffect(() => {
+    if (user?.role === 'gerant' && user.gerantActiviteType === 'activite' && user.gerantActiviteId) {
+      const act = { id: user.gerantActiviteId, nom: user.gerantActiviteNom ?? 'Activité', entrepriseId: 0 } as Activite;
+      setAllActivities([act]);
+      setSelectedActiviteId(act.id);
+      return;
+    }
     api.get('/api/entreprise/activites')
       .then(({ data }) => {
         const all = data as Activite[];
@@ -68,7 +73,7 @@ export default function ProductList() {
         if (scoped.length > 0) setSelectedActiviteId(scoped[0].id);
       });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isEntreprise, laboId]);
+  }, [user?.role, user?.gerantActiviteId, laboId]);
 
   // Load products
   useEffect(() => {
