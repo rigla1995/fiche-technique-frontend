@@ -158,6 +158,14 @@ function ArticlesStep({ onDone }: { onDone: () => void }) {
         </div>
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
           <a
+            href="/client/referentiel/unites"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ background: '#f1f5f9', color: '#475569', borderRadius: 9, padding: '9px 16px', fontSize: 13, fontWeight: 600, textDecoration: 'none', display: 'inline-block' }}
+          >
+            📏 Gérer les unités
+          </a>
+          <a
             href="/client/referentiel/familles"
             target="_blank"
             rel="noopener noreferrer"

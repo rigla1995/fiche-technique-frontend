@@ -587,6 +587,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                   <CollapsibleHeader label="Référentiel" icon="📚" isOpen={openSections.has('referentiel')} locked={false} onToggle={() => toggleSection('referentiel')} />
                   {openSections.has('referentiel') && (
                     <>
+                      <li><NavLink to="/client/referentiel/unites" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📏</span><span className="link-label">Unités</span></NavLink></li>
                       <li><NavLink to="/client/referentiel/familles" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}><span className="link-icon">🗂️</span><span className="link-label">Familles</span></NavLink></li>
                       <li><NavLink to="/client/referentiel/categories" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}><span className="link-icon">🏷️</span><span className="link-label">Catégories</span></NavLink></li>
                       <li><NavLink to="/client/referentiel/articles" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}><span className="link-icon">🧂</span><span className="link-label">Articles</span></NavLink></li>
