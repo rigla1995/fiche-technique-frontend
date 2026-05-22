@@ -85,7 +85,7 @@ export default function ProductList() {
 
   const openAddModal = useCallback(() => {
     setAddName(''); setAddRef(''); setAddIsSupplement(false);
-    setAddIngLines([]); setAddIngCatFilter(''); setAddIngSearch('');
+    setAddIngLines([]); setAddIngSearch('');
     setAddOpenCats(new Set()); setAddSavedName('');
     setAddModal(1);
     if (selectedActiviteId) {
