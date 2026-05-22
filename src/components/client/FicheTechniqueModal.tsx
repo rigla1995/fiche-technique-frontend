@@ -112,7 +112,7 @@ export default function FicheTechniqueModal({ productId, productName, hasIngredi
     setStockCheckLoading(true);
     const params = new URLSearchParams();
     if (effectiveActId) params.set('activiteId', String(effectiveActId));
-    api.get(`/products/${productId}/stock-check?${params}`)
+    api.get(`/api/products/${productId}/stock-check?${params}`)
       .then(({ data }) => {
         const result = data as StockCheckResult;
         setStockCheckResult(result);
@@ -143,7 +143,7 @@ export default function FicheTechniqueModal({ productId, productName, hasIngredi
     setCostLoading(true);
     const params = new URLSearchParams({ mode });
     if (resolvedActId) params.set('activiteId', String(resolvedActId));
-    api.get(`/products/${productId}/cout?${params}`)
+    api.get(`/api/products/${productId}/cout?${params}`)
       .then(({ data }) => setRealtimeCost((data as { totalCost: number }).totalCost ?? null))
       .catch(() => setRealtimeCost(null))
       .finally(() => setCostLoading(false));
@@ -154,7 +154,7 @@ export default function FicheTechniqueModal({ productId, productName, hasIngredi
     setManualLoading(true);
     try {
       const qs = resolvedActId ? `?activiteId=${resolvedActId}` : '';
-      const { data } = await api.get(`/products/${productId}/manual-prices${qs}`);
+      const { data } = await api.get(`/api/products/${productId}/manual-prices${qs}`);
       const { prices, groups, updatedAt } = data as {
         prices: { ingredientId: number; nom: string; unite: string; prixUnitaire: number | null }[];
         groups: ManualPriceGroup[];
@@ -182,7 +182,7 @@ export default function FicheTechniqueModal({ productId, productName, hasIngredi
           .filter((p) => p.prixUnitaire !== '' && !isNaN(parseFloat(p.prixUnitaire)))
           .map((p) => ({ ingredientId: p.ingredientId, prixUnitaire: parseFloat(p.prixUnitaire) })),
       };
-      await api.post(`/products/${productId}/manual-prices`, payload);
+      await api.post(`/api/products/${productId}/manual-prices`, payload);
       setShowManualPopup(false);
       setShowZeroWarning(false);
       setManualUpdatedAt(new Date().toISOString().slice(0, 10));
@@ -234,7 +234,7 @@ export default function FicheTechniqueModal({ productId, productName, hasIngredi
       setBulkMissingRefFacture('');
       const params = new URLSearchParams();
       if (effectiveActId) params.set('activiteId', String(effectiveActId));
-      const { data } = await api.get(`/products/${productId}/stock-check?${params}`);
+      const { data } = await api.get(`/api/products/${productId}/stock-check?${params}`);
       const result = data as StockCheckResult;
       setStockCheckResult(result);
       if (result.complete) {
@@ -263,7 +263,7 @@ export default function FicheTechniqueModal({ productId, productName, hasIngredi
       const params = new URLSearchParams({ mode });
       const effectiveActId = resolvedActId || (mode === 'stock' ? stockActId : null);
       if (effectiveActId) params.set('activiteId', String(effectiveActId));
-      const response = await api.get(`/products/${productId}/export?${params}`, { responseType: 'blob' });
+      const response = await api.get(`/api/products/${productId}/export?${params}`, { responseType: 'blob' });
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
       link.href = url;
@@ -604,7 +604,7 @@ export default function FicheTechniqueModal({ productId, productName, hasIngredi
                   <div>
                     <div style={{ fontWeight: 700, fontSize: '1rem', color: '#fff' }}>{t('client.stock.missing_stock_title')}</div>
                     <div style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.85)', marginTop: 2 }}>
-                      {stockCheckResult.missing.length} ingrédient{stockCheckResult.missing.length > 1 ? 's' : ''} sans appro — renseignez les valeurs puis enregistrez.
+                      {stockCheckResult.missing.length} article{stockCheckResult.missing.length > 1 ? 's' : ''} sans appro — renseignez les valeurs puis enregistrez.
                     </div>
                   </div>
                 </div>
