@@ -328,19 +328,6 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
               <Divider />
 
-              {/* ══ RÉFÉRENTIELS ══ */}
-              <CollapsibleHeader label="Référentiels" icon="🗂️" isOpen={openSections.has('admin-ref')} locked={false} onToggle={() => toggleSection('admin-ref')} />
-              {openSections.has('admin-ref') && (
-                <>
-                  <SubNavLink to="/admin/units" icon="📏" label={t('nav.units')} isActive={location.pathname === '/admin/units'} onClick={onClose} />
-                  <SubNavLink to="/admin/categories" icon="🏷️" label={t('nav.categories')} isActive={location.pathname === '/admin/categories'} onClick={onClose} />
-                  <SubNavLink to="/admin/domaines" icon="🗂️" label={t('nav.domaines')} isActive={location.pathname === '/admin/domaines'} onClick={onClose} />
-                  <SubNavLink to="/admin/ingredients" icon="🧂" label={t('nav.ingredients')} isActive={location.pathname === '/admin/ingredients'} onClick={onClose} />
-                </>
-              )}
-
-              <Divider />
-
               {/* ══ ABONNEMENTS ══ */}
               <li>
                 <NavLink to="/admin/abonnements" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>

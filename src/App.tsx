@@ -5,9 +5,6 @@ import Layout from './components/common/Layout';
 import LoginPage from './components/auth/LoginPage';
 import InvitePage from './components/auth/InvitePage';
 import ClientsManagement from './components/admin/ClientsManagement';
-import UnitsManagement from './components/admin/UnitsManagement';
-import CategoriesManagement from './components/admin/CategoriesManagement';
-import DomainesManagement from './components/admin/DomainesManagement';
 import ProductList from './components/client/ProductList';
 import ProductForm from './components/client/ProductForm';
 import ReferentielUnitesPage from './components/client/ReferentielUnitesPage';
@@ -97,10 +94,6 @@ export default function App() {
           <Route element={<Layout requireRole="super_admin" />}>
             <Route path="/admin" element={<Navigate to="/admin/rapports" replace />} />
             <Route path="/admin/clients" element={<ClientsManagement />} />
-            <Route path="/admin/units" element={<UnitsManagement />} />
-            {/* /admin/ingredients supprimé — admin ne gère plus les articles */}
-            <Route path="/admin/categories" element={<CategoriesManagement />} />
-            <Route path="/admin/domaines" element={<DomainesManagement />} />
             <Route path="/admin/rapports" element={<AdminRapportsPage />} />
             <Route path="/admin/abonnements" element={<AbonnementsManagement />} />
             <Route path="/admin/abonnements/paiements"  element={<HistoriquePaiementsAdmin />} />
