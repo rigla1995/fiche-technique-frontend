@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
@@ -61,6 +61,23 @@ export default function ProductList() {
   const [addSavedName, setAddSavedName] = useState('');
   const [addAffectationActiviteIds, setAddAffectationActiviteIds] = useState<number[]>([]);
 
+  // Edit product modal state
+  type EditStep = 1 | 2 | 3 | 4;
+  const [editModal, setEditModal] = useState<EditStep | null>(null);
+  const [editProductId, setEditProductId] = useState<number | null>(null);
+  const [editProductType, setEditProductType] = useState<'vendable' | 'utilisable'>('vendable');
+  const [editName, setEditName] = useState('');
+  const [editRef, setEditRef] = useState('');
+  const [editIsSupplement, setEditIsSupplement] = useState(false);
+  const [editIngLines, setEditIngLines] = useState<IngLine[]>([]);
+  const [editIngredients, setEditIngredients] = useState<ActiviteIngredient[]>([]);
+  const [editIngSearch, setEditIngSearch] = useState('');
+  const [editFamilleFilter, setEditFamilleFilter] = useState('');
+  const [editCatFilter, setEditCatFilter] = useState('');
+  const [editIngVisible, setEditIngVisible] = useState(20);
+  const [editSaving, setEditSaving] = useState(false);
+  const [editLoadingData, setEditLoadingData] = useState(false);
+
   // Load activities — for gerant users use their assigned activité directly
   useEffect(() => {
     if (user?.role === 'gerant' && user.gerantActiviteType === 'activite' && user.gerantActiviteId) {
@@ -91,6 +108,41 @@ export default function ProductList() {
       .finally(() => setLoading(false));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isEntreprise, laboId]);
+
+  const openEditModal = useCallback(async (p: Product) => {
+    setEditProductId(p.id);
+    setEditProductType(p.type);
+    setEditName(''); setEditRef(''); setEditIsSupplement(false);
+    setEditIngLines([]); setEditIngredients([]); setEditIngSearch('');
+    setEditFamilleFilter(''); setEditCatFilter(''); setEditIngVisible(20);
+    setEditLoadingData(true);
+    setEditModal(1);
+    try {
+      const actId = p.activiteId;
+      const [productRes, ingRes] = await Promise.all([
+        api.get(`/products/${p.id}`),
+        actId ? api.get(`/api/entreprise/activites/${actId}/ingredients`) : Promise.resolve({ data: [] }),
+      ]);
+      const pdata = productRes.data as {
+        name: string; refProduit?: string; isSupplement?: boolean;
+        ingredients: { ingredientId: number; portion: number; ingredientName?: string; unitName?: string }[];
+      };
+      const ings = ingRes.data as ActiviteIngredient[];
+      const ingMerged = [...ings];
+      for (const pi of pdata.ingredients) {
+        if (!ingMerged.find((x) => x.id === pi.ingredientId)) {
+          ingMerged.push({ id: pi.ingredientId, nom: pi.ingredientName || String(pi.ingredientId), unite: pi.unitName || '', categorie: '', categorieId: null, familleId: null, familleNom: null, prixUnitaire: null, selected: true });
+        }
+      }
+      setEditIngredients(ingMerged);
+      setEditName(pdata.name);
+      setEditRef(pdata.refProduit || '');
+      setEditIsSupplement(pdata.isSupplement ?? false);
+      setEditIngLines(pdata.ingredients.map((i) => ({ ingredientId: String(i.ingredientId), portion: String(i.portion) })));
+    } finally {
+      setEditLoadingData(false);
+    }
+  }, []);
 
   const openAddModal = useCallback(() => {
     setAddName(''); setAddRef(''); setAddIsSupplement(false);
@@ -217,33 +269,18 @@ export default function ProductList() {
           <text x="7" y="18" fill="white" fontSize="9" fontWeight="bold" fontFamily="Calibri,Arial,sans-serif">XLS</text>
         </svg>
       </button>
-      {canWrite
-        ? (
-          <Link
-            to={`/client/products/${p.id}/edit`}
-            className="btn btn-ghost btn-sm"
-            title={t('common.edit')}
-            style={{ width: 32, height: 32, padding: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', borderRadius: 7 }}
-          >
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-            </svg>
-          </Link>
-        ) : (
-          <button
-            className="btn btn-ghost btn-sm"
-            disabled
-            title={t('common.edit')}
-            style={{ width: 32, height: 32, padding: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', borderRadius: 7, ...disabledStyle }}
-          >
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-            </svg>
-          </button>
-        )
-      }
+      <button
+        className="btn btn-ghost btn-sm"
+        title={t('common.edit')}
+        disabled={!canWrite}
+        onClick={() => openEditModal(p)}
+        style={{ width: 32, height: 32, padding: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', borderRadius: 7, ...(!canWrite ? disabledStyle : {}) }}
+      >
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+        </svg>
+      </button>
       <button
         className="btn btn-danger btn-sm"
         onClick={() => handleDelete(p)}
@@ -642,6 +679,303 @@ export default function ProductList() {
               </div>
             </div>
           )}
+
+          {/* ── Edit product modal (3 steps) ── */}
+          {editModal && (() => {
+            const editIngIds = new Set(editIngLines.map((l) => l.ingredientId).filter(Boolean));
+            const availableEditIngs = editIngredients.filter((i) => i.selected);
+
+            const editToggleIng = (ing: ActiviteIngredient) => {
+              const sid = String(ing.id);
+              if (editIsSupplement) {
+                setEditIngLines([{ ingredientId: sid, portion: '' }]);
+              } else if (editIngIds.has(sid)) {
+                setEditIngLines((prev) => prev.filter((l) => l.ingredientId !== sid));
+              } else {
+                setEditIngLines((prev) => [...prev, { ingredientId: sid, portion: '' }]);
+              }
+            };
+
+            const editUpdatePortion = (ingId: string, val: string) => {
+              setEditIngLines((prev) => prev.map((l) => l.ingredientId === ingId ? { ...l, portion: val } : l));
+            };
+
+            const canGoEditStep2 = editName.trim().length > 0;
+            const canGoEditStep3 = editIngLines.some((l) => l.ingredientId && parseFloat(l.portion) > 0);
+
+            const handleEditSave = async () => {
+              if (!editProductId) return;
+              setEditSaving(true);
+              try {
+                await api.put(`/products/${editProductId}`, {
+                  name: editName.trim(),
+                  refProduit: editRef.trim() || null,
+                  isSupplement: editIsSupplement,
+                  ingredients: editIngLines
+                    .filter((l) => l.ingredientId && parseFloat(l.portion) > 0)
+                    .map((l) => ({ ingredientId: parseInt(l.ingredientId), portion: parseFloat(l.portion) })),
+                  subProducts: [],
+                });
+                setEditModal(4);
+                const params = new URLSearchParams();
+                if (laboId) params.set('laboId', laboId);
+                const qs = params.toString();
+                api.get(`/api/products${qs ? `?${qs}` : ''}`).then(({ data }) => setProducts(data as Product[]));
+              } catch { /* ignore */ }
+              setEditSaving(false);
+            };
+
+            const EDIT_STEPS = [
+              { n: 1, label: 'Identité' },
+              { n: 2, label: 'Articles' },
+              { n: 3, label: 'Récap' },
+            ];
+
+            const isEditVendable = editProductType === 'vendable';
+
+            // Compute filter options for step 2
+            const eFamOptions: { key: string; label: string }[] = [];
+            const eFamSeen = new Set<string>();
+            const eCatOptions: { key: string; label: string; famKey: string }[] = [];
+            const eCatSeen = new Set<string>();
+            for (const ing of availableEditIngs) {
+              const fk = ing.familleId != null ? String(ing.familleId) : '';
+              const fl = ing.familleNom ?? '';
+              if (fk && !eFamSeen.has(fk)) { eFamSeen.add(fk); eFamOptions.push({ key: fk, label: fl }); }
+              const ck = String(ing.categorieId ?? '');
+              const cl = ing.categorie || 'Sans catégorie';
+              if (!eCatSeen.has(ck)) { eCatSeen.add(ck); eCatOptions.push({ key: ck, label: cl, famKey: fk }); }
+            }
+            const eFilteredCats = editFamilleFilter ? eCatOptions.filter((c) => c.famKey === editFamilleFilter) : eCatOptions;
+            const eArticlesFiltered = availableEditIngs.filter((i) => {
+              if (editIngSearch && !i.nom.toLowerCase().includes(editIngSearch.toLowerCase())) return false;
+              if (editFamilleFilter && String(i.familleId ?? '') !== editFamilleFilter) return false;
+              if (editCatFilter && String(i.categorieId ?? '') !== editCatFilter) return false;
+              return true;
+            });
+
+            return (
+              <div className="modal-overlay">
+                <div className="modal" style={{ maxWidth: 560, width: '95vw', maxHeight: '90vh', overflow: 'auto' }} onClick={(e) => e.stopPropagation()}>
+                  {/* Header */}
+                  <div style={{ background: 'linear-gradient(135deg, #1e40af 0%, #3b82f6 100%)', padding: '18px 22px 14px', borderRadius: '12px 12px 0 0', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ color: '#fff', fontWeight: 800, fontSize: '1rem', marginBottom: editModal !== 4 ? 12 : 0 }}>
+                        {editModal === 4 ? '✅ Produit modifié' : `Modifier — ${isEditVendable ? 'produit vendable' : 'produit utilisable'}`}
+                      </div>
+                      {editModal !== 4 && (
+                        <div style={{ display: 'flex', gap: 10, width: '100%' }}>
+                          {EDIT_STEPS.map((s) => (
+                            <div key={s.n} style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                              <div style={{ height: 4, borderRadius: 4, background: s.n <= editModal ? '#fff' : 'rgba(255,255,255,0.28)', transition: 'background 0.2s' }} />
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                                <div style={{ width: 18, height: 18, borderRadius: '50%', flexShrink: 0, background: s.n <= editModal ? '#fff' : 'rgba(255,255,255,0.28)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.62rem', fontWeight: 800, color: s.n <= editModal ? '#1e40af' : 'rgba(255,255,255,0.55)' }}>
+                                  {s.n < editModal ? '✓' : s.n}
+                                </div>
+                                <span style={{ fontSize: '0.68rem', color: s.n <= editModal ? '#fff' : 'rgba(255,255,255,0.5)', fontWeight: 600 }}>{s.label}</span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    <button onClick={() => setEditModal(null)} style={{ background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: 8, color: '#fff', fontWeight: 900, fontSize: '1.1rem', cursor: 'pointer', padding: '2px 9px', lineHeight: 1, flexShrink: 0 }}>×</button>
+                  </div>
+
+                  <div style={{ padding: '20px 22px' }}>
+                    {/* Step 1 — Identité */}
+                    {editModal === 1 && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                        {editLoadingData && (
+                          <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '8px 0', fontSize: '0.85rem' }}>Chargement…</div>
+                        )}
+                        <div>
+                          <label style={{ display: 'block', fontWeight: 700, fontSize: '0.82rem', color: '#1e40af', marginBottom: 6 }}>
+                            Nom du produit <span style={{ color: '#ef4444' }}>*</span>
+                          </label>
+                          <input className="input" placeholder="Ex. Burger Classic…" value={editName}
+                            onChange={(e) => setEditName(e.target.value)} autoFocus
+                            style={{ width: '100%', borderColor: '#93c5fd' }} />
+                        </div>
+                        <div>
+                          <label style={{ display: 'block', fontWeight: 700, fontSize: '0.82rem', color: '#1e40af', marginBottom: 6 }}>
+                            Réf. produit <span style={{ fontSize: '0.75rem', fontWeight: 400, color: 'var(--text-muted)' }}>(optionnel)</span>
+                          </label>
+                          <input className="input" placeholder="Ex. BRG-001" value={editRef}
+                            onChange={(e) => setEditRef(e.target.value)}
+                            style={{ width: '100%', maxWidth: 280, borderColor: '#93c5fd' }} />
+                        </div>
+                        {isEditVendable && (
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: editIsSupplement ? '#eff6ff' : '#f9fafb', borderRadius: 10, padding: '12px 16px', border: `1.5px solid ${editIsSupplement ? '#93c5fd' : 'var(--border)'}` }}>
+                            <div>
+                              <div style={{ fontWeight: 700, fontSize: '0.88rem', color: editIsSupplement ? '#1e40af' : 'var(--text)' }}>Supplément</div>
+                              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: 2 }}>Un supplément ne contient qu'un seul ingrédient</div>
+                            </div>
+                            <button type="button"
+                              onClick={() => setEditIsSupplement((v) => !v)}
+                              style={{ width: 44, height: 24, borderRadius: 12, border: 'none', cursor: 'pointer', background: editIsSupplement ? '#3b82f6' : '#d1d5db', transition: 'background 0.2s', position: 'relative', flexShrink: 0 }}>
+                              <span style={{ position: 'absolute', top: 3, left: editIsSupplement ? 23 : 3, width: 18, height: 18, borderRadius: '50%', background: '#fff', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
+                            </button>
+                          </div>
+                        )}
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, paddingTop: 8 }}>
+                          <button className="btn btn-ghost" onClick={() => setEditModal(null)}>Annuler</button>
+                          <button disabled={!canGoEditStep2 || editLoadingData}
+                            onClick={() => setEditModal(2)}
+                            style={{ background: canGoEditStep2 && !editLoadingData ? 'linear-gradient(135deg, #1e40af, #3b82f6)' : '#e5e7eb', border: 'none', borderRadius: 10, color: canGoEditStep2 && !editLoadingData ? '#fff' : '#9ca3af', fontWeight: 700, padding: '9px 22px', cursor: canGoEditStep2 && !editLoadingData ? 'pointer' : 'not-allowed' }}>
+                            Suivant →
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Step 2 — Articles */}
+                    {editModal === 2 && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                        {editIsSupplement && (
+                          <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, padding: '8px 12px', fontSize: '0.82rem', color: '#475569', fontWeight: 600 }}>
+                            Mode supplément — sélectionnez un seul article
+                          </div>
+                        )}
+                        <input className="input" placeholder="🔍 Rechercher…" value={editIngSearch}
+                          onChange={(e) => { setEditIngSearch(e.target.value); setEditIngVisible(20); }}
+                          style={{ fontSize: '0.82rem' }} />
+                        <div style={{ display: 'flex', gap: 8 }}>
+                          <select value={editFamilleFilter}
+                            onChange={(e) => { setEditFamilleFilter(e.target.value); setEditCatFilter(''); setEditIngVisible(20); }}
+                            style={{ flex: 1, padding: '6px 10px', borderRadius: 8, border: '1px solid var(--border)', fontSize: '0.8rem', background: editFamilleFilter ? '#eff6ff' : '#fff', color: '#374151', cursor: 'pointer' }}>
+                            <option value="">Toutes les familles</option>
+                            {eFamOptions.map((f) => <option key={f.key} value={f.key}>{f.label}</option>)}
+                          </select>
+                          <select value={editCatFilter}
+                            onChange={(e) => { setEditCatFilter(e.target.value); setEditIngVisible(20); }}
+                            style={{ flex: 1, padding: '6px 10px', borderRadius: 8, border: '1px solid var(--border)', fontSize: '0.8rem', background: editCatFilter ? '#eff6ff' : '#fff', color: '#374151', cursor: 'pointer' }}>
+                            <option value="">Toutes les catégories</option>
+                            {eFilteredCats.map((c) => <option key={c.key} value={c.key}>{c.label}</option>)}
+                          </select>
+                        </div>
+                        <div
+                          style={{ height: 210, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 2, border: '1px solid var(--border)', borderRadius: 10, padding: '6px' }}
+                          onScroll={(e) => {
+                            const el = e.currentTarget;
+                            if (el.scrollHeight - el.scrollTop - el.clientHeight < 60) setEditIngVisible((v) => v + 20);
+                          }}
+                        >
+                          {eArticlesFiltered.length === 0 && (
+                            <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '24px 0', fontSize: '0.85rem' }}>Aucun article trouvé</div>
+                          )}
+                          {eArticlesFiltered.slice(0, editIngVisible).map((ing) => {
+                            const sid = String(ing.id);
+                            const sel = editIngIds.has(sid);
+                            const line = editIngLines.find((l) => l.ingredientId === sid);
+                            const portionValid = sel && parseFloat(line?.portion || '0') > 0;
+                            return (
+                              <div key={ing.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '7px 10px', borderRadius: 8, background: sel ? (portionValid ? '#eff6ff' : '#fef3c7') : 'transparent', cursor: 'pointer', transition: 'background 0.12s' }}
+                                onClick={() => editToggleIng(ing)}>
+                                <input type="checkbox" checked={sel} onChange={() => editToggleIng(ing)}
+                                  onClick={(e) => e.stopPropagation()}
+                                  style={{ accentColor: '#3b82f6', width: 15, height: 15, flexShrink: 0, cursor: 'pointer' }} />
+                                <span style={{ flex: 1, fontSize: '0.84rem', fontWeight: sel ? 600 : 400, color: sel ? '#1e40af' : '#374151' }}>{ing.nom}</span>
+                                {ing.categorie && (
+                                  <span style={{ fontSize: '0.68rem', color: '#64748b', background: '#f1f5f9', borderRadius: 6, padding: '1px 6px', flexShrink: 0 }}>{ing.categorie}</span>
+                                )}
+                                {sel && (
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }} onClick={(e) => e.stopPropagation()}>
+                                    <input type="number" step="0.001" min="0" placeholder="portion"
+                                      value={line?.portion || ''}
+                                      onChange={(e) => editUpdatePortion(sid, e.target.value)}
+                                      style={{ width: 72, padding: '3px 6px', borderRadius: 6, border: `1.5px solid ${portionValid ? '#93c5fd' : '#ef4444'}`, fontSize: '0.82rem', textAlign: 'right' }} />
+                                    <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{ing.unite}</span>
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                          {eArticlesFiltered.length > editIngVisible && (
+                            <div style={{ textAlign: 'center', padding: '8px 0', fontSize: '0.73rem', color: '#94a3b8' }}>
+                              ↓ {eArticlesFiltered.length - editIngVisible} article{eArticlesFiltered.length - editIngVisible > 1 ? 's' : ''} de plus — faites défiler
+                            </div>
+                          )}
+                        </div>
+                        {editIngLines.some((l) => l.ingredientId) && (
+                          <div style={{ fontSize: '0.78rem', color: '#3b82f6', fontWeight: 600 }}>
+                            {editIngLines.filter((l) => l.ingredientId && parseFloat(l.portion) > 0).length} article{editIngLines.filter((l) => l.ingredientId && parseFloat(l.portion) > 0).length !== 1 ? 's' : ''} valide{editIngLines.filter((l) => l.ingredientId && parseFloat(l.portion) > 0).length !== 1 ? 's' : ''} (portion &gt; 0)
+                          </div>
+                        )}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 4 }}>
+                          <button className="btn btn-ghost" onClick={() => setEditModal(1)}>← Retour</button>
+                          <button disabled={!canGoEditStep3}
+                            onClick={() => setEditModal(3)}
+                            style={{ background: canGoEditStep3 ? 'linear-gradient(135deg, #1e40af, #3b82f6)' : '#e5e7eb', border: 'none', borderRadius: 10, color: canGoEditStep3 ? '#fff' : '#9ca3af', fontWeight: 700, padding: '9px 22px', cursor: canGoEditStep3 ? 'pointer' : 'not-allowed' }}>
+                            Suivant →
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Step 3 — Récap & Confirmation */}
+                    {editModal === 3 && (() => {
+                      const ingCount = editIngLines.filter((l) => l.ingredientId && parseFloat(l.portion) > 0).length;
+                      return (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                          <div style={{ background: 'linear-gradient(135deg,#eff6ff,#dbeafe)', border: '1.5px solid #93c5fd', borderRadius: 14, padding: '16px 18px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+                              <div style={{ width: 42, height: 42, borderRadius: 10, background: '#3b82f6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.3rem', flexShrink: 0 }}>📦</div>
+                              <div>
+                                <div style={{ fontWeight: 800, fontSize: '1.05rem', color: '#1e40af' }}>{editName}</div>
+                                {editRef && <div style={{ fontSize: '0.75rem', color: '#3b82f6', marginTop: 1 }}>Réf : {editRef}</div>}
+                              </div>
+                              <div style={{ marginLeft: 'auto', background: '#3b82f6', color: '#fff', borderRadius: 20, padding: '3px 10px', fontSize: '0.72rem', fontWeight: 700 }}>
+                                {isEditVendable ? 'Vendable' : 'Utilisable'}{editIsSupplement ? ' · Suppl.' : ''}
+                              </div>
+                            </div>
+                            <div style={{ background: 'rgba(255,255,255,0.6)', borderRadius: 8, padding: '8px 10px', textAlign: 'center', display: 'inline-block', minWidth: 80 }}>
+                              <div style={{ fontSize: '1.2rem', fontWeight: 900, color: '#1e40af' }}>{ingCount}</div>
+                              <div style={{ fontSize: '0.7rem', color: '#3b82f6' }}>article{ingCount !== 1 ? 's' : ''}</div>
+                            </div>
+                          </div>
+                          <div>
+                            <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#64748b', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Articles sélectionnés</div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 4, maxHeight: 200, overflowY: 'auto' }}>
+                              {editIngLines.filter((l) => l.ingredientId && parseFloat(l.portion) > 0).map((l) => {
+                                const ing = editIngredients.find((i) => String(i.id) === l.ingredientId);
+                                return (
+                                  <div key={l.ingredientId} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '5px 10px', borderRadius: 7, background: '#f8fafc', fontSize: '0.82rem' }}>
+                                    <span style={{ color: '#374151', fontWeight: 500 }}>{ing?.nom ?? l.ingredientId}</span>
+                                    <span style={{ color: '#64748b', fontWeight: 600 }}>{l.portion} {ing?.unite}</span>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 4, borderTop: '1px solid var(--border)' }}>
+                            <button className="btn btn-ghost" onClick={() => setEditModal(2)}>← Retour</button>
+                            <button disabled={editSaving}
+                              onClick={handleEditSave}
+                              style={{ background: 'linear-gradient(135deg, #1e40af, #3b82f6)', border: 'none', borderRadius: 10, color: '#fff', fontWeight: 700, padding: '10px 28px', cursor: editSaving ? 'not-allowed' : 'pointer', opacity: editSaving ? 0.7 : 1, fontSize: '0.9rem' }}>
+                              {editSaving ? 'Enregistrement…' : 'Enregistrer les modifications ✓'}
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })()}
+
+                    {/* Step 4 — Succès */}
+                    {editModal === 4 && (
+                      <div style={{ textAlign: 'center', padding: '16px 0 8px' }}>
+                        <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'linear-gradient(135deg, #22c55e, #16a34a)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.6rem', margin: '0 auto 14px' }}>✓</div>
+                        <div style={{ fontWeight: 700, fontSize: '1rem', color: '#166534', marginBottom: 6 }}>Modifications enregistrées</div>
+                        <div style={{ fontSize: '0.88rem', color: 'var(--text-muted)', marginBottom: 22 }}>
+                          <strong>{editName}</strong> a été mis à jour avec succès.
+                        </div>
+                        <button className="btn btn-ghost" onClick={() => setEditModal(null)}>Fermer</button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
 
           {/* ── Add product modal (4 steps) ── */}
           {addModal && (() => {
