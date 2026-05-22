@@ -446,7 +446,8 @@ export default function LaboHistoriqueApproPage() {
           </button>
           <button onClick={exportExcel} disabled={results.length === 0}
             style={{ display: 'flex', alignItems: 'center', gap: 6, background: results.length > 0 ? 'linear-gradient(135deg, #3b0764 0%, #7e22ce 100%)' : '#e5e7eb', boxShadow: results.length > 0 ? '0 4px 14px rgba(126,34,206,0.3)' : 'none', borderRadius: 9, border: 'none', color: results.length > 0 ? '#fff' : 'var(--text-muted)', fontWeight: 800, padding: '8px 18px', cursor: results.length === 0 ? 'not-allowed' : 'pointer', opacity: results.length === 0 ? 0.55 : 1, transition: 'all 0.15s' }}>
-            <span>📊</span> Exporter{selectedIds.size > 0 ? ` (${selectedIds.size})` : ''}
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}><rect width="24" height="24" rx="3" fill="#217346"/><path d="M14 2H6C4.9 2 4 2.9 4 4V20C4 21.1 4.9 22 6 22H18C19.1 22 20 21.1 20 20V8L14 2Z" fill="#185C37"/><path d="M14 2V8H20L14 2Z" fill="#107C41"/><text x="7" y="18" fill="white" fontSize="8" fontWeight="bold" fontFamily="Arial,sans-serif">XLS</text></svg>
+            Exporter{selectedIds.size > 0 ? ` (${selectedIds.size})` : ''}
           </button>
           <button onClick={exportPdf} disabled={exportingPdf || results.length === 0}
             style={{ display: 'flex', alignItems: 'center', gap: 6, background: results.length > 0 ? 'linear-gradient(135deg, #3b0764 0%, #7e22ce 100%)' : '#e5e7eb', boxShadow: results.length > 0 ? '0 4px 14px rgba(126,34,206,0.3)' : 'none', borderRadius: 9, border: 'none', color: results.length > 0 ? '#fff' : 'var(--text-muted)', fontWeight: 800, padding: '8px 18px', cursor: (exportingPdf || results.length === 0) ? 'not-allowed' : 'pointer', opacity: (exportingPdf || results.length === 0) ? 0.55 : 1, transition: 'all 0.15s' }}>

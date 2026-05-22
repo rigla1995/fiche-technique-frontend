@@ -580,7 +580,7 @@ export default function FicheTechniqueTab({ isEntreprise, allActivities }: Props
           <div style={{ padding: '14px 20px', flexShrink: 0 }}>
             <button
               className="btn btn-primary"
-              style={{ paddingLeft: 22, paddingRight: 22, height: 40, fontSize: '0.9rem', fontWeight: 600, gap: 8 }}
+              style={{ paddingLeft: 22, paddingRight: 22, height: 40, fontSize: '0.9rem', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 7 }}
               disabled={!canGenerate || generating}
               onClick={generateExcel}
               title={
@@ -591,7 +591,8 @@ export default function FicheTechniqueTab({ isEntreprise, allActivities }: Props
                     : ''
               }
             >
-              📥 {generating ? t('common.loading') : t('client.fiche_technique.generate')}
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}><rect width="24" height="24" rx="3" fill="#fff"/><path d="M14 2H6C4.9 2 4 2.9 4 4V20C4 21.1 4.9 22 6 22H18C19.1 22 20 21.1 20 20V8L14 2Z" fill="#185C37"/><path d="M14 2V8H20L14 2Z" fill="#107C41"/><text x="7" y="18" fill="white" fontSize="8" fontWeight="bold" fontFamily="Arial,sans-serif">XLS</text></svg>
+              {generating ? t('common.loading') : t('client.fiche_technique.generate')}
             </button>
           </div>
         </div>
