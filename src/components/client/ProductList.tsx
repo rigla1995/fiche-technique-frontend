@@ -77,6 +77,7 @@ export default function ProductList() {
   const [editIngVisible, setEditIngVisible] = useState(20);
   const [editSaving, setEditSaving] = useState(false);
   const [editLoadingData, setEditLoadingData] = useState(false);
+  const [editActiviteNom, setEditActiviteNom] = useState('');
 
   // Load activities — for gerant users use their assigned activité directly
   useEffect(() => {
@@ -115,6 +116,7 @@ export default function ProductList() {
     setEditName(''); setEditRef(''); setEditIsSupplement(false);
     setEditIngLines([]); setEditIngredients([]); setEditIngSearch('');
     setEditFamilleFilter(''); setEditCatFilter(''); setEditIngVisible(20);
+    setEditActiviteNom(allActivities.find((a) => a.id === p.activiteId)?.nom || '');
     setEditLoadingData(true);
     setEditModal(2);
     try {
@@ -142,7 +144,7 @@ export default function ProductList() {
     } finally {
       setEditLoadingData(false);
     }
-  }, []);
+  }, [allActivities]);
 
   const openAddModal = useCallback(() => {
     setAddName(''); setAddRef(''); setAddIsSupplement(false);
@@ -756,26 +758,29 @@ export default function ProductList() {
               <div className="modal-overlay">
                 <div className="modal" style={{ maxWidth: 560, width: '95vw', maxHeight: '90vh', overflow: 'auto' }} onClick={(e) => e.stopPropagation()}>
                   {/* Header */}
-                  <div style={{ background: 'linear-gradient(135deg, #1e40af 0%, #3b82f6 100%)', padding: '18px 22px 14px', borderRadius: '12px 12px 0 0', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+                  <div style={{ background: 'linear-gradient(135deg, #881337 0%, #9f1239 100%)', padding: '18px 22px 14px', borderRadius: '12px 12px 0 0', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
                     <div style={{ flex: 1 }}>
-                      <div style={{ color: '#fff', fontWeight: 800, fontSize: '1rem', marginBottom: editModal !== 4 ? 12 : 0 }}>
-                        {editModal === 4 ? '✅ Produit modifié' : `Modifier — ${isEditVendable ? 'produit vendable' : 'produit utilisable'}`}
+                      <div style={{ color: '#fff', fontWeight: 800, fontSize: '1rem', marginBottom: 2 }}>
+                        ✏️ Modifier — {editName || '…'}
                       </div>
-                      {editModal !== 4 && (
-                        <div style={{ display: 'flex', gap: 10, width: '100%' }}>
-                          {EDIT_STEPS.map((s) => (
-                            <div key={s.n} style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4 }}>
-                              <div style={{ height: 4, borderRadius: 4, background: s.n <= editModal ? '#fff' : 'rgba(255,255,255,0.28)', transition: 'background 0.2s' }} />
-                              <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                                <div style={{ width: 18, height: 18, borderRadius: '50%', flexShrink: 0, background: s.n <= editModal ? '#fff' : 'rgba(255,255,255,0.28)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.62rem', fontWeight: 800, color: s.n <= editModal ? '#1e40af' : 'rgba(255,255,255,0.55)' }}>
-                                  {s.n < editModal ? '✓' : s.display}
-                                </div>
-                                <span style={{ fontSize: '0.68rem', color: s.n <= editModal ? '#fff' : 'rgba(255,255,255,0.5)', fontWeight: 600 }}>{s.label}</span>
-                              </div>
-                            </div>
-                          ))}
+                      {editActiviteNom && (
+                        <div style={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.78rem', fontWeight: 600, marginBottom: 12 }}>
+                          📍 {editActiviteNom}
                         </div>
                       )}
+                      <div style={{ display: 'flex', gap: 10, width: '100%' }}>
+                        {EDIT_STEPS.map((s) => (
+                          <div key={s.n} style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                            <div style={{ height: 4, borderRadius: 4, background: s.n <= editModal ? '#fff' : 'rgba(255,255,255,0.28)', transition: 'background 0.2s' }} />
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                              <div style={{ width: 18, height: 18, borderRadius: '50%', flexShrink: 0, background: s.n <= editModal ? '#fff' : 'rgba(255,255,255,0.28)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.62rem', fontWeight: 800, color: s.n <= editModal ? '#9f1239' : 'rgba(255,255,255,0.55)' }}>
+                                {s.n < editModal ? '✓' : s.display}
+                              </div>
+                              <span style={{ fontSize: '0.68rem', color: s.n <= editModal ? '#fff' : 'rgba(255,255,255,0.5)', fontWeight: 600 }}>{s.label}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                     <button onClick={() => setEditModal(null)} style={{ background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: 8, color: '#fff', fontWeight: 900, fontSize: '1.1rem', cursor: 'pointer', padding: '2px 9px', lineHeight: 1, flexShrink: 0 }}>×</button>
                   </div>
