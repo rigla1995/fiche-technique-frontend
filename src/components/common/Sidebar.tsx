@@ -195,6 +195,18 @@ function GerantSidebarContent({
             <SubNavLink to="/client/products?tab=utilisable" icon="🧪" label="Produits Utilisables" isActive={isProductsPage && currentProductTab === 'utilisable'} onClick={onClose} />
           </>
         )}
+
+        <Divider />
+        {/* ══ RÉFÉRENTIEL ══ */}
+        <CollapsibleHeader label="Référentiel" icon="📚" isOpen={openSections.has('referentiel')} locked={false} onToggle={() => toggleSection('referentiel')} />
+        {openSections.has('referentiel') && (
+          <>
+            <SubNavLink to="/client/referentiel/unites" icon="📏" label="Unités" isActive={location.pathname === '/client/referentiel/unites'} onClick={onClose} />
+            <SubNavLink to="/client/referentiel/familles" icon="🗂️" label="Familles" isActive={location.pathname === '/client/referentiel/familles'} onClick={onClose} />
+            <SubNavLink to="/client/referentiel/categories" icon="🏷️" label="Catégories" isActive={location.pathname === '/client/referentiel/categories'} onClick={onClose} />
+            <SubNavLink to="/client/referentiel/articles" icon="🧂" label="Articles" isActive={location.pathname === '/client/referentiel/articles'} onClick={onClose} />
+          </>
+        )}
       </>
     );
   }
@@ -426,6 +438,22 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                 </li>
               )}
 
+              {/* ══ RÉFÉRENTIEL ══ */}
+              {isEntreprise && (
+                <>
+                  <Divider />
+                  <CollapsibleHeader label="Référentiel" icon="📚" isOpen={openSections.has('referentiel')} locked={false} onToggle={() => toggleSection('referentiel')} />
+                  {openSections.has('referentiel') && (
+                    <>
+                      <SubNavLink to="/client/referentiel/unites" icon="📏" label="Unités" isActive={location.pathname === '/client/referentiel/unites'} onClick={onClose} />
+                      <SubNavLink to="/client/referentiel/familles" icon="🗂️" label="Familles" isActive={location.pathname === '/client/referentiel/familles'} onClick={onClose} />
+                      <SubNavLink to="/client/referentiel/categories" icon="🏷️" label="Catégories" isActive={location.pathname === '/client/referentiel/categories'} onClick={onClose} />
+                      <SubNavLink to="/client/referentiel/articles" icon="🧂" label="Articles" isActive={location.pathname === '/client/referentiel/articles'} onClick={onClose} />
+                    </>
+                  )}
+                </>
+              )}
+
               {/* Gérants — visible only if subscription allows; active only when activités or labos exist */}
               {isEntreprise && user?.role === 'client' && showGerants && (
                 <>
@@ -565,19 +593,6 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                           )}
                         </li>
                       )}
-                    </>
-                  )}
-
-                  <Divider />
-
-                  {/* ══ RÉFÉRENTIEL ══ */}
-                  <CollapsibleHeader label="Référentiel" icon="📚" isOpen={openSections.has('referentiel')} locked={false} onToggle={() => toggleSection('referentiel')} />
-                  {openSections.has('referentiel') && (
-                    <>
-                      <SubNavLink to="/client/referentiel/unites" icon="📏" label="Unités" isActive={location.pathname === '/client/referentiel/unites'} onClick={onClose} />
-                      <SubNavLink to="/client/referentiel/familles" icon="🗂️" label="Familles" isActive={location.pathname === '/client/referentiel/familles'} onClick={onClose} />
-                      <SubNavLink to="/client/referentiel/categories" icon="🏷️" label="Catégories" isActive={location.pathname === '/client/referentiel/categories'} onClick={onClose} />
-                      <SubNavLink to="/client/referentiel/articles" icon="🧂" label="Articles" isActive={location.pathname === '/client/referentiel/articles'} onClick={onClose} />
                     </>
                   )}
 
