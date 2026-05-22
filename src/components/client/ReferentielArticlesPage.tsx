@@ -199,16 +199,20 @@ export default function ReferentielArticlesPage() {
       {/* ── Table ── */}
       {loading ? (
         <div className="loading-text">Chargement…</div>
+      ) : articles.length === 0 ? (
+        <div style={{ background: 'linear-gradient(135deg,#f0fdf4,#dcfce7)', border: '2px dashed #86efac', borderRadius: 18, padding: '48px 32px', textAlign: 'center' }}>
+          <div style={{ fontSize: '2.8rem', marginBottom: 14 }}>🧂</div>
+          <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#14532d', margin: '0 0 8px' }}>Aucun article défini</h3>
+          <p style={{ color: '#166534', fontSize: '0.88rem', margin: '0 0 24px', maxWidth: 420, marginInline: 'auto' }}>
+            Les articles sont vos matières premières et ingrédients. Créez-en pour commencer à gérer votre stock, vos approvisionnements et vos fiches techniques.
+          </p>
+          <button onClick={openCreate} style={{ background: 'linear-gradient(135deg,#15803d,#16a34a)', color: '#fff', border: 'none', borderRadius: 10, padding: '11px 28px', fontWeight: 700, fontSize: '0.92rem', cursor: 'pointer' }}>
+            + Créer le premier article
+          </button>
+        </div>
       ) : filtered.length === 0 ? (
-        <div className="empty-state">
-          <span className="empty-icon">🧂</span>
-          <p>{articles.length === 0 ? 'Aucun article défini.' : 'Aucun résultat pour cette recherche.'}</p>
-          {articles.length === 0 && (
-            <>
-              <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: '0 0 12px' }}>Créez vos premiers articles pour les utiliser dans vos stocks et fiches techniques.</p>
-              <button className="btn btn-primary" onClick={openCreate}>+ Créer un article</button>
-            </>
-          )}
+        <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-muted)' }}>
+          Aucun résultat pour cette recherche.
         </div>
       ) : (
         <div className="table-responsive card">
