@@ -302,15 +302,17 @@ export default function ProductList() {
     <div className="page">
       {/* ── Hero header ── */}
       <div style={{
-        background: 'linear-gradient(135deg, #881337 0%, #9f1239 55%, #f43f5e 100%)',
+        background: 'linear-gradient(135deg, #0a1628 0%, #0f2847 55%, #0d3b2e 100%)',
         borderRadius: 18, padding: '24px 28px', marginBottom: 24,
-        boxShadow: '0 8px 32px rgba(159,18,57,0.28)',
+        boxShadow: '0 8px 32px rgba(10,22,40,0.35)',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
-              <div style={{ background: 'rgba(255,255,255,0.2)', borderRadius: 10, padding: '7px 9px', fontSize: '1.2rem' }}>📦</div>
-              <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0 }}>
+              <div style={{ background: 'rgba(16,185,129,0.18)', border: '1px solid rgba(16,185,129,0.3)', borderRadius: 10, padding: '7px 9px', fontSize: '1.2rem', lineHeight: 1 }}>
+                {tab === 'fiche-technique' ? '📋' : tab === 'utilisable' ? '🧪' : '🍽️'}
+              </div>
+              <h1 style={{ fontSize: '1.45rem', fontWeight: 800, color: '#fff', margin: 0, letterSpacing: '-0.01em' }}>
                 {tab === 'fiche-technique'
                   ? t('client.products.tab_fiche_technique')
                   : tab === 'utilisable'
@@ -320,13 +322,13 @@ export default function ProductList() {
               {tab !== 'fiche-technique' && selectedActiviteId && (() => {
                 const actNom = allActivities.find(a => a.id === selectedActiviteId)?.nom;
                 return actNom ? (
-                  <span style={{ background: 'rgba(255,255,255,0.18)', borderRadius: 10, padding: '3px 12px', fontSize: '0.82rem', fontWeight: 700, color: '#fff' }}>
-                    📍 {actNom}
+                  <span style={{ background: 'rgba(16,185,129,0.15)', border: '1px solid rgba(16,185,129,0.25)', borderRadius: 8, padding: '3px 10px', fontSize: '0.78rem', fontWeight: 600, color: '#6ee7b7' }}>
+                    {actNom}
                   </span>
                 ) : null;
               })()}
             </div>
-            <p style={{ color: 'rgba(255,255,255,0.78)', margin: 0, fontSize: '0.85rem' }}>
+            <p style={{ color: 'rgba(255,255,255,0.55)', margin: 0, fontSize: '0.83rem', letterSpacing: '0.01em' }}>
               {tab === 'fiche-technique'
                 ? 'Exportez et consultez vos fiches techniques par produit'
                 : tab === 'utilisable'
@@ -335,9 +337,9 @@ export default function ProductList() {
             </p>
           </div>
           {tab !== 'fiche-technique' && (
-            <div style={{ background: 'rgba(255,255,255,0.15)', border: '1.5px solid rgba(255,255,255,0.3)', borderRadius: 14, padding: '10px 20px', textAlign: 'center', minWidth: 80, flexShrink: 0 }}>
-              <div style={{ fontSize: '1.8rem', fontWeight: 900, color: '#fff', lineHeight: 1 }}>{byTab.length}</div>
-              <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.75)', marginTop: 2 }}>
+            <div style={{ background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.22)', borderRadius: 14, padding: '10px 20px', textAlign: 'center', minWidth: 80, flexShrink: 0 }}>
+              <div style={{ fontSize: '1.8rem', fontWeight: 900, color: '#10b981', lineHeight: 1 }}>{byTab.length}</div>
+              <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.5)', marginTop: 2 }}>
                 produit{byTab.length !== 1 ? 's' : ''}
               </div>
             </div>
@@ -347,14 +349,14 @@ export default function ProductList() {
 
       {/* Activity selector */}
       {tab !== 'fiche-technique' && !laboId && allActivities.length > 0 && (
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center', marginBottom: 16, padding: '10px 14px', background: '#fff', borderRadius: 10, border: '1px solid #fda4af' }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center', marginBottom: 16, padding: '10px 14px', background: '#fff', borderRadius: 10, border: '1px solid #e2e8f0', boxShadow: '0 1px 4px rgba(0,0,0,0.05)' }}>
           {allActivities.map((a) => (
             <button key={a.id} onClick={() => { setSelectedActiviteId(a.id); setPage(1); }}
               style={{
                 padding: '4px 14px', borderRadius: 20, cursor: 'pointer', fontSize: '0.82rem',
-                border: selectedActiviteId === a.id ? '1.5px solid #9f1239' : '1.5px solid #fda4af',
-                background: selectedActiviteId === a.id ? '#9f1239' : '#fff1f2',
-                color: selectedActiviteId === a.id ? '#fff' : '#881337',
+                border: selectedActiviteId === a.id ? '1.5px solid #0f2847' : '1.5px solid #e2e8f0',
+                background: selectedActiviteId === a.id ? '#0f2847' : '#f8fafc',
+                color: selectedActiviteId === a.id ? '#fff' : '#64748b',
                 fontWeight: selectedActiviteId === a.id ? 700 : 400,
                 transition: 'all 0.15s',
               }}>
@@ -364,7 +366,7 @@ export default function ProductList() {
           <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', alignSelf: 'center', marginLeft: 4 }}>← sélectionner l'activité</span>
           {canWrite && (
             <button onClick={openAddModal}
-              style={{ marginLeft: 'auto', padding: '5px 16px', borderRadius: 20, cursor: 'pointer', fontSize: '0.82rem', border: 'none', background: 'linear-gradient(135deg, #881337, #9f1239)', color: '#fff', fontWeight: 700, boxShadow: '0 2px 8px rgba(159,18,57,0.25)' }}>
+              style={{ marginLeft: 'auto', padding: '5px 16px', borderRadius: 20, cursor: 'pointer', fontSize: '0.82rem', border: 'none', background: 'linear-gradient(135deg, #059669, #10b981)', color: '#fff', fontWeight: 700, boxShadow: '0 2px 8px rgba(16,185,129,0.25)' }}>
               + {isVendable ? 'Produit vendable' : 'Produit utilisable'}
             </button>
           )}
@@ -391,10 +393,10 @@ export default function ProductList() {
                 </div>
               )}
               <div>
-                <label style={{ fontSize: '0.68rem', fontWeight: 800, color: '#9f1239', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>🔍 Nom</label>
+                <label style={{ fontSize: '0.68rem', fontWeight: 800, color: '#059669', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>🔍 Nom</label>
                 <input type="text" placeholder={t('common.search') + '...'}
                   value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-                  style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid #9f1239', fontSize: '0.88rem', background: '#fff1f2', minWidth: 160 }} />
+                  style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid #6ee7b7', fontSize: '0.88rem', background: '#f0fdf4', minWidth: 160 }} />
               </div>
             </div>
           )}
@@ -404,8 +406,8 @@ export default function ProductList() {
           ) : searched.length === 0 ? (
             byTab.length === 0 ? (
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '60px 24px', textAlign: 'center' }}>
-                <div style={{ width: 72, height: 72, borderRadius: 20, background: 'linear-gradient(135deg, #4338ca 0%, #6366f1 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem', marginBottom: 20, boxShadow: '0 8px 24px rgba(67,56,202,0.28)' }}>
-                  {isVendable ? '🍔' : '🧪'}
+                <div style={{ width: 72, height: 72, borderRadius: 20, background: 'linear-gradient(135deg, #0a1628 0%, #0f2847 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem', marginBottom: 20, boxShadow: '0 8px 24px rgba(10,22,40,0.22)' }}>
+                  {isVendable ? '🍽️' : '🧪'}
                 </div>
                 <h2 style={{ margin: '0 0 8px', fontSize: '1.15rem', fontWeight: 700, color: 'var(--text)' }}>
                   {isVendable ? 'Aucun produit vendable' : 'Aucun produit utilisable'}
@@ -429,31 +431,33 @@ export default function ProductList() {
 
                 const renderProductCard = (p: Product) => {
                   const isSup = !!p.isSupplement;
-                  const accentColor = isSup ? '#be185d' : '#9f1239';
-                  const accentLight = isSup ? '#fdf2f8' : '#fff1f2';
+                  const accentColor = isSup ? '#d97706' : '#059669';
+                  const accentDark = isSup ? '#b45309' : '#047857';
+                  const accentLight = isSup ? '#fffbeb' : '#f0fdf4';
+                  const accentShadow = isSup ? 'rgba(217,119,6,0.18)' : 'rgba(5,150,105,0.15)';
                   const act = isEntreprise ? allActivities.find((a) => a.id === p.activiteId) : null;
                   return (
                     <div key={p.id} style={{
                       background: '#fff', borderRadius: 14,
-                      border: '1px solid #f3f4f6',
+                      border: '1px solid #e2e8f0',
                       borderLeft: `4px solid ${accentColor}`,
-                      boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
+                      boxShadow: '0 2px 10px rgba(0,0,0,0.05)',
                       display: 'flex', flexDirection: 'column', overflow: 'hidden',
                       transition: 'box-shadow 0.15s, transform 0.15s',
                     }}
-                      onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.boxShadow = '0 6px 24px rgba(159,18,57,0.13)'; (e.currentTarget as HTMLDivElement).style.transform = 'translateY(-2px)'; }}
-                      onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.boxShadow = '0 2px 12px rgba(0,0,0,0.06)'; (e.currentTarget as HTMLDivElement).style.transform = 'none'; }}
+                      onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.boxShadow = `0 6px 24px ${accentShadow}`; (e.currentTarget as HTMLDivElement).style.transform = 'translateY(-2px)'; }}
+                      onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.boxShadow = '0 2px 10px rgba(0,0,0,0.05)'; (e.currentTarget as HTMLDivElement).style.transform = 'none'; }}
                     >
                       {/* Card header */}
                       <div style={{ padding: '14px 16px 10px', display: 'flex', alignItems: 'flex-start', gap: 12, background: accentLight }}>
-                        <div style={{ width: 40, height: 40, borderRadius: 10, flexShrink: 0, background: `linear-gradient(135deg, ${accentColor} 0%, ${isSup ? '#9d174d' : '#881337'} 100%)`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem', boxShadow: `0 4px 10px ${isSup ? 'rgba(190,24,93,0.3)' : 'rgba(159,18,57,0.3)'}` }}>
-                          {isSup ? '➕' : (isVendable ? '🍔' : '🧪')}
+                        <div style={{ width: 40, height: 40, borderRadius: 10, flexShrink: 0, background: `linear-gradient(135deg, ${accentColor} 0%, ${accentDark} 100%)`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem', boxShadow: `0 4px 10px ${accentShadow}` }}>
+                          {isSup ? '➕' : (isVendable ? '🍽️' : '🧪')}
                         </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap' }}>
-                            <span style={{ fontWeight: 700, fontSize: '0.92rem', color: '#111827', lineHeight: 1.3 }}>{p.name}</span>
+                            <span style={{ fontWeight: 700, fontSize: '0.92rem', color: '#0f172a', lineHeight: 1.3 }}>{p.name}</span>
                             {isSup && (
-                              <span style={{ fontSize: '0.62rem', fontWeight: 800, letterSpacing: '0.07em', textTransform: 'uppercase', background: `linear-gradient(135deg, ${accentColor}, #9d174d)`, color: '#fff', borderRadius: 20, padding: '2px 8px', flexShrink: 0 }}>Supplément</span>
+                              <span style={{ fontSize: '0.62rem', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', background: '#fef3c7', color: '#92400e', border: '1px solid #fcd34d', borderRadius: 20, padding: '2px 8px', flexShrink: 0 }}>Supplément</span>
                             )}
                           </div>
                           {act && (
@@ -468,15 +472,15 @@ export default function ProductList() {
                       </div>
 
                       {/* Metrics row */}
-                      <div style={{ padding: '10px 16px', display: 'flex', gap: 8, borderBottom: '1px solid #f3f4f6' }}>
+                      <div style={{ padding: '10px 16px', display: 'flex', gap: 8, borderBottom: '1px solid #f1f5f9' }}>
                         <button
                           onClick={() => openPopup('ingredients', p)}
                           disabled={!p.ingredientsCount}
                           title={p.ingredientsCount ? 'Voir les articles' : 'Aucun article'}
-                          style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, padding: '8px 4px', borderRadius: 10, border: `1px solid ${p.ingredientsCount ? '#fce7f3' : '#f3f4f6'}`, background: p.ingredientsCount ? '#fff1f2' : '#fafafa', cursor: p.ingredientsCount ? 'pointer' : 'default', opacity: p.ingredientsCount ? 1 : 0.5, transition: 'background 0.12s' }}
+                          style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, padding: '8px 4px', borderRadius: 10, border: `1px solid ${p.ingredientsCount ? '#a7f3d0' : '#f1f5f9'}`, background: p.ingredientsCount ? '#ecfdf5' : '#f8fafc', cursor: p.ingredientsCount ? 'pointer' : 'default', opacity: p.ingredientsCount ? 1 : 0.5, transition: 'background 0.12s' }}
                         >
                           <span style={{ fontSize: '1rem', lineHeight: 1 }}>🧂</span>
-                          <span style={{ fontWeight: 800, fontSize: '1rem', color: p.ingredientsCount ? accentColor : '#9ca3af', lineHeight: 1 }}>{p.ingredientsCount ?? 0}</span>
+                          <span style={{ fontWeight: 800, fontSize: '1rem', color: p.ingredientsCount ? '#059669' : '#9ca3af', lineHeight: 1 }}>{p.ingredientsCount ?? 0}</span>
                           <span style={{ fontSize: '0.6rem', color: '#9ca3af', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>articles</span>
                         </button>
                         {isVendable && (
@@ -484,10 +488,10 @@ export default function ProductList() {
                             onClick={() => openPopup('subProducts', p)}
                             disabled={!p.subProductsCount}
                             title={p.subProductsCount ? 'Voir les produits utilisables' : 'Aucun produit utilisable'}
-                            style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, padding: '8px 4px', borderRadius: 10, border: `1px solid ${p.subProductsCount ? '#e0e7ff' : '#f3f4f6'}`, background: p.subProductsCount ? '#eef2ff' : '#fafafa', cursor: p.subProductsCount ? 'pointer' : 'default', opacity: p.subProductsCount ? 1 : 0.5, transition: 'background 0.12s' }}
+                            style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, padding: '8px 4px', borderRadius: 10, border: `1px solid ${p.subProductsCount ? '#bfdbfe' : '#f1f5f9'}`, background: p.subProductsCount ? '#eff6ff' : '#f8fafc', cursor: p.subProductsCount ? 'pointer' : 'default', opacity: p.subProductsCount ? 1 : 0.5, transition: 'background 0.12s' }}
                           >
                             <span style={{ fontSize: '1rem', lineHeight: 1 }}>📦</span>
-                            <span style={{ fontWeight: 800, fontSize: '1rem', color: p.subProductsCount ? '#4338ca' : '#9ca3af', lineHeight: 1 }}>{p.subProductsCount ?? 0}</span>
+                            <span style={{ fontWeight: 800, fontSize: '1rem', color: p.subProductsCount ? '#2563eb' : '#9ca3af', lineHeight: 1 }}>{p.subProductsCount ?? 0}</span>
                             <span style={{ fontSize: '0.6rem', color: '#9ca3af', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>util.</span>
                           </button>
                         )}
@@ -530,8 +534,8 @@ export default function ProductList() {
                   <div>
                     {hasGroups ? (
                       <>
-                        {regulars.length > 0 && renderGroup('Produits', '🍔', regulars, '#9f1239')}
-                        {supplements.length > 0 && renderGroup('Suppléments', '➕', supplements, '#be185d')}
+                        {regulars.length > 0 && renderGroup('Produits', '🍽️', regulars, '#059669')}
+                        {supplements.length > 0 && renderGroup('Suppléments', '➕', supplements, '#d97706')}
                       </>
                     ) : (
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 14 }}>
