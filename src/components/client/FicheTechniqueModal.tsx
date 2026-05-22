@@ -54,6 +54,7 @@ export default function FicheTechniqueModal({ productId, productName, hasIngredi
   const [manualLoading, setManualLoading] = useState(false);
   const [manualUpdatedAt, setManualUpdatedAt] = useState<string | null>(null);
   const [showManualPopup, setShowManualPopup] = useState(false);
+  const [manualSearch, setManualSearch] = useState('');
   const [savingManual, setSavingManual] = useState(false);
   const [showZeroWarning, setShowZeroWarning] = useState(false);
   const [zeroWarningPrices, setZeroWarningPrices] = useState<ManualPriceEntry[]>([]);
@@ -403,76 +404,109 @@ export default function FicheTechniqueModal({ productId, productName, hasIngredi
       </div>
 
       {/* Manual prices popup */}
-      {showManualPopup && (
-        <div className="modal-overlay" style={{ zIndex: 1050 }}>
-          <div className="modal" style={{ maxWidth: 560 }} onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header modal-header--primary">
-              <h2>Prix Articles — {productName}</h2>
-              <button className="modal-close" onClick={() => setShowManualPopup(false)}>×</button>
-            </div>
-            <div className="modal-body">
-              {manualLoading ? (
-                <div className="loading-text">{t('common.loading')}</div>
-              ) : manualPrices.length === 0 ? (
-                <p style={{ color: '#888', textAlign: 'center' }}>{t('client.products.popup_no_ingredients')}</p>
-              ) : (
-                <table className="table">
-                  <thead>
-                    <tr>
-                      <th>{t('client.products.popup_col_ingredient')}</th>
-                      <th style={{ width: 80 }}>{t('client.products.popup_col_unit')}</th>
-                      <th style={{ textAlign: 'right', whiteSpace: 'nowrap', width: 130 }}>{t('client.products.popup_col_unit_price')} (DT)</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(manualPriceGroups.length > 0 ? manualPriceGroups : [{ label: '', depth: 0, ingredients: manualPrices.map((p) => ({ ingredientId: p.ingredientId, nom: p.nom, unite: p.unite })) }]).map((group, gi) => (
-                      <>
-                        {manualPriceGroups.length > 1 && group.depth > 0 && (
-                          <tr key={`gh-${gi}`}>
-                            <td colSpan={3} style={{ paddingLeft: 8 + group.depth * 16, paddingTop: gi === 0 ? 4 : 10, paddingBottom: 2, fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--text-muted)', borderTop: gi === 0 ? undefined : '1px solid var(--border)' }}>
-                              ↳ {group.label}
-                            </td>
-                          </tr>
-                        )}
-                        {group.ingredients.map((ing) => {
-                          const idx = manualPrices.findIndex((p) => p.ingredientId === ing.ingredientId);
-                          if (idx === -1) return null;
-                          const p = manualPrices[idx];
-                          return (
-                            <tr key={p.ingredientId}>
-                              <td style={{ paddingLeft: manualPriceGroups.length > 1 ? 8 + group.depth * 16 + 8 : undefined }}>{p.nom}</td>
-                              <td>{p.unite}</td>
-                              <td style={{ textAlign: 'right' }}>
-                                <input
-                                  type="number" className="input"
-                                  style={{ textAlign: 'right', width: 110, display: 'block', marginLeft: 'auto' }}
-                                  step="0.001" min="0" placeholder="0.000"
-                                  value={p.prixUnitaire}
-                                  onChange={(e) => {
-                                    const updated = [...manualPrices];
-                                    updated[idx] = { ...updated[idx], prixUnitaire: e.target.value };
-                                    setManualPrices(updated);
-                                  }}
-                                />
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-            </div>
-            <div className="modal-footer">
-              <button className="btn btn-ghost" onClick={() => setShowManualPopup(false)}>{t('common.cancel')}</button>
-              <button className="btn btn-primary" onClick={saveManualPrices} disabled={savingManual || manualLoading}>
-                {savingManual ? t('common.loading') : t('common.save')}
-              </button>
+      {showManualPopup && (() => {
+        // Build a flat ordered list of items with optional group labels
+        type ManualItem = { type: 'group'; label: string; depth: number } | { type: 'item'; idx: number; groupDepth: number; groupLabel: string };
+        const items: ManualItem[] = [];
+        const groups = manualPriceGroups.length > 0
+          ? manualPriceGroups
+          : [{ label: '', depth: 0, ingredients: manualPrices.map((p) => ({ ingredientId: p.ingredientId, nom: p.nom, unite: p.unite })) }];
+        const hasMultiGroups = manualPriceGroups.length > 1;
+        for (const group of groups) {
+          if (hasMultiGroups && group.depth > 0) items.push({ type: 'group', label: group.label, depth: group.depth });
+          for (const ing of group.ingredients) {
+            const idx = manualPrices.findIndex((p) => p.ingredientId === ing.ingredientId);
+            if (idx !== -1) items.push({ type: 'item', idx, groupDepth: group.depth, groupLabel: group.label });
+          }
+        }
+        const searchLow = manualSearch.toLowerCase();
+        const filteredItems = manualSearch
+          ? items.filter((it) => it.type === 'item' && manualPrices[it.idx].nom.toLowerCase().includes(searchLow))
+          : items;
+        const visibleCount = filteredItems.filter((it) => it.type === 'item').length;
+
+        return (
+          <div className="modal-overlay" style={{ zIndex: 1050 }}>
+            <div className="modal" style={{ maxWidth: 520, borderRadius: 14, overflow: 'hidden', padding: 0 }} onClick={(e) => e.stopPropagation()}>
+              {/* Header */}
+              <div style={{ background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 100%)', padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                <div>
+                  <div style={{ color: '#fff', fontWeight: 800, fontSize: '0.95rem', marginBottom: 2 }}>✏️ Prix Articles</div>
+                  <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.78rem', fontWeight: 600 }}>{productName}</div>
+                </div>
+                <button onClick={() => { setShowManualPopup(false); setManualSearch(''); }} style={{ background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: 8, color: '#fff', fontWeight: 900, fontSize: '1.1rem', cursor: 'pointer', padding: '2px 9px', lineHeight: 1, flexShrink: 0 }}>×</button>
+              </div>
+
+              <div style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {/* Search */}
+                <input
+                  className="input"
+                  placeholder="🔍 Rechercher un article…"
+                  value={manualSearch}
+                  onChange={(e) => setManualSearch(e.target.value)}
+                  style={{ fontSize: '0.82rem' }}
+                  autoFocus
+                />
+
+                {/* Article count */}
+                <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 600 }}>
+                  {visibleCount} article{visibleCount !== 1 ? 's' : ''}
+                  {manualSearch && ` — filtrés sur "${manualSearch}"`}
+                </div>
+
+                {/* Scrollable list */}
+                <div style={{ height: 280, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 2, border: '1px solid var(--border)', borderRadius: 10, padding: '6px' }}>
+                  {manualLoading && (
+                    <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '40px 0', fontSize: '0.85rem' }}>⏳ {t('common.loading')}</div>
+                  )}
+                  {!manualLoading && visibleCount === 0 && (
+                    <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '40px 0', fontSize: '0.85rem' }}>Aucun article trouvé</div>
+                  )}
+                  {!manualLoading && filteredItems.map((it, i) => {
+                    if (it.type === 'group') {
+                      return (
+                        <div key={`g-${i}`} style={{ paddingLeft: 8 + it.depth * 12, paddingTop: i === 0 ? 2 : 8, paddingBottom: 2, fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: '#6b7280', borderTop: i === 0 ? undefined : '1px solid var(--border)', marginTop: i === 0 ? 0 : 4 }}>
+                          ↳ {it.label}
+                        </div>
+                      );
+                    }
+                    const p = manualPrices[it.idx];
+                    const priceVal = parseFloat(p.prixUnitaire);
+                    const priceValid = !isNaN(priceVal) && priceVal > 0;
+                    return (
+                      <div key={p.ingredientId} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '7px 10px', paddingLeft: 10 + it.groupDepth * 12, borderRadius: 8, background: priceValid ? '#f0fdf4' : 'transparent', transition: 'background 0.12s' }}>
+                        <span style={{ flex: 1, fontSize: '0.84rem', fontWeight: 500, color: '#374151' }}>{p.nom}</span>
+                        <span style={{ fontSize: '0.68rem', color: '#64748b', background: '#f1f5f9', borderRadius: 6, padding: '1px 6px', flexShrink: 0 }}>{p.unite}</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+                          <input
+                            type="number"
+                            step="0.001" min="0" placeholder="0.000"
+                            value={p.prixUnitaire}
+                            onChange={(e) => {
+                              const updated = [...manualPrices];
+                              updated[it.idx] = { ...updated[it.idx], prixUnitaire: e.target.value };
+                              setManualPrices(updated);
+                            }}
+                            style={{ width: 90, padding: '3px 7px', borderRadius: 6, border: `1.5px solid ${priceValid ? '#86efac' : '#e2e8f0'}`, fontSize: '0.82rem', textAlign: 'right', outline: 'none' }}
+                          />
+                          <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', flexShrink: 0 }}>DT</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="modal-footer" style={{ borderTop: '1px solid var(--border)', padding: '12px 16px' }}>
+                <button className="btn btn-ghost" onClick={() => { setShowManualPopup(false); setManualSearch(''); }}>{t('common.cancel')}</button>
+                <button className="btn btn-primary" onClick={saveManualPrices} disabled={savingManual || manualLoading}>
+                  {savingManual ? t('common.loading') : t('common.save')}
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Zero-price warning popup */}
       {showZeroWarning && (
