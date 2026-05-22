@@ -137,10 +137,15 @@ export default function ProductForm() {
 
         if (isEdit && productRes) {
           const data = productRes.data as {
-            name: string; refProduit?: string; type: string;
+            name: string; refProduit?: string; type: string; activiteId?: number | null;
             ingredients: { ingredientId: number; portion: number; unitId?: number; ingredientName?: string; unitPrice?: number; unitName?: string }[];
             subProducts: { subProductId: number; portion: number }[];
           };
+          // For client with multiple activités, selectedActId is empty — set it from the product and re-run
+          if (!selectedActId && data.activiteId) {
+            setSelectedActId(String(data.activiteId));
+            return;
+          }
           for (const ing of data.ingredients) {
             if (!ingData.find((x) => x.id === ing.ingredientId)) {
               ingData.push({
@@ -274,7 +279,7 @@ export default function ProductForm() {
   // ── Validation ────────────────────────────────────────────────────────────
   const filledIngredients = ingredientLines.filter((l) => l.ingredientId && l.portion);
   const canSubmit = name.trim().length > 0 && filledIngredients.length >= 1;
-  const hasNoIngredients = !loading && preStepDone && ingredients.length === 0;
+  const hasNoIngredients = !loading && preStepDone && ingredients.length === 0 && (!isEdit || Boolean(selectedActId));
 
   // ── "Created successfully" screen ─────────────────────────────────────────
   if (savedOk) {
