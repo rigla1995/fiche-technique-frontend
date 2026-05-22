@@ -136,7 +136,7 @@ export default function ReferentielCategoriesPage() {
             </select>
           </div>
         )}
-        <button className="btn btn-primary" onClick={openCreate} style={{ flexShrink: 0 }}>
+        <button className="btn" onClick={openCreate} style={{ background: 'linear-gradient(135deg,#15803d,#16a34a)', color: '#fff', flexShrink: 0 }}>
           + Nouvelle catégorie
         </button>
       </div>
@@ -186,7 +186,7 @@ export default function ReferentielCategoriesPage() {
         <div className="modal-overlay">
           <div className="modal modal-sm" onClick={e => e.stopPropagation()}>
             <div className="modal-header" style={{ background: GRADIENT }}>
-              <h2>{editItem ? 'Modifier la catégorie' : 'Nouvelle catégorie'}</h2>
+              <h2 style={{ color: '#fff', margin: 0 }}>{editItem ? 'Modifier la catégorie' : 'Nouvelle catégorie'}</h2>
               <button className="modal-close" onClick={closeForm}>×</button>
             </div>
             <div className="modal-body">
@@ -206,7 +206,7 @@ export default function ReferentielCategoriesPage() {
               )}
               <div className="modal-footer">
                 <button className="btn btn-ghost" onClick={closeForm}>Annuler</button>
-                <button className="btn btn-primary" disabled={saving || !nom.trim()} onClick={handleSave}>
+                <button className="btn" disabled={saving || !nom.trim()} onClick={handleSave} style={{ background: 'linear-gradient(135deg,#15803d,#16a34a)', color: '#fff' }}>
                   {saving ? 'Enregistrement…' : 'Enregistrer'}
                 </button>
               </div>
