@@ -618,9 +618,7 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
 
             {/* Header */}
             <div style={{
-              background: editingId
-                ? 'linear-gradient(135deg,#1d4ed8,#2563eb)'
-                : 'linear-gradient(135deg,#14532d,#16a34a)',
+              background: 'linear-gradient(135deg, #1e3a8a 0%, #1e40af 55%, #3b82f6 100%)',
               padding: '22px 24px', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between',
             }}>
               <div>
@@ -833,7 +831,7 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
           <div className="modal" style={{ maxWidth: 480, borderRadius: 16, overflow: 'hidden' }} onClick={(e) => e.stopPropagation()}>
 
             <div style={{
-              background: 'linear-gradient(135deg,#4c1d95,#7c3aed)',
+              background: 'linear-gradient(135deg, #3b0764 0%, #7e22ce 55%, #a855f7 100%)',
               padding: '22px 24px', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between',
             }}>
               <div>
