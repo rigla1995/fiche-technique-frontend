@@ -679,7 +679,7 @@ export default function ProductList() {
                       </div>
                     </div>
                     {isCascade ? (
-                      <div style={{ background: '#fff1f2', border: '1px solid #fecdd3', borderRadius: 8, padding: '12px 14px' }}>
+                      <div style={{ background: '#f0fdf4', border: '1px solid #a7f3d0', borderRadius: 8, padding: '12px 14px' }}>
                         <div style={{ fontWeight: 800, color: '#b91c1c', fontSize: '0.88rem', marginBottom: 6 }}>
                           ⚠️ Cette suppression entraîne des effets en cascade :
                         </div>
@@ -834,7 +834,7 @@ export default function ProductList() {
               <div className="modal-overlay">
                 <div className="modal" style={{ maxWidth: 560, width: '95vw', maxHeight: '90vh', overflow: 'auto' }} onClick={(e) => e.stopPropagation()}>
                   {/* Header */}
-                  <div style={{ background: 'linear-gradient(135deg, #881337 0%, #9f1239 100%)', padding: '18px 22px 14px', borderRadius: '12px 12px 0 0', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+                  <div style={{ background: 'linear-gradient(135deg, #0a1628 0%, #0f2847 100%)', padding: '18px 22px 14px', borderRadius: '12px 12px 0 0', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
                     <div style={{ flex: 1 }}>
                       <div style={{ color: '#fff', fontWeight: 800, fontSize: '1rem', marginBottom: 2 }}>
                         ✏️ Modifier — {editName || '…'}
@@ -849,7 +849,7 @@ export default function ProductList() {
                           <div key={s.n} style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4 }}>
                             <div style={{ height: 4, borderRadius: 4, background: s.n <= editModal ? '#fff' : 'rgba(255,255,255,0.28)', transition: 'background 0.2s' }} />
                             <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                              <div style={{ width: 18, height: 18, borderRadius: '50%', flexShrink: 0, background: s.n <= editModal ? '#fff' : 'rgba(255,255,255,0.28)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.62rem', fontWeight: 800, color: s.n <= editModal ? '#9f1239' : 'rgba(255,255,255,0.55)' }}>
+                              <div style={{ width: 18, height: 18, borderRadius: '50%', flexShrink: 0, background: s.n <= editModal ? '#fff' : 'rgba(255,255,255,0.28)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.62rem', fontWeight: 800, color: s.n <= editModal ? '#059669' : 'rgba(255,255,255,0.55)' }}>
                                 {s.n < editModal ? '✓' : s.display}
                               </div>
                               <span style={{ fontSize: '0.68rem', color: s.n <= editModal ? '#fff' : 'rgba(255,255,255,0.5)', fontWeight: 600 }}>{s.label}</span>
@@ -1080,7 +1080,7 @@ export default function ProductList() {
               <div className="modal-overlay">
                 <div className="modal" style={{ maxWidth: 560, width: '95vw', maxHeight: '90vh', overflow: 'auto' }} onClick={(e) => e.stopPropagation()}>
                   {/* Header */}
-                  <div style={{ background: 'linear-gradient(135deg, #881337 0%, #9f1239 100%)', padding: '18px 22px 14px', borderRadius: '12px 12px 0 0', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+                  <div style={{ background: 'linear-gradient(135deg, #0a1628 0%, #0f2847 100%)', padding: '18px 22px 14px', borderRadius: '12px 12px 0 0', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
                     <div style={{ flex: 1 }}>
                       <div style={{ color: '#fff', fontWeight: 800, fontSize: '1rem', marginBottom: addModal !== 5 ? 12 : 0 }}>
                         {addModal === 5 ? '✅ Produit créé' : `Nouveau ${isVendable ? 'produit vendable' : 'produit utilisable'}`}
@@ -1091,7 +1091,7 @@ export default function ProductList() {
                             <div key={s.n} style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4 }}>
                               <div style={{ height: 4, borderRadius: 4, background: s.n <= addModal ? '#fff' : 'rgba(255,255,255,0.28)', transition: 'background 0.2s' }} />
                               <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                                <div style={{ width: 18, height: 18, borderRadius: '50%', flexShrink: 0, background: s.n <= addModal ? '#fff' : 'rgba(255,255,255,0.28)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.62rem', fontWeight: 800, color: s.n <= addModal ? '#9f1239' : 'rgba(255,255,255,0.55)' }}>
+                                <div style={{ width: 18, height: 18, borderRadius: '50%', flexShrink: 0, background: s.n <= addModal ? '#fff' : 'rgba(255,255,255,0.28)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.62rem', fontWeight: 800, color: s.n <= addModal ? '#059669' : 'rgba(255,255,255,0.55)' }}>
                                   {s.n < addModal ? '✓' : s.n}
                                 </div>
                                 <span style={{ fontSize: '0.68rem', color: s.n <= addModal ? '#fff' : 'rgba(255,255,255,0.5)', fontWeight: 600 }}>{s.label}</span>
@@ -1109,30 +1109,30 @@ export default function ProductList() {
                     {addModal === 1 && (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                         <div>
-                          <label style={{ display: 'block', fontWeight: 700, fontSize: '0.82rem', color: '#881337', marginBottom: 6 }}>
+                          <label style={{ display: 'block', fontWeight: 700, fontSize: '0.82rem', color: '#065f46', marginBottom: 6 }}>
                             Nom du produit <span style={{ color: '#ef4444' }}>*</span>
                           </label>
                           <input className="input" placeholder="Ex. Burger Classic, Pizza Margherita…" value={addName}
                             onChange={(e) => setAddName(e.target.value)} autoFocus
-                            style={{ width: '100%', borderColor: '#fda4af' }} />
+                            style={{ width: '100%', borderColor: '#6ee7b7' }} />
                         </div>
                         <div>
-                          <label style={{ display: 'block', fontWeight: 700, fontSize: '0.82rem', color: '#881337', marginBottom: 6 }}>
+                          <label style={{ display: 'block', fontWeight: 700, fontSize: '0.82rem', color: '#065f46', marginBottom: 6 }}>
                             Réf. produit <span style={{ fontSize: '0.75rem', fontWeight: 400, color: 'var(--text-muted)' }}>(optionnel)</span>
                           </label>
                           <input className="input" placeholder="Ex. BRG-001" value={addRef}
                             onChange={(e) => setAddRef(e.target.value)}
-                            style={{ width: '100%', maxWidth: 280, borderColor: '#fda4af' }} />
+                            style={{ width: '100%', maxWidth: 280, borderColor: '#6ee7b7' }} />
                         </div>
                         {isVendable && (
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: addIsSupplement ? '#fff1f2' : '#f9fafb', borderRadius: 10, padding: '12px 16px', border: `1.5px solid ${addIsSupplement ? '#fda4af' : 'var(--border)'}` }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: addIsSupplement ? '#fffbeb' : '#f9fafb', borderRadius: 10, padding: '12px 16px', border: `1.5px solid ${addIsSupplement ? '#fcd34d' : 'var(--border)'}` }}>
                             <div>
-                              <div style={{ fontWeight: 700, fontSize: '0.88rem', color: addIsSupplement ? '#881337' : 'var(--text)' }}>Supplément</div>
+                              <div style={{ fontWeight: 700, fontSize: '0.88rem', color: addIsSupplement ? '#92400e' : 'var(--text)' }}>Supplément</div>
                               <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: 2 }}>Un supplément ne contient qu'un seul ingrédient</div>
                             </div>
                             <button type="button"
                               onClick={() => setAddIsSupplement((v) => !v)}
-                              style={{ width: 44, height: 24, borderRadius: 12, border: 'none', cursor: 'pointer', background: addIsSupplement ? '#9f1239' : '#d1d5db', transition: 'background 0.2s', position: 'relative', flexShrink: 0 }}>
+                              style={{ width: 44, height: 24, borderRadius: 12, border: 'none', cursor: 'pointer', background: addIsSupplement ? '#d97706' : '#d1d5db', transition: 'background 0.2s', position: 'relative', flexShrink: 0 }}>
                               <span style={{ position: 'absolute', top: 3, left: addIsSupplement ? 23 : 3, width: 18, height: 18, borderRadius: '50%', background: '#fff', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
                             </button>
                           </div>
@@ -1141,7 +1141,7 @@ export default function ProductList() {
                           <button className="btn btn-ghost" onClick={() => setAddModal(null)}>Annuler</button>
                           <button disabled={!canGoStep2}
                             onClick={() => setAddModal(2)}
-                            style={{ background: canGoStep2 ? 'linear-gradient(135deg, #881337, #9f1239)' : '#e5e7eb', border: 'none', borderRadius: 10, color: canGoStep2 ? '#fff' : '#9ca3af', fontWeight: 700, padding: '9px 22px', cursor: canGoStep2 ? 'pointer' : 'not-allowed' }}>
+                            style={{ background: canGoStep2 ? 'linear-gradient(135deg, #047857, #059669)' : '#e5e7eb', border: 'none', borderRadius: 10, color: canGoStep2 ? '#fff' : '#9ca3af', fontWeight: 700, padding: '9px 22px', cursor: canGoStep2 ? 'pointer' : 'not-allowed' }}>
                             Suivant →
                           </button>
                         </div>
@@ -1217,12 +1217,12 @@ export default function ProductList() {
                               const line = addIngLines.find((l) => l.ingredientId === sid);
                               const portionValid = sel && parseFloat(line?.portion || '0') > 0;
                               return (
-                                <div key={ing.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '7px 10px', borderRadius: 8, background: sel ? (portionValid ? '#fff7ed' : '#fff1f2') : 'transparent', cursor: 'pointer', transition: 'background 0.12s' }}
+                                <div key={ing.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '7px 10px', borderRadius: 8, background: sel ? (portionValid ? '#ecfdf5' : '#fef3c7') : 'transparent', cursor: 'pointer', transition: 'background 0.12s' }}
                                   onClick={() => toggleIngredient(ing)}>
                                   <input type="checkbox" checked={sel} onChange={() => toggleIngredient(ing)}
                                     onClick={e => e.stopPropagation()}
-                                    style={{ accentColor: '#9f1239', width: 15, height: 15, flexShrink: 0, cursor: 'pointer' }} />
-                                  <span style={{ flex: 1, fontSize: '0.84rem', fontWeight: sel ? 600 : 400, color: sel ? '#881337' : '#374151' }}>{ing.nom}</span>
+                                    style={{ accentColor: '#059669', width: 15, height: 15, flexShrink: 0, cursor: 'pointer' }} />
+                                  <span style={{ flex: 1, fontSize: '0.84rem', fontWeight: sel ? 600 : 400, color: sel ? '#065f46' : '#374151' }}>{ing.nom}</span>
                                   {ing.categorie && (
                                     <span style={{ fontSize: '0.68rem', color: '#64748b', background: '#f1f5f9', borderRadius: 6, padding: '1px 6px', flexShrink: 0 }}>{ing.categorie}</span>
                                   )}
@@ -1231,7 +1231,7 @@ export default function ProductList() {
                                       <input type="number" step="0.001" min="0" placeholder="portion"
                                         value={line?.portion || ''}
                                         onChange={(e) => updatePortion(sid, e.target.value)}
-                                        style={{ width: 72, padding: '3px 6px', borderRadius: 6, border: `1.5px solid ${portionValid ? '#fda4af' : '#ef4444'}`, fontSize: '0.82rem', textAlign: 'right' }} />
+                                        style={{ width: 72, padding: '3px 6px', borderRadius: 6, border: `1.5px solid ${portionValid ? '#6ee7b7' : '#ef4444'}`, fontSize: '0.82rem', textAlign: 'right' }} />
                                       <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{ing.unite}</span>
                                     </div>
                                   )}
@@ -1245,7 +1245,7 @@ export default function ProductList() {
                             )}
                           </div>
                           {addIngLines.some(l => l.ingredientId) && (
-                            <div style={{ fontSize: '0.78rem', color: '#9f1239', fontWeight: 600 }}>
+                            <div style={{ fontSize: '0.78rem', color: '#059669', fontWeight: 600 }}>
                               {addIngLines.filter(l => l.ingredientId && parseFloat(l.portion) > 0).length} article{addIngLines.filter(l => l.ingredientId && parseFloat(l.portion) > 0).length !== 1 ? 's' : ''} valide{addIngLines.filter(l => l.ingredientId && parseFloat(l.portion) > 0).length !== 1 ? 's' : ''} (portion &gt; 0)
                             </div>
                           )}
@@ -1253,7 +1253,7 @@ export default function ProductList() {
                             <button className="btn btn-ghost" onClick={() => setAddModal(1)}>← Retour</button>
                             <button disabled={!canGoStep3}
                               onClick={() => setAddModal(3)}
-                              style={{ background: canGoStep3 ? 'linear-gradient(135deg, #881337, #9f1239)' : '#e5e7eb', border: 'none', borderRadius: 10, color: canGoStep3 ? '#fff' : '#9ca3af', fontWeight: 700, padding: '9px 22px', cursor: canGoStep3 ? 'pointer' : 'not-allowed' }}>
+                              style={{ background: canGoStep3 ? 'linear-gradient(135deg, #047857, #059669)' : '#e5e7eb', border: 'none', borderRadius: 10, color: canGoStep3 ? '#fff' : '#9ca3af', fontWeight: 700, padding: '9px 22px', cursor: canGoStep3 ? 'pointer' : 'not-allowed' }}>
                               Suivant →
                             </button>
                           </div>
@@ -1273,15 +1273,15 @@ export default function ProductList() {
                             Sélectionnez une ou plusieurs activités. Le produit sera créé pour chacune d'elles.
                           </div>
                           {allActivities.length === 0 ? (
-                            <div style={{ padding: 16, borderRadius: 8, background: '#fff1f2', border: '1px solid #fda4af', fontSize: '0.85rem', color: '#881337', textAlign: 'center' }}>
+                            <div style={{ padding: 16, borderRadius: 8, background: '#f0fdf4', border: '1px solid #a7f3d0', fontSize: '0.85rem', color: '#065f46', textAlign: 'center' }}>
                               Aucune activité disponible.
                             </div>
                           ) : (
                             <>
                               {/* Select all row */}
                               <button type="button" onClick={() => setAddAffectationActiviteIds(allSel ? [] : allActivities.map(a => a.id))}
-                                style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 14px', borderRadius: 8, cursor: 'pointer', border: '1.5px solid var(--border)', background: allSel ? '#fff1f2' : 'transparent', textAlign: 'left' }}>
-                                <div style={{ width: 18, height: 18, borderRadius: 4, flexShrink: 0, border: allSel ? 'none' : '1.5px solid #cbd5e1', background: allSel ? '#9f1239' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 14px', borderRadius: 8, cursor: 'pointer', border: '1.5px solid var(--border)', background: allSel ? '#f0fdf4' : 'transparent', textAlign: 'left' }}>
+                                <div style={{ width: 18, height: 18, borderRadius: 4, flexShrink: 0, border: allSel ? 'none' : '1.5px solid #cbd5e1', background: allSel ? '#059669' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                   {allSel && <span style={{ color: '#fff', fontSize: 11, fontWeight: 700 }}>✓</span>}
                                 </div>
                                 <span style={{ fontSize: '0.84rem', fontWeight: 600, color: '#374151' }}>Tout sélectionner</span>
@@ -1292,13 +1292,13 @@ export default function ProductList() {
                                   const sel = addAffectationActiviteIds.includes(act.id);
                                   return (
                                     <button key={act.id} type="button" onClick={() => toggleAct(act.id)}
-                                      style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', borderRadius: 10, cursor: 'pointer', textAlign: 'left', border: sel ? '2px solid #9f1239' : '1.5px solid var(--border)', background: sel ? '#fff1f2' : 'var(--surface)', transition: 'all 0.15s' }}>
-                                      <div style={{ width: 32, height: 32, borderRadius: 8, flexShrink: 0, background: sel ? '#ffe4e6' : '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>📍</div>
+                                      style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', borderRadius: 10, cursor: 'pointer', textAlign: 'left', border: sel ? '2px solid #059669' : '1.5px solid var(--border)', background: sel ? '#f0fdf4' : 'var(--surface)', transition: 'all 0.15s' }}>
+                                      <div style={{ width: 32, height: 32, borderRadius: 8, flexShrink: 0, background: sel ? '#d1fae5' : '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>📍</div>
                                       <div style={{ flex: 1 }}>
-                                        <div style={{ fontWeight: 600, fontSize: '0.88rem', color: sel ? '#881337' : '#0f172a' }}>{act.nom}</div>
+                                        <div style={{ fontWeight: 600, fontSize: '0.88rem', color: sel ? '#065f46' : '#0f172a' }}>{act.nom}</div>
                                         <div style={{ fontSize: '0.75rem', color: '#64748b' }}>Activité</div>
                                       </div>
-                                      <div style={{ width: 18, height: 18, borderRadius: 4, flexShrink: 0, border: sel ? 'none' : '1.5px solid #cbd5e1', background: sel ? '#9f1239' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                      <div style={{ width: 18, height: 18, borderRadius: 4, flexShrink: 0, border: sel ? 'none' : '1.5px solid #cbd5e1', background: sel ? '#059669' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                         {sel && <span style={{ color: '#fff', fontSize: 11, fontWeight: 700 }}>✓</span>}
                                       </div>
                                     </button>
@@ -1314,7 +1314,7 @@ export default function ProductList() {
                             <button className="btn btn-ghost" onClick={() => setAddModal(2)}>← Retour</button>
                             <button disabled={!canGoStep4}
                               onClick={() => setAddModal(4)}
-                              style={{ background: canGoStep4 ? 'linear-gradient(135deg, #881337, #9f1239)' : '#e5e7eb', border: 'none', borderRadius: 10, color: canGoStep4 ? '#fff' : '#9ca3af', fontWeight: 700, padding: '9px 22px', cursor: canGoStep4 ? 'pointer' : 'not-allowed' }}>
+                              style={{ background: canGoStep4 ? 'linear-gradient(135deg, #047857, #059669)' : '#e5e7eb', border: 'none', borderRadius: 10, color: canGoStep4 ? '#fff' : '#9ca3af', fontWeight: 700, padding: '9px 22px', cursor: canGoStep4 ? 'pointer' : 'not-allowed' }}>
                               Suivant →
                             </button>
                           </div>
@@ -1329,26 +1329,26 @@ export default function ProductList() {
                       return (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                           {/* Product identity card */}
-                          <div style={{ background: 'linear-gradient(135deg,#fff1f2,#ffe4e6)', border: '1.5px solid #fda4af', borderRadius: 14, padding: '16px 18px' }}>
+                          <div style={{ background: 'linear-gradient(135deg,#f0fdf4,#d1fae5)', border: '1.5px solid #a7f3d0', borderRadius: 14, padding: '16px 18px' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
-                              <div style={{ width: 42, height: 42, borderRadius: 10, background: '#9f1239', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.3rem', flexShrink: 0 }}>📦</div>
+                              <div style={{ width: 42, height: 42, borderRadius: 10, background: '#059669', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.3rem', flexShrink: 0 }}>📦</div>
                               <div>
-                                <div style={{ fontWeight: 800, fontSize: '1.05rem', color: '#881337' }}>{addName}</div>
-                                {addRef && <div style={{ fontSize: '0.75rem', color: '#9f1239', marginTop: 1 }}>Réf : {addRef}</div>}
+                                <div style={{ fontWeight: 800, fontSize: '1.05rem', color: '#065f46' }}>{addName}</div>
+                                {addRef && <div style={{ fontSize: '0.75rem', color: '#059669', marginTop: 1 }}>Réf : {addRef}</div>}
                               </div>
-                              <div style={{ marginLeft: 'auto', background: '#9f1239', color: '#fff', borderRadius: 20, padding: '3px 10px', fontSize: '0.72rem', fontWeight: 700 }}>
+                              <div style={{ marginLeft: 'auto', background: '#059669', color: '#fff', borderRadius: 20, padding: '3px 10px', fontSize: '0.72rem', fontWeight: 700 }}>
                                 {isVendable ? 'Vendable' : 'Utilisable'}{addIsSupplement ? ' · Suppl.' : ''}
                               </div>
                             </div>
                             {/* Stats row */}
                             <div style={{ display: 'flex', gap: 10 }}>
                               <div style={{ flex: 1, background: 'rgba(255,255,255,0.6)', borderRadius: 8, padding: '8px 10px', textAlign: 'center' }}>
-                                <div style={{ fontSize: '1.2rem', fontWeight: 900, color: '#881337' }}>{ingCount}</div>
-                                <div style={{ fontSize: '0.7rem', color: '#9f1239' }}>article{ingCount !== 1 ? 's' : ''}</div>
+                                <div style={{ fontSize: '1.2rem', fontWeight: 900, color: '#065f46' }}>{ingCount}</div>
+                                <div style={{ fontSize: '0.7rem', color: '#059669' }}>article{ingCount !== 1 ? 's' : ''}</div>
                               </div>
                               <div style={{ flex: 1, background: 'rgba(255,255,255,0.6)', borderRadius: 8, padding: '8px 10px', textAlign: 'center' }}>
-                                <div style={{ fontSize: '1.2rem', fontWeight: 900, color: '#881337' }}>{selActs.length}</div>
-                                <div style={{ fontSize: '0.7rem', color: '#9f1239' }}>activité{selActs.length !== 1 ? 's' : ''}</div>
+                                <div style={{ fontSize: '1.2rem', fontWeight: 900, color: '#065f46' }}>{selActs.length}</div>
+                                <div style={{ fontSize: '0.7rem', color: '#059669' }}>activité{selActs.length !== 1 ? 's' : ''}</div>
                               </div>
                             </div>
                           </div>
@@ -1357,7 +1357,7 @@ export default function ProductList() {
                             <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#64748b', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Activités cibles</div>
                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                               {selActs.map(a => (
-                                <span key={a.id} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: '#fff1f2', border: '1.5px solid #fda4af', borderRadius: 20, padding: '4px 12px', fontSize: '0.8rem', fontWeight: 600, color: '#881337' }}>
+                                <span key={a.id} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: '#f0fdf4', border: '1.5px solid #a7f3d0', borderRadius: 20, padding: '4px 12px', fontSize: '0.8rem', fontWeight: 600, color: '#065f46' }}>
                                   📍 {a.nom}
                                 </span>
                               ))}
@@ -1382,7 +1382,7 @@ export default function ProductList() {
                             <button className="btn btn-ghost" onClick={() => setAddModal(3)}>← Retour</button>
                             <button disabled={addSaving}
                               onClick={handleSave}
-                              style={{ background: 'linear-gradient(135deg, #881337, #9f1239)', border: 'none', borderRadius: 10, color: '#fff', fontWeight: 700, padding: '10px 28px', cursor: addSaving ? 'not-allowed' : 'pointer', opacity: addSaving ? 0.7 : 1, fontSize: '0.9rem' }}>
+                              style={{ background: 'linear-gradient(135deg, #047857, #059669)', border: 'none', borderRadius: 10, color: '#fff', fontWeight: 700, padding: '10px 28px', cursor: addSaving ? 'not-allowed' : 'pointer', opacity: addSaving ? 0.7 : 1, fontSize: '0.9rem' }}>
                               {addSaving ? 'Création…' : `Créer ${selActs.length > 1 ? `${selActs.length}×` : ''} le produit ✓`}
                             </button>
                           </div>
@@ -1401,7 +1401,7 @@ export default function ProductList() {
                         <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
                           <button className="btn btn-ghost" onClick={() => setAddModal(null)}>Fermer</button>
                           <button onClick={openAddModal}
-                            style={{ background: 'linear-gradient(135deg, #881337, #9f1239)', border: 'none', borderRadius: 10, color: '#fff', fontWeight: 700, padding: '9px 22px', cursor: 'pointer' }}>
+                            style={{ background: 'linear-gradient(135deg, #047857, #059669)', border: 'none', borderRadius: 10, color: '#fff', fontWeight: 700, padding: '9px 22px', cursor: 'pointer' }}>
                             + Ajouter un autre
                           </button>
                         </div>
