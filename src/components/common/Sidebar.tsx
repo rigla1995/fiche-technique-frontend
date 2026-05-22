@@ -427,7 +427,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
             <>
               {/* Rapports */}
               <li>
-                {isOnboarding || lockEspaces ? (
+                {isOnboarding || lockLevel0 ? (
                   <LockedLink label={t('nav.rapports', 'Rapports')} />
                 ) : (
                   <NavLink
