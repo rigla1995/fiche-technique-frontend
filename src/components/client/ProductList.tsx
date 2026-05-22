@@ -53,7 +53,6 @@ export default function ProductList() {
   const [addIsSupplement, setAddIsSupplement] = useState(false);
   const [addIngLines, setAddIngLines] = useState<IngLine[]>([]);
   const [addIngredients, setAddIngredients] = useState<ActiviteIngredient[]>([]);
-  const [addIngCatFilter, setAddIngCatFilter] = useState('');
   const [addIngSearch, setAddIngSearch] = useState('');
   const [addSaving, setAddSaving] = useState(false);
   const [addSavedName, setAddSavedName] = useState('');
