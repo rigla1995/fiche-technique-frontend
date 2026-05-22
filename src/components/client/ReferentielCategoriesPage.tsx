@@ -44,6 +44,7 @@ export default function ReferentielCategoriesPage() {
 
   const handleSave = async () => {
     if (!nom.trim()) { setError('Nom requis'); return; }
+    if (familles.length > 0 && !familleId) { setError('Famille requise'); return; }
     setSaving(true);
     try {
       const payload = { nom: nom.trim(), familleId: familleId ? parseInt(familleId) : null };
@@ -207,16 +208,16 @@ export default function ReferentielCategoriesPage() {
               </div>
               {familles.length > 0 && (
                 <div className="form-group">
-                  <label>Famille (optionnel)</label>
+                  <label>Famille *</label>
                   <select className="input" value={familleId} onChange={e => setFamilleId(e.target.value)}>
-                    <option value="">— Aucune famille —</option>
+                    <option value="">— Sélectionner une famille —</option>
                     {familles.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
                   </select>
                 </div>
               )}
               <div className="modal-footer">
                 <button className="btn btn-ghost" onClick={closeForm}>Annuler</button>
-                <button className="btn" disabled={saving || !nom.trim()} onClick={handleSave} style={{ background: 'linear-gradient(135deg,#15803d,#16a34a)', color: '#fff' }}>
+                <button className="btn" disabled={saving || !nom.trim() || (familles.length > 0 && !familleId)} onClick={handleSave} style={{ background: 'linear-gradient(135deg,#15803d,#16a34a)', color: '#fff' }}>
                   {saving ? 'Enregistrement…' : 'Enregistrer'}
                 </button>
               </div>
