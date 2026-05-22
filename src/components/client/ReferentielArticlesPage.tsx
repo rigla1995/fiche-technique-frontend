@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import api from '../../api/client';
-import type { Article, Category, Famille, Unit } from '../../types';
+import type { Article, Activite, Category, Famille, Labo, Unit } from '../../types';
 
 const COLOR = '#16a34a';
 const GRADIENT = 'linear-gradient(135deg, #14532d 0%, #16a34a 55%, #4ade80 100%)';
@@ -10,7 +10,7 @@ const LABEL: React.CSSProperties = {
   textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 3, display: 'block',
 };
 
-interface ArticleForm {
+interface ArticleEditForm {
   nom: string;
   prix: string;
   seuilMin: string;
@@ -18,19 +18,34 @@ interface ArticleForm {
   categorieId: string;
 }
 
-const emptyForm: ArticleForm = { nom: '', prix: '', seuilMin: '', uniteId: '', categorieId: '' };
+const emptyEditForm: ArticleEditForm = { nom: '', prix: '', seuilMin: '', uniteId: '', categorieId: '' };
 
 export default function ReferentielArticlesPage() {
   const [articles, setArticles] = useState<Article[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [familles, setFamilles] = useState<Famille[]>([]);
   const [unites, setUnites] = useState<Unit[]>([]);
+  const [activites, setActivites] = useState<Activite[]>([]);
+  const [labos, setLabos] = useState<Labo[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showForm, setShowForm] = useState(false);
+
+  // Create wizard state
+  const [showCreate, setShowCreate] = useState(false);
+  const [createStep, setCreateStep] = useState(1);
+  const [createNom, setCreateNom] = useState('');
+  const [createUniteId, setCreateUniteId] = useState('');
+  const [createCategorieId, setCreateCategorieId] = useState('');
+  const [selectedActiviteIds, setSelectedActiviteIds] = useState<number[]>([]);
+  const [selectedLaboIds, setSelectedLaboIds] = useState<number[]>([]);
+  const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState('');
+
+  // Edit state
   const [editItem, setEditItem] = useState<Article | null>(null);
-  const [form, setForm] = useState<ArticleForm>(emptyForm);
+  const [editForm, setEditForm] = useState<ArticleEditForm>(emptyEditForm);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
+  const [editError, setEditError] = useState('');
+
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [search, setSearch] = useState('');
   const [filterCat, setFilterCat] = useState('');
@@ -43,61 +58,109 @@ export default function ReferentielArticlesPage() {
       api.get('/api/categories'),
       api.get('/api/familles'),
       api.get('/api/unites'),
-    ]).then(([artR, catR, famR, uniR]) => {
+      api.get('/api/entreprise/activites'),
+      api.get('/api/labo'),
+    ]).then(([artR, catR, famR, uniR, actR, labR]) => {
       setArticles(artR.data);
       setCategories(catR.data);
       setFamilles(famR.data);
       setUnites(uniR.data);
+      setActivites(actR.data);
+      setLabos(labR.data);
       setLoading(false);
     }).catch(() => setLoading(false));
   }, []);
 
   useEffect(() => { load(); }, [load]);
 
-  const openCreate = () => { setEditItem(null); setForm(emptyForm); setError(''); setShowForm(true); };
+  // ── Create wizard ──
+  const openCreate = () => {
+    setCreateNom(''); setCreateUniteId(''); setCreateCategorieId('');
+    setSelectedActiviteIds([]); setSelectedLaboIds([]);
+    setCreateError(''); setCreateStep(1); setShowCreate(true);
+  };
+  const closeCreate = () => { setShowCreate(false); setCreateError(''); };
 
+  const step1Valid = createNom.trim() !== '' && createUniteId !== '' && (categories.length === 0 || createCategorieId !== '');
+
+  const goStep2 = () => {
+    if (!step1Valid) { setCreateError('Veuillez remplir tous les champs obligatoires'); return; }
+    setCreateError(''); setCreateStep(2);
+  };
+
+  const toggleActivite = (id: number) => {
+    setSelectedActiviteIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  };
+  const toggleLabo = (id: number) => {
+    setSelectedLaboIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  };
+
+  const handleCreate = async () => {
+    const totalSelected = selectedActiviteIds.length + selectedLaboIds.length;
+    if (totalSelected === 0) { setCreateError('Sélectionnez au moins une activité ou un labo'); return; }
+    setCreating(true);
+    setCreateError('');
+    try {
+      const res = await api.post('/api/articles', {
+        nom: createNom.trim(),
+        unitId: parseInt(createUniteId),
+        categorieId: createCategorieId ? parseInt(createCategorieId) : null,
+      });
+      const articleId = res.data.id;
+      await Promise.all([
+        ...selectedActiviteIds.map(actId =>
+          api.post(`/api/entreprise/activites/${actId}/ingredients/${articleId}/select`)
+        ),
+        ...selectedLaboIds.map(laboId =>
+          api.post(`/api/labo/${laboId}/ingredients/${articleId}/select`)
+        ),
+      ]);
+      window.dispatchEvent(new Event('articles-changed'));
+      closeCreate();
+      load();
+    } catch (e: unknown) {
+      setCreateError((e as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Erreur lors de la création');
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  // ── Edit ──
   const openEdit = (a: Article) => {
     setEditItem(a);
-    setForm({
+    setEditForm({
       nom: a.name,
       prix: a.price !== null && a.price !== undefined ? String(a.price) : '',
       seuilMin: a.seuilMin !== null && a.seuilMin !== undefined ? String(a.seuilMin) : '',
       uniteId: a.unitId ? String(a.unitId) : '',
       categorieId: a.categorieId ? String(a.categorieId) : '',
     });
-    setError('');
-    setShowForm(true);
+    setEditError('');
   };
-
-  const closeForm = () => { setShowForm(false); setEditItem(null); setForm(emptyForm); setError(''); };
+  const closeEdit = () => { setEditItem(null); setEditForm(emptyEditForm); setEditError(''); };
 
   const handleSave = async () => {
-    if (!form.nom.trim()) { setError('Nom requis'); return; }
-    if (!form.uniteId) { setError('Unité requise'); return; }
+    if (!editForm.nom.trim()) { setEditError('Nom requis'); return; }
+    if (!editForm.uniteId) { setEditError('Unité requise'); return; }
     setSaving(true);
     try {
-      const payload = {
-        nom: form.nom.trim(),
-        prix: form.prix !== '' ? parseFloat(form.prix) : null,
-        seuilMin: form.seuilMin !== '' ? parseFloat(form.seuilMin) : null,
-        unitId: parseInt(form.uniteId),
-        categorieId: form.categorieId ? parseInt(form.categorieId) : null,
-      };
-      if (editItem) {
-        await api.put(`/api/articles/${editItem.id}`, payload);
-      } else {
-        await api.post('/api/articles', payload);
-        window.dispatchEvent(new Event('articles-changed'));
-      }
-      closeForm();
+      await api.put(`/api/articles/${editItem!.id}`, {
+        nom: editForm.nom.trim(),
+        prix: editForm.prix !== '' ? parseFloat(editForm.prix) : null,
+        seuilMin: editForm.seuilMin !== '' ? parseFloat(editForm.seuilMin) : null,
+        unitId: parseInt(editForm.uniteId),
+        categorieId: editForm.categorieId ? parseInt(editForm.categorieId) : null,
+      });
+      closeEdit();
       load();
     } catch (e: unknown) {
-      setError((e as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Erreur lors de l\'enregistrement');
+      setEditError((e as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Erreur lors de l\'enregistrement');
     } finally {
       setSaving(false);
     }
   };
 
+  // ── Delete ──
   const handleDelete = async (id: number) => {
     try {
       await api.delete(`/api/articles/${id}`);
@@ -251,29 +314,220 @@ export default function ReferentielArticlesPage() {
         </div>
       )}
 
-      {/* ── Create/Edit Modal ── */}
-      {showForm && (
+      {/* ── Create Wizard ── */}
+      {showCreate && (
+        <div className="modal-overlay">
+          <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 480 }}>
+            {/* Header */}
+            <div className="modal-header" style={{ background: GRADIENT }}>
+              <div>
+                <h2 style={{ color: '#fff', margin: 0 }}>Nouvel article</h2>
+                <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
+                  {[1, 2].map(s => (
+                    <div key={s} style={{
+                      height: 4, width: 36, borderRadius: 4,
+                      background: s <= createStep ? '#fff' : 'rgba(255,255,255,0.3)',
+                      transition: 'background 0.2s',
+                    }} />
+                  ))}
+                  <span style={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.72rem', marginLeft: 6, alignSelf: 'center' }}>
+                    Étape {createStep}/2
+                  </span>
+                </div>
+              </div>
+              <button className="modal-close" onClick={closeCreate}>×</button>
+            </div>
+
+            <div className="modal-body">
+              {createError && (
+                <div style={{ background: '#fee2e2', color: '#dc2626', border: '1px solid #fecaca', borderRadius: 6, padding: '8px 12px', marginBottom: 12, fontSize: '0.85rem' }}>
+                  {createError}
+                </div>
+              )}
+
+              {createStep === 1 ? (
+                <>
+                  <div style={{ marginBottom: 6, color: '#64748b', fontSize: '0.82rem' }}>
+                    Renseignez les informations de base de l'article.
+                  </div>
+                  <div className="form-group">
+                    <label>Nom *</label>
+                    <input
+                      className="input" autoFocus value={createNom}
+                      placeholder="Ex: Poulet entier"
+                      onChange={e => setCreateNom(e.target.value)}
+                      onKeyDown={e => e.key === 'Enter' && step1Valid && goStep2()}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Unité *</label>
+                    <select className="input" value={createUniteId} onChange={e => setCreateUniteId(e.target.value)}>
+                      <option value="">— Sélectionner une unité —</option>
+                      {unites.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label>Catégorie *</label>
+                    {categories.length === 0 ? (
+                      <div style={{ padding: '10px 12px', borderRadius: 8, background: '#fefce8', border: '1px solid #fde68a', fontSize: '0.84rem', color: '#92400e' }}>
+                        💡 Créez d'abord des catégories dans le référentiel pour pouvoir les sélectionner.
+                      </div>
+                    ) : (
+                      <select className="input" value={createCategorieId} onChange={e => setCreateCategorieId(e.target.value)}>
+                        <option value="">— Sélectionner une catégorie —</option>
+                        {categories.map(c => <option key={c.id} value={c.id}>{c.familleName ? `${c.familleName} › ${c.name}` : c.name}</option>)}
+                      </select>
+                    )}
+                  </div>
+                  <div className="modal-footer">
+                    <button className="btn btn-ghost" onClick={closeCreate}>Annuler</button>
+                    <button
+                      className="btn"
+                      disabled={!step1Valid}
+                      onClick={goStep2}
+                      style={{ background: 'linear-gradient(135deg,#15803d,#16a34a)', color: '#fff' }}
+                    >
+                      Suivant →
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div style={{ marginBottom: 14, color: '#64748b', fontSize: '0.82rem' }}>
+                    Affectez cet article à au moins une activité ou un labo.
+                  </div>
+
+                  {activites.length === 0 && labos.length === 0 ? (
+                    <div style={{ padding: '16px', borderRadius: 8, background: '#f0fdf4', border: '1px solid #86efac', fontSize: '0.85rem', color: '#166534', textAlign: 'center' }}>
+                      Aucune activité ou labo trouvé. Créez-en depuis « Mes Activités ».
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 300, overflowY: 'auto' }}>
+                      {activites.map(act => {
+                        const selected = selectedActiviteIds.includes(act.id);
+                        return (
+                          <button
+                            key={`act-${act.id}`}
+                            onClick={() => toggleActivite(act.id)}
+                            style={{
+                              display: 'flex', alignItems: 'center', gap: 12,
+                              padding: '10px 14px', borderRadius: 10, cursor: 'pointer', textAlign: 'left',
+                              border: selected ? '2px solid #16a34a' : '1.5px solid var(--border)',
+                              background: selected ? '#f0fdf4' : 'var(--surface)',
+                              transition: 'all 0.15s',
+                            }}
+                          >
+                            <div style={{
+                              width: 32, height: 32, borderRadius: 8, flexShrink: 0,
+                              background: selected ? '#16a34a' : '#e2e8f0',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16,
+                            }}>
+                              📍
+                            </div>
+                            <div style={{ flex: 1 }}>
+                              <div style={{ fontWeight: 600, fontSize: '0.88rem', color: '#0f172a' }}>{act.nom}</div>
+                              <div style={{ fontSize: '0.75rem', color: '#64748b' }}>Activité</div>
+                            </div>
+                            <div style={{
+                              width: 20, height: 20, borderRadius: 6, flexShrink: 0,
+                              border: selected ? 'none' : '1.5px solid #cbd5e1',
+                              background: selected ? '#16a34a' : 'transparent',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            }}>
+                              {selected && <span style={{ color: '#fff', fontSize: 13, fontWeight: 700 }}>✓</span>}
+                            </div>
+                          </button>
+                        );
+                      })}
+                      {labos.map(labo => {
+                        const selected = selectedLaboIds.includes(labo.id);
+                        return (
+                          <button
+                            key={`labo-${labo.id}`}
+                            onClick={() => toggleLabo(labo.id)}
+                            style={{
+                              display: 'flex', alignItems: 'center', gap: 12,
+                              padding: '10px 14px', borderRadius: 10, cursor: 'pointer', textAlign: 'left',
+                              border: selected ? '2px solid #16a34a' : '1.5px solid var(--border)',
+                              background: selected ? '#f0fdf4' : 'var(--surface)',
+                              transition: 'all 0.15s',
+                            }}
+                          >
+                            <div style={{
+                              width: 32, height: 32, borderRadius: 8, flexShrink: 0,
+                              background: selected ? '#16a34a' : '#e2e8f0',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16,
+                            }}>
+                              🏭
+                            </div>
+                            <div style={{ flex: 1 }}>
+                              <div style={{ fontWeight: 600, fontSize: '0.88rem', color: '#0f172a' }}>{labo.nom}</div>
+                              <div style={{ fontSize: '0.75rem', color: '#64748b' }}>Laboratoire</div>
+                            </div>
+                            <div style={{
+                              width: 20, height: 20, borderRadius: 6, flexShrink: 0,
+                              border: selected ? 'none' : '1.5px solid #cbd5e1',
+                              background: selected ? '#16a34a' : 'transparent',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            }}>
+                              {selected && <span style={{ color: '#fff', fontSize: 13, fontWeight: 700 }}>✓</span>}
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {(activites.length > 0 || labos.length > 0) && (
+                    <div style={{ marginTop: 8, fontSize: '0.78rem', color: selectedActiviteIds.length + selectedLaboIds.length > 0 ? COLOR : '#94a3b8' }}>
+                      {selectedActiviteIds.length + selectedLaboIds.length} sélectionné{selectedActiviteIds.length + selectedLaboIds.length !== 1 ? 's' : ''}
+                      {selectedActiviteIds.length + selectedLaboIds.length === 0 && ' — au moins 1 requis'}
+                    </div>
+                  )}
+
+                  <div className="modal-footer">
+                    <button className="btn btn-ghost" onClick={() => { setCreateStep(1); setCreateError(''); }}>← Retour</button>
+                    <button
+                      className="btn"
+                      disabled={creating || selectedActiviteIds.length + selectedLaboIds.length === 0}
+                      onClick={handleCreate}
+                      style={{ background: 'linear-gradient(135deg,#15803d,#16a34a)', color: '#fff' }}
+                    >
+                      {creating ? 'Création…' : 'Créer l\'article'}
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Edit Modal ── */}
+      {editItem && (
         <div className="modal-overlay">
           <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 460 }}>
             <div className="modal-header" style={{ background: GRADIENT }}>
-              <h2 style={{ color: '#fff', margin: 0 }}>{editItem ? 'Modifier l\'article' : 'Nouvel article'}</h2>
-              <button className="modal-close" onClick={closeForm}>×</button>
+              <h2 style={{ color: '#fff', margin: 0 }}>Modifier l'article</h2>
+              <button className="modal-close" onClick={closeEdit}>×</button>
             </div>
             <div className="modal-body">
-              {error && <div style={{ background: '#fee2e2', color: '#dc2626', border: '1px solid #fecaca', borderRadius: 6, padding: '8px 12px', marginBottom: 12, fontSize: '0.85rem' }}>{error}</div>}
-              {[
-                { label: 'Nom *', key: 'nom', placeholder: 'Ex: Poulet entier', type: 'text' },
-                { label: 'Prix (DT)', key: 'prix', placeholder: '0.000', type: 'number' },
-                { label: 'Seuil minimum', key: 'seuilMin', placeholder: 'Quantité minimale en stock', type: 'number' },
-              ].map(f => (
-                <div key={f.key} className="form-group">
-                  <label>{f.label}</label>
-                  <input className="input" type={f.type} value={(form as unknown as Record<string, string>)[f.key]} onChange={e => setForm(prev => ({ ...prev, [f.key]: e.target.value }))} placeholder={f.placeholder} />
-                </div>
-              ))}
+              {editError && <div style={{ background: '#fee2e2', color: '#dc2626', border: '1px solid #fecaca', borderRadius: 6, padding: '8px 12px', marginBottom: 12, fontSize: '0.85rem' }}>{editError}</div>}
+              <div className="form-group">
+                <label>Nom *</label>
+                <input className="input" autoFocus value={editForm.nom} placeholder="Ex: Poulet entier" onChange={e => setEditForm(p => ({ ...p, nom: e.target.value }))} />
+              </div>
+              <div className="form-group">
+                <label>Prix (DT)</label>
+                <input className="input" type="number" value={editForm.prix} placeholder="0.000" onChange={e => setEditForm(p => ({ ...p, prix: e.target.value }))} />
+              </div>
+              <div className="form-group">
+                <label>Seuil minimum</label>
+                <input className="input" type="number" value={editForm.seuilMin} placeholder="Quantité minimale en stock" onChange={e => setEditForm(p => ({ ...p, seuilMin: e.target.value }))} />
+              </div>
               <div className="form-group">
                 <label>Unité *</label>
-                <select className="input" value={form.uniteId} onChange={e => setForm(p => ({ ...p, uniteId: e.target.value }))}>
+                <select className="input" value={editForm.uniteId} onChange={e => setEditForm(p => ({ ...p, uniteId: e.target.value }))}>
                   <option value="">— Sélectionner une unité —</option>
                   {unites.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
                 </select>
@@ -281,15 +535,15 @@ export default function ReferentielArticlesPage() {
               {categories.length > 0 && (
                 <div className="form-group">
                   <label>Catégorie</label>
-                  <select className="input" value={form.categorieId} onChange={e => setForm(p => ({ ...p, categorieId: e.target.value }))}>
+                  <select className="input" value={editForm.categorieId} onChange={e => setEditForm(p => ({ ...p, categorieId: e.target.value }))}>
                     <option value="">— Sans catégorie —</option>
                     {categories.map(c => <option key={c.id} value={c.id}>{c.familleName ? `${c.familleName} › ${c.name}` : c.name}</option>)}
                   </select>
                 </div>
               )}
               <div className="modal-footer">
-                <button className="btn btn-ghost" onClick={closeForm}>Annuler</button>
-                <button className="btn" disabled={saving || !form.nom.trim() || !form.uniteId} onClick={handleSave} style={{ background: 'linear-gradient(135deg,#15803d,#16a34a)', color: '#fff' }}>
+                <button className="btn btn-ghost" onClick={closeEdit}>Annuler</button>
+                <button className="btn" disabled={saving || !editForm.nom.trim() || !editForm.uniteId} onClick={handleSave} style={{ background: 'linear-gradient(135deg,#15803d,#16a34a)', color: '#fff' }}>
                   {saving ? 'Enregistrement…' : 'Enregistrer'}
                 </button>
               </div>
