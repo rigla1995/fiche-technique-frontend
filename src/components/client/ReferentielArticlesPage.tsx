@@ -330,7 +330,7 @@ export default function ReferentielArticlesPage() {
                   <span style={{ fontSize: '1rem' }}>🗂️</span>
                   <span style={{ fontWeight: 800, fontSize: '0.9rem', color: '#14532d' }}>{fg.famName}</span>
                   <span style={{ marginLeft: 'auto', fontSize: '0.72rem', color: '#16a34a', fontWeight: 600 }}>
-                    {fg.cats.reduce((s, c) => s + c.items.length, 0)} article{fg.cats.reduce((s, c) => s + c.items.length, 0) !== 1 ? 's' : ''}
+                    {fg.cats.length} catégorie{fg.cats.length !== 1 ? 's' : ''}
                   </span>
                 </div>
               )}
@@ -368,7 +368,7 @@ export default function ReferentielArticlesPage() {
                           marginLeft: 8, background: '#f1f5f9', color: '#64748b',
                           borderRadius: 10, padding: '1px 8px', fontSize: '0.72rem', fontWeight: 600,
                         }}>
-                          {cg.items.length}
+                          {cg.items.length} article{cg.items.length !== 1 ? 's' : ''}
                         </span>
                       </button>
 
