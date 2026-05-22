@@ -48,6 +48,7 @@ export default function ReferentielArticlesPage() {
   const [search, setSearch] = useState('');
   const [filterCat, setFilterCat] = useState('');
   const [filterFamille, setFilterFamille] = useState('');
+  const [openCats, setOpenCats] = useState<Set<string>>(new Set());
 
   const load = useCallback(() => {
     setLoading(true);
@@ -190,6 +191,36 @@ export default function ReferentielArticlesPage() {
     return true;
   });
 
+  const toggleCat = (key: string) => {
+    setOpenCats(prev => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key); else next.add(key);
+      return next;
+    });
+  };
+
+  // Group filtered articles by famille then catégorie
+  type CatGroup = { catKey: string; catName: string | null; catId: number | null; items: Article[] };
+  type FamGroup = { famKey: string; famName: string | null; cats: CatGroup[] };
+  const grouped: FamGroup[] = [];
+  const famMap = new Map<string, FamGroup>();
+  for (const a of filtered) {
+    const famKey = a.familleId != null ? String(a.familleId) : '__none__';
+    const famName = a.familleName || null;
+    const catKey = `${famKey}::${a.categorieId ?? '__none__'}`;
+    const catName = a.categorieName || null;
+    const catId = a.categorieId || null;
+    if (!famMap.has(famKey)) {
+      const fg: FamGroup = { famKey, famName, cats: [] };
+      famMap.set(famKey, fg);
+      grouped.push(fg);
+    }
+    const fg = famMap.get(famKey)!;
+    let cg = fg.cats.find(c => c.catKey === catKey);
+    if (!cg) { cg = { catKey, catName, catId, items: [] }; fg.cats.push(cg); }
+    cg.items.push(a);
+  }
+
   return (
     <div className="page">
       {/* ── Hero ── */}
@@ -266,7 +297,7 @@ export default function ReferentielArticlesPage() {
         </button>
       </div>
 
-      {/* ── Table ── */}
+      {/* ── Grouped list ── */}
       {loading ? (
         <div className="loading-text">Chargement…</div>
       ) : articles.length === 0 ? (
@@ -285,35 +316,99 @@ export default function ReferentielArticlesPage() {
           Aucun résultat pour cette recherche.
         </div>
       ) : (
-        <div className="table-responsive card">
-          <table className="table">
-            <thead>
-              <tr>
-                <th>Article</th>
-                <th>Catégorie</th>
-                <th style={{ textAlign: 'center' }}>Unité</th>
-                <th style={{ textAlign: 'right' }}></th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map(a => (
-                <tr key={a.id}>
-                  <td style={{ fontWeight: 600, color: '#0f172a' }}>{a.name}</td>
-                  <td style={{ fontSize: '0.85rem', color: '#64748b' }}>
-                    {a.familleName && <span style={{ color: COLOR, fontWeight: 600 }}>{a.familleName} › </span>}
-                    {a.categorieName || <span style={{ color: '#cbd5e1' }}>—</span>}
-                  </td>
-                  <td style={{ textAlign: 'center' }}>
-                    <span style={{ background: '#e0e7ff', color: '#4338ca', padding: '2px 8px', borderRadius: 6, fontWeight: 600, fontSize: '0.75rem' }}>{a.unitName || a.unit?.name || '—'}</span>
-                  </td>
-                  <td className="actions-cell" style={{ justifyContent: 'flex-end' }}>
-                    <button className="btn btn-ghost btn-sm" onClick={() => openEdit(a)}>✏️ Modifier</button>
-                    <button className="btn btn-danger btn-sm" onClick={() => setDeleteId(a.id)}>🗑️</button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {grouped.map(fg => (
+            <div key={fg.famKey} className="card" style={{ padding: 0, overflow: 'hidden' }}>
+              {/* Famille header */}
+              {fg.famName && (
+                <div style={{
+                  padding: '10px 18px',
+                  background: 'linear-gradient(90deg,#f0fdf4,#dcfce7)',
+                  borderBottom: '1px solid #bbf7d0',
+                  display: 'flex', alignItems: 'center', gap: 8,
+                }}>
+                  <span style={{ fontSize: '1rem' }}>🗂️</span>
+                  <span style={{ fontWeight: 800, fontSize: '0.9rem', color: '#14532d' }}>{fg.famName}</span>
+                  <span style={{ marginLeft: 'auto', fontSize: '0.72rem', color: '#16a34a', fontWeight: 600 }}>
+                    {fg.cats.reduce((s, c) => s + c.items.length, 0)} article{fg.cats.reduce((s, c) => s + c.items.length, 0) !== 1 ? 's' : ''}
+                  </span>
+                </div>
+              )}
+
+              {/* Categories */}
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                {fg.cats.map((cg, ci) => {
+                  const isOpen = openCats.has(cg.catKey);
+                  const isLast = ci === fg.cats.length - 1;
+                  return (
+                    <div key={cg.catKey} style={{ borderBottom: isLast ? 'none' : '1px solid var(--border)' }}>
+                      {/* Category toggle */}
+                      <button
+                        onClick={() => toggleCat(cg.catKey)}
+                        style={{
+                          width: '100%', display: 'flex', alignItems: 'center', gap: 10,
+                          padding: '11px 18px', background: 'transparent', border: 'none',
+                          cursor: 'pointer', textAlign: 'left',
+                          borderBottom: isOpen ? '1px solid var(--border)' : 'none',
+                          transition: 'background 0.15s',
+                        }}
+                        onMouseEnter={e => (e.currentTarget.style.background = '#f8fafc')}
+                        onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                      >
+                        <span style={{
+                          fontSize: '0.65rem', color: '#94a3b8',
+                          transform: isOpen ? 'rotate(90deg)' : 'none',
+                          transition: 'transform 0.2s', display: 'inline-block',
+                        }}>▶</span>
+                        <span style={{ fontSize: '0.9rem' }}>🏷️</span>
+                        <span style={{ fontWeight: 700, fontSize: '0.86rem', color: '#374151' }}>
+                          {cg.catName || 'Sans catégorie'}
+                        </span>
+                        <span style={{
+                          marginLeft: 8, background: '#f1f5f9', color: '#64748b',
+                          borderRadius: 10, padding: '1px 8px', fontSize: '0.72rem', fontWeight: 600,
+                        }}>
+                          {cg.items.length}
+                        </span>
+                      </button>
+
+                      {/* Articles */}
+                      {isOpen && (
+                        <div>
+                          {cg.items.map((a, ai) => (
+                            <div
+                              key={a.id}
+                              style={{
+                                display: 'flex', alignItems: 'center', gap: 12,
+                                padding: '9px 18px 9px 46px',
+                                borderBottom: ai < cg.items.length - 1 ? '1px solid #f1f5f9' : 'none',
+                                background: '#fafafa',
+                              }}
+                            >
+                              <span style={{
+                                width: 6, height: 6, borderRadius: '50%',
+                                background: COLOR, flexShrink: 0, display: 'inline-block',
+                              }} />
+                              <span style={{ flex: 1, fontWeight: 600, fontSize: '0.88rem', color: '#0f172a' }}>
+                                {a.name}
+                              </span>
+                              <span style={{ background: '#e0e7ff', color: '#4338ca', padding: '2px 8px', borderRadius: 6, fontWeight: 600, fontSize: '0.72rem' }}>
+                                {a.unitName || a.unit?.name || '—'}
+                              </span>
+                              <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+                                <button className="btn btn-ghost btn-sm" onClick={() => openEdit(a)}>✏️ Modifier</button>
+                                <button className="btn btn-danger btn-sm" onClick={() => setDeleteId(a.id)}>🗑️</button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
         </div>
       )}
 
