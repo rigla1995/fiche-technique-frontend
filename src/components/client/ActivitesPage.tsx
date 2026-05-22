@@ -347,6 +347,9 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
   const filteredActivites = activites.filter((a) =>
     !filterName || a.nom.toLowerCase().includes(filterName.toLowerCase())
   );
+  const filteredLabos = labos.filter((l) =>
+    !filterName || l.nom.toLowerCase().includes(filterName.toLowerCase())
+  );
 
   const usedLabos = new Set(activites.filter((a) => a.laboId).map((a) => a.laboId)).size;
 
@@ -457,6 +460,22 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
         </div>
       ) : showFullLayout ? (
         <>
+          {/* ── Unified filter bar ── */}
+          <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: '14px 18px', marginBottom: 20, boxShadow: '0 2px 8px rgba(0,0,0,0.04)', display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: '1 1 220px' }}>
+              <span style={{ fontSize: '1rem' }}>🔍</span>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 2, flex: 1 }}>
+                <span style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Nom</span>
+                <input
+                  type="text" className="input"
+                  placeholder="Filtrer activités et labos…"
+                  value={filterName} onChange={(e) => setFilterName(e.target.value)}
+                  style={{ minWidth: 180 }}
+                />
+              </div>
+            </div>
+          </div>
+
           {/* Activités section */}
           <div style={{ marginBottom: 32 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14, padding: '10px 16px', background: 'linear-gradient(135deg,#eff6ff,#dbeafe)', borderRadius: 12, border: '1px solid #bfdbfe' }}>
@@ -464,7 +483,7 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                 <span style={{ fontSize: '1.1rem' }}>🏢</span>
                 <span style={{ fontSize: '0.9rem', fontWeight: 800, color: '#1e40af' }}>{t('nav.activites')}</span>
                 <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#2563eb', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 20, padding: '2px 10px' }}>
-                  {activites.length} activité(s)
+                  {activites.length}{maxActivites !== null ? ` / ${maxActivites}` : ''} activité(s)
                 </span>
               </div>
               {!atActiviteLimit && (
@@ -472,17 +491,6 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                   + Nouvelle activité
                 </button>
               )}
-            </div>
-
-            <div style={{ display: 'flex', gap: 10, marginBottom: 14, flexWrap: 'wrap', alignItems: 'flex-end' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 3, flex: '1 1 auto', maxWidth: 260 }}>
-                <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Nom de l'activité</span>
-                <input
-                  type="text" className="input" style={{ minWidth: 140 }}
-                  placeholder="Filtrer par nom…"
-                  value={filterName} onChange={(e) => setFilterName(e.target.value)}
-                />
-              </div>
             </div>
 
             {activites.length === 0 ? (
@@ -569,6 +577,8 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                     </button>
                   )}
                 </p>
+              ) : filteredLabos.length === 0 ? (
+                <p className="text-muted" style={{ fontSize: '0.85rem' }}>{t('common.no_result')}</p>
               ) : (
                 <div className="table-responsive card" style={{ marginBottom: 0 }}>
                   <table className="table">
@@ -581,7 +591,7 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                       </tr>
                     </thead>
                     <tbody>
-                      {labos.map((labo) => (
+                      {filteredLabos.map((labo) => (
                         <tr key={labo.id}>
                           <td style={{ fontWeight: 700 }}>{labo.nom}</td>
                           <td style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{labo.refLabo || '—'}</td>
