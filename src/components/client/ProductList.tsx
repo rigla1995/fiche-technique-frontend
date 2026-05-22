@@ -78,6 +78,7 @@ export default function ProductList() {
   const [editSaving, setEditSaving] = useState(false);
   const [editLoadingData, setEditLoadingData] = useState(false);
   const [editActiviteNom, setEditActiviteNom] = useState('');
+  const [editOriginalIngLines, setEditOriginalIngLines] = useState<IngLine[]>([]);
 
   // Load activities — for gerant users use their assigned activité directly
   useEffect(() => {
@@ -140,7 +141,9 @@ export default function ProductList() {
       setEditName(pdata.name);
       setEditRef(pdata.refProduit || '');
       setEditIsSupplement(pdata.isSupplement ?? false);
-      setEditIngLines(pdata.ingredients.map((i) => ({ ingredientId: String(i.ingredientId), portion: String(i.portion) })));
+      const loadedLines = pdata.ingredients.map((i) => ({ ingredientId: String(i.ingredientId), portion: String(i.portion) }));
+      setEditIngLines(loadedLines);
+      setEditOriginalIngLines(loadedLines);
     } finally {
       setEditLoadingData(false);
     }
@@ -764,7 +767,14 @@ export default function ProductList() {
               setEditIngLines((prev) => prev.map((l) => l.ingredientId === ingId ? { ...l, portion: val } : l));
             };
 
-            const canGoEditStep3 = editIngLines.some((l) => l.ingredientId && parseFloat(l.portion) > 0);
+            const hasValidIngLines = editIngLines.some((l) => l.ingredientId && parseFloat(l.portion) > 0);
+            const normalizeLines = (lines: IngLine[]) =>
+              lines
+                .filter((l) => l.ingredientId && parseFloat(l.portion) > 0)
+                .map((l) => ({ id: l.ingredientId, p: parseFloat(l.portion).toFixed(3) }))
+                .sort((a, b) => a.id.localeCompare(b.id));
+            const isEditDirty = JSON.stringify(normalizeLines(editIngLines)) !== JSON.stringify(normalizeLines(editOriginalIngLines));
+            const canGoEditStep3 = hasValidIngLines && isEditDirty;
 
             const handleEditSave = async () => {
               if (!editProductId) return;
@@ -932,6 +942,7 @@ export default function ProductList() {
                           <button className="btn btn-ghost" onClick={() => setEditModal(null)}>Annuler</button>
                           <button disabled={!canGoEditStep3 || editLoadingData}
                             onClick={() => setEditModal(3)}
+                            title={!isEditDirty ? 'Aucune modification détectée' : !hasValidIngLines ? 'Ajoutez au moins un article avec une portion > 0' : undefined}
                             style={{ background: canGoEditStep3 && !editLoadingData ? 'linear-gradient(135deg, #1e40af, #3b82f6)' : '#e5e7eb', border: 'none', borderRadius: 10, color: canGoEditStep3 && !editLoadingData ? '#fff' : '#9ca3af', fontWeight: 700, padding: '9px 22px', cursor: canGoEditStep3 && !editLoadingData ? 'pointer' : 'not-allowed' }}>
                             Suivant →
                           </button>
