@@ -53,6 +53,10 @@ export default function FicheTechniqueTab({ isEntreprise, allActivities }: Props
   const [showMissingPopup, setShowMissingPopup] = useState(false);
   const [missingFillData, setMissingFillData] = useState<Record<number, { qty: string; price: string; date: string }>>({});
   const [savingMissing, setSavingMissing] = useState(false);
+  const [stockPricingDp, setStockPricingDp] = useState(true);
+  const [stockPricingMp, setStockPricingMp] = useState(false);
+  const [realtimeCostMp, setRealtimeCostMp] = useState<number | null>(null);
+  const [costLoadingMp, setCostLoadingMp] = useState(false);
 
   // FP Manuel
   const [manualPrices, setManualPrices] = useState<ManualPriceEntry[]>([]);
@@ -137,10 +141,8 @@ export default function FicheTechniqueTab({ isEntreprise, allActivities }: Props
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode, selectedProductId]);
 
-  // Load real-time cost after mode is selected.
-  // FP Manuel uses saved manual prices; FP Stock uses stock/catalogue prices.
   useEffect(() => {
-    if (!selectedProductId || !mode) { setRealtimeCost(null); return; }
+    if (!selectedProductId || !mode || (mode === 'stock' && !stockPricingDp)) { setRealtimeCost(null); return; }
     setCostLoading(true);
     const params = new URLSearchParams({ mode });
     if (resolvedActId) params.set('activiteId', String(resolvedActId));
@@ -148,9 +150,20 @@ export default function FicheTechniqueTab({ isEntreprise, allActivities }: Props
       .then(({ data }) => setRealtimeCost((data as { totalCost: number }).totalCost ?? null))
       .catch(() => setRealtimeCost(null))
       .finally(() => setCostLoading(false));
-  // costRefreshKey increments on every save so the effect always re-runs even when the date is unchanged
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedProductId, mode, costRefreshKey, resolvedActId]);
+  }, [selectedProductId, mode, costRefreshKey, resolvedActId, stockPricingDp]);
+
+  useEffect(() => {
+    if (mode !== 'stock' || !stockPricingMp || !stockCheckResult?.complete || !selectedProductId) { setRealtimeCostMp(null); return; }
+    setCostLoadingMp(true);
+    const params = new URLSearchParams({ mode: 'stock', pricingMethod: 'mp' });
+    if (resolvedActId) params.set('activiteId', String(resolvedActId));
+    api.get(`/api/products/${selectedProductId}/cout?${params}`)
+      .then(({ data }) => setRealtimeCostMp((data as { totalCost: number }).totalCost ?? null))
+      .catch(() => setRealtimeCostMp(null))
+      .finally(() => setCostLoadingMp(false));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedProductId, mode, costRefreshKey, resolvedActId, stockPricingMp, stockCheckResult]);
 
   const loadManualPrices = async () => {
     if (!selectedProductId) return;
@@ -260,7 +273,10 @@ export default function FicheTechniqueTab({ isEntreprise, allActivities }: Props
     try {
       const params = new URLSearchParams({ mode });
       if (resolvedActId) params.set('activiteId', String(resolvedActId));
-      // FP Stock: always uses latest appro — no date param needed
+      if (mode === 'stock') {
+        const pm = stockPricingDp && stockPricingMp ? 'both' : stockPricingMp ? 'mp' : 'dp';
+        params.set('pricingMethod', pm);
+      }
       const response = await api.get(`/api/products/${selectedProductId}/export?${params}`, { responseType: 'blob' });
       const selectedProduct = products.find((p) => String(p.id) === selectedProductId);
       const url = window.URL.createObjectURL(new Blob([response.data]));
@@ -286,7 +302,7 @@ export default function FicheTechniqueTab({ isEntreprise, allActivities }: Props
       return !isNaN(v) && v > 0;
     });
 
-  const canGenerateStock = mode === 'stock' && stockCheckResult?.complete === true;
+  const canGenerateStock = mode === 'stock' && stockCheckResult?.complete === true && (stockPricingDp || stockPricingMp);
   const canGenerateManual = mode === 'manual' && allManualPricesFilled;
   const canGenerate = canGenerateStock || canGenerateManual;
 
@@ -464,11 +480,25 @@ export default function FicheTechniqueTab({ isEntreprise, allActivities }: Props
                   {stockCheckLoading ? (
                     <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>{t('common.loading')}</span>
                   ) : stockCheckResult?.complete ? (
-                    <span style={{
-                      display: 'inline-flex', alignItems: 'center', gap: 5,
-                      fontSize: '0.78rem', fontWeight: 600, color: '#16a34a',
-                      background: '#dcfce7', borderRadius: 20, padding: '3px 10px',
-                    }}>✓ {t('client.stock.stock_complete')}</span>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      <span style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 5,
+                        fontSize: '0.78rem', fontWeight: 600, color: '#16a34a',
+                        background: '#dcfce7', borderRadius: 20, padding: '3px 10px',
+                      }}>✓ {t('client.stock.stock_complete')}</span>
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        <button
+                          title="DP — Dernier Prix : prix du dernier approvisionnement"
+                          onClick={(e) => { e.stopPropagation(); if (!stockPricingMp || stockPricingDp) setStockPricingDp((v) => !v); }}
+                          style={{ padding: '3px 10px', borderRadius: 6, border: '2px solid', borderColor: stockPricingDp ? '#2563eb' : '#d1d5db', background: stockPricingDp ? '#dbeafe' : 'transparent', color: stockPricingDp ? '#1d4ed8' : 'var(--text-muted)', fontWeight: 700, fontSize: '0.72rem', cursor: 'pointer', transition: 'all 0.12s' }}
+                        >DP</button>
+                        <button
+                          title="MP — Moyenne des Prix : moyenne des prix depuis le dernier inventaire"
+                          onClick={(e) => { e.stopPropagation(); if (!stockPricingDp || stockPricingMp) setStockPricingMp((v) => !v); }}
+                          style={{ padding: '3px 10px', borderRadius: 6, border: '2px solid', borderColor: stockPricingMp ? '#7c3aed' : '#d1d5db', background: stockPricingMp ? '#ede9fe' : 'transparent', color: stockPricingMp ? '#6d28d9' : 'var(--text-muted)', fontWeight: 700, fontSize: '0.72rem', cursor: 'pointer', transition: 'all 0.12s' }}
+                        >MP</button>
+                      </div>
+                    </div>
                   ) : stockCheckResult && !stockCheckResult.complete ? (
                     <div>
                       <span style={{
@@ -554,11 +584,34 @@ export default function FicheTechniqueTab({ isEntreprise, allActivities }: Props
               <div style={{ fontSize: '0.68rem', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 2 }}>
                 {t('client.products.real_time_cost')}
               </div>
-              {costLoading ? (
+              {(costLoading || costLoadingMp) ? (
                 <div style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>…</div>
               ) : mode === 'stock' && !stockCheckLoading && stockCheckResult && !stockCheckResult.complete ? (
                 <div style={{ fontSize: '0.8rem', color: '#b45309', fontWeight: 600 }}>
                   ⚠ {t('client.stock.missing_stock_msg').split('.')[0]}
+                </div>
+              ) : mode === 'stock' && stockPricingDp && stockPricingMp && realtimeCost !== null && realtimeCostMp !== null ? (
+                <div style={{ display: 'flex', gap: 14 }}>
+                  <div>
+                    <div style={{ fontSize: '0.6rem', fontWeight: 700, color: '#1d4ed8', letterSpacing: '0.05em', textTransform: 'uppercase', marginBottom: 1 }}>DP</div>
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 3 }}>
+                      <span style={{ fontWeight: 800, fontSize: '1.2rem', color: '#2563eb', letterSpacing: '-0.02em', lineHeight: 1 }}>{realtimeCost.toFixed(3)}</span>
+                      <span style={{ fontWeight: 600, fontSize: '0.75rem', color: 'var(--text-muted)' }}>{t('currency')}</span>
+                    </div>
+                  </div>
+                  <div style={{ width: 1, alignSelf: 'stretch', background: 'var(--border)' }} />
+                  <div>
+                    <div style={{ fontSize: '0.6rem', fontWeight: 700, color: '#6d28d9', letterSpacing: '0.05em', textTransform: 'uppercase', marginBottom: 1 }}>MP</div>
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 3 }}>
+                      <span style={{ fontWeight: 800, fontSize: '1.2rem', color: '#7c3aed', letterSpacing: '-0.02em', lineHeight: 1 }}>{realtimeCostMp.toFixed(3)}</span>
+                      <span style={{ fontWeight: 600, fontSize: '0.75rem', color: 'var(--text-muted)' }}>{t('currency')}</span>
+                    </div>
+                  </div>
+                </div>
+              ) : mode === 'stock' && stockPricingMp && !stockPricingDp && realtimeCostMp !== null ? (
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 5 }}>
+                  <span style={{ fontWeight: 800, fontSize: '1.5rem', color: '#7c3aed', letterSpacing: '-0.02em', lineHeight: 1 }}>{realtimeCostMp.toFixed(3)}</span>
+                  <span style={{ fontWeight: 600, fontSize: '0.8rem', color: 'var(--text-muted)' }}>{t('currency')}</span>
                 </div>
               ) : realtimeCost !== null ? (
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: 5 }}>
