@@ -7,31 +7,22 @@
     </linearGradient>
   </defs>
 
-  <!-- Icon mark (scaled 60%) -->
-  <g transform="translate(5,5) scale(0.6)">
+  <!-- Icon mark -->
+  <g transform="translate(2,2) scale(0.657)">
     <rect width="100" height="100" rx="22" fill="url(#bg)"/>
-
-    <!-- Seal ring -->
-    <circle cx="50" cy="50" r="39"
-      fill="none" stroke="white" stroke-width="1.2" opacity="0.55"/>
-    <circle cx="50" cy="11" r="1.8" fill="white" opacity="0.55"/>
-    <circle cx="50" cy="89" r="1.8" fill="white" opacity="0.55"/>
-
-    <!-- L -->
-    <path d="M 26,24 L 26,69 Q 26,74 31,74 L 44,74"
-      fill="none" stroke="white" stroke-width="3.2"
-      stroke-linecap="square" stroke-linejoin="round"/>
-
-    <!-- F -->
-    <path d="M 58,74 L 58,24 L 75,24 Q 78,24 78,27"
-      fill="none" stroke="white" stroke-width="3.2"
-      stroke-linecap="square" stroke-linejoin="round"/>
-    <path d="M 58,44 L 74,44"
-      fill="none" stroke="white" stroke-width="3.2"
-      stroke-linecap="square"/>
+    <!-- Bold L -->
+    <path d="M 21,22 L 21,74 L 43,74"
+      fill="none" stroke="white" stroke-width="8"
+      stroke-linecap="round" stroke-linejoin="round"/>
+    <!-- Bold F -->
+    <path d="M 57,74 L 57,22 L 79,22"
+      fill="none" stroke="white" stroke-width="8"
+      stroke-linecap="round" stroke-linejoin="round"/>
+    <line x1="57" y1="48" x2="76" y2="48"
+      stroke="white" stroke-width="8" stroke-linecap="round"/>
   </g>
 
-  <!-- Wordmark: white -->
+  <!-- Wordmark -->
   <text x="83" y="48"
     font-family="system-ui, -apple-system, 'Helvetica Neue', Arial, sans-serif"
     font-size="34"

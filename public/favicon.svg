@@ -9,38 +9,15 @@
 
   <rect width="100" height="100" rx="22" fill="url(#bg)"/>
 
-  <!--
-    Raffiné & Stylé — trois niveaux de lecture :
-    1. Le cercle-sceau  : cadre fin, comme une bague chevalière ou un gravé sur verre
-    2. Les lettres L+F  : trait mince et constant, terminaisons droites "carré"
-       L → angle bas-gauche arrondi (comme dans le sketch original)
-       F → arche quart-de-cercle au sommet (pas de barre droite)
-    3. Deux micro-points aux pôles du cercle : signature de précision
-  -->
+  <!-- Bold L -->
+  <path d="M 21,22 L 21,74 L 43,74"
+    fill="none" stroke="white" stroke-width="8"
+    stroke-linecap="round" stroke-linejoin="round"/>
 
-  <!-- Seal ring -->
-  <circle cx="50" cy="50" r="39"
-    fill="none" stroke="white" stroke-width="1.2" opacity="0.55"/>
-
-  <!-- Precision marker dots at top and bottom of ring -->
-  <circle cx="50" cy="11"  r="1.8" fill="white" opacity="0.55"/>
-  <circle cx="50" cy="89"  r="1.8" fill="white" opacity="0.55"/>
-
-  <!-- ── Letter "L" ──
-       Vertical stroke + rounded bottom-left corner + horizontal bar
-  ── -->
-  <path d="M 26,24 L 26,69 Q 26,74 31,74 L 44,74"
-    fill="none" stroke="white" stroke-width="3.2"
-    stroke-linecap="square" stroke-linejoin="round"/>
-
-  <!-- ── Letter "F" ──
-       Vertical + straight top bar (corner légèrement arrondi au bout)
-       + middle bar — lit clairement F, pas P
-  ── -->
-  <path d="M 58,74 L 58,24 L 75,24 Q 78,24 78,27"
-    fill="none" stroke="white" stroke-width="3.2"
-    stroke-linecap="square" stroke-linejoin="round"/>
-  <path d="M 58,44 L 74,44"
-    fill="none" stroke="white" stroke-width="3.2"
-    stroke-linecap="square"/>
+  <!-- Bold F: vertical + top bar + middle bar -->
+  <path d="M 57,74 L 57,22 L 79,22"
+    fill="none" stroke="white" stroke-width="8"
+    stroke-linecap="round" stroke-linejoin="round"/>
+  <line x1="57" y1="48" x2="76" y2="48"
+    stroke="white" stroke-width="8" stroke-linecap="round"/>
 </svg>
