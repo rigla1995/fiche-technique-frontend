@@ -419,60 +419,127 @@ export default function ProductList() {
             )
           ) : (
             <>
-              <div className="table-responsive card" style={{ borderRadius: 14, overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.07)' }}>
-                <table className="table">
-                  <thead style={{ background: 'linear-gradient(135deg, #1e1b4b, #4338ca)' }}>
-                    <tr>
-                      <th style={{ color: '#fff', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase' }}>{t('common.name')}</th>
-                      <th style={{ textAlign: 'center', color: '#fff', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase' }}>🧂 Articles</th>
-                      {isVendable && <th style={{ textAlign: 'center', color: '#fff', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase' }}>📦 P.Utilisables</th>}
-                      {!isVendable && <th style={{ width: 60, textAlign: 'center', color: '#fff', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase' }}>📦 Stock</th>}
-                      <th style={{ textAlign: 'right', color: '#fff', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase' }}>{t('common.actions')}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {paginated.map((p) => (
-                      <tr key={p.id}>
-                        <td><span style={{ fontWeight: 600 }}>{p.name}</span></td>
-                        <td style={{ textAlign: 'center' }}>
-                          <button className="count-badge" onClick={() => openPopup('ingredients', p)}
-                            title={p.ingredientsCount ? 'Voir les ingrédients' : 'Aucun ingrédient'}
-                            disabled={!p.ingredientsCount}
-                            style={{ opacity: p.ingredientsCount ? 1 : 0.4, cursor: p.ingredientsCount ? 'pointer' : 'default' }}>
-                            {p.ingredientsCount ?? 0}
-                          </button>
-                        </td>
+              {(() => {
+                const supplements = isVendable ? paginated.filter((p) => p.isSupplement) : [];
+                const regulars = isVendable ? paginated.filter((p) => !p.isSupplement) : paginated;
+                const hasGroups = isVendable && supplements.length > 0 && regulars.length > 0;
+
+                const renderProductCard = (p: Product) => {
+                  const isSup = !!p.isSupplement;
+                  const accentColor = isSup ? '#be185d' : '#9f1239';
+                  const accentLight = isSup ? '#fdf2f8' : '#fff1f2';
+                  const act = isEntreprise ? allActivities.find((a) => a.id === p.activiteId) : null;
+                  return (
+                    <div key={p.id} style={{
+                      background: '#fff', borderRadius: 14,
+                      border: '1px solid #f3f4f6',
+                      borderLeft: `4px solid ${accentColor}`,
+                      boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
+                      display: 'flex', flexDirection: 'column', overflow: 'hidden',
+                      transition: 'box-shadow 0.15s, transform 0.15s',
+                    }}
+                      onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.boxShadow = '0 6px 24px rgba(159,18,57,0.13)'; (e.currentTarget as HTMLDivElement).style.transform = 'translateY(-2px)'; }}
+                      onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.boxShadow = '0 2px 12px rgba(0,0,0,0.06)'; (e.currentTarget as HTMLDivElement).style.transform = 'none'; }}
+                    >
+                      {/* Card header */}
+                      <div style={{ padding: '14px 16px 10px', display: 'flex', alignItems: 'flex-start', gap: 12, background: accentLight }}>
+                        <div style={{ width: 40, height: 40, borderRadius: 10, flexShrink: 0, background: `linear-gradient(135deg, ${accentColor} 0%, ${isSup ? '#9d174d' : '#881337'} 100%)`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem', boxShadow: `0 4px 10px ${isSup ? 'rgba(190,24,93,0.3)' : 'rgba(159,18,57,0.3)'}` }}>
+                          {isSup ? '➕' : (isVendable ? '🍔' : '🧪')}
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap' }}>
+                            <span style={{ fontWeight: 700, fontSize: '0.92rem', color: '#111827', lineHeight: 1.3 }}>{p.name}</span>
+                            {isSup && (
+                              <span style={{ fontSize: '0.62rem', fontWeight: 800, letterSpacing: '0.07em', textTransform: 'uppercase', background: `linear-gradient(135deg, ${accentColor}, #9d174d)`, color: '#fff', borderRadius: 20, padding: '2px 8px', flexShrink: 0 }}>Supplément</span>
+                            )}
+                          </div>
+                          {act && (
+                            <div style={{ fontSize: '0.72rem', color: '#6b7280', fontWeight: 500, marginTop: 3 }}>
+                              📍 {act.nom}
+                            </div>
+                          )}
+                          {p.refProduit && (
+                            <div style={{ fontSize: '0.68rem', color: '#9ca3af', fontWeight: 500, marginTop: 2 }}>Réf : {p.refProduit}</div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Metrics row */}
+                      <div style={{ padding: '10px 16px', display: 'flex', gap: 8, borderBottom: '1px solid #f3f4f6' }}>
+                        <button
+                          onClick={() => openPopup('ingredients', p)}
+                          disabled={!p.ingredientsCount}
+                          title={p.ingredientsCount ? 'Voir les articles' : 'Aucun article'}
+                          style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, padding: '8px 4px', borderRadius: 10, border: `1px solid ${p.ingredientsCount ? '#fce7f3' : '#f3f4f6'}`, background: p.ingredientsCount ? '#fff1f2' : '#fafafa', cursor: p.ingredientsCount ? 'pointer' : 'default', opacity: p.ingredientsCount ? 1 : 0.5, transition: 'background 0.12s' }}
+                        >
+                          <span style={{ fontSize: '1rem', lineHeight: 1 }}>🧂</span>
+                          <span style={{ fontWeight: 800, fontSize: '1rem', color: p.ingredientsCount ? accentColor : '#9ca3af', lineHeight: 1 }}>{p.ingredientsCount ?? 0}</span>
+                          <span style={{ fontSize: '0.6rem', color: '#9ca3af', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>articles</span>
+                        </button>
                         {isVendable && (
-                          <td style={{ textAlign: 'center' }}>
-                            <button className="count-badge" onClick={() => openPopup('subProducts', p)}
-                              title={p.subProductsCount ? 'Voir les produits utilisables' : 'Aucun sous-produit'}
-                              disabled={!p.subProductsCount}
-                              style={{ opacity: p.subProductsCount ? 1 : 0.4, cursor: p.subProductsCount ? 'pointer' : 'default' }}>
-                              {p.subProductsCount ?? 0}
-                            </button>
-                          </td>
+                          <button
+                            onClick={() => openPopup('subProducts', p)}
+                            disabled={!p.subProductsCount}
+                            title={p.subProductsCount ? 'Voir les produits utilisables' : 'Aucun produit utilisable'}
+                            style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, padding: '8px 4px', borderRadius: 10, border: `1px solid ${p.subProductsCount ? '#e0e7ff' : '#f3f4f6'}`, background: p.subProductsCount ? '#eef2ff' : '#fafafa', cursor: p.subProductsCount ? 'pointer' : 'default', opacity: p.subProductsCount ? 1 : 0.5, transition: 'background 0.12s' }}
+                          >
+                            <span style={{ fontSize: '1rem', lineHeight: 1 }}>📦</span>
+                            <span style={{ fontWeight: 800, fontSize: '1rem', color: p.subProductsCount ? '#4338ca' : '#9ca3af', lineHeight: 1 }}>{p.subProductsCount ?? 0}</span>
+                            <span style={{ fontSize: '0.6rem', color: '#9ca3af', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>util.</span>
+                          </button>
                         )}
                         {!isVendable && (
-                          <td style={{ textAlign: 'center' }}>
-                            <button
-                              className="btn btn-ghost btn-sm"
-                              onClick={() => togglePT(p)}
-                              disabled={togglingPT === p.id}
-                              title={p.isStockIngredient ? 'Retirer du stock' : 'Ajouter au stock'}
-                              style={{ fontSize: '1rem', color: p.isStockIngredient ? 'var(--success)' : 'var(--text-muted)' }}
-                            >
-                              {togglingPT === p.id ? '…' : p.isStockIngredient ? '✓' : '○'}
-                            </button>
-                          </td>
+                          <button
+                            onClick={() => togglePT(p)}
+                            disabled={togglingPT === p.id}
+                            title={p.isStockIngredient ? 'Retirer du stock' : 'Ajouter au stock'}
+                            style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, padding: '8px 4px', borderRadius: 10, border: `1px solid ${p.isStockIngredient ? '#d1fae5' : '#f3f4f6'}`, background: p.isStockIngredient ? '#f0fdf4' : '#fafafa', cursor: 'pointer', transition: 'background 0.12s' }}
+                          >
+                            <span style={{ fontSize: '1rem', lineHeight: 1 }}>📦</span>
+                            <span style={{ fontWeight: 800, fontSize: '1rem', color: p.isStockIngredient ? '#16a34a' : '#9ca3af', lineHeight: 1 }}>{togglingPT === p.id ? '…' : p.isStockIngredient ? '✓' : '○'}</span>
+                            <span style={{ fontSize: '0.6rem', color: '#9ca3af', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>stock</span>
+                          </button>
                         )}
-                        <td style={{ textAlign: 'right' }}>{renderActions(p)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                      </div>
+
+                      {/* Actions footer */}
+                      <div style={{ padding: '10px 14px', display: 'flex', justifyContent: 'flex-end', gap: 6 }}>
+                        {renderActions(p)}
+                      </div>
+                    </div>
+                  );
+                };
+
+                const renderGroup = (label: string, icon: string, items: Product[], accent: string, labelBg: string) => (
+                  <div style={{ marginBottom: 24 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+                      <div style={{ width: 6, height: 28, borderRadius: 3, background: accent, flexShrink: 0 }} />
+                      <span style={{ fontSize: '0.7rem', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', color: accent }}>{icon} {label}</span>
+                      <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#fff', background: accent, borderRadius: 20, padding: '1px 9px' }}>{items.length}</span>
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 14 }}>
+                      {items.map((p) => renderProductCard(p))}
+                    </div>
+                  </div>
+                );
+
+                return (
+                  <div>
+                    {hasGroups ? (
+                      <>
+                        {regulars.length > 0 && renderGroup('Produits', '🍔', regulars, '#9f1239', '#fff1f2')}
+                        {supplements.length > 0 && renderGroup('Suppléments', '➕', supplements, '#be185d', '#fdf2f8')}
+                      </>
+                    ) : (
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 14 }}>
+                        {paginated.map((p) => renderProductCard(p))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
               {totalPages > 1 && (
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 16, flexWrap: 'wrap', gap: 8 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 20, flexWrap: 'wrap', gap: 8 }}>
                   <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)', fontWeight: 500 }}>
                     {(safePage - 1) * PAGE_SIZE + 1}–{Math.min(safePage * PAGE_SIZE, searched.length)} sur {searched.length}
                   </span>
