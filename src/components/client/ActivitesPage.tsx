@@ -442,9 +442,9 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
             ) : configHasLabo ? (
               <button
                 style={{
-                  padding: '13px 28px', borderRadius: 12, background: 'linear-gradient(135deg,#166534,#16a34a)',
+                  padding: '13px 28px', borderRadius: 12, background: 'linear-gradient(135deg, #1e3a8a 0%, #4338ca 45%, #7e22ce 80%, #a855f7 100%)',
                   color: '#fff', fontWeight: 800, fontSize: '0.95rem', cursor: 'pointer',
-                  border: 'none', boxShadow: '0 4px 16px rgba(22,101,52,0.35)',
+                  border: 'none', boxShadow: '0 4px 16px rgba(67,56,202,0.35)',
                   display: 'flex', alignItems: 'center', gap: 8,
                 }}
                 onClick={openBizWizard}
@@ -945,8 +945,11 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
 
             {/* Wizard header */}
             <div style={{
-              background: 'linear-gradient(135deg,#0f172a,#1e293b)',
+              background: bizStep === 1
+                ? 'linear-gradient(135deg, #3b0764 0%, #7e22ce 55%, #a855f7 100%)'
+                : 'linear-gradient(135deg, #1e3a8a 0%, #1e40af 55%, #3b82f6 100%)',
               padding: '24px 28px',
+              transition: 'background 0.3s',
             }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
                 <div>
@@ -1039,7 +1042,7 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
             {bizStep === 2 && (
               <div className="modal-body" style={{ padding: '22px 28px', display: 'flex', flexDirection: 'column', gap: 14, maxHeight: '55vh', overflowY: 'auto' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <div style={sectionTitle('#166534')}><span>🏢</span> Créez vos activités</div>
+                  <div style={sectionTitle('#1e40af')}><span>🏢</span> Créez vos activités</div>
                   {maxActivites !== null && (
                     <span style={{ fontSize: '0.72rem', color: '#6b7280', background: '#f3f4f6', border: '1px solid #e5e7eb', borderRadius: 20, padding: '2px 10px' }}>
                       {bizActForms.filter(f => f.nom.trim()).length} / {maxActivites}
@@ -1050,7 +1053,7 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                 {bizActForms.map((af, idx) => (
                   <div key={idx} style={{ background: '#f8fafc', border: '1px solid #e5e7eb', borderRadius: 12, padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2 }}>
-                      <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#16a34a', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
+                      <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#1e40af', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
                         Activité {idx + 1}
                       </span>
                       {bizActForms.length > 1 && (
@@ -1113,7 +1116,7 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
 
                 {(maxActivites === null || bizActForms.length < maxActivites) && (
                   <button type="button" onClick={bizAddSlot}
-                    style={{ background: 'none', border: '1px dashed #16a34a', color: '#16a34a', borderRadius: 10, padding: '10px', fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer', width: '100%' }}>
+                    style={{ background: 'none', border: '1px dashed #1e40af', color: '#1e40af', borderRadius: 10, padding: '10px', fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer', width: '100%' }}>
                     + Ajouter une activité
                   </button>
                 )}
@@ -1145,7 +1148,7 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                     <button type="button" className="btn btn-secondary" onClick={closeBizWizard}>{t('common.cancel')}</button>
                   )}
                   <button type="button" className="btn btn-primary" onClick={bizSaveAll} disabled={bizSaving}
-                    style={{ minWidth: 140, fontWeight: 700, background: 'linear-gradient(135deg,#14532d,#16a34a)', borderColor: '#14532d' }}>
+                    style={{ minWidth: 140, fontWeight: 700, background: 'linear-gradient(135deg, #1e3a8a, #3b82f6)', borderColor: '#1e3a8a' }}>
                     {bizSaving ? '…' : '✅ Enregistrer tout'}
                   </button>
                 </>
