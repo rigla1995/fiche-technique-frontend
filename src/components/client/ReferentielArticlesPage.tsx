@@ -12,13 +12,11 @@ const LABEL: React.CSSProperties = {
 
 interface ArticleEditForm {
   nom: string;
-  prix: string;
-  seuilMin: string;
   uniteId: string;
   categorieId: string;
 }
 
-const emptyEditForm: ArticleEditForm = { nom: '', prix: '', seuilMin: '', uniteId: '', categorieId: '' };
+const emptyEditForm: ArticleEditForm = { nom: '', uniteId: '', categorieId: '' };
 
 export default function ReferentielArticlesPage() {
   const [articles, setArticles] = useState<Article[]>([]);
@@ -88,6 +86,20 @@ export default function ReferentielArticlesPage() {
     setCreateError(''); setCreateStep(2);
   };
 
+  const allCount = activites.length + labos.length;
+  const selectedCount = selectedActiviteIds.length + selectedLaboIds.length;
+  const allSelected = allCount > 0 && selectedCount === allCount;
+
+  const toggleSelectAll = () => {
+    if (allSelected) {
+      setSelectedActiviteIds([]);
+      setSelectedLaboIds([]);
+    } else {
+      setSelectedActiviteIds(activites.map(a => a.id));
+      setSelectedLaboIds(labos.map(l => l.id));
+    }
+  };
+
   const toggleActivite = (id: number) => {
     setSelectedActiviteIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
   };
@@ -96,8 +108,7 @@ export default function ReferentielArticlesPage() {
   };
 
   const handleCreate = async () => {
-    const totalSelected = selectedActiviteIds.length + selectedLaboIds.length;
-    if (totalSelected === 0) { setCreateError('Sélectionnez au moins une activité ou un labo'); return; }
+    if (selectedCount === 0) { setCreateError('Sélectionnez au moins une activité ou un labo'); return; }
     setCreating(true);
     setCreateError('');
     try {
@@ -130,8 +141,6 @@ export default function ReferentielArticlesPage() {
     setEditItem(a);
     setEditForm({
       nom: a.name,
-      prix: a.price !== null && a.price !== undefined ? String(a.price) : '',
-      seuilMin: a.seuilMin !== null && a.seuilMin !== undefined ? String(a.seuilMin) : '',
       uniteId: a.unitId ? String(a.unitId) : '',
       categorieId: a.categorieId ? String(a.categorieId) : '',
     });
@@ -146,8 +155,6 @@ export default function ReferentielArticlesPage() {
     try {
       await api.put(`/api/articles/${editItem!.id}`, {
         nom: editForm.nom.trim(),
-        prix: editForm.prix !== '' ? parseFloat(editForm.prix) : null,
-        seuilMin: editForm.seuilMin !== '' ? parseFloat(editForm.seuilMin) : null,
         unitId: parseInt(editForm.uniteId),
         categorieId: editForm.categorieId ? parseInt(editForm.categorieId) : null,
       });
@@ -284,9 +291,7 @@ export default function ReferentielArticlesPage() {
               <tr>
                 <th>Article</th>
                 <th>Catégorie</th>
-                <th style={{ textAlign: 'right' }}>Prix</th>
                 <th style={{ textAlign: 'center' }}>Unité</th>
-                <th style={{ textAlign: 'right' }}>Seuil min</th>
                 <th style={{ textAlign: 'right' }}></th>
               </tr>
             </thead>
@@ -298,11 +303,9 @@ export default function ReferentielArticlesPage() {
                     {a.familleName && <span style={{ color: COLOR, fontWeight: 600 }}>{a.familleName} › </span>}
                     {a.categorieName || <span style={{ color: '#cbd5e1' }}>—</span>}
                   </td>
-                  <td style={{ textAlign: 'right', fontSize: '0.85rem' }}>{a.price !== null && a.price !== undefined ? `${a.price.toFixed(3)} DT` : '—'}</td>
                   <td style={{ textAlign: 'center' }}>
                     <span style={{ background: '#e0e7ff', color: '#4338ca', padding: '2px 8px', borderRadius: 6, fontWeight: 600, fontSize: '0.75rem' }}>{a.unitName || a.unit?.name || '—'}</span>
                   </td>
-                  <td style={{ textAlign: 'right', fontSize: '0.85rem' }}>{a.seuilMin !== null && a.seuilMin !== undefined ? String(a.seuilMin) : '—'}</td>
                   <td className="actions-cell" style={{ justifyContent: 'flex-end' }}>
                     <button className="btn btn-ghost btn-sm" onClick={() => openEdit(a)}>✏️ Modifier</button>
                     <button className="btn btn-danger btn-sm" onClick={() => setDeleteId(a.id)}>🗑️</button>
@@ -318,24 +321,41 @@ export default function ReferentielArticlesPage() {
       {showCreate && (
         <div className="modal-overlay">
           <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 480 }}>
-            {/* Header */}
-            <div className="modal-header" style={{ background: GRADIENT }}>
-              <div>
+            {/* Header with step indicator */}
+            <div className="modal-header" style={{ background: GRADIENT, flexDirection: 'column', alignItems: 'flex-start', gap: 12 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
                 <h2 style={{ color: '#fff', margin: 0 }}>Nouvel article</h2>
-                <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
-                  {[1, 2].map(s => (
-                    <div key={s} style={{
-                      height: 4, width: 36, borderRadius: 4,
-                      background: s <= createStep ? '#fff' : 'rgba(255,255,255,0.3)',
+                <button className="modal-close" onClick={closeCreate} style={{ color: '#fff' }}>×</button>
+              </div>
+              {/* Step indicator */}
+              <div style={{ display: 'flex', gap: 16, width: '100%' }}>
+                {[
+                  { n: 1, label: 'Informations' },
+                  { n: 2, label: 'Affectation' },
+                ].map(s => (
+                  <div key={s.n} style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    <div style={{
+                      height: 4, borderRadius: 4,
+                      background: s.n <= createStep ? '#fff' : 'rgba(255,255,255,0.3)',
                       transition: 'background 0.2s',
                     }} />
-                  ))}
-                  <span style={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.72rem', marginLeft: 6, alignSelf: 'center' }}>
-                    Étape {createStep}/2
-                  </span>
-                </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <div style={{
+                        width: 18, height: 18, borderRadius: '50%', flexShrink: 0,
+                        background: s.n <= createStep ? '#fff' : 'rgba(255,255,255,0.3)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: '0.65rem', fontWeight: 800,
+                        color: s.n <= createStep ? '#16a34a' : 'rgba(255,255,255,0.6)',
+                      }}>
+                        {s.n < createStep ? '✓' : s.n}
+                      </div>
+                      <span style={{ fontSize: '0.72rem', color: s.n <= createStep ? '#fff' : 'rgba(255,255,255,0.55)', fontWeight: 600 }}>
+                        {s.label}
+                      </span>
+                    </div>
+                  </div>
+                ))}
               </div>
-              <button className="modal-close" onClick={closeCreate}>×</button>
             </div>
 
             <div className="modal-body">
@@ -347,7 +367,7 @@ export default function ReferentielArticlesPage() {
 
               {createStep === 1 ? (
                 <>
-                  <div style={{ marginBottom: 6, color: '#64748b', fontSize: '0.82rem' }}>
+                  <div style={{ marginBottom: 14, color: '#64748b', fontSize: '0.82rem' }}>
                     Renseignez les informations de base de l'article.
                   </div>
                   <div className="form-group">
@@ -393,95 +413,121 @@ export default function ReferentielArticlesPage() {
                 </>
               ) : (
                 <>
-                  <div style={{ marginBottom: 14, color: '#64748b', fontSize: '0.82rem' }}>
+                  <div style={{ marginBottom: 12, color: '#64748b', fontSize: '0.82rem' }}>
                     Affectez cet article à au moins une activité ou un labo.
                   </div>
 
-                  {activites.length === 0 && labos.length === 0 ? (
+                  {allCount === 0 ? (
                     <div style={{ padding: '16px', borderRadius: 8, background: '#f0fdf4', border: '1px solid #86efac', fontSize: '0.85rem', color: '#166534', textAlign: 'center' }}>
                       Aucune activité ou labo trouvé. Créez-en depuis « Mes Activités ».
                     </div>
                   ) : (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 300, overflowY: 'auto' }}>
-                      {activites.map(act => {
-                        const selected = selectedActiviteIds.includes(act.id);
-                        return (
-                          <button
-                            key={`act-${act.id}`}
-                            onClick={() => toggleActivite(act.id)}
-                            style={{
-                              display: 'flex', alignItems: 'center', gap: 12,
-                              padding: '10px 14px', borderRadius: 10, cursor: 'pointer', textAlign: 'left',
-                              border: selected ? '2px solid #16a34a' : '1.5px solid var(--border)',
-                              background: selected ? '#f0fdf4' : 'var(--surface)',
-                              transition: 'all 0.15s',
-                            }}
-                          >
-                            <div style={{
-                              width: 32, height: 32, borderRadius: 8, flexShrink: 0,
-                              background: selected ? '#16a34a' : '#e2e8f0',
-                              display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16,
-                            }}>
-                              📍
-                            </div>
-                            <div style={{ flex: 1 }}>
-                              <div style={{ fontWeight: 600, fontSize: '0.88rem', color: '#0f172a' }}>{act.nom}</div>
-                              <div style={{ fontSize: '0.75rem', color: '#64748b' }}>Activité</div>
-                            </div>
-                            <div style={{
-                              width: 20, height: 20, borderRadius: 6, flexShrink: 0,
-                              border: selected ? 'none' : '1.5px solid #cbd5e1',
-                              background: selected ? '#16a34a' : 'transparent',
-                              display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            }}>
-                              {selected && <span style={{ color: '#fff', fontSize: 13, fontWeight: 700 }}>✓</span>}
-                            </div>
-                          </button>
-                        );
-                      })}
-                      {labos.map(labo => {
-                        const selected = selectedLaboIds.includes(labo.id);
-                        return (
-                          <button
-                            key={`labo-${labo.id}`}
-                            onClick={() => toggleLabo(labo.id)}
-                            style={{
-                              display: 'flex', alignItems: 'center', gap: 12,
-                              padding: '10px 14px', borderRadius: 10, cursor: 'pointer', textAlign: 'left',
-                              border: selected ? '2px solid #16a34a' : '1.5px solid var(--border)',
-                              background: selected ? '#f0fdf4' : 'var(--surface)',
-                              transition: 'all 0.15s',
-                            }}
-                          >
-                            <div style={{
-                              width: 32, height: 32, borderRadius: 8, flexShrink: 0,
-                              background: selected ? '#16a34a' : '#e2e8f0',
-                              display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16,
-                            }}>
-                              🏭
-                            </div>
-                            <div style={{ flex: 1 }}>
-                              <div style={{ fontWeight: 600, fontSize: '0.88rem', color: '#0f172a' }}>{labo.nom}</div>
-                              <div style={{ fontSize: '0.75rem', color: '#64748b' }}>Laboratoire</div>
-                            </div>
-                            <div style={{
-                              width: 20, height: 20, borderRadius: 6, flexShrink: 0,
-                              border: selected ? 'none' : '1.5px solid #cbd5e1',
-                              background: selected ? '#16a34a' : 'transparent',
-                              display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            }}>
-                              {selected && <span style={{ color: '#fff', fontSize: 13, fontWeight: 700 }}>✓</span>}
-                            </div>
-                          </button>
-                        );
-                      })}
-                    </div>
+                    <>
+                      {/* Select all */}
+                      <button
+                        onClick={toggleSelectAll}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: 10, width: '100%',
+                          padding: '8px 14px', marginBottom: 8, borderRadius: 8, cursor: 'pointer',
+                          border: '1.5px solid var(--border)', background: allSelected ? '#f0fdf4' : 'transparent',
+                          textAlign: 'left',
+                        }}
+                      >
+                        <div style={{
+                          width: 18, height: 18, borderRadius: 4, flexShrink: 0,
+                          border: allSelected ? 'none' : '1.5px solid #cbd5e1',
+                          background: allSelected ? '#16a34a' : 'transparent',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        }}>
+                          {allSelected && <span style={{ color: '#fff', fontSize: 11, fontWeight: 700 }}>✓</span>}
+                        </div>
+                        <span style={{ fontSize: '0.84rem', fontWeight: 600, color: '#374151' }}>Tout sélectionner</span>
+                        <span style={{ marginLeft: 'auto', fontSize: '0.75rem', color: '#94a3b8' }}>
+                          {selectedCount}/{allCount}
+                        </span>
+                      </button>
+
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 280, overflowY: 'auto' }}>
+                        {activites.map(act => {
+                          const selected = selectedActiviteIds.includes(act.id);
+                          return (
+                            <button
+                              key={`act-${act.id}`}
+                              onClick={() => toggleActivite(act.id)}
+                              style={{
+                                display: 'flex', alignItems: 'center', gap: 12,
+                                padding: '10px 14px', borderRadius: 10, cursor: 'pointer', textAlign: 'left',
+                                border: selected ? '2px solid #16a34a' : '1.5px solid var(--border)',
+                                background: selected ? '#f0fdf4' : 'var(--surface)',
+                                transition: 'all 0.15s',
+                              }}
+                            >
+                              <div style={{
+                                width: 32, height: 32, borderRadius: 8, flexShrink: 0,
+                                background: selected ? '#dcfce7' : '#f1f5f9',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16,
+                              }}>
+                                📍
+                              </div>
+                              <div style={{ flex: 1 }}>
+                                <div style={{ fontWeight: 600, fontSize: '0.88rem', color: '#0f172a' }}>{act.nom}</div>
+                                <div style={{ fontSize: '0.75rem', color: '#64748b' }}>Activité</div>
+                              </div>
+                              <div style={{
+                                width: 18, height: 18, borderRadius: 4, flexShrink: 0,
+                                border: selected ? 'none' : '1.5px solid #cbd5e1',
+                                background: selected ? '#16a34a' : 'transparent',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              }}>
+                                {selected && <span style={{ color: '#fff', fontSize: 11, fontWeight: 700 }}>✓</span>}
+                              </div>
+                            </button>
+                          );
+                        })}
+                        {labos.map(labo => {
+                          const selected = selectedLaboIds.includes(labo.id);
+                          return (
+                            <button
+                              key={`labo-${labo.id}`}
+                              onClick={() => toggleLabo(labo.id)}
+                              style={{
+                                display: 'flex', alignItems: 'center', gap: 12,
+                                padding: '10px 14px', borderRadius: 10, cursor: 'pointer', textAlign: 'left',
+                                border: selected ? '2px solid #16a34a' : '1.5px solid var(--border)',
+                                background: selected ? '#f0fdf4' : 'var(--surface)',
+                                transition: 'all 0.15s',
+                              }}
+                            >
+                              <div style={{
+                                width: 32, height: 32, borderRadius: 8, flexShrink: 0,
+                                background: selected ? '#dcfce7' : '#f1f5f9',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16,
+                              }}>
+                                🏭
+                              </div>
+                              <div style={{ flex: 1 }}>
+                                <div style={{ fontWeight: 600, fontSize: '0.88rem', color: '#0f172a' }}>{labo.nom}</div>
+                                <div style={{ fontSize: '0.75rem', color: '#64748b' }}>Laboratoire</div>
+                              </div>
+                              <div style={{
+                                width: 18, height: 18, borderRadius: 4, flexShrink: 0,
+                                border: selected ? 'none' : '1.5px solid #cbd5e1',
+                                background: selected ? '#16a34a' : 'transparent',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              }}>
+                                {selected && <span style={{ color: '#fff', fontSize: 11, fontWeight: 700 }}>✓</span>}
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </>
                   )}
 
-                  {(activites.length > 0 || labos.length > 0) && (
-                    <div style={{ marginTop: 8, fontSize: '0.78rem', color: selectedActiviteIds.length + selectedLaboIds.length > 0 ? COLOR : '#94a3b8' }}>
-                      {selectedActiviteIds.length + selectedLaboIds.length} sélectionné{selectedActiviteIds.length + selectedLaboIds.length !== 1 ? 's' : ''}
-                      {selectedActiviteIds.length + selectedLaboIds.length === 0 && ' — au moins 1 requis'}
+                  {allCount > 0 && (
+                    <div style={{ marginTop: 8, fontSize: '0.78rem', color: selectedCount > 0 ? COLOR : '#94a3b8' }}>
+                      {selectedCount} sélectionné{selectedCount !== 1 ? 's' : ''}
+                      {selectedCount === 0 && ' — au moins 1 requis'}
                     </div>
                   )}
 
@@ -489,7 +535,7 @@ export default function ReferentielArticlesPage() {
                     <button className="btn btn-ghost" onClick={() => { setCreateStep(1); setCreateError(''); }}>← Retour</button>
                     <button
                       className="btn"
-                      disabled={creating || selectedActiviteIds.length + selectedLaboIds.length === 0}
+                      disabled={creating || selectedCount === 0}
                       onClick={handleCreate}
                       style={{ background: 'linear-gradient(135deg,#15803d,#16a34a)', color: '#fff' }}
                     >
@@ -506,7 +552,7 @@ export default function ReferentielArticlesPage() {
       {/* ── Edit Modal ── */}
       {editItem && (
         <div className="modal-overlay">
-          <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 460 }}>
+          <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 440 }}>
             <div className="modal-header" style={{ background: GRADIENT }}>
               <h2 style={{ color: '#fff', margin: 0 }}>Modifier l'article</h2>
               <button className="modal-close" onClick={closeEdit}>×</button>
@@ -516,14 +562,6 @@ export default function ReferentielArticlesPage() {
               <div className="form-group">
                 <label>Nom *</label>
                 <input className="input" autoFocus value={editForm.nom} placeholder="Ex: Poulet entier" onChange={e => setEditForm(p => ({ ...p, nom: e.target.value }))} />
-              </div>
-              <div className="form-group">
-                <label>Prix (DT)</label>
-                <input className="input" type="number" value={editForm.prix} placeholder="0.000" onChange={e => setEditForm(p => ({ ...p, prix: e.target.value }))} />
-              </div>
-              <div className="form-group">
-                <label>Seuil minimum</label>
-                <input className="input" type="number" value={editForm.seuilMin} placeholder="Quantité minimale en stock" onChange={e => setEditForm(p => ({ ...p, seuilMin: e.target.value }))} />
               </div>
               <div className="form-group">
                 <label>Unité *</label>

@@ -185,8 +185,6 @@ export interface Famille {
 export interface Article {
   id: number;
   name: string;
-  price: number | null;
-  seuilMin?: number | null;
   unit: Unit;
   unitId: number;
   unitName?: string;
