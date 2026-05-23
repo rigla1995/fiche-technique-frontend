@@ -63,6 +63,7 @@ export default function ProductList() {
   const [addIngVisible, setAddIngVisible] = useState(20);
   const [addSaving, setAddSaving] = useState(false);
   const [addSavedName, setAddSavedName] = useState('');
+  const [addSaveError, setAddSaveError] = useState<string | null>(null);
 
   // Edit product modal state — steps: 2=Articles, 3=Récap, 4=Succès (step 1 is skipped)
   type EditStep = 1 | 2 | 3 | 4 | 5;
@@ -1288,6 +1289,7 @@ export default function ProductList() {
             const canGoStep3 = addIngLines.some((l) => l.ingredientId && parseFloat(l.portion) > 0) || addSubLines.some((l) => l.ingredientId && parseFloat(l.portion) > 0);
             const handleSave = async () => {
               setAddSaving(true);
+              setAddSaveError(null);
               try {
                 const baseIngredients = addIngLines
                   .filter((l) => l.ingredientId && parseFloat(l.portion) > 0)
@@ -1318,7 +1320,10 @@ export default function ProductList() {
                 if (selectedActiviteId) reloadParams.set('activiteId', String(selectedActiviteId));
                 const reloadQs = reloadParams.toString();
                 api.get(`/api/products${reloadQs ? `?${reloadQs}` : ''}`).then(({ data }) => setProducts(data as Product[]));
-              } catch { /* ignore */ }
+              } catch (err: unknown) {
+                const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+                setAddSaveError(msg || 'Erreur lors de la création du produit.');
+              }
               setAddSaving(false);
             };
 
@@ -1701,6 +1706,11 @@ export default function ProductList() {
                                   ) : null;
                                 })}
                               </div>
+                            </div>
+                          )}
+                          {addSaveError && (
+                            <div style={{ background: '#fff1f2', border: '1px solid #fecdd3', borderRadius: 8, padding: '10px 14px', color: '#b91c1c', fontWeight: 700, fontSize: '0.85rem' }}>
+                              ⛔ {addSaveError}
                             </div>
                           )}
                           <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 4, borderTop: '1px solid var(--border)' }}>
