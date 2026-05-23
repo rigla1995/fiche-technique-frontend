@@ -497,20 +497,38 @@ export default function ProductList() {
                         )}
                         {!isVendable && (
                           <button
-                            onClick={() => togglePT(p)}
-                            disabled={togglingPT === p.id}
-                            title={p.isStockIngredient ? 'Retirer du stock' : 'Ajouter au stock'}
-                            style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, padding: '8px 4px', borderRadius: 10, border: `1px solid ${p.isStockIngredient ? '#d1fae5' : '#f3f4f6'}`, background: p.isStockIngredient ? '#f0fdf4' : '#fafafa', cursor: 'pointer', transition: 'background 0.12s' }}
+                            disabled={!(p.parentProductsCount && p.parentProductsCount > 0)}
+                            title={p.parentProductsCount ? `Utilisé dans ${p.parentProductsCount} produit(s)` : 'Non utilisé dans un produit'}
+                            style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, padding: '8px 4px', borderRadius: 10, border: `1px solid ${p.parentProductsCount ? '#bfdbfe' : '#f1f5f9'}`, background: p.parentProductsCount ? '#eff6ff' : '#f8fafc', cursor: p.parentProductsCount ? 'pointer' : 'default', opacity: p.parentProductsCount ? 1 : 0.5, transition: 'background 0.12s' }}
                           >
-                            <span style={{ fontSize: '1rem', lineHeight: 1 }}>📦</span>
-                            <span style={{ fontWeight: 800, fontSize: '1rem', color: p.isStockIngredient ? '#16a34a' : '#9ca3af', lineHeight: 1 }}>{togglingPT === p.id ? '…' : p.isStockIngredient ? '✓' : '○'}</span>
-                            <span style={{ fontSize: '0.6rem', color: '#9ca3af', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>stock</span>
+                            <span style={{ fontSize: '1rem', lineHeight: 1 }}>🍽️</span>
+                            <span style={{ fontWeight: 800, fontSize: '1rem', color: p.parentProductsCount ? '#2563eb' : '#9ca3af', lineHeight: 1 }}>{p.parentProductsCount ?? 0}</span>
+                            <span style={{ fontSize: '0.6rem', color: '#9ca3af', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>utilisé</span>
                           </button>
                         )}
                       </div>
 
                       {/* Actions footer */}
-                      <div style={{ padding: '10px 14px', display: 'flex', justifyContent: 'flex-end', gap: 6 }}>
+                      <div style={{ padding: '10px 14px', display: 'flex', justifyContent: 'flex-end', gap: 6, alignItems: 'center' }}>
+                        {!isVendable && (
+                          <button
+                            onClick={() => togglePT(p)}
+                            disabled={togglingPT === p.id || !canWrite}
+                            title={p.isStockIngredient ? 'Désactiver le stock' : 'Activer le stock'}
+                            style={{
+                              display: 'inline-flex', alignItems: 'center', gap: 5,
+                              padding: '4px 10px', borderRadius: 20, cursor: canWrite ? 'pointer' : 'default',
+                              border: `1.5px solid ${p.isStockIngredient ? '#6ee7b7' : '#cbd5e1'}`,
+                              background: p.isStockIngredient ? '#d1fae5' : '#f1f5f9',
+                              color: p.isStockIngredient ? '#065f46' : '#64748b',
+                              fontSize: '0.72rem', fontWeight: 700, transition: 'all 0.12s',
+                              opacity: togglingPT === p.id ? 0.6 : 1,
+                            }}
+                          >
+                            <span style={{ fontSize: '0.8rem' }}>{togglingPT === p.id ? '…' : p.isStockIngredient ? '●' : '○'}</span>
+                            Stock
+                          </button>
+                        )}
                         {renderActions(p)}
                       </div>
                     </div>

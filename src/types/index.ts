@@ -223,6 +223,7 @@ export interface Product {
   totalCost: number;
   ingredientsCount?: number;
   subProductsCount?: number;
+  parentProductsCount?: number;
   userId: number;
   activiteId?: number | null;
   createdAt?: string;
