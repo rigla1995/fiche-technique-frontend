@@ -1480,15 +1480,14 @@ export default function ProductList() {
 
                     {/* Step 3 — Produits Transformés */}
                     {addModal === 3 && (() => {
-                      const actNom = allActivities.find(a => a.id === addAffectationIds[0])?.nom;
                       return (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                           <div style={{ fontSize: '0.82rem', color: '#64748b' }}>
-                            Optionnel — ajoutez des produits utilisables de <strong>{actNom ?? 'cette activité'}</strong> comme sous-composants.
+                            Optionnel — ajoutez des produits utilisables comme sous-composants de ce produit.
                           </div>
                           {utilisableForWizard.length === 0 ? (
                             <div style={{ padding: 16, borderRadius: 8, background: '#faf5ff', border: '1px solid #ede9fe', fontSize: '0.85rem', color: '#5b21b6', textAlign: 'center' }}>
-                              Aucun produit utilisable disponible pour cette activité.
+                              Aucun produit utilisable disponible.
                             </div>
                           ) : (
                             <>
@@ -1597,7 +1596,6 @@ export default function ProductList() {
                     {addModal === 5 && (() => {
                       const ingCount = addIngLines.filter(l => l.ingredientId && parseFloat(l.portion) > 0).length;
                       const subCount = addSubLines.filter(l => l.ingredientId && parseFloat(l.portion) > 0).length;
-                      const actNom = allActivities.find(a => a.id === addAffectationIds[0])?.nom;
                       return (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                           {/* Product identity card */}
@@ -1626,11 +1624,6 @@ export default function ProductList() {
                               )}
                             </div>
                           </div>
-                          {actNom && (
-                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: '#f0fdf4', border: '1.5px solid #a7f3d0', borderRadius: 20, padding: '5px 14px', fontSize: '0.82rem', fontWeight: 600, color: '#065f46' }}>
-                              📍 {actNom}
-                            </div>
-                          )}
                           {/* Articles list preview */}
                           <div>
                             <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#64748b', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Articles sélectionnés</div>
