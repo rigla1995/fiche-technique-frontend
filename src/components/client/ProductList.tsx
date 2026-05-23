@@ -214,11 +214,14 @@ export default function ProductList() {
 
   const handleDelete = async (product: Product) => {
     if (product.type === 'utilisable') {
-      // Always check total PT history across all activités/labos for this product
+      // Check PT history count for the selected activité
       setTogglingPT(product.id);
       let histCount = 0;
       try {
-        const { data: hist } = await api.get(`/api/stock/pt/${product.id}/history`);
+        const histUrl = selectedActiviteId
+          ? `/api/stock/pt/${product.id}/history?activiteId=${selectedActiviteId}`
+          : `/api/stock/pt/${product.id}/history`;
+        const { data: hist } = await api.get(histUrl);
         histCount = Array.isArray(hist) ? hist.length : 0;
       } catch { /* ignore */ }
       setTogglingPT(null);
@@ -234,8 +237,11 @@ export default function ProductList() {
     setDeleting(true);
     try {
       if (product.type === 'utilisable') {
-        // Clean up all PT stock history across every activité/labo before deleting
-        await api.delete(`/api/produits/${product.id}/stock-pt-history`);
+        // Clean up PT stock history for the selected activité before deleting the product
+        const historyUrl = selectedActiviteId
+          ? `/api/produits/${product.id}/stock-pt-history?activiteId=${selectedActiviteId}`
+          : `/api/produits/${product.id}/stock-pt-history`;
+        await api.delete(historyUrl);
       }
       await api.delete(`/api/products/${product.id}`);
       setProducts((p) => p.filter((x) => x.id !== product.id));
@@ -750,11 +756,11 @@ export default function ProductList() {
                         {hasPtHistory ? (
                           <>
                             <div style={{ fontWeight: 800, color: '#b91c1c', fontSize: '0.88rem', marginBottom: 6 }}>
-                              ⚠️ Cette suppression entraîne des effets en cascade sur toutes les activités/labos :
+                              ⚠️ Cette suppression entraîne des effets en cascade pour l'activité sélectionnée :
                             </div>
                             <ul style={{ margin: 0, paddingLeft: 18, fontSize: '0.83rem', color: '#7f1d1d', lineHeight: 1.7 }}>
-                              <li><strong>{historyCount}</strong> appro{(historyCount ?? 0) > 1 ? 's' : ''} supprimé{(historyCount ?? 0) > 1 ? 's' : ''} (toutes activités/labos)</li>
-                              <li>Retrait des stocks PT, inventaires et pertes associés</li>
+                              <li><strong>{historyCount}</strong> appro{(historyCount ?? 0) > 1 ? 's' : ''} supprimé{(historyCount ?? 0) > 1 ? 's' : ''}</li>
+                              <li>Stock PT, inventaires et pertes de cette activité supprimés</li>
                             </ul>
                           </>
                         ) : (
