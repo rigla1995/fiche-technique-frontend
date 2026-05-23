@@ -726,13 +726,14 @@ export default function ProductList() {
 
           {deleteModal && (() => {
             const { product, historyCount } = deleteModal;
-            const isCascade = product.type === 'utilisable' && product.isStockIngredient;
+            const isUtilisable = product.type === 'utilisable';
+            const hasPtHistory = isUtilisable && (historyCount ?? 0) > 0;
             return (
               <div className="modal-overlay">
                 <div className="modal" style={{ maxWidth: 460 }} onClick={(e) => e.stopPropagation()}>
-                  <div className="modal-header" style={{ background: isCascade ? 'linear-gradient(135deg, #7c2d12, #dc2626)' : 'linear-gradient(135deg, #b91c1c, #dc2626)', borderRadius: '12px 12px 0 0', padding: '18px 22px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div className="modal-header" style={{ background: hasPtHistory ? 'linear-gradient(135deg, #7c2d12, #dc2626)' : 'linear-gradient(135deg, #b91c1c, #dc2626)', borderRadius: '12px 12px 0 0', padding: '18px 22px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <h2 style={{ color: '#fff', margin: 0, fontSize: '1rem', fontWeight: 800 }}>
-                      {isCascade ? '⚠️ Suppression avec cascade' : '🗑️ Supprimer le produit'}
+                      {hasPtHistory ? '⚠️ Suppression avec cascade' : '🗑️ Supprimer le produit'}
                     </h2>
                     <button onClick={() => setDeleteModal(null)} style={{ background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: 8, color: '#fff', fontWeight: 900, fontSize: '1.1rem', cursor: 'pointer', padding: '2px 9px', lineHeight: 1 }}>×</button>
                   </div>
@@ -741,23 +742,28 @@ export default function ProductList() {
                       <div style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Produit</div>
                       <div style={{ fontWeight: 700, fontSize: '0.95rem' }}>{product.name}</div>
                       <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: 2 }}>
-                        {product.type === 'vendable' ? '🛒 Vendable' : product.isStockIngredient ? '🔄 Utilisable — Produit transformé' : '🧂 Utilisable'}
+                        {product.type === 'vendable' ? '🛒 Vendable' : '🧪 Utilisable'}
                       </div>
                     </div>
-                    {isCascade ? (
-                      <div style={{ background: '#f0fdf4', border: '1px solid #a7f3d0', borderRadius: 8, padding: '12px 14px' }}>
-                        <div style={{ fontWeight: 800, color: '#b91c1c', fontSize: '0.88rem', marginBottom: 6 }}>
-                          ⚠️ Cette suppression entraîne des effets en cascade :
-                        </div>
-                        <ul style={{ margin: 0, paddingLeft: 18, fontSize: '0.83rem', color: '#7f1d1d', lineHeight: 1.7 }}>
-                          {(historyCount ?? 0) > 0 && (
-                            <li><strong>{historyCount}</strong> entrée{(historyCount ?? 0) > 1 ? 's' : ''} d'approvisionnement supprimée{(historyCount ?? 0) > 1 ? 's' : ''}</li>
-                          )}
-                          <li>Retrait du stock et recalcul des quantités</li>
-                          <li>Suppression des inventaires associés</li>
-                        </ul>
+                    {isUtilisable && (
+                      <div style={{ background: hasPtHistory ? '#fff1f2' : '#f0fdf4', border: `1px solid ${hasPtHistory ? '#fecdd3' : '#a7f3d0'}`, borderRadius: 8, padding: '12px 14px' }}>
+                        {hasPtHistory ? (
+                          <>
+                            <div style={{ fontWeight: 800, color: '#b91c1c', fontSize: '0.88rem', marginBottom: 6 }}>
+                              ⚠️ Cette suppression entraîne des effets en cascade sur toutes les activités/labos :
+                            </div>
+                            <ul style={{ margin: 0, paddingLeft: 18, fontSize: '0.83rem', color: '#7f1d1d', lineHeight: 1.7 }}>
+                              <li><strong>{historyCount}</strong> appro{(historyCount ?? 0) > 1 ? 's' : ''} supprimé{(historyCount ?? 0) > 1 ? 's' : ''} (toutes activités/labos)</li>
+                              <li>Retrait des stocks PT, inventaires et pertes associés</li>
+                            </ul>
+                          </>
+                        ) : (
+                          <div style={{ fontSize: '0.83rem', color: '#065f46' }}>
+                            Aucun historique PT — les données de stock seront nettoyées proprement.
+                          </div>
+                        )}
                       </div>
-                    ) : null}
+                    )}
                     <div style={{ background: '#fff7ed', border: '1px solid #fbd38d', borderRadius: 8, padding: '8px 12px', fontSize: '0.82rem', color: '#92400e', fontWeight: 600 }}>
                       🔒 Action irréversible — cette suppression ne peut pas être annulée.
                     </div>
