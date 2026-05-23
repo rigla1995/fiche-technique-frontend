@@ -246,7 +246,11 @@ export default function ProductList() {
       await api.delete(`/api/products/${product.id}`);
       setProducts((p) => p.filter((x) => x.id !== product.id));
       setDeleteModal(null);
-    } catch { /* ignore */ }
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      console.error('[doDelete] error:', err);
+      alert(msg || 'Erreur lors de la suppression — voir console.');
+    }
     setDeleting(false);
   };
 
