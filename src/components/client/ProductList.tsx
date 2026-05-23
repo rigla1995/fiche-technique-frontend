@@ -34,6 +34,7 @@ export default function ProductList() {
   const [ptDeselectModal, setPtDeselectModal] = useState<{ id: number; nom: string; historyCount: number } | null>(null);
   const [deleteModal, setDeleteModal] = useState<{ product: Product; historyCount?: number } | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const [ftPopup, setFtPopup] = useState<{ productId: number; productName: string; hasIngredients: boolean; resolvedActId: number; contextLabel: string; activityName: string; activities: Activite[] } | null>(null);
 
@@ -225,8 +226,10 @@ export default function ProductList() {
         histCount = Array.isArray(hist) ? hist.length : 0;
       } catch { /* ignore */ }
       setTogglingPT(null);
+      setDeleteError(null);
       setDeleteModal({ product, historyCount: histCount });
     } else {
+      setDeleteError(null);
       setDeleteModal({ product });
     }
   };
@@ -235,6 +238,7 @@ export default function ProductList() {
     if (!deleteModal) return;
     const { product } = deleteModal;
     setDeleting(true);
+    setDeleteError(null);
     try {
       if (product.type === 'utilisable') {
         // Clean up PT stock history for the selected activité before deleting the product
@@ -246,10 +250,10 @@ export default function ProductList() {
       await api.delete(`/api/products/${product.id}`);
       setProducts((p) => p.filter((x) => x.id !== product.id));
       setDeleteModal(null);
+      setDeleteError(null);
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
-      console.error('[doDelete] error:', err);
-      alert(msg || 'Erreur lors de la suppression — voir console.');
+      setDeleteError(msg || 'Erreur lors de la suppression.');
     }
     setDeleting(false);
   };
@@ -745,7 +749,7 @@ export default function ProductList() {
                     <h2 style={{ color: '#fff', margin: 0, fontSize: '1rem', fontWeight: 800 }}>
                       {hasPtHistory ? '⚠️ Suppression avec cascade' : '🗑️ Supprimer le produit'}
                     </h2>
-                    <button onClick={() => setDeleteModal(null)} style={{ background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: 8, color: '#fff', fontWeight: 900, fontSize: '1.1rem', cursor: 'pointer', padding: '2px 9px', lineHeight: 1 }}>×</button>
+                    <button onClick={() => { setDeleteModal(null); setDeleteError(null); }} style={{ background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: 8, color: '#fff', fontWeight: 900, fontSize: '1.1rem', cursor: 'pointer', padding: '2px 9px', lineHeight: 1 }}>×</button>
                   </div>
                   <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                     <div style={{ background: '#f8faff', borderRadius: 8, padding: '12px 14px', border: '1px solid #e2e8f0' }}>
@@ -778,8 +782,13 @@ export default function ProductList() {
                       🔒 Action irréversible — cette suppression ne peut pas être annulée.
                     </div>
                   </div>
+                  {deleteError && (
+                    <div style={{ margin: '0 22px', background: '#fff1f2', border: '1px solid #fecdd3', borderRadius: 8, padding: '10px 14px', color: '#b91c1c', fontWeight: 700, fontSize: '0.85rem' }}>
+                      ⛔ {deleteError}
+                    </div>
+                  )}
                   <div className="modal-footer" style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, padding: '14px 22px', borderTop: '1px solid var(--border)' }}>
-                    <button className="btn btn-ghost" onClick={() => setDeleteModal(null)} disabled={deleting}>Annuler</button>
+                    <button className="btn btn-ghost" onClick={() => { setDeleteModal(null); setDeleteError(null); }} disabled={deleting}>Annuler</button>
                     <button
                       onClick={doDelete}
                       disabled={deleting}
