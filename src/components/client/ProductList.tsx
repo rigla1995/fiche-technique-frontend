@@ -491,7 +491,7 @@ export default function ProductList() {
                   const accentDark = isSup ? '#b45309' : '#047857';
                   const accentLight = isSup ? '#fffbeb' : '#f0fdf4';
                   const accentShadow = isSup ? 'rgba(217,119,6,0.18)' : 'rgba(5,150,105,0.15)';
-                  const act = isEntreprise ? allActivities.find((a) => a.id === p.activiteId) : null;
+                  const act = (isEntreprise && !selectedActiviteId) ? allActivities.find((a) => a.id === p.activiteId) : null;
                   return (
                     <div key={p.id} style={{
                       background: '#fff', borderRadius: 14,
