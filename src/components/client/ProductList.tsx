@@ -230,7 +230,10 @@ export default function ProductList() {
       setTogglingPT(p.id);
       let histCount = 0;
       try {
-        const { data: hist } = await api.get(`/api/stock/pt/${p.id}/history`);
+        const histUrl = selectedActiviteId
+          ? `/api/stock/pt/${p.id}/history?activiteId=${selectedActiviteId}`
+          : `/api/stock/pt/${p.id}/history`;
+        const { data: hist } = await api.get(histUrl);
         histCount = Array.isArray(hist) ? hist.length : 0;
       } catch { /* ignore */ }
       setTogglingPT(null);
@@ -245,7 +248,7 @@ export default function ProductList() {
   const doTogglePT = async (id: number, deleteHistory = false) => {
     setTogglingPT(id);
     try {
-      await api.post(`/api/produits/${id}/toggle-stock-ingredient`);
+      await api.post(`/api/produits/${id}/toggle-stock-ingredient`, selectedActiviteId ? { activiteId: selectedActiviteId } : {});
       if (deleteHistory) await api.delete(`/api/produits/${id}/stock-pt-history`);
       setProducts((prev) => prev.map((p) => p.id === id ? { ...p, isStockIngredient: !p.isStockIngredient } : p));
     } finally {
