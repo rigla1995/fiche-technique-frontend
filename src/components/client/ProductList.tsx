@@ -1272,20 +1272,24 @@ export default function ProductList() {
                   refProduit: addRef.trim() || null,
                   type: tab === 'utilisable' ? 'utilisable' : 'vendable',
                   isSupplement: addIsSupplement,
-                  activiteId: addAffectationIds[0] ?? null,
+                  activiteId: isVendable ? (selectedActiviteId ?? null) : (addAffectationIds[0] ?? null),
                   ingredients: baseIngredients,
                   subProducts: baseSubProducts,
                 });
-                // Assign to selected activités' stocks
-                for (const actId of addAffectationIds) {
-                  await api.post(`/api/produits/${(newProd as { id: number }).id}/toggle-stock-ingredient`, { activiteId: actId });
+                // Assign utilisable product to selected activités' stocks
+                if (!isVendable) {
+                  for (const actId of addAffectationIds) {
+                    await api.post(`/api/produits/${(newProd as { id: number }).id}/toggle-stock-ingredient`, { activiteId: actId });
+                  }
                 }
                 setAddSavedName(addName.trim());
                 setAddModal(6);
-                const params = new URLSearchParams();
-                if (laboId) params.set('laboId', laboId);
-                const qs = params.toString();
-                api.get(`/api/products${qs ? `?${qs}` : ''}`).then(({ data }) => setProducts(data as Product[]));
+                // Reload with current activiteId so the new product appears immediately
+                const reloadParams = new URLSearchParams();
+                if (laboId) reloadParams.set('laboId', laboId);
+                if (selectedActiviteId) reloadParams.set('activiteId', String(selectedActiviteId));
+                const reloadQs = reloadParams.toString();
+                api.get(`/api/products${reloadQs ? `?${reloadQs}` : ''}`).then(({ data }) => setProducts(data as Product[]));
               } catch { /* ignore */ }
               setAddSaving(false);
             };
