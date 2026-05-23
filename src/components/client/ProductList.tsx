@@ -65,7 +65,7 @@ export default function ProductList() {
   const [addAffectationActiviteIds, setAddAffectationActiviteIds] = useState<number[]>([]);
 
   // Edit product modal state — steps: 2=Articles, 3=Récap, 4=Succès (step 1 is skipped)
-  type EditStep = 1 | 2 | 3 | 4;
+  type EditStep = 1 | 2 | 3 | 4 | 5;
   const [editModal, setEditModal] = useState<EditStep | null>(null);
   const [editProductId, setEditProductId] = useState<number | null>(null);
   const [editProductType, setEditProductType] = useState<'vendable' | 'utilisable'>('vendable');
@@ -84,6 +84,7 @@ export default function ProductList() {
   const [editSaving, setEditSaving] = useState(false);
   const [editLoadingData, setEditLoadingData] = useState(false);
   const [editActiviteNom, setEditActiviteNom] = useState('');
+  const [editActiviteId, setEditActiviteId] = useState<number | null>(null);
   const [editOriginalIngLines, setEditOriginalIngLines] = useState<IngLine[]>([]);
 
   // Load activities — for gerant users use their assigned activité directly
@@ -125,11 +126,14 @@ export default function ProductList() {
     setEditIngredients([]); setEditIngSearch('');
     setEditFamilleFilter(''); setEditCatFilter(''); setEditIngVisible(20);
     setEditActiviteNom(allActivities.find((a) => a.id === p.activiteId)?.nom || '');
+    setEditActiviteId(p.activiteId ?? null);
     setEditLoadingData(true);
     setEditModal(2);
-    api.get('/api/products?type=utilisable')
-      .then(({ data }) => setUtilisableForWizard((data as Product[]).filter(u => u.id !== p.id).map(u => ({ id: u.id, name: u.name }))))
-      .catch(() => {});
+    if (p.activiteId) {
+      api.get(`/api/products?type=utilisable&activiteId=${p.activiteId}`)
+        .then(({ data }) => setUtilisableForWizard((data as Product[]).filter(u => u.id !== p.id).map(u => ({ id: u.id, name: u.name }))))
+        .catch(() => {});
+    }
     try {
       const actId = p.activiteId;
       const [productRes, ingRes] = await Promise.all([
@@ -169,9 +173,11 @@ export default function ProductList() {
     setAddSavedName(''); setAddFamilleFilter(''); setAddCatFilter(''); setAddIngVisible(20);
     setAddAffectationActiviteIds(selectedActiviteId ? [selectedActiviteId] : []);
     setAddModal(1);
-    api.get('/api/products?type=utilisable')
-      .then(({ data }) => setUtilisableForWizard((data as Product[]).map(u => ({ id: u.id, name: u.name }))))
-      .catch(() => {});
+    if (selectedActiviteId) {
+      api.get(`/api/products?type=utilisable&activiteId=${selectedActiviteId}`)
+        .then(({ data }) => setUtilisableForWizard((data as Product[]).map(u => ({ id: u.id, name: u.name }))))
+        .catch(() => {});
+    }
     if (selectedActiviteId) {
       api.get(`/api/entreprise/activites/${selectedActiviteId}/ingredients`)
         .then(({ data }) => setAddIngredients(data as ActiviteIngredient[]))
@@ -859,7 +865,8 @@ export default function ProductList() {
 
             const EDIT_STEPS = [
               { n: 2, display: 1, label: 'Articles' },
-              { n: 3, display: 2, label: 'Récap' },
+              { n: 3, display: 2, label: 'Transformés' },
+              { n: 4, display: 3, label: 'Récap' },
             ];
 
             const isEditVendable = editProductType === 'vendable';
@@ -998,18 +1005,34 @@ export default function ProductList() {
                           </div>
                         )}
 
-                        {/* Produits Transformés section */}
-                        {utilisableForWizard.length > 0 && (
+                        <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 4 }}>
+                          <button className="btn btn-ghost" onClick={() => setEditModal(null)}>Annuler</button>
+                          <button disabled={!canGoEditStep3 || editLoadingData}
+                            onClick={() => setEditModal(3)}
+                            title={!isEditDirty ? 'Aucune modification détectée' : !hasValidIngLines ? 'Ajoutez au moins un article avec une portion > 0' : undefined}
+                            style={{ background: canGoEditStep3 && !editLoadingData ? 'linear-gradient(135deg, #1e40af, #3b82f6)' : '#e5e7eb', border: 'none', borderRadius: 10, color: canGoEditStep3 && !editLoadingData ? '#fff' : '#9ca3af', fontWeight: 700, padding: '9px 22px', cursor: canGoEditStep3 && !editLoadingData ? 'pointer' : 'not-allowed' }}>
+                            Suivant →
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Step 3 — Produits Transformés */}
+                    {editModal === 3 && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                        <div style={{ fontSize: '0.82rem', color: '#64748b' }}>
+                          Optionnel — ajoutez des produits utilisables de <strong>{editActiviteNom || 'cette activité'}</strong> comme sous-composants.
+                        </div>
+                        {utilisableForWizard.length === 0 ? (
+                          <div style={{ padding: 16, borderRadius: 8, background: '#faf5ff', border: '1px solid #ede9fe', fontSize: '0.85rem', color: '#5b21b6', textAlign: 'center' }}>
+                            Aucun produit utilisable disponible pour cette activité.
+                          </div>
+                        ) : (
                           <>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
-                              <div style={{ flex: 1, height: 1, background: '#e2e8f0' }} />
-                              <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '0.06em', whiteSpace: 'nowrap' }}>🔄 Produits Transformés</span>
-                              <div style={{ flex: 1, height: 1, background: '#e2e8f0' }} />
-                            </div>
                             <input className="input" placeholder="🔍 Rechercher un produit transformé…" value={editSubSearch}
                               onChange={(e) => setEditSubSearch(e.target.value)}
                               style={{ fontSize: '0.82rem' }} />
-                            <div style={{ maxHeight: 160, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 2, border: '1px solid #ede9fe', borderRadius: 10, padding: '6px', background: '#faf5ff' }}>
+                            <div style={{ maxHeight: 240, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 2, border: '1px solid #ede9fe', borderRadius: 10, padding: '6px', background: '#faf5ff' }}>
                               {utilisableForWizard
                                 .filter(u => !editSubSearch || u.name.toLowerCase().includes(editSubSearch.toLowerCase()))
                                 .map((u) => {
@@ -1024,7 +1047,6 @@ export default function ProductList() {
                                         onClick={(e) => e.stopPropagation()}
                                         style={{ accentColor: '#7c3aed', width: 15, height: 15, flexShrink: 0, cursor: 'pointer' }} />
                                       <span style={{ flex: 1, fontSize: '0.84rem', fontWeight: sel ? 600 : 400, color: sel ? '#5b21b6' : '#374151' }}>{u.name}</span>
-                                      <span style={{ fontSize: '0.68rem', color: '#7c3aed', background: '#ede9fe', borderRadius: 6, padding: '1px 6px', flexShrink: 0 }}>Transformé</span>
                                       {sel && (
                                         <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }} onClick={(e) => e.stopPropagation()}>
                                           <input type="number" step="0.001" min="0" placeholder="portion"
@@ -1045,21 +1067,18 @@ export default function ProductList() {
                             )}
                           </>
                         )}
-
-                        <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 4 }}>
-                          <button className="btn btn-ghost" onClick={() => setEditModal(null)}>Annuler</button>
-                          <button disabled={!canGoEditStep3 || editLoadingData}
-                            onClick={() => setEditModal(3)}
-                            title={!isEditDirty ? 'Aucune modification détectée' : !hasValidIngLines ? 'Ajoutez au moins un article avec une portion > 0' : undefined}
-                            style={{ background: canGoEditStep3 && !editLoadingData ? 'linear-gradient(135deg, #1e40af, #3b82f6)' : '#e5e7eb', border: 'none', borderRadius: 10, color: canGoEditStep3 && !editLoadingData ? '#fff' : '#9ca3af', fontWeight: 700, padding: '9px 22px', cursor: canGoEditStep3 && !editLoadingData ? 'pointer' : 'not-allowed' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 8 }}>
+                          <button className="btn btn-ghost" onClick={() => setEditModal(2)}>← Retour</button>
+                          <button onClick={() => setEditModal(4)}
+                            style={{ background: 'linear-gradient(135deg, #1e40af, #3b82f6)', border: 'none', borderRadius: 10, color: '#fff', fontWeight: 700, padding: '9px 22px', cursor: 'pointer' }}>
                             Suivant →
                           </button>
                         </div>
                       </div>
                     )}
 
-                    {/* Step 3 — Récap & Confirmation */}
-                    {editModal === 3 && (() => {
+                    {/* Step 4 — Récap & Confirmation */}
+                    {editModal === 4 && (() => {
                       const ingCount = editIngLines.filter((l) => l.ingredientId && parseFloat(l.portion) > 0).length;
                       const subCount = editSubLines.filter((l) => l.ingredientId && parseFloat(l.portion) > 0).length;
                       return (
@@ -1119,7 +1138,7 @@ export default function ProductList() {
                             </div>
                           )}
                           <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 4, borderTop: '1px solid var(--border)' }}>
-                            <button className="btn btn-ghost" onClick={() => setEditModal(2)}>← Retour</button>
+                            <button className="btn btn-ghost" onClick={() => setEditModal(3)}>← Retour</button>
                             <button disabled={editSaving}
                               onClick={handleEditSave}
                               style={{ background: 'linear-gradient(135deg, #1e40af, #3b82f6)', border: 'none', borderRadius: 10, color: '#fff', fontWeight: 700, padding: '10px 28px', cursor: editSaving ? 'not-allowed' : 'pointer', opacity: editSaving ? 0.7 : 1, fontSize: '0.9rem' }}>
@@ -1130,17 +1149,6 @@ export default function ProductList() {
                       );
                     })()}
 
-                    {/* Step 4 — Succès */}
-                    {editModal === 4 && (
-                      <div style={{ textAlign: 'center', padding: '16px 0 8px' }}>
-                        <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'linear-gradient(135deg, #22c55e, #16a34a)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.6rem', margin: '0 auto 14px' }}>✓</div>
-                        <div style={{ fontWeight: 700, fontSize: '1rem', color: '#166534', marginBottom: 6 }}>Modifications enregistrées</div>
-                        <div style={{ fontSize: '0.88rem', color: 'var(--text-muted)', marginBottom: 22 }}>
-                          <strong>{editName}</strong> a été mis à jour avec succès.
-                        </div>
-                        <button className="btn btn-ghost" onClick={() => setEditModal(null)}>Fermer</button>
-                      </div>
-                    )}
                   </div>
                 </div>
               </div>
@@ -1178,7 +1186,7 @@ export default function ProductList() {
 
             const canGoStep2 = addName.trim().length > 0;
             const canGoStep3 = addIngLines.some((l) => l.ingredientId && parseFloat(l.portion) > 0) || addSubLines.some((l) => l.ingredientId && parseFloat(l.portion) > 0);
-            const canGoStep4 = addAffectationActiviteIds.length > 0;
+            const canGoStep4 = true;
 
             const handleSave = async () => {
               setAddSaving(true);
@@ -1189,17 +1197,15 @@ export default function ProductList() {
                 const baseSubProducts = addSubLines
                   .filter((l) => l.ingredientId && parseFloat(l.portion) > 0)
                   .map((l) => ({ subProductId: parseInt(l.ingredientId), portion: parseFloat(l.portion) }));
-                await Promise.all(addAffectationActiviteIds.map((actId) =>
-                  api.post('/api/products', {
-                    name: addName.trim(),
-                    refProduit: addRef.trim() || null,
-                    type: tab === 'utilisable' ? 'utilisable' : 'vendable',
-                    isSupplement: addIsSupplement,
-                    activiteId: actId,
-                    ingredients: baseIngredients,
-                    subProducts: baseSubProducts,
-                  })
-                ));
+                await api.post('/api/products', {
+                  name: addName.trim(),
+                  refProduit: addRef.trim() || null,
+                  type: tab === 'utilisable' ? 'utilisable' : 'vendable',
+                  isSupplement: addIsSupplement,
+                  activiteId: selectedActiviteId,
+                  ingredients: baseIngredients,
+                  subProducts: baseSubProducts,
+                });
                 setAddSavedName(addName.trim());
                 setAddModal(5);
                 const params = new URLSearchParams();
@@ -1213,7 +1219,7 @@ export default function ProductList() {
             const STEPS = [
               { n: 1, label: 'Identité' },
               { n: 2, label: 'Articles' },
-              { n: 3, label: 'Affectation' },
+              { n: 3, label: 'Transformés' },
               { n: 4, label: 'Récap' },
             ];
 
@@ -1391,18 +1397,36 @@ export default function ProductList() {
                             </div>
                           )}
 
-                          {/* Produits Transformés section */}
-                          {utilisableForWizard.length > 0 && (
+                          <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 4 }}>
+                            <button className="btn btn-ghost" onClick={() => setAddModal(1)}>← Retour</button>
+                            <button disabled={!canGoStep3}
+                              onClick={() => setAddModal(3)}
+                              style={{ background: canGoStep3 ? 'linear-gradient(135deg, #047857, #059669)' : '#e5e7eb', border: 'none', borderRadius: 10, color: canGoStep3 ? '#fff' : '#9ca3af', fontWeight: 700, padding: '9px 22px', cursor: canGoStep3 ? 'pointer' : 'not-allowed' }}>
+                              Suivant →
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })()}
+
+                    {/* Step 3 — Produits Transformés */}
+                    {addModal === 3 && (() => {
+                      const actNom = allActivities.find(a => a.id === selectedActiviteId)?.nom;
+                      return (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                          <div style={{ fontSize: '0.82rem', color: '#64748b' }}>
+                            Optionnel — ajoutez des produits utilisables de <strong>{actNom ?? 'cette activité'}</strong> comme sous-composants.
+                          </div>
+                          {utilisableForWizard.length === 0 ? (
+                            <div style={{ padding: 16, borderRadius: 8, background: '#faf5ff', border: '1px solid #ede9fe', fontSize: '0.85rem', color: '#5b21b6', textAlign: 'center' }}>
+                              Aucun produit utilisable disponible pour cette activité.
+                            </div>
+                          ) : (
                             <>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6 }}>
-                                <div style={{ flex: 1, height: 1, background: '#e2e8f0' }} />
-                                <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '0.06em', whiteSpace: 'nowrap' }}>🔄 Produits Transformés</span>
-                                <div style={{ flex: 1, height: 1, background: '#e2e8f0' }} />
-                              </div>
                               <input className="input" placeholder="🔍 Rechercher un produit transformé…" value={addSubSearch}
                                 onChange={(e) => setAddSubSearch(e.target.value)}
                                 style={{ fontSize: '0.82rem' }} />
-                              <div style={{ maxHeight: 160, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 2, border: '1px solid #ede9fe', borderRadius: 10, padding: '6px', background: '#faf5ff' }}>
+                              <div style={{ maxHeight: 240, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 2, border: '1px solid #ede9fe', borderRadius: 10, padding: '6px', background: '#faf5ff' }}>
                                 {utilisableForWizard
                                   .filter(u => !addSubSearch || u.name.toLowerCase().includes(addSubSearch.toLowerCase()))
                                   .map((u) => {
@@ -1417,7 +1441,6 @@ export default function ProductList() {
                                           onClick={e => e.stopPropagation()}
                                           style={{ accentColor: '#7c3aed', width: 15, height: 15, flexShrink: 0, cursor: 'pointer' }} />
                                         <span style={{ flex: 1, fontSize: '0.84rem', fontWeight: sel ? 600 : 400, color: sel ? '#5b21b6' : '#374151' }}>{u.name}</span>
-                                        <span style={{ fontSize: '0.68rem', color: '#7c3aed', background: '#ede9fe', borderRadius: 6, padding: '1px 6px', flexShrink: 0 }}>Transformé</span>
                                         {sel && (
                                           <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }} onClick={e => e.stopPropagation()}>
                                             <input type="number" step="0.001" min="0" placeholder="portion"
@@ -1438,73 +1461,10 @@ export default function ProductList() {
                               )}
                             </>
                           )}
-
-                          <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 4 }}>
-                            <button className="btn btn-ghost" onClick={() => setAddModal(1)}>← Retour</button>
-                            <button disabled={!canGoStep3}
-                              onClick={() => setAddModal(3)}
-                              style={{ background: canGoStep3 ? 'linear-gradient(135deg, #047857, #059669)' : '#e5e7eb', border: 'none', borderRadius: 10, color: canGoStep3 ? '#fff' : '#9ca3af', fontWeight: 700, padding: '9px 22px', cursor: canGoStep3 ? 'pointer' : 'not-allowed' }}>
-                              Suivant →
-                            </button>
-                          </div>
-                        </div>
-                      );
-                    })()}
-
-                    {/* Step 3 — Affectation (multi-select) */}
-                    {addModal === 3 && (() => {
-                      const allSel = allActivities.length > 0 && allActivities.every(a => addAffectationActiviteIds.includes(a.id));
-                      const toggleAct = (id: number) => setAddAffectationActiviteIds(prev =>
-                        prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
-                      );
-                      return (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                          <div style={{ fontSize: '0.82rem', color: '#64748b' }}>
-                            Sélectionnez une ou plusieurs activités. Le produit sera créé pour chacune d'elles.
-                          </div>
-                          {allActivities.length === 0 ? (
-                            <div style={{ padding: 16, borderRadius: 8, background: '#f0fdf4', border: '1px solid #a7f3d0', fontSize: '0.85rem', color: '#065f46', textAlign: 'center' }}>
-                              Aucune activité disponible.
-                            </div>
-                          ) : (
-                            <>
-                              {/* Select all row */}
-                              <button type="button" onClick={() => setAddAffectationActiviteIds(allSel ? [] : allActivities.map(a => a.id))}
-                                style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 14px', borderRadius: 8, cursor: 'pointer', border: '1.5px solid var(--border)', background: allSel ? '#f0fdf4' : 'transparent', textAlign: 'left' }}>
-                                <div style={{ width: 18, height: 18, borderRadius: 4, flexShrink: 0, border: allSel ? 'none' : '1.5px solid #cbd5e1', background: allSel ? '#059669' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                  {allSel && <span style={{ color: '#fff', fontSize: 11, fontWeight: 700 }}>✓</span>}
-                                </div>
-                                <span style={{ fontSize: '0.84rem', fontWeight: 600, color: '#374151' }}>Tout sélectionner</span>
-                                <span style={{ marginLeft: 'auto', fontSize: '0.75rem', color: '#94a3b8' }}>{addAffectationActiviteIds.length}/{allActivities.length}</span>
-                              </button>
-                              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 280, overflowY: 'auto' }}>
-                                {allActivities.map((act) => {
-                                  const sel = addAffectationActiviteIds.includes(act.id);
-                                  return (
-                                    <button key={act.id} type="button" onClick={() => toggleAct(act.id)}
-                                      style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', borderRadius: 10, cursor: 'pointer', textAlign: 'left', border: sel ? '2px solid #059669' : '1.5px solid var(--border)', background: sel ? '#f0fdf4' : 'var(--surface)', transition: 'all 0.15s' }}>
-                                      <div style={{ width: 32, height: 32, borderRadius: 8, flexShrink: 0, background: sel ? '#d1fae5' : '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>📍</div>
-                                      <div style={{ flex: 1 }}>
-                                        <div style={{ fontWeight: 600, fontSize: '0.88rem', color: sel ? '#065f46' : '#0f172a' }}>{act.nom}</div>
-                                        <div style={{ fontSize: '0.75rem', color: '#64748b' }}>Activité</div>
-                                      </div>
-                                      <div style={{ width: 18, height: 18, borderRadius: 4, flexShrink: 0, border: sel ? 'none' : '1.5px solid #cbd5e1', background: sel ? '#059669' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                        {sel && <span style={{ color: '#fff', fontSize: 11, fontWeight: 700 }}>✓</span>}
-                                      </div>
-                                    </button>
-                                  );
-                                })}
-                              </div>
-                              {addAffectationActiviteIds.length === 0 && (
-                                <div style={{ fontSize: '0.78rem', color: '#ef4444' }}>Au moins une activité est requise</div>
-                              )}
-                            </>
-                          )}
                           <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 8 }}>
                             <button className="btn btn-ghost" onClick={() => setAddModal(2)}>← Retour</button>
-                            <button disabled={!canGoStep4}
-                              onClick={() => setAddModal(4)}
-                              style={{ background: canGoStep4 ? 'linear-gradient(135deg, #047857, #059669)' : '#e5e7eb', border: 'none', borderRadius: 10, color: canGoStep4 ? '#fff' : '#9ca3af', fontWeight: 700, padding: '9px 22px', cursor: canGoStep4 ? 'pointer' : 'not-allowed' }}>
+                            <button onClick={() => setAddModal(4)}
+                              style={{ background: 'linear-gradient(135deg, #047857, #059669)', border: 'none', borderRadius: 10, color: '#fff', fontWeight: 700, padding: '9px 22px', cursor: 'pointer' }}>
                               Suivant →
                             </button>
                           </div>
@@ -1516,7 +1476,7 @@ export default function ProductList() {
                     {addModal === 4 && (() => {
                       const ingCount = addIngLines.filter(l => l.ingredientId && parseFloat(l.portion) > 0).length;
                       const subCount = addSubLines.filter(l => l.ingredientId && parseFloat(l.portion) > 0).length;
-                      const selActs = allActivities.filter(a => addAffectationActiviteIds.includes(a.id));
+                      const actNom = allActivities.find(a => a.id === selectedActiviteId)?.nom;
                       return (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                           {/* Product identity card */}
@@ -1543,23 +1503,13 @@ export default function ProductList() {
                                   <div style={{ fontSize: '0.7rem', color: '#7c3aed' }}>transformé{subCount !== 1 ? 's' : ''}</div>
                                 </div>
                               )}
-                              <div style={{ flex: 1, background: 'rgba(255,255,255,0.6)', borderRadius: 8, padding: '8px 10px', textAlign: 'center' }}>
-                                <div style={{ fontSize: '1.2rem', fontWeight: 900, color: '#065f46' }}>{selActs.length}</div>
-                                <div style={{ fontSize: '0.7rem', color: '#059669' }}>activité{selActs.length !== 1 ? 's' : ''}</div>
-                              </div>
                             </div>
                           </div>
-                          {/* Activités list */}
-                          <div>
-                            <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#64748b', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Activités cibles</div>
-                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                              {selActs.map(a => (
-                                <span key={a.id} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: '#f0fdf4', border: '1.5px solid #a7f3d0', borderRadius: 20, padding: '4px 12px', fontSize: '0.8rem', fontWeight: 600, color: '#065f46' }}>
-                                  📍 {a.nom}
-                                </span>
-                              ))}
+                          {actNom && (
+                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: '#f0fdf4', border: '1.5px solid #a7f3d0', borderRadius: 20, padding: '5px 14px', fontSize: '0.82rem', fontWeight: 600, color: '#065f46' }}>
+                              📍 {actNom}
                             </div>
-                          </div>
+                          )}
                           {/* Articles list preview */}
                           <div>
                             <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#64748b', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Articles sélectionnés</div>
