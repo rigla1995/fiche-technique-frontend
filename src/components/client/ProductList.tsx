@@ -47,11 +47,14 @@ export default function ProductList() {
   // Add product modal state
   type AddStep = 1 | 2 | 3 | 4 | 5;
   interface IngLine { ingredientId: string; portion: string; }
+  const [utilisableForWizard, setUtilisableForWizard] = useState<{ id: number; name: string }[]>([]);
   const [addModal, setAddModal] = useState<AddStep | null>(null);
   const [addName, setAddName] = useState('');
   const [addRef, setAddRef] = useState('');
   const [addIsSupplement, setAddIsSupplement] = useState(false);
   const [addIngLines, setAddIngLines] = useState<IngLine[]>([]);
+  const [addSubLines, setAddSubLines] = useState<IngLine[]>([]);
+  const [addSubSearch, setAddSubSearch] = useState('');
   const [addIngredients, setAddIngredients] = useState<ActiviteIngredient[]>([]);
   const [addIngSearch, setAddIngSearch] = useState('');
   const [addFamilleFilter, setAddFamilleFilter] = useState('');
@@ -70,6 +73,9 @@ export default function ProductList() {
   const [editRef, setEditRef] = useState('');
   const [editIsSupplement, setEditIsSupplement] = useState(false);
   const [editIngLines, setEditIngLines] = useState<IngLine[]>([]);
+  const [editSubLines, setEditSubLines] = useState<IngLine[]>([]);
+  const [editOriginalSubLines, setEditOriginalSubLines] = useState<IngLine[]>([]);
+  const [editSubSearch, setEditSubSearch] = useState('');
   const [editIngredients, setEditIngredients] = useState<ActiviteIngredient[]>([]);
   const [editIngSearch, setEditIngSearch] = useState('');
   const [editFamilleFilter, setEditFamilleFilter] = useState('');
@@ -115,11 +121,15 @@ export default function ProductList() {
     setEditProductId(p.id);
     setEditProductType(p.type);
     setEditName(''); setEditRef(''); setEditIsSupplement(false);
-    setEditIngLines([]); setEditIngredients([]); setEditIngSearch('');
+    setEditIngLines([]); setEditSubLines([]); setEditOriginalSubLines([]); setEditSubSearch('');
+    setEditIngredients([]); setEditIngSearch('');
     setEditFamilleFilter(''); setEditCatFilter(''); setEditIngVisible(20);
     setEditActiviteNom(allActivities.find((a) => a.id === p.activiteId)?.nom || '');
     setEditLoadingData(true);
     setEditModal(2);
+    api.get('/api/products?type=utilisable')
+      .then(({ data }) => setUtilisableForWizard((data as Product[]).filter(u => u.id !== p.id).map(u => ({ id: u.id, name: u.name }))))
+      .catch(() => {});
     try {
       const actId = p.activiteId;
       const [productRes, ingRes] = await Promise.all([
@@ -129,6 +139,7 @@ export default function ProductList() {
       const pdata = productRes.data as {
         name: string; refProduit?: string; isSupplement?: boolean;
         ingredients: { ingredientId: number; portion: number; ingredientName?: string; unitName?: string }[];
+        subProducts: { subProductId: number; portion: number; subProductName?: string }[];
       };
       const ings = ingRes.data as ActiviteIngredient[];
       const ingMerged = [...ings];
@@ -144,6 +155,9 @@ export default function ProductList() {
       const loadedLines = pdata.ingredients.map((i) => ({ ingredientId: String(i.ingredientId), portion: String(i.portion) }));
       setEditIngLines(loadedLines);
       setEditOriginalIngLines(loadedLines);
+      const loadedSubLines = (pdata.subProducts || []).map((sp) => ({ ingredientId: String(sp.subProductId), portion: String(sp.portion) }));
+      setEditSubLines(loadedSubLines);
+      setEditOriginalSubLines(loadedSubLines);
     } finally {
       setEditLoadingData(false);
     }
@@ -151,10 +165,13 @@ export default function ProductList() {
 
   const openAddModal = useCallback(() => {
     setAddName(''); setAddRef(''); setAddIsSupplement(false);
-    setAddIngLines([]); setAddIngSearch('');
+    setAddIngLines([]); setAddSubLines([]); setAddSubSearch(''); setAddIngSearch('');
     setAddSavedName(''); setAddFamilleFilter(''); setAddCatFilter(''); setAddIngVisible(20);
     setAddAffectationActiviteIds(selectedActiviteId ? [selectedActiviteId] : []);
     setAddModal(1);
+    api.get('/api/products?type=utilisable')
+      .then(({ data }) => setUtilisableForWizard((data as Product[]).map(u => ({ id: u.id, name: u.name }))))
+      .catch(() => {});
     if (selectedActiviteId) {
       api.get(`/api/entreprise/activites/${selectedActiviteId}/ingredients`)
         .then(({ data }) => setAddIngredients(data as ActiviteIngredient[]))
@@ -796,14 +813,25 @@ export default function ProductList() {
               setEditIngLines((prev) => prev.map((l) => l.ingredientId === ingId ? { ...l, portion: val } : l));
             };
 
-            const hasValidIngLines = editIngLines.some((l) => l.ingredientId && parseFloat(l.portion) > 0);
+            const hasValidIngLines = editIngLines.some((l) => l.ingredientId && parseFloat(l.portion) > 0) || editSubLines.some((l) => l.ingredientId && parseFloat(l.portion) > 0);
             const normalizeLines = (lines: IngLine[]) =>
               lines
                 .filter((l) => l.ingredientId && parseFloat(l.portion) > 0)
                 .map((l) => ({ id: l.ingredientId, p: parseFloat(l.portion).toFixed(3) }))
                 .sort((a, b) => a.id.localeCompare(b.id));
-            const isEditDirty = JSON.stringify(normalizeLines(editIngLines)) !== JSON.stringify(normalizeLines(editOriginalIngLines));
+            const isEditDirty =
+              JSON.stringify(normalizeLines(editIngLines)) !== JSON.stringify(normalizeLines(editOriginalIngLines)) ||
+              JSON.stringify(normalizeLines(editSubLines)) !== JSON.stringify(normalizeLines(editOriginalSubLines));
             const canGoEditStep3 = hasValidIngLines && isEditDirty;
+
+            const editSubIds = new Set(editSubLines.map((l) => l.ingredientId).filter(Boolean));
+            const editToggleSub = (id: number) => {
+              const sid = String(id);
+              if (editSubIds.has(sid)) setEditSubLines((prev) => prev.filter((l) => l.ingredientId !== sid));
+              else setEditSubLines((prev) => [...prev, { ingredientId: sid, portion: '' }]);
+            };
+            const editUpdateSubPortion = (id: string, val: string) =>
+              setEditSubLines((prev) => prev.map((l) => l.ingredientId === id ? { ...l, portion: val } : l));
 
             const handleEditSave = async () => {
               if (!editProductId) return;
@@ -816,7 +844,9 @@ export default function ProductList() {
                   ingredients: editIngLines
                     .filter((l) => l.ingredientId && parseFloat(l.portion) > 0)
                     .map((l) => ({ ingredientId: parseInt(l.ingredientId), portion: parseFloat(l.portion) })),
-                  subProducts: [],
+                  subProducts: editSubLines
+                    .filter((l) => l.ingredientId && parseFloat(l.portion) > 0)
+                    .map((l) => ({ subProductId: parseInt(l.ingredientId), portion: parseFloat(l.portion) })),
                 });
                 setEditModal(null);
                 const params = new URLSearchParams();
@@ -967,6 +997,55 @@ export default function ProductList() {
                             {editIngLines.filter((l) => l.ingredientId && parseFloat(l.portion) > 0).length} article{editIngLines.filter((l) => l.ingredientId && parseFloat(l.portion) > 0).length !== 1 ? 's' : ''} valide{editIngLines.filter((l) => l.ingredientId && parseFloat(l.portion) > 0).length !== 1 ? 's' : ''} (portion &gt; 0)
                           </div>
                         )}
+
+                        {/* Produits Transformés section */}
+                        {utilisableForWizard.length > 0 && (
+                          <>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
+                              <div style={{ flex: 1, height: 1, background: '#e2e8f0' }} />
+                              <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '0.06em', whiteSpace: 'nowrap' }}>🔄 Produits Transformés</span>
+                              <div style={{ flex: 1, height: 1, background: '#e2e8f0' }} />
+                            </div>
+                            <input className="input" placeholder="🔍 Rechercher un produit transformé…" value={editSubSearch}
+                              onChange={(e) => setEditSubSearch(e.target.value)}
+                              style={{ fontSize: '0.82rem' }} />
+                            <div style={{ maxHeight: 160, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 2, border: '1px solid #ede9fe', borderRadius: 10, padding: '6px', background: '#faf5ff' }}>
+                              {utilisableForWizard
+                                .filter(u => !editSubSearch || u.name.toLowerCase().includes(editSubSearch.toLowerCase()))
+                                .map((u) => {
+                                  const sid = String(u.id);
+                                  const sel = editSubIds.has(sid);
+                                  const line = editSubLines.find(l => l.ingredientId === sid);
+                                  const portionValid = sel && parseFloat(line?.portion || '0') > 0;
+                                  return (
+                                    <div key={u.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '7px 10px', borderRadius: 8, background: sel ? (portionValid ? '#f3e8ff' : '#fef3c7') : 'transparent', cursor: 'pointer', transition: 'background 0.12s' }}
+                                      onClick={() => editToggleSub(u.id)}>
+                                      <input type="checkbox" checked={sel} onChange={() => editToggleSub(u.id)}
+                                        onClick={(e) => e.stopPropagation()}
+                                        style={{ accentColor: '#7c3aed', width: 15, height: 15, flexShrink: 0, cursor: 'pointer' }} />
+                                      <span style={{ flex: 1, fontSize: '0.84rem', fontWeight: sel ? 600 : 400, color: sel ? '#5b21b6' : '#374151' }}>{u.name}</span>
+                                      <span style={{ fontSize: '0.68rem', color: '#7c3aed', background: '#ede9fe', borderRadius: 6, padding: '1px 6px', flexShrink: 0 }}>Transformé</span>
+                                      {sel && (
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }} onClick={(e) => e.stopPropagation()}>
+                                          <input type="number" step="0.001" min="0" placeholder="portion"
+                                            value={line?.portion || ''}
+                                            onChange={(e) => editUpdateSubPortion(sid, e.target.value)}
+                                            style={{ width: 72, padding: '3px 6px', borderRadius: 6, border: `1.5px solid ${portionValid ? '#c4b5fd' : '#ef4444'}`, fontSize: '0.82rem', textAlign: 'right' }} />
+                                          <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>unité</span>
+                                        </div>
+                                      )}
+                                    </div>
+                                  );
+                                })}
+                            </div>
+                            {editSubLines.some(l => l.ingredientId && parseFloat(l.portion) > 0) && (
+                              <div style={{ fontSize: '0.78rem', color: '#7c3aed', fontWeight: 600 }}>
+                                {editSubLines.filter(l => l.ingredientId && parseFloat(l.portion) > 0).length} produit(s) transformé(s) sélectionné(s)
+                              </div>
+                            )}
+                          </>
+                        )}
+
                         <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 4 }}>
                           <button className="btn btn-ghost" onClick={() => setEditModal(null)}>Annuler</button>
                           <button disabled={!canGoEditStep3 || editLoadingData}
@@ -982,6 +1061,7 @@ export default function ProductList() {
                     {/* Step 3 — Récap & Confirmation */}
                     {editModal === 3 && (() => {
                       const ingCount = editIngLines.filter((l) => l.ingredientId && parseFloat(l.portion) > 0).length;
+                      const subCount = editSubLines.filter((l) => l.ingredientId && parseFloat(l.portion) > 0).length;
                       return (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                           <div style={{ background: 'linear-gradient(135deg,#eff6ff,#dbeafe)', border: '1.5px solid #93c5fd', borderRadius: 14, padding: '16px 18px' }}>
@@ -995,14 +1075,22 @@ export default function ProductList() {
                                 {isEditVendable ? 'Vendable' : 'Utilisable'}{editIsSupplement ? ' · Suppl.' : ''}
                               </div>
                             </div>
-                            <div style={{ background: 'rgba(255,255,255,0.6)', borderRadius: 8, padding: '8px 10px', textAlign: 'center', display: 'inline-block', minWidth: 80 }}>
-                              <div style={{ fontSize: '1.2rem', fontWeight: 900, color: '#1e40af' }}>{ingCount}</div>
-                              <div style={{ fontSize: '0.7rem', color: '#3b82f6' }}>article{ingCount !== 1 ? 's' : ''}</div>
+                            <div style={{ display: 'flex', gap: 8 }}>
+                              <div style={{ background: 'rgba(255,255,255,0.6)', borderRadius: 8, padding: '8px 10px', textAlign: 'center', minWidth: 70 }}>
+                                <div style={{ fontSize: '1.2rem', fontWeight: 900, color: '#1e40af' }}>{ingCount}</div>
+                                <div style={{ fontSize: '0.7rem', color: '#3b82f6' }}>article{ingCount !== 1 ? 's' : ''}</div>
+                              </div>
+                              {subCount > 0 && (
+                                <div style={{ background: 'rgba(255,255,255,0.6)', borderRadius: 8, padding: '8px 10px', textAlign: 'center', minWidth: 70 }}>
+                                  <div style={{ fontSize: '1.2rem', fontWeight: 900, color: '#5b21b6' }}>{subCount}</div>
+                                  <div style={{ fontSize: '0.7rem', color: '#7c3aed' }}>transformé{subCount !== 1 ? 's' : ''}</div>
+                                </div>
+                              )}
                             </div>
                           </div>
                           <div>
                             <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#64748b', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Articles sélectionnés</div>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: 4, maxHeight: 200, overflowY: 'auto' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 4, maxHeight: 160, overflowY: 'auto' }}>
                               {editIngLines.filter((l) => l.ingredientId && parseFloat(l.portion) > 0).map((l) => {
                                 const ing = editIngredients.find((i) => String(i.id) === l.ingredientId);
                                 return (
@@ -1014,6 +1102,22 @@ export default function ProductList() {
                               })}
                             </div>
                           </div>
+                          {subCount > 0 && (
+                            <div>
+                              <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#7c3aed', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.06em' }}>🔄 Produits transformés</div>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: 4, maxHeight: 120, overflowY: 'auto' }}>
+                                {editSubLines.filter((l) => l.ingredientId && parseFloat(l.portion) > 0).map((l) => {
+                                  const sp = utilisableForWizard.find((u) => String(u.id) === l.ingredientId);
+                                  return (
+                                    <div key={l.ingredientId} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '5px 10px', borderRadius: 7, background: '#faf5ff', fontSize: '0.82rem', border: '1px solid #ede9fe' }}>
+                                      <span style={{ color: '#5b21b6', fontWeight: 500 }}>🔄 {sp?.name ?? l.ingredientId}</span>
+                                      <span style={{ color: '#7c3aed', fontWeight: 600 }}>{l.portion} unité</span>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          )}
                           <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 4, borderTop: '1px solid var(--border)' }}>
                             <button className="btn btn-ghost" onClick={() => setEditModal(2)}>← Retour</button>
                             <button disabled={editSaving}
@@ -1063,8 +1167,17 @@ export default function ProductList() {
               setAddIngLines((prev) => prev.map((l) => l.ingredientId === ingId ? { ...l, portion: val } : l));
             };
 
+            const addSubIds = new Set(addSubLines.map((l) => l.ingredientId).filter(Boolean));
+            const toggleSub = (id: number) => {
+              const sid = String(id);
+              if (addSubIds.has(sid)) setAddSubLines((prev) => prev.filter((l) => l.ingredientId !== sid));
+              else setAddSubLines((prev) => [...prev, { ingredientId: sid, portion: '' }]);
+            };
+            const updateSubPortion = (id: string, val: string) =>
+              setAddSubLines((prev) => prev.map((l) => l.ingredientId === id ? { ...l, portion: val } : l));
+
             const canGoStep2 = addName.trim().length > 0;
-            const canGoStep3 = addIngLines.some((l) => l.ingredientId && parseFloat(l.portion) > 0);
+            const canGoStep3 = addIngLines.some((l) => l.ingredientId && parseFloat(l.portion) > 0) || addSubLines.some((l) => l.ingredientId && parseFloat(l.portion) > 0);
             const canGoStep4 = addAffectationActiviteIds.length > 0;
 
             const handleSave = async () => {
@@ -1073,6 +1186,9 @@ export default function ProductList() {
                 const baseIngredients = addIngLines
                   .filter((l) => l.ingredientId && parseFloat(l.portion) > 0)
                   .map((l) => ({ ingredientId: parseInt(l.ingredientId), portion: parseFloat(l.portion) }));
+                const baseSubProducts = addSubLines
+                  .filter((l) => l.ingredientId && parseFloat(l.portion) > 0)
+                  .map((l) => ({ subProductId: parseInt(l.ingredientId), portion: parseFloat(l.portion) }));
                 await Promise.all(addAffectationActiviteIds.map((actId) =>
                   api.post('/api/products', {
                     name: addName.trim(),
@@ -1081,7 +1197,7 @@ export default function ProductList() {
                     isSupplement: addIsSupplement,
                     activiteId: actId,
                     ingredients: baseIngredients,
-                    subProducts: [],
+                    subProducts: baseSubProducts,
                   })
                 ));
                 setAddSavedName(addName.trim());
@@ -1274,6 +1390,55 @@ export default function ProductList() {
                               {addIngLines.filter(l => l.ingredientId && parseFloat(l.portion) > 0).length} article{addIngLines.filter(l => l.ingredientId && parseFloat(l.portion) > 0).length !== 1 ? 's' : ''} valide{addIngLines.filter(l => l.ingredientId && parseFloat(l.portion) > 0).length !== 1 ? 's' : ''} (portion &gt; 0)
                             </div>
                           )}
+
+                          {/* Produits Transformés section */}
+                          {utilisableForWizard.length > 0 && (
+                            <>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6 }}>
+                                <div style={{ flex: 1, height: 1, background: '#e2e8f0' }} />
+                                <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '0.06em', whiteSpace: 'nowrap' }}>🔄 Produits Transformés</span>
+                                <div style={{ flex: 1, height: 1, background: '#e2e8f0' }} />
+                              </div>
+                              <input className="input" placeholder="🔍 Rechercher un produit transformé…" value={addSubSearch}
+                                onChange={(e) => setAddSubSearch(e.target.value)}
+                                style={{ fontSize: '0.82rem' }} />
+                              <div style={{ maxHeight: 160, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 2, border: '1px solid #ede9fe', borderRadius: 10, padding: '6px', background: '#faf5ff' }}>
+                                {utilisableForWizard
+                                  .filter(u => !addSubSearch || u.name.toLowerCase().includes(addSubSearch.toLowerCase()))
+                                  .map((u) => {
+                                    const sid = String(u.id);
+                                    const sel = addSubIds.has(sid);
+                                    const line = addSubLines.find(l => l.ingredientId === sid);
+                                    const portionValid = sel && parseFloat(line?.portion || '0') > 0;
+                                    return (
+                                      <div key={u.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '7px 10px', borderRadius: 8, background: sel ? (portionValid ? '#f3e8ff' : '#fef3c7') : 'transparent', cursor: 'pointer', transition: 'background 0.12s' }}
+                                        onClick={() => toggleSub(u.id)}>
+                                        <input type="checkbox" checked={sel} onChange={() => toggleSub(u.id)}
+                                          onClick={e => e.stopPropagation()}
+                                          style={{ accentColor: '#7c3aed', width: 15, height: 15, flexShrink: 0, cursor: 'pointer' }} />
+                                        <span style={{ flex: 1, fontSize: '0.84rem', fontWeight: sel ? 600 : 400, color: sel ? '#5b21b6' : '#374151' }}>{u.name}</span>
+                                        <span style={{ fontSize: '0.68rem', color: '#7c3aed', background: '#ede9fe', borderRadius: 6, padding: '1px 6px', flexShrink: 0 }}>Transformé</span>
+                                        {sel && (
+                                          <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }} onClick={e => e.stopPropagation()}>
+                                            <input type="number" step="0.001" min="0" placeholder="portion"
+                                              value={line?.portion || ''}
+                                              onChange={(e) => updateSubPortion(sid, e.target.value)}
+                                              style={{ width: 72, padding: '3px 6px', borderRadius: 6, border: `1.5px solid ${portionValid ? '#c4b5fd' : '#ef4444'}`, fontSize: '0.82rem', textAlign: 'right' }} />
+                                            <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>unité</span>
+                                          </div>
+                                        )}
+                                      </div>
+                                    );
+                                  })}
+                              </div>
+                              {addSubLines.some(l => l.ingredientId && parseFloat(l.portion) > 0) && (
+                                <div style={{ fontSize: '0.78rem', color: '#7c3aed', fontWeight: 600 }}>
+                                  {addSubLines.filter(l => l.ingredientId && parseFloat(l.portion) > 0).length} produit(s) transformé(s) sélectionné(s)
+                                </div>
+                              )}
+                            </>
+                          )}
+
                           <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 4 }}>
                             <button className="btn btn-ghost" onClick={() => setAddModal(1)}>← Retour</button>
                             <button disabled={!canGoStep3}
@@ -1350,6 +1515,7 @@ export default function ProductList() {
                     {/* Step 4 — Récap & Confirmation */}
                     {addModal === 4 && (() => {
                       const ingCount = addIngLines.filter(l => l.ingredientId && parseFloat(l.portion) > 0).length;
+                      const subCount = addSubLines.filter(l => l.ingredientId && parseFloat(l.portion) > 0).length;
                       const selActs = allActivities.filter(a => addAffectationActiviteIds.includes(a.id));
                       return (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -1371,6 +1537,12 @@ export default function ProductList() {
                                 <div style={{ fontSize: '1.2rem', fontWeight: 900, color: '#065f46' }}>{ingCount}</div>
                                 <div style={{ fontSize: '0.7rem', color: '#059669' }}>article{ingCount !== 1 ? 's' : ''}</div>
                               </div>
+                              {subCount > 0 && (
+                                <div style={{ flex: 1, background: 'rgba(255,255,255,0.6)', borderRadius: 8, padding: '8px 10px', textAlign: 'center' }}>
+                                  <div style={{ fontSize: '1.2rem', fontWeight: 900, color: '#5b21b6' }}>{subCount}</div>
+                                  <div style={{ fontSize: '0.7rem', color: '#7c3aed' }}>transformé{subCount !== 1 ? 's' : ''}</div>
+                                </div>
+                              )}
                               <div style={{ flex: 1, background: 'rgba(255,255,255,0.6)', borderRadius: 8, padding: '8px 10px', textAlign: 'center' }}>
                                 <div style={{ fontSize: '1.2rem', fontWeight: 900, color: '#065f46' }}>{selActs.length}</div>
                                 <div style={{ fontSize: '0.7rem', color: '#059669' }}>activité{selActs.length !== 1 ? 's' : ''}</div>
@@ -1391,7 +1563,7 @@ export default function ProductList() {
                           {/* Articles list preview */}
                           <div>
                             <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#64748b', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Articles sélectionnés</div>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: 4, maxHeight: 140, overflowY: 'auto' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 4, maxHeight: 110, overflowY: 'auto' }}>
                               {addIngLines.filter(l => l.ingredientId && parseFloat(l.portion) > 0).map(l => {
                                 const ing = addIngredients.find(i => String(i.id) === l.ingredientId);
                                 return (
@@ -1403,6 +1575,23 @@ export default function ProductList() {
                               })}
                             </div>
                           </div>
+                          {/* Sub-products list preview */}
+                          {subCount > 0 && (
+                            <div>
+                              <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#7c3aed', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.06em' }}>🔄 Produits transformés</div>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: 4, maxHeight: 110, overflowY: 'auto' }}>
+                                {addSubLines.filter(l => l.ingredientId && parseFloat(l.portion) > 0).map(l => {
+                                  const sp = utilisableForWizard.find(u => String(u.id) === l.ingredientId);
+                                  return (
+                                    <div key={l.ingredientId} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '5px 10px', borderRadius: 7, background: '#faf5ff', border: '1px solid #ede9fe', fontSize: '0.82rem' }}>
+                                      <span style={{ color: '#5b21b6', fontWeight: 500 }}>🔄 {sp?.name ?? l.ingredientId}</span>
+                                      <span style={{ color: '#7c3aed', fontWeight: 600 }}>{l.portion} unité</span>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          )}
                           <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 4, borderTop: '1px solid var(--border)' }}>
                             <button className="btn btn-ghost" onClick={() => setAddModal(3)}>← Retour</button>
                             <button disabled={addSaving}
