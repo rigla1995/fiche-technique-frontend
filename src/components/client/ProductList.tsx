@@ -877,10 +877,11 @@ export default function ProductList() {
                   ...removed.map(actId => api.post(`/api/produits/${editProductId}/toggle-stock-ingredient`, { activiteId: actId })),
                 ]);
                 setEditModal(null);
-                const params = new URLSearchParams();
-                if (laboId) params.set('laboId', laboId);
-                const qs = params.toString();
-                api.get(`/api/products${qs ? `?${qs}` : ''}`).then(({ data }) => setProducts(data as Product[]));
+                const reloadParams = new URLSearchParams();
+                if (laboId) reloadParams.set('laboId', laboId);
+                if (selectedActiviteId) reloadParams.set('activiteId', String(selectedActiviteId));
+                const reloadQs = reloadParams.toString();
+                api.get(`/api/products${reloadQs ? `?${reloadQs}` : ''}`).then(({ data }) => setProducts(data as Product[]));
               } catch { /* ignore */ }
               setEditSaving(false);
             };
