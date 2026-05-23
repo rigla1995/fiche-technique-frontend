@@ -62,7 +62,6 @@ export default function ProductList() {
   const [addIngVisible, setAddIngVisible] = useState(20);
   const [addSaving, setAddSaving] = useState(false);
   const [addSavedName, setAddSavedName] = useState('');
-  const [addAffectationActiviteIds, setAddAffectationActiviteIds] = useState<number[]>([]);
 
   // Edit product modal state — steps: 2=Articles, 3=Récap, 4=Succès (step 1 is skipped)
   type EditStep = 1 | 2 | 3 | 4 | 5;
@@ -84,7 +83,6 @@ export default function ProductList() {
   const [editSaving, setEditSaving] = useState(false);
   const [editLoadingData, setEditLoadingData] = useState(false);
   const [editActiviteNom, setEditActiviteNom] = useState('');
-  const [editActiviteId, setEditActiviteId] = useState<number | null>(null);
   const [editOriginalIngLines, setEditOriginalIngLines] = useState<IngLine[]>([]);
 
   // Load activities — for gerant users use their assigned activité directly
@@ -126,7 +124,6 @@ export default function ProductList() {
     setEditIngredients([]); setEditIngSearch('');
     setEditFamilleFilter(''); setEditCatFilter(''); setEditIngVisible(20);
     setEditActiviteNom(allActivities.find((a) => a.id === p.activiteId)?.nom || '');
-    setEditActiviteId(p.activiteId ?? null);
     setEditLoadingData(true);
     setEditModal(2);
     if (p.activiteId) {
@@ -171,7 +168,6 @@ export default function ProductList() {
     setAddName(''); setAddRef(''); setAddIsSupplement(false);
     setAddIngLines([]); setAddSubLines([]); setAddSubSearch(''); setAddIngSearch('');
     setAddSavedName(''); setAddFamilleFilter(''); setAddCatFilter(''); setAddIngVisible(20);
-    setAddAffectationActiviteIds(selectedActiviteId ? [selectedActiviteId] : []);
     setAddModal(1);
     if (selectedActiviteId) {
       api.get(`/api/products?type=utilisable&activiteId=${selectedActiviteId}`)
@@ -1186,8 +1182,6 @@ export default function ProductList() {
 
             const canGoStep2 = addName.trim().length > 0;
             const canGoStep3 = addIngLines.some((l) => l.ingredientId && parseFloat(l.portion) > 0) || addSubLines.some((l) => l.ingredientId && parseFloat(l.portion) > 0);
-            const canGoStep4 = true;
-
             const handleSave = async () => {
               setAddSaving(true);
               try {
@@ -1547,7 +1541,7 @@ export default function ProductList() {
                             <button disabled={addSaving}
                               onClick={handleSave}
                               style={{ background: 'linear-gradient(135deg, #047857, #059669)', border: 'none', borderRadius: 10, color: '#fff', fontWeight: 700, padding: '10px 28px', cursor: addSaving ? 'not-allowed' : 'pointer', opacity: addSaving ? 0.7 : 1, fontSize: '0.9rem' }}>
-                              {addSaving ? 'Création…' : `Créer ${selActs.length > 1 ? `${selActs.length}×` : ''} le produit ✓`}
+                              {addSaving ? 'Création…' : 'Créer le produit ✓'}
                             </button>
                           </div>
                         </div>
