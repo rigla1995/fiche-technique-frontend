@@ -107,18 +107,20 @@ export default function ProductList() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.role, user?.gerantActiviteId, laboId]);
 
-  // Load products
+  // Load products — reload when activité changes so OR EXISTS per-activité affectations are reflected
   useEffect(() => {
+    if (!selectedActiviteId && allActivities.length > 0) return; // wait until activité is known
     setLoading(true);
     setPage(1);
     const params = new URLSearchParams();
     if (laboId) params.set('laboId', laboId);
+    if (selectedActiviteId) params.set('activiteId', String(selectedActiviteId));
     const qs = params.toString();
     api.get(`/api/products${qs ? `?${qs}` : ''}`)
       .then(({ data }) => setProducts(data as Product[]))
       .finally(() => setLoading(false));
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isEntreprise, laboId]);
+  }, [isEntreprise, laboId, selectedActiviteId]);
 
   const openEditModal = useCallback(async (p: Product) => {
     setEditProductId(p.id);
@@ -271,7 +273,7 @@ export default function ProductList() {
     }
   };
 
-  const byTab = products.filter((p) => p.type === tab && (!selectedActiviteId || p.activiteId === selectedActiviteId));
+  const byTab = products.filter((p) => p.type === tab);
   const searched = byTab.filter((p) => p.name.toLowerCase().includes(search.toLowerCase()));
   const totalPages = Math.max(1, Math.ceil(searched.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
