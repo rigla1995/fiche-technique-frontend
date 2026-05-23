@@ -213,7 +213,8 @@ export default function ProductList() {
   const closePopup = () => { setPopup(null); setDetail(null); };
 
   const handleDelete = async (product: Product) => {
-    if (product.type === 'utilisable' && product.isStockIngredient) {
+    if (product.type === 'utilisable') {
+      // Always check total PT history across all activités/labos for this product
       setTogglingPT(product.id);
       let histCount = 0;
       try {
@@ -232,7 +233,8 @@ export default function ProductList() {
     const { product } = deleteModal;
     setDeleting(true);
     try {
-      if (product.type === 'utilisable' && product.isStockIngredient) {
+      if (product.type === 'utilisable') {
+        // Clean up all PT stock history across every activité/labo before deleting
         await api.delete(`/api/produits/${product.id}/stock-pt-history`);
       }
       await api.delete(`/api/products/${product.id}`);
