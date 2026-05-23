@@ -45,7 +45,7 @@ export default function ProductList() {
   const [selectedActiviteId, setSelectedActiviteId] = useState<number | null>(null);
 
   // Add product modal state
-  type AddStep = 1 | 2 | 3 | 4 | 5;
+  type AddStep = 1 | 2 | 3 | 4 | 5 | 6;
   interface IngLine { ingredientId: string; portion: string; }
   const [utilisableForWizard, setUtilisableForWizard] = useState<{ id: number; name: string }[]>([]);
   const [addModal, setAddModal] = useState<AddStep | null>(null);
@@ -84,6 +84,10 @@ export default function ProductList() {
   const [editLoadingData, setEditLoadingData] = useState(false);
   const [editActiviteNom, setEditActiviteNom] = useState('');
   const [editOriginalIngLines, setEditOriginalIngLines] = useState<IngLine[]>([]);
+
+  const [addAffectationIds, setAddAffectationIds] = useState<number[]>([]);
+  const [editAffectationIds, setEditAffectationIds] = useState<number[]>([]);
+  const [editOriginalAffectationIds, setEditOriginalAffectationIds] = useState<number[]>([]);
 
   // Load activities — for gerant users use their assigned activité directly
   useEffect(() => {
@@ -126,6 +130,17 @@ export default function ProductList() {
     setEditActiviteNom(allActivities.find((a) => a.id === p.activiteId)?.nom || '');
     setEditLoadingData(true);
     setEditModal(2);
+    // Load current stock affectations for this product
+    api.get(`/api/produits/${p.id}/stock-activites`)
+      .then(({ data }) => {
+        const ids = data as number[];
+        setEditAffectationIds(ids);
+        setEditOriginalAffectationIds(ids);
+      })
+      .catch(() => {
+        setEditAffectationIds([]);
+        setEditOriginalAffectationIds([]);
+      });
     if (p.activiteId) {
       api.get(`/api/products?type=utilisable&activiteId=${p.activiteId}`)
         .then(({ data }) => setUtilisableForWizard((data as Product[]).filter(u => u.id !== p.id).map(u => ({ id: u.id, name: u.name }))))
@@ -168,6 +183,7 @@ export default function ProductList() {
     setAddName(''); setAddRef(''); setAddIsSupplement(false);
     setAddIngLines([]); setAddSubLines([]); setAddSubSearch(''); setAddIngSearch('');
     setAddSavedName(''); setAddFamilleFilter(''); setAddCatFilter(''); setAddIngVisible(20);
+    setAddAffectationIds(selectedActiviteId ? [selectedActiviteId] : []);
     setAddModal(1);
     if (selectedActiviteId) {
       api.get(`/api/products?type=utilisable&activiteId=${selectedActiviteId}`)
@@ -853,6 +869,12 @@ export default function ProductList() {
                     .filter((l) => l.ingredientId && parseFloat(l.portion) > 0)
                     .map((l) => ({ subProductId: parseInt(l.ingredientId), portion: parseFloat(l.portion) })),
                 });
+                const added = editAffectationIds.filter(id => !editOriginalAffectationIds.includes(id));
+                const removed = editOriginalAffectationIds.filter(id => !editAffectationIds.includes(id));
+                await Promise.all([
+                  ...added.map(actId => api.post(`/api/produits/${editProductId}/toggle-stock-ingredient`, { activiteId: actId })),
+                  ...removed.map(actId => api.post(`/api/produits/${editProductId}/toggle-stock-ingredient`, { activiteId: actId })),
+                ]);
                 setEditModal(null);
                 const params = new URLSearchParams();
                 if (laboId) params.set('laboId', laboId);
@@ -862,13 +884,11 @@ export default function ProductList() {
               setEditSaving(false);
             };
 
-            const EDIT_STEPS = [
-              { n: 2, display: 1, label: 'Articles' },
-              { n: 3, display: 2, label: 'Transformés' },
-              { n: 4, display: 3, label: 'Récap' },
-            ];
-
             const isEditVendable = editProductType === 'vendable';
+
+            const EDIT_STEPS = isEditVendable
+              ? [{ n: 2, display: 1, label: 'Articles' }, { n: 3, display: 2, label: 'Transformés' }, { n: 5, display: 3, label: 'Récap' }]
+              : [{ n: 2, display: 1, label: 'Articles' }, { n: 3, display: 2, label: 'Transformés' }, { n: 4, display: 3, label: 'Affectation' }, { n: 5, display: 4, label: 'Récap' }];
 
             // Compute filter options for step 2
             const eFamOptions: { key: string; label: string }[] = [];
@@ -1068,7 +1088,7 @@ export default function ProductList() {
                         )}
                         <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 8 }}>
                           <button className="btn btn-ghost" onClick={() => setEditModal(2)}>← Retour</button>
-                          <button onClick={() => setEditModal(4)}
+                          <button onClick={() => setEditModal(isEditVendable ? 5 : 4)}
                             style={{ background: 'linear-gradient(135deg, #1e40af, #3b82f6)', border: 'none', borderRadius: 10, color: '#fff', fontWeight: 700, padding: '9px 22px', cursor: 'pointer' }}>
                             Suivant →
                           </button>
@@ -1076,8 +1096,60 @@ export default function ProductList() {
                       </div>
                     )}
 
-                    {/* Step 4 — Récap & Confirmation */}
-                    {editModal === 4 && (() => {
+                    {/* Step 4 — Affectation aux stocks (utilisable only) */}
+                    {editModal === 4 && !isEditVendable && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                        <div style={{ fontSize: '0.82rem', color: '#64748b' }}>
+                          Gérez les activités où ce produit est disponible en stock.
+                        </div>
+                        {allActivities.length === 0 ? (
+                          <div style={{ padding: 16, background: '#f8fafc', borderRadius: 8, fontSize: '0.85rem', color: '#64748b', textAlign: 'center' }}>
+                            Aucune activité disponible.
+                          </div>
+                        ) : (
+                          <>
+                            <button type="button"
+                              onClick={() => setEditAffectationIds(editAffectationIds.length === allActivities.length ? [] : allActivities.map(a => a.id))}
+                              style={{ alignSelf: 'flex-start', background: 'transparent', border: '1.5px solid #3b82f6', borderRadius: 8, color: '#3b82f6', fontWeight: 700, padding: '5px 14px', cursor: 'pointer', fontSize: '0.8rem' }}>
+                              {editAffectationIds.length === allActivities.length ? '☐ Tout désélectionner' : '☑ Tout sélectionner'}
+                            </button>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 260, overflowY: 'auto' }}>
+                              {allActivities.map(a => {
+                                const checked = editAffectationIds.includes(a.id);
+                                return (
+                                  <div key={a.id}
+                                    onClick={() => setEditAffectationIds(prev => checked ? prev.filter(id => id !== a.id) : [...prev, a.id])}
+                                    style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', borderRadius: 9, cursor: 'pointer', background: checked ? '#eff6ff' : '#f8fafc', border: `1.5px solid ${checked ? '#93c5fd' : '#e2e8f0'}`, transition: 'all 0.12s' }}>
+                                    <input type="checkbox" checked={checked} readOnly
+                                      style={{ accentColor: '#3b82f6', width: 16, height: 16, flexShrink: 0, cursor: 'pointer' }} />
+                                    <div style={{ flex: 1 }}>
+                                      <div style={{ fontWeight: 600, fontSize: '0.88rem', color: checked ? '#1e40af' : '#374151' }}>{a.nom}</div>
+                                      {(a as any).laboNom && <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: 1 }}>🏭 Labo : {(a as any).laboNom}</div>}
+                                    </div>
+                                    {checked && <span style={{ color: '#3b82f6', fontSize: '0.9rem' }}>✓</span>}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                            {editAffectationIds.length > 0 && (
+                              <div style={{ fontSize: '0.78rem', color: '#3b82f6', fontWeight: 600 }}>
+                                {editAffectationIds.length} activité{editAffectationIds.length > 1 ? 's' : ''} sélectionnée{editAffectationIds.length > 1 ? 's' : ''}
+                              </div>
+                            )}
+                          </>
+                        )}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 8 }}>
+                          <button className="btn btn-ghost" onClick={() => setEditModal(3)}>← Retour</button>
+                          <button onClick={() => setEditModal(5)}
+                            style={{ background: 'linear-gradient(135deg, #1e40af, #3b82f6)', border: 'none', borderRadius: 10, color: '#fff', fontWeight: 700, padding: '9px 22px', cursor: 'pointer' }}>
+                            Suivant →
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Step 5 — Récap & Confirmation */}
+                    {editModal === 5 && (() => {
                       const ingCount = editIngLines.filter((l) => l.ingredientId && parseFloat(l.portion) > 0).length;
                       const subCount = editSubLines.filter((l) => l.ingredientId && parseFloat(l.portion) > 0).length;
                       return (
@@ -1137,7 +1209,7 @@ export default function ProductList() {
                             </div>
                           )}
                           <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 4, borderTop: '1px solid var(--border)' }}>
-                            <button className="btn btn-ghost" onClick={() => setEditModal(3)}>← Retour</button>
+                            <button className="btn btn-ghost" onClick={() => setEditModal(isEditVendable ? 3 : 4)}>← Retour</button>
                             <button disabled={editSaving}
                               onClick={handleEditSave}
                               style={{ background: 'linear-gradient(135deg, #1e40af, #3b82f6)', border: 'none', borderRadius: 10, color: '#fff', fontWeight: 700, padding: '10px 28px', cursor: editSaving ? 'not-allowed' : 'pointer', opacity: editSaving ? 0.7 : 1, fontSize: '0.9rem' }}>
@@ -1194,7 +1266,7 @@ export default function ProductList() {
                 const baseSubProducts = addSubLines
                   .filter((l) => l.ingredientId && parseFloat(l.portion) > 0)
                   .map((l) => ({ subProductId: parseInt(l.ingredientId), portion: parseFloat(l.portion) }));
-                await api.post('/api/products', {
+                const { data: newProd } = await api.post('/api/products', {
                   name: addName.trim(),
                   refProduit: addRef.trim() || null,
                   type: tab === 'utilisable' ? 'utilisable' : 'vendable',
@@ -1203,8 +1275,12 @@ export default function ProductList() {
                   ingredients: baseIngredients,
                   subProducts: baseSubProducts,
                 });
+                // Assign to selected activités' stocks
+                for (const actId of addAffectationIds) {
+                  await api.post(`/api/produits/${(newProd as { id: number }).id}/toggle-stock-ingredient`, { activiteId: actId });
+                }
                 setAddSavedName(addName.trim());
-                setAddModal(5);
+                setAddModal(6);
                 const params = new URLSearchParams();
                 if (laboId) params.set('laboId', laboId);
                 const qs = params.toString();
@@ -1213,12 +1289,9 @@ export default function ProductList() {
               setAddSaving(false);
             };
 
-            const STEPS = [
-              { n: 1, label: 'Identité' },
-              { n: 2, label: 'Articles' },
-              { n: 3, label: 'Transformés' },
-              { n: 4, label: 'Récap' },
-            ];
+            const STEPS = isVendable
+              ? [{ n: 1, d: 1, label: 'Identité' }, { n: 2, d: 2, label: 'Articles' }, { n: 3, d: 3, label: 'Transformés' }, { n: 5, d: 4, label: 'Récap' }]
+              : [{ n: 1, d: 1, label: 'Identité' }, { n: 2, d: 2, label: 'Articles' }, { n: 3, d: 3, label: 'Transformés' }, { n: 4, d: 4, label: 'Affectation' }, { n: 5, d: 5, label: 'Récap' }];
 
             return (
               <div className="modal-overlay">
@@ -1226,17 +1299,17 @@ export default function ProductList() {
                   {/* Header */}
                   <div style={{ background: 'linear-gradient(135deg, #0a1628 0%, #0f2847 100%)', padding: '18px 22px 14px', borderRadius: '12px 12px 0 0', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
                     <div style={{ flex: 1 }}>
-                      <div style={{ color: '#fff', fontWeight: 800, fontSize: '1rem', marginBottom: addModal !== 5 ? 12 : 0 }}>
-                        {addModal === 5 ? '✅ Produit créé' : `Nouveau ${isVendable ? 'produit vendable' : 'produit utilisable'}`}
+                      <div style={{ color: '#fff', fontWeight: 800, fontSize: '1rem', marginBottom: addModal !== 6 ? 12 : 0 }}>
+                        {addModal === 6 ? '✅ Produit créé' : `Nouveau ${isVendable ? 'produit vendable' : 'produit utilisable'}`}
                       </div>
-                      {addModal !== 5 && (
+                      {addModal !== 6 && (
                         <div style={{ display: 'flex', gap: 10, width: '100%' }}>
                           {STEPS.map((s) => (
                             <div key={s.n} style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4 }}>
                               <div style={{ height: 4, borderRadius: 4, background: s.n <= addModal ? '#fff' : 'rgba(255,255,255,0.28)', transition: 'background 0.2s' }} />
                               <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
                                 <div style={{ width: 18, height: 18, borderRadius: '50%', flexShrink: 0, background: s.n <= addModal ? '#fff' : 'rgba(255,255,255,0.28)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.62rem', fontWeight: 800, color: s.n <= addModal ? '#059669' : 'rgba(255,255,255,0.55)' }}>
-                                  {s.n < addModal ? '✓' : s.n}
+                                  {s.n < addModal ? '✓' : s.d}
                                 </div>
                                 <span style={{ fontSize: '0.68rem', color: s.n <= addModal ? '#fff' : 'rgba(255,255,255,0.5)', fontWeight: 600 }}>{s.label}</span>
                               </div>
@@ -1460,7 +1533,7 @@ export default function ProductList() {
                           )}
                           <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 8 }}>
                             <button className="btn btn-ghost" onClick={() => setAddModal(2)}>← Retour</button>
-                            <button onClick={() => setAddModal(4)}
+                            <button onClick={() => setAddModal(isVendable ? 5 : 4)}
                               style={{ background: 'linear-gradient(135deg, #047857, #059669)', border: 'none', borderRadius: 10, color: '#fff', fontWeight: 700, padding: '9px 22px', cursor: 'pointer' }}>
                               Suivant →
                             </button>
@@ -1469,8 +1542,60 @@ export default function ProductList() {
                       );
                     })()}
 
-                    {/* Step 4 — Récap & Confirmation */}
-                    {addModal === 4 && (() => {
+                    {/* Step 4 — Affectation aux stocks (utilisable only) */}
+                    {addModal === 4 && !isVendable && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                        <div style={{ fontSize: '0.82rem', color: '#64748b' }}>
+                          Sélectionnez les activités où ce produit sera disponible en stock. L'activation est optionnelle.
+                        </div>
+                        {allActivities.length === 0 ? (
+                          <div style={{ padding: 16, background: '#f8fafc', borderRadius: 8, fontSize: '0.85rem', color: '#64748b', textAlign: 'center' }}>
+                            Aucune activité disponible.
+                          </div>
+                        ) : (
+                          <>
+                            <button type="button"
+                              onClick={() => setAddAffectationIds(addAffectationIds.length === allActivities.length ? [] : allActivities.map(a => a.id))}
+                              style={{ alignSelf: 'flex-start', background: 'transparent', border: '1.5px solid #059669', borderRadius: 8, color: '#059669', fontWeight: 700, padding: '5px 14px', cursor: 'pointer', fontSize: '0.8rem' }}>
+                              {addAffectationIds.length === allActivities.length ? '☐ Tout désélectionner' : '☑ Tout sélectionner'}
+                            </button>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 260, overflowY: 'auto' }}>
+                              {allActivities.map(a => {
+                                const checked = addAffectationIds.includes(a.id);
+                                return (
+                                  <div key={a.id}
+                                    onClick={() => setAddAffectationIds(prev => checked ? prev.filter(id => id !== a.id) : [...prev, a.id])}
+                                    style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', borderRadius: 9, cursor: 'pointer', background: checked ? '#f0fdf4' : '#f8fafc', border: `1.5px solid ${checked ? '#6ee7b7' : '#e2e8f0'}`, transition: 'all 0.12s' }}>
+                                    <input type="checkbox" checked={checked} readOnly
+                                      style={{ accentColor: '#059669', width: 16, height: 16, flexShrink: 0, cursor: 'pointer' }} />
+                                    <div style={{ flex: 1 }}>
+                                      <div style={{ fontWeight: 600, fontSize: '0.88rem', color: checked ? '#065f46' : '#374151' }}>{a.nom}</div>
+                                      {(a as any).laboNom && <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: 1 }}>🏭 Labo : {(a as any).laboNom}</div>}
+                                    </div>
+                                    {checked && <span style={{ color: '#059669', fontSize: '0.9rem' }}>✓</span>}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                            {addAffectationIds.length > 0 && (
+                              <div style={{ fontSize: '0.78rem', color: '#059669', fontWeight: 600 }}>
+                                {addAffectationIds.length} activité{addAffectationIds.length > 1 ? 's' : ''} sélectionnée{addAffectationIds.length > 1 ? 's' : ''}
+                              </div>
+                            )}
+                          </>
+                        )}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 8 }}>
+                          <button className="btn btn-ghost" onClick={() => setAddModal(3)}>← Retour</button>
+                          <button onClick={() => setAddModal(5)}
+                            style={{ background: 'linear-gradient(135deg, #047857, #059669)', border: 'none', borderRadius: 10, color: '#fff', fontWeight: 700, padding: '9px 22px', cursor: 'pointer' }}>
+                            Suivant →
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Step 5 — Récap & Confirmation */}
+                    {addModal === 5 && (() => {
                       const ingCount = addIngLines.filter(l => l.ingredientId && parseFloat(l.portion) > 0).length;
                       const subCount = addSubLines.filter(l => l.ingredientId && parseFloat(l.portion) > 0).length;
                       const actNom = allActivities.find(a => a.id === selectedActiviteId)?.nom;
@@ -1539,8 +1664,21 @@ export default function ProductList() {
                               </div>
                             </div>
                           )}
+                          {!isVendable && addAffectationIds.length > 0 && (
+                            <div>
+                              <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#64748b', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.06em' }}>📍 Stocks activés</div>
+                              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                                {addAffectationIds.map(id => {
+                                  const act = allActivities.find(a => a.id === id);
+                                  return act ? (
+                                    <span key={id} style={{ background: '#f0fdf4', border: '1px solid #a7f3d0', borderRadius: 20, padding: '3px 10px', fontSize: '0.78rem', color: '#065f46', fontWeight: 600 }}>{act.nom}</span>
+                                  ) : null;
+                                })}
+                              </div>
+                            </div>
+                          )}
                           <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 4, borderTop: '1px solid var(--border)' }}>
-                            <button className="btn btn-ghost" onClick={() => setAddModal(3)}>← Retour</button>
+                            <button className="btn btn-ghost" onClick={() => setAddModal(isVendable ? 3 : 4)}>← Retour</button>
                             <button disabled={addSaving}
                               onClick={handleSave}
                               style={{ background: 'linear-gradient(135deg, #047857, #059669)', border: 'none', borderRadius: 10, color: '#fff', fontWeight: 700, padding: '10px 28px', cursor: addSaving ? 'not-allowed' : 'pointer', opacity: addSaving ? 0.7 : 1, fontSize: '0.9rem' }}>
@@ -1551,8 +1689,8 @@ export default function ProductList() {
                       );
                     })()}
 
-                    {/* Step 5 — Succès */}
-                    {addModal === 5 && (
+                    {/* Step 6 — Succès */}
+                    {addModal === 6 && (
                       <div style={{ textAlign: 'center', padding: '16px 0 8px' }}>
                         <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'linear-gradient(135deg, #22c55e, #16a34a)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.6rem', margin: '0 auto 14px' }}>✓</div>
                         <div style={{ fontWeight: 700, fontSize: '1rem', color: '#166534', marginBottom: 6 }}>Produit créé avec succès</div>
