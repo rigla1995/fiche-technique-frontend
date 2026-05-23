@@ -47,7 +47,6 @@ export default function ProductList() {
   // Add product modal state
   type AddStep = 1 | 2 | 3 | 4 | 5 | 6;
   interface IngLine { ingredientId: string; portion: string; }
-  const [wizardActiviteId, setWizardActiviteId] = useState<number | null>(null);
   const [utilisableForWizard, setUtilisableForWizard] = useState<{ id: number; name: string }[]>([]);
   const [addModal, setAddModal] = useState<AddStep | null>(null);
   const [addName, setAddName] = useState('');
@@ -180,25 +179,22 @@ export default function ProductList() {
     }
   }, [allActivities]);
 
-  const loadWizardData = useCallback((actId: number) => {
-    api.get(`/api/products?type=utilisable&activiteId=${actId}`)
-      .then(({ data }) => setUtilisableForWizard((data as Product[]).map(u => ({ id: u.id, name: u.name }))))
-      .catch(() => {});
-    api.get(`/api/entreprise/activites/${actId}/ingredients`)
-      .then(({ data }) => setAddIngredients(data as ActiviteIngredient[]))
-      .catch(() => setAddIngredients([]));
-  }, []);
-
   const openAddModal = useCallback(() => {
-    const initActId = selectedActiviteId;
     setAddName(''); setAddRef(''); setAddIsSupplement(false);
     setAddIngLines([]); setAddSubLines([]); setAddSubSearch(''); setAddIngSearch('');
     setAddSavedName(''); setAddFamilleFilter(''); setAddCatFilter(''); setAddIngVisible(20);
-    setWizardActiviteId(initActId);
-    setAddAffectationIds(initActId ? [initActId] : []);
+    setAddAffectationIds([]);
     setAddModal(1);
-    if (initActId) loadWizardData(initActId);
-  }, [selectedActiviteId, loadWizardData]);
+    api.get('/api/products?type=utilisable')
+      .then(({ data }) => setUtilisableForWizard((data as Product[]).map(u => ({ id: u.id, name: u.name }))))
+      .catch(() => {});
+    const actId = selectedActiviteId ?? allActivities[0]?.id;
+    if (actId) {
+      api.get(`/api/entreprise/activites/${actId}/ingredients`)
+        .then(({ data }) => setAddIngredients(data as ActiviteIngredient[]))
+        .catch(() => setAddIngredients([]));
+    }
+  }, [selectedActiviteId, allActivities]);
 
   const openPopup = async (type: PopupType, product: Product) => {
     setPopup({ type, productId: product.id, productName: product.name });
@@ -1258,7 +1254,7 @@ export default function ProductList() {
             const updateSubPortion = (id: string, val: string) =>
               setAddSubLines((prev) => prev.map((l) => l.ingredientId === id ? { ...l, portion: val } : l));
 
-            const canGoStep2 = addName.trim().length > 0 && (allActivities.length === 0 || wizardActiviteId !== null);
+            const canGoStep2 = addName.trim().length > 0;
             const canGoStep3 = addIngLines.some((l) => l.ingredientId && parseFloat(l.portion) > 0) || addSubLines.some((l) => l.ingredientId && parseFloat(l.portion) > 0);
             const handleSave = async () => {
               setAddSaving(true);
@@ -1274,7 +1270,7 @@ export default function ProductList() {
                   refProduit: addRef.trim() || null,
                   type: tab === 'utilisable' ? 'utilisable' : 'vendable',
                   isSupplement: addIsSupplement,
-                  activiteId: wizardActiviteId,
+                  activiteId: addAffectationIds[0] ?? null,
                   ingredients: baseIngredients,
                   subProducts: baseSubProducts,
                 });
@@ -1344,28 +1340,6 @@ export default function ProductList() {
                             onChange={(e) => setAddRef(e.target.value)}
                             style={{ width: '100%', maxWidth: 280, borderColor: '#6ee7b7' }} />
                         </div>
-                        {allActivities.length > 0 && (
-                          <div>
-                            <label style={{ display: 'block', fontWeight: 700, fontSize: '0.82rem', color: '#065f46', marginBottom: 8 }}>
-                              Activité <span style={{ color: '#ef4444' }}>*</span>
-                            </label>
-                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                              {allActivities.map(a => (
-                                <button key={a.id} type="button"
-                                  onClick={() => {
-                                    setWizardActiviteId(a.id);
-                                    setAddAffectationIds([a.id]);
-                                    setAddIngLines([]); setAddSubLines([]);
-                                    loadWizardData(a.id);
-                                  }}
-                                  style={{ padding: '5px 14px', borderRadius: 20, cursor: 'pointer', fontSize: '0.82rem', border: `1.5px solid ${wizardActiviteId === a.id ? '#059669' : '#e2e8f0'}`, background: wizardActiviteId === a.id ? '#f0fdf4' : '#f8fafc', color: wizardActiviteId === a.id ? '#065f46' : '#64748b', fontWeight: wizardActiviteId === a.id ? 700 : 400, transition: 'all 0.15s' }}>
-                                  {a.nom}
-                                  {wizardActiviteId === a.id && ' ✓'}
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-                        )}
                         {isVendable && (
                           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: addIsSupplement ? '#fffbeb' : '#f9fafb', borderRadius: 10, padding: '12px 16px', border: `1.5px solid ${addIsSupplement ? '#fcd34d' : 'var(--border)'}` }}>
                             <div>
@@ -1506,7 +1480,7 @@ export default function ProductList() {
 
                     {/* Step 3 — Produits Transformés */}
                     {addModal === 3 && (() => {
-                      const actNom = allActivities.find(a => a.id === wizardActiviteId)?.nom;
+                      const actNom = allActivities.find(a => a.id === addAffectationIds[0])?.nom;
                       return (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                           <div style={{ fontSize: '0.82rem', color: '#64748b' }}>
@@ -1571,7 +1545,7 @@ export default function ProductList() {
                     {addModal === 4 && !isVendable && (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                         <div style={{ fontSize: '0.82rem', color: '#64748b' }}>
-                          Sélectionnez les activités où ce produit sera disponible en stock. L'activation est optionnelle.
+                          Sélectionnez les activités où ce produit sera disponible en stock. <strong style={{ color: '#ef4444' }}>Au moins 1 activité requise.</strong>
                         </div>
                         {allActivities.length === 0 ? (
                           <div style={{ padding: 16, background: '#f8fafc', borderRadius: 8, fontSize: '0.85rem', color: '#64748b', textAlign: 'center' }}>
@@ -1611,8 +1585,8 @@ export default function ProductList() {
                         )}
                         <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 8 }}>
                           <button className="btn btn-ghost" onClick={() => setAddModal(3)}>← Retour</button>
-                          <button onClick={() => setAddModal(5)}
-                            style={{ background: 'linear-gradient(135deg, #047857, #059669)', border: 'none', borderRadius: 10, color: '#fff', fontWeight: 700, padding: '9px 22px', cursor: 'pointer' }}>
+                          <button disabled={addAffectationIds.length === 0} onClick={() => setAddModal(5)}
+                            style={{ background: addAffectationIds.length > 0 ? 'linear-gradient(135deg, #047857, #059669)' : '#e5e7eb', border: 'none', borderRadius: 10, color: addAffectationIds.length > 0 ? '#fff' : '#9ca3af', fontWeight: 700, padding: '9px 22px', cursor: addAffectationIds.length > 0 ? 'pointer' : 'not-allowed' }}>
                             Suivant →
                           </button>
                         </div>
@@ -1623,7 +1597,7 @@ export default function ProductList() {
                     {addModal === 5 && (() => {
                       const ingCount = addIngLines.filter(l => l.ingredientId && parseFloat(l.portion) > 0).length;
                       const subCount = addSubLines.filter(l => l.ingredientId && parseFloat(l.portion) > 0).length;
-                      const actNom = allActivities.find(a => a.id === wizardActiviteId)?.nom;
+                      const actNom = allActivities.find(a => a.id === addAffectationIds[0])?.nom;
                       return (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                           {/* Product identity card */}
