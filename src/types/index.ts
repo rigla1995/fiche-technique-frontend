@@ -227,6 +227,7 @@ export interface Product {
   parentProductsCount?: number;
   userId: number;
   activiteId?: number | null;
+  activites?: { id: number; nom: string }[];
   createdAt?: string;
   isStockIngredient?: boolean;
   isSupplement?: boolean;
