@@ -29,9 +29,19 @@ export default function Header({ onMenuToggle }: HeaderProps) {
     if (!open && unreadCount > 0) markAllRead();
   };
 
-  const handleNotifClick = () => {
+  const handleNotifClick = (eventType: string) => {
     setOpen(false);
-    navigate('/client/inventaire/historique');
+    if (eventType === 'new_inventaire') {
+      navigate('/client/inventaire/historique');
+    } else {
+      navigate(user?.role === 'super_admin' ? '/admin/support' : '/client/support');
+    }
+  };
+
+  const typeLabel = (type: string) => {
+    if (type === 'ingredient_manquant') return 'Ingrédient manquant';
+    if (type === 'supplement') return 'Ajout de capacité';
+    return 'Aide';
   };
 
   const initials = (name?: string) =>
@@ -138,7 +148,7 @@ export default function Header({ onMenuToggle }: HeaderProps) {
                 notifications.map((n) => (
                   <div
                     key={n.id}
-                    onClick={() => handleNotifClick()}
+                    onClick={() => handleNotifClick(n.eventType)}
                     style={{
                       padding: '11px 16px',
                       borderBottom: '1px solid #f8fafc',
@@ -155,9 +165,17 @@ export default function Header({ onMenuToggle }: HeaderProps) {
                         width: 34, height: 34, borderRadius: 10, flexShrink: 0,
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                         fontSize: '1rem',
-                        background: 'linear-gradient(135deg,#eff6ff,#dbeafe)',
+                        background: n.eventType === 'new_inventaire'
+                          ? 'linear-gradient(135deg,#eff6ff,#dbeafe)'
+                          : n.eventType === 'new_demande'
+                          ? 'linear-gradient(135deg,#fef3c7,#fde68a)'
+                          : n.statut === 'validée'
+                          ? 'linear-gradient(135deg,#d1fae5,#a7f3d0)'
+                          : 'linear-gradient(135deg,#fee2e2,#fecaca)',
                       }}>
-                        {'📦'}
+                        {n.eventType === 'new_inventaire' ? '📦'
+                          : n.eventType === 'new_demande' ? '📥'
+                          : n.statut === 'validée' ? '✅' : '❌'}
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#0f172a', lineHeight: 1.35 }}>

@@ -389,6 +389,16 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
               <Divider />
 
+              {/* ══ SUPPORT ══ */}
+              <li>
+                <NavLink to="/admin/support" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>
+                  <span className="link-icon">💬</span>
+                  <span className="link-label">Demandes</span>
+                </NavLink>
+              </li>
+
+              <Divider />
+
               {/* ══ PRESTATAIRES ══ */}
               <li>
                 <NavLink to="/admin/prestataires" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>
@@ -605,8 +615,14 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                     </>
                   )}
 
+                  {/* Demandes — toujours actif */}
+                  <Divider />
+                  <li>
+                    <NavLink to="/client/support" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>
+                      <span className="link-icon">💬</span><span className="link-label">Demandes</span>
+                    </NavLink>
+                  </li>
                 </>
-
               )}
 
             </>

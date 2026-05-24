@@ -46,6 +46,30 @@ export interface AbonnementConfig {
   updatedAt: string;
 }
 
+export interface SupportDemande {
+  id: number;
+  clientId: number;
+  clientNom: string | null;
+  clientEmail: string | null;
+  type: 'ingredient_manquant' | 'supplement' | 'aide';
+  statut: 'en_attente' | 'validée' | 'refusée';
+  domaineId?: number | null;
+  domaineNom?: string | null;
+  categorieNom?: string | null;
+  uniteNom?: string | null;
+  nomIngredient?: string | null;
+  nbActivitesSupp?: number | null;
+  nbLabosSupp?: number | null;
+  nbGerantsSupp?: number | null;
+  description?: string | null;
+  notesAdmin?: string | null;
+  traitePar?: number | null;
+  traiteParNom?: string | null;
+  traiteLe?: string | null;
+  createdAt: string;
+  createdBy?: number | null;
+  createdByNom?: string | null;
+}
 
 export interface Abonnement {
   id: number;
