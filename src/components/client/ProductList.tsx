@@ -21,6 +21,7 @@ export default function ProductList() {
   const { t } = useTranslation();
   const { canWrite, user } = useAuth();
   const isEntreprise = true;
+  const canWriteProducts = canWrite && user?.role !== 'gerant';
 
   const [searchParams] = useSearchParams();
   const tab = (searchParams.get('tab') as TabType) || 'vendable';
@@ -309,7 +310,7 @@ export default function ProductList() {
   };
 
   // Reusable action buttons for a product row
-  const disabledStyle = !canWrite ? { opacity: 0.4, cursor: 'not-allowed', pointerEvents: 'none' as const } : {};
+  const disabledStyle = !canWriteProducts ? { opacity: 0.4, cursor: 'not-allowed', pointerEvents: 'none' as const } : {};
 
   const renderActions = (p: Product) => (
     <div style={{ display: 'flex', gap: 4, justifyContent: 'flex-end', alignItems: 'center' }}>
@@ -317,7 +318,7 @@ export default function ProductList() {
         className="btn btn-ghost btn-sm"
         style={{ width: 32, height: 32, padding: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', borderRadius: 7, ...disabledStyle }}
         title="Générer la Fiche Technique"
-        disabled={!canWrite}
+        disabled={!canWriteProducts}
         onClick={() => {
           const ctx = getProductFtContext(p);
           setFtPopup({ productId: p.id, productName: p.name, hasIngredients: !!(p.ingredientsCount && p.ingredientsCount > 0), resolvedActId: getProductResolvedActId(p), activities: [], ...ctx });
@@ -328,9 +329,9 @@ export default function ProductList() {
       <button
         className="btn btn-ghost btn-sm"
         title={t('common.edit')}
-        disabled={!canWrite}
+        disabled={!canWriteProducts}
         onClick={() => openEditModal(p)}
-        style={{ width: 32, height: 32, padding: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', borderRadius: 7, ...(!canWrite ? disabledStyle : {}) }}
+        style={{ width: 32, height: 32, padding: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', borderRadius: 7, ...(!canWriteProducts ? disabledStyle : {}) }}
       >
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
@@ -340,7 +341,7 @@ export default function ProductList() {
       <button
         className="btn btn-danger btn-sm"
         onClick={() => handleDelete(p)}
-        disabled={!canWrite}
+        disabled={!canWriteProducts}
         title={t('common.delete')}
         style={{ width: 32, height: 32, padding: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', borderRadius: 7, ...disabledStyle }}
       >
@@ -420,12 +421,6 @@ export default function ProductList() {
             </button>
           ))}
           <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', alignSelf: 'center', marginLeft: 4 }}>← sélectionner l'activité</span>
-          {canWrite && (
-            <button onClick={openAddModal}
-              style={{ marginLeft: 'auto', padding: '5px 16px', borderRadius: 20, cursor: 'pointer', fontSize: '0.82rem', border: 'none', background: 'linear-gradient(135deg, #059669, #10b981)', color: '#fff', fontWeight: 700, boxShadow: '0 2px 8px rgba(16,185,129,0.25)' }}>
-              + {isVendable ? 'Produit vendable' : 'Produit utilisable'}
-            </button>
-          )}
         </div>
       )}
 
@@ -436,26 +431,32 @@ export default function ProductList() {
         />
       ) : (
         <>
-          {/* Search bar */}
-          {byTab.length > 0 && (
-            <div style={{
-              background: 'var(--surface)', borderRadius: 14, padding: '16px 20px', marginBottom: 24,
-              border: '1px solid var(--border)', boxShadow: '0 2px 12px rgba(0,0,0,0.05)',
-              display: 'flex', flexWrap: 'wrap', gap: 14, alignItems: 'flex-end',
-            }}>
-              {search && (
-                <div style={{ width: '100%', display: 'flex', justifyContent: 'flex-end', marginBottom: 4 }}>
-                  <button className="btn btn-ghost btn-sm" style={{ fontSize: '0.78rem' }} onClick={() => { setSearch(''); setPage(1); }}>✕ Réinitialiser</button>
-                </div>
-              )}
+          {/* Search bar + create button */}
+          <div style={{
+            background: 'var(--surface)', borderRadius: 14, padding: '16px 20px', marginBottom: 24,
+            border: '1px solid var(--border)', boxShadow: '0 2px 12px rgba(0,0,0,0.05)',
+            display: 'flex', flexWrap: 'wrap', gap: 14, alignItems: 'flex-end',
+          }}>
+            {search && (
+              <div style={{ width: '100%', display: 'flex', justifyContent: 'flex-end', marginBottom: 4 }}>
+                <button className="btn btn-ghost btn-sm" style={{ fontSize: '0.78rem' }} onClick={() => { setSearch(''); setPage(1); }}>✕ Réinitialiser</button>
+              </div>
+            )}
+            {byTab.length > 0 && (
               <div>
                 <label style={{ fontSize: '0.68rem', fontWeight: 800, color: '#059669', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>🔍 Nom</label>
                 <input type="text" placeholder={t('common.search') + '...'}
                   value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }}
                   style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid #6ee7b7', fontSize: '0.88rem', background: '#f0fdf4', minWidth: 160 }} />
               </div>
-            </div>
-          )}
+            )}
+            {canWriteProducts && tab !== 'fiche-technique' && (
+              <button onClick={openAddModal}
+                style={{ marginLeft: 'auto', padding: '9px 20px', borderRadius: 10, cursor: 'pointer', fontSize: '0.85rem', border: 'none', background: 'linear-gradient(135deg, #059669, #10b981)', color: '#fff', fontWeight: 700, boxShadow: '0 2px 8px rgba(16,185,129,0.25)', whiteSpace: 'nowrap' }}>
+                + {isVendable ? 'Produit vendable' : 'Produit utilisable'}
+              </button>
+            )}
+          </div>
 
           {loading ? (
             <div className="loading-text">{t('common.loading')}</div>
@@ -569,9 +570,9 @@ export default function ProductList() {
                         {!isVendable ? (
                           <button
                             onClick={() => togglePT(p)}
-                            disabled={togglingPT === p.id || !canWrite}
+                            disabled={togglingPT === p.id || !canWriteProducts}
                             title={p.isStockIngredient ? 'Désactiver le stock' : 'Activer le stock'}
-                            style={{ display: 'inline-flex', alignItems: 'center', gap: 7, background: 'none', border: 'none', padding: 0, cursor: canWrite ? 'pointer' : 'default', opacity: togglingPT === p.id ? 0.5 : 1 }}
+                            style={{ display: 'inline-flex', alignItems: 'center', gap: 7, background: 'none', border: 'none', padding: 0, cursor: canWriteProducts ? 'pointer' : 'default', opacity: togglingPT === p.id ? 0.5 : 1 }}
                           >
                             {/* Toggle track */}
                             <div style={{
