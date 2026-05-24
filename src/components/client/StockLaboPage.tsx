@@ -388,6 +388,18 @@ export default function StockLaboPage() {
           tauxTva: rs.tauxTva?.trim() ? parseFloat(rs.tauxTva) : null,
         });
       }
+      // Save PT rows (negative ingredientId, no fournisseur/ref needed)
+      const ptReadyEntries = Object.entries(rowState).filter(([idStr, rs]) => {
+        const stockRow = stock.find((r) => r.ingredientId === Number(idStr));
+        return stockRow?.isPT && parseFloat(rs.quantite) > 0;
+      });
+      for (const [idStr, rs] of ptReadyEntries) {
+        await api.put(`/api/labo/${laboId}/stock/${Number(idStr)}`, {
+          quantite: parseFloat(rs.quantite),
+          dateAppro: bulkDate,
+        });
+      }
+
       setBulkDate(todayStr());
       setBulkFournisseurId('');
       setBulkRefFacture('');
@@ -444,9 +456,21 @@ export default function StockLaboPage() {
     const prix = parseFloat(rs.prixUnitaire);
     return !isNaN(qty) && qty > 0 && !isNaN(prix) && prix > 0;
   }).length;
+
+  const ptReadyCount = Object.entries(rowState).filter(([idStr, rs]) => {
+    const stockRow = stock.find((r) => r.ingredientId === Number(idStr));
+    return stockRow?.isPT && parseFloat(rs.quantite) > 0;
+  }).length;
+
+  const hasPTQuantity = ptReadyCount > 0;
+  const hasIngredientQuantity = Object.entries(rowState).some(([idStr, rs]) => {
+    const stockRow = stock.find((r) => r.ingredientId === Number(idStr));
+    return !stockRow?.isPT && parseFloat(rs.quantite) > 0;
+  });
+
   const hasFournisseurs = fournisseurs.length > 0;
-  const canSaveBulk = readyCount > 0 && !!bulkDate.trim()
-    && (!hasFournisseurs || !!bulkFournisseurId) && !!bulkRefFacture.trim();
+  const canSaveBulk = (readyCount > 0 && !!bulkDate.trim() && (!hasFournisseurs || !!bulkFournisseurId) && !!bulkRefFacture.trim())
+    || (ptReadyCount > 0 && !!bulkDate.trim() && !hasIngredientQuantity);
 
   if (!laboId) return <div className="page"><p className="text-muted">Labo introuvable.</p></div>;
 
@@ -603,7 +627,7 @@ export default function StockLaboPage() {
               <div>
                 <label style={{ fontSize: '0.62rem', fontWeight: 700, color: '#7e22ce', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 3 }}>Fournisseur</label>
                 {hasFournisseurs ? (
-                  <select className="input" style={{ padding: '6px 10px', borderRadius: 7, fontSize: '0.82rem', border: '1.5px solid #7e22ce', background: '#fff', fontWeight: 600, maxWidth: 200 }} value={bulkFournisseurId} onChange={(e) => setBulkFournisseurId(e.target.value)}>
+                  <select className="input" style={{ padding: '6px 10px', borderRadius: 7, fontSize: '0.82rem', border: '1.5px solid #7e22ce', background: hasPTQuantity ? '#f1f5f9' : '#fff', fontWeight: 600, maxWidth: 200, opacity: hasPTQuantity ? 0.5 : 1 }} value={bulkFournisseurId} onChange={(e) => setBulkFournisseurId(e.target.value)} disabled={hasPTQuantity}>
                     <option value="">— Sélectionner —</option>
                     {fournisseurs.map((f) => <option key={f.id} value={String(f.id)}>{f.nom}</option>)}
                   </select>
@@ -614,14 +638,14 @@ export default function StockLaboPage() {
                 )}
               </div>
               <div>
-                <label style={{ fontSize: '0.62rem', fontWeight: 700, color: '#7e22ce', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 3 }}>Réf Facture <span style={{ color: '#ef4444' }}>*</span></label>
-                <input type="text" className="input" style={{ padding: '6px 10px', borderRadius: 7, fontSize: '0.82rem', border: '1.5px solid #7e22ce', background: '#fff', fontWeight: 600, maxWidth: 160 }} placeholder="N° facture…" value={bulkRefFacture} onChange={(e) => setBulkRefFacture(e.target.value)} />
+                <label style={{ fontSize: '0.62rem', fontWeight: 700, color: '#7e22ce', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 3 }}>Réf Facture {!hasPTQuantity && <span style={{ color: '#ef4444' }}>*</span>}</label>
+                <input type="text" className="input" style={{ padding: '6px 10px', borderRadius: 7, fontSize: '0.82rem', border: '1.5px solid #7e22ce', background: hasPTQuantity ? '#f1f5f9' : '#fff', fontWeight: 600, maxWidth: 160, opacity: hasPTQuantity ? 0.5 : 1 }} placeholder={hasPTQuantity ? '—' : 'N° facture…'} value={bulkRefFacture} onChange={(e) => setBulkRefFacture(e.target.value)} disabled={hasPTQuantity} />
               </div>
               <div style={{ flex: 1 }} />
               <div style={{ display: 'flex', gap: 8, alignSelf: 'flex-end' }}>
                 <button className="btn btn-primary btn-sm" onClick={saveBulk} disabled={!canSaveBulk || bulkSaving || !canWrite}
                   style={{ background: canSaveBulk ? 'linear-gradient(135deg, #7e22ce, #a855f7)' : undefined, border: 'none', boxShadow: canSaveBulk ? '0 3px 10px rgba(126,34,206,0.3)' : undefined }}>
-                  {bulkSaving ? '…' : `Enregistrer (${readyCount})`}
+                  {bulkSaving ? '…' : `Enregistrer (${readyCount + ptReadyCount})`}
                 </button>
                 <button className="btn btn-ghost btn-sm" onClick={() => { setBulkDate(todayStr()); setBulkFournisseurId(''); setBulkRefFacture(''); }}>
                   Réinitialiser
@@ -750,7 +774,7 @@ export default function StockLaboPage() {
                                         ) : <span style={{ color: '#cbd5e1', fontSize: '0.8rem' }}>—</span>}
                                       </td>
                                       <td style={{ textAlign: 'center', padding: '10px 14px', verticalAlign: 'middle' }}>
-                                        <input type="number" min="0" step="0.001" value={rs.quantite} onChange={(e) => setField(r.ingredientId, 'quantite', e.target.value)} style={{ width: 76, textAlign: 'right', padding: '5px 8px', borderRadius: 7, fontSize: '0.85rem', ...warnStyle }} className="input" />
+                                        <input type="number" min="0" step="0.001" value={rs.quantite} onChange={(e) => setField(r.ingredientId, 'quantite', e.target.value)} style={{ width: 76, textAlign: 'right', padding: '5px 8px', borderRadius: 7, fontSize: '0.85rem', ...warnStyle }} className="input" disabled={r.isPT ? hasIngredientQuantity : hasPTQuantity} />
                                       </td>
                                       <td style={{ textAlign: 'center', padding: '10px 14px', verticalAlign: 'middle' }}>
                                         {r.isPT ? (
