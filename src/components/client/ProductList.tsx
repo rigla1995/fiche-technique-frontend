@@ -1250,14 +1250,18 @@ export default function ProductList() {
                   refProduit: addRef.trim() || null,
                   type: tab === 'utilisable' ? 'utilisable' : 'vendable',
                   isSupplement: addIsSupplement,
-                  activiteId: isVendable ? null : (addAffectationIds[0] ?? null),
+                  activiteId: addAffectationIds[0] ?? null,
                   ingredients: baseIngredients,
                   subProducts: baseSubProducts,
                 });
-                // Assign utilisable product to selected activités' stocks
-                if (!isVendable) {
+                const newId = (newProd as { id: number }).id;
+                if (isVendable && addAffectationIds.length > 0) {
+                  // Vendable: link to activités (display only — no stock)
+                  await api.post(`/api/produits/${newId}/affecter-activites`, { activiteIds: addAffectationIds });
+                } else if (!isVendable) {
+                  // Utilisable: assign to activités' stocks
                   for (const actId of addAffectationIds) {
-                    await api.post(`/api/produits/${(newProd as { id: number }).id}/toggle-stock-ingredient`, { activiteId: actId });
+                    await api.post(`/api/produits/${newId}/toggle-stock-ingredient`, { activiteId: actId });
                   }
                 }
                 setAddSavedName(addName.trim());
@@ -1273,9 +1277,13 @@ export default function ProductList() {
               setAddSaving(false);
             };
 
-            const STEPS = isVendable
-              ? [{ n: 1, d: 1, label: 'Identité' }, { n: 2, d: 2, label: 'Articles' }, { n: 3, d: 3, label: 'Produits Utilisables' }, { n: 5, d: 4, label: 'Récap' }]
-              : [{ n: 1, d: 1, label: 'Identité' }, { n: 2, d: 2, label: 'Articles' }, { n: 3, d: 3, label: 'Produits Utilisables' }, { n: 4, d: 4, label: 'Affectation' }, { n: 5, d: 5, label: 'Récap' }];
+            const STEPS = [
+              { n: 1, d: 1, label: 'Identité' },
+              { n: 2, d: 2, label: 'Articles' },
+              { n: 3, d: 3, label: 'Produits Utilisables' },
+              { n: 4, d: 4, label: 'Affectation' },
+              { n: 5, d: 5, label: 'Récap' },
+            ];
 
             return (
               <div className="modal-overlay">
@@ -1519,7 +1527,7 @@ export default function ProductList() {
                             return (
                               <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 8 }}>
                                 <button className="btn btn-ghost" onClick={() => setAddModal(2)}>← Retour</button>
-                                <button disabled={!canNext} onClick={() => setAddModal(isVendable ? 5 : 4)}
+                                <button disabled={!canNext} onClick={() => setAddModal(4)}
                                   style={{ background: canNext ? 'linear-gradient(135deg, #047857, #059669)' : '#e5e7eb', border: 'none', borderRadius: 10, color: canNext ? '#fff' : '#9ca3af', fontWeight: 700, padding: '9px 22px', cursor: canNext ? 'pointer' : 'not-allowed' }}
                                   title={!canNext ? 'Ajoutez au moins 1 article ou produit utilisable' : undefined}>
                                   Suivant →
@@ -1531,11 +1539,14 @@ export default function ProductList() {
                       );
                     })()}
 
-                    {/* Step 4 — Affectation aux stocks (utilisable only) */}
-                    {addModal === 4 && !isVendable && (
+                    {/* Step 4 — Affectation aux activités */}
+                    {addModal === 4 && (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                         <div style={{ fontSize: '0.82rem', color: '#64748b' }}>
-                          Sélectionnez les activités où ce produit sera disponible en stock. <strong style={{ color: '#ef4444' }}>Au moins 1 activité requise.</strong>
+                          {isVendable
+                            ? <>Sélectionnez les activités qui utiliseront ce produit. <strong style={{ color: '#ef4444' }}>Au moins 1 activité requise.</strong></>
+                            : <>Sélectionnez les activités où ce produit sera disponible en stock. <strong style={{ color: '#ef4444' }}>Au moins 1 activité requise.</strong></>
+                          }
                         </div>
                         {allActivities.length === 0 ? (
                           <div style={{ padding: 16, background: '#f8fafc', borderRadius: 8, fontSize: '0.85rem', color: '#64748b', textAlign: 'center' }}>
@@ -1647,9 +1658,11 @@ export default function ProductList() {
                               </div>
                             </div>
                           )}
-                          {!isVendable && addAffectationIds.length > 0 && (
+                          {addAffectationIds.length > 0 && (
                             <div>
-                              <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#64748b', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.06em' }}>📍 Stocks activés</div>
+                              <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#64748b', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                                {isVendable ? '📍 Activités' : '📍 Stocks activés'}
+                              </div>
                               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                                 {addAffectationIds.map(id => {
                                   const act = allActivities.find(a => a.id === id);
