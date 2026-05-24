@@ -918,7 +918,7 @@ export default function ProductList() {
 
             const isEditVendable = editProductType === 'vendable';
 
-            const EDIT_STEPS = [{ n: 2, display: 1, label: 'Articles' }, { n: 3, display: 2, label: 'Transformés' }, { n: 5, display: 3, label: 'Récap' }];
+            const EDIT_STEPS = [{ n: 2, display: 1, label: 'Articles' }, { n: 3, display: 2, label: 'Produits Utilisables' }, { n: 5, display: 3, label: 'Récap' }];
 
             // Compute filter options for step 2
             const eFamOptions: { key: string; label: string }[] = [];
@@ -1056,21 +1056,20 @@ export default function ProductList() {
 
                         <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 4 }}>
                           <button className="btn btn-ghost" onClick={() => setEditModal(null)}>Annuler</button>
-                          <button disabled={!canGoEditStep3 || editLoadingData}
+                          <button disabled={editLoadingData}
                             onClick={() => setEditModal(3)}
-                            title={!isEditDirty ? 'Aucune modification détectée' : !hasValidIngLines ? 'Ajoutez au moins un article avec une portion > 0' : undefined}
-                            style={{ background: canGoEditStep3 && !editLoadingData ? 'linear-gradient(135deg, #1e40af, #3b82f6)' : '#e5e7eb', border: 'none', borderRadius: 10, color: canGoEditStep3 && !editLoadingData ? '#fff' : '#9ca3af', fontWeight: 700, padding: '9px 22px', cursor: canGoEditStep3 && !editLoadingData ? 'pointer' : 'not-allowed' }}>
+                            style={{ background: !editLoadingData ? 'linear-gradient(135deg, #1e40af, #3b82f6)' : '#e5e7eb', border: 'none', borderRadius: 10, color: !editLoadingData ? '#fff' : '#9ca3af', fontWeight: 700, padding: '9px 22px', cursor: !editLoadingData ? 'pointer' : 'not-allowed' }}>
                             Suivant →
                           </button>
                         </div>
                       </div>
                     )}
 
-                    {/* Step 3 — Produits Transformés */}
+                    {/* Step 3 — Produits Utilisables */}
                     {editModal === 3 && (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                         <div style={{ fontSize: '0.82rem', color: '#64748b' }}>
-                          Optionnel — ajoutez des produits utilisables de <strong>{editActiviteNom || 'cette activité'}</strong> comme sous-composants.
+                          Ajoutez des produits utilisables de <strong>{editActiviteNom || 'cette activité'}</strong> comme sous-composants. Au moins 1 article ou produit utilisable requis.
                         </div>
                         {utilisableForWizard.length === 0 ? (
                           <div style={{ padding: 16, borderRadius: 8, background: '#faf5ff', border: '1px solid #ede9fe', fontSize: '0.85rem', color: '#5b21b6', textAlign: 'center' }}>
@@ -1111,18 +1110,25 @@ export default function ProductList() {
                             </div>
                             {editSubLines.some(l => l.ingredientId && parseFloat(l.portion) > 0) && (
                               <div style={{ fontSize: '0.78rem', color: '#7c3aed', fontWeight: 600 }}>
-                                {editSubLines.filter(l => l.ingredientId && parseFloat(l.portion) > 0).length} produit(s) transformé(s) sélectionné(s)
+                                {editSubLines.filter(l => l.ingredientId && parseFloat(l.portion) > 0).length} produit(s) utilisable(s) sélectionné(s)
                               </div>
                             )}
                           </>
                         )}
-                        <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 8 }}>
-                          <button className="btn btn-ghost" onClick={() => setEditModal(2)}>← Retour</button>
-                          <button onClick={() => setEditModal(5)}
-                            style={{ background: 'linear-gradient(135deg, #1e40af, #3b82f6)', border: 'none', borderRadius: 10, color: '#fff', fontWeight: 700, padding: '9px 22px', cursor: 'pointer' }}>
-                            Suivant →
-                          </button>
-                        </div>
+                        {(() => {
+                          const editTotalValid = editIngLines.filter(l => l.ingredientId && parseFloat(l.portion) > 0).length + editSubLines.filter(l => l.ingredientId && parseFloat(l.portion) > 0).length;
+                          const canNext = editTotalValid > 0;
+                          return (
+                            <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 8 }}>
+                              <button className="btn btn-ghost" onClick={() => setEditModal(2)}>← Retour</button>
+                              <button disabled={!canNext} onClick={() => setEditModal(5)}
+                                style={{ background: canNext ? 'linear-gradient(135deg, #1e40af, #3b82f6)' : '#e5e7eb', border: 'none', borderRadius: 10, color: canNext ? '#fff' : '#9ca3af', fontWeight: 700, padding: '9px 22px', cursor: canNext ? 'pointer' : 'not-allowed' }}
+                                title={!canNext ? 'Ajoutez au moins 1 article ou produit utilisable' : undefined}>
+                                Suivant →
+                              </button>
+                            </div>
+                          );
+                        })()}
                       </div>
                     )}
 
@@ -1328,8 +1334,8 @@ export default function ProductList() {
             };
 
             const STEPS = isVendable
-              ? [{ n: 1, d: 1, label: 'Identité' }, { n: 2, d: 2, label: 'Articles' }, { n: 3, d: 3, label: 'Transformés' }, { n: 5, d: 4, label: 'Récap' }]
-              : [{ n: 1, d: 1, label: 'Identité' }, { n: 2, d: 2, label: 'Articles' }, { n: 3, d: 3, label: 'Transformés' }, { n: 4, d: 4, label: 'Affectation' }, { n: 5, d: 5, label: 'Récap' }];
+              ? [{ n: 1, d: 1, label: 'Identité' }, { n: 2, d: 2, label: 'Articles' }, { n: 3, d: 3, label: 'Produits Utilisables' }, { n: 5, d: 4, label: 'Récap' }]
+              : [{ n: 1, d: 1, label: 'Identité' }, { n: 2, d: 2, label: 'Articles' }, { n: 3, d: 3, label: 'Produits Utilisables' }, { n: 4, d: 4, label: 'Affectation' }, { n: 5, d: 5, label: 'Récap' }];
 
             return (
               <div className="modal-overlay">
@@ -1507,9 +1513,8 @@ export default function ProductList() {
 
                           <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 4 }}>
                             <button className="btn btn-ghost" onClick={() => setAddModal(1)}>← Retour</button>
-                            <button disabled={!canGoStep3}
-                              onClick={() => setAddModal(3)}
-                              style={{ background: canGoStep3 ? 'linear-gradient(135deg, #047857, #059669)' : '#e5e7eb', border: 'none', borderRadius: 10, color: canGoStep3 ? '#fff' : '#9ca3af', fontWeight: 700, padding: '9px 22px', cursor: canGoStep3 ? 'pointer' : 'not-allowed' }}>
+                            <button onClick={() => setAddModal(3)}
+                              style={{ background: 'linear-gradient(135deg, #047857, #059669)', border: 'none', borderRadius: 10, color: '#fff', fontWeight: 700, padding: '9px 22px', cursor: 'pointer' }}>
                               Suivant →
                             </button>
                           </div>
@@ -1517,12 +1522,12 @@ export default function ProductList() {
                       );
                     })()}
 
-                    {/* Step 3 — Produits Transformés */}
+                    {/* Step 3 — Produits Utilisables */}
                     {addModal === 3 && (() => {
                       return (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                           <div style={{ fontSize: '0.82rem', color: '#64748b' }}>
-                            Optionnel — ajoutez des produits utilisables comme sous-composants de ce produit.
+                            Ajoutez des produits utilisables comme sous-composants de ce produit. Au moins 1 article ou produit utilisable requis.
                           </div>
                           {utilisableForWizard.length === 0 ? (
                             <div style={{ padding: 16, borderRadius: 8, background: '#faf5ff', border: '1px solid #ede9fe', fontSize: '0.85rem', color: '#5b21b6', textAlign: 'center' }}>
@@ -1563,18 +1568,25 @@ export default function ProductList() {
                               </div>
                               {addSubLines.some(l => l.ingredientId && parseFloat(l.portion) > 0) && (
                                 <div style={{ fontSize: '0.78rem', color: '#7c3aed', fontWeight: 600 }}>
-                                  {addSubLines.filter(l => l.ingredientId && parseFloat(l.portion) > 0).length} produit(s) transformé(s) sélectionné(s)
+                                  {addSubLines.filter(l => l.ingredientId && parseFloat(l.portion) > 0).length} produit(s) utilisable(s) sélectionné(s)
                                 </div>
                               )}
                             </>
                           )}
-                          <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 8 }}>
-                            <button className="btn btn-ghost" onClick={() => setAddModal(2)}>← Retour</button>
-                            <button onClick={() => setAddModal(isVendable ? 5 : 4)}
-                              style={{ background: 'linear-gradient(135deg, #047857, #059669)', border: 'none', borderRadius: 10, color: '#fff', fontWeight: 700, padding: '9px 22px', cursor: 'pointer' }}>
-                              Suivant →
-                            </button>
-                          </div>
+                          {(() => {
+                            const addTotalValid = addIngLines.filter(l => l.ingredientId && parseFloat(l.portion) > 0).length + addSubLines.filter(l => l.ingredientId && parseFloat(l.portion) > 0).length;
+                            const canNext = addTotalValid > 0;
+                            return (
+                              <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 8 }}>
+                                <button className="btn btn-ghost" onClick={() => setAddModal(2)}>← Retour</button>
+                                <button disabled={!canNext} onClick={() => setAddModal(isVendable ? 5 : 4)}
+                                  style={{ background: canNext ? 'linear-gradient(135deg, #047857, #059669)' : '#e5e7eb', border: 'none', borderRadius: 10, color: canNext ? '#fff' : '#9ca3af', fontWeight: 700, padding: '9px 22px', cursor: canNext ? 'pointer' : 'not-allowed' }}
+                                  title={!canNext ? 'Ajoutez au moins 1 article ou produit utilisable' : undefined}>
+                                  Suivant →
+                                </button>
+                              </div>
+                            );
+                          })()}
                         </div>
                       );
                     })()}
