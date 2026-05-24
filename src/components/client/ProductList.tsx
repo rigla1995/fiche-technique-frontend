@@ -132,7 +132,8 @@ export default function ProductList() {
     setEditIngLines([]); setEditSubLines([]); setEditOriginalSubLines([]); setEditSubSearch('');
     setEditIngredients([]); setEditIngSearch('');
     setEditFamilleFilter(''); setEditCatFilter(''); setEditIngVisible(20);
-    setEditActiviteNom(allActivities.find((a) => a.id === p.activiteId)?.nom || '');
+    const contextActId = selectedActiviteId ?? p.activiteId;
+    setEditActiviteNom(allActivities.find((a) => a.id === contextActId)?.nom || '');
     setEditLoadingData(true);
     setEditModal(2);
     // Load current stock affectations for this product
@@ -146,13 +147,13 @@ export default function ProductList() {
         setEditAffectationIds([]);
         setEditOriginalAffectationIds([]);
       });
-    if (p.activiteId) {
-      api.get(`/api/products?type=utilisable&activiteId=${p.activiteId}`)
+    if (contextActId) {
+      api.get(`/api/products?type=utilisable&activiteId=${contextActId}`)
         .then(({ data }) => setUtilisableForWizard((data as Product[]).filter(u => u.id !== p.id).map(u => ({ id: u.id, name: u.name }))))
         .catch(() => {});
     }
     try {
-      const actId = p.activiteId;
+      const actId = contextActId;
       const [productRes, ingRes] = await Promise.all([
         api.get(`/api/products/${p.id}`),
         actId ? api.get(`/api/entreprise/activites/${actId}/ingredients`) : Promise.resolve({ data: [] }),
@@ -182,7 +183,7 @@ export default function ProductList() {
     } finally {
       setEditLoadingData(false);
     }
-  }, [allActivities]);
+  }, [allActivities, selectedActiviteId]);
 
   const openAddModal = useCallback(() => {
     setAddName(''); setAddRef(''); setAddIsSupplement(false);
