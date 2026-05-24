@@ -813,13 +813,10 @@ export default function StockLaboPage() {
                                               disabled={!canWrite}
                                             >📉 Perte</button>
                                           </div>
-                                          {/* Row 2 — Composition & Personnaliser (PT only) */}
-                                          {r.isPT && r.produitId && (
+                                          {/* Row 2 — Personnaliser (PT only) */}
+                                          {r.isPT && r.produitId && canWrite && (
                                             <div style={{ display: 'flex', gap: 5, alignItems: 'center', justifyContent: 'center' }}>
-                                              <button className="btn btn-ghost btn-sm" title="Composition (stock des articles)" onClick={() => { fetchPtRecipe(r.produitId!); setPtStockModal({ produitId: r.produitId!, nom: r.nom }); }}>📊 Composition</button>
-                                              {canWrite && (
-                                                <button className="btn btn-ghost btn-sm" title="Portions personnalisées pour cette appro" onClick={() => setPortionsModal({ produitId: r.produitId!, nom: r.nom })}>⚙️ Personnaliser</button>
-                                              )}
+                                              <button className="btn btn-ghost btn-sm" title="Portions personnalisées pour cette appro" onClick={() => setPortionsModal({ produitId: r.produitId!, nom: r.nom })}>⚙️ Personnaliser</button>
                                             </div>
                                           )}
                                         </div>

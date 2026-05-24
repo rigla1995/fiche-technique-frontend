@@ -140,7 +140,7 @@ export default function PortionsModal({ produitNom, recipeUrl, stockMap, onSave,
   return (
     <div className="modal-overlay">
       <div className="modal" style={{ maxWidth: 700, width: '95vw' }} onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header" style={{ background: 'linear-gradient(135deg, #1d4ed8, #0ea5e9)', borderBottom: 'none' }}>
+        <div className="modal-header" style={{ background: 'linear-gradient(135deg, #4c1d95, #7c3aed)', borderBottom: 'none' }}>
           <h2 style={{ color: '#fff', margin: 0, fontSize: '1rem' }}>⚙️ Portions personnalisées — {produitNom}</h2>
           <button className="modal-close" onClick={onClose} style={{ color: '#fff' }}>×</button>
         </div>
@@ -176,9 +176,9 @@ export default function PortionsModal({ produitNom, recipeUrl, stockMap, onSave,
 
               {/* Prix indicator */}
               <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-                <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 8, padding: '8px 14px', display: 'flex', gap: 8, alignItems: 'center' }}>
-                  <span style={{ fontSize: '0.78rem', color: '#1e40af', fontWeight: 700 }}>Prix unitaire PT</span>
-                  <span style={{ fontWeight: 900, color: '#1d4ed8' }}>{prixCalcule.toFixed(3)} DT</span>
+                <div style={{ background: '#f5f3ff', border: '1px solid #ddd6fe', borderRadius: 8, padding: '8px 14px', display: 'flex', gap: 8, alignItems: 'center' }}>
+                  <span style={{ fontSize: '0.78rem', color: '#5b21b6', fontWeight: 700 }}>Prix unitaire PT</span>
+                  <span style={{ fontWeight: 900, color: '#7c3aed' }}>{prixCalcule.toFixed(3)} DT</span>
                 </div>
                 {coutTotal != null && coutTotal > 0 && (
                   <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 8, padding: '8px 14px', display: 'flex', gap: 8, alignItems: 'center' }}>
@@ -226,11 +226,11 @@ export default function PortionsModal({ produitNom, recipeUrl, stockMap, onSave,
                 <table className="table" style={{ minWidth: 500 }}>
                   <thead>
                     <tr>
-                      <th style={{ background: '#1d4ed8', color: '#fff' }}>Article</th>
-                      <th style={{ background: '#1d4ed8', color: '#fff', textAlign: 'right' }}>Portion standard</th>
-                      <th style={{ background: '#1d4ed8', color: '#fff', textAlign: 'right' }}>Portion custom</th>
-                      <th style={{ background: '#1d4ed8', color: '#fff', textAlign: 'right' }}>Unité</th>
-                      <th style={{ background: '#1d4ed8', color: '#fff', textAlign: 'right' }}>Prix unit.</th>
+                      <th style={{ background: '#7c3aed', color: '#fff' }}>Article</th>
+                      <th style={{ background: '#7c3aed', color: '#fff', textAlign: 'right' }}>Portion standard</th>
+                      <th style={{ background: '#7c3aed', color: '#fff', textAlign: 'right' }}>Portion custom</th>
+                      <th style={{ background: '#7c3aed', color: '#fff', textAlign: 'right' }}>Unité</th>
+                      <th style={{ background: '#7c3aed', color: '#fff', textAlign: 'right' }}>Prix unit.</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -300,7 +300,7 @@ export default function PortionsModal({ produitNom, recipeUrl, stockMap, onSave,
             <button className="btn btn-ghost" onClick={onClose}>Annuler</button>
             <button
               className="btn btn-primary btn-sm"
-              style={{ background: 'linear-gradient(135deg, #1d4ed8, #0ea5e9)', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 700 }}
+              style={{ background: 'linear-gradient(135deg, #4c1d95, #7c3aed)', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 700 }}
               onClick={handleSave} disabled={saving || !qty || parseFloat(qty) <= 0 || qtyExceedsMax}
             >
               {saving ? '…' : 'Enregistrer l\'appro'}
