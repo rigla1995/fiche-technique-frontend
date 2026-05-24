@@ -229,13 +229,12 @@ export default function PortionsModal({ produitNom, recipeUrl, stockMap, onSave,
                       <th style={{ background: '#7c3aed', color: '#fff' }}>Article</th>
                       <th style={{ background: '#7c3aed', color: '#fff', textAlign: 'right' }}>Portion standard</th>
                       <th style={{ background: '#7c3aed', color: '#fff', textAlign: 'right' }}>Portion custom</th>
-                      <th style={{ background: '#7c3aed', color: '#fff', textAlign: 'right' }}>Unité</th>
                       <th style={{ background: '#7c3aed', color: '#fff', textAlign: 'right' }}>Prix unit.</th>
                     </tr>
                   </thead>
                   <tbody>
                     {visibleRecipe.length === 0 ? (
-                      <tr><td colSpan={5} style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '16px 0' }}>Aucun article pour ces filtres</td></tr>
+                      <tr><td colSpan={4} style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '16px 0' }}>Aucun article pour ces filtres</td></tr>
                     ) : visibleRecipe.map((r, i) => {
                       const customVal = portions[r.ingredientId] ?? String(r.portionStandard);
                       const isModified = parseFloat(customVal) !== r.portionStandard && customVal !== '';
@@ -243,9 +242,12 @@ export default function PortionsModal({ produitNom, recipeUrl, stockMap, onSave,
                         <tr key={r.ingredientId} style={{ background: i % 2 === 0 ? 'var(--surface)' : '#f8faff' }}>
                           <td>
                             <div style={{ fontWeight: 600 }}>{r.nom}</div>
-                            {r.categorie && <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: 2 }}>{r.categorie}</div>}
+                            {r.categorie && <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: 1 }}>{r.categorie}</div>}
+                            <div style={{ fontSize: '0.7rem', fontWeight: 700, color: '#7c3aed', marginTop: 1 }}>{r.unite}</div>
                           </td>
-                          <td style={{ textAlign: 'right', color: 'var(--text-muted)', fontSize: '0.85rem' }}>{r.portionStandard.toFixed(3)}</td>
+                          <td style={{ textAlign: 'right' }}>
+                            <span style={{ fontWeight: 800, fontSize: '0.95rem', color: '#6d28d9', background: '#f5f3ff', borderRadius: 6, padding: '2px 8px' }}>{r.portionStandard.toFixed(3)}</span>
+                          </td>
                           <td style={{ textAlign: 'right' }}>
                             <input
                               type="number" min="0" step="0.001" className="input"
@@ -256,7 +258,6 @@ export default function PortionsModal({ produitNom, recipeUrl, stockMap, onSave,
                               onChange={(e) => setPortions((prev) => ({ ...prev, [r.ingredientId]: e.target.value }))}
                             />
                           </td>
-                          <td style={{ textAlign: 'right', fontSize: '0.82rem', color: 'var(--text-muted)' }}>{r.unite}</td>
                           <td style={{ textAlign: 'right', fontSize: '0.82rem', color: 'var(--text-muted)' }}>
                             {r.lastPrix != null ? r.lastPrix.toFixed(3) : '—'}
                           </td>
