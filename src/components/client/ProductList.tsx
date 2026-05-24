@@ -76,7 +76,6 @@ export default function ProductList() {
   const [editIsSupplement, setEditIsSupplement] = useState(false);
   const [editIngLines, setEditIngLines] = useState<IngLine[]>([]);
   const [editSubLines, setEditSubLines] = useState<IngLine[]>([]);
-  const [editOriginalSubLines, setEditOriginalSubLines] = useState<IngLine[]>([]);
   const [editSubSearch, setEditSubSearch] = useState('');
   const [editIngredients, setEditIngredients] = useState<ActiviteIngredient[]>([]);
   const [editIngSearch, setEditIngSearch] = useState('');
@@ -86,7 +85,6 @@ export default function ProductList() {
   const [editSaving, setEditSaving] = useState(false);
   const [editLoadingData, setEditLoadingData] = useState(false);
   const [editActiviteNom, setEditActiviteNom] = useState('');
-  const [editOriginalIngLines, setEditOriginalIngLines] = useState<IngLine[]>([]);
 
   const [addAffectationIds, setAddAffectationIds] = useState<number[]>([]);
   const [editAffectationIds, setEditAffectationIds] = useState<number[]>([]);
@@ -129,7 +127,7 @@ export default function ProductList() {
     setEditProductId(p.id);
     setEditProductType(p.type);
     setEditName(''); setEditRef(''); setEditIsSupplement(false);
-    setEditIngLines([]); setEditSubLines([]); setEditOriginalSubLines([]); setEditSubSearch('');
+    setEditIngLines([]); setEditSubLines([]); setEditSubSearch('');
     setEditIngredients([]); setEditIngSearch('');
     setEditFamilleFilter(''); setEditCatFilter(''); setEditIngVisible(20);
     const contextActId = selectedActiviteId ?? p.activiteId;
@@ -176,10 +174,8 @@ export default function ProductList() {
       setEditIsSupplement(pdata.isSupplement ?? false);
       const loadedLines = pdata.ingredients.map((i) => ({ ingredientId: String(i.ingredientId), portion: String(i.portion) }));
       setEditIngLines(loadedLines);
-      setEditOriginalIngLines(loadedLines);
       const loadedSubLines = (pdata.subProducts || []).map((sp) => ({ ingredientId: String(sp.subProductId), portion: String(sp.portion) }));
       setEditSubLines(loadedSubLines);
-      setEditOriginalSubLines(loadedSubLines);
     } finally {
       setEditLoadingData(false);
     }
