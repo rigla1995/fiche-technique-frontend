@@ -451,7 +451,7 @@ export default function ProductList() {
                   style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid #6ee7b7', fontSize: '0.88rem', background: '#f0fdf4', minWidth: 160 }} />
               </div>
             )}
-            {canWriteProducts && tab !== 'fiche-technique' && (
+            {canWriteProducts && (
               <button onClick={openAddModal}
                 style={{ marginLeft: 'auto', padding: '9px 20px', borderRadius: 10, cursor: 'pointer', fontSize: '0.85rem', border: 'none', background: 'linear-gradient(135deg, #059669, #10b981)', color: '#fff', fontWeight: 700, boxShadow: '0 2px 8px rgba(16,185,129,0.25)', whiteSpace: 'nowrap' }}>
                 + {isVendable ? 'Produit vendable' : 'Produit utilisable'}
