@@ -588,6 +588,28 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
           });
         }
       }
+      // Save PT rows
+      const ptReadyEntries = Object.entries(rows).filter(([idStr, row]) => {
+        const entry = entries.find((e) => e.ingredientId === Number(idStr));
+        return entry?.isPT && parseFloat(row.quantite) > 0;
+      });
+      for (const [idStr, row] of ptReadyEntries) {
+        const entry = entries.find((e) => e.ingredientId === Number(idStr));
+        if (!entry?.produitId) continue;
+        await api.put(`/api/stock/pt/${entry.produitId}`, {
+          quantite: parseFloat(row.quantite),
+          dateAppro: bulkDate,
+          activiteId: activiteId ?? undefined,
+        });
+        if (isCurrentMonth(bulkDate)) {
+          const added = parseFloat(row.quantite) || 0;
+          setTotalOverrides((prev) => {
+            const base = prev[entry.ingredientId] ?? (entry.totalQuantite ?? 0);
+            return { ...prev, [entry.ingredientId]: (base as number) + added };
+          });
+        }
+      }
+
       setBulkDate(todayStr());
       setBulkFournisseurId('');
       setBulkRefFacture('');
@@ -670,8 +692,20 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
     const prix = parseFloat(row.prixUnitaire);
     return !isNaN(qty) && qty > 0 && !isNaN(prix) && prix > 0;
   }).length;
-  const canSaveBulk = readyCount > 0 && !!bulkDate.trim()
-    && (!hasFournisseurs || !!bulkFournisseurId) && !!bulkRefFacture.trim();
+
+  const ptReadyCount = Object.entries(rows).filter(([idStr, row]) => {
+    const entry = entries.find((e) => e.ingredientId === Number(idStr));
+    return entry?.isPT && parseFloat(row.quantite) > 0;
+  }).length;
+
+  const hasPTQuantity = ptReadyCount > 0;
+  const hasIngredientQuantity = Object.entries(rows).some(([idStr, row]) => {
+    const entry = entries.find((e) => e.ingredientId === Number(idStr));
+    return !entry?.isPT && parseFloat(row.quantite) > 0;
+  });
+
+  const canSaveBulk = (readyCount > 0 && !!bulkDate.trim() && (!hasFournisseurs || !!bulkFournisseurId) && !!bulkRefFacture.trim())
+    || (ptReadyCount > 0 && !!bulkDate.trim() && !hasIngredientQuantity);
 
   return (
     <div>
@@ -797,7 +831,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
           <div>
             <label style={{ fontSize: '0.62rem', fontWeight: 700, color: '#1e40af', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 3 }}>Fournisseur</label>
             {hasFournisseurs ? (
-              <select className="input" style={{ padding: '6px 10px', borderRadius: 7, fontSize: '0.82rem', border: '1.5px solid #1e40af', background: '#fff', fontWeight: 600, maxWidth: 200 }} value={bulkFournisseurId} onChange={(e) => setBulkFournisseurId(e.target.value)}>
+              <select className="input" style={{ padding: '6px 10px', borderRadius: 7, fontSize: '0.82rem', border: '1.5px solid #1e40af', background: hasPTQuantity ? '#f1f5f9' : '#fff', fontWeight: 600, maxWidth: 200, opacity: hasPTQuantity ? 0.5 : 1 }} value={bulkFournisseurId} onChange={(e) => setBulkFournisseurId(e.target.value)} disabled={hasPTQuantity}>
                 <option value="">— Sélectionner —</option>
                 {nonLaboFournisseurs.map((f) => <option key={f.id} value={String(f.id)}>{f.nom}</option>)}
               </select>
@@ -808,15 +842,15 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
             )}
           </div>
           <div>
-            <label style={{ fontSize: '0.62rem', fontWeight: 700, color: '#1e40af', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 3 }}>Réf Facture <span style={{ color: '#ef4444' }}>*</span></label>
-            <input type="text" className="input" style={{ padding: '6px 10px', borderRadius: 7, fontSize: '0.82rem', border: '1.5px solid #1e40af', background: '#fff', fontWeight: 600, maxWidth: 160 }} placeholder="N° facture…" value={bulkRefFacture} onChange={(e) => setBulkRefFacture(e.target.value)} />
+            <label style={{ fontSize: '0.62rem', fontWeight: 700, color: '#1e40af', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 3 }}>Réf Facture {!hasPTQuantity && <span style={{ color: '#ef4444' }}>*</span>}</label>
+            <input type="text" className="input" style={{ padding: '6px 10px', borderRadius: 7, fontSize: '0.82rem', border: '1.5px solid #1e40af', background: hasPTQuantity ? '#f1f5f9' : '#fff', fontWeight: 600, maxWidth: 160, opacity: hasPTQuantity ? 0.5 : 1 }} placeholder={hasPTQuantity ? '—' : 'N° facture…'} value={bulkRefFacture} onChange={(e) => setBulkRefFacture(e.target.value)} disabled={hasPTQuantity} />
           </div>
           <div style={{ flex: 1 }} />
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignSelf: 'flex-end' }}>
             <div style={{ display: 'flex', gap: 8 }}>
               <button className="btn btn-primary btn-sm" onClick={saveBulkMatrix} disabled={!canSaveBulk || bulkSaving || !canWrite}
                 style={{ background: canSaveBulk ? 'linear-gradient(135deg, #1e40af, #2563eb)' : undefined, border: 'none', boxShadow: canSaveBulk ? '0 3px 10px rgba(30,64,175,0.3)' : undefined }}>
-                {bulkSaving ? '…' : `Enregistrer (${readyCount})`}
+                {bulkSaving ? '…' : `Enregistrer (${readyCount + ptReadyCount})`}
               </button>
               <button className="btn btn-ghost btn-sm" onClick={() => { setBulkDate(todayStr()); setBulkFournisseurId(''); setBulkRefFacture(''); setBulkError(''); }}>
                 Réinitialiser
@@ -931,7 +965,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                                 onChange={(e) => updateRow(entry.ingredientId, 'quantite', e.target.value)}
                                 style={{ width: 80, textAlign: 'right', padding: '5px 8px', borderRadius: 7, fontSize: '0.85rem', ...warnStyle }}
                                 className="input"
-                                disabled={!canWrite}
+                                disabled={!canWrite || (entry.isPT ? hasIngredientQuantity : hasPTQuantity)}
                                 title={entry.isPT && entry.prixPartiel ? '⚠️ Prix incomplet pour certains articles — calcul partiel' : undefined}
                               />
                               {entry.isPT && (entry.prixUnitaire ?? 0) > 0 && parseFloat(row.quantite) > 0 && (
