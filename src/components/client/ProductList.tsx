@@ -918,9 +918,7 @@ export default function ProductList() {
 
             const isEditVendable = editProductType === 'vendable';
 
-            const EDIT_STEPS = isEditVendable
-              ? [{ n: 2, display: 1, label: 'Articles' }, { n: 3, display: 2, label: 'Transformés' }, { n: 5, display: 3, label: 'Récap' }]
-              : [{ n: 2, display: 1, label: 'Articles' }, { n: 3, display: 2, label: 'Transformés' }, { n: 4, display: 3, label: 'Affectation' }, { n: 5, display: 4, label: 'Récap' }];
+            const EDIT_STEPS = [{ n: 2, display: 1, label: 'Articles' }, { n: 3, display: 2, label: 'Transformés' }, { n: 5, display: 3, label: 'Récap' }];
 
             // Compute filter options for step 2
             const eFamOptions: { key: string; label: string }[] = [];
@@ -1120,7 +1118,7 @@ export default function ProductList() {
                         )}
                         <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 8 }}>
                           <button className="btn btn-ghost" onClick={() => setEditModal(2)}>← Retour</button>
-                          <button onClick={() => setEditModal(isEditVendable ? 5 : 4)}
+                          <button onClick={() => setEditModal(5)}
                             style={{ background: 'linear-gradient(135deg, #1e40af, #3b82f6)', border: 'none', borderRadius: 10, color: '#fff', fontWeight: 700, padding: '9px 22px', cursor: 'pointer' }}>
                             Suivant →
                           </button>
@@ -1241,7 +1239,7 @@ export default function ProductList() {
                             </div>
                           )}
                           <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 4, borderTop: '1px solid var(--border)' }}>
-                            <button className="btn btn-ghost" onClick={() => setEditModal(isEditVendable ? 3 : 4)}>← Retour</button>
+                            <button className="btn btn-ghost" onClick={() => setEditModal(3)}>← Retour</button>
                             <button disabled={editSaving}
                               onClick={handleEditSave}
                               style={{ background: 'linear-gradient(135deg, #1e40af, #3b82f6)', border: 'none', borderRadius: 10, color: '#fff', fontWeight: 700, padding: '10px 28px', cursor: editSaving ? 'not-allowed' : 'pointer', opacity: editSaving ? 0.7 : 1, fontSize: '0.9rem' }}>
