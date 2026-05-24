@@ -44,7 +44,6 @@ export default function ProductList() {
   const [loadingDetail, setLoadingDetail] = useState(false);
 
   const [allActivities, setAllActivities] = useState<Activite[]>([]);
-  const [selectedActiviteId, setSelectedActiviteId] = useState<number | null>(null);
 
   // Add product modal state
   type AddStep = 1 | 2 | 3 | 4 | 5 | 6;
@@ -90,12 +89,11 @@ export default function ProductList() {
   const [editAffectationIds, setEditAffectationIds] = useState<number[]>([]);
   const [editOriginalAffectationIds, setEditOriginalAffectationIds] = useState<number[]>([]);
 
-  // Load activities — for gerant users use their assigned activité directly
+  // Load activities (still needed for wizard affectation step + edit modal context)
   useEffect(() => {
     if (user?.role === 'gerant' && user.gerantActiviteType === 'activite' && user.gerantActiviteId) {
       const act = { id: user.gerantActiviteId, nom: user.gerantActiviteNom ?? 'Activité', entrepriseId: 0 } as Activite;
       setAllActivities([act]);
-      setSelectedActiviteId(act.id);
       return;
     }
     api.get('/api/entreprise/activites')
@@ -103,25 +101,22 @@ export default function ProductList() {
         const all = data as Activite[];
         const scoped = laboId ? all.filter((a) => String((a as any).laboId) === laboId) : all;
         setAllActivities(scoped);
-        if (scoped.length > 0) setSelectedActiviteId(scoped[0].id);
       });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.role, user?.gerantActiviteId, laboId]);
 
-  // Load products — reload when activité changes so OR EXISTS per-activité affectations are reflected
+  // Load all products (no activité filter — activités shown on each card)
   useEffect(() => {
-    if (!selectedActiviteId && allActivities.length > 0) return; // wait until activité is known
     setLoading(true);
     setPage(1);
     const params = new URLSearchParams();
     if (laboId) params.set('laboId', laboId);
-    if (selectedActiviteId) params.set('activiteId', String(selectedActiviteId));
     const qs = params.toString();
     api.get(`/api/products${qs ? `?${qs}` : ''}`)
       .then(({ data }) => setProducts(data as Product[]))
       .finally(() => setLoading(false));
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isEntreprise, laboId, selectedActiviteId]);
+  }, [isEntreprise, laboId]);
 
   const openEditModal = useCallback(async (p: Product) => {
     setEditProductId(p.id);
@@ -130,7 +125,7 @@ export default function ProductList() {
     setEditIngLines([]); setEditSubLines([]); setEditSubSearch('');
     setEditIngredients([]); setEditIngSearch('');
     setEditFamilleFilter(''); setEditCatFilter(''); setEditIngVisible(20);
-    const contextActId = selectedActiviteId ?? p.activiteId;
+    const contextActId = p.activiteId;
     setEditActiviteNom(allActivities.find((a) => a.id === contextActId)?.nom || '');
     setEditLoadingData(true);
     setEditModal(2);
@@ -179,7 +174,7 @@ export default function ProductList() {
     } finally {
       setEditLoadingData(false);
     }
-  }, [allActivities, selectedActiviteId]);
+  }, [allActivities]);
 
   const openAddModal = useCallback(() => {
     setAddName(''); setAddRef(''); setAddIsSupplement(false);
@@ -190,13 +185,13 @@ export default function ProductList() {
     api.get('/api/products?type=utilisable')
       .then(({ data }) => setUtilisableForWizard((data as Product[]).map(u => ({ id: u.id, name: u.name }))))
       .catch(() => {});
-    const actId = selectedActiviteId ?? allActivities[0]?.id;
+    const actId = allActivities[0]?.id;
     if (actId) {
       api.get(`/api/entreprise/activites/${actId}/ingredients`)
         .then(({ data }) => setAddIngredients(data as ActiviteIngredient[]))
         .catch(() => setAddIngredients([]));
     }
-  }, [selectedActiviteId, allActivities]);
+  }, [allActivities]);
 
   const openPopup = async (type: PopupType, product: Product) => {
     setPopup({ type, productId: product.id, productName: product.name });
@@ -214,14 +209,11 @@ export default function ProductList() {
 
   const handleDelete = async (product: Product) => {
     if (product.type === 'utilisable') {
-      // Check PT history count for the selected activité
+      // Check PT history count
       setTogglingPT(product.id);
       let histCount = 0;
       try {
-        const histUrl = selectedActiviteId
-          ? `/api/stock/pt/${product.id}/history?activiteId=${selectedActiviteId}`
-          : `/api/stock/pt/${product.id}/history`;
-        const { data: hist } = await api.get(histUrl);
+        const { data: hist } = await api.get(`/api/stock/pt/${product.id}/history`);
         histCount = Array.isArray(hist) ? hist.length : 0;
       } catch { /* ignore */ }
       setTogglingPT(null);
@@ -240,11 +232,7 @@ export default function ProductList() {
     setDeleteError(null);
     try {
       if (product.type === 'utilisable') {
-        // Clean up PT stock history for the selected activité before deleting the product
-        const historyUrl = selectedActiviteId
-          ? `/api/produits/${product.id}/stock-pt-history?activiteId=${selectedActiviteId}`
-          : `/api/produits/${product.id}/stock-pt-history`;
-        await api.delete(historyUrl);
+        await api.delete(`/api/produits/${product.id}/stock-pt-history`);
       }
       await api.delete(`/api/products/${product.id}`);
       setProducts((p) => p.filter((x) => x.id !== product.id));
@@ -262,10 +250,7 @@ export default function ProductList() {
       setTogglingPT(p.id);
       let histCount = 0;
       try {
-        const histUrl = selectedActiviteId
-          ? `/api/stock/pt/${p.id}/history?activiteId=${selectedActiviteId}`
-          : `/api/stock/pt/${p.id}/history`;
-        const { data: hist } = await api.get(histUrl);
+        const { data: hist } = await api.get(`/api/stock/pt/${p.id}/history`);
         histCount = Array.isArray(hist) ? hist.length : 0;
       } catch { /* ignore */ }
       setTogglingPT(null);
@@ -280,7 +265,7 @@ export default function ProductList() {
   const doTogglePT = async (id: number, deleteHistory = false) => {
     setTogglingPT(id);
     try {
-      await api.post(`/api/produits/${id}/toggle-stock-ingredient`, selectedActiviteId ? { activiteId: selectedActiviteId } : {});
+      await api.post(`/api/produits/${id}/toggle-stock-ingredient`, {});
       if (deleteHistory) await api.delete(`/api/produits/${id}/stock-pt-history`);
       setProducts((prev) => prev.map((p) => p.id === id ? { ...p, isStockIngredient: !p.isStockIngredient } : p));
     } finally {
@@ -373,14 +358,6 @@ export default function ProductList() {
                     ? t('client.products.tab_utilisable')
                     : t('client.products.tab_vendable')}
               </h1>
-              {tab !== 'fiche-technique' && selectedActiviteId && (() => {
-                const actNom = allActivities.find(a => a.id === selectedActiviteId)?.nom;
-                return actNom ? (
-                  <span style={{ background: 'rgba(16,185,129,0.15)', border: '1px solid rgba(16,185,129,0.25)', borderRadius: 8, padding: '3px 10px', fontSize: '0.78rem', fontWeight: 600, color: '#6ee7b7' }}>
-                    {actNom}
-                  </span>
-                ) : null;
-              })()}
             </div>
             <p style={{ color: 'rgba(255,255,255,0.55)', margin: 0, fontSize: '0.83rem', letterSpacing: '0.01em' }}>
               {tab === 'fiche-technique'
@@ -401,25 +378,6 @@ export default function ProductList() {
         </div>
       </div>
 
-      {/* Activity selector */}
-      {tab !== 'fiche-technique' && !laboId && allActivities.length > 0 && (
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center', marginBottom: 16, padding: '10px 14px', background: '#fff', borderRadius: 10, border: '1px solid #e2e8f0', boxShadow: '0 1px 4px rgba(0,0,0,0.05)' }}>
-          {allActivities.map((a) => (
-            <button key={a.id} onClick={() => { setSelectedActiviteId(a.id); setPage(1); }}
-              style={{
-                padding: '4px 14px', borderRadius: 20, cursor: 'pointer', fontSize: '0.82rem',
-                border: selectedActiviteId === a.id ? '1.5px solid #0f2847' : '1.5px solid #e2e8f0',
-                background: selectedActiviteId === a.id ? '#0f2847' : '#f8fafc',
-                color: selectedActiviteId === a.id ? '#fff' : '#64748b',
-                fontWeight: selectedActiviteId === a.id ? 700 : 400,
-                transition: 'all 0.15s',
-              }}>
-              {a.nom}
-            </button>
-          ))}
-          <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', alignSelf: 'center', marginLeft: 4 }}>← sélectionner l'activité</span>
-        </div>
-      )}
 
       {tab === 'fiche-technique' ? (
         <FicheTechniqueTab
@@ -489,7 +447,6 @@ export default function ProductList() {
                   const accentDark = isSup ? '#b45309' : '#047857';
                   const accentLight = isSup ? '#fffbeb' : '#f0fdf4';
                   const accentShadow = isSup ? 'rgba(217,119,6,0.18)' : 'rgba(5,150,105,0.15)';
-                  const act = (isEntreprise && !selectedActiviteId) ? allActivities.find((a) => a.id === p.activiteId) : null;
                   return (
                     <div key={p.id} style={{
                       background: '#fff', borderRadius: 14,
@@ -514,9 +471,11 @@ export default function ProductList() {
                               <span style={{ fontSize: '0.62rem', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', background: '#fef3c7', color: '#92400e', border: '1px solid #fcd34d', borderRadius: 20, padding: '2px 8px', flexShrink: 0 }}>Supplément</span>
                             )}
                           </div>
-                          {act && (
-                            <div style={{ fontSize: '0.72rem', color: '#6b7280', fontWeight: 500, marginTop: 3 }}>
-                              📍 {act.nom}
+                          {p.activites && p.activites.length > 0 && (
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3, marginTop: 4 }}>
+                              {p.activites.map(a => (
+                                <span key={a.id} style={{ fontSize: '0.64rem', color: '#6b7280', fontWeight: 600, background: '#f1f5f9', border: '1px solid #e2e8f0', borderRadius: 20, padding: '1px 7px' }}>📍 {a.nom}</span>
+                              ))}
                             </div>
                           )}
                           {p.refProduit && (
@@ -894,7 +853,6 @@ export default function ProductList() {
                 setEditModal(null);
                 const reloadParams = new URLSearchParams();
                 if (laboId) reloadParams.set('laboId', laboId);
-                if (selectedActiviteId) reloadParams.set('activiteId', String(selectedActiviteId));
                 const reloadQs = reloadParams.toString();
                 api.get(`/api/products${reloadQs ? `?${reloadQs}` : ''}`).then(({ data }) => setProducts(data as Product[]));
               } catch { /* ignore */ }
@@ -1292,7 +1250,7 @@ export default function ProductList() {
                   refProduit: addRef.trim() || null,
                   type: tab === 'utilisable' ? 'utilisable' : 'vendable',
                   isSupplement: addIsSupplement,
-                  activiteId: isVendable ? (selectedActiviteId ?? null) : (addAffectationIds[0] ?? null),
+                  activiteId: isVendable ? null : (addAffectationIds[0] ?? null),
                   ingredients: baseIngredients,
                   subProducts: baseSubProducts,
                 });
@@ -1304,10 +1262,8 @@ export default function ProductList() {
                 }
                 setAddSavedName(addName.trim());
                 setAddModal(6);
-                // Reload with current activiteId so the new product appears immediately
                 const reloadParams = new URLSearchParams();
                 if (laboId) reloadParams.set('laboId', laboId);
-                if (selectedActiviteId) reloadParams.set('activiteId', String(selectedActiviteId));
                 const reloadQs = reloadParams.toString();
                 api.get(`/api/products${reloadQs ? `?${reloadQs}` : ''}`).then(({ data }) => setProducts(data as Product[]));
               } catch (err: unknown) {
