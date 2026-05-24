@@ -4,12 +4,9 @@ import api from '../api/client';
 
 export interface AppNotification {
   id: string;
-  eventType: 'new_demande' | 'demande_traitee' | 'new_inventaire';
-  demandeId?: number;
+  eventType: 'new_inventaire';
   type: string;
   clientNom?: string;
-  statut?: string;
-  notesAdmin?: string | null;
   readAt: null | number;
   createdAt: number;
 }
@@ -41,20 +38,16 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   useEffect(() => {
     if (!user) { setNotifications([]); return; }
     api.get('/api/notifications').then(({ data }) => {
-      const mapped: AppNotification[] = data.map((r: {
-        id: number; eventType: string; demandeId?: number; type: string;
-        clientNom?: string; statut?: string; notesAdmin?: string | null; createdAt: string;
-      }) => ({
-        id: String(r.id),
-        eventType: r.eventType as AppNotification['eventType'],
-        demandeId: r.demandeId,
-        type: r.type,
-        clientNom: r.clientNom,
-        statut: r.statut,
-        notesAdmin: r.notesAdmin,
-        readAt: null,
-        createdAt: new Date(r.createdAt).getTime(),
-      }));
+      const mapped: AppNotification[] = data
+        .filter((r: { eventType: string }) => r.eventType === 'new_inventaire')
+        .map((r: { id: number; eventType: string; type: string; clientNom?: string; createdAt: string }) => ({
+          id: String(r.id),
+          eventType: r.eventType as AppNotification['eventType'],
+          type: r.type,
+          clientNom: r.clientNom,
+          readAt: null,
+          createdAt: new Date(r.createdAt).getTime(),
+        }));
       setNotifications(mapped);
     }).catch(() => {});
   }, [user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -63,11 +56,8 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     const notif: AppNotification = {
       id: `${Date.now()}-${Math.random()}`,
       eventType,
-      demandeId: data.demandeId as number | undefined,
       type: data.type as string,
       clientNom: data.clientNom as string | undefined,
-      statut: data.statut as string | undefined,
-      notesAdmin: data.notesAdmin as string | null | undefined,
       readAt: null,
       createdAt: Date.now(),
     };
@@ -86,12 +76,6 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       const es = new EventSource(`${url}?token=${encodeURIComponent(token)}`);
       esRef.current = es;
 
-      es.addEventListener('new_demande', (e) => {
-        try { push('new_demande', JSON.parse(e.data)); } catch { /* ignore */ }
-      });
-      es.addEventListener('demande_traitee', (e) => {
-        try { push('demande_traitee', JSON.parse(e.data)); } catch { /* ignore */ }
-      });
       es.addEventListener('new_inventaire', (e) => {
         try { push('new_inventaire', JSON.parse(e.data)); } catch { /* ignore */ }
       });
