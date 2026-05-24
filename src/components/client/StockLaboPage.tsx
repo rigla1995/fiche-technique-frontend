@@ -734,9 +734,6 @@ export default function StockLaboPage() {
                                             {rs.historyOpen ? '📋 ▲' : '📋 Historique'}
                                           </button>
                                         </div>
-                                        {r.isPT && r.activite && (
-                                          <div style={{ fontSize: '0.70rem', color: '#7c3aed', fontWeight: 500, marginTop: 3 }}>📍 {r.activite}</div>
-                                        )}
                                         {r.lastInvDate && (
                                           <div style={{ fontSize: '0.68rem', color: '#b45309', fontWeight: 600, marginTop: 3 }}>📦 {r.lastInvDate.split('-').reverse().join('/')} · {r.lastInvQty?.toFixed(3) ?? '—'}</div>
                                         )}
@@ -800,27 +797,31 @@ export default function StockLaboPage() {
                                         )}
                                       </td>
                                       <td style={{ padding: '10px 14px', verticalAlign: 'middle', textAlign: 'center' }}>
-                                        <div style={{ display: 'flex', gap: 5, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'center' }}>
-                                          {canWrite && (
-                                            <button title="Configurer seuil min" onClick={() => { setSeuilMinEdits((p) => ({ ...p, [r.ingredientId]: r.seuilMin != null ? String(r.seuilMin) : '' })); setSeuilModal({ ingredientId: r.ingredientId, nom: r.nom }); }}
-                                              style={{ fontSize: '0.75rem', fontWeight: 700, padding: '3px 8px', borderRadius: 6, border: '1px solid #f97316', background: '#fff7ed', color: '#ea580c', cursor: 'pointer' }}>
-                                              🔧 Seuil
-                                            </button>
-                                          )}
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: 5, alignItems: 'center' }}>
+                                          {/* Row 1 — Pertes & Seuil */}
+                                          <div style={{ display: 'flex', gap: 5, alignItems: 'center', justifyContent: 'center' }}>
+                                            {canWrite && (
+                                              <button title="Configurer seuil min" onClick={() => { setSeuilMinEdits((p) => ({ ...p, [r.ingredientId]: r.seuilMin != null ? String(r.seuilMin) : '' })); setSeuilModal({ ingredientId: r.ingredientId, nom: r.nom }); }}
+                                                style={{ fontSize: '0.75rem', fontWeight: 700, padding: '3px 8px', borderRadius: 6, border: '1px solid #f97316', background: '#fff7ed', color: '#ea580c', cursor: 'pointer' }}>
+                                                🔧 Seuil
+                                              </button>
+                                            )}
+                                            <button
+                                              className="perte-btn"
+                                              onClick={() => { setPerteModal({ ingredientId: r.ingredientId, nom: r.nom, quantite: r.quantite ?? null }); setPerteQty(''); setPerteType('avarie'); setPerteErrMsg(''); const d = todayStr(); setPerteDate(d); setPerteDateMin(null); setPerteDateMax(null); fetchPerteDateRange(r.ingredientId).then(() => fetchPertePrix(r.ingredientId, d)); }}
+                                              title="Enregistrer une perte"
+                                              disabled={!canWrite}
+                                            >📉 Perte</button>
+                                          </div>
+                                          {/* Row 2 — Composition & Personnaliser (PT only) */}
                                           {r.isPT && r.produitId && (
-                                            <>
-                                              <button className="btn btn-ghost btn-sm" title="Stock des articles relatifs" onClick={() => { fetchPtRecipe(r.produitId!); setPtStockModal({ produitId: r.produitId!, nom: r.nom }); }}>📊</button>
+                                            <div style={{ display: 'flex', gap: 5, alignItems: 'center', justifyContent: 'center' }}>
+                                              <button className="btn btn-ghost btn-sm" title="Composition (stock des articles)" onClick={() => { fetchPtRecipe(r.produitId!); setPtStockModal({ produitId: r.produitId!, nom: r.nom }); }}>📊 Composition</button>
                                               {canWrite && (
-                                                <button className="btn btn-ghost btn-sm" title="Portions personnalisées pour cette appro" onClick={() => setPortionsModal({ produitId: r.produitId!, nom: r.nom })}>⚙️</button>
+                                                <button className="btn btn-ghost btn-sm" title="Portions personnalisées pour cette appro" onClick={() => setPortionsModal({ produitId: r.produitId!, nom: r.nom })}>⚙️ Personnaliser</button>
                                               )}
-                                            </>
+                                            </div>
                                           )}
-                                          <button
-                                            className="perte-btn"
-                                            onClick={() => { setPerteModal({ ingredientId: r.ingredientId, nom: r.nom, quantite: r.quantite ?? null }); setPerteQty(''); setPerteType('avarie'); setPerteErrMsg(''); const d = todayStr(); setPerteDate(d); setPerteDateMin(null); setPerteDateMax(null); fetchPerteDateRange(r.ingredientId).then(() => fetchPertePrix(r.ingredientId, d)); }}
-                                            title="Enregistrer une perte"
-                                            disabled={!canWrite}
-                                          >📉 Perte</button>
                                         </div>
                                       </td>
                                     </tr>
