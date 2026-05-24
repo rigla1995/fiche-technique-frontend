@@ -874,8 +874,6 @@ export default function ProductList() {
             const isEditDirty =
               JSON.stringify(normalizeLines(editIngLines)) !== JSON.stringify(normalizeLines(editOriginalIngLines)) ||
               JSON.stringify(normalizeLines(editSubLines)) !== JSON.stringify(normalizeLines(editOriginalSubLines));
-            const canGoEditStep3 = hasValidIngLines && isEditDirty;
-
             const editSubIds = new Set(editSubLines.map((l) => l.ingredientId).filter(Boolean));
             const editToggleSub = (id: number) => {
               const sid = String(id);
@@ -1292,7 +1290,6 @@ export default function ProductList() {
               setAddSubLines((prev) => prev.map((l) => l.ingredientId === id ? { ...l, portion: val } : l));
 
             const canGoStep2 = addName.trim().length > 0;
-            const canGoStep3 = addIngLines.some((l) => l.ingredientId && parseFloat(l.portion) > 0) || addSubLines.some((l) => l.ingredientId && parseFloat(l.portion) > 0);
             const handleSave = async () => {
               setAddSaving(true);
               setAddSaveError(null);
