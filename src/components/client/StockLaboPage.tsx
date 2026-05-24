@@ -137,25 +137,7 @@ export default function StockLaboPage() {
 
 
   // ── PT recipe / stock popup
-  const [ptRecipes, setPtRecipes] = useState<Record<number, Array<{ ingredientId: number; nom: string; portion: number; unite: string }>>>({});
-  const [ptStockModal, setPtStockModal] = useState<{ produitId: number; nom: string } | null>(null);
   const [portionsModal, setPortionsModal] = useState<{ produitId: number; nom: string } | null>(null);
-
-  const fetchPtRecipe = async (produitId: number) => {
-    if (ptRecipes[produitId]) return;
-    try {
-      const { data } = await api.get(`/api/produits/${produitId}`);
-      setPtRecipes((prev) => ({
-        ...prev,
-        [produitId]: (data.ingredients || []).map((r: { ingredientId: number; ingredientName?: string; nom?: string; portion: number | string; unitName?: string; unite?: string }) => ({
-          ingredientId: r.ingredientId,
-          nom: r.ingredientName || r.nom || '',
-          portion: parseFloat(String(r.portion)) || 0,
-          unite: r.unitName || r.unite || '',
-        })),
-      }));
-    } catch { /* ignore */ }
-  };
 
   // ── Bulk appro
   const [bulkDate, setBulkDate] = useState(todayStr());
@@ -1156,62 +1138,6 @@ export default function StockLaboPage() {
           </div>
         </div>
       )}
-      {ptStockModal && (() => {
-        const recipe = ptRecipes[ptStockModal.produitId] ?? [];
-        const recipeRows = recipe.map((r) => {
-          const st = stock.find((s) => s.ingredientId === r.ingredientId)?.quantite ?? 0;
-          const maxUnits = r.portion > 0 ? (st ?? 0) / r.portion : Infinity;
-          return { ...r, stock: st ?? 0, maxUnits };
-        });
-        const overallMax = recipeRows.length > 0 ? Math.min(...recipeRows.map((r) => r.maxUnits)) : null;
-        return (
-          <div className="modal-overlay">
-            <div className="modal" style={{ maxWidth: 520 }} onClick={(e) => e.stopPropagation()}>
-              <div className="modal-header" style={{ background: 'linear-gradient(135deg, #7c3aed, #a855f7)', borderBottom: 'none' }}>
-                <h2 style={{ color: '#fff', margin: 0, fontSize: '1rem' }}>📊 Stock — {ptStockModal.nom}</h2>
-                <button className="modal-close" onClick={() => setPtStockModal(null)} style={{ color: '#fff' }}>×</button>
-              </div>
-              <div className="modal-body">
-                {recipe.length === 0 ? (
-                  <p style={{ color: 'var(--text-muted)', textAlign: 'center' }}>Recette non chargée ou vide.</p>
-                ) : (
-                  <div className="table-responsive">
-                    <table className="table" style={{ fontSize: '0.85rem' }}>
-                      <thead>
-                        <tr>
-                          <th>Article</th>
-                          <th style={{ textAlign: 'right' }}>Portion</th>
-                          <th style={{ textAlign: 'right' }}>Stock actuel</th>
-                          <th style={{ textAlign: 'right' }}>Max PT</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {recipeRows.map((r) => (
-                          <tr key={r.ingredientId}>
-                            <td>{r.nom}</td>
-                            <td style={{ textAlign: 'right' }}>{r.portion} {r.unite}</td>
-                            <td style={{ textAlign: 'right', fontWeight: 600, color: r.stock <= 0 ? 'var(--danger)' : 'var(--success)' }}>{r.stock.toFixed(3)}</td>
-                            <td style={{ textAlign: 'right', color: '#7c3aed', fontWeight: 700 }}>{isFinite(r.maxUnits) ? r.maxUnits.toFixed(3) : '∞'}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-                {overallMax !== null && (
-                  <div style={{ marginTop: 12, padding: '8px 14px', background: '#f5f3ff', borderRadius: 8, border: '1px solid #ddd6fe', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontWeight: 700, color: '#7c3aed', fontSize: '0.85rem' }}>Quantité max réalisable</span>
-                    <span style={{ fontWeight: 900, color: '#7c3aed', fontSize: '1.1rem' }}>{isFinite(overallMax) ? overallMax.toFixed(3) : '∞'}</span>
-                  </div>
-                )}
-              </div>
-              <div className="modal-footer">
-                <button className="btn btn-primary" onClick={() => setPtStockModal(null)}>Fermer</button>
-              </div>
-            </div>
-          </div>
-        );
-      })()}
 
       {portionsModal && (
         <PortionsModal
