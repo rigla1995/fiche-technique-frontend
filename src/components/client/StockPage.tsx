@@ -812,6 +812,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
       {portionsModal && (
         <PortionsModal
           produitNom={portionsModal.nom}
+          theme="activite"
           recipeUrl={activiteId
             ? `/api/stock/pt/${portionsModal.produitId}/recipe?activiteId=${activiteId}`
             : `/api/stock/pt/${portionsModal.produitId}/recipe`}
@@ -1047,24 +1048,26 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                               )}
                             </td>
                             <td style={{ padding: '10px 14px', verticalAlign: 'middle', textAlign: 'center' }}>
-                              <div style={{ display: 'flex', gap: 5, alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap' }}>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'center', justifyContent: 'center' }}>
                                 {row.error && <span style={{ color: 'var(--danger)', fontSize: '0.75rem', fontWeight: 700 }}>⚠</span>}
+                                <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', justifyContent: 'center' }}>
+                                  {onSaveSeuilMin && canWrite && (
+                                    <button title="Configurer le seuil minimum" onClick={() => { setSeuilEdits((p) => ({ ...p, [entry.ingredientId]: entry.seuilMin !== null ? String(entry.seuilMin) : '' })); setSeuilModal({ ingredientId: entry.ingredientId, nom: entry.nom }); }}
+                                      style={{ fontSize: '0.75rem', fontWeight: 700, padding: '4px 10px', borderRadius: 6, border: '1px solid #f97316', background: '#fff7ed', color: '#ea580c', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                                      🔧 Seuil
+                                    </button>
+                                  )}
+                                  {canWrite && ((isEntreprise && activiteId) || (!isEntreprise && onSavePerte)) && (
+                                    <button className="perte-btn" style={{ whiteSpace: 'nowrap' }} onClick={() => setPertesModal({ ingredientId: entry.ingredientId, nom: entry.nom, stockDisponible: entry.quantite ?? null })} title="Enregistrer une perte">📉 Perte</button>
+                                  )}
+                                </div>
                                 {entry.isPT && entry.produitId && (
-                                  <>
+                                  <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', justifyContent: 'center' }}>
                                     <button className="btn btn-ghost btn-sm" title="Stock des articles relatifs" style={{ fontSize: '0.78rem', padding: '3px 8px' }} onClick={() => { fetchPtRecipe(entry.produitId!); setPtStockModal({ produitId: entry.produitId!, nom: entry.nom }); }}>📊</button>
                                     {canWrite && (
-                                      <button className="btn btn-ghost btn-sm" title="Portions personnalisées" style={{ fontSize: '0.78rem', padding: '3px 8px' }} onClick={() => setPortionsModal({ produitId: entry.produitId!, nom: entry.nom })}>⚙️</button>
+                                      <button className="btn btn-ghost btn-sm" title="Portions personnalisées" style={{ fontSize: '0.78rem', padding: '3px 8px' }} onClick={() => setPortionsModal({ produitId: entry.produitId!, nom: entry.nom })}>⚙️ Personnaliser</button>
                                     )}
-                                  </>
-                                )}
-                                {onSaveSeuilMin && canWrite && (
-                                  <button title="Configurer le seuil minimum" onClick={() => { setSeuilEdits((p) => ({ ...p, [entry.ingredientId]: entry.seuilMin !== null ? String(entry.seuilMin) : '' })); setSeuilModal({ ingredientId: entry.ingredientId, nom: entry.nom }); }}
-                                    style={{ fontSize: '0.75rem', fontWeight: 700, padding: '4px 10px', borderRadius: 6, border: '1px solid #f97316', background: '#fff7ed', color: '#ea580c', cursor: 'pointer', whiteSpace: 'nowrap' }}>
-                                    🔧 Seuil
-                                  </button>
-                                )}
-                                {canWrite && ((isEntreprise && activiteId) || (!isEntreprise && onSavePerte)) && (
-                                  <button className="perte-btn" style={{ whiteSpace: 'nowrap' }} onClick={() => setPertesModal({ ingredientId: entry.ingredientId, nom: entry.nom, stockDisponible: entry.quantite ?? null })} title="Enregistrer une perte">📉 Perte</button>
+                                  </div>
                                 )}
                               </div>
                             </td>

@@ -27,9 +27,24 @@ interface Props {
   onSave: (qty: number, dateAppro: string, customPortions: CustomPortion[]) => Promise<void>;
   onClose: () => void;
   onSaved: () => void;
+  theme?: 'labo' | 'activite';
 }
 
-export default function PortionsModal({ produitNom, recipeUrl, stockMap, onSave, onClose, onSaved }: Props) {
+const THEMES = {
+  labo: {
+    gradientStart: '#4c1d95', gradientEnd: '#7c3aed',
+    primary: '#7c3aed', primaryDark: '#6d28d9', primaryDeep: '#5b21b6',
+    bg: '#f5f3ff', border: '#ddd6fe',
+  },
+  activite: {
+    gradientStart: '#1e40af', gradientEnd: '#2563eb',
+    primary: '#2563eb', primaryDark: '#1d4ed8', primaryDeep: '#1e40af',
+    bg: '#eff6ff', border: '#bfdbfe',
+  },
+};
+
+export default function PortionsModal({ produitNom, recipeUrl, stockMap, onSave, onClose, onSaved, theme = 'labo' }: Props) {
+  const T = THEMES[theme];
   const [recipe, setRecipe] = useState<RecipeIngredient[]>([]);
   const [loading, setLoading] = useState(true);
   const [portions, setPortions] = useState<Record<number, string>>({});
@@ -140,7 +155,7 @@ export default function PortionsModal({ produitNom, recipeUrl, stockMap, onSave,
   return (
     <div className="modal-overlay">
       <div className="modal" style={{ maxWidth: 700, width: '95vw' }} onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header" style={{ background: 'linear-gradient(135deg, #4c1d95, #7c3aed)', borderBottom: 'none' }}>
+        <div className="modal-header" style={{ background: `linear-gradient(135deg, ${T.gradientStart}, ${T.gradientEnd})`, borderBottom: 'none' }}>
           <h2 style={{ color: '#fff', margin: 0, fontSize: '1rem' }}>⚙️ Portions personnalisées — {produitNom}</h2>
           <button className="modal-close" onClick={onClose} style={{ color: '#fff' }}>×</button>
         </div>
@@ -176,9 +191,9 @@ export default function PortionsModal({ produitNom, recipeUrl, stockMap, onSave,
 
               {/* Prix indicator */}
               <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-                <div style={{ background: '#f5f3ff', border: '1px solid #ddd6fe', borderRadius: 8, padding: '8px 14px', display: 'flex', gap: 8, alignItems: 'center' }}>
-                  <span style={{ fontSize: '0.78rem', color: '#5b21b6', fontWeight: 700 }}>Prix unitaire PT</span>
-                  <span style={{ fontWeight: 900, color: '#7c3aed' }}>{prixCalcule.toFixed(3)} DT</span>
+                <div style={{ background: T.bg, border: `1px solid ${T.border}`, borderRadius: 8, padding: '8px 14px', display: 'flex', gap: 8, alignItems: 'center' }}>
+                  <span style={{ fontSize: '0.78rem', color: T.primaryDeep, fontWeight: 700 }}>Prix unitaire PT</span>
+                  <span style={{ fontWeight: 900, color: T.primary }}>{prixCalcule.toFixed(3)} DT</span>
                 </div>
                 {coutTotal != null && coutTotal > 0 && (
                   <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 8, padding: '8px 14px', display: 'flex', gap: 8, alignItems: 'center' }}>
@@ -187,9 +202,9 @@ export default function PortionsModal({ produitNom, recipeUrl, stockMap, onSave,
                   </div>
                 )}
                 {maxQty != null && (
-                  <div style={{ background: qtyExceedsMax ? '#fef2f2' : '#f5f3ff', border: `1px solid ${qtyExceedsMax ? '#fecaca' : '#ddd6fe'}`, borderRadius: 8, padding: '8px 14px', display: 'flex', gap: 8, alignItems: 'center' }}>
-                    <span style={{ fontSize: '0.78rem', color: qtyExceedsMax ? '#991b1b' : '#6d28d9', fontWeight: 700 }}>Qté max réalisable</span>
-                    <span style={{ fontWeight: 900, color: qtyExceedsMax ? '#dc2626' : '#7c3aed' }}>{maxQty.toFixed(3)}</span>
+                  <div style={{ background: qtyExceedsMax ? '#fef2f2' : T.bg, border: `1px solid ${qtyExceedsMax ? '#fecaca' : T.border}`, borderRadius: 8, padding: '8px 14px', display: 'flex', gap: 8, alignItems: 'center' }}>
+                    <span style={{ fontSize: '0.78rem', color: qtyExceedsMax ? '#991b1b' : T.primaryDark, fontWeight: 700 }}>Qté max réalisable</span>
+                    <span style={{ fontWeight: 900, color: qtyExceedsMax ? '#dc2626' : T.primary }}>{maxQty.toFixed(3)}</span>
                   </div>
                 )}
               </div>
@@ -226,10 +241,10 @@ export default function PortionsModal({ produitNom, recipeUrl, stockMap, onSave,
                 <table className="table" style={{ minWidth: 500 }}>
                   <thead>
                     <tr>
-                      <th style={{ background: '#7c3aed', color: '#fff' }}>Article</th>
-                      <th style={{ background: '#7c3aed', color: '#fff', textAlign: 'right' }}>Portion standard</th>
-                      <th style={{ background: '#7c3aed', color: '#fff', textAlign: 'right' }}>Portion custom</th>
-                      <th style={{ background: '#7c3aed', color: '#fff', textAlign: 'right' }}>Prix unit.</th>
+                      <th style={{ background: T.primary, color: '#fff' }}>Article</th>
+                      <th style={{ background: T.primary, color: '#fff', textAlign: 'right' }}>Portion standard</th>
+                      <th style={{ background: T.primary, color: '#fff', textAlign: 'right' }}>Portion custom</th>
+                      <th style={{ background: T.primary, color: '#fff', textAlign: 'right' }}>Prix unit.</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -243,10 +258,10 @@ export default function PortionsModal({ produitNom, recipeUrl, stockMap, onSave,
                           <td>
                             <div style={{ fontWeight: 600 }}>{r.nom}</div>
                             {r.categorie && <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: 1 }}>{r.categorie}</div>}
-                            <div style={{ fontSize: '0.7rem', fontWeight: 700, color: '#7c3aed', marginTop: 1 }}>{r.unite}</div>
+                            <div style={{ fontSize: '0.7rem', fontWeight: 700, color: T.primary, marginTop: 1 }}>{r.unite}</div>
                           </td>
                           <td style={{ textAlign: 'right' }}>
-                            <span style={{ fontWeight: 800, fontSize: '0.95rem', color: '#6d28d9', background: '#f5f3ff', borderRadius: 6, padding: '2px 8px' }}>{r.portionStandard.toFixed(3)}</span>
+                            <span style={{ fontWeight: 800, fontSize: '0.95rem', color: T.primaryDark, background: T.bg, borderRadius: 6, padding: '2px 8px' }}>{r.portionStandard.toFixed(3)}</span>
                           </td>
                           <td style={{ textAlign: 'right' }}>
                             <input
@@ -301,7 +316,7 @@ export default function PortionsModal({ produitNom, recipeUrl, stockMap, onSave,
             <button className="btn btn-ghost" onClick={onClose}>Annuler</button>
             <button
               className="btn btn-primary btn-sm"
-              style={{ background: 'linear-gradient(135deg, #4c1d95, #7c3aed)', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 700 }}
+              style={{ background: `linear-gradient(135deg, ${T.gradientStart}, ${T.gradientEnd})`, color: '#fff', border: 'none', borderRadius: 8, fontWeight: 700 }}
               onClick={handleSave} disabled={saving || !qty || parseFloat(qty) <= 0 || qtyExceedsMax}
             >
               {saving ? '…' : 'Enregistrer l\'appro'}
