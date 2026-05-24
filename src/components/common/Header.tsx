@@ -161,8 +161,22 @@ export default function Header({ onMenuToggle }: HeaderProps) {
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#0f172a', lineHeight: 1.35 }}>
-                          Inventaire ajouté par un gérant
+                          {n.eventType === 'new_inventaire'
+                            ? 'Inventaire ajouté par un gérant'
+                            : n.eventType === 'new_demande'
+                            ? `Nouvelle demande — ${typeLabel(n.type)}`
+                            : `Demande ${n.statut === 'validée' ? 'validée ✓' : 'refusée ✗'} — ${typeLabel(n.type)}`}
                         </div>
+                        {n.clientNom && (
+                          <div style={{ fontSize: '0.73rem', color: '#64748b', marginTop: 2 }}>
+                            👤 {n.clientNom}
+                          </div>
+                        )}
+                        {n.notesAdmin && (
+                          <div style={{ fontSize: '0.73rem', color: '#64748b', marginTop: 2, fontStyle: 'italic' }}>
+                            {n.notesAdmin}
+                          </div>
+                        )}
                         <div style={{ fontSize: '0.66rem', color: '#94a3b8', marginTop: 4 }}>
                           {new Date(n.createdAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
                         </div>
