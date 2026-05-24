@@ -682,7 +682,7 @@ export default function StockLaboPage() {
                             <thead style={{ background: '#f5f3ff', color: '#3b0764' }}>
                               <tr style={{ borderBottom: '1px solid #d8b4fe' }}>
                                 {[
-                                  { label: t('client.stock.ingredient'), minWidth: 180 },
+                                  { label: 'Article', minWidth: 180 },
                                   { label: 'Stock Actuel', minWidth: 110 },
                                   { label: 'Coût Total', minWidth: 100 },
                                   { label: 'Quantité', minWidth: 90 },
