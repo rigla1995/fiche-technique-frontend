@@ -865,15 +865,6 @@ export default function ProductList() {
               setEditIngLines((prev) => prev.map((l) => l.ingredientId === ingId ? { ...l, portion: val } : l));
             };
 
-            const hasValidIngLines = editIngLines.some((l) => l.ingredientId && parseFloat(l.portion) > 0) || editSubLines.some((l) => l.ingredientId && parseFloat(l.portion) > 0);
-            const normalizeLines = (lines: IngLine[]) =>
-              lines
-                .filter((l) => l.ingredientId && parseFloat(l.portion) > 0)
-                .map((l) => ({ id: l.ingredientId, p: parseFloat(l.portion).toFixed(3) }))
-                .sort((a, b) => a.id.localeCompare(b.id));
-            const isEditDirty =
-              JSON.stringify(normalizeLines(editIngLines)) !== JSON.stringify(normalizeLines(editOriginalIngLines)) ||
-              JSON.stringify(normalizeLines(editSubLines)) !== JSON.stringify(normalizeLines(editOriginalSubLines));
             const editSubIds = new Set(editSubLines.map((l) => l.ingredientId).filter(Boolean));
             const editToggleSub = (id: number) => {
               const sid = String(id);
