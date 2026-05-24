@@ -179,6 +179,7 @@ export interface Category {
 export interface Famille {
   id: number;
   name: string;
+  consommable: boolean;
   clientId: number;
 }
 

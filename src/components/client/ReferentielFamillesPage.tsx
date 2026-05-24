@@ -16,6 +16,7 @@ export default function ReferentielFamillesPage() {
   const [showForm, setShowForm] = useState(false);
   const [editItem, setEditItem] = useState<Famille | null>(null);
   const [nom, setNom] = useState('');
+  const [consommable, setConsommable] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [deleteId, setDeleteId] = useState<number | null>(null);
@@ -28,18 +29,18 @@ export default function ReferentielFamillesPage() {
 
   useEffect(() => { load(); }, []);
 
-  const openCreate = () => { setEditItem(null); setNom(''); setError(''); setShowForm(true); };
-  const openEdit = (f: Famille) => { setEditItem(f); setNom(f.name); setError(''); setShowForm(true); };
-  const closeForm = () => { setShowForm(false); setEditItem(null); setNom(''); setError(''); };
+  const openCreate = () => { setEditItem(null); setNom(''); setConsommable(true); setError(''); setShowForm(true); };
+  const openEdit = (f: Famille) => { setEditItem(f); setNom(f.name); setConsommable(f.consommable); setError(''); setShowForm(true); };
+  const closeForm = () => { setShowForm(false); setEditItem(null); setNom(''); setConsommable(true); setError(''); };
 
   const handleSave = async () => {
     if (!nom.trim()) { setError('Nom requis'); return; }
     setSaving(true);
     try {
       if (editItem) {
-        await api.put(`/api/familles/${editItem.id}`, { nom: nom.trim() });
+        await api.put(`/api/familles/${editItem.id}`, { nom: nom.trim(), consommable });
       } else {
-        await api.post('/api/familles', { nom: nom.trim() });
+        await api.post('/api/familles', { nom: nom.trim(), consommable });
       }
       closeForm();
       load();
@@ -47,6 +48,16 @@ export default function ReferentielFamillesPage() {
       setError((e as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Erreur lors de l\'enregistrement');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const toggleConsommable = async (f: Famille) => {
+    try {
+      await api.put(`/api/familles/${f.id}`, { nom: f.name, consommable: !f.consommable });
+      setFamilles(prev => prev.map(x => x.id === f.id ? { ...x, consommable: !f.consommable } : x));
+    } catch {
+      // silent — reload to sync
+      load();
     }
   };
 
@@ -140,6 +151,7 @@ export default function ReferentielFamillesPage() {
             <thead>
               <tr>
                 <th>Nom</th>
+                <th style={{ textAlign: 'center' }}>Consommable</th>
                 <th style={{ textAlign: 'right' }}>Actions</th>
               </tr>
             </thead>
@@ -151,6 +163,29 @@ export default function ReferentielFamillesPage() {
                       <div style={{ width: 32, height: 32, borderRadius: 8, background: `${COLOR}18`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, flexShrink: 0 }}>🗂️</div>
                       <span style={{ fontWeight: 600, color: '#0f172a' }}>{f.name}</span>
                     </div>
+                  </td>
+                  <td style={{ textAlign: 'center' }}>
+                    <button
+                      onClick={() => toggleConsommable(f)}
+                      title={f.consommable ? 'Consommable — cliquer pour désactiver' : 'Non consommable — cliquer pour activer'}
+                      style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', cursor: 'pointer', padding: '4px 8px', borderRadius: 8,
+                      }}
+                    >
+                      <div style={{
+                        width: 36, height: 20, borderRadius: 10, position: 'relative', flexShrink: 0,
+                        background: f.consommable ? '#059669' : '#cbd5e1', transition: 'background 0.2s',
+                      }}>
+                        <div style={{
+                          position: 'absolute', top: 2, left: f.consommable ? 18 : 2,
+                          width: 16, height: 16, borderRadius: '50%', background: '#fff',
+                          boxShadow: '0 1px 4px rgba(0,0,0,0.18)', transition: 'left 0.2s',
+                        }} />
+                      </div>
+                      <span style={{ fontSize: '0.75rem', fontWeight: 600, color: f.consommable ? '#065f46' : '#64748b' }}>
+                        {f.consommable ? 'Oui' : 'Non'}
+                      </span>
+                    </button>
                   </td>
                   <td className="actions-cell" style={{ justifyContent: 'flex-end' }}>
                     <button className="btn btn-ghost btn-sm" onClick={() => openEdit(f)}>✏️ Modifier</button>
@@ -181,6 +216,21 @@ export default function ReferentielFamillesPage() {
                   onChange={e => setNom(e.target.value)}
                   onKeyDown={e => e.key === 'Enter' && handleSave()}
                 />
+              </div>
+              <div className="form-group">
+                <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', userSelect: 'none' }}>
+                  <button type="button" onClick={() => setConsommable(v => !v)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
+                    <div style={{ width: 40, height: 22, borderRadius: 11, position: 'relative', background: consommable ? '#059669' : '#cbd5e1', transition: 'background 0.2s' }}>
+                      <div style={{ position: 'absolute', top: 3, left: consommable ? 20 : 3, width: 16, height: 16, borderRadius: '50%', background: '#fff', boxShadow: '0 1px 4px rgba(0,0,0,0.18)', transition: 'left 0.2s' }} />
+                    </div>
+                  </button>
+                  <span style={{ fontSize: '0.88rem', fontWeight: 600, color: consommable ? '#065f46' : '#64748b' }}>
+                    Consommable {consommable ? '(activé)' : '(désactivé)'}
+                  </span>
+                </label>
+                <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: 4, marginBottom: 0 }}>
+                  Si désactivé, les articles de cette famille n'apparaîtront pas dans les wizards de création/modification de produits.
+                </p>
               </div>
               <div className="modal-footer">
                 <button className="btn btn-ghost" onClick={closeForm}>Annuler</button>
