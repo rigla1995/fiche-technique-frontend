@@ -30,6 +30,7 @@ export default function ProductList() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
+  const [filterActiviteId, setFilterActiviteId] = useState<number | null>(null);
   const [page, setPage] = useState(1);
   const [togglingPT, setTogglingPT] = useState<number | null>(null);
   const [ptDeselectModal, setPtDeselectModal] = useState<{ id: number; nom: string; historyCount: number } | null>(null);
@@ -274,7 +275,10 @@ export default function ProductList() {
   };
 
   const byTab = products.filter((p) => p.type === tab);
-  const searched = byTab.filter((p) => p.name.toLowerCase().includes(search.toLowerCase()));
+  const byActivite = filterActiviteId
+    ? byTab.filter((p) => p.activites?.some((a) => a.id === filterActiviteId) || p.activiteId === filterActiviteId)
+    : byTab;
+  const searched = byActivite.filter((p) => p.name.toLowerCase().includes(search.toLowerCase()));
   const totalPages = Math.max(1, Math.ceil(searched.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
   const paginated = searched.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
@@ -392,9 +396,22 @@ export default function ProductList() {
             border: '1px solid var(--border)', boxShadow: '0 2px 12px rgba(0,0,0,0.05)',
             display: 'flex', flexWrap: 'wrap', gap: 14, alignItems: 'flex-end',
           }}>
-            {search && (
+            {(search || filterActiviteId) && (
               <div style={{ width: '100%', display: 'flex', justifyContent: 'flex-end', marginBottom: 4 }}>
-                <button className="btn btn-ghost btn-sm" style={{ fontSize: '0.78rem' }} onClick={() => { setSearch(''); setPage(1); }}>✕ Réinitialiser</button>
+                <button className="btn btn-ghost btn-sm" style={{ fontSize: '0.78rem' }} onClick={() => { setSearch(''); setFilterActiviteId(null); setPage(1); }}>✕ Réinitialiser</button>
+              </div>
+            )}
+            {byTab.length > 0 && allActivities.length > 0 && (
+              <div>
+                <label style={{ fontSize: '0.68rem', fontWeight: 800, color: '#059669', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>📍 Activité</label>
+                <select
+                  value={filterActiviteId ?? ''}
+                  onChange={(e) => { setFilterActiviteId(e.target.value ? Number(e.target.value) : null); setPage(1); }}
+                  style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid #6ee7b7', fontSize: '0.88rem', background: '#f0fdf4', minWidth: 160 }}
+                >
+                  <option value="">Toutes les activités</option>
+                  {allActivities.map((a) => <option key={a.id} value={a.id}>{a.nom}</option>)}
+                </select>
               </div>
             )}
             {byTab.length > 0 && (
@@ -427,6 +444,11 @@ export default function ProductList() {
                 <p style={{ margin: '0 0 4px', fontSize: '0.88rem', color: 'var(--text-muted)', maxWidth: 340 }}>
                   Commencez par créer votre premier produit.
                 </p>
+              </div>
+            ) : byActivite.length === 0 && filterActiviteId ? (
+              <div className="empty-state">
+                <span className="empty-icon">📍</span>
+                <p>Aucun produit pour cette activité.</p>
               </div>
             ) : (
               <div className="empty-state">
