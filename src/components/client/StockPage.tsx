@@ -451,6 +451,27 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
   const [, setSeuilSaving] = useState<Record<number, boolean>>({});
   const [totalOverrides, setTotalOverrides] = useState<Record<number, number>>({});
   const [portionsModal, setPortionsModal] = useState<{ produitId: number; nom: string } | null>(null);
+  const [ptRecipeMaxMap, setPtRecipeMaxMap] = useState<Record<number, number | null>>({});
+
+  const fetchPtMax = async (produitId: number, map: Record<number, number | null>) => {
+    if (map[produitId] !== undefined) return;
+    try {
+      const url = activiteId
+        ? `/api/stock/pt/${produitId}/recipe?activiteId=${activiteId}`
+        : `/api/stock/pt/${produitId}/recipe`;
+      const { data } = await api.get(url);
+      const ingStock = Object.fromEntries(entries.filter((e) => !e.isPT).map((e) => [e.ingredientId, (e.totalQuantite ?? 0) as number]));
+      let min = Infinity;
+      for (const r of data as Array<{ ingredientId: number; portionStandard: number }>) {
+        if (!r.portionStandard || r.portionStandard <= 0) continue;
+        min = Math.min(min, (ingStock[r.ingredientId] ?? 0) / r.portionStandard);
+      }
+      const maxVal = isFinite(min) && min >= 0 ? min : null;
+      setPtRecipeMaxMap((prev) => ({ ...prev, [produitId]: maxVal }));
+    } catch {
+      setPtRecipeMaxMap((prev) => ({ ...prev, [produitId]: null }));
+    }
+  };
 
   // ── Bulk appro
   const [bulkDate, setBulkDate] = useState(todayStr());
@@ -638,7 +659,15 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
       })
       .map(([idStr]) => Number(idStr));
 
-    if (readyIds.length === 0) return;
+    if (readyIds.length === 0) {
+      // No ingredient rows — check if there are PT-only rows to save
+      const hasPT = Object.entries(rows).some(([idStr, row]) => {
+        const entry = entries.find((e) => e.ingredientId === Number(idStr));
+        return entry?.isPT && parseFloat(row.quantite) > 0;
+      });
+      if (hasPT) await doBulkSave();
+      return;
+    }
 
     const histMap: Record<number, StockHistoryEntry[]> = {};
     await Promise.all(readyIds.map(async (id) => { histMap[id] = await fetchHistory(id); }));
@@ -967,13 +996,18 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                                 className="input"
                                 disabled={!canWrite || (entry.isPT ? hasIngredientQuantity : hasPTQuantity)}
                                 title={entry.isPT && entry.prixPartiel ? '⚠️ Prix incomplet pour certains articles — calcul partiel' : undefined}
+                                onFocus={() => { if (entry.isPT && entry.produitId) fetchPtMax(entry.produitId, ptRecipeMaxMap); }}
                               />
-                              {entry.isPT && (entry.prixUnitaire ?? 0) > 0 && parseFloat(row.quantite) > 0 && (
-                                <div style={{ fontSize: '0.7rem', color: '#2563eb', marginTop: 2 }}>
-                                  ≈ {(parseFloat(row.quantite) * (entry.prixUnitaire || 0)).toFixed(3)} DT
-                                  {entry.prixPartiel && ' ⚠️'}
-                                </div>
-                              )}
+                              {entry.isPT && entry.produitId && (() => {
+                                const max = ptRecipeMaxMap[entry.produitId];
+                                if (max === undefined) return null;
+                                return (
+                                  <div style={{ fontSize: '0.7rem', marginTop: 2, fontWeight: 700, color: max !== null && parseFloat(row.quantite) > max ? '#dc2626' : '#2563eb' }}>
+                                    Max: {max !== null ? max.toFixed(3) : '∞'}
+                                    {entry.prixPartiel && ' ⚠️'}
+                                  </div>
+                                );
+                              })()}
                             </td>
                             <td style={{ textAlign: 'center', padding: '10px 14px', verticalAlign: 'middle' }}>
                               {entry.isPT ? (
