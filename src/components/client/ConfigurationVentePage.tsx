@@ -248,7 +248,6 @@ export default function ConfigurationVentePage() {
     const histEntries = avId ? (historyCache[avId] ?? null) : null;
     const isHistOpen = avId ? historyOpen === avId : false;
     const hasPrix = hasPrixDirect(row);
-    const colCount = 2 + (showPortion ? 1 : 0) + 1 + activePrests.length;
     return (
       <tr style={{ borderBottom: `1px solid ${CB}`, background: idx % 2 === 0 ? '#fff' : '#fffdf7', opacity: row.vendable && !isActive ? 0.6 : 1 }}>
         <td style={{ padding: '12px 16px', position: 'relative' }}>
