@@ -38,6 +38,7 @@ interface ArticleVendable {
   actif: boolean;
   nom: string;
   unite_nom?: string | null;
+  is_supplement?: boolean;
 }
 
 interface ActivitePrestataire {
@@ -129,8 +130,8 @@ export default function VentesPage() {
   useEffect(() => { loadData(); }, [loadData]);
 
   const activePrests = prestataires;
-  const produits = articles.filter(a => a.article_type === 'produit');
-  const supplements = articles.filter(a => a.article_type === 'ingredient');
+  const produits = articles.filter(a => a.article_type === 'produit' && !a.is_supplement);
+  const supplements = articles.filter(a => a.article_type === 'produit' && a.is_supplement);
 
   const getQte = (articleId: string, channel: string) => qtes[articleId]?.[channel] ?? '';
   const setQte = (articleId: string, channel: string, val: string) =>
