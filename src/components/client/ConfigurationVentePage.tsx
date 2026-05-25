@@ -262,42 +262,106 @@ export default function ConfigurationVentePage() {
     );
   };
 
-  const ProduitTable = ({ tableRows, showPortion }: { tableRows: ProduitRow[]; showPortion: boolean }) => {
+  const ProduitTable = ({ tableRows, showPortion, isSupplement }: { tableRows: ProduitRow[]; showPortion: boolean; isSupplement?: boolean }) => {
+    const [filterNom, setFilterNom] = useState('');
+    const [filterPresta, setFilterPresta] = useState('');
+
     if (tableRows.length === 0) {
+      const emptyIcon = isSupplement ? '🧂' : '🛍️';
+      const emptyMsg = isSupplement
+        ? "Tu n'as pas de suppléments pour cette activité"
+        : "Aucun produit vendable assigné à cette activité";
+      const emptyHint = isSupplement
+        ? 'suppléments vendables'
+        : 'produits vendables';
       return (
         <div style={{ textAlign: 'center', padding: '50px 0', color: 'var(--text-muted)' }}>
-          <div style={{ fontSize: '2.5rem', marginBottom: 12 }}>🛍️</div>
-          Aucun produit vendable assigné à cette activité
-          <div style={{ fontSize: '0.8rem', marginTop: 6 }}>Créez des produits vendables dans <strong>Espace Produit</strong></div>
+          <div style={{ fontSize: '2.5rem', marginBottom: 12 }}>{emptyIcon}</div>
+          {emptyMsg}
+          <div style={{ fontSize: '0.8rem', marginTop: 6 }}>Créez des {emptyHint} dans <strong>Espace Produit</strong></div>
         </div>
       );
     }
+
+    const filtered = tableRows.filter(r => {
+      if (filterNom && !r.produit.name.toLowerCase().includes(filterNom.toLowerCase())) return false;
+      if (filterPresta) {
+        const hasPrix = prixPrestataires.some(p => p.article_vendable_id === r.vendable?.id && p.activite_prestataire_id === filterPresta && p.prix_vente != null);
+        if (!hasPrix) return false;
+      }
+      return true;
+    });
+
     const colCount = 2 + (showPortion ? 1 : 0) + 1 + activePrests.length;
     return (
-      <div style={{ overflowX: 'auto' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: colCount * 110 }}>
-          <thead>
-            <tr style={{ background: CL, borderBottom: `2px solid ${CB}` }}>
-              <th style={{ padding: '11px 16px', textAlign: 'left', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Produit</th>
-              <th style={{ padding: '11px 16px', textAlign: 'center', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Vendable</th>
-              {showPortion && (
-                <th style={{ padding: '11px 16px', textAlign: 'center', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Portion</th>
-              )}
-              <th style={{ padding: '11px 16px', textAlign: 'center', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>🏪 Prix direct</th>
+      <div>
+        {/* Filters */}
+        <div style={{ display: 'flex', gap: 10, padding: '12px 16px', borderBottom: `1px solid ${CB}`, flexWrap: 'wrap', alignItems: 'center' }}>
+          <div style={{ position: 'relative', flex: '1 1 180px', minWidth: 140 }}>
+            <span style={{ position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)', fontSize: '0.78rem', pointerEvents: 'none' }}>🔍</span>
+            <input
+              type="text"
+              placeholder="Nom article..."
+              value={filterNom}
+              onChange={e => setFilterNom(e.target.value)}
+              style={{ width: '100%', paddingLeft: 28, paddingRight: 8, paddingTop: 7, paddingBottom: 7, borderRadius: 8, border: `1.5px solid ${filterNom ? C : CB}`, background: filterNom ? CL : '#fafafa', fontSize: '0.83rem', color: CD, outline: 'none', boxSizing: 'border-box' }}
+            />
+          </div>
+          {activePrests.length > 0 && (
+            <select
+              value={filterPresta}
+              onChange={e => setFilterPresta(e.target.value)}
+              style={{ flex: '1 1 160px', minWidth: 130, padding: '7px 10px', borderRadius: 8, border: `1.5px solid ${filterPresta ? C : CB}`, background: filterPresta ? CL : '#fafafa', fontSize: '0.83rem', color: CD, outline: 'none', cursor: 'pointer' }}
+            >
+              <option value="">Tous prestataires</option>
               {activePrests.map(ap => (
-                <th key={ap.id} style={{ padding: '11px 16px', textAlign: 'center', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>
-                  🛵 {ap.prestataire_nom}
-                  <div style={{ fontSize: '0.68rem', fontWeight: 500, color: 'var(--text-muted)', textTransform: 'none' }}>−{ap.taux_commission}%</div>
-                </th>
+                <option key={ap.id} value={ap.id}>{ap.prestataire_nom}</option>
               ))}
-            </tr>
-          </thead>
-          <tbody>
-            {tableRows.map((row, idx) => (
-              <ProduitTableRow key={row.produit.id} row={row} idx={idx} showPortion={showPortion} />
-            ))}
-          </tbody>
-        </table>
+            </select>
+          )}
+          {(filterNom || filterPresta) && (
+            <button onClick={() => { setFilterNom(''); setFilterPresta(''); }}
+              style={{ padding: '6px 12px', borderRadius: 8, border: `1px solid ${CB}`, background: '#fff', color: C, fontSize: '0.78rem', cursor: 'pointer', fontWeight: 600, whiteSpace: 'nowrap' }}>
+              ✕ Réinitialiser
+            </button>
+          )}
+          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginLeft: 'auto', whiteSpace: 'nowrap' }}>
+            {filtered.length}/{tableRows.length} article{tableRows.length > 1 ? 's' : ''}
+          </div>
+        </div>
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: colCount * 110 }}>
+            <thead>
+              <tr style={{ background: CL, borderBottom: `2px solid ${CB}` }}>
+                <th style={{ padding: '11px 16px', textAlign: 'left', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Produit</th>
+                <th style={{ padding: '11px 16px', textAlign: 'center', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Vendable</th>
+                {showPortion && (
+                  <th style={{ padding: '11px 16px', textAlign: 'center', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Portion</th>
+                )}
+                <th style={{ padding: '11px 16px', textAlign: 'center', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>🏪 Prix direct</th>
+                {activePrests.map(ap => (
+                  <th key={ap.id} style={{ padding: '11px 16px', textAlign: 'center', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>
+                    🛵 {ap.prestataire_nom}
+                    <div style={{ fontSize: '0.68rem', fontWeight: 500, color: 'var(--text-muted)', textTransform: 'none' }}>−{ap.taux_commission}%</div>
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.length === 0 ? (
+                <tr>
+                  <td colSpan={colCount} style={{ textAlign: 'center', padding: '30px 0', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+                    Aucun résultat pour ces filtres
+                  </td>
+                </tr>
+              ) : (
+                filtered.map((row, idx) => (
+                  <ProduitTableRow key={row.produit.id} row={row} idx={idx} showPortion={showPortion} />
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
     );
   };
@@ -389,7 +453,7 @@ export default function ConfigurationVentePage() {
                   <div style={{ fontSize: '0.72rem', color: C }}>Produits suppléments assignés à cette activité — activez-les, définissez portion et prix</div>
                 </div>
               </div>
-              <ProduitTable tableRows={supplementRows} showPortion={false} />
+              <ProduitTable tableRows={supplementRows} showPortion={false} isSupplement />
             </div>
           )}
         </>
