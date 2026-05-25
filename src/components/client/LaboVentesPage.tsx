@@ -24,7 +24,7 @@ interface LaboTransfert {
   id: string;
   date_transfert: string;
   article_nom: string;
-  article_type: 'produit' | 'ingredient';
+  article_type: 'produit';
   unite_nom?: string | null;
   activite_nom: string;
   categorie_nom: string;

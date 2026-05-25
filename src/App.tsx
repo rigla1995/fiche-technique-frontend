@@ -49,9 +49,7 @@ import ConfigPrestatairesPage from './components/client/ConfigPrestatairesPage';
 import ConfigChargesPage from './components/client/ConfigChargesPage';
 import RapportVentePage from './components/client/RapportVentePage';
 import VenteGuard from './components/client/VenteGuard';
-import CatalogueVentePage from './components/client/CatalogueVentePage';
 import PrestatairesManagement from './components/admin/PrestatairesManagement';
-import IngredientsActivitePage from './components/client/IngredientsActivitePage';
 import './i18n';
 import './index.css';
 
@@ -143,14 +141,12 @@ export default function App() {
             <Route path="/client/ai-assistant" element={<AIAssistantPage />} />
             <Route element={<VenteGuard />}>
               <Route path="/client/ventes" element={<VentesPage />} />
-              <Route path="/client/ventes/catalogue" element={<CatalogueVentePage />} />
               <Route path="/client/ventes/configuration" element={<ConfigurationVentePage />} />
               <Route path="/client/ventes/prestataires" element={<ConfigPrestatairesPage />} />
               <Route path="/client/ventes/charges" element={<ConfigChargesPage />} />
               <Route path="/client/ventes/rapport" element={<RapportVentePage />} />
               <Route path="/client/labo/ventes" element={<LaboVentesPage />} />
             </Route>
-            <Route path="/client/ingredients-activite" element={<IngredientsActivitePage />} />
           </Route>
 
           {/* Error pages */}

@@ -32,7 +32,7 @@ const ExcelIcon = () => (
 interface ArticleVendable {
   id: string;
   activite_id: number;
-  article_type: 'produit' | 'ingredient';
+  article_type: 'produit';
   article_id: number;
   prix_vente: number;
   actif: boolean;

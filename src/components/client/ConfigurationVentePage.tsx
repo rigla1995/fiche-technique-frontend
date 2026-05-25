@@ -37,7 +37,7 @@ interface Produit {
 
 interface ArticleVendable {
   id: string;
-  article_type: 'produit' | 'ingredient';
+  article_type: 'produit';
   article_id: number;
   prix_vente: number;
   portion: number | null;
@@ -62,7 +62,7 @@ interface HistConfigEntry {
   article_vendable_id: string;
   prix_vente: number;
   saved_at: string;
-  article_type: 'produit' | 'ingredient';
+  article_type: 'produit';
   produit_nom: string | null;
   is_supplement: boolean;
 }
