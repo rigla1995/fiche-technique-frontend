@@ -100,7 +100,6 @@ interface CVCtxType {
   selectedActiviteId: number | null;
   selectedHistIds: Set<number>;
   toggleSelectHist: (id: number) => void;
-  setSelectedHistIds: React.Dispatch<React.SetStateAction<Set<number>>>;
 }
 
 const CVCtx = createContext<CVCtxType>(null!);
@@ -327,7 +326,7 @@ function HistoriqueTab() {
     histFilterNom, histFilterType, histFilterDu, histFilterAu,
     setHistFilterNom, setHistFilterType, setHistFilterDu, setHistFilterAu,
     loadHistorique, handleDeleteHistEntry, handleExportHistXls, exportingHistXls,
-    selectedHistIds, toggleSelectHist, setSelectedHistIds,
+    selectedHistIds, toggleSelectHist,
   } = useContext(CVCtx);
 
   return (
@@ -618,7 +617,7 @@ export default function ConfigurationVentePage() {
     loadHistorique, filteredHist,
     handleDeleteHistEntry, handleExportHistXls, exportingHistXls,
     selectedActiviteId,
-    selectedHistIds, toggleSelectHist, setSelectedHistIds,
+    selectedHistIds, toggleSelectHist,
   };
 
   const TabBtn = ({ tab, label, count }: { tab: Tab; label: string; count?: number }) => (
