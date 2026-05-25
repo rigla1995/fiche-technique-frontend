@@ -25,7 +25,7 @@ interface ActivitePrestataire {
 
 interface Produit {
   id: number;
-  nom: string;
+  name: string;
   isSupplement: boolean;
   type: string;
 }
@@ -88,7 +88,7 @@ export default function ConfigurationVentePage() {
       api.get(`/api/activite-prestataires?activiteId=${selectedActiviteId}`),
       api.get(`/api/articles-vendables?activiteId=${selectedActiviteId}`),
       api.get(`/api/article-prix-prestataire?activiteId=${selectedActiviteId}`),
-      api.get(`/api/produits?activiteId=${selectedActiviteId}&type=vendable`),
+      api.get('/api/produits?type=vendable'),
     ]).then(([ap, av, pp, pr]) => {
       setPrestataires(ap.data as ActivitePrestataire[]);
       setPrixPrestataires(pp.data as ArticlePrixPrestataire[]);
@@ -262,7 +262,7 @@ export default function ConfigurationVentePage() {
     return (
       <tr style={{ borderBottom: `1px solid ${CB}`, background: idx % 2 === 0 ? '#fff' : '#fffdf7', opacity: row.vendable && !isActive ? 0.6 : 1 }}>
         <td style={{ padding: '12px 16px' }}>
-          <div style={{ fontWeight: isActive ? 700 : 500, fontSize: '0.9rem', color: isActive ? CD : 'var(--text)' }}>{row.produit.nom}</div>
+          <div style={{ fontWeight: isActive ? 700 : 500, fontSize: '0.9rem', color: isActive ? CD : 'var(--text)' }}>{row.produit.name}</div>
           {row.error && <div style={{ fontSize: '0.7rem', color: '#dc2626', marginTop: 2 }}>{row.error}</div>}
         </td>
         <td style={{ padding: '8px 16px', textAlign: 'center' }}>
