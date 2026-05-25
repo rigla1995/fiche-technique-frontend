@@ -46,6 +46,7 @@ interface ArticleVendable {
 
 interface ActivitePrestataire {
   id: string;
+  prestataire_id: string;
   prestataire_nom: string;
   taux_commission: number;
   actif: boolean;
@@ -327,7 +328,7 @@ export default function VentesPage() {
         const prix = calcPrixPrestataire(av.id, ap.id, articles, prixPrestataires, activePrests);
         return [{ article_type: av.article_type, article_id: av.article_id, quantite: qte, prix_unitaire: prix }];
       });
-      if (lignes.length > 0) ventesToCreate.push({ type_vente: 'prestataire', prestataire_id: ap.id, lignes });
+      if (lignes.length > 0) ventesToCreate.push({ type_vente: 'prestataire', prestataire_id: ap.prestataire_id, lignes });
     }
 
     if (ventesToCreate.length === 0) {
