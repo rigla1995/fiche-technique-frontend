@@ -68,8 +68,6 @@ export default function ConfigurationVentePage() {
 
   const [editingPrixVente, setEditingPrixVente] = useState<Record<string, string>>({});
   const [editingPrixPrest, setEditingPrixPrest] = useState<Record<string, string>>({});
-  const [editingPortion, setEditingPortion] = useState<Record<number, string>>({});
-
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -144,19 +142,6 @@ export default function ConfigurationVentePage() {
     } catch {} finally { setSaving(false); }
   };
 
-  // ── Portion ──────────────────────────────────────────────────────────────────
-
-  const handleSavePortion = async (avId: string, produitId: number) => {
-    const val = editingPortion[produitId];
-    if (val == null) return;
-    setSaving(true);
-    try {
-      await api.put(`/api/articles-vendables/${avId}`, { portion: parseFloat(val) || null });
-      setEditingPortion(prev => { const n = { ...prev }; delete n[produitId]; return n; });
-      loadAll();
-    } catch {} finally { setSaving(false); }
-  };
-
   // ── Prix prestataire ─────────────────────────────────────────────────────────
 
   const getPrixKey = (avId: string, apId: string) => `${avId}__${apId}`;
@@ -214,22 +199,6 @@ export default function ConfigurationVentePage() {
     );
   };
 
-  const PortionInput = ({ avId, produitId, portion }: { avId: string; produitId: number; portion: number | null }) => {
-    const isDirty = produitId in editingPortion;
-    const val = isDirty ? editingPortion[produitId] : (portion != null ? String(portion) : '');
-    return (
-      <div style={{ display: 'flex', gap: 3, alignItems: 'center', justifyContent: 'center' }}>
-        <input type="number" min="0" step="0.001" value={val} placeholder="—"
-          onChange={e => setEditingPortion(prev => ({ ...prev, [produitId]: e.target.value }))}
-          style={{ width: 68, padding: '5px 6px', borderRadius: 7, border: `1.5px solid ${isDirty ? C : CB}`, background: isDirty ? CL : '#fafafa', fontSize: '0.82rem', textAlign: 'right', outline: 'none' }} />
-        {isDirty && (
-          <button onClick={() => handleSavePortion(avId, produitId)} disabled={saving}
-            style={{ padding: '4px 6px', borderRadius: 5, border: 'none', background: C, color: '#fff', cursor: 'pointer', fontSize: '0.68rem', fontWeight: 700 }}>✓</button>
-        )}
-      </div>
-    );
-  };
-
   const PrestInput = ({ avId, prix, ap }: { avId: string; prix: number; ap: ActivitePrestataire }) => {
     const key = getPrixKey(avId, ap.id);
     const existing = prixPrestataires.find(p => p.article_vendable_id === avId && p.activite_prestataire_id === ap.id);
@@ -272,9 +241,9 @@ export default function ConfigurationVentePage() {
         </td>
         {showPortion && (
           <td style={{ padding: '8px 16px', textAlign: 'center' }}>
-            {isActive && row.vendable
-              ? <PortionInput avId={row.vendable.id} produitId={row.produit.id} portion={row.vendable.portion} />
-              : <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>—</span>}
+            <span style={{ fontSize: '0.88rem', fontWeight: isActive ? 600 : 400, color: isActive ? CD : 'var(--text-muted)' }}>
+              {row.vendable?.portion != null ? row.vendable.portion : '—'}
+            </span>
           </td>
         )}
         <td style={{ padding: '8px 16px', textAlign: 'center' }}>
