@@ -98,6 +98,9 @@ interface CVCtxType {
   handleExportHistXls: () => void;
   exportingHistXls: boolean;
   selectedActiviteId: number | null;
+  selectedHistIds: Set<number>;
+  toggleSelectHist: (id: number) => void;
+  setSelectedHistIds: React.Dispatch<React.SetStateAction<Set<number>>>;
 }
 
 const CVCtx = createContext<CVCtxType>(null!);
@@ -324,6 +327,7 @@ function HistoriqueTab() {
     histFilterNom, histFilterType, histFilterDu, histFilterAu,
     setHistFilterNom, setHistFilterType, setHistFilterDu, setHistFilterAu,
     loadHistorique, handleDeleteHistEntry, handleExportHistXls, exportingHistXls,
+    selectedHistIds, toggleSelectHist, setSelectedHistIds,
   } = useContext(CVCtx);
 
   return (
@@ -389,14 +393,24 @@ function HistoriqueTab() {
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
             <colgroup>
-              <col style={{ width: '35%' }} />
-              <col style={{ width: '15%' }} />
-              <col style={{ width: '18%' }} />
-              <col style={{ width: '18%' }} />
+              <col style={{ width: 36 }} />
+              <col style={{ width: '33%' }} />
               <col style={{ width: '14%' }} />
+              <col style={{ width: '17%' }} />
+              <col style={{ width: '17%' }} />
+              <col style={{ width: '13%' }} />
             </colgroup>
             <thead>
               <tr style={{ background: CL, borderBottom: `2px solid ${CB}` }}>
+                <th style={{ padding: '8px 12px' }}>
+                  <input type="checkbox"
+                    checked={filteredHist.length > 0 && filteredHist.every(e => selectedHistIds.has(e.id))}
+                    onChange={ev => {
+                      if (ev.target.checked) setSelectedHistIds(new Set(filteredHist.map(e => e.id)));
+                      else setSelectedHistIds(new Set());
+                    }}
+                    style={{ accentColor: '#FF6B00', width: 15, height: 15, cursor: 'pointer' }} />
+                </th>
                 <th style={{ padding: '11px 16px', textAlign: 'left', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Produit</th>
                 <th style={{ padding: '11px 16px', textAlign: 'center', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Type</th>
                 <th style={{ padding: '11px 16px', textAlign: 'center', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Prix enregistré</th>
@@ -405,35 +419,43 @@ function HistoriqueTab() {
               </tr>
             </thead>
             <tbody>
-              {filteredHist.map((e, idx) => (
-                <tr key={e.id} style={{ borderBottom: `1px solid ${CB}`, background: idx % 2 === 0 ? '#fff' : '#fffdf7' }}>
-                  <td style={{ padding: '10px 16px', fontWeight: 600, fontSize: '0.88rem', color: CD, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {e.produit_nom ?? '—'}
-                  </td>
-                  <td style={{ padding: '10px 16px', textAlign: 'center' }}>
-                    <span style={{
-                      display: 'inline-block', padding: '2px 10px', borderRadius: 20, fontSize: '0.7rem', fontWeight: 700,
-                      background: e.is_supplement ? '#fef3c7' : CL,
-                      color: e.is_supplement ? '#92400e' : CD,
-                      border: `1px solid ${e.is_supplement ? '#fcd34d' : CB}`,
-                    }}>
-                      {e.is_supplement ? '🧂 Supplément' : '🛍️ Produit'}
-                    </span>
-                  </td>
-                  <td style={{ padding: '10px 16px', textAlign: 'center', fontWeight: 700, fontSize: '0.9rem', color: C }}>
-                    {fmtMoney(e.prix_vente)}
-                  </td>
-                  <td style={{ padding: '10px 16px', textAlign: 'center', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                    {fmtDate(e.saved_at)}
-                  </td>
-                  <td style={{ padding: '8px 16px', textAlign: 'center' }}>
-                    <button onClick={() => handleDeleteHistEntry(e.id)}
-                      style={{ border: '1.5px solid #dc2626', color: '#dc2626', background: 'none', borderRadius: 7, padding: '4px 10px', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 600, whiteSpace: 'nowrap' }}>
-                      Supprimer
-                    </button>
-                  </td>
-                </tr>
-              ))}
+              {filteredHist.map((e, idx) => {
+                const isSel = selectedHistIds.has(e.id);
+                const rowBg = isSel ? '#FF6B00' : (idx % 2 === 0 ? '#fff' : '#fffdf7');
+                return (
+                  <tr key={e.id} style={{ borderBottom: `1px solid ${CB}`, background: rowBg, cursor: 'pointer' }} onClick={() => toggleSelectHist(e.id)}>
+                    <td style={{ padding: '8px 12px', textAlign: 'center' }} onClick={ev => ev.stopPropagation()}>
+                      <input type="checkbox" checked={isSel} onChange={() => toggleSelectHist(e.id)}
+                        style={{ accentColor: '#FF6B00', width: 15, height: 15, cursor: 'pointer' }} />
+                    </td>
+                    <td style={{ padding: '10px 16px', fontWeight: 600, fontSize: '0.88rem', color: isSel ? '#fff' : CD, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {e.produit_nom ?? '—'}
+                    </td>
+                    <td style={{ padding: '10px 16px', textAlign: 'center' }}>
+                      <span style={{
+                        display: 'inline-block', padding: '2px 10px', borderRadius: 20, fontSize: '0.7rem', fontWeight: 700,
+                        background: isSel ? 'rgba(255,255,255,0.25)' : (e.is_supplement ? '#fef3c7' : CL),
+                        color: isSel ? '#fff' : (e.is_supplement ? '#92400e' : CD),
+                        border: `1px solid ${isSel ? 'rgba(255,255,255,0.4)' : (e.is_supplement ? '#fcd34d' : CB)}`,
+                      }}>
+                        {e.is_supplement ? '🧂 Supplément' : '🛍️ Produit'}
+                      </span>
+                    </td>
+                    <td style={{ padding: '10px 16px', textAlign: 'center', fontWeight: 700, fontSize: '0.9rem', color: isSel ? '#fff' : C }}>
+                      {fmtMoney(e.prix_vente)}
+                    </td>
+                    <td style={{ padding: '10px 16px', textAlign: 'center', fontSize: '0.8rem', color: isSel ? 'rgba(255,255,255,0.85)' : 'var(--text-muted)' }}>
+                      {fmtDate(e.saved_at)}
+                    </td>
+                    <td style={{ padding: '8px 16px', textAlign: 'center' }} onClick={ev => ev.stopPropagation()}>
+                      <button onClick={() => handleDeleteHistEntry(e.id)}
+                        style={{ border: `1.5px solid ${isSel ? '#fff' : '#dc2626'}`, color: isSel ? '#fff' : '#dc2626', background: 'none', borderRadius: 7, padding: '4px 10px', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 600, whiteSpace: 'nowrap' }}>
+                        Supprimer
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -465,6 +487,7 @@ export default function ConfigurationVentePage() {
   const [histFilterDu, setHistFilterDu] = useState('');
   const [histFilterAu, setHistFilterAu] = useState('');
   const [exportingHistXls, setExportingHistXls] = useState(false);
+  const [selectedHistIds, setSelectedHistIds] = useState<Set<number>>(new Set());
 
   useEffect(() => {
     api.get('/api/entreprise/activites').then(({ data }) => {
@@ -549,6 +572,14 @@ export default function ConfigurationVentePage() {
     } catch {} finally { setSaving(false); }
   };
 
+  const toggleSelectHist = (id: number) => {
+    setSelectedHistIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
   const handleDeleteHistEntry = async (id: number) => {
     if (!confirm('Supprimer cette entrée de l\'historique ?')) return;
     try {
@@ -561,7 +592,13 @@ export default function ConfigurationVentePage() {
     if (!selectedActiviteId) return;
     setExportingHistXls(true);
     try {
-      const resp = await api.get(`/api/articles-vendables/historique-config/export-excel?activiteId=${selectedActiviteId}`, { responseType: 'blob' });
+      const params = new URLSearchParams({ activiteId: String(selectedActiviteId) });
+      if (histFilterDu) params.set('from', histFilterDu);
+      if (histFilterAu) params.set('to', histFilterAu);
+      if (histFilterType !== 'all') params.set('filterType', histFilterType);
+      if (histFilterNom) params.set('filterNom', histFilterNom);
+      if (selectedHistIds.size > 0) params.set('selectedIds', [...selectedHistIds].join(','));
+      const resp = await api.get(`/api/articles-vendables/historique-config/export-excel?${params}`, { responseType: 'blob' });
       const url = URL.createObjectURL(resp.data as Blob);
       const a = document.createElement('a');
       a.href = url; a.download = 'historique-config-prix.xlsx'; a.click();
@@ -589,6 +626,7 @@ export default function ConfigurationVentePage() {
     loadHistorique, filteredHist,
     handleDeleteHistEntry, handleExportHistXls, exportingHistXls,
     selectedActiviteId,
+    selectedHistIds, toggleSelectHist, setSelectedHistIds,
   };
 
   const TabBtn = ({ tab, label, count }: { tab: Tab; label: string; count?: number }) => (

@@ -84,6 +84,8 @@ interface VPCtxType {
   saveError: string;
   saveSuccess: boolean;
   handleSubmit: () => void;
+  selectedVenteIds: Set<string>;
+  toggleSelectVente: (id: string) => void;
 }
 
 const VPCtx = createContext<VPCtxType>(null!);
@@ -264,6 +266,7 @@ export default function VentesPage() {
   const [histType, setHistType] = useState<'all' | 'directe' | 'prestataire'>('all');
   const [histPrestaId, setHistPrestaId] = useState('');
   const [exportingXls, setExportingXls] = useState(false);
+  const [selectedVenteIds, setSelectedVenteIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     api.get('/api/entreprise/activites').then(({ data }) => {
@@ -356,6 +359,14 @@ export default function VentesPage() {
     }
   };
 
+  const toggleSelectVente = (id: string) => {
+    setSelectedVenteIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
   const handleAnnuler = async (id: string) => {
     if (!confirm('Annuler cette vente et réintégrer le stock ?')) return;
     try { await api.delete(`/api/ventes/${id}`); loadData(); }
@@ -370,6 +381,8 @@ export default function VentesPage() {
       if (histDateFrom) params.set('from', histDateFrom);
       if (histDateTo) params.set('to', histDateTo);
       if (histType !== 'all') params.set('type', histType);
+      if (histPrestaId) params.set('prestataireId', histPrestaId);
+      if (selectedVenteIds.size > 0) params.set('selectedIds', [...selectedVenteIds].join(','));
       const resp = await api.get(`/api/ventes/export-excel?${params}`, { responseType: 'blob' });
       const url = URL.createObjectURL(resp.data as Blob);
       const a = document.createElement('a');
@@ -394,6 +407,7 @@ export default function VentesPage() {
     qtes, setQtes,
     dateVente, setDateVente,
     saving, saveError, saveSuccess, handleSubmit,
+    selectedVenteIds, toggleSelectVente,
   };
 
   return (
@@ -545,6 +559,9 @@ export default function VentesPage() {
                     )}
                     <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
                       {filteredVentes.length} vente{filteredVentes.length > 1 ? 's' : ''}
+                      {selectedVenteIds.size > 0 && (
+                        <span style={{ marginLeft: 6, color: '#FF6B00', fontWeight: 700 }}>· {selectedVenteIds.size} sélectionnée{selectedVenteIds.size > 1 ? 's' : ''}</span>
+                      )}
                     </div>
                     <button onClick={handleExportXls} disabled={exportingXls}
                       style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6, padding: '6px 14px', borderRadius: 8, border: '1.5px solid #1D6F42', background: exportingXls ? '#f3f4f6' : '#f0fdf4', color: '#1D6F42', cursor: exportingXls ? 'default' : 'pointer', fontWeight: 700, fontSize: '0.8rem', whiteSpace: 'nowrap' }}>
@@ -561,35 +578,53 @@ export default function VentesPage() {
                     <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                       <thead>
                         <tr style={{ background: CL, borderBottom: `2px solid ${CB}` }}>
+                          <th style={{ padding: '8px 12px', width: 36 }}>
+                            <input type="checkbox"
+                              checked={filteredVentes.length > 0 && filteredVentes.every(v => selectedVenteIds.has(v.id))}
+                              onChange={e => {
+                                if (e.target.checked) setSelectedVenteIds(new Set(filteredVentes.map(v => v.id)));
+                                else setSelectedVenteIds(new Set());
+                              }}
+                              style={{ accentColor: '#FF6B00', width: 15, height: 15, cursor: 'pointer' }} />
+                          </th>
                           {['Date', 'Type', 'CA', 'Marge', 'Statut', ''].map(h => (
                             <th key={h} style={{ padding: '11px 16px', textAlign: 'left', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{h}</th>
                           ))}
                         </tr>
                       </thead>
                       <tbody>
-                        {filteredVentes.map((v, idx) => (
-                          <tr key={v.id} style={{ borderBottom: `1px solid ${CB}`, background: idx % 2 === 0 ? '#fff' : '#fffdf7' }}>
-                            <td style={{ padding: '11px 16px', fontWeight: 600, fontSize: '0.9rem' }}>{fmtDate(v.date_vente)}</td>
-                            <td style={{ padding: '11px 16px', fontSize: '0.88rem' }}>
-                              {v.type_vente === 'directe' ? '🏪 Directe' : `🛵 ${v.prestataire_nom || 'Prestataire'}`}
-                            </td>
-                            <td style={{ padding: '11px 16px', fontWeight: 700, color: C }}>{fmtMoney(v.total_ca)}</td>
-                            <td style={{ padding: '11px 16px', fontWeight: 600, color: v.total_marge >= 0 ? '#16a34a' : '#dc2626' }}>
-                              {fmtMoney(v.total_marge)}
-                            </td>
-                            <td style={{ padding: '11px 16px' }}>
-                              <span style={{ padding: '2px 10px', borderRadius: 12, fontSize: '0.78rem', fontWeight: 600, background: v.statut === 'confirmee' ? '#dcfce7' : '#fef9c3', color: v.statut === 'confirmee' ? '#166534' : '#854d0e' }}>
-                                {v.statut === 'confirmee' ? '✓ Confirmée' : v.statut}
-                              </span>
-                            </td>
-                            <td style={{ padding: '8px 16px' }}>
-                              <button onClick={() => handleAnnuler(v.id)}
-                                style={{ border: '1.5px solid #dc2626', color: '#dc2626', background: 'none', borderRadius: 7, padding: '4px 12px', cursor: 'pointer', fontSize: '0.78rem', fontWeight: 600 }}>
-                                Annuler
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
+                        {filteredVentes.map((v, idx) => {
+                          const isSel = selectedVenteIds.has(v.id);
+                          const rowBg = isSel ? '#FF6B00' : (idx % 2 === 0 ? '#fff' : '#fffdf7');
+                          const rowColor = isSel ? '#fff' : undefined;
+                          return (
+                            <tr key={v.id} style={{ borderBottom: `1px solid ${CB}`, background: rowBg, color: rowColor }} onClick={() => toggleSelectVente(v.id)} role="button" tabIndex={0} onKeyDown={e => e.key === ' ' && toggleSelectVente(v.id)}>
+                              <td style={{ padding: '8px 12px', textAlign: 'center' }} onClick={e => e.stopPropagation()}>
+                                <input type="checkbox" checked={isSel} onChange={() => toggleSelectVente(v.id)}
+                                  style={{ accentColor: '#FF6B00', width: 15, height: 15, cursor: 'pointer' }} />
+                              </td>
+                              <td style={{ padding: '11px 16px', fontWeight: 600, fontSize: '0.9rem', color: isSel ? '#fff' : undefined }}>{fmtDate(v.date_vente)}</td>
+                              <td style={{ padding: '11px 16px', fontSize: '0.88rem', color: isSel ? '#fff' : undefined }}>
+                                {v.type_vente === 'directe' ? '🏪 Directe' : `🛵 ${v.prestataire_nom || 'Prestataire'}`}
+                              </td>
+                              <td style={{ padding: '11px 16px', fontWeight: 700, color: isSel ? '#fff' : C }}>{fmtMoney(v.total_ca)}</td>
+                              <td style={{ padding: '11px 16px', fontWeight: 600, color: isSel ? '#fff' : (v.total_marge >= 0 ? '#16a34a' : '#dc2626') }}>
+                                {fmtMoney(v.total_marge)}
+                              </td>
+                              <td style={{ padding: '11px 16px' }}>
+                                <span style={{ padding: '2px 10px', borderRadius: 12, fontSize: '0.78rem', fontWeight: 600, background: isSel ? 'rgba(255,255,255,0.25)' : (v.statut === 'confirmee' ? '#dcfce7' : '#fef9c3'), color: isSel ? '#fff' : (v.statut === 'confirmee' ? '#166534' : '#854d0e') }}>
+                                  {v.statut === 'confirmee' ? '✓ Confirmée' : v.statut}
+                                </span>
+                              </td>
+                              <td style={{ padding: '8px 16px' }} onClick={e => e.stopPropagation()}>
+                                <button onClick={() => handleAnnuler(v.id)}
+                                  style={{ border: `1.5px solid ${isSel ? '#fff' : '#dc2626'}`, color: isSel ? '#fff' : '#dc2626', background: 'none', borderRadius: 7, padding: '4px 12px', cursor: 'pointer', fontSize: '0.78rem', fontWeight: 600 }}>
+                                  Annuler
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })}
                       </tbody>
                     </table>
                   )}
