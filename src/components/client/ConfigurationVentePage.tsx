@@ -88,7 +88,7 @@ export default function ConfigurationVentePage() {
       api.get(`/api/activite-prestataires?activiteId=${selectedActiviteId}`),
       api.get(`/api/articles-vendables?activiteId=${selectedActiviteId}`),
       api.get(`/api/article-prix-prestataire?activiteId=${selectedActiviteId}`),
-      api.get('/api/produits?type=vendable'),
+      api.get(`/api/produits?activiteId=${selectedActiviteId}&type=vendable`),
     ]).then(([ap, av, pp, pr]) => {
       setPrestataires(ap.data as ActivitePrestataire[]);
       setPrixPrestataires(pp.data as ArticlePrixPrestataire[]);
