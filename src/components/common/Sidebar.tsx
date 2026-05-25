@@ -204,6 +204,7 @@ function GerantSidebarContent({
             <SubNavLink to="/client/referentiel/familles" icon="🗂️" label="Familles" isActive={location.pathname === '/client/referentiel/familles'} onClick={onClose} />
             <SubNavLink to="/client/referentiel/categories" icon="🏷️" label="Catégories" isActive={location.pathname === '/client/referentiel/categories'} onClick={onClose} />
             <SubNavLink to="/client/referentiel/articles" icon="🧂" label="Articles" isActive={location.pathname === '/client/referentiel/articles'} onClick={onClose} />
+            <SubNavLink to="/client/referentiel/import" icon="📥" label="Ajout Dynamique" isActive={location.pathname === '/client/referentiel/import'} onClick={onClose} />
           </>
         )}
       </>
@@ -468,6 +469,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                       <SubNavLink to="/client/referentiel/familles" icon="🗂️" label="Familles" isActive={location.pathname === '/client/referentiel/familles'} onClick={onClose} />
                       <SubNavLink to="/client/referentiel/categories" icon="🏷️" label="Catégories" isActive={location.pathname === '/client/referentiel/categories'} onClick={onClose} />
                       <SubNavLink to="/client/referentiel/articles" icon="🧂" label="Articles" isActive={location.pathname === '/client/referentiel/articles'} onClick={onClose} />
+                      <SubNavLink to="/client/referentiel/import" icon="📥" label="Ajout Dynamique" isActive={location.pathname === '/client/referentiel/import'} onClick={onClose} />
                     </>
                   )}
                 </>

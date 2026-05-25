@@ -173,6 +173,7 @@ export interface Category {
   name: string;
   familleId?: number | null;
   familleName?: string | null;
+  vendable: boolean;
   clientId?: number | null;
 }
 

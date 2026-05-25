@@ -18,6 +18,9 @@ interface ArticleEditForm {
 
 const emptyEditForm: ArticleEditForm = { nom: '', uniteId: '', categorieId: '' };
 
+interface ArtRow { nom: string; uniteId: string; categorieId: string; }
+const emptyArtRow = (): ArtRow => ({ nom: '', uniteId: '', categorieId: '' });
+
 export default function ReferentielArticlesPage() {
   const [articles, setArticles] = useState<Article[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -43,6 +46,12 @@ export default function ReferentielArticlesPage() {
   const [editForm, setEditForm] = useState<ArticleEditForm>(emptyEditForm);
   const [saving, setSaving] = useState(false);
   const [editError, setEditError] = useState('');
+
+  // Multi-add state
+  const [showMultiCreate, setShowMultiCreate] = useState(false);
+  const [multiRows, setMultiRows] = useState<ArtRow[]>([emptyArtRow()]);
+  const [multiError, setMultiError] = useState('');
+  const [multiCreating, setMultiCreating] = useState(false);
 
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [search, setSearch] = useState('');
@@ -135,6 +144,33 @@ export default function ReferentielArticlesPage() {
     } finally {
       setCreating(false);
     }
+  };
+
+  // ── Multi-add ──
+  const openMultiCreate = () => { setMultiRows([emptyArtRow()]); setMultiError(''); setShowMultiCreate(true); };
+  const closeMultiCreate = () => setShowMultiCreate(false);
+  const updateMultiRow = (i: number, field: keyof ArtRow, val: string) =>
+    setMultiRows(prev => prev.map((r, idx) => idx === i ? { ...r, [field]: val } : r));
+  const addMultiRow = () => setMultiRows(prev => [...prev, emptyArtRow()]);
+  const removeMultiRow = (i: number) => setMultiRows(prev => prev.filter((_, idx) => idx !== i));
+
+  const handleMultiCreate = async () => {
+    const valid = multiRows.filter(r => r.nom.trim() && r.uniteId);
+    if (!valid.length) { setMultiError('Au moins un article avec nom et unité requis'); return; }
+    setMultiCreating(true); setMultiError('');
+    try {
+      await Promise.all(valid.map(r =>
+        api.post('/api/articles', {
+          nom: r.nom.trim(),
+          unitId: parseInt(r.uniteId),
+          categorieId: r.categorieId ? parseInt(r.categorieId) : null,
+        })
+      ));
+      window.dispatchEvent(new Event('articles-changed'));
+      closeMultiCreate(); load();
+    } catch (e: unknown) {
+      setMultiError((e as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Erreur lors de la création');
+    } finally { setMultiCreating(false); }
   };
 
   // ── Edit ──
@@ -292,6 +328,9 @@ export default function ReferentielArticlesPage() {
             </select>
           </div>
         )}
+        <button className="btn btn-ghost" onClick={openMultiCreate} style={{ flexShrink: 0, border: '1.5px solid #16a34a', color: '#15803d' }}>
+          + Ajout multiple
+        </button>
         <button className="btn" onClick={openCreate} style={{ background: 'linear-gradient(135deg,#15803d,#16a34a)', color: '#fff', flexShrink: 0 }}>
           + Nouvel article
         </button>
@@ -409,6 +448,58 @@ export default function ReferentielArticlesPage() {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* ── Multi-add Modal ── */}
+      {showMultiCreate && (
+        <div className="modal-overlay">
+          <div className="modal" style={{ maxWidth: 680 }} onClick={e => e.stopPropagation()}>
+            <div className="modal-header" style={{ background: GRADIENT }}>
+              <h2 style={{ color: '#fff', margin: 0 }}>Ajout multiple d'articles</h2>
+              <button className="modal-close" onClick={closeMultiCreate}>×</button>
+            </div>
+            <div className="modal-body">
+              {multiError && <div style={{ background: '#fee2e2', color: '#dc2626', border: '1px solid #fecaca', borderRadius: 6, padding: '8px 12px', marginBottom: 12, fontSize: '0.85rem' }}>{multiError}</div>}
+              <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', margin: '0 0 10px' }}>
+                Les articles seront ajoutés à votre référentiel. Assignez-les à vos activités depuis le Catalogue Global.
+              </p>
+              <div style={{ display: 'flex', gap: 8, fontWeight: 700, fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6, paddingLeft: 2 }}>
+                <div style={{ flex: 2 }}>Nom *</div>
+                <div style={{ flex: 1 }}>Unité *</div>
+                <div style={{ flex: 2 }}>Catégorie</div>
+                <div style={{ width: 32 }} />
+              </div>
+              {multiRows.map((row, i) => (
+                <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 8, alignItems: 'center' }}>
+                  <input
+                    className="input" style={{ flex: 2 }}
+                    autoFocus={i === 0}
+                    placeholder="Ex: Poulet entier"
+                    value={row.nom}
+                    onChange={e => updateMultiRow(i, 'nom', e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); if (i === multiRows.length - 1) addMultiRow(); } }}
+                  />
+                  <select className="input" style={{ flex: 1 }} value={row.uniteId} onChange={e => updateMultiRow(i, 'uniteId', e.target.value)}>
+                    <option value="">— Unité —</option>
+                    {unites.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+                  </select>
+                  <select className="input" style={{ flex: 2 }} value={row.categorieId} onChange={e => updateMultiRow(i, 'categorieId', e.target.value)}>
+                    <option value="">— Catégorie —</option>
+                    {categories.map(c => <option key={c.id} value={c.id}>{c.familleName ? `${c.familleName} › ${c.name}` : c.name}</option>)}
+                  </select>
+                  <button onClick={() => removeMultiRow(i)} disabled={multiRows.length === 1} style={{ width: 32, height: 38, border: 'none', borderRadius: 6, background: multiRows.length === 1 ? '#f1f5f9' : '#fee2e2', color: multiRows.length === 1 ? '#94a3b8' : '#dc2626', cursor: multiRows.length === 1 ? 'not-allowed' : 'pointer', fontWeight: 700, flexShrink: 0 }}>×</button>
+                </div>
+              ))}
+              <button onClick={addMultiRow} style={{ background: 'none', border: `1.5px dashed ${COLOR}`, borderRadius: 8, padding: '7px 16px', color: COLOR, fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer', width: '100%', marginTop: 4 }}>+ Ajouter une ligne</button>
+              <div className="modal-footer" style={{ marginTop: 16 }}>
+                <button className="btn btn-ghost" onClick={closeMultiCreate}>Annuler</button>
+                <button className="btn" disabled={multiCreating} onClick={handleMultiCreate} style={{ background: 'linear-gradient(135deg,#15803d,#16a34a)', color: '#fff' }}>
+                  {multiCreating ? 'Création…' : `Créer ${multiRows.filter(r => r.nom.trim() && r.uniteId).length > 1 ? `(${multiRows.filter(r => r.nom.trim() && r.uniteId).length} articles)` : 'l\'article'}`}
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 

@@ -10,66 +10,89 @@ const LABEL: React.CSSProperties = {
   textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 3, display: 'block',
 };
 
+interface CatRow { nom: string; familleId: string; vendable: boolean; }
+const emptyRow = (): CatRow => ({ nom: '', familleId: '', vendable: true });
+
 export default function ReferentielCategoriesPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [familles, setFamilles] = useState<Famille[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showForm, setShowForm] = useState(false);
+
+  // Create — multi-row
+  const [showCreate, setShowCreate] = useState(false);
+  const [rows, setRows] = useState<CatRow[]>([emptyRow()]);
+  const [createError, setCreateError] = useState('');
+  const [creating, setCreating] = useState(false);
+
+  // Edit — single
   const [editItem, setEditItem] = useState<Category | null>(null);
-  const [nom, setNom] = useState('');
-  const [familleId, setFamilleId] = useState<string>('');
+  const [editNom, setEditNom] = useState('');
+  const [editFamilleId, setEditFamilleId] = useState('');
+  const [editVendable, setEditVendable] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
+  const [editError, setEditError] = useState('');
+
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [search, setSearch] = useState('');
-  const [filterFamille, setFilterFamille] = useState<string>('');
+  const [filterFamille, setFilterFamille] = useState('');
 
   const load = () => {
     setLoading(true);
-    Promise.all([
-      api.get('/api/categories'),
-      api.get('/api/familles'),
-    ]).then(([catR, famR]) => {
-      setCategories(catR.data);
-      setFamilles(famR.data);
-      setLoading(false);
-    }).catch(() => setLoading(false));
+    Promise.all([api.get('/api/categories'), api.get('/api/familles')])
+      .then(([catR, famR]) => { setCategories(catR.data); setFamilles(famR.data); setLoading(false); })
+      .catch(() => setLoading(false));
   };
-
   useEffect(() => { load(); }, []);
 
-  const openCreate = () => { setEditItem(null); setNom(''); setFamilleId(''); setError(''); setShowForm(true); };
-  const openEdit = (c: Category) => { setEditItem(c); setNom(c.name); setFamilleId(c.familleId ? String(c.familleId) : ''); setError(''); setShowForm(true); };
-  const closeForm = () => { setShowForm(false); setEditItem(null); setNom(''); setFamilleId(''); setError(''); };
+  const openCreate = () => { setRows([emptyRow()]); setCreateError(''); setShowCreate(true); };
+  const closeCreate = () => setShowCreate(false);
+  const updateRow = (i: number, field: keyof CatRow, val: string | boolean) =>
+    setRows(prev => prev.map((r, idx) => idx === i ? { ...r, [field]: val } : r));
+  const addRow = () => setRows(prev => [...prev, emptyRow()]);
+  const removeRow = (i: number) => setRows(prev => prev.filter((_, idx) => idx !== i));
+
+  const handleCreate = async () => {
+    const valid = rows.filter(r => r.nom.trim());
+    if (!valid.length) { setCreateError('Au moins un nom requis'); return; }
+    if (familles.length > 0 && valid.some(r => !r.familleId)) { setCreateError('Famille requise pour chaque ligne'); return; }
+    setCreating(true); setCreateError('');
+    try {
+      await Promise.all(valid.map(r =>
+        api.post('/api/categories', { nom: r.nom.trim(), familleId: r.familleId ? parseInt(r.familleId) : null, vendable: r.vendable })
+      ));
+      closeCreate(); load();
+    } catch (e: unknown) {
+      setCreateError((e as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Erreur lors de l\'enregistrement');
+    } finally { setCreating(false); }
+  };
+
+  const openEdit = (c: Category) => {
+    setEditItem(c); setEditNom(c.name);
+    setEditFamilleId(c.familleId ? String(c.familleId) : '');
+    setEditVendable(c.vendable !== false);
+    setEditError(''); setSaving(false);
+  };
+  const closeEdit = () => setEditItem(null);
 
   const handleSave = async () => {
-    if (!nom.trim()) { setError('Nom requis'); return; }
-    if (familles.length > 0 && !familleId) { setError('Famille requise'); return; }
+    if (!editNom.trim()) { setEditError('Nom requis'); return; }
+    if (familles.length > 0 && !editFamilleId) { setEditError('Famille requise'); return; }
     setSaving(true);
     try {
-      const payload = { nom: nom.trim(), familleId: familleId ? parseInt(familleId) : null };
-      if (editItem) {
-        await api.put(`/api/categories/${editItem.id}`, payload);
-      } else {
-        await api.post('/api/categories', payload);
-      }
-      closeForm();
-      load();
+      await api.put(`/api/categories/${editItem!.id}`, {
+        nom: editNom.trim(),
+        familleId: editFamilleId ? parseInt(editFamilleId) : null,
+        vendable: editVendable,
+      });
+      closeEdit(); load();
     } catch (e: unknown) {
-      setError((e as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Erreur lors de l\'enregistrement');
-    } finally {
-      setSaving(false);
-    }
+      setEditError((e as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Erreur lors de l\'enregistrement');
+    } finally { setSaving(false); }
   };
 
   const handleDelete = async (id: number) => {
-    try {
-      await api.delete(`/api/categories/${id}`);
-      setDeleteId(null);
-      load();
-    } catch (e: unknown) {
-      alert((e as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Impossible de supprimer cette catégorie');
-    }
+    try { await api.delete(`/api/categories/${id}`); setDeleteId(null); load(); }
+    catch (e: unknown) { alert((e as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Impossible de supprimer cette catégorie'); }
   };
 
   const filtered = categories.filter(c => {
@@ -80,92 +103,56 @@ export default function ReferentielCategoriesPage() {
 
   return (
     <div className="page">
-      {/* ── Hero ── */}
-      <div style={{
-        background: GRADIENT, borderRadius: 18, padding: '24px 28px', marginBottom: 24,
-        boxShadow: '0 8px 32px rgba(22,163,74,0.28)',
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16,
-      }}>
+      {/* Hero */}
+      <div style={{ background: GRADIENT, borderRadius: 18, padding: '24px 28px', marginBottom: 24, boxShadow: '0 8px 32px rgba(22,163,74,0.28)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
             <div style={{ background: 'rgba(255,255,255,0.15)', borderRadius: 10, padding: '7px 9px', fontSize: '1.2rem' }}>🏷️</div>
             <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0 }}>Catégories</h1>
           </div>
           <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.85rem', margin: 0 }}>
-            {categories.length === 0
-              ? 'Organisez vos articles par catégorie au sein de chaque famille'
-              : 'Catégories pour classer vos articles dans votre référentiel'}
+            {categories.length === 0 ? 'Organisez vos articles par catégorie au sein de chaque famille' : 'Catégories pour classer vos articles dans votre référentiel'}
           </p>
         </div>
-        <div style={{
-          background: 'rgba(255,255,255,0.15)', border: '1.5px solid rgba(255,255,255,0.3)',
-          borderRadius: 14, padding: '10px 20px', textAlign: 'center', minWidth: 80,
-        }}>
+        <div style={{ background: 'rgba(255,255,255,0.15)', border: '1.5px solid rgba(255,255,255,0.3)', borderRadius: 14, padding: '10px 20px', textAlign: 'center', minWidth: 80 }}>
           <div style={{ fontSize: '1.8rem', fontWeight: 900, color: '#fff', lineHeight: 1 }}>{categories.length}</div>
-          <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.75)', marginTop: 2 }}>
-            catégorie{categories.length !== 1 ? 's' : ''}
-          </div>
+          <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.75)', marginTop: 2 }}>catégorie{categories.length !== 1 ? 's' : ''}</div>
         </div>
       </div>
 
-      {/* ── Filter bar ── */}
-      <div style={{
-        background: 'var(--surface)', borderRadius: 14, padding: '14px 18px', marginBottom: 20,
-        border: '1px solid var(--border)', boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
-        display: 'flex', alignItems: 'flex-end', gap: 12, flexWrap: 'wrap',
-      }}>
+      {/* Filter bar */}
+      <div style={{ background: 'var(--surface)', borderRadius: 14, padding: '14px 18px', marginBottom: 20, border: '1px solid var(--border)', boxShadow: '0 2px 8px rgba(0,0,0,0.04)', display: 'flex', alignItems: 'flex-end', gap: 12, flexWrap: 'wrap' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 180 }}>
           <span style={{ fontSize: '1.1rem', flexShrink: 0 }}>🔍</span>
           <div style={{ flex: 1 }}>
             <span style={LABEL}>Recherche</span>
-            <input
-              value={search} onChange={e => setSearch(e.target.value)}
-              placeholder="Filtrer les catégories…"
-              style={{ width: '100%', padding: '8px 11px', borderRadius: 8, border: '1.5px solid var(--border)', fontSize: '0.88rem', background: '#f8fafc', boxSizing: 'border-box' }}
-            />
+            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Filtrer les catégories…" style={{ width: '100%', padding: '8px 11px', borderRadius: 8, border: '1.5px solid var(--border)', fontSize: '0.88rem', background: '#f8fafc', boxSizing: 'border-box' }} />
           </div>
         </div>
         {familles.length > 0 && (
           <div style={{ minWidth: 160 }}>
             <span style={LABEL}>🗂️ Famille</span>
-            <select
-              value={filterFamille} onChange={e => setFilterFamille(e.target.value)}
-              style={{ width: '100%', padding: '8px 11px', borderRadius: 8, border: '1.5px solid var(--border)', fontSize: '0.88rem', background: '#f8fafc' }}
-            >
+            <select value={filterFamille} onChange={e => setFilterFamille(e.target.value)} style={{ width: '100%', padding: '8px 11px', borderRadius: 8, border: '1.5px solid var(--border)', fontSize: '0.88rem', background: '#f8fafc' }}>
               <option value="">Toutes les familles</option>
               {familles.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
             </select>
           </div>
         )}
-        <button className="btn" onClick={openCreate} style={{ background: 'linear-gradient(135deg,#15803d,#16a34a)', color: '#fff', flexShrink: 0 }}>
-          + Nouvelle catégorie
-        </button>
+        <button className="btn" onClick={openCreate} style={{ background: 'linear-gradient(135deg,#15803d,#16a34a)', color: '#fff', flexShrink: 0 }}>+ Nouvelle catégorie</button>
       </div>
 
-      {/* ── List ── */}
+      {/* List */}
       {loading ? (
         <div className="loading-text">Chargement…</div>
       ) : categories.length === 0 ? (
         <div style={{ background: 'linear-gradient(135deg,#f0fdf4,#dcfce7)', border: '2px dashed #86efac', borderRadius: 18, padding: '48px 32px', textAlign: 'center' }}>
           <div style={{ fontSize: '2.8rem', marginBottom: 14 }}>🏷️</div>
           <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#14532d', margin: '0 0 8px' }}>Aucune catégorie définie</h3>
-          <p style={{ color: '#166534', fontSize: '0.88rem', margin: '0 0 6px', maxWidth: 400, marginInline: 'auto' }}>
-            Les catégories organisent vos articles au sein des familles : Volailles, Produits laitiers…
-          </p>
-          {familles.length === 0 && (
-            <p style={{ color: '#15803d', fontSize: '0.82rem', margin: '0 0 20px', fontStyle: 'italic' }}>
-              💡 Conseil : créez d'abord des familles pour mieux organiser vos catégories.
-            </p>
-          )}
-          {familles.length > 0 && <div style={{ marginBottom: 24 }} />}
-          <button onClick={openCreate} style={{ background: 'linear-gradient(135deg,#15803d,#16a34a)', color: '#fff', border: 'none', borderRadius: 10, padding: '11px 28px', fontWeight: 700, fontSize: '0.92rem', cursor: 'pointer' }}>
-            + Créer la première catégorie
-          </button>
+          <p style={{ color: '#166534', fontSize: '0.88rem', margin: '0 0 20px', maxWidth: 400, marginInline: 'auto' }}>Les catégories organisent vos articles au sein des familles.</p>
+          <button onClick={openCreate} style={{ background: 'linear-gradient(135deg,#15803d,#16a34a)', color: '#fff', border: 'none', borderRadius: 10, padding: '11px 28px', fontWeight: 700, fontSize: '0.92rem', cursor: 'pointer' }}>+ Créer la première catégorie</button>
         </div>
       ) : filtered.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-muted)' }}>
-          Aucun résultat pour cette recherche.
-        </div>
+        <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-muted)' }}>Aucun résultat pour cette recherche.</div>
       ) : (
         <div className="table-responsive card">
           <table className="table">
@@ -173,6 +160,7 @@ export default function ReferentielCategoriesPage() {
               <tr>
                 <th>Nom</th>
                 <th>Famille</th>
+                <th style={{ textAlign: 'center' }}>Vendable</th>
                 <th style={{ textAlign: 'right' }}>Actions</th>
               </tr>
             </thead>
@@ -181,6 +169,11 @@ export default function ReferentielCategoriesPage() {
                 <tr key={c.id}>
                   <td style={{ fontWeight: 600, color: '#0f172a' }}>{c.name}</td>
                   <td>{c.familleName ? <span style={{ fontSize: '0.82rem', color: COLOR, fontWeight: 600 }}>🗂️ {c.familleName}</span> : <span style={{ color: 'var(--text-muted)', fontSize: '0.82rem' }}>—</span>}</td>
+                  <td style={{ textAlign: 'center' }}>
+                    <span style={{ display: 'inline-block', padding: '2px 10px', borderRadius: 20, fontSize: '0.75rem', fontWeight: 700, background: c.vendable !== false ? '#dcfce7' : '#f1f5f9', color: c.vendable !== false ? '#15803d' : '#64748b' }}>
+                      {c.vendable !== false ? '✓ Oui' : '— Non'}
+                    </span>
+                  </td>
                   <td className="actions-cell" style={{ justifyContent: 'flex-end' }}>
                     <button className="btn btn-ghost btn-sm" onClick={() => openEdit(c)}>✏️ Modifier</button>
                     <button className="btn btn-danger btn-sm" onClick={() => setDeleteId(c.id)}>🗑️</button>
@@ -192,32 +185,87 @@ export default function ReferentielCategoriesPage() {
         </div>
       )}
 
-      {/* ── Create/Edit Modal ── */}
-      {showForm && (
+      {/* Create Modal — multi-row */}
+      {showCreate && (
+        <div className="modal-overlay">
+          <div className="modal" style={{ maxWidth: 620 }} onClick={e => e.stopPropagation()}>
+            <div className="modal-header" style={{ background: GRADIENT }}>
+              <h2 style={{ color: '#fff', margin: 0 }}>Nouvelles catégories</h2>
+              <button className="modal-close" onClick={closeCreate}>×</button>
+            </div>
+            <div className="modal-body">
+              {createError && <div style={{ background: '#fee2e2', color: '#dc2626', border: '1px solid #fecaca', borderRadius: 6, padding: '8px 12px', marginBottom: 12, fontSize: '0.85rem' }}>{createError}</div>}
+              <div style={{ display: 'flex', gap: 8, fontWeight: 700, fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6, paddingLeft: 2 }}>
+                <div style={{ flex: 2 }}>Nom *</div>
+                {familles.length > 0 && <div style={{ flex: 2 }}>Famille *</div>}
+                <div style={{ flex: 1 }}>Vendable</div>
+                <div style={{ width: 32 }} />
+              </div>
+              {rows.map((row, i) => (
+                <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 8, alignItems: 'center' }}>
+                  <input
+                    className="input" style={{ flex: 2 }}
+                    autoFocus={i === 0}
+                    placeholder="Ex: Viandes"
+                    value={row.nom}
+                    onChange={e => updateRow(i, 'nom', e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); if (i === rows.length - 1) addRow(); } }}
+                  />
+                  {familles.length > 0 && (
+                    <select className="input" style={{ flex: 2 }} value={row.familleId} onChange={e => updateRow(i, 'familleId', e.target.value)}>
+                      <option value="">— Famille —</option>
+                      {familles.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
+                    </select>
+                  )}
+                  <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <input type="checkbox" id={`vend-${i}`} checked={row.vendable} onChange={e => updateRow(i, 'vendable', e.target.checked)} style={{ width: 16, height: 16, accentColor: COLOR }} />
+                    <label htmlFor={`vend-${i}`} style={{ fontSize: '0.82rem', color: 'var(--text-muted)', cursor: 'pointer' }}>Oui</label>
+                  </div>
+                  <button onClick={() => removeRow(i)} disabled={rows.length === 1} style={{ width: 32, height: 32, border: 'none', borderRadius: 6, background: rows.length === 1 ? '#f1f5f9' : '#fee2e2', color: rows.length === 1 ? '#94a3b8' : '#dc2626', cursor: rows.length === 1 ? 'not-allowed' : 'pointer', fontWeight: 700, flexShrink: 0 }}>×</button>
+                </div>
+              ))}
+              <button onClick={addRow} style={{ background: 'none', border: '1.5px dashed #86efac', borderRadius: 8, padding: '7px 16px', color: COLOR, fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer', width: '100%', marginTop: 4 }}>+ Ajouter une ligne</button>
+              <div className="modal-footer" style={{ marginTop: 16 }}>
+                <button className="btn btn-ghost" onClick={closeCreate}>Annuler</button>
+                <button className="btn" disabled={creating} onClick={handleCreate} style={{ background: 'linear-gradient(135deg,#15803d,#16a34a)', color: '#fff' }}>
+                  {creating ? 'Enregistrement…' : `Enregistrer ${rows.filter(r => r.nom.trim()).length > 1 ? `(${rows.filter(r => r.nom.trim()).length})` : ''}`}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Modal */}
+      {editItem && (
         <div className="modal-overlay">
           <div className="modal modal-sm" onClick={e => e.stopPropagation()}>
             <div className="modal-header" style={{ background: GRADIENT }}>
-              <h2 style={{ color: '#fff', margin: 0 }}>{editItem ? 'Modifier la catégorie' : 'Nouvelle catégorie'}</h2>
-              <button className="modal-close" onClick={closeForm}>×</button>
+              <h2 style={{ color: '#fff', margin: 0 }}>Modifier la catégorie</h2>
+              <button className="modal-close" onClick={closeEdit}>×</button>
             </div>
             <div className="modal-body">
-              {error && <div style={{ background: '#fee2e2', color: '#dc2626', border: '1px solid #fecaca', borderRadius: 6, padding: '8px 12px', marginBottom: 12, fontSize: '0.85rem' }}>{error}</div>}
+              {editError && <div style={{ background: '#fee2e2', color: '#dc2626', border: '1px solid #fecaca', borderRadius: 6, padding: '8px 12px', marginBottom: 12, fontSize: '0.85rem' }}>{editError}</div>}
               <div className="form-group">
                 <label>Nom *</label>
-                <input className="input" autoFocus value={nom} placeholder="Ex: Viandes & Volailles" onChange={e => setNom(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSave()} />
+                <input className="input" autoFocus value={editNom} placeholder="Ex: Viandes & Volailles" onChange={e => setEditNom(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSave()} />
               </div>
               {familles.length > 0 && (
                 <div className="form-group">
                   <label>Famille *</label>
-                  <select className="input" value={familleId} onChange={e => setFamilleId(e.target.value)}>
+                  <select className="input" value={editFamilleId} onChange={e => setEditFamilleId(e.target.value)}>
                     <option value="">— Sélectionner une famille —</option>
                     {familles.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
                   </select>
                 </div>
               )}
+              <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <input type="checkbox" id="edit-vendable" checked={editVendable} onChange={e => setEditVendable(e.target.checked)} style={{ width: 18, height: 18, accentColor: COLOR }} />
+                <label htmlFor="edit-vendable" style={{ fontSize: '0.9rem', cursor: 'pointer', fontWeight: 600 }}>Vendable</label>
+              </div>
               <div className="modal-footer">
-                <button className="btn btn-ghost" onClick={closeForm}>Annuler</button>
-                <button className="btn" disabled={saving || !nom.trim() || (familles.length > 0 && !familleId)} onClick={handleSave} style={{ background: 'linear-gradient(135deg,#15803d,#16a34a)', color: '#fff' }}>
+                <button className="btn btn-ghost" onClick={closeEdit}>Annuler</button>
+                <button className="btn" disabled={saving || !editNom.trim() || (familles.length > 0 && !editFamilleId)} onClick={handleSave} style={{ background: 'linear-gradient(135deg,#15803d,#16a34a)', color: '#fff' }}>
                   {saving ? 'Enregistrement…' : 'Enregistrer'}
                 </button>
               </div>
@@ -226,7 +274,7 @@ export default function ReferentielCategoriesPage() {
         </div>
       )}
 
-      {/* ── Delete Modal ── */}
+      {/* Delete Modal */}
       {deleteId !== null && (
         <div className="modal-overlay">
           <div className="modal modal-sm" onClick={e => e.stopPropagation()} style={{ textAlign: 'center' }}>

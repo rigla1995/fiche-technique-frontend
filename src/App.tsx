@@ -11,6 +11,7 @@ import ReferentielUnitesPage from './components/client/ReferentielUnitesPage';
 import ReferentielFamillesPage from './components/client/ReferentielFamillesPage';
 import ReferentielCategoriesPage from './components/client/ReferentielCategoriesPage';
 import ReferentielArticlesPage from './components/client/ReferentielArticlesPage';
+import ReferentielImportPage from './components/client/ReferentielImportPage';
 import Profile from './components/client/Profile';
 import ActivitesPage from './components/client/ActivitesPage';
 import StockPage from './components/client/StockPage';
@@ -116,6 +117,7 @@ export default function App() {
             <Route path="/client/referentiel/familles" element={<ReferentielFamillesPage />} />
             <Route path="/client/referentiel/categories" element={<ReferentielCategoriesPage />} />
             <Route path="/client/referentiel/articles" element={<ReferentielArticlesPage />} />
+            <Route path="/client/referentiel/import" element={<ReferentielImportPage />} />
             <Route path="/client/profile" element={<Profile />} />
             <Route path="/client/activites" element={<ActivitesPage />} />
             <Route path="/client/stock" element={<StockPage />} />
