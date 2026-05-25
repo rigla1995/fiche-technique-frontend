@@ -389,7 +389,7 @@ export default function ConfigurationVentePage() {
                   <div style={{ fontSize: '0.72rem', color: C }}>Produits suppléments assignés à cette activité — activez-les, définissez portion et prix</div>
                 </div>
               </div>
-              <ProduitTable tableRows={supplementRows} showPortion={true} />
+              <ProduitTable tableRows={supplementRows} showPortion={false} />
             </div>
           )}
         </>
