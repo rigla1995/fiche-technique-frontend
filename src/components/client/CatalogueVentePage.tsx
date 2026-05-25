@@ -39,7 +39,7 @@ export default function CatalogueVentePage() {
 
   useEffect(() => {
     api.get('/api/entreprise/activites').then(({ data }) => {
-      const acts = (data as Activite[]).filter(a => !a.laboId);
+      const acts = data as Activite[];
       setActivites(acts);
       const paramId = searchParams.get('activiteId');
       const found = acts.find(a => String(a.id) === paramId);

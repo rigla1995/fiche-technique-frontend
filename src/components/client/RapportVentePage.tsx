@@ -47,7 +47,7 @@ export default function RapportVentePage() {
       api.get('/api/entreprise/activites').catch(() => ({ data: [] })),
       api.get('/api/labo').catch(() => ({ data: [] })),
     ]).then(([a, l]) => {
-      setActivites((a.data as Activite[]).filter((act: Activite) => !act.laboId));
+      setActivites(a.data as Activite[]);
       setLabos(l.data as Labo[]);
     }).catch(() => {});
   }, []);
@@ -58,7 +58,7 @@ export default function RapportVentePage() {
     try {
       if (tab === 'global') {
         // Load aggregate from all activités
-        const acts = activites.filter(a => !a.laboId);
+        const acts = activites;
         if (acts.length === 0) { setStatsCache(p => ({ ...p, global: null })); return; }
         const results = await Promise.all(acts.map(a => api.get(`/api/ventes/stats?activiteId=${a.id}`).catch(() => ({ data: null }))));
         const charges = await Promise.all(acts.map(a => api.get(`/api/charges-fixes?activiteId=${a.id}`).catch(() => ({ data: null }))));
