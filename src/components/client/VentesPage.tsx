@@ -22,6 +22,13 @@ const CD = '#78350f';
 const CL = '#fffbeb';
 const CB = '#fcd34d';
 
+const ExcelIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}>
+    <rect width="24" height="24" rx="3" fill="#1D6F42"/>
+    <path d="M7 7l3.5 5L7 17h2.5l2.5-3.5L14.5 17H17l-3.5-5L17 7h-2.5L12 10.5 9.5 7H7z" fill="white"/>
+  </svg>
+);
+
 interface ArticleVendable {
   id: string;
   activite_id: number;
@@ -57,13 +64,13 @@ interface Vente {
   notes?: string | null;
 }
 
-type Tab = 'saisie' | 'historique';
+type Tab = 'saisie_produits' | 'saisie_supplements' | 'historique';
 
 export default function VentesPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [activites, setActivites] = useState<Activite[]>([]);
   const [selectedActiviteId, setSelectedActiviteId] = useState<number | null>(null);
-  const [activeTab, setActiveTab] = useState<Tab>('saisie');
+  const [activeTab, setActiveTab] = useState<Tab>('saisie_produits');
 
   // Data
   const [articles, setArticles] = useState<ArticleVendable[]>([]);
@@ -72,16 +79,23 @@ export default function VentesPage() {
   const [ventes, setVentes] = useState<Vente[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // Saisie state: qtés par article+channel
+  // Saisie state
   const [dateVente, setDateVente] = useState(new Date().toISOString().slice(0, 10));
-  // qtés[articleId][channelKey] = quantite — channelKey: 'direct' | activitePrestataire.id
   const [qtes, setQtes] = useState<Record<string, Record<string, string>>>({});
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
-  // Pagination
+  const [saveSuccess, setSaveSuccess] = useState(false);
+
+  // Pagination (5 per section)
   const [prodPage, setProdPage] = useState(0);
   const [suppPage, setSuppPage] = useState(0);
-  const [saveSuccess, setSaveSuccess] = useState(false);
+
+  // Historique filters
+  const [histDateFrom, setHistDateFrom] = useState('');
+  const [histDateTo, setHistDateTo] = useState('');
+  const [histType, setHistType] = useState<'all' | 'directe' | 'prestataire'>('all');
+  const [histPrestaId, setHistPrestaId] = useState('');
+  const [exportingXls, setExportingXls] = useState(false);
 
   useEffect(() => {
     api.get('/api/entreprise/activites').then(({ data }) => {
@@ -119,10 +133,8 @@ export default function VentesPage() {
   const supplements = articles.filter(a => a.article_type === 'ingredient');
 
   const getQte = (articleId: string, channel: string) => qtes[articleId]?.[channel] ?? '';
-
-  const setQte = (articleId: string, channel: string, val: string) => {
+  const setQte = (articleId: string, channel: string, val: string) =>
     setQtes(prev => ({ ...prev, [articleId]: { ...prev[articleId], [channel]: val } }));
-  };
 
   const getPrixPrestataire = (articleId: string, apId: string) => {
     const av = articles.find(a => a.id === articleId);
@@ -133,15 +145,12 @@ export default function VentesPage() {
     return ap ? av.prix_vente * (1 - ap.taux_commission / 100) : av.prix_vente;
   };
 
-  // Compute total CA for current saisie
-  const computeTotal = () => {
+  const computeTotal = (subset: ArticleVendable[]) => {
     let total = 0;
-    for (const av of articles) {
-      const directQte = parseFloat(getQte(av.id, 'direct')) || 0;
-      total += directQte * av.prix_vente;
+    for (const av of subset) {
+      total += (parseFloat(getQte(av.id, 'direct')) || 0) * av.prix_vente;
       for (const ap of activePrests) {
-        const pqte = parseFloat(getQte(av.id, ap.id)) || 0;
-        total += pqte * getPrixPrestataire(av.id, ap.id);
+        total += (parseFloat(getQte(av.id, ap.id)) || 0) * getPrixPrestataire(av.id, ap.id);
       }
     }
     return total;
@@ -157,7 +166,6 @@ export default function VentesPage() {
       lignes: Array<{ article_type: string; article_id: number; quantite: number; prix_unitaire: number }>;
     }> = [];
 
-    // Build directe vente
     const directLignes = articles.flatMap(av => {
       const qte = parseFloat(getQte(av.id, 'direct')) || 0;
       if (qte <= 0) return [];
@@ -165,7 +173,6 @@ export default function VentesPage() {
     });
     if (directLignes.length > 0) ventesToCreate.push({ type_vente: 'directe', lignes: directLignes });
 
-    // Build prestataire ventes
     for (const ap of activePrests) {
       const lignes = articles.flatMap(av => {
         const qte = parseFloat(getQte(av.id, ap.id)) || 0;
@@ -210,7 +217,53 @@ export default function VentesPage() {
     catch (e: unknown) { alert(apiMsg(e)); }
   };
 
+  const handleExportXls = async () => {
+    if (!selectedActiviteId) return;
+    setExportingXls(true);
+    try {
+      const params = new URLSearchParams({ activiteId: String(selectedActiviteId) });
+      if (histDateFrom) params.set('from', histDateFrom);
+      if (histDateTo) params.set('to', histDateTo);
+      if (histType !== 'all') params.set('type', histType);
+      const resp = await api.get(`/api/ventes/export-excel?${params}`, { responseType: 'blob' });
+      const url = URL.createObjectURL(resp.data as Blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = 'historique-ventes.xlsx'; a.click();
+      URL.revokeObjectURL(url);
+    } catch (e: unknown) { alert(apiMsg(e)); }
+    finally { setExportingXls(false); }
+  };
+
+  const filteredVentes = ventes.filter(v => {
+    if (histDateFrom && v.date_vente < histDateFrom) return false;
+    if (histDateTo && v.date_vente > histDateTo) return false;
+    if (histType !== 'all' && v.type_vente !== histType) return false;
+    if (histPrestaId && v.prestataire_nom !== activePrests.find(p => p.id === histPrestaId)?.prestataire_nom) return false;
+    return true;
+  });
+
   const selectedActivite = activites.find(a => a.id === selectedActiviteId);
+
+  const PAGE = 5;
+
+  const paginationBar = (total: number, page: number, setPage: (p: number) => void) => {
+    const totalPages = Math.ceil(total / PAGE);
+    if (totalPages <= 1) return null;
+    return (
+      <div style={{ display: 'flex', gap: 4, padding: '10px 16px', alignItems: 'center', borderTop: `1px solid ${CB}`, justifyContent: 'center' }}>
+        <button onClick={() => setPage(Math.max(0, page - 1))} disabled={page === 0}
+          style={{ padding: '3px 10px', borderRadius: 6, border: `1px solid ${CB}`, background: page === 0 ? '#f3f4f6' : '#fff', color: page === 0 ? '#9ca3af' : C, cursor: page === 0 ? 'default' : 'pointer', fontWeight: 600, fontSize: '0.8rem' }}>‹</button>
+        {Array.from({ length: totalPages }, (_, i) => (
+          <button key={i} onClick={() => setPage(i)}
+            style={{ padding: '3px 9px', borderRadius: 6, border: `1.5px solid ${i === page ? C : CB}`, background: i === page ? C : '#fff', color: i === page ? '#fff' : CD, cursor: 'pointer', fontWeight: i === page ? 700 : 400, fontSize: '0.8rem' }}>
+            {i + 1}
+          </button>
+        ))}
+        <button onClick={() => setPage(Math.min(totalPages - 1, page + 1))} disabled={page >= totalPages - 1}
+          style={{ padding: '3px 10px', borderRadius: 6, border: `1px solid ${CB}`, background: page >= totalPages - 1 ? '#f3f4f6' : '#fff', color: page >= totalPages - 1 ? '#9ca3af' : C, cursor: page >= totalPages - 1 ? 'default' : 'pointer', fontWeight: 600, fontSize: '0.8rem' }}>›</button>
+      </div>
+    );
+  };
 
   const ArticleRow = ({ av }: { av: ArticleVendable }) => (
     <tr style={{ borderBottom: `1px solid ${CB}` }}>
@@ -221,25 +274,59 @@ export default function VentesPage() {
       <td style={{ padding: '8px 16px', textAlign: 'center' }}>
         <span style={{ fontWeight: 700, color: C, fontSize: '0.9rem' }}>{fmtMoney(av.prix_vente)}</span>
       </td>
-      {/* Directe */}
       <td style={{ padding: '8px 16px', textAlign: 'center' }}>
         <input type="number" min="0" step="0.001" value={getQte(av.id, 'direct')} placeholder="0"
           onChange={e => setQte(av.id, 'direct', e.target.value)}
           style={{ width: 78, padding: '7px 8px', borderRadius: 8, border: `1.5px solid ${getQte(av.id, 'direct') ? C : CB}`, background: getQte(av.id, 'direct') ? CL : '#fafafa', textAlign: 'center', fontSize: '0.88rem', fontWeight: 600, outline: 'none' }} />
       </td>
-      {/* Par prestataire */}
       {activePrests.map(ap => (
         <td key={ap.id} style={{ padding: '8px 16px', textAlign: 'center' }}>
-          <div>
-            <input type="number" min="0" step="0.001" value={getQte(av.id, ap.id)} placeholder="0"
-              onChange={e => setQte(av.id, ap.id, e.target.value)}
-              style={{ width: 78, padding: '7px 8px', borderRadius: 8, border: `1.5px solid ${getQte(av.id, ap.id) ? C : CB}`, background: getQte(av.id, ap.id) ? CL : '#fafafa', textAlign: 'center', fontSize: '0.88rem', fontWeight: 600, outline: 'none' }} />
-            <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', marginTop: 2 }}>{fmtMoney(getPrixPrestataire(av.id, ap.id))}</div>
-          </div>
+          <input type="number" min="0" step="0.001" value={getQte(av.id, ap.id)} placeholder="0"
+            onChange={e => setQte(av.id, ap.id, e.target.value)}
+            style={{ width: 78, padding: '7px 8px', borderRadius: 8, border: `1.5px solid ${getQte(av.id, ap.id) ? C : CB}`, background: getQte(av.id, ap.id) ? CL : '#fafafa', textAlign: 'center', fontSize: '0.88rem', fontWeight: 600, outline: 'none' }} />
+          <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', marginTop: 2 }}>{fmtMoney(getPrixPrestataire(av.id, ap.id))}</div>
         </td>
       ))}
     </tr>
   );
+
+  const SaisieTable = ({ subset, page, setPage, label }: { subset: ArticleVendable[]; page: number; setPage: (p: number) => void; label: string }) => {
+    const slice = subset.slice(page * PAGE, page * PAGE + PAGE);
+    const caTotal = computeTotal(subset);
+    return (
+      <div style={{ background: '#fff', borderRadius: 14, border: `1.5px solid ${CB}`, overflow: 'hidden', boxShadow: '0 2px 12px rgba(180,83,9,0.08)' }}>
+        <div style={{ padding: '10px 16px', background: `${CD}10`, borderBottom: `1px solid ${CB}`, fontSize: '0.75rem', fontWeight: 800, color: CD, textTransform: 'uppercase', letterSpacing: '0.07em' }}>
+          {label}
+        </div>
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 500 }}>
+            <thead>
+              <tr style={{ background: CL, borderBottom: `2px solid ${CB}` }}>
+                <th style={{ padding: '11px 16px', textAlign: 'left', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Article</th>
+                <th style={{ padding: '11px 16px', textAlign: 'center', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>Prix vente</th>
+                <th style={{ padding: '11px 16px', textAlign: 'center', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>🏪 Qté directe</th>
+                {activePrests.map(ap => (
+                  <th key={ap.id} style={{ padding: '11px 16px', textAlign: 'center', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>
+                    🛵 {ap.prestataire_nom}
+                    <div style={{ fontSize: '0.68rem', fontWeight: 500, color: 'var(--text-muted)', textTransform: 'none' }}>−{ap.taux_commission}%</div>
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>{slice.map(av => <ArticleRow key={av.id} av={av} />)}</tbody>
+          </table>
+        </div>
+        {paginationBar(subset.length, page, setPage)}
+        {/* CA total below list */}
+        <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '10px 16px', borderTop: `1px solid ${CB}`, background: '#fafafa' }}>
+          <div style={{ background: CL, borderRadius: 10, border: `1.5px solid ${C}`, padding: '8px 16px', display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontSize: '0.82rem', fontWeight: 600, color: CD, whiteSpace: 'nowrap' }}>CA total :</span>
+            <span style={{ fontSize: '1.05rem', fontWeight: 800, color: C, whiteSpace: 'nowrap' }}>{fmtMoney(caTotal)}</span>
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="page-content">
@@ -294,46 +381,46 @@ export default function VentesPage() {
       ) : (
         <>
           {/* Tabs */}
-          <div style={{ display: 'flex', gap: 4, borderBottom: `2px solid ${CB}`, marginBottom: 24 }}>
-            {(['saisie', 'historique'] as const).map(tab => (
+          <div style={{ display: 'flex', gap: 4, borderBottom: `2px solid ${CB}`, marginBottom: 24, overflowX: 'auto' }}>
+            {([
+              ['saisie_produits', '📝 Saisie des ventes produits'],
+              ['saisie_supplements', '🧂 Saisie des ventes suppléments'],
+              ['historique', '📋 Historique'],
+            ] as const).map(([tab, label]) => (
               <button key={tab} onClick={() => setActiveTab(tab)}
                 style={{
                   padding: '9px 20px', background: 'none', border: 'none', cursor: 'pointer',
                   fontSize: '0.92rem', fontWeight: activeTab === tab ? 700 : 400,
                   color: activeTab === tab ? C : 'var(--text)',
                   borderBottom: activeTab === tab ? `3px solid ${C}` : '3px solid transparent',
-                  marginBottom: -2,
+                  marginBottom: -2, whiteSpace: 'nowrap',
                 }}>
-                {tab === 'saisie' ? '📝 Saisie des ventes' : '📋 Historique'}
+                {label}
               </button>
             ))}
           </div>
 
-          {/* ── SAISIE TAB ── */}
-          {activeTab === 'saisie' && (
+          {/* ── SAISIE PRODUITS TAB ── */}
+          {activeTab === 'saisie_produits' && (
             <>
               {loading ? (
                 <div style={{ textAlign: 'center', padding: 40, color: 'var(--text-muted)' }}>Chargement…</div>
-              ) : articles.length === 0 ? (
+              ) : produits.length === 0 ? (
                 <div style={{ textAlign: 'center', padding: '60px 0', background: '#fff', borderRadius: 14, border: `1.5px solid ${CB}` }}>
                   <div style={{ fontSize: '3rem', marginBottom: 12 }}>🛍️</div>
-                  <div style={{ color: 'var(--text-muted)', marginBottom: 12 }}>Aucun article vendable configuré pour cette activité</div>
+                  <div style={{ color: 'var(--text-muted)', marginBottom: 12 }}>Aucun produit vendable configuré pour cette activité</div>
                   <Link to="/client/ventes/configuration" style={{ color: C, fontWeight: 700, fontSize: '0.9rem' }}>
                     ⚙️ Configurer les prix de vente →
                   </Link>
                 </div>
               ) : (
                 <>
-                  {/* Date + confirm */}
+                  {/* Date + confirm bar */}
                   <div style={{ background: '#fff', borderRadius: 12, border: `1.5px solid ${CB}`, padding: '16px 20px', marginBottom: 20, display: 'flex', gap: 16, flexWrap: 'wrap', alignItems: 'center' }}>
                     <div>
                       <label style={{ fontSize: '0.78rem', fontWeight: 700, display: 'block', marginBottom: 5, color: C, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Date de vente</label>
                       <input type="date" value={dateVente} onChange={e => setDateVente(e.target.value)}
                         style={{ padding: '8px 12px', borderRadius: 9, border: `1.5px solid ${CB}`, background: CL, color: CD, fontWeight: 600, outline: 'none' }} />
-                    </div>
-                    <div style={{ background: CL, borderRadius: 10, border: `1.5px solid ${C}`, padding: '10px 18px', display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span style={{ fontSize: '0.82rem', fontWeight: 600, color: CD, whiteSpace: 'nowrap' }}>CA total :</span>
-                      <span style={{ fontSize: '1.1rem', fontWeight: 800, color: C, whiteSpace: 'nowrap' }}>{fmtMoney(computeTotal())}</span>
                     </div>
                     <div style={{ marginLeft: 'auto', display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-end' }}>
                       {saveError && <div style={{ color: '#dc2626', fontSize: '0.82rem' }}>{saveError}</div>}
@@ -344,78 +431,44 @@ export default function VentesPage() {
                       </button>
                     </div>
                   </div>
+                  <SaisieTable subset={produits} page={prodPage} setPage={setProdPage} label="🛍️ Produits vendables" />
+                </>
+              )}
+            </>
+          )}
 
-                  {/* Grille de saisie */}
-                  {(() => {
-                    const PAGE = 5;
-                    const thead = (
-                      <thead>
-                        <tr style={{ background: CL, borderBottom: `2px solid ${CB}` }}>
-                          <th style={{ padding: '11px 16px', textAlign: 'left', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Article</th>
-                          <th style={{ padding: '11px 16px', textAlign: 'center', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>Prix vente</th>
-                          <th style={{ padding: '11px 16px', textAlign: 'center', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>🏪 Qté directe</th>
-                          {activePrests.map(ap => (
-                            <th key={ap.id} style={{ padding: '11px 16px', textAlign: 'center', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>
-                              🛵 {ap.prestataire_nom}
-                              <div style={{ fontSize: '0.68rem', fontWeight: 500, color: 'var(--text-muted)', textTransform: 'none' }}>−{ap.taux_commission}%</div>
-                            </th>
-                          ))}
-                        </tr>
-                      </thead>
-                    );
-                    const paginationBar = (total: number, page: number, setPage: (p: number) => void) => {
-                      const totalPages = Math.ceil(total / PAGE);
-                      if (totalPages <= 1) return null;
-                      return (
-                        <div style={{ display: 'flex', gap: 4, padding: '10px 16px', alignItems: 'center', borderTop: `1px solid ${CB}`, justifyContent: 'center' }}>
-                          <button onClick={() => setPage(Math.max(0, page - 1))} disabled={page === 0}
-                            style={{ padding: '3px 10px', borderRadius: 6, border: `1px solid ${CB}`, background: page === 0 ? '#f3f4f6' : '#fff', color: page === 0 ? '#9ca3af' : C, cursor: page === 0 ? 'default' : 'pointer', fontWeight: 600, fontSize: '0.8rem' }}>‹</button>
-                          {Array.from({ length: totalPages }, (_, i) => (
-                            <button key={i} onClick={() => setPage(i)}
-                              style={{ padding: '3px 9px', borderRadius: 6, border: `1.5px solid ${i === page ? C : CB}`, background: i === page ? C : '#fff', color: i === page ? '#fff' : CD, cursor: 'pointer', fontWeight: i === page ? 700 : 400, fontSize: '0.8rem' }}>
-                              {i + 1}
-                            </button>
-                          ))}
-                          <button onClick={() => setPage(Math.min(totalPages - 1, page + 1))} disabled={page >= totalPages - 1}
-                            style={{ padding: '3px 10px', borderRadius: 6, border: `1px solid ${CB}`, background: page >= totalPages - 1 ? '#f3f4f6' : '#fff', color: page >= totalPages - 1 ? '#9ca3af' : C, cursor: page >= totalPages - 1 ? 'default' : 'pointer', fontWeight: 600, fontSize: '0.8rem' }}>›</button>
-                        </div>
-                      );
-                    };
-                    const prodSlice = produits.slice(prodPage * PAGE, prodPage * PAGE + PAGE);
-                    const suppSlice = supplements.slice(suppPage * PAGE, suppPage * PAGE + PAGE);
-                    return (
-                      <>
-                        {produits.length > 0 && (
-                          <div style={{ background: '#fff', borderRadius: 14, border: `1.5px solid ${CB}`, overflow: 'hidden', boxShadow: '0 2px 12px rgba(180,83,9,0.08)', marginBottom: 16 }}>
-                            <div style={{ padding: '10px 16px', background: `${CD}10`, borderBottom: `1px solid ${CB}`, fontSize: '0.75rem', fontWeight: 800, color: CD, textTransform: 'uppercase', letterSpacing: '0.07em' }}>
-                              🛍️ Produits vendables
-                            </div>
-                            <div style={{ overflowX: 'auto' }}>
-                              <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 500 }}>
-                                {thead}
-                                <tbody>{prodSlice.map(av => <ArticleRow key={av.id} av={av} />)}</tbody>
-                              </table>
-                            </div>
-                            {paginationBar(produits.length, prodPage, setProdPage)}
-                          </div>
-                        )}
-                        {supplements.length > 0 && (
-                          <div style={{ background: '#fff', borderRadius: 14, border: `1.5px solid ${CB}`, overflow: 'hidden', boxShadow: '0 2px 12px rgba(180,83,9,0.08)', marginBottom: 16 }}>
-                            <div style={{ padding: '10px 16px', background: `${CD}10`, borderBottom: `1px solid ${CB}`, fontSize: '0.75rem', fontWeight: 800, color: CD, textTransform: 'uppercase', letterSpacing: '0.07em' }}>
-                              🧂 Suppléments vendables
-                            </div>
-                            <div style={{ overflowX: 'auto' }}>
-                              <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 500 }}>
-                                {thead}
-                                <tbody>{suppSlice.map(av => <ArticleRow key={av.id} av={av} />)}</tbody>
-                              </table>
-                            </div>
-                            {paginationBar(supplements.length, suppPage, setSuppPage)}
-                          </div>
-                        )}
-                      </>
-                    );
-                  })()}
+          {/* ── SAISIE SUPPLEMENTS TAB ── */}
+          {activeTab === 'saisie_supplements' && (
+            <>
+              {loading ? (
+                <div style={{ textAlign: 'center', padding: 40, color: 'var(--text-muted)' }}>Chargement…</div>
+              ) : supplements.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '60px 0', background: '#fff', borderRadius: 14, border: `1.5px solid ${CB}` }}>
+                  <div style={{ fontSize: '3rem', marginBottom: 12 }}>🧂</div>
+                  <div style={{ color: 'var(--text-muted)', marginBottom: 12 }}>Aucun supplément vendable configuré pour cette activité</div>
+                  <Link to="/client/ventes/configuration" style={{ color: C, fontWeight: 700, fontSize: '0.9rem' }}>
+                    ⚙️ Configurer les suppléments →
+                  </Link>
+                </div>
+              ) : (
+                <>
+                  {/* Date + confirm bar */}
+                  <div style={{ background: '#fff', borderRadius: 12, border: `1.5px solid ${CB}`, padding: '16px 20px', marginBottom: 20, display: 'flex', gap: 16, flexWrap: 'wrap', alignItems: 'center' }}>
+                    <div>
+                      <label style={{ fontSize: '0.78rem', fontWeight: 700, display: 'block', marginBottom: 5, color: C, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Date de vente</label>
+                      <input type="date" value={dateVente} onChange={e => setDateVente(e.target.value)}
+                        style={{ padding: '8px 12px', borderRadius: 9, border: `1.5px solid ${CB}`, background: CL, color: CD, fontWeight: 600, outline: 'none' }} />
+                    </div>
+                    <div style={{ marginLeft: 'auto', display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-end' }}>
+                      {saveError && <div style={{ color: '#dc2626', fontSize: '0.82rem' }}>{saveError}</div>}
+                      {saveSuccess && <div style={{ color: '#166534', fontSize: '0.82rem', fontWeight: 600 }}>✓ Ventes enregistrées !</div>}
+                      <button onClick={handleSubmit} disabled={saving}
+                        style={{ padding: '10px 24px', borderRadius: 10, border: 'none', background: saving ? '#d1d5db' : `linear-gradient(135deg, ${CD} 0%, ${C} 100%)`, color: '#fff', cursor: saving ? 'not-allowed' : 'pointer', fontWeight: 700, fontSize: '0.92rem', boxShadow: saving ? 'none' : `0 4px 14px ${C}44`, whiteSpace: 'nowrap' }}>
+                        {saving ? 'Enregistrement…' : '✓ Confirmer les ventes'}
+                      </button>
+                    </div>
+                  </div>
+                  <SaisieTable subset={supplements} page={suppPage} setPage={setSuppPage} label="🧂 Suppléments vendables" />
                 </>
               )}
             </>
@@ -426,47 +479,87 @@ export default function VentesPage() {
             <>
               {loading ? (
                 <div style={{ textAlign: 'center', padding: 40, color: 'var(--text-muted)' }}>Chargement…</div>
-              ) : ventes.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--text-muted)' }}>
-                  <div style={{ fontSize: '2.5rem', marginBottom: 12 }}>💸</div>
-                  Aucune vente enregistrée
-                </div>
               ) : (
                 <div style={{ background: '#fff', borderRadius: 14, border: `1.5px solid ${CB}`, overflow: 'hidden', boxShadow: '0 2px 12px rgba(180,83,9,0.08)' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                    <thead>
-                      <tr style={{ background: CL, borderBottom: `2px solid ${CB}` }}>
-                        {['Date', 'Type', 'CA', 'Marge', 'Statut', ''].map(h => (
-                          <th key={h} style={{ padding: '11px 16px', textAlign: 'left', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{h}</th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {ventes.map((v, idx) => (
-                        <tr key={v.id} style={{ borderBottom: `1px solid ${CB}`, background: idx % 2 === 0 ? '#fff' : '#fffdf7' }}>
-                          <td style={{ padding: '11px 16px', fontWeight: 600, fontSize: '0.9rem' }}>{fmtDate(v.date_vente)}</td>
-                          <td style={{ padding: '11px 16px', fontSize: '0.88rem' }}>
-                            {v.type_vente === 'directe' ? '🏪 Directe' : `🛵 ${v.prestataire_nom || 'Prestataire'}`}
-                          </td>
-                          <td style={{ padding: '11px 16px', fontWeight: 700, color: C }}>{fmtMoney(v.total_ca)}</td>
-                          <td style={{ padding: '11px 16px', fontWeight: 600, color: v.total_marge >= 0 ? '#16a34a' : '#dc2626' }}>
-                            {fmtMoney(v.total_marge)}
-                          </td>
-                          <td style={{ padding: '11px 16px' }}>
-                            <span style={{ padding: '2px 10px', borderRadius: 12, fontSize: '0.78rem', fontWeight: 600, background: v.statut === 'confirmee' ? '#dcfce7' : '#fef9c3', color: v.statut === 'confirmee' ? '#166534' : '#854d0e' }}>
-                              {v.statut === 'confirmee' ? '✓ Confirmée' : v.statut}
-                            </span>
-                          </td>
-                          <td style={{ padding: '8px 16px' }}>
-                            <button onClick={() => handleAnnuler(v.id)}
-                              style={{ border: '1.5px solid #dc2626', color: '#dc2626', background: 'none', borderRadius: 7, padding: '4px 12px', cursor: 'pointer', fontSize: '0.78rem', fontWeight: 600 }}>
-                              Annuler
-                            </button>
-                          </td>
+                  {/* Filters bar */}
+                  <div style={{ display: 'flex', gap: 10, padding: '12px 16px', borderBottom: `1px solid ${CB}`, flexWrap: 'wrap', alignItems: 'center', background: '#fafafa' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: '0 0 auto' }}>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>Du</span>
+                      <input type="date" value={histDateFrom} onChange={e => setHistDateFrom(e.target.value)}
+                        style={{ padding: '6px 8px', borderRadius: 8, border: `1.5px solid ${histDateFrom ? C : CB}`, background: histDateFrom ? CL : '#fff', fontSize: '0.8rem', color: CD, outline: 'none' }} />
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>Au</span>
+                      <input type="date" value={histDateTo} onChange={e => setHistDateTo(e.target.value)}
+                        style={{ padding: '6px 8px', borderRadius: 8, border: `1.5px solid ${histDateTo ? C : CB}`, background: histDateTo ? CL : '#fff', fontSize: '0.8rem', color: CD, outline: 'none' }} />
+                    </div>
+                    <select value={histType} onChange={e => setHistType(e.target.value as typeof histType)}
+                      style={{ flex: '0 0 150px', padding: '7px 10px', borderRadius: 8, border: `1.5px solid ${histType !== 'all' ? C : CB}`, background: histType !== 'all' ? CL : '#fff', fontSize: '0.83rem', color: CD, outline: 'none', cursor: 'pointer' }}>
+                      <option value="all">Tous types</option>
+                      <option value="directe">Directe</option>
+                      <option value="prestataire">Prestataire</option>
+                    </select>
+                    {activePrests.length > 0 && (
+                      <select value={histPrestaId} onChange={e => setHistPrestaId(e.target.value)}
+                        style={{ flex: '0 0 170px', padding: '7px 10px', borderRadius: 8, border: `1.5px solid ${histPrestaId ? C : CB}`, background: histPrestaId ? CL : '#fff', fontSize: '0.83rem', color: CD, outline: 'none', cursor: 'pointer' }}>
+                        <option value="">Tous prestataires</option>
+                        {activePrests.map(ap => <option key={ap.id} value={ap.id}>{ap.prestataire_nom}</option>)}
+                      </select>
+                    )}
+                    {(histDateFrom || histDateTo || histType !== 'all' || histPrestaId) && (
+                      <button onClick={() => { setHistDateFrom(''); setHistDateTo(''); setHistType('all'); setHistPrestaId(''); }}
+                        style={{ padding: '6px 12px', borderRadius: 8, border: `1px solid ${CB}`, background: '#fff', color: C, fontSize: '0.78rem', cursor: 'pointer', fontWeight: 600, whiteSpace: 'nowrap' }}>
+                        ✕ Réinitialiser
+                      </button>
+                    )}
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
+                      {filteredVentes.length} vente{filteredVentes.length > 1 ? 's' : ''}
+                    </div>
+                    <button onClick={handleExportXls} disabled={exportingXls}
+                      style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6, padding: '6px 14px', borderRadius: 8, border: '1.5px solid #1D6F42', background: exportingXls ? '#f3f4f6' : '#f0fdf4', color: '#1D6F42', cursor: exportingXls ? 'default' : 'pointer', fontWeight: 700, fontSize: '0.8rem', whiteSpace: 'nowrap' }}>
+                      <ExcelIcon /> {exportingXls ? 'Export…' : 'Exporter XLS'}
+                    </button>
+                  </div>
+
+                  {filteredVentes.length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--text-muted)' }}>
+                      <div style={{ fontSize: '2.5rem', marginBottom: 12 }}>💸</div>
+                      {ventes.length === 0 ? 'Aucune vente enregistrée' : 'Aucun résultat pour ces filtres'}
+                    </div>
+                  ) : (
+                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                      <thead>
+                        <tr style={{ background: CL, borderBottom: `2px solid ${CB}` }}>
+                          {['Date', 'Type', 'CA', 'Marge', 'Statut', ''].map(h => (
+                            <th key={h} style={{ padding: '11px 16px', textAlign: 'left', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{h}</th>
+                          ))}
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody>
+                        {filteredVentes.map((v, idx) => (
+                          <tr key={v.id} style={{ borderBottom: `1px solid ${CB}`, background: idx % 2 === 0 ? '#fff' : '#fffdf7' }}>
+                            <td style={{ padding: '11px 16px', fontWeight: 600, fontSize: '0.9rem' }}>{fmtDate(v.date_vente)}</td>
+                            <td style={{ padding: '11px 16px', fontSize: '0.88rem' }}>
+                              {v.type_vente === 'directe' ? '🏪 Directe' : `🛵 ${v.prestataire_nom || 'Prestataire'}`}
+                            </td>
+                            <td style={{ padding: '11px 16px', fontWeight: 700, color: C }}>{fmtMoney(v.total_ca)}</td>
+                            <td style={{ padding: '11px 16px', fontWeight: 600, color: v.total_marge >= 0 ? '#16a34a' : '#dc2626' }}>
+                              {fmtMoney(v.total_marge)}
+                            </td>
+                            <td style={{ padding: '11px 16px' }}>
+                              <span style={{ padding: '2px 10px', borderRadius: 12, fontSize: '0.78rem', fontWeight: 600, background: v.statut === 'confirmee' ? '#dcfce7' : '#fef9c3', color: v.statut === 'confirmee' ? '#166534' : '#854d0e' }}>
+                                {v.statut === 'confirmee' ? '✓ Confirmée' : v.statut}
+                              </span>
+                            </td>
+                            <td style={{ padding: '8px 16px' }}>
+                              <button onClick={() => handleAnnuler(v.id)}
+                                style={{ border: '1.5px solid #dc2626', color: '#dc2626', background: 'none', borderRadius: 7, padding: '4px 12px', cursor: 'pointer', fontSize: '0.78rem', fontWeight: 600 }}>
+                                Annuler
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
                 </div>
               )}
             </>

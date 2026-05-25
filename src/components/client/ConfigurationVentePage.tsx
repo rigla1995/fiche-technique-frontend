@@ -94,9 +94,20 @@ interface CVCtxType {
   setHistFilterAu: React.Dispatch<React.SetStateAction<string>>;
   loadHistorique: () => void;
   filteredHist: HistConfigEntry[];
+  handleDeleteHistEntry: (id: number) => void;
+  handleExportHistXls: () => void;
+  exportingHistXls: boolean;
+  selectedActiviteId: number | null;
 }
 
 const CVCtx = createContext<CVCtxType>(null!);
+
+const ExcelIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}>
+    <rect width="24" height="24" rx="3" fill="#1D6F42"/>
+    <path d="M7 7l3.5 5L7 17h2.5l2.5-3.5L14.5 17H17l-3.5-5L17 7h-2.5L12 10.5 9.5 7H7z" fill="white"/>
+  </svg>
+);
 
 // ── Module-level sub-components ───────────────────────────────────────────────
 
@@ -312,7 +323,7 @@ function HistoriqueTab() {
     filteredHist, histLoading, histEntries,
     histFilterNom, histFilterType, histFilterDu, histFilterAu,
     setHistFilterNom, setHistFilterType, setHistFilterDu, setHistFilterAu,
-    loadHistorique,
+    loadHistorique, handleDeleteHistEntry, handleExportHistXls, exportingHistXls,
   } = useContext(CVCtx);
 
   return (
@@ -323,10 +334,16 @@ function HistoriqueTab() {
           <div style={{ fontSize: '0.95rem', fontWeight: 800, color: CD }}>Historique des prix</div>
           <div style={{ fontSize: '0.72rem', color: C }}>Toutes les modifications de prix enregistrées pour cette activité</div>
         </div>
-        <button onClick={loadHistorique} disabled={histLoading}
-          style={{ marginLeft: 'auto', padding: '5px 12px', borderRadius: 8, border: `1px solid ${CB}`, background: CL, color: C, fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer' }}>
-          🔄 Actualiser
-        </button>
+        <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
+          <button onClick={handleExportHistXls} disabled={exportingHistXls}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 12px', borderRadius: 8, border: '1.5px solid #1D6F42', background: exportingHistXls ? '#f3f4f6' : '#f0fdf4', color: '#1D6F42', fontSize: '0.78rem', fontWeight: 700, cursor: exportingHistXls ? 'default' : 'pointer', whiteSpace: 'nowrap' }}>
+            <ExcelIcon /> {exportingHistXls ? 'Export…' : 'Exporter XLS'}
+          </button>
+          <button onClick={loadHistorique} disabled={histLoading}
+            style={{ padding: '5px 12px', borderRadius: 8, border: `1px solid ${CB}`, background: CL, color: C, fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer' }}>
+            🔄 Actualiser
+          </button>
+        </div>
       </div>
 
       <div style={{ display: 'flex', gap: 10, padding: '12px 16px', borderBottom: `1px solid ${CB}`, flexWrap: 'wrap', alignItems: 'center', background: '#fafafa' }}>
@@ -372,10 +389,11 @@ function HistoriqueTab() {
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
             <colgroup>
-              <col style={{ width: '40%' }} />
+              <col style={{ width: '35%' }} />
               <col style={{ width: '15%' }} />
-              <col style={{ width: '20%' }} />
-              <col style={{ width: '25%' }} />
+              <col style={{ width: '18%' }} />
+              <col style={{ width: '18%' }} />
+              <col style={{ width: '14%' }} />
             </colgroup>
             <thead>
               <tr style={{ background: CL, borderBottom: `2px solid ${CB}` }}>
@@ -383,6 +401,7 @@ function HistoriqueTab() {
                 <th style={{ padding: '11px 16px', textAlign: 'center', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Type</th>
                 <th style={{ padding: '11px 16px', textAlign: 'center', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Prix enregistré</th>
                 <th style={{ padding: '11px 16px', textAlign: 'center', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Date</th>
+                <th style={{ padding: '11px 16px', textAlign: 'center', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em' }}></th>
               </tr>
             </thead>
             <tbody>
@@ -406,6 +425,12 @@ function HistoriqueTab() {
                   </td>
                   <td style={{ padding: '10px 16px', textAlign: 'center', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
                     {fmtDate(e.saved_at)}
+                  </td>
+                  <td style={{ padding: '8px 16px', textAlign: 'center' }}>
+                    <button onClick={() => handleDeleteHistEntry(e.id)}
+                      style={{ border: '1.5px solid #dc2626', color: '#dc2626', background: 'none', borderRadius: 7, padding: '4px 10px', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 600, whiteSpace: 'nowrap' }}>
+                      Supprimer
+                    </button>
                   </td>
                 </tr>
               ))}
@@ -439,6 +464,7 @@ export default function ConfigurationVentePage() {
   const [histFilterType, setHistFilterType] = useState<'all' | 'produit' | 'supplement'>('all');
   const [histFilterDu, setHistFilterDu] = useState('');
   const [histFilterAu, setHistFilterAu] = useState('');
+  const [exportingHistXls, setExportingHistXls] = useState(false);
 
   useEffect(() => {
     api.get('/api/entreprise/activites').then(({ data }) => {
@@ -523,6 +549,27 @@ export default function ConfigurationVentePage() {
     } catch {} finally { setSaving(false); }
   };
 
+  const handleDeleteHistEntry = async (id: number) => {
+    if (!confirm('Supprimer cette entrée de l\'historique ?')) return;
+    try {
+      await api.delete(`/api/articles-vendables/historique/${id}`);
+      loadHistorique();
+    } catch (e: unknown) { alert(apiMsg(e)); }
+  };
+
+  const handleExportHistXls = async () => {
+    if (!selectedActiviteId) return;
+    setExportingHistXls(true);
+    try {
+      const resp = await api.get(`/api/articles-vendables/historique-config/export-excel?activiteId=${selectedActiviteId}`, { responseType: 'blob' });
+      const url = URL.createObjectURL(resp.data as Blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = 'historique-config-prix.xlsx'; a.click();
+      URL.revokeObjectURL(url);
+    } catch (e: unknown) { alert(apiMsg(e)); }
+    finally { setExportingHistXls(false); }
+  };
+
   const filteredHist = histEntries.filter(e => {
     if (histFilterNom && !(e.produit_nom ?? '').toLowerCase().includes(histFilterNom.toLowerCase())) return false;
     if (histFilterType === 'produit' && e.is_supplement) return false;
@@ -540,6 +587,8 @@ export default function ConfigurationVentePage() {
     histFilterNom, histFilterType, histFilterDu, histFilterAu,
     setHistFilterNom, setHistFilterType, setHistFilterDu, setHistFilterAu,
     loadHistorique, filteredHist,
+    handleDeleteHistEntry, handleExportHistXls, exportingHistXls,
+    selectedActiviteId,
   };
 
   const TabBtn = ({ tab, label, count }: { tab: Tab; label: string; count?: number }) => (
