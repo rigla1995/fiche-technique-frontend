@@ -402,15 +402,7 @@ function HistoriqueTab() {
             </colgroup>
             <thead>
               <tr style={{ background: CL, borderBottom: `2px solid ${CB}` }}>
-                <th style={{ padding: '8px 12px' }}>
-                  <input type="checkbox"
-                    checked={filteredHist.length > 0 && filteredHist.every(e => selectedHistIds.has(e.id))}
-                    onChange={ev => {
-                      if (ev.target.checked) setSelectedHistIds(new Set(filteredHist.map(e => e.id)));
-                      else setSelectedHistIds(new Set());
-                    }}
-                    style={{ accentColor: '#FF6B00', width: 15, height: 15, cursor: 'pointer' }} />
-                </th>
+                <th style={{ padding: '8px 12px', width: 36 }}></th>
                 <th style={{ padding: '11px 16px', textAlign: 'left', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Produit</th>
                 <th style={{ padding: '11px 16px', textAlign: 'center', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Type</th>
                 <th style={{ padding: '11px 16px', textAlign: 'center', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Prix enregistré</th>

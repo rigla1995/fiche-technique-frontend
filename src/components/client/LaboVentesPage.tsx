@@ -3,6 +3,16 @@ import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import api from '../../api/client';
 import type { Labo } from '../../types';
 
+const apiMsg = (e: unknown, fallback = 'Erreur') =>
+  (e as { response?: { data?: { message?: string } } })?.response?.data?.message ?? fallback;
+
+const ExcelIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}>
+    <rect width="24" height="24" rx="3" fill="#1D6F42"/>
+    <path d="M7 7l3.5 5L7 17h2.5l2.5-3.5L14.5 17H17l-3.5-5L17 7h-2.5L12 10.5 9.5 7H7z" fill="white"/>
+  </svg>
+);
+
 const fmtDate = (iso: string | null | undefined) => {
   if (!iso || iso.length < 10) return iso ?? '—';
   const [y, m, d] = iso.split('-');
@@ -48,6 +58,8 @@ export default function LaboVentesPage() {
   const [filterActivite, setFilterActivite] = useState('');
   const [filterArticle, setFilterArticle] = useState('');
   const [page, setPage] = useState(1);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [exportingXls, setExportingXls] = useState(false);
 
   useEffect(() => {
     api.get('/api/labo').then(({ data }) => {
@@ -117,13 +129,41 @@ export default function LaboVentesPage() {
   const hasFilters = filterCategorie || filterActivite || filterArticle || from || to;
   const resetFilters = () => { setFilterCategorie(''); setFilterActivite(''); setFilterArticle(''); setFrom(''); setTo(''); setPage(1); };
 
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const handleExportXls = async () => {
+    if (!selectedLaboId) return;
+    setExportingXls(true);
+    try {
+      const params = new URLSearchParams({ laboId: String(selectedLaboId) });
+      if (from) params.set('from', from);
+      if (to) params.set('to', to);
+      if (filterCategorie) params.set('filterCategorie', filterCategorie);
+      if (filterActivite) params.set('filterActivite', filterActivite);
+      if (filterArticle) params.set('filterArticle', filterArticle);
+      if (selectedIds.size > 0) params.set('selectedIds', [...selectedIds].join(','));
+      const resp = await api.get(`/api/labo-ventes/export-excel?${params}`, { responseType: 'blob' });
+      const url = URL.createObjectURL(resp.data as Blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = 'historique-ventes-labo.xlsx'; a.click();
+      URL.revokeObjectURL(url);
+    } catch (e: unknown) { alert(apiMsg(e)); }
+    finally { setExportingXls(false); }
+  };
+
   const selectStyle: React.CSSProperties = {
     padding: '7px 10px', borderRadius: 8, border: `1.5px solid ${CB}`,
     background: CL, color: CD, fontSize: '0.84rem', outline: 'none', cursor: 'pointer',
   };
 
-  // col widths: article, activité, qté, prix transfert, prix appro, écart
-  const colW = ['30%', '18%', '8%', '15%', '15%', '14%'] as const;
+  // col widths: checkbox, article, activité, qté, prix transfert, prix appro, écart
+  const colW = [36, '28%', '17%', '8%', '14%', '14%', '13%'] as const;
 
   return (
     <div className="page-content">
@@ -219,6 +259,15 @@ export default function LaboVentesPage() {
                 ✕ Réinitialiser
               </button>
             )}
+            {selectedIds.size > 0 && (
+              <span style={{ fontSize: '0.78rem', color: '#FF6B00', fontWeight: 700, whiteSpace: 'nowrap' }}>
+                {selectedIds.size} sélectionnée{selectedIds.size > 1 ? 's' : ''}
+              </span>
+            )}
+            <button onClick={handleExportXls} disabled={exportingXls}
+              style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 8, border: '1.5px solid #1D6F42', background: exportingXls ? '#f3f4f6' : '#f0fdf4', color: '#1D6F42', cursor: exportingXls ? 'default' : 'pointer', fontWeight: 700, fontSize: '0.82rem', whiteSpace: 'nowrap' }}>
+              <ExcelIcon /> {exportingXls ? 'Export…' : 'Exporter XLS'}
+            </button>
           </div>
 
           {/* KPIs — order: Valeur totale achat | Valeur totale transferts | Écart total */}
@@ -256,6 +305,7 @@ export default function LaboVentesPage() {
                   </colgroup>
                   <thead>
                     <tr style={{ background: CL, borderBottom: `2px solid ${CB}` }}>
+                      <th style={{ padding: '8px 10px', width: 36 }}></th>
                       <th style={{ padding: '11px 14px', textAlign: 'left', fontSize: '0.74rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Article</th>
                       <th style={{ padding: '11px 14px', textAlign: 'left', fontSize: '0.74rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Activité</th>
                       <th style={{ padding: '11px 14px', textAlign: 'right', fontSize: '0.74rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Qté</th>
@@ -275,48 +325,54 @@ export default function LaboVentesPage() {
                         ? (ecartTotal / prixApproTotal) * 100
                         : null;
                       const ecartColor = ecartTotal == null ? 'var(--text-muted)' : ecartTotal >= 0 ? '#16a34a' : '#dc2626';
+                      const isSel = selectedIds.has(String(l.id));
+                      const rowBg = isSel ? '#FF6B00' : (idx % 2 === 0 ? '#fff' : '#fffdf7');
 
                       return (
-                        <tr key={l.id} style={{ borderBottom: `1px solid ${CB}`, background: idx % 2 === 0 ? '#fff' : '#fffdf7' }}>
+                        <tr key={l.id} style={{ borderBottom: `1px solid ${CB}`, background: rowBg, cursor: 'pointer' }} onClick={() => toggleSelect(String(l.id))}>
+                          <td style={{ padding: '8px 10px', textAlign: 'center' }} onClick={e => e.stopPropagation()}>
+                            <input type="checkbox" checked={isSel} onChange={() => toggleSelect(String(l.id))}
+                              style={{ accentColor: '#FF6B00', width: 15, height: 15, cursor: 'pointer' }} />
+                          </td>
                           {/* Article + date merged */}
                           <td style={{ padding: '11px 14px' }}>
-                            <div style={{ fontWeight: 700, fontSize: '0.88rem', color: CD, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{l.article_nom}</div>
-                            <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: 2 }}>
+                            <div style={{ fontWeight: 700, fontSize: '0.88rem', color: isSel ? '#fff' : CD, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{l.article_nom}</div>
+                            <div style={{ fontSize: '0.72rem', color: isSel ? 'rgba(255,255,255,0.8)' : 'var(--text-muted)', marginTop: 2 }}>
                               {l.unite_nom && <span>{l.unite_nom} · </span>}
                               {fmtDate(l.date_transfert)}
                             </div>
                           </td>
-                          <td style={{ padding: '11px 14px', fontSize: '0.84rem', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{l.activite_nom}</td>
-                          <td style={{ padding: '11px 14px', fontSize: '0.88rem', textAlign: 'right', fontWeight: 600 }}>{l.quantite}</td>
+                          <td style={{ padding: '11px 14px', fontSize: '0.84rem', color: isSel ? 'rgba(255,255,255,0.9)' : 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{l.activite_nom}</td>
+                          <td style={{ padding: '11px 14px', fontSize: '0.88rem', textAlign: 'right', fontWeight: 600, color: isSel ? '#fff' : undefined }}>{l.quantite}</td>
                           {/* Prix transfert = total */}
                           <td style={{ padding: '11px 14px', textAlign: 'right' }}>
-                            <div style={{ fontWeight: 700, fontSize: '0.88rem', color: C }}>{fmtMoney(prixTransfertTotal)}</div>
+                            <div style={{ fontWeight: 700, fontSize: '0.88rem', color: isSel ? '#fff' : C }}>{fmtMoney(prixTransfertTotal)}</div>
                             {l.prix_unitaire != null && (
-                              <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>{fmtMoney(l.prix_unitaire)}/u</div>
+                              <div style={{ fontSize: '0.68rem', color: isSel ? 'rgba(255,255,255,0.75)' : 'var(--text-muted)' }}>{fmtMoney(l.prix_unitaire)}/u</div>
                             )}
                           </td>
                           {/* Prix appro = total */}
                           <td style={{ padding: '11px 14px', textAlign: 'right' }}>
-                            <div style={{ fontSize: '0.88rem', color: 'var(--text)' }}>{fmtMoney(prixApproTotal)}</div>
+                            <div style={{ fontSize: '0.88rem', color: isSel ? 'rgba(255,255,255,0.9)' : 'var(--text)' }}>{fmtMoney(prixApproTotal)}</div>
                             {l.prix_moyen_appro != null && (
-                              <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>{fmtMoney(l.prix_moyen_appro)}/u</div>
+                              <div style={{ fontSize: '0.68rem', color: isSel ? 'rgba(255,255,255,0.75)' : 'var(--text-muted)' }}>{fmtMoney(l.prix_moyen_appro)}/u</div>
                             )}
                           </td>
                           {/* Écart = total */}
                           <td style={{ padding: '11px 14px', textAlign: 'right' }}>
                             {ecartTotal != null ? (
                               <div>
-                                <div style={{ fontWeight: 700, fontSize: '0.88rem', color: ecartColor }}>
+                                <div style={{ fontWeight: 700, fontSize: '0.88rem', color: isSel ? '#fff' : ecartColor }}>
                                   {ecartTotal >= 0 ? '+' : ''}{fmtMoney(ecartTotal)}
                                 </div>
                                 {ecartPct != null && (
-                                  <div style={{ fontSize: '0.68rem', color: ecartColor, opacity: 0.85 }}>
+                                  <div style={{ fontSize: '0.68rem', color: isSel ? 'rgba(255,255,255,0.8)' : ecartColor, opacity: 0.85 }}>
                                     {ecartPct >= 0 ? '+' : ''}{ecartPct.toFixed(1)}%
                                   </div>
                                 )}
                               </div>
                             ) : (
-                              <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>—</span>
+                              <span style={{ color: isSel ? 'rgba(255,255,255,0.7)' : 'var(--text-muted)', fontSize: '0.8rem' }}>—</span>
                             )}
                           </td>
                         </tr>
@@ -325,6 +381,7 @@ export default function LaboVentesPage() {
                   </tbody>
                   <tfoot>
                     <tr style={{ background: CL, borderTop: `2px solid ${CB}` }}>
+                      <td style={{ padding: '11px 10px' }}></td>
                       <td colSpan={3} style={{ padding: '11px 14px', fontWeight: 700, fontSize: '0.88rem', color: CD }}>
                         Total ({filtered.length} ligne{filtered.length !== 1 ? 's' : ''})
                       </td>

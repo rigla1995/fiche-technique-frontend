@@ -578,15 +578,7 @@ export default function VentesPage() {
                     <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                       <thead>
                         <tr style={{ background: CL, borderBottom: `2px solid ${CB}` }}>
-                          <th style={{ padding: '8px 12px', width: 36 }}>
-                            <input type="checkbox"
-                              checked={filteredVentes.length > 0 && filteredVentes.every(v => selectedVenteIds.has(v.id))}
-                              onChange={e => {
-                                if (e.target.checked) setSelectedVenteIds(new Set(filteredVentes.map(v => v.id)));
-                                else setSelectedVenteIds(new Set());
-                              }}
-                              style={{ accentColor: '#FF6B00', width: 15, height: 15, cursor: 'pointer' }} />
-                          </th>
+                          <th style={{ padding: '8px 12px', width: 36 }}></th>
                           {['Date', 'Type', 'CA', 'Marge', 'Statut', ''].map(h => (
                             <th key={h} style={{ padding: '11px 16px', textAlign: 'left', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{h}</th>
                           ))}
