@@ -268,6 +268,7 @@ export default function VentesPage() {
   const [histPrestaId, setHistPrestaId] = useState('');
   const [exportingXls, setExportingXls] = useState(false);
   const [selectedVenteIds, setSelectedVenteIds] = useState<Set<string>>(new Set());
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   useEffect(() => {
     api.get('/api/entreprise/activites').then(({ data }) => {
@@ -304,11 +305,8 @@ export default function VentesPage() {
   const produits = articles.filter(a => !a.is_supplement);
   const supplements = articles.filter(a => a.is_supplement);
 
-  const handleSubmit = async () => {
-    if (!selectedActiviteId) return;
-    setSaving(true); setSaveError(''); setSaveSuccess(false);
-
-    const ventesToCreate: Array<{
+  const buildVentesToCreate = () => {
+    const list: Array<{
       type_vente: 'directe' | 'prestataire';
       prestataire_id?: string;
       lignes: Array<{ article_type: string; article_id: number; quantite: number; prix_unitaire: number }>;
@@ -319,7 +317,7 @@ export default function VentesPage() {
       if (qte <= 0) return [];
       return [{ article_type: av.article_type, article_id: av.article_id, quantite: qte, prix_unitaire: av.prix_vente }];
     });
-    if (directLignes.length > 0) ventesToCreate.push({ type_vente: 'directe', lignes: directLignes });
+    if (directLignes.length > 0) list.push({ type_vente: 'directe', lignes: directLignes });
 
     for (const ap of activePrests) {
       const lignes = articles.flatMap(av => {
@@ -328,15 +326,24 @@ export default function VentesPage() {
         const prix = calcPrixPrestataire(av.id, ap.id, articles, prixPrestataires, activePrests);
         return [{ article_type: av.article_type, article_id: av.article_id, quantite: qte, prix_unitaire: prix }];
       });
-      if (lignes.length > 0) ventesToCreate.push({ type_vente: 'prestataire', prestataire_id: ap.prestataire_id, lignes });
+      if (lignes.length > 0) list.push({ type_vente: 'prestataire', prestataire_id: ap.prestataire_id, lignes });
     }
+    return list;
+  };
 
-    if (ventesToCreate.length === 0) {
-      setSaveError('Saisissez au moins une quantité > 0');
-      setSaving(false);
-      return;
-    }
+  const handleSubmit = () => {
+    if (!selectedActiviteId) return;
+    setSaveError('');
+    const list = buildVentesToCreate();
+    if (list.length === 0) { setSaveError('Saisissez au moins une quantité > 0'); return; }
+    setConfirmOpen(true);
+  };
 
+  const doSubmit = async () => {
+    if (!selectedActiviteId) return;
+    setConfirmOpen(false);
+    setSaving(true); setSaveError(''); setSaveSuccess(false);
+    const ventesToCreate = buildVentesToCreate();
     try {
       for (const v of ventesToCreate) {
         await api.post('/api/ventes', {
@@ -627,6 +634,35 @@ export default function VentesPage() {
           </>
         )}
       </div>
+
+      {/* Confirmation modal */}
+      {confirmOpen && (
+        <div className="modal-overlay" onClick={() => setConfirmOpen(false)}>
+          <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 420 }}>
+            <div className="modal-header" style={{ background: `linear-gradient(135deg, ${CD}, ${C})`, borderBottom: 'none' }}>
+              <h2 style={{ color: '#fff', margin: 0, fontSize: '1.05rem' }}>⚠️ Confirmer la vente</h2>
+              <button className="modal-close" onClick={() => setConfirmOpen(false)} style={{ color: '#fff' }}>✕</button>
+            </div>
+            <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div style={{ background: '#fff7ed', border: `1.5px solid ${CB}`, borderRadius: 10, padding: '14px 16px', fontSize: '0.9rem', color: CD, lineHeight: 1.6 }}>
+                <div style={{ fontWeight: 800, marginBottom: 6, fontSize: '0.95rem', color: C }}>Cette vente est définitive.</div>
+                <ul style={{ margin: 0, paddingLeft: 18, fontSize: '0.85rem' }}>
+                  <li>Elle <strong>ne pourra pas être annulée</strong> après confirmation.</li>
+                  <li>Elle <strong>impactera directement votre stock activité</strong> en déduisant les portions des produits vendus.</li>
+                </ul>
+              </div>
+              <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 4 }}>
+                <button className="btn btn-ghost" onClick={() => setConfirmOpen(false)}>Annuler</button>
+                <button
+                  onClick={doSubmit}
+                  style={{ background: `linear-gradient(135deg, ${CD} 0%, ${C} 100%)`, border: 'none', borderRadius: 10, color: '#fff', fontWeight: 800, padding: '10px 26px', cursor: 'pointer', fontSize: '0.92rem', boxShadow: `0 4px 14px ${C}44` }}>
+                  ✓ Confirmer
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </VPCtx.Provider>
   );
 }

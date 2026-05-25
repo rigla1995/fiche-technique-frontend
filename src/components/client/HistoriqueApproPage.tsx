@@ -587,7 +587,10 @@ export default function HistoriqueApproPage() {
                       </span>
                       {isEntreprise && (
                         <span className={`badge-appro ${r.typeAppro ?? 'manuel'}`} style={{ fontSize: '0.65rem', display: 'block', marginTop: 3 }}>
-                          {r.typeAppro === 'transfert' ? 'Transfert' : 'Manuel'}
+                          {r.typeAppro === 'transfert' ? 'Transfert'
+                            : r.typeAppro === 'vente' ? '💰 Vente'
+                            : r.typeAppro === 'annulation_vente' ? '↩️ Annul. vente'
+                            : 'Manuel'}
                         </span>
                       )}
                     </td>
@@ -612,7 +615,7 @@ export default function HistoriqueApproPage() {
                       {r.createdByNom ? `👤 ${r.createdByNom}` : '—'}
                     </td>
                     <td style={{ whiteSpace: 'nowrap', textAlign: 'right', padding: '8px 6px' }}>
-                      {!isReadOnly && (!isGerant || r.createdBy === user?.id) && (<>
+                      {!isReadOnly && (!isGerant || r.createdBy === user?.id) && r.typeAppro !== 'vente' && r.typeAppro !== 'annulation_vente' && (<>
                         <button
                           className="btn btn-ghost btn-sm"
                           onClick={() => setEditEntry(r)}

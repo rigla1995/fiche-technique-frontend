@@ -971,6 +971,9 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                               {entry.ptUsageDepuisInv != null && entry.ptUsageDepuisInv > 0 && (
                                 <div style={{ fontSize: '0.67rem', color: '#7c3aed', fontWeight: 500, marginTop: 1 }}>PT {entry.ptUsageDepuisInv.toFixed(3)}</div>
                               )}
+                              {entry.venteDepuisInv != null && entry.venteDepuisInv > 0 && (
+                                <div style={{ fontSize: '0.67rem', color: '#b45309', fontWeight: 600, marginTop: 1 }}>💰 VENTE −{entry.venteDepuisInv.toFixed(3)}</div>
+                              )}
                             </td>
                             <td style={{ textAlign: 'center', padding: '10px 14px', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
                               {entry.coutTotal != null && entry.coutTotal > 0 ? (
