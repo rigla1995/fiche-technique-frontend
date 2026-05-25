@@ -564,7 +564,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
             quantite: e.quantite,
             prixUnitaire: e.prixCalcule != null ? parseFloat(e.prixCalcule) : null,
             updatedAt: e.createdAt ?? null,
-            typeAppro: 'manuel',
+            typeAppro: (e as any).typeAppro ?? ((e.quantite != null && parseFloat(e.quantite) < 0) ? 'vente' : 'manuel'),
             fournisseurNom: null,
             refFacture: null,
           }))
