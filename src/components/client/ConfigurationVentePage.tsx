@@ -12,7 +12,7 @@ const fmtMoney = (n: number | null | undefined) => {
 };
 
 const fmtDate = (s: string) =>
-  new Date(s).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' });
+  new Date(s).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: '2-digit' });
 
 const C = '#b45309';
 const CD = '#78350f';
