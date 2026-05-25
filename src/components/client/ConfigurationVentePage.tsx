@@ -11,6 +11,9 @@ const fmtMoney = (n: number | null | undefined) => {
   return n.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' DT';
 };
 
+const fmtDate = (s: string) =>
+  new Date(s).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' });
+
 const C = '#b45309';
 const CD = '#78350f';
 const CL = '#fffbeb';
@@ -52,12 +55,17 @@ interface ProduitRow {
   error?: string;
 }
 
-interface HistEntry {
+interface HistConfigEntry {
+  id: number;
+  article_vendable_id: string;
   prix_vente: number;
   saved_at: string;
+  article_type: 'produit' | 'ingredient';
+  produit_nom: string | null;
+  is_supplement: boolean;
 }
 
-type Tab = 'produits' | 'supplements';
+type Tab = 'produits' | 'supplements' | 'historique';
 
 export default function ConfigurationVentePage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -73,9 +81,13 @@ export default function ConfigurationVentePage() {
   const [editingPrixPrest, setEditingPrixPrest] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
 
-  const [historyOpen, setHistoryOpen] = useState<string | null>(null);
-  const [historyCache, setHistoryCache] = useState<Record<string, HistEntry[]>>({});
-  const [historyLoading, setHistoryLoading] = useState(false);
+  // ── Historique config tab ────────────────────────────────────────────────────
+  const [histEntries, setHistEntries] = useState<HistConfigEntry[]>([]);
+  const [histLoading, setHistLoading] = useState(false);
+  const [histFilterNom, setHistFilterNom] = useState('');
+  const [histFilterType, setHistFilterType] = useState<'all' | 'produit' | 'supplement'>('all');
+  const [histFilterDu, setHistFilterDu] = useState('');
+  const [histFilterAu, setHistFilterAu] = useState('');
 
   useEffect(() => {
     api.get('/api/entreprise/activites').then(({ data }) => {
@@ -97,7 +109,6 @@ export default function ConfigurationVentePage() {
     ]).then(([ap, av, pp, pr]) => {
       setPrestataires(ap.data as ActivitePrestataire[]);
       setPrixPrestataires(pp.data as ArticlePrixPrestataire[]);
-
       const avData = av.data as ArticleVendable[];
       const avMap = new Map(
         avData.filter(a => a.article_type === 'produit').map(a => [a.article_id, a])
@@ -108,6 +119,19 @@ export default function ConfigurationVentePage() {
   }, [selectedActiviteId]);
 
   useEffect(() => { loadAll(); }, [loadAll]);
+
+  const loadHistorique = useCallback(() => {
+    if (!selectedActiviteId) return;
+    setHistLoading(true);
+    api.get(`/api/articles-vendables/historique-config?activiteId=${selectedActiviteId}`)
+      .then(({ data }) => setHistEntries(data as HistConfigEntry[]))
+      .catch(() => {})
+      .finally(() => setHistLoading(false));
+  }, [selectedActiviteId]);
+
+  useEffect(() => {
+    if (activeTab === 'historique') loadHistorique();
+  }, [activeTab, loadHistorique]);
 
   const activePrests = prestataires.filter(p => p.actif);
   const produitRows = rows.filter(r => !r.produit.isSupplement);
@@ -168,22 +192,8 @@ export default function ConfigurationVentePage() {
       await Promise.all(proms);
       setEditingPrixVente({});
       setEditingPrixPrest({});
-      setHistoryCache({});
       loadAll();
     } catch {} finally { setSaving(false); }
-  };
-
-  // ── Prix history ─────────────────────────────────────────────────────────────
-
-  const fetchHistory = async (avId: string) => {
-    if (historyOpen === avId) { setHistoryOpen(null); return; }
-    setHistoryOpen(avId);
-    if (historyCache[avId]) return;
-    setHistoryLoading(true);
-    try {
-      const { data } = await api.get(`/api/articles-vendables/${avId}/historique`);
-      setHistoryCache(prev => ({ ...prev, [avId]: data as HistEntry[] }));
-    } catch {} finally { setHistoryLoading(false); }
   };
 
   // ── Prix prestataire key ─────────────────────────────────────────────────────
@@ -192,7 +202,7 @@ export default function ConfigurationVentePage() {
 
   // ── Sub-components ───────────────────────────────────────────────────────────
 
-  const TabBtn = ({ tab, label, count }: { tab: Tab; label: string; count: number }) => (
+  const TabBtn = ({ tab, label, count }: { tab: Tab; label: string; count?: number }) => (
     <button onClick={() => setActiveTab(tab)}
       style={{
         padding: '10px 22px', background: activeTab === tab ? C : '#fff',
@@ -204,7 +214,9 @@ export default function ConfigurationVentePage() {
         display: 'flex', alignItems: 'center', gap: 8,
       }}>
       {label}
-      <span style={{ background: activeTab === tab ? 'rgba(255,255,255,0.25)' : CB, color: activeTab === tab ? '#fff' : CD, borderRadius: 10, padding: '1px 7px', fontSize: '0.75rem', fontWeight: 700 }}>{count}</span>
+      {count != null && (
+        <span style={{ background: activeTab === tab ? 'rgba(255,255,255,0.25)' : CB, color: activeTab === tab ? '#fff' : CD, borderRadius: 10, padding: '1px 7px', fontSize: '0.75rem', fontWeight: 700 }}>{count}</span>
+      )}
     </button>
   );
 
@@ -244,45 +256,12 @@ export default function ConfigurationVentePage() {
 
   const ProduitTableRow = ({ row, idx, showPortion }: { row: ProduitRow; idx: number; showPortion: boolean }) => {
     const isActive = row.vendable?.actif === true;
-    const avId = row.vendable?.id;
-    const histEntries = avId ? (historyCache[avId] ?? null) : null;
-    const isHistOpen = avId ? historyOpen === avId : false;
     const hasPrix = hasPrixDirect(row);
     return (
       <tr style={{ borderBottom: `1px solid ${CB}`, background: idx % 2 === 0 ? '#fff' : '#fffdf7', opacity: row.vendable && !isActive ? 0.6 : 1 }}>
-        <td style={{ padding: '12px 16px', position: 'relative' }}>
+        <td style={{ padding: '12px 16px' }}>
           <div style={{ fontWeight: isActive ? 700 : 500, fontSize: '0.9rem', color: isActive ? CD : 'var(--text)' }}>{row.produit.name}</div>
-          {avId && (
-            <div style={{ position: 'relative', display: 'inline-block' }}>
-              <button
-                onClick={() => fetchHistory(avId)}
-                style={{ fontSize: '0.62rem', color: C, background: 'none', border: 'none', cursor: 'pointer', padding: '2px 0', textDecoration: 'underline', fontWeight: 600 }}>
-                📋 historique
-              </button>
-              {isHistOpen && (
-                <div style={{ position: 'absolute', left: 0, top: '100%', zIndex: 200, background: '#fff', border: `1.5px solid ${CB}`, borderRadius: 8, boxShadow: '0 4px 16px rgba(0,0,0,0.14)', minWidth: 230, padding: 8 }}>
-                  <div style={{ fontSize: '0.7rem', fontWeight: 800, color: CD, marginBottom: 6, paddingBottom: 4, borderBottom: `1px solid ${CB}` }}>5 derniers prix enregistrés</div>
-                  {historyLoading && !histEntries ? (
-                    <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', padding: '4px 0' }}>Chargement…</div>
-                  ) : histEntries && histEntries.length > 0 ? (
-                    histEntries.map((h, i) => (
-                      <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '4px 2px', fontSize: '0.72rem', borderBottom: i < histEntries.length - 1 ? `1px solid ${CB}55` : 'none' }}>
-                        <span style={{ color: CD, fontWeight: 700 }}>{fmtMoney(h.prix_vente)}</span>
-                        <span style={{ color: 'var(--text-muted)' }}>{new Date(h.saved_at).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: '2-digit' })}</span>
-                      </div>
-                    ))
-                  ) : (
-                    <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', padding: '4px 0' }}>Aucun historique disponible</div>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
           {row.error && <div style={{ fontSize: '0.7rem', color: '#dc2626', marginTop: 2 }}>{row.error}</div>}
-          {/* close overlay */}
-          {isHistOpen && (
-            <div style={{ position: 'fixed', inset: 0, zIndex: 199 }} onClick={() => setHistoryOpen(null)} />
-          )}
         </td>
         <td style={{ padding: '8px 16px', textAlign: 'center' }}>
           <input type="checkbox" checked={isActive} disabled={row.saving}
@@ -345,24 +324,18 @@ export default function ConfigurationVentePage() {
     const colCount = 2 + (showPortion ? 1 : 0) + 1 + activePrests.length;
     return (
       <div>
-        {/* Filters + global save */}
         <div style={{ display: 'flex', gap: 10, padding: '12px 16px', borderBottom: `1px solid ${CB}`, flexWrap: 'wrap', alignItems: 'center' }}>
           <div style={{ position: 'relative', flex: '1 1 180px', minWidth: 140 }}>
             <span style={{ position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)', fontSize: '0.78rem', pointerEvents: 'none' }}>🔍</span>
             <input
-              type="text"
-              placeholder={articleLabel}
-              value={filterNom}
+              type="text" placeholder={articleLabel} value={filterNom}
               onChange={e => setFilterNom(e.target.value)}
               style={{ width: '100%', paddingLeft: 28, paddingRight: 8, paddingTop: 7, paddingBottom: 7, borderRadius: 8, border: `1.5px solid ${filterNom ? C : CB}`, background: filterNom ? CL : '#fafafa', fontSize: '0.83rem', color: CD, outline: 'none', boxSizing: 'border-box' }}
             />
           </div>
           {activePrests.length > 0 && (
-            <select
-              value={filterPresta}
-              onChange={e => setFilterPresta(e.target.value)}
-              style={{ flex: '1 1 160px', minWidth: 130, padding: '7px 10px', borderRadius: 8, border: `1.5px solid ${filterPresta ? C : CB}`, background: filterPresta ? CL : '#fafafa', fontSize: '0.83rem', color: CD, outline: 'none', cursor: 'pointer' }}
-            >
+            <select value={filterPresta} onChange={e => setFilterPresta(e.target.value)}
+              style={{ flex: '1 1 160px', minWidth: 130, padding: '7px 10px', borderRadius: 8, border: `1.5px solid ${filterPresta ? C : CB}`, background: filterPresta ? CL : '#fafafa', fontSize: '0.83rem', color: CD, outline: 'none', cursor: 'pointer' }}>
               <option value="">Tous prestataires</option>
               {activePrests.map(ap => (
                 <option key={ap.id} value={ap.id}>{ap.prestataire_nom}</option>
@@ -378,16 +351,13 @@ export default function ConfigurationVentePage() {
           <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
             {filtered.length}/{tableRows.length} article{tableRows.length > 1 ? 's' : ''}
           </div>
-          <button
-            onClick={handleSaveAll}
-            disabled={saving || dirtyCount === 0}
+          <button onClick={handleSaveAll} disabled={saving || dirtyCount === 0}
             style={{
               marginLeft: 'auto', padding: '7px 18px', borderRadius: 8, border: 'none',
               background: dirtyCount > 0 ? C : '#e5e7eb', color: dirtyCount > 0 ? '#fff' : '#9ca3af',
               fontSize: '0.83rem', fontWeight: 700, cursor: dirtyCount > 0 ? 'pointer' : 'default',
               display: 'flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap',
-              transition: 'all 0.15s',
-              boxShadow: dirtyCount > 0 ? `0 2px 8px ${C}55` : 'none',
+              transition: 'all 0.15s', boxShadow: dirtyCount > 0 ? `0 2px 8px ${C}55` : 'none',
             }}>
             💾 Enregistrer
             {dirtyCount > 0 && (
@@ -431,6 +401,120 @@ export default function ConfigurationVentePage() {
       </div>
     );
   };
+
+  // ── Historique config tab content ────────────────────────────────────────────
+
+  const filteredHist = histEntries.filter(e => {
+    if (histFilterNom && !(e.produit_nom ?? '').toLowerCase().includes(histFilterNom.toLowerCase())) return false;
+    if (histFilterType === 'produit' && e.is_supplement) return false;
+    if (histFilterType === 'supplement' && !e.is_supplement) return false;
+    if (histFilterDu && new Date(e.saved_at) < new Date(histFilterDu)) return false;
+    if (histFilterAu && new Date(e.saved_at) > new Date(histFilterAu + 'T23:59:59')) return false;
+    return true;
+  });
+
+  const HistoriqueTab = () => (
+    <div style={{ background: '#fff', borderRadius: 14, border: `1.5px solid ${CB}`, overflow: 'hidden', boxShadow: '0 2px 12px rgba(180,83,9,0.08)' }}>
+      <div style={{ background: `linear-gradient(135deg, ${CD}18 0%, ${C}12 100%)`, borderBottom: `1.5px solid ${CB}`, padding: '14px 22px', display: 'flex', alignItems: 'center', gap: 10 }}>
+        <div style={{ background: C + '22', borderRadius: 8, padding: '6px 8px', fontSize: '1rem' }}>📋</div>
+        <div>
+          <div style={{ fontSize: '0.95rem', fontWeight: 800, color: CD }}>Historique des prix</div>
+          <div style={{ fontSize: '0.72rem', color: C }}>Toutes les modifications de prix enregistrées pour cette activité</div>
+        </div>
+        <button onClick={loadHistorique} disabled={histLoading}
+          style={{ marginLeft: 'auto', padding: '5px 12px', borderRadius: 8, border: `1px solid ${CB}`, background: CL, color: C, fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer' }}>
+          🔄 Actualiser
+        </button>
+      </div>
+
+      {/* Filters */}
+      <div style={{ display: 'flex', gap: 10, padding: '12px 16px', borderBottom: `1px solid ${CB}`, flexWrap: 'wrap', alignItems: 'center', background: '#fafafa' }}>
+        <div style={{ position: 'relative', flex: '1 1 180px', minWidth: 140 }}>
+          <span style={{ position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)', fontSize: '0.78rem', pointerEvents: 'none' }}>🔍</span>
+          <input type="text" placeholder="Nom produit…" value={histFilterNom}
+            onChange={e => setHistFilterNom(e.target.value)}
+            style={{ width: '100%', paddingLeft: 28, paddingRight: 8, paddingTop: 7, paddingBottom: 7, borderRadius: 8, border: `1.5px solid ${histFilterNom ? C : CB}`, background: histFilterNom ? CL : '#fff', fontSize: '0.83rem', color: CD, outline: 'none', boxSizing: 'border-box' }} />
+        </div>
+        <select value={histFilterType} onChange={e => setHistFilterType(e.target.value as 'all' | 'produit' | 'supplement')}
+          style={{ flex: '0 0 160px', padding: '7px 10px', borderRadius: 8, border: `1.5px solid ${histFilterType !== 'all' ? C : CB}`, background: histFilterType !== 'all' ? CL : '#fff', fontSize: '0.83rem', color: CD, outline: 'none', cursor: 'pointer' }}>
+          <option value="all">Tous types</option>
+          <option value="produit">Produits</option>
+          <option value="supplement">Suppléments</option>
+        </select>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: '0 0 auto' }}>
+          <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>Du</span>
+          <input type="date" value={histFilterDu} onChange={e => setHistFilterDu(e.target.value)}
+            style={{ padding: '6px 8px', borderRadius: 8, border: `1.5px solid ${histFilterDu ? C : CB}`, background: histFilterDu ? CL : '#fff', fontSize: '0.8rem', color: CD, outline: 'none' }} />
+          <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>Au</span>
+          <input type="date" value={histFilterAu} onChange={e => setHistFilterAu(e.target.value)}
+            style={{ padding: '6px 8px', borderRadius: 8, border: `1.5px solid ${histFilterAu ? C : CB}`, background: histFilterAu ? CL : '#fff', fontSize: '0.8rem', color: CD, outline: 'none' }} />
+        </div>
+        {(histFilterNom || histFilterType !== 'all' || histFilterDu || histFilterAu) && (
+          <button onClick={() => { setHistFilterNom(''); setHistFilterType('all'); setHistFilterDu(''); setHistFilterAu(''); }}
+            style={{ padding: '6px 12px', borderRadius: 8, border: `1px solid ${CB}`, background: '#fff', color: C, fontSize: '0.78rem', cursor: 'pointer', fontWeight: 600, whiteSpace: 'nowrap' }}>
+            ✕ Réinitialiser
+          </button>
+        )}
+        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', whiteSpace: 'nowrap', marginLeft: 'auto' }}>
+          {filteredHist.length} entrée{filteredHist.length > 1 ? 's' : ''}
+        </div>
+      </div>
+
+      {/* Table */}
+      {histLoading ? (
+        <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-muted)', fontSize: '0.85rem' }}>Chargement…</div>
+      ) : filteredHist.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: '50px 0', color: 'var(--text-muted)' }}>
+          <div style={{ fontSize: '2rem', marginBottom: 10 }}>📋</div>
+          {histEntries.length === 0 ? 'Aucun historique enregistré' : 'Aucun résultat pour ces filtres'}
+        </div>
+      ) : (
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
+            <colgroup>
+              <col style={{ width: '40%' }} />
+              <col style={{ width: '15%' }} />
+              <col style={{ width: '20%' }} />
+              <col style={{ width: '25%' }} />
+            </colgroup>
+            <thead>
+              <tr style={{ background: CL, borderBottom: `2px solid ${CB}` }}>
+                <th style={{ padding: '11px 16px', textAlign: 'left', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Produit</th>
+                <th style={{ padding: '11px 16px', textAlign: 'center', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Type</th>
+                <th style={{ padding: '11px 16px', textAlign: 'center', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Prix enregistré</th>
+                <th style={{ padding: '11px 16px', textAlign: 'center', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Date</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredHist.map((e, idx) => (
+                <tr key={e.id} style={{ borderBottom: `1px solid ${CB}`, background: idx % 2 === 0 ? '#fff' : '#fffdf7' }}>
+                  <td style={{ padding: '10px 16px', fontWeight: 600, fontSize: '0.88rem', color: CD, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {e.produit_nom ?? '—'}
+                  </td>
+                  <td style={{ padding: '10px 16px', textAlign: 'center' }}>
+                    <span style={{
+                      display: 'inline-block', padding: '2px 10px', borderRadius: 20, fontSize: '0.7rem', fontWeight: 700,
+                      background: e.is_supplement ? '#fef3c7' : CL,
+                      color: e.is_supplement ? '#92400e' : CD,
+                      border: `1px solid ${e.is_supplement ? '#fcd34d' : CB}`,
+                    }}>
+                      {e.is_supplement ? '🧂 Supplément' : '🛍️ Produit'}
+                    </span>
+                  </td>
+                  <td style={{ padding: '10px 16px', textAlign: 'center', fontWeight: 700, fontSize: '0.9rem', color: C }}>
+                    {fmtMoney(e.prix_vente)}
+                  </td>
+                  <td style={{ padding: '10px 16px', textAlign: 'center', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                    {fmtDate(e.saved_at)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
 
   return (
     <div className="page-content">
@@ -482,7 +566,7 @@ export default function ConfigurationVentePage() {
         <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '60px 0' }}>Aucune activité disponible</div>
       ) : (
         <>
-          {activePrests.length === 0 && (
+          {activePrests.length === 0 && activeTab !== 'historique' && (
             <div style={{ background: '#fef9c3', border: `1px solid ${CB}`, borderRadius: 10, padding: '10px 16px', fontSize: '0.83rem', color: '#854d0e', marginBottom: 18, display: 'flex', alignItems: 'center', gap: 10 }}>
               💡 Aucun prestataire actif — les colonnes prestataire n'apparaîtront pas.
               <Link to="/client/ventes/prestataires" style={{ color: C, fontWeight: 700, marginLeft: 4 }}>Configurer les prestataires →</Link>
@@ -490,12 +574,12 @@ export default function ConfigurationVentePage() {
           )}
 
           {/* Tabs */}
-          <div style={{ display: 'flex', gap: 10, marginBottom: 22 }}>
+          <div style={{ display: 'flex', gap: 10, marginBottom: 22, flexWrap: 'wrap' }}>
             <TabBtn tab="produits" label="🛍️ Vente Produits" count={produitRows.length} />
             <TabBtn tab="supplements" label="🧂 Ventes Suppléments" count={supplementRows.length} />
+            <TabBtn tab="historique" label="📋 Historique config" />
           </div>
 
-          {/* ── Vente Produits ── */}
           {activeTab === 'produits' && (
             <div style={{ background: '#fff', borderRadius: 14, border: `1.5px solid ${CB}`, overflow: 'hidden', boxShadow: '0 2px 12px rgba(180,83,9,0.08)' }}>
               <div style={{ background: `linear-gradient(135deg, ${CD}18 0%, ${C}12 100%)`, borderBottom: `1.5px solid ${CB}`, padding: '14px 22px', display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -509,7 +593,6 @@ export default function ConfigurationVentePage() {
             </div>
           )}
 
-          {/* ── Ventes Suppléments ── */}
           {activeTab === 'supplements' && (
             <div style={{ background: '#fff', borderRadius: 14, border: `1.5px solid ${CB}`, overflow: 'hidden', boxShadow: '0 2px 12px rgba(180,83,9,0.08)' }}>
               <div style={{ background: `linear-gradient(135deg, ${CD}18 0%, ${C}12 100%)`, borderBottom: `1.5px solid ${CB}`, padding: '14px 22px', display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -522,6 +605,8 @@ export default function ConfigurationVentePage() {
               <ProduitTable tableRows={supplementRows} showPortion={false} isSupplement />
             </div>
           )}
+
+          {activeTab === 'historique' && <HistoriqueTab />}
         </>
       )}
     </div>
