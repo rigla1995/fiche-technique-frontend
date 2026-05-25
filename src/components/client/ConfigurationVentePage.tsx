@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import api from '../../api/client';
-import type { Activite } from '../../types';
+import type { Activite, ActiviteIngredient } from '../../types';
 
 const apiMsg = (e: unknown, fallback = 'Erreur') =>
   (e as { response?: { data?: { message?: string } } })?.response?.data?.message ?? fallback;
@@ -18,17 +18,8 @@ const CB = '#fcd34d';
 
 interface ActivitePrestataire {
   id: string;
-  activite_id: number;
-  prestataire_id: string;
   taux_commission: number;
-  actif: boolean;
   prestataire_nom: string;
-  logo_url?: string | null;
-}
-
-interface PrestataireGlobal {
-  id: string;
-  nom: string;
   actif: boolean;
 }
 
@@ -36,71 +27,47 @@ interface ArticleVendable {
   id: string;
   nom: string;
   article_type: 'produit' | 'ingredient';
+  article_id: number;
   prix_vente: number;
+  portion: number | null;
   actif: boolean;
   unite_nom?: string | null;
 }
 
 interface ArticlePrixPrestataire {
-  id: string;
   article_vendable_id: string;
   activite_prestataire_id: string;
   prix_vente: number | null;
-  prix_base: number;
-  taux_commission: number;
-  prestataire_nom: string;
-  article_nom: string;
-  prestataire_id: string;
 }
 
-interface ChargesFixes {
-  id?: string;
-  activite_id?: number;
-  mode: 'global' | 'detail';
-  montant_global?: number | null;
-  loyer?: number | null;
-  charges_personnel?: number | null;
-  electricite_gaz?: number | null;
-  eau?: number | null;
+interface IngredientRow extends ActiviteIngredient {
+  vendable?: ArticleVendable;
+  saving?: boolean;
+  error?: string;
 }
+
+type Tab = 'produits' | 'supplements';
 
 export default function ConfigurationVentePage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [activites, setActivites] = useState<Activite[]>([]);
   const [selectedActiviteId, setSelectedActiviteId] = useState<number | null>(null);
+  const [activeTab, setActiveTab] = useState<Tab>('produits');
 
-  // Prestataires par activité
-  const [activitePrestataires, setActivitePrestataires] = useState<ActivitePrestataire[]>([]);
-  const [allPrestataires, setAllPrestataires] = useState<PrestataireGlobal[]>([]);
+  // Prestataires (read-only here, managed in Config Prestataires)
+  const [prestataires, setPrestataires] = useState<ActivitePrestataire[]>([]);
 
-  // Prix prestataire
-  const [articlesVendables, setArticlesVendables] = useState<ArticleVendable[]>([]);
+  // Produits vendables (fiches techniques)
+  const [produits, setProduits] = useState<ArticleVendable[]>([]);
+  const [editingPrixVente, setEditingPrixVente] = useState<Record<string, string>>({});
+  const [editingPrixPrest, setEditingPrixPrest] = useState<Record<string, string>>({});
   const [prixPrestataires, setPrixPrestataires] = useState<ArticlePrixPrestataire[]>([]);
 
-  // Charges fixes
-  const [charges, setCharges] = useState<ChargesFixes | null>(null);
+  // Suppléments (ingrédients du catalogue)
+  const [ingredients, setIngredients] = useState<IngredientRow[]>([]);
+  const [editingSuppl, setEditingSuppl] = useState<Record<number, { portion?: string; prix?: string }>>({});
 
   const [saving, setSaving] = useState(false);
-  const [activeSection, setActiveSection] = useState<'prestataires' | 'prix' | 'charges'>('prestataires');
-
-  // Add prestataire form
-  const [showAddPrest, setShowAddPrest] = useState(false);
-  const [newPrestId, setNewPrestId] = useState('');
-  const [newTaux, setNewTaux] = useState('0');
-  const [addPrestError, setAddPrestError] = useState('');
-
-  // Edit taux form
-  const [editTauxId, setEditTauxId] = useState<string | null>(null);
-  const [editTauxVal, setEditTauxVal] = useState('');
-
-  // Prix edit
-  const [editingPrix, setEditingPrix] = useState<Record<string, string>>({});
-  const [editingPrixVente, setEditingPrixVente] = useState<Record<string, string>>({});
-
-  // Charges form
-  const [chargesForm, setChargesForm] = useState<ChargesFixes>({ mode: 'global' });
-  const [chargesSaving, setChargesSaving] = useState(false);
-  const [chargesError, setChargesError] = useState('');
 
   useEffect(() => {
     api.get('/api/entreprise/activites').then(({ data }) => {
@@ -110,7 +77,6 @@ export default function ConfigurationVentePage() {
       const found = acts.find(a => String(a.id) === paramId);
       setSelectedActiviteId(found ? found.id : acts[0]?.id ?? null);
     }).catch(() => {});
-    api.get('/api/prestataires').then(({ data }) => setAllPrestataires(data)).catch(() => {});
   }, []);
 
   const loadAll = useCallback(() => {
@@ -119,62 +85,42 @@ export default function ConfigurationVentePage() {
       api.get(`/api/activite-prestataires?activiteId=${selectedActiviteId}`),
       api.get(`/api/articles-vendables?activiteId=${selectedActiviteId}`),
       api.get(`/api/article-prix-prestataire?activiteId=${selectedActiviteId}`),
-      api.get(`/api/charges-fixes?activiteId=${selectedActiviteId}`),
-    ]).then(([ap, av, pp, ch]) => {
-      setActivitePrestataires(ap.data);
-      setArticlesVendables(av.data as ArticleVendable[]);
-      setPrixPrestataires(pp.data);
-      const chData = ch.data as ChargesFixes | null;
-      setCharges(chData);
-      setChargesForm(chData || { mode: 'global' });
+      api.get(`/api/entreprise/activites/${selectedActiviteId}/ingredients`),
+    ]).then(([ap, av, pp, ing]) => {
+      const apData = ap.data as ActivitePrestataire[];
+      setPrestataires(apData);
+      const avData = av.data as ArticleVendable[];
+      setProduits(avData.filter(a => a.article_type === 'produit'));
+      setPrixPrestataires(pp.data as ArticlePrixPrestataire[]);
+
+      const ingData = ing.data as ActiviteIngredient[];
+      const avIngMap = new Map(avData.filter(a => a.article_type === 'ingredient').map(a => [a.article_id, a]));
+      setIngredients(ingData.map(i => ({ ...i, vendable: avIngMap.get(i.id) })));
     }).catch(() => {});
   }, [selectedActiviteId]);
 
   useEffect(() => { loadAll(); }, [loadAll]);
 
-  const handleAddPrestataire = async () => {
-    if (!selectedActiviteId || !newPrestId) return;
-    setSaving(true); setAddPrestError('');
-    try {
-      await api.post('/api/activite-prestataires', {
-        activite_id: selectedActiviteId,
-        prestataire_id: newPrestId,
-        taux_commission: parseFloat(newTaux) || 0,
-      });
-      setShowAddPrest(false); setNewPrestId(''); setNewTaux('0');
-      loadAll();
-    } catch (e: unknown) {
-      setAddPrestError(apiMsg(e));
-    } finally {
-      setSaving(false);
-    }
-  };
+  const activePrests = prestataires.filter(p => p.actif);
 
-  const handleUpdateTaux = async (id: string) => {
+  // ── Produits handlers ──────────────────────────────────────────────────────
+
+  const handleSavePrixVente = async (articleId: string) => {
+    const val = editingPrixVente[articleId];
+    if (val == null) return;
     setSaving(true);
     try {
-      await api.put(`/api/activite-prestataires/${id}`, { taux_commission: parseFloat(editTauxVal) || 0 });
-      setEditTauxId(null);
+      await api.put(`/api/articles-vendables/${articleId}`, { prix_vente: parseFloat(val) || 0 });
+      setEditingPrixVente(prev => { const n = { ...prev }; delete n[articleId]; return n; });
       loadAll();
-    } catch {} finally {
-      setSaving(false);
-    }
-  };
-
-
-  const handleRemovePrestataire = async (id: string) => {
-    if (!confirm('Retirer ce prestataire de cette activité ?')) return;
-    try {
-      await api.delete(`/api/activite-prestataires/${id}`);
-      loadAll();
-    } catch {}
+    } catch {} finally { setSaving(false); }
   };
 
   const getPrixKey = (articleId: string, apId: string) => `${articleId}__${apId}`;
 
-  const handleSavePrix = async (articleId: string, apId: string) => {
+  const handleSavePrixPrest = async (articleId: string, apId: string) => {
     const key = getPrixKey(articleId, apId);
-    const val = editingPrix[key];
+    const val = editingPrixPrest[key];
     if (!val) return;
     setSaving(true);
     try {
@@ -183,63 +129,118 @@ export default function ConfigurationVentePage() {
         activite_prestataire_id: apId,
         prix_vente: parseFloat(val),
       });
-      const newEdit = { ...editingPrix };
-      delete newEdit[key];
-      setEditingPrix(newEdit);
+      setEditingPrixPrest(prev => { const n = { ...prev }; delete n[key]; return n; });
       loadAll();
-    } catch {} finally {
-      setSaving(false);
-    }
+    } catch {} finally { setSaving(false); }
   };
 
-  const handleSavePrixVente = async (articleId: string) => {
-    const val = editingPrixVente[articleId];
-    if (val == null) return;
-    setSaving(true);
-    try {
-      await api.put(`/api/articles-vendables/${articleId}`, { prix_vente: parseFloat(val) || 0 });
-      const next = { ...editingPrixVente };
-      delete next[articleId];
-      setEditingPrixVente(next);
-      loadAll();
-    } catch {} finally {
-      setSaving(false);
-    }
-  };
+  // ── Suppléments handlers ───────────────────────────────────────────────────
 
-  const handleSaveCharges = async () => {
-    if (!selectedActiviteId) return;
-    setChargesSaving(true); setChargesError('');
+  const toggleSupplVendable = async (ing: IngredientRow) => {
+    setIngredients(prev => prev.map(i => i.id === ing.id ? { ...i, saving: true, error: undefined } : i));
     try {
-      await api.post('/api/charges-fixes', { ...chargesForm, activite_id: selectedActiviteId });
+      if (ing.vendable) {
+        await api.put(`/api/articles-vendables/${ing.vendable.id}`, { actif: !ing.vendable.actif });
+      } else {
+        await api.post('/api/articles-vendables', {
+          activite_id: selectedActiviteId, article_type: 'ingredient',
+          article_id: ing.id, prix_vente: 0, portion: null, actif: true,
+        });
+      }
       loadAll();
     } catch (e: unknown) {
-      setChargesError(apiMsg(e));
-    } finally {
-      setChargesSaving(false);
+      setIngredients(prev => prev.map(i => i.id === ing.id ? { ...i, saving: false, error: apiMsg(e) } : i));
     }
   };
 
-  const totalCharges = chargesForm.mode === 'global'
-    ? chargesForm.montant_global ?? 0
-    : (chargesForm.loyer ?? 0) + (chargesForm.charges_personnel ?? 0) + (chargesForm.electricite_gaz ?? 0) + (chargesForm.eau ?? 0);
+  const saveSupplField = async (ing: IngredientRow, field: 'portion' | 'prix') => {
+    if (!ing.vendable) return;
+    const editState = editingSuppl[ing.id];
+    const val = field === 'portion' ? editState?.portion : editState?.prix;
+    if (val == null) return;
+    setIngredients(prev => prev.map(i => i.id === ing.id ? { ...i, saving: true, error: undefined } : i));
+    try {
+      const body = field === 'portion'
+        ? { portion: parseFloat(val) || null }
+        : { prix_vente: parseFloat(val) || 0 };
+      await api.put(`/api/articles-vendables/${ing.vendable!.id}`, body);
+      setEditingSuppl(prev => {
+        const next = { ...prev };
+        if (next[ing.id]) { const e = { ...next[ing.id] }; if (field === 'portion') delete e.portion; else delete e.prix; next[ing.id] = e; }
+        return next;
+      });
+      loadAll();
+    } catch (e: unknown) {
+      setIngredients(prev => prev.map(i => i.id === ing.id ? { ...i, saving: false, error: apiMsg(e) } : i));
+    }
+  };
 
-  const alreadyAdded = new Set(activitePrestataires.map(ap => ap.prestataire_id));
-  const availablePrestataires = allPrestataires.filter(p => p.actif && !alreadyAdded.has(p.id));
+  const cats = [...new Set(ingredients.map(i => i.categorie || 'Sans catégorie'))].sort();
+  const [openCats, setOpenCats] = useState<Set<string>>(new Set());
+  useEffect(() => {
+    const allCats = new Set(ingredients.map(i => i.categorie || 'Sans catégorie'));
+    setOpenCats(allCats);
+  }, [ingredients.length]);
 
-  const sectionBtn = (key: typeof activeSection, label: string) => (
-    <button onClick={() => setActiveSection(key)}
+  const TabBtn = ({ tab, label }: { tab: Tab; label: string }) => (
+    <button onClick={() => setActiveTab(tab)}
       style={{
-        padding: '8px 18px', background: activeSection === key ? C : '#fff',
-        color: activeSection === key ? '#fff' : CD,
-        border: activeSection === key ? `1.5px solid ${C}` : `1.5px solid ${CB}`,
-        borderRadius: 9, cursor: 'pointer', fontWeight: activeSection === key ? 700 : 500, fontSize: '0.88rem',
-        boxShadow: activeSection === key ? `0 2px 8px ${C}44` : 'none',
+        padding: '10px 22px', background: activeTab === tab ? C : '#fff',
+        color: activeTab === tab ? '#fff' : CD,
+        border: activeTab === tab ? `1.5px solid ${C}` : `1.5px solid ${CB}`,
+        borderRadius: 10, cursor: 'pointer', fontWeight: activeTab === tab ? 700 : 500, fontSize: '0.9rem',
+        boxShadow: activeTab === tab ? `0 2px 10px ${C}44` : 'none',
         transition: 'all 0.15s',
       }}>
       {label}
     </button>
   );
+
+  const PrixVenteInput = ({ av }: { av: ArticleVendable }) => {
+    const isDirty = av.id in editingPrixVente;
+    const val = isDirty ? editingPrixVente[av.id] : String(av.prix_vente);
+    return (
+      <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+        <div style={{ position: 'relative' }}>
+          <input type="number" min="0" step="0.01" value={val}
+            onChange={e => setEditingPrixVente(prev => ({ ...prev, [av.id]: e.target.value }))}
+            style={{ width: 95, padding: '7px 30px 7px 8px', borderRadius: 8, border: `1.5px solid ${isDirty ? C : CB}`, background: isDirty ? CL : '#fafafa', fontSize: '0.88rem', fontWeight: 700, color: CD, outline: 'none' }} />
+          <span style={{ position: 'absolute', right: 7, top: '50%', transform: 'translateY(-50%)', fontSize: '0.6rem', color: C, pointerEvents: 'none', fontWeight: 700 }}>DT</span>
+        </div>
+        {isDirty && (
+          <button onClick={() => handleSavePrixVente(av.id)} disabled={saving}
+            style={{ padding: '5px 8px', borderRadius: 6, border: 'none', background: C, color: '#fff', cursor: 'pointer', fontSize: '0.72rem', fontWeight: 700 }}>✓</button>
+        )}
+      </div>
+    );
+  };
+
+  const PrestInput = ({ av, ap }: { av: ArticleVendable; ap: ActivitePrestataire }) => {
+    const key = getPrixKey(av.id, ap.id);
+    const existing = prixPrestataires.find(p => p.article_vendable_id === av.id && p.activite_prestataire_id === ap.id);
+    const autoCalc = av.prix_vente * (1 - ap.taux_commission / 100);
+    const isDirty = key in editingPrixPrest;
+    const currentVal = isDirty ? editingPrixPrest[key] : (existing?.prix_vente != null ? String(existing.prix_vente) : '');
+    return (
+      <div>
+        <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+          <div style={{ position: 'relative' }}>
+            <input type="number" min="0" step="0.01" value={currentVal} placeholder={autoCalc.toFixed(2)}
+              onChange={e => setEditingPrixPrest(prev => ({ ...prev, [key]: e.target.value }))}
+              style={{ width: 95, padding: '7px 30px 7px 8px', borderRadius: 8, border: `1.5px solid ${isDirty ? C : CB}`, background: isDirty ? CL : '#fafafa', fontSize: '0.88rem', fontWeight: 700, color: CD, outline: 'none' }} />
+            <span style={{ position: 'absolute', right: 7, top: '50%', transform: 'translateY(-50%)', fontSize: '0.6rem', color: C, pointerEvents: 'none', fontWeight: 700 }}>DT</span>
+          </div>
+          {isDirty && (
+            <button onClick={() => handleSavePrixPrest(av.id, ap.id)} disabled={saving}
+              style={{ padding: '5px 8px', borderRadius: 6, border: 'none', background: C, color: '#fff', cursor: 'pointer', fontSize: '0.72rem', fontWeight: 700 }}>✓</button>
+          )}
+        </div>
+        {!isDirty && (
+          <div style={{ fontSize: '0.62rem', color: 'var(--text-muted)', marginTop: 1 }}>auto : {fmtMoney(autoCalc)}</div>
+        )}
+      </div>
+    );
+  };
 
   return (
     <div className="page-content">
@@ -248,19 +249,30 @@ export default function ConfigurationVentePage() {
         background: `linear-gradient(135deg, ${CD} 0%, ${C} 55%, #d97706 100%)`,
         borderRadius: 18, padding: '24px 28px', marginBottom: 24,
         boxShadow: '0 8px 32px rgba(180,83,9,0.28)',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16,
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
-          <div style={{ background: 'rgba(255,255,255,0.2)', borderRadius: 10, padding: '7px 9px', fontSize: '1.2rem' }}>⚙️</div>
-          <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0 }}>Configuration Vente</h1>
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+            <div style={{ background: 'rgba(255,255,255,0.2)', borderRadius: 10, padding: '7px 9px', fontSize: '1.2rem' }}>💲</div>
+            <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0 }}>Configuration Vente</h1>
+          </div>
+          <p style={{ color: 'rgba(255,255,255,0.82)', margin: 0, fontSize: '0.85rem' }}>
+            Prix de vente directs et par prestataire — produits et suppléments
+          </p>
         </div>
-        <p style={{ color: 'rgba(255,255,255,0.82)', margin: 0, fontSize: '0.85rem' }}>
-          Prestataires, prix par prestataire et charges fixes
-        </p>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <Link to="/client/ventes/prestataires" style={{ background: 'rgba(255,255,255,0.18)', color: '#fff', borderRadius: 20, padding: '5px 14px', fontSize: '0.82rem', fontWeight: 600, textDecoration: 'none', border: '1px solid rgba(255,255,255,0.3)' }}>
+            🛵 Prestataires
+          </Link>
+          <Link to="/client/ventes/charges" style={{ background: 'rgba(255,255,255,0.18)', color: '#fff', borderRadius: 20, padding: '5px 14px', fontSize: '0.82rem', fontWeight: 600, textDecoration: 'none', border: '1px solid rgba(255,255,255,0.3)' }}>
+            🏗️ Charges
+          </Link>
+        </div>
       </div>
 
       {/* Activité selector */}
       {activites.length > 0 && (
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center', marginBottom: 16, padding: '10px 14px', background: '#fff', borderRadius: 10, border: `1px solid ${CB}` }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center', marginBottom: 20, padding: '10px 14px', background: '#fff', borderRadius: 10, border: `1px solid ${CB}` }}>
           {activites.map(a => (
             <button key={a.id} onClick={() => { setSelectedActiviteId(a.id); setSearchParams({ activiteId: String(a.id) }); }}
               style={{
@@ -273,7 +285,6 @@ export default function ConfigurationVentePage() {
               {a.nom}
             </button>
           ))}
-          <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', alignSelf: 'center', marginLeft: 4 }}>← sélectionner l'activité</span>
         </div>
       )}
 
@@ -281,380 +292,196 @@ export default function ConfigurationVentePage() {
         <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '60px 0' }}>Aucune activité disponible</div>
       ) : (
         <>
-          {/* Section tabs */}
-          <div style={{ display: 'flex', gap: 8, marginBottom: 24, flexWrap: 'wrap' }}>
-            {sectionBtn('prestataires', '🛵 Prestataires')}
-            {sectionBtn('prix', '💲 Prix Vente')}
-            {sectionBtn('charges', '🏗️ Charges fixes')}
+          {activePrests.length === 0 && (
+            <div style={{ background: '#fef9c3', border: `1px solid ${CB}`, borderRadius: 10, padding: '10px 16px', fontSize: '0.83rem', color: '#854d0e', marginBottom: 18, display: 'flex', alignItems: 'center', gap: 10 }}>
+              💡 Aucun prestataire actif — les colonnes prestataire n'apparaîtront pas.
+              <Link to="/client/ventes/prestataires" style={{ color: C, fontWeight: 700, marginLeft: 4 }}>Configurer les prestataires →</Link>
+            </div>
+          )}
+
+          {/* Tabs */}
+          <div style={{ display: 'flex', gap: 10, marginBottom: 22 }}>
+            <TabBtn tab="produits" label="🛍️ Vente Produits" />
+            <TabBtn tab="supplements" label="🧂 Ventes Suppléments" />
           </div>
 
-          {/* ── PRESTATAIRES ── */}
-          {activeSection === 'prestataires' && (
+          {/* ── Vente Produits ── */}
+          {activeTab === 'produits' && (
             <div style={{ background: '#fff', borderRadius: 14, border: `1.5px solid ${CB}`, overflow: 'hidden', boxShadow: '0 2px 12px rgba(180,83,9,0.08)' }}>
-              <div style={{ background: `linear-gradient(135deg, ${CD}18 0%, ${C}12 100%)`, borderBottom: `1.5px solid ${CB}`, padding: '16px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <div style={{ background: C + '22', borderRadius: 8, padding: '6px 8px', fontSize: '1rem' }}>🛵</div>
-                  <div>
-                    <div style={{ fontSize: '1rem', fontWeight: 800, color: CD }}>Prestataires de l'activité</div>
-                    <div style={{ fontSize: '0.72rem', color: C, fontWeight: 500 }}>{activitePrestataires.length} prestataire{activitePrestataires.length !== 1 ? 's' : ''} configuré{activitePrestataires.length !== 1 ? 's' : ''}</div>
-                  </div>
+              <div style={{ background: `linear-gradient(135deg, ${CD}18 0%, ${C}12 100%)`, borderBottom: `1.5px solid ${CB}`, padding: '16px 24px', display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{ background: C + '22', borderRadius: 8, padding: '6px 8px', fontSize: '1rem' }}>🛍️</div>
+                <div>
+                  <div style={{ fontSize: '1rem', fontWeight: 800, color: CD }}>Produits vendables</div>
+                  <div style={{ fontSize: '0.72rem', color: C }}>Fiches techniques — prix direct + prix par prestataire</div>
                 </div>
-                <button onClick={() => { setShowAddPrest(true); setAddPrestError(''); }}
-                  style={{ background: `linear-gradient(135deg, ${CD} 0%, ${C} 100%)`, color: '#fff', border: 'none', borderRadius: 9, padding: '8px 18px', cursor: 'pointer', fontWeight: 700, fontSize: '0.85rem', boxShadow: `0 2px 8px ${C}55` }}>
-                  + Ajouter
-                </button>
               </div>
-              <div style={{ padding: 24 }}>
-
-              {activitePrestataires.length === 0 ? (
-                <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '30px 0' }}>
-                  Aucun prestataire configuré pour cette activité
-                </div>
-              ) : (
-                <div style={{ display: 'grid', gap: 10 }}>
-                  {activitePrestataires.map(ap => (
-                    <div key={ap.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', background: ap.actif ? CL : '#fafafa', borderRadius: 10, border: `1px solid ${ap.actif ? CB : '#e5e7eb'}` }}>
-                      <div style={{ width: 36, height: 36, borderRadius: 8, background: C + '22', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem' }}>🛵</div>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontWeight: 700, fontSize: '0.92rem' }}>{ap.prestataire_nom}</div>
-                        {editTauxId === ap.id ? (
-                          <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginTop: 4 }}>
-                            <input type="number" min="0" max="100" step="0.1" value={editTauxVal}
-                              onChange={e => setEditTauxVal(e.target.value)}
-                              style={{ width: 80, padding: '3px 8px', borderRadius: 6, border: `1px solid ${CB}`, background: CL, fontSize: '0.85rem' }} />
-                            <span style={{ fontSize: '0.82rem' }}>%</span>
-                            <button onClick={() => handleUpdateTaux(ap.id)} disabled={saving}
-                              style={{ padding: '3px 10px', borderRadius: 6, border: 'none', background: C, color: '#fff', cursor: 'pointer', fontSize: '0.78rem', fontWeight: 600 }}>OK</button>
-                            <button onClick={() => setEditTauxId(null)}
-                              style={{ padding: '3px 10px', borderRadius: 6, border: '1px solid var(--border)', background: 'none', cursor: 'pointer', fontSize: '0.78rem' }}>✕</button>
-                          </div>
-                        ) : (
-                          <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginTop: 2, display: 'flex', gap: 8, alignItems: 'center' }}>
-                            Commission : <strong style={{ color: C }}>{ap.taux_commission}%</strong>
-                            <button onClick={() => { setEditTauxId(ap.id); setEditTauxVal(String(ap.taux_commission)); }}
-                              style={{ padding: '3px 10px', borderRadius: 6, border: `1.5px solid ${C}`, background: CL, color: C, cursor: 'pointer', fontSize: '0.78rem', fontWeight: 700 }}>
-                              ✏️ Modifier
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                      <span style={{ padding: '2px 8px', borderRadius: 12, fontSize: '0.75rem', background: ap.actif ? '#dcfce7' : '#f3f4f6', color: ap.actif ? '#166534' : '#6b7280' }}>
-                        {ap.actif ? '✓ Actif' : 'Inactif'}
-                      </span>
-                      <button onClick={() => handleRemovePrestataire(ap.id)}
-                        style={{ padding: '3px 10px', borderRadius: 6, border: '1px solid #dc2626', color: '#dc2626', background: 'none', cursor: 'pointer', fontSize: '0.78rem' }}>
-                        Retirer
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
+              <div style={{ padding: 0 }}>
+                {produits.filter(p => p.actif).length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-muted)' }}>
+                    <div style={{ fontSize: '2.5rem', marginBottom: 12 }}>🛍️</div>
+                    Aucun produit vendable actif pour cette activité
+                  </div>
+                ) : (
+                  <div style={{ overflowX: 'auto' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 400 }}>
+                      <thead>
+                        <tr style={{ background: CL, borderBottom: `2px solid ${CB}` }}>
+                          <th style={{ padding: '11px 16px', textAlign: 'left', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Produit</th>
+                          <th style={{ padding: '11px 16px', textAlign: 'center', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>🏪 Vente directe</th>
+                          {activePrests.map(ap => (
+                            <th key={ap.id} style={{ padding: '11px 16px', textAlign: 'center', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>
+                              🛵 {ap.prestataire_nom}
+                              <div style={{ fontSize: '0.68rem', fontWeight: 500, color: 'var(--text-muted)', textTransform: 'none' }}>−{ap.taux_commission}%</div>
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {produits.filter(p => p.actif).map((av, idx) => (
+                          <tr key={av.id} style={{ borderBottom: `1px solid ${CB}`, background: idx % 2 === 0 ? '#fff' : '#fffdf7' }}>
+                            <td style={{ padding: '13px 16px' }}>
+                              <div style={{ fontWeight: 700, fontSize: '0.92rem', color: CD }}>{av.nom}</div>
+                              {av.unite_nom && <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{av.unite_nom}</div>}
+                            </td>
+                            <td style={{ padding: '10px 16px', textAlign: 'center' }}><PrixVenteInput av={av} /></td>
+                            {activePrests.map(ap => (
+                              <td key={ap.id} style={{ padding: '10px 16px', textAlign: 'center' }}><PrestInput av={av} ap={ap} /></td>
+                            ))}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </div>
             </div>
           )}
 
-          {/* ── PRIX VENTE ── */}
-          {activeSection === 'prix' && (() => {
-            const activePrests = activitePrestataires.filter(ap => ap.actif);
-            const items = articlesVendables.filter(a => a.article_type === 'produit' && a.actif);
-            const ingItems = articlesVendables.filter(a => a.article_type === 'ingredient' && a.actif);
-
-            const PrixInput = ({ articleId, currentPrixVente }: { articleId: string; currentPrixVente: number }) => {
-              const isDirty = articleId in editingPrixVente;
-              const val = isDirty ? editingPrixVente[articleId] : String(currentPrixVente);
-              return (
-                <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-                  <div style={{ position: 'relative' }}>
-                    <input type="number" min="0" step="0.01" value={val}
-                      onChange={e => setEditingPrixVente(prev => ({ ...prev, [articleId]: e.target.value }))}
-                      style={{ width: 90, padding: '6px 28px 6px 8px', borderRadius: 7, border: `1.5px solid ${isDirty ? C : CB}`, background: isDirty ? CL : '#fafafa', fontSize: '0.85rem', fontWeight: 700, color: CD, outline: 'none' }} />
-                    <span style={{ position: 'absolute', right: 7, top: '50%', transform: 'translateY(-50%)', fontSize: '0.65rem', color: C, pointerEvents: 'none', fontWeight: 700 }}>DT</span>
-                  </div>
-                  {isDirty && (
-                    <button onClick={() => handleSavePrixVente(articleId)} disabled={saving}
-                      style={{ padding: '5px 8px', borderRadius: 6, border: 'none', background: C, color: '#fff', cursor: 'pointer', fontSize: '0.72rem', fontWeight: 700 }}>✓</button>
-                  )}
+          {/* ── Ventes Suppléments ── */}
+          {activeTab === 'supplements' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {ingredients.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--text-muted)' }}>
+                  <div style={{ fontSize: '2.5rem', marginBottom: 12 }}>🧂</div>
+                  Aucun ingrédient disponible pour cette activité
                 </div>
-              );
-            };
-
-            const PrestInput = ({ av, ap }: { av: ArticleVendable; ap: typeof activePrests[0] }) => {
-              const key = getPrixKey(av.id, ap.id);
-              const existingRecord = prixPrestataires.find(p => p.article_vendable_id === av.id && p.activite_prestataire_id === ap.id);
-              const autoCalc = av.prix_vente * (1 - ap.taux_commission / 100);
-              const currentVal = key in editingPrix ? editingPrix[key] : (existingRecord?.prix_vente != null ? String(existingRecord.prix_vente) : '');
-              const isDirty = key in editingPrix;
-              return (
-                <div>
-                  <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-                    <div style={{ position: 'relative' }}>
-                      <input type="number" min="0" step="0.01"
-                        value={currentVal} placeholder={autoCalc.toFixed(2)}
-                        onChange={e => setEditingPrix(prev => ({ ...prev, [key]: e.target.value }))}
-                        style={{ width: 90, padding: '6px 28px 6px 8px', borderRadius: 7, border: `1.5px solid ${isDirty ? C : CB}`, background: isDirty ? CL : '#fafafa', fontSize: '0.85rem', fontWeight: 700, color: CD, outline: 'none' }} />
-                      <span style={{ position: 'absolute', right: 7, top: '50%', transform: 'translateY(-50%)', fontSize: '0.65rem', color: C, pointerEvents: 'none', fontWeight: 700 }}>DT</span>
-                    </div>
-                    {isDirty && (
-                      <button onClick={() => handleSavePrix(av.id, ap.id)} disabled={saving}
-                        style={{ padding: '5px 8px', borderRadius: 6, border: 'none', background: C, color: '#fff', cursor: 'pointer', fontSize: '0.72rem', fontWeight: 700 }}>✓</button>
-                    )}
-                  </div>
-                  {!isDirty && (
-                    <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginTop: 2 }}>auto: {autoCalc.toFixed(2)}</div>
-                  )}
-                </div>
-              );
-            };
-
-            return (
-              <div style={{ background: '#fff', borderRadius: 14, border: `1.5px solid ${CB}`, overflow: 'hidden', boxShadow: '0 2px 12px rgba(180,83,9,0.08)' }}>
-                {/* Header */}
-                <div style={{ background: `linear-gradient(135deg, ${CD}18 0%, ${C}12 100%)`, borderBottom: `1.5px solid ${CB}`, padding: '16px 24px', display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <div style={{ background: C + '22', borderRadius: 8, padding: '6px 8px', fontSize: '1rem' }}>💲</div>
-                  <div>
-                    <div style={{ fontSize: '1rem', fontWeight: 800, color: CD }}>Prix Vente</div>
-                    <div style={{ fontSize: '0.72rem', color: C, fontWeight: 500 }}>Prix directs + calcul automatique prestataires</div>
-                  </div>
-                </div>
-
-                <div style={{ padding: 24 }}>
-                  {activitePrestataires.length === 0 && (
-                    <div style={{ background: '#fef9c3', borderRadius: 9, padding: '10px 14px', fontSize: '0.82rem', color: '#854d0e', marginBottom: 16 }}>
-                      💡 Aucun prestataire actif — les prix prestataires ne s'afficheront pas.
-                    </div>
-                  )}
-
-                  {/* ── Bloc 2 : Produits vendables ── */}
-                  <div style={{ fontWeight: 800, fontSize: '0.85rem', color: CD, marginBottom: 10, display: 'flex', alignItems: 'center', gap: 8 }}>
-                    🛍️ Produits vendables (fiches techniques)
-                    <span style={{ fontWeight: 400, fontSize: '0.75rem', color: 'var(--text-muted)' }}>({items.length})</span>
-                  </div>
-                  {items.length === 0 ? (
-                    <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '24px 0', fontSize: '0.85rem', marginBottom: 24 }}>
-                      Aucun produit vendable actif pour cette activité.
-                    </div>
-                  ) : (
-                    <div style={{ overflowX: 'auto', marginBottom: 28 }}>
-                      <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 400 }}>
-                        <thead>
-                          <tr style={{ background: CL, borderBottom: `2px solid ${CB}` }}>
-                            <th style={{ padding: '10px 14px', textAlign: 'left', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>Article</th>
-                            <th style={{ padding: '10px 14px', textAlign: 'center', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>
-                              🏪 Vente directe
-                            </th>
-                            {activePrests.map(ap => (
-                              <th key={ap.id} style={{ padding: '10px 14px', textAlign: 'center', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>
-                                🛵 {ap.prestataire_nom}
-                                <div style={{ fontSize: '0.68rem', fontWeight: 500, color: 'var(--text-muted)', textTransform: 'none', letterSpacing: 0 }}>-{ap.taux_commission}%</div>
-                              </th>
-                            ))}
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {items.map((av, idx) => (
-                            <tr key={av.id} style={{ borderBottom: `1px solid ${CB}`, background: idx % 2 === 0 ? '#fff' : '#fffdf7' }}>
-                              <td style={{ padding: '12px 14px' }}>
-                                <div style={{ fontWeight: 700, fontSize: '0.9rem', color: CD }}>{av.nom}</div>
-                                {av.unite_nom && <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{av.unite_nom}</div>}
-                              </td>
-                              <td style={{ padding: '10px 14px', textAlign: 'center' }}>
-                                <PrixInput articleId={av.id} currentPrixVente={av.prix_vente} />
-                              </td>
-                              {activePrests.map(ap => (
-                                <td key={ap.id} style={{ padding: '10px 14px', textAlign: 'center' }}>
-                                  <PrestInput av={av} ap={ap} />
-                                </td>
-                              ))}
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
-
-                  {/* ── Bloc 3 : Articles vendables ── */}
-                  <div style={{ borderTop: `1.5px solid ${CB}`, paddingTop: 20 }}>
-                    <div style={{ fontWeight: 800, fontSize: '0.85rem', color: CD, marginBottom: 10, display: 'flex', alignItems: 'center', gap: 8 }}>
-                      🧂 Articles vendables (catalogue)
-                      <span style={{ fontWeight: 400, fontSize: '0.75rem', color: 'var(--text-muted)' }}>({ingItems.length})</span>
-                    </div>
-                    {ingItems.length === 0 ? (
-                      <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '24px 0', fontSize: '0.85rem' }}>
-                        Aucun article vendable actif.{' '}
-                        <Link to={`/client/ventes/catalogue${selectedActiviteId ? `?activiteId=${selectedActiviteId}` : ''}`} style={{ color: C, fontWeight: 600 }}>
-                          Configurer le catalogue →
-                        </Link>
+              ) : cats.map(cat => {
+                const catIngs = ingredients.filter(i => (i.categorie || 'Sans catégorie') === cat);
+                const isOpen = openCats.has(cat);
+                const activeCount = catIngs.filter(i => i.vendable?.actif).length;
+                return (
+                  <div key={cat} style={{ background: '#fff', borderRadius: 14, border: `1.5px solid ${CB}`, overflow: 'hidden', boxShadow: '0 2px 8px rgba(180,83,9,0.06)' }}>
+                    <button onClick={() => setOpenCats(prev => { const n = new Set(prev); if (n.has(cat)) n.delete(cat); else n.add(cat); return n; })}
+                      style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 20px', background: `linear-gradient(135deg, ${CD}10 0%, ${C}06 100%)`, border: 'none', cursor: 'pointer', borderBottom: isOpen ? `1.5px solid ${CB}` : 'none' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <div style={{ background: C + '22', borderRadius: 7, padding: '4px 7px', fontSize: '0.9rem' }}>🏷️</div>
+                        <span style={{ fontWeight: 800, fontSize: '0.95rem', color: CD }}>{cat}</span>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>({catIngs.length})</span>
+                        {activeCount > 0 && <span style={{ background: C, color: '#fff', borderRadius: 12, padding: '2px 8px', fontSize: '0.7rem', fontWeight: 700 }}>{activeCount} actif{activeCount !== 1 ? 's' : ''}</span>}
                       </div>
-                    ) : (
+                      <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{isOpen ? '▲' : '▼'}</span>
+                    </button>
+
+                    {isOpen && (
                       <div style={{ overflowX: 'auto' }}>
                         <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 400 }}>
                           <thead>
-                            <tr style={{ background: CL, borderBottom: `2px solid ${CB}` }}>
-                              <th style={{ padding: "10px 14px", textAlign: "left", fontSize: "0.78rem", fontWeight: 800, color: C, textTransform: "uppercase", letterSpacing: "0.05em", whiteSpace: "nowrap" }}>Article</th>
-                              <th style={{ padding: '10px 14px', textAlign: 'center', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>
-                                🏪 Vente directe
-                              </th>
+                            <tr style={{ background: CL, borderBottom: `1px solid ${CB}` }}>
+                              <th style={{ padding: '9px 16px', textAlign: 'left', fontSize: '0.72rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Ingrédient</th>
+                              <th style={{ padding: '9px 16px', textAlign: 'center', fontSize: '0.72rem', fontWeight: 800, color: C, textTransform: 'uppercase' }}>Vendable</th>
+                              <th style={{ padding: '9px 16px', textAlign: 'center', fontSize: '0.72rem', fontWeight: 800, color: C, textTransform: 'uppercase' }}>Portion</th>
+                              <th style={{ padding: '9px 16px', textAlign: 'center', fontSize: '0.72rem', fontWeight: 800, color: C, textTransform: 'uppercase', whiteSpace: 'nowrap' }}>🏪 Vente directe</th>
                               {activePrests.map(ap => (
-                                <th key={ap.id} style={{ padding: '10px 14px', textAlign: 'center', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>
+                                <th key={ap.id} style={{ padding: '9px 16px', textAlign: 'center', fontSize: '0.72rem', fontWeight: 800, color: C, textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
                                   🛵 {ap.prestataire_nom}
-                                  <div style={{ fontSize: '0.68rem', fontWeight: 500, color: 'var(--text-muted)', textTransform: 'none', letterSpacing: 0 }}>-{ap.taux_commission}%</div>
+                                  <div style={{ fontSize: '0.62rem', fontWeight: 500, textTransform: 'none' }}>−{ap.taux_commission}%</div>
                                 </th>
                               ))}
                             </tr>
                           </thead>
                           <tbody>
-                            {ingItems.map((av, idx) => (
-                              <tr key={av.id} style={{ borderBottom: `1px solid ${CB}`, background: idx % 2 === 0 ? '#fff' : '#fffdf7' }}>
-                                <td style={{ padding: '12px 14px' }}>
-                                  <div style={{ fontWeight: 700, fontSize: '0.9rem', color: CD }}>{av.nom}</div>
-                                  {av.unite_nom && <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{av.unite_nom}</div>}
-                                </td>
-                                <td style={{ padding: '10px 14px', textAlign: 'center' }}>
-                                  <PrixInput articleId={av.id} currentPrixVente={av.prix_vente} />
-                                </td>
-                                {activePrests.map(ap => (
-                                  <td key={ap.id} style={{ padding: '10px 14px', textAlign: 'center' }}>
-                                    <PrestInput av={av} ap={ap} />
+                            {catIngs.map((ing, idx) => {
+                              const isActive = ing.vendable?.actif === true;
+                              const editState = editingSuppl[ing.id];
+                              const portionVal = editState?.portion ?? (ing.vendable?.portion != null ? String(ing.vendable.portion) : '');
+                              const prixVal = editState?.prix ?? (ing.vendable ? String(ing.vendable.prix_vente) : '');
+                              const portionDirty = editState?.portion != null;
+                              const prixDirty = editState?.prix != null;
+
+                              return (
+                                <tr key={ing.id} style={{ borderBottom: `1px solid ${CB}`, background: idx % 2 === 0 ? '#fff' : '#fffdf7', opacity: ing.vendable && !isActive ? 0.55 : 1 }}>
+                                  <td style={{ padding: '11px 16px' }}>
+                                    <div style={{ fontWeight: isActive ? 700 : 400, fontSize: '0.88rem', color: isActive ? CD : 'var(--text)' }}>{ing.nom}</div>
+                                    <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{ing.unite}</div>
+                                    {ing.error && <div style={{ fontSize: '0.7rem', color: '#dc2626' }}>{ing.error}</div>}
                                   </td>
-                                ))}
-                              </tr>
-                            ))}
+                                  <td style={{ padding: '8px 16px', textAlign: 'center' }}>
+                                    <input type="checkbox" checked={isActive} disabled={ing.saving} onChange={() => toggleSupplVendable(ing)}
+                                      style={{ accentColor: C, width: 17, height: 17, cursor: 'pointer' }} />
+                                  </td>
+                                  <td style={{ padding: '8px 16px', textAlign: 'center' }}>
+                                    {isActive ? (
+                                      <div style={{ display: 'flex', gap: 3, alignItems: 'center', justifyContent: 'center' }}>
+                                        <input type="number" min="0" step="0.001" value={portionVal} placeholder="—"
+                                          onChange={e => setEditingSuppl(prev => ({ ...prev, [ing.id]: { portion: e.target.value, prix: prev[ing.id]?.prix ?? prixVal } }))}
+                                          style={{ width: 68, padding: '5px 6px', borderRadius: 7, border: `1.5px solid ${portionDirty ? C : CB}`, background: portionDirty ? CL : '#fafafa', fontSize: '0.82rem', textAlign: 'right', outline: 'none' }} />
+                                        {portionDirty && <button onClick={() => saveSupplField(ing, 'portion')} disabled={ing.saving} style={{ padding: '4px 6px', borderRadius: 5, border: 'none', background: C, color: '#fff', cursor: 'pointer', fontSize: '0.68rem', fontWeight: 700 }}>✓</button>}
+                                      </div>
+                                    ) : <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>—</span>}
+                                  </td>
+                                  <td style={{ padding: '8px 16px', textAlign: 'center' }}>
+                                    {isActive ? (
+                                      <div style={{ display: 'flex', gap: 3, alignItems: 'center', justifyContent: 'center' }}>
+                                        <div style={{ position: 'relative' }}>
+                                          <input type="number" min="0" step="0.01" value={prixVal} placeholder="0.00"
+                                            onChange={e => setEditingSuppl(prev => ({ ...prev, [ing.id]: { portion: prev[ing.id]?.portion ?? portionVal, prix: e.target.value } }))}
+                                            style={{ width: 85, padding: '5px 26px 5px 6px', borderRadius: 7, border: `1.5px solid ${prixDirty ? C : CB}`, background: prixDirty ? CL : '#fafafa', fontSize: '0.82rem', fontWeight: 700, color: CD, outline: 'none' }} />
+                                          <span style={{ position: 'absolute', right: 6, top: '50%', transform: 'translateY(-50%)', fontSize: '0.6rem', color: C, pointerEvents: 'none', fontWeight: 700 }}>DT</span>
+                                        </div>
+                                        {prixDirty && <button onClick={() => saveSupplField(ing, 'prix')} disabled={ing.saving} style={{ padding: '4px 6px', borderRadius: 5, border: 'none', background: C, color: '#fff', cursor: 'pointer', fontSize: '0.68rem', fontWeight: 700 }}>✓</button>}
+                                      </div>
+                                    ) : <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>—</span>}
+                                  </td>
+                                  {activePrests.map(ap => (
+                                    <td key={ap.id} style={{ padding: '8px 16px', textAlign: 'center' }}>
+                                      {isActive && ing.vendable ? (
+                                        (() => {
+                                          const key = getPrixKey(ing.vendable!.id, ap.id);
+                                          const existing = prixPrestataires.find(p => p.article_vendable_id === ing.vendable!.id && p.activite_prestataire_id === ap.id);
+                                          const autoCalc = (ing.vendable!.prix_vente) * (1 - ap.taux_commission / 100);
+                                          const isDirty = key in editingPrixPrest;
+                                          const cv = isDirty ? editingPrixPrest[key] : (existing?.prix_vente != null ? String(existing.prix_vente) : '');
+                                          return (
+                                            <div>
+                                              <div style={{ display: 'flex', gap: 3, alignItems: 'center', justifyContent: 'center' }}>
+                                                <div style={{ position: 'relative' }}>
+                                                  <input type="number" min="0" step="0.01" value={cv} placeholder={autoCalc.toFixed(2)}
+                                                    onChange={e => setEditingPrixPrest(prev => ({ ...prev, [key]: e.target.value }))}
+                                                    style={{ width: 85, padding: '5px 26px 5px 6px', borderRadius: 7, border: `1.5px solid ${isDirty ? C : CB}`, background: isDirty ? CL : '#fafafa', fontSize: '0.82rem', fontWeight: 700, color: CD, outline: 'none' }} />
+                                                  <span style={{ position: 'absolute', right: 6, top: '50%', transform: 'translateY(-50%)', fontSize: '0.6rem', color: C, pointerEvents: 'none', fontWeight: 700 }}>DT</span>
+                                                </div>
+                                                {isDirty && <button onClick={() => handleSavePrixPrest(ing.vendable!.id, ap.id)} disabled={saving} style={{ padding: '4px 6px', borderRadius: 5, border: 'none', background: C, color: '#fff', cursor: 'pointer', fontSize: '0.68rem', fontWeight: 700 }}>✓</button>}
+                                              </div>
+                                              {!isDirty && <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', marginTop: 1 }}>auto : {fmtMoney(autoCalc)}</div>}
+                                            </div>
+                                          );
+                                        })()
+                                      ) : <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>—</span>}
+                                    </td>
+                                  ))}
+                                </tr>
+                              );
+                            })}
                           </tbody>
                         </table>
                       </div>
                     )}
                   </div>
-                </div>
-              </div>
-            );
-          })()}
-
-          {/* ── CHARGES FIXES ── */}
-          {activeSection === 'charges' && (
-            <div style={{ background: '#fff', borderRadius: 14, border: `1.5px solid ${CB}`, padding: 24, boxShadow: '0 2px 12px rgba(180,83,9,0.08)' }}>
-              <h2 style={{ fontSize: '1.05rem', fontWeight: 700, color: C, marginBottom: 6 }}>🏗️ Charges fixes annuelles</h2>
-              <p style={{ color: 'var(--text-muted)', fontSize: '0.82rem', marginBottom: 20 }}>
-                Utilisées pour calculer le seuil de rentabilité et le rapport vente.
-              </p>
-
-              {/* Mode toggle */}
-              <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
-                {(['global', 'detail'] as const).map(m => (
-                  <button key={m} onClick={() => setChargesForm(f => ({ ...f, mode: m }))}
-                    style={{
-                      padding: '7px 16px', borderRadius: 8, cursor: 'pointer', fontWeight: chargesForm.mode === m ? 700 : 400, fontSize: '0.88rem',
-                      background: chargesForm.mode === m ? C : 'var(--bg)',
-                      color: chargesForm.mode === m ? '#fff' : 'var(--text)',
-                      border: chargesForm.mode === m ? `1.5px solid ${C}` : '1.5px solid var(--border)',
-                    }}>
-                    {m === 'global' ? '📊 Montant global' : '📋 Détail par poste'}
-                  </button>
-                ))}
-              </div>
-
-              {chargesForm.mode === 'global' ? (
-                <div style={{ maxWidth: 340 }}>
-                  <label style={{ fontSize: '0.82rem', fontWeight: 600, display: 'block', marginBottom: 6 }}>Charges fixes annuelles totales (DT)</label>
-                  <input type="number" min="0" step="100" value={chargesForm.montant_global ?? ''}
-                    onChange={e => setChargesForm(f => ({ ...f, montant_global: e.target.value ? parseFloat(e.target.value) : null }))}
-                    placeholder="0.00"
-                    style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: `1.5px solid ${CB}`, background: CL, fontSize: '1rem', fontWeight: 600 }} />
-                </div>
-              ) : (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 14 }}>
-                  {([
-                    { key: 'loyer' as const, label: '🏠 Loyer', icon: '🏠' },
-                    { key: 'charges_personnel' as const, label: '👥 Charges personnel', icon: '👥' },
-                    { key: 'electricite_gaz' as const, label: '⚡ Électricité / Gaz', icon: '⚡' },
-                    { key: 'eau' as const, label: '💧 Eau', icon: '💧' },
-                  ] as const).map(({ key, label }) => (
-                    <div key={key}>
-                      <label style={{ fontSize: '0.82rem', fontWeight: 600, display: 'block', marginBottom: 4 }}>{label} (DT/an)</label>
-                      <input type="number" min="0" step="100" value={chargesForm[key] ?? ''}
-                        onChange={e => setChargesForm(f => ({ ...f, [key]: e.target.value ? parseFloat(e.target.value) : null }))}
-                        placeholder="0.00"
-                        style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: `1.5px solid ${CB}`, background: CL }} />
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              <div style={{ marginTop: 20, padding: '12px 16px', background: CL, borderRadius: 10, border: `1px solid ${CB}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontWeight: 600, color: CD }}>Total charges annuelles</span>
-                <span style={{ fontSize: '1.2rem', fontWeight: 800, color: C }}>{fmtMoney(totalCharges)}</span>
-              </div>
-
-              {chargesError && <div style={{ color: '#dc2626', fontSize: '0.85rem', marginTop: 10 }}>{chargesError}</div>}
-
-              <div style={{ marginTop: 20, display: 'flex', justifyContent: 'flex-end' }}>
-                <button onClick={handleSaveCharges} disabled={chargesSaving}
-                  style={{ padding: '9px 22px', borderRadius: 9, border: 'none', background: `linear-gradient(135deg, ${CD} 0%, ${C} 100%)`, color: '#fff', cursor: 'pointer', fontWeight: 700, opacity: chargesSaving ? 0.6 : 1 }}>
-                  {chargesSaving ? 'Enregistrement…' : charges ? 'Mettre à jour' : 'Enregistrer'}
-                </button>
-              </div>
+                );
+              })}
             </div>
           )}
         </>
-      )}
-
-      {/* Modal ajout prestataire */}
-      {showAddPrest && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
-          onClick={e => { if (e.target === e.currentTarget) setShowAddPrest(false); }}>
-          <div style={{ background: '#fff', borderRadius: 20, width: '100%', maxWidth: 420, boxShadow: '0 24px 64px rgba(120,53,15,0.28)', overflow: 'hidden' }}>
-            {/* Header */}
-            <div style={{ background: `linear-gradient(135deg, ${CD} 0%, ${C} 100%)`, padding: '20px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <div style={{ background: 'rgba(255,255,255,0.2)', borderRadius: 9, padding: '7px 9px', fontSize: '1.1rem' }}>🛵</div>
-                <div>
-                  <div style={{ color: '#fff', fontWeight: 800, fontSize: '1.05rem' }}>Ajouter un prestataire</div>
-                  <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.75rem' }}>Lier un prestataire de livraison à cette activité</div>
-                </div>
-              </div>
-              <button onClick={() => setShowAddPrest(false)}
-                style={{ background: 'rgba(255,255,255,0.18)', border: 'none', borderRadius: 8, color: '#fff', cursor: 'pointer', padding: '5px 9px', fontSize: '1rem', fontWeight: 700, lineHeight: 1 }}>
-                ✕
-              </button>
-            </div>
-            {/* Body */}
-            <div style={{ padding: '24px 24px 20px' }}>
-              <div style={{ marginBottom: 18 }}>
-                <label style={{ fontSize: '0.72rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 7 }}>Prestataire</label>
-                <select value={newPrestId} onChange={e => setNewPrestId(e.target.value)}
-                  style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: `1.5px solid ${CB}`, background: CL, color: CD, fontSize: '0.9rem', fontWeight: 500, outline: 'none' }}>
-                  <option value="">— Sélectionner un prestataire —</option>
-                  {availablePrestataires.map(p => <option key={p.id} value={p.id}>{p.nom}</option>)}
-                </select>
-                {availablePrestataires.length === 0 && (
-                  <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: 5 }}>Tous les prestataires actifs sont déjà configurés.</p>
-                )}
-              </div>
-              <div style={{ marginBottom: 22 }}>
-                <label style={{ fontSize: '0.72rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 7 }}>Taux de commission</label>
-                <div style={{ position: 'relative' }}>
-                  <input type="number" min="0" max="100" step="0.1" value={newTaux} onChange={e => setNewTaux(e.target.value)}
-                    style={{ width: '100%', padding: '10px 40px 10px 12px', borderRadius: 10, border: `1.5px solid ${CB}`, background: CL, color: CD, fontSize: '1rem', fontWeight: 700, outline: 'none', boxSizing: 'border-box' }} />
-                  <span style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', color: C, fontWeight: 700, fontSize: '0.95rem', pointerEvents: 'none' }}>%</span>
-                </div>
-              </div>
-              {addPrestError && (
-                <div style={{ background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: 9, padding: '9px 13px', color: '#dc2626', fontSize: '0.82rem', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 6 }}>
-                  ⚠️ {addPrestError}
-                </div>
-              )}
-              <div style={{ display: 'flex', gap: 10 }}>
-                <button onClick={() => setShowAddPrest(false)}
-                  style={{ flex: 1, padding: '10px 0', borderRadius: 10, border: `1.5px solid ${CB}`, background: CL, color: CD, cursor: 'pointer', fontWeight: 600, fontSize: '0.9rem' }}>
-                  Annuler
-                </button>
-                <button onClick={handleAddPrestataire} disabled={saving || !newPrestId}
-                  style={{ flex: 2, padding: '10px 0', borderRadius: 10, border: 'none', background: saving || !newPrestId ? '#d1d5db' : `linear-gradient(135deg, ${CD} 0%, ${C} 100%)`, color: '#fff', cursor: saving || !newPrestId ? 'not-allowed' : 'pointer', fontWeight: 700, fontSize: '0.9rem' }}>
-                  {saving ? 'Ajout en cours…' : '🛵 Ajouter le prestataire'}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
       )}
     </div>
   );
