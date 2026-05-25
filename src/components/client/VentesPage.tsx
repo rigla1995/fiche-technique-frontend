@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useContext, createContext } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import api from '../../api/client';
 import type { Activite } from '../../types';
@@ -21,6 +21,7 @@ const C = '#b45309';
 const CD = '#78350f';
 const CL = '#fffbeb';
 const CB = '#fcd34d';
+const PAGE = 5;
 
 const ExcelIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}>
@@ -28,6 +29,8 @@ const ExcelIcon = () => (
     <path d="M7 7l3.5 5L7 17h2.5l2.5-3.5L14.5 17H17l-3.5-5L17 7h-2.5L12 10.5 9.5 7H7z" fill="white"/>
   </svg>
 );
+
+// ── Interfaces ────────────────────────────────────────────────────────────────
 
 interface ArticleVendable {
   id: string;
@@ -67,31 +70,195 @@ interface Vente {
 
 type Tab = 'saisie_produits' | 'saisie_supplements' | 'historique';
 
+// ── Context ───────────────────────────────────────────────────────────────────
+
+interface VPCtxType {
+  activePrests: ActivitePrestataire[];
+  prixPrestataires: ArticlePrixPrestataire[];
+  allArticles: ArticleVendable[];
+  qtes: Record<string, Record<string, string>>;
+  setQtes: React.Dispatch<React.SetStateAction<Record<string, Record<string, string>>>>;
+  dateVente: string;
+  setDateVente: React.Dispatch<React.SetStateAction<string>>;
+  saving: boolean;
+  saveError: string;
+  saveSuccess: boolean;
+  handleSubmit: () => void;
+}
+
+const VPCtx = createContext<VPCtxType>(null!);
+
+// ── Module-level helpers ──────────────────────────────────────────────────────
+
+function calcPrixPrestataire(
+  articleId: string,
+  apId: string,
+  allArticles: ArticleVendable[],
+  prixPrestataires: ArticlePrixPrestataire[],
+  activePrests: ActivitePrestataire[]
+): number {
+  const av = allArticles.find(a => a.id === articleId);
+  if (!av) return 0;
+  const override = prixPrestataires.find(p => p.article_vendable_id === articleId && p.activite_prestataire_id === apId);
+  if (override?.prix_vente != null) return override.prix_vente;
+  const ap = activePrests.find(p => p.id === apId);
+  return ap ? av.prix_vente * (1 - ap.taux_commission / 100) : av.prix_vente;
+}
+
+// ── Module-level sub-components ───────────────────────────────────────────────
+
+function PaginationBar({ total, page, setPage }: { total: number; page: number; setPage: (p: number) => void }) {
+  const totalPages = Math.ceil(total / PAGE);
+  if (totalPages <= 1) return null;
+  return (
+    <div style={{ display: 'flex', gap: 4, padding: '10px 16px', alignItems: 'center', borderTop: `1px solid ${CB}`, justifyContent: 'center' }}>
+      <button onClick={() => setPage(Math.max(0, page - 1))} disabled={page === 0}
+        style={{ padding: '3px 10px', borderRadius: 6, border: `1px solid ${CB}`, background: page === 0 ? '#f3f4f6' : '#fff', color: page === 0 ? '#9ca3af' : C, cursor: page === 0 ? 'default' : 'pointer', fontWeight: 600, fontSize: '0.8rem' }}>‹</button>
+      {Array.from({ length: totalPages }, (_, i) => (
+        <button key={i} onClick={() => setPage(i)}
+          style={{ padding: '3px 9px', borderRadius: 6, border: `1.5px solid ${i === page ? C : CB}`, background: i === page ? C : '#fff', color: i === page ? '#fff' : CD, cursor: 'pointer', fontWeight: i === page ? 700 : 400, fontSize: '0.8rem' }}>
+          {i + 1}
+        </button>
+      ))}
+      <button onClick={() => setPage(Math.min(totalPages - 1, page + 1))} disabled={page >= totalPages - 1}
+        style={{ padding: '3px 10px', borderRadius: 6, border: `1px solid ${CB}`, background: page >= totalPages - 1 ? '#f3f4f6' : '#fff', color: page >= totalPages - 1 ? '#9ca3af' : C, cursor: page >= totalPages - 1 ? 'default' : 'pointer', fontWeight: 600, fontSize: '0.8rem' }}>›</button>
+    </div>
+  );
+}
+
+function DateBar() {
+  const { dateVente, setDateVente, saving, saveError, saveSuccess, handleSubmit } = useContext(VPCtx);
+  return (
+    <div style={{ background: '#fff', borderRadius: 12, border: `1.5px solid ${CB}`, padding: '16px 20px', marginBottom: 20, display: 'flex', gap: 16, flexWrap: 'wrap', alignItems: 'center' }}>
+      <div>
+        <label style={{ fontSize: '0.78rem', fontWeight: 700, display: 'block', marginBottom: 5, color: C, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Date de vente</label>
+        <input type="date" value={dateVente} onChange={e => setDateVente(e.target.value)}
+          style={{ padding: '8px 12px', borderRadius: 9, border: `1.5px solid ${CB}`, background: CL, color: CD, fontWeight: 600, outline: 'none' }} />
+      </div>
+      <div style={{ marginLeft: 'auto', display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-end' }}>
+        {saveError && <div style={{ color: '#dc2626', fontSize: '0.82rem' }}>{saveError}</div>}
+        {saveSuccess && <div style={{ color: '#166534', fontSize: '0.82rem', fontWeight: 600 }}>✓ Ventes enregistrées !</div>}
+        <button onClick={handleSubmit} disabled={saving}
+          style={{ padding: '10px 24px', borderRadius: 10, border: 'none', background: saving ? '#d1d5db' : `linear-gradient(135deg, ${CD} 0%, ${C} 100%)`, color: '#fff', cursor: saving ? 'not-allowed' : 'pointer', fontWeight: 700, fontSize: '0.92rem', boxShadow: saving ? 'none' : `0 4px 14px ${C}44`, whiteSpace: 'nowrap' }}>
+          {saving ? 'Enregistrement…' : '✓ Confirmer les ventes'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function ArticleRow({ av }: { av: ArticleVendable }) {
+  const { activePrests, prixPrestataires, allArticles, qtes, setQtes } = useContext(VPCtx);
+  const getQte = (channel: string) => qtes[av.id]?.[channel] ?? '';
+  const setQte = (channel: string, val: string) =>
+    setQtes(prev => ({ ...prev, [av.id]: { ...prev[av.id], [channel]: val } }));
+
+  return (
+    <tr style={{ borderBottom: `1px solid ${CB}` }}>
+      <td style={{ padding: '11px 16px' }}>
+        <div style={{ fontWeight: 700, fontSize: '0.9rem', color: CD }}>{av.nom}</div>
+        {av.unite_nom && <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{av.unite_nom}</div>}
+      </td>
+      <td style={{ padding: '8px 16px', textAlign: 'center' }}>
+        <span style={{ fontWeight: 700, color: C, fontSize: '0.9rem' }}>{fmtMoney(av.prix_vente)}</span>
+      </td>
+      <td style={{ padding: '8px 16px', textAlign: 'center' }}>
+        <input type="number" min="0" step="0.001" value={getQte('direct')} placeholder="0"
+          onChange={e => setQte('direct', e.target.value)}
+          style={{ width: 78, padding: '7px 8px', borderRadius: 8, border: `1.5px solid ${getQte('direct') ? C : CB}`, background: getQte('direct') ? CL : '#fafafa', textAlign: 'center', fontSize: '0.88rem', fontWeight: 600, outline: 'none' }} />
+      </td>
+      {activePrests.map(ap => {
+        const prix = calcPrixPrestataire(av.id, ap.id, allArticles, prixPrestataires, activePrests);
+        return (
+          <td key={ap.id} style={{ padding: '8px 16px', textAlign: 'center' }}>
+            <input type="number" min="0" step="0.001" value={getQte(ap.id)} placeholder="0"
+              onChange={e => setQte(ap.id, e.target.value)}
+              style={{ width: 78, padding: '7px 8px', borderRadius: 8, border: `1.5px solid ${getQte(ap.id) ? C : CB}`, background: getQte(ap.id) ? CL : '#fafafa', textAlign: 'center', fontSize: '0.88rem', fontWeight: 600, outline: 'none' }} />
+            <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', marginTop: 2 }}>{fmtMoney(prix)}</div>
+          </td>
+        );
+      })}
+    </tr>
+  );
+}
+
+function SaisieTable({ subset, page, setPage, label }: {
+  subset: ArticleVendable[];
+  page: number;
+  setPage: (p: number) => void;
+  label: string;
+}) {
+  const { activePrests, prixPrestataires, allArticles, qtes } = useContext(VPCtx);
+  const slice = subset.slice(page * PAGE, page * PAGE + PAGE);
+
+  const caTotal = subset.reduce((acc, av) => {
+    const direct = (parseFloat(qtes[av.id]?.['direct'] ?? '') || 0) * av.prix_vente;
+    const presta = activePrests.reduce((s, ap) => {
+      const prix = calcPrixPrestataire(av.id, ap.id, allArticles, prixPrestataires, activePrests);
+      return s + (parseFloat(qtes[av.id]?.[ap.id] ?? '') || 0) * prix;
+    }, 0);
+    return acc + direct + presta;
+  }, 0);
+
+  return (
+    <div style={{ background: '#fff', borderRadius: 14, border: `1.5px solid ${CB}`, overflow: 'hidden', boxShadow: '0 2px 12px rgba(180,83,9,0.08)' }}>
+      <div style={{ padding: '10px 16px', background: `${CD}10`, borderBottom: `1px solid ${CB}`, fontSize: '0.75rem', fontWeight: 800, color: CD, textTransform: 'uppercase', letterSpacing: '0.07em' }}>
+        {label}
+      </div>
+      <div style={{ overflowX: 'auto' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 500 }}>
+          <thead>
+            <tr style={{ background: CL, borderBottom: `2px solid ${CB}` }}>
+              <th style={{ padding: '11px 16px', textAlign: 'left', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Article</th>
+              <th style={{ padding: '11px 16px', textAlign: 'center', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>Prix vente</th>
+              <th style={{ padding: '11px 16px', textAlign: 'center', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>🏪 Qté directe</th>
+              {activePrests.map(ap => (
+                <th key={ap.id} style={{ padding: '11px 16px', textAlign: 'center', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>
+                  🛵 {ap.prestataire_nom}
+                  <div style={{ fontSize: '0.68rem', fontWeight: 500, color: 'var(--text-muted)', textTransform: 'none' }}>−{ap.taux_commission}%</div>
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {slice.map(av => <ArticleRow key={av.id} av={av} />)}
+          </tbody>
+        </table>
+      </div>
+      <PaginationBar total={subset.length} page={page} setPage={setPage} />
+      <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '10px 16px', borderTop: `1px solid ${CB}`, background: '#fafafa' }}>
+        <div style={{ background: CL, borderRadius: 10, border: `1.5px solid ${C}`, padding: '8px 16px', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ fontSize: '0.82rem', fontWeight: 600, color: CD, whiteSpace: 'nowrap' }}>CA total :</span>
+          <span style={{ fontSize: '1.05rem', fontWeight: 800, color: C, whiteSpace: 'nowrap' }}>{fmtMoney(caTotal)}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Page ──────────────────────────────────────────────────────────────────────
+
 export default function VentesPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [activites, setActivites] = useState<Activite[]>([]);
   const [selectedActiviteId, setSelectedActiviteId] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState<Tab>('saisie_produits');
 
-  // Data
   const [articles, setArticles] = useState<ArticleVendable[]>([]);
   const [prestataires, setPrestataires] = useState<ActivitePrestataire[]>([]);
   const [prixPrestataires, setPrixPrestataires] = useState<ArticlePrixPrestataire[]>([]);
   const [ventes, setVentes] = useState<Vente[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // Saisie state
   const [dateVente, setDateVente] = useState(new Date().toISOString().slice(0, 10));
   const [qtes, setQtes] = useState<Record<string, Record<string, string>>>({});
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
   const [saveSuccess, setSaveSuccess] = useState(false);
 
-  // Pagination (5 per section)
   const [prodPage, setProdPage] = useState(0);
   const [suppPage, setSuppPage] = useState(0);
 
-  // Historique filters
   const [histDateFrom, setHistDateFrom] = useState('');
   const [histDateTo, setHistDateTo] = useState('');
   const [histType, setHistType] = useState<'all' | 'directe' | 'prestataire'>('all');
@@ -130,32 +297,8 @@ export default function VentesPage() {
   useEffect(() => { loadData(); }, [loadData]);
 
   const activePrests = prestataires;
-  const produits = articles.filter(a => a.article_type === 'produit' && !a.is_supplement);
-  const supplements = articles.filter(a => a.article_type === 'produit' && a.is_supplement);
-
-  const getQte = (articleId: string, channel: string) => qtes[articleId]?.[channel] ?? '';
-  const setQte = (articleId: string, channel: string, val: string) =>
-    setQtes(prev => ({ ...prev, [articleId]: { ...prev[articleId], [channel]: val } }));
-
-  const getPrixPrestataire = (articleId: string, apId: string) => {
-    const av = articles.find(a => a.id === articleId);
-    if (!av) return 0;
-    const override = prixPrestataires.find(p => p.article_vendable_id === articleId && p.activite_prestataire_id === apId);
-    if (override?.prix_vente != null) return override.prix_vente;
-    const ap = activePrests.find(p => p.id === apId);
-    return ap ? av.prix_vente * (1 - ap.taux_commission / 100) : av.prix_vente;
-  };
-
-  const computeTotal = (subset: ArticleVendable[]) => {
-    let total = 0;
-    for (const av of subset) {
-      total += (parseFloat(getQte(av.id, 'direct')) || 0) * av.prix_vente;
-      for (const ap of activePrests) {
-        total += (parseFloat(getQte(av.id, ap.id)) || 0) * getPrixPrestataire(av.id, ap.id);
-      }
-    }
-    return total;
-  };
+  const produits = articles.filter(a => !a.is_supplement);
+  const supplements = articles.filter(a => a.is_supplement);
 
   const handleSubmit = async () => {
     if (!selectedActiviteId) return;
@@ -168,7 +311,7 @@ export default function VentesPage() {
     }> = [];
 
     const directLignes = articles.flatMap(av => {
-      const qte = parseFloat(getQte(av.id, 'direct')) || 0;
+      const qte = parseFloat(qtes[av.id]?.['direct'] ?? '') || 0;
       if (qte <= 0) return [];
       return [{ article_type: av.article_type, article_id: av.article_id, quantite: qte, prix_unitaire: av.prix_vente }];
     });
@@ -176,9 +319,10 @@ export default function VentesPage() {
 
     for (const ap of activePrests) {
       const lignes = articles.flatMap(av => {
-        const qte = parseFloat(getQte(av.id, ap.id)) || 0;
+        const qte = parseFloat(qtes[av.id]?.[ap.id] ?? '') || 0;
         if (qte <= 0) return [];
-        return [{ article_type: av.article_type, article_id: av.article_id, quantite: qte, prix_unitaire: getPrixPrestataire(av.id, ap.id) }];
+        const prix = calcPrixPrestataire(av.id, ap.id, articles, prixPrestataires, activePrests);
+        return [{ article_type: av.article_type, article_id: av.article_id, quantite: qte, prix_unitaire: prix }];
       });
       if (lignes.length > 0) ventesToCreate.push({ type_vente: 'prestataire', prestataire_id: ap.id, lignes });
     }
@@ -245,166 +389,89 @@ export default function VentesPage() {
 
   const selectedActivite = activites.find(a => a.id === selectedActiviteId);
 
-  const PAGE = 5;
-
-  const paginationBar = (total: number, page: number, setPage: (p: number) => void) => {
-    const totalPages = Math.ceil(total / PAGE);
-    if (totalPages <= 1) return null;
-    return (
-      <div style={{ display: 'flex', gap: 4, padding: '10px 16px', alignItems: 'center', borderTop: `1px solid ${CB}`, justifyContent: 'center' }}>
-        <button onClick={() => setPage(Math.max(0, page - 1))} disabled={page === 0}
-          style={{ padding: '3px 10px', borderRadius: 6, border: `1px solid ${CB}`, background: page === 0 ? '#f3f4f6' : '#fff', color: page === 0 ? '#9ca3af' : C, cursor: page === 0 ? 'default' : 'pointer', fontWeight: 600, fontSize: '0.8rem' }}>‹</button>
-        {Array.from({ length: totalPages }, (_, i) => (
-          <button key={i} onClick={() => setPage(i)}
-            style={{ padding: '3px 9px', borderRadius: 6, border: `1.5px solid ${i === page ? C : CB}`, background: i === page ? C : '#fff', color: i === page ? '#fff' : CD, cursor: 'pointer', fontWeight: i === page ? 700 : 400, fontSize: '0.8rem' }}>
-            {i + 1}
-          </button>
-        ))}
-        <button onClick={() => setPage(Math.min(totalPages - 1, page + 1))} disabled={page >= totalPages - 1}
-          style={{ padding: '3px 10px', borderRadius: 6, border: `1px solid ${CB}`, background: page >= totalPages - 1 ? '#f3f4f6' : '#fff', color: page >= totalPages - 1 ? '#9ca3af' : C, cursor: page >= totalPages - 1 ? 'default' : 'pointer', fontWeight: 600, fontSize: '0.8rem' }}>›</button>
-      </div>
-    );
-  };
-
-  const ArticleRow = ({ av }: { av: ArticleVendable }) => (
-    <tr style={{ borderBottom: `1px solid ${CB}` }}>
-      <td style={{ padding: '11px 16px' }}>
-        <div style={{ fontWeight: 700, fontSize: '0.9rem', color: CD }}>{av.nom}</div>
-        {av.unite_nom && <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{av.unite_nom}</div>}
-      </td>
-      <td style={{ padding: '8px 16px', textAlign: 'center' }}>
-        <span style={{ fontWeight: 700, color: C, fontSize: '0.9rem' }}>{fmtMoney(av.prix_vente)}</span>
-      </td>
-      <td style={{ padding: '8px 16px', textAlign: 'center' }}>
-        <input type="number" min="0" step="0.001" value={getQte(av.id, 'direct')} placeholder="0"
-          onChange={e => setQte(av.id, 'direct', e.target.value)}
-          style={{ width: 78, padding: '7px 8px', borderRadius: 8, border: `1.5px solid ${getQte(av.id, 'direct') ? C : CB}`, background: getQte(av.id, 'direct') ? CL : '#fafafa', textAlign: 'center', fontSize: '0.88rem', fontWeight: 600, outline: 'none' }} />
-      </td>
-      {activePrests.map(ap => (
-        <td key={ap.id} style={{ padding: '8px 16px', textAlign: 'center' }}>
-          <input type="number" min="0" step="0.001" value={getQte(av.id, ap.id)} placeholder="0"
-            onChange={e => setQte(av.id, ap.id, e.target.value)}
-            style={{ width: 78, padding: '7px 8px', borderRadius: 8, border: `1.5px solid ${getQte(av.id, ap.id) ? C : CB}`, background: getQte(av.id, ap.id) ? CL : '#fafafa', textAlign: 'center', fontSize: '0.88rem', fontWeight: 600, outline: 'none' }} />
-          <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', marginTop: 2 }}>{fmtMoney(getPrixPrestataire(av.id, ap.id))}</div>
-        </td>
-      ))}
-    </tr>
-  );
-
-  const SaisieTable = ({ subset, page, setPage, label }: { subset: ArticleVendable[]; page: number; setPage: (p: number) => void; label: string }) => {
-    const slice = subset.slice(page * PAGE, page * PAGE + PAGE);
-    const caTotal = computeTotal(subset);
-    return (
-      <div style={{ background: '#fff', borderRadius: 14, border: `1.5px solid ${CB}`, overflow: 'hidden', boxShadow: '0 2px 12px rgba(180,83,9,0.08)' }}>
-        <div style={{ padding: '10px 16px', background: `${CD}10`, borderBottom: `1px solid ${CB}`, fontSize: '0.75rem', fontWeight: 800, color: CD, textTransform: 'uppercase', letterSpacing: '0.07em' }}>
-          {label}
-        </div>
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 500 }}>
-            <thead>
-              <tr style={{ background: CL, borderBottom: `2px solid ${CB}` }}>
-                <th style={{ padding: '11px 16px', textAlign: 'left', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Article</th>
-                <th style={{ padding: '11px 16px', textAlign: 'center', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>Prix vente</th>
-                <th style={{ padding: '11px 16px', textAlign: 'center', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>🏪 Qté directe</th>
-                {activePrests.map(ap => (
-                  <th key={ap.id} style={{ padding: '11px 16px', textAlign: 'center', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>
-                    🛵 {ap.prestataire_nom}
-                    <div style={{ fontSize: '0.68rem', fontWeight: 500, color: 'var(--text-muted)', textTransform: 'none' }}>−{ap.taux_commission}%</div>
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>{slice.map(av => <ArticleRow key={av.id} av={av} />)}</tbody>
-          </table>
-        </div>
-        {paginationBar(subset.length, page, setPage)}
-        {/* CA total below list */}
-        <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '10px 16px', borderTop: `1px solid ${CB}`, background: '#fafafa' }}>
-          <div style={{ background: CL, borderRadius: 10, border: `1.5px solid ${C}`, padding: '8px 16px', display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ fontSize: '0.82rem', fontWeight: 600, color: CD, whiteSpace: 'nowrap' }}>CA total :</span>
-            <span style={{ fontSize: '1.05rem', fontWeight: 800, color: C, whiteSpace: 'nowrap' }}>{fmtMoney(caTotal)}</span>
-          </div>
-        </div>
-      </div>
-    );
+  const ctxValue: VPCtxType = {
+    activePrests, prixPrestataires, allArticles: articles,
+    qtes, setQtes,
+    dateVente, setDateVente,
+    saving, saveError, saveSuccess, handleSubmit,
   };
 
   return (
-    <div className="page-content">
-      {/* Hero */}
-      <div style={{
-        background: `linear-gradient(135deg, ${CD} 0%, ${C} 55%, #d97706 100%)`,
-        borderRadius: 18, padding: '24px 28px', marginBottom: 24,
-        boxShadow: '0 8px 32px rgba(180,83,9,0.28)',
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16,
-      }}>
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
-            <div style={{ background: 'rgba(255,255,255,0.2)', borderRadius: 10, padding: '7px 9px', fontSize: '1.2rem' }}>💰</div>
-            <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0 }}>
-              Ventes Activités{selectedActivite ? ` — ${selectedActivite.nom}` : ''}
-            </h1>
+    <VPCtx.Provider value={ctxValue}>
+      <div className="page-content">
+        {/* Hero */}
+        <div style={{
+          background: `linear-gradient(135deg, ${CD} 0%, ${C} 55%, #d97706 100%)`,
+          borderRadius: 18, padding: '24px 28px', marginBottom: 24,
+          boxShadow: '0 8px 32px rgba(180,83,9,0.28)',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16,
+        }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+              <div style={{ background: 'rgba(255,255,255,0.2)', borderRadius: 10, padding: '7px 9px', fontSize: '1.2rem' }}>💰</div>
+              <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0 }}>
+                Ventes Activités{selectedActivite ? ` — ${selectedActivite.nom}` : ''}
+              </h1>
+            </div>
+            <p style={{ color: 'rgba(255,255,255,0.82)', margin: 0, fontSize: '0.85rem' }}>
+              Saisissez vos ventes directes et via prestataires
+            </p>
           </div>
-          <p style={{ color: 'rgba(255,255,255,0.82)', margin: 0, fontSize: '0.85rem' }}>
-            Saisissez vos ventes directes et via prestataires
-          </p>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <Link to="/client/ventes/configuration" style={{ background: 'rgba(255,255,255,0.18)', color: '#fff', borderRadius: 20, padding: '5px 14px', fontSize: '0.82rem', fontWeight: 600, textDecoration: 'none', border: '1px solid rgba(255,255,255,0.3)' }}>
+              ⚙️ Configuration
+            </Link>
+            <Link to="/client/ventes/rapport" style={{ background: 'rgba(255,255,255,0.18)', color: '#fff', borderRadius: 20, padding: '5px 14px', fontSize: '0.82rem', fontWeight: 600, textDecoration: 'none', border: '1px solid rgba(255,255,255,0.3)' }}>
+              📊 Rapport
+            </Link>
+          </div>
         </div>
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          <Link to="/client/ventes/configuration" style={{ background: 'rgba(255,255,255,0.18)', color: '#fff', borderRadius: 20, padding: '5px 14px', fontSize: '0.82rem', fontWeight: 600, textDecoration: 'none', border: '1px solid rgba(255,255,255,0.3)' }}>
-            ⚙️ Configuration
-          </Link>
-          <Link to="/client/ventes/rapport" style={{ background: 'rgba(255,255,255,0.18)', color: '#fff', borderRadius: 20, padding: '5px 14px', fontSize: '0.82rem', fontWeight: 600, textDecoration: 'none', border: '1px solid rgba(255,255,255,0.3)' }}>
-            📊 Rapport
-          </Link>
-        </div>
-      </div>
 
-      {/* Activité selector */}
-      {activites.length > 0 && (
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center', marginBottom: 20, padding: '10px 14px', background: '#fff', borderRadius: 10, border: `1px solid ${CB}` }}>
-          {activites.map(a => (
-            <button key={a.id} onClick={() => { setSelectedActiviteId(a.id); setSearchParams({ activiteId: String(a.id) }); }}
-              style={{
-                padding: '4px 14px', borderRadius: 20, cursor: 'pointer', fontSize: '0.82rem',
-                border: selectedActiviteId === a.id ? `1.5px solid ${C}` : `1.5px solid ${CB}`,
-                background: selectedActiviteId === a.id ? C : CL,
-                color: selectedActiviteId === a.id ? '#fff' : CD,
-                fontWeight: selectedActiviteId === a.id ? 700 : 400,
-              }}>
-              {a.nom}
-            </button>
-          ))}
-        </div>
-      )}
-
-      {!selectedActiviteId ? (
-        <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '60px 0' }}>Aucune activité disponible</div>
-      ) : (
-        <>
-          {/* Tabs */}
-          <div style={{ display: 'flex', gap: 4, borderBottom: `2px solid ${CB}`, marginBottom: 24, overflowX: 'auto' }}>
-            {([
-              ['saisie_produits', '📝 Saisie des ventes produits'],
-              ['saisie_supplements', '🧂 Saisie des ventes suppléments'],
-              ['historique', '📋 Historique'],
-            ] as const).map(([tab, label]) => (
-              <button key={tab} onClick={() => setActiveTab(tab)}
+        {/* Activité selector */}
+        {activites.length > 0 && (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center', marginBottom: 20, padding: '10px 14px', background: '#fff', borderRadius: 10, border: `1px solid ${CB}` }}>
+            {activites.map(a => (
+              <button key={a.id} onClick={() => { setSelectedActiviteId(a.id); setSearchParams({ activiteId: String(a.id) }); }}
                 style={{
-                  padding: '9px 20px', background: 'none', border: 'none', cursor: 'pointer',
-                  fontSize: '0.92rem', fontWeight: activeTab === tab ? 700 : 400,
-                  color: activeTab === tab ? C : 'var(--text)',
-                  borderBottom: activeTab === tab ? `3px solid ${C}` : '3px solid transparent',
-                  marginBottom: -2, whiteSpace: 'nowrap',
+                  padding: '4px 14px', borderRadius: 20, cursor: 'pointer', fontSize: '0.82rem',
+                  border: selectedActiviteId === a.id ? `1.5px solid ${C}` : `1.5px solid ${CB}`,
+                  background: selectedActiviteId === a.id ? C : CL,
+                  color: selectedActiviteId === a.id ? '#fff' : CD,
+                  fontWeight: selectedActiviteId === a.id ? 700 : 400,
                 }}>
-                {label}
+                {a.nom}
               </button>
             ))}
           </div>
+        )}
 
-          {/* ── SAISIE PRODUITS TAB ── */}
-          {activeTab === 'saisie_produits' && (
-            <>
-              {loading ? (
+        {!selectedActiviteId ? (
+          <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '60px 0' }}>Aucune activité disponible</div>
+        ) : (
+          <>
+            {/* Tabs */}
+            <div style={{ display: 'flex', gap: 4, borderBottom: `2px solid ${CB}`, marginBottom: 24, overflowX: 'auto' }}>
+              {([
+                ['saisie_produits', '📝 Saisie des ventes produits'],
+                ['saisie_supplements', '🧂 Saisie des ventes suppléments'],
+                ['historique', '📋 Historique'],
+              ] as const).map(([tab, label]) => (
+                <button key={tab} onClick={() => setActiveTab(tab)}
+                  style={{
+                    padding: '9px 20px', background: 'none', border: 'none', cursor: 'pointer',
+                    fontSize: '0.92rem', fontWeight: activeTab === tab ? 700 : 400,
+                    color: activeTab === tab ? C : 'var(--text)',
+                    borderBottom: activeTab === tab ? `3px solid ${C}` : '3px solid transparent',
+                    marginBottom: -2, whiteSpace: 'nowrap',
+                  }}>
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            {/* ── SAISIE PRODUITS TAB ── */}
+            {activeTab === 'saisie_produits' && (
+              loading ? (
                 <div style={{ textAlign: 'center', padding: 40, color: 'var(--text-muted)' }}>Chargement…</div>
               ) : produits.length === 0 ? (
                 <div style={{ textAlign: 'center', padding: '60px 0', background: '#fff', borderRadius: 14, border: `1.5px solid ${CB}` }}>
@@ -416,32 +483,15 @@ export default function VentesPage() {
                 </div>
               ) : (
                 <>
-                  {/* Date + confirm bar */}
-                  <div style={{ background: '#fff', borderRadius: 12, border: `1.5px solid ${CB}`, padding: '16px 20px', marginBottom: 20, display: 'flex', gap: 16, flexWrap: 'wrap', alignItems: 'center' }}>
-                    <div>
-                      <label style={{ fontSize: '0.78rem', fontWeight: 700, display: 'block', marginBottom: 5, color: C, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Date de vente</label>
-                      <input type="date" value={dateVente} onChange={e => setDateVente(e.target.value)}
-                        style={{ padding: '8px 12px', borderRadius: 9, border: `1.5px solid ${CB}`, background: CL, color: CD, fontWeight: 600, outline: 'none' }} />
-                    </div>
-                    <div style={{ marginLeft: 'auto', display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-end' }}>
-                      {saveError && <div style={{ color: '#dc2626', fontSize: '0.82rem' }}>{saveError}</div>}
-                      {saveSuccess && <div style={{ color: '#166534', fontSize: '0.82rem', fontWeight: 600 }}>✓ Ventes enregistrées !</div>}
-                      <button onClick={handleSubmit} disabled={saving}
-                        style={{ padding: '10px 24px', borderRadius: 10, border: 'none', background: saving ? '#d1d5db' : `linear-gradient(135deg, ${CD} 0%, ${C} 100%)`, color: '#fff', cursor: saving ? 'not-allowed' : 'pointer', fontWeight: 700, fontSize: '0.92rem', boxShadow: saving ? 'none' : `0 4px 14px ${C}44`, whiteSpace: 'nowrap' }}>
-                        {saving ? 'Enregistrement…' : '✓ Confirmer les ventes'}
-                      </button>
-                    </div>
-                  </div>
+                  <DateBar />
                   <SaisieTable subset={produits} page={prodPage} setPage={setProdPage} label="🛍️ Produits vendables" />
                 </>
-              )}
-            </>
-          )}
+              )
+            )}
 
-          {/* ── SAISIE SUPPLEMENTS TAB ── */}
-          {activeTab === 'saisie_supplements' && (
-            <>
-              {loading ? (
+            {/* ── SAISIE SUPPLEMENTS TAB ── */}
+            {activeTab === 'saisie_supplements' && (
+              loading ? (
                 <div style={{ textAlign: 'center', padding: 40, color: 'var(--text-muted)' }}>Chargement…</div>
               ) : supplements.length === 0 ? (
                 <div style={{ textAlign: 'center', padding: '60px 0', background: '#fff', borderRadius: 14, border: `1.5px solid ${CB}` }}>
@@ -453,36 +503,18 @@ export default function VentesPage() {
                 </div>
               ) : (
                 <>
-                  {/* Date + confirm bar */}
-                  <div style={{ background: '#fff', borderRadius: 12, border: `1.5px solid ${CB}`, padding: '16px 20px', marginBottom: 20, display: 'flex', gap: 16, flexWrap: 'wrap', alignItems: 'center' }}>
-                    <div>
-                      <label style={{ fontSize: '0.78rem', fontWeight: 700, display: 'block', marginBottom: 5, color: C, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Date de vente</label>
-                      <input type="date" value={dateVente} onChange={e => setDateVente(e.target.value)}
-                        style={{ padding: '8px 12px', borderRadius: 9, border: `1.5px solid ${CB}`, background: CL, color: CD, fontWeight: 600, outline: 'none' }} />
-                    </div>
-                    <div style={{ marginLeft: 'auto', display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-end' }}>
-                      {saveError && <div style={{ color: '#dc2626', fontSize: '0.82rem' }}>{saveError}</div>}
-                      {saveSuccess && <div style={{ color: '#166534', fontSize: '0.82rem', fontWeight: 600 }}>✓ Ventes enregistrées !</div>}
-                      <button onClick={handleSubmit} disabled={saving}
-                        style={{ padding: '10px 24px', borderRadius: 10, border: 'none', background: saving ? '#d1d5db' : `linear-gradient(135deg, ${CD} 0%, ${C} 100%)`, color: '#fff', cursor: saving ? 'not-allowed' : 'pointer', fontWeight: 700, fontSize: '0.92rem', boxShadow: saving ? 'none' : `0 4px 14px ${C}44`, whiteSpace: 'nowrap' }}>
-                        {saving ? 'Enregistrement…' : '✓ Confirmer les ventes'}
-                      </button>
-                    </div>
-                  </div>
+                  <DateBar />
                   <SaisieTable subset={supplements} page={suppPage} setPage={setSuppPage} label="🧂 Suppléments vendables" />
                 </>
-              )}
-            </>
-          )}
+              )
+            )}
 
-          {/* ── HISTORIQUE TAB ── */}
-          {activeTab === 'historique' && (
-            <>
-              {loading ? (
+            {/* ── HISTORIQUE TAB ── */}
+            {activeTab === 'historique' && (
+              loading ? (
                 <div style={{ textAlign: 'center', padding: 40, color: 'var(--text-muted)' }}>Chargement…</div>
               ) : (
                 <div style={{ background: '#fff', borderRadius: 14, border: `1.5px solid ${CB}`, overflow: 'hidden', boxShadow: '0 2px 12px rgba(180,83,9,0.08)' }}>
-                  {/* Filters bar */}
                   <div style={{ display: 'flex', gap: 10, padding: '12px 16px', borderBottom: `1px solid ${CB}`, flexWrap: 'wrap', alignItems: 'center', background: '#fafafa' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: '0 0 auto' }}>
                       <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>Du</span>
@@ -562,11 +594,11 @@ export default function VentesPage() {
                     </table>
                   )}
                 </div>
-              )}
-            </>
-          )}
-        </>
-      )}
-    </div>
+              )
+            )}
+          </>
+        )}
+      </div>
+    </VPCtx.Provider>
   );
 }
