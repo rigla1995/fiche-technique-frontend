@@ -74,11 +74,13 @@ export default function VentesPage() {
 
   // Saisie state: qtés par article+channel
   const [dateVente, setDateVente] = useState(new Date().toISOString().slice(0, 10));
-  const [notes, setNotes] = useState('');
   // qtés[articleId][channelKey] = quantite — channelKey: 'direct' | activitePrestataire.id
   const [qtes, setQtes] = useState<Record<string, Record<string, string>>>({});
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
+  // Pagination
+  const [prodPage, setProdPage] = useState(0);
+  const [suppPage, setSuppPage] = useState(0);
   const [saveSuccess, setSaveSuccess] = useState(false);
 
   useEffect(() => {
@@ -105,6 +107,8 @@ export default function VentesPage() {
       setPrixPrestataires(pp.data as ArticlePrixPrestataire[]);
       setVentes(v.data as Vente[]);
       setQtes({});
+      setProdPage(0);
+      setSuppPage(0);
     }).catch(() => {}).finally(() => setLoading(false));
   }, [selectedActiviteId]);
 
@@ -184,13 +188,12 @@ export default function VentesPage() {
           date_vente: dateVente,
           type_vente: v.type_vente,
           prestataire_id: v.prestataire_id || null,
-          notes: notes || null,
+          notes: null,
           lignes: v.lignes,
         });
       }
       setSaveSuccess(true);
       setQtes({});
-      setNotes('');
       setDateVente(new Date().toISOString().slice(0, 10));
       loadData();
       setTimeout(() => setSaveSuccess(false), 3000);
@@ -321,80 +324,98 @@ export default function VentesPage() {
                 </div>
               ) : (
                 <>
-                  {/* Date + notes */}
-                  <div style={{ background: '#fff', borderRadius: 12, border: `1.5px solid ${CB}`, padding: '16px 20px', marginBottom: 20, display: 'flex', gap: 16, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+                  {/* Date + confirm */}
+                  <div style={{ background: '#fff', borderRadius: 12, border: `1.5px solid ${CB}`, padding: '16px 20px', marginBottom: 20, display: 'flex', gap: 16, flexWrap: 'wrap', alignItems: 'center' }}>
                     <div>
                       <label style={{ fontSize: '0.78rem', fontWeight: 700, display: 'block', marginBottom: 5, color: C, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Date de vente</label>
                       <input type="date" value={dateVente} onChange={e => setDateVente(e.target.value)}
                         style={{ padding: '8px 12px', borderRadius: 9, border: `1.5px solid ${CB}`, background: CL, color: CD, fontWeight: 600, outline: 'none' }} />
                     </div>
-                    <div style={{ flex: 1, minWidth: 200 }}>
-                      <label style={{ fontSize: '0.78rem', fontWeight: 700, display: 'block', marginBottom: 5, color: C, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Notes (optionnel)</label>
-                      <input type="text" value={notes} onChange={e => setNotes(e.target.value)} placeholder="Remarques…"
-                        style={{ width: '100%', padding: '8px 12px', borderRadius: 9, border: `1.5px solid ${CB}`, background: '#fafafa', outline: 'none', boxSizing: 'border-box' }} />
+                    <div style={{ background: CL, borderRadius: 10, border: `1.5px solid ${C}`, padding: '10px 18px', display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontSize: '0.82rem', fontWeight: 600, color: CD, whiteSpace: 'nowrap' }}>CA total :</span>
+                      <span style={{ fontSize: '1.1rem', fontWeight: 800, color: C, whiteSpace: 'nowrap' }}>{fmtMoney(computeTotal())}</span>
                     </div>
-                  </div>
-
-                  {/* Grille de saisie */}
-                  <div style={{ background: '#fff', borderRadius: 14, border: `1.5px solid ${CB}`, overflow: 'hidden', boxShadow: '0 2px 12px rgba(180,83,9,0.08)', marginBottom: 20 }}>
-                    <div style={{ overflowX: 'auto' }}>
-                      <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 500 }}>
-                        <thead>
-                          <tr style={{ background: CL, borderBottom: `2px solid ${CB}` }}>
-                            <th style={{ padding: '11px 16px', textAlign: 'left', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Article</th>
-                            <th style={{ padding: '11px 16px', textAlign: 'center', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>Prix vente</th>
-                            <th style={{ padding: '11px 16px', textAlign: 'center', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>
-                              🏪 Qté directe
-                            </th>
-                            {activePrests.map(ap => (
-                              <th key={ap.id} style={{ padding: '11px 16px', textAlign: 'center', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>
-                                🛵 {ap.prestataire_nom}
-                                <div style={{ fontSize: '0.68rem', fontWeight: 500, color: 'var(--text-muted)', textTransform: 'none' }}>−{ap.taux_commission}%</div>
-                              </th>
-                            ))}
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {produits.length > 0 && (
-                            <>
-                              <tr>
-                                <td colSpan={3 + activePrests.length} style={{ padding: '8px 16px', background: `${CD}10`, fontSize: '0.75rem', fontWeight: 800, color: CD, textTransform: 'uppercase', letterSpacing: '0.07em' }}>
-                                  🛍️ Produits vendables
-                                </td>
-                              </tr>
-                              {produits.map(av => <ArticleRow key={av.id} av={av} />)}
-                            </>
-                          )}
-                          {supplements.length > 0 && (
-                            <>
-                              <tr>
-                                <td colSpan={3 + activePrests.length} style={{ padding: '8px 16px', background: `${CD}10`, fontSize: '0.75rem', fontWeight: 800, color: CD, textTransform: 'uppercase', letterSpacing: '0.07em' }}>
-                                  🧂 Suppléments
-                                </td>
-                              </tr>
-                              {supplements.map(av => <ArticleRow key={av.id} av={av} />)}
-                            </>
-                          )}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-
-                  {/* Total + submit */}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
-                    <div style={{ background: CL, borderRadius: 12, border: `1.5px solid ${C}`, padding: '12px 22px', display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <span style={{ fontSize: '0.85rem', fontWeight: 600, color: CD }}>CA total saisi :</span>
-                      <span style={{ fontSize: '1.25rem', fontWeight: 800, color: C }}>{fmtMoney(computeTotal())}</span>
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'flex-end' }}>
-                      {saveError && <div style={{ color: '#dc2626', fontSize: '0.85rem' }}>{saveError}</div>}
-                      {saveSuccess && <div style={{ color: '#166534', fontSize: '0.85rem', fontWeight: 600 }}>✓ Ventes enregistrées avec succès !</div>}
+                    <div style={{ marginLeft: 'auto', display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-end' }}>
+                      {saveError && <div style={{ color: '#dc2626', fontSize: '0.82rem' }}>{saveError}</div>}
+                      {saveSuccess && <div style={{ color: '#166534', fontSize: '0.82rem', fontWeight: 600 }}>✓ Ventes enregistrées !</div>}
                       <button onClick={handleSubmit} disabled={saving}
-                        style={{ padding: '11px 28px', borderRadius: 10, border: 'none', background: saving ? '#d1d5db' : `linear-gradient(135deg, ${CD} 0%, ${C} 100%)`, color: '#fff', cursor: saving ? 'not-allowed' : 'pointer', fontWeight: 700, fontSize: '0.95rem', boxShadow: saving ? 'none' : `0 4px 14px ${C}44` }}>
+                        style={{ padding: '10px 24px', borderRadius: 10, border: 'none', background: saving ? '#d1d5db' : `linear-gradient(135deg, ${CD} 0%, ${C} 100%)`, color: '#fff', cursor: saving ? 'not-allowed' : 'pointer', fontWeight: 700, fontSize: '0.92rem', boxShadow: saving ? 'none' : `0 4px 14px ${C}44`, whiteSpace: 'nowrap' }}>
                         {saving ? 'Enregistrement…' : '✓ Confirmer les ventes'}
                       </button>
                     </div>
                   </div>
+
+                  {/* Grille de saisie */}
+                  {(() => {
+                    const PAGE = 5;
+                    const thead = (
+                      <thead>
+                        <tr style={{ background: CL, borderBottom: `2px solid ${CB}` }}>
+                          <th style={{ padding: '11px 16px', textAlign: 'left', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Article</th>
+                          <th style={{ padding: '11px 16px', textAlign: 'center', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>Prix vente</th>
+                          <th style={{ padding: '11px 16px', textAlign: 'center', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>🏪 Qté directe</th>
+                          {activePrests.map(ap => (
+                            <th key={ap.id} style={{ padding: '11px 16px', textAlign: 'center', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>
+                              🛵 {ap.prestataire_nom}
+                              <div style={{ fontSize: '0.68rem', fontWeight: 500, color: 'var(--text-muted)', textTransform: 'none' }}>−{ap.taux_commission}%</div>
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                    );
+                    const paginationBar = (total: number, page: number, setPage: (p: number) => void) => {
+                      const totalPages = Math.ceil(total / PAGE);
+                      if (totalPages <= 1) return null;
+                      return (
+                        <div style={{ display: 'flex', gap: 4, padding: '10px 16px', alignItems: 'center', borderTop: `1px solid ${CB}`, justifyContent: 'center' }}>
+                          <button onClick={() => setPage(Math.max(0, page - 1))} disabled={page === 0}
+                            style={{ padding: '3px 10px', borderRadius: 6, border: `1px solid ${CB}`, background: page === 0 ? '#f3f4f6' : '#fff', color: page === 0 ? '#9ca3af' : C, cursor: page === 0 ? 'default' : 'pointer', fontWeight: 600, fontSize: '0.8rem' }}>‹</button>
+                          {Array.from({ length: totalPages }, (_, i) => (
+                            <button key={i} onClick={() => setPage(i)}
+                              style={{ padding: '3px 9px', borderRadius: 6, border: `1.5px solid ${i === page ? C : CB}`, background: i === page ? C : '#fff', color: i === page ? '#fff' : CD, cursor: 'pointer', fontWeight: i === page ? 700 : 400, fontSize: '0.8rem' }}>
+                              {i + 1}
+                            </button>
+                          ))}
+                          <button onClick={() => setPage(Math.min(totalPages - 1, page + 1))} disabled={page >= totalPages - 1}
+                            style={{ padding: '3px 10px', borderRadius: 6, border: `1px solid ${CB}`, background: page >= totalPages - 1 ? '#f3f4f6' : '#fff', color: page >= totalPages - 1 ? '#9ca3af' : C, cursor: page >= totalPages - 1 ? 'default' : 'pointer', fontWeight: 600, fontSize: '0.8rem' }}>›</button>
+                        </div>
+                      );
+                    };
+                    const prodSlice = produits.slice(prodPage * PAGE, prodPage * PAGE + PAGE);
+                    const suppSlice = supplements.slice(suppPage * PAGE, suppPage * PAGE + PAGE);
+                    return (
+                      <>
+                        {produits.length > 0 && (
+                          <div style={{ background: '#fff', borderRadius: 14, border: `1.5px solid ${CB}`, overflow: 'hidden', boxShadow: '0 2px 12px rgba(180,83,9,0.08)', marginBottom: 16 }}>
+                            <div style={{ padding: '10px 16px', background: `${CD}10`, borderBottom: `1px solid ${CB}`, fontSize: '0.75rem', fontWeight: 800, color: CD, textTransform: 'uppercase', letterSpacing: '0.07em' }}>
+                              🛍️ Produits vendables
+                            </div>
+                            <div style={{ overflowX: 'auto' }}>
+                              <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 500 }}>
+                                {thead}
+                                <tbody>{prodSlice.map(av => <ArticleRow key={av.id} av={av} />)}</tbody>
+                              </table>
+                            </div>
+                            {paginationBar(produits.length, prodPage, setProdPage)}
+                          </div>
+                        )}
+                        {supplements.length > 0 && (
+                          <div style={{ background: '#fff', borderRadius: 14, border: `1.5px solid ${CB}`, overflow: 'hidden', boxShadow: '0 2px 12px rgba(180,83,9,0.08)', marginBottom: 16 }}>
+                            <div style={{ padding: '10px 16px', background: `${CD}10`, borderBottom: `1px solid ${CB}`, fontSize: '0.75rem', fontWeight: 800, color: CD, textTransform: 'uppercase', letterSpacing: '0.07em' }}>
+                              🧂 Suppléments vendables
+                            </div>
+                            <div style={{ overflowX: 'auto' }}>
+                              <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 500 }}>
+                                {thead}
+                                <tbody>{suppSlice.map(av => <ArticleRow key={av.id} av={av} />)}</tbody>
+                              </table>
+                            </div>
+                            {paginationBar(supplements.length, suppPage, setSuppPage)}
+                          </div>
+                        )}
+                      </>
+                    );
+                  })()}
                 </>
               )}
             </>
