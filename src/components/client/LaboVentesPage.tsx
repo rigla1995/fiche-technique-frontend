@@ -27,6 +27,7 @@ interface LaboTransfert {
   article_type: 'produit' | 'ingredient';
   unite_nom?: string | null;
   activite_nom: string;
+  categorie_nom: string;
   quantite: number;
   prix_unitaire: number | null;
   valeur: number;
@@ -41,15 +42,11 @@ export default function LaboVentesPage() {
   const [selectedLaboId, setSelectedLaboId] = useState<number | null>(null);
   const [transferts, setTransferts] = useState<LaboTransfert[]>([]);
 
-  // Date filters
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
-
-  // Text / select filters
+  const [filterCategorie, setFilterCategorie] = useState('');
   const [filterActivite, setFilterActivite] = useState('');
   const [filterArticle, setFilterArticle] = useState('');
-
-  // Pagination
   const [page, setPage] = useState(1);
 
   useEffect(() => {
@@ -75,53 +72,58 @@ export default function LaboVentesPage() {
 
   const selectedLabo = labos.find(l => l.id === selectedLaboId);
 
-  // Derive filter options from loaded data
+  // Derive filter options
+  const categorieOptions = useMemo(
+    () => [...new Set(transferts.map(t => t.categorie_nom))].sort(),
+    [transferts]
+  );
   const activiteOptions = useMemo(
     () => [...new Set(transferts.map(t => t.activite_nom))].sort(),
     [transferts]
   );
-  const articleOptions = useMemo(
-    () => [...new Set(transferts.map(t => t.article_nom))].sort(),
-    [transferts]
-  );
+  const articleOptions = useMemo(() => {
+    let src = transferts;
+    if (filterCategorie) src = src.filter(t => t.categorie_nom === filterCategorie);
+    return [...new Set(src.map(t => t.article_nom))].sort();
+  }, [transferts, filterCategorie]);
+
+  // When category changes, reset article filter if it no longer belongs to new category
+  const handleCategorieChange = (val: string) => {
+    setFilterCategorie(val);
+    setFilterArticle('');
+    setPage(1);
+  };
 
   // Apply filters
   const filtered = useMemo(() => {
     let r = transferts;
+    if (filterCategorie) r = r.filter(t => t.categorie_nom === filterCategorie);
     if (filterActivite) r = r.filter(t => t.activite_nom === filterActivite);
     if (filterArticle) r = r.filter(t => t.article_nom === filterArticle);
     return r;
-  }, [transferts, filterActivite, filterArticle]);
+  }, [transferts, filterCategorie, filterActivite, filterArticle]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const pageData = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
-  const totalValeur = filtered.reduce((s, l) => s + l.valeur, 0);
-  const totalEcart = filtered.reduce((s, l) => {
-    if (l.prix_unitaire == null || l.prix_moyen_appro == null) return s;
-    return s + (l.prix_unitaire - l.prix_moyen_appro) * l.quantite;
+  // KPI aggregates on filtered data
+  const totalTransferts = filtered.reduce((s, l) => s + l.valeur, 0);
+  const totalAchat = filtered.reduce((s, l) => {
+    if (l.prix_moyen_appro == null) return s;
+    return s + l.prix_moyen_appro * l.quantite;
   }, 0);
+  const totalEcart = totalTransferts - totalAchat;
 
-  const ecartColor = (prix: number | null, appro: number | null) => {
-    if (prix == null || appro == null) return 'var(--text-muted)';
-    return prix >= appro ? '#16a34a' : '#dc2626';
-  };
+  const hasFilters = filterCategorie || filterActivite || filterArticle || from || to;
+  const resetFilters = () => { setFilterCategorie(''); setFilterActivite(''); setFilterArticle(''); setFrom(''); setTo(''); setPage(1); };
 
-  const ecartPct = (prix: number | null, appro: number | null) => {
-    if (prix == null || appro == null || appro === 0) return null;
-    return ((prix - appro) / appro) * 100;
-  };
-
-  const resetFilters = () => { setFilterActivite(''); setFilterArticle(''); setFrom(''); setTo(''); setPage(1); };
-
-  const hasFilters = filterActivite || filterArticle || from || to;
-
-  const selectStyle = {
+  const selectStyle: React.CSSProperties = {
     padding: '7px 10px', borderRadius: 8, border: `1.5px solid ${CB}`,
-    background: CL, color: CD, fontSize: '0.85rem', outline: 'none', cursor: 'pointer',
+    background: CL, color: CD, fontSize: '0.84rem', outline: 'none', cursor: 'pointer',
   };
 
-  const colW = ['10%', '18%', '12%', '7%', '12%', '12%', '12%', '11%'] as const;
+  // col widths: article, activité, qté, prix transfert, prix appro, écart
+  const colW = ['30%', '18%', '8%', '15%', '15%', '14%'] as const;
 
   return (
     <div className="page-content">
@@ -172,67 +174,69 @@ export default function LaboVentesPage() {
         <>
           {/* Filters */}
           <div style={{ background: '#fff', borderRadius: 12, border: `1.5px solid ${CB}`, padding: '14px 18px', marginBottom: 20, display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-end' }}>
-            {/* Date range */}
             <div>
-              <label style={{ fontSize: '0.72rem', display: 'block', marginBottom: 4, fontWeight: 700, color: C, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Du</label>
+              <label style={{ fontSize: '0.7rem', display: 'block', marginBottom: 4, fontWeight: 700, color: C, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Du</label>
               <input type="date" value={from} onChange={e => { setFrom(e.target.value); setPage(1); }}
-                style={{ padding: '7px 10px', borderRadius: 8, border: `1.5px solid ${CB}`, background: CL, color: CD, fontSize: '0.85rem' }} />
+                style={{ padding: '7px 10px', borderRadius: 8, border: `1.5px solid ${CB}`, background: CL, color: CD, fontSize: '0.84rem' }} />
             </div>
             <div>
-              <label style={{ fontSize: '0.72rem', display: 'block', marginBottom: 4, fontWeight: 700, color: C, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Au</label>
+              <label style={{ fontSize: '0.7rem', display: 'block', marginBottom: 4, fontWeight: 700, color: C, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Au</label>
               <input type="date" value={to} onChange={e => { setTo(e.target.value); setPage(1); }}
-                style={{ padding: '7px 10px', borderRadius: 8, border: `1.5px solid ${CB}`, background: CL, color: CD, fontSize: '0.85rem' }} />
+                style={{ padding: '7px 10px', borderRadius: 8, border: `1.5px solid ${CB}`, background: CL, color: CD, fontSize: '0.84rem' }} />
             </div>
             <button onClick={loadTransferts}
-              style={{ padding: '8px 16px', borderRadius: 8, border: `1.5px solid ${C}`, color: '#fff', background: C, cursor: 'pointer', fontWeight: 700, fontSize: '0.85rem' }}>
+              style={{ padding: '8px 14px', borderRadius: 8, border: `1.5px solid ${C}`, color: '#fff', background: C, cursor: 'pointer', fontWeight: 700, fontSize: '0.84rem' }}>
               Filtrer dates
             </button>
 
-            {/* Separator */}
-            <div style={{ width: 1, background: CB, alignSelf: 'stretch', margin: '0 4px' }} />
+            <div style={{ width: 1, background: CB, alignSelf: 'stretch', margin: '0 2px' }} />
 
-            {/* Activité filter */}
             <div>
-              <label style={{ fontSize: '0.72rem', display: 'block', marginBottom: 4, fontWeight: 700, color: C, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Activité</label>
+              <label style={{ fontSize: '0.7rem', display: 'block', marginBottom: 4, fontWeight: 700, color: C, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Catégorie</label>
+              <select value={filterCategorie} onChange={e => handleCategorieChange(e.target.value)} style={selectStyle}>
+                <option value="">Toutes</option>
+                {categorieOptions.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
+            <div>
+              <label style={{ fontSize: '0.7rem', display: 'block', marginBottom: 4, fontWeight: 700, color: C, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Article</label>
+              <select value={filterArticle} onChange={e => { setFilterArticle(e.target.value); setPage(1); }} style={selectStyle}>
+                <option value="">Tous</option>
+                {articleOptions.map(a => <option key={a} value={a}>{a}</option>)}
+              </select>
+            </div>
+            <div>
+              <label style={{ fontSize: '0.7rem', display: 'block', marginBottom: 4, fontWeight: 700, color: C, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Activité</label>
               <select value={filterActivite} onChange={e => { setFilterActivite(e.target.value); setPage(1); }} style={selectStyle}>
                 <option value="">Toutes</option>
                 {activiteOptions.map(a => <option key={a} value={a}>{a}</option>)}
               </select>
             </div>
 
-            {/* Article filter */}
-            <div>
-              <label style={{ fontSize: '0.72rem', display: 'block', marginBottom: 4, fontWeight: 700, color: C, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Article</label>
-              <select value={filterArticle} onChange={e => { setFilterArticle(e.target.value); setPage(1); }} style={selectStyle}>
-                <option value="">Tous</option>
-                {articleOptions.map(a => <option key={a} value={a}>{a}</option>)}
-              </select>
-            </div>
-
             {hasFilters && (
               <button onClick={resetFilters}
-                style={{ padding: '7px 14px', borderRadius: 8, border: '1px solid var(--border)', background: 'none', cursor: 'pointer', fontSize: '0.83rem', color: 'var(--text-muted)' }}>
+                style={{ padding: '7px 12px', borderRadius: 8, border: '1px solid var(--border)', background: 'none', cursor: 'pointer', fontSize: '0.82rem', color: 'var(--text-muted)' }}>
                 ✕ Réinitialiser
               </button>
             )}
           </div>
 
-          {/* KPIs */}
+          {/* KPIs — order: Valeur totale achat | Valeur totale transferts | Écart total */}
           {filtered.length > 0 && (
             <div style={{ display: 'flex', gap: 14, marginBottom: 20, flexWrap: 'wrap' }}>
               <div style={{ flex: 1, minWidth: 160, background: '#fff', borderRadius: 12, border: `1.5px solid ${CB}`, padding: '14px 20px' }}>
-                <div style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Valeur totale</div>
-                <div style={{ fontSize: '1.25rem', fontWeight: 800, color: C }}>{fmtMoney(totalValeur)}</div>
+                <div style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Valeur totale achat</div>
+                <div style={{ fontSize: '1.25rem', fontWeight: 800, color: CD }}>{fmtMoney(totalAchat)}</div>
               </div>
               <div style={{ flex: 1, minWidth: 160, background: '#fff', borderRadius: 12, border: `1.5px solid ${CB}`, padding: '14px 20px' }}>
-                <div style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Écart total (prix − coût)</div>
+                <div style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Valeur totale transferts</div>
+                <div style={{ fontSize: '1.25rem', fontWeight: 800, color: C }}>{fmtMoney(totalTransferts)}</div>
+              </div>
+              <div style={{ flex: 1, minWidth: 160, background: '#fff', borderRadius: 12, border: `1.5px solid ${CB}`, padding: '14px 20px' }}>
+                <div style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Écart total</div>
                 <div style={{ fontSize: '1.25rem', fontWeight: 800, color: totalEcart >= 0 ? '#16a34a' : '#dc2626' }}>
                   {totalEcart >= 0 ? '+' : ''}{fmtMoney(totalEcart)}
                 </div>
-              </div>
-              <div style={{ flex: 1, minWidth: 140, background: '#fff', borderRadius: 12, border: `1.5px solid ${CB}`, padding: '14px 20px' }}>
-                <div style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Résultats</div>
-                <div style={{ fontSize: '1.25rem', fontWeight: 800, color: CD }}>{filtered.length} <span style={{ fontSize: '0.78rem', fontWeight: 500 }}>lignes</span></div>
               </div>
             </div>
           )}
@@ -252,41 +256,62 @@ export default function LaboVentesPage() {
                   </colgroup>
                   <thead>
                     <tr style={{ background: CL, borderBottom: `2px solid ${CB}` }}>
-                      <th style={{ padding: '11px 12px', textAlign: 'left', fontSize: '0.74rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Date</th>
-                      <th style={{ padding: '11px 12px', textAlign: 'left', fontSize: '0.74rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Article</th>
-                      <th style={{ padding: '11px 12px', textAlign: 'left', fontSize: '0.74rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Activité</th>
-                      <th style={{ padding: '11px 12px', textAlign: 'right', fontSize: '0.74rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Qté</th>
-                      <th style={{ padding: '11px 12px', textAlign: 'right', fontSize: '0.74rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Prix transfert</th>
-                      <th style={{ padding: '11px 12px', textAlign: 'right', fontSize: '0.74rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Px moy. appro</th>
-                      <th style={{ padding: '11px 12px', textAlign: 'right', fontSize: '0.74rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Écart / unité</th>
-                      <th style={{ padding: '11px 12px', textAlign: 'right', fontSize: '0.74rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Valeur</th>
+                      <th style={{ padding: '11px 14px', textAlign: 'left', fontSize: '0.74rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Article</th>
+                      <th style={{ padding: '11px 14px', textAlign: 'left', fontSize: '0.74rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Activité</th>
+                      <th style={{ padding: '11px 14px', textAlign: 'right', fontSize: '0.74rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Qté</th>
+                      <th style={{ padding: '11px 14px', textAlign: 'right', fontSize: '0.74rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Prix transfert</th>
+                      <th style={{ padding: '11px 14px', textAlign: 'right', fontSize: '0.74rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Prix appro</th>
+                      <th style={{ padding: '11px 14px', textAlign: 'right', fontSize: '0.74rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Écart</th>
                     </tr>
                   </thead>
                   <tbody>
                     {pageData.map((l, idx) => {
-                      const ecart = l.prix_unitaire != null && l.prix_moyen_appro != null
-                        ? l.prix_unitaire - l.prix_moyen_appro
+                      const prixTransfertTotal = l.prix_unitaire != null ? l.prix_unitaire * l.quantite : null;
+                      const prixApproTotal = l.prix_moyen_appro != null ? l.prix_moyen_appro * l.quantite : null;
+                      const ecartTotal = prixTransfertTotal != null && prixApproTotal != null
+                        ? prixTransfertTotal - prixApproTotal
                         : null;
-                      const pct = ecartPct(l.prix_unitaire, l.prix_moyen_appro);
-                      const color = ecartColor(l.prix_unitaire, l.prix_moyen_appro);
+                      const ecartPct = prixApproTotal != null && prixApproTotal !== 0 && ecartTotal != null
+                        ? (ecartTotal / prixApproTotal) * 100
+                        : null;
+                      const ecartColor = ecartTotal == null ? 'var(--text-muted)' : ecartTotal >= 0 ? '#16a34a' : '#dc2626';
+
                       return (
                         <tr key={l.id} style={{ borderBottom: `1px solid ${CB}`, background: idx % 2 === 0 ? '#fff' : '#fffdf7' }}>
-                          <td style={{ padding: '11px 12px', fontWeight: 600, fontSize: '0.86rem' }}>{fmtDate(l.date_transfert)}</td>
-                          <td style={{ padding: '11px 12px', fontSize: '0.86rem', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                            <div style={{ fontWeight: 600, color: CD, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{l.article_nom}</div>
-                            {l.unite_nom && <div style={{ color: 'var(--text-muted)', fontSize: '0.72rem' }}>{l.unite_nom}</div>}
+                          {/* Article + date merged */}
+                          <td style={{ padding: '11px 14px' }}>
+                            <div style={{ fontWeight: 700, fontSize: '0.88rem', color: CD, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{l.article_nom}</div>
+                            <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: 2 }}>
+                              {l.unite_nom && <span>{l.unite_nom} · </span>}
+                              {fmtDate(l.date_transfert)}
+                            </div>
                           </td>
-                          <td style={{ padding: '11px 12px', fontSize: '0.82rem', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{l.activite_nom}</td>
-                          <td style={{ padding: '11px 12px', fontSize: '0.86rem', textAlign: 'right' }}>{l.quantite}</td>
-                          <td style={{ padding: '11px 12px', fontSize: '0.86rem', textAlign: 'right', fontWeight: 700, color: C }}>{fmtMoney(l.prix_unitaire)}</td>
-                          <td style={{ padding: '11px 12px', fontSize: '0.86rem', textAlign: 'right' }}>{fmtMoney(l.prix_moyen_appro)}</td>
-                          <td style={{ padding: '11px 12px', textAlign: 'right' }}>
-                            {ecart != null ? (
-                              <div style={{ color, fontWeight: 700, fontSize: '0.86rem' }}>
-                                {ecart >= 0 ? '+' : ''}{fmtMoney(ecart)}
-                                {pct != null && (
-                                  <div style={{ fontSize: '0.68rem', fontWeight: 500, opacity: 0.8 }}>
-                                    {pct >= 0 ? '+' : ''}{pct.toFixed(1)}%
+                          <td style={{ padding: '11px 14px', fontSize: '0.84rem', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{l.activite_nom}</td>
+                          <td style={{ padding: '11px 14px', fontSize: '0.88rem', textAlign: 'right', fontWeight: 600 }}>{l.quantite}</td>
+                          {/* Prix transfert = total */}
+                          <td style={{ padding: '11px 14px', textAlign: 'right' }}>
+                            <div style={{ fontWeight: 700, fontSize: '0.88rem', color: C }}>{fmtMoney(prixTransfertTotal)}</div>
+                            {l.prix_unitaire != null && (
+                              <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>{fmtMoney(l.prix_unitaire)}/u</div>
+                            )}
+                          </td>
+                          {/* Prix appro = total */}
+                          <td style={{ padding: '11px 14px', textAlign: 'right' }}>
+                            <div style={{ fontSize: '0.88rem', color: 'var(--text)' }}>{fmtMoney(prixApproTotal)}</div>
+                            {l.prix_moyen_appro != null && (
+                              <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>{fmtMoney(l.prix_moyen_appro)}/u</div>
+                            )}
+                          </td>
+                          {/* Écart = total */}
+                          <td style={{ padding: '11px 14px', textAlign: 'right' }}>
+                            {ecartTotal != null ? (
+                              <div>
+                                <div style={{ fontWeight: 700, fontSize: '0.88rem', color: ecartColor }}>
+                                  {ecartTotal >= 0 ? '+' : ''}{fmtMoney(ecartTotal)}
+                                </div>
+                                {ecartPct != null && (
+                                  <div style={{ fontSize: '0.68rem', color: ecartColor, opacity: 0.85 }}>
+                                    {ecartPct >= 0 ? '+' : ''}{ecartPct.toFixed(1)}%
                                   </div>
                                 )}
                               </div>
@@ -294,18 +319,19 @@ export default function LaboVentesPage() {
                               <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>—</span>
                             )}
                           </td>
-                          <td style={{ padding: '11px 12px', fontWeight: 700, color: C, textAlign: 'right' }}>{fmtMoney(l.valeur)}</td>
                         </tr>
                       );
                     })}
                   </tbody>
                   <tfoot>
                     <tr style={{ background: CL, borderTop: `2px solid ${CB}` }}>
-                      <td colSpan={7} style={{ padding: '11px 12px', fontWeight: 700, fontSize: '0.88rem', color: CD }}>
+                      <td colSpan={3} style={{ padding: '11px 14px', fontWeight: 700, fontSize: '0.88rem', color: CD }}>
                         Total ({filtered.length} ligne{filtered.length !== 1 ? 's' : ''})
                       </td>
-                      <td style={{ padding: '11px 12px', fontWeight: 800, fontSize: '1rem', color: C, textAlign: 'right' }}>
-                        {fmtMoney(totalValeur)}
+                      <td style={{ padding: '11px 14px', fontWeight: 800, fontSize: '0.95rem', color: C, textAlign: 'right' }}>{fmtMoney(totalTransferts)}</td>
+                      <td style={{ padding: '11px 14px', fontWeight: 800, fontSize: '0.95rem', color: CD, textAlign: 'right' }}>{fmtMoney(totalAchat)}</td>
+                      <td style={{ padding: '11px 14px', fontWeight: 800, fontSize: '0.95rem', color: totalEcart >= 0 ? '#16a34a' : '#dc2626', textAlign: 'right' }}>
+                        {totalEcart >= 0 ? '+' : ''}{fmtMoney(totalEcart)}
                       </td>
                     </tr>
                   </tfoot>
@@ -316,13 +342,9 @@ export default function LaboVentesPage() {
               {totalPages > 1 && (
                 <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 8, marginTop: 18 }}>
                   <button onClick={() => setPage(1)} disabled={page === 1}
-                    style={{ padding: '6px 10px', borderRadius: 7, border: `1.5px solid ${page === 1 ? CB : C}`, background: page === 1 ? '#f9f9f9' : CL, color: page === 1 ? 'var(--text-muted)' : C, cursor: page === 1 ? 'default' : 'pointer', fontWeight: 700, fontSize: '0.82rem' }}>
-                    «
-                  </button>
+                    style={{ padding: '6px 10px', borderRadius: 7, border: `1.5px solid ${page === 1 ? CB : C}`, background: page === 1 ? '#f9f9f9' : CL, color: page === 1 ? 'var(--text-muted)' : C, cursor: page === 1 ? 'default' : 'pointer', fontWeight: 700, fontSize: '0.82rem' }}>«</button>
                   <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
-                    style={{ padding: '6px 10px', borderRadius: 7, border: `1.5px solid ${page === 1 ? CB : C}`, background: page === 1 ? '#f9f9f9' : CL, color: page === 1 ? 'var(--text-muted)' : C, cursor: page === 1 ? 'default' : 'pointer', fontWeight: 700, fontSize: '0.82rem' }}>
-                    ‹
-                  </button>
+                    style={{ padding: '6px 10px', borderRadius: 7, border: `1.5px solid ${page === 1 ? CB : C}`, background: page === 1 ? '#f9f9f9' : CL, color: page === 1 ? 'var(--text-muted)' : C, cursor: page === 1 ? 'default' : 'pointer', fontWeight: 700, fontSize: '0.82rem' }}>‹</button>
                   {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
                     const start = Math.max(1, Math.min(page - 2, totalPages - 4));
                     const p = start + i;
@@ -334,13 +356,9 @@ export default function LaboVentesPage() {
                     ) : null;
                   })}
                   <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}
-                    style={{ padding: '6px 10px', borderRadius: 7, border: `1.5px solid ${page === totalPages ? CB : C}`, background: page === totalPages ? '#f9f9f9' : CL, color: page === totalPages ? 'var(--text-muted)' : C, cursor: page === totalPages ? 'default' : 'pointer', fontWeight: 700, fontSize: '0.82rem' }}>
-                    ›
-                  </button>
+                    style={{ padding: '6px 10px', borderRadius: 7, border: `1.5px solid ${page === totalPages ? CB : C}`, background: page === totalPages ? '#f9f9f9' : CL, color: page === totalPages ? 'var(--text-muted)' : C, cursor: page === totalPages ? 'default' : 'pointer', fontWeight: 700, fontSize: '0.82rem' }}>›</button>
                   <button onClick={() => setPage(totalPages)} disabled={page === totalPages}
-                    style={{ padding: '6px 10px', borderRadius: 7, border: `1.5px solid ${page === totalPages ? CB : C}`, background: page === totalPages ? '#f9f9f9' : CL, color: page === totalPages ? 'var(--text-muted)' : C, cursor: page === totalPages ? 'default' : 'pointer', fontWeight: 700, fontSize: '0.82rem' }}>
-                    »
-                  </button>
+                    style={{ padding: '6px 10px', borderRadius: 7, border: `1.5px solid ${page === totalPages ? CB : C}`, background: page === totalPages ? '#f9f9f9' : CL, color: page === totalPages ? 'var(--text-muted)' : C, cursor: page === totalPages ? 'default' : 'pointer', fontWeight: 700, fontSize: '0.82rem' }}>»</button>
                   <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginLeft: 8 }}>
                     Page {page} / {totalPages} — {filtered.length} lignes
                   </span>
