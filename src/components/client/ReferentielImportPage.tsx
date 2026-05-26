@@ -11,11 +11,12 @@ interface RowDetail {
   error?: string;
   created: string[];
   existing: string[];
+  autoAssigned?: boolean;
 }
 
 interface ImportResult {
   processed: number;
-  stats: { familles: number; categories: number; unites: number; articles: number };
+  stats: { familles: number; categories: number; unites: number; articles: number; autoAssigned: number };
   errors: number;
   details: RowDetail[];
 }
@@ -197,15 +198,16 @@ export default function ReferentielImportPage() {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 12, marginBottom: 20 }}>
             {([
               { label: 'Articles', value: result.stats.articles, icon: '🧂' },
+              { label: 'Auto-affectés', value: result.stats.autoAssigned ?? 0, icon: '🔗', isInfo: true },
               { label: 'Catégories', value: result.stats.categories, icon: '🏷️' },
               { label: 'Familles', value: result.stats.familles, icon: '🗂️' },
               { label: 'Unités', value: result.stats.unites, icon: '📏' },
               { label: 'Erreurs', value: result.errors, icon: '❌', isError: true },
-            ] as { label: string; value: number; icon: string; isError?: boolean }[]).map(s => (
-              <div key={s.label} style={{ background: s.isError && s.value > 0 ? '#fff7ed' : '#f0fdf4', borderRadius: 12, padding: '12px 16px', textAlign: 'center', border: `1px solid ${s.isError && s.value > 0 ? '#fed7aa' : '#bbf7d0'}` }}>
+            ] as { label: string; value: number; icon: string; isError?: boolean; isInfo?: boolean }[]).map(s => (
+              <div key={s.label} style={{ background: s.isError && s.value > 0 ? '#fff7ed' : s.isInfo && s.value > 0 ? '#eff6ff' : '#f0fdf4', borderRadius: 12, padding: '12px 16px', textAlign: 'center', border: `1px solid ${s.isError && s.value > 0 ? '#fed7aa' : s.isInfo && s.value > 0 ? '#bfdbfe' : '#bbf7d0'}` }}>
                 <div style={{ fontSize: '1.4rem', marginBottom: 4 }}>{s.icon}</div>
-                <div style={{ fontSize: '1.5rem', fontWeight: 900, color: s.isError && s.value > 0 ? '#c2410c' : '#15803d', lineHeight: 1 }}>{s.value}</div>
-                <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: 3 }}>créé{s.value !== 1 ? 's' : ''}</div>
+                <div style={{ fontSize: '1.5rem', fontWeight: 900, color: s.isError && s.value > 0 ? '#c2410c' : s.isInfo && s.value > 0 ? '#1d4ed8' : '#15803d', lineHeight: 1 }}>{s.value}</div>
+                <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: 3 }}>{s.isInfo ? 'article' + (s.value !== 1 ? 's' : '') : 'créé' + (s.value !== 1 ? 's' : '')}</div>
                 <div style={{ fontSize: '0.68rem', fontWeight: 700, color: '#64748b', marginTop: 1 }}>{s.label}</div>
               </div>
             ))}
@@ -221,7 +223,8 @@ export default function ReferentielImportPage() {
                     <th>Article</th>
                     <th>Créé</th>
                     <th>Existant</th>
-                    <th style={{ width: 80, textAlign: 'center' }}>Statut</th>
+                    <th style={{ width: 90, textAlign: 'center' }}>Affectation</th>
+                    <th style={{ width: 70, textAlign: 'center' }}>Statut</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -237,6 +240,11 @@ export default function ReferentielImportPage() {
                       <td>
                         {d.existing.length > 0
                           ? <span style={{ color: '#64748b' }}>{d.existing.join(', ')}</span>
+                          : <span style={{ color: 'var(--text-muted)' }}>—</span>}
+                      </td>
+                      <td style={{ textAlign: 'center' }}>
+                        {d.autoAssigned
+                          ? <span title="Article existant non affecté — assigné automatiquement" style={{ color: '#1d4ed8', fontWeight: 700, fontSize: '0.75rem', cursor: 'help' }}>🔗 auto</span>
                           : <span style={{ color: 'var(--text-muted)' }}>—</span>}
                       </td>
                       <td style={{ textAlign: 'center' }}>
