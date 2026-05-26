@@ -89,6 +89,7 @@ export default function ProductList() {
   const [addAffectationIds, setAddAffectationIds] = useState<number[]>([]);
   const [editAffectationIds, setEditAffectationIds] = useState<number[]>([]);
   const [editOriginalAffectationIds, setEditOriginalAffectationIds] = useState<number[]>([]);
+  const [vendableSubTab, setVendableSubTab] = useState<'produit' | 'supplement'>('produit');
 
   // Load activities (still needed for wizard affectation step + edit modal context)
   useEffect(() => {
@@ -177,8 +178,8 @@ export default function ProductList() {
     }
   }, [allActivities]);
 
-  const openAddModal = useCallback(() => {
-    setAddName(''); setAddRef(''); setAddIsSupplement(false);
+  const openAddModal = useCallback((isSupplement = false) => {
+    setAddName(''); setAddRef(''); setAddIsSupplement(isSupplement);
     setAddIngLines([]); setAddSubLines([]); setAddSubSearch(''); setAddIngSearch('');
     setAddSavedName(''); setAddFamilleFilter(''); setAddCatFilter(''); setAddIngVisible(20);
     setAddAffectationIds([]);
@@ -279,11 +280,14 @@ export default function ProductList() {
     ? byTab.filter((p) => p.activites?.some((a) => a.id === filterActiviteId) || p.activiteId === filterActiviteId)
     : byTab;
   const searched = byActivite.filter((p) => p.name.toLowerCase().includes(search.toLowerCase()));
-  const totalPages = Math.max(1, Math.ceil(searched.length / PAGE_SIZE));
-  const safePage = Math.min(page, totalPages);
-  const paginated = searched.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
-
   const isVendable = tab === 'vendable';
+  const bySubTab = isVendable
+    ? searched.filter((p) => vendableSubTab === 'produit' ? !p.isSupplement : !!p.isSupplement)
+    : searched;
+  const totalPages = Math.max(1, Math.ceil(bySubTab.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+  const paginated = bySubTab.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+
   const getProductResolvedActId = (p: Product): number => {
     if (!isEntreprise) return 0;
     return p.activiteId || 0;
@@ -390,6 +394,30 @@ export default function ProductList() {
         />
       ) : (
         <>
+          {/* Sub-tabs for vendable tab */}
+          {isVendable && (
+            <div style={{ display: 'flex', gap: 4, borderBottom: '2px solid #e2e8f0', marginBottom: 20 }}>
+              {([
+                ['produit', '🍽️ Produits vendables'],
+                ['supplement', '➕ Suppléments vendables'],
+              ] as const).map(([key, label]) => (
+                <button key={key} onClick={() => { setVendableSubTab(key); setPage(1); }}
+                  style={{
+                    padding: '9px 22px', background: 'none', border: 'none', cursor: 'pointer',
+                    fontSize: '0.92rem', fontWeight: vendableSubTab === key ? 700 : 400,
+                    color: vendableSubTab === key ? '#059669' : 'var(--text)',
+                    borderBottom: vendableSubTab === key ? '3px solid #059669' : '3px solid transparent',
+                    marginBottom: -2, whiteSpace: 'nowrap',
+                  }}>
+                  {label}
+                  <span style={{ marginLeft: 7, fontSize: '0.72rem', fontWeight: 700, color: '#fff', background: vendableSubTab === key ? '#059669' : '#94a3b8', borderRadius: 20, padding: '1px 8px' }}>
+                    {searched.filter(p => key === 'produit' ? !p.isSupplement : !!p.isSupplement).length}
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
+
           {/* Search bar + create button */}
           <div style={{
             background: 'var(--surface)', borderRadius: 14, padding: '16px 20px', marginBottom: 24,
@@ -423,16 +451,16 @@ export default function ProductList() {
               </div>
             )}
             {canWriteProducts && (
-              <button onClick={openAddModal}
+              <button onClick={() => openAddModal(isVendable && vendableSubTab === 'supplement')}
                 style={{ marginLeft: 'auto', padding: '9px 20px', borderRadius: 10, cursor: 'pointer', fontSize: '0.85rem', border: 'none', background: 'linear-gradient(135deg, #059669, #10b981)', color: '#fff', fontWeight: 700, boxShadow: '0 2px 8px rgba(16,185,129,0.25)', whiteSpace: 'nowrap' }}>
-                + {isVendable ? 'Produit vendable' : 'Produit utilisable'}
+                + {isVendable ? (vendableSubTab === 'supplement' ? 'Supplément vendable' : 'Produit vendable') : 'Produit utilisable'}
               </button>
             )}
           </div>
 
           {loading ? (
             <div className="loading-text">{t('common.loading')}</div>
-          ) : searched.length === 0 ? (
+          ) : bySubTab.length === 0 ? (
             byTab.length === 0 ? (
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '60px 24px', textAlign: 'center' }}>
                 <div style={{ width: 72, height: 72, borderRadius: 20, background: 'linear-gradient(135deg, #0a1628 0%, #0f2847 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem', marginBottom: 20, boxShadow: '0 8px 24px rgba(10,22,40,0.22)' }}>
@@ -459,10 +487,6 @@ export default function ProductList() {
           ) : (
             <>
               {(() => {
-                const supplements = isVendable ? paginated.filter((p) => p.isSupplement) : [];
-                const regulars = isVendable ? paginated.filter((p) => !p.isSupplement) : paginated;
-                const hasGroups = isVendable && supplements.length > 0 && regulars.length > 0;
-
                 const renderProductCard = (p: Product) => {
                   const isSup = !!p.isSupplement;
                   const accentColor = isSup ? '#d97706' : '#059669';
@@ -577,38 +601,16 @@ export default function ProductList() {
                   );
                 };
 
-                const renderGroup = (label: string, icon: string, items: Product[], accent: string) => (
-                  <div style={{ marginBottom: 24 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
-                      <div style={{ width: 6, height: 28, borderRadius: 3, background: accent, flexShrink: 0 }} />
-                      <span style={{ fontSize: '0.7rem', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', color: accent }}>{icon} {label}</span>
-                      <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#fff', background: accent, borderRadius: 20, padding: '1px 9px' }}>{items.length}</span>
-                    </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 14 }}>
-                      {items.map((p) => renderProductCard(p))}
-                    </div>
-                  </div>
-                );
-
                 return (
-                  <div>
-                    {hasGroups ? (
-                      <>
-                        {regulars.length > 0 && renderGroup('Produits', '🍽️', regulars, '#059669')}
-                        {supplements.length > 0 && renderGroup('Suppléments', '➕', supplements, '#d97706')}
-                      </>
-                    ) : (
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 14 }}>
-                        {paginated.map((p) => renderProductCard(p))}
-                      </div>
-                    )}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 14 }}>
+                    {paginated.map((p) => renderProductCard(p))}
                   </div>
                 );
               })()}
               {totalPages > 1 && (
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 20, flexWrap: 'wrap', gap: 8 }}>
                   <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)', fontWeight: 500 }}>
-                    {(safePage - 1) * PAGE_SIZE + 1}–{Math.min(safePage * PAGE_SIZE, searched.length)} sur {searched.length}
+                    {(safePage - 1) * PAGE_SIZE + 1}–{Math.min(safePage * PAGE_SIZE, bySubTab.length)} sur {bySubTab.length}
                   </span>
                   <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
                     <button className="btn btn-ghost btn-sm" disabled={safePage <= 1} onClick={() => setPage(safePage - 1)} style={{ padding: '4px 12px', fontWeight: 700 }}>‹</button>
@@ -1082,7 +1084,7 @@ export default function ProductList() {
                         )}
                         {(() => {
                           const editTotalValid = editIngLines.filter(l => l.ingredientId && parseFloat(l.portion) > 0).length + editSubLines.filter(l => l.ingredientId && parseFloat(l.portion) > 0).length;
-                          const canNext = editTotalValid > 0;
+                          const canNext = editIsSupplement ? editTotalValid === 1 : editTotalValid >= 2;
                           return (
                             <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 8 }}>
                               <button className="btn btn-ghost" onClick={() => setEditModal(2)}>← Retour</button>
@@ -1236,6 +1238,7 @@ export default function ProductList() {
               const sid = String(ing.id);
               if (addIsSupplement) {
                 setAddIngLines([{ ingredientId: sid, portion: '' }]);
+                setAddSubLines([]);
               } else if (selectedIngIds.has(sid)) {
                 setAddIngLines((prev) => prev.filter((l) => l.ingredientId !== sid));
               } else {
@@ -1250,8 +1253,18 @@ export default function ProductList() {
             const addSubIds = new Set(addSubLines.map((l) => l.ingredientId).filter(Boolean));
             const toggleSub = (id: number) => {
               const sid = String(id);
-              if (addSubIds.has(sid)) setAddSubLines((prev) => prev.filter((l) => l.ingredientId !== sid));
-              else setAddSubLines((prev) => [...prev, { ingredientId: sid, portion: '' }]);
+              if (addIsSupplement) {
+                if (addSubIds.has(sid)) {
+                  setAddSubLines([]);
+                } else {
+                  setAddSubLines([{ ingredientId: sid, portion: '' }]);
+                  setAddIngLines([]);
+                }
+              } else if (addSubIds.has(sid)) {
+                setAddSubLines((prev) => prev.filter((l) => l.ingredientId !== sid));
+              } else {
+                setAddSubLines((prev) => [...prev, { ingredientId: sid, portion: '' }]);
+              }
             };
             const updateSubPortion = (id: string, val: string) =>
               setAddSubLines((prev) => prev.map((l) => l.ingredientId === id ? { ...l, portion: val } : l));
@@ -1314,7 +1327,7 @@ export default function ProductList() {
                   <div style={{ background: 'linear-gradient(135deg, #0a1628 0%, #0f2847 100%)', padding: '18px 22px 14px', borderRadius: '12px 12px 0 0', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
                     <div style={{ flex: 1 }}>
                       <div style={{ color: '#fff', fontWeight: 800, fontSize: '1rem', marginBottom: addModal !== 6 ? 12 : 0 }}>
-                        {addModal === 6 ? '✅ Produit créé' : `Nouveau ${isVendable ? 'produit vendable' : 'produit utilisable'}`}
+                        {addModal === 6 ? '✅ Produit créé' : isVendable ? (addIsSupplement ? 'Nouveau supplément vendable' : 'Nouveau produit vendable') : 'Nouveau produit utilisable'}
                       </div>
                       {addModal !== 6 && (
                         <div style={{ display: 'flex', gap: 10, width: '100%' }}>
@@ -1355,17 +1368,9 @@ export default function ProductList() {
                             onChange={(e) => setAddRef(e.target.value)}
                             style={{ width: '100%', maxWidth: 280, borderColor: '#6ee7b7' }} />
                         </div>
-                        {isVendable && (
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: addIsSupplement ? '#fffbeb' : '#f9fafb', borderRadius: 10, padding: '12px 16px', border: `1.5px solid ${addIsSupplement ? '#fcd34d' : 'var(--border)'}` }}>
-                            <div>
-                              <div style={{ fontWeight: 700, fontSize: '0.88rem', color: addIsSupplement ? '#92400e' : 'var(--text)' }}>Supplément</div>
-                              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: 2 }}>Un supplément ne contient qu'un seul ingrédient</div>
-                            </div>
-                            <button type="button"
-                              onClick={() => setAddIsSupplement((v) => !v)}
-                              style={{ width: 44, height: 24, borderRadius: 12, border: 'none', cursor: 'pointer', background: addIsSupplement ? '#d97706' : '#d1d5db', transition: 'background 0.2s', position: 'relative', flexShrink: 0 }}>
-                              <span style={{ position: 'absolute', top: 3, left: addIsSupplement ? 23 : 3, width: 18, height: 18, borderRadius: '50%', background: '#fff', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
-                            </button>
+                        {isVendable && addIsSupplement && (
+                          <div style={{ background: '#fffbeb', borderRadius: 10, padding: '10px 16px', border: '1.5px solid #fcd34d', fontSize: '0.82rem', color: '#92400e', fontWeight: 600 }}>
+                            ➕ Ce produit sera créé comme supplément vendable
                           </div>
                         )}
                         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, paddingTop: 8 }}>
@@ -1497,7 +1502,9 @@ export default function ProductList() {
                       return (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                           <div style={{ fontSize: '0.82rem', color: '#64748b' }}>
-                            Ajoutez des produits utilisables comme sous-composants de ce produit. Au moins 1 article ou produit utilisable requis.
+                            {addIsSupplement
+                              ? 'Mode supplément — sélectionnez exactement 1 produit utilisable (OU utilisez l\'étape Articles).'
+                              : 'Ajoutez des produits utilisables comme sous-composants. Au minimum 2 articles/produits utilisables requis au total.'}
                           </div>
                           {utilisableForWizard.length === 0 ? (
                             <div style={{ padding: 16, borderRadius: 8, background: '#faf5ff', border: '1px solid #ede9fe', fontSize: '0.85rem', color: '#5b21b6', textAlign: 'center' }}>
@@ -1545,13 +1552,13 @@ export default function ProductList() {
                           )}
                           {(() => {
                             const addTotalValid = addIngLines.filter(l => l.ingredientId && parseFloat(l.portion) > 0).length + addSubLines.filter(l => l.ingredientId && parseFloat(l.portion) > 0).length;
-                            const canNext = addTotalValid > 0;
+                            const canNext = addIsSupplement ? addTotalValid === 1 : addTotalValid >= 2;
                             return (
                               <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 8 }}>
                                 <button className="btn btn-ghost" onClick={() => setAddModal(2)}>← Retour</button>
                                 <button disabled={!canNext} onClick={() => setAddModal(4)}
                                   style={{ background: canNext ? 'linear-gradient(135deg, #047857, #059669)' : '#e5e7eb', border: 'none', borderRadius: 10, color: canNext ? '#fff' : '#9ca3af', fontWeight: 700, padding: '9px 22px', cursor: canNext ? 'pointer' : 'not-allowed' }}
-                                  title={!canNext ? 'Ajoutez au moins 1 article ou produit utilisable' : undefined}>
+                                  title={!canNext ? (addIsSupplement ? 'Sélectionnez exactement 1 article ou produit utilisable' : 'Au minimum 2 articles/produits utilisables requis') : undefined}>
                                   Suivant →
                                 </button>
                               </div>
@@ -1722,7 +1729,7 @@ export default function ProductList() {
                         </div>
                         <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
                           <button className="btn btn-ghost" onClick={() => setAddModal(null)}>Fermer</button>
-                          <button onClick={openAddModal}
+                          <button onClick={() => openAddModal(addIsSupplement)}
                             style={{ background: 'linear-gradient(135deg, #047857, #059669)', border: 'none', borderRadius: 10, color: '#fff', fontWeight: 700, padding: '9px 22px', cursor: 'pointer' }}>
                             + Ajouter un autre
                           </button>
