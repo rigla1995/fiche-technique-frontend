@@ -96,11 +96,11 @@ interface CVCtxType {
   histEntries: HistConfigEntry[];
   histLoading: boolean;
   histFilterNom: string;
-  histFilterType: 'all' | 'produit' | 'supplement';
+  histFilterType: 'all' | 'produit' | 'supplement' | 'valorise';
   histFilterDu: string;
   histFilterAu: string;
   setHistFilterNom: React.Dispatch<React.SetStateAction<string>>;
-  setHistFilterType: React.Dispatch<React.SetStateAction<'all' | 'produit' | 'supplement'>>;
+  setHistFilterType: React.Dispatch<React.SetStateAction<'all' | 'produit' | 'supplement' | 'valorise'>>;
   setHistFilterDu: React.Dispatch<React.SetStateAction<string>>;
   setHistFilterAu: React.Dispatch<React.SetStateAction<string>>;
   loadHistorique: () => void;
@@ -386,11 +386,12 @@ function HistoriqueTab() {
             onChange={e => setHistFilterNom(e.target.value)}
             style={{ width: '100%', paddingLeft: 28, paddingRight: 8, paddingTop: 7, paddingBottom: 7, borderRadius: 8, border: `1.5px solid ${histFilterNom ? C : CB}`, background: histFilterNom ? CL : '#fff', fontSize: '0.83rem', color: CD, outline: 'none', boxSizing: 'border-box' }} />
         </div>
-        <select value={histFilterType} onChange={e => setHistFilterType(e.target.value as 'all' | 'produit' | 'supplement')}
-          style={{ flex: '0 0 160px', padding: '7px 10px', borderRadius: 8, border: `1.5px solid ${histFilterType !== 'all' ? C : CB}`, background: histFilterType !== 'all' ? CL : '#fff', fontSize: '0.83rem', color: CD, outline: 'none', cursor: 'pointer' }}>
+        <select value={histFilterType} onChange={e => setHistFilterType(e.target.value as 'all' | 'produit' | 'supplement' | 'valorise')}
+          style={{ flex: '0 0 180px', padding: '7px 10px', borderRadius: 8, border: `1.5px solid ${histFilterType !== 'all' ? C : CB}`, background: histFilterType !== 'all' ? CL : '#fff', fontSize: '0.83rem', color: CD, outline: 'none', cursor: 'pointer' }}>
           <option value="all">Tous types</option>
           <option value="produit">Produits</option>
           <option value="supplement">Suppléments</option>
+          <option value="valorise">Produits Valorisés</option>
         </select>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: '0 0 auto' }}>
           <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>Du</span>
@@ -460,11 +461,11 @@ function HistoriqueTab() {
                         <td style={{ padding: '10px 16px', textAlign: 'center' }}>
                           <span style={{
                             display: 'inline-block', padding: '2px 10px', borderRadius: 20, fontSize: '0.7rem', fontWeight: 700,
-                            background: isSel ? 'rgba(255,255,255,0.25)' : (e.is_supplement ? '#fef3c7' : CL),
-                            color: isSel ? '#fff' : (e.is_supplement ? '#92400e' : CD),
-                            border: `1px solid ${isSel ? 'rgba(255,255,255,0.4)' : (e.is_supplement ? '#fcd34d' : CB)}`,
+                            background: isSel ? 'rgba(255,255,255,0.25)' : (e.article_type === 'ingredient' ? '#f0fdf4' : (e.is_supplement ? '#fef3c7' : CL)),
+                            color: isSel ? '#fff' : (e.article_type === 'ingredient' ? '#166534' : (e.is_supplement ? '#92400e' : CD)),
+                            border: `1px solid ${isSel ? 'rgba(255,255,255,0.4)' : (e.article_type === 'ingredient' ? '#86efac' : (e.is_supplement ? '#fcd34d' : CB))}`,
                           }}>
-                            {e.is_supplement ? '🧂 Supplément' : '🛍️ Produit'}
+                            {e.article_type === 'ingredient' ? '💎 Produit Valorisé' : (e.is_supplement ? '🧂 Supplément' : '🛍️ Produit')}
                           </span>
                         </td>
                         <td style={{ padding: '10px 16px', textAlign: 'center', fontWeight: 700, fontSize: '0.9rem', color: isSel ? '#fff' : C }}>
@@ -526,7 +527,7 @@ export default function ConfigurationVentePage() {
   const [histEntries, setHistEntries] = useState<HistConfigEntry[]>([]);
   const [histLoading, setHistLoading] = useState(false);
   const [histFilterNom, setHistFilterNom] = useState('');
-  const [histFilterType, setHistFilterType] = useState<'all' | 'produit' | 'supplement'>('all');
+  const [histFilterType, setHistFilterType] = useState<'all' | 'produit' | 'supplement' | 'valorise'>('all');
   const [histFilterDu, setHistFilterDu] = useState('');
   const [histFilterAu, setHistFilterAu] = useState('');
   const [exportingHistXls, setExportingHistXls] = useState(false);
@@ -666,8 +667,9 @@ export default function ConfigurationVentePage() {
 
   const filteredHist = histEntries.filter(e => {
     if (histFilterNom && !(e.produit_nom ?? '').toLowerCase().includes(histFilterNom.toLowerCase())) return false;
-    if (histFilterType === 'produit' && e.is_supplement) return false;
+    if (histFilterType === 'produit' && (e.is_supplement || e.article_type === 'ingredient')) return false;
     if (histFilterType === 'supplement' && !e.is_supplement) return false;
+    if (histFilterType === 'valorise' && e.article_type !== 'ingredient') return false;
     if (histFilterDu && new Date(e.saved_at) < new Date(histFilterDu)) return false;
     if (histFilterAu && new Date(e.saved_at) > new Date(histFilterAu + 'T23:59:59')) return false;
     return true;
