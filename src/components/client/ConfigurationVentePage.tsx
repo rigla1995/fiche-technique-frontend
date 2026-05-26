@@ -359,6 +359,10 @@ function HistoriqueTab() {
   } = useContext(CVCtx);
   const [page, setPage] = useState(1);
 
+  const histTotalPages = Math.max(1, Math.ceil(filteredHist.length / PAGE_SIZE));
+  const histSafePage = Math.min(page, histTotalPages);
+  const histPaginated = filteredHist.slice((histSafePage - 1) * PAGE_SIZE, histSafePage * PAGE_SIZE);
+
   return (
     <div style={{ background: '#fff', borderRadius: 14, border: `1.5px solid ${CB}`, overflow: 'hidden', boxShadow: '0 2px 12px rgba(180,83,9,0.08)' }}>
       <div style={{ background: `linear-gradient(135deg, ${CD}18 0%, ${C}12 100%)`, borderBottom: `1.5px solid ${CB}`, padding: '14px 22px', display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -419,11 +423,7 @@ function HistoriqueTab() {
           <div style={{ fontSize: '2rem', marginBottom: 10 }}>📋</div>
           {histEntries.length === 0 ? 'Aucun historique enregistré' : 'Aucun résultat pour ces filtres'}
         </div>
-      ) : (() => {
-        const totalPages = Math.max(1, Math.ceil(filteredHist.length / PAGE_SIZE));
-        const safePage = Math.min(page, totalPages);
-        const paginated = filteredHist.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
-        return (
+      ) : (
           <>
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
@@ -446,7 +446,7 @@ function HistoriqueTab() {
                   </tr>
                 </thead>
                 <tbody>
-                  {paginated.map((e, idx) => {
+                  {histPaginated.map((e, idx) => {
                     const isSel = selectedHistIds.has(e.id);
                     const rowBg = isSel ? '#FF6B00' : (idx % 2 === 0 ? '#fff' : '#fffdf7');
                     return (
@@ -486,23 +486,22 @@ function HistoriqueTab() {
                 </tbody>
               </table>
             </div>
-            {totalPages > 1 && (
+            {histTotalPages > 1 && (
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 16px', borderTop: `1px solid ${CB}`, flexWrap: 'wrap', gap: 8 }}>
                 <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                  {(safePage - 1) * PAGE_SIZE + 1}–{Math.min(safePage * PAGE_SIZE, filteredHist.length)} sur {filteredHist.length}
+                  {(histSafePage - 1) * PAGE_SIZE + 1}–{Math.min(histSafePage * PAGE_SIZE, filteredHist.length)} sur {filteredHist.length}
                 </span>
                 <div style={{ display: 'flex', gap: 4 }}>
-                  <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={safePage <= 1} style={{ padding: '4px 10px', borderRadius: 7, border: `1px solid ${CB}`, background: '#fff', color: C, cursor: safePage <= 1 ? 'default' : 'pointer', fontWeight: 700, opacity: safePage <= 1 ? 0.4 : 1 }}>‹</button>
-                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
-                    <button key={p} onClick={() => setPage(p)} style={{ padding: '4px 9px', borderRadius: 7, border: `1.5px solid ${p === safePage ? C : CB}`, background: p === safePage ? C : '#fff', color: p === safePage ? '#fff' : CD, fontWeight: p === safePage ? 800 : 500, cursor: 'pointer', minWidth: 30 }}>{p}</button>
+                  <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={histSafePage <= 1} style={{ padding: '4px 10px', borderRadius: 7, border: `1px solid ${CB}`, background: '#fff', color: C, cursor: histSafePage <= 1 ? 'default' : 'pointer', fontWeight: 700, opacity: histSafePage <= 1 ? 0.4 : 1 }}>‹</button>
+                  {Array.from({ length: histTotalPages }, (_, i) => i + 1).map(p => (
+                    <button key={p} onClick={() => setPage(p)} style={{ padding: '4px 9px', borderRadius: 7, border: `1.5px solid ${p === histSafePage ? C : CB}`, background: p === histSafePage ? C : '#fff', color: p === histSafePage ? '#fff' : CD, fontWeight: p === histSafePage ? 800 : 500, cursor: 'pointer', minWidth: 30 }}>{p}</button>
                   ))}
-                  <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={safePage >= totalPages} style={{ padding: '4px 10px', borderRadius: 7, border: `1px solid ${CB}`, background: '#fff', color: C, cursor: safePage >= totalPages ? 'default' : 'pointer', fontWeight: 700, opacity: safePage >= totalPages ? 0.4 : 1 }}>›</button>
+                  <button onClick={() => setPage(p => Math.min(histTotalPages, p + 1))} disabled={histSafePage >= histTotalPages} style={{ padding: '4px 10px', borderRadius: 7, border: `1px solid ${CB}`, background: '#fff', color: C, cursor: histSafePage >= histTotalPages ? 'default' : 'pointer', fontWeight: 700, opacity: histSafePage >= histTotalPages ? 0.4 : 1 }}>›</button>
                 </div>
               </div>
             )}
           </>
-        );
-      })()}
+        )}
     </div>
   );
 }
