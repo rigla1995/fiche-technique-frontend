@@ -115,6 +115,17 @@ interface VPCtxType {
 
 const VPCtx = createContext<VPCtxType>(null!);
 
+// ── Historique helpers ────────────────────────────────────────────────────────
+
+interface ExpandedRow { vente: Vente; ligne: VenteLigne | null; ligneIdx: number; lignesCount: number; }
+
+function getLigneBadge(l: VenteLigne | null): { label: string; bg: string; color: string; border: string } | null {
+  if (!l) return null;
+  if (l.article_type === 'ingredient') return { label: '💎 Valorisé', bg: '#f0fdf4', color: '#166534', border: '#86efac' };
+  if (l.is_supplement) return { label: '🧂 Supplément', bg: '#fef3c7', color: '#92400e', border: '#fcd34d' };
+  return { label: '🛍️ Produit', bg: CL, color: CD, border: CB };
+}
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function calcPrixPrestataire(
@@ -488,6 +499,11 @@ export default function VentesPage() {
   const selectedActivite = activites.find(a => a.id === selectedActiviteId);
 
   const histSlice = filteredVentes.slice(histPage * PAGE, histPage * PAGE + PAGE);
+  const histExpandedRows: ExpandedRow[] = histSlice.flatMap((v): ExpandedRow[] => {
+    const lignes = v.lignes || [];
+    if (lignes.length === 0) return [{ vente: v, ligne: null, ligneIdx: 0, lignesCount: 1 }];
+    return lignes.map((l, idx) => ({ vente: v, ligne: l, ligneIdx: idx, lignesCount: lignes.length }));
+  });
 
   const ctxValue: VPCtxType = {
     activePrests, prixPrestataires, allArticles,
@@ -657,56 +673,61 @@ export default function VentesPage() {
                         </tr>
                       </thead>
                       <tbody>
-                        {histSlice.map((v, idx) => {
+                        {histExpandedRows.map(({ vente: v, ligne, ligneIdx, lignesCount }, rowIdx) => {
                           const isSel = selectedVenteIds.has(v.id);
-                          const rowBg = isSel ? '#FF6B00' : (idx % 2 === 0 ? '#fff' : '#fffdf7');
-                          const lignes: VenteLigne[] = v.lignes || [];
-                          const articleNames = lignes.map(l => l.article_nom).filter(Boolean);
-                          const displayNames = articleNames.length > 2
-                            ? `${articleNames.slice(0, 2).join(', ')} +${articleNames.length - 2}`
-                            : (articleNames.join(', ') || '—');
-                          const totalQte = v.total_quantite;
-                          const typeBadges = [
-                            lignes.some(l => !l.is_supplement && l.article_type === 'produit') && { label: '🛍️ Produit', bg: CL, color: CD, border: CB },
-                            lignes.some(l => l.is_supplement) && { label: '🧂 Supplément', bg: '#fef3c7', color: '#92400e', border: '#fcd34d' },
-                            lignes.some(l => l.article_type === 'ingredient') && { label: '💎 Valorisé', bg: '#f0fdf4', color: '#166534', border: '#86efac' },
-                          ].filter(Boolean) as { label: string; bg: string; color: string; border: string }[];
+                          const isFirst = ligneIdx === 0;
+                          const rowBg = isSel ? '#FF6B00' : (rowIdx % 2 === 0 ? '#fff' : '#fffdf7');
+                          const topBorder = isFirst && rowIdx > 0 ? `2px solid ${CB}` : undefined;
+                          const badge = getLigneBadge(ligne);
+                          const ligneQte = ligne ? parseFloat(String(ligne.quantite)) || 0 : 0;
+                          const ligneCa = ligne ? ligneQte * (ligne.prix_unitaire || 0) : v.total_ca;
                           return (
-                            <tr key={v.id} style={{ borderBottom: `1px solid ${CB}`, background: rowBg, cursor: 'pointer' }}
+                            <tr key={`${v.id}-${ligneIdx}`}
+                              style={{ borderBottom: `1px solid ${CB}`, borderTop: topBorder, background: rowBg, cursor: 'pointer' }}
                               onClick={() => toggleSelectVente(v.id)} role="button" tabIndex={0}
                               onKeyDown={e => e.key === ' ' && toggleSelectVente(v.id)}>
-                              <td style={{ padding: '8px 12px', textAlign: 'center' }} onClick={e => e.stopPropagation()}>
-                                <input type="checkbox" checked={isSel} onChange={() => toggleSelectVente(v.id)}
-                                  style={{ accentColor: '#FF6B00', width: 15, height: 15, cursor: 'pointer' }} />
-                              </td>
+                              {isFirst && (
+                                <td rowSpan={lignesCount} style={{ padding: '8px 12px', textAlign: 'center', verticalAlign: 'middle' }} onClick={e => e.stopPropagation()}>
+                                  <input type="checkbox" checked={isSel} onChange={() => toggleSelectVente(v.id)}
+                                    style={{ accentColor: '#FF6B00', width: 15, height: 15, cursor: 'pointer' }} />
+                                </td>
+                              )}
                               <td style={{ padding: '10px 16px' }}>
-                                <div style={{ fontWeight: 700, fontSize: '0.88rem', color: isSel ? '#fff' : CD }}>{displayNames}</div>
-                                <div style={{ fontSize: '0.7rem', color: isSel ? 'rgba(255,255,255,0.8)' : 'var(--text-muted)', marginTop: 2 }}>{fmtDate(v.date_vente)}</div>
+                                <div style={{ fontWeight: 700, fontSize: '0.88rem', color: isSel ? '#fff' : CD }}>
+                                  {ligne ? ligne.article_nom : '—'}
+                                </div>
+                                {isFirst && (
+                                  <div style={{ fontSize: '0.7rem', color: isSel ? 'rgba(255,255,255,0.8)' : 'var(--text-muted)', marginTop: 2 }}>
+                                    {fmtDate(v.date_vente)}
+                                  </div>
+                                )}
                               </td>
                               <td style={{ padding: '10px 16px', textAlign: 'center' }}>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: 3, alignItems: 'center' }}>
-                                  {typeBadges.map(b => (
-                                    <span key={b.label} style={{ display: 'inline-block', padding: '2px 9px', borderRadius: 10, fontSize: '0.65rem', fontWeight: 700, background: isSel ? 'rgba(255,255,255,0.2)' : b.bg, color: isSel ? '#fff' : b.color, border: `1px solid ${isSel ? 'rgba(255,255,255,0.4)' : b.border}` }}>
-                                      {b.label}
-                                    </span>
-                                  ))}
-                                </div>
+                                {badge && (
+                                  <span style={{ display: 'inline-block', padding: '2px 9px', borderRadius: 10, fontSize: '0.68rem', fontWeight: 700, background: isSel ? 'rgba(255,255,255,0.2)' : badge.bg, color: isSel ? '#fff' : badge.color, border: `1px solid ${isSel ? 'rgba(255,255,255,0.4)' : badge.border}` }}>
+                                    {badge.label}
+                                  </span>
+                                )}
                               </td>
-                              <td style={{ padding: '10px 16px', textAlign: 'center', fontSize: '0.88rem', color: isSel ? '#fff' : undefined }}>
-                                {v.type_vente === 'directe' ? '🏪 Directe' : `🛵 ${v.prestataire_nom || 'Prestataire'}`}
-                              </td>
+                              {isFirst && (
+                                <td rowSpan={lignesCount} style={{ padding: '10px 16px', textAlign: 'center', fontSize: '0.88rem', color: isSel ? '#fff' : undefined, verticalAlign: 'middle' }}>
+                                  {v.type_vente === 'directe' ? '🏪 Directe' : `🛵 ${v.prestataire_nom || 'Prestataire'}`}
+                                </td>
+                              )}
                               <td style={{ padding: '10px 16px', textAlign: 'center', fontWeight: 600, color: isSel ? '#fff' : CD }}>
-                                {totalQte > 0 ? (totalQte % 1 === 0 ? totalQte.toFixed(0) : totalQte.toFixed(3)) : '—'}
+                                {ligneQte > 0 ? (ligneQte % 1 === 0 ? ligneQte.toFixed(0) : ligneQte.toFixed(3)) : '—'}
                               </td>
                               <td style={{ padding: '10px 16px', textAlign: 'right', fontWeight: 700, color: isSel ? '#fff' : C }}>
-                                {fmtMoney(v.total_ca)}
+                                {fmtMoney(ligneCa)}
                               </td>
-                              <td style={{ padding: '8px 16px', textAlign: 'center' }} onClick={e => e.stopPropagation()}>
-                                <button onClick={() => handleAnnuler(v.id)}
-                                  style={{ border: `1.5px solid ${isSel ? '#fff' : '#dc2626'}`, color: isSel ? '#fff' : '#dc2626', background: 'none', borderRadius: 7, padding: '4px 10px', cursor: 'pointer', fontSize: '0.78rem', fontWeight: 600 }}>
-                                  Annuler
-                                </button>
-                              </td>
+                              {isFirst && (
+                                <td rowSpan={lignesCount} style={{ padding: '8px 16px', textAlign: 'center', verticalAlign: 'middle' }} onClick={e => e.stopPropagation()}>
+                                  <button onClick={() => handleAnnuler(v.id)}
+                                    style={{ border: `1.5px solid ${isSel ? '#fff' : '#dc2626'}`, color: isSel ? '#fff' : '#dc2626', background: 'none', borderRadius: 7, padding: '4px 10px', cursor: 'pointer', fontSize: '0.78rem', fontWeight: 600 }}>
+                                    Annuler
+                                  </button>
+                                </td>
+                              )}
                             </tr>
                           );
                         })}
