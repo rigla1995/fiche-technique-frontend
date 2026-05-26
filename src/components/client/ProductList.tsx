@@ -15,7 +15,14 @@ interface ProductDetail {
 type PopupType = 'ingredients' | 'subProducts' | null;
 type TabType = 'vendable' | 'utilisable' | 'fiche-technique';
 
-const PAGE_SIZE = 10;
+const PAGE_SIZE = 9;
+
+const ExcelIcon = () => (
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}>
+    <rect width="24" height="24" rx="3" fill="#1D6F42"/>
+    <path d="M7 7l3.5 5L7 17h2.5l2.5-3.5L14.5 17H17l-3.5-5L17 7h-2.5L12 10.5 9.5 7H7z" fill="white"/>
+  </svg>
+);
 
 export default function ProductList() {
   const { t } = useTranslation();
@@ -45,6 +52,7 @@ export default function ProductList() {
   const [loadingDetail, setLoadingDetail] = useState(false);
 
   const [allActivities, setAllActivities] = useState<Activite[]>([]);
+  const [exportingXls, setExportingXls] = useState(false);
 
   // Add product modal state
   type AddStep = 1 | 2 | 3 | 4 | 5 | 6;
@@ -299,6 +307,24 @@ export default function ProductList() {
     return act ? { contextLabel: `Activité : ${act.nom}`, activityName: act.nom } : { contextLabel: '', activityName: '' };
   };
 
+  const handleExportXls = async () => {
+    setExportingXls(true);
+    try {
+      const params = new URLSearchParams({ type: tab });
+      if (filterActiviteId) params.set('activiteId', String(filterActiviteId));
+      if (search) params.set('search', search);
+      if (tab === 'vendable') params.set('isSupplement', vendableSubTab === 'supplement' ? 'true' : 'false');
+      const resp = await api.get(`/api/produits/export-list?${params}`, { responseType: 'blob' });
+      const url = URL.createObjectURL(resp.data as Blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `export-produits-${tab}${tab === 'vendable' ? '-' + vendableSubTab : ''}.xlsx`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch { /* silent */ }
+    finally { setExportingXls(false); }
+  };
+
   // Reusable action buttons for a product row
   const disabledStyle = !canWriteProducts ? { opacity: 0.4, cursor: 'not-allowed', pointerEvents: 'none' as const } : {};
 
@@ -424,11 +450,6 @@ export default function ProductList() {
             border: '1px solid var(--border)', boxShadow: '0 2px 12px rgba(0,0,0,0.05)',
             display: 'flex', flexWrap: 'wrap', gap: 14, alignItems: 'flex-end',
           }}>
-            {(search || filterActiviteId) && (
-              <div style={{ width: '100%', display: 'flex', justifyContent: 'flex-end', marginBottom: 4 }}>
-                <button className="btn btn-ghost btn-sm" style={{ fontSize: '0.78rem' }} onClick={() => { setSearch(''); setFilterActiviteId(null); setPage(1); }}>✕ Réinitialiser</button>
-              </div>
-            )}
             {byTab.length > 0 && allActivities.length > 0 && (
               <div>
                 <label style={{ fontSize: '0.68rem', fontWeight: 800, color: '#059669', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>📍 Activité</label>
@@ -450,12 +471,28 @@ export default function ProductList() {
                   style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid #6ee7b7', fontSize: '0.88rem', background: '#f0fdf4', minWidth: 160 }} />
               </div>
             )}
-            {canWriteProducts && (
-              <button onClick={() => openAddModal(isVendable && vendableSubTab === 'supplement')}
-                style={{ marginLeft: 'auto', padding: '9px 20px', borderRadius: 10, cursor: 'pointer', fontSize: '0.85rem', border: 'none', background: 'linear-gradient(135deg, #059669, #10b981)', color: '#fff', fontWeight: 700, boxShadow: '0 2px 8px rgba(16,185,129,0.25)', whiteSpace: 'nowrap' }}>
-                + {isVendable ? (vendableSubTab === 'supplement' ? 'Supplément vendable' : 'Produit vendable') : 'Produit utilisable'}
+            <div style={{ display: 'flex', alignItems: 'flex-end', marginTop: 'auto' }}>
+              <button
+                className="btn btn-ghost btn-sm"
+                onClick={() => { setSearch(''); setFilterActiviteId(null); setPage(1); }}
+                disabled={!search && !filterActiviteId}
+                style={{ fontSize: '0.78rem', opacity: (!search && !filterActiviteId) ? 0.35 : 1, transition: 'opacity 0.15s' }}
+              >
+                ✕ Réinitialiser
               </button>
-            )}
+            </div>
+            <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, alignItems: 'flex-end' }}>
+              <button onClick={handleExportXls} disabled={exportingXls || bySubTab.length === 0}
+                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 14px', borderRadius: 10, border: '1.5px solid #1D6F42', background: (exportingXls || bySubTab.length === 0) ? '#f3f4f6' : '#f0fdf4', color: '#1D6F42', cursor: (exportingXls || bySubTab.length === 0) ? 'default' : 'pointer', fontWeight: 700, fontSize: '0.82rem', whiteSpace: 'nowrap', opacity: bySubTab.length === 0 ? 0.5 : 1 }}>
+                <ExcelIcon /> {exportingXls ? 'Export…' : 'Exporter XLS'}
+              </button>
+              {canWriteProducts && (
+                <button onClick={() => openAddModal(isVendable && vendableSubTab === 'supplement')}
+                  style={{ padding: '9px 20px', borderRadius: 10, cursor: 'pointer', fontSize: '0.85rem', border: 'none', background: 'linear-gradient(135deg, #059669, #10b981)', color: '#fff', fontWeight: 700, boxShadow: '0 2px 8px rgba(16,185,129,0.25)', whiteSpace: 'nowrap' }}>
+                  + {isVendable ? (vendableSubTab === 'supplement' ? 'Supplément vendable' : 'Produit vendable') : 'Produit utilisable'}
+                </button>
+              )}
+            </div>
           </div>
 
           {loading ? (
