@@ -75,6 +75,7 @@ interface ArticlePrixPrestataire {
 interface VenteLigne {
   article_nom: string;
   quantite: number;
+  prix_unitaire: number;
   article_type: 'produit' | 'ingredient';
   is_supplement: boolean;
 }
@@ -339,6 +340,7 @@ export default function VentesPage() {
   const [histDateTo, setHistDateTo] = useState('');
   const [histType, setHistType] = useState<'all' | 'directe' | 'prestataire'>('all');
   const [histPrestaId, setHistPrestaId] = useState('');
+  const [histPage, setHistPage] = useState(0);
   const [exportingXls, setExportingXls] = useState(false);
   const [selectedVenteIds, setSelectedVenteIds] = useState<Set<string>>(new Set());
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -387,6 +389,7 @@ export default function VentesPage() {
       setProdPage(0);
       setSuppPage(0);
       setValPage(0);
+      setHistPage(0);
     }).catch(() => {}).finally(() => setLoading(false));
   }, [selectedActiviteId]);
 
@@ -633,7 +636,7 @@ export default function VentesPage() {
                     </select>
                   )}
                   {(histDateFrom || histDateTo || histType !== 'all' || histPrestaId) && (
-                    <button onClick={() => { setHistDateFrom(''); setHistDateTo(''); setHistType('all'); setHistPrestaId(''); }}
+                    <button onClick={() => { setHistDateFrom(''); setHistDateTo(''); setHistType('all'); setHistPrestaId(''); setHistPage(0); }}
                       style={{ padding: '6px 12px', borderRadius: 8, border: `1px solid ${CB}`, background: '#fff', color: C, fontSize: '0.78rem', cursor: 'pointer', fontWeight: 600, whiteSpace: 'nowrap' }}>
                       ✕ Réinitialiser
                     </button>
@@ -655,64 +658,99 @@ export default function VentesPage() {
                     <div style={{ fontSize: '2.5rem', marginBottom: 12 }}>💸</div>
                     {ventes.length === 0 ? 'Aucune vente enregistrée' : 'Aucun résultat pour ces filtres'}
                   </div>
-                ) : (
-                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                    <thead>
-                      <tr style={{ background: CL, borderBottom: `2px solid ${CB}` }}>
-                        <th style={{ padding: '8px 12px', width: 36 }}></th>
-                        <th style={{ padding: '11px 16px', textAlign: 'left', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Article</th>
-                        <th style={{ padding: '11px 16px', textAlign: 'center', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Type vente</th>
-                        <th style={{ padding: '11px 16px', textAlign: 'center', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Quantité</th>
-                        <th style={{ padding: '11px 16px', textAlign: 'right', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em' }}>CA</th>
-                        <th style={{ padding: '11px 16px', width: 80 }}></th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {filteredVentes.map((v, idx) => {
-                        const isSel = selectedVenteIds.has(v.id);
-                        const rowBg = isSel ? '#FF6B00' : (idx % 2 === 0 ? '#fff' : '#fffdf7');
-                        const lignes: VenteLigne[] = v.lignes || [];
-                        const articleNames = lignes.map(l => l.article_nom).filter(Boolean);
-                        const displayNames = articleNames.length > 2
-                          ? `${articleNames.slice(0, 2).join(', ')} +${articleNames.length - 2}`
-                          : (articleNames.join(', ') || '—');
-                        const totalQte = lignes.reduce((s, l) => s + (parseFloat(String(l.quantite)) || 0), 0);
-                        return (
-                          <tr key={v.id} style={{ borderBottom: `1px solid ${CB}`, background: rowBg, cursor: 'pointer' }}
-                            onClick={() => toggleSelectVente(v.id)} role="button" tabIndex={0}
-                            onKeyDown={e => e.key === ' ' && toggleSelectVente(v.id)}>
-                            <td style={{ padding: '8px 12px', textAlign: 'center' }} onClick={e => e.stopPropagation()}>
-                              <input type="checkbox" checked={isSel} onChange={() => toggleSelectVente(v.id)}
-                                style={{ accentColor: '#FF6B00', width: 15, height: 15, cursor: 'pointer' }} />
-                            </td>
-                            <td style={{ padding: '10px 16px' }}>
-                              <div style={{ fontWeight: 700, fontSize: '0.88rem', color: isSel ? '#fff' : CD }}>{displayNames}</div>
-                              <div style={{ display: 'flex', gap: 5, alignItems: 'center', marginTop: 4, flexWrap: 'wrap' }}>
-                                <span style={{ fontSize: '0.7rem', color: isSel ? 'rgba(255,255,255,0.8)' : 'var(--text-muted)' }}>{fmtDate(v.date_vente)}</span>
-                                <ArticleTypeBadges lignes={lignes} isSel={isSel} />
-                              </div>
-                            </td>
-                            <td style={{ padding: '10px 16px', textAlign: 'center', fontSize: '0.88rem', color: isSel ? '#fff' : undefined }}>
-                              {v.type_vente === 'directe' ? '🏪 Directe' : `🛵 ${v.prestataire_nom || 'Prestataire'}`}
-                            </td>
-                            <td style={{ padding: '10px 16px', textAlign: 'center', fontWeight: 600, color: isSel ? '#fff' : CD }}>
-                              {totalQte > 0 ? (totalQte % 1 === 0 ? totalQte.toFixed(0) : totalQte.toFixed(3)) : '—'}
-                            </td>
-                            <td style={{ padding: '10px 16px', textAlign: 'right', fontWeight: 700, color: isSel ? '#fff' : C }}>
-                              {fmtMoney(v.total_ca)}
-                            </td>
-                            <td style={{ padding: '8px 16px', textAlign: 'center' }} onClick={e => e.stopPropagation()}>
-                              <button onClick={() => handleAnnuler(v.id)}
-                                style={{ border: `1.5px solid ${isSel ? '#fff' : '#dc2626'}`, color: isSel ? '#fff' : '#dc2626', background: 'none', borderRadius: 7, padding: '4px 10px', cursor: 'pointer', fontSize: '0.78rem', fontWeight: 600 }}>
-                                Annuler
-                              </button>
-                            </td>
+                ) : (() => {
+                  const histSlice = filteredVentes.slice(histPage * PAGE, histPage * PAGE + PAGE);
+                  type ExpandedRow = { vente: Vente; ligne: VenteLigne | null; ligneIdx: number; lignesCount: number };
+                  const rows: ExpandedRow[] = histSlice.flatMap(v => {
+                    const lignes = v.lignes || [];
+                    if (lignes.length === 0) return [{ vente: v, ligne: null, ligneIdx: 0, lignesCount: 1 }];
+                    return lignes.map((l, idx) => ({ vente: v, ligne: l, ligneIdx: idx, lignesCount: lignes.length }));
+                  });
+                  const getLigneBadge = (l: VenteLigne | null) => {
+                    if (!l) return null;
+                    if (l.article_type === 'ingredient') return { label: '💎 Valorisé', bg: '#f0fdf4', color: '#166534', border: '#86efac' };
+                    if (l.is_supplement) return { label: '🧂 Supplément', bg: '#fef3c7', color: '#92400e', border: '#fcd34d' };
+                    return { label: '🛍️ Produit', bg: CL, color: CD, border: CB };
+                  };
+                  return (
+                    <>
+                      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                        <thead>
+                          <tr style={{ background: CL, borderBottom: `2px solid ${CB}` }}>
+                            <th style={{ padding: '8px 12px', width: 36 }}></th>
+                            <th style={{ padding: '11px 16px', textAlign: 'left', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Article</th>
+                            <th style={{ padding: '11px 16px', textAlign: 'center', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>Type produit</th>
+                            <th style={{ padding: '11px 16px', textAlign: 'center', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Type vente</th>
+                            <th style={{ padding: '11px 16px', textAlign: 'center', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Quantité</th>
+                            <th style={{ padding: '11px 16px', textAlign: 'right', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em' }}>CA</th>
+                            <th style={{ padding: '11px 16px', width: 80 }}></th>
                           </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                )}
+                        </thead>
+                        <tbody>
+                          {rows.map(({ vente: v, ligne, ligneIdx, lignesCount }, rowIdx) => {
+                            const isSel = selectedVenteIds.has(v.id);
+                            const isFirst = ligneIdx === 0;
+                            const rowBg = isSel ? '#FF6B00' : (rowIdx % 2 === 0 ? '#fff' : '#fffdf7');
+                            const venteTopBorder = isFirst && rowIdx > 0 ? `2px solid ${CB}` : undefined;
+                            const badge = getLigneBadge(ligne);
+                            const ligneQte = ligne ? parseFloat(String(ligne.quantite)) || 0 : 0;
+                            const ligneCa = ligne ? ligneQte * (ligne.prix_unitaire || 0) : v.total_ca;
+                            return (
+                              <tr key={`${v.id}-${ligneIdx}`}
+                                style={{ borderBottom: `1px solid ${CB}`, borderTop: venteTopBorder, background: rowBg, cursor: 'pointer' }}
+                                onClick={() => toggleSelectVente(v.id)} role="button" tabIndex={0}
+                                onKeyDown={e => e.key === ' ' && toggleSelectVente(v.id)}>
+                                {isFirst && (
+                                  <td rowSpan={lignesCount} style={{ padding: '8px 12px', textAlign: 'center', verticalAlign: 'middle' }} onClick={e => e.stopPropagation()}>
+                                    <input type="checkbox" checked={isSel} onChange={() => toggleSelectVente(v.id)}
+                                      style={{ accentColor: '#FF6B00', width: 15, height: 15, cursor: 'pointer' }} />
+                                  </td>
+                                )}
+                                <td style={{ padding: '10px 16px' }}>
+                                  <div style={{ fontWeight: 700, fontSize: '0.88rem', color: isSel ? '#fff' : CD }}>
+                                    {ligne ? ligne.article_nom : '—'}
+                                  </div>
+                                  {isFirst && (
+                                    <div style={{ fontSize: '0.7rem', color: isSel ? 'rgba(255,255,255,0.8)' : 'var(--text-muted)', marginTop: 2 }}>
+                                      {fmtDate(v.date_vente)}
+                                    </div>
+                                  )}
+                                </td>
+                                <td style={{ padding: '10px 16px', textAlign: 'center' }}>
+                                  {badge && (
+                                    <span style={{ display: 'inline-block', padding: '2px 9px', borderRadius: 10, fontSize: '0.68rem', fontWeight: 700, background: isSel ? 'rgba(255,255,255,0.2)' : badge.bg, color: isSel ? '#fff' : badge.color, border: `1px solid ${isSel ? 'rgba(255,255,255,0.4)' : badge.border}` }}>
+                                      {badge.label}
+                                    </span>
+                                  )}
+                                </td>
+                                {isFirst && (
+                                  <td rowSpan={lignesCount} style={{ padding: '10px 16px', textAlign: 'center', fontSize: '0.88rem', color: isSel ? '#fff' : undefined, verticalAlign: 'middle' }}>
+                                    {v.type_vente === 'directe' ? '🏪 Directe' : `🛵 ${v.prestataire_nom || 'Prestataire'}`}
+                                  </td>
+                                )}
+                                <td style={{ padding: '10px 16px', textAlign: 'center', fontWeight: 600, color: isSel ? '#fff' : CD }}>
+                                  {ligneQte > 0 ? (ligneQte % 1 === 0 ? ligneQte.toFixed(0) : ligneQte.toFixed(3)) : '—'}
+                                </td>
+                                <td style={{ padding: '10px 16px', textAlign: 'right', fontWeight: 700, color: isSel ? '#fff' : C }}>
+                                  {fmtMoney(ligneCa)}
+                                </td>
+                                {isFirst && (
+                                  <td rowSpan={lignesCount} style={{ padding: '8px 16px', textAlign: 'center', verticalAlign: 'middle' }} onClick={e => e.stopPropagation()}>
+                                    <button onClick={() => handleAnnuler(v.id)}
+                                      style={{ border: `1.5px solid ${isSel ? '#fff' : '#dc2626'}`, color: isSel ? '#fff' : '#dc2626', background: 'none', borderRadius: 7, padding: '4px 10px', cursor: 'pointer', fontSize: '0.78rem', fontWeight: 600 }}>
+                                      Annuler
+                                    </button>
+                                  </td>
+                                )}
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                      <PaginationBar total={filteredVentes.length} page={histPage} setPage={setHistPage} />
+                    </>
+                  );
+                })()}
               </div>
             )}
           </>
