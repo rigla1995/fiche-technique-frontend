@@ -486,7 +486,14 @@ export default function ProductList() {
             </div>
             <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, alignItems: 'flex-end' }}>
               <button
-                onClick={() => { setExportIncludeOther(false); setExportModalOpen(true); }}
+                onClick={() => {
+                  if (tab !== 'vendable') {
+                    handleExportXls(false);
+                  } else {
+                    setExportIncludeOther(false);
+                    setExportModalOpen(true);
+                  }
+                }}
                 disabled={exportingXls || bySubTab.length === 0}
                 style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 14px', borderRadius: 10, border: '1.5px solid #1D6F42', background: (exportingXls || bySubTab.length === 0) ? '#f3f4f6' : '#f0fdf4', color: '#1D6F42', cursor: (exportingXls || bySubTab.length === 0) ? 'default' : 'pointer', fontWeight: 700, fontSize: '0.82rem', whiteSpace: 'nowrap', opacity: bySubTab.length === 0 ? 0.5 : 1 }}>
                 <ExcelIcon /> {exportingXls ? 'Export…' : 'Exporter XLS'}
