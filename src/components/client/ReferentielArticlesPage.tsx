@@ -47,6 +47,12 @@ export default function ReferentielArticlesPage() {
   const [saving, setSaving] = useState(false);
   const [editError, setEditError] = useState('');
 
+  // Assignment state (edit modal)
+  interface AssignItem { id: number; nom: string; assigned: boolean; toggling?: boolean; }
+  const [editActivites, setEditActivites] = useState<AssignItem[]>([]);
+  const [editLabos, setEditLabos] = useState<AssignItem[]>([]);
+  const [assignLoading, setAssignLoading] = useState(false);
+
   // Multi-add state
   const [showMultiCreate, setShowMultiCreate] = useState(false);
   const [multiRows, setMultiRows] = useState<ArtRow[]>([emptyArtRow()]);
@@ -182,8 +188,35 @@ export default function ReferentielArticlesPage() {
       categorieId: a.categorieId ? String(a.categorieId) : '',
     });
     setEditError('');
+    setEditActivites([]);
+    setEditLabos([]);
+    setAssignLoading(true);
+    api.get(`/api/referentiel/articles/${a.id}/assignments`)
+      .then(r => { setEditActivites(r.data.activites); setEditLabos(r.data.labos); })
+      .catch(() => {})
+      .finally(() => setAssignLoading(false));
   };
-  const closeEdit = () => { setEditItem(null); setEditForm(emptyEditForm); setEditError(''); };
+  const closeEdit = () => { setEditItem(null); setEditForm(emptyEditForm); setEditError(''); setEditActivites([]); setEditLabos([]); };
+
+  const toggleAssignActivite = async (actId: number, currentlyAssigned: boolean) => {
+    setEditActivites(prev => prev.map(a => a.id === actId ? { ...a, toggling: true } : a));
+    try {
+      await api.post(`/api/entreprise/activites/${actId}/ingredients/${editItem!.id}/select`);
+      setEditActivites(prev => prev.map(a => a.id === actId ? { ...a, assigned: !currentlyAssigned, toggling: false } : a));
+    } catch {
+      setEditActivites(prev => prev.map(a => a.id === actId ? { ...a, toggling: false } : a));
+    }
+  };
+
+  const toggleAssignLabo = async (laboId: number, currentlyAssigned: boolean) => {
+    setEditLabos(prev => prev.map(l => l.id === laboId ? { ...l, toggling: true } : l));
+    try {
+      await api.post(`/api/labo/${laboId}/ingredients/${editItem!.id}/select`);
+      setEditLabos(prev => prev.map(l => l.id === laboId ? { ...l, assigned: !currentlyAssigned, toggling: false } : l));
+    } catch {
+      setEditLabos(prev => prev.map(l => l.id === laboId ? { ...l, toggling: false } : l));
+    }
+  };
 
   const handleSave = async () => {
     if (!editForm.nom.trim()) { setEditError('Nom requis'); return; }
@@ -765,6 +798,74 @@ export default function ReferentielArticlesPage() {
                   </select>
                 </div>
               )}
+
+              {/* Assignments section */}
+              {(editActivites.length > 0 || editLabos.length > 0 || assignLoading) && (
+                <div style={{ marginTop: 4, marginBottom: 8 }}>
+                  <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>
+                    Affectations
+                  </div>
+                  {assignLoading ? (
+                    <div style={{ color: 'var(--text-muted)', fontSize: '0.82rem' }}>Chargement…</div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 220, overflowY: 'auto' }}>
+                      {editActivites.map(act => (
+                        <button
+                          key={`ea-${act.id}`}
+                          onClick={() => toggleAssignActivite(act.id, act.assigned)}
+                          disabled={act.toggling}
+                          style={{
+                            display: 'flex', alignItems: 'center', gap: 10,
+                            padding: '8px 12px', borderRadius: 9, cursor: act.toggling ? 'wait' : 'pointer', textAlign: 'left',
+                            border: act.assigned ? '2px solid #16a34a' : '1.5px solid var(--border)',
+                            background: act.assigned ? '#f0fdf4' : 'var(--surface)',
+                            transition: 'all 0.15s', opacity: act.toggling ? 0.6 : 1,
+                          }}
+                        >
+                          <span style={{ fontSize: '0.95rem' }}>📍</span>
+                          <span style={{ flex: 1, fontWeight: 600, fontSize: '0.84rem', color: '#0f172a' }}>{act.nom}</span>
+                          <span style={{ fontSize: '0.7rem', color: '#64748b' }}>Activité</span>
+                          <div style={{
+                            width: 16, height: 16, borderRadius: 4, flexShrink: 0,
+                            border: act.assigned ? 'none' : '1.5px solid #cbd5e1',
+                            background: act.assigned ? '#16a34a' : 'transparent',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          }}>
+                            {act.assigned && <span style={{ color: '#fff', fontSize: 10, fontWeight: 700 }}>✓</span>}
+                          </div>
+                        </button>
+                      ))}
+                      {editLabos.map(labo => (
+                        <button
+                          key={`el-${labo.id}`}
+                          onClick={() => toggleAssignLabo(labo.id, labo.assigned)}
+                          disabled={labo.toggling}
+                          style={{
+                            display: 'flex', alignItems: 'center', gap: 10,
+                            padding: '8px 12px', borderRadius: 9, cursor: labo.toggling ? 'wait' : 'pointer', textAlign: 'left',
+                            border: labo.assigned ? '2px solid #16a34a' : '1.5px solid var(--border)',
+                            background: labo.assigned ? '#f0fdf4' : 'var(--surface)',
+                            transition: 'all 0.15s', opacity: labo.toggling ? 0.6 : 1,
+                          }}
+                        >
+                          <span style={{ fontSize: '0.95rem' }}>🏭</span>
+                          <span style={{ flex: 1, fontWeight: 600, fontSize: '0.84rem', color: '#0f172a' }}>{labo.nom}</span>
+                          <span style={{ fontSize: '0.7rem', color: '#64748b' }}>Laboratoire</span>
+                          <div style={{
+                            width: 16, height: 16, borderRadius: 4, flexShrink: 0,
+                            border: labo.assigned ? 'none' : '1.5px solid #cbd5e1',
+                            background: labo.assigned ? '#16a34a' : 'transparent',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          }}>
+                            {labo.assigned && <span style={{ color: '#fff', fontSize: 10, fontWeight: 700 }}>✓</span>}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
               <div className="modal-footer">
                 <button className="btn btn-ghost" onClick={closeEdit}>Annuler</button>
                 <button className="btn" disabled={saving || !editForm.nom.trim() || !editForm.uniteId} onClick={handleSave} style={{ background: 'linear-gradient(135deg,#15803d,#16a34a)', color: '#fff' }}>
