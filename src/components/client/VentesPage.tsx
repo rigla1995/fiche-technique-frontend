@@ -152,6 +152,15 @@ function ArticleTypeBadges({ lignes, isSel }: { lignes: VenteLigne[]; isSel: boo
   );
 }
 
+interface ExpandedRow { vente: Vente; ligne: VenteLigne | null; ligneIdx: number; lignesCount: number; }
+
+function getLigneBadge(l: VenteLigne | null): { label: string; bg: string; color: string; border: string } | null {
+  if (!l) return null;
+  if (l.article_type === 'ingredient') return { label: '💎 Valorisé', bg: '#f0fdf4', color: '#166534', border: '#86efac' };
+  if (l.is_supplement) return { label: '🧂 Supplément', bg: '#fef3c7', color: '#92400e', border: '#fcd34d' };
+  return { label: '🛍️ Produit', bg: CL, color: CD, border: CB };
+}
+
 // ── Sub-components ────────────────────────────────────────────────────────────
 
 function PaginationBar({ total, page, setPage }: { total: number; page: number; setPage: (p: number) => void }) {
@@ -505,6 +514,13 @@ export default function VentesPage() {
 
   const selectedActivite = activites.find(a => a.id === selectedActiviteId);
 
+  const histSlice = filteredVentes.slice(histPage * PAGE, histPage * PAGE + PAGE);
+  const histExpandedRows: ExpandedRow[] = histSlice.flatMap(v => {
+    const lignes = v.lignes || [];
+    if (lignes.length === 0) return [{ vente: v, ligne: null, ligneIdx: 0, lignesCount: 1 }];
+    return lignes.map((l, idx) => ({ vente: v, ligne: l, ligneIdx: idx, lignesCount: lignes.length }));
+  });
+
   const ctxValue: VPCtxType = {
     activePrests, prixPrestataires, allArticles,
     qtes, setQtes,
@@ -658,36 +674,22 @@ export default function VentesPage() {
                     <div style={{ fontSize: '2.5rem', marginBottom: 12 }}>💸</div>
                     {ventes.length === 0 ? 'Aucune vente enregistrée' : 'Aucun résultat pour ces filtres'}
                   </div>
-                ) : (() => {
-                  const histSlice = filteredVentes.slice(histPage * PAGE, histPage * PAGE + PAGE);
-                  type ExpandedRow = { vente: Vente; ligne: VenteLigne | null; ligneIdx: number; lignesCount: number };
-                  const rows: ExpandedRow[] = histSlice.flatMap(v => {
-                    const lignes = v.lignes || [];
-                    if (lignes.length === 0) return [{ vente: v, ligne: null, ligneIdx: 0, lignesCount: 1 }];
-                    return lignes.map((l, idx) => ({ vente: v, ligne: l, ligneIdx: idx, lignesCount: lignes.length }));
-                  });
-                  const getLigneBadge = (l: VenteLigne | null) => {
-                    if (!l) return null;
-                    if (l.article_type === 'ingredient') return { label: '💎 Valorisé', bg: '#f0fdf4', color: '#166534', border: '#86efac' };
-                    if (l.is_supplement) return { label: '🧂 Supplément', bg: '#fef3c7', color: '#92400e', border: '#fcd34d' };
-                    return { label: '🛍️ Produit', bg: CL, color: CD, border: CB };
-                  };
-                  return (
-                    <>
-                      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                        <thead>
-                          <tr style={{ background: CL, borderBottom: `2px solid ${CB}` }}>
-                            <th style={{ padding: '8px 12px', width: 36 }}></th>
-                            <th style={{ padding: '11px 16px', textAlign: 'left', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Article</th>
-                            <th style={{ padding: '11px 16px', textAlign: 'center', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>Type produit</th>
-                            <th style={{ padding: '11px 16px', textAlign: 'center', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Type vente</th>
-                            <th style={{ padding: '11px 16px', textAlign: 'center', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Quantité</th>
-                            <th style={{ padding: '11px 16px', textAlign: 'right', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em' }}>CA</th>
-                            <th style={{ padding: '11px 16px', width: 80 }}></th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {rows.map(({ vente: v, ligne, ligneIdx, lignesCount }, rowIdx) => {
+                ) : (
+                  <>
+                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                      <thead>
+                        <tr style={{ background: CL, borderBottom: `2px solid ${CB}` }}>
+                          <th style={{ padding: '8px 12px', width: 36 }}></th>
+                          <th style={{ padding: '11px 16px', textAlign: 'left', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Article</th>
+                          <th style={{ padding: '11px 16px', textAlign: 'center', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>Type produit</th>
+                          <th style={{ padding: '11px 16px', textAlign: 'center', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Type vente</th>
+                          <th style={{ padding: '11px 16px', textAlign: 'center', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Quantité</th>
+                          <th style={{ padding: '11px 16px', textAlign: 'right', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em' }}>CA</th>
+                          <th style={{ padding: '11px 16px', width: 80 }}></th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                          {histExpandedRows.map(({ vente: v, ligne, ligneIdx, lignesCount }, rowIdx) => {
                             const isSel = selectedVenteIds.has(v.id);
                             const isFirst = ligneIdx === 0;
                             const rowBg = isSel ? '#FF6B00' : (rowIdx % 2 === 0 ? '#fff' : '#fffdf7');
@@ -745,12 +747,11 @@ export default function VentesPage() {
                               </tr>
                             );
                           })}
-                        </tbody>
-                      </table>
-                      <PaginationBar total={filteredVentes.length} page={histPage} setPage={setHistPage} />
-                    </>
-                  );
-                })()}
+                      </tbody>
+                    </table>
+                    <PaginationBar total={filteredVentes.length} page={histPage} setPage={setHistPage} />
+                  </>
+                )}
               </div>
             )}
           </>
