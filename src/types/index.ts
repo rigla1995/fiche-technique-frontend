@@ -166,6 +166,7 @@ export interface AuthResponse {
 export interface Unit {
   id: number;
   name: string;
+  hasAppros?: boolean;
 }
 
 export interface Category {
@@ -174,6 +175,7 @@ export interface Category {
   familleId?: number | null;
   familleName?: string | null;
   clientId?: number | null;
+  hasAppros?: boolean;
 }
 
 export interface Famille {
@@ -181,6 +183,7 @@ export interface Famille {
   name: string;
   consommable: boolean;
   vendable: boolean;
+  hasAppros?: boolean;
   clientId: number;
 }
 
@@ -195,6 +198,7 @@ export interface Article {
   familleId?: number | null;
   familleName?: string | null;
   clientId?: number | null;
+  hasAppros?: boolean;
 }
 
 // Legacy alias for backward compatibility during migration

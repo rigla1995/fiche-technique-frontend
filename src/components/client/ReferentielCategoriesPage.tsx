@@ -167,7 +167,7 @@ export default function ReferentielCategoriesPage() {
                   <td>{c.familleName ? <span style={{ fontSize: '0.82rem', color: COLOR, fontWeight: 600 }}>🗂️ {c.familleName}</span> : <span style={{ color: 'var(--text-muted)', fontSize: '0.82rem' }}>—</span>}</td>
                   <td className="actions-cell" style={{ justifyContent: 'flex-end' }}>
                     <button className="btn btn-ghost btn-sm" onClick={() => openEdit(c)}>✏️ Modifier</button>
-                    <button className="btn btn-danger btn-sm" onClick={() => setDeleteId(c.id)}>🗑️</button>
+                    <button className="btn btn-danger btn-sm" disabled={c.hasAppros} title={c.hasAppros ? 'Cette catégorie ne peut pas être supprimée car des articles liés ont des approvisionnements enregistrés' : undefined} onClick={() => !c.hasAppros && setDeleteId(c.id)} style={c.hasAppros ? { opacity: 0.4, cursor: 'not-allowed' } : undefined}>🗑️</button>
                   </td>
                 </tr>
               ))}

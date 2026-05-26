@@ -129,7 +129,7 @@ export default function ReferentielUnitesPage() {
                   </td>
                   <td className="actions-cell" style={{ justifyContent: 'flex-end' }}>
                     <button className="btn btn-ghost btn-sm" onClick={() => openEdit(u)}>✏️ Modifier</button>
-                    <button className="btn btn-danger btn-sm" onClick={() => setDeleteId(u.id)}>🗑️</button>
+                    <button className="btn btn-danger btn-sm" disabled={u.hasAppros} title={u.hasAppros ? 'Cette unité ne peut pas être supprimée car des articles l\'utilisent et ont des approvisionnements enregistrés' : undefined} onClick={() => !u.hasAppros && setDeleteId(u.id)} style={u.hasAppros ? { opacity: 0.4, cursor: 'not-allowed' } : undefined}>🗑️</button>
                   </td>
                 </tr>
               ))}

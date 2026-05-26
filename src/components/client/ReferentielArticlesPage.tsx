@@ -471,7 +471,7 @@ export default function ReferentielArticlesPage() {
                               </span>
                               <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
                                 <button className="btn btn-ghost btn-sm" onClick={() => openEdit(a)}>✏️ Modifier</button>
-                                <button className="btn btn-danger btn-sm" onClick={() => setDeleteId(a.id)}>🗑️</button>
+                                <button className="btn btn-danger btn-sm" disabled={a.hasAppros} title={a.hasAppros ? 'Cet article ne peut pas être supprimé car il a des approvisionnements enregistrés' : undefined} onClick={() => !a.hasAppros && setDeleteId(a.id)} style={a.hasAppros ? { opacity: 0.4, cursor: 'not-allowed' } : undefined}>🗑️</button>
                               </div>
                             </div>
                           ))}
