@@ -339,6 +339,7 @@ export default function VentesPage() {
   const [histDateFrom, setHistDateFrom] = useState('');
   const [histDateTo, setHistDateTo] = useState('');
   const [histType, setHistType] = useState<'all' | 'directe' | 'prestataire'>('all');
+  const [histTypeProduit, setHistTypeProduit] = useState<'all' | 'produit' | 'supplement' | 'valorise'>('all');
   const [histPrestaId, setHistPrestaId] = useState('');
   const [histPage, setHistPage] = useState(0);
   const [exportingXls, setExportingXls] = useState(false);
@@ -390,6 +391,7 @@ export default function VentesPage() {
       setSuppPage(0);
       setValPage(0);
       setHistPage(0);
+      setHistTypeProduit('all');
     }).catch(() => {}).finally(() => setLoading(false));
   }, [selectedActiviteId]);
 
@@ -505,14 +507,22 @@ export default function VentesPage() {
 
   const selectedActivite = activites.find(a => a.id === selectedActiviteId);
 
-  const histSlice = filteredVentes.slice(histPage * PAGE, histPage * PAGE + PAGE);
-  const histExpandedRows: ExpandedRow[] = histSlice
+  const allExpandedRows: ExpandedRow[] = filteredVentes
     .flatMap((v): ExpandedRow[] => {
       const lignes = v.lignes || [];
       if (lignes.length === 0) return [{ vente: v, ligne: null }];
       return lignes.map(l => ({ vente: v, ligne: l }));
     })
+    .filter(row => {
+      if (histTypeProduit === 'all') return true;
+      if (!row.ligne) return histTypeProduit === 'produit';
+      if (histTypeProduit === 'valorise') return row.ligne.article_type === 'ingredient';
+      if (histTypeProduit === 'supplement') return row.ligne.is_supplement && row.ligne.article_type === 'produit';
+      return !row.ligne.is_supplement && row.ligne.article_type === 'produit';
+    })
     .sort((a, b) => ligneSortPriority(a.ligne) - ligneSortPriority(b.ligne));
+
+  const histExpandedRows = allExpandedRows.slice(histPage * PAGE, histPage * PAGE + PAGE);
 
   const ctxValue: VPCtxType = {
     activePrests, prixPrestataires, allArticles,
@@ -631,11 +641,18 @@ export default function VentesPage() {
                     <input type="date" value={histDateTo} onChange={e => setHistDateTo(e.target.value)}
                       style={{ padding: '6px 8px', borderRadius: 8, border: `1.5px solid ${histDateTo ? C : CB}`, background: histDateTo ? CL : '#fff', fontSize: '0.8rem', color: CD, outline: 'none' }} />
                   </div>
-                  <select value={histType} onChange={e => setHistType(e.target.value as typeof histType)}
+                  <select value={histType} onChange={e => { setHistType(e.target.value as typeof histType); setHistPage(0); }}
                     style={{ flex: '0 0 150px', padding: '7px 10px', borderRadius: 8, border: `1.5px solid ${histType !== 'all' ? C : CB}`, background: histType !== 'all' ? CL : '#fff', fontSize: '0.83rem', color: CD, outline: 'none', cursor: 'pointer' }}>
-                    <option value="all">Tous types</option>
+                    <option value="all">Tous types vente</option>
                     <option value="directe">Directe</option>
                     <option value="prestataire">Prestataire</option>
+                  </select>
+                  <select value={histTypeProduit} onChange={e => { setHistTypeProduit(e.target.value as typeof histTypeProduit); setHistPage(0); }}
+                    style={{ flex: '0 0 160px', padding: '7px 10px', borderRadius: 8, border: `1.5px solid ${histTypeProduit !== 'all' ? C : CB}`, background: histTypeProduit !== 'all' ? CL : '#fff', fontSize: '0.83rem', color: CD, outline: 'none', cursor: 'pointer' }}>
+                    <option value="all">Tous types produit</option>
+                    <option value="produit">🛍️ Produit</option>
+                    <option value="supplement">🧂 Supplément</option>
+                    <option value="valorise">💎 Valorisé</option>
                   </select>
                   {activePrests.length > 0 && (
                     <select value={histPrestaId} onChange={e => setHistPrestaId(e.target.value)}
@@ -644,14 +661,14 @@ export default function VentesPage() {
                       {activePrests.map(ap => <option key={ap.id} value={ap.id}>{ap.prestataire_nom}</option>)}
                     </select>
                   )}
-                  {(histDateFrom || histDateTo || histType !== 'all' || histPrestaId) && (
-                    <button onClick={() => { setHistDateFrom(''); setHistDateTo(''); setHistType('all'); setHistPrestaId(''); setHistPage(0); }}
+                  {(histDateFrom || histDateTo || histType !== 'all' || histTypeProduit !== 'all' || histPrestaId) && (
+                    <button onClick={() => { setHistDateFrom(''); setHistDateTo(''); setHistType('all'); setHistTypeProduit('all'); setHistPrestaId(''); setHistPage(0); }}
                       style={{ padding: '6px 12px', borderRadius: 8, border: `1px solid ${CB}`, background: '#fff', color: C, fontSize: '0.78rem', cursor: 'pointer', fontWeight: 600, whiteSpace: 'nowrap' }}>
                       ✕ Réinitialiser
                     </button>
                   )}
                   <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
-                    {filteredVentes.length} vente{filteredVentes.length > 1 ? 's' : ''}
+                    {allExpandedRows.length} ligne{allExpandedRows.length > 1 ? 's' : ''}
                     {selectedVenteIds.size > 0 && (
                       <span style={{ marginLeft: 6, color: '#FF6B00', fontWeight: 700 }}>· {selectedVenteIds.size} sélectionnée{selectedVenteIds.size > 1 ? 's' : ''}</span>
                     )}
@@ -662,7 +679,7 @@ export default function VentesPage() {
                   </button>
                 </div>
 
-                {filteredVentes.length === 0 ? (
+                {allExpandedRows.length === 0 ? (
                   <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--text-muted)' }}>
                     <div style={{ fontSize: '2.5rem', marginBottom: 12 }}>💸</div>
                     {ventes.length === 0 ? 'Aucune vente enregistrée' : 'Aucun résultat pour ces filtres'}
@@ -738,7 +755,7 @@ export default function VentesPage() {
                         })}
                       </tbody>
                     </table>
-                    <PaginationBar total={filteredVentes.length} page={histPage} setPage={setHistPage} />
+                    <PaginationBar total={allExpandedRows.length} page={histPage} setPage={setHistPage} />
                   </>
                 )}
               </div>
