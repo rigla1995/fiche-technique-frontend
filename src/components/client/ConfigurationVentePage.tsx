@@ -37,11 +37,20 @@ interface Produit {
 
 interface ArticleVendable {
   id: string;
-  article_type: 'produit';
+  article_type: 'produit' | 'ingredient';
   article_id: number;
   prix_vente: number;
   portion: number | null;
   actif: boolean;
+}
+
+interface ArticleValorise {
+  id: number;
+  nom: string;
+  unite_nom: string;
+  categorie_nom: string | null;
+  famille_nom: string | null;
+  vendable: ArticleVendable | null;
 }
 
 interface ArticlePrixPrestataire {
@@ -62,12 +71,14 @@ interface HistConfigEntry {
   article_vendable_id: string;
   prix_vente: number;
   saved_at: string;
-  article_type: 'produit';
+  article_type: 'produit' | 'ingredient';
   produit_nom: string | null;
   is_supplement: boolean;
 }
 
-type Tab = 'produits' | 'supplements' | 'historique';
+const PAGE_SIZE = 10;
+
+type Tab = 'produits' | 'supplements' | 'valorises' | 'historique';
 
 // ── Context ──────────────────────────────────────────────────────────────────
 
@@ -214,6 +225,7 @@ function ProduitTable({ tableRows, showPortion, isSupplement }: { tableRows: Pro
   const { activePrests, prixPrestataires, dirtyCount, handleSaveAll, saving } = useContext(CVCtx);
   const [filterNom, setFilterNom] = useState('');
   const [filterPresta, setFilterPresta] = useState('');
+  const [page, setPage] = useState(1);
 
   const articleLabel = isSupplement ? 'Nom supplément…' : 'Nom produit…';
 
@@ -240,6 +252,9 @@ function ProduitTable({ tableRows, showPortion, isSupplement }: { tableRows: Pro
     }
     return true;
   });
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+  const paginated = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
 
   const colCount = 2 + (showPortion ? 1 : 0) + 1 + activePrests.length;
   return (
@@ -261,7 +276,7 @@ function ProduitTable({ tableRows, showPortion, isSupplement }: { tableRows: Pro
           </select>
         )}
         {(filterNom || filterPresta) && (
-          <button onClick={() => { setFilterNom(''); setFilterPresta(''); }}
+          <button onClick={() => { setFilterNom(''); setFilterPresta(''); setPage(1); }}
             style={{ padding: '6px 12px', borderRadius: 8, border: `1px solid ${CB}`, background: '#fff', color: C, fontSize: '0.78rem', cursor: 'pointer', fontWeight: 600, whiteSpace: 'nowrap' }}>
             ✕ Réinitialiser
           </button>
@@ -309,13 +324,27 @@ function ProduitTable({ tableRows, showPortion, isSupplement }: { tableRows: Pro
                 </td>
               </tr>
             ) : (
-              filtered.map((row, idx) => (
+              paginated.map((row, idx) => (
                 <ProduitTableRow key={row.produit.id} row={row} idx={idx} showPortion={showPortion} />
               ))
             )}
           </tbody>
         </table>
       </div>
+      {totalPages > 1 && (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 16px', borderTop: `1px solid ${CB}`, flexWrap: 'wrap', gap: 8 }}>
+          <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+            {(safePage - 1) * PAGE_SIZE + 1}–{Math.min(safePage * PAGE_SIZE, filtered.length)} sur {filtered.length}
+          </span>
+          <div style={{ display: 'flex', gap: 4 }}>
+            <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={safePage <= 1} style={{ padding: '4px 10px', borderRadius: 7, border: `1px solid ${CB}`, background: '#fff', color: C, cursor: safePage <= 1 ? 'default' : 'pointer', fontWeight: 700, opacity: safePage <= 1 ? 0.4 : 1 }}>‹</button>
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
+              <button key={p} onClick={() => setPage(p)} style={{ padding: '4px 9px', borderRadius: 7, border: `1.5px solid ${p === safePage ? C : CB}`, background: p === safePage ? C : '#fff', color: p === safePage ? '#fff' : CD, fontWeight: p === safePage ? 800 : 500, cursor: 'pointer', minWidth: 30 }}>{p}</button>
+            ))}
+            <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={safePage >= totalPages} style={{ padding: '4px 10px', borderRadius: 7, border: `1px solid ${CB}`, background: '#fff', color: C, cursor: safePage >= totalPages ? 'default' : 'pointer', fontWeight: 700, opacity: safePage >= totalPages ? 0.4 : 1 }}>›</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -328,6 +357,7 @@ function HistoriqueTab() {
     loadHistorique, handleDeleteHistEntry, handleExportHistXls, exportingHistXls,
     selectedHistIds, toggleSelectHist,
   } = useContext(CVCtx);
+  const [page, setPage] = useState(1);
 
   return (
     <div style={{ background: '#fff', borderRadius: 14, border: `1.5px solid ${CB}`, overflow: 'hidden', boxShadow: '0 2px 12px rgba(180,83,9,0.08)' }}>
@@ -371,7 +401,7 @@ function HistoriqueTab() {
             style={{ padding: '6px 8px', borderRadius: 8, border: `1.5px solid ${histFilterAu ? C : CB}`, background: histFilterAu ? CL : '#fff', fontSize: '0.8rem', color: CD, outline: 'none' }} />
         </div>
         {(histFilterNom || histFilterType !== 'all' || histFilterDu || histFilterAu) && (
-          <button onClick={() => { setHistFilterNom(''); setHistFilterType('all'); setHistFilterDu(''); setHistFilterAu(''); }}
+          <button onClick={() => { setHistFilterNom(''); setHistFilterType('all'); setHistFilterDu(''); setHistFilterAu(''); setPage(1); }}
             style={{ padding: '6px 12px', borderRadius: 8, border: `1px solid ${CB}`, background: '#fff', color: C, fontSize: '0.78rem', cursor: 'pointer', fontWeight: 600, whiteSpace: 'nowrap' }}>
             ✕ Réinitialiser
           </button>
@@ -388,69 +418,90 @@ function HistoriqueTab() {
           <div style={{ fontSize: '2rem', marginBottom: 10 }}>📋</div>
           {histEntries.length === 0 ? 'Aucun historique enregistré' : 'Aucun résultat pour ces filtres'}
         </div>
-      ) : (
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
-            <colgroup>
-              <col style={{ width: 36 }} />
-              <col style={{ width: '33%' }} />
-              <col style={{ width: '14%' }} />
-              <col style={{ width: '17%' }} />
-              <col style={{ width: '17%' }} />
-              <col style={{ width: '13%' }} />
-            </colgroup>
-            <thead>
-              <tr style={{ background: CL, borderBottom: `2px solid ${CB}` }}>
-                <th style={{ padding: '8px 12px', width: 36 }}></th>
-                <th style={{ padding: '11px 16px', textAlign: 'left', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Produit</th>
-                <th style={{ padding: '11px 16px', textAlign: 'center', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Type</th>
-                <th style={{ padding: '11px 16px', textAlign: 'center', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Prix enregistré</th>
-                <th style={{ padding: '11px 16px', textAlign: 'center', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Date</th>
-                <th style={{ padding: '11px 16px', textAlign: 'center', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em' }}></th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredHist.map((e, idx) => {
-                const isSel = selectedHistIds.has(e.id);
-                const rowBg = isSel ? '#FF6B00' : (idx % 2 === 0 ? '#fff' : '#fffdf7');
-                return (
-                  <tr key={e.id} style={{ borderBottom: `1px solid ${CB}`, background: rowBg, cursor: 'pointer' }} onClick={() => toggleSelectHist(e.id)}>
-                    <td style={{ padding: '8px 12px', textAlign: 'center' }} onClick={ev => ev.stopPropagation()}>
-                      <input type="checkbox" checked={isSel} onChange={() => toggleSelectHist(e.id)}
-                        style={{ accentColor: '#FF6B00', width: 15, height: 15, cursor: 'pointer' }} />
-                    </td>
-                    <td style={{ padding: '10px 16px', fontWeight: 600, fontSize: '0.88rem', color: isSel ? '#fff' : CD, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {e.produit_nom ?? '—'}
-                    </td>
-                    <td style={{ padding: '10px 16px', textAlign: 'center' }}>
-                      <span style={{
-                        display: 'inline-block', padding: '2px 10px', borderRadius: 20, fontSize: '0.7rem', fontWeight: 700,
-                        background: isSel ? 'rgba(255,255,255,0.25)' : (e.is_supplement ? '#fef3c7' : CL),
-                        color: isSel ? '#fff' : (e.is_supplement ? '#92400e' : CD),
-                        border: `1px solid ${isSel ? 'rgba(255,255,255,0.4)' : (e.is_supplement ? '#fcd34d' : CB)}`,
-                      }}>
-                        {e.is_supplement ? '🧂 Supplément' : '🛍️ Produit'}
-                      </span>
-                    </td>
-                    <td style={{ padding: '10px 16px', textAlign: 'center', fontWeight: 700, fontSize: '0.9rem', color: isSel ? '#fff' : C }}>
-                      {fmtMoney(e.prix_vente)}
-                    </td>
-                    <td style={{ padding: '10px 16px', textAlign: 'center', fontSize: '0.8rem', color: isSel ? 'rgba(255,255,255,0.85)' : 'var(--text-muted)' }}>
-                      {fmtDate(e.saved_at)}
-                    </td>
-                    <td style={{ padding: '8px 16px', textAlign: 'center' }} onClick={ev => ev.stopPropagation()}>
-                      <button onClick={() => handleDeleteHistEntry(e.id)}
-                        style={{ border: `1.5px solid ${isSel ? '#fff' : '#dc2626'}`, color: isSel ? '#fff' : '#dc2626', background: 'none', borderRadius: 7, padding: '4px 10px', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 600, whiteSpace: 'nowrap' }}>
-                        Supprimer
-                      </button>
-                    </td>
+      ) : (() => {
+        const totalPages = Math.max(1, Math.ceil(filteredHist.length / PAGE_SIZE));
+        const safePage = Math.min(page, totalPages);
+        const paginated = filteredHist.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+        return (
+          <>
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
+                <colgroup>
+                  <col style={{ width: 36 }} />
+                  <col style={{ width: '33%' }} />
+                  <col style={{ width: '14%' }} />
+                  <col style={{ width: '17%' }} />
+                  <col style={{ width: '17%' }} />
+                  <col style={{ width: '13%' }} />
+                </colgroup>
+                <thead>
+                  <tr style={{ background: CL, borderBottom: `2px solid ${CB}` }}>
+                    <th style={{ padding: '8px 12px', width: 36 }}></th>
+                    <th style={{ padding: '11px 16px', textAlign: 'left', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Produit</th>
+                    <th style={{ padding: '11px 16px', textAlign: 'center', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Type</th>
+                    <th style={{ padding: '11px 16px', textAlign: 'center', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Prix enregistré</th>
+                    <th style={{ padding: '11px 16px', textAlign: 'center', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Date</th>
+                    <th style={{ padding: '11px 16px', textAlign: 'center', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em' }}></th>
                   </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      )}
+                </thead>
+                <tbody>
+                  {paginated.map((e, idx) => {
+                    const isSel = selectedHistIds.has(e.id);
+                    const rowBg = isSel ? '#FF6B00' : (idx % 2 === 0 ? '#fff' : '#fffdf7');
+                    return (
+                      <tr key={e.id} style={{ borderBottom: `1px solid ${CB}`, background: rowBg, cursor: 'pointer' }} onClick={() => toggleSelectHist(e.id)}>
+                        <td style={{ padding: '8px 12px', textAlign: 'center' }} onClick={ev => ev.stopPropagation()}>
+                          <input type="checkbox" checked={isSel} onChange={() => toggleSelectHist(e.id)}
+                            style={{ accentColor: '#FF6B00', width: 15, height: 15, cursor: 'pointer' }} />
+                        </td>
+                        <td style={{ padding: '10px 16px', fontWeight: 600, fontSize: '0.88rem', color: isSel ? '#fff' : CD, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {e.produit_nom ?? '—'}
+                        </td>
+                        <td style={{ padding: '10px 16px', textAlign: 'center' }}>
+                          <span style={{
+                            display: 'inline-block', padding: '2px 10px', borderRadius: 20, fontSize: '0.7rem', fontWeight: 700,
+                            background: isSel ? 'rgba(255,255,255,0.25)' : (e.is_supplement ? '#fef3c7' : CL),
+                            color: isSel ? '#fff' : (e.is_supplement ? '#92400e' : CD),
+                            border: `1px solid ${isSel ? 'rgba(255,255,255,0.4)' : (e.is_supplement ? '#fcd34d' : CB)}`,
+                          }}>
+                            {e.is_supplement ? '🧂 Supplément' : '🛍️ Produit'}
+                          </span>
+                        </td>
+                        <td style={{ padding: '10px 16px', textAlign: 'center', fontWeight: 700, fontSize: '0.9rem', color: isSel ? '#fff' : C }}>
+                          {fmtMoney(e.prix_vente)}
+                        </td>
+                        <td style={{ padding: '10px 16px', textAlign: 'center', fontSize: '0.8rem', color: isSel ? 'rgba(255,255,255,0.85)' : 'var(--text-muted)' }}>
+                          {fmtDate(e.saved_at)}
+                        </td>
+                        <td style={{ padding: '8px 16px', textAlign: 'center' }} onClick={ev => ev.stopPropagation()}>
+                          <button onClick={() => handleDeleteHistEntry(e.id)}
+                            style={{ border: `1.5px solid ${isSel ? '#fff' : '#dc2626'}`, color: isSel ? '#fff' : '#dc2626', background: 'none', borderRadius: 7, padding: '4px 10px', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 600, whiteSpace: 'nowrap' }}>
+                            Supprimer
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+            {totalPages > 1 && (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 16px', borderTop: `1px solid ${CB}`, flexWrap: 'wrap', gap: 8 }}>
+                <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                  {(safePage - 1) * PAGE_SIZE + 1}–{Math.min(safePage * PAGE_SIZE, filteredHist.length)} sur {filteredHist.length}
+                </span>
+                <div style={{ display: 'flex', gap: 4 }}>
+                  <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={safePage <= 1} style={{ padding: '4px 10px', borderRadius: 7, border: `1px solid ${CB}`, background: '#fff', color: C, cursor: safePage <= 1 ? 'default' : 'pointer', fontWeight: 700, opacity: safePage <= 1 ? 0.4 : 1 }}>‹</button>
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
+                    <button key={p} onClick={() => setPage(p)} style={{ padding: '4px 9px', borderRadius: 7, border: `1.5px solid ${p === safePage ? C : CB}`, background: p === safePage ? C : '#fff', color: p === safePage ? '#fff' : CD, fontWeight: p === safePage ? 800 : 500, cursor: 'pointer', minWidth: 30 }}>{p}</button>
+                  ))}
+                  <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={safePage >= totalPages} style={{ padding: '4px 10px', borderRadius: 7, border: `1px solid ${CB}`, background: '#fff', color: C, cursor: safePage >= totalPages ? 'default' : 'pointer', fontWeight: 700, opacity: safePage >= totalPages ? 0.4 : 1 }}>›</button>
+                </div>
+              </div>
+            )}
+          </>
+        );
+      })()}
     </div>
   );
 }
@@ -466,6 +517,7 @@ export default function ConfigurationVentePage() {
   const [prestataires, setPrestataires] = useState<ActivitePrestataire[]>([]);
   const [prixPrestataires, setPrixPrestataires] = useState<ArticlePrixPrestataire[]>([]);
   const [rows, setRows] = useState<ProduitRow[]>([]);
+  const [valorises, setValorises] = useState<ArticleValorise[]>([]);
 
   const [editingPrixVente, setEditingPrixVente] = useState<Record<string, string>>({});
   const [editingPrixPrest, setEditingPrixPrest] = useState<Record<string, string>>({});
@@ -497,13 +549,15 @@ export default function ConfigurationVentePage() {
       api.get(`/api/articles-vendables?activiteId=${selectedActiviteId}`),
       api.get(`/api/article-prix-prestataire?activiteId=${selectedActiviteId}`),
       api.get(`/api/produits?activiteId=${selectedActiviteId}&type=vendable`),
-    ]).then(([ap, av, pp, pr]) => {
+      api.get(`/api/articles-valorises?activiteId=${selectedActiviteId}`),
+    ]).then(([ap, av, pp, pr, val]) => {
       setPrestataires(ap.data as ActivitePrestataire[]);
       setPrixPrestataires(pp.data as ArticlePrixPrestataire[]);
       const avData = av.data as ArticleVendable[];
       const avMap = new Map(avData.filter(a => a.article_type === 'produit').map(a => [a.article_id, a]));
       const prodData = pr.data as Produit[];
       setRows(prodData.map(p => ({ produit: p, vendable: avMap.get(p.id) })));
+      setValorises(val.data as ArticleValorise[]);
     }).catch(() => {});
   }, [selectedActiviteId]);
 
@@ -523,22 +577,34 @@ export default function ConfigurationVentePage() {
   const activePrests = prestataires.filter(p => p.actif);
   const produitRows = rows.filter(r => !r.produit.isSupplement);
   const supplementRows = rows.filter(r => r.produit.isSupplement);
+  const valoriseRows: ProduitRow[] = valorises.map(v => ({
+    produit: { id: v.id, name: v.nom, isSupplement: false, type: 'ingredient' },
+    vendable: v.vendable ?? undefined,
+  }));
   const dirtyCount = Object.keys(editingPrixVente).length + Object.keys(editingPrixPrest).length;
 
   const toggleVendable = async (row: ProduitRow) => {
-    setRows(prev => prev.map(r => r.produit.id === row.produit.id ? { ...r, saving: true, error: undefined } : r));
+    const isIngredient = row.produit.type === 'ingredient';
+    if (isIngredient) {
+      setValorises(prev => prev.map(v => v.id === row.produit.id ? { ...v, vendable: v.vendable ? { ...v.vendable } : v.vendable } : v));
+    } else {
+      setRows(prev => prev.map(r => r.produit.id === row.produit.id ? { ...r, saving: true, error: undefined } : r));
+    }
     try {
       if (row.vendable) {
         await api.put(`/api/articles-vendables/${row.vendable.id}`, { actif: !row.vendable.actif });
       } else {
         await api.post('/api/articles-vendables', {
-          activite_id: selectedActiviteId, article_type: 'produit',
+          activite_id: selectedActiviteId,
+          article_type: isIngredient ? 'ingredient' : 'produit',
           article_id: row.produit.id, prix_vente: 0, portion: null, actif: true,
         });
       }
       loadAll();
     } catch (e: unknown) {
-      setRows(prev => prev.map(r => r.produit.id === row.produit.id ? { ...r, saving: false, error: apiMsg(e) } : r));
+      if (!isIngredient) {
+        setRows(prev => prev.map(r => r.produit.id === row.produit.id ? { ...r, saving: false, error: apiMsg(e) } : r));
+      }
     }
   };
 
@@ -691,6 +757,7 @@ export default function ConfigurationVentePage() {
             <div style={{ display: 'flex', gap: 10, marginBottom: 22, flexWrap: 'wrap' }}>
               <TabBtn tab="produits" label="🛍️ Vente Produits" count={produitRows.length} />
               <TabBtn tab="supplements" label="🧂 Ventes Suppléments" count={supplementRows.length} />
+              <TabBtn tab="valorises" label="💎 Ventes Valorisées" count={valoriseRows.length} />
               <TabBtn tab="historique" label="📋 Historique config" />
             </div>
 
@@ -717,6 +784,19 @@ export default function ConfigurationVentePage() {
                   </div>
                 </div>
                 <ProduitTable tableRows={supplementRows} showPortion={false} isSupplement />
+              </div>
+            )}
+
+            {activeTab === 'valorises' && (
+              <div style={{ background: '#fff', borderRadius: 14, border: `1.5px solid ${CB}`, overflow: 'hidden', boxShadow: '0 2px 12px rgba(180,83,9,0.08)' }}>
+                <div style={{ background: `linear-gradient(135deg, ${CD}18 0%, ${C}12 100%)`, borderBottom: `1.5px solid ${CB}`, padding: '14px 22px', display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <div style={{ background: C + '22', borderRadius: 8, padding: '6px 8px', fontSize: '1rem' }}>💎</div>
+                  <div>
+                    <div style={{ fontSize: '0.95rem', fontWeight: 800, color: CD }}>Ventes Valorisées</div>
+                    <div style={{ fontSize: '0.72rem', color: C }}>Articles valorisés (familles non consommables et vendables) — activez-les et définissez leur prix</div>
+                  </div>
+                </div>
+                <ProduitTable tableRows={valoriseRows} showPortion={false} />
               </div>
             )}
 
