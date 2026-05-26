@@ -132,25 +132,6 @@ function calcPrixPrestataire(
   return ap ? av.prix_vente * (1 - ap.taux_commission / 100) : av.prix_vente;
 }
 
-function ArticleTypeBadges({ lignes, isSel }: { lignes: VenteLigne[]; isSel: boolean }) {
-  if (!lignes || lignes.length === 0) return null;
-  const hasValorises = lignes.some(l => l.article_type === 'ingredient');
-  const hasSupplements = lignes.some(l => l.is_supplement && l.article_type === 'produit');
-  const hasProduits = lignes.some(l => !l.is_supplement && l.article_type === 'produit');
-  const badges: { label: string; bg: string; color: string; border: string }[] = [];
-  if (hasProduits) badges.push({ label: '🛍️ Produit', bg: isSel ? 'rgba(255,255,255,0.2)' : CL, color: isSel ? '#fff' : CD, border: isSel ? 'rgba(255,255,255,0.4)' : CB });
-  if (hasSupplements) badges.push({ label: '🧂 Supplément', bg: isSel ? 'rgba(255,255,255,0.2)' : '#fef3c7', color: isSel ? '#fff' : '#92400e', border: isSel ? 'rgba(255,255,255,0.4)' : '#fcd34d' });
-  if (hasValorises) badges.push({ label: '💎 Valorisé', bg: isSel ? 'rgba(255,255,255,0.2)' : '#f0fdf4', color: isSel ? '#fff' : '#166534', border: isSel ? 'rgba(255,255,255,0.4)' : '#86efac' });
-  return (
-    <>
-      {badges.map(b => (
-        <span key={b.label} style={{ display: 'inline-block', padding: '1px 7px', borderRadius: 10, fontSize: '0.65rem', fontWeight: 700, background: b.bg, color: b.color, border: `1px solid ${b.border}` }}>
-          {b.label}
-        </span>
-      ))}
-    </>
-  );
-}
 
 interface ExpandedRow { vente: Vente; ligne: VenteLigne | null; ligneIdx: number; lignesCount: number; }
 
@@ -515,7 +496,7 @@ export default function VentesPage() {
   const selectedActivite = activites.find(a => a.id === selectedActiviteId);
 
   const histSlice = filteredVentes.slice(histPage * PAGE, histPage * PAGE + PAGE);
-  const histExpandedRows: ExpandedRow[] = histSlice.flatMap(v => {
+  const histExpandedRows: ExpandedRow[] = histSlice.flatMap((v): ExpandedRow[] => {
     const lignes = v.lignes || [];
     if (lignes.length === 0) return [{ vente: v, ligne: null, ligneIdx: 0, lignesCount: 1 }];
     return lignes.map((l, idx) => ({ vente: v, ligne: l, ligneIdx: idx, lignesCount: lignes.length }));
