@@ -53,6 +53,8 @@ export default function ProductList() {
 
   const [allActivities, setAllActivities] = useState<Activite[]>([]);
   const [exportingXls, setExportingXls] = useState(false);
+  const [exportModalOpen, setExportModalOpen] = useState(false);
+  const [exportIncludeOther, setExportIncludeOther] = useState(false);
 
   // Add product modal state
   type AddStep = 1 | 2 | 3 | 4 | 5 | 6;
@@ -307,18 +309,19 @@ export default function ProductList() {
     return act ? { contextLabel: `Activité : ${act.nom}`, activityName: act.nom } : { contextLabel: '', activityName: '' };
   };
 
-  const handleExportXls = async () => {
+  const handleExportXls = async (withOtherSubTab = false) => {
     setExportingXls(true);
     try {
       const params = new URLSearchParams({ type: tab });
       if (filterActiviteId) params.set('activiteId', String(filterActiviteId));
       if (search) params.set('search', search);
       if (tab === 'vendable') params.set('isSupplement', vendableSubTab === 'supplement' ? 'true' : 'false');
+      if (withOtherSubTab) params.set('withOtherSubTab', 'true');
       const resp = await api.get(`/api/produits/export-list?${params}`, { responseType: 'blob' });
       const url = URL.createObjectURL(resp.data as Blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `export-produits-${tab}${tab === 'vendable' ? '-' + vendableSubTab : ''}.xlsx`;
+      a.download = `labflow-${tab === 'vendable' ? vendableSubTab === 'supplement' ? 'supplements' : 'produits-vendables' : 'produits-utilisables'}.xlsx`;
       a.click();
       URL.revokeObjectURL(url);
     } catch { /* silent */ }
@@ -482,7 +485,9 @@ export default function ProductList() {
               </button>
             </div>
             <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, alignItems: 'flex-end' }}>
-              <button onClick={handleExportXls} disabled={exportingXls || bySubTab.length === 0}
+              <button
+                onClick={() => { setExportIncludeOther(false); setExportModalOpen(true); }}
+                disabled={exportingXls || bySubTab.length === 0}
                 style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 14px', borderRadius: 10, border: '1.5px solid #1D6F42', background: (exportingXls || bySubTab.length === 0) ? '#f3f4f6' : '#f0fdf4', color: '#1D6F42', cursor: (exportingXls || bySubTab.length === 0) ? 'default' : 'pointer', fontWeight: 700, fontSize: '0.82rem', whiteSpace: 'nowrap', opacity: bySubTab.length === 0 ? 0.5 : 1 }}>
                 <ExcelIcon /> {exportingXls ? 'Export…' : 'Exporter XLS'}
               </button>
@@ -659,6 +664,47 @@ export default function ProductList() {
                 </div>
               )}
             </>
+          )}
+
+          {exportModalOpen && (
+            <div className="modal-overlay" onClick={() => setExportModalOpen(false)}>
+              <div className="modal" style={{ maxWidth: 440 }} onClick={e => e.stopPropagation()}>
+                <div className="modal-header" style={{ background: 'linear-gradient(135deg, #1D6F42, #2d9e5f)', borderBottom: 'none', borderRadius: '12px 12px 0 0', padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <h2 style={{ color: '#fff', margin: 0, fontSize: '0.97rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <ExcelIcon /> Export XLS
+                  </h2>
+                  <button onClick={() => setExportModalOpen(false)} style={{ background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: 8, color: '#fff', fontWeight: 900, fontSize: '1.1rem', cursor: 'pointer', padding: '2px 9px', lineHeight: 1 }}>×</button>
+                </div>
+                <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                  <div style={{ background: '#f0fdf4', border: '1px solid #a7f3d0', borderRadius: 8, padding: '12px 14px', fontSize: '0.88rem', color: '#064e3b' }}>
+                    <strong>{bySubTab.length}</strong> {vendableSubTab === 'supplement' ? 'supplément(s) vendable(s)' : tab === 'vendable' ? 'produit(s) vendable(s)' : 'produit(s) utilisable(s)'} seront exportés avec les filtres actuels.
+                  </div>
+                  {tab === 'vendable' && (
+                    <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer', background: '#f8fafc', border: '1.5px solid #e2e8f0', borderRadius: 8, padding: '12px 14px' }}>
+                      <input
+                        type="checkbox"
+                        checked={exportIncludeOther}
+                        onChange={e => setExportIncludeOther(e.target.checked)}
+                        style={{ width: 16, height: 16, marginTop: 1, flexShrink: 0, accentColor: '#1D6F42' }}
+                      />
+                      <span style={{ fontSize: '0.88rem', color: 'var(--text)', lineHeight: 1.4 }}>
+                        Inclure aussi les <strong>{vendableSubTab === 'supplement' ? 'produits vendables' : 'suppléments vendables'}</strong> dans une feuille séparée du même fichier
+                      </span>
+                    </label>
+                  )}
+                </div>
+                <div className="modal-footer" style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                  <button className="btn btn-ghost" onClick={() => setExportModalOpen(false)}>Annuler</button>
+                  <button
+                    disabled={exportingXls}
+                    onClick={() => { setExportModalOpen(false); handleExportXls(exportIncludeOther); }}
+                    style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 18px', borderRadius: 8, border: 'none', background: '#1D6F42', color: '#fff', fontWeight: 700, fontSize: '0.88rem', cursor: 'pointer' }}
+                  >
+                    <ExcelIcon /> Exporter
+                  </button>
+                </div>
+              </div>
+            </div>
           )}
 
           {ftPopup && (
