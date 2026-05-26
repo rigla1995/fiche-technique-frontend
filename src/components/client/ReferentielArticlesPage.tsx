@@ -52,6 +52,7 @@ export default function ReferentielArticlesPage() {
   const [editActivites, setEditActivites] = useState<AssignItem[]>([]);
   const [editLabos, setEditLabos] = useState<AssignItem[]>([]);
   const [assignLoading, setAssignLoading] = useState(false);
+  const [assignLoaded, setAssignLoaded] = useState(false);
 
   // Multi-add state
   const [showMultiCreate, setShowMultiCreate] = useState(false);
@@ -190,13 +191,14 @@ export default function ReferentielArticlesPage() {
     setEditError('');
     setEditActivites([]);
     setEditLabos([]);
+    setAssignLoaded(false);
     setAssignLoading(true);
     api.get(`/api/referentiel/articles/${a.id}/assignments`)
-      .then(r => { setEditActivites(r.data.activites); setEditLabos(r.data.labos); })
-      .catch(() => {})
+      .then(r => { setEditActivites(r.data.activites); setEditLabos(r.data.labos); setAssignLoaded(true); })
+      .catch(() => { setAssignLoaded(true); })
       .finally(() => setAssignLoading(false));
   };
-  const closeEdit = () => { setEditItem(null); setEditForm(emptyEditForm); setEditError(''); setEditActivites([]); setEditLabos([]); };
+  const closeEdit = () => { setEditItem(null); setEditForm(emptyEditForm); setEditError(''); setEditActivites([]); setEditLabos([]); setAssignLoaded(false); };
 
   const toggleAssignActivite = async (actId: number, currentlyAssigned: boolean) => {
     setEditActivites(prev => prev.map(a => a.id === actId ? { ...a, toggling: true } : a));
@@ -799,16 +801,19 @@ export default function ReferentielArticlesPage() {
                 </div>
               )}
 
-              {/* Assignments section */}
-              {(editActivites.length > 0 || editLabos.length > 0 || assignLoading) && (
-                <div style={{ marginTop: 4, marginBottom: 8 }}>
-                  <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>
-                    Affectations
+              {/* Assignments section — always visible when modal is open */}
+              <div style={{ marginTop: 4, marginBottom: 8 }}>
+                <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>
+                  Affectations
+                </div>
+                {assignLoading ? (
+                  <div style={{ color: 'var(--text-muted)', fontSize: '0.82rem', padding: '8px 0' }}>Chargement…</div>
+                ) : assignLoaded && editActivites.length === 0 && editLabos.length === 0 ? (
+                  <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', padding: '8px 12px', background: '#f8fafc', borderRadius: 8 }}>
+                    Aucune activité ni labo configuré.
                   </div>
-                  {assignLoading ? (
-                    <div style={{ color: 'var(--text-muted)', fontSize: '0.82rem' }}>Chargement…</div>
-                  ) : (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 220, overflowY: 'auto' }}>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 220, overflowY: 'auto' }}>
                       {editActivites.map(act => (
                         <button
                           key={`ea-${act.id}`}
@@ -864,7 +869,6 @@ export default function ReferentielArticlesPage() {
                     </div>
                   )}
                 </div>
-              )}
 
               <div className="modal-footer">
                 <button className="btn btn-ghost" onClick={closeEdit}>Annuler</button>

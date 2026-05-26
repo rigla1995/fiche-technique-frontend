@@ -10,8 +10,8 @@ const LABEL: React.CSSProperties = {
   textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 3, display: 'block',
 };
 
-interface CatRow { nom: string; familleId: string; vendable: boolean; }
-const emptyRow = (): CatRow => ({ nom: '', familleId: '', vendable: true });
+interface CatRow { nom: string; familleId: string; }
+const emptyRow = (): CatRow => ({ nom: '', familleId: '' });
 
 export default function ReferentielCategoriesPage() {
   const [categories, setCategories] = useState<Category[]>([]);
@@ -28,7 +28,6 @@ export default function ReferentielCategoriesPage() {
   const [editItem, setEditItem] = useState<Category | null>(null);
   const [editNom, setEditNom] = useState('');
   const [editFamilleId, setEditFamilleId] = useState('');
-  const [editVendable, setEditVendable] = useState(true);
   const [saving, setSaving] = useState(false);
   const [editError, setEditError] = useState('');
 
@@ -58,7 +57,7 @@ export default function ReferentielCategoriesPage() {
     setCreating(true); setCreateError('');
     try {
       await Promise.all(valid.map(r =>
-        api.post('/api/categories', { nom: r.nom.trim(), familleId: r.familleId ? parseInt(r.familleId) : null, vendable: r.vendable })
+        api.post('/api/categories', { nom: r.nom.trim(), familleId: r.familleId ? parseInt(r.familleId) : null })
       ));
       closeCreate(); load();
     } catch (e: unknown) {
@@ -69,7 +68,6 @@ export default function ReferentielCategoriesPage() {
   const openEdit = (c: Category) => {
     setEditItem(c); setEditNom(c.name);
     setEditFamilleId(c.familleId ? String(c.familleId) : '');
-    setEditVendable(c.vendable !== false);
     setEditError(''); setSaving(false);
   };
   const closeEdit = () => setEditItem(null);
@@ -82,7 +80,6 @@ export default function ReferentielCategoriesPage() {
       await api.put(`/api/categories/${editItem!.id}`, {
         nom: editNom.trim(),
         familleId: editFamilleId ? parseInt(editFamilleId) : null,
-        vendable: editVendable,
       });
       closeEdit(); load();
     } catch (e: unknown) {
@@ -160,7 +157,6 @@ export default function ReferentielCategoriesPage() {
               <tr>
                 <th>Nom</th>
                 <th>Famille</th>
-                <th style={{ textAlign: 'center' }}>Vendable</th>
                 <th style={{ textAlign: 'right' }}>Actions</th>
               </tr>
             </thead>
@@ -169,11 +165,6 @@ export default function ReferentielCategoriesPage() {
                 <tr key={c.id}>
                   <td style={{ fontWeight: 600, color: '#0f172a' }}>{c.name}</td>
                   <td>{c.familleName ? <span style={{ fontSize: '0.82rem', color: COLOR, fontWeight: 600 }}>🗂️ {c.familleName}</span> : <span style={{ color: 'var(--text-muted)', fontSize: '0.82rem' }}>—</span>}</td>
-                  <td style={{ textAlign: 'center' }}>
-                    <span style={{ display: 'inline-block', padding: '2px 10px', borderRadius: 20, fontSize: '0.75rem', fontWeight: 700, background: c.vendable !== false ? '#dcfce7' : '#f1f5f9', color: c.vendable !== false ? '#15803d' : '#64748b' }}>
-                      {c.vendable !== false ? '✓ Oui' : '— Non'}
-                    </span>
-                  </td>
                   <td className="actions-cell" style={{ justifyContent: 'flex-end' }}>
                     <button className="btn btn-ghost btn-sm" onClick={() => openEdit(c)}>✏️ Modifier</button>
                     <button className="btn btn-danger btn-sm" onClick={() => setDeleteId(c.id)}>🗑️</button>
@@ -198,7 +189,6 @@ export default function ReferentielCategoriesPage() {
               <div style={{ display: 'flex', gap: 8, fontWeight: 700, fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6, paddingLeft: 2 }}>
                 <div style={{ flex: 2 }}>Nom *</div>
                 {familles.length > 0 && <div style={{ flex: 2 }}>Famille *</div>}
-                <div style={{ flex: 1 }}>Vendable</div>
                 <div style={{ width: 32 }} />
               </div>
               {rows.map((row, i) => (
@@ -217,10 +207,6 @@ export default function ReferentielCategoriesPage() {
                       {familles.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
                     </select>
                   )}
-                  <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <input type="checkbox" id={`vend-${i}`} checked={row.vendable} onChange={e => updateRow(i, 'vendable', e.target.checked)} style={{ width: 16, height: 16, accentColor: COLOR }} />
-                    <label htmlFor={`vend-${i}`} style={{ fontSize: '0.82rem', color: 'var(--text-muted)', cursor: 'pointer' }}>Oui</label>
-                  </div>
                   <button onClick={() => removeRow(i)} disabled={rows.length === 1} style={{ width: 32, height: 32, border: 'none', borderRadius: 6, background: rows.length === 1 ? '#f1f5f9' : '#fee2e2', color: rows.length === 1 ? '#94a3b8' : '#dc2626', cursor: rows.length === 1 ? 'not-allowed' : 'pointer', fontWeight: 700, flexShrink: 0 }}>×</button>
                 </div>
               ))}
@@ -259,10 +245,6 @@ export default function ReferentielCategoriesPage() {
                   </select>
                 </div>
               )}
-              <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <input type="checkbox" id="edit-vendable" checked={editVendable} onChange={e => setEditVendable(e.target.checked)} style={{ width: 18, height: 18, accentColor: COLOR }} />
-                <label htmlFor="edit-vendable" style={{ fontSize: '0.9rem', cursor: 'pointer', fontWeight: 600 }}>Vendable</label>
-              </div>
               <div className="modal-footer">
                 <button className="btn btn-ghost" onClick={closeEdit}>Annuler</button>
                 <button className="btn" disabled={saving || !editNom.trim() || (familles.length > 0 && !editFamilleId)} onClick={handleSave} style={{ background: 'linear-gradient(135deg,#15803d,#16a34a)', color: '#fff' }}>
