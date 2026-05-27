@@ -42,6 +42,7 @@ interface FactureGroup {
   totalHT: number;
   totalTTC: number;
   hasTva: boolean;
+  typeAppro: string;
 }
 
 function groupIntoFactures(entries: HistEntry[]): FactureGroup[] {
@@ -60,6 +61,7 @@ function groupIntoFactures(entries: HistEntry[]): FactureGroup[] {
         totalHT: 0,
         totalTTC: 0,
         hasTva: false,
+        typeAppro: e.typeAppro ?? 'manuel',
       });
     }
     const group = map.get(key)!;
@@ -253,6 +255,9 @@ export default function LaboFacturesApproPage() {
                         {f.fournisseurNom && <> · {f.fournisseurNom}</>}
                         <span style={{ marginLeft: 8, background: '#7c3aed', color: '#fff', borderRadius: 4, padding: '1px 6px', fontSize: '0.65rem' }}>
                           {f.lines.length} article{f.lines.length > 1 ? 's' : ''}
+                        </span>
+                        <span style={{ marginLeft: 6, background: f.typeAppro === 'transfert' ? '#6d28d9' : '#0369a1', color: '#fff', borderRadius: 4, padding: '1px 6px', fontSize: '0.65rem', fontWeight: 700 }}>
+                          {f.typeAppro === 'transfert' ? '↗ Transfert' : 'Manuel'}
                         </span>
                       </div>
                     </div>

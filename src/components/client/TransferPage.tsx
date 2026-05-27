@@ -2,6 +2,16 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useSearchParams, Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
+import TransferConfirmModal, { type TransferActiviteGroup, type TransferLine } from './TransferConfirmModal';
+
+type TransferBatch = {
+  ingredientId: number;
+  nom: string;
+  transfers: Array<{ activiteId: number; ingredientId: number; quantite: number; prixUnitaire: number }>;
+  dateTransfert: string;
+  quantite: number | null;
+  tauxTva: number | null;
+};
 
 const fmtDate = (iso: string | null | undefined) => {
   if (!iso || iso.length < 10) return iso ?? '—';
@@ -75,6 +85,7 @@ export default function TransferPage() {
   const [transferConfirm, setTransferConfirm] = useState<{
     ingredientId: number; nom: string; date: string; existingTotal: number; newQty: number;
   } | null>(null);
+  const [invoiceModal, setInvoiceModal] = useState<{ groups: TransferActiviteGroup[]; batches: TransferBatch[] } | null>(null);
 
   const [filterCategorie, setFilterCategorie] = useState('');
   const [filterNom, setFilterNom] = useState('');
@@ -174,19 +185,66 @@ export default function TransferPage() {
     return new Set([...histDates, ...recentDates]);
   };
 
+  const doTransfer = async (batches: TransferBatch[]) => {
+    setBulkSaving(true);
+    try {
+      for (const batch of batches) {
+        await api.post(`/api/labo/${laboId}/transfer`, {
+          dateTransfert: batch.dateTransfert,
+          note: note || undefined,
+          refFacture: refFacture.trim(),
+          tauxTva: batch.tauxTva,
+          transfers: batch.transfers,
+        });
+        setQtys((prev) => ({
+          ...prev,
+          [batch.ingredientId]: Object.fromEntries(Object.keys(prev[batch.ingredientId] || {}).map((a) => [a, ''])),
+        }));
+        setPrixUnitaireMap((prev) => ({ ...prev, [batch.ingredientId]: '' }));
+        setTauxTvaMap((prev) => ({ ...prev, [batch.ingredientId]: '' }));
+      }
+      setHasTransfers(true);
+      try {
+        const histUpdates = await Promise.allSettled(
+          batches.map(async (b) => {
+            const { data } = await api.get(`/api/labo/${laboId}/transfers?ingredientId=${b.ingredientId}&limit=5`);
+            return [b.ingredientId, data] as [number, TransferRecord[]];
+          })
+        );
+        setTransferHistory((prev) => {
+          const next = { ...prev };
+          for (const r of histUpdates) {
+            if (r.status === 'fulfilled') next[r.value[0]] = r.value[1];
+          }
+          return next;
+        });
+        setHistoryLoaded((prev) => {
+          const n = new Set(prev);
+          for (const r of histUpdates) if (r.status === 'fulfilled') n.add(r.value[0]);
+          return n;
+        });
+      } catch { /* ignore */ }
+      const { data } = await api.get(`/api/labo/${laboId}/stock?assignedOnly=true`);
+      setStock(data);
+      setSuccessMsg(t('client.labo.transfer_success'));
+      setTimeout(() => setSuccessMsg(''), 3000);
+    } catch (err: unknown) {
+      const d = (err as { response?: { data?: { message?: string; disponible?: number; demande?: number } } })?.response?.data;
+      if (d?.disponible !== undefined) {
+        setErrorDetail({ msg: d.message || t('common.error'), disponible: d.disponible, demande: d.demande });
+      } else {
+        setErrorMsg(d?.message || t('common.error'));
+      }
+    }
+    setBulkSaving(false);
+  };
+
   const handleBulkTransfer = async (confirmed = false) => {
     setErrorMsg('');
     setErrorDetail(null);
     if (!refFacture.trim()) { setErrorMsg('Le N° de BL (Réf. Facture) est obligatoire.'); return; }
 
-    // Gather all non-zero transfers per ingredient
-    const ingredientBatches: Array<{
-      ingredientId: number;
-      nom: string;
-      transfers: Array<{ activiteId: number; ingredientId: number; quantite: number; prixUnitaire: number }>;
-      dateTransfert: string;
-      quantite: number | null;
-    }> = [];
+    const ingredientBatches: TransferBatch[] = [];
 
     for (const row of stock) {
       const activiteMap = qtys[row.ingredientId] || {};
@@ -217,6 +275,7 @@ export default function TransferPage() {
         transfers,
         dateTransfert: transferDate,
         quantite: row.quantite,
+        tauxTva: tauxTvaMap[row.ingredientId]?.trim() ? parseFloat(tauxTvaMap[row.ingredientId]) : null,
       });
     }
 
@@ -248,59 +307,30 @@ export default function TransferPage() {
       }
     }
 
-    setBulkSaving(true);
-    try {
+    // Build invoice preview modal
+    const modalGroups: TransferActiviteGroup[] = [];
+    for (const act of activites) {
+      const lines: TransferLine[] = [];
       for (const batch of ingredientBatches) {
-        await api.post(`/api/labo/${laboId}/transfer`, {
-          dateTransfert: batch.dateTransfert,
-          note: note || undefined,
-          refFacture: refFacture.trim(),
-          tauxTva: tauxTvaMap[batch.ingredientId]?.trim() ? parseFloat(tauxTvaMap[batch.ingredientId]) : null,
-          transfers: batch.transfers,
-        });
-        setQtys((prev) => ({
-          ...prev,
-          [batch.ingredientId]: Object.fromEntries(Object.keys(prev[batch.ingredientId] || {}).map((a) => [a, ''])),
-        }));
-        setPrixUnitaireMap((prev) => ({ ...prev, [batch.ingredientId]: '' }));
-        setTauxTvaMap((prev) => ({ ...prev, [batch.ingredientId]: '' }));
-      }
-      setHasTransfers(true);
-      // Refresh transfer histories
-      try {
-        const histUpdates = await Promise.allSettled(
-          ingredientBatches.map(async (b) => {
-            const { data } = await api.get(`/api/labo/${laboId}/transfers?ingredientId=${b.ingredientId}&limit=5`);
-            return [b.ingredientId, data] as [number, TransferRecord[]];
-          })
-        );
-        setTransferHistory((prev) => {
-          const next = { ...prev };
-          for (const r of histUpdates) {
-            if (r.status === 'fulfilled') next[r.value[0]] = r.value[1];
+        for (const tr of batch.transfers) {
+          if (tr.activiteId === act.id) {
+            const row = stock.find((r) => r.ingredientId === batch.ingredientId);
+            lines.push({
+              ingredientId: batch.ingredientId,
+              nom: batch.nom,
+              unite: row?.unite ?? '',
+              quantite: tr.quantite,
+              prixUnitaire: tr.prixUnitaire,
+              tauxTva: batch.tauxTva,
+            });
           }
-          return next;
-        });
-        setHistoryLoaded((prev) => {
-          const n = new Set(prev);
-          for (const r of histUpdates) if (r.status === 'fulfilled') n.add(r.value[0]);
-          return n;
-        });
-      } catch { /* ignore */ }
-      // Reload stock
-      const { data } = await api.get(`/api/labo/${laboId}/stock?assignedOnly=true`);
-      setStock(data);
-      setSuccessMsg(t('client.labo.transfer_success'));
-      setTimeout(() => setSuccessMsg(''), 3000);
-    } catch (err: unknown) {
-      const d = (err as { response?: { data?: { message?: string; disponible?: number; demande?: number } } })?.response?.data;
-      if (d?.disponible !== undefined) {
-        setErrorDetail({ msg: d.message || t('common.error'), disponible: d.disponible, demande: d.demande });
-      } else {
-        setErrorMsg(d?.message || t('common.error'));
+        }
+      }
+      if (lines.length > 0) {
+        modalGroups.push({ activiteId: act.id, activiteNom: act.nom, lines });
       }
     }
-    setBulkSaving(false);
+    setInvoiceModal({ groups: modalGroups, batches: ingredientBatches });
   };
 
   const handleReset = () => {
@@ -378,13 +408,24 @@ export default function TransferPage() {
               <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
                 <button className="btn btn-ghost" style={{ fontWeight: 600 }} onClick={() => setTransferConfirm(null)}>Annuler</button>
                 <button style={{ background: 'linear-gradient(135deg, #f59e0b, #d97706)', color: '#fff', border: 'none', borderRadius: 10, padding: '9px 20px', fontWeight: 700, cursor: 'pointer', fontSize: '0.92rem' }}
-                  onClick={() => { setTransferConfirm(null); handleBulkTransfer(true); }}>
+                  onClick={() => { setTransferConfirm(null); void handleBulkTransfer(true); }}>
                   ✓ Confirmer le transfert
                 </button>
               </div>
             </div>
           </div>
         </div>
+      )}
+
+      {/* Invoice confirmation modal */}
+      {invoiceModal && (
+        <TransferConfirmModal
+          groups={invoiceModal.groups}
+          date={transferDate}
+          refFacture={refFacture}
+          onConfirm={() => { const b = invoiceModal.batches; setInvoiceModal(null); doTransfer(b); }}
+          onCancel={() => setInvoiceModal(null)}
+        />
       )}
 
       {/* Hero header */}
