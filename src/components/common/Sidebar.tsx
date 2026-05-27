@@ -328,7 +328,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
     <div style={{ background: '#fef9c3', borderRadius: 8, padding: '10px 12px', margin: '8px 12px', fontSize: '0.78rem', color: '#854d0e', lineHeight: 1.5 }}>
       {step === 1 && '🔒 Changez votre mot de passe pour continuer.'}
       {step === 2 && '🏢 Créez votre première activité pour continuer.'}
-      {step === 3 && '🧂 Assignez des ingrédients à vos activités dans le Catalogue pour débloquer les produits et le stock.'}
+      {step === 3 && '🧂 Créez vos articles dans le Référentiel puis assignez-les à vos activités dans le Catalogue pour débloquer les espaces.'}
     </div>
   ) : isEntreprise && lockLevel0 ? (
     <div style={{ background: '#fef9c3', borderRadius: 8, padding: '10px 12px', margin: '8px 12px', fontSize: '0.78rem', color: '#854d0e', lineHeight: 1.5 }}>
@@ -467,7 +467,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
               {isEntreprise && (
                 <>
                   <Divider />
-                  <CollapsibleHeader label="Référentiel" icon="📚" isOpen={openSections.has('referentiel')} locked={isOnboarding || lockLevel0} onToggle={() => toggleSection('referentiel')} />
+                  <CollapsibleHeader label="Référentiel" icon="📚" isOpen={openSections.has('referentiel')} locked={lockLevel0} onToggle={() => toggleSection('referentiel')} />
                   {openSections.has('referentiel') && (
                     <>
                       <SubNavLink to="/client/referentiel/unites" icon="📏" label="Unités" isActive={location.pathname === '/client/referentiel/unites'} onClick={onClose} />
