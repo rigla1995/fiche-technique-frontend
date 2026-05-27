@@ -140,6 +140,7 @@ function GerantSidebarContent({
           <>
             <li><Link to={`/client/labo/stock?laboId=${laboId}`} className={`sidebar-link ${isLaboStock ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📦</span><span className="link-label">Stock {laboLabel}</span></Link></li>
             <li><Link to={`/client/labo/historique-appro?laboId=${laboId}`} className={`sidebar-link ${isLaboHistoriqueAppro ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📋</span><span className="link-label">Historique Appro</span></Link></li>
+            <li><Link to={`/client/labo/factures?laboId=${laboId}`} className={`sidebar-link ${location.pathname === '/client/labo/factures' && location.search.includes(laboParam) ? 'active' : ''}`} onClick={onClose}><span className="link-icon">🧾</span><span className="link-label">Factures</span></Link></li>
             <li><Link to={`/client/labo/historique-pertes?laboId=${laboId}`} className={`sidebar-link ${isLaboHistoriquePertes ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📉</span><span className="link-label">Historique Pertes</span></Link></li>
             <li><Link to={`/client/labo/transfer?laboId=${laboId}`} className={`sidebar-link ${isLaboTransfer ? 'active' : ''}`} onClick={onClose}><span className="link-icon">↗</span><span className="link-label">Transferts {laboLabel}</span></Link></li>
             <li><Link to={`/client/labo/historique-transferts?laboId=${laboId}`} className={`sidebar-link ${isLaboHistorique ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📋</span><span className="link-label">Historiques Transferts</span></Link></li>
@@ -155,7 +156,10 @@ function GerantSidebarContent({
         <Divider />
         <CollapsibleHeader label="Approvisionnements Activités" icon="📋" isOpen={openSections.has('gerant-appros')} locked={false} onToggle={() => toggleSection('gerant-appros')} />
         {openSections.has('gerant-appros') && (
-          <li><Link to={`/client/stock/historique?entType=activite&laboId=${laboId}`} className={`sidebar-link ${isHistoriquePage ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📋</span><span className="link-label">Toutes les activités</span></Link></li>
+          <>
+            <li><Link to={`/client/stock/historique?entType=activite&laboId=${laboId}`} className={`sidebar-link ${isHistoriquePage ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📋</span><span className="link-label">Toutes les activités</span></Link></li>
+            <li><Link to={`/client/stock/factures?entType=activite&laboId=${laboId}`} className={`sidebar-link ${location.pathname === '/client/stock/factures' ? 'active' : ''}`} onClick={onClose}><span className="link-icon">🧾</span><span className="link-label">Factures Activités</span></Link></li>
+          </>
         )}
       </>
     );
@@ -176,6 +180,7 @@ function GerantSidebarContent({
             <li><NavLink to={`/client/catalogue-global?activiteId=${activiteId}`} className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}><span className="link-icon">🧂</span><span className="link-label">Articles</span></NavLink></li>
             <li><Link to={`/client/stock?section=activite&activiteId=${activiteId}`} className={`sidebar-link ${location.pathname === '/client/stock' && currentSection === 'activite' ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📦</span><span className="link-label">Stock Activité</span></Link></li>
             <li><Link to={`/client/stock/historique?activiteId=${activiteId}`} className={`sidebar-link ${isHistoriquePage ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📋</span><span className="link-label">Historique Appro</span></Link></li>
+            <li><Link to={`/client/stock/factures?activiteId=${activiteId}`} className={`sidebar-link ${location.pathname === '/client/stock/factures' ? 'active' : ''}`} onClick={onClose}><span className="link-icon">🧾</span><span className="link-label">Factures</span></Link></li>
             <li><Link to={`/client/stock/historique-pertes?activiteId=${activiteId}`} className={`sidebar-link ${isHistoriquepertesPage ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📉</span><span className="link-label">Historique Pertes</span></Link></li>
             <li><Link to={`/client/inventaire?section=activite&activiteId=${activiteId}`} className={`sidebar-link ${location.pathname === '/client/inventaire' && new URLSearchParams(location.search).get('section') === 'activite' ? 'active' : ''}`} onClick={onClose}><span className="link-icon">🔢</span><span className="link-label">Inventaire</span></Link></li>
             <li><Link to={`/client/inventaire/historique?section=activite&activiteId=${activiteId}`} className={`sidebar-link ${location.pathname === '/client/inventaire/historique' && new URLSearchParams(location.search).get('section') === 'activite' ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📊</span><span className="link-label">Historique Inventaire</span></Link></li>
@@ -513,6 +518,11 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                         </Link>
                       </li>
                       <li>
+                        <Link to="/client/stock/factures?entType=activite" className={`sidebar-link ${location.pathname === '/client/stock/factures' ? 'active' : ''}`} onClick={onClose}>
+                          <span className="link-icon">🧾</span><span className="link-label">Factures</span>
+                        </Link>
+                      </li>
+                      <li>
                         <Link to="/client/stock/historique-pertes?entType=activite" className={`sidebar-link ${isHistoriquepertesPage ? 'active' : ''}`} onClick={onClose}>
                           <span className="link-icon">📉</span><span className="link-label">Historique Pertes</span>
                         </Link>
@@ -543,6 +553,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                           <>
                             <li><Link to={`/client/labo/stock?laboId=${firstLaboId}`} className={`sidebar-link ${location.pathname === '/client/labo/stock' ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📦</span><span className="link-label">Stock Labo</span></Link></li>
                             <li><Link to={`/client/labo/historique-appro?laboId=${firstLaboId}`} className={`sidebar-link ${location.pathname === '/client/labo/historique-appro' ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📋</span><span className="link-label">Historique Appro</span></Link></li>
+                            <li><Link to={`/client/labo/factures?laboId=${firstLaboId}`} className={`sidebar-link ${location.pathname === '/client/labo/factures' ? 'active' : ''}`} onClick={onClose}><span className="link-icon">🧾</span><span className="link-label">Factures</span></Link></li>
                             <li><Link to={`/client/labo/historique-pertes?laboId=${firstLaboId}`} className={`sidebar-link ${location.pathname === '/client/labo/historique-pertes' ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📉</span><span className="link-label">Historique Pertes</span></Link></li>
                             <li><Link to={`/client/labo/transfer?laboId=${firstLaboId}`} className={`sidebar-link ${location.pathname === '/client/labo/transfer' ? 'active' : ''}`} onClick={onClose}><span className="link-icon">↗</span><span className="link-label">Transferts</span></Link></li>
                             <li><Link to={`/client/labo/historique-transferts?laboId=${firstLaboId}`} className={`sidebar-link ${location.pathname === '/client/labo/historique-transferts' ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📋</span><span className="link-label">Historique Transferts</span></Link></li>

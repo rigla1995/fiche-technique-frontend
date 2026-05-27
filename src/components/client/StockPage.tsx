@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 import PortionsModal from './PortionsModal';
+import InvoiceConfirmModal, { type InvoiceLineItem } from './InvoiceConfirmModal';
 import type { Activite, StockEntry, StockHistoryEntry, ActiviteTypesSummary, Fournisseur } from '../../types';
 
 const currentYear = new Date().getFullYear();
@@ -489,6 +490,13 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
     onConfirm: () => void;
   } | null>(null);
 
+  // ── Invoice preview modal
+  const [invoiceModal, setInvoiceModal] = useState<{
+    lines: InvoiceLineItem[];
+    fournisseurNom: string | null;
+    onConfirm: () => void;
+  } | null>(null);
+
   const toggleCat = (cat: string) => setOpenCats((prev) => { const n = new Set(prev); if (n.has(cat)) n.delete(cat); else n.add(cat); return n; });
 
   useEffect(() => {
@@ -660,7 +668,6 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
       .map(([idStr]) => Number(idStr));
 
     if (readyIds.length === 0) {
-      // No ingredient rows — check if there are PT-only rows to save
       const hasPT = Object.entries(rows).some(([idStr, row]) => {
         const entry = entries.find((e) => e.ingredientId === Number(idStr));
         return entry?.isPT && parseFloat(row.quantite) > 0;
@@ -669,29 +676,50 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
       return;
     }
 
-    const histMap: Record<number, StockHistoryEntry[]> = {};
-    await Promise.all(readyIds.map(async (id) => { histMap[id] = await fetchHistory(id); }));
+    const invoiceLines: InvoiceLineItem[] = readyIds.map((id) => {
+      const entry = entries.find((e) => e.ingredientId === id)!;
+      const row = rows[id];
+      return {
+        ingredientId: id,
+        nom: entry.nom,
+        unite: (entry as any).unite ?? '',
+        quantite: parseFloat(row.quantite),
+        prixUnitaire: parseFloat(row.prixUnitaire),
+        tauxTva: row.tauxTva.trim() ? parseFloat(row.tauxTva) : null,
+      };
+    });
 
-    const conflicts: ApproConflictEntry[] = [];
-    for (const ingId of readyIds) {
-      const hist = histMap[ingId] || [];
-      const conflictEntries = hist.filter((h) => h.dateAppro === bulkDate);
-      const entry = entries.find((e) => e.ingredientId === ingId);
-      const hasConflict = conflictEntries.length > 0 || (entry?.quantite !== null && bulkDate === entry?.dateAppro);
-      if (hasConflict) {
-        const displayEntries = conflictEntries.length > 0 ? conflictEntries : [{
-          dateAppro: bulkDate, quantite: entry!.quantite, prixUnitaire: entry!.prixUnitaire,
-          typeAppro: 'manuel', fournisseurNom: null, refFacture: null, updatedAt: null,
-        }];
-        conflicts.push({ ingredientNom: entry?.nom ?? `#${ingId}`, entries: displayEntries as StockHistoryEntry[] });
+    const fournisseurNom = bulkFournisseurId
+      ? (fournisseurs.find((f) => f.id === Number(bulkFournisseurId))?.nom ?? null)
+      : null;
+
+    const doConflictCheckThenSave = async () => {
+      const histMap: Record<number, StockHistoryEntry[]> = {};
+      await Promise.all(readyIds.map(async (id) => { histMap[id] = await fetchHistory(id); }));
+
+      const conflicts: ApproConflictEntry[] = [];
+      for (const ingId of readyIds) {
+        const hist = histMap[ingId] || [];
+        const conflictEntries = hist.filter((h) => h.dateAppro === bulkDate);
+        const entry = entries.find((e) => e.ingredientId === ingId);
+        const hasConflict = conflictEntries.length > 0 || (entry?.quantite !== null && bulkDate === entry?.dateAppro);
+        if (hasConflict) {
+          const displayEntries = conflictEntries.length > 0 ? conflictEntries : [{
+            dateAppro: bulkDate, quantite: entry!.quantite, prixUnitaire: entry!.prixUnitaire,
+            typeAppro: 'manuel', fournisseurNom: null, refFacture: null, updatedAt: null,
+          }];
+          conflicts.push({ ingredientNom: entry?.nom ?? `#${ingId}`, entries: displayEntries as StockHistoryEntry[] });
+        }
       }
-    }
 
-    if (conflicts.length > 0) {
-      setConflictModal({ date: bulkDate, conflicts, onConfirm: () => { setConflictModal(null); doBulkSave(); } });
-      return;
-    }
-    await doBulkSave();
+      if (conflicts.length > 0) {
+        setConflictModal({ date: bulkDate, conflicts, onConfirm: () => { setConflictModal(null); doBulkSave(); } });
+        return;
+      }
+      await doBulkSave();
+    };
+
+    setInvoiceModal({ lines: invoiceLines, fournisseurNom, onConfirm: doConflictCheckThenSave });
   };
 
   let filtered = entries;
@@ -745,6 +773,18 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
           newQuantite={conflictModal.newQuantite}
           onConfirm={conflictModal.onConfirm}
           onCancel={() => setConflictModal(null)}
+        />
+      )}
+
+      {invoiceModal && (
+        <InvoiceConfirmModal
+          lines={invoiceModal.lines}
+          date={bulkDate}
+          fournisseurNom={invoiceModal.fournisseurNom}
+          refFacture={bulkRefFacture.trim() || null}
+          theme="activite"
+          onConfirm={() => { setInvoiceModal(null); invoiceModal.onConfirm(); }}
+          onCancel={() => setInvoiceModal(null)}
         />
       )}
 

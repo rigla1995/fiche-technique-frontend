@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 import PortionsModal from './PortionsModal';
+import InvoiceConfirmModal, { type InvoiceLineItem } from './InvoiceConfirmModal';
 
 const currentYear = new Date().getFullYear();
 const yearStart = `${currentYear}-01-01`;
@@ -145,6 +146,7 @@ export default function StockLaboPage() {
   const [bulkRefFacture, setBulkRefFacture] = useState('');
   const [bulkSaving, setBulkSaving] = useState(false);
   const [seuilModal, setSeuilModal] = useState<{ ingredientId: number; nom: string } | null>(null);
+  const [invoiceModal, setInvoiceModal] = useState<{ lines: InvoiceLineItem[]; fournisseurNom: string | null; onConfirm: () => void } | null>(null);
 
   const today = todayStr();
 
@@ -366,8 +368,7 @@ export default function StockLaboPage() {
     } catch { /* ignore */ }
   };
 
-  const saveBulk = async () => {
-    if (!bulkDate) return;
+  const doBulkSave = async () => {
     setBulkSaving(true);
     try {
       const readyEntries = Object.entries(rowState).filter(([idStr, rs]) => {
@@ -388,7 +389,6 @@ export default function StockLaboPage() {
           tauxTva: rs.tauxTva?.trim() ? parseFloat(rs.tauxTva) : null,
         });
       }
-      // Save PT rows (negative ingredientId, no fournisseur/ref needed)
       const ptReadyEntries = Object.entries(rowState).filter(([idStr, rs]) => {
         const stockRow = stock.find((r) => r.ingredientId === Number(idStr));
         return stockRow?.isPT && parseFloat(rs.quantite) > 0;
@@ -411,6 +411,45 @@ export default function StockLaboPage() {
       loadStock();
     } catch { /* ignore */ }
     setBulkSaving(false);
+  };
+
+  const saveBulk = () => {
+    if (!bulkDate) return;
+
+    const readyIds = Object.entries(rowState)
+      .filter(([idStr, rs]) => {
+        const id = Number(idStr);
+        const stockRow = stock.find((r) => r.ingredientId === id);
+        if (stockRow?.isPT) return false;
+        const qty = parseFloat(rs.quantite);
+        const prix = parseFloat(rs.prixUnitaire);
+        return !isNaN(qty) && qty > 0 && !isNaN(prix) && prix > 0;
+      })
+      .map(([idStr]) => Number(idStr));
+
+    if (readyIds.length === 0) {
+      doBulkSave();
+      return;
+    }
+
+    const invoiceLines: InvoiceLineItem[] = readyIds.map((id) => {
+      const stockRow = stock.find((r) => r.ingredientId === id)!;
+      const rs = rowState[id];
+      return {
+        ingredientId: id,
+        nom: stockRow.nom,
+        unite: stockRow.unite ?? '',
+        quantite: parseFloat(rs.quantite),
+        prixUnitaire: parseFloat(rs.prixUnitaire),
+        tauxTva: rs.tauxTva?.trim() ? parseFloat(rs.tauxTva) : null,
+      };
+    });
+
+    const fournisseurNom = bulkFournisseurId
+      ? (fournisseurs.find((f) => f.id === Number(bulkFournisseurId))?.nom ?? null)
+      : null;
+
+    setInvoiceModal({ lines: invoiceLines, fournisseurNom, onConfirm: doBulkSave });
   };
 
 
@@ -1126,6 +1165,18 @@ export default function StockLaboPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {invoiceModal && (
+        <InvoiceConfirmModal
+          lines={invoiceModal.lines}
+          date={bulkDate}
+          fournisseurNom={invoiceModal.fournisseurNom}
+          refFacture={bulkRefFacture.trim() || null}
+          theme="labo"
+          onConfirm={() => { setInvoiceModal(null); invoiceModal.onConfirm(); }}
+          onCancel={() => setInvoiceModal(null)}
+        />
       )}
 
       {/* PT accumulation confirmation modal */}

@@ -25,6 +25,8 @@ import FournisseursPage from './components/client/FournisseursPage';
 import FournisseursLaboPage from './components/client/FournisseursLaboPage';
 import LaboHistoriqueApproPage from './components/client/LaboHistoriqueApproPage';
 import LaboHistoriquepertesPage from './components/client/LaboHistoriquepertesPage';
+import FacturesApproPage from './components/client/FacturesApproPage';
+import LaboFacturesApproPage from './components/client/LaboFacturesApproPage';
 import InventairePage from './components/client/InventairePage';
 import HistoriqueInventairePage from './components/client/HistoriqueInventairePage';
 import ErrorPage from './components/common/ErrorPage';
@@ -122,11 +124,13 @@ export default function App() {
             <Route path="/client/activites" element={<ActivitesPage />} />
             <Route path="/client/stock" element={<StockPage />} />
             <Route path="/client/stock/historique" element={<HistoriqueApproPage />} />
+            <Route path="/client/stock/factures" element={<FacturesApproPage />} />
             <Route path="/client/stock/historique-pertes" element={<HistoriquepertesPage />} />
             <Route path="/client/labo/stock" element={<StockLaboPage />} />
             <Route path="/client/labo/transfer" element={<TransferPage />} />
             <Route path="/client/labo/historique-transferts" element={<TransferHistoriquePage />} />
             <Route path="/client/labo/historique-appro" element={<LaboHistoriqueApproPage />} />
+            <Route path="/client/labo/factures" element={<LaboFacturesApproPage />} />
             <Route path="/client/labo/historique-pertes" element={<LaboHistoriquepertesPage />} />
             <Route path="/client/labo/inventaire" element={<InventairePage />} />
             <Route path="/client/inventaire" element={<InventairePage />} />
