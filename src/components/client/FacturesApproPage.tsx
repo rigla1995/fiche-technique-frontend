@@ -76,7 +76,6 @@ export default function FacturesApproPage() {
   const [endDate, setEndDate] = useState(yearEnd);
   const [results, setResults] = useState<HistoriqueApproEntry[]>([]);
   const [loading, setLoading] = useState(false);
-  const [searched, setSearched] = useState(false);
   const [expandedKeys, setExpandedKeys] = useState<Set<string>>(new Set());
   const [page, setPage] = useState(1);
 
@@ -91,13 +90,13 @@ export default function FacturesApproPage() {
     }).catch(() => {});
   }, [laboId]);
 
-  const fetchResults = useCallback(async () => {
+  const fetchResults = useCallback(async (activiteId?: string) => {
     setLoading(true);
-    setSearched(true);
     setPage(1);
     try {
       const params = new URLSearchParams();
-      if (selectedActiviteId) params.set('activiteId', selectedActiviteId);
+      const actId = activiteId !== undefined ? activiteId : selectedActiviteId;
+      if (actId) params.set('activiteId', actId);
       else params.set('entType', 'activite');
       if (laboId) params.set('laboId', laboId);
       if (startDate) params.set('startDate', startDate);
@@ -112,6 +111,9 @@ export default function FacturesApproPage() {
     }
     setLoading(false);
   }, [selectedActiviteId, laboId, startDate, endDate, selectedFournisseurId, refFactureFilter]);
+
+  // Auto-fetch on mount
+  useEffect(() => { fetchResults(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const factures = groupIntoFactures(results);
   const totalPages = Math.max(1, Math.ceil(factures.length / PAGE_SIZE));
@@ -149,14 +151,11 @@ export default function FacturesApproPage() {
 
       {/* Activité selector */}
       {!isActiviteGerant && allActivities.length > 0 && (
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16, padding: '10px 14px', background: 'var(--card-bg)', borderRadius: 10, border: '1px solid var(--border)' }}>
-          <button
-            onClick={() => setSelectedActiviteId('')}
-            style={{ padding: '4px 14px', borderRadius: 20, cursor: 'pointer', fontSize: '0.82rem', border: !selectedActiviteId ? '1.5px solid #1e40af' : '1.5px solid var(--border)', background: !selectedActiviteId ? '#1e40af' : 'var(--bg)', color: !selectedActiviteId ? '#fff' : 'var(--text)', fontWeight: !selectedActiviteId ? 700 : 400 }}
-          >Toutes</button>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16, padding: '10px 14px', background: 'var(--card-bg)', borderRadius: 10, border: '1px solid var(--border)', alignItems: 'center' }}>
+          <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Sélectionner l'activité :</span>
           {allActivities.map((a) => (
             <button key={a.id}
-              onClick={() => setSelectedActiviteId(String(a.id))}
+              onClick={() => { setSelectedActiviteId(String(a.id)); fetchResults(String(a.id)); }}
               style={{ padding: '4px 14px', borderRadius: 20, cursor: 'pointer', fontSize: '0.82rem', border: selectedActiviteId === String(a.id) ? '1.5px solid #1e40af' : '1.5px solid var(--border)', background: selectedActiviteId === String(a.id) ? '#1e40af' : 'var(--bg)', color: selectedActiviteId === String(a.id) ? '#fff' : 'var(--text)', fontWeight: selectedActiviteId === String(a.id) ? 700 : 400 }}
             >🏪 {a.nom}</button>
           ))}
@@ -198,7 +197,7 @@ export default function FacturesApproPage() {
           )}
         </div>
         <div style={{ display: 'flex', justifyContent: 'center' }}>
-          <button onClick={fetchResults} disabled={loading}
+          <button onClick={() => fetchResults()} disabled={loading}
             style={{ background: 'linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%)', boxShadow: '0 4px 14px rgba(30,64,175,0.35)', borderRadius: 9, border: 'none', color: '#fff', fontWeight: 800, padding: '8px 24px', cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.7 : 1 }}>
             🔍 {loading ? 'Chargement…' : 'Rechercher'}
           </button>
@@ -206,7 +205,7 @@ export default function FacturesApproPage() {
       </div>
 
       {/* Results */}
-      {!searched ? null : loading ? (
+      {loading ? (
         <p className="text-muted" style={{ textAlign: 'center', padding: 32 }}>Chargement…</p>
       ) : factures.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '48px 24px' }}>
