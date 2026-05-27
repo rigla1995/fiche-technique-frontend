@@ -586,10 +586,11 @@ export default function HistoriqueApproPage() {
                         {fmtDate(r.dateAppro)}
                       </span>
                       {isEntreprise && (
-                        <span className={`badge-appro ${r.typeAppro ?? 'manuel'}`} style={{ fontSize: '0.65rem', display: 'block', marginTop: 3 }}>
+                        <span className={`badge-appro ${r.typeAppro === 'PT' ? 'pt' : (r.typeAppro ?? 'manuel')}`} style={{ fontSize: '0.65rem', display: 'block', marginTop: 3 }}>
                           {r.typeAppro === 'transfert' ? 'Transfert'
                             : r.typeAppro === 'vente' ? '💰 Vente'
                             : r.typeAppro === 'annulation_vente' ? '↩️ Annul. vente'
+                            : r.typeAppro === 'PT' ? '🔄 PT'
                             : 'Manuel'}
                         </span>
                       )}

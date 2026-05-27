@@ -1130,10 +1130,11 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                                           <tr key={i}>
                                             <td style={{ color: 'var(--primary)', fontWeight: 600 }}>{fmtDate(h.dateAppro)}</td>
                                             <td>
-                                              <span className={`badge-appro ${h.typeAppro ?? 'manuel'}`}>
+                                              <span className={`badge-appro ${h.typeAppro === 'PT' ? 'pt' : (h.typeAppro ?? 'manuel')}`}>
                                                 {h.typeAppro === 'transfert' ? 'Transfert'
                                                   : h.typeAppro === 'vente' ? '💰 Vente'
                                                   : h.typeAppro === 'annulation_vente' ? '↩️ Annul. vente'
+                                                  : h.typeAppro === 'PT' ? '🔄 PT'
                                                   : 'Manuel'}
                                               </span>
                                             </td>
