@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import api from '../../api/client';
 import type { Activite, HistoriqueApproEntry } from '../../types';
@@ -33,8 +33,9 @@ function groupIntoFactures(entries: HistoriqueApproEntry[]): FactureGroup[] {
   const map = new Map<string, FactureGroup>();
 
   for (const e of entries) {
-    // Only manuel and transfert types
+    // Only manuel and transfert types with positive quantity
     if (e.typeAppro === 'vente' || e.typeAppro === 'annulation_vente') continue;
+    if ((e.quantite ?? 0) <= 0) continue;
     const key = `${e.refFacture ?? `__no-ref-${e.id}`}__${e.dateAppro}__${e.fournisseurId ?? ''}__${e.activiteId ?? ''}`;
     if (!map.has(key)) {
       map.set(key, {
@@ -90,30 +91,35 @@ export default function FacturesApproPage() {
     }).catch(() => {});
   }, [laboId]);
 
-  const fetchResults = useCallback(async (activiteId?: string) => {
+  const latestFilters = useRef({ selectedActiviteId, laboId, startDate, endDate, selectedFournisseurId, refFactureFilter });
+  latestFilters.current = { selectedActiviteId, laboId, startDate, endDate, selectedFournisseurId, refFactureFilter };
+
+  const fetchResults = () => {
+    const { selectedActiviteId: actId, laboId: lId, startDate: sd, endDate: ed, selectedFournisseurId: fId, refFactureFilter: ref } = latestFilters.current;
     setLoading(true);
     setPage(1);
-    try {
-      const params = new URLSearchParams();
-      const actId = activiteId !== undefined ? activiteId : selectedActiviteId;
-      if (actId) params.set('activiteId', actId);
-      else params.set('entType', 'activite');
-      if (laboId) params.set('laboId', laboId);
-      if (startDate) params.set('startDate', startDate);
-      if (endDate) params.set('endDate', endDate);
-      if (selectedFournisseurId) params.set('fournisseurId', selectedFournisseurId);
-      if (refFactureFilter.trim()) params.set('refFacture', refFactureFilter.trim());
-      const { data } = await api.get(`/api/stock/historique?${params}`);
-      setResults(data as HistoriqueApproEntry[]);
-      setExpandedKeys(new Set());
-    } catch {
-      setResults([]);
-    }
-    setLoading(false);
-  }, [selectedActiviteId, laboId, startDate, endDate, selectedFournisseurId, refFactureFilter]);
+    const params = new URLSearchParams();
+    if (actId) params.set('activiteId', actId);
+    else params.set('entType', 'activite');
+    if (lId) params.set('laboId', lId);
+    if (sd) params.set('startDate', sd);
+    if (ed) params.set('endDate', ed);
+    if (fId) params.set('fournisseurId', fId);
+    if (ref.trim()) params.set('refFacture', ref.trim());
+    api.get(`/api/stock/historique?${params}`)
+      .then(({ data }) => { setResults(data as HistoriqueApproEntry[]); setExpandedKeys(new Set()); })
+      .catch(() => setResults([]))
+      .finally(() => setLoading(false));
+  };
 
-  // Auto-fetch on mount
-  useEffect(() => { fetchResults(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  // Dynamic search: debounce filter changes, immediate on mount
+  const isFirstRender = useRef(true);
+  useEffect(() => {
+    if (isFirstRender.current) { isFirstRender.current = false; fetchResults(); return; }
+    const timer = setTimeout(fetchResults, 400);
+    return () => clearTimeout(timer);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [startDate, endDate, selectedFournisseurId, refFactureFilter, selectedActiviteId]);
 
   const factures = groupIntoFactures(results);
   const totalPages = Math.max(1, Math.ceil(factures.length / PAGE_SIZE));
@@ -152,13 +158,15 @@ export default function FacturesApproPage() {
       {/* Activité selector */}
       {!isActiviteGerant && allActivities.length > 0 && (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16, padding: '10px 14px', background: 'var(--card-bg)', borderRadius: 10, border: '1px solid var(--border)', alignItems: 'center' }}>
-          <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Sélectionner l'activité :</span>
           {allActivities.map((a) => (
             <button key={a.id}
-              onClick={() => { setSelectedActiviteId(String(a.id)); fetchResults(String(a.id)); }}
+              onClick={() => setSelectedActiviteId(String(a.id))}
               style={{ padding: '4px 14px', borderRadius: 20, cursor: 'pointer', fontSize: '0.82rem', border: selectedActiviteId === String(a.id) ? '1.5px solid #1e40af' : '1.5px solid var(--border)', background: selectedActiviteId === String(a.id) ? '#1e40af' : 'var(--bg)', color: selectedActiviteId === String(a.id) ? '#fff' : 'var(--text)', fontWeight: selectedActiviteId === String(a.id) ? 700 : 400 }}
             >🏪 {a.nom}</button>
           ))}
+          {!selectedActiviteId && (
+            <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', fontStyle: 'italic' }}>← sélectionner l'activité</span>
+          )}
         </div>
       )}
 
@@ -195,12 +203,7 @@ export default function FacturesApproPage() {
               style={{ alignSelf: 'flex-end', background: 'transparent', border: '1.5px solid var(--border)', borderRadius: 7, padding: '5px 9px', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '0.85rem', fontWeight: 700 }}
               title="Réinitialiser">✕</button>
           )}
-        </div>
-        <div style={{ display: 'flex', justifyContent: 'center' }}>
-          <button onClick={() => fetchResults()} disabled={loading}
-            style={{ background: 'linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%)', boxShadow: '0 4px 14px rgba(30,64,175,0.35)', borderRadius: 9, border: 'none', color: '#fff', fontWeight: 800, padding: '8px 24px', cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.7 : 1 }}>
-            🔍 {loading ? 'Chargement…' : 'Rechercher'}
-          </button>
+          {loading && <span style={{ alignSelf: 'flex-end', fontSize: '0.78rem', color: 'var(--text-muted)', fontStyle: 'italic', paddingBottom: 6 }}>Chargement…</span>}
         </div>
       </div>
 

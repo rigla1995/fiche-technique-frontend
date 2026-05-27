@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import api from '../../api/client';
 
@@ -47,8 +47,9 @@ function groupIntoFactures(entries: HistEntry[]): FactureGroup[] {
   const map = new Map<string, FactureGroup>();
 
   for (const e of entries) {
-    // Only manuel and transfert types
+    // Only manuel and transfert types with positive quantity
     if (e.typeAppro === 'vente' || e.typeAppro === 'annulation_vente') continue;
+    if ((e.quantite ?? 0) <= 0) continue;
     const key = `${e.refFacture ?? `__no-ref-${e.id}`}__${e.dateAppro}__${e.fournisseurId ?? ''}`;
     if (!map.has(key)) {
       map.set(key, {
@@ -87,7 +88,6 @@ export default function LaboFacturesApproPage() {
   const [endDate, setEndDate] = useState(yearEnd);
   const [results, setResults] = useState<HistEntry[]>([]);
   const [loading, setLoading] = useState(false);
-  const [searched, setSearched] = useState(false);
   const [expandedKeys, setExpandedKeys] = useState<Set<string>>(new Set());
   const [page, setPage] = useState(1);
 
@@ -98,24 +98,31 @@ export default function LaboFacturesApproPage() {
     }
   }, [laboId]);
 
-  const fetchResults = useCallback(async () => {
-    if (!laboId) return;
+  const latestFilters = useRef({ laboId, startDate, endDate, selectedFournisseurId, refFactureFilter });
+  latestFilters.current = { laboId, startDate, endDate, selectedFournisseurId, refFactureFilter };
+
+  const fetchResults = () => {
+    const { laboId: lId, startDate: sd, endDate: ed, selectedFournisseurId: fId, refFactureFilter: ref } = latestFilters.current;
+    if (!lId) return;
     setLoading(true);
-    setSearched(true);
     setPage(1);
-    try {
-      const params = new URLSearchParams();
-      if (startDate) params.set('startDate', startDate);
-      if (endDate) params.set('endDate', endDate);
-      if (selectedFournisseurId) params.set('fournisseurId', selectedFournisseurId);
-      if (refFactureFilter.trim()) params.set('refFacture', refFactureFilter.trim());
-      const { data } = await api.get(`/api/labo/${laboId}/historique?${params}`);
-      setResults(data as HistEntry[]);
-      setExpandedKeys(new Set());
-    } catch {
-      setResults([]);
-    }
-    setLoading(false);
+    const params = new URLSearchParams();
+    if (sd) params.set('startDate', sd);
+    if (ed) params.set('endDate', ed);
+    if (fId) params.set('fournisseurId', fId);
+    if (ref.trim()) params.set('refFacture', ref.trim());
+    api.get(`/api/labo/${lId}/historique?${params}`)
+      .then(({ data }) => { setResults(data as HistEntry[]); setExpandedKeys(new Set()); })
+      .catch(() => setResults([]))
+      .finally(() => setLoading(false));
+  };
+
+  const isFirstRender = useRef(true);
+  useEffect(() => {
+    if (isFirstRender.current) { isFirstRender.current = false; fetchResults(); return; }
+    const timer = setTimeout(fetchResults, 400);
+    return () => clearTimeout(timer);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [laboId, startDate, endDate, selectedFournisseurId, refFactureFilter]);
 
   const factures = groupIntoFactures(results);
@@ -196,17 +203,12 @@ export default function LaboFacturesApproPage() {
               style={{ alignSelf: 'flex-end', background: 'transparent', border: '1.5px solid var(--border)', borderRadius: 7, padding: '5px 9px', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '0.85rem', fontWeight: 700 }}
               title="Réinitialiser">✕</button>
           )}
-        </div>
-        <div style={{ display: 'flex', justifyContent: 'center' }}>
-          <button onClick={fetchResults} disabled={loading}
-            style={{ background: 'linear-gradient(135deg, #6d28d9 0%, #7c3aed 100%)', boxShadow: '0 4px 14px rgba(124,58,237,0.35)', borderRadius: 9, border: 'none', color: '#fff', fontWeight: 800, padding: '8px 24px', cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.7 : 1 }}>
-            🔍 {loading ? 'Chargement…' : 'Rechercher'}
-          </button>
+          {loading && <span style={{ alignSelf: 'flex-end', fontSize: '0.78rem', color: 'var(--text-muted)', fontStyle: 'italic', paddingBottom: 6 }}>Chargement…</span>}
         </div>
       </div>
 
       {/* Results */}
-      {!searched ? null : loading ? (
+      {loading ? (
         <p className="text-muted" style={{ textAlign: 'center', padding: 32 }}>Chargement…</p>
       ) : factures.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '48px 24px' }}>
