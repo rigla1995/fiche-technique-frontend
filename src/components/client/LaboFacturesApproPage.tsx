@@ -6,6 +6,7 @@ const currentYear = new Date().getFullYear();
 const yearStart = `${currentYear}-01-01`;
 const yearEnd = `${currentYear}-12-31`;
 const PAGE_SIZE = 10;
+const BATCH = 200;
 
 const fmtDate = (iso: string | null | undefined) => {
   if (!iso || iso.length < 10) return iso ?? '—';
@@ -47,7 +48,6 @@ function groupIntoFactures(entries: HistEntry[]): FactureGroup[] {
   const map = new Map<string, FactureGroup>();
 
   for (const e of entries) {
-    // Only manuel and transfert types with positive quantity
     if (e.typeAppro === 'vente' || e.typeAppro === 'annulation_vente') continue;
     if ((e.quantite ?? 0) <= 0) continue;
     const key = `${e.refFacture ?? `__no-ref-${e.id}`}__${e.dateAppro}__${e.fournisseurId ?? ''}`;
@@ -86,8 +86,12 @@ export default function LaboFacturesApproPage() {
   const [refFactureFilter, setRefFactureFilter] = useState('');
   const [startDate, setStartDate] = useState(yearStart);
   const [endDate, setEndDate] = useState(yearEnd);
-  const [results, setResults] = useState<HistEntry[]>([]);
+
+  const [allEntries, setAllEntries] = useState<HistEntry[]>([]);
+  const [hasMore, setHasMore] = useState(false);
+  const [nextOffset, setNextOffset] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [expandedKeys, setExpandedKeys] = useState<Set<string>>(new Set());
   const [page, setPage] = useState(1);
 
@@ -101,31 +105,38 @@ export default function LaboFacturesApproPage() {
   const latestFilters = useRef({ laboId, startDate, endDate, selectedFournisseurId, refFactureFilter });
   latestFilters.current = { laboId, startDate, endDate, selectedFournisseurId, refFactureFilter };
 
-  const fetchResults = () => {
+  const fetchBatch = (offset: number, append: boolean) => {
     const { laboId: lId, startDate: sd, endDate: ed, selectedFournisseurId: fId, refFactureFilter: ref } = latestFilters.current;
     if (!lId) return;
-    setLoading(true);
-    setPage(1);
+    if (append) setLoadingMore(true); else { setLoading(true); setPage(1); setExpandedKeys(new Set()); }
     const params = new URLSearchParams();
     if (sd) params.set('startDate', sd);
     if (ed) params.set('endDate', ed);
     if (fId) params.set('fournisseurId', fId);
     if (ref.trim()) params.set('refFacture', ref.trim());
+    params.set('limit', String(BATCH));
+    params.set('offset', String(offset));
     api.get(`/api/labo/${lId}/historique?${params}`)
-      .then(({ data }) => { setResults(data as HistEntry[]); setExpandedKeys(new Set()); })
-      .catch(() => setResults([]))
-      .finally(() => setLoading(false));
+      .then(({ data }) => {
+        const rows = data as HistEntry[];
+        if (append) setAllEntries((prev) => [...prev, ...rows]);
+        else setAllEntries(rows);
+        setHasMore(rows.length === BATCH);
+        setNextOffset(offset + rows.length);
+      })
+      .catch(() => { if (!append) setAllEntries([]); })
+      .finally(() => { if (append) setLoadingMore(false); else setLoading(false); });
   };
 
-  const isFirstRender = useRef(true);
+  const isFirst = useRef(true);
   useEffect(() => {
-    if (isFirstRender.current) { isFirstRender.current = false; fetchResults(); return; }
-    const timer = setTimeout(fetchResults, 400);
+    if (isFirst.current) { isFirst.current = false; fetchBatch(0, false); return; }
+    const timer = setTimeout(() => fetchBatch(0, false), 400);
     return () => clearTimeout(timer);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [laboId, startDate, endDate, selectedFournisseurId, refFactureFilter]);
 
-  const factures = groupIntoFactures(results);
+  const factures = groupIntoFactures(allEntries);
   const totalPages = Math.max(1, Math.ceil(factures.length / PAGE_SIZE));
   const pagedFactures = factures.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
@@ -172,7 +183,7 @@ export default function LaboFacturesApproPage() {
 
       {/* Filters */}
       <div style={{ background: 'var(--surface)', borderRadius: 14, padding: '12px 16px', border: '1px solid var(--border)', boxShadow: '0 2px 12px rgba(0,0,0,0.05)', marginBottom: 24 }}>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'flex-end', justifyContent: 'center', marginBottom: 12 }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'flex-end', justifyContent: 'center' }}>
           <div>
             <label style={{ fontSize: '0.62rem', fontWeight: 700, color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 4 }}>📅 Du</label>
             <input type="date" style={{ padding: '6px 10px', borderRadius: 7, border: '1.5px solid #7c3aed', fontSize: '0.82rem', background: '#faf5ff', fontWeight: 600 }}
@@ -219,7 +230,7 @@ export default function LaboFacturesApproPage() {
         <>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
             <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)', fontWeight: 600 }}>
-              {factures.length} facture{factures.length > 1 ? 's' : ''}
+              {factures.length}{hasMore ? '+' : ''} facture{factures.length > 1 ? 's' : ''}
             </span>
             <div style={{ display: 'flex', gap: 8 }}>
               <button onClick={expandAll} className="btn btn-ghost btn-sm">Tout ouvrir</button>
@@ -299,7 +310,7 @@ export default function LaboFacturesApproPage() {
                       </tbody>
                       <tfoot>
                         <tr style={{ background: '#faf5ff', borderTop: '2px solid #c4b5fd' }}>
-                          <td colSpan={f.hasTva ? 6 : 3} style={{ padding: '8px 12px', fontWeight: 800, fontSize: '0.72rem', color: '#6d28d9', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                          <td colSpan={f.hasTva ? 6 : 4} style={{ padding: '8px 12px', fontWeight: 800, fontSize: '0.72rem', color: '#6d28d9', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                             Sous-total — {f.lines.length} article{f.lines.length > 1 ? 's' : ''}
                           </td>
                           <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 900, color: '#6d28d9', fontSize: '0.88rem' }}>{f.totalHT.toFixed(3)} DT</td>
@@ -316,20 +327,32 @@ export default function LaboFacturesApproPage() {
           {/* Pagination */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 4px', marginTop: 4 }}>
             <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-              {factures.length} facture{factures.length > 1 ? 's' : ''} · page {page}/{totalPages}
+              {factures.length}{hasMore ? '+' : ''} facture{factures.length > 1 ? 's' : ''} · page {page}/{totalPages}
             </span>
-            {totalPages > 1 && (
-              <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                <button className="btn btn-ghost btn-sm" disabled={page === 1}
-                  onClick={() => setPage((p) => Math.max(1, p - 1))} style={{ padding: '3px 10px', fontWeight: 700 }}>‹</button>
-                <span style={{ fontWeight: 600, color: 'var(--text)', fontSize: '0.82rem' }}>{page} / {totalPages}</span>
-                <button className="btn btn-ghost btn-sm" disabled={page === totalPages}
-                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))} style={{ padding: '3px 10px', fontWeight: 700 }}>›</button>
-              </div>
-            )}
+            <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+              {totalPages > 1 && (
+                <>
+                  <button className="btn btn-ghost btn-sm" disabled={page === 1}
+                    onClick={() => setPage((p) => Math.max(1, p - 1))} style={{ padding: '3px 10px', fontWeight: 700 }}>‹</button>
+                  <span style={{ fontWeight: 600, color: 'var(--text)', fontSize: '0.82rem' }}>{page} / {totalPages}</span>
+                  <button className="btn btn-ghost btn-sm" disabled={page === totalPages && !hasMore}
+                    onClick={() => {
+                      if (page < totalPages) setPage((p) => p + 1);
+                      else if (hasMore) fetchBatch(nextOffset, true);
+                    }} style={{ padding: '3px 10px', fontWeight: 700 }}>›</button>
+                </>
+              )}
+              {hasMore && page === totalPages && !loadingMore && factures.length > 0 && (
+                <button onClick={() => fetchBatch(nextOffset, true)}
+                  className="btn btn-ghost btn-sm" style={{ padding: '3px 12px', fontWeight: 700, color: '#7c3aed' }}>
+                  Charger plus
+                </button>
+              )}
+              {loadingMore && <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>Chargement…</span>}
+            </div>
           </div>
 
-          {/* Grand total (all pages) */}
+          {/* Grand total (all loaded) */}
           {factures.length > 1 && (
             <div style={{ background: 'linear-gradient(90deg, #6d28d9, #7c3aed)', borderRadius: 10, padding: '14px 20px', display: 'flex', justifyContent: 'flex-end', gap: 24, flexWrap: 'wrap', marginTop: 8 }}>
               <div style={{ textAlign: 'right' }}>

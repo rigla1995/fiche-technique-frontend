@@ -7,6 +7,7 @@ const currentYear = new Date().getFullYear();
 const yearStart = `${currentYear}-01-01`;
 const yearEnd = `${currentYear}-12-31`;
 const PAGE_SIZE = 10;
+const BATCH = 200;
 
 const fmtDate = (iso: string | null | undefined) => {
   if (!iso || iso.length < 10) return iso ?? '—';
@@ -33,7 +34,6 @@ function groupIntoFactures(entries: HistoriqueApproEntry[]): FactureGroup[] {
   const map = new Map<string, FactureGroup>();
 
   for (const e of entries) {
-    // Only manuel and transfert types with positive quantity
     if (e.typeAppro === 'vente' || e.typeAppro === 'annulation_vente') continue;
     if ((e.quantite ?? 0) <= 0) continue;
     const key = `${e.refFacture ?? `__no-ref-${e.id}`}__${e.dateAppro}__${e.fournisseurId ?? ''}__${e.activiteId ?? ''}`;
@@ -75,29 +75,44 @@ export default function FacturesApproPage() {
   const [refFactureFilter, setRefFactureFilter] = useState('');
   const [startDate, setStartDate] = useState(yearStart);
   const [endDate, setEndDate] = useState(yearEnd);
-  const [results, setResults] = useState<HistoriqueApproEntry[]>([]);
+
+  const [allEntries, setAllEntries] = useState<HistoriqueApproEntry[]>([]);
+  const [hasMore, setHasMore] = useState(false);
+  const [nextOffset, setNextOffset] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [expandedKeys, setExpandedKeys] = useState<Set<string>>(new Set());
   const [page, setPage] = useState(1);
+  const [ready, setReady] = useState(false);
 
   const isActiviteGerant = !!initActiviteId && !laboId;
 
+  // Load activities + fournisseurs; auto-select first activité
   useEffect(() => {
-    api.get('/api/entreprise/fournisseurs').then(({ data }) => setFournisseurs(data as Fournisseur[])).catch(() => {});
-    api.get('/api/entreprise/activites').then(({ data }) => {
-      const all = data as Activite[];
+    let cancelled = false;
+    Promise.all([
+      api.get('/api/entreprise/fournisseurs').catch(() => ({ data: [] })),
+      api.get('/api/entreprise/activites').catch(() => ({ data: [] })),
+    ]).then(([{ data: fData }, { data: aData }]) => {
+      if (cancelled) return;
+      setFournisseurs(fData as Fournisseur[]);
+      const all = aData as Activite[];
       const filtered = laboId ? all.filter((a) => String((a as any).laboId) === laboId) : all;
       setAllActivities(filtered);
-    }).catch(() => {});
-  }, [laboId]);
+      if (!initActiviteId && filtered.length > 0) {
+        setSelectedActiviteId(String(filtered[0].id));
+      }
+      setReady(true);
+    });
+    return () => { cancelled = true; };
+  }, [laboId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const latestFilters = useRef({ selectedActiviteId, laboId, startDate, endDate, selectedFournisseurId, refFactureFilter });
   latestFilters.current = { selectedActiviteId, laboId, startDate, endDate, selectedFournisseurId, refFactureFilter };
 
-  const fetchResults = () => {
+  const fetchBatch = (offset: number, append: boolean) => {
     const { selectedActiviteId: actId, laboId: lId, startDate: sd, endDate: ed, selectedFournisseurId: fId, refFactureFilter: ref } = latestFilters.current;
-    setLoading(true);
-    setPage(1);
+    if (append) setLoadingMore(true); else { setLoading(true); setPage(1); setExpandedKeys(new Set()); }
     const params = new URLSearchParams();
     if (actId) params.set('activiteId', actId);
     else params.set('entType', 'activite');
@@ -106,22 +121,31 @@ export default function FacturesApproPage() {
     if (ed) params.set('endDate', ed);
     if (fId) params.set('fournisseurId', fId);
     if (ref.trim()) params.set('refFacture', ref.trim());
+    params.set('limit', String(BATCH));
+    params.set('offset', String(offset));
     api.get(`/api/stock/historique?${params}`)
-      .then(({ data }) => { setResults(data as HistoriqueApproEntry[]); setExpandedKeys(new Set()); })
-      .catch(() => setResults([]))
-      .finally(() => setLoading(false));
+      .then(({ data }) => {
+        const rows = data as HistoriqueApproEntry[];
+        if (append) setAllEntries((prev) => [...prev, ...rows]);
+        else setAllEntries(rows);
+        setHasMore(rows.length === BATCH);
+        setNextOffset(offset + rows.length);
+      })
+      .catch(() => { if (!append) setAllEntries([]); })
+      .finally(() => { if (append) setLoadingMore(false); else setLoading(false); });
   };
 
-  // Dynamic search: debounce filter changes, immediate on mount
-  const isFirstRender = useRef(true);
+  // Initial fetch once activities are ready; debounce on filter changes
+  const isFirst = useRef(true);
   useEffect(() => {
-    if (isFirstRender.current) { isFirstRender.current = false; fetchResults(); return; }
-    const timer = setTimeout(fetchResults, 400);
-    return () => clearTimeout(timer);
+    if (!ready) return;
+    if (isFirst.current) { isFirst.current = false; fetchBatch(0, false); return; }
+    const t = setTimeout(() => fetchBatch(0, false), 400);
+    return () => clearTimeout(t);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [startDate, endDate, selectedFournisseurId, refFactureFilter, selectedActiviteId]);
+  }, [ready, startDate, endDate, selectedFournisseurId, refFactureFilter, selectedActiviteId]);
 
-  const factures = groupIntoFactures(results);
+  const factures = groupIntoFactures(allEntries);
   const totalPages = Math.max(1, Math.ceil(factures.length / PAGE_SIZE));
   const pagedFactures = factures.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
   const nonLaboFournisseurs = fournisseurs.filter((f) => !f.isLabo);
@@ -164,15 +188,12 @@ export default function FacturesApproPage() {
               style={{ padding: '4px 14px', borderRadius: 20, cursor: 'pointer', fontSize: '0.82rem', border: selectedActiviteId === String(a.id) ? '1.5px solid #1e40af' : '1.5px solid var(--border)', background: selectedActiviteId === String(a.id) ? '#1e40af' : 'var(--bg)', color: selectedActiviteId === String(a.id) ? '#fff' : 'var(--text)', fontWeight: selectedActiviteId === String(a.id) ? 700 : 400 }}
             >🏪 {a.nom}</button>
           ))}
-          {!selectedActiviteId && (
-            <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', fontStyle: 'italic' }}>← sélectionner l'activité</span>
-          )}
         </div>
       )}
 
       {/* Filters */}
       <div style={{ background: 'var(--surface)', borderRadius: 14, padding: '12px 16px', border: '1px solid var(--border)', boxShadow: '0 2px 12px rgba(0,0,0,0.05)', marginBottom: 24 }}>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'flex-end', justifyContent: 'center', marginBottom: 12 }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'flex-end', justifyContent: 'center' }}>
           <div>
             <label style={{ fontSize: '0.62rem', fontWeight: 700, color: '#1e40af', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 4 }}>📅 Du</label>
             <input type="date" style={{ padding: '6px 10px', borderRadius: 7, border: '1.5px solid #1e40af', fontSize: '0.82rem', background: '#eff6ff', fontWeight: 600 }}
@@ -219,7 +240,7 @@ export default function FacturesApproPage() {
         <>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
             <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)', fontWeight: 600 }}>
-              {factures.length} facture{factures.length > 1 ? 's' : ''}
+              {factures.length} facture{factures.length > 1 ? 's' : ''}{hasMore ? '+' : ''}
             </span>
             <div style={{ display: 'flex', gap: 8 }}>
               <button onClick={expandAll} className="btn btn-ghost btn-sm">Tout ouvrir</button>
@@ -299,7 +320,7 @@ export default function FacturesApproPage() {
                       </tbody>
                       <tfoot>
                         <tr style={{ background: '#eff6ff', borderTop: '2px solid #bfdbfe' }}>
-                          <td colSpan={f.hasTva ? 6 : 3} style={{ padding: '8px 12px', fontWeight: 800, fontSize: '0.72rem', color: '#1e40af', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                          <td colSpan={f.hasTva ? 6 : 4} style={{ padding: '8px 12px', fontWeight: 800, fontSize: '0.72rem', color: '#1e40af', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                             Sous-total — {f.lines.length} article{f.lines.length > 1 ? 's' : ''}
                           </td>
                           <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 900, color: '#1e40af', fontSize: '0.88rem' }}>{f.totalHT.toFixed(3)} DT</td>
@@ -316,20 +337,32 @@ export default function FacturesApproPage() {
           {/* Pagination */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 4px', marginTop: 4 }}>
             <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-              {factures.length} facture{factures.length > 1 ? 's' : ''} · page {page}/{totalPages}
+              {factures.length}{hasMore ? '+' : ''} facture{factures.length > 1 ? 's' : ''} · page {page}/{totalPages}
             </span>
-            {totalPages > 1 && (
-              <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                <button className="btn btn-ghost btn-sm" disabled={page === 1}
-                  onClick={() => setPage((p) => Math.max(1, p - 1))} style={{ padding: '3px 10px', fontWeight: 700 }}>‹</button>
-                <span style={{ fontWeight: 600, color: 'var(--text)', fontSize: '0.82rem' }}>{page} / {totalPages}</span>
-                <button className="btn btn-ghost btn-sm" disabled={page === totalPages}
-                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))} style={{ padding: '3px 10px', fontWeight: 700 }}>›</button>
-              </div>
-            )}
+            <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+              {totalPages > 1 && (
+                <>
+                  <button className="btn btn-ghost btn-sm" disabled={page === 1}
+                    onClick={() => setPage((p) => Math.max(1, p - 1))} style={{ padding: '3px 10px', fontWeight: 700 }}>‹</button>
+                  <span style={{ fontWeight: 600, color: 'var(--text)', fontSize: '0.82rem' }}>{page} / {totalPages}</span>
+                  <button className="btn btn-ghost btn-sm" disabled={page === totalPages && !hasMore}
+                    onClick={() => {
+                      if (page < totalPages) setPage((p) => p + 1);
+                      else if (hasMore) fetchBatch(nextOffset, true);
+                    }} style={{ padding: '3px 10px', fontWeight: 700 }}>›</button>
+                </>
+              )}
+              {hasMore && page === totalPages && !loadingMore && factures.length > 0 && (
+                <button onClick={() => fetchBatch(nextOffset, true)}
+                  className="btn btn-ghost btn-sm" style={{ padding: '3px 12px', fontWeight: 700, color: '#1e40af' }}>
+                  Charger plus
+                </button>
+              )}
+              {loadingMore && <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>Chargement…</span>}
+            </div>
           </div>
 
-          {/* Grand total (all pages) */}
+          {/* Grand total (all loaded) */}
           {factures.length > 1 && (
             <div style={{ background: 'linear-gradient(90deg, #1e3a8a, #1e40af)', borderRadius: 10, padding: '14px 20px', display: 'flex', justifyContent: 'flex-end', gap: 24, flexWrap: 'wrap', marginTop: 8 }}>
               <div style={{ textAlign: 'right' }}>
