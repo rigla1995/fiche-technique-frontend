@@ -34,8 +34,7 @@ function groupIntoFactures(entries: HistoriqueApproEntry[]): FactureGroup[] {
   const map = new Map<string, FactureGroup>();
 
   for (const e of entries) {
-    if (e.typeAppro === 'vente' || e.typeAppro === 'annulation_vente') continue;
-    if ((e.quantite ?? 0) <= 0) continue;
+    if (e.typeAppro !== 'manuel' && e.typeAppro !== 'transfert') continue;
     const key = `${e.refFacture ?? `__no-ref-${e.id}`}__${e.dateAppro}__${e.fournisseurId ?? ''}__${e.activiteId ?? ''}`;
     if (!map.has(key)) {
       map.set(key, {
