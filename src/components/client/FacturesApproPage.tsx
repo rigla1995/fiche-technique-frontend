@@ -6,6 +6,7 @@ import type { Activite, HistoriqueApproEntry } from '../../types';
 const currentYear = new Date().getFullYear();
 const yearStart = `${currentYear}-01-01`;
 const yearEnd = `${currentYear}-12-31`;
+const PAGE_SIZE = 10;
 
 const fmtDate = (iso: string | null | undefined) => {
   if (!iso || iso.length < 10) return iso ?? '—';
@@ -22,7 +23,6 @@ interface FactureGroup {
   fournisseurId: number | null;
   fournisseurNom: string | null;
   activiteId: number | null;
-  activiteNom?: string;
   lines: HistoriqueApproEntry[];
   totalHT: number;
   totalTTC: number;
@@ -33,7 +33,8 @@ function groupIntoFactures(entries: HistoriqueApproEntry[]): FactureGroup[] {
   const map = new Map<string, FactureGroup>();
 
   for (const e of entries) {
-    if (e.typeAppro === 'vente' || e.typeAppro === 'annulation_vente' || e.typeAppro === 'transfert') continue;
+    // Only manuel and transfert types
+    if (e.typeAppro === 'vente' || e.typeAppro === 'annulation_vente') continue;
     const key = `${e.refFacture ?? `__no-ref-${e.id}`}__${e.dateAppro}__${e.fournisseurId ?? ''}__${e.activiteId ?? ''}`;
     if (!map.has(key)) {
       map.set(key, {
@@ -77,6 +78,7 @@ export default function FacturesApproPage() {
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
   const [expandedKeys, setExpandedKeys] = useState<Set<string>>(new Set());
+  const [page, setPage] = useState(1);
 
   const isActiviteGerant = !!initActiviteId && !laboId;
 
@@ -92,6 +94,7 @@ export default function FacturesApproPage() {
   const fetchResults = useCallback(async () => {
     setLoading(true);
     setSearched(true);
+    setPage(1);
     try {
       const params = new URLSearchParams();
       if (selectedActiviteId) params.set('activiteId', selectedActiviteId);
@@ -111,6 +114,8 @@ export default function FacturesApproPage() {
   }, [selectedActiviteId, laboId, startDate, endDate, selectedFournisseurId, refFactureFilter]);
 
   const factures = groupIntoFactures(results);
+  const totalPages = Math.max(1, Math.ceil(factures.length / PAGE_SIZE));
+  const pagedFactures = factures.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
   const nonLaboFournisseurs = fournisseurs.filter((f) => !f.isLabo);
 
   const toggleExpand = (key: string) => {
@@ -121,7 +126,7 @@ export default function FacturesApproPage() {
     });
   };
 
-  const expandAll = () => setExpandedKeys(new Set(factures.map((f) => f.key)));
+  const expandAll = () => setExpandedKeys(new Set(pagedFactures.map((f) => f.key)));
   const collapseAll = () => setExpandedKeys(new Set());
 
   return (
@@ -220,11 +225,10 @@ export default function FacturesApproPage() {
             </div>
           </div>
 
-          {factures.map((f) => {
+          {pagedFactures.map((f) => {
             const isExpanded = expandedKeys.has(f.key);
             return (
               <div key={f.key} style={{ marginBottom: 12, border: '1.5px solid #bfdbfe', borderRadius: 12, overflow: 'hidden', boxShadow: '0 2px 8px rgba(30,64,175,0.08)' }}>
-                {/* Invoice header */}
                 <button onClick={() => toggleExpand(f.key)} style={{ width: '100%', background: 'linear-gradient(90deg, #eff6ff, #dbeafe)', border: 'none', cursor: 'pointer', padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', textAlign: 'left' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
                     <span style={{ fontSize: '1.1rem' }}>🧾</span>
@@ -256,13 +260,12 @@ export default function FacturesApproPage() {
                   </div>
                 </button>
 
-                {/* Invoice lines */}
                 {isExpanded && (
                   <div style={{ overflowX: 'auto' }}>
                     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
                       <thead>
                         <tr style={{ background: '#eff6ff', borderBottom: '2px solid #bfdbfe' }}>
-                          {(['Article', 'Catégorie', 'Qté', 'Unité', 'Prix HT/u', f.hasTva ? 'TVA %' : null, f.hasTva ? 'Prix TTC/u' : null, 'Total HT', f.hasTva ? 'Total TTC' : null] as (string | null)[])
+                          {(['Article', 'Catégorie', 'Qté', 'Prix HT/u', f.hasTva ? 'TVA %' : null, f.hasTva ? 'Prix TTC/u' : null, 'Total HT', f.hasTva ? 'Total TTC' : null] as (string | null)[])
                             .filter(Boolean)
                             .map((h) => (
                               <th key={h!} style={{ padding: '8px 12px', fontWeight: 700, textAlign: h === 'Article' || h === 'Catégorie' ? 'left' : 'right', color: '#1e40af', textTransform: 'uppercase', fontSize: '0.65rem', letterSpacing: '0.05em' }}>
@@ -277,10 +280,12 @@ export default function FacturesApproPage() {
                           const ttc = (l.quantite ?? 0) * (l.prixUnitaireTva ?? l.prixUnitaire ?? 0);
                           return (
                             <tr key={l.id} style={{ borderBottom: '1px solid var(--border)', background: i % 2 === 0 ? '#fff' : '#f8faff' }}>
-                              <td style={{ padding: '8px 12px', fontWeight: 600 }}>{l.ingredientNom}</td>
+                              <td style={{ padding: '8px 12px' }}>
+                                <div style={{ fontWeight: 600 }}>{l.ingredientNom}</div>
+                                <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{l.uniteNom}</div>
+                              </td>
                               <td style={{ padding: '8px 12px', color: 'var(--text-muted)', fontSize: '0.78rem' }}>{l.categorieNom}</td>
                               <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 700, color: '#0f766e' }}>{l.quantite ?? '—'}</td>
-                              <td style={{ padding: '8px 12px', textAlign: 'right', color: 'var(--text-muted)' }}>{l.uniteNom}</td>
                               <td style={{ padding: '8px 12px', textAlign: 'right' }}>{l.prixUnitaire != null ? `${l.prixUnitaire.toFixed(3)}` : '—'}</td>
                               {f.hasTva && <td style={{ padding: '8px 12px', textAlign: 'right', color: '#0369a1' }}>{l.tauxTva != null ? `${l.tauxTva}%` : '—'}</td>}
                               {f.hasTva && <td style={{ padding: '8px 12px', textAlign: 'right' }}>{l.prixUnitaireTva != null ? l.prixUnitaireTva.toFixed(3) : '—'}</td>}
@@ -292,7 +297,7 @@ export default function FacturesApproPage() {
                       </tbody>
                       <tfoot>
                         <tr style={{ background: '#eff6ff', borderTop: '2px solid #bfdbfe' }}>
-                          <td colSpan={f.hasTva ? 7 : 4} style={{ padding: '8px 12px', fontWeight: 800, fontSize: '0.72rem', color: '#1e40af', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                          <td colSpan={f.hasTva ? 6 : 3} style={{ padding: '8px 12px', fontWeight: 800, fontSize: '0.72rem', color: '#1e40af', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                             Sous-total — {f.lines.length} article{f.lines.length > 1 ? 's' : ''}
                           </td>
                           <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 900, color: '#1e40af', fontSize: '0.88rem' }}>{f.totalHT.toFixed(3)} DT</td>
@@ -306,7 +311,23 @@ export default function FacturesApproPage() {
             );
           })}
 
-          {/* Grand total */}
+          {/* Pagination */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 4px', marginTop: 4 }}>
+            <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+              {factures.length} facture{factures.length > 1 ? 's' : ''} · page {page}/{totalPages}
+            </span>
+            {totalPages > 1 && (
+              <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                <button className="btn btn-ghost btn-sm" disabled={page === 1}
+                  onClick={() => setPage((p) => Math.max(1, p - 1))} style={{ padding: '3px 10px', fontWeight: 700 }}>‹</button>
+                <span style={{ fontWeight: 600, color: 'var(--text)', fontSize: '0.82rem' }}>{page} / {totalPages}</span>
+                <button className="btn btn-ghost btn-sm" disabled={page === totalPages}
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))} style={{ padding: '3px 10px', fontWeight: 700 }}>›</button>
+              </div>
+            )}
+          </div>
+
+          {/* Grand total (all pages) */}
           {factures.length > 1 && (
             <div style={{ background: 'linear-gradient(90deg, #1e3a8a, #1e40af)', borderRadius: 10, padding: '14px 20px', display: 'flex', justifyContent: 'flex-end', gap: 24, flexWrap: 'wrap', marginTop: 8 }}>
               <div style={{ textAlign: 'right' }}>
