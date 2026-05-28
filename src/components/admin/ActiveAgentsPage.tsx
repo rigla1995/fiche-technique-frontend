@@ -7,11 +7,13 @@ interface Agent {
   clientEmail: string;
   enabled: boolean;
   telegramLinked: boolean;
+  messengerLinked: boolean;
   messageCount: number;
   lastActivity: string | null;
   lastConfidence: number | null;
   avgConfidenceMonth: number | null;
   inviteLink: string | null;
+  messengerInviteLink: string | null;
   activatedAt: string | null;
 }
 
@@ -43,9 +45,10 @@ const ConfBadge = ({ value, label }: { value: number | null; label: string }) =>
   );
 };
 
-const StatusBadge = ({ enabled, telegramLinked }: { enabled: boolean; telegramLinked: boolean }) => {
+const StatusBadge = ({ enabled, telegramLinked, messengerLinked }: { enabled: boolean; telegramLinked: boolean; messengerLinked: boolean }) => {
   if (!enabled) return <span className="badge" style={{ background: '#f1f5f9', color: '#64748b' }}>⭕ Inactif</span>;
-  if (!telegramLinked) return <span className="badge" style={{ background: '#fef3c7', color: '#92400e' }}>⏳ En attente</span>;
+  const linked = telegramLinked || messengerLinked;
+  if (!linked) return <span className="badge" style={{ background: '#fef3c7', color: '#92400e' }}>⏳ En attente</span>;
   return <span className="badge" style={{ background: '#dcfce7', color: '#16a34a' }}>🟢 Actif</span>;
 };
 
@@ -54,9 +57,9 @@ export default function ActiveAgentsPage() {
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [saving, setSaving] = useState<number | null>(null);
-  const [copiedLink, setCopiedLink] = useState<number | null>(null);
+  const [copiedLink, setCopiedLink] = useState<string | null>(null);
   const [filter, setFilter] = useState<'all' | 'active' | 'pending' | 'inactive'>('all');
-  const [generatingInvite, setGeneratingInvite] = useState<number | null>(null);
+  const [generatingInvite, setGeneratingInvite] = useState<string | null>(null);
 
   const fetchAgents = useCallback(async () => {
     setLoading(true);
@@ -84,15 +87,15 @@ export default function ActiveAgentsPage() {
     }
   };
 
-  const copyLink = (agent: Agent) => {
-    if (!agent.inviteLink) return;
-    navigator.clipboard.writeText(agent.inviteLink);
-    setCopiedLink(agent.clientId);
+  const copyLink = (key: string, link: string) => {
+    navigator.clipboard.writeText(link);
+    setCopiedLink(key);
     setTimeout(() => setCopiedLink(null), 2000);
   };
 
-  const generateNewInvite = async (agent: Agent) => {
-    setGeneratingInvite(agent.clientId);
+  const generateTelegramInvite = async (agent: Agent) => {
+    const key = `tg-${agent.clientId}`;
+    setGeneratingInvite(key);
     try {
       const res = await api.post(`/api/ai-assistant/config/${agent.clientId}/invite`);
       setAgents(prev => prev.map(a => a.clientId === agent.clientId ? { ...a, inviteLink: res.data.inviteLink, telegramLinked: false } : a));
@@ -101,17 +104,29 @@ export default function ActiveAgentsPage() {
     }
   };
 
+  const generateMessengerInvite = async (agent: Agent) => {
+    const key = `ms-${agent.clientId}`;
+    setGeneratingInvite(key);
+    try {
+      const res = await api.post(`/api/ai-assistant/config/${agent.clientId}/messenger-invite`);
+      setAgents(prev => prev.map(a => a.clientId === agent.clientId ? { ...a, messengerInviteLink: res.data.messengerInviteLink, messengerLinked: false } : a));
+    } finally {
+      setGeneratingInvite(null);
+    }
+  };
+
   const filtered = agents.filter(a => {
-    if (filter === 'active') return a.enabled && a.telegramLinked;
-    if (filter === 'pending') return a.enabled && !a.telegramLinked;
+    const linked = a.telegramLinked || a.messengerLinked;
+    if (filter === 'active') return a.enabled && linked;
+    if (filter === 'pending') return a.enabled && !linked;
     if (filter === 'inactive') return !a.enabled;
     return true;
   });
 
   const counts = {
     total: agents.length,
-    active: agents.filter(a => a.enabled && a.telegramLinked).length,
-    pending: agents.filter(a => a.enabled && !a.telegramLinked).length,
+    active: agents.filter(a => a.enabled && (a.telegramLinked || a.messengerLinked)).length,
+    pending: agents.filter(a => a.enabled && !a.telegramLinked && !a.messengerLinked).length,
     inactive: agents.filter(a => !a.enabled).length,
   };
 
@@ -128,7 +143,7 @@ export default function ActiveAgentsPage() {
         <div>
           <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0 }}>Agents IA actifs</h1>
           <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.7)', margin: '4px 0 0' }}>
-            Agents Telegram par client — activation, score de confiance, lien d'invitation
+            Agents Telegram &amp; Messenger par client — activation, score de confiance, lien d'invitation
           </p>
         </div>
         <button onClick={fetchAgents} style={{ marginLeft: 'auto', padding: '8px 16px', borderRadius: 8, border: 'none', background: 'rgba(255,255,255,0.18)', color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
@@ -200,7 +215,7 @@ export default function ActiveAgentsPage() {
                     <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{agent.clientEmail}</div>
                   </div>
 
-                  <StatusBadge enabled={agent.enabled} telegramLinked={agent.telegramLinked} />
+                  <StatusBadge enabled={agent.enabled} telegramLinked={agent.telegramLinked} messengerLinked={agent.messengerLinked} />
 
                   {/* Confidence scores */}
                   <div style={{ display: 'flex', gap: 20, padding: '8px 16px', background: 'var(--bg-soft)', borderRadius: 10 }}>
@@ -241,35 +256,66 @@ export default function ActiveAgentsPage() {
                   </span>
                 </div>
 
-                {/* Row 3: Telegram invite */}
                 {agent.enabled && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, borderTop: '1px solid var(--border)', paddingTop: 10, flexWrap: 'wrap' }}>
-                    {agent.telegramLinked ? (
-                      <span style={{ fontSize: 12, color: '#16a34a', fontWeight: 600 }}>✅ Client lié à Telegram</span>
-                    ) : agent.inviteLink ? (
-                      <>
-                        <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Lien d'invitation :</span>
-                        <code style={{ fontSize: 11, background: 'var(--bg-soft)', border: '1px solid var(--border)', borderRadius: 6, padding: '3px 8px', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 320 }}>
-                          {agent.inviteLink}
-                        </code>
-                        <button
-                          onClick={() => copyLink(agent)}
-                          style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, border: '1px solid var(--border)', background: copiedLink === agent.clientId ? '#dcfce7' : '#fff', color: copiedLink === agent.clientId ? '#16a34a' : 'var(--text)', cursor: 'pointer', fontWeight: 600, flexShrink: 0 }}
-                        >
-                          {copiedLink === agent.clientId ? '✅ Copié' : '📋 Copier'}
-                        </button>
-                      </>
-                    ) : (
-                      <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Aucun lien généré</span>
-                    )}
-                    <button
-                      onClick={() => generateNewInvite(agent)}
-                      disabled={generatingInvite === agent.clientId}
-                      style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, border: '1px solid var(--border)', background: '#fff', color: 'var(--primary)', cursor: 'pointer', fontWeight: 600, marginLeft: 'auto', flexShrink: 0 }}
-                    >
-                      {generatingInvite === agent.clientId ? 'Génération…' : '🔗 Nouveau lien'}
-                    </button>
-                  </div>
+                  <>
+                    {/* Row 3: Telegram invite */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, borderTop: '1px solid var(--border)', paddingTop: 10, flexWrap: 'wrap' }}>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: '#2563eb', background: '#eff6ff', padding: '2px 8px', borderRadius: 6 }}>✈️ Telegram</span>
+                      {agent.telegramLinked ? (
+                        <span style={{ fontSize: 12, color: '#16a34a', fontWeight: 600 }}>✅ Client lié</span>
+                      ) : agent.inviteLink ? (
+                        <>
+                          <code style={{ fontSize: 11, background: 'var(--bg-soft)', border: '1px solid var(--border)', borderRadius: 6, padding: '3px 8px', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 280 }}>
+                            {agent.inviteLink}
+                          </code>
+                          <button
+                            onClick={() => copyLink(`tg-${agent.clientId}`, agent.inviteLink!)}
+                            style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, border: '1px solid var(--border)', background: copiedLink === `tg-${agent.clientId}` ? '#dcfce7' : '#fff', color: copiedLink === `tg-${agent.clientId}` ? '#16a34a' : 'var(--text)', cursor: 'pointer', fontWeight: 600, flexShrink: 0 }}
+                          >
+                            {copiedLink === `tg-${agent.clientId}` ? '✅ Copié' : '📋 Copier'}
+                          </button>
+                        </>
+                      ) : (
+                        <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Aucun lien</span>
+                      )}
+                      <button
+                        onClick={() => generateTelegramInvite(agent)}
+                        disabled={generatingInvite === `tg-${agent.clientId}`}
+                        style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, border: '1px solid var(--border)', background: '#fff', color: 'var(--primary)', cursor: 'pointer', fontWeight: 600, marginLeft: 'auto', flexShrink: 0 }}
+                      >
+                        {generatingInvite === `tg-${agent.clientId}` ? 'Génération…' : '🔗 Nouveau lien'}
+                      </button>
+                    </div>
+
+                    {/* Row 4: Messenger invite */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, borderTop: '1px solid var(--border)', paddingTop: 10, flexWrap: 'wrap' }}>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: '#1877f2', background: '#eff6ff', padding: '2px 8px', borderRadius: 6 }}>💬 Messenger</span>
+                      {agent.messengerLinked ? (
+                        <span style={{ fontSize: 12, color: '#16a34a', fontWeight: 600 }}>✅ Client lié</span>
+                      ) : agent.messengerInviteLink ? (
+                        <>
+                          <code style={{ fontSize: 11, background: 'var(--bg-soft)', border: '1px solid var(--border)', borderRadius: 6, padding: '3px 8px', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 280 }}>
+                            {agent.messengerInviteLink}
+                          </code>
+                          <button
+                            onClick={() => copyLink(`ms-${agent.clientId}`, agent.messengerInviteLink!)}
+                            style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, border: '1px solid var(--border)', background: copiedLink === `ms-${agent.clientId}` ? '#dcfce7' : '#fff', color: copiedLink === `ms-${agent.clientId}` ? '#16a34a' : 'var(--text)', cursor: 'pointer', fontWeight: 600, flexShrink: 0 }}
+                          >
+                            {copiedLink === `ms-${agent.clientId}` ? '✅ Copié' : '📋 Copier'}
+                          </button>
+                        </>
+                      ) : (
+                        <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Aucun lien</span>
+                      )}
+                      <button
+                        onClick={() => generateMessengerInvite(agent)}
+                        disabled={generatingInvite === `ms-${agent.clientId}`}
+                        style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, border: '1px solid #bfdbfe', background: '#eff6ff', color: '#1877f2', cursor: 'pointer', fontWeight: 600, marginLeft: 'auto', flexShrink: 0 }}
+                      >
+                        {generatingInvite === `ms-${agent.clientId}` ? 'Génération…' : '🔗 Nouveau lien'}
+                      </button>
+                    </div>
+                  </>
                 )}
               </div>
             );
