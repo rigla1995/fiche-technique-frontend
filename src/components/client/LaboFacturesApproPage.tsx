@@ -16,6 +16,7 @@ const fmtDate = (iso: string | null | undefined) => {
 
 interface Fournisseur { id: number; nom: string }
 interface Labo { id: number; nom: string }
+interface Activite { id: number; nom: string }
 
 interface HistEntry {
   id: number;
@@ -31,6 +32,8 @@ interface HistEntry {
   fournisseurNom: string | null;
   refFacture: string | null;
   typeAppro?: string;
+  activiteId?: number | null;
+  activiteNom?: string | null;
 }
 
 interface FactureGroup {
@@ -38,6 +41,8 @@ interface FactureGroup {
   refFacture: string | null;
   dateAppro: string;
   fournisseurNom: string | null;
+  activiteId: number | null;
+  activiteNom: string | null;
   lines: HistEntry[];
   totalHT: number;
   totalTTC: number;
@@ -50,13 +55,17 @@ function groupIntoFactures(entries: HistEntry[]): FactureGroup[] {
 
   for (const e of entries) {
     if (e.typeAppro !== 'manuel' && e.typeAppro !== 'transfert') continue;
-    const key = `${e.refFacture ?? `__no-ref-${e.id}`}__${e.dateAppro}__${e.fournisseurId ?? ''}`;
+    // For transfers: group by (ref, date, activiteId); for manuel: group by (ref, date, fournisseurId)
+    const groupId = e.typeAppro === 'transfert' ? (e.activiteId ?? '') : (e.fournisseurId ?? '');
+    const key = `${e.refFacture ?? `__no-ref-${e.id}`}__${e.dateAppro}__${groupId}`;
     if (!map.has(key)) {
       map.set(key, {
         key,
         refFacture: e.refFacture,
         dateAppro: e.dateAppro,
         fournisseurNom: e.fournisseurNom,
+        activiteId: e.activiteId ?? null,
+        activiteNom: e.activiteNom ?? null,
         lines: [],
         totalHT: 0,
         totalTTC: 0,
@@ -83,7 +92,10 @@ export default function LaboFacturesApproPage() {
 
   const [allLabos, setAllLabos] = useState<Labo[]>([]);
   const [fournisseurs, setFournisseurs] = useState<Fournisseur[]>([]);
+  const [activites, setActivites] = useState<Activite[]>([]);
   const [selectedFournisseurId, setSelectedFournisseurId] = useState('');
+  const [selectedActiviteId, setSelectedActiviteId] = useState('');
+  const [typeFilter, setTypeFilter] = useState('');
   const [refFactureFilter, setRefFactureFilter] = useState('');
   const [startDate, setStartDate] = useState(yearStart);
   const [endDate, setEndDate] = useState(yearEnd);
@@ -100,20 +112,23 @@ export default function LaboFacturesApproPage() {
     api.get('/api/labo').then(({ data }) => setAllLabos(data as Labo[])).catch(() => {});
     if (laboId) {
       api.get(`/api/labo/${laboId}/fournisseurs`).then(({ data }) => setFournisseurs(data as Fournisseur[])).catch(() => {});
+      api.get(`/api/labo/${laboId}`).then(({ data }) => setActivites((data.activites ?? []) as Activite[])).catch(() => {});
     }
   }, [laboId]);
 
-  const latestFilters = useRef({ laboId, startDate, endDate, selectedFournisseurId, refFactureFilter });
-  latestFilters.current = { laboId, startDate, endDate, selectedFournisseurId, refFactureFilter };
+  const latestFilters = useRef({ laboId, startDate, endDate, selectedFournisseurId, selectedActiviteId, typeFilter, refFactureFilter });
+  latestFilters.current = { laboId, startDate, endDate, selectedFournisseurId, selectedActiviteId, typeFilter, refFactureFilter };
 
   const fetchBatch = (offset: number, append: boolean) => {
-    const { laboId: lId, startDate: sd, endDate: ed, selectedFournisseurId: fId, refFactureFilter: ref } = latestFilters.current;
+    const { laboId: lId, startDate: sd, endDate: ed, selectedFournisseurId: fId, selectedActiviteId: aId, typeFilter: tf, refFactureFilter: ref } = latestFilters.current;
     if (!lId) return;
     if (append) setLoadingMore(true); else { setLoading(true); setPage(1); setExpandedKeys(new Set()); }
     const params = new URLSearchParams();
     if (sd) params.set('startDate', sd);
     if (ed) params.set('endDate', ed);
     if (fId) params.set('fournisseurId', fId);
+    if (aId) params.set('activiteId', aId);
+    if (tf) params.set('typeFilter', tf);
     if (ref.trim()) params.set('refFacture', ref.trim());
     params.set('limit', String(BATCH));
     params.set('offset', String(offset));
@@ -135,7 +150,7 @@ export default function LaboFacturesApproPage() {
     const timer = setTimeout(() => fetchBatch(0, false), 400);
     return () => clearTimeout(timer);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [laboId, startDate, endDate, selectedFournisseurId, refFactureFilter]);
+  }, [laboId, startDate, endDate, selectedFournisseurId, selectedActiviteId, typeFilter, refFactureFilter]);
 
   const factures = groupIntoFactures(allEntries);
   const totalPages = Math.max(1, Math.ceil(factures.length / PAGE_SIZE));
@@ -195,7 +210,26 @@ export default function LaboFacturesApproPage() {
             <input type="date" style={{ padding: '6px 10px', borderRadius: 7, border: '1.5px solid #7c3aed', fontSize: '0.82rem', background: '#faf5ff', fontWeight: 600 }}
               value={endDate} onChange={(e) => setEndDate(e.target.value)} />
           </div>
-          {fournisseurs.length > 0 && (
+          {activites.length > 0 && (
+            <div>
+              <label style={{ fontSize: '0.62rem', fontWeight: 700, color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 4 }}>🏪 Activité</label>
+              <select style={{ padding: '6px 10px', borderRadius: 7, border: '1.5px solid #7c3aed', fontSize: '0.82rem', background: '#faf5ff', minWidth: 130 }}
+                value={selectedActiviteId} onChange={(e) => setSelectedActiviteId(e.target.value)}>
+                <option value="">— Toutes —</option>
+                {activites.map((a) => <option key={a.id} value={a.id}>{a.nom}</option>)}
+              </select>
+            </div>
+          )}
+          <div>
+            <label style={{ fontSize: '0.62rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 4 }}>🏷️ Type</label>
+            <select style={{ padding: '6px 10px', borderRadius: 7, border: '1.5px solid #c4b5fd', fontSize: '0.82rem', background: '#faf5ff', minWidth: 120 }}
+              value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}>
+              <option value="">— Tous —</option>
+              <option value="manuel">Manuel</option>
+              <option value="transfert">Transfert</option>
+            </select>
+          </div>
+          {fournisseurs.length > 0 && !selectedActiviteId && typeFilter !== 'transfert' && (
             <div>
               <label style={{ fontSize: '0.62rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 4 }}>🚚 Fournisseur</label>
               <select style={{ padding: '6px 10px', borderRadius: 7, border: '1.5px solid #c4b5fd', fontSize: '0.82rem', background: '#faf5ff', minWidth: 130 }}
@@ -210,8 +244,8 @@ export default function LaboFacturesApproPage() {
             <input type="text" style={{ padding: '6px 10px', borderRadius: 7, border: '1.5px solid #c4b5fd', fontSize: '0.82rem', background: '#faf5ff', minWidth: 120 }}
               placeholder="Réf…" value={refFactureFilter} onChange={(e) => setRefFactureFilter(e.target.value)} />
           </div>
-          {(selectedFournisseurId || refFactureFilter || startDate !== yearStart || endDate !== yearEnd) && (
-            <button onClick={() => { setSelectedFournisseurId(''); setRefFactureFilter(''); setStartDate(yearStart); setEndDate(yearEnd); }}
+          {(selectedFournisseurId || selectedActiviteId || typeFilter || refFactureFilter || startDate !== yearStart || endDate !== yearEnd) && (
+            <button onClick={() => { setSelectedFournisseurId(''); setSelectedActiviteId(''); setTypeFilter(''); setRefFactureFilter(''); setStartDate(yearStart); setEndDate(yearEnd); }}
               style={{ alignSelf: 'flex-end', background: 'transparent', border: '1.5px solid var(--border)', borderRadius: 7, padding: '5px 9px', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '0.85rem', fontWeight: 700 }}
               title="Réinitialiser">✕</button>
           )}
@@ -252,7 +286,8 @@ export default function LaboFacturesApproPage() {
                       </div>
                       <div style={{ fontSize: '0.72rem', color: '#7c3aed', marginTop: 2 }}>
                         {fmtDate(f.dateAppro)}
-                        {f.fournisseurNom && <> · {f.fournisseurNom}</>}
+                        {f.activiteNom && <> · 🏪 <strong>{f.activiteNom}</strong></>}
+                        {f.fournisseurNom && !f.activiteNom && <> · {f.fournisseurNom}</>}
                         <span style={{ marginLeft: 8, background: '#7c3aed', color: '#fff', borderRadius: 4, padding: '1px 6px', fontSize: '0.65rem' }}>
                           {f.lines.length} article{f.lines.length > 1 ? 's' : ''}
                         </span>
