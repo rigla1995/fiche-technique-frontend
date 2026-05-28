@@ -302,6 +302,12 @@ export default function AbonnementsManagement() {
   const [aiLinkCopied, setAiLinkCopied] = useState(false);
   const [aiInviteGenerating, setAiInviteGenerating] = useState(false);
 
+  // AI assistant / Messenger
+  const [aiMessengerLinked, setAiMessengerLinked] = useState(false);
+  const [aiMessengerInviteLink, setAiMessengerInviteLink] = useState<string | null>(null);
+  const [aiMessengerLinkCopied, setAiMessengerLinkCopied] = useState(false);
+  const [aiMessengerInviteGenerating, setAiMessengerInviteGenerating] = useState(false);
+
   // invite
 
   const [search, setSearch] = useState('');
@@ -341,8 +347,11 @@ export default function AbonnementsManagement() {
       setAiEnabled(aiRes.data.enabled ?? false);
       setAiTelegramLinked(aiRes.data.telegramLinked ?? false);
       setAiInviteLink(aiRes.data.inviteLink ?? null);
+      setAiMessengerLinked(aiRes.data.messengerLinked ?? false);
+      setAiMessengerInviteLink(aiRes.data.messengerInviteLink ?? null);
       setAiError(null);
       setAiLinkCopied(false);
+      setAiMessengerLinkCopied(false);
       setObDatePaiement(abRes.data.dateOnboarding ? abRes.data.dateOnboarding.slice(0, 10) : '');
       // Default mensualité month to current month
       const now = new Date();
@@ -402,6 +411,27 @@ export default function AbonnementsManagement() {
     navigator.clipboard.writeText(aiInviteLink);
     setAiLinkCopied(true);
     setTimeout(() => setAiLinkCopied(false), 2000);
+  };
+
+  const generateMessengerInviteLink = async () => {
+    if (!selected || aiMessengerInviteGenerating) return;
+    setAiMessengerInviteGenerating(true);
+    try {
+      const res = await api.post(`/api/ai-assistant/config/${selected.clientId}/messenger-invite`);
+      setAiMessengerInviteLink(res.data.messengerInviteLink);
+      setAiMessengerLinked(false);
+    } catch (err: unknown) {
+      setAiError((err as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Erreur génération lien Messenger');
+    } finally {
+      setAiMessengerInviteGenerating(false);
+    }
+  };
+
+  const copyMessengerInviteLink = () => {
+    if (!aiMessengerInviteLink) return;
+    navigator.clipboard.writeText(aiMessengerInviteLink);
+    setAiMessengerLinkCopied(true);
+    setTimeout(() => setAiMessengerLinkCopied(false), 2000);
   };
 
   // Auto-fetch montant when pMois or selected changes
@@ -1534,6 +1564,54 @@ export default function AbonnementsManagement() {
                     </button>
                   </div>
                 )}
+              </div>
+            </div>
+
+            {/* ── Agent IA Messenger ─────────────────────────────────── */}
+            <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #e2e8f0', overflow: 'hidden', marginBottom: 20 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 18px', background: 'linear-gradient(135deg,#eff6ff 0%,#dbeafe 100%)', borderBottom: '1px solid #e2e8f0' }}>
+                <span style={{ fontSize: 20 }}>💬</span>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: '#0f172a' }}>Agent IA Messenger</div>
+                  <div style={{ fontSize: 11, color: '#64748b', marginTop: 1 }}>L'agent répond sur Facebook Messenger aux questions stock, inventaire, pertes et envoie des rapports par email</div>
+                </div>
+                <div style={{ padding: '4px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700, background: aiEnabled && aiMessengerLinked ? '#dcfce7' : aiEnabled ? '#fef3c7' : '#f1f5f9', color: aiEnabled && aiMessengerLinked ? '#16a34a' : aiEnabled ? '#92400e' : '#94a3b8' }}>
+                  {aiEnabled && aiMessengerLinked ? '🟢 Actif' : aiEnabled ? '⏳ En attente' : '⭕ Inactif'}
+                </div>
+              </div>
+
+              <div style={{ padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {/* Messenger invite link */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {aiMessengerLinked ? (
+                    <div style={{ fontSize: 12, color: '#16a34a', fontWeight: 600 }}>✅ Client lié à Messenger — l'agent est opérationnel</div>
+                  ) : aiMessengerInviteLink ? (
+                    <>
+                      <div style={{ fontSize: 12, color: '#374151', fontWeight: 600 }}>📨 Envoyez ce lien au client pour lier Messenger :</div>
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        <code style={{ flex: 1, fontSize: 11, background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 6, padding: '6px 10px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {aiMessengerInviteLink}
+                        </code>
+                        <button
+                          onClick={copyMessengerInviteLink}
+                          style={{ padding: '6px 12px', borderRadius: 6, border: '1px solid #e2e8f0', background: aiMessengerLinkCopied ? '#dcfce7' : '#fff', color: aiMessengerLinkCopied ? '#16a34a' : '#374151', fontSize: 11, fontWeight: 600, cursor: 'pointer', flexShrink: 0 }}
+                        >
+                          {aiMessengerLinkCopied ? '✅ Copié' : '📋 Copier'}
+                        </button>
+                      </div>
+                      <div style={{ fontSize: 11, color: '#94a3b8' }}>Le client clique → Messenger s'ouvre → l'agent l'identifie et lui envoie un message de bienvenue.</div>
+                    </>
+                  ) : (
+                    <div style={{ fontSize: 12, color: '#94a3b8' }}>Aucun lien généré</div>
+                  )}
+                  <button
+                    onClick={generateMessengerInviteLink}
+                    disabled={aiMessengerInviteGenerating}
+                    style={{ fontSize: 11, padding: '6px 12px', borderRadius: 6, border: '1px solid #1877f2', background: '#fff', color: '#1877f2', cursor: aiMessengerInviteGenerating ? 'not-allowed' : 'pointer', fontWeight: 600, alignSelf: 'flex-start' }}
+                  >
+                    {aiMessengerInviteGenerating ? 'Génération…' : '🔗 Générer un nouveau lien'}
+                  </button>
+                </div>
               </div>
             </div>
 
