@@ -12,6 +12,8 @@ interface Agent {
   lastActivity: string | null;
   lastConfidence: number | null;
   avgConfidenceMonth: number | null;
+  tokensMonth: number;
+  tokensTotal: number;
   inviteLink: string | null;
   messengerInviteLink: string | null;
   activatedAt: string | null;
@@ -128,6 +130,7 @@ export default function ActiveAgentsPage() {
     active: agents.filter(a => a.enabled && (a.telegramLinked || a.messengerLinked)).length,
     pending: agents.filter(a => a.enabled && !a.telegramLinked && !a.messengerLinked).length,
     inactive: agents.filter(a => !a.enabled).length,
+    tokensMonth: agents.reduce((s, a) => s + (a.tokensMonth || 0), 0),
   };
 
   return (
@@ -158,6 +161,7 @@ export default function ActiveAgentsPage() {
           { label: 'Actifs', value: counts.active, color: '#16a34a', icon: '🟢' },
           { label: 'En attente', value: counts.pending, color: '#f59e0b', icon: '⏳' },
           { label: 'Inactifs', value: counts.inactive, color: '#94a3b8', icon: '⭕' },
+          { label: 'Tokens ce mois', value: counts.tokensMonth.toLocaleString('fr-FR'), color: counts.tokensMonth > 100000 ? '#ef4444' : '#6366f1', icon: '🔋' },
         ].map(s => (
           <div key={s.label} style={{ background: '#fff', border: '1px solid var(--border)', borderRadius: 10, padding: '16px 20px' }}>
             <div style={{ fontSize: '1.3rem' }}>{s.icon}</div>
@@ -244,9 +248,13 @@ export default function ActiveAgentsPage() {
                 </div>
 
                 {/* Row 2: stats */}
-                <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap', alignItems: 'center', borderTop: '1px solid var(--border)', paddingTop: 10 }}>
+                <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', alignItems: 'center', borderTop: '1px solid var(--border)', paddingTop: 10 }}>
                   <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
                     💬 <strong style={{ color: 'var(--text)' }}>{agent.messageCount}</strong> messages
+                  </span>
+                  <span style={{ fontSize: 12, color: 'var(--text-muted)', display: 'flex', flexDirection: 'column', gap: 1 }}>
+                    <span>🔋 Tokens ce mois : <strong style={{ color: agent.tokensMonth > 10000 ? '#f59e0b' : 'var(--text)' }}>{agent.tokensMonth.toLocaleString('fr-FR')}</strong></span>
+                    <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>Total : {agent.tokensTotal.toLocaleString('fr-FR')}</span>
                   </span>
                   <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
                     🕐 Dernière activité : <strong style={{ color: 'var(--text)' }}>{fmtDate(agent.lastActivity)}</strong>
