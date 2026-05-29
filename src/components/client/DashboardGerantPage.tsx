@@ -40,7 +40,7 @@ export default function DashboardGerantPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  const prenom = user?.nom?.split(' ')[0] ?? 'Gérant';
+  const prenom = user?.name?.split(' ')[0] ?? 'Gérant';
   const activiteLabel = data?.type === 'labo' ? 'Labo' : 'Activité';
 
   if (loading) {
