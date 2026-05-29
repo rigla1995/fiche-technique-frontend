@@ -196,7 +196,8 @@ export default function HistoriquepertesPage() {
     api.get('/api/entreprise/activites')
       .then(({ data }) => {
         const all = data as Activite[];
-        setActivites(all);
+        const isActiviteGerantLoad = isGerant && user?.gerantActiviteType === 'activite' && !!user?.gerantActiviteId;
+        setActivites(isActiviteGerantLoad ? all.filter((a) => a.id === user!.gerantActiviteId) : all);
       }).catch(() => {});
   }, [isEntreprise, type]);
 
@@ -338,9 +339,9 @@ export default function HistoriquepertesPage() {
       </div>
 
       {/* Activité selector pills */}
-      {isEntreprise && !isActiviteGerant && activites.length > 0 && (
+      {isEntreprise && activites.length > 0 && (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16, padding: '10px 14px', background: 'var(--card-bg)', borderRadius: 10, border: '1px solid var(--border)' }}>
-          <button onClick={() => setFActiviteId('')} style={{ padding: '4px 14px', borderRadius: 20, cursor: 'pointer', fontSize: '0.82rem', border: !fActiviteId ? '1.5px solid #1e40af' : '1.5px solid var(--border)', background: !fActiviteId ? '#1e40af' : 'var(--bg)', color: !fActiviteId ? '#fff' : 'var(--text)', fontWeight: !fActiviteId ? 700 : 400 }}>Toutes</button>
+          {!isActiviteGerant && <button onClick={() => setFActiviteId('')} style={{ padding: '4px 14px', borderRadius: 20, cursor: 'pointer', fontSize: '0.82rem', border: !fActiviteId ? '1.5px solid #1e40af' : '1.5px solid var(--border)', background: !fActiviteId ? '#1e40af' : 'var(--bg)', color: !fActiviteId ? '#fff' : 'var(--text)', fontWeight: !fActiviteId ? 700 : 400 }}>Toutes</button>}
           {activites.map((a) => (
             <button key={a.id} onClick={() => setFActiviteId(String(a.id))} style={{ padding: '4px 14px', borderRadius: 20, cursor: 'pointer', fontSize: '0.82rem', border: fActiviteId === String(a.id) ? '1.5px solid #1e40af' : '1.5px solid var(--border)', background: fActiviteId === String(a.id) ? '#1e40af' : 'var(--bg)', color: fActiviteId === String(a.id) ? '#fff' : 'var(--text)', fontWeight: fActiviteId === String(a.id) ? 700 : 400 }}>🏪 {a.nom}</button>
           ))}

@@ -87,12 +87,14 @@ export default function HistoriqueInventairePage() {
     if (!section) return;
     api.get('/api/entreprise/activites')
       .then(({ data }) => {
-        const filtered = data as Activite[];
+        const all = data as Activite[];
+        const isActiviteGerantLoad = user?.role === 'gerant' && user?.gerantActiviteType === 'activite' && !!user?.gerantActiviteId;
+        const filtered = isActiviteGerantLoad ? all.filter((a) => a.id === user!.gerantActiviteId) : all;
         setActivites(filtered);
         if (filtered.length >= 1) setSelectedActiviteId(filtered[0].id);
       })
       .catch(() => {});
-  }, [section]);
+  }, [section]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!laboId && !effectiveActiviteId && !isClientMode) return;
@@ -215,7 +217,7 @@ export default function HistoriqueInventairePage() {
     ? contextNom || 'Activités'
     : contextNom || '';
 
-  const showActiviteSelector = !!section && !activiteId && activites.length > 1;
+  const showActiviteSelector = !!section && !activiteId && activites.length >= 1;
   const canSearch = !!laboId || !!effectiveActiviteId || isClientMode;
   const canExport = canWrite && applied && histRows.length > 0;
   const primaryBtn: React.CSSProperties = {

@@ -98,7 +98,8 @@ export default function FacturesApproPage() {
       if (cancelled) return;
       setFournisseurs(fData as Fournisseur[]);
       const all = aData as Activite[];
-      const filtered = laboId ? all.filter((a) => String((a as any).laboId) === laboId) : all;
+      let filtered = laboId ? all.filter((a) => String((a as any).laboId) === laboId) : all;
+      if (isActiviteGerant) filtered = filtered.filter((a) => a.id === Number(initActiviteId));
       setAllActivities(filtered);
       if (!initActiviteId && filtered.length > 0) {
         setSelectedActiviteId(String(filtered[0].id));
@@ -181,7 +182,7 @@ export default function FacturesApproPage() {
       </div>
 
       {/* Activité selector */}
-      {!isActiviteGerant && allActivities.length > 0 && (
+      {allActivities.length > 0 && (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16, padding: '10px 14px', background: 'var(--card-bg)', borderRadius: 10, border: '1px solid var(--border)', alignItems: 'center' }}>
           {allActivities.map((a) => (
             <button key={a.id}

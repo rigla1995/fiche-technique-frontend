@@ -252,7 +252,7 @@ export default function InventairePage() {
       )}
 
       {/* ── Activite selector ── */}
-      {section && !activiteId && activites.length > 1 && (
+      {section && !activiteId && activites.length >= 1 && (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16, padding: '10px 14px', background: 'var(--card-bg)', borderRadius: 10, border: '1px solid var(--border)' }}>
           {activites.map((a) => (
             <button key={a.id} onClick={() => setSelectedActiviteId(a.id)}

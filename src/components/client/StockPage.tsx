@@ -1257,7 +1257,7 @@ function ActivityStockSection({ label: _label, activities, initialActiviteId, on
   return (
     <div style={{ marginBottom: 36 }}>
       {/* Activité selector pills */}
-      {activities.length > 1 && (
+      {activities.length >= 1 && (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16, padding: '10px 14px', background: 'var(--card-bg)', borderRadius: 10, border: '1px solid var(--border)' }}>
           {activities.map((a) => (
             <button

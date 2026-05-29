@@ -300,7 +300,9 @@ export default function HistoriqueApproPage() {
     api.get('/api/entreprise/activites')
       .then(({ data }) => {
         const all = data as Activite[];
-        const filtered = laboId ? all.filter((a) => String((a as any).laboId) === laboId) : all;
+        const isActiviteGerantLoad = isGerant && user?.gerantActiviteType === 'activite' && !!user?.gerantActiviteId;
+        let filtered = laboId ? all.filter((a) => String((a as any).laboId) === laboId) : all;
+        if (isActiviteGerantLoad) filtered = filtered.filter((a) => a.id === user!.gerantActiviteId);
         setAllActivities(filtered);
       })
       .finally(() => setActivitesLoading(false));
@@ -440,14 +442,16 @@ export default function HistoriqueApproPage() {
       </div>
 
       {/* Activité selector pills */}
-      {isEntreprise && !isActiviteGerant && activitiesForDropdown.length > 0 && (
+      {isEntreprise && activitiesForDropdown.length > 0 && (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16, padding: '10px 14px', background: 'var(--card-bg)', borderRadius: 10, border: '1px solid var(--border)' }}>
-          <button
-            onClick={() => setSelectedActiviteId('')}
-            style={{ padding: '4px 14px', borderRadius: 20, cursor: 'pointer', fontSize: '0.82rem', border: !selectedActiviteId ? '1.5px solid #1e40af' : '1.5px solid var(--border)', background: !selectedActiviteId ? '#1e40af' : 'var(--bg)', color: !selectedActiviteId ? '#fff' : 'var(--text)', fontWeight: !selectedActiviteId ? 700 : 400 }}
-          >
-            Toutes
-          </button>
+          {!isActiviteGerant && (
+            <button
+              onClick={() => setSelectedActiviteId('')}
+              style={{ padding: '4px 14px', borderRadius: 20, cursor: 'pointer', fontSize: '0.82rem', border: !selectedActiviteId ? '1.5px solid #1e40af' : '1.5px solid var(--border)', background: !selectedActiviteId ? '#1e40af' : 'var(--bg)', color: !selectedActiviteId ? '#fff' : 'var(--text)', fontWeight: !selectedActiviteId ? 700 : 400 }}
+            >
+              Toutes
+            </button>
+          )}
           {activitiesForDropdown.map((a) => (
             <button key={a.id}
               onClick={() => setSelectedActiviteId(String(a.id))}
