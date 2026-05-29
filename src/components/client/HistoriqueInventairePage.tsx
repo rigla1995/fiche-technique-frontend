@@ -42,6 +42,7 @@ export default function HistoriqueInventairePage() {
   const navigate = useNavigate();
   const isGerant = user?.role === 'gerant';
   const isActiviteGerant = isGerant && user?.gerantActiviteType === 'activite' && !!user?.gerantActiviteId;
+  const isLaboGerant = isGerant && user?.gerantActiviteType === 'labo' && !!user?.gerantActiviteId;
   const [searchParams] = useSearchParams();
   const laboId = searchParams.get('laboId');
   const activiteId = searchParams.get('activiteId');
@@ -77,7 +78,10 @@ export default function HistoriqueInventairePage() {
   const isClientMode = !laboId && !section && !activiteId;
 
   useEffect(() => {
-    api.get('/api/labo').then(({ data }) => setAllLabos(data)).catch(() => {});
+    api.get('/api/labo').then(({ data }) => {
+      const labs = data as { id: number; nom: string }[];
+      setAllLabos(isLaboGerant ? labs.filter((l) => l.id === user!.gerantActiviteId) : labs);
+    }).catch(() => {});
   }, []);
 
   useEffect(() => {

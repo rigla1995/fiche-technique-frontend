@@ -28,6 +28,7 @@ interface Activite { id: number; nom: string }
 export default function InventairePage() {
   const { canWrite, user } = useAuth();
   const isActiviteGerant = user?.role === 'gerant' && user?.gerantActiviteType === 'activite' && !!user?.gerantActiviteId;
+  const isLaboGerant = user?.role === 'gerant' && user?.gerantActiviteType === 'labo' && !!user?.gerantActiviteId;
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const laboId = searchParams.get('laboId');
@@ -57,7 +58,10 @@ export default function InventairePage() {
   const [confirmPopup, setConfirmPopup] = useState<{ entries: ConfirmEntry[] } | null>(null);
 
   useEffect(() => {
-    api.get('/api/labo').then(({ data }) => setAllLabos(data)).catch(() => {});
+    api.get('/api/labo').then(({ data }) => {
+      const labs = data as { id: number; nom: string }[];
+      setAllLabos(isLaboGerant ? labs.filter((l) => l.id === user!.gerantActiviteId) : labs);
+    }).catch(() => {});
   }, []);
 
   useEffect(() => {
