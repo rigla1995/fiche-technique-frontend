@@ -26,7 +26,8 @@ interface InventaireRow {
 interface Activite { id: number; nom: string }
 
 export default function InventairePage() {
-  const { canWrite } = useAuth();
+  const { canWrite, user } = useAuth();
+  const isActiviteGerant = user?.role === 'gerant' && user?.gerantActiviteType === 'activite' && !!user?.gerantActiviteId;
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const laboId = searchParams.get('laboId');
@@ -63,7 +64,10 @@ export default function InventairePage() {
     if (!section) return;
     api.get('/api/entreprise/activites')
       .then(({ data }) => {
-        const filtered = data as Activite[];
+        const acts = data as Activite[];
+        const filtered = isActiviteGerant
+          ? acts.filter((a) => a.id === user!.gerantActiviteId)
+          : acts;
         setActivites(filtered);
         if (filtered.length >= 1) setSelectedActiviteId(filtered[0].id);
       })
