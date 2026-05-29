@@ -47,6 +47,8 @@ import UpgradeWizard from './components/client/UpgradeWizard';
 import RapportsPage from './components/client/RapportsPage';
 import VentesPage from './components/client/VentesPage';
 import LaboVentesPage from './components/client/LaboVentesPage';
+import DashboardGerantPage from './components/client/DashboardGerantPage';
+import AbonnementGerantPage from './components/client/AbonnementGerantPage';
 import ConfigurationVentePage from './components/client/ConfigurationVentePage';
 import ConfigPrestatairesPage from './components/client/ConfigPrestatairesPage';
 import ConfigChargesPage from './components/client/ConfigChargesPage';
@@ -58,7 +60,7 @@ import './index.css';
 
 function ClientDefaultRedirect() {
   const { user } = useAuth();
-  if (user?.role === 'gerant') return <Navigate to="/client/stock" replace />;
+  if (user?.role === 'gerant') return <Navigate to="/client/gerant-dashboard" replace />;
   if ((user?.activitesCount ?? 0) === 0) return <Navigate to="/client/activites" replace />;
   return <Navigate to="/client/rapports" replace />;
 }
@@ -68,7 +70,7 @@ function RootRedirect() {
   if (isLoading) return <div className="page-loading"><div className="spinner" /></div>;
   if (!user) return <Navigate to="/login" replace />;
   if (user.role === 'super_admin') return <Navigate to="/admin" replace />;
-  if (user.role === 'gerant') return <Navigate to="/client/stock" replace />;
+  if (user.role === 'gerant') return <Navigate to="/client/gerant-dashboard" replace />;
   if ((user.onboardingStep ?? 0) === 50) {
     return <Navigate to="/client/upgrade-wizard" replace />;
   }
@@ -144,6 +146,8 @@ export default function App() {
             <Route path="/client/upgrade-wizard" element={<UpgradeWizard />} />
             <Route path="/client/rapports" element={<RapportsPage />} />
             <Route path="/client/support" element={<SupportPage />} />
+            <Route path="/client/gerant-dashboard" element={<DashboardGerantPage />} />
+            <Route path="/client/gerant-abonnement" element={<AbonnementGerantPage />} />
             <Route path="/client/ai-assistant" element={<AIAssistantPage />} />
             <Route element={<VenteGuard />}>
               <Route path="/client/ventes" element={<VentesPage />} />
