@@ -20,13 +20,67 @@ interface DashboardData {
 
 function formatDate(iso: string | null) {
   if (!iso) return '—';
-  const d = new Date(iso);
-  return d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
+  return new Date(iso).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
 }
 
 function formatCurrency(v: number) {
   return v.toLocaleString('fr-TN', { minimumFractionDigits: 0, maximumFractionDigits: 2 }) + ' DT';
 }
+
+const KPI_CARDS = (kpis: DashboardKpis, type: string, activiteId?: number) => [
+  {
+    icon: '📦',
+    label: 'Approvisionnements',
+    value: String(kpis.approsCount),
+    sub: kpis.approsValeur > 0 ? `Valeur : ${formatCurrency(kpis.approsValeur)}` : 'Aucune valeur ce mois',
+    accent: '#059669',
+    bg: '#ecfdf5',
+    border: '#a7f3d0',
+    link: type === 'labo'
+      ? `/client/labo/historique-appro?laboId=${activiteId}`
+      : `/client/stock/historique?activiteId=${activiteId}`,
+    linkLabel: 'Voir historique →',
+  },
+  {
+    icon: '🗑️',
+    label: 'Pertes enregistrées',
+    value: String(kpis.pertesCount),
+    sub: kpis.pertesValeur > 0 ? `Valeur : ${formatCurrency(kpis.pertesValeur)}` : 'Aucune perte ce mois',
+    accent: '#dc2626',
+    bg: '#fff1f2',
+    border: '#fecdd3',
+    link: type === 'labo'
+      ? `/client/labo/historique-pertes?laboId=${activiteId}`
+      : `/client/stock/historique-pertes?activiteId=${activiteId}`,
+    linkLabel: 'Voir pertes →',
+  },
+  {
+    icon: '🏪',
+    label: 'Articles en stock',
+    value: String(kpis.ingredientsCount),
+    sub: 'Articles approvisionnés au total',
+    accent: '#2563eb',
+    bg: '#eff6ff',
+    border: '#bfdbfe',
+    link: type === 'labo'
+      ? `/client/labo/stock?laboId=${activiteId}`
+      : `/client/stock?section=activite&activiteId=${activiteId}`,
+    linkLabel: 'Voir le stock →',
+  },
+  {
+    icon: '📋',
+    label: 'Dernier inventaire',
+    value: formatDate(kpis.dernierInventaire),
+    sub: kpis.dernierInventaire ? undefined : 'Aucun inventaire effectué',
+    accent: '#d97706',
+    bg: '#fffbeb',
+    border: '#fde68a',
+    link: type === 'labo'
+      ? `/client/labo/inventaire?laboId=${activiteId}`
+      : `/client/inventaire/historique?section=activite&activiteId=${activiteId}`,
+    linkLabel: 'Voir inventaires →',
+  },
+];
 
 export default function DashboardGerantPage() {
   const { user } = useAuth();
@@ -42,150 +96,105 @@ export default function DashboardGerantPage() {
 
   const prenom = user?.name?.split(' ')[0] ?? 'Gérant';
   const activiteLabel = data?.type === 'labo' ? 'Labo' : 'Activité';
+  const now = new Date();
+  const monthLabel = now.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600" />
+      <div className="page">
+        <div style={{ padding: '48px 0', textAlign: 'center', color: '#9ca3af', fontSize: 14 }}>
+          Chargement…
+        </div>
       </div>
     );
   }
 
   if (!data?.kpis) {
     return (
-      <div className="max-w-2xl mx-auto mt-12 p-8 bg-white rounded-2xl shadow-sm border border-gray-100 text-center">
-        <div className="text-4xl mb-4">👋</div>
-        <h2 className="text-xl font-semibold text-gray-800 mb-2">Bienvenue, {prenom}</h2>
-        <p className="text-gray-500">
-          Votre compte gérant n'est pas encore assigné à une activité ou un labo.
-          Contactez l'administrateur pour configurer votre accès.
-        </p>
+      <div className="page">
+        <div style={{
+          background: '#fff', borderRadius: 16, border: '1px solid #e5e7eb',
+          padding: '40px 32px', textAlign: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
+        }}>
+          <div style={{ fontSize: '2.5rem', marginBottom: 12 }}>👋</div>
+          <h2 style={{ fontSize: '1.15rem', fontWeight: 700, color: '#111827', marginBottom: 8 }}>
+            Bienvenue, {prenom}
+          </h2>
+          <p style={{ fontSize: '0.875rem', color: '#6b7280' }}>
+            Votre compte gérant n'est pas encore assigné à une activité ou un labo.
+            Contactez l'administrateur pour configurer votre accès.
+          </p>
+        </div>
       </div>
     );
   }
 
   const { kpis } = data;
-  const now = new Date();
-  const monthLabel = now.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+  const cards = KPI_CARDS(kpis, data.type ?? '', user?.gerantActiviteId);
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
-      {/* Header */}
-      <div className="bg-gradient-to-r from-emerald-600 to-teal-500 rounded-2xl p-6 text-white shadow-md">
-        <p className="text-emerald-100 text-sm font-medium uppercase tracking-wider mb-1">Tableau de bord</p>
-        <h1 className="text-2xl font-bold">Bonjour, {prenom} 👋</h1>
-        <p className="text-emerald-100 mt-1">
-          {activiteLabel} : <span className="font-semibold text-white">{data.activiteNom}</span>
-        </p>
-      </div>
-
-      {/* KPI Cards — current month */}
-      <div>
-        <p className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-3">
-          Ce mois — {monthLabel}
-        </p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {/* Approvisionnements */}
-          <KpiCard
-            icon="📦"
-            label="Approvisionnements"
-            value={String(kpis.approsCount)}
-            sub={kpis.approsValeur > 0 ? `Valeur : ${formatCurrency(kpis.approsValeur)}` : undefined}
-            color="emerald"
-            link={
-              data.type === 'labo'
-                ? `/client/labo/historique-appro?laboId=${user?.gerantActiviteId}`
-                : `/client/stock/historique?activiteId=${user?.gerantActiviteId}`
-            }
-            linkLabel="Voir historique"
-          />
-
-          {/* Pertes */}
-          <KpiCard
-            icon="🗑️"
-            label="Pertes enregistrées"
-            value={String(kpis.pertesCount)}
-            sub={kpis.pertesValeur > 0 ? `Valeur : ${formatCurrency(kpis.pertesValeur)}` : undefined}
-            color="red"
-            link={
-              data.type === 'labo'
-                ? `/client/labo/historique-pertes?laboId=${user?.gerantActiviteId}`
-                : `/client/stock/historique-pertes?activiteId=${user?.gerantActiviteId}`
-            }
-            linkLabel="Voir pertes"
-          />
+    <div className="page">
+      {/* Hero */}
+      <div style={{
+        background: 'linear-gradient(135deg, #064e3b 0%, #065f46 50%, #059669 100%)',
+        borderRadius: 18, padding: '24px 28px', marginBottom: 24,
+        boxShadow: '0 8px 32px rgba(5,150,105,0.28)',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16,
+      }}>
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+            <div style={{ background: 'rgba(255,255,255,0.2)', borderRadius: 10, padding: '7px 9px', fontSize: '1.2rem' }}>🏠</div>
+            <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0 }}>
+              Bonjour, {prenom} 👋
+            </h1>
+          </div>
+          <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.85rem', margin: 0 }}>
+            {activiteLabel} : <strong style={{ color: '#fff' }}>{data.activiteNom}</strong>
+          </p>
+        </div>
+        <div style={{
+          background: 'rgba(255,255,255,0.15)', borderRadius: 12,
+          padding: '10px 18px', fontSize: '0.8rem', color: '#fff', fontWeight: 600,
+          backdropFilter: 'blur(4px)',
+        }}>
+          📅 {monthLabel}
         </div>
       </div>
 
-      {/* Stock summary */}
-      <div>
-        <p className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-3">Stock</p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <KpiCard
-            icon="🏪"
-            label="Articles en stock"
-            value={String(kpis.ingredientsCount)}
-            sub="Articles approvisionnés au total"
-            color="blue"
-            link={
-              data.type === 'labo'
-                ? `/client/labo/stock?laboId=${user?.gerantActiviteId}`
-                : `/client/stock?section=activite&activiteId=${user?.gerantActiviteId}`
-            }
-            linkLabel="Voir le stock"
-          />
-
-          <KpiCard
-            icon="📋"
-            label="Dernier inventaire"
-            value={formatDate(kpis.dernierInventaire)}
-            sub={kpis.dernierInventaire ? undefined : 'Aucun inventaire effectué'}
-            color="amber"
-            link={
-              data.type === 'labo'
-                ? `/client/labo/inventaire?laboId=${user?.gerantActiviteId}`
-                : `/client/inventaire/historique?section=activite&activiteId=${user?.gerantActiviteId}`
-            }
-            linkLabel="Voir inventaires"
-          />
-        </div>
+      {/* KPI grid */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16 }}>
+        {cards.map((card) => (
+          <div key={card.label} style={{
+            background: card.bg,
+            borderRadius: 14, border: `1px solid ${card.border}`,
+            padding: '20px 20px 16px', display: 'flex', flexDirection: 'column', gap: 6,
+            boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span style={{
+                background: '#fff', borderRadius: 8, width: 36, height: 36,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: '1.1rem', boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
+              }}>{card.icon}</span>
+              <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#374151' }}>{card.label}</span>
+            </div>
+            <div style={{ fontSize: '1.9rem', fontWeight: 900, color: card.accent, lineHeight: 1.1 }}>
+              {card.value}
+            </div>
+            {card.sub && (
+              <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>{card.sub}</div>
+            )}
+            {card.link && (
+              <Link to={card.link} style={{
+                fontSize: '0.75rem', fontWeight: 600, color: card.accent,
+                textDecoration: 'none', marginTop: 4, alignSelf: 'flex-start',
+              }}>
+                {card.linkLabel}
+              </Link>
+            )}
+          </div>
+        ))}
       </div>
-    </div>
-  );
-}
-
-interface KpiCardProps {
-  icon: string;
-  label: string;
-  value: string;
-  sub?: string;
-  color: 'emerald' | 'red' | 'blue' | 'amber';
-  link?: string;
-  linkLabel?: string;
-}
-
-const colorMap = {
-  emerald: { bg: 'bg-emerald-50', border: 'border-emerald-100', icon: 'bg-emerald-100 text-emerald-700', value: 'text-emerald-700', link: 'text-emerald-600 hover:text-emerald-800' },
-  red:     { bg: 'bg-red-50',     border: 'border-red-100',     icon: 'bg-red-100 text-red-700',         value: 'text-red-700',     link: 'text-red-600 hover:text-red-800' },
-  blue:    { bg: 'bg-blue-50',    border: 'border-blue-100',    icon: 'bg-blue-100 text-blue-700',        value: 'text-blue-700',    link: 'text-blue-600 hover:text-blue-800' },
-  amber:   { bg: 'bg-amber-50',   border: 'border-amber-100',   icon: 'bg-amber-100 text-amber-700',      value: 'text-amber-700',   link: 'text-amber-600 hover:text-amber-800' },
-};
-
-function KpiCard({ icon, label, value, sub, color, link, linkLabel }: KpiCardProps) {
-  const c = colorMap[color];
-  return (
-    <div className={`${c.bg} border ${c.border} rounded-xl p-5 flex flex-col gap-2`}>
-      <div className="flex items-center gap-3">
-        <span className={`${c.icon} rounded-lg w-10 h-10 flex items-center justify-center text-xl`}>{icon}</span>
-        <span className="text-sm font-medium text-gray-600">{label}</span>
-      </div>
-      <p className={`text-3xl font-bold ${c.value}`}>{value}</p>
-      {sub && <p className="text-xs text-gray-400">{sub}</p>}
-      {link && linkLabel && (
-        <Link to={link} className={`text-xs font-medium ${c.link} mt-1 self-start`}>
-          {linkLabel} →
-        </Link>
-      )}
     </div>
   );
 }
