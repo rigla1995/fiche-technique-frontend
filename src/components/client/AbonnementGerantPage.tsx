@@ -32,7 +32,7 @@ export default function AbonnementGerantPage() {
   useEffect(() => {
     api.get('/api/gerant/abonnement')
       .then((res) => setData(res.data))
-      .catch(() => setError('Impossible de charger les informations d'abonnement.'))
+      .catch(() => setError("Impossible de charger les informations d'abonnement."))
       .finally(() => setLoading(false));
   }, []);
 
