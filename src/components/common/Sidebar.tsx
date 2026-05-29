@@ -178,6 +178,18 @@ function GerantSidebarContent({
       <>
         <li><NavLink to="/client/gerant-dashboard" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}><span className="link-icon">🏠</span><span className="link-label">Tableau de bord</span></NavLink></li>
         <Divider />
+        {/* ══ RÉFÉRENTIEL ══ */}
+        <CollapsibleHeader label="Référentiel" icon="📚" isOpen={openSections.has('referentiel')} locked={false} onToggle={() => toggleSection('referentiel')} />
+        {openSections.has('referentiel') && (
+          <>
+            <SubNavLink to="/client/referentiel/unites" icon="📏" label="Unités" isActive={location.pathname === '/client/referentiel/unites'} onClick={onClose} />
+            <SubNavLink to="/client/referentiel/familles" icon="🗂️" label="Familles" isActive={location.pathname === '/client/referentiel/familles'} onClick={onClose} />
+            <SubNavLink to="/client/referentiel/categories" icon="🏷️" label="Catégories" isActive={location.pathname === '/client/referentiel/categories'} onClick={onClose} />
+            <SubNavLink to="/client/referentiel/articles" icon="🧂" label="Articles" isActive={location.pathname === '/client/referentiel/articles'} onClick={onClose} />
+            <SubNavLink to="/client/referentiel/import" icon="📥" label="Ajout Dynamique" isActive={location.pathname === '/client/referentiel/import'} onClick={onClose} />
+          </>
+        )}
+        <Divider />
         <CollapsibleHeader label={`Espace ${activiteNom}`} icon="📍" isOpen={openSections.has('gerant-activite')} locked={false} onToggle={() => toggleSection('gerant-activite')} />
         {openSections.has('gerant-activite') && (
           <>
@@ -201,19 +213,6 @@ function GerantSidebarContent({
           <>
             <SubNavLink to="/client/products?tab=vendable" icon="🍔" label="Produits Vendables" isActive={isProductsPage && currentProductTab === 'vendable'} onClick={onClose} />
             <SubNavLink to="/client/products?tab=utilisable" icon="🧪" label="Produits Utilisables" isActive={isProductsPage && currentProductTab === 'utilisable'} onClick={onClose} />
-          </>
-        )}
-
-        <Divider />
-        {/* ══ RÉFÉRENTIEL ══ */}
-        <CollapsibleHeader label="Référentiel" icon="📚" isOpen={openSections.has('referentiel')} locked={false} onToggle={() => toggleSection('referentiel')} />
-        {openSections.has('referentiel') && (
-          <>
-            <SubNavLink to="/client/referentiel/unites" icon="📏" label="Unités" isActive={location.pathname === '/client/referentiel/unites'} onClick={onClose} />
-            <SubNavLink to="/client/referentiel/familles" icon="🗂️" label="Familles" isActive={location.pathname === '/client/referentiel/familles'} onClick={onClose} />
-            <SubNavLink to="/client/referentiel/categories" icon="🏷️" label="Catégories" isActive={location.pathname === '/client/referentiel/categories'} onClick={onClose} />
-            <SubNavLink to="/client/referentiel/articles" icon="🧂" label="Articles" isActive={location.pathname === '/client/referentiel/articles'} onClick={onClose} />
-            <SubNavLink to="/client/referentiel/import" icon="📥" label="Ajout Dynamique" isActive={location.pathname === '/client/referentiel/import'} onClick={onClose} />
           </>
         )}
       </>
