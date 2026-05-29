@@ -136,7 +136,6 @@ function GerantSidebarContent({
     return (
       <>
         <li><NavLink to="/client/gerant-dashboard" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}><span className="link-icon">🏠</span><span className="link-label">Tableau de bord</span></NavLink></li>
-        <li><NavLink to="/client/gerant-abonnement" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📄</span><span className="link-label">Mon abonnement</span></NavLink></li>
         <Divider />
         <CollapsibleHeader label={`Espace ${laboLabel}`} icon="🏭" isOpen={openSections.has('gerant-labo')} locked={false} onToggle={() => toggleSection('gerant-labo')} />
         {openSections.has('gerant-labo') && (
@@ -178,7 +177,6 @@ function GerantSidebarContent({
     return (
       <>
         <li><NavLink to="/client/gerant-dashboard" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}><span className="link-icon">🏠</span><span className="link-label">Tableau de bord</span></NavLink></li>
-        <li><NavLink to="/client/gerant-abonnement" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📄</span><span className="link-label">Mon abonnement</span></NavLink></li>
         <Divider />
         <CollapsibleHeader label={`Espace ${activiteNom}`} icon="📍" isOpen={openSections.has('gerant-activite')} locked={false} onToggle={() => toggleSection('gerant-activite')} />
         {openSections.has('gerant-activite') && (
@@ -666,6 +664,14 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                   </NavLink>
                 </li>
               </>
+            )}
+            {user?.role === 'gerant' && (
+              <li>
+                <NavLink to="/client/gerant-abonnement" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>
+                  <span className="link-icon">💳</span>
+                  <span className="link-label">Mon abonnement</span>
+                </NavLink>
+              </li>
             )}
             <li>
               <NavLink
