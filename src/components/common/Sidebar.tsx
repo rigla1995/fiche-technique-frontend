@@ -193,7 +193,6 @@ function GerantSidebarContent({
         <CollapsibleHeader label={`Espace ${activiteNom}`} icon="📍" isOpen={openSections.has('gerant-activite')} locked={false} onToggle={() => toggleSection('gerant-activite')} />
         {openSections.has('gerant-activite') && (
           <>
-            <li><NavLink to={`/client/catalogue-global?activiteId=${activiteId}`} className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}><span className="link-icon">🧂</span><span className="link-label">Articles</span></NavLink></li>
             <li><Link to={`/client/stock?section=activite&activiteId=${activiteId}`} className={`sidebar-link ${location.pathname === '/client/stock' && currentSection === 'activite' ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📦</span><span className="link-label">Stock Activité</span></Link></li>
             <li><Link to={`/client/stock/historique?activiteId=${activiteId}`} className={`sidebar-link ${isHistoriquePage ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📋</span><span className="link-label">Historique Appro</span></Link></li>
             <li><Link to={`/client/stock/factures?activiteId=${activiteId}`} className={`sidebar-link ${location.pathname === '/client/stock/factures' ? 'active' : ''}`} onClick={onClose}><span className="link-icon">🧾</span><span className="link-label">Factures</span></Link></li>
