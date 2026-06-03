@@ -18,8 +18,8 @@ interface ArticleEditForm {
 
 const emptyEditForm: ArticleEditForm = { nom: '', uniteId: '', categorieId: '' };
 
-interface ArtRow { nom: string; uniteId: string; categorieId: string; }
-const emptyArtRow = (): ArtRow => ({ nom: '', uniteId: '', categorieId: '' });
+interface ArtRow { nom: string; uniteId: string; categorieId: string; activiteIds: number[]; laboIds: number[]; }
+const emptyArtRow = (): ArtRow => ({ nom: '', uniteId: '', categorieId: '', activiteIds: [], laboIds: [] });
 
 export default function ReferentielArticlesPage() {
   const [articles, setArticles] = useState<Article[]>([]);
@@ -59,6 +59,7 @@ export default function ReferentielArticlesPage() {
   const [multiRows, setMultiRows] = useState<ArtRow[]>([emptyArtRow()]);
   const [multiError, setMultiError] = useState('');
   const [multiCreating, setMultiCreating] = useState(false);
+  const [multiAssignOpen, setMultiAssignOpen] = useState<number | null>(null);
 
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [search, setSearch] = useState('');
@@ -154,25 +155,41 @@ export default function ReferentielArticlesPage() {
   };
 
   // ── Multi-add ──
-  const openMultiCreate = () => { setMultiRows([emptyArtRow()]); setMultiError(''); setShowMultiCreate(true); };
-  const closeMultiCreate = () => setShowMultiCreate(false);
-  const updateMultiRow = (i: number, field: keyof ArtRow, val: string) =>
+  const openMultiCreate = () => { setMultiRows([emptyArtRow()]); setMultiError(''); setMultiAssignOpen(null); setShowMultiCreate(true); };
+  const closeMultiCreate = () => { setShowMultiCreate(false); setMultiAssignOpen(null); };
+  const updateMultiRow = (i: number, field: keyof Pick<ArtRow, 'nom' | 'uniteId' | 'categorieId'>, val: string) =>
     setMultiRows(prev => prev.map((r, idx) => idx === i ? { ...r, [field]: val } : r));
   const addMultiRow = () => setMultiRows(prev => [...prev, emptyArtRow()]);
-  const removeMultiRow = (i: number) => setMultiRows(prev => prev.filter((_, idx) => idx !== i));
+  const removeMultiRow = (i: number) => {
+    setMultiRows(prev => prev.filter((_, idx) => idx !== i));
+    if (multiAssignOpen === i) setMultiAssignOpen(null);
+  };
+
+  const toggleMultiActivite = (rowIdx: number, actId: number) =>
+    setMultiRows(prev => prev.map((r, i) => i !== rowIdx ? r : {
+      ...r, activiteIds: r.activiteIds.includes(actId) ? r.activiteIds.filter(x => x !== actId) : [...r.activiteIds, actId],
+    }));
+  const toggleMultiLabo = (rowIdx: number, laboId: number) =>
+    setMultiRows(prev => prev.map((r, i) => i !== rowIdx ? r : {
+      ...r, laboIds: r.laboIds.includes(laboId) ? r.laboIds.filter(x => x !== laboId) : [...r.laboIds, laboId],
+    }));
 
   const handleMultiCreate = async () => {
     const valid = multiRows.filter(r => r.nom.trim() && r.uniteId);
     if (!valid.length) { setMultiError('Au moins un article avec nom et unité requis'); return; }
     setMultiCreating(true); setMultiError('');
     try {
-      await Promise.all(valid.map(r =>
+      const created = await Promise.all(valid.map(r =>
         api.post('/api/articles', {
           nom: r.nom.trim(),
           unitId: parseInt(r.uniteId),
           categorieId: r.categorieId ? parseInt(r.categorieId) : null,
-        })
+        }).then(res => ({ id: res.data.id as number, activiteIds: r.activiteIds, laboIds: r.laboIds }))
       ));
+      await Promise.all(created.flatMap(c => [
+        ...c.activiteIds.map(actId => api.post(`/api/entreprise/activites/${actId}/ingredients/${c.id}/select`)),
+        ...c.laboIds.map(laboId => api.post(`/api/labo/${laboId}/ingredients/${c.id}/select`)),
+      ]));
       window.dispatchEvent(new Event('articles-changed'));
       closeMultiCreate(); load();
     } catch (e: unknown) {
@@ -489,43 +506,99 @@ export default function ReferentielArticlesPage() {
       {/* ── Multi-add Modal ── */}
       {showMultiCreate && (
         <div className="modal-overlay">
-          <div className="modal" style={{ maxWidth: 680 }} onClick={e => e.stopPropagation()}>
+          <div className="modal" style={{ maxWidth: 860 }} onClick={e => e.stopPropagation()}>
             <div className="modal-header" style={{ background: GRADIENT }}>
               <h2 style={{ color: '#fff', margin: 0 }}>Ajout multiple d'articles</h2>
               <button className="modal-close" onClick={closeMultiCreate}>×</button>
             </div>
             <div className="modal-body">
               {multiError && <div style={{ background: '#fee2e2', color: '#dc2626', border: '1px solid #fecaca', borderRadius: 6, padding: '8px 12px', marginBottom: 12, fontSize: '0.85rem' }}>{multiError}</div>}
-              <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', margin: '0 0 10px' }}>
-                Les articles seront ajoutés à votre référentiel. Assignez-les à vos activités depuis le Catalogue Global.
-              </p>
-              <div style={{ display: 'flex', gap: 8, fontWeight: 700, fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6, paddingLeft: 2 }}>
+              <div style={{ display: 'flex', gap: 8, fontWeight: 700, fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6, paddingLeft: 2 }}>
                 <div style={{ flex: 2 }}>Nom *</div>
                 <div style={{ flex: 1 }}>Unité *</div>
                 <div style={{ flex: 2 }}>Catégorie</div>
+                <div style={{ minWidth: 130 }}>Affectation</div>
                 <div style={{ width: 32 }} />
               </div>
-              {multiRows.map((row, i) => (
-                <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 8, alignItems: 'center' }}>
-                  <input
-                    className="input" style={{ flex: 2 }}
-                    autoFocus={i === 0}
-                    placeholder="Ex: Poulet entier"
-                    value={row.nom}
-                    onChange={e => updateMultiRow(i, 'nom', e.target.value)}
-                    onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); if (i === multiRows.length - 1) addMultiRow(); } }}
-                  />
-                  <select className="input" style={{ flex: 1 }} value={row.uniteId} onChange={e => updateMultiRow(i, 'uniteId', e.target.value)}>
-                    <option value="">— Unité —</option>
-                    {unites.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
-                  </select>
-                  <select className="input" style={{ flex: 2 }} value={row.categorieId} onChange={e => updateMultiRow(i, 'categorieId', e.target.value)}>
-                    <option value="">— Catégorie —</option>
-                    {categories.map(c => <option key={c.id} value={c.id}>{c.familleName ? `${c.familleName} › ${c.name}` : c.name}</option>)}
-                  </select>
-                  <button onClick={() => removeMultiRow(i)} disabled={multiRows.length === 1} style={{ width: 32, height: 38, border: 'none', borderRadius: 6, background: multiRows.length === 1 ? '#f1f5f9' : '#fee2e2', color: multiRows.length === 1 ? '#94a3b8' : '#dc2626', cursor: multiRows.length === 1 ? 'not-allowed' : 'pointer', fontWeight: 700, flexShrink: 0 }}>×</button>
-                </div>
-              ))}
+              {multiRows.map((row, i) => {
+                const assignCount = row.activiteIds.length + row.laboIds.length;
+                const isAssignOpen = multiAssignOpen === i;
+                return (
+                  <div key={i}>
+                    <div style={{ display: 'flex', gap: 8, marginBottom: isAssignOpen ? 4 : 8, alignItems: 'center' }}>
+                      <input
+                        className="input" style={{ flex: 2 }}
+                        autoFocus={i === 0}
+                        placeholder="Ex: Poulet entier"
+                        value={row.nom}
+                        onChange={e => updateMultiRow(i, 'nom', e.target.value)}
+                        onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); if (i === multiRows.length - 1) addMultiRow(); } }}
+                      />
+                      <select className="input" style={{ flex: 1 }} value={row.uniteId} onChange={e => updateMultiRow(i, 'uniteId', e.target.value)}>
+                        <option value="">— Unité —</option>
+                        {unites.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+                      </select>
+                      <select className="input" style={{ flex: 2 }} value={row.categorieId} onChange={e => updateMultiRow(i, 'categorieId', e.target.value)}>
+                        <option value="">— Catégorie —</option>
+                        {categories.map(c => <option key={c.id} value={c.id}>{c.familleName ? `${c.familleName} › ${c.name}` : c.name}</option>)}
+                      </select>
+                      <button
+                        onClick={() => setMultiAssignOpen(isAssignOpen ? null : i)}
+                        style={{
+                          minWidth: 130, height: 38, borderRadius: 8, flexShrink: 0,
+                          border: assignCount > 0 ? `1.5px solid ${COLOR}` : '1.5px solid var(--border)',
+                          background: assignCount > 0 ? '#f0fdf4' : '#f8fafc',
+                          color: assignCount > 0 ? '#15803d' : '#94a3b8',
+                          cursor: 'pointer', fontSize: '0.78rem', fontWeight: 700,
+                          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
+                        }}
+                      >
+                        {assignCount > 0
+                          ? `📍${row.activiteIds.length} 🏭${row.laboIds.length}`
+                          : '+ Affecter'}
+                        <span style={{ fontSize: '0.6rem', color: assignCount > 0 ? '#15803d' : '#cbd5e1' }}>{isAssignOpen ? '▲' : '▼'}</span>
+                      </button>
+                      <button onClick={() => removeMultiRow(i)} disabled={multiRows.length === 1} style={{ width: 32, height: 38, border: 'none', borderRadius: 6, background: multiRows.length === 1 ? '#f1f5f9' : '#fee2e2', color: multiRows.length === 1 ? '#94a3b8' : '#dc2626', cursor: multiRows.length === 1 ? 'not-allowed' : 'pointer', fontWeight: 700, flexShrink: 0 }}>×</button>
+                    </div>
+                    {isAssignOpen && (
+                      <div style={{ marginBottom: 8, padding: '10px 12px', borderRadius: 8, border: '1.5px solid #dcfce7', background: '#f0fdf4' }}>
+                        {activites.length === 0 && labos.length === 0 ? (
+                          <div style={{ fontSize: '0.82rem', color: '#166534' }}>Aucune activité ni labo configuré.</div>
+                        ) : (
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                            {activites.map(act => {
+                              const sel = row.activiteIds.includes(act.id);
+                              return (
+                                <button key={`ma${act.id}`} onClick={() => toggleMultiActivite(i, act.id)} style={{
+                                  padding: '4px 11px', borderRadius: 20, fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer',
+                                  border: sel ? `1.5px solid ${COLOR}` : '1.5px solid #bbf7d0',
+                                  background: sel ? COLOR : '#fff', color: sel ? '#fff' : '#166534',
+                                  transition: 'all 0.12s',
+                                }}>
+                                  📍 {act.nom}
+                                </button>
+                              );
+                            })}
+                            {labos.map(labo => {
+                              const sel = row.laboIds.includes(labo.id);
+                              return (
+                                <button key={`ml${labo.id}`} onClick={() => toggleMultiLabo(i, labo.id)} style={{
+                                  padding: '4px 11px', borderRadius: 20, fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer',
+                                  border: sel ? '1.5px solid #15803d' : '1.5px solid #bbf7d0',
+                                  background: sel ? '#14532d' : '#fff', color: sel ? '#fff' : '#166534',
+                                  transition: 'all 0.12s',
+                                }}>
+                                  🏭 {labo.nom}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
               <button onClick={addMultiRow} style={{ background: 'none', border: `1.5px dashed ${COLOR}`, borderRadius: 8, padding: '7px 16px', color: COLOR, fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer', width: '100%', marginTop: 4 }}>+ Ajouter une ligne</button>
               <div className="modal-footer" style={{ marginTop: 16 }}>
                 <button className="btn btn-ghost" onClick={closeMultiCreate}>Annuler</button>

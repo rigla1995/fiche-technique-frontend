@@ -327,6 +327,21 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
     prevNoActivitesOrLabos.current = noActivitesOrLabos;
   }, [noActivitesOrLabos, isEntreprise, isOnboarding, navigate]);
 
+  // Auto-open Espace Activités/Labo when first articles are created (level 1 → level 2 transition)
+  const prevLockEspaces = useRef<boolean | null>(null);
+  useEffect(() => {
+    if (!isEntreprise || isOnboarding) return;
+    if (prevLockEspaces.current === true && lockEspaces === false) {
+      setOpenSections(prev => {
+        const next = new Set(prev);
+        next.add('activites');
+        if (labos.length > 0) next.add('labo');
+        return next;
+      });
+    }
+    prevLockEspaces.current = lockEspaces;
+  }, [lockEspaces, isEntreprise, isOnboarding, labos.length]);
+
   useEffect(() => {
     if (!isEntreprise) return;
     const onLabosOrActivites = () => { fetchLabos(); fetchSummary(); };
