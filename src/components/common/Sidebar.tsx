@@ -155,14 +155,6 @@ function GerantSidebarContent({
         {openSections.has('gerant-labo-fournisseurs') && (
           <li><NavLink to="/client/fournisseurs-labo" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}><span className="link-icon">🚚</span><span className="link-label">Fournisseurs Labo</span></NavLink></li>
         )}
-        <Divider />
-        <CollapsibleHeader label="Approvisionnements Activités" icon="📋" isOpen={openSections.has('gerant-appros')} locked={false} onToggle={() => toggleSection('gerant-appros')} />
-        {openSections.has('gerant-appros') && (
-          <>
-            <li><Link to={`/client/stock/historique?entType=activite&laboId=${laboId}`} className={`sidebar-link ${isHistoriquePage ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📋</span><span className="link-label">Toutes les activités</span></Link></li>
-            <li><Link to={`/client/stock/factures?entType=activite&laboId=${laboId}`} className={`sidebar-link ${location.pathname === '/client/stock/factures' ? 'active' : ''}`} onClick={onClose}><span className="link-icon">🧾</span><span className="link-label">Factures Activités</span></Link></li>
-          </>
-        )}
       </>
     );
   }
