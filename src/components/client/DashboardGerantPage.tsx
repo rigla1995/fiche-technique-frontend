@@ -112,11 +112,15 @@ export default function DashboardGerantPage() {
   const yearOptions = [currentYear - 1, currentYear];
   const periodLabel = month ? MONTHS_LONG[month - 1] + ' ' + year : `Année ${year}`;
 
-  const selectStyle: React.CSSProperties = {
-    padding: '6px 10px', borderRadius: 8, border: '1px solid var(--border)',
-    background: 'var(--card-bg)', color: 'var(--text)', fontSize: '0.8rem',
-    cursor: 'pointer', outline: 'none',
+  const filterSelectStyle: React.CSSProperties = {
+    padding: '6px 10px', borderRadius: 7, border: '1.5px solid #93c5fd',
+    fontSize: '0.82rem', background: '#eff6ff', minWidth: 130,
   };
+  const filterLabelStyle: React.CSSProperties = {
+    fontSize: '0.62rem', fontWeight: 700, color: 'var(--text-muted)',
+    textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 4,
+  };
+  const isFiltered = month !== null || typeAppro !== '' || year !== currentYear;
 
   if (loading) {
     return (
@@ -166,65 +170,46 @@ export default function DashboardGerantPage() {
         </div>
       </div>
 
-      {/* Filters bar */}
+      {/* Filters bar — same layout as Historique Appro */}
       <div style={{
-        display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center',
-        background: 'var(--card-bg)', borderRadius: 12, padding: '12px 16px',
-        border: '1px solid var(--border)', marginBottom: 16,
+        background: 'var(--surface)', borderRadius: 14, padding: '12px 16px',
+        border: '1px solid var(--border)', boxShadow: '0 2px 12px rgba(0,0,0,0.05)',
+        marginBottom: 20,
       }}>
-        <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-muted)', marginRight: 2 }}>Filtres :</span>
-
-        {/* Year */}
-        <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-          <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Année</span>
-          {yearOptions.map((y) => (
-            <button key={y} onClick={() => setYear(y)} style={{
-              padding: '4px 12px', borderRadius: 16, cursor: 'pointer', fontSize: '0.78rem', fontWeight: 700,
-              border: `1.5px solid ${y === year ? themeColor : 'var(--border)'}`,
-              background: y === year ? themeColor : 'var(--bg)',
-              color: y === year ? '#fff' : 'var(--text)',
-              transition: 'all 0.15s',
-            }}>
-              {y}
-            </button>
-          ))}
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'flex-end', justifyContent: 'center' }}>
+          {/* Année */}
+          <div>
+            <label style={filterLabelStyle}>📅 Année</label>
+            <select value={year} onChange={(e) => setYear(Number(e.target.value))} style={filterSelectStyle}>
+              {yearOptions.map((y) => <option key={y} value={y}>{y}</option>)}
+            </select>
+          </div>
+          {/* Mois */}
+          <div>
+            <label style={filterLabelStyle}>📆 Mois</label>
+            <select value={month ?? ''} onChange={(e) => setMonth(e.target.value ? Number(e.target.value) : null)} style={filterSelectStyle}>
+              <option value="">Toute l'année</option>
+              {MONTHS_LONG.map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
+            </select>
+          </div>
+          {/* Type appro */}
+          <div>
+            <label style={filterLabelStyle}>🏷️ Type d'appro</label>
+            <select value={typeAppro} onChange={(e) => setTypeAppro(e.target.value)} style={filterSelectStyle}>
+              <option value="">Tous les types</option>
+              <option value="manuel">Manuel</option>
+              <option value="transfert">Transfert</option>
+              {isLabo && <option value="PT">Prod. Transformé</option>}
+              {(data?.hasVente) && <option value="vente">Vente</option>}
+            </select>
+          </div>
+          {/* Reset */}
+          {isFiltered && (
+            <button onClick={() => { setYear(currentYear); setMonth(null); setTypeAppro(''); }}
+              style={{ alignSelf: 'flex-end', background: 'transparent', border: '1.5px solid var(--border)', borderRadius: 7, padding: '5px 9px', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '0.85rem', lineHeight: 1, fontWeight: 700 }}
+              title="Réinitialiser">✕</button>
+          )}
         </div>
-
-        <div style={{ width: 1, height: 20, background: 'var(--border)' }} />
-
-        {/* Month */}
-        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-          <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Mois</span>
-          <select value={month ?? ''} onChange={(e) => setMonth(e.target.value ? Number(e.target.value) : null)} style={selectStyle}>
-            <option value="">Toute l'année</option>
-            {MONTHS_LONG.map((m, i) => (
-              <option key={i} value={i + 1}>{m}</option>
-            ))}
-          </select>
-        </div>
-
-        <div style={{ width: 1, height: 20, background: 'var(--border)' }} />
-
-        {/* Type appro */}
-        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-          <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Type</span>
-          <select value={typeAppro} onChange={(e) => setTypeAppro(e.target.value)} style={selectStyle}>
-            <option value="">Tous les types</option>
-            <option value="manuel">Manuel</option>
-            <option value="transfert">Transfert</option>
-            {isLabo && <option value="PT">Prod. Transformé</option>}
-            {hasVente && <option value="vente">Vente</option>}
-          </select>
-        </div>
-
-        {(month || typeAppro) && (
-          <button onClick={() => { setMonth(null); setTypeAppro(''); }} style={{
-            marginLeft: 'auto', padding: '4px 10px', borderRadius: 8, cursor: 'pointer',
-            fontSize: '0.72rem', background: '#fee2e2', color: '#dc2626', border: '1px solid #fecaca', fontWeight: 600,
-          }}>
-            Réinitialiser
-          </button>
-        )}
       </div>
 
       {/* KPI cards */}
