@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { flushSync } from 'react-dom';
 import type { User } from '../types';
 import api from '../api/client';
 
@@ -43,10 +44,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = async (email: string, password: string) => {
     const { data } = await api.post('/auth/login', { email, password });
-    setToken(data.token);
-    setUser(data.user);
     localStorage.setItem('token', data.token);
     localStorage.setItem('user', JSON.stringify(data.user));
+    // flushSync ensures React commits the state update synchronously before
+    // navigate() fires in the caller — without this, React 18 batching delays
+    // the setUser commit and RootRedirect sees user=null, redirecting to /login
+    flushSync(() => {
+      setToken(data.token);
+      setUser(data.user);
+    });
   };
 
   const logout = () => {
