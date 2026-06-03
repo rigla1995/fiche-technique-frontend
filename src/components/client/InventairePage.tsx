@@ -274,7 +274,7 @@ export default function InventairePage() {
           <div style={{
             background: 'var(--surface)', borderRadius: 14, padding: '14px 20px', marginBottom: 20,
             border: `1.5px solid ${themeBorder}`, boxShadow: isLaboMode ? '0 2px 12px rgba(126,34,206,0.08)' : '0 2px 12px rgba(30,64,175,0.08)',
-            display: 'flex', flexWrap: 'wrap', gap: 14, alignItems: 'flex-end', justifyContent: 'center',
+            display: 'flex', flexWrap: 'wrap', gap: 14, alignItems: 'flex-end',
           }}>
             <div>
               <label style={{ fontSize: '0.62rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 4 }}>🏷️ Catégorie</label>
