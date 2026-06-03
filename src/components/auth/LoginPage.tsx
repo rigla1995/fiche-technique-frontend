@@ -15,8 +15,14 @@ export default function LoginPage() {
     setError('');
     setLoading(true);
     try {
-      await login(email, password);
-      navigate('/');
+      const loggedUser = await login(email, password);
+      if (loggedUser.role === 'gerant') {
+        navigate('/client/gerant-dashboard', { replace: true });
+      } else if (loggedUser.role === 'super_admin') {
+        navigate('/admin', { replace: true });
+      } else {
+        navigate('/', { replace: true });
+      }
     } catch (e: unknown) {
       const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message;
       if (msg === 'invite_pending') {

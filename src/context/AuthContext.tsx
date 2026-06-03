@@ -7,7 +7,7 @@ interface AuthContextType {
   user: User | null;
   token: string | null;
   canWrite: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<User>;
   logout: () => void;
   updateUser: (patch: Partial<User>) => void;
   advanceOnboarding: (step: number) => Promise<void>;
@@ -42,17 +42,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  const login = async (email: string, password: string) => {
+  const login = async (email: string, password: string): Promise<User> => {
     const { data } = await api.post('/auth/login', { email, password });
     localStorage.setItem('token', data.token);
     localStorage.setItem('user', JSON.stringify(data.user));
-    // flushSync ensures React commits the state update synchronously before
-    // navigate() fires in the caller — without this, React 18 batching delays
-    // the setUser commit and RootRedirect sees user=null, redirecting to /login
     flushSync(() => {
       setToken(data.token);
       setUser(data.user);
     });
+    return data.user as User;
   };
 
   const logout = () => {
