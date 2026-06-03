@@ -109,12 +109,14 @@ interface GerantSidebarProps {
   currentHistType: string | null;
   currentProductTab: string | null;
   currentActCtx: string | null;
+  moduleVenteActif: boolean;
 }
 
 function GerantSidebarContent({
   user, labos, gerantActivites, location, openSections, toggleSection, onClose,
   isHistoriquePage, isHistoriquepertesPage, isProductsPage,
   currentHistType: _currentHistType, currentProductTab, currentActCtx: _currentActCtx,
+  moduleVenteActif,
 }: GerantSidebarProps) {
   const gerantActiviteId = user.gerantActiviteId;
   const gerantActiviteType = user.gerantActiviteType;
@@ -154,6 +156,15 @@ function GerantSidebarContent({
         <CollapsibleHeader label="Fournisseurs" icon="🚚" isOpen={openSections.has('gerant-labo-fournisseurs')} locked={false} onToggle={() => toggleSection('gerant-labo-fournisseurs')} />
         {openSections.has('gerant-labo-fournisseurs') && (
           <li><NavLink to="/client/fournisseurs-labo" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}><span className="link-icon">🚚</span><span className="link-label">Fournisseurs Labo</span></NavLink></li>
+        )}
+        {moduleVenteActif && (
+          <>
+            <Divider />
+            <CollapsibleHeader label="Espace Vente" icon="🛒" isOpen={openSections.has('gerant-labo-vente')} locked={false} onToggle={() => toggleSection('gerant-labo-vente')} />
+            {openSections.has('gerant-labo-vente') && (
+              <li><Link to={`/client/labo/ventes?laboId=${laboId}`} className={`sidebar-link ${location.pathname === '/client/labo/ventes' ? 'active' : ''}`} onClick={onClose}><span className="link-icon">🏭</span><span className="link-label">Ventes Labo</span></Link></li>
+            )}
+          </>
         )}
       </>
     );
@@ -204,6 +215,19 @@ function GerantSidebarContent({
           <>
             <SubNavLink to="/client/products?tab=vendable" icon="🍔" label="Produits Vendables" isActive={isProductsPage && currentProductTab === 'vendable'} onClick={onClose} />
             <SubNavLink to="/client/products?tab=utilisable" icon="🧪" label="Produits Utilisables" isActive={isProductsPage && currentProductTab === 'utilisable'} onClick={onClose} />
+          </>
+        )}
+        {moduleVenteActif && (
+          <>
+            <Divider />
+            <CollapsibleHeader label="Espace Vente" icon="🛒" isOpen={openSections.has('gerant-act-vente')} locked={false} onToggle={() => toggleSection('gerant-act-vente')} />
+            {openSections.has('gerant-act-vente') && (
+              <>
+                <li><NavLink to="/client/ventes/prestataires" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}><span className="link-icon">🛵</span><span className="link-label">Config Prestataires</span></NavLink></li>
+                <li><NavLink to="/client/ventes/configuration" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}><span className="link-icon">💲</span><span className="link-label">Configuration Vente</span></NavLink></li>
+                <li><Link to={`/client/ventes?activiteId=${activiteId}`} className={`sidebar-link ${location.pathname === '/client/ventes' ? 'active' : ''}`} onClick={onClose}><span className="link-icon">💰</span><span className="link-label">Ventes Activités</span></Link></li>
+              </>
+            )}
           </>
         )}
       </>
@@ -282,13 +306,13 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   useEffect(() => {
     if (!isEntreprise) return;
     fetchLabos();
+    api.get('/api/entreprise')
+      .then(({ data }) => setModuleVenteActif(!!data?.module_vente_actif))
+      .catch(() => {});
     if (!isGerant) {
       fetchSummary();
       api.get('/api/abonnements/mon-abonnement')
         .then(({ data }) => { if (data?.config) setAboConfig(data.config); })
-        .catch(() => {});
-      api.get('/api/entreprise')
-        .then(({ data }) => setModuleVenteActif(!!data?.module_vente_actif))
         .catch(() => {});
     }
   }, [isEntreprise, isGerant, location.pathname, user?.role, fetchLabos, fetchSummary]);
@@ -422,6 +446,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
               currentHistType={currentHistType}
               currentProductTab={currentProductTab}
               currentActCtx={currentActCtx}
+              moduleVenteActif={moduleVenteActif}
             />
           ) : (
             <>
