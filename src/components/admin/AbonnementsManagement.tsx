@@ -1481,6 +1481,22 @@ export default function AbonnementsManagement() {
               </div>
             </div>
 
+            {/* ── Contrat ─────────────────────────────────────────────── */}
+            <div style={{ background: '#fff', borderRadius: 12, border: `1.5px solid ${selected.contratAccepteLe ? '#86efac' : '#fca5a5'}`, overflow: 'hidden', marginBottom: 20 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 18px', background: selected.contratAccepteLe ? 'linear-gradient(135deg,#f0fdf4 0%,#dcfce7 100%)' : 'linear-gradient(135deg,#fff1f2 0%,#fee2e2 100%)', borderBottom: `1px solid ${selected.contratAccepteLe ? '#86efac' : '#fca5a5'}` }}>
+                <span style={{ fontSize: 20 }}>📄</span>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: selected.contratAccepteLe ? '#14532d' : '#7f1d1d' }}>Contrat d'abonnement</div>
+                  <div style={{ fontSize: 11, color: selected.contratAccepteLe ? '#16a34a' : '#b91c1c', marginTop: 1 }}>
+                    {selected.contratAccepteLe ? `Signé le ${fmtDate(selected.contratAccepteLe)}${selected.contratAccepteIp ? ` · IP ${selected.contratAccepteIp}` : ''}` : 'En attente de signature client'}
+                  </div>
+                </div>
+                <span style={{ padding: '4px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700, background: selected.contratAccepteLe ? '#dcfce7' : '#fee2e2', color: selected.contratAccepteLe ? '#166534' : '#991b1b' }}>
+                  {selected.contratAccepteLe ? '✅ Signé' : '⏳ En attente'}
+                </span>
+              </div>
+            </div>
+
             {/* ── Agent IA Telegram ───────────────────────────────────── */}
             <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #e2e8f0', overflow: 'hidden', marginBottom: 20 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 18px', background: 'linear-gradient(135deg,#eff6ff 0%,#dbeafe 100%)', borderBottom: '1px solid #e2e8f0' }}>
