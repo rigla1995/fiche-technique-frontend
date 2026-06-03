@@ -504,7 +504,16 @@ export default function ReferentielArticlesPage() {
       )}
 
       {/* ── Multi-add Modal ── */}
-      {showMultiCreate && (
+      {showMultiCreate && (() => {
+        const needsCat = categories.length > 0;
+        const needsAssign = activites.length > 0 || labos.length > 0;
+        const rowValid = (r: ArtRow) =>
+          r.nom.trim() !== '' &&
+          r.uniteId !== '' &&
+          (!needsCat || r.categorieId !== '') &&
+          (!needsAssign || (r.activiteIds.length + r.laboIds.length) > 0);
+        const multiIsValid = multiRows.length > 0 && multiRows.every(rowValid);
+        return (
         <div className="modal-overlay">
           <div className="modal" style={{ maxWidth: 860 }} onClick={e => e.stopPropagation()}>
             <div className="modal-header" style={{ background: GRADIENT }}>
@@ -516,29 +525,34 @@ export default function ReferentielArticlesPage() {
               <div style={{ display: 'flex', gap: 8, fontWeight: 700, fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6, paddingLeft: 2 }}>
                 <div style={{ flex: 2 }}>Nom *</div>
                 <div style={{ flex: 1 }}>Unité *</div>
-                <div style={{ flex: 2 }}>Catégorie</div>
-                <div style={{ minWidth: 130 }}>Affectation</div>
+                <div style={{ flex: 2 }}>Catégorie{needsCat ? ' *' : ''}</div>
+                <div style={{ minWidth: 130 }}>Affectation{needsAssign ? ' *' : ''}</div>
                 <div style={{ width: 32 }} />
               </div>
               {multiRows.map((row, i) => {
                 const assignCount = row.activiteIds.length + row.laboIds.length;
                 const isAssignOpen = multiAssignOpen === i;
+                const touched = row.nom.trim() !== '';
+                const errNom = touched && !row.nom.trim();
+                const errUnite = touched && !row.uniteId;
+                const errCat = touched && needsCat && !row.categorieId;
+                const errAssign = touched && needsAssign && assignCount === 0;
                 return (
                   <div key={i}>
                     <div style={{ display: 'flex', gap: 8, marginBottom: isAssignOpen ? 4 : 8, alignItems: 'center' }}>
                       <input
-                        className="input" style={{ flex: 2 }}
+                        className="input" style={{ flex: 2, borderColor: errNom ? '#ef4444' : undefined }}
                         autoFocus={i === 0}
                         placeholder="Ex: Poulet entier"
                         value={row.nom}
                         onChange={e => updateMultiRow(i, 'nom', e.target.value)}
                         onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); if (i === multiRows.length - 1) addMultiRow(); } }}
                       />
-                      <select className="input" style={{ flex: 1 }} value={row.uniteId} onChange={e => updateMultiRow(i, 'uniteId', e.target.value)}>
+                      <select className="input" style={{ flex: 1, borderColor: errUnite ? '#ef4444' : undefined }} value={row.uniteId} onChange={e => updateMultiRow(i, 'uniteId', e.target.value)}>
                         <option value="">— Unité —</option>
                         {unites.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
                       </select>
-                      <select className="input" style={{ flex: 2 }} value={row.categorieId} onChange={e => updateMultiRow(i, 'categorieId', e.target.value)}>
+                      <select className="input" style={{ flex: 2, borderColor: errCat ? '#ef4444' : undefined }} value={row.categorieId} onChange={e => updateMultiRow(i, 'categorieId', e.target.value)}>
                         <option value="">— Catégorie —</option>
                         {categories.map(c => <option key={c.id} value={c.id}>{c.familleName ? `${c.familleName} › ${c.name}` : c.name}</option>)}
                       </select>
@@ -546,9 +560,9 @@ export default function ReferentielArticlesPage() {
                         onClick={() => setMultiAssignOpen(isAssignOpen ? null : i)}
                         style={{
                           minWidth: 130, height: 38, borderRadius: 8, flexShrink: 0,
-                          border: assignCount > 0 ? `1.5px solid ${COLOR}` : '1.5px solid var(--border)',
-                          background: assignCount > 0 ? '#f0fdf4' : '#f8fafc',
-                          color: assignCount > 0 ? '#15803d' : '#94a3b8',
+                          border: assignCount > 0 ? `1.5px solid ${COLOR}` : errAssign ? '1.5px solid #ef4444' : '1.5px solid var(--border)',
+                          background: assignCount > 0 ? '#f0fdf4' : errAssign ? '#fff5f5' : '#f8fafc',
+                          color: assignCount > 0 ? '#15803d' : errAssign ? '#ef4444' : '#94a3b8',
                           cursor: 'pointer', fontSize: '0.78rem', fontWeight: 700,
                           display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
                         }}
@@ -602,14 +616,15 @@ export default function ReferentielArticlesPage() {
               <button onClick={addMultiRow} style={{ background: 'none', border: `1.5px dashed ${COLOR}`, borderRadius: 8, padding: '7px 16px', color: COLOR, fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer', width: '100%', marginTop: 4 }}>+ Ajouter une ligne</button>
               <div className="modal-footer" style={{ marginTop: 16 }}>
                 <button className="btn btn-ghost" onClick={closeMultiCreate}>Annuler</button>
-                <button className="btn" disabled={multiCreating} onClick={handleMultiCreate} style={{ background: 'linear-gradient(135deg,#15803d,#16a34a)', color: '#fff' }}>
-                  {multiCreating ? 'Création…' : `Créer ${multiRows.filter(r => r.nom.trim() && r.uniteId).length > 1 ? `(${multiRows.filter(r => r.nom.trim() && r.uniteId).length} articles)` : 'l\'article'}`}
+                <button className="btn" disabled={multiCreating || !multiIsValid} onClick={handleMultiCreate} style={{ background: 'linear-gradient(135deg,#15803d,#16a34a)', color: '#fff', opacity: multiIsValid ? 1 : 0.5 }}>
+                  {multiCreating ? 'Création…' : `Créer ${multiRows.length > 1 ? `(${multiRows.length} articles)` : 'l\'article'}`}
                 </button>
               </div>
             </div>
           </div>
         </div>
-      )}
+        );
+      })()}
 
       {/* ── Create Wizard ── */}
       {showCreate && (
