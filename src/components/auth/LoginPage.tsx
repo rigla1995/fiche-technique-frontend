@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import LabFlowLogo from '../common/LabFlowLogo';
 export default function LoginPage() {
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -40,7 +41,7 @@ export default function LoginPage() {
       {/* Brand panel */}
       <div className="login-panel-brand">
         <div className="login-brand-content">
-          <img src="/logo.svg" alt="LabFlow" style={{ height: 56, marginBottom: 12 }} />
+          <LabFlowLogo height={56} style={{ marginBottom: 12 }} />
 
           <h1 className="login-brand-headline">
             Pilotez votre restauration.<br />

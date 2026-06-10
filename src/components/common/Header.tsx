@@ -2,6 +2,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useNotifications } from '../../context/NotificationContext';
 import { useNavigate } from 'react-router-dom';
 import { useState, useRef, useEffect } from 'react';
+import LabFlowLogo from './LabFlowLogo';
 interface HeaderProps {
   onMenuToggle: () => void;
 }
@@ -55,7 +56,7 @@ export default function Header({ onMenuToggle }: HeaderProps) {
           <span /><span /><span />
         </button>
         <div className="header-brand">
-          <img src="/logo.svg" alt="LabFlow" style={{ height: 36 }} />
+          <LabFlowLogo height={36} />
         </div>
       </div>
 
