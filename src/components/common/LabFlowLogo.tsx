@@ -51,16 +51,17 @@ export default function LabFlowLogo({ height = 38, style }: Props) {
         <rect x="-1.51" y="-1.33" width="9.17"  height="3.37"  rx="1.28"/>
       </g>
 
-      {/* Wordmark */}
+      {/* Wordmark — Work Sans Light, "Lab" full opacity / "Flow" dimmed (style v12) */}
       <text
         x="62" y="26"
-        fontFamily="system-ui, -apple-system, 'Helvetica Neue', Arial, sans-serif"
-        fontSize="23"
-        fill="white"
+        fontFamily="'Work Sans', system-ui, -apple-system, sans-serif"
+        fontSize="22"
+        fontWeight="300"
+        letterSpacing="1.8"
         dominantBaseline="middle"
       >
-        <tspan fontWeight="800" letterSpacing="-0.5">Lab</tspan>
-        <tspan fontWeight="300" letterSpacing="2">Flow</tspan>
+        <tspan fill="rgba(255,255,255,0.95)">Lab</tspan>
+        <tspan fill="rgba(255,255,255,0.58)">Flow</tspan>
       </text>
     </svg>
   );
