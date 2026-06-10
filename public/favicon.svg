@@ -1,33 +1,45 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
   <defs>
-    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1" gradientUnits="objectBoundingBox">
       <stop offset="0%"   stop-color="#0ea5e9"/>
-      <stop offset="50%"  stop-color="#6366f1"/>
+      <stop offset="52%"  stop-color="#6366f1"/>
       <stop offset="100%" stop-color="#a855f7"/>
     </linearGradient>
+    <linearGradient id="sh" x1="0" y1="0" x2="0" y2="1" gradientUnits="objectBoundingBox">
+      <stop offset="0%"   stop-color="white" stop-opacity="0.18"/>
+      <stop offset="100%" stop-color="white" stop-opacity="0"/>
+    </linearGradient>
+    <clipPath id="dc">
+      <rect x="-30.3" y="-30.3" width="60.6" height="60.6" rx="11.3"
+            transform="translate(50,50) rotate(45)"/>
+    </clipPath>
   </defs>
 
-  <!-- Background squircle -->
-  <rect width="100" height="100" rx="26" fill="url(#bg)"/>
+  <!-- Ombre (simulée par un gradient radial très doux) -->
+  <ellipse cx="50" cy="54" rx="36" ry="10" fill="#6366f1" opacity="0.25"/>
 
-  <!--
-    LF ligature — single flowing mark:
-    Left arm (L): vertical down + round bottom-left corner + right horizontal base
-    Right arm (F): vertical up from same base level + top-right bar + mid bar
-    Both letters share the same baseline, connected as a unified mark.
-  -->
+  <!-- Fond gradient du losange (clippé) -->
+  <g clip-path="url(#dc)">
+    <rect width="100" height="100" fill="url(#bg)"/>
+    <rect width="100" height="100" fill="url(#sh)"/>
+  </g>
 
-  <!-- L -->
-  <path d="M 20 22 L 20 71 Q 20 79 28 79 L 44 79"
-    fill="none" stroke="white" stroke-width="9"
-    stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Border fin -->
+  <rect x="-30.3" y="-30.3" width="60.6" height="60.6" rx="11.3"
+        transform="translate(50,50) rotate(45)"
+        fill="none" stroke="white" stroke-opacity="0.28" stroke-width="0.7"/>
 
-  <!-- F vertical + top bar -->
-  <path d="M 57 79 L 57 22 L 80 22"
-    fill="none" stroke="white" stroke-width="9"
-    stroke-linecap="round" stroke-linejoin="round"/>
-
-  <!-- F middle bar -->
-  <line x1="57" y1="49" x2="77" y2="49"
-    stroke="white" stroke-width="9" stroke-linecap="round"/>
+  <!-- Monogramme LF (espace coordonnées tourné 45°) -->
+  <g transform="translate(50,50) rotate(45)" fill="white">
+    <!-- L tige (raccourcie en haut pour laisser passer barre haute F) -->
+    <rect x="-12.9" y="-9.2" width="5.7" height="25.2" rx="2.1"/>
+    <!-- L pied -->
+    <rect x="-12.9" y="10.4" width="19.0" height="5.7" rx="2.1"/>
+    <!-- F tige (pleine hauteur) -->
+    <rect x="7.2" y="-16.0" width="5.7" height="32.0" rx="2.1"/>
+    <!-- F barre haute (pleine largeur) -->
+    <rect x="-12.9" y="-16.0" width="25.8" height="5.7" rx="2.1"/>
+    <!-- F barre milieu (raccourcie) -->
+    <rect x="-2.5" y="-2.3" width="15.4" height="5.7" rx="2.1"/>
+  </g>
 </svg>
