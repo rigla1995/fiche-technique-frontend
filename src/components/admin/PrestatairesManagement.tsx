@@ -66,63 +66,72 @@ export default function PrestatairesManagement() {
   };
 
   return (
-    <div style={{ padding: '24px', maxWidth: 900, margin: '0 auto' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+    <div className="page">
+      {/* Header */}
+      <div style={{
+        background: 'linear-gradient(135deg, #0369a1 0%, #6366f1 55%, #a855f7 100%)',
+        borderRadius: 18, padding: '24px 28px', marginBottom: 24,
+        boxShadow: '0 8px 32px rgba(39,39,42,0.28)',
+        display: 'flex', alignItems: 'center', gap: 12,
+      }}>
+        <div style={{ background: 'rgba(255,255,255,0.18)', borderRadius: 10, padding: '7px 9px', fontSize: '1.2rem' }}>🚚</div>
         <div>
-          <h1 style={{ fontSize: '1.4rem', fontWeight: 700, marginBottom: 2 }}>Prestataires de livraison</h1>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+          <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0 }}>Prestataires de livraison</h1>
+          <p style={{ color: 'rgba(255,255,255,0.70)', fontSize: '0.85rem', margin: '2px 0 0' }}>
             Gérez les plateformes de livraison disponibles pour les clients
           </p>
         </div>
-        <button
-          onClick={openNew}
-          style={{ background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 18px', cursor: 'pointer', fontWeight: 600 }}
-        >
+        <button className="btn btn-primary" style={{ marginLeft: 'auto', background: 'rgba(255,255,255,0.22)', border: '1px solid rgba(255,255,255,0.35)', color: '#fff' }} onClick={openNew}>
           + Nouveau prestataire
         </button>
       </div>
 
+      {/* Table */}
       {loading ? (
-        <div style={{ textAlign: 'center', padding: 40, color: 'var(--text-muted)' }}>Chargement…</div>
+        <div className="loading-text">Chargement…</div>
       ) : prestataires.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: 60, color: 'var(--text-muted)' }}>Aucun prestataire</div>
+        <div className="empty-state">
+          <span className="empty-icon">🚚</span>
+          <p>Aucun prestataire de livraison.</p>
+          <button className="btn btn-primary" onClick={openNew}>Créer le premier prestataire</button>
+        </div>
       ) : (
-        <div style={{ background: 'var(--card-bg)', borderRadius: 12, border: '1px solid var(--border)', overflow: 'hidden' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+        <div className="table-responsive card">
+          <table className="table">
             <thead>
-              <tr style={{ background: 'var(--bg)', borderBottom: '1px solid var(--border)' }}>
-                {['Nom', 'Statut', 'Actions'].map(h => (
-                  <th key={h} style={{ padding: '10px 16px', textAlign: 'left', fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-muted)' }}>{h}</th>
-                ))}
+              <tr>
+                <th>Nom</th>
+                <th>Statut</th>
+                <th style={{ textAlign: 'right' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
               {prestataires.map(p => (
-                <tr key={p.id} style={{ borderBottom: '1px solid var(--border)', opacity: p.actif ? 1 : 0.55 }}>
-                  <td style={{ padding: '12px 16px', fontWeight: 500 }}>{p.nom}</td>
-
-                  <td style={{ padding: '12px 16px' }}>
-                    <span style={{
-                      padding: '2px 10px', borderRadius: 12, fontSize: '0.78rem',
+                <tr key={p.id} style={{ opacity: p.actif ? 1 : 0.6 }}>
+                  <td>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ width: 8, height: 8, borderRadius: '50%', background: p.actif ? '#10b981' : '#94a3b8', flexShrink: 0 }} />
+                      <span style={{ fontWeight: 600, color: '#0f172a' }}>{p.nom}</span>
+                    </div>
+                  </td>
+                  <td>
+                    <span className="badge" style={{
                       background: p.actif ? '#dcfce7' : '#f1f5f9',
-                      color: p.actif ? '#166534' : '#64748b',
+                      color: p.actif ? '#16a34a' : '#64748b',
                     }}>
-                      {p.actif ? 'Actif' : 'Inactif'}
+                      {p.actif ? '🟢 Actif' : '⭕ Inactif'}
                     </span>
                   </td>
-                  <td style={{ padding: '12px 16px', display: 'flex', gap: 6 }}>
-                    <button onClick={() => openEdit(p)}
-                      style={{ padding: '4px 12px', borderRadius: 6, border: '1px solid var(--border)', background: 'none', cursor: 'pointer', fontSize: '0.8rem' }}>
-                      Modifier
+                  <td className="actions-cell" style={{ justifyContent: 'flex-end' }}>
+                    <button className="btn btn-ghost btn-sm" onClick={() => openEdit(p)}>✏️ Modifier</button>
+                    <button
+                      className="btn btn-sm"
+                      style={{ border: `1px solid ${p.actif ? '#f59e0b' : '#16a34a'}`, color: p.actif ? '#92400e' : '#166534', background: 'none' }}
+                      onClick={() => handleToggleActif(p)}
+                    >
+                      {p.actif ? '⏸ Désactiver' : '▶ Activer'}
                     </button>
-                    <button onClick={() => handleToggleActif(p)}
-                      style={{ padding: '4px 12px', borderRadius: 6, border: `1px solid ${p.actif ? '#f59e0b' : '#16a34a'}`, color: p.actif ? '#92400e' : '#166534', background: 'none', cursor: 'pointer', fontSize: '0.8rem' }}>
-                      {p.actif ? 'Désactiver' : 'Activer'}
-                    </button>
-                    <button onClick={() => handleDelete(p.id)}
-                      style={{ padding: '4px 12px', borderRadius: 6, border: '1px solid #dc2626', color: '#dc2626', background: 'none', cursor: 'pointer', fontSize: '0.8rem' }}>
-                      Supprimer
-                    </button>
+                    <button className="btn btn-danger btn-sm" onClick={() => handleDelete(p.id)}>🗑️</button>
                   </td>
                 </tr>
               ))}
@@ -131,37 +140,49 @@ export default function PrestatairesManagement() {
         </div>
       )}
 
-      {/* Modal form */}
+      {/* Modal */}
       {showForm && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-          <div style={{ background: 'var(--card-bg)', borderRadius: 16, padding: 28, width: '100%', maxWidth: 400 }}>
-            <h2 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: 20 }}>
-              {editing ? 'Modifier le prestataire' : 'Nouveau prestataire'}
-            </h2>
-
-            <div style={{ marginBottom: 14 }}>
-              <label style={{ fontSize: '0.82rem', fontWeight: 600, display: 'block', marginBottom: 4 }}>Nom</label>
-              <input value={nom} onChange={e => setNom(e.target.value)} placeholder="ex: Uber Eats"
-                style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg)' }} />
+        <div className="modal-overlay">
+          <div className="modal modal-sm" onClick={e => e.stopPropagation()}>
+            <div className="modal-header modal-header--primary">
+              <h2>{editing ? 'Modifier le prestataire' : 'Nouveau prestataire'}</h2>
+              <button className="modal-close" onClick={() => setShowForm(false)}>×</button>
             </div>
-
-            <div style={{ marginBottom: 20 }}>
-              <label style={{ fontSize: '0.82rem', fontWeight: 600, display: 'block', marginBottom: 4 }}>Commission (%)</label>
-              <input type="number" min="0" max="100" step="0.1" value={commission} onChange={e => setCommission(e.target.value)} placeholder="0"
-                style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg)' }} />
-            </div>
-
-            {error && <div style={{ color: '#dc2626', fontSize: '0.85rem', marginBottom: 12 }}>{error}</div>}
-
-            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
-              <button onClick={() => setShowForm(false)}
-                style={{ padding: '8px 18px', borderRadius: 8, border: '1px solid var(--border)', background: 'none', cursor: 'pointer' }}>
-                Annuler
-              </button>
-              <button onClick={handleSave} disabled={saving}
-                style={{ padding: '8px 18px', borderRadius: 8, border: 'none', background: 'var(--primary)', color: '#fff', cursor: 'pointer', fontWeight: 600, opacity: saving ? 0.7 : 1 }}>
-                {saving ? 'Enregistrement…' : 'Enregistrer'}
-              </button>
+            <div className="modal-body">
+              {error && (
+                <div style={{ background: '#fee2e2', color: '#dc2626', border: '1px solid #fecaca', borderRadius: 6, padding: '8px 12px', marginBottom: 12, fontSize: '0.85rem' }}>
+                  ⚠️ {error}
+                </div>
+              )}
+              <div className="form-group">
+                <label>Nom *</label>
+                <input
+                  className="input"
+                  autoFocus
+                  value={nom}
+                  onChange={e => setNom(e.target.value)}
+                  placeholder="ex: Uber Eats"
+                />
+              </div>
+              <div className="form-group">
+                <label>Commission (%)</label>
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.1"
+                  className="input"
+                  value={commission}
+                  onChange={e => setCommission(e.target.value)}
+                  placeholder="0"
+                />
+              </div>
+              <div className="modal-footer">
+                <button type="button" className="btn btn-ghost" onClick={() => setShowForm(false)}>Annuler</button>
+                <button type="button" className="btn btn-primary" disabled={saving || !nom.trim()} onClick={handleSave}>
+                  {saving ? 'Enregistrement…' : 'Enregistrer'}
+                </button>
+              </div>
             </div>
           </div>
         </div>
