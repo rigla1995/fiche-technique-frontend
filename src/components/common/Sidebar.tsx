@@ -441,7 +441,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
               {/* ══ PRESTATAIRES ══ */}
               <li>
                 <NavLink to="/admin/prestataires" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>
-                  <span className="link-icon">🛵</span>
+                  <span className="link-icon">🚚</span>
                   <span className="link-label">Prestataires</span>
                 </NavLink>
               </li>

@@ -91,7 +91,7 @@ export default function PrestatairesManagement() {
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ background: 'var(--bg)', borderBottom: '1px solid var(--border)' }}>
-                {['Nom', 'Commission %', 'Statut', 'Actions'].map(h => (
+                {['Nom', 'Statut', 'Actions'].map(h => (
                   <th key={h} style={{ padding: '10px 16px', textAlign: 'left', fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-muted)' }}>{h}</th>
                 ))}
               </tr>
@@ -100,7 +100,7 @@ export default function PrestatairesManagement() {
               {prestataires.map(p => (
                 <tr key={p.id} style={{ borderBottom: '1px solid var(--border)', opacity: p.actif ? 1 : 0.55 }}>
                   <td style={{ padding: '12px 16px', fontWeight: 500 }}>{p.nom}</td>
-                  <td style={{ padding: '12px 16px' }}>{p.commission_pct}%</td>
+
                   <td style={{ padding: '12px 16px' }}>
                     <span style={{
                       padding: '2px 10px', borderRadius: 12, fontSize: '0.78rem',
