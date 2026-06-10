@@ -2,6 +2,20 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import LabFlowLogo from '../common/LabFlowLogo';
+
+const FEATURES = [
+  { icon: '🧾', label: 'Fiches techniques' },
+  { icon: '📦', label: 'Stocks & inventaire' },
+  { icon: '🛒', label: 'Module vente' },
+  { icon: '🤖', label: 'Agent IA' },
+];
+
+const STATS = [
+  { num: '3×', label: 'plus rapide' },
+  { num: '−30%', label: 'de gaspillage' },
+  { num: '100%', label: 'en ligne' },
+];
+
 export default function LoginPage() {
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -26,11 +40,9 @@ export default function LoginPage() {
       }
     } catch (e: unknown) {
       const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message;
-      if (msg === 'invite_pending') {
-        setError('Votre compte n\'est pas encore activé. Consultez votre email d\'invitation.');
-      } else {
-        setError('Identifiants incorrects. Vérifiez votre email et mot de passe.');
-      }
+      setError(msg === 'invite_pending'
+        ? "Votre compte n'est pas encore activé. Consultez votre email d'invitation."
+        : 'Identifiants incorrects. Vérifiez votre email et mot de passe.');
     } finally {
       setLoading(false);
     }
@@ -41,57 +53,48 @@ export default function LoginPage() {
       {/* Brand panel */}
       <div className="login-panel-brand">
         <div className="login-brand-content">
-          <LabFlowLogo height={56} style={{ marginBottom: 12 }} />
+
+          <div className="login-logo-hero">
+            <LabFlowLogo height={80} />
+          </div>
 
           <h1 className="login-brand-headline">
-            Pilotez votre restauration.<br />
+            Pilotez votre cuisine.<br />
             <span className="login-brand-headline-accent">L'IA fait le reste.</span>
           </h1>
 
-          <p className="login-brand-sub">
-            LabFlow centralise vos fiches techniques, stocks et finances — et intègre un agent IA qui vous conseille, anticipe vos besoins et maximise votre rentabilité au quotidien.
-          </p>
-
-          <div className="login-features-grid">
-            {[
-              { icon: '🧾', title: 'Fiches techniques rentables', desc: 'Coûts précis, marges calculées automatiquement pour chaque plat.' },
-              { icon: '📦', title: 'Stock, inventaire & approvisionnement', desc: 'Gérez vos niveaux de stock, effectuez vos inventaires et anticipez les commandes fournisseurs.' },
-              { icon: '🛒', title: 'Module vente', desc: 'Suivez vos ventes par activité, analysez vos produits phares et pilotez votre chiffre d\'affaires.' },
-              { icon: '🤖', title: 'Agent IA intégré', desc: 'Posez vos questions métier, obtenez des recommandations et optimisez vos achats.' },
-              { icon: '📊', title: 'Rapports & analyses', desc: 'Ventes, pertes, tendances : toutes les données pour décider vite et bien.' },
-            ].map(({ icon, title, desc }) => (
-              <div key={title} className="login-feat-card">
-                <span className="login-feat-icon">{icon}</span>
-                <div>
-                  <div className="login-feat-title">{title}</div>
-                  <div className="login-feat-desc">{desc}</div>
-                </div>
+          <div className="login-feat-grid">
+            {FEATURES.map(({ icon, label }) => (
+              <div key={label} className="login-feat-chip">
+                <span className="login-feat-chip-icon">{icon}</span>
+                <span>{label}</span>
               </div>
             ))}
           </div>
 
           <div className="login-stats-row">
-            <div className="login-stat">
-              <span className="login-stat-num">3×</span>
-              <span className="login-stat-label">plus rapide</span>
-            </div>
-            <div className="login-stat-sep" />
-            <div className="login-stat">
-              <span className="login-stat-num">−30%</span>
-              <span className="login-stat-label">de gaspillage</span>
-            </div>
-            <div className="login-stat-sep" />
-            <div className="login-stat">
-              <span className="login-stat-num">100%</span>
-              <span className="login-stat-label">en ligne</span>
-            </div>
+            {STATS.map(({ num, label }, i) => (
+              <div key={num} style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
+                {i > 0 && <div className="login-stat-sep" />}
+                <div className="login-stat">
+                  <span className="login-stat-num">{num}</span>
+                  <span className="login-stat-label">{label}</span>
+                </div>
+              </div>
+            ))}
           </div>
+
         </div>
       </div>
 
       {/* Form panel */}
       <div className="login-panel-form">
         <div className="login-form-inner">
+
+          <div className="login-form-logo">
+            <LabFlowLogo height={34} />
+          </div>
+
           <div className="login-form-heading">Connexion</div>
           <p className="login-form-subheading">Accédez à votre espace de gestion</p>
 
@@ -104,29 +107,25 @@ export default function LoginPage() {
 
             <div className="form-group">
               <label htmlFor="email">Adresse email</label>
-              <div className="login-input-wrap">
-                <span className="login-input-icon">📧</span>
-                <input
-                  id="email"
-                  type="email"
-                  className="input login-input"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  autoComplete="email"
-                  placeholder="votre@email.com"
-                />
-              </div>
+              <input
+                id="email"
+                type="email"
+                className="input"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                autoComplete="email"
+                placeholder="votre@email.com"
+              />
             </div>
 
             <div className="form-group">
               <label htmlFor="password">Mot de passe</label>
-              <div className="login-input-wrap">
-                <span className="login-input-icon">🔑</span>
+              <div className="login-pwd-wrap">
                 <input
                   id="password"
                   type={showPwd ? 'text' : 'password'}
-                  className="input login-input"
+                  className="input"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
@@ -136,38 +135,41 @@ export default function LoginPage() {
                 />
                 <button
                   type="button"
+                  className="login-pwd-toggle"
                   onClick={() => setShowPwd(v => !v)}
-                  style={{
-                    position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)',
-                    background: 'none', border: 'none', cursor: 'pointer', fontSize: '1rem',
-                    color: 'var(--text-muted)', padding: 4,
-                  }}
                   tabIndex={-1}
+                  aria-label={showPwd ? 'Masquer' : 'Afficher'}
                 >
-                  {showPwd ? '🙈' : '👁️'}
+                  {showPwd ? (
+                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
+                      <line x1="1" y1="1" x2="23" y2="23"/>
+                    </svg>
+                  ) : (
+                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                      <circle cx="12" cy="12" r="3"/>
+                    </svg>
+                  )}
                 </button>
               </div>
             </div>
 
             <button
               type="submit"
-              className="btn btn-primary btn-full login-submit"
+              className="login-submit-btn"
               disabled={loading}
             >
               {loading ? (
-                <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center' }}>
                   <span className="spinner" style={{ width: 18, height: 18, borderWidth: 2 }} />
                   Connexion…
                 </span>
-              ) : (
-                '→  Se connecter'
-              )}
+              ) : 'Se connecter'}
             </button>
           </form>
 
-          <p className="login-footer-note">
-            Accès réservé aux utilisateurs autorisés
-          </p>
+          <p className="login-footer-note">Accès réservé aux utilisateurs autorisés</p>
         </div>
       </div>
     </div>
