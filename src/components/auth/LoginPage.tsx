@@ -92,7 +92,7 @@ export default function LoginPage() {
         <div className="login-form-inner">
 
           <div className="login-form-logo">
-            <LabFlowLogo height={34} />
+            <LabFlowLogo height={34} variant="dark" />
           </div>
 
           <div className="login-form-heading">Connexion</div>

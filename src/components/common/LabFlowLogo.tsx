@@ -1,9 +1,15 @@
 interface Props {
   height?: number;
   style?: React.CSSProperties;
+  /** 'light' (default) = white wordmark for dark/gradient backgrounds
+   *  'dark' = dark wordmark for white/light backgrounds */
+  variant?: 'light' | 'dark';
 }
 
-export default function LabFlowLogo({ height = 38, style }: Props) {
+export default function LabFlowLogo({ height = 38, style, variant = 'light' }: Props) {
+  const labColor  = variant === 'dark' ? '#1f2937'           : 'rgba(255,255,255,0.95)';
+  const flowColor = variant === 'dark' ? '#6b7280'           : 'rgba(255,255,255,0.58)';
+
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -37,21 +43,16 @@ export default function LabFlowLogo({ height = 38, style }: Props) {
         fill="none" stroke="rgba(255,255,255,0.32)" strokeWidth="0.6"
         transform="translate(26,26) rotate(45)"/>
 
-      {/* LF monogram — L normal (left) + F mirrored (right), white */}
+      {/* LF monogram */}
       <g transform="translate(26,26) rotate(45)" fill="white">
-        {/* L stem (shortened top — starts below F top bar) */}
         <rect x="-7.66" y="-5.46" width="3.37" height="14.98" rx="1.28"/>
-        {/* L foot */}
         <rect x="-7.66" y="6.15"  width="11.27" height="3.37"  rx="1.28"/>
-        {/* F stem (full height) */}
         <rect x="4.30"  y="-9.52" width="3.37"  height="19.04" rx="1.28"/>
-        {/* F top bar (full width, spans both L and F) */}
         <rect x="-7.66" y="-9.52" width="15.33" height="3.37"  rx="1.28"/>
-        {/* F mid bar (shorter) */}
         <rect x="-1.51" y="-1.33" width="9.17"  height="3.37"  rx="1.28"/>
       </g>
 
-      {/* Wordmark — Work Sans Light, "Lab" full opacity / "Flow" dimmed (style v12) */}
+      {/* Wordmark — Work Sans Light, style v12 */}
       <text
         x="62" y="26"
         fontFamily="'Work Sans', system-ui, -apple-system, sans-serif"
@@ -60,8 +61,8 @@ export default function LabFlowLogo({ height = 38, style }: Props) {
         letterSpacing="1.8"
         dominantBaseline="middle"
       >
-        <tspan fill="rgba(255,255,255,0.95)">Lab</tspan>
-        <tspan fill="rgba(255,255,255,0.58)">Flow</tspan>
+        <tspan fill={labColor}>Lab</tspan>
+        <tspan fill={flowColor}>Flow</tspan>
       </text>
     </svg>
   );
