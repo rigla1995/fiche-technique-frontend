@@ -50,22 +50,23 @@ export default function LoginPage() {
 
   return (
     <div className="login-page">
-
-      {/* ── Left: brand content on gradient ── */}
+      {/* Brand panel */}
       <div className="login-panel-brand">
-        <div className="login-brand-inner">
+        <div className="login-brand-content">
 
-          <LabFlowLogo height={72} />
+          <div className="login-logo-hero">
+            <LabFlowLogo height={80} />
+          </div>
 
           <h1 className="login-brand-headline">
-            Pilotez votre<br />cuisine.
-            <br /><span className="login-brand-headline-accent">L'IA fait le reste.</span>
+            Pilotez votre cuisine.<br />
+            <span className="login-brand-headline-accent">L'IA fait le reste.</span>
           </h1>
 
           <div className="login-feat-grid">
             {FEATURES.map(({ icon, label }) => (
-              <div key={label} className="login-feat-row">
-                <span className="login-feat-row-icon">{icon}</span>
+              <div key={label} className="login-feat-chip">
+                <span className="login-feat-chip-icon">{icon}</span>
                 <span>{label}</span>
               </div>
             ))}
@@ -73,7 +74,7 @@ export default function LoginPage() {
 
           <div className="login-stats-row">
             {STATS.map(({ num, label }, i) => (
-              <div key={num} className="login-stat-group">
+              <div key={num} style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
                 {i > 0 && <div className="login-stat-sep" />}
                 <div className="login-stat">
                   <span className="login-stat-num">{num}</span>
@@ -86,16 +87,16 @@ export default function LoginPage() {
         </div>
       </div>
 
-      {/* ── Right: glass card on gradient ── */}
+      {/* Form panel */}
       <div className="login-panel-form">
-        <div className="login-card">
+        <div className="login-form-inner">
 
-          <div className="login-card-logo">
-            <LabFlowLogo height={32} variant="dark" />
+          <div className="login-form-logo">
+            <LabFlowLogo height={34} variant="dark" />
           </div>
 
-          <div className="login-card-heading">Connexion</div>
-          <p className="login-card-sub">Accédez à votre espace de gestion</p>
+          <div className="login-form-heading">Connexion</div>
+          <p className="login-form-subheading">Accédez à votre espace de gestion</p>
 
           <form onSubmit={handleSubmit}>
             {error && (
@@ -154,7 +155,11 @@ export default function LoginPage() {
               </div>
             </div>
 
-            <button type="submit" className="login-submit-btn" disabled={loading}>
+            <button
+              type="submit"
+              className="login-submit-btn"
+              disabled={loading}
+            >
               {loading ? (
                 <span style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center' }}>
                   <span className="spinner" style={{ width: 18, height: 18, borderWidth: 2 }} />
@@ -167,7 +172,6 @@ export default function LoginPage() {
           <p className="login-footer-note">Accès réservé aux utilisateurs autorisés</p>
         </div>
       </div>
-
     </div>
   );
 }
