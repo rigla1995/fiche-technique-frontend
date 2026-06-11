@@ -269,11 +269,16 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
   // Progressive-unlock flags (post-onboarding, entreprise only)
   const noActivitesOrLabos = typesSummary !== null && !hasActivites && labos.length === 0;
-  const hasArticles = !isOnboarding && typesSummary !== null && (typesSummary.hasArticles ?? false);
+  // Workspace is "ready" if articles exist OR ingredients have been assigned (selections / labo ingredients)
+  const hasWorkspaceContent = !isOnboarding && typesSummary !== null && (
+    (typesSummary.hasArticles ?? false)
+    || (typesSummary.hasSelections ?? false)
+    || (typesSummary.hasLaboIngredients ?? false)
+  );
   // Level 0: no activités/labos → only Mes Activités accessible
   const lockLevel0 = !isOnboarding && noActivitesOrLabos;
-  // Level 1: has activités/labos but no articles → only Référentiel + Mes Activités
-  const lockLevel1 = !isOnboarding && !noActivitesOrLabos && !hasArticles && typesSummary !== null;
+  // Level 1: has activités/labos but nothing assigned yet → only Référentiel + Mes Activités
+  const lockLevel1 = !isOnboarding && !noActivitesOrLabos && !hasWorkspaceContent && typesSummary !== null;
   // Lock all espaces until articles exist
   const lockEspaces = lockLevel0 || lockLevel1;
 
@@ -519,7 +524,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                 <>
                 <Divider />
                 <li>
-                  {!isOnboarding && hasArticles ? (
+                  {!isOnboarding && hasWorkspaceContent ? (
                     <NavLink to="/client/gerants" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>
                       <span className="link-icon">👥</span>
                       <span className="link-label">Gérants</span>

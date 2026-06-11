@@ -375,7 +375,10 @@ export default function GlobalCataloguePage() {
     try {
       const { data } = await api.post(`/ingredients/${ingId}/select`);
       refreshSelections();
-      if (data.selected && user?.onboardingStep === 3) await advanceOnboarding(0);
+      if (data.selected && user?.onboardingStep === 3) {
+        await advanceOnboarding(0);
+        window.dispatchEvent(new Event('activites-changed'));
+      }
       if (deleteHistory) await api.delete(`/api/stock/client/${ingId}/all-history`);
       setIngredients((prev) => prev.map((i) => i.id === ingId ? { ...i, selected: data.selected } : i));
     } finally {
@@ -423,12 +426,18 @@ export default function GlobalCataloguePage() {
       let newAssigned: boolean;
       if (ctx.type === 'activite') {
         const { data } = await api.post(`/api/entreprise/activites/${ctx.id}/ingredients/${ingId}/select`);
-        if (user?.onboardingStep === 3) await advanceOnboarding(0);
+        if (user?.onboardingStep === 3) {
+          await advanceOnboarding(0);
+          window.dispatchEvent(new Event('activites-changed'));
+        }
         if (deleteHistory) await api.delete(`/api/stock/entreprise/${ctx.id}/${ingId}/all-history`);
         newAssigned = data.selected;
       } else {
         const { data } = await api.post(`/api/labo/${ctx.id}/ingredients/${ingId}/select`);
-        if (user?.onboardingStep === 3) await advanceOnboarding(0);
+        if (user?.onboardingStep === 3) {
+          await advanceOnboarding(0);
+          window.dispatchEvent(new Event('activites-changed'));
+        }
         newAssigned = data.selected;
       }
       setIngredients((prev) => prev.map((ing) => {
