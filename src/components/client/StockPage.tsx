@@ -1039,7 +1039,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                                 className="input"
                                 disabled={!canWrite || (entry.isPT ? hasIngredientQuantity : hasPTQuantity)}
                                 title={entry.isPT && entry.prixPartiel ? '⚠️ Prix incomplet pour certains articles — calcul partiel' : undefined}
-                                onFocus={() => { if (entry.isPT && entry.produitId) fetchPtMax(entry.produitId, ptRecipeMaxMap); }}
+                                onFocus={(e) => { e.target.select(); if (entry.isPT && entry.produitId) fetchPtMax(entry.produitId, ptRecipeMaxMap); }}
                               />
                               {entry.isPT && entry.produitId && (() => {
                                 const max = ptRecipeMaxMap[entry.produitId];
@@ -1063,6 +1063,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                                   type="number" min="0" step="0.001" placeholder="0.000"
                                   value={row.prixUnitaire}
                                   onChange={(e) => updateRow(entry.ingredientId, 'prixUnitaire', e.target.value)}
+                                  onFocus={(e) => e.target.select()}
                                   style={{ width: 88, textAlign: 'right', padding: '5px 8px', borderRadius: 7, fontSize: '0.85rem', ...warnStyle }}
                                   className="input"
                                   disabled={!canWrite}
@@ -1075,6 +1076,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                                   type="number" min="0" max="100" step="0.1" placeholder="—"
                                   value={row.tauxTva}
                                   onChange={(e) => updateRow(entry.ingredientId, 'tauxTva', e.target.value)}
+                                  onFocus={(e) => e.target.select()}
                                   style={{ width: 62, textAlign: 'right', padding: '5px 8px', borderRadius: 7, fontSize: '0.85rem' }}
                                   className="input"
                                   disabled={!canWrite}

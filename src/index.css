@@ -639,3 +639,9 @@ select.input { cursor: pointer; }
 
 /* ===== FILTER BAR ===== */
 .filter-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 10px 16px; margin-bottom: 18px; }
+
+
+/* ===== HIDE NUMBER INPUT ARROWS ===== */
+input[type=number]::-webkit-inner-spin-button,
+input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+input[type=number] { -moz-appearance: textfield; }

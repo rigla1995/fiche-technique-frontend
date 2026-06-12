@@ -813,7 +813,7 @@ export default function StockLaboPage() {
                                         ) : <span style={{ color: '#cbd5e1', fontSize: '0.8rem' }}>—</span>}
                                       </td>
                                       <td style={{ textAlign: 'center', padding: '10px 14px', verticalAlign: 'middle' }}>
-                                        <input type="number" min="0" step="0.001" value={rs.quantite} onChange={(e) => setField(r.ingredientId, 'quantite', e.target.value)} style={{ width: 76, textAlign: 'right', padding: '5px 8px', borderRadius: 7, fontSize: '0.85rem', ...warnStyle }} className="input" disabled={r.isPT ? hasIngredientQuantity : hasPTQuantity} />
+                                        <input type="number" min="0" step="0.001" value={rs.quantite} onChange={(e) => setField(r.ingredientId, 'quantite', e.target.value)} onFocus={(e) => e.target.select()} style={{ width: 76, textAlign: 'right', padding: '5px 8px', borderRadius: 7, fontSize: '0.85rem', ...warnStyle }} className="input" disabled={r.isPT ? hasIngredientQuantity : hasPTQuantity} />
                                       </td>
                                       <td style={{ textAlign: 'center', padding: '10px 14px', verticalAlign: 'middle' }}>
                                         {r.isPT ? (
@@ -827,7 +827,7 @@ export default function StockLaboPage() {
                                             )}
                                           </span>
                                         ) : (
-                                          <input type="number" min="0" step="0.001" value={rs.prixUnitaire} onChange={(e) => setField(r.ingredientId, 'prixUnitaire', e.target.value)} style={{ width: 84, textAlign: 'right', padding: '5px 8px', borderRadius: 7, fontSize: '0.85rem', ...warnStyle }} className="input" />
+                                          <input type="number" min="0" step="0.001" value={rs.prixUnitaire} onChange={(e) => setField(r.ingredientId, 'prixUnitaire', e.target.value)} onFocus={(e) => e.target.select()} style={{ width: 84, textAlign: 'right', padding: '5px 8px', borderRadius: 7, fontSize: '0.85rem', ...warnStyle }} className="input" />
                                         )}
                                       </td>
                                       <td style={{ textAlign: 'center', padding: '10px 14px', verticalAlign: 'middle' }}>
@@ -835,6 +835,7 @@ export default function StockLaboPage() {
                                           <input type="number" min="0" max="100" step="0.1" placeholder="—"
                                             value={rs.tauxTva}
                                             onChange={(e) => setField(r.ingredientId, 'tauxTva', e.target.value)}
+                                            onFocus={(e) => e.target.select()}
                                             style={{ width: 62, textAlign: 'right', padding: '5px 8px', borderRadius: 7, fontSize: '0.85rem' }}
                                             className="input"
                                             disabled={!canWrite}

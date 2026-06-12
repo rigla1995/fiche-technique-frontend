@@ -730,6 +730,7 @@ export default function TransferPage() {
                                     style={{ width: 90, textAlign: 'right', padding: '5px 8px', borderRadius: 7, fontSize: '0.85rem', borderColor: (!prixUnitaireMap[r.ingredientId]?.trim() && Object.values(qtys[r.ingredientId] || {}).some((v) => parseFloat(v) > 0)) ? '#ef4444' : undefined }}
                                     value={prixUnitaireMap[r.ingredientId] ?? ''}
                                     onChange={(e) => setPrixUnitaireMap((prev) => ({ ...prev, [r.ingredientId]: e.target.value }))}
+                                    onFocus={(e) => e.target.select()}
                                     placeholder="0.000"
                                   />
                                 </td>
@@ -739,6 +740,7 @@ export default function TransferPage() {
                                     style={{ width: 62, textAlign: 'right', padding: '5px 8px', borderRadius: 7, fontSize: '0.85rem' }}
                                     value={tauxTvaMap[r.ingredientId] ?? ''}
                                     onChange={(e) => setTauxTvaMap((prev) => ({ ...prev, [r.ingredientId]: e.target.value }))}
+                                    onFocus={(e) => e.target.select()}
                                     placeholder="—"
                                   />
                                 </td>
@@ -753,6 +755,7 @@ export default function TransferPage() {
                                           style={{ width: 100, textAlign: 'right', borderColor: qtyExceedsStock ? '#ef4444' : undefined, background: qtyExceedsStock ? '#fef2f2' : undefined }}
                                           value={qtys[r.ingredientId]?.[act.id] ?? ''}
                                           onChange={(e) => { setQty(r.ingredientId, act.id, e.target.value); setErrorDetail(null); setErrorMsg(''); }}
+                                          onFocus={(e) => e.target.select()}
                                           placeholder="0" />
                                       ) : (
                                         <span style={{ color: 'var(--danger, #ef4444)', fontWeight: 700, fontSize: '1.1rem' }}>—</span>
