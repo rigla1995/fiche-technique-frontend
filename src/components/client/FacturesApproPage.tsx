@@ -1,13 +1,12 @@
 import { useEffect, useState, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import api from '../../api/client';
-import type { Activite, HistoriqueApproEntry } from '../../types';
+import type { Activite } from '../../types';
 
 const currentYear = new Date().getFullYear();
 const yearStart = `${currentYear}-01-01`;
 const yearEnd = `${currentYear}-12-31`;
 const PAGE_SIZE = 10;
-const BATCH = 200;
 
 const fmtDate = (iso: string | null | undefined) => {
   if (!iso || iso.length < 10) return iso ?? '—';
@@ -17,51 +16,38 @@ const fmtDate = (iso: string | null | undefined) => {
 
 interface Fournisseur { id: number; nom: string; isLabo?: boolean }
 
-interface FactureGroup {
-  key: string;
+interface FactureRow {
+  id: number;
   refFacture: string | null;
-  dateAppro: string;
+  dateFacture: string;
   fournisseurId: number | null;
   fournisseurNom: string | null;
   activiteId: number | null;
-  lines: HistoriqueApproEntry[];
-  totalHT: number;
-  totalTTC: number;
-  hasTva: boolean;
-  typeAppro: string;
+  activiteNom: string | null;
+  laboId: number | null;
+  laboNom: string | null;
+  typeSource: string;
+  montantHT: number;
+  montantTva: number;
+  montantTTC: number;
 }
 
-function groupIntoFactures(entries: HistoriqueApproEntry[]): FactureGroup[] {
-  const map = new Map<string, FactureGroup>();
-
-  for (const e of entries) {
-    if (e.typeAppro !== 'manuel' && e.typeAppro !== 'transfert') continue;
-    const key = `${e.refFacture ?? `__no-ref-${e.id}`}__${e.dateAppro}__${e.fournisseurId ?? ''}__${e.activiteId ?? ''}`;
-    if (!map.has(key)) {
-      map.set(key, {
-        key,
-        refFacture: e.refFacture,
-        dateAppro: e.dateAppro,
-        fournisseurId: e.fournisseurId ?? null,
-        fournisseurNom: e.fournisseurNom,
-        activiteId: e.activiteId ?? null,
-        lines: [],
-        totalHT: 0,
-        totalTTC: 0,
-        hasTva: false,
-        typeAppro: e.typeAppro ?? 'manuel',
-      });
-    }
-    const group = map.get(key)!;
-    group.lines.push(e);
-    const ht = (e.quantite ?? 0) * (e.prixUnitaire ?? 0);
-    const ttc = (e.quantite ?? 0) * (e.prixUnitaireTva ?? e.prixUnitaire ?? 0);
-    group.totalHT += ht;
-    group.totalTTC += ttc;
-    if (e.tauxTva != null && e.tauxTva > 0) group.hasTva = true;
-  }
-
-  return Array.from(map.values()).sort((a, b) => b.dateAppro.localeCompare(a.dateAppro));
+interface LigneFact {
+  id: number;
+  dateAppro: string;
+  quantite: number | null;
+  prixUnitaire: number | null;
+  tauxTva: number | null;
+  prixUnitaireTva: number | null;
+  typeAppro: string;
+  ingredientId: number;
+  ingredientNom: string;
+  uniteNom: string;
+  categorieNom: string;
+  fournisseurId: number | null;
+  fournisseurNom: string | null;
+  activiteId: number | null;
+  activiteNom: string | null;
 }
 
 export default function FacturesApproPage() {
@@ -77,18 +63,19 @@ export default function FacturesApproPage() {
   const [startDate, setStartDate] = useState(yearStart);
   const [endDate, setEndDate] = useState(yearEnd);
 
-  const [allEntries, setAllEntries] = useState<HistoriqueApproEntry[]>([]);
+  const [factures, setFactures] = useState<FactureRow[]>([]);
   const [hasMore, setHasMore] = useState(false);
   const [nextOffset, setNextOffset] = useState(0);
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
-  const [expandedKeys, setExpandedKeys] = useState<Set<string>>(new Set());
+  const [expandedIds, setExpandedIds] = useState<Set<number>>(new Set());
+  const [lignesMap, setLignesMap] = useState<Record<number, LigneFact[]>>({});
+  const [loadingLignes, setLoadingLignes] = useState<Set<number>>(new Set());
   const [page, setPage] = useState(1);
   const [ready, setReady] = useState(false);
 
   const isActiviteGerant = !!initActiviteId && !laboId;
 
-  // Load activities + fournisseurs; auto-select first activité
   useEffect(() => {
     let cancelled = false;
     Promise.all([
@@ -114,30 +101,28 @@ export default function FacturesApproPage() {
 
   const fetchBatch = (offset: number, append: boolean) => {
     const { selectedActiviteId: actId, laboId: lId, startDate: sd, endDate: ed, selectedFournisseurId: fId, refFactureFilter: ref } = latestFilters.current;
-    if (append) setLoadingMore(true); else { setLoading(true); setPage(1); setExpandedKeys(new Set()); }
+    if (append) setLoadingMore(true); else { setLoading(true); setPage(1); setExpandedIds(new Set()); setLignesMap({}); }
     const params = new URLSearchParams();
     if (actId) params.set('activiteId', actId);
-    else params.set('entType', 'activite');
     if (lId) params.set('laboId', lId);
     if (sd) params.set('startDate', sd);
     if (ed) params.set('endDate', ed);
     if (fId) params.set('fournisseurId', fId);
-    if (ref.trim()) params.set('refFacture', ref.trim());
-    params.set('limit', String(BATCH));
+    if (ref.trim()) params.set('ref', ref.trim());
+    params.set('limit', '50');
     params.set('offset', String(offset));
-    api.get(`/api/stock/historique?${params}`)
+    api.get(`/api/factures?${params}`)
       .then(({ data }) => {
-        const rows = data as HistoriqueApproEntry[];
-        if (append) setAllEntries((prev) => [...prev, ...rows]);
-        else setAllEntries(rows);
-        setHasMore(rows.length === BATCH);
+        const rows = data as FactureRow[];
+        if (append) setFactures((prev) => [...prev, ...rows]);
+        else setFactures(rows);
+        setHasMore(rows.length === 50);
         setNextOffset(offset + rows.length);
       })
-      .catch(() => { if (!append) setAllEntries([]); })
+      .catch(() => { if (!append) setFactures([]); })
       .finally(() => { if (append) setLoadingMore(false); else setLoading(false); });
   };
 
-  // Initial fetch once activities are ready; debounce on filter changes
   const isFirst = useRef(true);
   useEffect(() => {
     if (!ready) return;
@@ -147,21 +132,43 @@ export default function FacturesApproPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, startDate, endDate, selectedFournisseurId, refFactureFilter, selectedActiviteId]);
 
-  const factures = groupIntoFactures(allEntries);
-  const totalPages = Math.max(1, Math.ceil(factures.length / PAGE_SIZE));
-  const pagedFactures = factures.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
-  const nonLaboFournisseurs = fournisseurs.filter((f) => !f.isLabo);
-
-  const toggleExpand = (key: string) => {
-    setExpandedKeys((prev) => {
+  const toggleExpand = (id: number) => {
+    setExpandedIds((prev) => {
       const next = new Set(prev);
-      if (next.has(key)) next.delete(key); else next.add(key);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+        if (!lignesMap[id]) {
+          setLoadingLignes((pl) => new Set(pl).add(id));
+          api.get(`/api/factures/${id}/lignes`)
+            .then(({ data }) => setLignesMap((pm) => ({ ...pm, [id]: data as LigneFact[] })))
+            .catch(() => setLignesMap((pm) => ({ ...pm, [id]: [] })))
+            .finally(() => setLoadingLignes((pl) => { const s = new Set(pl); s.delete(id); return s; }));
+        }
+      }
       return next;
     });
   };
 
-  const expandAll = () => setExpandedKeys(new Set(pagedFactures.map((f) => f.key)));
-  const collapseAll = () => setExpandedKeys(new Set());
+  const totalPages = Math.max(1, Math.ceil(factures.length / PAGE_SIZE));
+  const pagedFactures = factures.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const nonLaboFournisseurs = fournisseurs.filter((f) => !f.isLabo);
+
+  const expandAll = () => {
+    const ids = pagedFactures.map((f) => f.id);
+    setExpandedIds(new Set(ids));
+    ids.forEach((id) => {
+      if (!lignesMap[id]) {
+        setLoadingLignes((pl) => new Set(pl).add(id));
+        api.get(`/api/factures/${id}/lignes`)
+          .then(({ data }) => setLignesMap((pm) => ({ ...pm, [id]: data as LigneFact[] })))
+          .catch(() => setLignesMap((pm) => ({ ...pm, [id]: [] })))
+          .finally(() => setLoadingLignes((pl) => { const s = new Set(pl); s.delete(id); return s; }));
+      }
+    });
+  };
+  const collapseAll = () => setExpandedIds(new Set());
 
   return (
     <div className="page">
@@ -251,10 +258,12 @@ export default function FacturesApproPage() {
           </div>
 
           {pagedFactures.map((f) => {
-            const isExpanded = expandedKeys.has(f.key);
+            const isExpanded = expandedIds.has(f.id);
+            const lignes = lignesMap[f.id] ?? [];
+            const hasTva = f.montantTva > 0;
             return (
-              <div key={f.key} style={{ marginBottom: 12, border: '1.5px solid #bfdbfe', borderRadius: 12, overflow: 'hidden', boxShadow: '0 2px 8px rgba(30,64,175,0.08)' }}>
-                <button onClick={() => toggleExpand(f.key)} style={{ width: '100%', background: 'linear-gradient(90deg, #eff6ff, #dbeafe)', border: 'none', cursor: 'pointer', padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', textAlign: 'left' }}>
+              <div key={f.id} style={{ marginBottom: 12, border: '1.5px solid #bfdbfe', borderRadius: 12, overflow: 'hidden', boxShadow: '0 2px 8px rgba(30,64,175,0.08)' }}>
+                <button onClick={() => toggleExpand(f.id)} style={{ width: '100%', background: 'linear-gradient(90deg, #eff6ff, #dbeafe)', border: 'none', cursor: 'pointer', padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', textAlign: 'left' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
                     <span style={{ fontSize: '1.1rem' }}>🧾</span>
                     <div>
@@ -262,13 +271,10 @@ export default function FacturesApproPage() {
                         {f.refFacture ? `Réf: ${f.refFacture}` : 'Sans référence'}
                       </div>
                       <div style={{ fontSize: '0.72rem', color: '#3b82f6', marginTop: 2 }}>
-                        {fmtDate(f.dateAppro)}
+                        {fmtDate(f.dateFacture)}
                         {f.fournisseurNom && <> · {f.fournisseurNom}</>}
-                        <span style={{ marginLeft: 8, background: '#1e40af', color: '#fff', borderRadius: 4, padding: '1px 6px', fontSize: '0.65rem' }}>
-                          {f.lines.length} article{f.lines.length > 1 ? 's' : ''}
-                        </span>
-                        <span style={{ marginLeft: 6, background: f.typeAppro === 'transfert' ? '#7c3aed' : '#0369a1', color: '#fff', borderRadius: 4, padding: '1px 6px', fontSize: '0.65rem', fontWeight: 700 }}>
-                          {f.typeAppro === 'transfert' ? '↗ Transfert' : 'Manuel'}
+                        <span style={{ marginLeft: 8, background: '#0369a1', color: '#fff', borderRadius: 4, padding: '1px 6px', fontSize: '0.65rem', fontWeight: 700 }}>
+                          {f.typeSource === 'transfert' ? '↗ Transfert' : 'Manuel'}
                         </span>
                       </div>
                     </div>
@@ -276,12 +282,12 @@ export default function FacturesApproPage() {
                   <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexShrink: 0 }}>
                     <div style={{ textAlign: 'right' }}>
                       <div style={{ fontSize: '0.68rem', color: '#3b82f6', fontWeight: 600, textTransform: 'uppercase' }}>Total HT</div>
-                      <div style={{ fontWeight: 800, color: '#1e40af', fontSize: '0.92rem' }}>{f.totalHT.toFixed(3)} DT</div>
+                      <div style={{ fontWeight: 800, color: '#1e40af', fontSize: '0.92rem' }}>{f.montantHT.toFixed(3)} DT</div>
                     </div>
-                    {f.hasTva && (
+                    {hasTva && (
                       <div style={{ textAlign: 'right' }}>
                         <div style={{ fontSize: '0.68rem', color: '#059669', fontWeight: 600, textTransform: 'uppercase' }}>Total TTC</div>
-                        <div style={{ fontWeight: 800, color: '#059669', fontSize: '0.92rem' }}>{f.totalTTC.toFixed(3)} DT</div>
+                        <div style={{ fontWeight: 800, color: '#059669', fontSize: '0.92rem' }}>{f.montantTTC.toFixed(3)} DT</div>
                       </div>
                     )}
                     <span style={{ color: '#1e40af', fontSize: '1rem' }}>{isExpanded ? '▼' : '▶'}</span>
@@ -290,49 +296,55 @@ export default function FacturesApproPage() {
 
                 {isExpanded && (
                   <div style={{ overflowX: 'auto' }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
-                      <thead>
-                        <tr style={{ background: '#eff6ff', borderBottom: '2px solid #bfdbfe' }}>
-                          {(['Article', 'Catégorie', 'Qté', 'Prix HT/u', f.hasTva ? 'TVA %' : null, f.hasTva ? 'Prix TTC/u' : null, 'Total HT', f.hasTva ? 'Total TTC' : null] as (string | null)[])
-                            .filter(Boolean)
-                            .map((h) => (
-                              <th key={h!} style={{ padding: '8px 12px', fontWeight: 700, textAlign: h === 'Article' || h === 'Catégorie' ? 'left' : 'right', color: '#1e40af', textTransform: 'uppercase', fontSize: '0.65rem', letterSpacing: '0.05em' }}>
-                                {h}
-                              </th>
-                            ))}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {f.lines.map((l, i) => {
-                          const ht = (l.quantite ?? 0) * (l.prixUnitaire ?? 0);
-                          const ttc = (l.quantite ?? 0) * (l.prixUnitaireTva ?? l.prixUnitaire ?? 0);
-                          return (
-                            <tr key={l.id} style={{ borderBottom: '1px solid var(--border)', background: i % 2 === 0 ? '#fff' : '#f8faff' }}>
-                              <td style={{ padding: '8px 12px' }}>
-                                <div style={{ fontWeight: 600 }}>{l.ingredientNom}</div>
-                                <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{l.uniteNom}</div>
-                              </td>
-                              <td style={{ padding: '8px 12px', color: 'var(--text-muted)', fontSize: '0.78rem' }}>{l.categorieNom}</td>
-                              <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 700, color: '#0f766e' }}>{l.quantite ?? '—'}</td>
-                              <td style={{ padding: '8px 12px', textAlign: 'right' }}>{l.prixUnitaire != null ? `${l.prixUnitaire.toFixed(3)}` : '—'}</td>
-                              {f.hasTva && <td style={{ padding: '8px 12px', textAlign: 'right', color: '#0369a1' }}>{l.tauxTva != null ? `${l.tauxTva}%` : '—'}</td>}
-                              {f.hasTva && <td style={{ padding: '8px 12px', textAlign: 'right' }}>{l.prixUnitaireTva != null ? l.prixUnitaireTva.toFixed(3) : '—'}</td>}
-                              <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 700 }}>{ht.toFixed(3)}</td>
-                              {f.hasTva && <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 700, color: '#059669' }}>{ttc.toFixed(3)}</td>}
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                      <tfoot>
-                        <tr style={{ background: '#eff6ff', borderTop: '2px solid #bfdbfe' }}>
-                          <td colSpan={f.hasTva ? 6 : 4} style={{ padding: '8px 12px', fontWeight: 800, fontSize: '0.72rem', color: '#1e40af', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                            Sous-total — {f.lines.length} article{f.lines.length > 1 ? 's' : ''}
-                          </td>
-                          <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 900, color: '#1e40af', fontSize: '0.88rem' }}>{f.totalHT.toFixed(3)} DT</td>
-                          {f.hasTva && <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 900, color: '#059669', fontSize: '0.88rem' }}>{f.totalTTC.toFixed(3)} DT</td>}
-                        </tr>
-                      </tfoot>
-                    </table>
+                    {loadingLignes.has(f.id) ? (
+                      <p style={{ padding: '12px 16px', color: 'var(--text-muted)', fontSize: '0.82rem', fontStyle: 'italic' }}>Chargement des lignes…</p>
+                    ) : lignes.length === 0 ? (
+                      <p style={{ padding: '12px 16px', color: 'var(--text-muted)', fontSize: '0.82rem' }}>Aucune ligne trouvée.</p>
+                    ) : (
+                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
+                        <thead>
+                          <tr style={{ background: '#eff6ff', borderBottom: '2px solid #bfdbfe' }}>
+                            {(['Article', 'Catégorie', 'Qté', 'Prix HT/u', hasTva ? 'TVA %' : null, hasTva ? 'Prix TTC/u' : null, 'Total HT', hasTva ? 'Total TTC' : null] as (string | null)[])
+                              .filter(Boolean)
+                              .map((h) => (
+                                <th key={h!} style={{ padding: '8px 12px', fontWeight: 700, textAlign: h === 'Article' || h === 'Catégorie' ? 'left' : 'right', color: '#1e40af', textTransform: 'uppercase', fontSize: '0.65rem', letterSpacing: '0.05em' }}>
+                                  {h}
+                                </th>
+                              ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {lignes.map((l, i) => {
+                            const ht = (l.quantite ?? 0) * (l.prixUnitaire ?? 0);
+                            const ttc = (l.quantite ?? 0) * (l.prixUnitaireTva ?? l.prixUnitaire ?? 0);
+                            return (
+                              <tr key={l.id} style={{ borderBottom: '1px solid var(--border)', background: i % 2 === 0 ? '#fff' : '#f8faff' }}>
+                                <td style={{ padding: '8px 12px' }}>
+                                  <div style={{ fontWeight: 600 }}>{l.ingredientNom}</div>
+                                  <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{l.uniteNom}</div>
+                                </td>
+                                <td style={{ padding: '8px 12px', color: 'var(--text-muted)', fontSize: '0.78rem' }}>{l.categorieNom}</td>
+                                <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 700, color: '#0f766e' }}>{l.quantite ?? '—'}</td>
+                                <td style={{ padding: '8px 12px', textAlign: 'right' }}>{l.prixUnitaire != null ? `${l.prixUnitaire.toFixed(3)}` : '—'}</td>
+                                {hasTva && <td style={{ padding: '8px 12px', textAlign: 'right', color: '#0369a1' }}>{l.tauxTva != null ? `${l.tauxTva}%` : '—'}</td>}
+                                {hasTva && <td style={{ padding: '8px 12px', textAlign: 'right' }}>{l.prixUnitaireTva != null ? l.prixUnitaireTva.toFixed(3) : '—'}</td>}
+                                <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 700 }}>{ht.toFixed(3)}</td>
+                                {hasTva && <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 700, color: '#059669' }}>{ttc.toFixed(3)}</td>}
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                        <tfoot>
+                          <tr style={{ background: '#eff6ff', borderTop: '2px solid #bfdbfe' }}>
+                            <td colSpan={hasTva ? 6 : 4} style={{ padding: '8px 12px', fontWeight: 800, fontSize: '0.72rem', color: '#1e40af', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                              Sous-total — {lignes.length} article{lignes.length > 1 ? 's' : ''}
+                            </td>
+                            <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 900, color: '#1e40af', fontSize: '0.88rem' }}>{f.montantHT.toFixed(3)} DT</td>
+                            {hasTva && <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 900, color: '#059669', fontSize: '0.88rem' }}>{f.montantTTC.toFixed(3)} DT</td>}
+                          </tr>
+                        </tfoot>
+                      </table>
+                    )}
                   </div>
                 )}
               </div>
@@ -373,14 +385,14 @@ export default function FacturesApproPage() {
               <div style={{ textAlign: 'right' }}>
                 <div style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.7)', fontWeight: 600, textTransform: 'uppercase' }}>Total général HT</div>
                 <div style={{ fontWeight: 900, color: '#fff', fontSize: '1rem' }}>
-                  {factures.reduce((s, f) => s + f.totalHT, 0).toFixed(3)} DT
+                  {factures.reduce((s, f) => s + f.montantHT, 0).toFixed(3)} DT
                 </div>
               </div>
-              {factures.some((f) => f.hasTva) && (
+              {factures.some((f) => f.montantTva > 0) && (
                 <div style={{ textAlign: 'right' }}>
                   <div style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.7)', fontWeight: 600, textTransform: 'uppercase' }}>Total général TTC</div>
                   <div style={{ fontWeight: 900, color: '#86efac', fontSize: '1rem' }}>
-                    {factures.reduce((s, f) => s + f.totalTTC, 0).toFixed(3)} DT
+                    {factures.reduce((s, f) => s + f.montantTTC, 0).toFixed(3)} DT
                   </div>
                 </div>
               )}
