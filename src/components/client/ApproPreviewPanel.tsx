@@ -1,5 +1,3 @@
-import React from 'react';
-
 export interface PreviewLine {
   nom: string;
   unite: string;
