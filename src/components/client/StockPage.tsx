@@ -38,9 +38,9 @@ function buildInitialRowState(entries: StockEntry[]): Record<number, StockRowSta
   for (const e of entries) {
     const hasExisting = e.quantite !== null;
     state[e.ingredientId] = {
-      quantite: '0', prixUnitaire: '0', dateAppro: today,
+      quantite: '', prixUnitaire: '', dateAppro: today,
       fournisseurId: '', refFacture: '', tauxTva: '',
-      origQuantite: '0', origPrixUnitaire: '0', origDateAppro: today,
+      origQuantite: '', origPrixUnitaire: '', origDateAppro: today,
       hasExisting, saving: false, saved: false, error: '',
     };
   }
@@ -183,7 +183,7 @@ function PerteModal({ ingredientId, nom, activiteId, stockDisponible, onSaveOver
                 <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: 4 }}>Quantité perdue</label>
                 <input type="number" min="0.001" step="0.001" className="input" style={{ width: '100%' }}
                   max={stockDisponible ?? undefined}
-                  value={quantite} onChange={(e) => { setQuantite(e.target.value); setError(''); }} placeholder="0.000" />
+                  value={quantite} onChange={(e) => { setQuantite(e.target.value); setError(''); }} onFocus={(e) => e.target.select()} placeholder="—" />
                 {stockDisponible !== null && stockDisponible !== undefined && quantite && parseFloat(quantite) > stockDisponible && (
                   <p style={{ color: '#dc2626', fontSize: '0.78rem', margin: '4px 0 0', fontWeight: 600 }}>
                     ⚠ Dépasse le stock disponible ({stockDisponible.toFixed(3)})
@@ -523,8 +523,8 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
         [id]: {
           ...prev[id],
           dateAppro: value,
-          quantite: hasConflict ? '0' : prev[id].quantite,
-          prixUnitaire: hasConflict ? '0' : prev[id].prixUnitaire,
+          quantite: hasConflict ? '' : prev[id].quantite,
+          prixUnitaire: hasConflict ? '' : prev[id].prixUnitaire,
           saved: false, error: '',
         },
       }));
@@ -1032,7 +1032,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                             </td>
                             <td style={{ textAlign: 'center', padding: '10px 14px', verticalAlign: 'middle' }}>
                               <input
-                                type="number" min="0" step="0.001" placeholder="0"
+                                type="number" min="0" step="0.001" placeholder="—"
                                 value={row.quantite}
                                 onChange={(e) => updateRow(entry.ingredientId, 'quantite', e.target.value)}
                                 style={{ width: 80, textAlign: 'right', padding: '5px 8px', borderRadius: 7, fontSize: '0.85rem', ...warnStyle }}
@@ -1060,7 +1060,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                                 </span>
                               ) : (
                                 <input
-                                  type="number" min="0" step="0.001" placeholder="0.000"
+                                  type="number" min="0" step="0.001" placeholder="—"
                                   value={row.prixUnitaire}
                                   onChange={(e) => updateRow(entry.ingredientId, 'prixUnitaire', e.target.value)}
                                   onFocus={(e) => e.target.select()}

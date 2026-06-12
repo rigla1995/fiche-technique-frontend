@@ -731,7 +731,7 @@ export default function TransferPage() {
                                     value={prixUnitaireMap[r.ingredientId] ?? ''}
                                     onChange={(e) => setPrixUnitaireMap((prev) => ({ ...prev, [r.ingredientId]: e.target.value }))}
                                     onFocus={(e) => e.target.select()}
-                                    placeholder="0.000"
+                                    placeholder="—"
                                   />
                                 </td>
                                 <td style={{ textAlign: 'center', padding: '10px 14px', verticalAlign: 'middle' }}>
@@ -756,7 +756,7 @@ export default function TransferPage() {
                                           value={qtys[r.ingredientId]?.[act.id] ?? ''}
                                           onChange={(e) => { setQty(r.ingredientId, act.id, e.target.value); setErrorDetail(null); setErrorMsg(''); }}
                                           onFocus={(e) => e.target.select()}
-                                          placeholder="0" />
+                                          placeholder="—" />
                                       ) : (
                                         <span style={{ color: 'var(--danger, #ef4444)', fontWeight: 700, fontSize: '1.1rem' }}>—</span>
                                       )}
