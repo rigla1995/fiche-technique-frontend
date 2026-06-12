@@ -5,6 +5,7 @@ import api from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 import PortionsModal from './PortionsModal';
 import InvoiceConfirmModal, { type InvoiceLineItem } from './InvoiceConfirmModal';
+import ApproPreviewPanel, { type PreviewLine } from './ApproPreviewPanel';
 
 const currentYear = new Date().getFullYear();
 const yearStart = `${currentYear}-01-01`;
@@ -511,10 +512,35 @@ export default function StockLaboPage() {
   const canSaveBulk = (readyCount > 0 && !!bulkDate.trim() && (!hasFournisseurs || !!bulkFournisseurId) && !!bulkRefFacture.trim())
     || (ptReadyCount > 0 && !!bulkDate.trim() && !hasIngredientQuantity);
 
+  const previewLines: PreviewLine[] = Object.entries(rowState)
+    .filter(([idStr, rs]) => {
+      const row = stock.find((r) => r.ingredientId === Number(idStr));
+      if (row?.isPT) return false;
+      return parseFloat(rs.quantite) > 0 && parseFloat(rs.prixUnitaire) > 0;
+    })
+    .map(([idStr, rs]) => {
+      const row = stock.find((r) => r.ingredientId === Number(idStr))!;
+      const qty = parseFloat(rs.quantite);
+      const prixHT = parseFloat(rs.prixUnitaire);
+      const tva = rs.tauxTva.trim() ? parseFloat(rs.tauxTva) : null;
+      const prixTTCPerUnit = tva != null ? prixHT * (1 + tva / 100) : prixHT;
+      return {
+        nom: row?.nom ?? `#${idStr}`,
+        unite: row?.unite ?? '',
+        quantite: qty,
+        prixHT,
+        tva,
+        prixTTCPerUnit,
+        totalHT: qty * prixHT,
+        totalTTC: qty * prixTTCPerUnit,
+      };
+    });
+
   if (!laboId) return <div className="page"><p className="text-muted">Labo introuvable.</p></div>;
 
   return (
     <div className="page">
+      <ApproPreviewPanel lines={previewLines} />
       {/* Hero header */}
       <div style={{
         background: 'linear-gradient(135deg, #3b0764 0%, #7e22ce 55%, #a855f7 100%)',

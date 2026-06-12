@@ -5,6 +5,7 @@ import api from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 import PortionsModal from './PortionsModal';
 import InvoiceConfirmModal, { type InvoiceLineItem } from './InvoiceConfirmModal';
+import ApproPreviewPanel, { type PreviewLine } from './ApproPreviewPanel';
 import type { Activite, StockEntry, StockHistoryEntry, ActiviteTypesSummary, Fournisseur } from '../../types';
 
 const currentYear = new Date().getFullYear();
@@ -764,8 +765,33 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
   const canSaveBulk = (readyCount > 0 && !!bulkDate.trim() && (!hasFournisseurs || !!bulkFournisseurId) && !!bulkRefFacture.trim())
     || (ptReadyCount > 0 && !!bulkDate.trim() && !hasIngredientQuantity);
 
+  const previewLines: PreviewLine[] = Object.entries(rows)
+    .filter(([idStr, row]) => {
+      const entry = entries.find((e) => e.ingredientId === Number(idStr));
+      if (entry?.isPT) return false;
+      return parseFloat(row.quantite) > 0 && parseFloat(row.prixUnitaire) > 0;
+    })
+    .map(([idStr, row]) => {
+      const entry = entries.find((e) => e.ingredientId === Number(idStr))!;
+      const qty = parseFloat(row.quantite);
+      const prixHT = parseFloat(row.prixUnitaire);
+      const tva = row.tauxTva.trim() ? parseFloat(row.tauxTva) : null;
+      const prixTTCPerUnit = tva != null ? prixHT * (1 + tva / 100) : prixHT;
+      return {
+        nom: entry.nom,
+        unite: (entry as any).unite ?? '',
+        quantite: qty,
+        prixHT,
+        tva,
+        prixTTCPerUnit,
+        totalHT: qty * prixHT,
+        totalTTC: qty * prixTTCPerUnit,
+      };
+    });
+
   return (
     <div>
+      <ApproPreviewPanel lines={previewLines} />
       {conflictModal && (
         <ApproConflictModal
           date={conflictModal.date}
