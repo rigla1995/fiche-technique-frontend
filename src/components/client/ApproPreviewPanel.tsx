@@ -67,10 +67,10 @@ export default function ApproPreviewPanel({ lines }: Props) {
     <div
       style={{
         position: 'fixed',
-        top: HEADER_H,
+        bottom: 0,
         right: 0,
         width: 420,
-        bottom: 0,
+        maxHeight: `calc(100vh - ${HEADER_H}px)`,
         background: '#fff',
         boxShadow: '-4px 0 24px rgba(0,0,0,0.13)',
         zIndex: 1100,
