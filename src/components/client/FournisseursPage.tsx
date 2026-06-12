@@ -182,20 +182,6 @@ export default function FournisseursPage() {
             <div style={{ fontSize: '1.4rem', fontWeight: 900, color: '#fff' }}>{fournisseurs.length}</div>
             <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.75)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Fournisseurs</div>
           </div>
-          {canWrite && (
-          <button
-            onClick={openCreate}
-            style={{
-              background: 'rgba(255,255,255,0.2)',
-              boxShadow: '0 4px 14px rgba(0,0,0,0.15)',
-              borderRadius: 10, border: '1px solid rgba(255,255,255,0.35)',
-              color: '#fff', fontWeight: 800, padding: '10px 22px',
-              cursor: 'pointer', fontSize: '0.9rem', backdropFilter: 'blur(4px)',
-            }}
-          >
-            + Nouveau fournisseur
-          </button>
-          )}
         </div>
       </div>
 
@@ -205,20 +191,31 @@ export default function FournisseursPage() {
         border: '1px solid var(--border)', boxShadow: '0 2px 12px rgba(0,0,0,0.05)',
         display: 'flex', flexWrap: 'wrap', gap: 14, alignItems: 'flex-end',
       }}>
-        <div style={{ width: '100%', marginBottom: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span style={{ fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#92400e' }}>Filtres</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1 }}>
+          <span style={{ fontSize: '1rem' }}>🔍</span>
+          <input
+            type="text" placeholder="Rechercher par nom, téléphone, adresse…" value={search}
+            onChange={(e) => { setSearch(e.target.value); setFoPage(1); }}
+            style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid #92400e', fontSize: '0.88rem', background: '#fffbeb', flex: 1, minWidth: 160 }}
+          />
           {search && (
-            <button className="btn btn-ghost btn-sm" style={{ fontSize: '0.78rem' }} onClick={() => { setSearch(''); setFoPage(1); }}>✕ Réinitialiser</button>
+            <button className="btn btn-ghost btn-sm" style={{ fontSize: '0.78rem', whiteSpace: 'nowrap' }} onClick={() => { setSearch(''); setFoPage(1); }}>✕ Réinitialiser</button>
           )}
         </div>
-        <div>
-          <label style={{ fontSize: '0.68rem', fontWeight: 800, color: '#92400e', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>🔍 Recherche</label>
-          <input
-            type="text" placeholder="Nom, téléphone, adresse…" value={search}
-            onChange={(e) => { setSearch(e.target.value); setFoPage(1); }}
-            style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid #92400e', fontSize: '0.88rem', background: '#fffbeb', minWidth: 160 }}
-          />
-        </div>
+        {canWrite && (
+          <button
+            onClick={openCreate}
+            style={{
+              background: 'linear-gradient(135deg, #92400e, #ea580c)',
+              boxShadow: '0 4px 14px rgba(146,64,14,0.3)',
+              borderRadius: 10, border: 'none',
+              color: '#fff', fontWeight: 800, padding: '10px 22px',
+              cursor: 'pointer', fontSize: '0.9rem', whiteSpace: 'nowrap',
+            }}
+          >
+            + Nouveau fournisseur
+          </button>
+        )}
       </div>
 
       {loading ? (
