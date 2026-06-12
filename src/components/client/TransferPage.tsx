@@ -49,6 +49,8 @@ interface LaboStockRow {
   categorie: string;
   quantite: number | null;
   prixUnitaire: number | null;
+  tauxTva?: number | null;
+  pmpUnitHT?: number | null;
   isPT?: boolean;
   activiteId?: number | null;
   recentTransferDates?: string[];
@@ -129,6 +131,7 @@ export default function TransferPage() {
       ]);
       setLabo(laboRes.data);
       setStock(stockRes.data);
+      initPrixFromStock(stockRes.data as LaboStockRow[]);
       setHasTransfers(Array.isArray(transfersRes.data) && transfersRes.data.length > 0);
       const assigned = new Set<string>();
       for (const ing of (assignRes.data.ingredients || []) as { ingredientId: number; activities: { activiteId: number; assigned: boolean }[] }[]) {
@@ -171,6 +174,18 @@ export default function TransferPage() {
   useEffect(() => { load(); }, [load]);
   useEffect(() => { api.get('/api/labo').then(({ data }) => setAllLabos(data)).catch(() => {}); }, []);
 
+  const initPrixFromStock = (rows: LaboStockRow[]) => {
+    const prix: Record<number, string> = {};
+    const tva: Record<number, string> = {};
+    for (const r of rows) {
+      const suggested = r.pmpUnitHT ?? r.prixUnitaire;
+      prix[r.ingredientId] = suggested != null ? String(Math.round(suggested * 1000) / 1000) : '';
+      tva[r.ingredientId] = r.tauxTva != null ? String(r.tauxTva) : '';
+    }
+    setPrixUnitaireMap(prix);
+    setTauxTvaMap(tva);
+  };
+
   const setQty = (ingredientId: number, activiteId: number, value: string) => {
     setQtys((prev) => ({
       ...prev,
@@ -200,8 +215,7 @@ export default function TransferPage() {
           ...prev,
           [batch.ingredientId]: Object.fromEntries(Object.keys(prev[batch.ingredientId] || {}).map((a) => [a, ''])),
         }));
-        setPrixUnitaireMap((prev) => ({ ...prev, [batch.ingredientId]: '' }));
-        setTauxTvaMap((prev) => ({ ...prev, [batch.ingredientId]: '' }));
+        // prix/tva will be re-initialized from refreshed stock below
       }
       setHasTransfers(true);
       try {
@@ -226,6 +240,7 @@ export default function TransferPage() {
       } catch { /* ignore */ }
       const { data } = await api.get(`/api/labo/${laboId}/stock?assignedOnly=true`);
       setStock(data);
+      initPrixFromStock(data as LaboStockRow[]);
       setSuccessMsg(t('client.labo.transfer_success'));
       setTimeout(() => setSuccessMsg(''), 3000);
     } catch (err: unknown) {
@@ -665,7 +680,7 @@ export default function TransferPage() {
                         <tr style={{ background: 'linear-gradient(135deg, #3b0764, #7e22ce)', borderBottom: '1px solid rgba(255,255,255,0.2)' }}>
                           <th style={{ minWidth: 140, fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '10px 14px 4px', color: '#fff', background: 'transparent', borderBottom: 'none', textAlign: 'center' }}>{t('client.stock.ingredient')}</th>
                           <th style={{ textAlign: 'center', minWidth: 100, fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '10px 14px 4px', color: '#fff', background: 'transparent', borderBottom: 'none' }}>{t('client.labo.labo_stock')}</th>
-                          <th style={{ textAlign: 'center', minWidth: 110, fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '10px 14px 4px', color: '#fff', background: 'transparent', borderBottom: 'none' }}>Prix <span style={{ color: '#ef4444' }}>*</span></th>
+                          <th style={{ textAlign: 'center', minWidth: 110, fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '10px 14px 4px', color: '#fff', background: 'transparent', borderBottom: 'none' }}>Prix</th>
                           <th style={{ textAlign: 'center', minWidth: 80, fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '10px 14px 4px', color: '#e9d5ff', background: 'transparent', borderBottom: 'none' }}>TVA (%)</th>
                           {activites.map((act) => (
                             <th key={act.id} style={{ textAlign: 'center', minWidth: 120, fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '10px 14px 4px', color: '#e9d5ff', background: 'transparent', borderBottom: 'none' }}>{act.nom}</th>
