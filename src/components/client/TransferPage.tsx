@@ -3,6 +3,7 @@ import { useSearchParams, Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
 import TransferConfirmModal, { type TransferActiviteGroup, type TransferLine } from './TransferConfirmModal';
+import ApproPreviewPanel, { type PreviewLine } from './ApproPreviewPanel';
 
 type TransferBatch = {
   ingredientId: number;
@@ -386,10 +387,31 @@ export default function TransferPage() {
     groups[r.categorie].push(r);
   }
 
+  const previewLines: PreviewLine[] = stock
+    .filter((r) => !r.isPT)
+    .flatMap((r) => {
+      const totalQty = Object.values(qtys[r.ingredientId] || {}).reduce((s, q) => s + (parseFloat(q) || 0), 0);
+      const prixHT = parseFloat(prixUnitaireMap[r.ingredientId] || '') || 0;
+      if (totalQty <= 0 || prixHT <= 0) return [];
+      const tva = tauxTvaMap[r.ingredientId]?.trim() ? parseFloat(tauxTvaMap[r.ingredientId]) : null;
+      const prixTTCPerUnit = tva != null ? prixHT * (1 + tva / 100) : prixHT;
+      return [{
+        nom: r.nom,
+        unite: r.unite,
+        quantite: totalQty,
+        prixHT,
+        tva,
+        prixTTCPerUnit,
+        totalHT: totalQty * prixHT,
+        totalTTC: totalQty * prixTTCPerUnit,
+      }];
+    });
+
   if (!laboId) return <div className="page"><p className="text-muted">Labo introuvable.</p></div>;
 
   return (
     <div className="page">
+      <ApproPreviewPanel lines={previewLines} />
       {/* Confirmation popup — date conflict warning */}
       {transferConfirm && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,15,15,0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}

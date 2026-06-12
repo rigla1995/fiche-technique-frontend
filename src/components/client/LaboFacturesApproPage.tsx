@@ -264,12 +264,11 @@ export default function LaboFacturesApproPage() {
                     <span style={{ fontSize: '1.1rem' }}>🧾</span>
                     <div>
                       <div style={{ fontWeight: 800, fontSize: '0.9rem', color: '#4c1d95' }}>
-                        {f.refFacture ? `Réf: ${f.refFacture}` : 'Sans référence'}
+                        {f.fournisseurNom ?? 'Sans fournisseur'}
                       </div>
                       <div style={{ fontSize: '0.72rem', color: '#7c3aed', marginTop: 2 }}>
-                        {fmtDate(f.dateFacture)}
+                        {f.refFacture ? `Réf: ${f.refFacture}` : 'Sans réf.'} · {fmtDate(f.dateFacture)}
                         {f.activiteNom && <> · 🏪 <strong>{f.activiteNom}</strong></>}
-                        {f.fournisseurNom && !f.activiteNom && <> · {f.fournisseurNom}</>}
                         <span style={{ marginLeft: 8, background: f.typeSource === 'transfert' ? '#6d28d9' : '#0369a1', color: '#fff', borderRadius: 4, padding: '1px 6px', fontSize: '0.65rem', fontWeight: 700 }}>
                           {f.typeSource === 'transfert' ? '↗ Transfert' : 'Manuel'}
                         </span>
@@ -281,12 +280,10 @@ export default function LaboFacturesApproPage() {
                       <div style={{ fontSize: '0.68rem', color: '#7c3aed', fontWeight: 600, textTransform: 'uppercase' }}>Total HT</div>
                       <div style={{ fontWeight: 800, color: '#6d28d9', fontSize: '0.92rem' }}>{f.montantHT.toFixed(3)} DT</div>
                     </div>
-                    {hasTva && (
-                      <div style={{ textAlign: 'right' }}>
-                        <div style={{ fontSize: '0.68rem', color: '#059669', fontWeight: 600, textTransform: 'uppercase' }}>Total TTC</div>
-                        <div style={{ fontWeight: 800, color: '#059669', fontSize: '0.92rem' }}>{f.montantTTC.toFixed(3)} DT</div>
-                      </div>
-                    )}
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ fontSize: '0.68rem', color: '#059669', fontWeight: 600, textTransform: 'uppercase' }}>Total TTC</div>
+                      <div style={{ fontWeight: 800, color: '#059669', fontSize: '0.92rem' }}>{f.montantTTC.toFixed(3)} DT</div>
+                    </div>
                     <span style={{ color: '#7c3aed', fontSize: '1rem' }}>{isExpanded ? '▼' : '▶'}</span>
                   </div>
                 </button>
@@ -385,14 +382,12 @@ export default function LaboFacturesApproPage() {
                   {factures.reduce((s, f) => s + f.montantHT, 0).toFixed(3)} DT
                 </div>
               </div>
-              {factures.some((f) => f.montantTva > 0) && (
-                <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.7)', fontWeight: 600, textTransform: 'uppercase' }}>Total général TTC</div>
-                  <div style={{ fontWeight: 900, color: '#86efac', fontSize: '1rem' }}>
-                    {factures.reduce((s, f) => s + f.montantTTC, 0).toFixed(3)} DT
-                  </div>
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.7)', fontWeight: 600, textTransform: 'uppercase' }}>Total général TTC</div>
+                <div style={{ fontWeight: 900, color: '#86efac', fontSize: '1rem' }}>
+                  {factures.reduce((s, f) => s + f.montantTTC, 0).toFixed(3)} DT
                 </div>
-              )}
+              </div>
             </div>
           )}
         </>
