@@ -64,18 +64,26 @@ export default function ApproPreviewPanel({ lines }: Props) {
   const grandTTC = lines.reduce((s, l) => s + l.totalTTC, 0);
 
   return (
+    /* Outer wrapper: full column height but transparent to pointer events above the panel */
+    <div style={{
+      position: 'fixed',
+      top: HEADER_H,
+      bottom: 0,
+      right: 0,
+      width: 420,
+      display: 'flex',
+      flexDirection: 'column',
+      justifyContent: 'flex-end',
+      zIndex: 1100,
+      pointerEvents: 'none',
+    }}>
     <div
       style={{
-        position: 'fixed',
-        bottom: 0,
-        right: 0,
-        width: 420,
-        maxHeight: `calc(100vh - ${HEADER_H}px)`,
         background: '#fff',
         boxShadow: '-4px 0 24px rgba(0,0,0,0.13)',
-        zIndex: 1100,
         display: 'flex',
         flexDirection: 'column',
+        maxHeight: `calc(100vh - ${HEADER_H}px)`,
         transform: visible ? 'translateX(0)' : 'translateX(100%)',
         transition: 'transform 0.28s cubic-bezier(0.4,0,0.2,1)',
         pointerEvents: visible ? 'auto' : 'none',
@@ -140,6 +148,7 @@ export default function ApproPreviewPanel({ lines }: Props) {
           )}
         </table>
       </div>
+    </div>
     </div>
   );
 }
