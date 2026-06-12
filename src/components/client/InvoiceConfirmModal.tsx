@@ -107,12 +107,10 @@ export default function InvoiceConfirmModal({ lines, date, fournisseurNom, refFa
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
             <div style={{ display: 'flex', gap: 20, fontSize: '0.88rem', fontWeight: 700, flexWrap: 'wrap' }}>
               <span>Total HT : <span style={{ color: accent }}>{totalHT.toFixed(3)} DT</span></span>
-              {(hasTva || timbreFiscal) && (
-                <span>
-                  Total TTC : <span style={{ color: accent }}>{totalTTCWithTimbre.toFixed(3)} DT</span>
-                  {timbreFiscal && <span style={{ fontSize: '0.72rem', fontWeight: 400, color: '#6b7280', marginLeft: 4 }}>(dont 1.000 DT timbre)</span>}
-                </span>
-              )}
+              <span>
+                Total TTC : <span style={{ color: accent }}>{totalTTCWithTimbre.toFixed(3)} DT</span>
+                {timbreFiscal && <span style={{ fontSize: '0.72rem', fontWeight: 400, color: '#6b7280', marginLeft: 4 }}>(dont 1.000 DT timbre)</span>}
+              </span>
             </div>
             <div style={{ display: 'flex', gap: 10 }}>
               <button className="btn btn-ghost btn-sm" onClick={onCancel}>Annuler</button>
