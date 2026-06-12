@@ -24,8 +24,12 @@ const thStyle: React.CSSProperties = {
 };
 
 export default function FournisseursPage() {
-  const { canWrite } = useAuth();
+  const { canWrite, user } = useAuth();
   const isIndep = false;
+  const isGerant = user?.role === 'gerant';
+  const gerantActiviteType = user?.gerantActiviteType;
+  const gerantActiviteId = user?.gerantActiviteId;
+  const gerantActiviteNom = user?.gerantActiviteNom;
 
   const [fournisseurs, setFournisseurs] = useState<Fournisseur[]>([]);
   const [activites, setActivites] = useState<Activite[]>([]);
@@ -66,7 +70,17 @@ export default function FournisseursPage() {
   useEffect(() => { load(); }, [isIndep]);
 
   const openCreate = () => {
-    setForm(isIndep ? empty : { ...empty, activiteIds: activites.map((a) => a.id) });
+    let defaultForm: FournisseurFormData;
+    if (isIndep) {
+      defaultForm = empty;
+    } else if (isGerant && gerantActiviteId) {
+      defaultForm = gerantActiviteType === 'labo'
+        ? { ...empty, laboIds: [gerantActiviteId] }
+        : { ...empty, activiteIds: [gerantActiviteId] };
+    } else {
+      defaultForm = { ...empty, activiteIds: activites.map((a) => a.id) };
+    }
+    setForm(defaultForm);
     setError('');
     setModal({ mode: 'create' });
   };
@@ -88,9 +102,20 @@ export default function FournisseursPage() {
     setSaving(true);
     setError('');
     try {
+      let activiteIds = form.activiteIds;
+      let laboIds = form.laboIds;
+      if (isGerant && gerantActiviteId) {
+        if (gerantActiviteType === 'labo') {
+          laboIds = [gerantActiviteId];
+          activiteIds = [];
+        } else {
+          activiteIds = [gerantActiviteId];
+          laboIds = [];
+        }
+      }
       const payload = isIndep
         ? { nom: form.nom.trim(), adresse: form.adresse.trim() || null, telephone: form.telephone.trim() || null }
-        : { nom: form.nom.trim(), adresse: form.adresse.trim() || null, telephone: form.telephone.trim() || null, activiteIds: form.activiteIds, laboIds: form.laboIds };
+        : { nom: form.nom.trim(), adresse: form.adresse.trim() || null, telephone: form.telephone.trim() || null, activiteIds, laboIds };
 
       const base = isIndep ? '/api/fournisseurs' : '/api/entreprise/fournisseurs';
       if (modal?.mode === 'edit' && modal.item) {
@@ -422,34 +447,40 @@ export default function FournisseursPage() {
                 <input className="input" style={{ width: '100%' }} placeholder="Adresse (optionnel)" value={form.adresse} onChange={(e) => setForm((p) => ({ ...p, adresse: e.target.value }))} />
               </div>
               {!isIndep && (
-                <>
-                  <div>
-                    <label style={labelStyle}>Activités liées</label>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, maxHeight: 140, overflowY: 'auto', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 10px' }}>
-                      {activites.length === 0
-                        ? <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>Aucune activité</span>
-                        : activites.map((a) => (
-                          <label key={a.id} style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: '0.85rem' }}>
-                            <input type="checkbox" checked={form.activiteIds.includes(a.id)} onChange={() => toggleActivite(a.id)} />
-                            {a.nom}
-                          </label>
-                        ))}
-                    </div>
+                isGerant ? (
+                  <div style={{ background: '#f0fdf4', border: '1.5px solid #86efac', borderRadius: 9, padding: '10px 14px', fontSize: '0.85rem', color: '#15803d', fontWeight: 600 }}>
+                    {gerantActiviteType === 'labo' ? '🏭' : '📍'} Assigné automatiquement à : <strong>{gerantActiviteNom}</strong>
                   </div>
-                  {labos.length > 0 && (
+                ) : (
+                  <>
                     <div>
-                      <label style={labelStyle}>Labos liés</label>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, border: '1px solid var(--border)', borderRadius: 8, padding: '8px 10px' }}>
-                        {labos.map((l) => (
-                          <label key={l.id} style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: '0.85rem' }}>
-                            <input type="checkbox" checked={form.laboIds.includes(l.id)} onChange={() => toggleLabo(l.id)} />
-                            🏭 {l.nom} {l.refLabo ? <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>({l.refLabo})</span> : null}
-                          </label>
-                        ))}
+                      <label style={labelStyle}>Activités liées</label>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, maxHeight: 140, overflowY: 'auto', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 10px' }}>
+                        {activites.length === 0
+                          ? <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>Aucune activité</span>
+                          : activites.map((a) => (
+                            <label key={a.id} style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: '0.85rem' }}>
+                              <input type="checkbox" checked={form.activiteIds.includes(a.id)} onChange={() => toggleActivite(a.id)} />
+                              {a.nom}
+                            </label>
+                          ))}
                       </div>
                     </div>
-                  )}
-                </>
+                    {labos.length > 0 && (
+                      <div>
+                        <label style={labelStyle}>Labos liés</label>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, border: '1px solid var(--border)', borderRadius: 8, padding: '8px 10px' }}>
+                          {labos.map((l) => (
+                            <label key={l.id} style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: '0.85rem' }}>
+                              <input type="checkbox" checked={form.laboIds.includes(l.id)} onChange={() => toggleLabo(l.id)} />
+                              🏭 {l.nom} {l.refLabo ? <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>({l.refLabo})</span> : null}
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )
               )}
               {error && <p style={{ color: 'var(--danger)', fontSize: '0.85rem' }}>{error}</p>}
             </div>

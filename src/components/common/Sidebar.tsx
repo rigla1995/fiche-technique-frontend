@@ -153,10 +153,7 @@ function GerantSidebarContent({
           </>
         )}
         <Divider />
-        <CollapsibleHeader label="Fournisseurs" icon="🚚" isOpen={openSections.has('gerant-labo-fournisseurs')} locked={false} onToggle={() => toggleSection('gerant-labo-fournisseurs')} />
-        {openSections.has('gerant-labo-fournisseurs') && (
-          <li><NavLink to="/client/fournisseurs-labo" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}><span className="link-icon">🚚</span><span className="link-label">Fournisseurs Labo</span></NavLink></li>
-        )}
+        <li><NavLink to="/client/fournisseurs" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}><span className="link-icon">🚚</span><span className="link-label">Fournisseurs</span></NavLink></li>
         {moduleVenteActif && (
           <>
             <Divider />
@@ -205,10 +202,7 @@ function GerantSidebarContent({
           </>
         )}
         <Divider />
-        <CollapsibleHeader label="Fournisseurs" icon="🚚" isOpen={openSections.has('gerant-act-fournisseurs')} locked={false} onToggle={() => toggleSection('gerant-act-fournisseurs')} />
-        {openSections.has('gerant-act-fournisseurs') && (
-          <li><NavLink to="/client/fournisseurs" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}><span className="link-icon">🚚</span><span className="link-label">Fournisseurs</span></NavLink></li>
-        )}
+        <li><NavLink to="/client/fournisseurs" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}><span className="link-icon">🚚</span><span className="link-label">Fournisseurs</span></NavLink></li>
         <Divider />
         <CollapsibleHeader label="Produits" icon="🍔" isOpen={openSections.has('gerant-produits')} locked={false} onToggle={() => toggleSection('gerant-produits')} />
         {openSections.has('gerant-produits') && (
@@ -645,28 +639,13 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
                   <Divider />
 
-                  {/* ══ ESPACE FOURNISSEURS ══ — unlocks at level 2 */}
-                  <CollapsibleHeader label="Espace Fournisseurs" icon="🚚" isOpen={openSections.has('fournisseurs')} locked={isOnboarding || lockEspaces} onToggle={() => toggleSection('fournisseurs')} />
-                  {openSections.has('fournisseurs') && (
-                    <>
-                      <li>
-                        <NavLink to="/client/fournisseurs" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>
-                          <span className="link-icon">🚚</span><span className="link-label">Fournisseurs</span>
-                        </NavLink>
-                      </li>
-                      {(labos.length > 0 || (aboConfig?.nbLabos ?? 0) > 0) && (
-                        <li>
-                          {labos.length === 0 ? (
-                            <LockedLink label="Fournisseurs Labos" reason="Créez d'abord un labo depuis Mes Activités" />
-                          ) : (
-                            <NavLink to="/client/fournisseurs-labo" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>
-                              <span className="link-icon">🏭</span><span className="link-label">Fournisseurs Labos</span>
-                            </NavLink>
-                          )}
-                        </li>
-                      )}
-                    </>
-                  )}
+                  {/* ══ FOURNISSEURS ══ */}
+                  <li>
+                    {(isOnboarding || lockEspaces)
+                      ? <LockedLink label="Fournisseurs" reason="Configurez vos activités pour accéder aux fournisseurs" />
+                      : <NavLink to="/client/fournisseurs" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}><span className="link-icon">🚚</span><span className="link-label">Fournisseurs</span></NavLink>
+                    }
+                  </li>
 
                   {/* Demandes — toujours actif */}
                   <Divider />
