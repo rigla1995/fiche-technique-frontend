@@ -431,7 +431,7 @@ interface StockMatrixProps {
   activiteId?: number;
   isEntreprise: boolean;
   fournisseurs?: Fournisseur[];
-  onSave: (ingredientId: number, quantite: string, prixUnitaire: string, dateAppro: string, fournisseurId?: number | null, refFacture?: string | null, tauxTva?: number | null) => Promise<void>;
+  onSave: (ingredientId: number, quantite: string, prixUnitaire: string, dateAppro: string, fournisseurId?: number | null, refFacture?: string | null, tauxTva?: number | null, timbreFiscal?: boolean) => Promise<void>;
   onSavePT?: (produitId: number, quantite: string, dateAppro: string) => Promise<{ prixCalcule: number | null; dateAppro: string; totalQuantite: number }>;
   onSaveSeuilMin?: (ingredientId: number, seuilMin: number | null) => Promise<void>;
   onSavePerte?: (ingredientId: number, quantite: number, typePerte: string, datePerte: string) => Promise<void>;
@@ -495,7 +495,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
   const [invoiceModal, setInvoiceModal] = useState<{
     lines: InvoiceLineItem[];
     fournisseurNom: string | null;
-    onConfirm: () => void;
+    onConfirm: (timbreFiscal: boolean) => void;
   } | null>(null);
 
   const toggleCat = (cat: string) => setOpenCats((prev) => { const n = new Set(prev); if (n.has(cat)) n.delete(cat); else n.add(cat); return n; });
@@ -592,7 +592,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
     if (!isOpen) await fetchHistory(id);
   };
 
-  const doBulkSave = async () => {
+  const doBulkSave = async (timbreFiscal = false) => {
     setBulkSaving(true);
     setBulkError('');
     try {
@@ -609,7 +609,8 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
         await onSave(ingId, row.quantite, row.prixUnitaire, bulkDate,
           bulkFournisseurId ? Number(bulkFournisseurId) : null,
           bulkRefFacture.trim() || null,
-          row.tauxTva.trim() ? parseFloat(row.tauxTva) : null);
+          row.tauxTva.trim() ? parseFloat(row.tauxTva) : null,
+          timbreFiscal);
         if (isCurrentMonth(bulkDate)) {
           const added = parseFloat(row.quantite) || 0;
           setTotalOverrides((prev) => {
@@ -694,7 +695,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
       ? (fournisseurs.find((f) => f.id === Number(bulkFournisseurId))?.nom ?? null)
       : null;
 
-    const doConflictCheckThenSave = async () => {
+    const doConflictCheckThenSave = async (timbreFiscal = false) => {
       const histMap: Record<number, StockHistoryEntry[]> = {};
       await Promise.all(readyIds.map(async (id) => { histMap[id] = await fetchHistory(id); }));
 
@@ -714,13 +715,13 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
       }
 
       if (conflicts.length > 0) {
-        setConflictModal({ date: bulkDate, conflicts, onConfirm: () => { setConflictModal(null); doBulkSave(); } });
+        setConflictModal({ date: bulkDate, conflicts, onConfirm: () => { setConflictModal(null); doBulkSave(timbreFiscal); } });
         return;
       }
-      await doBulkSave();
+      await doBulkSave(timbreFiscal);
     };
 
-    setInvoiceModal({ lines: invoiceLines, fournisseurNom, onConfirm: doConflictCheckThenSave });
+    setInvoiceModal({ lines: invoiceLines, fournisseurNom, onConfirm: (tf) => doConflictCheckThenSave(tf) });
   };
 
   let filtered = entries;
@@ -809,7 +810,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
           fournisseurNom={invoiceModal.fournisseurNom}
           refFacture={bulkRefFacture.trim() || null}
           theme="activite"
-          onConfirm={() => { setInvoiceModal(null); invoiceModal.onConfirm(); }}
+          onConfirm={(tf) => { setInvoiceModal(null); invoiceModal.onConfirm(tf); }}
           onCancel={() => setInvoiceModal(null)}
         />
       )}
@@ -1212,7 +1213,7 @@ interface ActivityStockSectionProps {
   label: string;
   activities: Activite[];
   initialActiviteId?: number;
-  onSave: (activiteId: number, ingredientId: number, quantite: string, prixUnitaire: string, dateAppro: string, fournisseurId?: number | null, refFacture?: string | null, tauxTva?: number | null) => Promise<void>;
+  onSave: (activiteId: number, ingredientId: number, quantite: string, prixUnitaire: string, dateAppro: string, fournisseurId?: number | null, refFacture?: string | null, tauxTva?: number | null, timbreFiscal?: boolean) => Promise<void>;
   onActiviteChange?: (nom: string) => void;
 }
 
@@ -1257,8 +1258,8 @@ function ActivityStockSection({ label: _label, activities, initialActiviteId, on
     if (selectedId) loadStock(selectedId);
   }, [selectedId, loadStock]);
 
-  const handleSave = async (ingredientId: number, quantite: string, prixUnitaire: string, dateAppro: string, fournisseurId?: number | null, refFacture?: string | null, tauxTva?: number | null) => {
-    await onSave(selectedId, ingredientId, quantite, prixUnitaire, dateAppro, fournisseurId, refFacture, tauxTva);
+  const handleSave = async (ingredientId: number, quantite: string, prixUnitaire: string, dateAppro: string, fournisseurId?: number | null, refFacture?: string | null, tauxTva?: number | null, timbreFiscal?: boolean) => {
+    await onSave(selectedId, ingredientId, quantite, prixUnitaire, dateAppro, fournisseurId, refFacture, tauxTva, timbreFiscal);
     if (selectedId) loadStock(selectedId);
   };
 
@@ -1441,7 +1442,7 @@ export default function StockPage() {
     }).finally(() => setActivitesLoading(false));
   }, []);
 
-  const saveEntrepriseStock = async (activiteId: number, ingredientId: number, quantite: string, prixUnitaire: string, dateAppro: string, fournisseurId?: number | null, refFacture?: string | null, tauxTva?: number | null) => {
+  const saveEntrepriseStock = async (activiteId: number, ingredientId: number, quantite: string, prixUnitaire: string, dateAppro: string, fournisseurId?: number | null, refFacture?: string | null, tauxTva?: number | null, timbreFiscal?: boolean) => {
     await api.put(`/api/stock/entreprise/${activiteId}/${ingredientId}`, {
       quantite: quantite ? parseFloat(quantite) : null,
       prixUnitaire: prixUnitaire ? parseFloat(prixUnitaire) : null,
@@ -1449,6 +1450,7 @@ export default function StockPage() {
       fournisseurId: fournisseurId ?? null,
       refFacture: refFacture ?? null,
       tauxTva: tauxTva ?? null,
+      timbreFiscal: timbreFiscal ?? false,
     });
   };
 

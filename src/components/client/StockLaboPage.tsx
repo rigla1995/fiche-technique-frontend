@@ -147,7 +147,7 @@ export default function StockLaboPage() {
   const [bulkRefFacture, setBulkRefFacture] = useState('');
   const [bulkSaving, setBulkSaving] = useState(false);
   const [seuilModal, setSeuilModal] = useState<{ ingredientId: number; nom: string } | null>(null);
-  const [invoiceModal, setInvoiceModal] = useState<{ lines: InvoiceLineItem[]; fournisseurNom: string | null; onConfirm: () => void } | null>(null);
+  const [invoiceModal, setInvoiceModal] = useState<{ lines: InvoiceLineItem[]; fournisseurNom: string | null; onConfirm: (timbreFiscal: boolean) => void } | null>(null);
 
   const today = todayStr();
 
@@ -369,7 +369,7 @@ export default function StockLaboPage() {
     } catch { /* ignore */ }
   };
 
-  const doBulkSave = async () => {
+  const doBulkSave = async (timbreFiscal = false) => {
     setBulkSaving(true);
     try {
       const readyEntries = Object.entries(rowState).filter(([idStr, rs]) => {
@@ -388,6 +388,7 @@ export default function StockLaboPage() {
           fournisseurId: bulkFournisseurId ? Number(bulkFournisseurId) : null,
           refFacture: bulkRefFacture.trim() || null,
           tauxTva: rs.tauxTva?.trim() ? parseFloat(rs.tauxTva) : null,
+          timbreFiscal,
         });
       }
       const ptReadyEntries = Object.entries(rowState).filter(([idStr, rs]) => {
@@ -450,7 +451,7 @@ export default function StockLaboPage() {
       ? (fournisseurs.find((f) => f.id === Number(bulkFournisseurId))?.nom ?? null)
       : null;
 
-    setInvoiceModal({ lines: invoiceLines, fournisseurNom, onConfirm: doBulkSave });
+    setInvoiceModal({ lines: invoiceLines, fournisseurNom, onConfirm: (tf) => doBulkSave(tf) });
   };
 
 
@@ -1201,7 +1202,7 @@ export default function StockLaboPage() {
           fournisseurNom={invoiceModal.fournisseurNom}
           refFacture={bulkRefFacture.trim() || null}
           theme="labo"
-          onConfirm={() => { setInvoiceModal(null); invoiceModal.onConfirm(); }}
+          onConfirm={(tf) => { setInvoiceModal(null); invoiceModal.onConfirm(tf); }}
           onCancel={() => setInvoiceModal(null)}
         />
       )}

@@ -1,3 +1,4 @@
+import { useState } from 'react';
 
 export interface InvoiceLineItem {
   ingredientId: number;
@@ -14,11 +15,15 @@ interface Props {
   fournisseurNom: string | null;
   refFacture: string | null;
   theme: 'activite' | 'labo';
-  onConfirm: () => void;
+  onConfirm: (timbreFiscal: boolean) => void;
   onCancel: () => void;
 }
 
+const TIMBRE = 1;
+
 export default function InvoiceConfirmModal({ lines, date, fournisseurNom, refFacture, theme, onConfirm, onCancel }: Props) {
+  const [timbreFiscal, setTimbreFiscal] = useState(true);
+
   const [y, m, d] = date.split('-');
   const dateLabel = `${d}/${m}/${y}`;
   const accent = theme === 'labo' ? '#0f766e' : '#d97706';
@@ -30,6 +35,7 @@ export default function InvoiceConfirmModal({ lines, date, fournisseurNom, refFa
     const ht = l.quantite * l.prixUnitaire;
     return s + ht * (1 + (l.tauxTva ?? 0) / 100);
   }, 0);
+  const totalTTCWithTimbre = totalTTC + (timbreFiscal ? TIMBRE : 0);
   const hasTva = lines.some((l) => l.tauxTva != null && l.tauxTva > 0);
 
   return (
@@ -45,6 +51,7 @@ export default function InvoiceConfirmModal({ lines, date, fournisseurNom, refFa
           </div>
           <button className="modal-close" onClick={onCancel} style={{ color: '#fff' }}>✕</button>
         </div>
+
         <div className="modal-body" style={{ padding: '16px 20px', maxHeight: '55vh', overflowY: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
             <thead>
@@ -80,17 +87,42 @@ export default function InvoiceConfirmModal({ lines, date, fournisseurNom, refFa
             </tbody>
           </table>
         </div>
-        <div style={{ background: accentBg, borderTop: `1px solid ${accentBorder}`, padding: '12px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
-          <div style={{ display: 'flex', gap: 20, fontSize: '0.88rem', fontWeight: 700 }}>
-            <span>Total HT : <span style={{ color: accent }}>{totalHT.toFixed(3)} DT</span></span>
-            {hasTva && <span>Total TTC : <span style={{ color: accent }}>{totalTTC.toFixed(3)} DT</span></span>}
-          </div>
-          <div style={{ display: 'flex', gap: 10 }}>
-            <button className="btn btn-ghost btn-sm" onClick={onCancel}>Annuler</button>
-            <button onClick={onConfirm}
-              style={{ background: `linear-gradient(135deg, ${accent}, ${accent}cc)`, color: '#fff', border: 'none', borderRadius: 8, padding: '8px 20px', fontWeight: 700, cursor: 'pointer', fontSize: '0.88rem' }}>
-              Confirmer l'appro
-            </button>
+
+        <div style={{ background: accentBg, borderTop: `1px solid ${accentBorder}`, padding: '10px 20px 12px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {/* Timbre fiscal checkbox */}
+          <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: '0.84rem', fontWeight: 600, color: '#374151', userSelect: 'none' }}>
+            <input
+              type="checkbox"
+              checked={timbreFiscal}
+              onChange={(e) => setTimbreFiscal(e.target.checked)}
+              style={{ width: 16, height: 16, accentColor: accent, cursor: 'pointer' }}
+            />
+            Timbre Fiscal
+            <span style={{ fontWeight: 400, color: '#6b7280', fontSize: '0.78rem' }}>
+              {timbreFiscal ? `+ ${TIMBRE.toFixed(3)} DT` : '(désactivé)'}
+            </span>
+          </label>
+
+          {/* Totals + buttons */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+            <div style={{ display: 'flex', gap: 20, fontSize: '0.88rem', fontWeight: 700, flexWrap: 'wrap' }}>
+              <span>Total HT : <span style={{ color: accent }}>{totalHT.toFixed(3)} DT</span></span>
+              {(hasTva || timbreFiscal) && (
+                <span>
+                  Total TTC : <span style={{ color: accent }}>{totalTTCWithTimbre.toFixed(3)} DT</span>
+                  {timbreFiscal && <span style={{ fontSize: '0.72rem', fontWeight: 400, color: '#6b7280', marginLeft: 4 }}>(dont 1.000 DT timbre)</span>}
+                </span>
+              )}
+            </div>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button className="btn btn-ghost btn-sm" onClick={onCancel}>Annuler</button>
+              <button
+                onClick={() => onConfirm(timbreFiscal)}
+                style={{ background: `linear-gradient(135deg, ${accent}, ${accent}cc)`, color: '#fff', border: 'none', borderRadius: 8, padding: '8px 20px', fontWeight: 700, cursor: 'pointer', fontSize: '0.88rem' }}
+              >
+                Confirmer l'appro
+              </button>
+            </div>
           </div>
         </div>
       </div>
