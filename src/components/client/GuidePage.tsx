@@ -114,7 +114,7 @@ const SECTIONS: Section[] = [
   },
   {
     id: 'referentiel-categories',
-    icon: '📁',
+    icon: '🏷️',
     title: 'Référentiel — Catégories',
     content: (
       <>
@@ -137,7 +137,7 @@ const SECTIONS: Section[] = [
   },
   {
     id: 'referentiel-articles',
-    icon: '🥕',
+    icon: '🧂',
     title: 'Référentiel — Articles',
     content: (
       <>
@@ -262,7 +262,7 @@ const SECTIONS: Section[] = [
   },
   {
     id: 'stock-labo',
-    icon: '🧪',
+    icon: '🏭',
     title: 'Stock Labo',
     content: (
       <>
@@ -288,7 +288,7 @@ const SECTIONS: Section[] = [
   },
   {
     id: 'transferts',
-    icon: '🔄',
+    icon: '↗',
     title: 'Transferts',
     content: (
       <>
@@ -342,7 +342,7 @@ const SECTIONS: Section[] = [
   // ─── HISTORIQUES ──────────────────────────────────────────────────────────
   {
     id: 'historique',
-    icon: '📊',
+    icon: '📋',
     title: 'Historiques',
     content: (
       <>
@@ -372,7 +372,7 @@ const SECTIONS: Section[] = [
   // ─── PRODUITS ─────────────────────────────────────────────────────────────
   {
     id: 'produits',
-    icon: '🍽️',
+    icon: '🍔',
     title: 'Gestion des Produits',
     content: (
       <>
@@ -408,7 +408,7 @@ const SECTIONS: Section[] = [
   // ─── FICHES TECHNIQUES ────────────────────────────────────────────────────
   {
     id: 'fiches-techniques',
-    icon: '📐',
+    icon: '📋',
     title: 'Fiches Techniques & Formules',
     content: (
       <>
@@ -479,7 +479,7 @@ const SECTIONS: Section[] = [
   // ─── FOURNISSEURS ─────────────────────────────────────────────────────────
   {
     id: 'fournisseurs',
-    icon: '🏭',
+    icon: '🚚',
     title: 'Fournisseurs',
     content: (
       <>
@@ -537,7 +537,7 @@ const SECTIONS: Section[] = [
   // ─── SUPPORT ──────────────────────────────────────────────────────────────
   {
     id: 'support',
-    icon: '❓',
+    icon: '💬',
     title: 'Support & Aide',
     content: (
       <>
