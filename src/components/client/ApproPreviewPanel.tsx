@@ -29,13 +29,12 @@ export default function ApproPreviewPanel({ lines }: Props) {
 
   const wrapStyle: CSSProperties = {
     position: 'fixed',
-    bottom: 0,
-    right: 0,
+    bottom: 14,
+    right: 14,
     zIndex: 1100,
     pointerEvents: 'none',
-    // Full column from header — outer wrapper never intercepts events
-    top: HEADER_H,
-    width: 380,
+    top: HEADER_H + 14,
+    width: 370,
     display: 'flex',
     flexDirection: 'column',
     justifyContent: 'flex-end',
@@ -56,8 +55,7 @@ export default function ApproPreviewPanel({ lines }: Props) {
             display: 'flex',
             alignItems: 'center',
             gap: 10,
-            margin: '0 0 12px auto',
-            marginRight: 12,
+            margin: '0 0 0 auto',
             padding: '8px 14px',
             background: 'linear-gradient(135deg,#1e40af,#2563eb)',
             border: 'none',
@@ -94,11 +92,11 @@ export default function ApproPreviewPanel({ lines }: Props) {
       <div style={{
         pointerEvents: 'auto',
         background: '#fff',
-        boxShadow: '-2px 0 20px rgba(0,0,0,0.10), 0 -2px 8px rgba(0,0,0,0.04)',
-        borderTopLeftRadius: 10,
+        boxShadow: '0 8px 32px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.06)',
+        borderRadius: 12,
         display: 'flex',
         flexDirection: 'column',
-        maxHeight: `calc(100vh - ${HEADER_H}px)`,
+        maxHeight: `calc(100vh - ${HEADER_H}px - 28px)`,
         transform: 'translateX(0)',
         transition: 'transform 0.28s cubic-bezier(0.4,0,0.2,1)',
         overflow: 'hidden',
@@ -111,7 +109,7 @@ export default function ApproPreviewPanel({ lines }: Props) {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          borderTopLeftRadius: 10,
+          borderRadius: '12px 12px 0 0',
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
