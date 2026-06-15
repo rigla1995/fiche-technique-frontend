@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react';
 import api from '../../api/client';
+import GuideButton from './GuideButton';
 
 const COLOR = '#16a34a';
 const GRADIENT = 'linear-gradient(135deg, #14532d 0%, #16a34a 55%, #4ade80 100%)';
@@ -86,14 +87,17 @@ export default function ReferentielImportPage() {
   return (
     <div className="page">
       {/* Hero */}
-      <div style={{ background: GRADIENT, borderRadius: 18, padding: '24px 28px', marginBottom: 24, boxShadow: '0 8px 32px rgba(22,163,74,0.28)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
-          <div style={{ background: 'rgba(255,255,255,0.15)', borderRadius: 10, padding: '7px 9px', fontSize: '1.2rem' }}>📥</div>
-          <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0 }}>Ajout Dynamique</h1>
+      <div style={{ background: GRADIENT, borderRadius: 18, padding: '24px 28px', marginBottom: 24, boxShadow: '0 8px 32px rgba(22,163,74,0.28)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+            <div style={{ background: 'rgba(255,255,255,0.15)', borderRadius: 10, padding: '7px 9px', fontSize: '1.2rem' }}>📥</div>
+            <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0 }}>Ajout Dynamique</h1>
+          </div>
+          <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.85rem', margin: 0 }}>
+            Importez vos articles, unités, catégories et familles en masse depuis un fichier Excel
+          </p>
         </div>
-        <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.85rem', margin: 0 }}>
-          Importez vos articles, unités, catégories et familles en masse depuis un fichier Excel
-        </p>
+        <GuideButton section="referentiel-import" />
       </div>
 
       {/* Step 1 — Download template */}

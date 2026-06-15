@@ -6,6 +6,7 @@ import { useAuth } from '../../context/AuthContext';
 import PortionsModal from './PortionsModal';
 import InvoiceConfirmModal, { type InvoiceLineItem } from './InvoiceConfirmModal';
 import ApproPreviewPanel, { type PreviewLine } from './ApproPreviewPanel';
+import GuideButton from './GuideButton';
 
 const currentYear = new Date().getFullYear();
 const yearStart = `${currentYear}-01-01`;
@@ -560,14 +561,17 @@ export default function StockLaboPage() {
             Gérez les stocks et approvisionnements de vos laboratoires
           </span>
         </div>
-        {tab === 'stock' && (
-          <Link
-            to={`/client/labo/transfer?laboId=${laboId}`}
-            style={{ background: 'rgba(255,255,255,0.15)', border: '1.5px solid rgba(255,255,255,0.6)', color: '#fff', borderRadius: 9, padding: '8px 16px', fontWeight: 700, textDecoration: 'none' }}
-          >
-            ↗ {t('client.labo.btn_transfer')}
-          </Link>
-        )}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          {tab === 'stock' && (
+            <Link
+              to={`/client/labo/transfer?laboId=${laboId}`}
+              style={{ background: 'rgba(255,255,255,0.15)', border: '1.5px solid rgba(255,255,255,0.6)', color: '#fff', borderRadius: 9, padding: '8px 16px', fontWeight: 700, textDecoration: 'none' }}
+            >
+              ↗ {t('client.labo.btn_transfer')}
+            </Link>
+          )}
+          <GuideButton section="stock-labo" />
+        </div>
       </div>
 
       {/* Labo selector row — always visible */}

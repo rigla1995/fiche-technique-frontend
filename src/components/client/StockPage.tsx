@@ -7,6 +7,7 @@ import PortionsModal from './PortionsModal';
 import InvoiceConfirmModal, { type InvoiceLineItem } from './InvoiceConfirmModal';
 import ApproPreviewPanel, { type PreviewLine } from './ApproPreviewPanel';
 import type { Activite, StockEntry, StockHistoryEntry, ActiviteTypesSummary, Fournisseur } from '../../types';
+import GuideButton from './GuideButton';
 
 const currentYear = new Date().getFullYear();
 const yearStart = `${currentYear}-01-01`;
@@ -1476,6 +1477,7 @@ export default function StockPage() {
             Gérez les stocks et approvisionnements de vos activités
           </span>
         </div>
+        <GuideButton section="stock-activites" />
       </div>
 
       {activitesLoading ? (

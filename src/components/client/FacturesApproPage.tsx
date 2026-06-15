@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import api from '../../api/client';
 import type { Activite } from '../../types';
+import GuideButton from './GuideButton';
 
 const currentYear = new Date().getFullYear();
 const yearStart = `${currentYear}-01-01`;
@@ -186,6 +187,7 @@ export default function FacturesApproPage() {
           </div>
           <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.85rem', margin: 0 }}>Consultation des approvisionnements sous forme de factures</p>
         </div>
+        <GuideButton section="factures" />
       </div>
 
       {/* Activité selector */}

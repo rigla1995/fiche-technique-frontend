@@ -6,6 +6,7 @@ import { useAuth } from '../../context/AuthContext';
 import type { Product, Activite, ActiviteIngredient } from '../../types';
 import FicheTechniqueTab from './FicheTechniqueTab';
 import FicheTechniqueModal from './FicheTechniqueModal';
+import GuideButton from './GuideButton';
 
 interface ProductDetail {
   ingredients: { ingredientName: string; portion: number; unitName: string; unitPrice: number; categorieName?: string | null }[];
@@ -404,14 +405,17 @@ export default function ProductList() {
                   : 'Produits finis destinés à la vente, définis par leurs fiches techniques'}
             </p>
           </div>
-          {tab !== 'fiche-technique' && (
-            <div style={{ background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.22)', borderRadius: 14, padding: '10px 20px', textAlign: 'center', minWidth: 80, flexShrink: 0 }}>
-              <div style={{ fontSize: '1.8rem', fontWeight: 900, color: '#10b981', lineHeight: 1 }}>{byTab.length}</div>
-              <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.5)', marginTop: 2 }}>
-                produit{byTab.length !== 1 ? 's' : ''}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+            {tab !== 'fiche-technique' && (
+              <div style={{ background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.22)', borderRadius: 14, padding: '10px 20px', textAlign: 'center', minWidth: 80 }}>
+                <div style={{ fontSize: '1.8rem', fontWeight: 900, color: '#10b981', lineHeight: 1 }}>{byTab.length}</div>
+                <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.5)', marginTop: 2 }}>
+                  produit{byTab.length !== 1 ? 's' : ''}
+                </div>
               </div>
-            </div>
-          )}
+            )}
+            <GuideButton section={tab === 'fiche-technique' ? 'fiches-techniques' : 'produits'} />
+          </div>
         </div>
       </div>
 

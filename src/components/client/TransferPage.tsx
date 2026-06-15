@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
 import TransferConfirmModal, { type TransferActiviteGroup, type TransferLine } from './TransferConfirmModal';
 import ApproPreviewPanel, { type PreviewLine } from './ApproPreviewPanel';
+import GuideButton from './GuideButton';
 
 type TransferBatch = {
   ingredientId: number;
@@ -498,6 +499,7 @@ export default function TransferPage() {
               📋 {t('client.labo.transfers_history')}
             </span>
           )}
+          <GuideButton section="transferts" />
         </div>
       </div>
 

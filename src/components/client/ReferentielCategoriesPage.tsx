@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import api from '../../api/client';
 import type { Category, Famille } from '../../types';
+import GuideButton from './GuideButton';
 
 const COLOR = '#16a34a';
 const GRADIENT = 'linear-gradient(135deg, #14532d 0%, #16a34a 55%, #4ade80 100%)';
@@ -111,9 +112,12 @@ export default function ReferentielCategoriesPage() {
             {categories.length === 0 ? 'Organisez vos articles par catégorie au sein de chaque famille' : 'Catégories pour classer vos articles dans votre référentiel'}
           </p>
         </div>
-        <div style={{ background: 'rgba(255,255,255,0.15)', border: '1.5px solid rgba(255,255,255,0.3)', borderRadius: 14, padding: '10px 20px', textAlign: 'center', minWidth: 80 }}>
-          <div style={{ fontSize: '1.8rem', fontWeight: 900, color: '#fff', lineHeight: 1 }}>{categories.length}</div>
-          <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.75)', marginTop: 2 }}>catégorie{categories.length !== 1 ? 's' : ''}</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ background: 'rgba(255,255,255,0.15)', border: '1.5px solid rgba(255,255,255,0.3)', borderRadius: 14, padding: '10px 20px', textAlign: 'center', minWidth: 80 }}>
+            <div style={{ fontSize: '1.8rem', fontWeight: 900, color: '#fff', lineHeight: 1 }}>{categories.length}</div>
+            <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.75)', marginTop: 2 }}>catégorie{categories.length !== 1 ? 's' : ''}</div>
+          </div>
+          <GuideButton section="referentiel-categories" />
         </div>
       </div>
 
