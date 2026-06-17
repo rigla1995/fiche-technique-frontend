@@ -141,6 +141,11 @@ export default function TransferPage() {
           if (act.assigned) assigned.add(`${ing.ingredientId}-${act.activiteId}`);
         }
       }
+      for (const pt of (assignRes.data.produits || []) as { ingredientId: number; activities: { activiteId: number; assigned: boolean }[] }[]) {
+        for (const act of pt.activities) {
+          if (act.assigned) assigned.add(`${pt.ingredientId}-${act.activiteId}`);
+        }
+      }
       setAssignedSet(assigned);
       const init: TransferQtys = {};
       for (const r of stockRes.data as LaboStockRow[]) {
@@ -379,8 +384,7 @@ export default function TransferPage() {
     const catOk = !filterCategorie || r.categorie === filterCategorie;
     const ingOk = !filterIngredientId || r.ingredientId === filterIngredientId;
     const nomOk = !filterNom || r.nom.toLowerCase().includes(filterNom.toLowerCase());
-    const actOk = !filterActiviteId ||
-      (r.isPT ? r.activiteId === filterActiviteId : assignedSet.has(`${r.ingredientId}-${filterActiviteId}`));
+    const actOk = !filterActiviteId || assignedSet.has(`${r.ingredientId}-${filterActiviteId}`);
     return catOk && ingOk && nomOk && actOk;
   });
   const groups: Record<string, LaboStockRow[]> = {};
@@ -785,9 +789,7 @@ export default function TransferPage() {
                                   />
                                 </td>
                                 {activites.map((act) => {
-                                  const isAssigned = r.isPT
-                                    ? r.activiteId != null && act.id === r.activiteId
-                                    : assignedSet.has(`${r.ingredientId}-${act.id}`);
+                                  const isAssigned = assignedSet.has(`${r.ingredientId}-${act.id}`);
                                   return (
                                     <td key={act.id} style={{ textAlign: 'center', padding: '10px 14px', verticalAlign: 'middle' }}>
                                       {!stockEmpty && isAssigned ? (
