@@ -40,8 +40,11 @@ function buildInitialRowState(entries: StockEntry[]): Record<number, StockRowSta
   for (const e of entries) {
     const hasExisting = e.quantite !== null;
     state[e.ingredientId] = {
-      quantite: '', prixUnitaire: '', dateAppro: today,
-      fournisseurId: '', refFacture: '', tauxTva: '',
+      quantite: '',
+      prixUnitaire: e.prixUnitaire != null && e.prixUnitaire > 0 ? String(e.prixUnitaire) : '',
+      dateAppro: today,
+      fournisseurId: '', refFacture: '',
+      tauxTva: e.lastTauxTva != null && e.lastTauxTva > 0 ? String(e.lastTauxTva) : '',
       origQuantite: '', origPrixUnitaire: '', origDateAppro: today,
       hasExisting, saving: false, saved: false, error: '',
     };

@@ -52,6 +52,7 @@ interface LaboStockRow {
   totalTransfere: number;
   lastFournisseurId: number | null;
   lastRefFacture: string | null;
+  tauxTva?: number | null;
   recentDates?: string[];
   lastInvDate?: string | null;
   lastInvQty?: number | null;
@@ -171,8 +172,11 @@ export default function StockLaboPage() {
       const seuilInit: Record<number, string> = {};
       for (const r of rows) {
         init[r.ingredientId] = {
-          quantite: '', prixUnitaire: '', dateAppro: today,
-          fournisseurId: '', refFacture: '', tauxTva: '',
+          quantite: '',
+          prixUnitaire: r.prixUnitaire != null && r.prixUnitaire > 0 ? String(r.prixUnitaire) : '',
+          dateAppro: today,
+          fournisseurId: '', refFacture: '',
+          tauxTva: r.tauxTva != null && r.tauxTva > 0 ? String(r.tauxTva) : '',
           hasExisting: r.quantite !== null,
           saving: false, saved: false, historyOpen: false,
           history: (r.recentDates || []).map((d) => ({ dateAppro: d, quantite: null, prixUnitaire: null, fournisseurNom: null, refFacture: null })),

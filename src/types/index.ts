@@ -327,6 +327,7 @@ export interface StockEntry {
   lastTypeAppro?: string | null;
   lastInvDate?: string | null;
   lastInvQty?: number | null;
+  lastTauxTva?: number | null;
   pertesDepuisInv?: number | null;
   ptUsageDepuisInv?: number | null;
   venteDepuisInv?: number | null;
