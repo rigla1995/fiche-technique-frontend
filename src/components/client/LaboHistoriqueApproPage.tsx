@@ -522,7 +522,7 @@ export default function LaboHistoriqueApproPage() {
                     </td>
                     <td style={{ padding: '8px 10px' }}>
                       {r.typeAppro === 'manuel' && (
-                        <span style={{ background: '#dcfce7', color: '#15803d', borderRadius: 6, padding: '2px 6px', fontSize: '0.7rem', fontWeight: 700 }}>Appro</span>
+                        <span style={{ background: '#dcfce7', color: '#15803d', borderRadius: 6, padding: '2px 6px', fontSize: '0.7rem', fontWeight: 700 }}>Manuel</span>
                       )}
                       {r.typeAppro === 'transfert' && (
                         <span style={{ background: '#e0f2fe', color: '#0369a1', borderRadius: 6, padding: '2px 6px', fontSize: '0.7rem', fontWeight: 700 }}>Transf.</span>
