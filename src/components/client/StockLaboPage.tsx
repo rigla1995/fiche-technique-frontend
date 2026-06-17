@@ -929,7 +929,7 @@ export default function StockLaboPage() {
                                                   <tr key={i}>
                                                     <td style={{ color: 'var(--primary)', fontWeight: 600 }}>{fmtDate(h.dateAppro)}</td>
                                                     <td>
-                                                      {h.typeAppro === 'manuel' && <span style={{ background: '#dcfce7', color: '#15803d', borderRadius: 5, padding: '1px 7px', fontSize: '0.7rem', fontWeight: 700 }}>Appro</span>}
+                                                      {h.typeAppro === 'manuel' && <span style={{ background: '#dcfce7', color: '#15803d', borderRadius: 5, padding: '1px 7px', fontSize: '0.7rem', fontWeight: 700 }}>Manuel</span>}
                                                       {h.typeAppro === 'transfert' && <span style={{ background: '#e0f2fe', color: '#0369a1', borderRadius: 5, padding: '1px 7px', fontSize: '0.7rem', fontWeight: 700 }}>Transfert</span>}
                                                       {h.typeAppro && h.typeAppro !== 'manuel' && h.typeAppro !== 'transfert' && <span style={{ background: '#f3e8ff', color: '#7c3aed', borderRadius: 5, padding: '1px 7px', fontSize: '0.7rem', fontWeight: 700 }}>PT</span>}
                                                       {!h.typeAppro && '—'}
