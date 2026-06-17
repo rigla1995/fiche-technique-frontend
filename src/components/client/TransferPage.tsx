@@ -53,6 +53,7 @@ interface LaboStockRow {
   prixUnitaire: number | null;
   tauxTva?: number | null;
   pmpUnitHT?: number | null;
+  prixCalcule?: number | null;
   isPT?: boolean;
   activiteId?: number | null;
   recentTransferDates?: string[];
@@ -185,7 +186,9 @@ export default function TransferPage() {
     const prix: Record<number, string> = {};
     const tva: Record<number, string> = {};
     for (const r of rows) {
-      const suggested = r.pmpUnitHT ?? r.prixUnitaire;
+      const suggested = r.isPT
+        ? (r.prixCalcule ?? r.prixUnitaire)
+        : (r.pmpUnitHT ?? r.prixUnitaire);
       prix[r.ingredientId] = suggested != null ? String(Math.round(suggested * 1000) / 1000) : '';
       tva[r.ingredientId] = r.tauxTva != null ? String(r.tauxTva) : '';
     }
@@ -769,14 +772,26 @@ export default function TransferPage() {
                                   )}
                                 </td>
                                 <td style={{ textAlign: 'center', padding: '10px 14px', verticalAlign: 'middle' }}>
-                                  <input
-                                    type="number" min="0" step="0.001" className="input"
-                                    style={{ width: 90, textAlign: 'right', padding: '5px 8px', borderRadius: 7, fontSize: '0.85rem', borderColor: (!prixUnitaireMap[r.ingredientId]?.trim() && Object.values(qtys[r.ingredientId] || {}).some((v) => parseFloat(v) > 0)) ? '#ef4444' : undefined }}
-                                    value={prixUnitaireMap[r.ingredientId] ?? ''}
-                                    onChange={(e) => setPrixUnitaireMap((prev) => ({ ...prev, [r.ingredientId]: e.target.value }))}
-                                    onFocus={(e) => e.target.select()}
-                                    placeholder="—"
-                                  />
+                                  {r.isPT ? (
+                                    <span title="Calculé automatiquement depuis les prix des articles du labo">
+                                      {r.prixCalcule != null && r.prixCalcule > 0 ? (
+                                        <span style={{ fontSize: '0.88rem', color: '#7c3aed', fontWeight: 600 }}>{r.prixCalcule.toFixed(3)}</span>
+                                      ) : r.prixUnitaire != null ? (
+                                        <span style={{ fontSize: '0.88rem', color: '#6b7280', fontWeight: 500 }}>{r.prixUnitaire.toFixed(3)}</span>
+                                      ) : (
+                                        <span style={{ fontSize: '0.78rem', color: '#9ca3af' }}>—</span>
+                                      )}
+                                    </span>
+                                  ) : (
+                                    <input
+                                      type="number" min="0" step="0.001" className="input"
+                                      style={{ width: 90, textAlign: 'right', padding: '5px 8px', borderRadius: 7, fontSize: '0.85rem', borderColor: (!prixUnitaireMap[r.ingredientId]?.trim() && Object.values(qtys[r.ingredientId] || {}).some((v) => parseFloat(v) > 0)) ? '#ef4444' : undefined }}
+                                      value={prixUnitaireMap[r.ingredientId] ?? ''}
+                                      onChange={(e) => setPrixUnitaireMap((prev) => ({ ...prev, [r.ingredientId]: e.target.value }))}
+                                      onFocus={(e) => e.target.select()}
+                                      placeholder="—"
+                                    />
+                                  )}
                                 </td>
                                 <td style={{ textAlign: 'center', padding: '10px 14px', verticalAlign: 'middle' }}>
                                   <input
