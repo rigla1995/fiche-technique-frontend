@@ -588,6 +588,21 @@ export default function ProductList() {
                             {isSup && (
                               <span style={{ fontSize: '0.62rem', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', background: '#fef3c7', color: '#92400e', border: '1px solid #fcd34d', borderRadius: 20, padding: '2px 8px', flexShrink: 0 }}>Supplément</span>
                             )}
+                            {!isVendable && (
+                              <button
+                                onClick={() => togglePT(p)}
+                                disabled={togglingPT === p.id || !canWriteProducts}
+                                title={p.isStockIngredient ? 'Désactiver le stock' : 'Activer le stock'}
+                                style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: 'none', border: 'none', padding: 0, cursor: canWriteProducts ? 'pointer' : 'default', opacity: togglingPT === p.id ? 0.5 : 1, flexShrink: 0 }}
+                              >
+                                <div style={{ width: 30, height: 17, borderRadius: 9, position: 'relative', flexShrink: 0, background: p.isStockIngredient ? '#059669' : '#cbd5e1', transition: 'background 0.2s' }}>
+                                  <div style={{ position: 'absolute', top: 2, left: p.isStockIngredient ? 15 : 2, width: 13, height: 13, borderRadius: '50%', background: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.25)', transition: 'left 0.2s' }} />
+                                </div>
+                                <span style={{ fontSize: '0.67rem', fontWeight: 600, color: p.isStockIngredient ? '#065f46' : '#94a3b8', whiteSpace: 'nowrap' }}>
+                                  {togglingPT === p.id ? '…' : p.isStockIngredient ? 'Activé dans le stock' : 'Inactif'}
+                                </span>
+                              </button>
+                            )}
                           </div>
                           {p.refProduit && (
                             <div style={{ fontSize: '0.68rem', color: '#9ca3af', fontWeight: 500, marginTop: 2 }}>Réf : {p.refProduit}</div>
@@ -633,33 +648,7 @@ export default function ProductList() {
                       </div>
 
                       {/* Actions footer */}
-                      <div style={{ padding: '10px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        {!isVendable ? (
-                          <button
-                            onClick={() => togglePT(p)}
-                            disabled={togglingPT === p.id || !canWriteProducts}
-                            title={p.isStockIngredient ? 'Désactiver le stock' : 'Activer le stock'}
-                            style={{ display: 'inline-flex', alignItems: 'center', gap: 7, background: 'none', border: 'none', padding: 0, cursor: canWriteProducts ? 'pointer' : 'default', opacity: togglingPT === p.id ? 0.5 : 1 }}
-                          >
-                            {/* Toggle track */}
-                            <div style={{
-                              width: 36, height: 20, borderRadius: 10, position: 'relative', flexShrink: 0,
-                              background: p.isStockIngredient ? '#059669' : '#cbd5e1',
-                              transition: 'background 0.2s',
-                            }}>
-                              {/* Toggle thumb */}
-                              <div style={{
-                                position: 'absolute', top: 2, left: p.isStockIngredient ? 18 : 2,
-                                width: 16, height: 16, borderRadius: '50%', background: '#fff',
-                                boxShadow: '0 1px 3px rgba(0,0,0,0.25)',
-                                transition: 'left 0.2s',
-                              }} />
-                            </div>
-                            <span style={{ fontSize: '0.72rem', fontWeight: 600, color: p.isStockIngredient ? '#065f46' : '#94a3b8', whiteSpace: 'nowrap' }}>
-                              {togglingPT === p.id ? '…' : p.isStockIngredient ? 'Activé dans le stock' : 'Inactif'}
-                            </span>
-                          </button>
-                        ) : <div />}
+                      <div style={{ padding: '10px 14px', display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
                         <div style={{ display: 'flex', gap: 4 }}>{renderActions(p)}</div>
                       </div>
 
