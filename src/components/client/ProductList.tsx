@@ -11,9 +11,10 @@ import GuideButton from './GuideButton';
 interface ProductDetail {
   ingredients: { ingredientName: string; portion: number; unitName: string; unitPrice: number; categorieName?: string | null }[];
   subProducts: { subProductName: string; portion: number; unitCost: number; totalLineCost: number }[];
+  parentProducts?: { id: number; name: string; portion: number }[];
 }
 
-type PopupType = 'ingredients' | 'subProducts' | null;
+type PopupType = 'ingredients' | 'subProducts' | 'parentProducts' | null;
 type TabType = 'vendable' | 'utilisable' | 'fiche-technique';
 
 const PAGE_SIZE = 9;
@@ -211,8 +212,13 @@ export default function ProductList() {
     setDetail(null);
     setLoadingDetail(true);
     try {
-      const { data } = await api.get(`/api/products/${product.id}`);
-      setDetail(data);
+      if (type === 'parentProducts') {
+        const { data } = await api.get(`/api/produits/${product.id}/parent-products`);
+        setDetail({ ingredients: [], subProducts: [], parentProducts: data });
+      } else {
+        const { data } = await api.get(`/api/products/${product.id}`);
+        setDetail(data);
+      }
     } finally {
       setLoadingDetail(false);
     }
@@ -639,8 +645,9 @@ export default function ProductList() {
                         )}
                         {!isVendable && (
                           <button
+                            onClick={() => p.parentProductsCount && p.parentProductsCount > 0 ? openPopup('parentProducts', p) : undefined}
                             disabled={!(p.parentProductsCount && p.parentProductsCount > 0)}
-                            title={p.parentProductsCount ? `Utilisé dans ${p.parentProductsCount} produit(s)` : 'Non utilisé dans un produit'}
+                            title={p.parentProductsCount ? `Voir les ${p.parentProductsCount} produit(s) qui utilisent ce PT` : 'Non utilisé dans un produit'}
                             style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, padding: '8px 4px', borderRadius: 10, border: `1px solid ${p.parentProductsCount ? '#bfdbfe' : '#f1f5f9'}`, background: p.parentProductsCount ? '#eff6ff' : '#f8fafc', cursor: p.parentProductsCount ? 'pointer' : 'default', opacity: p.parentProductsCount ? 1 : 0.5, transition: 'background 0.12s' }}
                           >
                             <span style={{ fontSize: '1rem', lineHeight: 1 }}>🍽️</span>
@@ -773,6 +780,8 @@ export default function ProductList() {
                   <h2 style={{ color: '#fff', margin: 0 }}>
                     {popup.type === 'ingredients'
                       ? t('client.products.popup_ingredients_title')
+                      : popup.type === 'parentProducts'
+                      ? 'Utilisé dans'
                       : t('client.products.popup_subproducts_title')} — {popup.productName}
                   </h2>
                   <button className="modal-close" onClick={closePopup}>×</button>
@@ -813,6 +822,30 @@ export default function ProductList() {
                       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '32px 0' }}>
                         <span style={{ fontSize: '2rem', marginBottom: 8 }}>🧂</span>
                         <p style={{ color: 'var(--text-muted)', textAlign: 'center', margin: 0 }}>{t('client.products.popup_no_ingredients')}</p>
+                      </div>
+                    )
+                  ) : popup.type === 'parentProducts' ? (
+                    detail?.parentProducts && detail.parentProducts.length > 0 ? (
+                      <table className="table">
+                        <thead style={{ background: 'linear-gradient(135deg, #1e1b4b, #4338ca)' }}>
+                          <tr>
+                            <th style={{ color: '#fff', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase' }}>Produit</th>
+                            <th style={{ textAlign: 'right', color: '#fff', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase' }}>Portion</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {detail.parentProducts.map((pp, i) => (
+                            <tr key={i} style={{ background: i % 2 === 0 ? '#f8fafc' : '#fff' }}>
+                              <td style={{ fontWeight: 600, color: '#1e1b4b' }}>{pp.name}</td>
+                              <td style={{ textAlign: 'right', fontWeight: 700, color: '#374151' }}>{pp.portion}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    ) : (
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '32px 0' }}>
+                        <span style={{ fontSize: '2rem', marginBottom: 8 }}>🍽️</span>
+                        <p style={{ color: 'var(--text-muted)', textAlign: 'center', margin: 0 }}>Aucun produit n'utilise ce produit transformé.</p>
                       </div>
                     )
                   ) : (
