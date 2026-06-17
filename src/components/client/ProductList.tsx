@@ -352,10 +352,10 @@ export default function ProductList() {
   const disabledStyle = !canWriteProducts ? { opacity: 0.4, cursor: 'not-allowed', pointerEvents: 'none' as const } : {};
 
   const renderActions = (p: Product) => (
-    <div style={{ display: 'flex', gap: 4, justifyContent: 'flex-end', alignItems: 'center' }}>
+    <div style={{ display: 'flex', gap: 6, justifyContent: 'center', alignItems: 'center', width: '100%' }}>
       <button
         className="btn btn-ghost btn-sm"
-        style={{ width: 32, height: 32, padding: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', borderRadius: 7, ...disabledStyle }}
+        style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: 2, padding: '5px 8px', borderRadius: 7, fontSize: '0.6rem', fontWeight: 600, color: '#374151', minWidth: 54, ...disabledStyle }}
         title="Générer la Fiche Technique"
         disabled={!canWriteProducts}
         onClick={() => {
@@ -363,26 +363,28 @@ export default function ProductList() {
           setFtPopup({ productId: p.id, productName: p.name, hasIngredients: !!(p.ingredientsCount && p.ingredientsCount > 0), resolvedActId: getProductResolvedActId(p), activities: [], ...ctx });
         }}
       >
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><rect width="24" height="24" rx="3" fill="#217346"/><path d="M14 2H6C4.9 2 4 2.9 4 4V20C4 21.1 4.9 22 6 22H18C19.1 22 20 21.1 20 20V8L14 2Z" fill="#185C37"/><path d="M14 2V8H20L14 2Z" fill="#107C41"/><text x="7" y="18" fill="white" fontSize="8" fontWeight="bold" fontFamily="Arial,sans-serif">XLS</text></svg>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect width="24" height="24" rx="3" fill="#217346"/><path d="M14 2H6C4.9 2 4 2.9 4 4V20C4 21.1 4.9 22 6 22H18C19.1 22 20 21.1 20 20V8L14 2Z" fill="#185C37"/><path d="M14 2V8H20L14 2Z" fill="#107C41"/><text x="7" y="18" fill="white" fontSize="8" fontWeight="bold" fontFamily="Arial,sans-serif">XLS</text></svg>
+        Fiche tech.
       </button>
       <button
         className="btn btn-ghost btn-sm"
         title={t('common.edit')}
         disabled={!canWriteProducts}
         onClick={() => openEditModal(p)}
-        style={{ width: 32, height: 32, padding: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', borderRadius: 7, ...(!canWriteProducts ? disabledStyle : {}) }}
+        style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: 2, padding: '5px 8px', borderRadius: 7, fontSize: '0.6rem', fontWeight: 600, color: '#374151', minWidth: 54, ...(!canWriteProducts ? disabledStyle : {}) }}
       >
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
           <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
         </svg>
+        Modifier
       </button>
       <button
         className="btn btn-danger btn-sm"
         onClick={() => handleDelete(p)}
         disabled={!canWriteProducts}
         title={t('common.delete')}
-        style={{ width: 32, height: 32, padding: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', borderRadius: 7, ...disabledStyle }}
+        style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: 2, padding: '5px 8px', borderRadius: 7, fontSize: '0.6rem', fontWeight: 600, minWidth: 54, ...disabledStyle }}
       >
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <polyline points="3 6 5 6 21 6"/>
@@ -390,6 +392,7 @@ export default function ProductList() {
           <path d="M10 11v6M14 11v6"/>
           <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
         </svg>
+        Supprimer
       </button>
     </div>
   );
@@ -588,22 +591,22 @@ export default function ProductList() {
                             {isSup && (
                               <span style={{ fontSize: '0.62rem', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', background: '#fef3c7', color: '#92400e', border: '1px solid #fcd34d', borderRadius: 20, padding: '2px 8px', flexShrink: 0 }}>Supplément</span>
                             )}
-                            {!isVendable && (
-                              <button
-                                onClick={() => togglePT(p)}
-                                disabled={togglingPT === p.id || !canWriteProducts}
-                                title={p.isStockIngredient ? 'Désactiver le stock' : 'Activer le stock'}
-                                style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: 'none', border: 'none', padding: 0, cursor: canWriteProducts ? 'pointer' : 'default', opacity: togglingPT === p.id ? 0.5 : 1, flexShrink: 0 }}
-                              >
-                                <div style={{ width: 30, height: 17, borderRadius: 9, position: 'relative', flexShrink: 0, background: p.isStockIngredient ? '#059669' : '#cbd5e1', transition: 'background 0.2s' }}>
-                                  <div style={{ position: 'absolute', top: 2, left: p.isStockIngredient ? 15 : 2, width: 13, height: 13, borderRadius: '50%', background: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.25)', transition: 'left 0.2s' }} />
-                                </div>
-                                <span style={{ fontSize: '0.67rem', fontWeight: 600, color: p.isStockIngredient ? '#065f46' : '#94a3b8', whiteSpace: 'nowrap' }}>
-                                  {togglingPT === p.id ? '…' : p.isStockIngredient ? 'Activé dans le stock' : 'Inactif'}
-                                </span>
-                              </button>
-                            )}
                           </div>
+                          {!isVendable && (
+                            <button
+                              onClick={() => togglePT(p)}
+                              disabled={togglingPT === p.id || !canWriteProducts}
+                              title={p.isStockIngredient ? 'Désactiver le stock' : 'Activer le stock'}
+                              style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: 'none', border: 'none', padding: 0, marginTop: 5, cursor: canWriteProducts ? 'pointer' : 'default', opacity: togglingPT === p.id ? 0.5 : 1 }}
+                            >
+                              <div style={{ width: 30, height: 17, borderRadius: 9, position: 'relative', flexShrink: 0, background: p.isStockIngredient ? '#059669' : '#cbd5e1', transition: 'background 0.2s' }}>
+                                <div style={{ position: 'absolute', top: 2, left: p.isStockIngredient ? 15 : 2, width: 13, height: 13, borderRadius: '50%', background: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.25)', transition: 'left 0.2s' }} />
+                              </div>
+                              <span style={{ fontSize: '0.67rem', fontWeight: 600, color: p.isStockIngredient ? '#065f46' : '#94a3b8', whiteSpace: 'nowrap' }}>
+                                {togglingPT === p.id ? '…' : p.isStockIngredient ? 'Activé dans le stock' : 'Inactif'}
+                              </span>
+                            </button>
+                          )}
                           {p.refProduit && (
                             <div style={{ fontSize: '0.68rem', color: '#9ca3af', fontWeight: 500, marginTop: 2 }}>Réf : {p.refProduit}</div>
                           )}
@@ -648,8 +651,8 @@ export default function ProductList() {
                       </div>
 
                       {/* Actions footer */}
-                      <div style={{ padding: '10px 14px', display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
-                        <div style={{ display: 'flex', gap: 4 }}>{renderActions(p)}</div>
+                      <div style={{ padding: '10px 14px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                        {renderActions(p)}
                       </div>
 
                       {/* Activité assignments (utilisable only) */}
