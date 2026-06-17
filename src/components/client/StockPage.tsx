@@ -963,6 +963,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
 
       {Object.entries(groups).sort(([a], [b]) => a.localeCompare(b)).map(([cat, items]) => {
         const isOpen = openCats.has(cat);
+        const isPTGroup = items[0]?.isPT === true;
         return (
           <div key={cat} style={{ marginBottom: 8 }}>
             <button onClick={() => toggleCat(cat)} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', width: '100%', textAlign: 'left', borderLeft: '4px solid #2563eb', borderBottom: '1px solid var(--border)', marginBottom: isOpen ? 10 : 0, borderRadius: isOpen ? '4px 4px 0 0' : 4 }}>
@@ -981,7 +982,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                         { label: 'Coût Total', minWidth: 100 },
                         { label: 'Quantité', minWidth: 90 },
                         { label: 'Prix', minWidth: 100 },
-                        { label: 'TVA (%)', minWidth: 80 },
+                        ...(!isPTGroup ? [{ label: 'TVA (%)', minWidth: 80 }] : []),
                         { label: 'Actions', minWidth: 150 },
                       ].map(({ label, minWidth }) => (
                         <th key={label} style={{ fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.06em', textTransform: 'uppercase', padding: '10px 14px 4px', minWidth, textAlign: 'center' }}>
@@ -996,7 +997,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                         { sub: 'HT · TTC' },
                         { sub: 'Nouvelle' },
                         { sub: 'HT / Unité' },
-                        { sub: 'Optionnel' },
+                        ...(!isPTGroup ? [{ sub: 'Optionnel' }] : []),
                         { sub: '' },
                       ].map(({ sub }, i) => (
                         <th key={i} style={{ fontWeight: 400, fontSize: '0.62rem', color: '#3b82f6', letterSpacing: '0.04em', padding: '2px 14px 8px', textAlign: 'center', opacity: 0.85 }}>
@@ -1101,8 +1102,8 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                                 />
                               )}
                             </td>
-                            <td style={{ textAlign: 'center', padding: '10px 14px', verticalAlign: 'middle' }}>
-                              {!entry.isPT && (
+                            {!isPTGroup && (
+                              <td style={{ textAlign: 'center', padding: '10px 14px', verticalAlign: 'middle' }}>
                                 <input
                                   type="number" min="0" max="100" step="0.1" placeholder="—"
                                   value={row.tauxTva}
@@ -1112,8 +1113,8 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                                   className="input"
                                   disabled={!canWrite}
                                 />
-                              )}
-                            </td>
+                              </td>
+                            )}
                             <td style={{ padding: '10px 14px', verticalAlign: 'middle', textAlign: 'center' }}>
                               <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'center', justifyContent: 'center' }}>
                                 {row.error && <span style={{ color: 'var(--danger)', fontSize: '0.75rem', fontWeight: 700 }}>⚠</span>}

@@ -748,6 +748,7 @@ export default function StockLaboPage() {
               <>
                 {paged.map(([cat, rows]) => {
                   const isOpen = openStockCats.has(cat);
+                  const isPTGroup = rows[0]?.isPT === true;
                   const toggle = () => setOpenStockCats((prev) => { const n = new Set(prev); if (n.has(cat)) n.delete(cat); else n.add(cat); return n; });
                   return (
                     <div key={cat} style={{ marginBottom: 12 }}>
@@ -767,7 +768,7 @@ export default function StockLaboPage() {
                                   { label: 'Coût Total', minWidth: 100 },
                                   { label: 'Quantité', minWidth: 90 },
                                   { label: 'Prix', minWidth: 100 },
-                                  { label: 'TVA (%)', minWidth: 80 },
+                                  ...(!isPTGroup ? [{ label: 'TVA (%)', minWidth: 80 }] : []),
                                   { label: 'Actions', minWidth: 150 },
                                 ].map(({ label, minWidth }) => (
                                   <th key={label} style={{ fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.06em', textTransform: 'uppercase', padding: '10px 14px 4px', minWidth, textAlign: 'center' }}>
@@ -782,7 +783,7 @@ export default function StockLaboPage() {
                                   { sub: 'HT · TTC' },
                                   { sub: 'Nouvelle' },
                                   { sub: 'HT / Unité' },
-                                  { sub: 'Optionnel' },
+                                  ...(!isPTGroup ? [{ sub: 'Optionnel' }] : []),
                                   { sub: '' },
                                 ].map(({ sub }, i) => (
                                   <th key={i} style={{ fontWeight: 400, fontSize: '0.62rem', color: '#a855f7', letterSpacing: '0.04em', padding: '2px 14px 8px', textAlign: 'center', opacity: 0.85 }}>
@@ -865,8 +866,8 @@ export default function StockLaboPage() {
                                           <input type="number" min="0" step="0.001" placeholder="—" value={rs.prixUnitaire} onChange={(e) => setField(r.ingredientId, 'prixUnitaire', e.target.value)} onFocus={(e) => e.target.select()} style={{ width: 84, textAlign: 'right', padding: '5px 8px', borderRadius: 7, fontSize: '0.85rem', ...warnStyle }} className="input" />
                                         )}
                                       </td>
-                                      <td style={{ textAlign: 'center', padding: '10px 14px', verticalAlign: 'middle' }}>
-                                        {!r.isPT && (
+                                      {!isPTGroup && (
+                                        <td style={{ textAlign: 'center', padding: '10px 14px', verticalAlign: 'middle' }}>
                                           <input type="number" min="0" max="100" step="0.1" placeholder="—"
                                             value={rs.tauxTva}
                                             onChange={(e) => setField(r.ingredientId, 'tauxTva', e.target.value)}
@@ -875,8 +876,8 @@ export default function StockLaboPage() {
                                             className="input"
                                             disabled={!canWrite}
                                           />
-                                        )}
-                                      </td>
+                                        </td>
+                                      )}
                                       <td style={{ padding: '10px 14px', verticalAlign: 'middle', textAlign: 'center' }}>
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: 5, alignItems: 'center' }}>
                                           {/* Row 1 — Pertes & Seuil */}

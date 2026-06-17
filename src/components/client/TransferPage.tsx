@@ -698,6 +698,7 @@ export default function TransferPage() {
             </div>
           ) : Object.entries(groups).sort(([a], [b]) => a.localeCompare(b)).map(([cat, rows]) => {
             const isOpen = openCats.has(cat);
+            const isPTGroup = rows[0]?.isPT === true;
             return (
               <div key={cat} style={{ marginBottom: 8 }}>
                 <button onClick={() => toggleCat(cat)} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0', width: '100%', textAlign: 'left', borderBottom: '2px solid var(--border)', marginBottom: isOpen ? 10 : 0 }}>
@@ -713,7 +714,7 @@ export default function TransferPage() {
                           <th style={{ minWidth: 140, fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '10px 14px 4px', color: '#fff', background: 'transparent', borderBottom: 'none', textAlign: 'center' }}>Article</th>
                           <th style={{ textAlign: 'center', minWidth: 100, fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '10px 14px 4px', color: '#fff', background: 'transparent', borderBottom: 'none' }}>{t('client.labo.labo_stock')}</th>
                           <th style={{ textAlign: 'center', minWidth: 110, fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '10px 14px 4px', color: '#fff', background: 'transparent', borderBottom: 'none' }}>Prix</th>
-                          <th style={{ textAlign: 'center', minWidth: 80, fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '10px 14px 4px', color: '#e9d5ff', background: 'transparent', borderBottom: 'none' }}>TVA (%)</th>
+                          {!isPTGroup && <th style={{ textAlign: 'center', minWidth: 80, fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '10px 14px 4px', color: '#e9d5ff', background: 'transparent', borderBottom: 'none' }}>TVA (%)</th>}
                           {activites.map((act) => (
                             <th key={act.id} style={{ textAlign: 'center', minWidth: 120, fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '10px 14px 4px', color: '#e9d5ff', background: 'transparent', borderBottom: 'none' }}>{act.nom}</th>
                           ))}
@@ -723,7 +724,7 @@ export default function TransferPage() {
                             { sub: 'Hist.Transfert · Unité' },
                             { sub: 'Disponible' },
                             { sub: 'HT / Unité' },
-                            { sub: 'Optionnel' },
+                            ...(!isPTGroup ? [{ sub: 'Optionnel' }] : []),
                           ].map(({ sub }, i) => (
                             <th key={i} style={{ fontWeight: 400, fontSize: '0.62rem', color: 'rgba(255,255,255,0.65)', letterSpacing: '0.04em', padding: '2px 14px 8px', textAlign: 'center', background: 'transparent', borderBottom: 'none' }}>
                               {sub}
@@ -793,16 +794,18 @@ export default function TransferPage() {
                                     />
                                   )}
                                 </td>
-                                <td style={{ textAlign: 'center', padding: '10px 14px', verticalAlign: 'middle' }}>
-                                  <input
-                                    type="number" min="0" max="100" step="0.1" className="input"
-                                    style={{ width: 62, textAlign: 'right', padding: '5px 8px', borderRadius: 7, fontSize: '0.85rem' }}
-                                    value={tauxTvaMap[r.ingredientId] ?? ''}
-                                    onChange={(e) => setTauxTvaMap((prev) => ({ ...prev, [r.ingredientId]: e.target.value }))}
-                                    onFocus={(e) => e.target.select()}
-                                    placeholder="—"
-                                  />
-                                </td>
+                                {!isPTGroup && (
+                                  <td style={{ textAlign: 'center', padding: '10px 14px', verticalAlign: 'middle' }}>
+                                    <input
+                                      type="number" min="0" max="100" step="0.1" className="input"
+                                      style={{ width: 62, textAlign: 'right', padding: '5px 8px', borderRadius: 7, fontSize: '0.85rem' }}
+                                      value={tauxTvaMap[r.ingredientId] ?? ''}
+                                      onChange={(e) => setTauxTvaMap((prev) => ({ ...prev, [r.ingredientId]: e.target.value }))}
+                                      onFocus={(e) => e.target.select()}
+                                      placeholder="—"
+                                    />
+                                  </td>
+                                )}
                                 {activites.map((act) => {
                                   const isAssigned = assignedSet.has(`${r.ingredientId}-${act.id}`);
                                   return (
