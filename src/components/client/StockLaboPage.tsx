@@ -801,7 +801,7 @@ export default function StockLaboPage() {
                                 const warnStyle = hasDateConflict ? { borderColor: '#f59e0b', boxShadow: '0 0 0 2px #fef3c7' } : {};
                                 return (
                                   <React.Fragment key={r.ingredientId}>
-                                    <tr style={{ borderBottom: '1px solid #f1f5f9', ...(r.isPT ? { background: '#f5f3ff' } : {}) }}>
+                                    <tr style={{ borderBottom: r.isPT ? '2px solid #ddd6fe' : '1px solid #f1f5f9', ...(r.isPT ? { background: '#f5f3ff' } : {}) }}>
                                       <td style={{ padding: '10px 14px', verticalAlign: 'middle', textAlign: 'center' }}>
                                         <div style={{ fontWeight: 700, fontSize: '0.88rem' }}>
                                           {r.isPT && <span style={{ fontSize: '0.68rem', background: '#7c3aed', color: '#fff', borderRadius: 4, padding: '1px 5px', marginRight: 5, fontWeight: 700 }}>PT</span>}
