@@ -782,7 +782,7 @@ export default function StockLaboPage() {
                                   { sub: 'Pertes · PT · Transfert' },
                                   { sub: 'HT · TTC' },
                                   { sub: 'Nouvelle' },
-                                  { sub: 'HT / Unité' },
+                                  { sub: 'Unité' },
                                   ...(!isPTGroup ? [{ sub: 'Optionnel' }] : []),
                                   { sub: '' },
                                 ].map(({ sub }, i) => (

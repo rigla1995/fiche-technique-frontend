@@ -396,25 +396,38 @@ export default function TransferPage() {
     groups[r.categorie].push(r);
   }
 
-  const previewLines: PreviewLine[] = stock
-    .filter((r) => !r.isPT)
-    .flatMap((r) => {
-      const totalQty = Object.values(qtys[r.ingredientId] || {}).reduce((s, q) => s + (parseFloat(q) || 0), 0);
-      const prixHT = parseFloat(prixUnitaireMap[r.ingredientId] || '') || 0;
-      if (totalQty <= 0 || prixHT <= 0) return [];
-      const tva = tauxTvaMap[r.ingredientId]?.trim() ? parseFloat(tauxTvaMap[r.ingredientId]) : null;
-      const prixTTCPerUnit = tva != null ? prixHT * (1 + tva / 100) : prixHT;
+  const previewLines: PreviewLine[] = stock.flatMap((r) => {
+    const totalQty = Object.values(qtys[r.ingredientId] || {}).reduce((s, q) => s + (parseFloat(q) || 0), 0);
+    if (totalQty <= 0) return [];
+    if (r.isPT) {
+      const prix = r.prixCalcule ?? r.prixUnitaire;
+      if (!prix || prix <= 0) return [];
       return [{
         nom: r.nom,
         unite: r.unite,
         quantite: totalQty,
-        prixHT,
-        tva,
-        prixTTCPerUnit,
-        totalHT: totalQty * prixHT,
-        totalTTC: totalQty * prixTTCPerUnit,
+        prixHT: prix,
+        tva: null,
+        prixTTCPerUnit: prix,
+        totalHT: totalQty * prix,
+        totalTTC: totalQty * prix,
       }];
-    });
+    }
+    const prixHT = parseFloat(prixUnitaireMap[r.ingredientId] || '') || 0;
+    if (prixHT <= 0) return [];
+    const tva = tauxTvaMap[r.ingredientId]?.trim() ? parseFloat(tauxTvaMap[r.ingredientId]) : null;
+    const prixTTCPerUnit = tva != null ? prixHT * (1 + tva / 100) : prixHT;
+    return [{
+      nom: r.nom,
+      unite: r.unite,
+      quantite: totalQty,
+      prixHT,
+      tva,
+      prixTTCPerUnit,
+      totalHT: totalQty * prixHT,
+      totalTTC: totalQty * prixTTCPerUnit,
+    }];
+  });
 
   if (!laboId) return <div className="page"><p className="text-muted">Labo introuvable.</p></div>;
 
@@ -723,7 +736,7 @@ export default function TransferPage() {
                           {[
                             { sub: 'Hist.Transfert · Unité' },
                             { sub: 'Disponible' },
-                            { sub: 'HT / Unité' },
+                            { sub: 'Unité' },
                             ...(!isPTGroup ? [{ sub: 'Optionnel' }] : []),
                           ].map(({ sub }, i) => (
                             <th key={i} style={{ fontWeight: 400, fontSize: '0.62rem', color: 'rgba(255,255,255,0.65)', letterSpacing: '0.04em', padding: '2px 14px 8px', textAlign: 'center', background: 'transparent', borderBottom: 'none' }}>
@@ -909,6 +922,7 @@ export default function TransferPage() {
           })}
         </>
       )}
+      <ApproPreviewPanel lines={previewLines} />
     </div>
   );
 }

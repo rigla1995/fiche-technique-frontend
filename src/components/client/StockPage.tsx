@@ -996,7 +996,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                         { sub: 'Pertes · PT · Transfert' },
                         { sub: 'HT · TTC' },
                         { sub: 'Nouvelle' },
-                        { sub: 'HT / Unité' },
+                        { sub: 'Unité' },
                         ...(!isPTGroup ? [{ sub: 'Optionnel' }] : []),
                         { sub: '' },
                       ].map(({ sub }, i) => (

@@ -189,6 +189,11 @@ export default function InventairePage() {
   const alarmTotal = rows.filter((r) => isAlarm(r)).length;
   const hasAnyQty = filledCount > 0;
   const needsActiviteSelector = false;
+  const [invPreviewMinimized, setInvPreviewMinimized] = useState(false);
+
+  const invPreviewLines = rows
+    .filter((r) => qtys[r.ingredientId] !== '' && parseFloat(qtys[r.ingredientId] || '0') >= 0)
+    .map((r) => ({ nom: r.nom, unite: r.unite, qty: parseFloat(qtys[r.ingredientId] || '0'), stock: r.totalStock }));
 
   const resetFilters = () => { setFilterCategory(''); setFilterIngredient(''); };
 
@@ -560,6 +565,66 @@ export default function InventairePage() {
           </div>
         );
       })()}
+
+      {/* Aperçu saisie inventaire */}
+      {invPreviewLines.length > 0 && (
+        <div style={{ position: 'fixed', bottom: 14, right: 14, zIndex: 1100, width: 320, display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+          {invPreviewMinimized ? (
+            <button onClick={() => setInvPreviewMinimized(false)} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 14px', background: 'linear-gradient(135deg,#1e40af,#2563eb)', border: 'none', borderRadius: 30, cursor: 'pointer', boxShadow: '0 4px 16px rgba(37,99,235,0.35)', color: '#fff' }}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="13" y2="16"/></svg>
+              <span style={{ fontSize: '0.72rem', fontWeight: 700 }}>{invPreviewLines.length} article{invPreviewLines.length > 1 ? 's' : ''}</span>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="18 15 12 9 6 15"/></svg>
+            </button>
+          ) : (
+            <div style={{ background: '#fff', boxShadow: '0 8px 32px rgba(0,0,0,0.12)', borderRadius: 12, width: '100%', overflow: 'hidden' }}>
+              <div style={{ padding: '10px 14px 8px', background: 'linear-gradient(135deg,#1e40af,#2563eb)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderRadius: '12px 12px 0 0' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="13" y2="16"/></svg>
+                  <span style={{ fontSize: '0.70rem', fontWeight: 800, color: '#fff', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Aperçu saisie</span>
+                  <span style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.75)', background: 'rgba(255,255,255,0.15)', padding: '2px 8px', borderRadius: 20, fontWeight: 600 }}>{invPreviewLines.length} article{invPreviewLines.length > 1 ? 's' : ''}</span>
+                </div>
+                <button onClick={() => setInvPreviewMinimized(true)} style={{ background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: 6, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', width: 26, height: 26, padding: 0, color: '#fff' }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                </button>
+              </div>
+              <div style={{ maxHeight: 280, overflowY: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr style={{ background: '#f8fafc' }}>
+                      <th style={{ padding: '7px 14px', fontSize: '0.62rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', textAlign: 'left', borderBottom: '1px solid #e2e8f0' }}>Article</th>
+                      <th style={{ padding: '7px 10px', fontSize: '0.62rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', textAlign: 'right', borderBottom: '1px solid #e2e8f0' }}>Stock</th>
+                      <th style={{ padding: '7px 14px', fontSize: '0.62rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', textAlign: 'right', borderBottom: '1px solid #e2e8f0' }}>Qté réelle</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {invPreviewLines.map((line, i) => {
+                      const delta = line.stock != null ? line.qty - line.stock : null;
+                      return (
+                        <tr key={i} style={{ background: i % 2 === 0 ? '#fff' : '#fafbfc' }}>
+                          <td style={{ padding: '7px 14px', borderBottom: '1px solid #f1f5f9' }}>
+                            <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#1e293b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 120 }}>{line.nom}</div>
+                            <div style={{ fontSize: '0.62rem', color: '#94a3b8' }}>{line.unite}</div>
+                          </td>
+                          <td style={{ padding: '7px 10px', borderBottom: '1px solid #f1f5f9', textAlign: 'right', fontSize: '0.74rem', color: '#475569' }}>
+                            {line.stock != null ? line.stock.toFixed(3).replace(/\.?0+$/, '') : '—'}
+                          </td>
+                          <td style={{ padding: '7px 14px', borderBottom: '1px solid #f1f5f9', textAlign: 'right' }}>
+                            <div style={{ fontSize: '0.76rem', fontWeight: 700, color: '#1e293b' }}>{line.qty.toFixed(3).replace(/\.?0+$/, '')}</div>
+                            {delta != null && <div style={{ fontSize: '0.60rem', color: delta >= 0 ? '#10b981' : '#ef4444', fontWeight: 700 }}>{delta >= 0 ? '+' : ''}{delta.toFixed(3).replace(/\.?0+$/, '')}</div>}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+              <div style={{ padding: '8px 14px', background: '#f1f5f9', borderTop: '2px solid #e2e8f0', fontSize: '0.72rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                {invPreviewLines.length} article{invPreviewLines.length > 1 ? 's' : ''} inventoriés
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
