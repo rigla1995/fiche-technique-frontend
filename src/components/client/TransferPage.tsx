@@ -379,7 +379,7 @@ export default function TransferPage() {
     const catOk = !filterCategorie || r.categorie === filterCategorie;
     const ingOk = !filterIngredientId || r.ingredientId === filterIngredientId;
     const nomOk = !filterNom || r.nom.toLowerCase().includes(filterNom.toLowerCase());
-    const actOk = !filterActiviteId || (r.isPT ? r.activiteId === filterActiviteId : assignedSet.has(`${r.ingredientId}-${filterActiviteId}`));
+    const actOk = !filterActiviteId || r.isPT || assignedSet.has(`${r.ingredientId}-${filterActiviteId}`);
     return catOk && ingOk && nomOk && actOk;
   });
   const groups: Record<string, LaboStockRow[]> = {};
@@ -481,7 +481,7 @@ export default function TransferPage() {
             </h1>
           </div>
           <span style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.82rem' }}>
-            Transférez les ingrédients du labo vers vos activités
+            Transférez les articles du labo vers vos activités
           </span>
         </div>
         <div style={{ display: 'flex', gap: 10 }}>
@@ -572,7 +572,7 @@ export default function TransferPage() {
               </select>
             </div>
             <div>
-              <label style={{ fontSize: '0.62rem', fontWeight: 700, color: '#7e22ce', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 3 }}>🧂 Ingrédient</label>
+              <label style={{ fontSize: '0.62rem', fontWeight: 700, color: '#7e22ce', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 3 }}>🧂 Article</label>
               <select style={{ padding: '6px 10px', borderRadius: 7, border: '1.5px solid #7e22ce', fontSize: '0.82rem', background: '#faf5ff', minWidth: 150 }} value={filterIngredientId} disabled={!filterCategorie}
                 onChange={(e) => setFilterIngredientId(e.target.value === '' ? '' : Number(e.target.value))}>
                 <option value="">— Tous —</option>
@@ -658,12 +658,12 @@ export default function TransferPage() {
         }}>
           <div style={{ fontSize: '3rem', marginBottom: 16 }}>🏭</div>
           <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#7e22ce', marginBottom: 8 }}>
-            Aucun ingrédient disponible pour le transfert
+            Aucun article disponible pour le transfert
           </div>
           <div style={{ fontSize: '0.9rem', color: 'var(--text-muted)', maxWidth: 460, margin: '0 auto 20px', lineHeight: 1.6 }}>
             Les activités assignées à ce labo ne sont pas encore configurées.
             Pour pouvoir effectuer des transferts, accédez au <strong>Catalogue Global</strong> et
-            assignez des ingrédients aux activités liées à ce labo.
+            assignez des articles aux activités liées à ce labo.
           </div>
           <Link to="/client/catalogue-global"
             style={{
@@ -702,7 +702,7 @@ export default function TransferPage() {
                     <table className="table">
                       <thead>
                         <tr style={{ background: 'linear-gradient(135deg, #3b0764, #7e22ce)', borderBottom: '1px solid rgba(255,255,255,0.2)' }}>
-                          <th style={{ minWidth: 140, fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '10px 14px 4px', color: '#fff', background: 'transparent', borderBottom: 'none', textAlign: 'center' }}>{t('client.stock.ingredient')}</th>
+                          <th style={{ minWidth: 140, fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '10px 14px 4px', color: '#fff', background: 'transparent', borderBottom: 'none', textAlign: 'center' }}>Article</th>
                           <th style={{ textAlign: 'center', minWidth: 100, fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '10px 14px 4px', color: '#fff', background: 'transparent', borderBottom: 'none' }}>{t('client.labo.labo_stock')}</th>
                           <th style={{ textAlign: 'center', minWidth: 110, fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '10px 14px 4px', color: '#fff', background: 'transparent', borderBottom: 'none' }}>Prix</th>
                           <th style={{ textAlign: 'center', minWidth: 80, fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '10px 14px 4px', color: '#e9d5ff', background: 'transparent', borderBottom: 'none' }}>TVA (%)</th>
@@ -785,7 +785,7 @@ export default function TransferPage() {
                                 </td>
                                 {activites.map((act) => {
                                   const isAssigned = r.isPT
-                                    ? act.id === r.activiteId
+                                    ? true
                                     : assignedSet.has(`${r.ingredientId}-${act.id}`);
                                   return (
                                     <td key={act.id} style={{ textAlign: 'center', padding: '10px 14px', verticalAlign: 'middle' }}>
