@@ -310,6 +310,7 @@ export interface StockEntry {
   ingredientId: number;        // negative = PT product (-produitId)
   produitId?: number;          // set for PT rows
   isPT?: boolean;
+  prixCalcule?: number | null; // PT: auto-calculated price from recipe
   prixPartiel?: boolean;       // PT: true if any recipe ingredient has no price
   coutTotal?: number | null;
   coutTotalTTC?: number | null;

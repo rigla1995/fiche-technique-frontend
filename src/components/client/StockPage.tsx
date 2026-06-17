@@ -977,7 +977,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                   <thead style={{ background: '#eff6ff', color: '#1e3a5f' }}>
                     <tr style={{ borderBottom: '1px solid #bfdbfe' }}>
                       {[
-                        { label: t('client.stock.ingredient'), minWidth: 180 },
+                        { label: 'Article', minWidth: 180 },
                         { label: 'Stock Actuel', minWidth: 110 },
                         { label: 'Coût Total', minWidth: 100 },
                         { label: 'Quantité', minWidth: 90 },
@@ -1086,9 +1086,14 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                             </td>
                             <td style={{ textAlign: 'center', padding: '10px 14px', verticalAlign: 'middle' }}>
                               {entry.isPT ? (
-                                <span style={{ fontWeight: 700, color: '#1d4ed8', fontSize: '0.88rem' }}>
-                                  {entry.prixUnitaire != null && entry.prixUnitaire > 0 ? entry.prixUnitaire.toFixed(3) : '—'}
-                                  {entry.prixPartiel && <span style={{ fontSize: '0.68rem', color: '#d97706', marginLeft: 4 }}>⚠️</span>}
+                                <span title="Calculé automatiquement depuis les prix des articles">
+                                  {entry.prixCalcule != null && entry.prixCalcule > 0 ? (
+                                    <span style={{ fontSize: '0.88rem', color: '#7c3aed', fontWeight: 600 }}>{entry.prixCalcule.toFixed(3)}</span>
+                                  ) : entry.prixUnitaire != null && entry.prixUnitaire > 0 ? (
+                                    <span style={{ fontSize: '0.88rem', color: '#6b7280', fontWeight: 500 }}>{entry.prixUnitaire.toFixed(3)}</span>
+                                  ) : (
+                                    <span style={{ fontSize: '0.78rem', color: '#9ca3af' }}>—</span>
+                                  )}
                                 </span>
                               ) : (
                                 <input
