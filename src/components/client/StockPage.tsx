@@ -993,7 +993,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                     <tr style={{ borderBottom: '2px solid #2563eb' }}>
                       {[
                         { sub: 'Hist.Appro · Unité' },
-                        { sub: 'Pertes · PT · Transfert' },
+                        { sub: '↑Appro · ⇄Trf · ↘Pertes · PT' },
                         { sub: 'HT · TTC' },
                         { sub: 'Nouvelle' },
                         { sub: 'Unité' },
@@ -1037,18 +1037,10 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                             </td>
                             <td style={{ textAlign: 'center', padding: '10px 14px', verticalAlign: 'middle' }}>
                               <span className={cls} style={{ fontSize: '1rem', fontWeight: 800 }}>{totalDisplay}</span>
-                              {entry.approDepuisInv != null && entry.approDepuisInv > 0 && (
-                                <div style={{ fontSize: '0.67rem', color: '#16a34a', fontWeight: 600, marginTop: 2 }}>↑ {entry.approDepuisInv.toFixed(3)}</div>
-                              )}
-                              {entry.transfertsDepuisAppro != null && entry.transfertsDepuisAppro > 0 && (
-                                <div style={{ fontSize: '0.67rem', color: '#0891b2', fontWeight: 600, marginTop: 1 }}>⇄ {entry.transfertsDepuisAppro.toFixed(3)}</div>
-                              )}
-                              {entry.pertesDepuisInv != null && entry.pertesDepuisInv > 0 && (
-                                <div style={{ fontSize: '0.67rem', color: '#dc2626', fontWeight: 500, marginTop: 1 }}>↘ {entry.pertesDepuisInv.toFixed(3)}</div>
-                              )}
-                              {entry.ptUsageDepuisInv != null && entry.ptUsageDepuisInv > 0 && (
-                                <div style={{ fontSize: '0.67rem', color: '#7c3aed', fontWeight: 500, marginTop: 1 }}>PT {entry.ptUsageDepuisInv.toFixed(3)}</div>
-                              )}
+                              <div style={{ fontSize: '0.67rem', color: '#16a34a', fontWeight: 600, marginTop: 2 }}>↑ {(entry.approDepuisInv ?? 0).toFixed(3)}</div>
+                              <div style={{ fontSize: '0.67rem', color: '#0891b2', fontWeight: 600, marginTop: 1 }}>⇄ {(entry.transfertsDepuisAppro ?? 0).toFixed(3)}</div>
+                              <div style={{ fontSize: '0.67rem', color: '#dc2626', fontWeight: 500, marginTop: 1 }}>↘ {(entry.pertesDepuisInv ?? 0).toFixed(3)}</div>
+                              {!entry.isPT && <div style={{ fontSize: '0.67rem', color: '#7c3aed', fontWeight: 500, marginTop: 1 }}>PT {(entry.ptUsageDepuisInv ?? 0).toFixed(3)}</div>}
                               {entry.venteDepuisInv != null && entry.venteDepuisInv > 0 && (
                                 <div style={{ fontSize: '0.67rem', color: '#b45309', fontWeight: 600, marginTop: 1 }}>💰 VENTE −{entry.venteDepuisInv.toFixed(3)}</div>
                               )}
