@@ -286,6 +286,25 @@ export default function ProductList() {
     }
   };
 
+  const [togglingActivite, setTogglingActivite] = useState<string | null>(null); // "produitId-activiteId"
+
+  const toggleActiviteAssignment = async (p: Product, activiteId: number) => {
+    const key = `${p.id}-${activiteId}`;
+    setTogglingActivite(key);
+    try {
+      await api.post(`/api/produits/${p.id}/toggle-stock-ingredient`, { activiteId });
+      const currentlyAssigned = p.activites?.some((a) => a.id === activiteId) ?? false;
+      setProducts((prev) => prev.map((prod) => {
+        if (prod.id !== p.id) return prod;
+        const newActivites = currentlyAssigned
+          ? (prod.activites || []).filter((a) => a.id !== activiteId)
+          : [...(prod.activites || []), allActivities.find((a) => a.id === activiteId)!].filter(Boolean);
+        return { ...prod, activites: newActivites };
+      }));
+    } catch { /* ignore */ }
+    setTogglingActivite(null);
+  };
+
   const byTab = products.filter((p) => p.type === tab);
   const byActivite = filterActiviteId
     ? byTab.filter((p) => p.activites?.some((a) => a.id === filterActiviteId) || p.activiteId === filterActiviteId)
@@ -569,6 +588,11 @@ export default function ProductList() {
                             {isSup && (
                               <span style={{ fontSize: '0.62rem', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', background: '#fef3c7', color: '#92400e', border: '1px solid #fcd34d', borderRadius: 20, padding: '2px 8px', flexShrink: 0 }}>Supplément</span>
                             )}
+                            {!isVendable && (
+                              <span style={{ fontSize: '0.6rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', background: p.isStockIngredient ? '#dcfce7' : '#f1f5f9', color: p.isStockIngredient ? '#059669' : '#94a3b8', border: `1px solid ${p.isStockIngredient ? '#bbf7d0' : '#e2e8f0'}`, borderRadius: 20, padding: '2px 7px', flexShrink: 0 }}>
+                                {p.isStockIngredient ? '● Stock actif' : '○ Inactif'}
+                              </span>
+                            )}
                           </div>
                           {p.activites && p.activites.length > 0 && (
                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3, marginTop: 4 }}>
@@ -650,6 +674,36 @@ export default function ProductList() {
                         ) : <div />}
                         <div style={{ display: 'flex', gap: 4 }}>{renderActions(p)}</div>
                       </div>
+
+                      {/* Activité assignments (utilisable only) */}
+                      {!isVendable && allActivities.length > 0 && (
+                        <div style={{ padding: '8px 14px 12px', borderTop: '1px solid #f1f5f9' }}>
+                          <div style={{ fontSize: '0.6rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>Activités</div>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+                            {allActivities.map((act) => {
+                              const assigned = p.activites?.some((a) => a.id === act.id) ?? false;
+                              const toggling = togglingActivite === `${p.id}-${act.id}`;
+                              return (
+                                <button
+                                  key={act.id}
+                                  onClick={() => toggleActiviteAssignment(p, act.id)}
+                                  disabled={toggling || !canWriteProducts}
+                                  style={{
+                                    fontSize: '0.68rem', fontWeight: 600, padding: '3px 9px', borderRadius: 20, cursor: canWriteProducts ? 'pointer' : 'default',
+                                    border: `1px solid ${assigned ? '#6ee7b7' : '#e2e8f0'}`,
+                                    background: assigned ? '#ecfdf5' : '#f8fafc',
+                                    color: assigned ? '#065f46' : '#94a3b8',
+                                    opacity: toggling ? 0.5 : 1,
+                                    transition: 'background 0.15s, color 0.15s',
+                                  }}
+                                >
+                                  {toggling ? '…' : (assigned ? '✓ ' : '') + act.nom}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   );
                 };
