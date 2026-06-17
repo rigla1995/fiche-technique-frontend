@@ -588,19 +588,7 @@ export default function ProductList() {
                             {isSup && (
                               <span style={{ fontSize: '0.62rem', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', background: '#fef3c7', color: '#92400e', border: '1px solid #fcd34d', borderRadius: 20, padding: '2px 8px', flexShrink: 0 }}>Supplément</span>
                             )}
-                            {!isVendable && (
-                              <span style={{ fontSize: '0.6rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', background: p.isStockIngredient ? '#dcfce7' : '#f1f5f9', color: p.isStockIngredient ? '#059669' : '#94a3b8', border: `1px solid ${p.isStockIngredient ? '#bbf7d0' : '#e2e8f0'}`, borderRadius: 20, padding: '2px 7px', flexShrink: 0 }}>
-                                {p.isStockIngredient ? '● Stock actif' : '○ Inactif'}
-                              </span>
-                            )}
                           </div>
-                          {p.activites && p.activites.length > 0 && (
-                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3, marginTop: 4 }}>
-                              {p.activites.map(a => (
-                                <span key={a.id} style={{ fontSize: '0.64rem', color: '#6b7280', fontWeight: 600, background: '#f1f5f9', border: '1px solid #e2e8f0', borderRadius: 20, padding: '1px 7px' }}>📍 {a.nom}</span>
-                              ))}
-                            </div>
-                          )}
                           {p.refProduit && (
                             <div style={{ fontSize: '0.68rem', color: '#9ca3af', fontWeight: 500, marginTop: 2 }}>Réf : {p.refProduit}</div>
                           )}
