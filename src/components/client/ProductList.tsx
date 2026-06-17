@@ -645,13 +645,13 @@ export default function ProductList() {
                         )}
                         {!isVendable && (
                           <button
-                            onClick={() => p.parentProductsCount && p.parentProductsCount > 0 ? openPopup('parentProducts', p) : undefined}
-                            disabled={!(p.parentProductsCount && p.parentProductsCount > 0)}
-                            title={p.parentProductsCount ? `Voir les ${p.parentProductsCount} produit(s) qui utilisent ce PT` : 'Non utilisé dans un produit'}
-                            style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, padding: '8px 4px', borderRadius: 10, border: `1px solid ${p.parentProductsCount ? '#bfdbfe' : '#f1f5f9'}`, background: p.parentProductsCount ? '#eff6ff' : '#f8fafc', cursor: p.parentProductsCount ? 'pointer' : 'default', opacity: p.parentProductsCount ? 1 : 0.5, transition: 'background 0.12s' }}
+                            onClick={() => openPopup('subProducts', p)}
+                            disabled={!p.subProductsCount}
+                            title={p.subProductsCount ? `Voir les ${p.subProductsCount} sous-produit(s)` : 'Aucun sous-produit'}
+                            style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, padding: '8px 4px', borderRadius: 10, border: `1px solid ${p.subProductsCount ? '#bfdbfe' : '#f1f5f9'}`, background: p.subProductsCount ? '#eff6ff' : '#f8fafc', cursor: p.subProductsCount ? 'pointer' : 'default', opacity: p.subProductsCount ? 1 : 0.5, transition: 'background 0.12s' }}
                           >
                             <span style={{ fontSize: '1rem', lineHeight: 1 }}>🍽️</span>
-                            <span style={{ fontWeight: 800, fontSize: '1rem', color: p.parentProductsCount ? '#2563eb' : '#9ca3af', lineHeight: 1 }}>{p.parentProductsCount ?? 0}</span>
+                            <span style={{ fontWeight: 800, fontSize: '1rem', color: p.subProductsCount ? '#2563eb' : '#9ca3af', lineHeight: 1 }}>{p.subProductsCount ?? 0}</span>
                             <span style={{ fontSize: '0.6rem', color: '#9ca3af', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>utilisé</span>
                           </button>
                         )}
