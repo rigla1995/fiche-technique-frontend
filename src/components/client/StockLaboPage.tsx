@@ -176,7 +176,7 @@ export default function StockLaboPage() {
           prixUnitaire: r.prixUnitaire != null && r.prixUnitaire > 0 ? String(r.prixUnitaire) : '',
           dateAppro: today,
           fournisseurId: '', refFacture: '',
-          tauxTva: r.tauxTva != null && r.tauxTva > 0 ? String(r.tauxTva) : '',
+          tauxTva: r.tauxTva != null ? String(r.tauxTva) : '',
           hasExisting: r.quantite !== null,
           saving: false, saved: false, historyOpen: false,
           history: (r.recentDates || []).map((d) => ({ dateAppro: d, quantite: null, prixUnitaire: null, fournisseurNom: null, refFacture: null })),
@@ -834,15 +834,15 @@ export default function StockLaboPage() {
                                         )}
                                       </td>
                                       <td style={{ textAlign: 'center', padding: '10px 14px', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
-                                        {r.coutTotal != null && r.coutTotal > 0 ? (
+                                        {(r.coutTotal != null && r.coutTotal > 0) || (r.coutTotalTTC != null && r.coutTotalTTC > 0) ? (
                                           <>
                                             <div>
-                                              <span style={{ fontSize: '0.88rem', color: '#1d4ed8', fontWeight: 700 }}>{r.coutTotal.toFixed(3)}</span>
+                                              <span style={{ fontSize: '0.88rem', color: '#1d4ed8', fontWeight: 700 }}>{(r.coutTotalTTC ?? r.coutTotal ?? 0).toFixed(3)}</span>
                                               <span style={{ fontSize: '0.72rem', color: '#64748b', marginLeft: 2 }}>DT</span>
                                             </div>
-                                            {r.coutTotalTTC != null && r.coutTotalTTC > 0 && r.coutTotalTTC !== r.coutTotal && (
-                                              <div style={{ fontSize: '0.72rem', color: '#7c3aed', marginTop: 2 }}>
-                                                {r.coutTotalTTC.toFixed(3)} <span style={{ fontSize: '0.65rem', color: '#a78bfa' }}>TTC</span>
+                                            {r.coutTotal != null && r.coutTotal > 0 && r.coutTotalTTC !== r.coutTotal && (
+                                              <div style={{ fontSize: '0.72rem', color: '#94a3b8', marginTop: 1 }}>
+                                                {r.coutTotal.toFixed(3)} <span style={{ fontSize: '0.65rem' }}>HT</span>
                                               </div>
                                             )}
                                           </>

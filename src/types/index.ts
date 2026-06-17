@@ -333,6 +333,7 @@ export interface StockEntry {
   ptUsageDepuisInv?: number | null;
   venteDepuisInv?: number | null;
   transfertsDepuisAppro?: number | null;
+  approDepuisInv?: number | null;
   transfertsDepuisInv?: number | null;
 }
 

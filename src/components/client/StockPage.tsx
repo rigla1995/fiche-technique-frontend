@@ -44,7 +44,7 @@ function buildInitialRowState(entries: StockEntry[]): Record<number, StockRowSta
       prixUnitaire: e.prixUnitaire != null && e.prixUnitaire > 0 ? String(e.prixUnitaire) : '',
       dateAppro: today,
       fournisseurId: '', refFacture: '',
-      tauxTva: e.lastTauxTva != null && e.lastTauxTva > 0 ? String(e.lastTauxTva) : '',
+      tauxTva: e.lastTauxTva != null ? String(e.lastTauxTva) : '',
       origQuantite: '', origPrixUnitaire: '', origDateAppro: today,
       hasExisting, saving: false, saved: false, error: '',
     };
@@ -1037,8 +1037,14 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                             </td>
                             <td style={{ textAlign: 'center', padding: '10px 14px', verticalAlign: 'middle' }}>
                               <span className={cls} style={{ fontSize: '1rem', fontWeight: 800 }}>{totalDisplay}</span>
+                              {entry.approDepuisInv != null && entry.approDepuisInv > 0 && (
+                                <div style={{ fontSize: '0.67rem', color: '#16a34a', fontWeight: 600, marginTop: 2 }}>↑ {entry.approDepuisInv.toFixed(3)}</div>
+                              )}
+                              {entry.transfertsDepuisAppro != null && entry.transfertsDepuisAppro > 0 && (
+                                <div style={{ fontSize: '0.67rem', color: '#0891b2', fontWeight: 600, marginTop: 1 }}>⇄ {entry.transfertsDepuisAppro.toFixed(3)}</div>
+                              )}
                               {entry.pertesDepuisInv != null && entry.pertesDepuisInv > 0 && (
-                                <div style={{ fontSize: '0.67rem', color: '#dc2626', fontWeight: 500, marginTop: 2 }}>↘ {entry.pertesDepuisInv.toFixed(3)}</div>
+                                <div style={{ fontSize: '0.67rem', color: '#dc2626', fontWeight: 500, marginTop: 1 }}>↘ {entry.pertesDepuisInv.toFixed(3)}</div>
                               )}
                               {entry.ptUsageDepuisInv != null && entry.ptUsageDepuisInv > 0 && (
                                 <div style={{ fontSize: '0.67rem', color: '#7c3aed', fontWeight: 500, marginTop: 1 }}>PT {entry.ptUsageDepuisInv.toFixed(3)}</div>
@@ -1048,15 +1054,15 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                               )}
                             </td>
                             <td style={{ textAlign: 'center', padding: '10px 14px', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
-                              {entry.coutTotal != null && entry.coutTotal > 0 ? (
+                              {(entry.coutTotal != null && entry.coutTotal > 0) || (entry.coutTotalTTC != null && entry.coutTotalTTC > 0) ? (
                                 <>
                                   <div>
-                                    <span style={{ fontSize: '0.88rem', color: '#1d4ed8', fontWeight: 700 }}>{entry.coutTotal.toFixed(3)}</span>
+                                    <span style={{ fontSize: '0.88rem', color: '#1d4ed8', fontWeight: 700 }}>{(entry.coutTotalTTC ?? entry.coutTotal ?? 0).toFixed(3)}</span>
                                     <span style={{ fontSize: '0.72rem', color: '#64748b', marginLeft: 2 }}>DT</span>
                                   </div>
-                                  {entry.coutTotalTTC != null && entry.coutTotalTTC > 0 && entry.coutTotalTTC !== entry.coutTotal && (
-                                    <div style={{ fontSize: '0.72rem', color: '#7c3aed', marginTop: 2 }}>
-                                      {entry.coutTotalTTC.toFixed(3)} <span style={{ fontSize: '0.65rem', color: '#a78bfa' }}>TTC</span>
+                                  {entry.coutTotal != null && entry.coutTotal > 0 && entry.coutTotalTTC !== entry.coutTotal && (
+                                    <div style={{ fontSize: '0.72rem', color: '#94a3b8', marginTop: 1 }}>
+                                      {entry.coutTotal.toFixed(3)} <span style={{ fontSize: '0.65rem' }}>HT</span>
                                     </div>
                                   )}
                                 </>
