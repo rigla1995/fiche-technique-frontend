@@ -311,20 +311,21 @@ export default function TransferPage() {
 
     if (!confirmed) {
       for (const batch of ingredientBatches) {
-        const tDates = getTransferDates(batch.ingredientId);
-        if (tDates.has(batch.dateTransfert)) {
-          let history = transferHistory[batch.ingredientId];
-          if (!historyLoaded.has(batch.ingredientId)) {
-            try {
-              const { data } = await api.get(`/api/labo/${laboId}/transfers?ingredientId=${batch.ingredientId}&limit=50`);
-              setTransferHistory((prev) => ({ ...prev, [batch.ingredientId]: data }));
-              setHistoryLoaded((prev) => new Set([...prev, batch.ingredientId]));
-              history = data;
-            } catch { history = []; }
-          }
-          const existingTotal = (history || [])
-            .filter((h) => h.dateTransfert === batch.dateTransfert)
-            .reduce((s, h) => s + h.quantite, 0);
+        const batchActIds = new Set(batch.transfers.map((t) => t.activiteId));
+        let history = transferHistory[batch.ingredientId];
+        if (!historyLoaded.has(batch.ingredientId)) {
+          try {
+            const { data } = await api.get(`/api/labo/${laboId}/transfers?ingredientId=${batch.ingredientId}&limit=50`);
+            setTransferHistory((prev) => ({ ...prev, [batch.ingredientId]: data }));
+            setHistoryLoaded((prev) => new Set([...prev, batch.ingredientId]));
+            history = data;
+          } catch { history = []; }
+        }
+        const sameDateSameAct = (history || []).filter(
+          (h) => h.dateTransfert === batch.dateTransfert && batchActIds.has(h.activiteId)
+        );
+        if (sameDateSameAct.length > 0) {
+          const existingTotal = sameDateSameAct.reduce((s, h) => s + h.quantite, 0);
           const newQty = batch.transfers.reduce((s, tr) => s + tr.quantite, 0);
           setTransferConfirm({ ingredientId: batch.ingredientId, nom: batch.nom, date: batch.dateTransfert, existingTotal, newQty });
           return;
