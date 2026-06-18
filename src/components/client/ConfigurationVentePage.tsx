@@ -131,16 +131,6 @@ function PrixInput({ avId, savedPrix }: { avId: string; savedPrix: number }) {
 
   const handleChange = (v: string) => {
     setEditingPrixVente(prev => ({ ...prev, [avId]: v }));
-    const pv = parseFloat(v) || 0;
-    if (pv > 0 && activePrests.length > 0) {
-      setEditingPrixPrest(prev => {
-        const updated = { ...prev };
-        for (const ap of activePrests) {
-          updated[`${avId}__${ap.id}`] = (pv * (1 - ap.taux_commission / 100)).toFixed(2);
-        }
-        return updated;
-      });
-    }
   };
 
   return (
@@ -153,25 +143,19 @@ function PrixInput({ avId, savedPrix }: { avId: string; savedPrix: number }) {
   );
 }
 
-function PrestInput({ avId, savedPrix, ap }: { avId: string; savedPrix: number; ap: ActivitePrestataire }) {
+function PrestInput({ avId, ap }: { avId: string; ap: ActivitePrestataire }) {
   const { editingPrixPrest, setEditingPrixPrest, prixPrestataires } = useContext(CVCtx);
   const key = `${avId}__${ap.id}`;
   const existing = prixPrestataires.find(p => p.article_vendable_id === avId && p.activite_prestataire_id === ap.id);
-  const autoCalc = savedPrix * (1 - ap.taux_commission / 100);
   const isDirty = key in editingPrixPrest;
   const val = isDirty ? editingPrixPrest[key] : (existing?.prix_vente != null ? String(existing.prix_vente) : '');
 
   return (
-    <div>
-      <div style={{ position: 'relative', display: 'inline-block' }}>
-        <input type="number" min="0" step="0.01" value={val} placeholder={autoCalc.toFixed(2)}
-          onChange={e => setEditingPrixPrest(prev => ({ ...prev, [key]: e.target.value }))}
-          style={{ width: 90, padding: '5px 26px 5px 6px', borderRadius: 7, border: `1.5px solid ${isDirty ? C : CB}`, background: isDirty ? CL : '#fafafa', fontSize: '0.82rem', fontWeight: 700, color: CD, outline: 'none' }} />
-        <span style={{ position: 'absolute', right: 6, top: '50%', transform: 'translateY(-50%)', fontSize: '0.6rem', color: C, pointerEvents: 'none', fontWeight: 700 }}>DT</span>
-      </div>
-      {!isDirty && (
-        <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', marginTop: 1 }}>auto : {fmtMoney(autoCalc)}</div>
-      )}
+    <div style={{ position: 'relative', display: 'inline-block' }}>
+      <input type="number" min="0" step="0.01" value={val} placeholder="—"
+        onChange={e => setEditingPrixPrest(prev => ({ ...prev, [key]: e.target.value }))}
+        style={{ width: 90, padding: '5px 26px 5px 6px', borderRadius: 7, border: `1.5px solid ${isDirty ? C : CB}`, background: isDirty ? CL : '#fafafa', fontSize: '0.82rem', fontWeight: 700, color: CD, outline: 'none' }} />
+      <span style={{ position: 'absolute', right: 6, top: '50%', transform: 'translateY(-50%)', fontSize: '0.6rem', color: C, pointerEvents: 'none', fontWeight: 700 }}>DT</span>
     </div>
   );
 }
@@ -213,7 +197,7 @@ function ProduitTableRow({ row, idx, showPortion }: { row: ProduitRow; idx: numb
       {activePrests.map(ap => (
         <td key={ap.id} style={{ padding: '8px 16px', textAlign: 'center' }}>
           {isActive && row.vendable && hasPrix
-            ? <PrestInput avId={row.vendable.id} savedPrix={row.vendable.prix_vente} ap={ap} />
+            ? <PrestInput avId={row.vendable.id} ap={ap} />
             : <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>—</span>}
         </td>
       ))}
@@ -311,7 +295,6 @@ function ProduitTable({ tableRows, showPortion, isSupplement }: { tableRows: Pro
               {activePrests.map(ap => (
                 <th key={ap.id} style={{ padding: '11px 16px', textAlign: 'center', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>
                   🛵 {ap.prestataire_nom}
-                  <div style={{ fontSize: '0.68rem', fontWeight: 500, color: 'var(--text-muted)', textTransform: 'none' }}>−{ap.taux_commission}%</div>
                 </th>
               ))}
             </tr>
