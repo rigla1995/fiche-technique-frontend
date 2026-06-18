@@ -1013,7 +1013,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                       const hist = historyData[entry.ingredientId];
                       const totalQty = totalOverrides[entry.ingredientId] ?? entry.totalQuantite ?? null;
                       const cls = seuilClass(totalQty, entry.seuilMin ?? null);
-                      const totalDisplay = totalQty !== null ? (totalQty as number).toFixed(3) : '—';
+                      const totalDisplay = totalQty !== null ? String(parseFloat((totalQty as number).toFixed(3))) : '—';
                       // Date conflict warning (using bloc date)
                       const histDatesSet = new Set<string>((hist || []).map((h) => h.dateAppro).filter(Boolean) as string[]);
                       const hasExisting = entry.quantite !== null;
@@ -1037,9 +1037,9 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                             </td>
                             <td style={{ textAlign: 'center', padding: '10px 14px', verticalAlign: 'middle' }}>
                               <span className={cls} style={{ fontSize: '1rem', fontWeight: 800 }}>{totalDisplay}</span>
-                              <div style={{ fontSize: '0.67rem', color: '#16a34a', fontWeight: 600, marginTop: 2 }}>↑ {parseFloat((entry.approDepuisInv ?? 0).toFixed(3))}</div>
-                              <div style={{ fontSize: '0.67rem', color: '#0891b2', fontWeight: 600, marginTop: 1 }}>⇄ {parseFloat((entry.transfertsDepuisAppro ?? 0).toFixed(3))}</div>
-                              <div style={{ fontSize: '0.67rem', color: '#dc2626', fontWeight: 500, marginTop: 1 }}>↘ {parseFloat((entry.pertesDepuisInv ?? 0).toFixed(3))}</div>
+                              <div style={{ fontSize: '0.67rem', color: '#16a34a', fontWeight: 600, marginTop: 2 }}>↑ appro {parseFloat((entry.approDepuisInv ?? 0).toFixed(3))}</div>
+                              <div style={{ fontSize: '0.67rem', color: '#0891b2', fontWeight: 600, marginTop: 1 }}>⇄ transf {parseFloat((entry.transfertsDepuisAppro ?? 0).toFixed(3))}</div>
+                              <div style={{ fontSize: '0.67rem', color: '#dc2626', fontWeight: 500, marginTop: 1 }}>↘ pertes {parseFloat((entry.pertesDepuisInv ?? 0).toFixed(3))}</div>
                               {!entry.isPT && <div style={{ fontSize: '0.67rem', color: '#7c3aed', fontWeight: 500, marginTop: 1 }}>PT {parseFloat((entry.ptUsageDepuisInv ?? 0).toFixed(3))}</div>}
                               {entry.venteDepuisInv != null && entry.venteDepuisInv > 0 && (
                                 <div style={{ fontSize: '0.67rem', color: '#b45309', fontWeight: 600, marginTop: 1 }}>💰 VENTE −{parseFloat(entry.venteDepuisInv.toFixed(3))}</div>
