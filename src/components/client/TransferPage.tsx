@@ -88,7 +88,8 @@ export default function TransferPage() {
   const [transferDate, setTransferDate] = useState(todayStr());
   const [bulkSaving, setBulkSaving] = useState(false);
   const [transferConfirm, setTransferConfirm] = useState<{
-    ingredientId: number; nom: string; date: string; existingTotal: number; newQty: number;
+    ingredientId: number; nom: string; unite: string; date: string;
+    perActivite: Array<{ activiteId: number; activiteNom: string; existing: number; newQty: number }>;
   } | null>(null);
   const [invoiceModal, setInvoiceModal] = useState<{ groups: TransferActiviteGroup[]; batches: TransferBatch[] } | null>(null);
 
@@ -325,9 +326,15 @@ export default function TransferPage() {
           (h) => h.dateTransfert === batch.dateTransfert && batchActIds.has(h.activiteId)
         );
         if (sameDateSameAct.length > 0) {
-          const existingTotal = sameDateSameAct.reduce((s, h) => s + h.quantite, 0);
-          const newQty = batch.transfers.reduce((s, tr) => s + tr.quantite, 0);
-          setTransferConfirm({ ingredientId: batch.ingredientId, nom: batch.nom, date: batch.dateTransfert, existingTotal, newQty });
+          const row = stock.find((r) => r.ingredientId === batch.ingredientId);
+          const perActivite = batch.transfers.map((tr) => {
+            const existing = sameDateSameAct
+              .filter((h) => h.activiteId === tr.activiteId)
+              .reduce((s, h) => s + h.quantite, 0);
+            const actNom = activites.find((a) => a.id === tr.activiteId)?.nom ?? String(tr.activiteId);
+            return { activiteId: tr.activiteId, activiteNom: actNom, existing, newQty: tr.quantite };
+          });
+          setTransferConfirm({ ingredientId: batch.ingredientId, nom: batch.nom, unite: row?.unite ?? '', date: batch.dateTransfert, perActivite });
           return;
         }
       }
@@ -435,35 +442,57 @@ export default function TransferPage() {
   return (
     <div className="page">
       <ApproPreviewPanel lines={previewLines} />
-      {/* Confirmation popup — date conflict warning */}
+      {/* Confirmation popup — date conflict warning, per-activité breakdown */}
       {transferConfirm && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,15,15,0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}
           onClick={() => setTransferConfirm(null)}>
-          <div style={{ background: '#fff', borderRadius: 20, padding: 0, maxWidth: 440, width: '92%', boxShadow: '0 24px 64px rgba(0,0,0,0.28)', overflow: 'hidden' }}
+          <div style={{ background: '#fff', borderRadius: 20, padding: 0, maxWidth: 520, width: '95%', boxShadow: '0 24px 64px rgba(0,0,0,0.28)', overflow: 'hidden' }}
             onClick={(e) => e.stopPropagation()}>
-            {/* Header band */}
+            {/* Header */}
             <div style={{ background: 'linear-gradient(135deg, #f59e0b, #d97706)', padding: '18px 24px', display: 'flex', alignItems: 'center', gap: 12 }}>
-              <div style={{ background: 'rgba(255,255,255,0.25)', borderRadius: 12, width: 42, height: 42, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.4rem', flexShrink: 0 }}>⚠️</div>
+              <div style={{ background: 'rgba(255,255,255,0.25)', borderRadius: 12, width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.4rem', flexShrink: 0 }}>⚠️</div>
               <div>
-                <div style={{ fontWeight: 800, fontSize: '1rem', color: '#fff' }}>Transfert déjà existant</div>
-                <div style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.85)' }}>{transferConfirm.nom} · {fmtDate(transferConfirm.date)}</div>
+                <div style={{ fontWeight: 800, fontSize: '1rem', color: '#fff' }}>Transfert déjà existant pour cette date</div>
+                <div style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.9)', marginTop: 2 }}>
+                  <span style={{ fontWeight: 700 }}>{transferConfirm.nom}</span>
+                  <span style={{ margin: '0 6px', opacity: 0.7 }}>·</span>
+                  <span>{fmtDate(transferConfirm.date)}</span>
+                </div>
               </div>
             </div>
             {/* Body */}
             <div style={{ padding: '20px 24px' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 20 }}>
-                <div style={{ background: '#fef9ec', border: '1.5px solid #fde68a', borderRadius: 12, padding: '12px 10px', textAlign: 'center' }}>
-                  <div style={{ fontSize: '0.68rem', fontWeight: 700, color: '#92400e', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>Existant</div>
-                  <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#d97706' }}>{transferConfirm.existingTotal.toFixed(3)}</div>
-                </div>
-                <div style={{ background: '#f0fdf4', border: '1.5px solid #bbf7d0', borderRadius: 12, padding: '12px 10px', textAlign: 'center' }}>
-                  <div style={{ fontSize: '0.68rem', fontWeight: 700, color: '#065f46', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>À ajouter</div>
-                  <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#059669' }}>+{transferConfirm.newQty.toFixed(3)}</div>
-                </div>
-                <div style={{ background: '#f5f3ff', border: '1.5px solid #ddd6fe', borderRadius: 12, padding: '12px 10px', textAlign: 'center' }}>
-                  <div style={{ fontSize: '0.68rem', fontWeight: 700, color: '#4c1d95', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>Total</div>
-                  <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#7c3aed' }}>{(transferConfirm.existingTotal + transferConfirm.newQty).toFixed(3)}</div>
-                </div>
+              <p style={{ fontSize: '0.82rem', color: '#6b7280', marginBottom: 14, marginTop: 0 }}>
+                Un ou plusieurs transferts existent déjà vers ces activités à cette date. Voici le détail par activité :
+              </p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20 }}>
+                {transferConfirm.perActivite.map((a) => (
+                  <div key={a.activiteId} style={{ border: '1.5px solid #e5e7eb', borderRadius: 12, overflow: 'hidden' }}>
+                    <div style={{ background: '#f8f7ff', borderBottom: '1px solid #e5e7eb', padding: '8px 14px', display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '0.06em' }}>↗ {a.activiteNom}</span>
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 0 }}>
+                      <div style={{ padding: '10px 14px', textAlign: 'center', borderRight: '1px solid #f3f4f6' }}>
+                        <div style={{ fontSize: '0.65rem', fontWeight: 700, color: '#92400e', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 3 }}>Déjà envoyé</div>
+                        <div style={{ fontSize: '1.1rem', fontWeight: 800, color: a.existing > 0 ? '#d97706' : '#9ca3af' }}>
+                          {parseFloat(a.existing.toFixed(3))} <span style={{ fontSize: '0.65rem', fontWeight: 500, color: '#9ca3af' }}>{transferConfirm.unite}</span>
+                        </div>
+                      </div>
+                      <div style={{ padding: '10px 14px', textAlign: 'center', background: '#f0fdf4', borderRight: '1px solid #f3f4f6' }}>
+                        <div style={{ fontSize: '0.65rem', fontWeight: 700, color: '#065f46', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 3 }}>Nouveau transfert</div>
+                        <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#059669' }}>
+                          +{parseFloat(a.newQty.toFixed(3))} <span style={{ fontSize: '0.65rem', fontWeight: 500, color: '#6b7280' }}>{transferConfirm.unite}</span>
+                        </div>
+                      </div>
+                      <div style={{ padding: '10px 14px', textAlign: 'center', background: '#f5f3ff' }}>
+                        <div style={{ fontSize: '0.65rem', fontWeight: 700, color: '#4c1d95', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 3 }}>Total après</div>
+                        <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#7c3aed' }}>
+                          {parseFloat((a.existing + a.newQty).toFixed(3))} <span style={{ fontSize: '0.65rem', fontWeight: 500, color: '#a78bfa' }}>{transferConfirm.unite}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
               <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
                 <button className="btn btn-ghost" style={{ fontWeight: 600 }} onClick={() => setTransferConfirm(null)}>Annuler</button>
