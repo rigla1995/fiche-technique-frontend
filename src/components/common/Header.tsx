@@ -3,11 +3,8 @@ import { useNotifications } from '../../context/NotificationContext';
 import { useNavigate } from 'react-router-dom';
 import { useState, useRef, useEffect } from 'react';
 import LabFlowLogo from './LabFlowLogo';
-interface HeaderProps {
-  onMenuToggle: () => void;
-}
 
-export default function Header({ onMenuToggle }: HeaderProps) {
+export default function Header() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const { notifications, unreadCount, markAllRead } = useNotifications();
@@ -39,6 +36,11 @@ export default function Header({ onMenuToggle }: HeaderProps) {
     }
   };
 
+  const handleLogoClick = () => {
+    if (user?.role === 'super_admin') navigate('/admin');
+    else navigate('/client/dashboard');
+  };
+
   const typeLabel = (type: string) => {
     if (type === 'ingredient_manquant') return 'Ingrédient manquant';
     if (type === 'supplement') return 'Ajout de capacité';
@@ -50,14 +52,15 @@ export default function Header({ onMenuToggle }: HeaderProps) {
 
   return (
     <header className="header">
-      {/* Left */}
+      {/* Left — logo cliquable */}
       <div className="header-left">
-        <button className="menu-toggle" onClick={onMenuToggle} aria-label="Menu">
-          <span /><span /><span />
-        </button>
-        <div className="header-brand">
+        <button
+          onClick={handleLogoClick}
+          title="Tableau de bord"
+          style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+        >
           <LabFlowLogo height={36} />
-        </div>
+        </button>
       </div>
 
       {/* Right */}
@@ -161,7 +164,6 @@ export default function Header({ onMenuToggle }: HeaderProps) {
                     onMouseLeave={e => (e.currentTarget.style.background = n.readAt ? '#fff' : '#fef9ff')}
                   >
                     <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-                      {/* Icon bubble */}
                       <div style={{
                         width: 34, height: 34, borderRadius: 10, flexShrink: 0,
                         display: 'flex', alignItems: 'center', justifyContent: 'center',

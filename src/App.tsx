@@ -75,19 +75,15 @@ function RootRedirect() {
   if (isLoading) return <div className="page-loading"><div className="spinner" /></div>;
   if (!user) return <Navigate to="/login" replace />;
   if (user.role === 'super_admin') return <Navigate to="/admin" replace />;
+  // Gérant : toujours son tableau de bord
   if (user.role === 'gerant') return <Navigate to="/client/dashboard" replace />;
-  if ((user.onboardingStep ?? 0) === 50) {
-    return <Navigate to="/client/upgrade-wizard" replace />;
-  }
-  if ((user.onboardingStep ?? 0) === 1) {
-    return <Navigate to="/client/profile" replace />;
-  }
-  if ((user.onboardingStep ?? 0) === 2) {
-    return <Navigate to="/client/activites" replace />;
-  }
-  // Post-onboarding: redirect based on activités count
+  // Onboarding steps
+  if ((user.onboardingStep ?? 0) === 50) return <Navigate to="/client/upgrade-wizard" replace />;
+  if ((user.onboardingStep ?? 0) === 1) return <Navigate to="/client/profile" replace />;
+  if ((user.onboardingStep ?? 0) === 2) return <Navigate to="/client/activites" replace />;
+  // Client post-onboarding : sans activité → mes activités, sinon → tableau de bord
   if ((user.activitesCount ?? 0) === 0) return <Navigate to="/client/activites" replace />;
-  return <Navigate to="/client/rapports" replace />;
+  return <Navigate to="/client/dashboard" replace />;
 }
 
 export default function App() {
