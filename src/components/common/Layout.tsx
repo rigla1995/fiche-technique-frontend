@@ -26,7 +26,7 @@ export default function Layout({ requireRole }: LayoutProps) {
   return (
     <SelectionProvider>
     <div className="app-layout">
-      <Header onMenuToggle={() => setSidebarOpen((v) => !v)} />
+      <Header />
       <ReadOnlyBanner />
       <div className="layout-body">
         <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
