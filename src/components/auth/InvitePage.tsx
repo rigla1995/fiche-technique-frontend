@@ -4,6 +4,14 @@ import api from '../../api/client';
 
 type State = 'loading' | 'ready' | 'invalid' | 'success' | 'error';
 
+const PWD_RULES: { test: (v: string) => boolean; label: string }[] = [
+  { test: (v) => v.length >= 8, label: 'Au moins 8 caractères' },
+  { test: (v) => /[A-Z]/.test(v), label: 'Une majuscule' },
+  { test: (v) => /[a-z]/.test(v), label: 'Une minuscule' },
+  { test: (v) => /[0-9]/.test(v), label: 'Un chiffre' },
+  { test: (v) => /[@$!%*?&_\-#]/.test(v), label: 'Un caractère spécial (@$!%*?&_-#)' },
+];
+
 export default function InvitePage() {
   const { token } = useParams<{ token: string }>();
   const navigate = useNavigate();
@@ -25,7 +33,8 @@ export default function InvitePage() {
   }, [token]);
 
   const validate = () => {
-    if (password.length < 8) return 'Le mot de passe doit contenir au moins 8 caractères.';
+    const failed = PWD_RULES.find((r) => !r.test(password));
+    if (failed) return `Mot de passe trop faible : ${failed.label.toLowerCase()}.`;
     if (password !== confirm) return 'Les mots de passe ne correspondent pas.';
     return null;
   };
@@ -154,6 +163,18 @@ export default function InvitePage() {
                 {showPwd ? '🙈' : '👁'}
               </button>
             </div>
+            {password.length > 0 && (
+              <div style={{ marginTop: 8, display: 'flex', flexWrap: 'wrap', gap: '4px 12px' }}>
+                {PWD_RULES.map((r) => {
+                  const ok = r.test(password);
+                  return (
+                    <span key={r.label} style={{ fontSize: '0.72rem', color: ok ? '#16a34a' : '#9ca3af', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                      {ok ? '✓' : '○'} {r.label}
+                    </span>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           <div style={{ marginBottom: 24 }}>
