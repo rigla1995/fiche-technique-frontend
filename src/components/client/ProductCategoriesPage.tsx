@@ -1,10 +1,18 @@
 import { useState, useEffect } from 'react';
 import api from '../../api/client';
-import type { CategorieProduit } from '../../types';
+import type { CategorieProduit, TypeProduitCategorie } from '../../types';
 
 const COLOR = '#059669';
 const HERO = 'linear-gradient(135deg, #0a1628 0%, #0f2847 55%, #0d3b2e 100%)';
 const BTN = 'linear-gradient(135deg, #059669, #10b981)';
+
+const TYPE_OPTIONS: { value: TypeProduitCategorie; label: string; icon: string }[] = [
+  { value: 'vendable', label: 'Produit vendable', icon: '🍽️' },
+  { value: 'supplement', label: 'Supplément vendable', icon: '➕' },
+  { value: 'valorise', label: 'Article valorisé', icon: '💎' },
+];
+const typeLabel = (t?: TypeProduitCategorie) => TYPE_OPTIONS.find(o => o.value === t)?.label ?? '—';
+const typeIcon = (t?: TypeProduitCategorie) => TYPE_OPTIONS.find(o => o.value === t)?.icon ?? '🏷️';
 
 const apiMsg = (e: unknown, fallback = 'Erreur') =>
   (e as { response?: { data?: { message?: string } } })?.response?.data?.message ?? fallback;
@@ -18,16 +26,19 @@ export default function ProductCategoriesPage() {
 
   const [showCreate, setShowCreate] = useState(false);
   const [rows, setRows] = useState<CatRow[]>([emptyRow()]);
+  const [createType, setCreateType] = useState<TypeProduitCategorie>('vendable');
   const [createError, setCreateError] = useState('');
   const [creating, setCreating] = useState(false);
 
   const [editItem, setEditItem] = useState<CategorieProduit | null>(null);
   const [editNom, setEditNom] = useState('');
+  const [editType, setEditType] = useState<TypeProduitCategorie>('vendable');
   const [saving, setSaving] = useState(false);
   const [editError, setEditError] = useState('');
 
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [search, setSearch] = useState('');
+  const [filterType, setFilterType] = useState<'' | TypeProduitCategorie>('');
 
   const load = () => {
     setLoading(true);
@@ -37,7 +48,7 @@ export default function ProductCategoriesPage() {
   };
   useEffect(() => { load(); }, []);
 
-  const openCreate = () => { setRows([emptyRow()]); setCreateError(''); setShowCreate(true); };
+  const openCreate = () => { setRows([emptyRow()]); setCreateType('vendable'); setCreateError(''); setShowCreate(true); };
   const closeCreate = () => setShowCreate(false);
   const updateRow = (i: number, val: string) => setRows(prev => prev.map((r, idx) => idx === i ? { nom: val } : r));
   const addRow = () => setRows(prev => [...prev, emptyRow()]);
@@ -48,21 +59,21 @@ export default function ProductCategoriesPage() {
     if (!valid.length) { setCreateError('Au moins un nom requis'); return; }
     setCreating(true); setCreateError('');
     try {
-      await Promise.all(valid.map(r => api.post('/api/categories-produit', { nom: r.nom.trim() })));
+      await Promise.all(valid.map(r => api.post('/api/categories-produit', { nom: r.nom.trim(), typeProduit: createType })));
       closeCreate(); load();
     } catch (e: unknown) {
       setCreateError(apiMsg(e, "Erreur lors de l'enregistrement"));
     } finally { setCreating(false); }
   };
 
-  const openEdit = (c: CategorieProduit) => { setEditItem(c); setEditNom(c.name); setEditError(''); setSaving(false); };
+  const openEdit = (c: CategorieProduit) => { setEditItem(c); setEditNom(c.name); setEditType(c.typeProduit ?? 'vendable'); setEditError(''); setSaving(false); };
   const closeEdit = () => setEditItem(null);
 
   const handleSave = async () => {
     if (!editNom.trim()) { setEditError('Nom requis'); return; }
     setSaving(true);
     try {
-      await api.put(`/api/categories-produit/${editItem!.id}`, { nom: editNom.trim() });
+      await api.put(`/api/categories-produit/${editItem!.id}`, { nom: editNom.trim(), typeProduit: editType });
       closeEdit(); load();
     } catch (e: unknown) {
       setEditError(apiMsg(e, "Erreur lors de l'enregistrement"));
@@ -74,7 +85,10 @@ export default function ProductCategoriesPage() {
     catch (e: unknown) { alert(apiMsg(e, 'Impossible de supprimer cette catégorie')); }
   };
 
-  const filtered = categories.filter(c => !search || c.name.toLowerCase().includes(search.toLowerCase()));
+  const filtered = categories.filter(c =>
+    (!search || c.name.toLowerCase().includes(search.toLowerCase())) &&
+    (!filterType || c.typeProduit === filterType)
+  );
 
   return (
     <div className="page">
@@ -103,6 +117,10 @@ export default function ProductCategoriesPage() {
           <span style={{ fontSize: '1.1rem', flexShrink: 0 }}>🔍</span>
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Filtrer les catégories…" style={{ flex: 1, padding: '9px 13px', borderRadius: 9, border: '1.5px solid #6ee7b7', fontSize: '0.88rem', background: '#f0fdf4', boxSizing: 'border-box' }} />
         </div>
+        <select value={filterType} onChange={e => setFilterType(e.target.value as '' | TypeProduitCategorie)} style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid #6ee7b7', fontSize: '0.88rem', background: '#f0fdf4', minWidth: 170 }}>
+          <option value="">Tous les types</option>
+          {TYPE_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.icon} {o.label}</option>)}
+        </select>
         <button className="btn" onClick={openCreate} style={{ background: BTN, color: '#fff', flexShrink: 0, boxShadow: '0 2px 8px rgba(16,185,129,0.25)' }}>+ Nouvelle catégorie</button>
       </div>
 
@@ -124,6 +142,7 @@ export default function ProductCategoriesPage() {
             <thead>
               <tr>
                 <th>Nom</th>
+                <th>Type</th>
                 <th>Produits</th>
                 <th style={{ textAlign: 'right' }}>Actions</th>
               </tr>
@@ -132,6 +151,7 @@ export default function ProductCategoriesPage() {
               {filtered.map(c => (
                 <tr key={c.id}>
                   <td style={{ fontWeight: 600, color: '#0f172a' }}>{c.name}</td>
+                  <td><span style={{ fontSize: '0.74rem', fontWeight: 700, background: '#d1fae5', color: '#065f46', border: '1px solid #6ee7b7', borderRadius: 20, padding: '2px 9px', whiteSpace: 'nowrap' }}>{typeIcon(c.typeProduit)} {typeLabel(c.typeProduit)}</span></td>
                   <td><span style={{ fontSize: '0.82rem', color: COLOR, fontWeight: 600 }}>{c.produitsCount ?? 0} produit{(c.produitsCount ?? 0) !== 1 ? 's' : ''}</span></td>
                   <td className="actions-cell" style={{ justifyContent: 'flex-end' }}>
                     <button className="btn btn-ghost btn-sm" onClick={() => openEdit(c)}>✏️ Modifier</button>
@@ -154,6 +174,14 @@ export default function ProductCategoriesPage() {
             </div>
             <div className="modal-body">
               {createError && <div style={{ background: '#fee2e2', color: '#dc2626', border: '1px solid #fecaca', borderRadius: 6, padding: '8px 12px', marginBottom: 12, fontSize: '0.85rem' }}>{createError}</div>}
+              <div style={{ marginBottom: 14 }}>
+                <label style={{ display: 'block', fontWeight: 700, fontSize: '0.82rem', color: '#065f46', marginBottom: 6 }}>Type <span style={{ color: '#ef4444' }}>*</span></label>
+                <select className="input" value={createType} onChange={e => setCreateType(e.target.value as TypeProduitCategorie)} style={{ width: '100%' }}>
+                  {TYPE_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.icon} {o.label}</option>)}
+                </select>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: 4 }}>Ces catégories ne seront proposées que pour ce type.</div>
+              </div>
+              <label style={{ display: 'block', fontWeight: 700, fontSize: '0.82rem', color: '#065f46', marginBottom: 6 }}>Nom(s)</label>
               {rows.map((row, i) => (
                 <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 8, alignItems: 'center' }}>
                   <input
@@ -189,6 +217,12 @@ export default function ProductCategoriesPage() {
             </div>
             <div className="modal-body">
               {editError && <div style={{ background: '#fee2e2', color: '#dc2626', border: '1px solid #fecaca', borderRadius: 6, padding: '8px 12px', marginBottom: 12, fontSize: '0.85rem' }}>{editError}</div>}
+              <div className="form-group">
+                <label>Type *</label>
+                <select className="input" value={editType} onChange={e => setEditType(e.target.value as TypeProduitCategorie)}>
+                  {TYPE_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.icon} {o.label}</option>)}
+                </select>
+              </div>
               <div className="form-group">
                 <label>Nom *</label>
                 <input className="input" autoFocus value={editNom} placeholder="Ex: Boissons" onChange={e => setEditNom(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSave()} />

@@ -456,10 +456,10 @@ export default function ProductForm() {
                     onChange={(e) => setCategorieProduitId(e.target.value)}
                   >
                     <option value="">— Sélectionner une catégorie —</option>
-                    {categoriesProduit.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                    {categoriesProduit.filter((c) => c.typeProduit === 'vendable').map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                   </select>
-                  {categoriesProduit.length === 0 && (
-                    <div style={{ fontSize: '0.76rem', color: '#b45309', marginTop: 4 }}>Aucune catégorie. Créez-en dans « Configuration Catégorie » (Espace Produits).</div>
+                  {categoriesProduit.filter((c) => c.typeProduit === 'vendable').length === 0 && (
+                    <div style={{ fontSize: '0.76rem', color: '#b45309', marginTop: 4 }}>Aucune catégorie de type « Produit vendable ». Créez-en dans « Configuration Catégorie » (Espace Produits).</div>
                   )}
                 </div>
               )}

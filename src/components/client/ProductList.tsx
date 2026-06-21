@@ -522,7 +522,7 @@ export default function ProductList() {
                   style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid #6ee7b7', fontSize: '0.88rem', background: '#f0fdf4', minWidth: 160 }}
                 >
                   <option value="">Toutes les catégories</option>
-                  {categoriesProduit.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  {categoriesProduit.filter((c) => c.typeProduit === (vendableSubTab === 'supplement' ? 'supplement' : 'vendable')).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
               </div>
             )}
@@ -1381,7 +1381,7 @@ export default function ProductList() {
                               </label>
                               <select className="input" value={editCategorieId} onChange={(e) => setEditCategorieId(e.target.value)} style={{ width: '100%', maxWidth: 320, borderColor: editCategorieId ? '#93c5fd' : '#fca5a5' }}>
                                 <option value="">— Sélectionner une catégorie —</option>
-                                {categoriesProduit.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                {categoriesProduit.filter((c) => c.typeProduit === (editIsSupplement ? 'supplement' : 'vendable')).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                               </select>
                               {categoriesProduit.length === 0 && (
                                 <div style={{ fontSize: '0.76rem', color: '#b45309', marginTop: 4 }}>Aucune catégorie. Créez-en dans « Configuration Catégorie ».</div>
@@ -1584,7 +1584,7 @@ export default function ProductList() {
                             </label>
                             <select className="input" value={addCategorieId} onChange={(e) => setAddCategorieId(e.target.value)} style={{ width: '100%', maxWidth: 320, borderColor: addCategorieId ? '#6ee7b7' : '#fca5a5' }}>
                               <option value="">— Sélectionner une catégorie —</option>
-                              {categoriesProduit.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                              {categoriesProduit.filter((c) => c.typeProduit === (addIsSupplement ? 'supplement' : 'vendable')).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                             </select>
                             {categoriesProduit.length === 0 && (
                               <div style={{ fontSize: '0.76rem', color: '#b45309', marginTop: 4 }}>Aucune catégorie. Créez-en d'abord dans « Configuration Catégorie ».</div>
