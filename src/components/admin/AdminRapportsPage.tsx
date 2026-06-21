@@ -31,7 +31,8 @@ function KpiCard({ icon, label, value, sub, color }: {
 }) {
   return (
     <div style={{
-      background: '#fff', border: '1px solid var(--border)', borderRadius: 10,
+      background: '#fff', border: '1px solid var(--border)',
+      borderLeft: `4px solid ${color || '#475569'}`, borderRadius: 10,
       padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 4,
     }}>
       <div style={{ fontSize: '1.3rem' }}>{icon}</div>
