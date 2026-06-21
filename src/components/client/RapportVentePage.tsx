@@ -18,6 +18,16 @@ const fmtDT = (n: number) => `${(n ?? 0).toLocaleString('fr-FR', { maximumFracti
 const PALETTE = ['#b45309', '#0d9488', '#4f46e5', '#db2777', '#0891b2', '#65a30d'];
 const fcColor = (p: number | null) => p == null ? '#64748b' : p < 30 ? '#059669' : p <= 40 ? '#d97706' : '#dc2626';
 const fcBg = (p: number | null) => p == null ? '#f1f5f9' : p < 30 ? '#dcfce7' : p <= 40 ? '#fef3c7' : '#fee2e2';
+
+type Status = 'good' | 'warn' | 'bad' | 'info' | 'neutral';
+const STATUS: Record<Status, { c: string; bg: string; bd: string }> = {
+  good: { c: '#059669', bg: '#ecfdf5', bd: '#a7f3d0' },
+  warn: { c: '#d97706', bg: '#fffbeb', bd: '#fcd34d' },
+  bad: { c: '#dc2626', bg: '#fef2f2', bd: '#fecaca' },
+  info: { c: '#4f46e5', bg: '#eef2ff', bd: '#c7d2fe' },
+  neutral: { c: '#475569', bg: 'var(--surface)', bd: 'var(--border)' },
+};
+const fcStatus = (p: number | null): Status => p == null ? 'neutral' : p < 30 ? 'good' : p <= 40 ? 'warn' : 'bad';
 type Preset = 'mois' | '30j' | 'trimestre' | 'perso';
 const periodForPreset = (preset: Preset): { from: string; to: string } => {
   const now = new Date();
@@ -27,12 +37,16 @@ const periodForPreset = (preset: Preset): { from: string; to: string } => {
   return { from: iso(new Date(now.getFullYear(), now.getMonth(), 1)), to: iso(new Date(now.getFullYear(), now.getMonth() + 1, 0)) };
 };
 
-function Kpi({ label, value, sub, valueColor, subColor }: { label: string; value: string; sub?: string; valueColor?: string; subColor?: string }) {
+function Kpi({ label, value, sub, status = 'neutral' }: { label: string; value: string; sub?: string; status?: Status }) {
+  const s = STATUS[status];
   return (
-    <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: '14px 16px' }}>
-      <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: 6 }}>{label}</div>
-      <div style={{ fontSize: '1.4rem', fontWeight: 800, color: valueColor || 'var(--text)', lineHeight: 1.1 }}>{value}</div>
-      {sub && <div style={{ fontSize: '0.74rem', color: subColor || 'var(--text-muted)', marginTop: 4 }}>{sub}</div>}
+    <div style={{ background: s.bg, border: `1px solid ${s.bd}`, borderLeft: `4px solid ${s.c}`, borderRadius: 12, padding: '14px 16px' }}>
+      <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: 6, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <span>{label}</span>
+        {(status === 'warn' || status === 'bad' || status === 'good') && <span style={{ width: 8, height: 8, borderRadius: '50%', background: s.c }} />}
+      </div>
+      <div style={{ fontSize: '1.4rem', fontWeight: 800, color: status === 'neutral' ? 'var(--text)' : s.c, lineHeight: 1.1 }}>{value}</div>
+      {sub && <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)', marginTop: 4 }}>{sub}</div>}
     </div>
   );
 }
@@ -127,9 +141,9 @@ export default function RapportVentePage() {
       ) : (
         <>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12, marginBottom: 20 }}>
-            <Kpi label="CA total" value={fmtDT(k!.ca)} />
-            <Kpi label="Marge brute" value={fmtDT(k!.marge)} sub={k!.taux_marge_pct != null ? `${k!.taux_marge_pct}%` : undefined} />
-            <Kpi label="Food cost moyen" value={k!.food_cost_pct != null ? `${k!.food_cost_pct}%` : '—'} valueColor={fcColor(k!.food_cost_pct)} sub="cible <30%" subColor={fcColor(k!.food_cost_pct)} />
+            <Kpi label="CA total" value={fmtDT(k!.ca)} status="info" />
+            <Kpi label="Marge brute" value={fmtDT(k!.marge)} status={(k!.taux_marge_pct ?? 0) >= 50 ? 'good' : 'neutral'} sub={k!.taux_marge_pct != null ? `${k!.taux_marge_pct}%` : undefined} />
+            <Kpi label="Food cost moyen" value={k!.food_cost_pct != null ? `${k!.food_cost_pct}%` : '—'} status={fcStatus(k!.food_cost_pct)} sub="cible <30%" />
             <Kpi label="Panier moyen" value={`${k!.panier_moyen.toLocaleString('fr-FR', { maximumFractionDigits: 2 })} DT`} sub={`${k!.nb_ventes} vente${k!.nb_ventes > 1 ? 's' : ''}`} />
           </div>
 

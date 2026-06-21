@@ -25,11 +25,23 @@ const periodForPreset = (preset: Preset): { from: string; to: string } => {
   return { from: iso(new Date(now.getFullYear(), now.getMonth(), 1)), to: iso(new Date(now.getFullYear(), now.getMonth() + 1, 0)) };
 };
 
-function Kpi({ label, value, sub }: { label: string; value: string; sub?: string }) {
+type Status = 'good' | 'warn' | 'bad' | 'info' | 'neutral';
+const STATUS: Record<Status, { c: string; bg: string; bd: string }> = {
+  good: { c: '#059669', bg: '#ecfdf5', bd: '#a7f3d0' },
+  warn: { c: '#d97706', bg: '#fffbeb', bd: '#fcd34d' },
+  bad: { c: '#dc2626', bg: '#fef2f2', bd: '#fecaca' },
+  info: { c: '#7c3aed', bg: '#f5f3ff', bd: '#ddd6fe' },
+  neutral: { c: '#475569', bg: 'var(--surface)', bd: 'var(--border)' },
+};
+function Kpi({ label, value, sub, status = 'neutral' }: { label: string; value: string; sub?: string; status?: Status }) {
+  const s = STATUS[status];
   return (
-    <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: '14px 16px' }}>
-      <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: 6 }}>{label}</div>
-      <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--text)', lineHeight: 1.1 }}>{value}</div>
+    <div style={{ background: s.bg, border: `1px solid ${s.bd}`, borderLeft: `4px solid ${s.c}`, borderRadius: 12, padding: '14px 16px' }}>
+      <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: 6, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <span>{label}</span>
+        {(status === 'warn' || status === 'bad' || status === 'good') && <span style={{ width: 8, height: 8, borderRadius: '50%', background: s.c }} />}
+      </div>
+      <div style={{ fontSize: '1.5rem', fontWeight: 800, color: status === 'neutral' ? 'var(--text)' : s.c, lineHeight: 1.1 }}>{value}</div>
       {sub && <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)', marginTop: 4 }}>{sub}</div>}
     </div>
   );
@@ -100,10 +112,10 @@ export default function RapportLaboPage() {
       ) : (
         <>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12, marginBottom: 20 }}>
-            <Kpi label="Valeur du stock" value={fmtDT(data.kpis.valeur_stock)} />
-            <Kpi label="Approvisionnements" value={fmtDT(data.kpis.appros)} sub={`${data.kpis.nb_appros} entrée${data.kpis.nb_appros > 1 ? 's' : ''}`} />
-            <Kpi label="Pertes" value={fmtDT(data.kpis.pertes)} />
-            <Kpi label="Transferts émis" value={fmtDT(data.kpis.transferts)} sub={`${data.kpis.nb_transferts} transfert${data.kpis.nb_transferts > 1 ? 's' : ''}`} />
+            <Kpi label="Valeur du stock" value={fmtDT(data.kpis.valeur_stock)} status="info" />
+            <Kpi label="Approvisionnements" value={fmtDT(data.kpis.appros)} status="neutral" sub={`${data.kpis.nb_appros} entrée${data.kpis.nb_appros > 1 ? 's' : ''}`} />
+            <Kpi label="Pertes" value={fmtDT(data.kpis.pertes)} status={data.kpis.pertes > 0 ? 'bad' : 'good'} />
+            <Kpi label="Transferts émis" value={fmtDT(data.kpis.transferts)} status="info" sub={`${data.kpis.nb_transferts} transfert${data.kpis.nb_transferts > 1 ? 's' : ''}`} />
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 12 }}>

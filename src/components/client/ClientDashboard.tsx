@@ -29,7 +29,17 @@ const fmt = (n: number) => (n ?? 0).toLocaleString('fr-FR', { maximumFractionDig
 const fmtDT = (n: number) => `${fmt(n)} DT`;
 
 const PALETTE = ['#4f46e5', '#0d9488', '#d97706', '#db2777', '#0891b2', '#65a30d', '#dc2626', '#7c3aed'];
-const foodCostColor = (p: number | null) => p == null ? '#64748b' : p < 30 ? '#059669' : p <= 40 ? '#d97706' : '#dc2626';
+
+type Status = 'good' | 'warn' | 'bad' | 'info' | 'neutral';
+const STATUS: Record<Status, { c: string; bg: string; bd: string }> = {
+  good: { c: '#059669', bg: '#ecfdf5', bd: '#a7f3d0' },
+  warn: { c: '#d97706', bg: '#fffbeb', bd: '#fcd34d' },
+  bad: { c: '#dc2626', bg: '#fef2f2', bd: '#fecaca' },
+  info: { c: '#4f46e5', bg: '#eef2ff', bd: '#c7d2fe' },
+  neutral: { c: '#475569', bg: 'var(--surface)', bd: 'var(--border)' },
+};
+const foodCostStatus = (p: number | null): Status => p == null ? 'neutral' : p < 30 ? 'good' : p <= 40 ? 'warn' : 'bad';
+const pertesStatus = (pct: number | null): Status => pct == null ? 'neutral' : pct < 3 ? 'good' : pct <= 5 ? 'warn' : 'bad';
 
 type Preset = 'mois' | '30j' | 'trimestre' | 'perso';
 
@@ -43,11 +53,15 @@ const periodForPreset = (preset: Preset): { from: string; to: string } => {
   return { from: iso(f), to: iso(t) };
 };
 
-function KpiCard({ label, value, sub, subColor, valueColor }: { label: string; value: string; sub?: string; subColor?: string; valueColor?: string }) {
+function KpiCard({ label, value, sub, status = 'neutral', subColor }: { label: string; value: string; sub?: string; status?: Status; subColor?: string }) {
+  const s = STATUS[status];
   return (
-    <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: '14px 16px' }}>
-      <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: 6 }}>{label}</div>
-      <div style={{ fontSize: '1.5rem', fontWeight: 800, color: valueColor || 'var(--text)', lineHeight: 1.1 }}>{value}</div>
+    <div style={{ background: s.bg, border: `1px solid ${s.bd}`, borderLeft: `4px solid ${s.c}`, borderRadius: 12, padding: '14px 16px' }}>
+      <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: 6, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <span>{label}</span>
+        {status !== 'neutral' && status !== 'info' && <span style={{ width: 8, height: 8, borderRadius: '50%', background: s.c }} />}
+      </div>
+      <div style={{ fontSize: '1.5rem', fontWeight: 800, color: status === 'neutral' ? 'var(--text)' : s.c, lineHeight: 1.1 }}>{value}</div>
       {sub && <div style={{ fontSize: '0.74rem', color: subColor || 'var(--text-muted)', marginTop: 4 }}>{sub}</div>}
     </div>
   );
@@ -147,11 +161,11 @@ export default function ClientDashboard() {
       ) : (
         <>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12, marginBottom: 20 }}>
-            <KpiCard label="Chiffre d'affaires" value={fmtDT(k!.ca)} sub={k!.ca_delta_pct != null ? `${k!.ca_delta_pct >= 0 ? '▲' : '▼'} ${Math.abs(k!.ca_delta_pct)}% vs période préc.` : undefined} subColor={k!.ca_delta_pct != null && k!.ca_delta_pct >= 0 ? '#059669' : '#dc2626'} />
-            <KpiCard label="Food cost" value={k!.food_cost_pct != null ? `${k!.food_cost_pct}%` : '—'} valueColor={foodCostColor(k!.food_cost_pct)} sub={k!.food_cost_pct != null ? (k!.food_cost_pct < 30 ? 'sain' : k!.food_cost_pct <= 40 ? 'à surveiller (cible <30%)' : 'élevé — revoir les prix') : undefined} subColor={foodCostColor(k!.food_cost_pct)} />
-            <KpiCard label="Marge brute" value={fmtDT(k!.marge)} sub={k!.taux_marge_pct != null ? `taux ${k!.taux_marge_pct}%` : undefined} />
-            <KpiCard label="Valeur du stock" value={fmtDT(k!.valeur_stock)} />
-            <KpiCard label="Pertes" value={fmtDT(k!.pertes)} sub={k!.pertes_pct_ca != null ? `${k!.pertes_pct_ca}% du CA` : undefined} />
+            <KpiCard label="Chiffre d'affaires" value={fmtDT(k!.ca)} status={k!.ca_delta_pct == null ? 'info' : k!.ca_delta_pct >= 0 ? 'good' : 'bad'} sub={k!.ca_delta_pct != null ? `${k!.ca_delta_pct >= 0 ? '▲' : '▼'} ${Math.abs(k!.ca_delta_pct)}% vs période préc.` : undefined} subColor={k!.ca_delta_pct != null && k!.ca_delta_pct >= 0 ? '#059669' : '#dc2626'} />
+            <KpiCard label="Food cost" value={k!.food_cost_pct != null ? `${k!.food_cost_pct}%` : '—'} status={foodCostStatus(k!.food_cost_pct)} sub={k!.food_cost_pct != null ? (k!.food_cost_pct < 30 ? 'sain' : k!.food_cost_pct <= 40 ? 'à surveiller (cible <30%)' : 'élevé — revoir les prix') : undefined} />
+            <KpiCard label="Marge brute" value={fmtDT(k!.marge)} status={(k!.taux_marge_pct ?? 0) >= 50 ? 'good' : 'neutral'} sub={k!.taux_marge_pct != null ? `taux ${k!.taux_marge_pct}%` : undefined} />
+            <KpiCard label="Valeur du stock" value={fmtDT(k!.valeur_stock)} status="info" />
+            <KpiCard label="Pertes" value={fmtDT(k!.pertes)} status={pertesStatus(k!.pertes_pct_ca)} sub={k!.pertes_pct_ca != null ? `${k!.pertes_pct_ca}% du CA` : undefined} />
             <KpiCard label="Panier moyen" value={`${k!.panier_moyen.toLocaleString('fr-FR', { maximumFractionDigits: 2 })} DT`} sub={`${k!.nb_ventes} vente${k!.nb_ventes > 1 ? 's' : ''}`} />
           </div>
 
