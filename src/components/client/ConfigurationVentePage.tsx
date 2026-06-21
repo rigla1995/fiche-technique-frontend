@@ -125,7 +125,7 @@ const ExcelIcon = () => (
 // ── Module-level sub-components ───────────────────────────────────────────────
 
 function PrixInput({ avId, savedPrix }: { avId: string; savedPrix: number }) {
-  const { editingPrixVente, setEditingPrixVente, setEditingPrixPrest, activePrests } = useContext(CVCtx);
+  const { editingPrixVente, setEditingPrixVente } = useContext(CVCtx);
   const isDirty = avId in editingPrixVente;
   const val = isDirty ? editingPrixVente[avId] : String(savedPrix);
 
