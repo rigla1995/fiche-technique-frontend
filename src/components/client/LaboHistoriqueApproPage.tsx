@@ -32,6 +32,7 @@ interface HistEntry {
   fournisseurId: number | null;
   fournisseurNom: string | null;
   createdBy?: number | null;
+  createdByNom?: string | null;
 }
 
 interface LaboFournisseur { id: number; nom: string; telephone: string | null }
@@ -495,6 +496,7 @@ export default function LaboHistoriqueApproPage() {
                     <th key={label} style={{ textAlign: 'right', fontWeight: 800, fontSize: '0.75rem', letterSpacing: '0.04em', textTransform: 'uppercase', padding: '10px 10px', color: '#fff', background: 'transparent', borderBottom: 'none' }}>{label}</th>
                   ))}
                   <th style={{ fontWeight: 800, fontSize: '0.75rem', letterSpacing: '0.04em', textTransform: 'uppercase', padding: '10px 10px', color: '#fff', background: 'transparent', borderBottom: 'none' }}>Fourn. / Réf</th>
+                  <th style={{ fontWeight: 800, fontSize: '0.75rem', letterSpacing: '0.04em', textTransform: 'uppercase', padding: '10px 10px', color: '#fff', background: 'transparent', borderBottom: 'none' }}>Créé par</th>
                   <th style={{ padding: '10px 6px', color: '#fff', background: 'transparent', borderBottom: 'none' }}></th>
                 </tr>
               </thead>
@@ -547,6 +549,9 @@ export default function LaboHistoriqueApproPage() {
                     <td style={{ fontSize: '0.76rem', padding: '8px 10px' }}>
                       <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.fournisseurNom ?? '—'}</div>
                       <div style={{ color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.refFacture ?? '—'}</div>
+                    </td>
+                    <td style={{ fontSize: '0.73rem', color: r.createdByNom ? '#7c3aed' : 'var(--text-muted)', fontWeight: r.createdByNom ? 600 : 400, whiteSpace: 'nowrap', padding: '8px 10px' }}>
+                      {r.createdByNom ? `👤 ${r.createdByNom}` : '—'}
                     </td>
                     <td style={{ whiteSpace: 'nowrap', textAlign: 'right', padding: '8px 6px' }}>
                       {(!isGerant || r.createdBy === user?.id) && (<>

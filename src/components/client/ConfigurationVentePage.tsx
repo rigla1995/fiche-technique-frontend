@@ -80,6 +80,7 @@ interface HistConfigEntry {
   article_type: 'produit' | 'ingredient';
   produit_nom: string | null;
   is_supplement: boolean;
+  created_by_nom?: string | null;
 }
 
 const PAGE_SIZE = 10;
@@ -453,6 +454,7 @@ function HistoriqueTab() {
                     <th style={{ padding: '11px 16px', textAlign: 'center', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Type</th>
                     <th style={{ padding: '11px 16px', textAlign: 'center', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Prix enregistré</th>
                     <th style={{ padding: '11px 16px', textAlign: 'center', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Date</th>
+                    <th style={{ padding: '11px 16px', textAlign: 'center', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>Créé par</th>
                     <th style={{ padding: '11px 16px', textAlign: 'center', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em' }}></th>
                   </tr>
                 </thead>
@@ -484,6 +486,9 @@ function HistoriqueTab() {
                         </td>
                         <td style={{ padding: '10px 16px', textAlign: 'center', fontSize: '0.8rem', color: isSel ? 'rgba(255,255,255,0.85)' : 'var(--text-muted)' }}>
                           {fmtDate(e.saved_at)}
+                        </td>
+                        <td style={{ padding: '10px 16px', textAlign: 'center', fontSize: '0.8rem', color: isSel ? 'rgba(255,255,255,0.85)' : 'var(--text-muted)' }}>
+                          {e.created_by_nom || '—'}
                         </td>
                         <td style={{ padding: '8px 16px', textAlign: 'center' }} onClick={ev => ev.stopPropagation()}>
                           <button onClick={() => handleDeleteHistEntry(e.id)}

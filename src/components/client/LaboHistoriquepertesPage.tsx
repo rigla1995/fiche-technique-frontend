@@ -27,6 +27,7 @@ interface LaboPerteEntry {
   typePerte: 'avarie' | 'dechet';
   datePerte: string;
   createdAt: string;
+  createdByNom?: string | null;
 }
 
 interface LaboIngredient { id: number; nom: string; unite: string; categorie: string; categorieId: number | null }
@@ -282,7 +283,7 @@ export default function LaboHistoriquepertesPage() {
               <thead>
                 <tr style={{ background: 'linear-gradient(135deg, #3b0764, #7e22ce)' }}>
                   <th style={{ width: 40, textAlign: 'center', padding: '12px 14px', color: '#fff', background: 'transparent', borderBottom: 'none' }} />
-                  {['Article', 'Date', 'Type', 'Quantité', ...(hasCout ? ['Coût'] : [])].map((h) => (
+                  {['Article', 'Date', 'Type', 'Quantité', ...(hasCout ? ['Coût'] : []), 'Créé par'].map((h) => (
                     <th key={h} style={{ fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px', color: '#fff', background: 'transparent', borderBottom: 'none' }}>{h}</th>
                   ))}
                 </tr>
@@ -313,6 +314,9 @@ export default function LaboHistoriquepertesPage() {
                         {e.prixUnitaire != null ? `${(e.quantite * e.prixUnitaire).toFixed(3)} DT` : '—'}
                       </td>
                     )}
+                    <td style={{ padding: '10px 14px', fontSize: '0.78rem', color: e.createdByNom ? '#7c3aed' : 'var(--text-muted)', fontWeight: e.createdByNom ? 600 : 400, whiteSpace: 'nowrap' }}>
+                      {e.createdByNom ? `👤 ${e.createdByNom}` : '—'}
+                    </td>
                   </tr>
                   );
                 })}

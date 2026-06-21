@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useContext, createContext } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import api from '../../api/client';
+import { useAuth } from '../../context/AuthContext';
 import type { Activite } from '../../types';
 
 const apiMsg = (e: unknown, fallback = 'Erreur serveur') =>
@@ -88,6 +89,8 @@ interface Vente {
   type_vente: 'directe' | 'prestataire';
   statut: string;
   prestataire_nom?: string | null;
+  created_by?: number | null;
+  created_by_nom?: string | null;
   total_ca: number;
   total_marge: number;
   total_quantite: number;
@@ -332,6 +335,7 @@ function SaisieTable({ subset, page, setPage, label, emptyIcon = '🛍️', empt
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function VentesPage() {
+  const { user } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const [activites, setActivites] = useState<Activite[]>([]);
   const [selectedActiviteId, setSelectedActiviteId] = useState<number | null>(null);
@@ -714,6 +718,7 @@ export default function VentesPage() {
                           <th style={{ padding: '11px 16px', textAlign: 'center', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Type vente</th>
                           <th style={{ padding: '11px 16px', textAlign: 'center', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Quantité</th>
                           <th style={{ padding: '11px 16px', textAlign: 'right', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em' }}>CA</th>
+                          <th style={{ padding: '11px 16px', textAlign: 'center', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>Créé par</th>
                           <th style={{ padding: '11px 16px', width: 80 }}></th>
                         </tr>
                       </thead>
@@ -763,11 +768,16 @@ export default function VentesPage() {
                                   </div>
                                 )}
                               </td>
+                              <td style={{ padding: '10px 16px', textAlign: 'center', fontSize: '0.8rem', color: isSel ? '#fff' : 'var(--text-muted)' }}>
+                                {v.created_by_nom || '—'}
+                              </td>
                               <td style={{ padding: '8px 16px', textAlign: 'center' }} onClick={e => e.stopPropagation()}>
-                                <button onClick={() => handleAnnuler(v.id)}
-                                  style={{ border: `1.5px solid ${isSel ? '#fff' : '#dc2626'}`, color: isSel ? '#fff' : '#dc2626', background: 'none', borderRadius: 7, padding: '4px 10px', cursor: 'pointer', fontSize: '0.78rem', fontWeight: 600 }}>
-                                  Annuler
-                                </button>
+                                {(user?.role !== 'gerant' || v.created_by === user?.id) && (
+                                  <button onClick={() => handleAnnuler(v.id)}
+                                    style={{ border: `1.5px solid ${isSel ? '#fff' : '#dc2626'}`, color: isSel ? '#fff' : '#dc2626', background: 'none', borderRadius: 7, padding: '4px 10px', cursor: 'pointer', fontSize: '0.78rem', fontWeight: 600 }}>
+                                    Annuler
+                                  </button>
+                                )}
                               </td>
                             </tr>
                           );
