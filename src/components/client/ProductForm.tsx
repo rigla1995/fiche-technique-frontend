@@ -572,7 +572,7 @@ export default function ProductForm() {
             <button type="button" className="btn btn-ghost" onClick={() => navigate(buildBackUrl(productType))}>
               {t('common.cancel')}
             </button>
-            <button type="submit" className="btn btn-primary" disabled={saving || !canSubmit || !canWrite}
+            <button type="submit" className="btn btn-primary" disabled={saving || !canSubmit || !canWrite || user?.role === 'gerant'}
               style={{ paddingLeft: 28, paddingRight: 28 }}
             >
               {saving ? t('common.loading') : t('common.save')}

@@ -107,13 +107,8 @@ export default function ProductList() {
   const [editOriginalAffectationIds, setEditOriginalAffectationIds] = useState<number[]>([]);
   const [vendableSubTab, setVendableSubTab] = useState<'produit' | 'supplement'>('produit');
 
-  // Load activities (still needed for wizard affectation step + edit modal context)
+  // Load activities (filtré au périmètre du gérant côté backend pour les gérants)
   useEffect(() => {
-    if (user?.role === 'gerant' && user.gerantActiviteType === 'activite' && user.gerantActiviteId) {
-      const act = { id: user.gerantActiviteId, nom: user.gerantActiviteNom ?? 'Activité', entrepriseId: 0 } as Activite;
-      setAllActivities([act]);
-      return;
-    }
     api.get('/api/entreprise/activites')
       .then(({ data }) => {
         const all = data as Activite[];
@@ -121,7 +116,7 @@ export default function ProductList() {
         setAllActivities(scoped);
       });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.role, user?.gerantActiviteId, laboId]);
+  }, [user?.role, laboId]);
 
   // Load product categories (for vendable/supplément mandatory selection)
   useEffect(() => {
