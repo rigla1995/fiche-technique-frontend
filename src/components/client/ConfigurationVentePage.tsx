@@ -205,13 +205,15 @@ function ProduitTableRow({ row, idx, showPortion, isValorise }: { row: ProduitRo
         </td>
       )}
       <td style={{ padding: '8px 16px', textAlign: 'center' }}>
-        {isActive && row.vendable
-          ? <PrixInput avId={row.vendable.id} savedPrix={row.vendable.prix_vente} />
-          : <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>—</span>}
+        {isValorise && isActive && row.vendable && !currentCat
+          ? <span style={{ fontSize: '0.72rem', color: '#dc2626', fontWeight: 600, whiteSpace: 'nowrap' }}>🏷️ Catégorie requise</span>
+          : isActive && row.vendable
+            ? <PrixInput avId={row.vendable.id} savedPrix={row.vendable.prix_vente} />
+            : <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>—</span>}
       </td>
       {activePrests.map(ap => (
         <td key={ap.id} style={{ padding: '8px 16px', textAlign: 'center' }}>
-          {isActive && row.vendable && hasPrix
+          {isActive && row.vendable && hasPrix && !(isValorise && !currentCat)
             ? <PrestInput avId={row.vendable.id} ap={ap} />
             : <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>—</span>}
         </td>

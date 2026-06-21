@@ -36,6 +36,7 @@ interface ArticleValoriseRaw {
   id: number;
   nom: string;
   unite_nom: string;
+  categorie_produit_nom?: string | null;
   vendable: {
     id: string;
     article_type: 'ingredient';
@@ -56,6 +57,7 @@ interface ArticleVendable {
   unite_nom?: string | null;
   is_supplement?: boolean;
   is_valorise?: boolean;
+  categorie_nom?: string | null;
 }
 
 interface ActivitePrestataire {
@@ -219,7 +221,14 @@ function SaisieTable({ subset, page, setPage, label, emptyIcon = '🛍️', empt
   const { activePrests, prixPrestataires, allArticles, qtes, dateVente, setDateVente, saving, saveError, saveSuccess, handleSubmit } = useContext(VPCtx);
   const [filterNom, setFilterNom] = useState('');
 
-  const filtered = filterNom ? subset.filter(av => av.nom.toLowerCase().includes(filterNom.toLowerCase())) : subset;
+  const filteredRaw = filterNom ? subset.filter(av => av.nom.toLowerCase().includes(filterNom.toLowerCase())) : subset;
+  // Trier par catégorie (puis nom) pour un affichage groupé par catégorie.
+  const filtered = [...filteredRaw].sort((a, b) => {
+    const ca = a.categorie_nom ?? '￿';
+    const cb = b.categorie_nom ?? '￿';
+    if (ca !== cb) return ca.localeCompare(cb, 'fr');
+    return a.nom.localeCompare(b.nom, 'fr');
+  });
   const slice = filtered.slice(page * PAGE, page * PAGE + PAGE);
 
   const caTotal = subset.reduce((acc, av) => {
@@ -293,7 +302,25 @@ function SaisieTable({ subset, page, setPage, label, emptyIcon = '🛍️', empt
                 </td>
               </tr>
             ) : (
-              slice.map(av => <ArticleRow key={av.id} av={av} />)
+              (() => {
+                let prevCat: string | null | undefined = '__init__';
+                const out: React.ReactNode[] = [];
+                slice.forEach(av => {
+                  const cat = av.categorie_nom ?? null;
+                  if (cat !== prevCat) {
+                    prevCat = cat;
+                    out.push(
+                      <tr key={`cat-${cat ?? 'none'}`} style={{ background: `${CD}0d` }}>
+                        <td colSpan={3 + activePrests.length} style={{ padding: '7px 16px', fontWeight: 800, fontSize: '0.74rem', color: CD, textTransform: 'uppercase' as const, letterSpacing: '0.06em' }}>
+                          🏷️ {cat ?? 'Sans catégorie'}
+                        </td>
+                      </tr>
+                    );
+                  }
+                  out.push(<ArticleRow key={av.id} av={av} />);
+                });
+                return out;
+              })()
             )}
           </tbody>
         </table>
@@ -384,6 +411,7 @@ export default function VentesPage() {
           unite_nom: vv.unite_nom,
           is_supplement: false,
           is_valorise: true,
+          categorie_nom: vv.categorie_produit_nom ?? null,
         }))
       );
       setQtes({});
