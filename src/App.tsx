@@ -7,6 +7,7 @@ import InvitePage from './components/auth/InvitePage';
 import ClientsManagement from './components/admin/ClientsManagement';
 import ProductList from './components/client/ProductList';
 import ClientDashboard from './components/client/ClientDashboard';
+import RapportLaboPage from './components/client/RapportLaboPage';
 import ProductForm from './components/client/ProductForm';
 import ProductCategoriesPage from './components/client/ProductCategoriesPage';
 import ValorisesPage from './components/client/ValorisesPage';
@@ -152,6 +153,7 @@ export default function App() {
             <Route path="/client/gerants" element={<GerantsPage />} />
             <Route path="/client/upgrade-wizard" element={<UpgradeWizard />} />
             <Route path="/client/rapports" element={<RapportsPage />} />
+            <Route path="/client/rapports/labo" element={<RapportLaboPage />} />
             <Route path="/client/support" element={<SupportPage />} />
             <Route path="/client/guide" element={<GuidePage />} />
             <Route path="/client/gerant-dashboard" element={<DashboardGerantPage />} />
