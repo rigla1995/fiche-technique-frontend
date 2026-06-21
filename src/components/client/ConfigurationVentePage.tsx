@@ -535,7 +535,7 @@ export default function ConfigurationVentePage() {
   const [categoriesProduit, setCategoriesProduit] = useState<CategorieProduit[]>([]);
 
   useEffect(() => {
-    api.get('/api/categories-produit').then(({ data }) => setCategoriesProduit(data as CategorieProduit[])).catch(() => {});
+    api.get('/api/categories-produit?type=valorise').then(({ data }) => setCategoriesProduit(data as CategorieProduit[])).catch(() => {});
   }, []);
 
   useEffect(() => {

@@ -243,9 +243,12 @@ export interface Product {
   categorieProduitName?: string | null;
 }
 
+export type TypeProduitCategorie = 'vendable' | 'supplement' | 'valorise';
+
 export interface CategorieProduit {
   id: number;
   name: string;
+  typeProduit?: TypeProduitCategorie;
   clientId?: number | null;
   produitsCount?: number;
 }
