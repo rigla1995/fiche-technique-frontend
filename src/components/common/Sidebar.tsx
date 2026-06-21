@@ -301,6 +301,17 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
             </>
           ) : (
             <>
+              {/* Tableau de bord */}
+              <li>
+                {isOnboarding || lockLevel0 ? (
+                  <LockedLink label="Tableau de bord" />
+                ) : (
+                  <NavLink to="/client/dashboard" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>
+                    <span className="link-icon">📊</span>
+                    <span className="link-label">Tableau de bord</span>
+                  </NavLink>
+                )}
+              </li>
               {/* Rapports */}
               <li>
                 {isOnboarding || lockLevel0 ? (
@@ -311,7 +322,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                     className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
                     onClick={onClose}
                   >
-                    <span className="link-icon">📊</span>
+                    <span className="link-icon">📈</span>
                     <span className="link-label">{t('nav.rapports', 'Rapports')}</span>
                   </NavLink>
                 )}

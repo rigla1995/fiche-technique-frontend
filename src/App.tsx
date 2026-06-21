@@ -6,6 +6,7 @@ import LoginPage from './components/auth/LoginPage';
 import InvitePage from './components/auth/InvitePage';
 import ClientsManagement from './components/admin/ClientsManagement';
 import ProductList from './components/client/ProductList';
+import ClientDashboard from './components/client/ClientDashboard';
 import ProductForm from './components/client/ProductForm';
 import ProductCategoriesPage from './components/client/ProductCategoriesPage';
 import ValorisesPage from './components/client/ValorisesPage';
@@ -65,7 +66,7 @@ function ClientDefaultRedirect() {
   const { user } = useAuth();
   if (user?.role === 'gerant') return <Navigate to="/client/gerant-dashboard" replace />;
   if ((user?.activitesCount ?? 0) === 0) return <Navigate to="/client/activites" replace />;
-  return <Navigate to="/client/rapports" replace />;
+  return <Navigate to="/client/dashboard" replace />;
 }
 
 function RootRedirect() {
@@ -116,6 +117,7 @@ export default function App() {
           {/* Client + Gérant routes */}
           <Route element={<Layout requireRole="client" />}>
             <Route path="/client" element={<ClientDefaultRedirect />} />
+            <Route path="/client/dashboard" element={<ClientDashboard />} />
             <Route path="/client/products" element={<ProductList />} />
             <Route path="/client/products/categories" element={<ProductCategoriesPage />} />
             <Route path="/client/products/valorises" element={<ValorisesPage />} />
