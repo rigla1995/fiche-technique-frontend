@@ -310,7 +310,8 @@ export default function ProductList() {
     const key = `${p.id}-${activiteId}`;
     setTogglingActivite(key);
     try {
-      await api.post(`/api/produits/${p.id}/toggle-stock-ingredient`, { activiteId });
+      const endpoint = p.type === 'vendable' ? 'toggle-affectation' : 'toggle-stock-ingredient';
+      await api.post(`/api/produits/${p.id}/${endpoint}`, { activiteId });
       const currentlyAssigned = p.activites?.some((a) => a.id === activiteId) ?? false;
       setProducts((prev) => prev.map((prod) => {
         if (prod.id !== p.id) return prod;
@@ -622,9 +623,6 @@ export default function ProductList() {
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap' }}>
                             <span style={{ fontWeight: 700, fontSize: '0.92rem', color: '#0f172a', lineHeight: 1.3 }}>{p.name}</span>
-                            {isSup && (
-                              <span style={{ fontSize: '0.62rem', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', background: '#fef3c7', color: '#92400e', border: '1px solid #fcd34d', borderRadius: 20, padding: '2px 8px', flexShrink: 0 }}>Supplément</span>
-                            )}
                             {isVendable && p.categorieProduitName && (
                               <span style={{ fontSize: '0.62rem', fontWeight: 700, letterSpacing: '0.04em', background: '#d1fae5', color: '#065f46', border: '1px solid #6ee7b7', borderRadius: 20, padding: '2px 8px', flexShrink: 0 }}>🏷️ {p.categorieProduitName}</span>
                             )}
@@ -693,8 +691,8 @@ export default function ProductList() {
                         {renderActions(p)}
                       </div>
 
-                      {/* Activité assignments (utilisable only) */}
-                      {!isVendable && allActivities.length > 0 && (
+                      {/* Activité assignments — assignables pour tous les types */}
+                      {allActivities.length > 0 && (
                         <div style={{ padding: '8px 14px 12px', borderTop: '1px solid #f1f5f9' }}>
                           <div style={{ fontSize: '0.6rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>Activités</div>
                           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
