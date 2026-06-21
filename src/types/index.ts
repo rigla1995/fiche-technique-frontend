@@ -239,6 +239,15 @@ export interface Product {
   isStockIngredient?: boolean;
   isSupplement?: boolean;
   refProduit?: string | null;
+  categorieProduitId?: number | null;
+  categorieProduitName?: string | null;
+}
+
+export interface CategorieProduit {
+  id: number;
+  name: string;
+  clientId?: number | null;
+  produitsCount?: number;
 }
 
 export interface Client {
