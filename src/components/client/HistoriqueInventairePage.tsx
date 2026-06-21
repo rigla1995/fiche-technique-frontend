@@ -41,8 +41,8 @@ export default function HistoriqueInventairePage() {
   const { clearByEventType } = useNotifications();
   const navigate = useNavigate();
   const isGerant = user?.role === 'gerant';
-  const isActiviteGerant = isGerant && user?.gerantActiviteType === 'activite' && !!user?.gerantActiviteId;
-  const isLaboGerant = isGerant && user?.gerantActiviteType === 'labo' && !!user?.gerantActiviteId;
+  // Multi-affectations : sélecteur d'activité affiché (périmètre filtré côté backend).
+  const isActiviteGerant = false;
   const [searchParams] = useSearchParams();
   const laboId = searchParams.get('laboId');
   const activiteId = searchParams.get('activiteId');
@@ -80,7 +80,7 @@ export default function HistoriqueInventairePage() {
   useEffect(() => {
     api.get('/api/labo').then(({ data }) => {
       const labs = data as { id: number; nom: string }[];
-      setAllLabos(isLaboGerant ? labs.filter((l) => l.id === user!.gerantActiviteId) : labs);
+      setAllLabos(labs);
     }).catch(() => {});
   }, []);
 
@@ -93,10 +93,8 @@ export default function HistoriqueInventairePage() {
     api.get('/api/entreprise/activites')
       .then(({ data }) => {
         const all = data as Activite[];
-        const isActiviteGerantLoad = user?.role === 'gerant' && user?.gerantActiviteType === 'activite' && !!user?.gerantActiviteId;
-        const filtered = isActiviteGerantLoad ? all.filter((a) => a.id === user!.gerantActiviteId) : all;
-        setActivites(filtered);
-        if (filtered.length >= 1) setSelectedActiviteId(filtered[0].id);
+        setActivites(all);
+        if (all.length >= 1) setSelectedActiviteId(all[0].id);
       })
       .catch(() => {});
   }, [section]); // eslint-disable-line react-hooks/exhaustive-deps

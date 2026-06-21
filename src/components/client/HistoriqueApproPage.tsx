@@ -217,7 +217,8 @@ export default function HistoriqueApproPage() {
   const laboId = searchParams.get('laboId') || '';
   const isGerant = user?.role === 'gerant';
   const isReadOnly = isGerant && !!laboId;
-  const isActiviteGerant = isGerant && !!initActiviteId && !laboId;
+  // Multi-affectations : le gérant peut choisir parmi ses activités (sélecteur affiché).
+  const isActiviteGerant = false;
 
   const [allActivities, setAllActivities] = useState<Activite[]>([]);
   const [_activitesLoading, setActivitesLoading] = useState(false);
@@ -300,9 +301,8 @@ export default function HistoriqueApproPage() {
     api.get('/api/entreprise/activites')
       .then(({ data }) => {
         const all = data as Activite[];
-        const isActiviteGerantLoad = isGerant && user?.gerantActiviteType === 'activite' && !!user?.gerantActiviteId;
-        let filtered = laboId ? all.filter((a) => String((a as any).laboId) === laboId) : all;
-        if (isActiviteGerantLoad) filtered = filtered.filter((a) => a.id === user!.gerantActiviteId);
+        // Backend filtre déjà au périmètre du gérant.
+        const filtered = laboId ? all.filter((a) => String((a as any).laboId) === laboId) : all;
         setAllActivities(filtered);
       })
       .finally(() => setActivitesLoading(false));

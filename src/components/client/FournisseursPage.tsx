@@ -24,12 +24,8 @@ const thStyle: React.CSSProperties = {
 };
 
 export default function FournisseursPage() {
-  const { canWrite, user } = useAuth();
+  const { canWrite } = useAuth();
   const isIndep = false;
-  const isGerant = user?.role === 'gerant';
-  const gerantActiviteType = user?.gerantActiviteType;
-  const gerantActiviteId = user?.gerantActiviteId;
-  const gerantActiviteNom = user?.gerantActiviteNom;
 
   const [fournisseurs, setFournisseurs] = useState<Fournisseur[]>([]);
   const [activites, setActivites] = useState<Activite[]>([]);
@@ -70,16 +66,9 @@ export default function FournisseursPage() {
   useEffect(() => { load(); }, [isIndep]);
 
   const openCreate = () => {
-    let defaultForm: FournisseurFormData;
-    if (isIndep) {
-      defaultForm = empty;
-    } else if (isGerant && gerantActiviteId) {
-      defaultForm = gerantActiviteType === 'labo'
-        ? { ...empty, laboIds: [gerantActiviteId] }
-        : { ...empty, activiteIds: [gerantActiviteId] };
-    } else {
-      defaultForm = { ...empty, activiteIds: activites.map((a) => a.id) };
-    }
+    const defaultForm: FournisseurFormData = isIndep
+      ? empty
+      : { ...empty, activiteIds: activites.map((a) => a.id) };
     setForm(defaultForm);
     setError('');
     setModal({ mode: 'create' });
@@ -102,17 +91,8 @@ export default function FournisseursPage() {
     setSaving(true);
     setError('');
     try {
-      let activiteIds = form.activiteIds;
-      let laboIds = form.laboIds;
-      if (isGerant && gerantActiviteId) {
-        if (gerantActiviteType === 'labo') {
-          laboIds = [gerantActiviteId];
-          activiteIds = [];
-        } else {
-          activiteIds = [gerantActiviteId];
-          laboIds = [];
-        }
-      }
+      const activiteIds = form.activiteIds;
+      const laboIds = form.laboIds;
       const payload = isIndep
         ? { nom: form.nom.trim(), adresse: form.adresse.trim() || null, telephone: form.telephone.trim() || null }
         : { nom: form.nom.trim(), adresse: form.adresse.trim() || null, telephone: form.telephone.trim() || null, activiteIds, laboIds };
@@ -444,11 +424,6 @@ export default function FournisseursPage() {
                 <input className="input" style={{ width: '100%' }} placeholder="Adresse (optionnel)" value={form.adresse} onChange={(e) => setForm((p) => ({ ...p, adresse: e.target.value }))} />
               </div>
               {!isIndep && (
-                isGerant ? (
-                  <div style={{ background: '#f0fdf4', border: '1.5px solid #86efac', borderRadius: 9, padding: '10px 14px', fontSize: '0.85rem', color: '#15803d', fontWeight: 600 }}>
-                    {gerantActiviteType === 'labo' ? '🏭' : '📍'} Assigné automatiquement à : <strong>{gerantActiviteNom}</strong>
-                  </div>
-                ) : (
                   <>
                     <div>
                       <label style={labelStyle}>Activités liées</label>
@@ -477,7 +452,6 @@ export default function FournisseursPage() {
                       </div>
                     )}
                   </>
-                )
               )}
               {error && <p style={{ color: 'var(--danger)', fontSize: '0.85rem' }}>{error}</p>}
             </div>

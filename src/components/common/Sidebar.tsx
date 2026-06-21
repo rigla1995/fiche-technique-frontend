@@ -443,13 +443,13 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                       {openSections.has('vente') && (
                         <>
                           <li><NavLink to="/client/ventes/prestataires" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}><span className="link-icon">🛵</span><span className="link-label">Config Prestataires</span></NavLink></li>
-                          <li><NavLink to="/client/ventes/charges" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}><span className="link-icon">🏗️</span><span className="link-label">Config Charges</span></NavLink></li>
+                          {user?.role === 'client' && <li><NavLink to="/client/ventes/charges" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}><span className="link-icon">🏗️</span><span className="link-label">Config Charges</span></NavLink></li>}
                           <li><NavLink to="/client/ventes/configuration" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}><span className="link-icon">💲</span><span className="link-label">Configuration Vente</span></NavLink></li>
                           <li><NavLink to="/client/ventes" end className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}><span className="link-icon">💰</span><span className="link-label">Ventes Activités</span></NavLink></li>
                           {labos.length > 0 && (
                             <li><Link to={`/client/labo/ventes?laboId=${labos[0].id}`} className={`sidebar-link ${location.pathname === '/client/labo/ventes' ? 'active' : ''}`} onClick={onClose}><span className="link-icon">🏭</span><span className="link-label">Ventes Labo</span></Link></li>
                           )}
-                          <li><NavLink to="/client/ventes/rapport" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📊</span><span className="link-label">Rapport Vente</span></NavLink></li>
+                          {user?.role === 'client' && <li><NavLink to="/client/ventes/rapport" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📊</span><span className="link-label">Rapport Vente</span></NavLink></li>}
                         </>
                       )}
                     </>
