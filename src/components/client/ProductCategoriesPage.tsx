@@ -2,8 +2,9 @@ import { useState, useEffect } from 'react';
 import api from '../../api/client';
 import type { CategorieProduit } from '../../types';
 
-const COLOR = '#ea580c';
-const GRADIENT = 'linear-gradient(135deg, #7c2d12 0%, #ea580c 55%, #fb923c 100%)';
+const COLOR = '#059669';
+const HERO = 'linear-gradient(135deg, #0a1628 0%, #0f2847 55%, #0d3b2e 100%)';
+const BTN = 'linear-gradient(135deg, #059669, #10b981)';
 
 const apiMsg = (e: unknown, fallback = 'Erreur') =>
   (e as { response?: { data?: { message?: string } } })?.response?.data?.message ?? fallback;
@@ -77,20 +78,22 @@ export default function ProductCategoriesPage() {
 
   return (
     <div className="page">
-      {/* Hero */}
-      <div style={{ background: GRADIENT, borderRadius: 18, padding: '24px 28px', marginBottom: 24, boxShadow: '0 8px 32px rgba(234,88,12,0.28)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
-            <div style={{ background: 'rgba(255,255,255,0.15)', borderRadius: 10, padding: '7px 9px', fontSize: '1.2rem' }}>🏷️</div>
-            <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0 }}>Catégories de produit</h1>
+      {/* Hero — même thème que l'Espace Produit */}
+      <div style={{ background: HERO, borderRadius: 18, padding: '24px 28px', marginBottom: 24, boxShadow: '0 8px 32px rgba(10,22,40,0.35)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+              <div style={{ background: 'rgba(16,185,129,0.18)', border: '1px solid rgba(16,185,129,0.3)', borderRadius: 10, padding: '7px 9px', fontSize: '1.2rem', lineHeight: 1 }}>🏷️</div>
+              <h1 style={{ fontSize: '1.45rem', fontWeight: 800, color: '#fff', margin: 0, letterSpacing: '-0.01em' }}>Catégories de produit</h1>
+            </div>
+            <p style={{ color: 'rgba(255,255,255,0.55)', fontSize: '0.83rem', margin: 0, letterSpacing: '0.01em' }}>
+              Classez vos produits vendables, suppléments et articles valorisés par catégorie
+            </p>
           </div>
-          <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.85rem', margin: 0 }}>
-            Classez vos produits vendables, suppléments et articles valorisés par catégorie
-          </p>
-        </div>
-        <div style={{ background: 'rgba(255,255,255,0.15)', border: '1.5px solid rgba(255,255,255,0.3)', borderRadius: 14, padding: '10px 20px', textAlign: 'center', minWidth: 80 }}>
-          <div style={{ fontSize: '1.8rem', fontWeight: 900, color: '#fff', lineHeight: 1 }}>{categories.length}</div>
-          <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.75)', marginTop: 2 }}>catégorie{categories.length !== 1 ? 's' : ''}</div>
+          <div style={{ background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.22)', borderRadius: 14, padding: '10px 20px', textAlign: 'center', minWidth: 80 }}>
+            <div style={{ fontSize: '1.8rem', fontWeight: 900, color: '#10b981', lineHeight: 1 }}>{categories.length}</div>
+            <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.5)', marginTop: 2 }}>catégorie{categories.length !== 1 ? 's' : ''}</div>
+          </div>
         </div>
       </div>
 
@@ -98,20 +101,20 @@ export default function ProductCategoriesPage() {
       <div style={{ background: 'var(--surface)', borderRadius: 14, padding: '14px 18px', marginBottom: 20, border: '1px solid var(--border)', boxShadow: '0 2px 8px rgba(0,0,0,0.04)', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 180 }}>
           <span style={{ fontSize: '1.1rem', flexShrink: 0 }}>🔍</span>
-          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Filtrer les catégories…" style={{ flex: 1, padding: '8px 11px', borderRadius: 8, border: '1.5px solid var(--border)', fontSize: '0.88rem', background: '#f8fafc', boxSizing: 'border-box' }} />
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Filtrer les catégories…" style={{ flex: 1, padding: '9px 13px', borderRadius: 9, border: '1.5px solid #6ee7b7', fontSize: '0.88rem', background: '#f0fdf4', boxSizing: 'border-box' }} />
         </div>
-        <button className="btn" onClick={openCreate} style={{ background: 'linear-gradient(135deg,#c2410c,#ea580c)', color: '#fff', flexShrink: 0 }}>+ Nouvelle catégorie</button>
+        <button className="btn" onClick={openCreate} style={{ background: BTN, color: '#fff', flexShrink: 0, boxShadow: '0 2px 8px rgba(16,185,129,0.25)' }}>+ Nouvelle catégorie</button>
       </div>
 
       {/* List */}
       {loading ? (
         <div className="loading-text">Chargement…</div>
       ) : categories.length === 0 ? (
-        <div style={{ background: 'linear-gradient(135deg,#fff7ed,#ffedd5)', border: '2px dashed #fdba74', borderRadius: 18, padding: '48px 32px', textAlign: 'center' }}>
+        <div style={{ background: 'linear-gradient(135deg,#f0fdf4,#dcfce7)', border: '2px dashed #86efac', borderRadius: 18, padding: '48px 32px', textAlign: 'center' }}>
           <div style={{ fontSize: '2.8rem', marginBottom: 14 }}>🏷️</div>
-          <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#7c2d12', margin: '0 0 8px' }}>Aucune catégorie de produit</h3>
-          <p style={{ color: '#9a3412', fontSize: '0.88rem', margin: '0 0 20px', maxWidth: 440, marginInline: 'auto' }}>Les catégories servent à classer vos produits vendables et suppléments (obligatoire à la création) ainsi que vos articles valorisés.</p>
-          <button onClick={openCreate} style={{ background: 'linear-gradient(135deg,#c2410c,#ea580c)', color: '#fff', border: 'none', borderRadius: 10, padding: '11px 28px', fontWeight: 700, fontSize: '0.92rem', cursor: 'pointer' }}>+ Créer la première catégorie</button>
+          <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#14532d', margin: '0 0 8px' }}>Aucune catégorie de produit</h3>
+          <p style={{ color: '#166534', fontSize: '0.88rem', margin: '0 0 20px', maxWidth: 440, marginInline: 'auto' }}>Les catégories servent à classer vos produits vendables et suppléments (obligatoire à la création) ainsi que vos articles valorisés.</p>
+          <button onClick={openCreate} style={{ background: BTN, color: '#fff', border: 'none', borderRadius: 10, padding: '11px 28px', fontWeight: 700, fontSize: '0.92rem', cursor: 'pointer' }}>+ Créer la première catégorie</button>
         </div>
       ) : filtered.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-muted)' }}>Aucun résultat pour cette recherche.</div>
@@ -145,7 +148,7 @@ export default function ProductCategoriesPage() {
       {showCreate && (
         <div className="modal-overlay">
           <div className="modal" style={{ maxWidth: 520 }} onClick={e => e.stopPropagation()}>
-            <div className="modal-header" style={{ background: GRADIENT }}>
+            <div className="modal-header" style={{ background: BTN }}>
               <h2 style={{ color: '#fff', margin: 0 }}>Nouvelles catégories</h2>
               <button className="modal-close" onClick={closeCreate}>×</button>
             </div>
@@ -164,10 +167,10 @@ export default function ProductCategoriesPage() {
                   <button onClick={() => removeRow(i)} disabled={rows.length === 1} style={{ width: 32, height: 32, border: 'none', borderRadius: 6, background: rows.length === 1 ? '#f1f5f9' : '#fee2e2', color: rows.length === 1 ? '#94a3b8' : '#dc2626', cursor: rows.length === 1 ? 'not-allowed' : 'pointer', fontWeight: 700, flexShrink: 0 }}>×</button>
                 </div>
               ))}
-              <button onClick={addRow} style={{ background: 'none', border: '1.5px dashed #fdba74', borderRadius: 8, padding: '7px 16px', color: COLOR, fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer', width: '100%', marginTop: 4 }}>+ Ajouter une ligne</button>
+              <button onClick={addRow} style={{ background: 'none', border: '1.5px dashed #86efac', borderRadius: 8, padding: '7px 16px', color: COLOR, fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer', width: '100%', marginTop: 4 }}>+ Ajouter une ligne</button>
               <div className="modal-footer" style={{ marginTop: 16 }}>
                 <button className="btn btn-ghost" onClick={closeCreate}>Annuler</button>
-                <button className="btn" disabled={creating} onClick={handleCreate} style={{ background: 'linear-gradient(135deg,#c2410c,#ea580c)', color: '#fff' }}>
+                <button className="btn" disabled={creating} onClick={handleCreate} style={{ background: BTN, color: '#fff' }}>
                   {creating ? 'Enregistrement…' : `Enregistrer ${rows.filter(r => r.nom.trim()).length > 1 ? `(${rows.filter(r => r.nom.trim()).length})` : ''}`}
                 </button>
               </div>
@@ -180,7 +183,7 @@ export default function ProductCategoriesPage() {
       {editItem && (
         <div className="modal-overlay">
           <div className="modal modal-sm" onClick={e => e.stopPropagation()}>
-            <div className="modal-header" style={{ background: GRADIENT }}>
+            <div className="modal-header" style={{ background: BTN }}>
               <h2 style={{ color: '#fff', margin: 0 }}>Modifier la catégorie</h2>
               <button className="modal-close" onClick={closeEdit}>×</button>
             </div>
@@ -192,7 +195,7 @@ export default function ProductCategoriesPage() {
               </div>
               <div className="modal-footer">
                 <button className="btn btn-ghost" onClick={closeEdit}>Annuler</button>
-                <button className="btn" disabled={saving || !editNom.trim()} onClick={handleSave} style={{ background: 'linear-gradient(135deg,#c2410c,#ea580c)', color: '#fff' }}>
+                <button className="btn" disabled={saving || !editNom.trim()} onClick={handleSave} style={{ background: BTN, color: '#fff' }}>
                   {saving ? 'Enregistrement…' : 'Enregistrer'}
                 </button>
               </div>
