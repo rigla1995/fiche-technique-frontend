@@ -238,7 +238,7 @@ export default function SupportPage() {
 
           {!formType ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {Object.entries(TYPE_LABELS).filter(([key]) => !(isGerant && key === 'supplement')).map(([key, { label, icon, desc }]) => (
+              {Object.entries(TYPE_LABELS).filter(([key]) => key !== 'ingredient_manquant' && !(isGerant && key === 'supplement')).map(([key, { label, icon, desc }]) => (
                 <button key={key} onClick={() => setFormType(key as SupportDemande['type'])}
                   style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 18px', borderRadius: 12, border: '1.5px solid #e2e8f0', background: '#fff', cursor: 'pointer', textAlign: 'left' }}
                   onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#6366f1'; e.currentTarget.style.background = '#f5f3ff'; }}

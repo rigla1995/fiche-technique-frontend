@@ -410,6 +410,13 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                     </div>
                   </div>
                 )}
+                {(atActiviteLimit || atLaboLimit) && (
+                  <button onClick={() => navigate('/client/support?type=supplement')}
+                    title="Demander l'ajout d'activités ou de labos"
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: '#fff', color: '#b45309', border: 'none', borderRadius: 12, padding: '11px 18px', fontWeight: 800, fontSize: '0.85rem', cursor: 'pointer', boxShadow: '0 2px 10px rgba(0,0,0,0.12)' }}>
+                    ⚡ Ajouter des capacités
+                  </button>
+                )}
               </>
             )}
           </div>
