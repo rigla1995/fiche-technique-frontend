@@ -8,6 +8,7 @@ import ClientsManagement from './components/admin/ClientsManagement';
 import ProductList from './components/client/ProductList';
 import ProductForm from './components/client/ProductForm';
 import ProductCategoriesPage from './components/client/ProductCategoriesPage';
+import ValorisesPage from './components/client/ValorisesPage';
 import ReferentielUnitesPage from './components/client/ReferentielUnitesPage';
 import ReferentielFamillesPage from './components/client/ReferentielFamillesPage';
 import ReferentielCategoriesPage from './components/client/ReferentielCategoriesPage';
@@ -117,6 +118,7 @@ export default function App() {
             <Route path="/client" element={<ClientDefaultRedirect />} />
             <Route path="/client/products" element={<ProductList />} />
             <Route path="/client/products/categories" element={<ProductCategoriesPage />} />
+            <Route path="/client/products/valorises" element={<ValorisesPage />} />
             <Route path="/client/products/new" element={<ProductForm />} />
             <Route path="/client/products/:id/edit" element={<ProductForm />} />
             <Route path="/client/catalogue-global" element={<GlobalCataloguePage />} />

@@ -207,9 +207,10 @@ function GerantSidebarContent({
         <CollapsibleHeader label="Produits" icon="🍔" isOpen={openSections.has('gerant-produits')} locked={false} onToggle={() => toggleSection('gerant-produits')} />
         {openSections.has('gerant-produits') && (
           <>
+            <SubNavLink to="/client/products/categories" icon="🏷️" label="Catégories Produits" isActive={location.pathname === '/client/products/categories'} onClick={onClose} />
             <SubNavLink to="/client/products?tab=vendable" icon="🍔" label="Produits Vendables" isActive={isProductsPage && currentProductTab === 'vendable'} onClick={onClose} />
             <SubNavLink to="/client/products?tab=utilisable" icon="🧪" label="Produits Utilisables" isActive={isProductsPage && currentProductTab === 'utilisable'} onClick={onClose} />
-            <SubNavLink to="/client/products/categories" icon="🏷️" label="Configuration Catégorie" isActive={location.pathname === '/client/products/categories'} onClick={onClose} />
+            <SubNavLink to="/client/products/valorises" icon="💎" label="Articles Valorisés" isActive={location.pathname === '/client/products/valorises'} onClick={onClose} />
           </>
         )}
         {moduleVenteActif && (
@@ -626,6 +627,11 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                   {openSections.has('produits') && (
                     <>
                       <li>
+                        <Link to="/client/products/categories" className={`sidebar-link ${location.pathname === '/client/products/categories' ? 'active' : ''}`} onClick={onClose}>
+                          <span className="link-icon">🏷️</span><span className="link-label">Catégories Produits</span>
+                        </Link>
+                      </li>
+                      <li>
                         <Link to="/client/products?tab=vendable" className={`sidebar-link ${isProductsPage && currentProductTab === 'vendable' ? 'active' : ''}`} onClick={onClose}>
                           <span className="link-icon">🍔</span><span className="link-label">Produits Vendables</span>
                         </Link>
@@ -636,8 +642,8 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                         </Link>
                       </li>
                       <li>
-                        <Link to="/client/products/categories" className={`sidebar-link ${location.pathname === '/client/products/categories' ? 'active' : ''}`} onClick={onClose}>
-                          <span className="link-icon">🏷️</span><span className="link-label">Configuration Catégorie</span>
+                        <Link to="/client/products/valorises" className={`sidebar-link ${location.pathname === '/client/products/valorises' ? 'active' : ''}`} onClick={onClose}>
+                          <span className="link-icon">💎</span><span className="link-label">Articles Valorisés</span>
                         </Link>
                       </li>
                     </>
