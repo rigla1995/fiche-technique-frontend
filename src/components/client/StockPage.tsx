@@ -1417,11 +1417,8 @@ function ActivityStockSection({ label: _label, activities, initialActiviteId, on
 
 export default function StockPage() {
   const { t } = useTranslation();
-  const { user } = useAuth();
   const [searchParams] = useSearchParams();
   const urlActiviteId = searchParams.get('activiteId') ? Number(searchParams.get('activiteId')) : undefined;
-
-  const isActiviteGerant = user?.role === 'gerant' && user?.gerantActiviteType === 'activite' && !!user?.gerantActiviteId;
 
   const [typesSummary, setTypesSummary] = useState<ActiviteTypesSummary | null>(null);
   const [allActivities, setAllActivities] = useState<Activite[]>([]);
@@ -1437,11 +1434,9 @@ export default function StockPage() {
       api.get('/api/entreprise/activites'),
     ]).then(([summaryRes, activitesRes]) => {
       setTypesSummary(summaryRes.data as ActiviteTypesSummary);
+      // Le backend filtre déjà au périmètre du gérant (toutes ses activités assignées).
       const acts = activitesRes.data as Activite[];
-      const filtered = isActiviteGerant
-        ? acts.filter((a) => a.id === user!.gerantActiviteId)
-        : acts;
-      setAllActivities(filtered);
+      setAllActivities(acts);
       const initId = searchParams.get('activiteId') ? Number(searchParams.get('activiteId')) : undefined;
       const initAct = initId ? acts.find((a) => a.id === initId) : acts[0];
       if (initAct) setSelectedActiviteNom(initAct.nom);

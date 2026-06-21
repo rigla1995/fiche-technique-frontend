@@ -160,7 +160,8 @@ export default function HistoriquepertesPage() {
   const type = searchParams.get('type');
   const urlActiviteId = searchParams.get('activiteId') || '';
   const isGerant = user?.role === 'gerant';
-  const isActiviteGerant = isGerant && !!urlActiviteId;
+  // Multi-affectations : sélecteur d'activité affiché pour le gérant.
+  const isActiviteGerant = false;
 
   // Data
   const [entries, setEntries] = useState<HistoriquePerteEntry[]>([]);
@@ -196,8 +197,7 @@ export default function HistoriquepertesPage() {
     api.get('/api/entreprise/activites')
       .then(({ data }) => {
         const all = data as Activite[];
-        const isActiviteGerantLoad = isGerant && user?.gerantActiviteType === 'activite' && !!user?.gerantActiviteId;
-        setActivites(isActiviteGerantLoad ? all.filter((a) => a.id === user!.gerantActiviteId) : all);
+        setActivites(all);
       }).catch(() => {});
   }, [isEntreprise, type]);
 
