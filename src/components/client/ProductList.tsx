@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
-import type { Product, Activite, ActiviteIngredient } from '../../types';
+import type { Product, Activite, ActiviteIngredient, CategorieProduit } from '../../types';
 import FicheTechniqueTab from './FicheTechniqueTab';
 import FicheTechniqueModal from './FicheTechniqueModal';
 import GuideButton from './GuideButton';
@@ -40,6 +40,7 @@ export default function ProductList() {
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
   const [filterActiviteId, setFilterActiviteId] = useState<number | null>(null);
+  const [filterCategorieId, setFilterCategorieId] = useState<number | null>(null);
   const [page, setPage] = useState(1);
   const [togglingPT, setTogglingPT] = useState<number | null>(null);
   const [ptDeselectModal, setPtDeselectModal] = useState<{ id: number; nom: string; historyCount: number } | null>(null);
@@ -66,6 +67,7 @@ export default function ProductList() {
   const [addName, setAddName] = useState('');
   const [addRef, setAddRef] = useState('');
   const [addIsSupplement, setAddIsSupplement] = useState(false);
+  const [addCategorieId, setAddCategorieId] = useState('');
   const [addIngLines, setAddIngLines] = useState<IngLine[]>([]);
   const [addSubLines, setAddSubLines] = useState<IngLine[]>([]);
   const [addSubSearch, setAddSubSearch] = useState('');
@@ -86,6 +88,8 @@ export default function ProductList() {
   const [editName, setEditName] = useState('');
   const [editRef, setEditRef] = useState('');
   const [editIsSupplement, setEditIsSupplement] = useState(false);
+  const [editCategorieId, setEditCategorieId] = useState('');
+  const [categoriesProduit, setCategoriesProduit] = useState<CategorieProduit[]>([]);
   const [editIngLines, setEditIngLines] = useState<IngLine[]>([]);
   const [editSubLines, setEditSubLines] = useState<IngLine[]>([]);
   const [editSubSearch, setEditSubSearch] = useState('');
@@ -118,6 +122,13 @@ export default function ProductList() {
       });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.role, user?.gerantActiviteId, laboId]);
+
+  // Load product categories (for vendable/supplément mandatory selection)
+  useEffect(() => {
+    api.get('/api/categories-produit')
+      .then(({ data }) => setCategoriesProduit(data as CategorieProduit[]))
+      .catch(() => {});
+  }, []);
 
   // Load all products (no activité filter — activités shown on each card)
   useEffect(() => {
@@ -166,7 +177,7 @@ export default function ProductList() {
         actId ? api.get(`/api/entreprise/activites/${actId}/ingredients`) : Promise.resolve({ data: [] }),
       ]);
       const pdata = productRes.data as {
-        name: string; refProduit?: string; isSupplement?: boolean;
+        name: string; refProduit?: string; isSupplement?: boolean; categorieProduitId?: number | null;
         ingredients: { ingredientId: number; portion: number; ingredientName?: string; unitName?: string }[];
         subProducts: { subProductId: number; portion: number; subProductName?: string }[];
       };
@@ -181,6 +192,7 @@ export default function ProductList() {
       setEditName(pdata.name);
       setEditRef(pdata.refProduit || '');
       setEditIsSupplement(pdata.isSupplement ?? false);
+      setEditCategorieId(pdata.categorieProduitId ? String(pdata.categorieProduitId) : '');
       const loadedLines = pdata.ingredients.map((i) => ({ ingredientId: String(i.ingredientId), portion: String(i.portion) }));
       setEditIngLines(loadedLines);
       const loadedSubLines = (pdata.subProducts || []).map((sp) => ({ ingredientId: String(sp.subProductId), portion: String(sp.portion) }));
@@ -191,7 +203,7 @@ export default function ProductList() {
   }, [allActivities]);
 
   const openAddModal = useCallback((isSupplement = false) => {
-    setAddName(''); setAddRef(''); setAddIsSupplement(isSupplement);
+    setAddName(''); setAddRef(''); setAddIsSupplement(isSupplement); setAddCategorieId('');
     setAddIngLines([]); setAddSubLines([]); setAddSubSearch(''); setAddIngSearch('');
     setAddSavedName(''); setAddFamilleFilter(''); setAddCatFilter(''); setAddIngVisible(20);
     setAddAffectationIds([]);
@@ -315,8 +327,11 @@ export default function ProductList() {
   const byActivite = filterActiviteId
     ? byTab.filter((p) => p.activites?.some((a) => a.id === filterActiviteId) || p.activiteId === filterActiviteId)
     : byTab;
-  const searched = byActivite.filter((p) => p.name.toLowerCase().includes(search.toLowerCase()));
+  const searchedAll = byActivite.filter((p) => p.name.toLowerCase().includes(search.toLowerCase()));
   const isVendable = tab === 'vendable';
+  const searched = isVendable && filterCategorieId
+    ? searchedAll.filter((p) => p.categorieProduitId === filterCategorieId)
+    : searchedAll;
   const bySubTab = isVendable
     ? searched.filter((p) => vendableSubTab === 'produit' ? !p.isSupplement : !!p.isSupplement)
     : searched;
@@ -498,6 +513,19 @@ export default function ProductList() {
                 </select>
               </div>
             )}
+            {byTab.length > 0 && isVendable && categoriesProduit.length > 0 && (
+              <div>
+                <label style={{ fontSize: '0.68rem', fontWeight: 800, color: '#059669', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>🏷️ Catégorie</label>
+                <select
+                  value={filterCategorieId ?? ''}
+                  onChange={(e) => { setFilterCategorieId(e.target.value ? Number(e.target.value) : null); setPage(1); }}
+                  style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid #6ee7b7', fontSize: '0.88rem', background: '#f0fdf4', minWidth: 160 }}
+                >
+                  <option value="">Toutes les catégories</option>
+                  {categoriesProduit.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+              </div>
+            )}
             {byTab.length > 0 && (
               <div>
                 <label style={{ fontSize: '0.68rem', fontWeight: 800, color: '#059669', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>🔍 Nom</label>
@@ -596,6 +624,9 @@ export default function ProductList() {
                             <span style={{ fontWeight: 700, fontSize: '0.92rem', color: '#0f172a', lineHeight: 1.3 }}>{p.name}</span>
                             {isSup && (
                               <span style={{ fontSize: '0.62rem', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', background: '#fef3c7', color: '#92400e', border: '1px solid #fcd34d', borderRadius: 20, padding: '2px 8px', flexShrink: 0 }}>Supplément</span>
+                            )}
+                            {isVendable && p.categorieProduitName && (
+                              <span style={{ fontSize: '0.62rem', fontWeight: 700, letterSpacing: '0.04em', background: '#ffedd5', color: '#9a3412', border: '1px solid #fdba74', borderRadius: 20, padding: '2px 8px', flexShrink: 0 }}>🏷️ {p.categorieProduitName}</span>
                             )}
                           </div>
                           {!isVendable && (
@@ -1022,6 +1053,7 @@ export default function ProductList() {
                   name: editName.trim(),
                   refProduit: editRef.trim() || null,
                   isSupplement: editIsSupplement,
+                  categorieProduitId: isEditVendable ? (editCategorieId ? parseInt(editCategorieId) : null) : null,
                   ingredients: editIngLines
                     .filter((l) => l.ingredientId && parseFloat(l.portion) > 0)
                     .map((l) => ({ ingredientId: parseInt(l.ingredientId), portion: parseFloat(l.portion) })),
@@ -1342,6 +1374,20 @@ export default function ProductList() {
                               )}
                             </div>
                           </div>
+                          {isEditVendable && (
+                            <div>
+                              <label style={{ display: 'block', fontWeight: 700, fontSize: '0.82rem', color: '#1e40af', marginBottom: 6 }}>
+                                Catégorie de produit <span style={{ color: '#ef4444' }}>*</span>
+                              </label>
+                              <select className="input" value={editCategorieId} onChange={(e) => setEditCategorieId(e.target.value)} style={{ width: '100%', maxWidth: 320, borderColor: editCategorieId ? '#93c5fd' : '#fca5a5' }}>
+                                <option value="">— Sélectionner une catégorie —</option>
+                                {categoriesProduit.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                              </select>
+                              {categoriesProduit.length === 0 && (
+                                <div style={{ fontSize: '0.76rem', color: '#b45309', marginTop: 4 }}>Aucune catégorie. Créez-en dans « Configuration Catégorie ».</div>
+                              )}
+                            </div>
+                          )}
                           <div>
                             <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#64748b', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Articles sélectionnés</div>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 4, maxHeight: 160, overflowY: 'auto' }}>
@@ -1374,9 +1420,10 @@ export default function ProductList() {
                           )}
                           <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 4, borderTop: '1px solid var(--border)' }}>
                             <button className="btn btn-ghost" onClick={() => setEditModal(3)}>← Retour</button>
-                            <button disabled={editSaving}
+                            <button disabled={editSaving || (isEditVendable && !editCategorieId)}
                               onClick={handleEditSave}
-                              style={{ background: 'linear-gradient(135deg, #1e40af, #3b82f6)', border: 'none', borderRadius: 10, color: '#fff', fontWeight: 700, padding: '10px 28px', cursor: editSaving ? 'not-allowed' : 'pointer', opacity: editSaving ? 0.7 : 1, fontSize: '0.9rem' }}>
+                              title={isEditVendable && !editCategorieId ? 'Sélectionnez une catégorie de produit' : undefined}
+                              style={{ background: 'linear-gradient(135deg, #1e40af, #3b82f6)', border: 'none', borderRadius: 10, color: '#fff', fontWeight: 700, padding: '10px 28px', cursor: (editSaving || (isEditVendable && !editCategorieId)) ? 'not-allowed' : 'pointer', opacity: (editSaving || (isEditVendable && !editCategorieId)) ? 0.7 : 1, fontSize: '0.9rem' }}>
                               {editSaving ? 'Enregistrement…' : 'Enregistrer les modifications ✓'}
                             </button>
                           </div>
@@ -1430,7 +1477,7 @@ export default function ProductList() {
             const updateSubPortion = (id: string, val: string) =>
               setAddSubLines((prev) => prev.map((l) => l.ingredientId === id ? { ...l, portion: val } : l));
 
-            const canGoStep2 = addName.trim().length > 0;
+            const canGoStep2 = addName.trim().length > 0 && (!isVendable || !!addCategorieId);
             const handleSave = async () => {
               setAddSaving(true);
               setAddSaveError(null);
@@ -1446,6 +1493,7 @@ export default function ProductList() {
                   refProduit: addRef.trim() || null,
                   type: tab === 'utilisable' ? 'utilisable' : 'vendable',
                   isSupplement: addIsSupplement,
+                  categorieProduitId: tab === 'utilisable' ? null : (addCategorieId ? parseInt(addCategorieId) : null),
                   activiteId: addAffectationIds[0] ?? null,
                   ingredients: baseIngredients,
                   subProducts: baseSubProducts,
@@ -1529,6 +1577,20 @@ export default function ProductList() {
                             onChange={(e) => setAddRef(e.target.value)}
                             style={{ width: '100%', maxWidth: 280, borderColor: '#6ee7b7' }} />
                         </div>
+                        {isVendable && (
+                          <div>
+                            <label style={{ display: 'block', fontWeight: 700, fontSize: '0.82rem', color: '#065f46', marginBottom: 6 }}>
+                              Catégorie de produit <span style={{ color: '#ef4444' }}>*</span>
+                            </label>
+                            <select className="input" value={addCategorieId} onChange={(e) => setAddCategorieId(e.target.value)} style={{ width: '100%', maxWidth: 320, borderColor: addCategorieId ? '#6ee7b7' : '#fca5a5' }}>
+                              <option value="">— Sélectionner une catégorie —</option>
+                              {categoriesProduit.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                            </select>
+                            {categoriesProduit.length === 0 && (
+                              <div style={{ fontSize: '0.76rem', color: '#b45309', marginTop: 4 }}>Aucune catégorie. Créez-en d'abord dans « Configuration Catégorie ».</div>
+                            )}
+                          </div>
+                        )}
                         {isVendable && addIsSupplement && (
                           <div style={{ background: '#fffbeb', borderRadius: 10, padding: '10px 16px', border: '1.5px solid #fcd34d', fontSize: '0.82rem', color: '#92400e', fontWeight: 600 }}>
                             ➕ Ce produit sera créé comme supplément vendable

@@ -209,6 +209,7 @@ function GerantSidebarContent({
           <>
             <SubNavLink to="/client/products?tab=vendable" icon="🍔" label="Produits Vendables" isActive={isProductsPage && currentProductTab === 'vendable'} onClick={onClose} />
             <SubNavLink to="/client/products?tab=utilisable" icon="🧪" label="Produits Utilisables" isActive={isProductsPage && currentProductTab === 'utilisable'} onClick={onClose} />
+            <SubNavLink to="/client/products/categories" icon="🏷️" label="Configuration Catégorie" isActive={location.pathname === '/client/products/categories'} onClick={onClose} />
           </>
         )}
         {moduleVenteActif && (
@@ -632,6 +633,11 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                       <li>
                         <Link to="/client/products?tab=utilisable" className={`sidebar-link ${isProductsPage && currentProductTab === 'utilisable' ? 'active' : ''}`} onClick={onClose}>
                           <span className="link-icon">🧪</span><span className="link-label">Produits Utilisables</span>
+                        </Link>
+                      </li>
+                      <li>
+                        <Link to="/client/products/categories" className={`sidebar-link ${location.pathname === '/client/products/categories' ? 'active' : ''}`} onClick={onClose}>
+                          <span className="link-icon">🏷️</span><span className="link-label">Configuration Catégorie</span>
                         </Link>
                       </li>
                     </>
