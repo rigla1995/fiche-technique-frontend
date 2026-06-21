@@ -137,19 +137,15 @@ function ligneSortPriority(l: VenteLigne | null): number {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
+// Prix de vente prestataire = saisie manuelle (configuré dans Configuration Vente).
+// Pas de commission ni de prix par défaut. null = prix non configuré.
 function calcPrixPrestataire(
   articleId: string,
   apId: string,
-  allArticles: ArticleVendable[],
-  prixPrestataires: ArticlePrixPrestataire[],
-  activePrests: ActivitePrestataire[]
-): number {
-  const av = allArticles.find(a => a.id === articleId);
-  if (!av) return 0;
+  prixPrestataires: ArticlePrixPrestataire[]
+): number | null {
   const override = prixPrestataires.find(p => p.article_vendable_id === articleId && p.activite_prestataire_id === apId);
-  if (override?.prix_vente != null) return override.prix_vente;
-  const ap = activePrests.find(p => p.id === apId);
-  return ap ? av.prix_vente * (1 - ap.taux_commission / 100) : av.prix_vente;
+  return override?.prix_vente ?? null;
 }
 
 
@@ -176,7 +172,7 @@ function PaginationBar({ total, page, setPage }: { total: number; page: number; 
 }
 
 function ArticleRow({ av }: { av: ArticleVendable }) {
-  const { activePrests, prixPrestataires, allArticles, qtes, setQtes } = useContext(VPCtx);
+  const { activePrests, prixPrestataires, qtes, setQtes } = useContext(VPCtx);
   const getQte = (channel: string) => qtes[av.id]?.[channel] ?? '';
   const setQte = (channel: string, val: string) =>
     setQtes(prev => ({ ...prev, [av.id]: { ...prev[av.id], [channel]: val } }));
@@ -196,13 +192,13 @@ function ArticleRow({ av }: { av: ArticleVendable }) {
           style={{ width: 78, padding: '7px 8px', borderRadius: 8, border: `1.5px solid ${getQte('direct') ? C : CB}`, background: getQte('direct') ? CL : '#fafafa', textAlign: 'center', fontSize: '0.88rem', fontWeight: 600, outline: 'none' }} />
       </td>
       {activePrests.map(ap => {
-        const prix = calcPrixPrestataire(av.id, ap.id, allArticles, prixPrestataires, activePrests);
+        const prix = calcPrixPrestataire(av.id, ap.id, prixPrestataires);
         return (
           <td key={ap.id} style={{ padding: '8px 16px', textAlign: 'center' }}>
             <input type="number" min="0" step="0.001" value={getQte(ap.id)} placeholder="0"
               onChange={e => setQte(ap.id, e.target.value)}
               style={{ width: 78, padding: '7px 8px', borderRadius: 8, border: `1.5px solid ${getQte(ap.id) ? C : CB}`, background: getQte(ap.id) ? CL : '#fafafa', textAlign: 'center', fontSize: '0.88rem', fontWeight: 600, outline: 'none' }} />
-            <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', marginTop: 2 }}>{fmtMoney(prix)}</div>
+            <div style={{ fontSize: '0.6rem', color: prix == null ? '#dc2626' : 'var(--text-muted)', marginTop: 2 }}>{prix == null ? 'non configuré' : fmtMoney(prix)}</div>
           </td>
         );
       })}
@@ -218,7 +214,7 @@ function SaisieTable({ subset, page, setPage, label, emptyIcon = '🛍️', empt
   emptyIcon?: string;
   emptyMsg?: string;
 }) {
-  const { activePrests, prixPrestataires, allArticles, qtes, dateVente, setDateVente, saving, saveError, saveSuccess, handleSubmit } = useContext(VPCtx);
+  const { activePrests, prixPrestataires, qtes, dateVente, setDateVente, saving, saveError, saveSuccess, handleSubmit } = useContext(VPCtx);
   const [filterNom, setFilterNom] = useState('');
 
   const filteredRaw = filterNom ? subset.filter(av => av.nom.toLowerCase().includes(filterNom.toLowerCase())) : subset;
@@ -234,8 +230,8 @@ function SaisieTable({ subset, page, setPage, label, emptyIcon = '🛍️', empt
   const caTotal = subset.reduce((acc, av) => {
     const direct = (parseFloat(qtes[av.id]?.['direct'] ?? '') || 0) * av.prix_vente;
     const presta = activePrests.reduce((s, ap) => {
-      const prix = calcPrixPrestataire(av.id, ap.id, allArticles, prixPrestataires, activePrests);
-      return s + (parseFloat(qtes[av.id]?.[ap.id] ?? '') || 0) * prix;
+      const prix = calcPrixPrestataire(av.id, ap.id, prixPrestataires);
+      return s + (parseFloat(qtes[av.id]?.[ap.id] ?? '') || 0) * (prix ?? 0);
     }, 0);
     return acc + direct + presta;
   }, 0);
@@ -289,7 +285,6 @@ function SaisieTable({ subset, page, setPage, label, emptyIcon = '🛍️', empt
               {activePrests.map(ap => (
                 <th key={ap.id} style={{ padding: '11px 16px', textAlign: 'center', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase' as const, letterSpacing: '0.05em', whiteSpace: 'nowrap' as const }}>
                   🛵 {ap.prestataire_nom}
-                  <div style={{ fontSize: '0.68rem', fontWeight: 500, color: 'var(--text-muted)', textTransform: 'none' as const }}>−{ap.taux_commission}%</div>
                 </th>
               ))}
             </tr>
@@ -448,8 +443,8 @@ export default function VentesPage() {
       const lignes = allArticles.flatMap(av => {
         const qte = parseFloat(qtes[av.id]?.[ap.id] ?? '') || 0;
         if (qte <= 0) return [];
-        const prix = calcPrixPrestataire(av.id, ap.id, allArticles, prixPrestataires, activePrests);
-        return [{ article_type: av.article_type, article_id: av.article_id, quantite: qte, prix_unitaire: prix }];
+        const prix = calcPrixPrestataire(av.id, ap.id, prixPrestataires);
+        return [{ article_type: av.article_type, article_id: av.article_id, quantite: qte, prix_unitaire: prix ?? 0 }];
       });
       if (lignes.length > 0) list.push({ type_vente: 'prestataire', prestataire_id: ap.prestataire_id, lignes });
     }
