@@ -213,6 +213,31 @@ export default function ClientDashboard() {
               </ResponsiveContainer>
             </ChartCard>
           </div>
+
+          {/* Liens vers les rapports détaillés */}
+          <div style={{ marginTop: 20 }}>
+            <div style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10 }}>Rapports détaillés</div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
+              <Link to="/client/rapports?scope=activite" style={{ textDecoration: 'none' }}>
+                <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <span style={{ fontSize: '1.3rem' }}>📍</span>
+                  <div><div style={{ fontWeight: 700, color: 'var(--text)' }}>Rapport activités</div><div style={{ fontSize: '0.76rem', color: 'var(--text-muted)' }}>Pertes, coût matière, appros, stock</div></div>
+                </div>
+              </Link>
+              <Link to="/client/ventes/rapport" style={{ textDecoration: 'none' }}>
+                <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <span style={{ fontSize: '1.3rem' }}>🛒</span>
+                  <div><div style={{ fontWeight: 700, color: 'var(--text)' }}>Rapport ventes</div><div style={{ fontSize: '0.76rem', color: 'var(--text-muted)' }}>CA, food cost, top produits, canaux</div></div>
+                </div>
+              </Link>
+              <Link to="/client/rapports/labo" style={{ textDecoration: 'none' }}>
+                <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <span style={{ fontSize: '1.3rem' }}>🏭</span>
+                  <div><div style={{ fontWeight: 700, color: 'var(--text)' }}>Rapport labo</div><div style={{ fontSize: '0.76rem', color: 'var(--text-muted)' }}>Stock, appros, pertes, transferts</div></div>
+                </div>
+              </Link>
+            </div>
+          </div>
         </>
       )}
     </div>
