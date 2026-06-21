@@ -172,7 +172,7 @@ function PaginationBar({ total, page, setPage }: { total: number; page: number; 
 }
 
 function ArticleRow({ av }: { av: ArticleVendable }) {
-  const { activePrests, prixPrestataires, qtes, setQtes } = useContext(VPCtx);
+  const { activePrests, qtes, setQtes } = useContext(VPCtx);
   const getQte = (channel: string) => qtes[av.id]?.[channel] ?? '';
   const setQte = (channel: string, val: string) =>
     setQtes(prev => ({ ...prev, [av.id]: { ...prev[av.id], [channel]: val } }));
@@ -191,17 +191,13 @@ function ArticleRow({ av }: { av: ArticleVendable }) {
           onChange={e => setQte('direct', e.target.value)}
           style={{ width: 78, padding: '7px 8px', borderRadius: 8, border: `1.5px solid ${getQte('direct') ? C : CB}`, background: getQte('direct') ? CL : '#fafafa', textAlign: 'center', fontSize: '0.88rem', fontWeight: 600, outline: 'none' }} />
       </td>
-      {activePrests.map(ap => {
-        const prix = calcPrixPrestataire(av.id, ap.id, prixPrestataires);
-        return (
-          <td key={ap.id} style={{ padding: '8px 16px', textAlign: 'center' }}>
-            <input type="number" min="0" step="0.001" value={getQte(ap.id)} placeholder="0"
-              onChange={e => setQte(ap.id, e.target.value)}
-              style={{ width: 78, padding: '7px 8px', borderRadius: 8, border: `1.5px solid ${getQte(ap.id) ? C : CB}`, background: getQte(ap.id) ? CL : '#fafafa', textAlign: 'center', fontSize: '0.88rem', fontWeight: 600, outline: 'none' }} />
-            <div style={{ fontSize: '0.6rem', color: prix == null ? '#dc2626' : 'var(--text-muted)', marginTop: 2 }}>{prix == null ? 'non configuré' : fmtMoney(prix)}</div>
-          </td>
-        );
-      })}
+      {activePrests.map(ap => (
+        <td key={ap.id} style={{ padding: '8px 16px', textAlign: 'center' }}>
+          <input type="number" min="0" step="0.001" value={getQte(ap.id)} placeholder="0"
+            onChange={e => setQte(ap.id, e.target.value)}
+            style={{ width: 78, padding: '7px 8px', borderRadius: 8, border: `1.5px solid ${getQte(ap.id) ? C : CB}`, background: getQte(ap.id) ? CL : '#fafafa', textAlign: 'center', fontSize: '0.88rem', fontWeight: 600, outline: 'none' }} />
+        </td>
+      ))}
     </tr>
   );
 }
