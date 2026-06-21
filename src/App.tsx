@@ -65,7 +65,7 @@ import './index.css';
 
 function ClientDefaultRedirect() {
   const { user } = useAuth();
-  if (user?.role === 'gerant') return <Navigate to="/client/gerant-dashboard" replace />;
+  if (user?.role === 'gerant') return <Navigate to="/client/dashboard" replace />;
   if ((user?.activitesCount ?? 0) === 0) return <Navigate to="/client/activites" replace />;
   return <Navigate to="/client/dashboard" replace />;
 }
@@ -75,7 +75,7 @@ function RootRedirect() {
   if (isLoading) return <div className="page-loading"><div className="spinner" /></div>;
   if (!user) return <Navigate to="/login" replace />;
   if (user.role === 'super_admin') return <Navigate to="/admin" replace />;
-  if (user.role === 'gerant') return <Navigate to="/client/gerant-dashboard" replace />;
+  if (user.role === 'gerant') return <Navigate to="/client/dashboard" replace />;
   if ((user.onboardingStep ?? 0) === 50) {
     return <Navigate to="/client/upgrade-wizard" replace />;
   }

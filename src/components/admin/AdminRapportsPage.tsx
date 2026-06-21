@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend,
@@ -117,6 +118,39 @@ export default function AdminRapportsPage() {
         <KpiCard icon="🔄" label="Abonnements actifs" value={abonnements.actif} sub={`${abonnements.total} total`} color="var(--primary)" />
         <KpiCard icon="📨" label="Demandes en attente" value={demandes.total} sub={demandes.total > 0 ? `${demandes.gerantSup} gérant · ${demandes.laboSup} labo` : 'Aucune'} color={demandes.total > 0 ? '#f59e0b' : 'var(--text-muted)'} />
       </div>
+
+      {/* ── Alertes & actions ── */}
+      {(demandes.total > 0 || paiementsMonth.impayeCount > 0 || (abonnements.readOnly + abonnements.desactive) > 0) && (
+        <div style={{ background: '#fff', border: '1px solid var(--border)', borderRadius: 12, padding: '14px 18px', marginTop: 16 }}>
+          <div style={{ fontSize: '0.92rem', fontWeight: 700, marginBottom: 10 }}>🔔 Alertes & actions</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {demandes.total > 0 && (
+              <Link to="/admin/demandes" style={{ textDecoration: 'none' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, background: '#fffbeb', border: '1px solid #fcd34d', borderRadius: 10, padding: '9px 13px' }}>
+                  <span style={{ fontSize: '0.84rem', color: '#b45309', fontWeight: 600 }}>📨 {demandes.total} demande{demandes.total > 1 ? 's' : ''} en attente de traitement</span>
+                  <span style={{ fontSize: '0.78rem', color: '#b45309', fontWeight: 700 }}>Traiter →</span>
+                </div>
+              </Link>
+            )}
+            {paiementsMonth.impayeCount > 0 && (
+              <Link to="/admin/abonnements/paiements" style={{ textDecoration: 'none' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 10, padding: '9px 13px' }}>
+                  <span style={{ fontSize: '0.84rem', color: '#dc2626', fontWeight: 600 }}>⚠️ {paiementsMonth.impayeCount} paiement{paiementsMonth.impayeCount > 1 ? 's' : ''} impayé{paiementsMonth.impayeCount > 1 ? 's' : ''} ce mois ({fmtDT(paiementsMonth.impayeDt)})</span>
+                  <span style={{ fontSize: '0.78rem', color: '#dc2626', fontWeight: 700 }}>Voir →</span>
+                </div>
+              </Link>
+            )}
+            {(abonnements.readOnly + abonnements.desactive) > 0 && (
+              <Link to="/admin/abonnements" style={{ textDecoration: 'none' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 10, padding: '9px 13px' }}>
+                  <span style={{ fontSize: '0.84rem', color: '#1d4ed8', fontWeight: 600 }}>🔒 {abonnements.readOnly + abonnements.desactive} compte{(abonnements.readOnly + abonnements.desactive) > 1 ? 's' : ''} en lecture seule / désactivé{(abonnements.readOnly + abonnements.desactive) > 1 ? 's' : ''}</span>
+                  <span style={{ fontSize: '0.78rem', color: '#1d4ed8', fontWeight: 700 }}>Gérer →</span>
+                </div>
+              </Link>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* ── Revenus mensuels ── */}
       <SectionTitle>Revenus mensuels (6 derniers mois)</SectionTitle>
