@@ -1,9 +1,9 @@
-import { useState, useEffect, useRef, useCallback, Fragment } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { NavLink, Link, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../api/client';
-import type { Activite, ActiviteTypesSummary, Labo, User, AbonnementConfig } from '../../types';
+import type { ActiviteTypesSummary, Labo, AbonnementConfig } from '../../types';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -95,144 +95,6 @@ function SubNavLink({ to, icon, label, isActive, onClick }: {
   );
 }
 
-interface GerantSidebarProps {
-  user: User;
-  labos: Labo[];
-  gerantActivites: Activite[];
-  location: ReturnType<typeof useLocation>;
-  openSections: Set<string>;
-  toggleSection: (key: string) => void;
-  onClose: () => void;
-  isHistoriquePage: boolean;
-  isHistoriquepertesPage: boolean;
-  isProductsPage: boolean;
-  currentHistType: string | null;
-  currentProductTab: string | null;
-  currentActCtx: string | null;
-  moduleVenteActif: boolean;
-}
-
-function GerantSidebarContent({
-  labos, gerantActivites, location, openSections, toggleSection, onClose,
-  isHistoriquePage, isHistoriquepertesPage, isProductsPage,
-  currentHistType: _currentHistType, currentProductTab, currentActCtx: _currentActCtx,
-  moduleVenteActif,
-}: GerantSidebarProps) {
-  // Multi-affectations : on liste toutes les activités et tous les labos assignés.
-  // gerantActivites et labos sont déjà filtrés au périmètre du gérant côté backend.
-  const hasActivites = gerantActivites.length > 0;
-  const curSearch = new URLSearchParams(location.search);
-  const curActId = curSearch.get('activiteId');
-  const curLaboId = curSearch.get('laboId');
-
-  return (
-    <>
-      <li><NavLink to="/client/gerant-dashboard" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}><span className="link-icon">🏠</span><span className="link-label">Tableau de bord</span></NavLink></li>
-
-      {/* ══ RÉFÉRENTIEL (partagé) ══ */}
-      {hasActivites && (
-        <>
-          <Divider />
-          <CollapsibleHeader label="Référentiel" icon="📚" isOpen={openSections.has('referentiel')} locked={false} onToggle={() => toggleSection('referentiel')} />
-          {openSections.has('referentiel') && (
-            <>
-              <SubNavLink to="/client/referentiel/unites" icon="📏" label="Unités" isActive={location.pathname === '/client/referentiel/unites'} onClick={onClose} />
-              <SubNavLink to="/client/referentiel/familles" icon="🗂️" label="Familles" isActive={location.pathname === '/client/referentiel/familles'} onClick={onClose} />
-              <SubNavLink to="/client/referentiel/categories" icon="🏷️" label="Catégories" isActive={location.pathname === '/client/referentiel/categories'} onClick={onClose} />
-              <SubNavLink to="/client/referentiel/articles" icon="🧂" label="Articles" isActive={location.pathname === '/client/referentiel/articles'} onClick={onClose} />
-              <SubNavLink to="/client/referentiel/import" icon="📥" label="Ajout Dynamique" isActive={location.pathname === '/client/referentiel/import'} onClick={onClose} />
-            </>
-          )}
-        </>
-      )}
-
-      {/* ══ Une section par activité assignée ══ */}
-      {gerantActivites.map((act) => {
-        const activiteId = act.id;
-        const key = `gerant-act-${activiteId}`;
-        const isThis = curActId === String(activiteId);
-        return (
-          <Fragment key={key}>
-            <Divider />
-            <CollapsibleHeader label={`Espace ${act.nom}`} icon="📍" isOpen={openSections.has(key)} locked={false} onToggle={() => toggleSection(key)} />
-            {openSections.has(key) && (
-              <>
-                <li><Link to={`/client/stock?section=activite&activiteId=${activiteId}`} className={`sidebar-link ${location.pathname === '/client/stock' && isThis ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📦</span><span className="link-label">Stock Activité</span></Link></li>
-                <li><Link to={`/client/stock/historique?activiteId=${activiteId}`} className={`sidebar-link ${isHistoriquePage && isThis ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📋</span><span className="link-label">Historique Appro</span></Link></li>
-                <li><Link to={`/client/stock/factures?activiteId=${activiteId}`} className={`sidebar-link ${location.pathname === '/client/stock/factures' && isThis ? 'active' : ''}`} onClick={onClose}><span className="link-icon">🧾</span><span className="link-label">Factures</span></Link></li>
-                <li><Link to={`/client/stock/historique-pertes?activiteId=${activiteId}`} className={`sidebar-link ${isHistoriquepertesPage && isThis ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📉</span><span className="link-label">Historique Pertes</span></Link></li>
-                <li><Link to={`/client/inventaire?section=activite&activiteId=${activiteId}`} className={`sidebar-link ${location.pathname === '/client/inventaire' && isThis ? 'active' : ''}`} onClick={onClose}><span className="link-icon">🔢</span><span className="link-label">Inventaire</span></Link></li>
-                <li><Link to={`/client/inventaire/historique?section=activite&activiteId=${activiteId}`} className={`sidebar-link ${location.pathname === '/client/inventaire/historique' && isThis ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📊</span><span className="link-label">Historique Inventaire</span></Link></li>
-                {moduleVenteActif && (
-                  <li><Link to={`/client/ventes?activiteId=${activiteId}`} className={`sidebar-link ${location.pathname === '/client/ventes' && isThis ? 'active' : ''}`} onClick={onClose}><span className="link-icon">💰</span><span className="link-label">Ventes</span></Link></li>
-                )}
-              </>
-            )}
-          </Fragment>
-        );
-      })}
-
-      {/* ══ Une section par labo assigné ══ */}
-      {labos.map((labo) => {
-        const laboId = labo.id;
-        const key = `gerant-labo-${laboId}`;
-        const isThis = curLaboId === String(laboId);
-        return (
-          <Fragment key={key}>
-            <Divider />
-            <CollapsibleHeader label={`Espace ${labo.nom}`} icon="🏭" isOpen={openSections.has(key)} locked={false} onToggle={() => toggleSection(key)} />
-            {openSections.has(key) && (
-              <>
-                <li><Link to={`/client/labo/stock?laboId=${laboId}`} className={`sidebar-link ${location.pathname === '/client/labo/stock' && isThis ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📦</span><span className="link-label">Stock</span></Link></li>
-                <li><Link to={`/client/labo/historique-appro?laboId=${laboId}`} className={`sidebar-link ${location.pathname === '/client/labo/historique-appro' && isThis ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📋</span><span className="link-label">Historique Appro</span></Link></li>
-                <li><Link to={`/client/labo/factures?laboId=${laboId}`} className={`sidebar-link ${location.pathname === '/client/labo/factures' && isThis ? 'active' : ''}`} onClick={onClose}><span className="link-icon">🧾</span><span className="link-label">Factures</span></Link></li>
-                <li><Link to={`/client/labo/historique-pertes?laboId=${laboId}`} className={`sidebar-link ${location.pathname === '/client/labo/historique-pertes' && isThis ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📉</span><span className="link-label">Historique Pertes</span></Link></li>
-                <li><Link to={`/client/labo/transfer?laboId=${laboId}`} className={`sidebar-link ${location.pathname === '/client/labo/transfer' && isThis ? 'active' : ''}`} onClick={onClose}><span className="link-icon">↗</span><span className="link-label">Transferts</span></Link></li>
-                <li><Link to={`/client/labo/historique-transferts?laboId=${laboId}`} className={`sidebar-link ${location.pathname === '/client/labo/historique-transferts' && isThis ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📋</span><span className="link-label">Historiques Transferts</span></Link></li>
-                <li><Link to={`/client/labo/inventaire?laboId=${laboId}`} className={`sidebar-link ${location.pathname === '/client/labo/inventaire' && isThis ? 'active' : ''}`} onClick={onClose}><span className="link-icon">🔢</span><span className="link-label">Inventaire</span></Link></li>
-                <li><Link to={`/client/labo/inventaire/historique?laboId=${laboId}`} className={`sidebar-link ${location.pathname === '/client/labo/inventaire/historique' && isThis ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📊</span><span className="link-label">Historique Inventaire</span></Link></li>
-                {moduleVenteActif && (
-                  <li><Link to={`/client/labo/ventes?laboId=${laboId}`} className={`sidebar-link ${location.pathname === '/client/labo/ventes' && isThis ? 'active' : ''}`} onClick={onClose}><span className="link-icon">🏭</span><span className="link-label">Ventes Labo</span></Link></li>
-                )}
-              </>
-            )}
-          </Fragment>
-        );
-      })}
-
-      <Divider />
-      <li><NavLink to="/client/fournisseurs" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}><span className="link-icon">🚚</span><span className="link-label">Fournisseurs</span></NavLink></li>
-
-      {/* ══ PRODUITS (partagé) ══ */}
-      {hasActivites && (
-        <>
-          <Divider />
-          <CollapsibleHeader label="Produits" icon="🍔" isOpen={openSections.has('gerant-produits')} locked={false} onToggle={() => toggleSection('gerant-produits')} />
-          {openSections.has('gerant-produits') && (
-            <>
-              <SubNavLink to="/client/products/categories" icon="🏷️" label="Catégories Produits" isActive={location.pathname === '/client/products/categories'} onClick={onClose} />
-              <SubNavLink to="/client/products?tab=vendable" icon="🍔" label="Produits Vendables" isActive={isProductsPage && currentProductTab === 'vendable'} onClick={onClose} />
-              <SubNavLink to="/client/products?tab=utilisable" icon="🧪" label="Produits Utilisables" isActive={isProductsPage && currentProductTab === 'utilisable'} onClick={onClose} />
-              <SubNavLink to="/client/products/valorises" icon="💎" label="Articles Valorisés" isActive={location.pathname === '/client/products/valorises'} onClick={onClose} />
-            </>
-          )}
-          {moduleVenteActif && (
-            <>
-              <Divider />
-              <CollapsibleHeader label="Espace Vente" icon="🛒" isOpen={openSections.has('gerant-act-vente')} locked={false} onToggle={() => toggleSection('gerant-act-vente')} />
-              {openSections.has('gerant-act-vente') && (
-                <>
-                  <li><NavLink to="/client/ventes/prestataires" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}><span className="link-icon">🛵</span><span className="link-label">Config Prestataires</span></NavLink></li>
-                  <li><NavLink to="/client/ventes/configuration" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}><span className="link-icon">💲</span><span className="link-label">Configuration Vente</span></NavLink></li>
-                </>
-              )}
-            </>
-          )}
-        </>
-      )}
-    </>
-  );
-}
 
 export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const { t } = useTranslation();
@@ -246,7 +108,6 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const [openSections, setOpenSections] = useState<Set<string>>(
     isAdmin ? new Set(['admin-ref']) : new Set()
   );
-  const [gerantActivites, setGerantActivites] = useState<Activite[]>([]);
   const [moduleVenteActif, setModuleVenteActif] = useState(false);
 
   const location = useLocation();
@@ -256,9 +117,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
   const currentSearch = new URLSearchParams(location.search);
   const currentSection = currentSearch.get('section');
-  const currentHistType = currentSearch.get('type');
   const currentProductTab = currentSearch.get('tab');
-  const currentActCtx = currentSearch.get('actCtx');
   const isHistoriquePage = location.pathname === '/client/stock/historique';
   const isHistoriquepertesPage = location.pathname === '/client/stock/historique-pertes';
   const isProductsPage = location.pathname === '/client/products';
@@ -296,14 +155,6 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const fetchLabos = useCallback(() => {
     api.get('/api/labo').then(({ data }) => setLabos(data)).catch(() => setLabos([]));
   }, []);
-
-  useEffect(() => {
-    if (isGerant && isEntreprise) {
-      api.get('/api/entreprise/activites')
-        .then(({ data }) => setGerantActivites(data))
-        .catch(() => {});
-    }
-  }, [isGerant, isEntreprise]);
 
   useEffect(() => {
     if (!isEntreprise) return;
@@ -448,23 +299,6 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                 </NavLink>
               </li>
             </>
-          ) : isGerant ? (
-            <GerantSidebarContent
-              user={user!}
-              labos={labos}
-              gerantActivites={gerantActivites}
-              location={location}
-              openSections={openSections}
-              toggleSection={toggleSection}
-              onClose={onClose}
-              isHistoriquePage={isHistoriquePage}
-              isHistoriquepertesPage={isHistoriquepertesPage}
-              isProductsPage={isProductsPage}
-              currentHistType={currentHistType}
-              currentProductTab={currentProductTab}
-              currentActCtx={currentActCtx}
-              moduleVenteActif={moduleVenteActif}
-            />
           ) : (
             <>
               {/* Rapports */}
@@ -485,8 +319,8 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
               <Divider />
 
-              {/* Mes Activités */}
-              {isEntreprise && (
+              {/* Mes Activités — gestion (CRUD) réservée au client propriétaire */}
+              {isEntreprise && user?.role === 'client' && (
                 <li>
                   {isOnboarding && step < 2 ? (
                     <LockedLink label={t('nav.activites')} />
