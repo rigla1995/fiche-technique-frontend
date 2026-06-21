@@ -3,7 +3,7 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
-import type { Activite, ActiviteTypesSummary, Category, Ingredient, Product } from '../../types';
+import type { Activite, ActiviteTypesSummary, Category, CategorieProduit, Ingredient, Product } from '../../types';
 
 interface IngredientLine {
   ingredientId: string;
@@ -54,6 +54,8 @@ export default function ProductForm() {
 
   const [ingredients, setIngredients] = useState<Ingredient[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [categoriesProduit, setCategoriesProduit] = useState<CategorieProduit[]>([]);
+  const [categorieProduitId, setCategorieProduitId] = useState('');
   const [products, setProducts] = useState<Product[]>([]);
   const [newCatSelect, setNewCatSelect] = useState('');
 
@@ -86,6 +88,13 @@ export default function ProductForm() {
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isEntreprise, user?.role, user?.gerantActiviteId]);
+
+  // ── Load product categories (vendable mandatory selection) ────────────────
+  useEffect(() => {
+    api.get('/api/categories-produit')
+      .then(({ data }) => setCategoriesProduit(data as CategorieProduit[]))
+      .catch(() => {});
+  }, []);
 
   // ── Load ingredients + product data ──────────────────────────────────────
   useEffect(() => {
@@ -137,7 +146,7 @@ export default function ProductForm() {
 
         if (isEdit && productRes) {
           const data = productRes.data as {
-            name: string; refProduit?: string; type: string; activiteId?: number | null;
+            name: string; refProduit?: string; type: string; activiteId?: number | null; categorieProduitId?: number | null;
             ingredients: { ingredientId: number; portion: number; unitId?: number; ingredientName?: string; unitPrice?: number; unitName?: string }[];
             subProducts: { subProductId: number; portion: number }[];
           };
@@ -162,6 +171,7 @@ export default function ProductForm() {
           setIngredients(ingData);
           setName(data.name);
           setRefProduit(data.refProduit || '');
+          setCategorieProduitId(data.categorieProduitId ? String(data.categorieProduitId) : '');
           setIngredientLines(data.ingredients.map((i) => {
             const found = ingData.find((x) => x.id === i.ingredientId);
             return { ingredientId: String(i.ingredientId), portion: String(i.portion), categoryFilter: found?.categorieId ? String(found.categorieId) : '' };
@@ -237,12 +247,17 @@ export default function ProductForm() {
   // ── Submit ────────────────────────────────────────────────────────────────
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (productType === 'vendable' && !categorieProduitId) {
+      window.alert('La catégorie de produit est obligatoire pour un produit vendable.');
+      return;
+    }
     setSaving(true);
     try {
       const payload: Record<string, unknown> = {
         name,
         refProduit: refProduit.trim() || null,
         type: productType,
+        categorieProduitId: productType === 'vendable' ? (categorieProduitId ? parseInt(categorieProduitId) : null) : null,
         ingredients: ingredientLines
           .filter((l) => l.ingredientId && l.portion)
           .map((l) => ({ ingredientId: parseInt(l.ingredientId), portion: parseFloat(l.portion) })),
@@ -428,6 +443,26 @@ export default function ProductForm() {
                   onChange={(e) => setRefProduit(e.target.value)}
                 />
               </div>
+              {productType === 'vendable' && (
+                <div>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600, fontSize: '0.85rem', marginBottom: 8, color: 'var(--text)' }}>
+                    Catégorie de produit
+                    <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#ef4444', background: '#fee2e2', borderRadius: 4, padding: '1px 5px' }}>obligatoire</span>
+                  </label>
+                  <select
+                    className="input"
+                    style={{ maxWidth: 300, borderColor: categorieProduitId ? undefined : '#fca5a5' }}
+                    value={categorieProduitId}
+                    onChange={(e) => setCategorieProduitId(e.target.value)}
+                  >
+                    <option value="">— Sélectionner une catégorie —</option>
+                    {categoriesProduit.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  </select>
+                  {categoriesProduit.length === 0 && (
+                    <div style={{ fontSize: '0.76rem', color: '#b45309', marginTop: 4 }}>Aucune catégorie. Créez-en dans « Configuration Catégorie » (Espace Produits).</div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 

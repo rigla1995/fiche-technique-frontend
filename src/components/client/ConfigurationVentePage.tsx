@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useContext, createContext } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import api from '../../api/client';
-import type { Activite } from '../../types';
+import type { Activite, CategorieProduit } from '../../types';
 
 const apiMsg = (e: unknown, fallback = 'Erreur') =>
   (e as { response?: { data?: { message?: string } } })?.response?.data?.message ?? fallback;
@@ -42,6 +42,7 @@ interface ArticleVendable {
   prix_vente: number;
   portion: number | null;
   actif: boolean;
+  categorie_produit_id?: number | null;
 }
 
 interface ArticleValorise {
@@ -50,6 +51,7 @@ interface ArticleValorise {
   unite_nom: string;
   categorie_nom: string | null;
   famille_nom: string | null;
+  categorie_produit_id: number | null;
   vendable: ArticleVendable | null;
 }
 
@@ -64,6 +66,7 @@ interface ProduitRow {
   vendable?: ArticleVendable;
   saving?: boolean;
   error?: string;
+  categorieProduitId?: number | null;
 }
 
 interface HistConfigEntry {
@@ -111,6 +114,8 @@ interface CVCtxType {
   selectedActiviteId: number | null;
   selectedHistIds: Set<number>;
   toggleSelectHist: (id: number) => void;
+  categoriesProduit: CategorieProduit[];
+  saveCategorieValorise: (row: ProduitRow, categorieId: string) => void;
 }
 
 const CVCtx = createContext<CVCtxType>(null!);
@@ -160,9 +165,10 @@ function PrestInput({ avId, ap }: { avId: string; ap: ActivitePrestataire }) {
   );
 }
 
-function ProduitTableRow({ row, idx, showPortion }: { row: ProduitRow; idx: number; showPortion: boolean }) {
-  const { activePrests, editingPrixVente, toggleVendable } = useContext(CVCtx);
+function ProduitTableRow({ row, idx, showPortion, isValorise }: { row: ProduitRow; idx: number; showPortion: boolean; isValorise?: boolean }) {
+  const { activePrests, editingPrixVente, toggleVendable, categoriesProduit, saveCategorieValorise } = useContext(CVCtx);
   const isActive = row.vendable?.actif === true;
+  const currentCat = row.vendable?.categorie_produit_id ?? row.categorieProduitId ?? '';
 
   const hasPrixDirect = () => {
     if (!row.vendable) return false;
@@ -182,6 +188,15 @@ function ProduitTableRow({ row, idx, showPortion }: { row: ProduitRow; idx: numb
           onChange={() => toggleVendable(row)}
           style={{ accentColor: C, width: 17, height: 17, cursor: 'pointer' }} />
       </td>
+      {isValorise && (
+        <td style={{ padding: '8px 16px', textAlign: 'center' }}>
+          <select value={String(currentCat)} onChange={e => saveCategorieValorise(row, e.target.value)}
+            style={{ minWidth: 150, padding: '6px 8px', borderRadius: 7, border: `1.5px solid ${currentCat ? CB : '#fca5a5'}`, background: currentCat ? '#fafafa' : '#fef2f2', fontSize: '0.82rem', color: CD, outline: 'none', cursor: 'pointer' }}>
+            <option value="">— Catégorie —</option>
+            {categoriesProduit.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </select>
+        </td>
+      )}
       {showPortion && (
         <td style={{ padding: '8px 16px', textAlign: 'center' }}>
           <span style={{ fontSize: '0.88rem', fontWeight: isActive ? 600 : 400, color: isActive ? CD : 'var(--text-muted)' }}>
@@ -205,7 +220,7 @@ function ProduitTableRow({ row, idx, showPortion }: { row: ProduitRow; idx: numb
   );
 }
 
-function ProduitTable({ tableRows, showPortion, isSupplement }: { tableRows: ProduitRow[]; showPortion: boolean; isSupplement?: boolean }) {
+function ProduitTable({ tableRows, showPortion, isSupplement, isValorise }: { tableRows: ProduitRow[]; showPortion: boolean; isSupplement?: boolean; isValorise?: boolean }) {
   const { activePrests, prixPrestataires, dirtyCount, handleSaveAll, saving } = useContext(CVCtx);
   const [filterNom, setFilterNom] = useState('');
   const [filterPresta, setFilterPresta] = useState('');
@@ -240,7 +255,7 @@ function ProduitTable({ tableRows, showPortion, isSupplement }: { tableRows: Pro
   const safePage = Math.min(page, totalPages);
   const paginated = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
 
-  const colCount = 2 + (showPortion ? 1 : 0) + 1 + activePrests.length;
+  const colCount = 2 + (isValorise ? 1 : 0) + (showPortion ? 1 : 0) + 1 + activePrests.length;
   return (
     <div>
       <div style={{ display: 'flex', gap: 10, padding: '12px 16px', borderBottom: `1px solid ${CB}`, flexWrap: 'wrap', alignItems: 'center' }}>
@@ -288,6 +303,9 @@ function ProduitTable({ tableRows, showPortion, isSupplement }: { tableRows: Pro
             <tr style={{ background: CL, borderBottom: `2px solid ${CB}` }}>
               <th style={{ padding: '11px 16px', textAlign: 'left', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Produit</th>
               <th style={{ padding: '11px 16px', textAlign: 'center', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Vendable</th>
+              {isValorise && (
+                <th style={{ padding: '11px 16px', textAlign: 'center', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em' }}>🏷️ Catégorie</th>
+              )}
               {showPortion && (
                 <th style={{ padding: '11px 16px', textAlign: 'center', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Portion</th>
               )}
@@ -308,7 +326,7 @@ function ProduitTable({ tableRows, showPortion, isSupplement }: { tableRows: Pro
               </tr>
             ) : (
               paginated.map((row, idx) => (
-                <ProduitTableRow key={row.produit.id} row={row} idx={idx} showPortion={showPortion} />
+                <ProduitTableRow key={row.produit.id} row={row} idx={idx} showPortion={showPortion} isValorise={isValorise} />
               ))
             )}
           </tbody>
@@ -514,6 +532,11 @@ export default function ConfigurationVentePage() {
   const [histFilterAu, setHistFilterAu] = useState('');
   const [exportingHistXls, setExportingHistXls] = useState(false);
   const [selectedHistIds, setSelectedHistIds] = useState<Set<number>>(new Set());
+  const [categoriesProduit, setCategoriesProduit] = useState<CategorieProduit[]>([]);
+
+  useEffect(() => {
+    api.get('/api/categories-produit').then(({ data }) => setCategoriesProduit(data as CategorieProduit[])).catch(() => {});
+  }, []);
 
   useEffect(() => {
     api.get('/api/entreprise/activites').then(({ data }) => {
@@ -563,6 +586,7 @@ export default function ConfigurationVentePage() {
   const valoriseRows: ProduitRow[] = valorises.map(v => ({
     produit: { id: v.id, name: v.nom, isSupplement: false, type: 'ingredient' },
     vendable: v.vendable ?? undefined,
+    categorieProduitId: v.categorie_produit_id,
   }));
   const dirtyCount = Object.keys(editingPrixVente).length + Object.keys(editingPrixPrest).length;
 
@@ -589,6 +613,28 @@ export default function ConfigurationVentePage() {
         setRows(prev => prev.map(r => r.produit.id === row.produit.id ? { ...r, saving: false, error: apiMsg(e) } : r));
       }
     }
+  };
+
+  const saveCategorieValorise = async (row: ProduitRow, categorieId: string) => {
+    const catId = categorieId ? parseInt(categorieId) : null;
+    try {
+      if (row.vendable) {
+        await api.put(`/api/articles-vendables/${row.vendable.id}`, { categorie_produit_id: catId });
+      } else {
+        await api.post('/api/articles-vendables', {
+          activite_id: selectedActiviteId,
+          article_type: 'ingredient',
+          article_id: row.produit.id,
+          prix_vente: 0, portion: null, actif: true,
+          categorie_produit_id: catId,
+        });
+      }
+      // Optimistic local update so the select reflects immediately
+      setValorises(prev => prev.map(v => v.id === row.produit.id
+        ? { ...v, categorie_produit_id: catId, vendable: v.vendable ? { ...v.vendable, categorie_produit_id: catId } : v.vendable }
+        : v));
+      loadAll();
+    } catch { /* ignore */ }
   };
 
   const handleSaveAll = async () => {
@@ -668,6 +714,7 @@ export default function ConfigurationVentePage() {
     handleDeleteHistEntry, handleExportHistXls, exportingHistXls,
     selectedActiviteId,
     selectedHistIds, toggleSelectHist,
+    categoriesProduit, saveCategorieValorise,
   };
 
   const TabBtn = ({ tab, label, count }: { tab: Tab; label: string; count?: number }) => (
@@ -780,7 +827,7 @@ export default function ConfigurationVentePage() {
                     <div style={{ fontSize: '0.72rem', color: C }}>Articles valorisés (familles non consommables et vendables) — activez-les et définissez leur prix</div>
                   </div>
                 </div>
-                <ProduitTable tableRows={valoriseRows} showPortion={false} />
+                <ProduitTable tableRows={valoriseRows} showPortion={false} isValorise />
               </div>
             )}
 
