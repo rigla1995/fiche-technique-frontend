@@ -153,6 +153,8 @@ export interface Gerant {
   parentId: number;
   activiteId: number | null;
   activiteType: 'labo' | 'activite' | null;
+  activiteIds?: number[];
+  laboIds?: number[];
   estGratuit: boolean;
   montantMensuel: number;
   actif: boolean;
