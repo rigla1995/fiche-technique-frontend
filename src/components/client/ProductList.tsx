@@ -626,7 +626,7 @@ export default function ProductList() {
                               <span style={{ fontSize: '0.62rem', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', background: '#fef3c7', color: '#92400e', border: '1px solid #fcd34d', borderRadius: 20, padding: '2px 8px', flexShrink: 0 }}>Supplément</span>
                             )}
                             {isVendable && p.categorieProduitName && (
-                              <span style={{ fontSize: '0.62rem', fontWeight: 700, letterSpacing: '0.04em', background: '#ffedd5', color: '#9a3412', border: '1px solid #fdba74', borderRadius: 20, padding: '2px 8px', flexShrink: 0 }}>🏷️ {p.categorieProduitName}</span>
+                              <span style={{ fontSize: '0.62rem', fontWeight: 700, letterSpacing: '0.04em', background: '#d1fae5', color: '#065f46', border: '1px solid #6ee7b7', borderRadius: 20, padding: '2px 8px', flexShrink: 0 }}>🏷️ {p.categorieProduitName}</span>
                             )}
                           </div>
                           {!isVendable && (
