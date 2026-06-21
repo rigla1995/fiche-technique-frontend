@@ -3,7 +3,7 @@ import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell,
 } from 'recharts';
 import api from '../../api/client';
-import type { Activite } from '../../types';
+import type { Activite, CategorieProduit } from '../../types';
 
 interface RVProduit { nom: string; type: 'produit' | 'supplement' | 'valorise'; qte: number; ca: number; marge: number; food_cost_pct: number | null }
 interface RVData {
@@ -41,7 +41,9 @@ type SortKey = 'ca' | 'marge' | 'food' | 'qte';
 
 export default function RapportVentePage() {
   const [activites, setActivites] = useState<Activite[]>([]);
+  const [categories, setCategories] = useState<CategorieProduit[]>([]);
   const [activiteId, setActiviteId] = useState('');
+  const [categorieId, setCategorieId] = useState('');
   const [canal, setCanal] = useState('');
   const [preset, setPreset] = useState<Preset>('mois');
   const [customFrom, setCustomFrom] = useState('');
@@ -51,16 +53,20 @@ export default function RapportVentePage() {
   const [sort, setSort] = useState<SortKey>('ca');
   const [filterType, setFilterType] = useState('');
 
-  useEffect(() => { api.get('/api/entreprise/activites').then(({ data }) => setActivites(data as Activite[])).catch(() => {}); }, []);
+  useEffect(() => {
+    api.get('/api/entreprise/activites').then(({ data }) => setActivites(data as Activite[])).catch(() => {});
+    api.get('/api/categories-produit').then(({ data }) => setCategories((data as CategorieProduit[]).filter(c => c.typeProduit === 'vendable' || c.typeProduit === 'supplement'))).catch(() => {});
+  }, []);
 
   const load = useCallback(() => {
     setLoading(true);
     const range = preset === 'perso' && customFrom && customTo ? { from: customFrom, to: customTo } : periodForPreset(preset);
     const params = new URLSearchParams({ from: range.from, to: range.to });
     if (activiteId) params.set('activiteId', activiteId);
+    if (categorieId) params.set('categorieId', categorieId);
     if (canal) params.set('canal', canal);
     api.get(`/api/dashboard/rapport-ventes?${params}`).then(({ data }) => setData(data as RVData)).catch(() => setData(null)).finally(() => setLoading(false));
-  }, [preset, customFrom, customTo, activiteId, canal]);
+  }, [preset, customFrom, customTo, activiteId, categorieId, canal]);
   useEffect(() => { load(); }, [load]);
 
   const presets: { key: Preset; label: string }[] = [
@@ -104,6 +110,11 @@ export default function RapportVentePage() {
         {activites.length > 1 && (
           <select value={activiteId} onChange={e => setActiviteId(e.target.value)} style={{ fontSize: '0.78rem', padding: '6px 10px', borderRadius: 8, border: '1px solid var(--border)' }}>
             <option value="">Toutes activités</option>{activites.map(a => <option key={a.id} value={a.id}>{a.nom}</option>)}
+          </select>
+        )}
+        {categories.length > 0 && (
+          <select value={categorieId} onChange={e => setCategorieId(e.target.value)} style={{ fontSize: '0.78rem', padding: '6px 10px', borderRadius: 8, border: '1px solid var(--border)' }}>
+            <option value="">Toutes catégories</option>{categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
         )}
         <select value={canal} onChange={e => setCanal(e.target.value)} style={{ fontSize: '0.78rem', padding: '6px 10px', borderRadius: 8, border: '1px solid var(--border)' }}>

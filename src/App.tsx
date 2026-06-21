@@ -49,7 +49,7 @@ import SupportPage from './components/client/SupportPage';
 import GuidePage from './components/client/GuidePage';
 import AIAssistantPage from './components/client/AIAssistantPage';
 import UpgradeWizard from './components/client/UpgradeWizard';
-import RapportsPage from './components/client/RapportsPage';
+import RapportActivitesPage from './components/client/RapportActivitesPage';
 import VentesPage from './components/client/VentesPage';
 import LaboVentesPage from './components/client/LaboVentesPage';
 import DashboardGerantPage from './components/client/DashboardGerantPage';
@@ -152,7 +152,7 @@ export default function App() {
             <Route path="/client/historique-paiement" element={<HistoriquePaiementPage />} />
             <Route path="/client/gerants" element={<GerantsPage />} />
             <Route path="/client/upgrade-wizard" element={<UpgradeWizard />} />
-            <Route path="/client/rapports" element={<RapportsPage />} />
+            <Route path="/client/rapports" element={<RapportActivitesPage />} />
             <Route path="/client/rapports/labo" element={<RapportLaboPage />} />
             <Route path="/client/support" element={<SupportPage />} />
             <Route path="/client/guide" element={<GuidePage />} />
