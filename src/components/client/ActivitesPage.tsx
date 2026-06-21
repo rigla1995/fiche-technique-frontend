@@ -410,13 +410,6 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                     </div>
                   </div>
                 )}
-                {(atActiviteLimit || atLaboLimit) && (
-                  <button onClick={() => navigate('/client/support?type=supplement')}
-                    title="Demander l'ajout d'activités ou de labos"
-                    style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: '#fff', color: '#b45309', border: 'none', borderRadius: 12, padding: '11px 18px', fontWeight: 800, fontSize: '0.85rem', cursor: 'pointer', boxShadow: '0 2px 10px rgba(0,0,0,0.12)' }}>
-                    ⚡ Ajouter des capacités
-                  </button>
-                )}
               </>
             )}
           </div>
@@ -496,9 +489,14 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                   {activites.length}{maxActivites !== null ? ` / ${maxActivites}` : ''} activité(s)
                 </span>
               </div>
-              {!atActiviteLimit && (
+              {!atActiviteLimit ? (
                 <button className="btn btn-primary btn-sm" onClick={() => openAdd()}>
                   + Nouvelle activité
+                </button>
+              ) : (
+                <button className="btn btn-sm" title="Demander l'ajout d'activités" onClick={() => navigate('/client/support?type=supplement')}
+                  style={{ background: '#1e40af', color: '#fff', border: 'none', borderRadius: 8, fontSize: '0.8rem', padding: '6px 14px', cursor: 'pointer', fontWeight: 700 }}>
+                  ⚡ Ajouter activités
                 </button>
               )}
             </div>
@@ -567,13 +565,18 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                     {labos.length} / {maxLabos} labo(s)
                   </span>
                 </div>
-                {!atLaboLimit && (
+                {!atLaboLimit ? (
                   <button
                     className="btn btn-sm"
                     style={{ background: '#7e22ce', color: '#fff', border: 'none', borderRadius: 8, fontSize: '0.8rem', padding: '6px 14px', cursor: 'pointer', fontWeight: 700 }}
                     onClick={openAddLabo}
                   >
                     + Nouveau labo
+                  </button>
+                ) : (
+                  <button className="btn btn-sm" title="Demander l'ajout de labos" onClick={() => navigate('/client/support?type=supplement')}
+                    style={{ background: '#7e22ce', color: '#fff', border: 'none', borderRadius: 8, fontSize: '0.8rem', padding: '6px 14px', cursor: 'pointer', fontWeight: 700 }}>
+                    ⚡ Ajouter labos
                   </button>
                 )}
               </div>
