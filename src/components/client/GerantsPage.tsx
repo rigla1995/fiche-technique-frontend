@@ -7,11 +7,11 @@ interface GerantForm {
   nom: string;
   telephone: string;
   email: string;
-  activiteId: string;
-  activiteType: 'labo' | 'activite' | '';
+  activiteIds: number[];
+  laboIds: number[];
 }
 
-const EMPTY_FORM: GerantForm = { nom: '', telephone: '', email: '', activiteId: '', activiteType: '' };
+const EMPTY_FORM: GerantForm = { nom: '', telephone: '', email: '', activiteIds: [], laboIds: [] };
 
 export default function GerantsPage() {
   const isEntreprise = true;
@@ -57,6 +57,7 @@ export default function GerantsPage() {
   const submitForm = async () => {
     if (!form.nom || !form.telephone || !form.email) { setError('Nom, téléphone et email requis'); return; }
     if (gerantEmailExists) { setError('Cet email est déjà utilisé.'); return; }
+    if (form.activiteIds.length === 0 && form.laboIds.length === 0) { setError('Affectez au moins une activité ou un labo'); return; }
     setSaving(true);
     setError('');
     try {
@@ -64,8 +65,8 @@ export default function GerantsPage() {
         nom: form.nom,
         telephone: form.telephone,
         email: form.email,
-        activiteId: form.activiteId ? Number(form.activiteId) : undefined,
-        activiteType: form.activiteType || undefined,
+        activiteIds: form.activiteIds,
+        laboIds: form.laboIds,
       });
       setGerants((g) => [...g, res.data]);
       setInviteSent({ nom: res.data.nom, email: res.data.email });
@@ -102,14 +103,15 @@ export default function GerantsPage() {
   };
 
   const activiteLabel = (g: Gerant) => {
-    if (!g.activiteId) return '—';
-    if (g.activiteType === 'labo') {
-      const l = labos.find((x) => x.id === g.activiteId);
-      return l ? `Labo : ${l.nom}` : `Labo #${g.activiteId}`;
-    }
-    const a = activites.find((x) => x.id === g.activiteId);
-    return a ? `Activité : ${a.nom}` : `Activité #${g.activiteId}`;
+    const actIds = g.activiteIds && g.activiteIds.length ? g.activiteIds : (g.activiteType !== 'labo' && g.activiteId ? [g.activiteId] : []);
+    const laboIds = g.laboIds && g.laboIds.length ? g.laboIds : (g.activiteType === 'labo' && g.activiteId ? [g.activiteId] : []);
+    const names = [
+      ...actIds.map((id) => activites.find((x) => x.id === id)?.nom ?? `Activité #${id}`),
+      ...laboIds.map((id) => `Labo : ${labos.find((x) => x.id === id)?.nom ?? id}`),
+    ];
+    return names.length ? names.join(' · ') : '—';
   };
+  const hasAffectation = (g: Gerant) => (g.activiteIds?.length || g.laboIds?.length || g.activiteId);
 
   const activeCount = gerants.filter((g) => g.actif).length;
   const pendingInvites = gerants.filter((g) => !g.activatedAt).length;
@@ -219,30 +221,56 @@ export default function GerantsPage() {
                 {gerantEmailChecking && <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 3 }}>Vérification…</div>}
                 {!gerantEmailChecking && gerantEmailExists && <div style={{ fontSize: 11, color: '#dc2626', marginTop: 3 }}>Cet email est déjà utilisé.</div>}
               </div>
-              {isEntreprise && (
-                <>
-                  <div>
-                    <label style={lbl}>Type d'activité assignée</label>
-                    <select value={form.activiteType} onChange={(e) => setForm((f) => ({ ...f, activiteType: e.target.value as GerantForm['activiteType'], activiteId: '' }))} style={inp}>
-                      <option value="">— Sélectionner —</option>
-                      <option value="activite">Activité</option>
-                      <option value="labo">Labo</option>
-                    </select>
-                  </div>
-                  {form.activiteType && (
-                    <div>
-                      <label style={lbl}>{form.activiteType === 'labo' ? 'Labo' : 'Activité'}</label>
-                      <select value={form.activiteId} onChange={(e) => setForm((f) => ({ ...f, activiteId: e.target.value }))} style={inp}>
-                        <option value="">— Sélectionner —</option>
-                        {form.activiteType === 'labo'
-                          ? labos.map((l) => <option key={l.id} value={l.id}>{l.nom}</option>)
-                          : activites.map((a) => <option key={a.id} value={a.id}>{a.nom}</option>)
-                        }
-                      </select>
+              {isEntreprise && (() => {
+                const allActIds = activites.map((a) => a.id);
+                const allLaboIds = labos.map((l) => l.id);
+                const allChecked = form.activiteIds.length === allActIds.length && form.laboIds.length === allLaboIds.length && (allActIds.length + allLaboIds.length) > 0;
+                const toggleAct = (id: number) => setForm((f) => ({ ...f, activiteIds: f.activiteIds.includes(id) ? f.activiteIds.filter((x) => x !== id) : [...f.activiteIds, id] }));
+                const toggleLabo = (id: number) => setForm((f) => ({ ...f, laboIds: f.laboIds.includes(id) ? f.laboIds.filter((x) => x !== id) : [...f.laboIds, id] }));
+                const pill = (checked: boolean): React.CSSProperties => ({
+                  display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 20, cursor: 'pointer',
+                  fontSize: '0.82rem', fontWeight: 600, border: `1.5px solid ${checked ? '#6ee7b7' : '#e2e8f0'}`,
+                  background: checked ? '#ecfdf5' : '#f8fafc', color: checked ? '#065f46' : '#64748b',
+                });
+                return (
+                  <div style={{ gridColumn: '1 / -1' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                      <label style={lbl}>Activités &amp; labos assignés <span style={{ color: '#ef4444' }}>*</span></label>
+                      {(allActIds.length + allLaboIds.length) > 0 && (
+                        <button type="button"
+                          onClick={() => setForm((f) => allChecked ? { ...f, activiteIds: [], laboIds: [] } : { ...f, activiteIds: allActIds, laboIds: allLaboIds })}
+                          style={{ background: 'none', border: 'none', color: '#2563eb', fontWeight: 700, fontSize: '0.78rem', cursor: 'pointer' }}>
+                          {allChecked ? 'Tout décocher' : '✓ Tout'}
+                        </button>
+                      )}
                     </div>
-                  )}
-                </>
-              )}
+                    {activites.length > 0 && (
+                      <>
+                        <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '4px 0' }}>📍 Activités</div>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7, marginBottom: 10 }}>
+                          {activites.map((a) => (
+                            <span key={a.id} style={pill(form.activiteIds.includes(a.id))} onClick={() => toggleAct(a.id)}>
+                              {form.activiteIds.includes(a.id) ? '✓ ' : ''}{a.nom}
+                            </span>
+                          ))}
+                        </div>
+                      </>
+                    )}
+                    {labos.length > 0 && (
+                      <>
+                        <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '4px 0' }}>🏭 Labos</div>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
+                          {labos.map((l) => (
+                            <span key={l.id} style={pill(form.laboIds.includes(l.id))} onClick={() => toggleLabo(l.id)}>
+                              {form.laboIds.includes(l.id) ? '✓ ' : ''}{l.nom}
+                            </span>
+                          ))}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                );
+              })()}
             </div>
             {error && <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, padding: '9px 13px', fontSize: '0.82rem', color: '#dc2626', marginBottom: 14 }}>{error}</div>}
             <div style={{ display: 'flex', gap: 10 }}>
@@ -310,7 +338,7 @@ export default function GerantsPage() {
                   <div style={{ fontSize: '0.8rem', color: '#6b7280' }}>
                     📧 {g.email}{g.telephone ? ` · 📞 ${g.telephone}` : ''}
                   </div>
-                  {isEntreprise && g.activiteId && (
+                  {isEntreprise && hasAffectation(g) && (
                     <div style={{ fontSize: '0.78rem', color: '#7c3aed', marginTop: 3, fontWeight: 600 }}>📍 {activiteLabel(g)}</div>
                   )}
                 </div>
