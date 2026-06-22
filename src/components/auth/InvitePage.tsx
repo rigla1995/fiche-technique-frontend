@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import api from '../../api/client';
+import LabFlowLogo from '../common/LabFlowLogo';
 
 type State = 'loading' | 'ready' | 'invalid' | 'success' | 'error';
 
@@ -9,8 +10,43 @@ const PWD_RULES: { test: (v: string) => boolean; label: string }[] = [
   { test: (v) => /[A-Z]/.test(v), label: 'Une majuscule' },
   { test: (v) => /[a-z]/.test(v), label: 'Une minuscule' },
   { test: (v) => /[0-9]/.test(v), label: 'Un chiffre' },
-  { test: (v) => /[@$!%*?&_\-#]/.test(v), label: 'Un caractère spécial (@$!%*?&_-#)' },
+  { test: (v) => /[@$!%*?&_\-#]/.test(v), label: 'Un caractère spécial' },
 ];
+
+// Habillage commun : fond dégradé LabFlow + carte avec en-tête logo + barre ambre.
+function Shell({ children }: { children: React.ReactNode }) {
+  return (
+    <div style={{
+      minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
+      background: 'radial-gradient(1200px 600px at 50% -10%, #312e81 0%, transparent 60%), linear-gradient(135deg, #1e1b4b 0%, #312e81 55%, #4338ca 100%)',
+      padding: 24,
+    }}>
+      <div style={{
+        background: '#fff', borderRadius: 20, width: '100%', maxWidth: 460,
+        boxShadow: '0 30px 80px rgba(15,12,41,0.45)', overflow: 'hidden',
+      }}>
+        {/* En-tête logo */}
+        <div style={{ background: 'linear-gradient(135deg, #1e1b4b 0%, #4338ca 100%)', padding: '34px 36px 28px', position: 'relative' }}>
+          <LabFlowLogo height={48} variant="light" style={{ margin: '0 auto' }} />
+          <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 5, background: 'linear-gradient(90deg, #d97706, #f59e0b)' }} />
+        </div>
+        {/* Corps */}
+        <div style={{ padding: '30px 36px 34px' }}>
+          {children}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const inputStyle: React.CSSProperties = {
+  width: '100%', padding: '12px 14px', borderRadius: 10, border: '1px solid #e5e7eb',
+  fontSize: '0.92rem', outline: 'none', background: '#f9fafb', color: '#111827',
+};
+const labelStyle: React.CSSProperties = {
+  display: 'block', fontSize: '0.72rem', fontWeight: 700, color: '#6b7280',
+  marginBottom: 7, textTransform: 'uppercase', letterSpacing: '0.06em',
+};
 
 export default function InvitePage() {
   const { token } = useParams<{ token: string }>();
@@ -55,158 +91,146 @@ export default function InvitePage() {
     }
   };
 
-  const containerStyle: React.CSSProperties = {
-    minHeight: '100vh',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    background: 'linear-gradient(135deg, #1e1b4b 0%, #4338ca 55%, #6366f1 100%)',
-    padding: '24px',
-  };
-
-  const cardStyle: React.CSSProperties = {
-    background: '#fff',
-    borderRadius: 16,
-    padding: '40px 36px',
-    width: '100%',
-    maxWidth: 440,
-    boxShadow: '0 20px 60px rgba(0,0,0,0.2)',
-  };
-
   if (state === 'loading') {
     return (
-      <div style={containerStyle}>
-        <div style={cardStyle}>
-          <p style={{ textAlign: 'center', color: '#6b7280' }}>Vérification du lien…</p>
+      <Shell>
+        <div style={{ textAlign: 'center', padding: '20px 0' }}>
+          <div style={{ width: 34, height: 34, margin: '0 auto 14px', border: '3px solid #e0e7ff', borderTopColor: '#4338ca', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+          <p style={{ color: '#6b7280', fontSize: '0.9rem', margin: 0 }}>Vérification du lien…</p>
         </div>
-      </div>
+        <style>{'@keyframes spin{to{transform:rotate(360deg)}}'}</style>
+      </Shell>
     );
   }
 
   if (state === 'invalid') {
     return (
-      <div style={containerStyle}>
-        <div style={cardStyle}>
-          <div style={{ textAlign: 'center', marginBottom: 24 }}>
-            <div style={{ fontSize: '3rem', marginBottom: 12 }}>🔗</div>
-            <h2 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#111827', margin: '0 0 8px' }}>Lien invalide ou expiré</h2>
-            <p style={{ color: '#6b7280', fontSize: '0.9rem', margin: '0 0 24px' }}>
-              Ce lien d'invitation n'est plus valide (durée : 48h).<br />
-              Contactez votre administrateur pour recevoir un nouveau lien.
-            </p>
-            <Link to="/login" style={{ color: '#4338ca', fontWeight: 600, fontSize: '0.9rem' }}>← Retour à la connexion</Link>
-          </div>
+      <Shell>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ width: 60, height: 60, margin: '0 auto 16px', borderRadius: '50%', background: '#fef2f2', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.8rem' }}>🔗</div>
+          <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#111827', margin: '0 0 8px' }}>Lien invalide ou expiré</h2>
+          <p style={{ color: '#6b7280', fontSize: '0.9rem', margin: '0 0 24px', lineHeight: 1.5 }}>
+            Ce lien d'activation n'est plus valide (durée : 48&nbsp;h).<br />
+            Contactez votre administrateur pour en recevoir un nouveau.
+          </p>
+          <Link to="/login" style={{ color: '#4338ca', fontWeight: 700, fontSize: '0.9rem', textDecoration: 'none' }}>← Retour à la connexion</Link>
         </div>
-      </div>
+      </Shell>
     );
   }
 
   if (state === 'success') {
     return (
-      <div style={containerStyle}>
-        <div style={cardStyle}>
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '3rem', marginBottom: 12 }}>✅</div>
-            <h2 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#111827', margin: '0 0 8px' }}>Compte activé !</h2>
-            <p style={{ color: '#6b7280', fontSize: '0.9rem', margin: '0 0 28px' }}>
-              Votre mot de passe a été défini. Vous pouvez maintenant vous connecter.
-            </p>
-            <button
-              className="btn btn-primary"
-              style={{ width: '100%' }}
-              onClick={() => navigate('/login')}
-            >
-              Se connecter
-            </button>
-          </div>
+      <Shell>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ width: 64, height: 64, margin: '0 auto 16px', borderRadius: '50%', background: '#ecfdf5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem' }}>✅</div>
+          <h2 style={{ fontSize: '1.3rem', fontWeight: 800, color: '#111827', margin: '0 0 8px' }}>Compte activé&nbsp;!</h2>
+          <p style={{ color: '#6b7280', fontSize: '0.9rem', margin: '0 0 26px', lineHeight: 1.5 }}>
+            Votre mot de passe a bien été défini.<br />Vous pouvez maintenant vous connecter à LabFlow.
+          </p>
+          <button onClick={() => navigate('/login')} style={{
+            width: '100%', padding: '13px', border: 'none', borderRadius: 10,
+            background: 'linear-gradient(135deg, #4338ca, #6366f1)', color: '#fff',
+            fontWeight: 800, fontSize: '0.95rem', cursor: 'pointer', boxShadow: '0 8px 20px rgba(67,56,202,0.35)',
+          }}>
+            Se connecter
+          </button>
         </div>
-      </div>
+      </Shell>
     );
   }
 
+  const pwdOk = PWD_RULES.every((r) => r.test(password));
+  const match = password.length > 0 && password === confirm;
+
   return (
-    <div style={containerStyle}>
-      <div style={cardStyle}>
-        <div style={{ marginBottom: 28 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
-            <div style={{ background: 'linear-gradient(135deg, #4338ca, #6366f1)', borderRadius: 10, padding: '8px 10px', fontSize: '1.1rem', lineHeight: 1 }}>🔑</div>
-            <span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#4338ca', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Activation du compte</span>
-          </div>
-          <h1 style={{ fontSize: '1.4rem', fontWeight: 900, color: '#111827', margin: '0 0 4px', letterSpacing: '-0.02em' }}>
-            Bonjour, {nom} !
-          </h1>
-          <p style={{ color: '#6b7280', fontSize: '0.88rem', margin: 0 }}>
-            Choisissez votre mot de passe pour activer le compte <strong>{email}</strong>.
-          </p>
-        </div>
+    <Shell>
+      {/* Badge + titre */}
+      <div style={{ marginBottom: 22 }}>
+        <span style={{ display: 'inline-block', fontSize: '0.66rem', fontWeight: 800, color: '#b45309', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 20, padding: '4px 11px', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 12 }}>
+          🔑 Activation du compte
+        </span>
+        <h1 style={{ fontSize: '1.45rem', fontWeight: 900, color: '#0f172a', margin: '0 0 5px', letterSpacing: '-0.02em' }}>
+          Bonjour, {nom}&nbsp;!
+        </h1>
+        <p style={{ color: '#6b7280', fontSize: '0.88rem', margin: 0, lineHeight: 1.5 }}>
+          Choisissez un mot de passe pour activer le compte<br /><strong style={{ color: '#4338ca' }}>{email}</strong>.
+        </p>
+      </div>
 
-        <form onSubmit={handleSubmit}>
-          <div style={{ marginBottom: 16 }}>
-            <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#374151', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              Mot de passe
-            </label>
-            <div style={{ position: 'relative' }}>
-              <input
-                type={showPwd ? 'text' : 'password'}
-                className="input"
-                style={{ width: '100%', paddingRight: 40 }}
-                placeholder="Minimum 8 caractères"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                autoFocus
-              />
-              <button
-                type="button"
-                onClick={() => setShowPwd((v) => !v)}
-                style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', fontSize: '1rem' }}
-              >
-                {showPwd ? '🙈' : '👁'}
-              </button>
-            </div>
-            {password.length > 0 && (
-              <div style={{ marginTop: 8, display: 'flex', flexWrap: 'wrap', gap: '4px 12px' }}>
-                {PWD_RULES.map((r) => {
-                  const ok = r.test(password);
-                  return (
-                    <span key={r.label} style={{ fontSize: '0.72rem', color: ok ? '#16a34a' : '#9ca3af', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                      {ok ? '✓' : '○'} {r.label}
-                    </span>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
-          <div style={{ marginBottom: 24 }}>
-            <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#374151', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              Confirmer le mot de passe
-            </label>
+      <form onSubmit={handleSubmit}>
+        <div style={{ marginBottom: 14 }}>
+          <label style={labelStyle}>Mot de passe</label>
+          <div style={{ position: 'relative' }}>
             <input
               type={showPwd ? 'text' : 'password'}
-              className="input"
-              style={{ width: '100%' }}
-              placeholder="Répétez votre mot de passe"
-              value={confirm}
-              onChange={(e) => setConfirm(e.target.value)}
+              style={{ ...inputStyle, paddingRight: 44 }}
+              placeholder="Votre mot de passe"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              onFocus={(e) => (e.currentTarget.style.borderColor = '#6366f1')}
+              onBlur={(e) => (e.currentTarget.style.borderColor = '#e5e7eb')}
+              autoFocus
             />
+            <button type="button" onClick={() => setShowPwd((v) => !v)} aria-label="Afficher/masquer"
+              style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', fontSize: '1.05rem', padding: 4 }}>
+              {showPwd ? '🙈' : '👁'}
+            </button>
           </div>
-
-          {err && (
-            <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, padding: '10px 14px', marginBottom: 16, color: '#b91c1c', fontSize: '0.85rem' }}>
-              {err}
+          {password.length > 0 && (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 10 }}>
+              {PWD_RULES.map((r) => {
+                const ok = r.test(password);
+                return (
+                  <span key={r.label} style={{
+                    fontSize: '0.68rem', fontWeight: 600, padding: '3px 9px', borderRadius: 20,
+                    display: 'inline-flex', alignItems: 'center', gap: 4,
+                    background: ok ? '#ecfdf5' : '#f3f4f6', color: ok ? '#059669' : '#9ca3af',
+                    border: `1px solid ${ok ? '#a7f3d0' : '#e5e7eb'}`,
+                  }}>
+                    {ok ? '✓' : '○'} {r.label}
+                  </span>
+                );
+              })}
             </div>
           )}
+        </div>
 
-          <button
-            type="submit"
-            className="btn btn-primary"
-            style={{ width: '100%' }}
-            disabled={saving}
-          >
-            {saving ? 'Activation…' : 'Activer mon compte'}
-          </button>
-        </form>
-      </div>
-    </div>
+        <div style={{ marginBottom: 20 }}>
+          <label style={labelStyle}>Confirmer le mot de passe</label>
+          <input
+            type={showPwd ? 'text' : 'password'}
+            style={{ ...inputStyle, borderColor: confirm.length > 0 ? (match ? '#a7f3d0' : '#fecaca') : '#e5e7eb' }}
+            placeholder="Répétez votre mot de passe"
+            value={confirm}
+            onChange={(e) => setConfirm(e.target.value)}
+          />
+          {confirm.length > 0 && !match && (
+            <span style={{ fontSize: '0.72rem', color: '#dc2626', marginTop: 5, display: 'block' }}>Les mots de passe ne correspondent pas.</span>
+          )}
+        </div>
+
+        {err && (
+          <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 10, padding: '10px 14px', marginBottom: 16, color: '#b91c1c', fontSize: '0.84rem' }}>
+            {err}
+          </div>
+        )}
+
+        <button type="submit" disabled={saving || !pwdOk || !match} style={{
+          width: '100%', padding: '13px', border: 'none', borderRadius: 10, color: '#fff',
+          fontWeight: 800, fontSize: '0.95rem', letterSpacing: '0.02em',
+          cursor: saving || !pwdOk || !match ? 'not-allowed' : 'pointer',
+          background: saving || !pwdOk || !match ? '#c7d2fe' : 'linear-gradient(135deg, #4338ca, #6366f1)',
+          boxShadow: saving || !pwdOk || !match ? 'none' : '0 8px 20px rgba(67,56,202,0.35)',
+          transition: 'background 0.2s, box-shadow 0.2s',
+        }}>
+          {saving ? 'Activation…' : 'Activer mon compte'}
+        </button>
+
+        <p style={{ textAlign: 'center', fontSize: '0.72rem', color: '#9ca3af', margin: '16px 0 0', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
+          🔒 Connexion sécurisée &middot; vos données sont chiffrées
+        </p>
+      </form>
+    </Shell>
   );
 }
