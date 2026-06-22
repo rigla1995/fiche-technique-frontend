@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useSearchParams, Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
+import HelpButton from '../common/HelpButton';
 
 const currentYear = new Date().getFullYear();
 const yearStart = `${currentYear}-01-01`;
@@ -211,7 +212,7 @@ export default function TransferHistoriquePage() {
             <div>
               <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0, letterSpacing: '-0.02em' }}>
                 Historique Transfert{labo ? ` — ${labo.nom}` : ''}
-              </h1>
+              <HelpButton section="transferts" variant="solid" size={18} tip="Aide" /></h1>
               <p style={{ color: 'rgba(255,255,255,0.72)', fontSize: '0.82rem', margin: '4px 0 0' }}>Consultez et exportez l'historique des transferts vers les activités</p>
             </div>
           </div>

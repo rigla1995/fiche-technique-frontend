@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useSearchParams, Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
+import HelpButton from '../common/HelpButton';
 import { useAuth } from '../../context/AuthContext';
 import PortionsModal from './PortionsModal';
 import InvoiceConfirmModal, { type InvoiceLineItem } from './InvoiceConfirmModal';
@@ -559,7 +560,7 @@ export default function StockLaboPage() {
             <div style={{ background: 'rgba(255,255,255,0.2)', borderRadius: 10, padding: '7px 9px', fontSize: '1.2rem' }}>🏭</div>
             <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0 }}>
               Stock Labo{labo ? ` — ${labo.nom}` : ''}
-            </h1>
+            <HelpButton section="stock-labo" variant="solid" size={18} tip="Aide" /></h1>
           </div>
           <span style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.82rem' }}>
             Gérez les stocks et approvisionnements de vos laboratoires

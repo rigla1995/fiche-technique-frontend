@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useSearchParams, Link, useNavigate } from 'react-router-dom';
 import api from '../../api/client';
+import HelpButton from '../common/HelpButton';
 import { useAuth } from '../../context/AuthContext';
 import { useNotifications } from '../../context/NotificationContext';
 
@@ -252,7 +253,7 @@ export default function HistoriqueInventairePage() {
             <div>
               <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0, letterSpacing: '-0.02em' }}>
                 Historique Inventaire{contextTitle ? ` — ${contextTitle}` : ''}
-              </h1>
+              <HelpButton section="inventaire" variant="solid" size={18} tip="Aide" /></h1>
               <p style={{ color: 'rgba(255,255,255,0.72)', fontSize: '0.82rem', margin: '4px 0 0' }}>
                 Consultez et exportez l'historique des inventaires enregistrés
               </p>
