@@ -105,8 +105,9 @@ export default function LoginPage() {
             <LabFlowLogo height={34} variant="dark" />
           </div>
 
+          <div className="login-form-mark" />
           <div className="login-form-heading">Connexion</div>
-          <p className="login-form-subheading">Accédez à votre espace de gestion</p>
+          <p className="login-form-subheading">Accédez à votre espace de gestion LabFlow</p>
 
           <form onSubmit={handleSubmit}>
             {justActivated && !error && (
