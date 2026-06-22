@@ -6,7 +6,9 @@ RUN npm ci --include=dev
 COPY . .
 ARG VITE_API_URL=https://api.labflow-tn.com
 ENV VITE_API_URL=$VITE_API_URL
-RUN npm run build
+# Build conteneur = bundling Vite uniquement (léger en mémoire). Le type-check TypeScript
+# (`tsc -b`) est exécuté en local/CI avant chaque push — l'inclure ici sature la RAM (OOM).
+RUN npx vite build
 
 FROM nginx:alpine
 COPY --from=build /app/dist /usr/share/nginx/html
