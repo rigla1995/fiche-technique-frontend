@@ -83,7 +83,8 @@ export default function InvitePage() {
     setErr('');
     try {
       await api.post('/auth/invite/accept', { token, password });
-      setState('success');
+      // Redirection directe vers la connexion, email pré-rempli — le client n'a plus qu'à saisir son mot de passe.
+      navigate('/login', { replace: true, state: { email, activated: true } });
     } catch (e: unknown) {
       setErr((e as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Erreur, veuillez réessayer.');
     } finally {

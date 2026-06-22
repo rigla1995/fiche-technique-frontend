@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useRef, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import LabFlowLogo from '../common/LabFlowLogo';
 
@@ -19,11 +19,21 @@ const STATS = [
 export default function LoginPage() {
   const { login } = useAuth();
   const navigate = useNavigate();
-  const [email, setEmail] = useState('');
+  const location = useLocation();
+  const prefill = (location.state as { email?: string; activated?: boolean } | null) || {};
+  const [email, setEmail] = useState(prefill.email || '');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPwd, setShowPwd] = useState(false);
+  const [justActivated] = useState(!!prefill.activated);
+  const pwdRef = useRef<HTMLInputElement>(null);
+
+  // Si on arrive depuis l'activation avec l'email pré-rempli, on met le focus sur le mot de passe.
+  useEffect(() => {
+    if (prefill.email && pwdRef.current) pwdRef.current.focus();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -99,6 +109,11 @@ export default function LoginPage() {
           <p className="login-form-subheading">Accédez à votre espace de gestion</p>
 
           <form onSubmit={handleSubmit}>
+            {justActivated && !error && (
+              <div style={{ marginBottom: 20, background: '#ecfdf5', border: '1px solid #a7f3d0', color: '#047857', borderRadius: 10, padding: '11px 14px', fontSize: '0.86rem', fontWeight: 600 }}>
+                ✅ Compte activé ! Saisissez votre mot de passe pour vous connecter.
+              </div>
+            )}
             {error && (
               <div className="alert alert-error" style={{ marginBottom: 20 }}>
                 ⚠️ {error}
@@ -123,6 +138,7 @@ export default function LoginPage() {
               <label htmlFor="password">Mot de passe</label>
               <div className="login-pwd-wrap">
                 <input
+                  ref={pwdRef}
                   id="password"
                   type={showPwd ? 'text' : 'password'}
                   className="input"
