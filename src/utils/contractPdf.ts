@@ -109,33 +109,60 @@ function makeDoc() {
 
 // ── Contract PDF ──────────────────────────────────────────────────────────────
 
-export function generateContractPdf(params: ContractPdfParams): string {
-  const { clientNom, clientEmail, clientTel, nbActivites, nbLabos, nbGerants,
-          montantOnboarding, totalMensuel, promos = [], preview, appName } = params;
+// Infos prestataire — DOIVENT correspondre au template Docuseal (docuseal-templates/generate.js)
+const PRESTATAIRE = {
+  forme: 'SARL',
+  matricule: '1234567/A/M/000',
+  rc: 'B0123452024',
+  adresse: 'Avenue Habib Bourguiba, 1000 Tunis, Tunisie',
+  email: 'contact@labflow-tn.com',
+  tel: '+216 71 000 000',
+};
 
-  // ── Promo helpers ────────────────────────────────────────────────────────────
+// Aperçu du contrat — reproduit EXACTEMENT le template Docuseal envoyé au client
+// (mêmes articles, mêmes infos légales, même section promo) avec les prix effectifs.
+export function generateContractPdf(params: ContractPdfParams): string {
+  const { clientNom, clientEmail, nbActivites, nbLabos, nbGerants,
+          montantOnboarding, totalMensuel, promos = [], appName } = params;
+
   const mensPromo = promos.find((p) => ['mensualite', 'les_deux'].includes(p.appliesTo));
   const obPromo   = promos.find((p) => ['onboarding', 'les_deux'].includes(p.appliesTo));
-
   const applyPromo = (base: number, p: ContractPromo): number => {
     if (p.type === 'free_months') return 0;
     if (p.type === 'percent_off' && p.discountVal) return Math.round(base * (1 - parseFloat(p.discountVal) / 100) * 100) / 100;
     if (p.type === 'fixed_price' && p.fixedVal) return parseFloat(p.fixedVal);
     return base;
   };
-  const promoLabel = (p: ContractPromo): string => {
-    if (p.type === 'free_months') return 'Gratuit (100%)';
-    if (p.type === 'percent_off') return `-${p.discountVal}%`;
-    return `-${p.fixedVal} DT (prix fixe)`;
-  };
-  const promoDurLabel = (p: ContractPromo): string => {
-    if (!p.months) return 'Permanent';
-    const start = p.moisDebut ? ` a partir de ${p.moisDebut}` : '';
-    return `${p.months} mois${start}`;
-  };
+  const effMensuel    = mensPromo ? applyPromo(totalMensuel, mensPromo) : totalMensuel;
+  const effOnboarding = obPromo  ? applyPromo(montantOnboarding, obPromo) : montantOnboarding;
 
-  const effectifMensuel   = mensPromo ? applyPromo(totalMensuel, mensPromo) : totalMensuel;
-  const effectifOnboarding = obPromo  ? applyPromo(montantOnboarding, obPromo) : montantOnboarding;
+  // Détail promotion — miroir du backend buildContractPricingFields
+  const resumeDate = (p: ContractPromo): string => {
+    if (!p.months || !p.moisDebut) return '';
+    const [yy, mm] = p.moisDebut.split('-').map(Number);
+    if (!yy || !mm) return '';
+    const d = new Date(yy, (mm - 1) + parseInt(p.months), 1);
+    return d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
+  };
+  let promoDetail: string;
+  if (!mensPromo && !obPromo) {
+    promoDetail = 'Aucune promotion — tarifs standard.';
+  } else {
+    const parts: string[] = [];
+    if (obPromo) parts.push(effOnboarding === 0
+      ? `Frais d'activation offerts (au lieu de ${fmt(montantOnboarding)})`
+      : `Frais d'activation : ${fmt(effOnboarding)} au lieu de ${fmt(montantOnboarding)}`);
+    if (mensPromo) {
+      let m = effMensuel === 0
+        ? `Mensualite offerte (au lieu de ${fmt(totalMensuel)})`
+        : `Mensualite : ${fmt(effMensuel)} au lieu de ${fmt(totalMensuel)}`;
+      if (mensPromo.months) m += ` pendant ${mensPromo.months} mois`;
+      const rd = resumeDate(mensPromo);
+      if (rd) m += `, puis ${fmt(totalMensuel)} a partir du ${rd}`;
+      parts.push(m);
+    }
+    promoDetail = parts.join('   ·   ');
+  }
 
   const { doc, PW, PH, ML, MR, CW, RX, setFont, txt, rect, hrule, sectionHeader } = makeDoc();
   void MR;
@@ -143,166 +170,110 @@ export function generateContractPdf(params: ContractPdfParams): string {
 
   // ── HEADER ─────────────────────────────────────────────────────────────────
   rect(0, 0, PW, 42, '#1e1b4b');
-  rect(0, 38, PW, 4, '#4338ca');
+  rect(0, 38, PW, 4, '#d97706');
   setFont(22, 'bold', '#ffffff');   txt(appName, ML, 17);
-  setFont(10, 'normal', '#c7d2fe'); txt('CONTRAT D\'ABONNEMENT', ML, 27);
-  setFont(8, 'normal', '#818cf8');  txt(`Réf. CTR-${Date.now().toString().slice(-8)}`, RX, 17, { align: 'right' });
-  setFont(8, 'normal', '#a5b4fc');  txt(`Émis le ${todayFr()}`, RX, 24, { align: 'right' });
-  y = 54;
+  setFont(10, 'normal', '#fde68a'); txt('CONTRAT D\'ABONNEMENT', ML, 27);
+  setFont(8, 'normal', '#fbbf24');  txt(`Réf. CTR-${Date.now().toString().slice(-8)}`, RX, 17, { align: 'right' });
+  setFont(8, 'normal', '#fcd34d');  txt(`Émis le ${todayFr()}`, RX, 24, { align: 'right' });
+  y = 52;
 
-  // ── PARTIES ────────────────────────────────────────────────────────────────
-  y = sectionHeader('PARTIES AU CONTRAT', y);
+  // ── ENTRE LES SOUSSIGNÉS ───────────────────────────────────────────────────
+  y = sectionHeader('ENTRE LES SOUSSIGNÉS', y);
   const mid = ML + CW / 2 + 4;
-
-  rect(ML, y, CW / 2 - 4, 26, '#f8fafc');
-  hrule(y, '#e2e8f0', ML, ML + CW / 2 - 4);
-  hrule(y + 26, '#e2e8f0', ML, ML + CW / 2 - 4);
-  setFont(7, 'bold', '#6366f1');  txt('PRESTATAIRE', ML + 4, y + 6);
-  setFont(9, 'bold', '#0f172a'); txt(appName, ML + 4, y + 13);
-  setFont(7, 'normal', '#64748b'); txt('Plateforme LabFlow', ML + 4, y + 19);
-
-  rect(mid, y, CW / 2 - 4, 26, '#f8fafc');
-  hrule(y, '#e2e8f0', mid, mid + CW / 2 - 4);
-  hrule(y + 26, '#e2e8f0', mid, mid + CW / 2 - 4);
-  setFont(7, 'bold', '#6366f1');   txt('CLIENT', mid + 4, y + 6);
+  rect(ML, y, CW, 30, '#f8fafc'); hrule(y, '#e2e8f0'); hrule(y + 30, '#e2e8f0');
+  setFont(7, 'bold', '#374151');   txt('LE PRESTATAIRE', ML + 4, y + 6);
+  setFont(9, 'bold', '#0f172a');  txt(`${appName} ${PRESTATAIRE.forme}`, ML + 4, y + 12);
+  setFont(6.5, 'normal', '#64748b');
+  txt(`Matricule fiscal : ${PRESTATAIRE.matricule}`, ML + 4, y + 17);
+  txt(`RC : ${PRESTATAIRE.rc}`, ML + 4, y + 21);
+  txt(PRESTATAIRE.adresse, ML + 4, y + 25);
+  txt(`${PRESTATAIRE.email}  ·  ${PRESTATAIRE.tel}`, ML + 4, y + 29);
+  setFont(7, 'bold', '#374151');   txt('LE CLIENT', mid + 4, y + 6);
   setFont(9, 'bold', '#0f172a');  txt(clientNom, mid + 4, y + 13);
-  setFont(7, 'normal', '#64748b');
-  if (clientEmail) txt(clientEmail, mid + 4, y + 19);
-  if (clientTel)   txt(`Tel : ${clientTel}`, mid + 4, y + 24);
-  y += 34;
+  setFont(7, 'normal', '#64748b'); if (clientEmail) txt(clientEmail, mid + 4, y + 19);
+  setFont(7, 'normal', '#94a3b8'); txt('Ci-après dénommé « le Client »', mid + 4, y + 26);
+  y += 38;
 
-  // ── CONFIGURATION SOUSCRITE ────────────────────────────────────────────────
-  y = sectionHeader('CONFIGURATION SOUSCRITE', y);
-  rect(ML, y, CW, 7, '#eef2ff');
-  setFont(7, 'bold', '#4338ca');
-  txt('Poste', ML + 4, y + 5);
-  txt('Qte', ML + 70, y + 5);
-  txt('Tarif mensuel', RX - 4, y + 5, { align: 'right' });
-  y += 7;
-  hrule(y, '#c7d2fe');
-  y += 2;
+  // ── ARTICLE 1 — OBJET ──────────────────────────────────────────────────────
+  y = sectionHeader('ARTICLE 1 — OBJET', y);
+  rect(ML, y, CW, 16, '#fffbeb'); hrule(y, '#fde68a'); hrule(y + 16, '#fde68a');
+  setFont(8, 'normal', '#78350f');
+  const objet = doc.splitTextToSize(
+    `${appName} met à la disposition du Client, sur abonnement, une plateforme logicielle en mode SaaS accessible par navigateur web, dédiée à la gestion des stocks, approvisionnements, pertes, inventaires, fiches techniques et ventes pour les métiers de la restauration.`,
+    CW - 8);
+  let oy = y + 5; for (const l of objet) { txt(l, ML + 4, oy); oy += 4; }
+  y += 22;
 
-  // Use preview breakdown when available, fall back to param values
-  const configRows: { label: string; qty: string; price: string }[] = [];
-  if (preview) {
-    if (preview.activite.nb > 0) {
-      const lines = preview.activite.lines;
-      if (lines && lines.length > 1) {
-        lines.forEach((l, i) => configRows.push({
-          label: i === 0 ? `Activite(s) (x${preview.activite.nb})` : `  ${l.label}`,
-          qty: i === 0 ? String(preview.activite.nb) : '',
-          price: `${l.total} DT / mois`,
-        }));
-      } else {
-        configRows.push({ label: `Activite(s)`, qty: String(preview.activite.nb), price: `${preview.activite.total} DT / mois` });
-      }
-    }
-    if (preview.labo.nb > 0)   configRows.push({ label: 'Labo(s)', qty: String(preview.labo.nb), price: `${preview.labo.nb} x ${preview.labo.unitPrice} = ${preview.labo.total} DT / mois` });
-    if (preview.gerant.nb > 0) configRows.push({ label: 'Gerant(s) sup.', qty: String(preview.gerant.nb), price: `${preview.gerant.nb} x ${preview.gerant.unitPrice} = ${preview.gerant.total} DT / mois` });
-  } else {
-    if (nbActivites === 1)      configRows.push({ label: 'Activite', qty: '1', price: `${totalMensuel} DT / mois` });
-    else                         configRows.push({ label: 'Activites', qty: String(nbActivites), price: `${totalMensuel} DT / mois` });
-    if (nbLabos > 0)   configRows.push({ label: 'Labo(s)', qty: String(nbLabos), price: `${nbLabos} x 160 = ${nbLabos * 160} DT / mois` });
-    if (nbGerants > 0) configRows.push({ label: 'Gerant(s) sup.', qty: String(nbGerants), price: `${nbGerants} x 80 = ${nbGerants * 80} DT / mois` });
-  }
-
-  for (let i = 0; i < configRows.length; i++) {
-    const row = configRows[i];
+  // ── ARTICLE 2 — CONFIGURATION SOUSCRITE ────────────────────────────────────
+  y = sectionHeader('ARTICLE 2 — CONFIGURATION SOUSCRITE', y);
+  rect(ML, y, CW, 7, '#eef2ff'); setFont(7, 'bold', '#4338ca');
+  txt('Ressource', ML + 4, y + 5); txt('Quantité souscrite', RX - 4, y + 5, { align: 'right' });
+  y += 7; hrule(y, '#c7d2fe'); y += 2;
+  const confRows: [string, number][] = [
+    ['Points de vente (activités)', nbActivites], ['Laboratoires de production', nbLabos], ['Comptes gérants', nbGerants],
+  ];
+  confRows.forEach(([label, qty], i) => {
     if (i % 2 === 0) rect(ML, y, CW, 8, '#fafbff');
-    setFont(9, 'normal', '#0f172a'); txt(row.label, ML + 4, y + 5.5);
-    setFont(9, 'bold', '#4338ca');   if (row.qty) txt(row.qty, ML + 70, y + 5.5);
-    setFont(8, 'normal', '#374151'); txt(row.price, RX - 4, y + 5.5, { align: 'right' });
-    hrule(y + 8, '#f1f5f9');
-    y += 8;
-  }
+    setFont(9, 'normal', '#0f172a'); txt(label, ML + 4, y + 5.5);
+    setFont(9, 'bold', '#4338ca');   txt(String(qty), RX - 4, y + 5.5, { align: 'right' });
+    hrule(y + 8, '#f1f5f9'); y += 8;
+  });
   y += 4;
 
-  // ── RÉCAPITULATIF FINANCIER ────────────────────────────────────────────────
-  y = sectionHeader('RECAPITULATIF FINANCIER', y);
+  // ── ARTICLE 3 — PRIX ET MODALITÉS ──────────────────────────────────────────
+  y = sectionHeader('ARTICLE 3 — PRIX ET MODALITÉS DE PAIEMENT', y);
+  rect(ML, y, CW, 9, '#f8fafc'); hrule(y, '#e2e8f0'); hrule(y + 9, '#e2e8f0');
+  setFont(8, 'normal', '#374151'); txt("Frais d'activation (onboarding), payables une fois", ML + 4, y + 6);
+  setFont(10, 'bold', '#0369a1');  txt(fmt(effOnboarding), RX - 4, y + 6, { align: 'right' });
+  y += 9;
+  rect(ML, y, CW, 11, '#dbeafe'); hrule(y, '#93c5fd'); hrule(y + 11, '#1d4ed8');
+  setFont(9, 'bold', '#1e40af');   txt('Mensualité applicable (promotion incluse)', ML + 4, y + 7);
+  setFont(11, 'bold', '#1d4ed8');  txt(`${fmt(effMensuel)} /mois`, RX - 4, y + 7, { align: 'right' });
+  y += 11;
+  // CONDITIONS PARTICULIÈRES (promo)
+  rect(ML, y, CW, 12, '#fffbeb'); hrule(y, '#fde68a'); hrule(y + 12, '#fde68a');
+  setFont(6.5, 'bold', '#b45309'); txt('CONDITIONS PARTICULIÈRES', ML + 4, y + 4.5);
+  setFont(8, 'normal', '#78350f');
+  const pdLines = doc.splitTextToSize(promoDetail, CW - 8);
+  let py = y + 9; for (const l of pdLines.slice(0, 1)) { txt(l, ML + 4, py); py += 4; }
+  y += 16;
 
-  // ── Onboarding ──
-  const obH = obPromo ? 18 : 10;
-  rect(ML, y, CW, obH, '#f0f9ff');
-  hrule(y, '#bfdbfe');
-  setFont(8, 'normal', '#374151');
-  txt('Frais d\'onboarding (versement unique)', ML + 4, y + 6.5);
-  if (obPromo) {
-    // Base (crossed-out visual: show in grey with "base:" label)
-    setFont(8, 'normal', '#94a3b8'); txt(`Base : ${fmt(montantOnboarding)}`, ML + 4, y + 13);
-    setFont(8, 'bold', '#d97706');   txt(`Promo : ${promoLabel(obPromo)}  (${promoDurLabel(obPromo)})`, ML + 55, y + 13);
-    setFont(10, 'bold', '#0369a1');  txt(fmt(effectifOnboarding), RX - 4, y + 6.5, { align: 'right' });
-  } else {
-    setFont(10, 'bold', '#0369a1');  txt(fmt(montantOnboarding), RX - 4, y + 6.5, { align: 'right' });
-  }
-  hrule(y + obH, '#bfdbfe');
-  y += obH;
-
-  // ── Mensualité ──
-  const mensH = mensPromo ? 22 : 16;
-  rect(ML, y, CW, mensH, '#dbeafe');
-  hrule(y, '#93c5fd');
-  setFont(9, 'bold', '#1e40af');
-  txt('Mensualite abonnement', ML + 4, y + 7);
-  setFont(11, 'bold', '#1d4ed8');
-  txt(fmt(effectifMensuel) + ' /mois', RX - 4, y + 7, { align: 'right' });
-  if (mensPromo) {
-    setFont(7, 'normal', '#94a3b8'); txt(`Base : ${fmt(totalMensuel)} /mois`, ML + 4, y + 13);
-    setFont(7, 'bold', '#d97706');   txt(`Promo : ${promoLabel(mensPromo)}  |  ${promoDurLabel(mensPromo)}`, ML + 50, y + 13);
-    setFont(7, 'normal', '#3b82f6'); txt('Puis tarif normal apres expiration promo', ML + 4, y + 19);
-  } else {
-    setFont(7, 'normal', '#3b82f6'); txt('Facturation mensuelle recurrente', ML + 4, y + 12);
-  }
-  hrule(y + mensH, '#1d4ed8');
-  y += mensH + 6;
-
-  // ── CONDITIONS GÉNÉRALES ───────────────────────────────────────────────────
-  y = sectionHeader('CONDITIONS GÉNÉRALES', y);
+  // ── ARTICLE 4 — CONDITIONS GÉNÉRALES ───────────────────────────────────────
+  y = sectionHeader('ARTICLE 4 — CONDITIONS GÉNÉRALES', y);
   const terms = [
-    '1. Ce contrat entre en vigueur à la date d\'activation du compte par le client.',
-    '2. L\'abonnement est facturé mensuellement, dû en début de période.',
-    '3. Toute modification de configuration (ajout d\'activité, labo ou gérant) fait l\'objet d\'un avenant tarifaire.',
-    '4. En cas de non-paiement, le prestataire se réserve le droit de suspendre l\'accès sans préavis.',
-    '5. La résiliation doit être notifiée par email avec un préavis de 30 jours calendaires.',
+    '4.1 Durée : contrat à durée indéterminée dès l\'activation, renouvelable par tacite reconduction mensuelle.',
+    '4.2 Prix : frais d\'activation à la souscription, mensualité par avance ; en cas de promotion, le tarif promotionnel s\'applique pour la durée indiquée puis le tarif de base reprend.',
+    '4.3 Données : les données du Client restent sa propriété exclusive et lui sont restituées sur demande.',
+    '4.4 Résiliation : préavis de 30 jours par email ; suspension possible en cas de non-paiement.',
+    '4.5 Droit applicable : droit tunisien ; litiges du ressort des tribunaux de Tunis.',
   ];
-  setFont(8, 'normal', '#374151');
+  setFont(8, 'normal', '#475569');
   for (const t of terms) {
     const lines = doc.splitTextToSize(t, CW - 8);
-    for (const l of lines) { txt(l, ML + 4, y); y += 5; }
-    y += 1;
+    for (const l of lines) { txt(l, ML + 4, y); y += 4.5; }
+    y += 1.5;
   }
-  y += 4;
+  y += 3;
 
   // ── SIGNATURES ─────────────────────────────────────────────────────────────
   y = sectionHeader('SIGNATURES', y);
   const sw = (CW - 8) / 2;
   const sx1 = ML;
   const sx2 = ML + sw + 8;
-
-  rect(sx1, y, sw, 32, '#f8fafc'); hrule(y, '#e2e8f0', sx1, sx1 + sw); hrule(y + 32, '#e2e8f0', sx1, sx1 + sw);
-  setFont(7, 'bold', '#374151');   txt('PRESTATAIRE', sx1 + 4, y + 6);
+  rect(sx1, y, sw, 30, '#f8fafc'); hrule(y, '#e2e8f0', sx1, sx1 + sw); hrule(y + 30, '#e2e8f0', sx1, sx1 + sw);
+  setFont(7, 'bold', '#374151');   txt('LE PRESTATAIRE', sx1 + 4, y + 6);
   setFont(8, 'normal', '#64748b'); txt(appName, sx1 + 4, y + 12);
-  setFont(7, 'normal', '#64748b'); txt(`Date : ${todayFr()}`, sx1 + 4, y + 18);
-  hrule(y + 26, '#9ca3af', sx1 + 4, sx1 + sw - 4);
-  setFont(7, 'normal', '#9ca3af'); txt('Signature & cachet', sx1 + 4, y + 31);
-
-  rect(sx2, y, sw, 32, '#f8fafc'); hrule(y, '#e2e8f0', sx2, sx2 + sw); hrule(y + 32, '#e2e8f0', sx2, sx2 + sw);
-  setFont(7, 'bold', '#374151');   txt('CLIENT', sx2 + 4, y + 6);
+  setFont(7, 'normal', '#9ca3af'); txt('Signature & cachet', sx1 + 4, y + 27);
+  rect(sx2, y, sw, 30, '#f8fafc'); hrule(y, '#e2e8f0', sx2, sx2 + sw); hrule(y + 30, '#e2e8f0', sx2, sx2 + sw);
+  setFont(7, 'bold', '#374151');   txt('LE CLIENT', sx2 + 4, y + 6);
   setFont(8, 'normal', '#64748b'); txt(clientNom, sx2 + 4, y + 12);
-  setFont(7, 'normal', '#64748b'); txt(`Date : ${todayFr()}`, sx2 + 4, y + 18);
-  hrule(y + 26, '#9ca3af', sx2 + 4, sx2 + sw - 4);
-  setFont(7, 'normal', '#9ca3af'); txt(`Signature — ${clientNom}`, sx2 + 4, y + 31);
-  y += 40;
-
-  // ── ACCEPTATION NUMÉRIQUE ──────────────────────────────────────────────────
-  rect(ML, y, CW, 10, '#fefce8');
-  hrule(y, '#fde68a'); hrule(y + 10, '#fde68a');
-  setFont(7.5, 'normal', '#92400e');
-  txt('Validation numérique : l\'activation du compte par le client vaut acceptation du présent contrat.', ML + 4, y + 6.5);
+  setFont(7, 'normal', '#9ca3af'); txt('Signature électronique', sx2 + 4, y + 27);
+  y += 36;
 
   // ── FOOTER ─────────────────────────────────────────────────────────────────
   rect(0, PH - 12, PW, 12, '#1e1b4b');
-  setFont(7, 'normal', '#a5b4fc');
-  txt(`${appName}  ·  Contrat généré le ${todayFr()}  ·  Document confidentiel`, PW / 2, PH - 5.5, { align: 'center' });
+  setFont(7, 'normal', '#fbbf24');
+  txt(`${appName}  ·  Contrat d'abonnement  ·  Document confidentiel`, PW / 2, PH - 5.5, { align: 'center' });
 
   return doc.output('datauristring').split(',')[1];
 }
