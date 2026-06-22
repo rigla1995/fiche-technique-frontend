@@ -147,12 +147,17 @@ export default function SupportPage() {
         if (!description.trim()) { setError('Description requise'); setSaving(false); return; }
         body = { ...body, description: description.trim() };
       }
-      await api.post('/api/abonnements/support', body);
-      setSuccess('Demande envoyée avec succès.');
+      const { data } = await api.post('/api/abonnements/support', body);
+      if (formType === 'supplement' && data?.signingUrl) {
+        setSuccess('Votre avenant a été généré. Ouvrez le lien de signature pour finaliser — la capacité sera ajoutée automatiquement dès la signature.');
+        window.open(data.signingUrl, '_blank', 'noopener');
+      } else {
+        setSuccess('Demande envoyée avec succès.');
+      }
       setShowForm(false);
       resetForm();
       fetchDemandes();
-      setTimeout(() => setSuccess(null), 4000);
+      setTimeout(() => setSuccess(null), 8000);
     } catch (err: unknown) {
       const e = err as { response?: { data?: { message?: string } } };
       setError(e?.response?.data?.message || 'Erreur lors de l\'envoi');
