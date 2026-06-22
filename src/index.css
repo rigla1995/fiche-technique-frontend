@@ -382,9 +382,10 @@ select.input { cursor: pointer; }
 .login-panel-brand {
   flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
   background:
-    radial-gradient(900px 500px at 80% -10%, rgba(99,102,241,0.35) 0%, transparent 60%),
-    linear-gradient(150deg, #1e1b4b 0%, #312e81 52%, #4338ca 100%);
-  padding: 56px 48px; color: #fff;
+    radial-gradient(900px 520px at 80% -10%, rgba(99,102,241,0.14) 0%, transparent 60%),
+    radial-gradient(700px 400px at 10% 110%, rgba(217,119,6,0.08) 0%, transparent 60%),
+    linear-gradient(150deg, #f6f8ff 0%, #eef2ff 52%, #f4efff 100%);
+  padding: 56px 48px; color: #1e1b4b;
   position: relative; overflow: hidden;
 }
 /* Bande ambre signature en haut */
@@ -396,7 +397,7 @@ select.input { cursor: pointer; }
 .login-panel-brand::after {
   content: ''; position: absolute; bottom: -100px; left: -80px;
   width: 320px; height: 320px; border-radius: 50%;
-  background: radial-gradient(circle, rgba(14,165,233,0.16) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(99,102,241,0.10) 0%, transparent 70%);
   pointer-events: none;
 }
 .login-brand-content {
@@ -405,31 +406,30 @@ select.input { cursor: pointer; }
   display: flex; flex-direction: column; align-items: center; gap: 30px;
 }
 
-/* Logo hero with glow ring */
+/* Logo hero — carte blanche qui met le logo en valeur */
 .login-logo-hero {
   display: flex; align-items: center; justify-content: center;
-  padding: 22px 34px;
-  background: rgba(255,255,255,0.06);
-  border: 1px solid rgba(255,255,255,0.18);
+  padding: 28px 42px;
+  background: #ffffff;
+  border: 1px solid #e0e7ff;
   border-radius: 22px;
-  backdrop-filter: blur(10px);
-  box-shadow: 0 0 60px rgba(99,102,241,0.35), 0 10px 30px rgba(0,0,0,0.22);
+  box-shadow: 0 24px 60px rgba(67,56,202,0.16), 0 0 0 8px rgba(255,255,255,0.55);
   position: relative;
 }
 /* petit liseré ambre sous le logo */
 .login-logo-hero::after {
   content: ''; position: absolute; bottom: -1px; left: 50%; transform: translateX(-50%);
-  width: 54px; height: 3px; border-radius: 3px;
+  width: 60px; height: 3px; border-radius: 3px;
   background: linear-gradient(90deg, #d97706, #f59e0b);
 }
 
 /* Tagline */
 .login-brand-headline {
-  font-size: 1.9rem; font-weight: 800; color: #fff;
+  font-size: 1.9rem; font-weight: 800; color: #1e1b4b;
   letter-spacing: -0.5px; line-height: 1.22; margin: 0;
 }
 .login-brand-headline-accent {
-  background: linear-gradient(90deg, #fcd34d, #f59e0b);
+  background: linear-gradient(90deg, #d97706, #f59e0b);
   -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
 }
 
@@ -439,23 +439,23 @@ select.input { cursor: pointer; }
 }
 .login-feat-chip {
   display: flex; align-items: center; gap: 9px;
-  background: rgba(255,255,255,0.09); border: 1px solid rgba(255,255,255,0.14);
+  background: rgba(255,255,255,0.8); border: 1px solid #e0e7ff;
   border-radius: 12px; padding: 11px 14px;
-  font-size: 0.82rem; font-weight: 600; color: rgba(255,255,255,0.92);
-  backdrop-filter: blur(4px); transition: background 0.18s, transform 0.18s;
+  font-size: 0.82rem; font-weight: 600; color: #3730a3;
+  box-shadow: 0 2px 10px rgba(67,56,202,0.06); transition: background 0.18s, transform 0.18s, box-shadow 0.18s;
 }
-.login-feat-chip:hover { background: rgba(255,255,255,0.14); transform: translateY(-2px); }
+.login-feat-chip:hover { background: #fff; transform: translateY(-2px); box-shadow: 0 6px 16px rgba(67,56,202,0.12); }
 .login-feat-chip-icon { font-size: 1.1rem; flex-shrink: 0; }
 
 /* Stats */
 .login-stats-row {
   display: flex; align-items: center; justify-content: center; gap: 0;
-  padding-top: 24px; border-top: 1px solid rgba(255,255,255,0.12); width: 100%;
+  padding-top: 24px; border-top: 1px solid #e0e7ff; width: 100%;
 }
 .login-stat { display: flex; flex-direction: column; align-items: center; gap: 2px; flex: 1; }
-.login-stat-num { font-size: 1.45rem; font-weight: 900; color: #fcd34d; letter-spacing: -0.5px; }
-.login-stat-label { font-size: 0.66rem; color: rgba(255,255,255,0.55); text-transform: uppercase; letter-spacing: 0.6px; }
-.login-stat-sep { width: 1px; height: 34px; background: rgba(255,255,255,0.15); }
+.login-stat-num { font-size: 1.45rem; font-weight: 900; color: #4338ca; letter-spacing: -0.5px; }
+.login-stat-label { font-size: 0.66rem; color: #6b7280; text-transform: uppercase; letter-spacing: 0.6px; }
+.login-stat-sep { width: 1px; height: 34px; background: #e0e7ff; }
 
 /* ── Form panel ── */
 .login-panel-form {

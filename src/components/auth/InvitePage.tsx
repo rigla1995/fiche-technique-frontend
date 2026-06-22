@@ -13,25 +13,28 @@ const PWD_RULES: { test: (v: string) => boolean; label: string }[] = [
   { test: (v) => /[@$!%*?&_\-#]/.test(v), label: 'Un caractère spécial' },
 ];
 
-// Habillage commun : fond dégradé LabFlow + carte avec en-tête logo + barre ambre.
+// Habillage commun — thème CLAIR, logo mis en valeur sur carte blanche + barre ambre.
 function Shell({ children }: { children: React.ReactNode }) {
   return (
     <div style={{
       minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
-      background: 'radial-gradient(1200px 600px at 50% -10%, #312e81 0%, transparent 60%), linear-gradient(135deg, #1e1b4b 0%, #312e81 55%, #4338ca 100%)',
+      background: 'radial-gradient(900px 520px at 80% -10%, rgba(99,102,241,0.14) 0%, transparent 60%), radial-gradient(700px 400px at 10% 110%, rgba(217,119,6,0.08) 0%, transparent 60%), linear-gradient(150deg, #f6f8ff 0%, #eef2ff 55%, #f4efff 100%)',
       padding: 24,
     }}>
       <div style={{
-        background: '#fff', borderRadius: 20, width: '100%', maxWidth: 460,
-        boxShadow: '0 30px 80px rgba(15,12,41,0.45)', overflow: 'hidden',
+        background: '#fff', borderRadius: 22, width: '100%', maxWidth: 460,
+        boxShadow: '0 28px 70px rgba(67,56,202,0.18)', overflow: 'hidden',
       }}>
-        {/* En-tête logo */}
-        <div style={{ background: 'linear-gradient(135deg, #1e1b4b 0%, #4338ca 100%)', padding: '34px 36px 28px', position: 'relative' }}>
-          <LabFlowLogo height={48} variant="light" style={{ margin: '0 auto' }} />
-          <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 5, background: 'linear-gradient(90deg, #d97706, #f59e0b)' }} />
+        {/* Barre ambre signature */}
+        <div style={{ height: 5, background: 'linear-gradient(90deg, #d97706, #f59e0b)' }} />
+        {/* En-tête logo — clair, logo dans une pastille blanche */}
+        <div style={{ padding: '30px 36px 14px', textAlign: 'center', background: 'linear-gradient(180deg, #f8faff 0%, #ffffff 100%)' }}>
+          <div style={{ display: 'inline-flex', padding: '16px 26px', background: '#fff', border: '1px solid #e0e7ff', borderRadius: 18, boxShadow: '0 14px 36px rgba(67,56,202,0.13)' }}>
+            <LabFlowLogo height={42} variant="dark" />
+          </div>
         </div>
         {/* Corps */}
-        <div style={{ padding: '30px 36px 34px' }}>
+        <div style={{ padding: '14px 36px 34px' }}>
           {children}
         </div>
       </div>

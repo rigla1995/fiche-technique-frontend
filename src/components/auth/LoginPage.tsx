@@ -65,7 +65,7 @@ export default function LoginPage() {
         <div className="login-brand-content">
 
           <div className="login-logo-hero">
-            <LabFlowLogo height={80} />
+            <LabFlowLogo height={80} variant="dark" />
           </div>
 
           <h1 className="login-brand-headline">
