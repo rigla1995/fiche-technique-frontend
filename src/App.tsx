@@ -40,6 +40,7 @@ import HistoriquePromotionsAdmin from './components/admin/HistoriquePromotionsAd
 import TarifsConfig from './components/admin/TarifsConfig';
 import DemandesManagement from './components/admin/DemandesManagement';
 import AdminRapportsPage from './components/admin/AdminRapportsPage';
+import AdminKnowledgeBasePage from './components/admin/AdminKnowledgeBasePage';
 import AdminSupportPage from './components/admin/AdminSupportPage';
 import ActiveAgentsPage from './components/admin/ActiveAgentsPage';
 import MonAbonnementPage from './components/client/MonAbonnementPage';
@@ -109,6 +110,7 @@ export default function App() {
             <Route path="/admin/support" element={<AdminSupportPage />} />
             <Route path="/admin/active-agents" element={<ActiveAgentsPage />} />
             <Route path="/admin/prestataires" element={<PrestatairesManagement />} />
+            <Route path="/admin/knowledge-base" element={<AdminKnowledgeBasePage />} />
           </Route>
 
           {/* Client + Gérant routes */}
