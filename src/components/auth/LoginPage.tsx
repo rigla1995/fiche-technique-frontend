@@ -16,6 +16,12 @@ const STATS = [
   { num: '100%', label: 'en ligne' },
 ];
 
+const fieldLabel: React.CSSProperties = { display: 'block', fontSize: '0.74rem', fontWeight: 700, color: '#475569', marginBottom: 7, letterSpacing: '0.02em' };
+const fieldIcon: React.CSSProperties = { position: 'absolute', left: 13, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', display: 'flex', pointerEvents: 'none' };
+const fieldInput: React.CSSProperties = { width: '100%', padding: '13px 14px 13px 42px', borderRadius: 12, border: '1.5px solid #e5e7eb', fontSize: '0.93rem', background: '#f8fafc', color: '#0f172a', outline: 'none', transition: 'border-color 0.15s, background 0.15s, box-shadow 0.15s' };
+const onFieldFocus = (e: React.FocusEvent<HTMLInputElement>) => { e.currentTarget.style.borderColor = '#6366f1'; e.currentTarget.style.background = '#fff'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(99,102,241,0.12)'; };
+const onFieldBlur = (e: React.FocusEvent<HTMLInputElement>) => { e.currentTarget.style.borderColor = '#e5e7eb'; e.currentTarget.style.background = '#f8fafc'; e.currentTarget.style.boxShadow = 'none'; };
+
 export default function LoginPage() {
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -101,13 +107,12 @@ export default function LoginPage() {
       <div className="login-panel-form">
         <div className="login-form-inner">
 
-          <div className="login-form-logo">
-            <LabFlowLogo height={34} variant="dark" />
+          <div style={{ marginBottom: 26 }}>
+            <LabFlowLogo height={30} variant="dark" />
           </div>
 
-          <div className="login-form-mark" />
-          <div className="login-form-heading">Connexion</div>
-          <p className="login-form-subheading">Accédez à votre espace de gestion LabFlow</p>
+          <h2 style={{ fontSize: '1.75rem', fontWeight: 900, color: '#0f172a', margin: '0 0 6px', letterSpacing: '-0.6px' }}>Bon retour&nbsp;👋</h2>
+          <p style={{ color: '#64748b', fontSize: '0.9rem', margin: '0 0 28px' }}>Connectez-vous à votre espace LabFlow.</p>
 
           <form onSubmit={handleSubmit}>
             {justActivated && !error && (
@@ -121,34 +126,49 @@ export default function LoginPage() {
               </div>
             )}
 
-            <div className="form-group">
-              <label htmlFor="email">Adresse email</label>
-              <input
-                id="email"
-                type="email"
-                className="input"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                autoComplete="email"
-                placeholder="votre@email.com"
-              />
+            <div style={{ marginBottom: 16 }}>
+              <label htmlFor="email" style={fieldLabel}>Adresse email</label>
+              <div style={{ position: 'relative' }}>
+                <span style={fieldIcon}>
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 5L2 7"/>
+                  </svg>
+                </span>
+                <input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  autoComplete="email"
+                  placeholder="votre@email.com"
+                  style={fieldInput}
+                  onFocus={onFieldFocus}
+                  onBlur={onFieldBlur}
+                />
+              </div>
             </div>
 
-            <div className="form-group">
-              <label htmlFor="password">Mot de passe</label>
-              <div className="login-pwd-wrap">
+            <div style={{ marginBottom: 22 }}>
+              <label htmlFor="password" style={fieldLabel}>Mot de passe</label>
+              <div style={{ position: 'relative' }}>
+                <span style={fieldIcon}>
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                  </svg>
+                </span>
                 <input
                   ref={pwdRef}
                   id="password"
                   type={showPwd ? 'text' : 'password'}
-                  className="input"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   autoComplete="current-password"
                   placeholder="••••••••"
-                  style={{ paddingRight: 44 }}
+                  style={{ ...fieldInput, paddingRight: 44 }}
+                  onFocus={onFieldFocus}
+                  onBlur={onFieldBlur}
                 />
                 <button
                   type="button"
