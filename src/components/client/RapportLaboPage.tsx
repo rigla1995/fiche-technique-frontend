@@ -4,6 +4,7 @@ import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell,
 } from 'recharts';
 import api from '../../api/client';
+import HelpButton from '../common/HelpButton';
 import type { Labo } from '../../types';
 
 interface LaboDash {
@@ -33,12 +34,12 @@ const STATUS: Record<Status, { c: string; bg: string; bd: string }> = {
   info: { c: '#7c3aed', bg: '#f5f3ff', bd: '#ddd6fe' },
   neutral: { c: '#475569', bg: 'var(--surface)', bd: 'var(--border)' },
 };
-function Kpi({ label, value, sub, status = 'neutral' }: { label: string; value: string; sub?: string; status?: Status }) {
+function Kpi({ label, value, sub, status = 'neutral', help }: { label: string; value: string; sub?: string; status?: Status; help?: string }) {
   const s = STATUS[status];
   return (
     <div style={{ background: s.bg, border: `1px solid ${s.bd}`, borderLeft: `4px solid ${s.c}`, borderRadius: 12, padding: '14px 16px' }}>
       <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: 6, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <span>{label}</span>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>{label}{help && <HelpButton section={help} size={14} tip="Comprendre cet indicateur" />}</span>
         {(status === 'warn' || status === 'bad' || status === 'good') && <span style={{ width: 8, height: 8, borderRadius: '50%', background: s.c }} />}
       </div>
       <div style={{ fontSize: '1.5rem', fontWeight: 800, color: status === 'neutral' ? 'var(--text)' : s.c, lineHeight: 1.1 }}>{value}</div>
@@ -84,7 +85,7 @@ export default function RapportLaboPage() {
   return (
     <div className="page">
       <div style={{ background: 'linear-gradient(135deg, #3b0764 0%, #6b21a8 55%, #7e22ce 100%)', borderRadius: 18, padding: '22px 26px', marginBottom: 20, boxShadow: '0 8px 28px rgba(107,33,168,0.3)' }}>
-        <h1 style={{ fontSize: '1.45rem', fontWeight: 800, color: '#fff', margin: 0 }}>🏭 Rapport labo</h1>
+        <h1 style={{ fontSize: '1.45rem', fontWeight: 800, color: '#fff', margin: 0, display: 'flex', alignItems: 'center', gap: 9 }}>🏭 Rapport labo<HelpButton section="stock-labo" variant="solid" size={20} tip="Comment lire ce rapport ?" /></h1>
         <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.82rem', margin: '4px 0 0' }}>Stock, approvisionnements, pertes et transferts du labo</p>
       </div>
 
@@ -112,10 +113,10 @@ export default function RapportLaboPage() {
       ) : (
         <>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12, marginBottom: 20 }}>
-            <Kpi label="Valeur du stock" value={fmtDT(data.kpis.valeur_stock)} status="info" />
-            <Kpi label="Approvisionnements" value={fmtDT(data.kpis.appros)} status="neutral" sub={`${data.kpis.nb_appros} entrée${data.kpis.nb_appros > 1 ? 's' : ''}`} />
-            <Kpi label="Pertes" value={fmtDT(data.kpis.pertes)} status={data.kpis.pertes > 0 ? 'bad' : 'good'} />
-            <Kpi label="Transferts émis" value={fmtDT(data.kpis.transferts)} status="info" sub={`${data.kpis.nb_transferts} transfert${data.kpis.nb_transferts > 1 ? 's' : ''}`} />
+            <Kpi label="Valeur du stock" help="stock-labo" value={fmtDT(data.kpis.valeur_stock)} status="info" />
+            <Kpi label="Approvisionnements" help="factures" value={fmtDT(data.kpis.appros)} status="neutral" sub={`${data.kpis.nb_appros} entrée${data.kpis.nb_appros > 1 ? 's' : ''}`} />
+            <Kpi label="Pertes" help="pertes" value={fmtDT(data.kpis.pertes)} status={data.kpis.pertes > 0 ? 'bad' : 'good'} />
+            <Kpi label="Transferts émis" help="transferts" value={fmtDT(data.kpis.transferts)} status="info" sub={`${data.kpis.nb_transferts} transfert${data.kpis.nb_transferts > 1 ? 's' : ''}`} />
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 12 }}>

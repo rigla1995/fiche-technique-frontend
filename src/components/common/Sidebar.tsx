@@ -135,8 +135,14 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const lockLevel0 = !isOnboarding && noActivitesOrLabos;
   // Level 1: has activités/labos but nothing assigned yet → only Référentiel + Mes Activités
   const lockLevel1 = !isOnboarding && !noActivitesOrLabos && !hasWorkspaceContent && typesSummary !== null;
-  // Lock all espaces until articles exist
-  const lockEspaces = lockLevel0 || lockLevel1;
+  // Déverrouillage PAR ESPACE (raffiné) : chaque espace s'ouvre dès qu'un article y est assigné.
+  //  - Espace Activités : un article sélectionné pour une activité (hasSelections)
+  //  - Espace Labo      : un article/ingrédient assigné au labo (hasLaboIngredients)
+  //  - Espace Produits  : un article existe au référentiel (hasArticles)
+  const summaryReady = typesSummary !== null;
+  const lockEspaceActivites = lockLevel0 || (summaryReady && !(typesSummary?.hasSelections ?? false));
+  const lockEspaceLabo      = lockLevel0 || (summaryReady && !(typesSummary?.hasLaboIngredients ?? false));
+  const lockEspaceProduits  = lockLevel0 || (summaryReady && !(typesSummary?.hasArticles ?? false));
 
   const showGerants = !aboConfig || (aboConfig.nbGerants ?? 0) > 0;
 
@@ -180,20 +186,20 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
     prevNoActivitesOrLabos.current = noActivitesOrLabos;
   }, [noActivitesOrLabos, isEntreprise, isOnboarding, navigate]);
 
-  // Auto-open Espace Activités/Labo when first articles are created (level 1 → level 2 transition)
-  const prevLockEspaces = useRef<boolean | null>(null);
+  // Auto-ouverture de CHAQUE espace au moment précis où il se déverrouille (article assigné).
+  const prevLocks = useRef<{ act: boolean | null; labo: boolean | null; prod: boolean | null }>({ act: null, labo: null, prod: null });
   useEffect(() => {
     if (!isEntreprise || isOnboarding) return;
-    if (prevLockEspaces.current === true && lockEspaces === false) {
-      setOpenSections(prev => {
-        const next = new Set(prev);
-        next.add('activites');
-        if (labos.length > 0) next.add('labo');
-        return next;
-      });
-    }
-    prevLockEspaces.current = lockEspaces;
-  }, [lockEspaces, isEntreprise, isOnboarding, labos.length]);
+    setOpenSections(prev => {
+      const next = new Set(prev);
+      let changed = false;
+      if (prevLocks.current.act === true && lockEspaceActivites === false) { next.add('activites'); changed = true; }
+      if (prevLocks.current.labo === true && lockEspaceLabo === false && labos.length > 0) { next.add('labo'); changed = true; }
+      if (prevLocks.current.prod === true && lockEspaceProduits === false) { next.add('produits'); changed = true; }
+      return changed ? next : prev;
+    });
+    prevLocks.current = { act: lockEspaceActivites, labo: lockEspaceLabo, prod: lockEspaceProduits };
+  }, [lockEspaceActivites, lockEspaceLabo, lockEspaceProduits, isEntreprise, isOnboarding, labos.length]);
 
   useEffect(() => {
     if (!isEntreprise) return;
@@ -385,7 +391,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                   {(hasActivites || typesSummary === null) && (
                   <>
                   <Divider />
-                  <CollapsibleHeader label="Espace Activités" icon="📍" isOpen={openSections.has('activites')} locked={isOnboarding || lockEspaces} onToggle={() => toggleSection('activites')} />
+                  <CollapsibleHeader label="Espace Activités" icon="📍" isOpen={openSections.has('activites')} locked={isOnboarding || lockEspaceActivites} onToggle={() => toggleSection('activites')} />
                   {openSections.has('activites') && (
                     <>
                       <li>
@@ -434,7 +440,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                     return (
                       <>
                         <Divider />
-                        <CollapsibleHeader label="Espace Labo" icon="🏭" isOpen={openSections.has('labo')} locked={lockEspaces} onToggle={() => toggleSection('labo')} />
+                        <CollapsibleHeader label="Espace Labo" icon="🏭" isOpen={openSections.has('labo')} locked={lockEspaceLabo} onToggle={() => toggleSection('labo')} />
                         {openSections.has('labo') && (
                           <>
                             <li><Link to={`/client/labo/stock?laboId=${firstLaboId}`} className={`sidebar-link ${location.pathname === '/client/labo/stock' ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📦</span><span className="link-label">Stock Labo</span></Link></li>
@@ -453,7 +459,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                   })()}
 
                   {/* ══ ESPACE VENTE ══ */}
-                  {!isOnboarding && !lockEspaces && moduleVenteActif && (
+                  {!isOnboarding && !lockEspaceProduits && moduleVenteActif && (
                     <>
                       <Divider />
                       <CollapsibleHeader label="Espace Vente" icon="🛒" isOpen={openSections.has('vente')} locked={false} onToggle={() => toggleSection('vente')} />
@@ -475,7 +481,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                   <Divider />
 
                   {/* ══ ESPACE PRODUITS ══ — unlocks at level 2 */}
-                  <CollapsibleHeader label="Espace Produits" icon="🍔" isOpen={openSections.has('produits')} locked={isOnboarding || lockEspaces} onToggle={() => toggleSection('produits')} />
+                  <CollapsibleHeader label="Espace Produits" icon="🍔" isOpen={openSections.has('produits')} locked={isOnboarding || lockEspaceProduits} onToggle={() => toggleSection('produits')} />
                   {openSections.has('produits') && (
                     <>
                       <li>

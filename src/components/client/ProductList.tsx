@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
+import HelpButton from '../common/HelpButton';
 import { useAuth } from '../../context/AuthContext';
 import type { Product, Activite, ActiviteIngredient, CategorieProduit } from '../../types';
 import FicheTechniqueTab from './FicheTechniqueTab';
@@ -428,12 +429,13 @@ export default function ProductList() {
               <div style={{ background: 'rgba(16,185,129,0.18)', border: '1px solid rgba(16,185,129,0.3)', borderRadius: 10, padding: '7px 9px', fontSize: '1.2rem', lineHeight: 1 }}>
                 {tab === 'fiche-technique' ? '📋' : tab === 'utilisable' ? '🧪' : '🍽️'}
               </div>
-              <h1 style={{ fontSize: '1.45rem', fontWeight: 800, color: '#fff', margin: 0, letterSpacing: '-0.01em' }}>
+              <h1 style={{ fontSize: '1.45rem', fontWeight: 800, color: '#fff', margin: 0, letterSpacing: '-0.01em', display: 'flex', alignItems: 'center', gap: 9 }}>
                 {tab === 'fiche-technique'
                   ? t('client.products.tab_fiche_technique')
                   : tab === 'utilisable'
                     ? t('client.products.tab_utilisable')
                     : t('client.products.tab_vendable')}
+                <HelpButton section={tab === 'fiche-technique' ? 'fiches-techniques' : tab === 'utilisable' ? 'produits-utilisables' : 'produits-vendables'} variant="solid" size={20} tip="Aide sur cette page" />
               </h1>
             </div>
             <p style={{ color: 'rgba(255,255,255,0.55)', margin: 0, fontSize: '0.83rem', letterSpacing: '0.01em' }}>
