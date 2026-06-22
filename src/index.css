@@ -464,7 +464,7 @@ select.input { cursor: pointer; }
   border-left: 1px solid var(--border);
 }
 .login-form-inner { width: 100%; max-width: 366px; }
-.login-form-logo { margin-bottom: 30px; display: none; }
+.login-form-logo { margin-bottom: 26px; display: block; }
 /* Repère ambre + titre */
 .login-form-mark {
   width: 42px; height: 4px; border-radius: 4px;
