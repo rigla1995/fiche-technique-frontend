@@ -180,7 +180,8 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
         const allActsFilled = maxActivites !== null ? newActCount >= maxActivites : isFirst;
         const allLabosFilled = (maxLabos ?? 0) === 0 || labos.length >= (maxLabos ?? 0);
         if (allActsFilled && allLabosFilled) {
-          navigate('/client/catalogue-global?created=1');
+          // Étape suivante logique : créer les articles dans le Référentiel (débloqué dès la 1ʳᵉ activité/labo).
+          navigate('/client/referentiel/unites');
           return;
         }
         setMsg(t('client.entreprise.activity_created'));

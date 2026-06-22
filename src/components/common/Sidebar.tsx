@@ -361,18 +361,18 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                 </>
               )}
 
-              {/* Gérants — visible only if subscription allows; unlocks at level 2 */}
+              {/* Gérants — visible only if subscription allows; unlocks at level 1 (≥1 activité/labo) */}
               {isEntreprise && user?.role === 'client' && showGerants && (
                 <>
                 <Divider />
                 <li>
-                  {!isOnboarding && hasWorkspaceContent ? (
+                  {!isOnboarding && !lockLevel0 ? (
                     <NavLink to="/client/gerants" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>
                       <span className="link-icon">👥</span>
                       <span className="link-label">Gérants</span>
                     </NavLink>
                   ) : (
-                    <LockedLink label="Gérants" reason="Créez vos articles dans le référentiel pour débloquer" />
+                    <LockedLink label="Gérants" reason="Créez une activité ou un labo pour débloquer" />
                   )}
                 </li>
                 </>
@@ -503,10 +503,10 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
                   <Divider />
 
-                  {/* ══ FOURNISSEURS ══ */}
+                  {/* ══ FOURNISSEURS ══ — déverrouillé au niveau 1 (≥1 activité/labo) */}
                   <li>
-                    {(isOnboarding || lockEspaces)
-                      ? <LockedLink label="Fournisseurs" reason="Configurez vos activités pour accéder aux fournisseurs" />
+                    {(isOnboarding || lockLevel0)
+                      ? <LockedLink label="Fournisseurs" reason="Créez une activité ou un labo pour débloquer" />
                       : <NavLink to="/client/fournisseurs" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}><span className="link-icon">🚚</span><span className="link-label">Fournisseurs</span></NavLink>
                     }
                   </li>
