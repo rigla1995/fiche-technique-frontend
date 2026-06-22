@@ -42,6 +42,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  // Rafraîchit le user (dont activitesCount) quand les activités/labos changent —
+  // pour que les redirections (logo, home) restent dynamiques sans recharger la page.
+  useEffect(() => {
+    if (!token) return;
+    const refresh = () => api.get('/auth/me')
+      .then(({ data }) => { setUser(data); localStorage.setItem('user', JSON.stringify(data)); })
+      .catch(() => {});
+    window.addEventListener('activites-changed', refresh);
+    window.addEventListener('labos-changed', refresh);
+    return () => {
+      window.removeEventListener('activites-changed', refresh);
+      window.removeEventListener('labos-changed', refresh);
+    };
+  }, [token]);
+
   const login = async (email: string, password: string): Promise<User> => {
     const { data } = await api.post('/auth/login', { email, password });
     localStorage.setItem('token', data.token);

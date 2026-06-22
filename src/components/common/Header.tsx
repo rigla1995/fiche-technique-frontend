@@ -38,7 +38,8 @@ export default function Header() {
 
   const handleLogoClick = () => {
     if (user?.role === 'super_admin') navigate('/admin');
-    else navigate('/client/dashboard');
+    // Home « intelligent » : sans activité/labo → Mes activités (pas de saut vers un dashboard verrouillé) ; sinon → tableau de bord.
+    else navigate('/client');
   };
 
   const typeLabel = (type: string) => {
