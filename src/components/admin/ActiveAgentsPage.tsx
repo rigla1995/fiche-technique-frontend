@@ -5,6 +5,7 @@ interface Agent {
   clientId: number;
   clientNom: string;
   clientEmail: string;
+  reportEmail: string | null;
   enabled: boolean;
   telegramLinked: boolean;
   messengerLinked: boolean;
@@ -62,6 +63,7 @@ export default function ActiveAgentsPage() {
   const [copiedLink, setCopiedLink] = useState<string | null>(null);
   const [filter, setFilter] = useState<'all' | 'active' | 'pending' | 'inactive'>('all');
   const [generatingInvite, setGeneratingInvite] = useState<string | null>(null);
+  const [messengerEmail, setMessengerEmail] = useState<Record<number, string>>({});
 
   const fetchAgents = useCallback(async () => {
     setLoading(true);
@@ -110,8 +112,11 @@ export default function ActiveAgentsPage() {
     const key = `ms-${agent.clientId}`;
     setGeneratingInvite(key);
     try {
-      const res = await api.post(`/api/ai-assistant/config/${agent.clientId}/messenger-invite`);
-      setAgents(prev => prev.map(a => a.clientId === agent.clientId ? { ...a, messengerInviteLink: res.data.messengerInviteLink, messengerLinked: false } : a));
+      const email = (messengerEmail[agent.clientId] ?? agent.reportEmail ?? agent.clientEmail ?? '').trim();
+      const res = await api.post(`/api/ai-assistant/config/${agent.clientId}/messenger-invite`, { email });
+      setAgents(prev => prev.map(a => a.clientId === agent.clientId
+        ? { ...a, messengerInviteLink: res.data.messengerInviteLink, reportEmail: res.data.reportEmail ?? email, messengerLinked: false }
+        : a));
     } finally {
       setGeneratingInvite(null);
     }
@@ -295,14 +300,37 @@ export default function ActiveAgentsPage() {
                       </button>
                     </div>
 
-                    {/* Row 4: Messenger invite */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, borderTop: '1px solid var(--border)', paddingTop: 10, flexWrap: 'wrap' }}>
-                      <span style={{ fontSize: 11, fontWeight: 700, color: '#1877f2', background: '#eff6ff', padding: '2px 8px', borderRadius: 6 }}>💬 Messenger</span>
-                      {agent.messengerLinked ? (
-                        <span style={{ fontSize: 12, color: '#16a34a', fontWeight: 600 }}>✅ Client lié</span>
-                      ) : agent.messengerInviteLink ? (
-                        <>
-                          <code style={{ fontSize: 11, background: 'var(--bg-soft)', border: '1px solid var(--border)', borderRadius: 6, padding: '3px 8px', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 280 }}>
+                    {/* Row 4: Messenger activation (email + invite) */}
+                    <div style={{ borderTop: '1px solid var(--border)', paddingTop: 10, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                        <span style={{ fontSize: 11, fontWeight: 700, color: '#1877f2', background: '#eff6ff', padding: '2px 8px', borderRadius: 6 }}>💬 Messenger</span>
+                        {agent.messengerLinked ? (
+                          <span style={{ fontSize: 12, color: '#16a34a', fontWeight: 600 }}>
+                            ✅ Client lié{agent.reportEmail ? ` · ${agent.reportEmail}` : ''}
+                          </span>
+                        ) : (
+                          <>
+                            <input
+                              type="email"
+                              value={messengerEmail[agent.clientId] ?? agent.reportEmail ?? agent.clientEmail ?? ''}
+                              onChange={(e) => setMessengerEmail(prev => ({ ...prev, [agent.clientId]: e.target.value }))}
+                              placeholder="email d'activation (Messenger)"
+                              title="Email où envoyer le lien d'activation — par défaut l'email du client, modifiable (ex. Messenger personnel du propriétaire)"
+                              style={{ fontSize: 12, padding: '5px 10px', borderRadius: 6, border: '1px solid var(--border)', flex: 1, minWidth: 180, maxWidth: 300 }}
+                            />
+                            <button
+                              onClick={() => generateMessengerInvite(agent)}
+                              disabled={generatingInvite === `ms-${agent.clientId}`}
+                              style={{ fontSize: 11, padding: '5px 12px', borderRadius: 6, border: '1px solid #bfdbfe', background: '#eff6ff', color: '#1877f2', cursor: 'pointer', fontWeight: 700, flexShrink: 0 }}
+                            >
+                              {generatingInvite === `ms-${agent.clientId}` ? 'Envoi…' : '📨 Activer & envoyer'}
+                            </button>
+                          </>
+                        )}
+                      </div>
+                      {!agent.messengerLinked && agent.messengerInviteLink && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                          <code style={{ fontSize: 11, background: 'var(--bg-soft)', border: '1px solid var(--border)', borderRadius: 6, padding: '3px 8px', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 320 }}>
                             {agent.messengerInviteLink}
                           </code>
                           <button
@@ -311,17 +339,8 @@ export default function ActiveAgentsPage() {
                           >
                             {copiedLink === `ms-${agent.clientId}` ? '✅ Copié' : '📋 Copier'}
                           </button>
-                        </>
-                      ) : (
-                        <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Aucun lien</span>
+                        </div>
                       )}
-                      <button
-                        onClick={() => generateMessengerInvite(agent)}
-                        disabled={generatingInvite === `ms-${agent.clientId}`}
-                        style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, border: '1px solid #bfdbfe', background: '#eff6ff', color: '#1877f2', cursor: 'pointer', fontWeight: 600, marginLeft: 'auto', flexShrink: 0 }}
-                      >
-                        {generatingInvite === `ms-${agent.clientId}` ? 'Génération…' : '🔗 Nouveau lien'}
-                      </button>
                     </div>
                   </>
                 )}
