@@ -304,6 +304,13 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                   <span className="link-label">Prestataires</span>
                 </NavLink>
               </li>
+              {/* ══ BASE DE CONNAISSANCES IA ══ */}
+              <li>
+                <NavLink to="/admin/knowledge-base" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>
+                  <span className="link-icon">🧠</span>
+                  <span className="link-label">Base IA</span>
+                </NavLink>
+              </li>
             </>
           ) : (
             <>
