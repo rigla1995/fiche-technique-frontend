@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import api from '../../api/client';
+import HelpButton from '../common/HelpButton';
 import type { Activite } from '../../types';
 
 const apiMsg = (e: unknown, fallback = 'Erreur') =>
@@ -100,7 +101,7 @@ export default function ConfigChargesPage() {
             <div style={{ background: 'rgba(255,255,255,0.2)', borderRadius: 10, padding: '7px 9px', fontSize: '1.2rem' }}>🏗️</div>
             <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0 }}>
               Config Charges
-            </h1>
+            <HelpButton section="charges" variant="solid" size={18} tip="Aide" /></h1>
           </div>
           <p style={{ color: 'rgba(255,255,255,0.82)', margin: 0, fontSize: '0.85rem' }}>
             Charges fixes annuelles — utilisées pour calculer le seuil de rentabilité

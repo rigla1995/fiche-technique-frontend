@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import api from '../../api/client';
+import HelpButton from '../common/HelpButton';
 import { useAuth } from '../../context/AuthContext';
 import type { Labo } from '../../types';
 
@@ -360,7 +361,7 @@ export default function LaboHistoriqueApproPage() {
             <div style={{ background: 'rgba(255,255,255,0.2)', borderRadius: 10, padding: '7px 9px', fontSize: '1.2rem' }}>📋</div>
             <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0 }}>
               Historique Approvisionnement — {labo?.nom ?? '…'}
-            </h1>
+            <HelpButton section="historique" variant="solid" size={18} tip="Aide" /></h1>
           </div>
           <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.85rem', margin: 0 }}>
             Labo — consultation et export des approvisionnements

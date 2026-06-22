@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useContext, createContext } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import api from '../../api/client';
+import HelpButton from '../common/HelpButton';
 import type { Activite } from '../../types';
 
 const apiMsg = (e: unknown, fallback = 'Erreur') =>
@@ -734,7 +735,7 @@ export default function ConfigurationVentePage() {
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
               <div style={{ background: 'rgba(255,255,255,0.2)', borderRadius: 10, padding: '7px 9px', fontSize: '1.2rem' }}>💲</div>
-              <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0 }}>Configuration Vente</h1>
+              <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0 }}>Configuration Vente <HelpButton section="configuration-vente" variant="solid" size={18} tip="Aide" /></h1>
             </div>
             <p style={{ color: 'rgba(255,255,255,0.82)', margin: 0, fontSize: '0.85rem' }}>
               Activez les produits vendables et configurez leurs prix de vente

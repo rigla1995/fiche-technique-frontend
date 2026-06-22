@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useSearchParams, Link, useNavigate } from 'react-router-dom';
 import api from '../../api/client';
+import HelpButton from '../common/HelpButton';
 import { useAuth } from '../../context/AuthContext';
 
 const todayStr = () => new Date().toISOString().slice(0, 10);
@@ -210,7 +211,7 @@ export default function InventairePage() {
             <div>
               <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0, letterSpacing: '-0.02em' }}>
                 Inventaire{contextNom ? ` — ${contextNom}` : ''}
-              </h1>
+              <HelpButton section="inventaire" variant="solid" size={18} tip="Aide" /></h1>
               <p style={{ color: 'rgba(255,255,255,0.72)', fontSize: '0.82rem', margin: '4px 0 0' }}>
                 Saisissez les quantités réelles pour mettre à jour les stocks
               </p>
