@@ -123,18 +123,19 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const isProductsPage = location.pathname === '/client/products';
   const hasActivites = typesSummary === null ? true : typesSummary.hasActivites;
 
-  // Progressive-unlock flags (post-onboarding, entreprise only)
+  // Déverrouillage 100% BASÉ SUR LES DONNÉES (indépendant des étapes d'onboarding) :
+  // c'est l'existence réelle d'activités/labos/articles qui ouvre les liens.
   const noActivitesOrLabos = typesSummary !== null && !hasActivites && labos.length === 0;
   // Workspace is "ready" if articles exist OR ingredients have been assigned (selections / labo ingredients)
-  const hasWorkspaceContent = !isOnboarding && typesSummary !== null && (
+  const hasWorkspaceContent = typesSummary !== null && (
     (typesSummary.hasArticles ?? false)
     || (typesSummary.hasSelections ?? false)
     || (typesSummary.hasLaboIngredients ?? false)
   );
-  // Level 0: no activités/labos → only Mes Activités accessible
-  const lockLevel0 = !isOnboarding && noActivitesOrLabos;
-  // Level 1: has activités/labos but nothing assigned yet → only Référentiel + Mes Activités
-  const lockLevel1 = !isOnboarding && !noActivitesOrLabos && !hasWorkspaceContent && typesSummary !== null;
+  // Level 0: aucune activité/labo → seul « Mes Activités » est accessible (Référentiel verrouillé)
+  const lockLevel0 = noActivitesOrLabos;
+  // Level 1: a des activités/labos mais rien d'assigné → Référentiel ouvert, espaces verrouillés
+  const lockLevel1 = !noActivitesOrLabos && !hasWorkspaceContent && typesSummary !== null;
   // Déverrouillage PAR ESPACE (raffiné) : chaque espace s'ouvre dès qu'un article y est assigné.
   //  - Espace Activités : un article sélectionné pour une activité (hasSelections)
   //  - Espace Labo      : un article/ingrédient assigné au labo (hasLaboIngredients)
@@ -216,19 +217,18 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   }, [isEntreprise, fetchLabos, fetchSummary]);
 
 
-  const sidebarBanner = isOnboarding ? (
+  // Narrateur data-based : reflète l'état réel (activités / articles), pas l'étape d'onboarding.
+  const sidebarBanner = (isEntreprise && step === 1) ? (
     <div style={{ background: '#fef9c3', borderRadius: 8, padding: '10px 12px', margin: '8px 12px', fontSize: '0.78rem', color: '#854d0e', lineHeight: 1.5 }}>
-      {step === 1 && '🔒 Changez votre mot de passe pour continuer.'}
-      {step === 2 && '🏢 Créez votre première activité pour continuer.'}
-      {step === 3 && '🧂 Créez vos articles dans le Référentiel puis assignez-les à vos activités dans le Catalogue pour débloquer les espaces.'}
+      🔒 Changez votre mot de passe pour continuer.
     </div>
-  ) : isEntreprise && lockLevel0 ? (
+  ) : (isEntreprise && lockLevel0) ? (
     <div style={{ background: '#fef9c3', borderRadius: 8, padding: '10px 12px', margin: '8px 12px', fontSize: '0.78rem', color: '#854d0e', lineHeight: 1.5 }}>
-      🏢 Créez vos activités ou votre labo pour débloquer le référentiel.
+      🏢 Créez vos activités ou votre labo pour débloquer le référentiel et le tableau de bord.
     </div>
-  ) : isEntreprise && lockLevel1 ? (
+  ) : (isEntreprise && lockLevel1) ? (
     <div style={{ background: '#f0fdf4', borderRadius: 8, padding: '10px 12px', margin: '8px 12px', fontSize: '0.78rem', color: '#166534', lineHeight: 1.5 }}>
-      📚 Créez vos articles dans le référentiel pour débloquer les espaces.
+      📚 Créez vos articles dans le référentiel et assignez-les pour débloquer les espaces.
     </div>
   ) : null;
 
@@ -309,7 +309,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
             <>
               {/* Tableau de bord */}
               <li>
-                {isOnboarding || lockLevel0 ? (
+                {lockLevel0 ? (
                   <LockedLink label="Tableau de bord" />
                 ) : (
                   <NavLink to="/client/dashboard" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>
@@ -320,7 +320,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
               </li>
               {/* Rapports */}
               <li>
-                {isOnboarding || lockLevel0 ? (
+                {lockLevel0 ? (
                   <LockedLink label={t('nav.rapports', 'Rapports')} />
                 ) : (
                   <NavLink
@@ -339,7 +339,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
               {/* Mes Activités — gestion (CRUD) réservée au client propriétaire */}
               {isEntreprise && user?.role === 'client' && (
                 <li>
-                  {isOnboarding && step < 2 ? (
+                  {step === 1 ? (
                     <LockedLink label={t('nav.activites')} />
                   ) : (
                     <NavLink to="/client/activites" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>
@@ -372,7 +372,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                 <>
                 <Divider />
                 <li>
-                  {!isOnboarding && !lockLevel0 ? (
+                  {!lockLevel0 ? (
                     <NavLink to="/client/gerants" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>
                       <span className="link-icon">👥</span>
                       <span className="link-label">Gérants</span>
@@ -391,7 +391,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                   {(hasActivites || typesSummary === null) && (
                   <>
                   <Divider />
-                  <CollapsibleHeader label="Espace Activités" icon="📍" isOpen={openSections.has('activites')} locked={isOnboarding || lockEspaceActivites} onToggle={() => toggleSection('activites')} />
+                  <CollapsibleHeader label="Espace Activités" icon="📍" isOpen={openSections.has('activites')} locked={lockEspaceActivites} onToggle={() => toggleSection('activites')} />
                   {openSections.has('activites') && (
                     <>
                       <li>
@@ -435,7 +435,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                   )}
 
                   {/* ══ ESPACE LABO ══ — shown when labos exist */}
-                  {!isOnboarding && labos.length > 0 && (() => {
+                  {labos.length > 0 && (() => {
                     const firstLaboId = labos[0].id;
                     return (
                       <>
@@ -459,7 +459,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                   })()}
 
                   {/* ══ ESPACE VENTE ══ */}
-                  {!isOnboarding && !lockEspaceProduits && moduleVenteActif && (
+                  {!lockEspaceProduits && moduleVenteActif && (
                     <>
                       <Divider />
                       <CollapsibleHeader label="Espace Vente" icon="🛒" isOpen={openSections.has('vente')} locked={false} onToggle={() => toggleSection('vente')} />
@@ -481,7 +481,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                   <Divider />
 
                   {/* ══ ESPACE PRODUITS ══ — unlocks at level 2 */}
-                  <CollapsibleHeader label="Espace Produits" icon="🍔" isOpen={openSections.has('produits')} locked={isOnboarding || lockEspaceProduits} onToggle={() => toggleSection('produits')} />
+                  <CollapsibleHeader label="Espace Produits" icon="🍔" isOpen={openSections.has('produits')} locked={lockEspaceProduits} onToggle={() => toggleSection('produits')} />
                   {openSections.has('produits') && (
                     <>
                       <li>
@@ -511,7 +511,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
                   {/* ══ FOURNISSEURS ══ — déverrouillé au niveau 1 (≥1 activité/labo) */}
                   <li>
-                    {(isOnboarding || lockLevel0)
+                    {(lockLevel0)
                       ? <LockedLink label="Fournisseurs" reason="Créez une activité ou un labo pour débloquer" />
                       : <NavLink to="/client/fournisseurs" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}><span className="link-icon">🚚</span><span className="link-label">Fournisseurs</span></NavLink>
                     }
