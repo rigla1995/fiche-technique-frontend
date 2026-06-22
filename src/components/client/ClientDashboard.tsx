@@ -5,6 +5,7 @@ import {
   PieChart, Pie, Cell, BarChart, Bar,
 } from 'recharts';
 import api from '../../api/client';
+import HelpButton from '../common/HelpButton';
 import type { Activite } from '../../types';
 
 interface DashKpis {
@@ -53,12 +54,15 @@ const periodForPreset = (preset: Preset): { from: string; to: string } => {
   return { from: iso(f), to: iso(t) };
 };
 
-function KpiCard({ label, value, sub, status = 'neutral', subColor }: { label: string; value: string; sub?: string; status?: Status; subColor?: string }) {
+function KpiCard({ label, value, sub, status = 'neutral', subColor, help }: { label: string; value: string; sub?: string; status?: Status; subColor?: string; help?: string }) {
   const s = STATUS[status];
   return (
     <div style={{ background: s.bg, border: `1px solid ${s.bd}`, borderLeft: `4px solid ${s.c}`, borderRadius: 12, padding: '14px 16px' }}>
       <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: 6, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <span>{label}</span>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+          {label}
+          {help && <HelpButton section={help} size={14} tip="Comprendre cet indicateur" />}
+        </span>
         {status !== 'neutral' && status !== 'info' && <span style={{ width: 8, height: 8, borderRadius: '50%', background: s.c }} />}
       </div>
       <div style={{ fontSize: '1.5rem', fontWeight: 800, color: status === 'neutral' ? 'var(--text)' : s.c, lineHeight: 1.1 }}>{value}</div>
@@ -127,7 +131,10 @@ export default function ClientDashboard() {
     <div className="page">
       <div style={{ background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 55%, #4338ca 100%)', borderRadius: 18, padding: '22px 26px', marginBottom: 20, boxShadow: '0 8px 28px rgba(49,46,129,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 14 }}>
         <div>
-          <h1 style={{ fontSize: '1.45rem', fontWeight: 800, color: '#fff', margin: 0 }}>📊 Tableau de bord</h1>
+          <h1 style={{ fontSize: '1.45rem', fontWeight: 800, color: '#fff', margin: 0, display: 'flex', alignItems: 'center', gap: 9 }}>
+            📊 Tableau de bord
+            <HelpButton section="rapports" variant="solid" size={20} tip="Comment lire le tableau de bord ?" />
+          </h1>
           <p style={{ color: 'rgba(255,255,255,0.65)', fontSize: '0.82rem', margin: '4px 0 0' }}>Vue d'ensemble de votre activité</p>
         </div>
         {data?.periode && <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.8)', background: 'rgba(255,255,255,0.12)', borderRadius: 10, padding: '8px 14px' }}>{data.periode.from.split('-').reverse().join('/')} → {data.periode.to.split('-').reverse().join('/')}</div>}
@@ -161,12 +168,12 @@ export default function ClientDashboard() {
       ) : (
         <>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12, marginBottom: 20 }}>
-            <KpiCard label="Chiffre d'affaires" value={fmtDT(k!.ca)} status={k!.ca_delta_pct == null ? 'info' : k!.ca_delta_pct >= 0 ? 'good' : 'bad'} sub={k!.ca_delta_pct != null ? `${k!.ca_delta_pct >= 0 ? '▲' : '▼'} ${Math.abs(k!.ca_delta_pct)}% vs période préc.` : undefined} subColor={k!.ca_delta_pct != null && k!.ca_delta_pct >= 0 ? '#059669' : '#dc2626'} />
-            <KpiCard label="Food cost" value={k!.food_cost_pct != null ? `${k!.food_cost_pct}%` : '—'} status={foodCostStatus(k!.food_cost_pct)} sub={k!.food_cost_pct != null ? (k!.food_cost_pct < 30 ? 'sain' : k!.food_cost_pct <= 40 ? 'à surveiller (cible <30%)' : 'élevé — revoir les prix') : undefined} />
-            <KpiCard label="Marge brute" value={fmtDT(k!.marge)} status={(k!.taux_marge_pct ?? 0) >= 50 ? 'good' : 'neutral'} sub={k!.taux_marge_pct != null ? `taux ${k!.taux_marge_pct}%` : undefined} />
-            <KpiCard label="Valeur du stock" value={fmtDT(k!.valeur_stock)} status="info" />
-            <KpiCard label="Pertes" value={fmtDT(k!.pertes)} status={pertesStatus(k!.pertes_pct_ca)} sub={k!.pertes_pct_ca != null ? `${k!.pertes_pct_ca}% du CA` : undefined} />
-            <KpiCard label="Panier moyen" value={`${k!.panier_moyen.toLocaleString('fr-FR', { maximumFractionDigits: 2 })} DT`} sub={`${k!.nb_ventes} vente${k!.nb_ventes > 1 ? 's' : ''}`} />
+            <KpiCard label="Chiffre d'affaires" help="saisie-ventes" value={fmtDT(k!.ca)} status={k!.ca_delta_pct == null ? 'info' : k!.ca_delta_pct >= 0 ? 'good' : 'bad'} sub={k!.ca_delta_pct != null ? `${k!.ca_delta_pct >= 0 ? '▲' : '▼'} ${Math.abs(k!.ca_delta_pct)}% vs période préc.` : undefined} subColor={k!.ca_delta_pct != null && k!.ca_delta_pct >= 0 ? '#059669' : '#dc2626'} />
+            <KpiCard label="Food cost" help="fiches-techniques" value={k!.food_cost_pct != null ? `${k!.food_cost_pct}%` : '—'} status={foodCostStatus(k!.food_cost_pct)} sub={k!.food_cost_pct != null ? (k!.food_cost_pct < 30 ? 'sain' : k!.food_cost_pct <= 40 ? 'à surveiller (cible <30%)' : 'élevé — revoir les prix') : undefined} />
+            <KpiCard label="Marge brute" help="fiches-techniques" value={fmtDT(k!.marge)} status={(k!.taux_marge_pct ?? 0) >= 50 ? 'good' : 'neutral'} sub={k!.taux_marge_pct != null ? `taux ${k!.taux_marge_pct}%` : undefined} />
+            <KpiCard label="Valeur du stock" help="stock-activites" value={fmtDT(k!.valeur_stock)} status="info" />
+            <KpiCard label="Pertes" help="pertes" value={fmtDT(k!.pertes)} status={pertesStatus(k!.pertes_pct_ca)} sub={k!.pertes_pct_ca != null ? `${k!.pertes_pct_ca}% du CA` : undefined} />
+            <KpiCard label="Panier moyen" help="rapports-vente" value={`${k!.panier_moyen.toLocaleString('fr-FR', { maximumFractionDigits: 2 })} DT`} sub={`${k!.nb_ventes} vente${k!.nb_ventes > 1 ? 's' : ''}`} />
           </div>
 
           {(data.alertes.stock_bas > 0 || data.alertes.food_cost_eleve > 0 || (data.alertes.jours_inventaire ?? 99) > 14) && (
