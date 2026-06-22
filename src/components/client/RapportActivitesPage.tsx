@@ -3,6 +3,7 @@ import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell,
 } from 'recharts';
 import api from '../../api/client';
+import HelpButton from '../common/HelpButton';
 import type { Activite, Category } from '../../types';
 
 interface ActDash {
@@ -37,12 +38,12 @@ const STATUS: Record<Status, { c: string; bg: string; bd: string }> = {
   info: { c: '#4f46e5', bg: '#eef2ff', bd: '#c7d2fe' },
   neutral: { c: '#475569', bg: 'var(--surface)', bd: 'var(--border)' },
 };
-function Kpi({ label, value, sub, status = 'neutral' }: { label: string; value: string; sub?: string; status?: Status }) {
+function Kpi({ label, value, sub, status = 'neutral', help }: { label: string; value: string; sub?: string; status?: Status; help?: string }) {
   const s = STATUS[status];
   return (
     <div style={{ background: s.bg, border: `1px solid ${s.bd}`, borderLeft: `4px solid ${s.c}`, borderRadius: 12, padding: '14px 16px' }}>
       <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: 6, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <span>{label}</span>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>{label}{help && <HelpButton section={help} size={14} tip="Comprendre cet indicateur" />}</span>
         {(status === 'warn' || status === 'bad' || status === 'good') && <span style={{ width: 8, height: 8, borderRadius: '50%', background: s.c }} />}
       </div>
       <div style={{ fontSize: '1.5rem', fontWeight: 800, color: status === 'neutral' ? 'var(--text)' : s.c, lineHeight: 1.1 }}>{value}</div>
@@ -94,7 +95,7 @@ export default function RapportActivitesPage() {
   return (
     <div className="page">
       <div style={{ background: 'linear-gradient(135deg, #064e3b 0%, #047857 55%, #10b981 100%)', borderRadius: 18, padding: '22px 26px', marginBottom: 20, boxShadow: '0 8px 28px rgba(4,120,87,0.3)' }}>
-        <h1 style={{ fontSize: '1.45rem', fontWeight: 800, color: '#fff', margin: 0 }}>📍 Rapport activités</h1>
+        <h1 style={{ fontSize: '1.45rem', fontWeight: 800, color: '#fff', margin: 0, display: 'flex', alignItems: 'center', gap: 9 }}>📍 Rapport activités<HelpButton section="rapports" variant="solid" size={20} tip="Comment lire ce rapport ?" /></h1>
         <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.82rem', margin: '4px 0 0' }}>Stock, achats et pertes de vos activités</p>
       </div>
 
@@ -125,10 +126,10 @@ export default function RapportActivitesPage() {
       ) : (
         <>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12, marginBottom: 20 }}>
-            <Kpi label="Valeur du stock" value={fmtDT(data.kpis.valeur_stock)} status="info" />
-            <Kpi label="Achats (appros)" value={fmtDT(data.kpis.achats)} status="neutral" sub={`${data.kpis.nb_appros} entrée${data.kpis.nb_appros > 1 ? 's' : ''}`} />
-            <Kpi label="Pertes" value={fmtDT(data.kpis.pertes)} status={data.kpis.pertes > 0 ? 'bad' : 'good'} />
-            <Kpi label="Articles en alerte" value={String(data.kpis.stock_bas)} status={data.kpis.stock_bas > 5 ? 'bad' : data.kpis.stock_bas > 0 ? 'warn' : 'good'} sub="sous le seuil min" />
+            <Kpi label="Valeur du stock" help="stock-activites" value={fmtDT(data.kpis.valeur_stock)} status="info" />
+            <Kpi label="Achats (appros)" help="factures" value={fmtDT(data.kpis.achats)} status="neutral" sub={`${data.kpis.nb_appros} entrée${data.kpis.nb_appros > 1 ? 's' : ''}`} />
+            <Kpi label="Pertes" help="pertes" value={fmtDT(data.kpis.pertes)} status={data.kpis.pertes > 0 ? 'bad' : 'good'} />
+            <Kpi label="Articles en alerte" help="stock-activites" value={String(data.kpis.stock_bas)} status={data.kpis.stock_bas > 5 ? 'bad' : data.kpis.stock_bas > 0 ? 'warn' : 'good'} sub="sous le seuil min" />
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 12, marginBottom: 20 }}>

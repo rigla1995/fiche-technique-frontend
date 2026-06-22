@@ -3,6 +3,7 @@ import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell,
 } from 'recharts';
 import api from '../../api/client';
+import HelpButton from '../common/HelpButton';
 import type { Activite, CategorieProduit } from '../../types';
 
 interface RVProduit { nom: string; type: 'produit' | 'supplement' | 'valorise'; qte: number; ca: number; marge: number; food_cost_pct: number | null }
@@ -37,12 +38,12 @@ const periodForPreset = (preset: Preset): { from: string; to: string } => {
   return { from: iso(new Date(now.getFullYear(), now.getMonth(), 1)), to: iso(new Date(now.getFullYear(), now.getMonth() + 1, 0)) };
 };
 
-function Kpi({ label, value, sub, status = 'neutral' }: { label: string; value: string; sub?: string; status?: Status }) {
+function Kpi({ label, value, sub, status = 'neutral', help }: { label: string; value: string; sub?: string; status?: Status; help?: string }) {
   const s = STATUS[status];
   return (
     <div style={{ background: s.bg, border: `1px solid ${s.bd}`, borderLeft: `4px solid ${s.c}`, borderRadius: 12, padding: '14px 16px' }}>
       <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: 6, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <span>{label}</span>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>{label}{help && <HelpButton section={help} size={14} tip="Comprendre cet indicateur" />}</span>
         {(status === 'warn' || status === 'bad' || status === 'good') && <span style={{ width: 8, height: 8, borderRadius: '50%', background: s.c }} />}
       </div>
       <div style={{ fontSize: '1.4rem', fontWeight: 800, color: status === 'neutral' ? 'var(--text)' : s.c, lineHeight: 1.1 }}>{value}</div>
@@ -105,7 +106,7 @@ export default function RapportVentePage() {
     <div className="page">
       <div style={{ background: 'linear-gradient(135deg, #78350f 0%, #b45309 55%, #f59e0b 100%)', borderRadius: 18, padding: '22px 26px', marginBottom: 20, boxShadow: '0 8px 28px rgba(180,83,9,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
         <div>
-          <h1 style={{ fontSize: '1.45rem', fontWeight: 800, color: '#fff', margin: 0 }}>🛒 Rapport ventes</h1>
+          <h1 style={{ fontSize: '1.45rem', fontWeight: 800, color: '#fff', margin: 0, display: 'flex', alignItems: 'center', gap: 9 }}>🛒 Rapport ventes<HelpButton section="rapports-vente" variant="solid" size={20} tip="Comment lire ce rapport ?" /></h1>
           <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.82rem', margin: '4px 0 0' }}>CA, marges, food cost et performances produits</p>
         </div>
         <button onClick={exportExcel} style={{ fontSize: '0.82rem', padding: '8px 14px', borderRadius: 9, border: '1.5px solid rgba(255,255,255,0.5)', background: 'rgba(255,255,255,0.15)', color: '#fff', cursor: 'pointer', fontWeight: 600 }}>📊 Export Excel</button>
@@ -141,9 +142,9 @@ export default function RapportVentePage() {
       ) : (
         <>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12, marginBottom: 20 }}>
-            <Kpi label="CA total" value={fmtDT(k!.ca)} status="info" />
-            <Kpi label="Marge brute" value={fmtDT(k!.marge)} status={(k!.taux_marge_pct ?? 0) >= 50 ? 'good' : 'neutral'} sub={k!.taux_marge_pct != null ? `${k!.taux_marge_pct}%` : undefined} />
-            <Kpi label="Food cost moyen" value={k!.food_cost_pct != null ? `${k!.food_cost_pct}%` : '—'} status={fcStatus(k!.food_cost_pct)} sub="cible <30%" />
+            <Kpi label="CA total" help="saisie-ventes" value={fmtDT(k!.ca)} status="info" />
+            <Kpi label="Marge brute" help="fiches-techniques" value={fmtDT(k!.marge)} status={(k!.taux_marge_pct ?? 0) >= 50 ? 'good' : 'neutral'} sub={k!.taux_marge_pct != null ? `${k!.taux_marge_pct}%` : undefined} />
+            <Kpi label="Food cost moyen" help="fiches-techniques" value={k!.food_cost_pct != null ? `${k!.food_cost_pct}%` : '—'} status={fcStatus(k!.food_cost_pct)} sub="cible <30%" />
             <Kpi label="Panier moyen" value={`${k!.panier_moyen.toLocaleString('fr-FR', { maximumFractionDigits: 2 })} DT`} sub={`${k!.nb_ventes} vente${k!.nb_ventes > 1 ? 's' : ''}`} />
           </div>
 
