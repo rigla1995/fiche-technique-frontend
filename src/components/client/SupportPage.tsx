@@ -36,6 +36,8 @@ interface SupplPricing {
   prixLaboSup: number;
   prixGerantSup: number;
   currentMensuel: number;
+  currentMensuelEffectif?: number;
+  mensPromo?: { type: string; discount_mensualite?: number | null; fixed_mensualite?: number | null } | null;
   nbActivites: number;
   nbLabos: number;
   nbGerants: number;
@@ -43,6 +45,15 @@ interface SupplPricing {
   laboPromo?:     PromoInfo | null;
   gerantPromo?:   PromoInfo | null;
 }
+
+// Applique la promo mensualité (miroir backend applyPromoMensualite) au montant de base.
+const applyMensPromo = (base: number, p?: SupplPricing['mensPromo']): number => {
+  if (!p) return base;
+  if (p.type === 'free_months') return 0;
+  if (p.type === 'percent_off' && p.discount_mensualite != null) return Math.round(base * (1 - p.discount_mensualite / 100) * 100) / 100;
+  if (p.type === 'fixed_price' && p.fixed_mensualite != null) return Number(p.fixed_mensualite);
+  return base;
+};
 
 export default function SupportPage() {
   const { user } = useAuth();
@@ -193,6 +204,9 @@ export default function SupportPage() {
       + nbLabos * (supplPricing.prixLaboSup ?? 0)
       + nbGerants * (supplPricing.prixGerantSup ?? 0)
     : 0;
+  // Total après application de la promo mensualité active (= ce qui sera sur l'avenant signé)
+  const supplTotalEff = supplTotal != null ? applyMensPromo(supplTotal, supplPricing?.mensPromo) : null;
+  const supplHasMensPromo = !!supplPricing?.mensPromo && supplTotalEff != null && supplTotal != null && supplTotalEff !== supplTotal;
 
   return (
     <div className="page">
@@ -373,7 +387,15 @@ export default function SupportPage() {
                         <div style={{ fontSize: '0.78rem', color: '#6d28d9', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Nouveau total estimé</div>
                         <div style={{ fontSize: '0.78rem', color: '#7c3aed', marginTop: 2 }}>+{supplDelta.toFixed(0)} DT/mois de plus</div>
                       </div>
-                      <div style={{ fontSize: '1.6rem', fontWeight: 900, color: '#4c1d95' }}>{supplTotal?.toFixed(0)} DT<span style={{ fontSize: '0.8rem', fontWeight: 500, color: '#7c3aed' }}>/mois</span></div>
+                      <div style={{ textAlign: 'right' }}>
+                        {supplHasMensPromo && (
+                          <div style={{ fontSize: '0.85rem', fontWeight: 600, color: '#9ca3af', textDecoration: 'line-through' }}>{supplTotal?.toFixed(0)} DT</div>
+                        )}
+                        <div style={{ fontSize: '1.6rem', fontWeight: 900, color: '#4c1d95' }}>{(supplTotalEff ?? supplTotal)?.toFixed(0)} DT<span style={{ fontSize: '0.8rem', fontWeight: 500, color: '#7c3aed' }}>/mois</span></div>
+                        {supplHasMensPromo && (
+                          <div style={{ fontSize: '0.68rem', color: '#7c3aed', fontWeight: 600 }}>promotion appliquée</div>
+                        )}
+                      </div>
                     </div>
                   )}
                 </div>
