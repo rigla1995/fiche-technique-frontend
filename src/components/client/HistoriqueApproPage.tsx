@@ -562,16 +562,21 @@ export default function HistoriqueApproPage() {
               </colgroup>
               <thead>
                 <tr style={{ background: 'linear-gradient(135deg, #1e3a8a, #1e40af)' }}>
-                  <th style={{ width: 28, padding: '10px 4px', color: '#fff', background: 'transparent', borderBottom: 'none' }} />
+                  <th rowSpan={2} style={{ width: 28, padding: '10px 4px', color: '#fff', background: 'transparent', borderBottom: 'none' }} />
                   {(['Article', 'Date'] as const).map((label) => (
-                    <th key={label} style={{ fontWeight: 800, fontSize: '0.75rem', letterSpacing: '0.04em', textTransform: 'uppercase', padding: '10px 10px', color: '#fff', background: 'transparent', borderBottom: 'none' }}>{label}</th>
+                    <th key={label} rowSpan={2} style={{ fontWeight: 800, fontSize: '0.75rem', letterSpacing: '0.04em', textTransform: 'uppercase', padding: '10px 10px', color: '#fff', background: 'transparent', borderBottom: 'none', verticalAlign: 'bottom' }}>{label}</th>
                   ))}
-                  {(['Quantité', 'Prix U. HT', 'TVA %', 'Prix U. TTC'] as const).map((label) => (
-                    <th key={label} style={{ textAlign: 'right', fontWeight: 800, fontSize: '0.75rem', letterSpacing: '0.04em', textTransform: 'uppercase', padding: '10px 10px', color: '#fff', background: 'transparent', borderBottom: 'none' }}>{label}</th>
+                  {(['Quantité', 'Prix', 'TVA', 'Prix'] as const).map((label, i) => (
+                    <th key={i} style={{ textAlign: 'right', fontWeight: 800, fontSize: '0.75rem', letterSpacing: '0.04em', textTransform: 'uppercase', padding: '10px 10px 2px', color: '#fff', background: 'transparent', borderBottom: 'none' }}>{label}</th>
                   ))}
-                  <th style={{ fontWeight: 800, fontSize: '0.75rem', letterSpacing: '0.04em', textTransform: 'uppercase', padding: '10px 10px', color: '#fff', background: 'transparent', borderBottom: 'none' }}>Fourn. / Réf</th>
-                  <th style={{ fontWeight: 800, fontSize: '0.75rem', letterSpacing: '0.04em', textTransform: 'uppercase', padding: '10px 10px', color: '#fff', background: 'transparent', borderBottom: 'none' }}>Créé par</th>
-                  <th style={{ padding: '10px 6px', color: '#fff', background: 'transparent', borderBottom: 'none' }}></th>
+                  <th rowSpan={2} style={{ fontWeight: 800, fontSize: '0.75rem', letterSpacing: '0.04em', textTransform: 'uppercase', padding: '10px 10px', color: '#fff', background: 'transparent', borderBottom: 'none', verticalAlign: 'bottom' }}>Fourn. / Réf</th>
+                  <th rowSpan={2} style={{ fontWeight: 800, fontSize: '0.75rem', letterSpacing: '0.04em', textTransform: 'uppercase', padding: '10px 10px', color: '#fff', background: 'transparent', borderBottom: 'none', verticalAlign: 'bottom' }}>Créé par</th>
+                  <th rowSpan={2} style={{ padding: '10px 6px', color: '#fff', background: 'transparent', borderBottom: 'none' }}></th>
+                </tr>
+                <tr style={{ background: 'linear-gradient(135deg, #1e3a8a, #1e40af)' }}>
+                  {(['Unité', 'HT', '%', 'TTC'] as const).map((sub, i) => (
+                    <th key={i} style={{ textAlign: 'right', fontWeight: 400, fontSize: '0.62rem', color: '#93c5fd', letterSpacing: '0.04em', padding: '0 10px 8px', background: 'transparent', borderBottom: 'none' }}>{sub}</th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
@@ -604,14 +609,23 @@ export default function HistoriqueApproPage() {
                       <div style={{ whiteSpace: 'nowrap' }}>{r.quantite ?? '—'}</div>
                       <div style={{ color: 'var(--text-muted)', fontSize: '0.7rem', fontWeight: 400 }}>{r.uniteNom}</div>
                     </td>
-                    <td style={{ textAlign: 'right', fontWeight: 600, color: prixColor(r.prixUnitaire), fontSize: '0.85rem', padding: '8px 10px', whiteSpace: 'nowrap' }}>
-                      {r.prixUnitaire !== null ? `${r.prixUnitaire.toFixed(3)} DT` : '—'}
+                    <td style={{ textAlign: 'right', padding: '8px 10px', whiteSpace: 'nowrap' }}>
+                      {r.prixUnitaire !== null ? (<>
+                        <div style={{ fontWeight: 700, color: prixColor(r.prixUnitaire), fontSize: '0.85rem' }}>{((r.quantite ?? 0) * r.prixUnitaire).toFixed(3)} DT</div>
+                        <div style={{ color: 'var(--text-muted)', fontSize: '0.68rem', fontWeight: 400 }}>{r.prixUnitaire.toFixed(3)} /u</div>
+                      </>) : '—'}
                     </td>
                     <td style={{ textAlign: 'right', fontSize: '0.82rem', color: r.tauxTva != null ? '#6b7280' : 'var(--text-muted)', padding: '8px 10px', whiteSpace: 'nowrap' }}>
                       {r.tauxTva != null ? `${r.tauxTva}%` : '—'}
                     </td>
-                    <td style={{ textAlign: 'right', fontWeight: 700, color: r.prixUnitaireTva != null ? '#059669' : 'var(--text-muted)', fontSize: '0.85rem', padding: '8px 10px', whiteSpace: 'nowrap' }}>
-                      {r.prixUnitaireTva != null ? `${r.prixUnitaireTva.toFixed(3)} DT` : '—'}
+                    <td style={{ textAlign: 'right', padding: '8px 10px', whiteSpace: 'nowrap' }}>
+                      {(() => {
+                        const uttc = r.prixUnitaireTva ?? r.prixUnitaire;
+                        return uttc != null ? (<>
+                          <div style={{ fontWeight: 700, color: '#059669', fontSize: '0.85rem' }}>{((r.quantite ?? 0) * uttc).toFixed(3)} DT</div>
+                          <div style={{ color: 'var(--text-muted)', fontSize: '0.68rem', fontWeight: 400 }}>{uttc.toFixed(3)} /u</div>
+                        </>) : '—';
+                      })()}
                     </td>
                     <td style={{ fontSize: '0.76rem', padding: '8px 10px' }}>
                       <div style={{ color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.fournisseurNom ?? '—'}</div>
