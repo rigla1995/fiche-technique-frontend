@@ -159,9 +159,8 @@ export default function SupportPage() {
         body = { ...body, description: description.trim() };
       }
       const { data } = await api.post('/api/abonnements/support', body);
-      if (formType === 'supplement' && data?.signingUrl) {
-        setSuccess('Votre avenant a été généré. Ouvrez le lien de signature pour finaliser — la capacité sera ajoutée automatiquement dès la signature.');
-        window.open(data.signingUrl, '_blank', 'noopener');
+      if (formType === 'supplement' && data?.avenantEmailSent) {
+        setSuccess('Votre avenant a été généré : un email avec le lien de signature vous a été envoyé. Signez-le pour que la capacité soit ajoutée automatiquement.');
       } else {
         setSuccess('Demande envoyée avec succès.');
       }
