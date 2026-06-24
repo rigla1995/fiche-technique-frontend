@@ -176,9 +176,16 @@ export default function SupportPage() {
 
   const downloadContrat = async (id: number) => {
     try {
-      const { data } = await api.get(`/api/abonnements/support/${id}/contrat-signe`);
-      if (data?.url) window.open(data.url, '_blank', 'noopener');
-      else setError('Le contrat signé n\'est pas encore disponible.');
+      const res = await api.get(`/api/abonnements/support/${id}/contrat-signe`, { responseType: 'blob' });
+      const blob = new Blob([res.data], { type: 'application/pdf' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `contrat-avenant-${id}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
     } catch {
       setError('Le contrat signé n\'est pas encore disponible.');
     }
