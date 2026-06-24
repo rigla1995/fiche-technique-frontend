@@ -541,7 +541,7 @@ export default function SupportPage() {
                       <button
                         onClick={() => downloadContrat(d.id)}
                         style={{ marginTop: 8, padding: '6px 12px', borderRadius: 8, border: '1.5px solid #4338ca', background: '#fff', color: '#4338ca', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer' }}>
-                        ⬇️ Télécharger le contrat signé
+                        ⬇️ Contrat avenant{d.traiteLe ? ` — ${fmtDate(d.traiteLe)}` : ''}
                       </button>
                     )}
                   </div>
