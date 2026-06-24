@@ -174,6 +174,16 @@ export default function SupportPage() {
     } finally { setSaving(false); }
   };
 
+  const downloadContrat = async (id: number) => {
+    try {
+      const { data } = await api.get(`/api/abonnements/support/${id}/contrat-signe`);
+      if (data?.url) window.open(data.url, '_blank', 'noopener');
+      else setError('Le contrat signé n\'est pas encore disponible.');
+    } catch {
+      setError('Le contrat signé n\'est pas encore disponible.');
+    }
+  };
+
   const filtered = demandes.filter((d) => {
     if (filterStatut !== 'all' && d.statut !== filterStatut) return false;
     if (dateFrom && new Date(d.createdAt) < new Date(dateFrom)) return false;
@@ -515,6 +525,20 @@ export default function SupportPage() {
                     <span style={{ color: '#64748b', fontStyle: 'italic' }}>{d.description.slice(0, 120)}{d.description.length > 120 ? '…' : ''}</span>
                   )}
                 </div>
+                {d.type === 'supplement' && d.docusealSubmissionId && (
+                  <div style={{ marginTop: 10, background: '#f5f3ff', borderRadius: 8, padding: '10px 12px', borderLeft: '3px solid #4338ca' }}>
+                    <div style={{ fontSize: '0.78rem', color: '#374151' }}>
+                      📄 Contrat avenant envoyé à <strong>{d.clientEmail || 'votre adresse email'}</strong> · {d.statut === 'validée' ? 'signé ✓' : 'en attente de signature'}
+                    </div>
+                    {d.statut === 'validée' && (
+                      <button
+                        onClick={() => downloadContrat(d.id)}
+                        style={{ marginTop: 8, padding: '6px 12px', borderRadius: 8, border: '1.5px solid #4338ca', background: '#fff', color: '#4338ca', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer' }}>
+                        ⬇️ Télécharger le contrat signé
+                      </button>
+                    )}
+                  </div>
+                )}
                 {d.notesAdmin && (
                   <div style={{ marginTop: 10, background: '#f8fafc', borderRadius: 8, padding: '10px 12px', borderLeft: '3px solid #4338ca' }}>
                     <div style={{ fontSize: '0.7rem', fontWeight: 700, color: '#4338ca', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 4 }}>Réponse de l'administration</div>
