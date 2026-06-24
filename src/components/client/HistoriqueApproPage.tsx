@@ -562,21 +562,27 @@ export default function HistoriqueApproPage() {
               </colgroup>
               <thead>
                 <tr style={{ background: 'linear-gradient(135deg, #1e3a8a, #1e40af)' }}>
-                  <th rowSpan={2} style={{ width: 28, padding: '10px 4px', color: '#fff', background: 'transparent', borderBottom: 'none' }} />
+                  <th style={{ width: 28, padding: '10px 4px', color: '#fff', background: 'transparent', borderBottom: 'none' }} />
                   {(['Article', 'Date'] as const).map((label) => (
-                    <th key={label} rowSpan={2} style={{ fontWeight: 800, fontSize: '0.75rem', letterSpacing: '0.04em', textTransform: 'uppercase', padding: '10px 10px', color: '#fff', background: 'transparent', borderBottom: 'none', verticalAlign: 'bottom' }}>{label}</th>
+                    <th key={label} style={{ fontWeight: 800, fontSize: '0.75rem', letterSpacing: '0.04em', textTransform: 'uppercase', padding: '10px 10px 2px', color: '#fff', background: 'transparent', borderBottom: 'none' }}>{label}</th>
                   ))}
                   {(['Quantité', 'Prix', 'TVA', 'Prix'] as const).map((label, i) => (
                     <th key={i} style={{ textAlign: 'right', fontWeight: 800, fontSize: '0.75rem', letterSpacing: '0.04em', textTransform: 'uppercase', padding: '10px 10px 2px', color: '#fff', background: 'transparent', borderBottom: 'none' }}>{label}</th>
                   ))}
-                  <th rowSpan={2} style={{ fontWeight: 800, fontSize: '0.75rem', letterSpacing: '0.04em', textTransform: 'uppercase', padding: '10px 10px', color: '#fff', background: 'transparent', borderBottom: 'none', verticalAlign: 'bottom' }}>Fourn. / Réf</th>
-                  <th rowSpan={2} style={{ fontWeight: 800, fontSize: '0.75rem', letterSpacing: '0.04em', textTransform: 'uppercase', padding: '10px 10px', color: '#fff', background: 'transparent', borderBottom: 'none', verticalAlign: 'bottom' }}>Créé par</th>
-                  <th rowSpan={2} style={{ padding: '10px 6px', color: '#fff', background: 'transparent', borderBottom: 'none' }}></th>
+                  <th style={{ fontWeight: 800, fontSize: '0.75rem', letterSpacing: '0.04em', textTransform: 'uppercase', padding: '10px 10px 2px', color: '#fff', background: 'transparent', borderBottom: 'none' }}>Fourn. / Réf</th>
+                  <th style={{ fontWeight: 800, fontSize: '0.75rem', letterSpacing: '0.04em', textTransform: 'uppercase', padding: '10px 10px 2px', color: '#fff', background: 'transparent', borderBottom: 'none' }}>Créé par</th>
+                  <th style={{ padding: '10px 6px', color: '#fff', background: 'transparent', borderBottom: 'none' }}></th>
                 </tr>
                 <tr style={{ background: 'linear-gradient(135deg, #1e3a8a, #1e40af)' }}>
+                  <th style={{ background: 'transparent', borderBottom: 'none' }} />
+                  <th style={{ background: 'transparent', borderBottom: 'none' }} />
+                  <th style={{ background: 'transparent', borderBottom: 'none' }} />
                   {(['Unité', 'HT', '%', 'TTC'] as const).map((sub, i) => (
                     <th key={i} style={{ textAlign: 'right', fontWeight: 400, fontSize: '0.62rem', color: '#93c5fd', letterSpacing: '0.04em', padding: '0 10px 8px', background: 'transparent', borderBottom: 'none' }}>{sub}</th>
                   ))}
+                  <th style={{ background: 'transparent', borderBottom: 'none' }} />
+                  <th style={{ background: 'transparent', borderBottom: 'none' }} />
+                  <th style={{ background: 'transparent', borderBottom: 'none' }} />
                 </tr>
               </thead>
               <tbody>
