@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
 import HelpButton from '../common/HelpButton';
+import TypeApproFilter from '../common/TypeApproFilter';
 import { useAuth } from '../../context/AuthContext';
 import type { Activite, HistoriqueApproEntry } from '../../types';
 
@@ -515,17 +516,7 @@ export default function HistoriqueApproPage() {
           )}
           <div>
             <label style={{ fontSize: '0.62rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 4 }}>🏷️ Type d'appro</label>
-            <div style={{ display: 'flex', gap: 4 }}>
-              {([['manuel', 'Manuel'], ['transfert', 'Transfert'], ['vente', 'Vente'], ['pt', 'PT']] as const).map(([key, label]) => {
-                const on = selectedTypes.has(key);
-                return (
-                  <button key={key} type="button" onClick={() => toggleType(key)} title="Multi-sélection : combinez les types à afficher"
-                    style={{ padding: '6px 10px', borderRadius: 7, border: `1.5px solid ${on ? '#1e40af' : '#cbd5e1'}`, background: on ? '#1e40af' : '#fff', color: on ? '#fff' : '#475569', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer' }}>
-                    {label}
-                  </button>
-                );
-              })}
-            </div>
+            <TypeApproFilter selected={selectedTypes} onToggle={toggleType} accent="#1e40af" />
           </div>
           {(selectedCategoryId || selectedIngredientId || selectedFournisseurId || selectedTypes.size > 0 || startDate !== yearStart || endDate !== yearEnd) && (
             <button onClick={() => { setSelectedCategoryId(''); setSelectedIngredientId(''); setSelectedFournisseurId(''); setSelectedTypes(new Set()); setStartDate(yearStart); setEndDate(yearEnd); }}

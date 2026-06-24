@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import api from '../../api/client';
 import HelpButton from '../common/HelpButton';
+import TypeApproFilter from '../common/TypeApproFilter';
 import { useAuth } from '../../context/AuthContext';
 import type { Labo } from '../../types';
 
@@ -437,17 +438,7 @@ export default function LaboHistoriqueApproPage() {
           )}
           <div>
             <label style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 3 }}>🏷️ Type d'appro</label>
-            <div style={{ display: 'flex', gap: 4 }}>
-              {([['manuel', 'Manuel'], ['transfert', 'Transfert'], ['vente', 'Vente'], ['pt', 'PT']] as const).map(([key, label]) => {
-                const on = selectedTypes.has(key);
-                return (
-                  <button key={key} type="button" onClick={() => toggleType(key)} title="Multi-sélection : combinez les types à afficher"
-                    style={{ padding: '6px 10px', borderRadius: 8, border: `1.5px solid ${on ? '#7e22ce' : '#cbd5e1'}`, background: on ? '#7e22ce' : '#fff', color: on ? '#fff' : '#475569', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer' }}>
-                    {label}
-                  </button>
-                );
-              })}
-            </div>
+            <TypeApproFilter selected={selectedTypes} onToggle={toggleType} accent="#7e22ce" />
           </div>
           {(filterCategorieId || filterIngredientId || filterFournisseurId || selectedTypes.size > 0) && (
             <button onClick={() => { setFilterCategorieId(''); setFilterIngredientId(''); setFilterFournisseurId(''); setSelectedTypes(new Set()); }}
