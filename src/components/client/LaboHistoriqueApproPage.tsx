@@ -233,7 +233,7 @@ export default function LaboHistoriqueApproPage() {
   const [filterCategorieId, setFilterCategorieId] = useState('');
   const [filterIngredientId, setFilterIngredientId] = useState('');
   const [filterFournisseurId, setFilterFournisseurId] = useState('');
-  const [filterRefFacture, setFilterRefFacture] = useState('');
+  const [selectedTypes, setSelectedTypes] = useState<Set<string>>(new Set());
 
   const [editEntry, setEditEntry] = useState<HistEntry | null>(null);
   const [deleteEntry, setDeleteEntry] = useState<HistEntry | null>(null);
@@ -284,14 +284,13 @@ export default function LaboHistoriqueApproPage() {
       if (filterIngredientId) params.set('ingredientId', filterIngredientId);
       else if (filterCategorieId) params.set('categorieId', filterCategorieId);
       if (filterFournisseurId) params.set('fournisseurId', filterFournisseurId);
-      if (filterRefFacture.trim()) params.set('refFacture', filterRefFacture.trim());
       const { data } = await api.get(`/api/labo/${laboId}/historique?${params}`);
       setResults(data as HistEntry[]);
     } catch {
       setResults([]);
     }
     setLoading(false);
-  }, [laboId, startDate, endDate, filterIngredientId, filterCategorieId, filterFournisseurId, filterRefFacture]);
+  }, [laboId, startDate, endDate, filterIngredientId, filterCategorieId, filterFournisseurId]);
 
   const buildLaboApproParams = () => {
     const params = new URLSearchParams();
@@ -300,7 +299,6 @@ export default function LaboHistoriqueApproPage() {
     if (filterIngredientId) params.set('ingredientId', filterIngredientId);
     else if (filterCategorieId) params.set('categorieId', filterCategorieId);
     if (filterFournisseurId) params.set('fournisseurId', filterFournisseurId);
-    if (filterRefFacture.trim()) params.set('refFacture', filterRefFacture.trim());
     if (selectedIds.size > 0) params.set('selectedIds', [...selectedIds].join(','));
     return params;
   };
@@ -338,11 +336,19 @@ export default function LaboHistoriqueApproPage() {
     setResults((prev) => prev.filter((r) => r.id !== id));
   };
 
-  const totalPages = Math.max(1, Math.ceil(results.length / PAGE_SIZE));
-  const pagedResults = results.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const typeCategory = (t: string | null): string =>
+    t === 'transfert' ? 'transfert'
+    : (t === 'vente' || t === 'annulation_vente') ? 'vente'
+    : (t === 'PT' || t === 'produit_transformé' || t === 'produit_transforme') ? 'pt'
+    : 'manuel';
+  const displayedResults = selectedTypes.size === 0 ? results : results.filter((r) => selectedTypes.has(typeCategory(r.typeAppro)));
+  const toggleType = (key: string) => { setSelectedTypes((prev) => { const n = new Set(prev); if (n.has(key)) n.delete(key); else n.add(key); return n; }); setPage(1); };
 
-  const totalHT = results.reduce((s, r) => s + (r.quantite ?? 0) * (r.prixUnitaire ?? 0), 0);
-  const totalTTC = results.reduce((s, r) => s + (r.quantite ?? 0) * (r.prixUnitaireTva ?? r.prixUnitaire ?? 0), 0);
+  const totalPages = Math.max(1, Math.ceil(displayedResults.length / PAGE_SIZE));
+  const pagedResults = displayedResults.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  const totalHT = displayedResults.reduce((s, r) => s + (r.quantite ?? 0) * (r.prixUnitaire ?? 0), 0);
+  const totalTTC = displayedResults.reduce((s, r) => s + (r.quantite ?? 0) * (r.prixUnitaireTva ?? r.prixUnitaire ?? 0), 0);
   const unitQtyMap: Record<string, number> = {};
   for (const r of results) { unitQtyMap[r.uniteNom] = (unitQtyMap[r.uniteNom] || 0) + (r.quantite ?? 0); }
   if (!laboId) return <div className="page"><p className="text-muted">Labo non spécifié.</p></div>;
@@ -430,12 +436,21 @@ export default function LaboHistoriqueApproPage() {
             </div>
           )}
           <div>
-            <label style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 3 }}>🧾 Réf.</label>
-            <input type="text" style={{ padding: '6px 10px', borderRadius: 8, border: '1.5px solid var(--border)', fontSize: '0.83rem', background: 'var(--bg)', minWidth: 110 }}
-              placeholder="Rechercher réf…" value={filterRefFacture} onChange={(e) => setFilterRefFacture(e.target.value)} />
+            <label style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 3 }}>🏷️ Type d'appro</label>
+            <div style={{ display: 'flex', gap: 4 }}>
+              {([['manuel', 'Manuel'], ['transfert', 'Transfert'], ['vente', 'Vente'], ['pt', 'PT']] as const).map(([key, label]) => {
+                const on = selectedTypes.has(key);
+                return (
+                  <button key={key} type="button" onClick={() => toggleType(key)} title="Multi-sélection : combinez les types à afficher"
+                    style={{ padding: '6px 10px', borderRadius: 8, border: `1.5px solid ${on ? '#7e22ce' : '#cbd5e1'}`, background: on ? '#7e22ce' : '#fff', color: on ? '#fff' : '#475569', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer' }}>
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
           </div>
-          {(filterCategorieId || filterIngredientId || filterFournisseurId || filterRefFacture) && (
-            <button onClick={() => { setFilterCategorieId(''); setFilterIngredientId(''); setFilterFournisseurId(''); setFilterRefFacture(''); }}
+          {(filterCategorieId || filterIngredientId || filterFournisseurId || selectedTypes.size > 0) && (
+            <button onClick={() => { setFilterCategorieId(''); setFilterIngredientId(''); setFilterFournisseurId(''); setSelectedTypes(new Set()); }}
               style={{ alignSelf: 'flex-end', marginLeft: 'auto', background: 'transparent', border: '1.5px solid var(--border)', borderRadius: 7, padding: '5px 9px', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '0.85rem', lineHeight: 1, fontWeight: 700 }}
               title="Réinitialiser">✕</button>
           )}
@@ -601,7 +616,7 @@ export default function LaboHistoriqueApproPage() {
               <tfoot>
                 <tr style={{ background: '#f5f3ff', borderTop: '2px solid #7e22ce' }}>
                   <td colSpan={5} style={{ padding: '9px 10px', fontSize: '0.76rem', fontWeight: 800, color: '#3b0764', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                    Total — {results.length} enregistrement{results.length > 1 ? 's' : ''}
+                    Total — {displayedResults.length} enregistrement{displayedResults.length > 1 ? 's' : ''}
                   </td>
                   <td style={{ textAlign: 'right', padding: '9px 10px', fontWeight: 800, color: '#1d4ed8', fontSize: '0.84rem', whiteSpace: 'nowrap' }}>
                     {totalHT.toFixed(3)} DT
@@ -617,7 +632,7 @@ export default function LaboHistoriqueApproPage() {
 
             <div style={{ padding: '8px 14px', fontSize: '0.78rem', color: 'var(--text-muted)', borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <span>
-                {results.length} enregistrement{results.length > 1 ? 's' : ''}
+                {displayedResults.length} enregistrement{displayedResults.length > 1 ? 's' : ''}
                 {selectedIds.size > 0 && (
                   <span style={{ marginLeft: 8, color: '#ea580c', fontWeight: 700 }}>
                     · {selectedIds.size} sélectionné{selectedIds.size > 1 ? 's' : ''}

@@ -232,7 +232,7 @@ export default function HistoriqueApproPage() {
 
   const [fournisseurs, setFournisseurs] = useState<Fournisseur[]>([]);
   const [selectedFournisseurId, setSelectedFournisseurId] = useState('');
-  const [refFactureFilter, setRefFactureFilter] = useState('');
+  const [selectedTypes, setSelectedTypes] = useState<Set<string>>(new Set());
 
   const [startDate, setStartDate] = useState(yearStart);
   const [endDate, setEndDate] = useState(yearEnd);
@@ -258,13 +258,21 @@ export default function HistoriqueApproPage() {
     if (next.has(id)) next.delete(id); else next.add(id);
     return next;
   });
-  const totalPages = Math.max(1, Math.ceil(results.length / PAGE_SIZE));
-  const pagedResults = results.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const typeCategory = (t: string | null): string =>
+    t === 'transfert' ? 'transfert'
+    : (t === 'vente' || t === 'annulation_vente') ? 'vente'
+    : (t === 'PT' || t === 'produit_transformé' || t === 'produit_transforme') ? 'pt'
+    : 'manuel';
+  const displayedResults = selectedTypes.size === 0 ? results : results.filter((r) => selectedTypes.has(typeCategory(r.typeAppro)));
+  const toggleType = (key: string) => { setSelectedTypes((prev) => { const n = new Set(prev); if (n.has(key)) n.delete(key); else n.add(key); return n; }); setPage(1); };
 
-  const totalHT = results.reduce((s, r) => s + (r.quantite ?? 0) * (r.prixUnitaire ?? 0), 0);
-  const totalTTC = results.reduce((s, r) => s + (r.quantite ?? 0) * (r.prixUnitaireTva ?? r.prixUnitaire ?? 0), 0);
+  const totalPages = Math.max(1, Math.ceil(displayedResults.length / PAGE_SIZE));
+  const pagedResults = displayedResults.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  const totalHT = displayedResults.reduce((s, r) => s + (r.quantite ?? 0) * (r.prixUnitaire ?? 0), 0);
+  const totalTTC = displayedResults.reduce((s, r) => s + (r.quantite ?? 0) * (r.prixUnitaireTva ?? r.prixUnitaire ?? 0), 0);
   const unitQtyMap: Record<string, number> = {};
-  for (const r of results) { unitQtyMap[r.uniteNom] = (unitQtyMap[r.uniteNom] || 0) + (r.quantite ?? 0); }
+  for (const r of displayedResults) { unitQtyMap[r.uniteNom] = (unitQtyMap[r.uniteNom] || 0) + (r.quantite ?? 0); }
   const [ptProducts, setPtProducts] = useState<Array<{ id: number; nom: string }>>([]);
 
   useEffect(() => {
@@ -343,7 +351,6 @@ export default function HistoriqueApproPage() {
       if (startDate) params.set('startDate', startDate);
       if (endDate) params.set('endDate', endDate);
       if (selectedFournisseurId) params.set('fournisseurId', selectedFournisseurId);
-      if (refFactureFilter.trim()) params.set('refFacture', refFactureFilter.trim());
       const { data } = await api.get(`/api/stock/historique?${params}`);
       setResults(data as HistoriqueApproEntry[]);
     } catch {
@@ -351,7 +358,7 @@ export default function HistoriqueApproPage() {
     }
     setLoading(false);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isEntreprise, selectedActiviteId, selectedIngredientId, selectedCategoryId, startDate, endDate, selectedFournisseurId, refFactureFilter]);
+  }, [isEntreprise, selectedActiviteId, selectedIngredientId, selectedCategoryId, startDate, endDate, selectedFournisseurId]);
 
   const handleEdit = async (id: number, data: { quantite: number | null; prixUnitaire: number | null; fournisseurId: number | null; refFacture: string | null }) => {
     await api.put(`/api/stock/historique/${id}`, { ...data, isEntreprise });
@@ -386,7 +393,6 @@ export default function HistoriqueApproPage() {
     if (startDate) params.set('startDate', startDate);
     if (endDate) params.set('endDate', endDate);
     if (selectedFournisseurId) params.set('fournisseurId', selectedFournisseurId);
-    if (refFactureFilter.trim()) params.set('refFacture', refFactureFilter.trim());
     if (selectedIds.size > 0) params.set('selectedIds', [...selectedIds].join(','));
     return params;
   };
@@ -508,12 +514,21 @@ export default function HistoriqueApproPage() {
             </div>
           )}
           <div>
-            <label style={{ fontSize: '0.62rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 4 }}>🧾 Réf.</label>
-            <input type="text" style={{ padding: '6px 10px', borderRadius: 7, border: '1.5px solid #93c5fd', fontSize: '0.82rem', background: '#eff6ff', minWidth: 110 }}
-              placeholder="Réf…" value={refFactureFilter} onChange={(e) => setRefFactureFilter(e.target.value)} />
+            <label style={{ fontSize: '0.62rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 4 }}>🏷️ Type d'appro</label>
+            <div style={{ display: 'flex', gap: 4 }}>
+              {([['manuel', 'Manuel'], ['transfert', 'Transfert'], ['vente', 'Vente'], ['pt', 'PT']] as const).map(([key, label]) => {
+                const on = selectedTypes.has(key);
+                return (
+                  <button key={key} type="button" onClick={() => toggleType(key)} title="Multi-sélection : combinez les types à afficher"
+                    style={{ padding: '6px 10px', borderRadius: 7, border: `1.5px solid ${on ? '#1e40af' : '#cbd5e1'}`, background: on ? '#1e40af' : '#fff', color: on ? '#fff' : '#475569', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer' }}>
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
           </div>
-          {(selectedCategoryId || selectedIngredientId || selectedFournisseurId || refFactureFilter || startDate !== yearStart || endDate !== yearEnd) && (
-            <button onClick={() => { setSelectedCategoryId(''); setSelectedIngredientId(''); setSelectedFournisseurId(''); setRefFactureFilter(''); setStartDate(yearStart); setEndDate(yearEnd); }}
+          {(selectedCategoryId || selectedIngredientId || selectedFournisseurId || selectedTypes.size > 0 || startDate !== yearStart || endDate !== yearEnd) && (
+            <button onClick={() => { setSelectedCategoryId(''); setSelectedIngredientId(''); setSelectedFournisseurId(''); setSelectedTypes(new Set()); setStartDate(yearStart); setEndDate(yearEnd); }}
               style={{ alignSelf: 'flex-end', background: 'transparent', border: '1.5px solid var(--border)', borderRadius: 7, padding: '5px 9px', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '0.85rem', lineHeight: 1, fontWeight: 700 }}
               title="Réinitialiser">✕</button>
           )}
@@ -665,7 +680,7 @@ export default function HistoriqueApproPage() {
               <tfoot>
                 <tr style={{ background: '#f0fdf4', borderTop: '2px solid #10b981' }}>
                   <td colSpan={4} style={{ padding: '9px 10px', fontSize: '0.76rem', fontWeight: 800, color: '#065f46', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                    Total — {results.length} enregistrement{results.length > 1 ? 's' : ''}
+                    Total — {displayedResults.length} enregistrement{displayedResults.length > 1 ? 's' : ''}
                   </td>
                   <td style={{ textAlign: 'right', padding: '9px 10px', fontWeight: 800, color: '#1e40af', fontSize: '0.84rem', whiteSpace: 'nowrap' }}>
                     {totalHT.toFixed(3)} DT
