@@ -167,37 +167,44 @@ export default function ValorisesPage() {
             <div style={{ fontSize: '0.88rem' }}>Cliquez sur « + Produit valorisé composé » pour en créer un.</div>
           </div>
         ) : (
-          <div className="card" style={{ overflow: 'hidden' }}>
-            <div className="table-responsive">
-              <table className="table" style={{ margin: 0 }}>
-                <thead><tr><th>Produit</th><th style={{ width: 170 }}>Catégorie</th><th style={{ width: 70, textAlign: 'center' }}>Articles</th><th style={{ width: 150, textAlign: 'right' }}>Actions</th></tr></thead>
-                <tbody>
-                  {composes.slice((composePage - 1) * COMPOSES_PER_PAGE, composePage * COMPOSES_PER_PAGE).map((p) => (
-                    <tr key={p.id}>
-                      <td style={{ fontWeight: 600, color: '#0f172a' }}>💎 {p.name}{p.refProduit && <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginLeft: 6 }}>({p.refProduit})</span>}</td>
-                      <td style={{ fontSize: '0.85rem', color: '#475569' }}>{p.categorieProduitName ?? '—'}</td>
-                      <td style={{ textAlign: 'center', fontSize: '0.85rem', color: '#475569' }}>{p.ingredientsCount ?? 0}</td>
-                      <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
-                        <button onClick={() => openView(p)} title="Consulter articles / PU"
-                          style={{ background: '#f1f5f9', border: '1px solid #e2e8f0', borderRadius: 7, color: '#475569', cursor: 'pointer', padding: '4px 8px', fontSize: '0.8rem', marginRight: 4 }}>👁</button>
-                        <button onClick={() => setEditComposeId(p.id)} title="Modifier"
-                          style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 7, color: '#1d4ed8', cursor: 'pointer', padding: '4px 8px', fontSize: '0.8rem', marginRight: 4 }}>✏️</button>
-                        <button onClick={() => deleteCompose(p)} disabled={deletingId === p.id}
-                          title="Supprimer" style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 7, color: '#dc2626', cursor: 'pointer', padding: '4px 8px', fontSize: '0.8rem', fontWeight: 700 }}>🗑</button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+          <>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 14 }}>
+              {composes.slice((composePage - 1) * COMPOSES_PER_PAGE, composePage * COMPOSES_PER_PAGE).map((p) => (
+                <div key={p.id} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: '14px 16px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+                    <div style={{ width: 38, height: 38, borderRadius: 10, background: 'linear-gradient(135deg,#6366f1,#4338ca)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem', flexShrink: 0 }}>💎</div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#0f172a' }}>{p.name}</div>
+                      {p.refProduit && <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Réf : {p.refProduit}</div>}
+                      <div style={{ fontSize: '0.74rem', color: '#4338ca', marginTop: 3, background: '#eef2ff', borderRadius: 6, padding: '1px 7px', display: 'inline-block' }}>{p.categorieProduitName ?? 'Sans catégorie'}</div>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <div style={{ flex: 1, background: '#f8fafc', borderRadius: 8, padding: '6px 8px', textAlign: 'center' }}>
+                      <div style={{ fontWeight: 800, color: '#0f172a' }}>{p.ingredientsCount ?? 0}</div>
+                      <div style={{ fontSize: '0.66rem', color: '#64748b' }}>articles</div>
+                    </div>
+                    <div style={{ flex: 1, background: '#faf5ff', borderRadius: 8, padding: '6px 8px', textAlign: 'center' }}>
+                      <div style={{ fontWeight: 800, color: '#5b21b6' }}>{p.subProductsCount ?? 0}</div>
+                      <div style={{ fontSize: '0.66rem', color: '#7c3aed' }}>PU</div>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: 6, borderTop: '1px solid var(--border)', paddingTop: 10 }}>
+                    <button onClick={() => openView(p)} style={{ flex: 1, background: '#f1f5f9', border: '1px solid #e2e8f0', borderRadius: 8, color: '#475569', cursor: 'pointer', padding: '6px', fontSize: '0.78rem', fontWeight: 600 }}>👁 Voir</button>
+                    <button onClick={() => setEditComposeId(p.id)} style={{ flex: 1, background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 8, color: '#1d4ed8', cursor: 'pointer', padding: '6px', fontSize: '0.78rem', fontWeight: 600 }}>✏️ Modifier</button>
+                    <button onClick={() => deleteCompose(p)} disabled={deletingId === p.id} title="Supprimer" style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, color: '#dc2626', cursor: 'pointer', padding: '6px 10px', fontSize: '0.78rem', fontWeight: 700 }}>🗑</button>
+                  </div>
+                </div>
+              ))}
             </div>
             {composes.length > COMPOSES_PER_PAGE && (
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 6, padding: '10px 14px', borderTop: '1px solid var(--border)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 18 }}>
                 <button disabled={composePage <= 1} onClick={() => setComposePage(composePage - 1)} style={{ padding: '4px 12px', borderRadius: 7, border: '1px solid #c7d2fe', background: '#fff', color: '#4338ca', cursor: composePage <= 1 ? 'default' : 'pointer', fontWeight: 700, opacity: composePage <= 1 ? 0.4 : 1 }}>‹</button>
                 <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{composePage} / {Math.ceil(composes.length / COMPOSES_PER_PAGE)}</span>
                 <button disabled={composePage >= Math.ceil(composes.length / COMPOSES_PER_PAGE)} onClick={() => setComposePage(composePage + 1)} style={{ padding: '4px 12px', borderRadius: 7, border: '1px solid #c7d2fe', background: '#fff', color: '#4338ca', cursor: 'pointer', fontWeight: 700, opacity: composePage >= Math.ceil(composes.length / COMPOSES_PER_PAGE) ? 0.4 : 1 }}>›</button>
               </div>
             )}
-          </div>
+          </>
         )
       )}
 
