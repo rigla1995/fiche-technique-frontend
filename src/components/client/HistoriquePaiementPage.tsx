@@ -27,6 +27,29 @@ export default function HistoriquePaiementPage() {
   const [loading, setLoading] = useState(true);
   const [filterMois, setFilterMois] = useState('');
   const [filterStatut, setFilterStatut] = useState('');
+  const [downloadingId, setDownloadingId] = useState<number | null>(null);
+
+  const downloadFacture = async (id: number) => {
+    setDownloadingId(id);
+    try {
+      const res = await api.get(`/api/abonnements/mon-abonnement/paiements/${id}/facture`, { responseType: 'blob' });
+      const cd = res.headers['content-disposition'] || '';
+      const m = cd.match(/filename="?([^"]+)"?/);
+      const filename = m ? m[1] : `facture-${id}.pdf`;
+      const url = window.URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', filename);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch {
+      alert('Facture indisponible pour ce paiement.');
+    } finally {
+      setDownloadingId(null);
+    }
+  };
 
   const fetchAll = useCallback(async () => {
     setLoading(true);
@@ -149,7 +172,7 @@ export default function HistoriquePaiementPage() {
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.88rem' }}>
               <thead>
                 <tr style={{ background: '#f9fafb' }}>
-                  {['Mois', 'Montant', 'Statut', 'Date paiement'].map((h) => (
+                  {['Mois', 'Montant', 'Statut', 'Date paiement', 'Facture'].map((h) => (
                     <th key={h} style={{ padding: '10px 20px', textAlign: 'left', borderBottom: '1px solid #e5e7eb', fontWeight: 700, color: '#374151', fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{h}</th>
                   ))}
                 </tr>
@@ -173,6 +196,17 @@ export default function HistoriquePaiementPage() {
                         }}>{STATUT_LABELS[statut] || statut}</span>
                       </td>
                       <td style={{ padding: '12px 20px', color: '#6b7280' }}>{p.datePaiement ? fmtDate(p.datePaiement) : '—'}</td>
+                      <td style={{ padding: '12px 20px' }}>
+                        {statut === 'payé' ? (
+                          <button onClick={() => downloadFacture(p.id)} disabled={downloadingId === p.id}
+                            title="Télécharger la facture (PDF)"
+                            style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 8, border: '1.5px solid #bfdbfe', background: downloadingId === p.id ? '#eff6ff' : '#fff', color: '#1d4ed8', fontWeight: 700, fontSize: '0.78rem', cursor: downloadingId === p.id ? 'default' : 'pointer' }}>
+                            🧾 {downloadingId === p.id ? '…' : 'Facture'}
+                          </button>
+                        ) : (
+                          <span style={{ color: '#cbd5e1', fontSize: '0.8rem' }}>—</span>
+                        )}
+                      </td>
                     </tr>
                   );
                 })}
