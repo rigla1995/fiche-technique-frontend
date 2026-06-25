@@ -229,6 +229,7 @@ export interface Product {
   id: number;
   name: string;
   type: 'utilisable' | 'vendable';
+  origine?: 'labo' | 'activite';
   ingredients: ProductIngredient[];
   subProducts: ProductComponent[];
   totalCost: number;

@@ -508,7 +508,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                       </li>
                       <li>
                         <Link to="/client/products/valorises" className={`sidebar-link ${location.pathname === '/client/products/valorises' ? 'active' : ''}`} onClick={onClose}>
-                          <span className="link-icon">💎</span><span className="link-label">Articles Valorisés</span>
+                          <span className="link-icon">💎</span><span className="link-label">Produits Valorisés</span>
                         </Link>
                       </li>
                     </>
