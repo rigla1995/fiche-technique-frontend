@@ -118,7 +118,6 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const currentSearch = new URLSearchParams(location.search);
   const currentSection = currentSearch.get('section');
   const currentProductTab = currentSearch.get('tab');
-  const currentProductOrigine = currentSearch.get('origine');
   const isHistoriquePage = location.pathname === '/client/stock/historique';
   const isHistoriquepertesPage = location.pathname === '/client/stock/historique-pertes';
   const isProductsPage = location.pathname === '/client/products';
@@ -497,33 +496,19 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                           <span className="link-icon">🏷️</span><span className="link-label">Catégories Produits</span>
                         </Link>
                       </li>
-                      {labos.length > 0 && (
-                        <>
-                          <li>
-                            <Link to="/client/products?tab=vendable&origine=labo" className={`sidebar-link ${isProductsPage && currentProductTab === 'vendable' && currentProductOrigine === 'labo' ? 'active' : ''}`} onClick={onClose}>
-                              <span className="link-icon">🏭</span><span className="link-label">Produits Labo</span>
-                            </Link>
-                          </li>
-                          <li>
-                            <Link to="/client/products?tab=utilisable&origine=labo" className={`sidebar-link ${isProductsPage && currentProductTab === 'utilisable' && currentProductOrigine === 'labo' ? 'active' : ''}`} onClick={onClose}>
-                              <span className="link-icon">🧫</span><span className="link-label">PU Labo</span>
-                            </Link>
-                          </li>
-                        </>
-                      )}
                       <li>
-                        <Link to="/client/products?tab=vendable&origine=activite" className={`sidebar-link ${isProductsPage && currentProductTab === 'vendable' && currentProductOrigine !== 'labo' ? 'active' : ''}`} onClick={onClose}>
-                          <span className="link-icon">🍔</span><span className="link-label">Produits Activités</span>
+                        <Link to="/client/products?tab=vendable" className={`sidebar-link ${isProductsPage && currentProductTab === 'vendable' ? 'active' : ''}`} onClick={onClose}>
+                          <span className="link-icon">🍔</span><span className="link-label">Produits Vendables</span>
                         </Link>
                       </li>
                       <li>
-                        <Link to="/client/products?tab=utilisable&origine=activite" className={`sidebar-link ${isProductsPage && currentProductTab === 'utilisable' && currentProductOrigine !== 'labo' ? 'active' : ''}`} onClick={onClose}>
-                          <span className="link-icon">🧪</span><span className="link-label">PU Activité</span>
+                        <Link to="/client/products?tab=utilisable" className={`sidebar-link ${isProductsPage && currentProductTab === 'utilisable' ? 'active' : ''}`} onClick={onClose}>
+                          <span className="link-icon">🧪</span><span className="link-label">Produits Utilisables</span>
                         </Link>
                       </li>
                       <li>
                         <Link to="/client/products/valorises" className={`sidebar-link ${location.pathname === '/client/products/valorises' ? 'active' : ''}`} onClick={onClose}>
-                          <span className="link-icon">💎</span><span className="link-label">Produits Valorisés</span>
+                          <span className="link-icon">💎</span><span className="link-label">Articles Valorisés</span>
                         </Link>
                       </li>
                     </>
