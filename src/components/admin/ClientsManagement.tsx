@@ -158,6 +158,20 @@ export default function ClientsManagement() {
     bloque:    { label: 'Bloqué',     bg: '#ede9fe', color: '#5b21b6' },
   };
 
+  // Vue d'ensemble aérée + filtres clairs (search + statut segmenté avec compteurs).
+  const activeCount = clients.length - totalPending;
+  const statusFilters = [
+    { value: '' as const,        label: 'Tous',       count: clients.length, color: '#0d9488' },
+    { value: 'active' as const,  label: 'Activés',    count: activeCount,    color: '#15803d' },
+    { value: 'pending' as const, label: 'En attente', count: totalPending,   color: '#b45309' },
+  ];
+  const avatarFor = (name: string) => {
+    const initials = name?.trim().split(/\s+/).map((w) => w[0]).slice(0, 2).join('').toUpperCase() || '?';
+    const palette = ['#dbeafe:#1d4ed8', '#dcfce7:#166534', '#fce7f3:#9d174d', '#ede9fe:#6d28d9', '#fff7ed:#c2410c', '#e0f2fe:#075985'];
+    const [bg, color] = palette[(name?.charCodeAt(0) || 0) % palette.length].split(':');
+    return { initials, bg, color };
+  };
+
   return (
     <>
     {showAddModal && (
@@ -168,69 +182,56 @@ export default function ClientsManagement() {
     )}
 
     <div className="page">
+      {/* En-tête : titre + résumé + action, épuré */}
       <div style={{
         background: 'linear-gradient(135deg, #0f766e 0%, #0d9488 55%, #14b8a6 100%)',
-        borderRadius: 18, padding: '24px 28px', marginBottom: 24,
-        boxShadow: '0 8px 32px rgba(15,118,110,0.28)',
-        display: 'flex', alignItems: 'center', gap: 12,
+        borderRadius: 18, padding: '20px 24px', marginBottom: 18,
+        boxShadow: '0 8px 32px rgba(15,118,110,0.25)',
+        display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap',
       }}>
-        <div style={{ background: 'rgba(255,255,255,0.18)', borderRadius: 10, padding: '7px 9px', fontSize: '1.2rem' }}>👥</div>
-        <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0 }}>Clients</h1>
-        <button className="btn btn-primary" style={{ marginLeft: 'auto' }} onClick={() => setShowAddModal(true)}>+ Ajouter</button>
+        <div style={{ background: 'rgba(255,255,255,0.18)', borderRadius: 12, padding: '8px 11px', fontSize: '1.3rem' }}>👥</div>
+        <div>
+          <h1 style={{ fontSize: '1.4rem', fontWeight: 900, color: '#fff', margin: 0, lineHeight: 1.1 }}>Clients</h1>
+          <p style={{ margin: '3px 0 0', fontSize: '0.82rem', color: 'rgba(255,255,255,0.78)' }}>
+            {clients.length} client{clients.length > 1 ? 's' : ''} · {activeCount} activé{activeCount > 1 ? 's' : ''}{totalPending > 0 ? ` · ${totalPending} en attente` : ''}
+          </p>
+        </div>
+        <button onClick={() => setShowAddModal(true)}
+          style={{ marginLeft: 'auto', background: '#fff', color: '#0f766e', fontWeight: 800, border: 'none', borderRadius: 10, padding: '10px 18px', fontSize: '0.88rem', cursor: 'pointer', boxShadow: '0 2px 10px rgba(0,0,0,0.12)' }}>
+          + Ajouter un client
+        </button>
       </div>
 
-      {/* KPI bar */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12, marginBottom: 16 }}>
-        {[
-          { label: 'Total', value: clients.length, icon: '👥', bg: '#eff6ff', color: '#1d4ed8' },
-          { label: 'En attente', value: totalPending, icon: '⏳', bg: totalPending > 0 ? '#fee2e2' : '#f8fafc', color: totalPending > 0 ? '#991b1b' : '#64748b' },
-        ].map(({ label, value, icon, bg, color }) => (
-          <div key={label} style={{ background: bg, border: `1px solid ${color}22`, borderRadius: 10, padding: '12px 16px' }}>
-            <div style={{ fontSize: '1.4rem', fontWeight: 700, color }}>{icon} {value}</div>
-            <div style={{ fontSize: '0.78rem', color, opacity: 0.8 }}>{label}</div>
-          </div>
-        ))}
-      </div>
-
-      {/* Filter row */}
+      {/* Barre recherche + filtres statut (aérée, claire) */}
       <div style={{
-        background: 'var(--surface)', borderRadius: 14, padding: '16px 20px', marginBottom: 20,
-        border: '1px solid var(--border)', boxShadow: '0 2px 12px rgba(0,0,0,0.05)',
-        display: 'flex', flexWrap: 'wrap', gap: 14, alignItems: 'flex-end',
+        background: 'var(--surface)', borderRadius: 14, padding: '13px 18px', marginBottom: 18,
+        border: '1px solid var(--border)', boxShadow: '0 2px 12px rgba(0,0,0,0.04)',
+        display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap',
       }}>
-        <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 220 }}>
-          <label style={{ fontSize: '0.68rem', fontWeight: 800, color: '#0d9488', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>🔍 Recherche</label>
+        <div style={{ position: 'relative', flex: 1, minWidth: 240 }}>
+          <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 13, pointerEvents: 'none', opacity: 0.5 }}>🔍</span>
           <input
             type="text"
-            placeholder="Nom, email, téléphone…"
+            placeholder="Rechercher par nom, email ou téléphone…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid #0d9488', fontSize: '0.88rem', background: '#f4f4f5', minWidth: 160 }}
+            style={{ width: '100%', padding: '9px 12px 9px 34px', borderRadius: 10, border: '1.5px solid var(--border)', fontSize: '0.88rem', background: 'var(--background)', boxSizing: 'border-box' }}
           />
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column' }}>
-          <label style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>📊 Statut</label>
-          <div style={{ display: 'flex', gap: 6 }}>
-            {([
-              { value: '' as const, label: 'Tous' },
-              { value: 'active' as const, label: '✅ Activés' },
-              { value: 'pending' as const, label: '⏳ En attente' },
-            ]).map(({ value, label }) => (
-              <button
-                key={value}
-                className={`btn btn-sm ${filterStatus === value ? 'btn-primary' : 'btn-ghost'}`}
-                onClick={() => setFilterStatus(value)}
-              >
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+          {statusFilters.map(({ value, label, count, color }) => {
+            const active = filterStatus === value;
+            return (
+              <button key={value || 'all'} onClick={() => setFilterStatus(value)}
+                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 13px', borderRadius: 20, fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                  border: `1.5px solid ${active ? color : '#e2e8f0'}`, background: active ? color + '15' : '#fff', color: active ? color : '#64748b', transition: 'all 0.15s' }}>
                 {label}
-                {value === 'pending' && totalPending > 0 && (
-                  <span style={{ background: '#dc2626', color: '#fff', borderRadius: '50%', width: 16, height: 16, fontSize: '0.65rem', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginLeft: 4 }}>
-                    {totalPending}
-                  </span>
-                )}
+                <span style={{ background: active ? color : '#eef2f7', color: active ? '#fff' : '#94a3b8', borderRadius: 10, padding: '0 6px', fontSize: 9.5, fontWeight: 800, lineHeight: '15px' }}>{count}</span>
               </button>
-            ))}
-          </div>
+            );
+          })}
         </div>
+        <span style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--text-muted)', fontWeight: 600 }}>{filtered.length} résultat{filtered.length !== 1 ? 's' : ''}</span>
       </div>
 
       {loading ? (
@@ -240,24 +241,32 @@ export default function ClientsManagement() {
           <table className="table">
             <thead>
               <tr>
-                <th>Nom</th>
-                <th>Email</th>
+                <th>Client</th>
                 <th>Téléphone</th>
                 <th>Domaines</th>
-                <th>Configuration</th>
-                <th>Contrat</th>
                 <th>Statut</th>
-                <th>Actions</th>
+                <th>Abonnement</th>
+                <th style={{ textAlign: 'right' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
               {filtered.map((c) => {
                 const domCount = (c.domaineIds || []).length;
+                const av = avatarFor(c.name);
                 return (
-                  <tr key={c.id} style={!c.activatedAt ? { background: '#fffbeb' } : {}}>
-                    <td style={{ fontWeight: 600 }}>{c.name}</td>
-                    <td style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{c.email}</td>
-                    <td style={{ fontSize: '0.85rem' }}>{c.phone || '—'}</td>
+                  <tr key={c.id} style={!c.activatedAt ? { background: '#fffdf5' } : {}}>
+                    {/* Client = avatar + nom + email */}
+                    <td>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
+                        <div style={{ width: 38, height: 38, borderRadius: 11, background: av.bg, color: av.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 13, flexShrink: 0 }}>{av.initials}</div>
+                        <div style={{ minWidth: 0 }}>
+                          <div style={{ fontWeight: 700, color: '#0f172a', fontSize: '0.9rem' }}>{c.name}</div>
+                          <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>{c.email}</div>
+                        </div>
+                      </div>
+                    </td>
+
+                    <td style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{c.phone || '—'}</td>
 
                     {/* Domaines — count badge */}
                     <td>
@@ -272,60 +281,50 @@ export default function ClientsManagement() {
                             cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4,
                           }}
                         >
-                          🏷️ {domCount} domaine{domCount > 1 ? 's' : ''}
+                          🏷️ {domCount}
                         </button>
-                      )}
-                    </td>
-
-                    {/* Configuration */}
-                    <td>
-                      <button
-                        onClick={() => openConfig(c)}
-                        style={{
-                          background: '#f0fdf4', color: '#15803d', border: '1px solid #bbf7d0',
-                          borderRadius: 7, padding: '4px 10px', fontSize: '0.78rem', fontWeight: 700,
-                          cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 5,
-                        }}
-                      >
-                        ⚙️ Config
-                      </button>
-                    </td>
-
-                    {/* Contrat */}
-                    <td>
-                      {c.activatedAt ? (
-                        <button
-                          onClick={() => downloadContract(c)}
-                          style={{
-                            background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe',
-                            borderRadius: 7, padding: '4px 10px', fontSize: '0.78rem', fontWeight: 700,
-                            cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 5,
-                          }}
-                        >
-                          📄 PDF
-                        </button>
-                      ) : (
-                        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>—</span>
                       )}
                     </td>
 
                     {/* Statut */}
                     <td>
                       {c.activatedAt ? (
-                        <span style={{ background: '#dcfce7', color: '#15803d', fontSize: '0.72rem', fontWeight: 700, padding: '2px 8px', borderRadius: 20 }}>✅ Activé</span>
+                        <span style={{ background: '#dcfce7', color: '#15803d', fontSize: '0.72rem', fontWeight: 700, padding: '3px 10px', borderRadius: 20, whiteSpace: 'nowrap' }}>✅ Activé</span>
                       ) : (
-                        <span style={{ background: '#fee2e2', color: '#991b1b', fontSize: '0.72rem', fontWeight: 700, padding: '2px 8px', borderRadius: 20 }}>⏳ En attente</span>
+                        <span style={{ background: '#fef3c7', color: '#b45309', fontSize: '0.72rem', fontWeight: 700, padding: '3px 10px', borderRadius: 20, whiteSpace: 'nowrap' }}>⏳ En attente</span>
                       )}
                     </td>
 
-                    <td className="actions-cell">
-                      <button className="btn btn-ghost btn-sm" onClick={() => openEdit(c)}>✏️ Modifier</button>
+                    {/* Abonnement = Config + Contrat regroupés */}
+                    <td>
+                      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                        <button
+                          onClick={() => openConfig(c)}
+                          style={{ background: '#f0fdf4', color: '#15803d', border: '1px solid #bbf7d0', borderRadius: 7, padding: '4px 10px', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 5 }}
+                        >
+                          ⚙️ Config
+                        </button>
+                        {c.activatedAt && (
+                          <button
+                            onClick={() => downloadContract(c)}
+                            style={{ background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe', borderRadius: 7, padding: '4px 10px', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 5 }}
+                          >
+                            📄 Contrat
+                          </button>
+                        )}
+                      </div>
+                    </td>
+
+                    {/* Actions */}
+                    <td className="actions-cell" style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+                      <button className="btn btn-ghost btn-sm" onClick={() => openEdit(c)} title="Modifier">✏️ Modifier</button>
                       {!c.activatedAt && (
                         <button
                           className="btn btn-ghost btn-sm"
                           style={{ color: '#4338ca', borderColor: '#4338ca' }}
                           disabled={resendingId === c.id}
                           onClick={() => handleResendInvite(c.id, c.email)}
+                          title="Renvoyer l'invitation"
                         >
                           {resendingId === c.id ? '…' : '✉️ Renvoyer'}
                         </button>
@@ -334,6 +333,7 @@ export default function ClientsManagement() {
                         <button
                           className="btn btn-ghost btn-sm"
                           style={{ color: 'var(--warning, #b45309)', borderColor: 'var(--warning, #b45309)' }}
+                          title="Réinitialiser l'onboarding"
                           onClick={async () => {
                             if (!window.confirm(`Réinitialiser l'onboarding de ${c.name} ?`)) return;
                             await api.put(`/admin/clients/${c.id}`, { onboardingStep: 0 });
@@ -343,13 +343,13 @@ export default function ClientsManagement() {
                           🔓 Reset
                         </button>
                       )}
-                      <button className="btn btn-danger btn-sm" onClick={() => setDeleteTarget(c)}>🗑️</button>
+                      <button className="btn btn-danger btn-sm" onClick={() => setDeleteTarget(c)} title="Supprimer">🗑️</button>
                     </td>
                   </tr>
                 );
               })}
               {filtered.length === 0 && (
-                <tr><td colSpan={8} className="empty-cell">Aucun résultat</td></tr>
+                <tr><td colSpan={6} className="empty-cell">Aucun résultat</td></tr>
               )}
             </tbody>
           </table>
