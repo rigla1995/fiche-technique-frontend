@@ -209,24 +209,25 @@ export default function ProductList() {
     setAddIngLines([]); setAddSubLines([]); setAddSubSearch(''); setAddIngSearch('');
     setAddSavedName(''); setAddFamilleFilter(''); setAddCatFilter(''); setAddIngVisible(20);
     setAddAffectationIds([]);
-    setAddIngredients([]); // chargés réactivement selon le périmètre choisi (step 1)
+    setAddIngredients([]); setUtilisableForWizard([]); // chargés réactivement selon le périmètre (step 1)
     setAddModal(1);
-    api.get('/api/products?type=utilisable')
-      .then(({ data }) => setUtilisableForWizard((data as Product[]).map(u => ({ id: u.id, name: u.name }))))
-      .catch(() => {});
   }, []);
 
-  // Charge les articles consommables selon le périmètre choisi (intersection) — refonte Espace Produits.
-  // Origine labo → articles communs aux labos choisis ; origine activité → articles communs aux activités.
+  // Charge articles consommables ET produits utilisables selon le périmètre choisi — refonte Espace Produits.
+  // Origine labo → communs aux labos choisis ; origine activité → communs aux activités (+ PU des labos liés).
   useEffect(() => {
-    if (addAffectationIds.length === 0) { setAddIngredients([]); return; }
+    if (addAffectationIds.length === 0) { setAddIngredients([]); setUtilisableForWizard([]); return; }
+    const ids = addAffectationIds.join(',');
     const param = productOrigine === 'labo' ? 'laboIds' : 'activiteIds';
     const path = productOrigine === 'labo'
       ? '/api/labo/articles-consommables'
       : '/api/entreprise/activites/articles-consommables';
-    api.get(`${path}?${param}=${addAffectationIds.join(',')}`)
+    api.get(`${path}?${param}=${ids}`)
       .then(({ data }) => setAddIngredients(data as ActiviteIngredient[]))
       .catch(() => setAddIngredients([]));
+    api.get(`/api/produits/utilisables-perimetre?origine=${productOrigine}&ids=${ids}`)
+      .then(({ data }) => setUtilisableForWizard(data as { id: number; name: string }[]))
+      .catch(() => setUtilisableForWizard([]));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [addAffectationIds, productOrigine]);
 
