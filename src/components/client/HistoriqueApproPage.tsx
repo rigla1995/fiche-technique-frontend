@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
 import HelpButton from '../common/HelpButton';
+import TypeApproFilter from '../common/TypeApproFilter';
 import { useAuth } from '../../context/AuthContext';
 import type { Activite, HistoriqueApproEntry } from '../../types';
 
@@ -232,7 +233,7 @@ export default function HistoriqueApproPage() {
 
   const [fournisseurs, setFournisseurs] = useState<Fournisseur[]>([]);
   const [selectedFournisseurId, setSelectedFournisseurId] = useState('');
-  const [refFactureFilter, setRefFactureFilter] = useState('');
+  const [selectedTypes, setSelectedTypes] = useState<Set<string>>(new Set());
 
   const [startDate, setStartDate] = useState(yearStart);
   const [endDate, setEndDate] = useState(yearEnd);
@@ -258,13 +259,21 @@ export default function HistoriqueApproPage() {
     if (next.has(id)) next.delete(id); else next.add(id);
     return next;
   });
-  const totalPages = Math.max(1, Math.ceil(results.length / PAGE_SIZE));
-  const pagedResults = results.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const typeCategory = (t: string | null): string =>
+    t === 'transfert' ? 'transfert'
+    : (t === 'vente' || t === 'annulation_vente') ? 'vente'
+    : (t === 'PT' || t === 'produit_transformé' || t === 'produit_transforme') ? 'pt'
+    : 'manuel';
+  const displayedResults = selectedTypes.size === 0 ? results : results.filter((r) => selectedTypes.has(typeCategory(r.typeAppro)));
+  const toggleType = (key: string) => { setSelectedTypes((prev) => { const n = new Set(prev); if (n.has(key)) n.delete(key); else n.add(key); return n; }); setPage(1); };
 
-  const totalHT = results.reduce((s, r) => s + (r.quantite ?? 0) * (r.prixUnitaire ?? 0), 0);
-  const totalTTC = results.reduce((s, r) => s + (r.quantite ?? 0) * (r.prixUnitaireTva ?? r.prixUnitaire ?? 0), 0);
+  const totalPages = Math.max(1, Math.ceil(displayedResults.length / PAGE_SIZE));
+  const pagedResults = displayedResults.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  const totalHT = displayedResults.reduce((s, r) => s + (r.quantite ?? 0) * (r.prixUnitaire ?? 0), 0);
+  const totalTTC = displayedResults.reduce((s, r) => s + (r.quantite ?? 0) * (r.prixUnitaireTva ?? r.prixUnitaire ?? 0), 0);
   const unitQtyMap: Record<string, number> = {};
-  for (const r of results) { unitQtyMap[r.uniteNom] = (unitQtyMap[r.uniteNom] || 0) + (r.quantite ?? 0); }
+  for (const r of displayedResults) { unitQtyMap[r.uniteNom] = (unitQtyMap[r.uniteNom] || 0) + (r.quantite ?? 0); }
   const [ptProducts, setPtProducts] = useState<Array<{ id: number; nom: string }>>([]);
 
   useEffect(() => {
@@ -343,7 +352,6 @@ export default function HistoriqueApproPage() {
       if (startDate) params.set('startDate', startDate);
       if (endDate) params.set('endDate', endDate);
       if (selectedFournisseurId) params.set('fournisseurId', selectedFournisseurId);
-      if (refFactureFilter.trim()) params.set('refFacture', refFactureFilter.trim());
       const { data } = await api.get(`/api/stock/historique?${params}`);
       setResults(data as HistoriqueApproEntry[]);
     } catch {
@@ -351,7 +359,7 @@ export default function HistoriqueApproPage() {
     }
     setLoading(false);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isEntreprise, selectedActiviteId, selectedIngredientId, selectedCategoryId, startDate, endDate, selectedFournisseurId, refFactureFilter]);
+  }, [isEntreprise, selectedActiviteId, selectedIngredientId, selectedCategoryId, startDate, endDate, selectedFournisseurId]);
 
   const handleEdit = async (id: number, data: { quantite: number | null; prixUnitaire: number | null; fournisseurId: number | null; refFacture: string | null }) => {
     await api.put(`/api/stock/historique/${id}`, { ...data, isEntreprise });
@@ -386,7 +394,6 @@ export default function HistoriqueApproPage() {
     if (startDate) params.set('startDate', startDate);
     if (endDate) params.set('endDate', endDate);
     if (selectedFournisseurId) params.set('fournisseurId', selectedFournisseurId);
-    if (refFactureFilter.trim()) params.set('refFacture', refFactureFilter.trim());
     if (selectedIds.size > 0) params.set('selectedIds', [...selectedIds].join(','));
     return params;
   };
@@ -508,12 +515,11 @@ export default function HistoriqueApproPage() {
             </div>
           )}
           <div>
-            <label style={{ fontSize: '0.62rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 4 }}>🧾 Réf.</label>
-            <input type="text" style={{ padding: '6px 10px', borderRadius: 7, border: '1.5px solid #93c5fd', fontSize: '0.82rem', background: '#eff6ff', minWidth: 110 }}
-              placeholder="Réf…" value={refFactureFilter} onChange={(e) => setRefFactureFilter(e.target.value)} />
+            <label style={{ fontSize: '0.62rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 4 }}>🏷️ Type d'appro</label>
+            <TypeApproFilter selected={selectedTypes} onToggle={toggleType} accent="#1e40af" />
           </div>
-          {(selectedCategoryId || selectedIngredientId || selectedFournisseurId || refFactureFilter || startDate !== yearStart || endDate !== yearEnd) && (
-            <button onClick={() => { setSelectedCategoryId(''); setSelectedIngredientId(''); setSelectedFournisseurId(''); setRefFactureFilter(''); setStartDate(yearStart); setEndDate(yearEnd); }}
+          {(selectedCategoryId || selectedIngredientId || selectedFournisseurId || selectedTypes.size > 0 || startDate !== yearStart || endDate !== yearEnd) && (
+            <button onClick={() => { setSelectedCategoryId(''); setSelectedIngredientId(''); setSelectedFournisseurId(''); setSelectedTypes(new Set()); setStartDate(yearStart); setEndDate(yearEnd); }}
               style={{ alignSelf: 'flex-end', background: 'transparent', border: '1.5px solid var(--border)', borderRadius: 7, padding: '5px 9px', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '0.85rem', lineHeight: 1, fontWeight: 700 }}
               title="Réinitialiser">✕</button>
           )}
@@ -564,14 +570,25 @@ export default function HistoriqueApproPage() {
                 <tr style={{ background: 'linear-gradient(135deg, #1e3a8a, #1e40af)' }}>
                   <th style={{ width: 28, padding: '10px 4px', color: '#fff', background: 'transparent', borderBottom: 'none' }} />
                   {(['Article', 'Date'] as const).map((label) => (
-                    <th key={label} style={{ fontWeight: 800, fontSize: '0.75rem', letterSpacing: '0.04em', textTransform: 'uppercase', padding: '10px 10px', color: '#fff', background: 'transparent', borderBottom: 'none' }}>{label}</th>
+                    <th key={label} style={{ fontWeight: 800, fontSize: '0.75rem', letterSpacing: '0.04em', textTransform: 'uppercase', padding: '10px 10px 2px', color: '#fff', background: 'transparent', borderBottom: 'none' }}>{label}</th>
                   ))}
-                  {(['Quantité', 'Prix U. HT', 'TVA %', 'Prix U. TTC'] as const).map((label) => (
-                    <th key={label} style={{ textAlign: 'right', fontWeight: 800, fontSize: '0.75rem', letterSpacing: '0.04em', textTransform: 'uppercase', padding: '10px 10px', color: '#fff', background: 'transparent', borderBottom: 'none' }}>{label}</th>
+                  {(['Quantité', 'Prix', 'TVA', 'Prix'] as const).map((label, i) => (
+                    <th key={i} style={{ textAlign: 'right', fontWeight: 800, fontSize: '0.75rem', letterSpacing: '0.04em', textTransform: 'uppercase', padding: '10px 10px 2px', color: '#fff', background: 'transparent', borderBottom: 'none' }}>{label}</th>
                   ))}
-                  <th style={{ fontWeight: 800, fontSize: '0.75rem', letterSpacing: '0.04em', textTransform: 'uppercase', padding: '10px 10px', color: '#fff', background: 'transparent', borderBottom: 'none' }}>Fourn. / Réf</th>
-                  <th style={{ fontWeight: 800, fontSize: '0.75rem', letterSpacing: '0.04em', textTransform: 'uppercase', padding: '10px 10px', color: '#fff', background: 'transparent', borderBottom: 'none' }}>Créé par</th>
+                  <th style={{ fontWeight: 800, fontSize: '0.75rem', letterSpacing: '0.04em', textTransform: 'uppercase', padding: '10px 10px 2px', color: '#fff', background: 'transparent', borderBottom: 'none' }}>Fourn. / Réf</th>
+                  <th style={{ fontWeight: 800, fontSize: '0.75rem', letterSpacing: '0.04em', textTransform: 'uppercase', padding: '10px 10px 2px', color: '#fff', background: 'transparent', borderBottom: 'none' }}>Créé par</th>
                   <th style={{ padding: '10px 6px', color: '#fff', background: 'transparent', borderBottom: 'none' }}></th>
+                </tr>
+                <tr style={{ background: 'linear-gradient(135deg, #1e3a8a, #1e40af)' }}>
+                  <th style={{ background: 'transparent', borderBottom: 'none' }} />
+                  <th style={{ background: 'transparent', borderBottom: 'none' }} />
+                  <th style={{ background: 'transparent', borderBottom: 'none' }} />
+                  {(['Unité', 'HT', '%', 'TTC'] as const).map((sub, i) => (
+                    <th key={i} style={{ textAlign: 'right', fontWeight: 400, fontSize: '0.62rem', color: '#93c5fd', letterSpacing: '0.04em', padding: '0 10px 8px', background: 'transparent', borderBottom: 'none' }}>{sub}</th>
+                  ))}
+                  <th style={{ background: 'transparent', borderBottom: 'none' }} />
+                  <th style={{ background: 'transparent', borderBottom: 'none' }} />
+                  <th style={{ background: 'transparent', borderBottom: 'none' }} />
                 </tr>
               </thead>
               <tbody>
@@ -604,14 +621,23 @@ export default function HistoriqueApproPage() {
                       <div style={{ whiteSpace: 'nowrap' }}>{r.quantite ?? '—'}</div>
                       <div style={{ color: 'var(--text-muted)', fontSize: '0.7rem', fontWeight: 400 }}>{r.uniteNom}</div>
                     </td>
-                    <td style={{ textAlign: 'right', fontWeight: 600, color: prixColor(r.prixUnitaire), fontSize: '0.85rem', padding: '8px 10px', whiteSpace: 'nowrap' }}>
-                      {r.prixUnitaire !== null ? `${r.prixUnitaire.toFixed(3)} DT` : '—'}
+                    <td style={{ textAlign: 'right', padding: '8px 10px', whiteSpace: 'nowrap' }}>
+                      {r.prixUnitaire !== null ? (<>
+                        <div style={{ fontWeight: 700, color: prixColor(r.prixUnitaire), fontSize: '0.85rem' }}>{((r.quantite ?? 0) * r.prixUnitaire).toFixed(3)} DT</div>
+                        <div style={{ color: 'var(--text-muted)', fontSize: '0.68rem', fontWeight: 400 }}>{r.prixUnitaire.toFixed(3)} /u</div>
+                      </>) : '—'}
                     </td>
                     <td style={{ textAlign: 'right', fontSize: '0.82rem', color: r.tauxTva != null ? '#6b7280' : 'var(--text-muted)', padding: '8px 10px', whiteSpace: 'nowrap' }}>
                       {r.tauxTva != null ? `${r.tauxTva}%` : '—'}
                     </td>
-                    <td style={{ textAlign: 'right', fontWeight: 700, color: r.prixUnitaireTva != null ? '#059669' : 'var(--text-muted)', fontSize: '0.85rem', padding: '8px 10px', whiteSpace: 'nowrap' }}>
-                      {r.prixUnitaireTva != null ? `${r.prixUnitaireTva.toFixed(3)} DT` : '—'}
+                    <td style={{ textAlign: 'right', padding: '8px 10px', whiteSpace: 'nowrap' }}>
+                      {(() => {
+                        const uttc = r.prixUnitaireTva ?? r.prixUnitaire;
+                        return uttc != null ? (<>
+                          <div style={{ fontWeight: 700, color: '#059669', fontSize: '0.85rem' }}>{((r.quantite ?? 0) * uttc).toFixed(3)} DT</div>
+                          <div style={{ color: 'var(--text-muted)', fontSize: '0.68rem', fontWeight: 400 }}>{uttc.toFixed(3)} /u</div>
+                        </>) : '—';
+                      })()}
                     </td>
                     <td style={{ fontSize: '0.76rem', padding: '8px 10px' }}>
                       <div style={{ color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.fournisseurNom ?? '—'}</div>
@@ -645,7 +671,7 @@ export default function HistoriqueApproPage() {
               <tfoot>
                 <tr style={{ background: '#f0fdf4', borderTop: '2px solid #10b981' }}>
                   <td colSpan={4} style={{ padding: '9px 10px', fontSize: '0.76rem', fontWeight: 800, color: '#065f46', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                    Total — {results.length} enregistrement{results.length > 1 ? 's' : ''}
+                    Total — {displayedResults.length} enregistrement{displayedResults.length > 1 ? 's' : ''}
                   </td>
                   <td style={{ textAlign: 'right', padding: '9px 10px', fontWeight: 800, color: '#1e40af', fontSize: '0.84rem', whiteSpace: 'nowrap' }}>
                     {totalHT.toFixed(3)} DT

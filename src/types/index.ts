@@ -61,6 +61,7 @@ export interface SupportDemande {
   nbActivitesSupp?: number | null;
   nbLabosSupp?: number | null;
   nbGerantsSupp?: number | null;
+  docusealSubmissionId?: string | null;
   description?: string | null;
   notesAdmin?: string | null;
   traitePar?: number | null;
@@ -228,6 +229,7 @@ export interface Product {
   id: number;
   name: string;
   type: 'utilisable' | 'vendable';
+  origine?: 'labo' | 'activite';
   ingredients: ProductIngredient[];
   subProducts: ProductComponent[];
   totalCost: number;

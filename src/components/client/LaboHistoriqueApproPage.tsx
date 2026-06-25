@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import api from '../../api/client';
 import HelpButton from '../common/HelpButton';
+import TypeApproFilter from '../common/TypeApproFilter';
 import { useAuth } from '../../context/AuthContext';
 import type { Labo } from '../../types';
 
@@ -233,7 +234,7 @@ export default function LaboHistoriqueApproPage() {
   const [filterCategorieId, setFilterCategorieId] = useState('');
   const [filterIngredientId, setFilterIngredientId] = useState('');
   const [filterFournisseurId, setFilterFournisseurId] = useState('');
-  const [filterRefFacture, setFilterRefFacture] = useState('');
+  const [selectedTypes, setSelectedTypes] = useState<Set<string>>(new Set());
 
   const [editEntry, setEditEntry] = useState<HistEntry | null>(null);
   const [deleteEntry, setDeleteEntry] = useState<HistEntry | null>(null);
@@ -284,14 +285,13 @@ export default function LaboHistoriqueApproPage() {
       if (filterIngredientId) params.set('ingredientId', filterIngredientId);
       else if (filterCategorieId) params.set('categorieId', filterCategorieId);
       if (filterFournisseurId) params.set('fournisseurId', filterFournisseurId);
-      if (filterRefFacture.trim()) params.set('refFacture', filterRefFacture.trim());
       const { data } = await api.get(`/api/labo/${laboId}/historique?${params}`);
       setResults(data as HistEntry[]);
     } catch {
       setResults([]);
     }
     setLoading(false);
-  }, [laboId, startDate, endDate, filterIngredientId, filterCategorieId, filterFournisseurId, filterRefFacture]);
+  }, [laboId, startDate, endDate, filterIngredientId, filterCategorieId, filterFournisseurId]);
 
   const buildLaboApproParams = () => {
     const params = new URLSearchParams();
@@ -300,7 +300,6 @@ export default function LaboHistoriqueApproPage() {
     if (filterIngredientId) params.set('ingredientId', filterIngredientId);
     else if (filterCategorieId) params.set('categorieId', filterCategorieId);
     if (filterFournisseurId) params.set('fournisseurId', filterFournisseurId);
-    if (filterRefFacture.trim()) params.set('refFacture', filterRefFacture.trim());
     if (selectedIds.size > 0) params.set('selectedIds', [...selectedIds].join(','));
     return params;
   };
@@ -338,11 +337,19 @@ export default function LaboHistoriqueApproPage() {
     setResults((prev) => prev.filter((r) => r.id !== id));
   };
 
-  const totalPages = Math.max(1, Math.ceil(results.length / PAGE_SIZE));
-  const pagedResults = results.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const typeCategory = (t: string | null): string =>
+    t === 'transfert' ? 'transfert'
+    : (t === 'vente' || t === 'annulation_vente') ? 'vente'
+    : (t === 'PT' || t === 'produit_transformé' || t === 'produit_transforme') ? 'pt'
+    : 'manuel';
+  const displayedResults = selectedTypes.size === 0 ? results : results.filter((r) => selectedTypes.has(typeCategory(r.typeAppro)));
+  const toggleType = (key: string) => { setSelectedTypes((prev) => { const n = new Set(prev); if (n.has(key)) n.delete(key); else n.add(key); return n; }); setPage(1); };
 
-  const totalHT = results.reduce((s, r) => s + (r.quantite ?? 0) * (r.prixUnitaire ?? 0), 0);
-  const totalTTC = results.reduce((s, r) => s + (r.quantite ?? 0) * (r.prixUnitaireTva ?? r.prixUnitaire ?? 0), 0);
+  const totalPages = Math.max(1, Math.ceil(displayedResults.length / PAGE_SIZE));
+  const pagedResults = displayedResults.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  const totalHT = displayedResults.reduce((s, r) => s + (r.quantite ?? 0) * (r.prixUnitaire ?? 0), 0);
+  const totalTTC = displayedResults.reduce((s, r) => s + (r.quantite ?? 0) * (r.prixUnitaireTva ?? r.prixUnitaire ?? 0), 0);
   const unitQtyMap: Record<string, number> = {};
   for (const r of results) { unitQtyMap[r.uniteNom] = (unitQtyMap[r.uniteNom] || 0) + (r.quantite ?? 0); }
   if (!laboId) return <div className="page"><p className="text-muted">Labo non spécifié.</p></div>;
@@ -430,12 +437,11 @@ export default function LaboHistoriqueApproPage() {
             </div>
           )}
           <div>
-            <label style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 3 }}>🧾 Réf.</label>
-            <input type="text" style={{ padding: '6px 10px', borderRadius: 8, border: '1.5px solid var(--border)', fontSize: '0.83rem', background: 'var(--bg)', minWidth: 110 }}
-              placeholder="Rechercher réf…" value={filterRefFacture} onChange={(e) => setFilterRefFacture(e.target.value)} />
+            <label style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 3 }}>🏷️ Type d'appro</label>
+            <TypeApproFilter selected={selectedTypes} onToggle={toggleType} accent="#7e22ce" />
           </div>
-          {(filterCategorieId || filterIngredientId || filterFournisseurId || filterRefFacture) && (
-            <button onClick={() => { setFilterCategorieId(''); setFilterIngredientId(''); setFilterFournisseurId(''); setFilterRefFacture(''); }}
+          {(filterCategorieId || filterIngredientId || filterFournisseurId || selectedTypes.size > 0) && (
+            <button onClick={() => { setFilterCategorieId(''); setFilterIngredientId(''); setFilterFournisseurId(''); setSelectedTypes(new Set()); }}
               style={{ alignSelf: 'flex-end', marginLeft: 'auto', background: 'transparent', border: '1.5px solid var(--border)', borderRadius: 7, padding: '5px 9px', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '0.85rem', lineHeight: 1, fontWeight: 700 }}
               title="Réinitialiser">✕</button>
           )}
@@ -491,14 +497,26 @@ export default function LaboHistoriqueApproPage() {
                 <tr style={{ background: 'linear-gradient(135deg, #3b0764, #7e22ce)' }}>
                   <th style={{ width: 28, padding: '10px 4px', color: '#fff', background: 'transparent', borderBottom: 'none' }} />
                   {(['Article', 'Date', 'Type'] as const).map((label) => (
-                    <th key={label} style={{ fontWeight: 800, fontSize: '0.75rem', letterSpacing: '0.04em', textTransform: 'uppercase', padding: '10px 10px', color: '#fff', background: 'transparent', borderBottom: 'none' }}>{label}</th>
+                    <th key={label} style={{ fontWeight: 800, fontSize: '0.75rem', letterSpacing: '0.04em', textTransform: 'uppercase', padding: '10px 10px 2px', color: '#fff', background: 'transparent', borderBottom: 'none' }}>{label}</th>
                   ))}
-                  {(['Quantité', 'Prix U. HT', 'TVA %', 'Prix U. TTC'] as const).map((label) => (
-                    <th key={label} style={{ textAlign: 'right', fontWeight: 800, fontSize: '0.75rem', letterSpacing: '0.04em', textTransform: 'uppercase', padding: '10px 10px', color: '#fff', background: 'transparent', borderBottom: 'none' }}>{label}</th>
+                  {(['Quantité', 'Prix', 'TVA', 'Prix'] as const).map((label, i) => (
+                    <th key={i} style={{ textAlign: 'right', fontWeight: 800, fontSize: '0.75rem', letterSpacing: '0.04em', textTransform: 'uppercase', padding: '10px 10px 2px', color: '#fff', background: 'transparent', borderBottom: 'none' }}>{label}</th>
                   ))}
-                  <th style={{ fontWeight: 800, fontSize: '0.75rem', letterSpacing: '0.04em', textTransform: 'uppercase', padding: '10px 10px', color: '#fff', background: 'transparent', borderBottom: 'none' }}>Fourn. / Réf</th>
-                  <th style={{ fontWeight: 800, fontSize: '0.75rem', letterSpacing: '0.04em', textTransform: 'uppercase', padding: '10px 10px', color: '#fff', background: 'transparent', borderBottom: 'none' }}>Créé par</th>
+                  <th style={{ fontWeight: 800, fontSize: '0.75rem', letterSpacing: '0.04em', textTransform: 'uppercase', padding: '10px 10px 2px', color: '#fff', background: 'transparent', borderBottom: 'none' }}>Fourn. / Réf</th>
+                  <th style={{ fontWeight: 800, fontSize: '0.75rem', letterSpacing: '0.04em', textTransform: 'uppercase', padding: '10px 10px 2px', color: '#fff', background: 'transparent', borderBottom: 'none' }}>Créé par</th>
                   <th style={{ padding: '10px 6px', color: '#fff', background: 'transparent', borderBottom: 'none' }}></th>
+                </tr>
+                <tr style={{ background: 'linear-gradient(135deg, #3b0764, #7e22ce)' }}>
+                  <th style={{ background: 'transparent', borderBottom: 'none' }} />
+                  <th style={{ background: 'transparent', borderBottom: 'none' }} />
+                  <th style={{ background: 'transparent', borderBottom: 'none' }} />
+                  <th style={{ background: 'transparent', borderBottom: 'none' }} />
+                  {(['Unité', 'HT', '%', 'TTC'] as const).map((sub, i) => (
+                    <th key={i} style={{ textAlign: 'right', fontWeight: 400, fontSize: '0.62rem', color: '#d8b4fe', letterSpacing: '0.04em', padding: '0 10px 8px', background: 'transparent', borderBottom: 'none' }}>{sub}</th>
+                  ))}
+                  <th style={{ background: 'transparent', borderBottom: 'none' }} />
+                  <th style={{ background: 'transparent', borderBottom: 'none' }} />
+                  <th style={{ background: 'transparent', borderBottom: 'none' }} />
                 </tr>
               </thead>
               <tbody>
@@ -535,17 +553,27 @@ export default function LaboHistoriqueApproPage() {
                       )}
                       {!r.typeAppro && <span style={{ color: 'var(--text-muted)' }}>—</span>}
                     </td>
-                    <td style={{ textAlign: 'right', fontWeight: 800, color: '#0f766e', padding: '8px 10px', fontSize: '0.85rem', whiteSpace: 'nowrap' }}>
-                      {r.quantite ?? '—'}
+                    <td style={{ textAlign: 'right', padding: '8px 10px', whiteSpace: 'nowrap' }}>
+                      <div style={{ fontWeight: 800, color: '#0f766e', fontSize: '0.85rem' }}>{r.quantite ?? '—'}</div>
+                      <div style={{ color: 'var(--text-muted)', fontSize: '0.7rem', fontWeight: 400 }}>{r.uniteNom}</div>
                     </td>
-                    <td style={{ textAlign: 'right', fontWeight: 600, color: r.prixUnitaire ? '#1d4ed8' : 'var(--text-muted)', fontSize: '0.85rem', padding: '8px 10px', whiteSpace: 'nowrap' }}>
-                      {r.prixUnitaire !== null ? `${r.prixUnitaire.toFixed(3)} DT` : '—'}
+                    <td style={{ textAlign: 'right', padding: '8px 10px', whiteSpace: 'nowrap' }}>
+                      {r.prixUnitaire !== null ? (<>
+                        <div style={{ fontWeight: 700, color: '#1d4ed8', fontSize: '0.85rem' }}>{((r.quantite ?? 0) * r.prixUnitaire).toFixed(3)} DT</div>
+                        <div style={{ color: 'var(--text-muted)', fontSize: '0.68rem', fontWeight: 400 }}>{r.prixUnitaire.toFixed(3)} /u</div>
+                      </>) : '—'}
                     </td>
                     <td style={{ textAlign: 'right', fontSize: '0.82rem', color: r.tauxTva != null ? '#6b7280' : 'var(--text-muted)', padding: '8px 10px', whiteSpace: 'nowrap' }}>
                       {r.tauxTva != null ? `${r.tauxTva}%` : '—'}
                     </td>
-                    <td style={{ textAlign: 'right', fontWeight: 700, color: r.prixUnitaireTva != null ? '#059669' : 'var(--text-muted)', fontSize: '0.85rem', padding: '8px 10px', whiteSpace: 'nowrap' }}>
-                      {r.prixUnitaireTva != null ? `${r.prixUnitaireTva.toFixed(3)} DT` : '—'}
+                    <td style={{ textAlign: 'right', padding: '8px 10px', whiteSpace: 'nowrap' }}>
+                      {(() => {
+                        const uttc = r.prixUnitaireTva ?? r.prixUnitaire;
+                        return uttc != null ? (<>
+                          <div style={{ fontWeight: 700, color: '#059669', fontSize: '0.85rem' }}>{((r.quantite ?? 0) * uttc).toFixed(3)} DT</div>
+                          <div style={{ color: 'var(--text-muted)', fontSize: '0.68rem', fontWeight: 400 }}>{uttc.toFixed(3)} /u</div>
+                        </>) : '—';
+                      })()}
                     </td>
                     <td style={{ fontSize: '0.76rem', padding: '8px 10px' }}>
                       <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.fournisseurNom ?? '—'}</div>
@@ -579,7 +607,7 @@ export default function LaboHistoriqueApproPage() {
               <tfoot>
                 <tr style={{ background: '#f5f3ff', borderTop: '2px solid #7e22ce' }}>
                   <td colSpan={5} style={{ padding: '9px 10px', fontSize: '0.76rem', fontWeight: 800, color: '#3b0764', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                    Total — {results.length} enregistrement{results.length > 1 ? 's' : ''}
+                    Total — {displayedResults.length} enregistrement{displayedResults.length > 1 ? 's' : ''}
                   </td>
                   <td style={{ textAlign: 'right', padding: '9px 10px', fontWeight: 800, color: '#1d4ed8', fontSize: '0.84rem', whiteSpace: 'nowrap' }}>
                     {totalHT.toFixed(3)} DT
@@ -595,7 +623,7 @@ export default function LaboHistoriqueApproPage() {
 
             <div style={{ padding: '8px 14px', fontSize: '0.78rem', color: 'var(--text-muted)', borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <span>
-                {results.length} enregistrement{results.length > 1 ? 's' : ''}
+                {displayedResults.length} enregistrement{displayedResults.length > 1 ? 's' : ''}
                 {selectedIds.size > 0 && (
                   <span style={{ marginLeft: 8, color: '#ea580c', fontWeight: 700 }}>
                     · {selectedIds.size} sélectionné{selectedIds.size > 1 ? 's' : ''}

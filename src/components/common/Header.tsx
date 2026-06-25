@@ -31,6 +31,10 @@ export default function Header() {
     setOpen(false);
     if (eventType === 'new_inventaire') {
       navigate('/client/inventaire/historique');
+    } else if (eventType === 'demande_capacite_validee') {
+      navigate('/client/activites');
+    } else if (eventType === 'demande_gerant_validee') {
+      navigate('/client/gerants');
     } else {
       navigate(user?.role === 'super_admin' ? '/admin/support' : '/client/support');
     }

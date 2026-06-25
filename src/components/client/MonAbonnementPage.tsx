@@ -54,6 +54,7 @@ export default function MonAbonnementPage() {
   const [requestingVente, setRequestingVente] = useState(false);
   const [requestedVente, setRequestedVente] = useState(false);
   const [requestErrorVente, setRequestErrorVente] = useState('');
+  const [contratInfo, setContratInfo] = useState<{ available: boolean; date: string | null } | null>(null);
 
   const fetchAll = useCallback(async () => {
     try {
@@ -73,6 +74,10 @@ export default function MonAbonnementPage() {
         .some(d => d.typeDemande === 'activer_module_vente' && d.statut === 'en_attente');
       setHasPendingVente(pending);
     } catch { /* module vente section simply won't show */ }
+    try {
+      const { data } = await api.get('/api/abonnements/contrat-actif?info=1');
+      setContratInfo(data);
+    } catch { /* bouton contrat simplement masqué */ }
   }, []);
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
@@ -96,6 +101,21 @@ export default function MonAbonnementPage() {
     } finally {
       setRequestingVente(false);
     }
+  };
+
+  const downloadContrat = async () => {
+    try {
+      const res = await api.get('/api/abonnements/contrat-actif', { responseType: 'blob' });
+      const blob = new Blob([res.data], { type: 'application/pdf' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'contrat-labflow.pdf';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch { /* contrat indisponible */ }
   };
 
   const mode = MODE_INFO[abo.modeCompte] || MODE_INFO.actif;
@@ -164,6 +184,13 @@ export default function MonAbonnementPage() {
                 <div style={{ marginTop: 10, background: '#ede9fe', borderRadius: 8, padding: '8px 12px', fontSize: '0.8rem', color: '#6d28d9', fontWeight: 600 }}>
                   ✚ Prolongation accordée : {abo.prolongationJours} jour(s)
                 </div>
+              )}
+              {contratInfo?.available && (
+                <button
+                  onClick={downloadContrat}
+                  style={{ marginTop: 12, width: '100%', padding: '9px 12px', borderRadius: 8, border: '1.5px solid #4338ca', background: '#fff', color: '#4338ca', fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer' }}>
+                  📄 Contrat actif{contratInfo.date ? ` — ${new Date(contratInfo.date).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' })}` : ''}
+                </button>
               )}
             </div>
           </div>
