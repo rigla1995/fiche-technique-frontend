@@ -56,7 +56,6 @@ export default function ProductList() {
   const [loadingDetail, setLoadingDetail] = useState(false);
 
   const [allActivities, setAllActivities] = useState<Activite[]>([]);
-  const [allLabos, setAllLabos] = useState<{ id: number; nom: string }[]>([]);
   const [exportingXls, setExportingXls] = useState(false);
   const [exportModalOpen, setExportModalOpen] = useState(false);
   const [exportIncludeOther, setExportIncludeOther] = useState(false);
@@ -105,8 +104,6 @@ export default function ProductList() {
   const [editActiviteNom, setEditActiviteNom] = useState('');
 
   const [addAffectationIds, setAddAffectationIds] = useState<number[]>([]);
-  // Affectation EXCLUSIVE au step 1 : le produit est rattaché soit à des labos, soit à des activités.
-  const [addOrigine, setAddOrigine] = useState<'labo' | 'activite'>('activite');
   const [editAffectationIds, setEditAffectationIds] = useState<number[]>([]);
   const [editOriginalAffectationIds, setEditOriginalAffectationIds] = useState<number[]>([]);
   const [vendableSubTab, setVendableSubTab] = useState<'produit' | 'supplement'>('produit');
@@ -119,9 +116,6 @@ export default function ProductList() {
         const scoped = laboId ? all.filter((a) => String((a as any).laboId) === laboId) : all;
         setAllActivities(scoped);
       });
-    api.get('/api/labo')
-      .then(({ data }) => setAllLabos((data as { id: number; nom: string }[]).map((l) => ({ id: l.id, nom: l.nom }))))
-      .catch(() => setAllLabos([]));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.role, laboId]);
 
@@ -208,28 +202,18 @@ export default function ProductList() {
     setAddName(''); setAddRef(''); setAddIsSupplement(isSupplement); setAddCategorieId('');
     setAddIngLines([]); setAddSubLines([]); setAddSubSearch(''); setAddIngSearch('');
     setAddSavedName(''); setAddFamilleFilter(''); setAddCatFilter(''); setAddIngVisible(20);
-    setAddAffectationIds([]); setAddOrigine('activite');
-    setAddIngredients([]); setUtilisableForWizard([]); // chargés réactivement selon le périmètre (step 1)
+    setAddAffectationIds([]);
     setAddModal(1);
-  }, []);
-
-  // Charge articles consommables ET produits utilisables selon le périmètre choisi au step 1.
-  // Origine labo → communs aux labos choisis ; origine activité → communs aux activités (+ PU des labos liés).
-  useEffect(() => {
-    if (addAffectationIds.length === 0) { setAddIngredients([]); setUtilisableForWizard([]); return; }
-    const ids = addAffectationIds.join(',');
-    const param = addOrigine === 'labo' ? 'laboIds' : 'activiteIds';
-    const path = addOrigine === 'labo'
-      ? '/api/labo/articles-consommables'
-      : '/api/entreprise/activites/articles-consommables';
-    api.get(`${path}?${param}=${ids}`)
-      .then(({ data }) => setAddIngredients(data as ActiviteIngredient[]))
-      .catch(() => setAddIngredients([]));
-    api.get(`/api/produits/utilisables-perimetre?origine=${addOrigine}&ids=${ids}`)
-      .then(({ data }) => setUtilisableForWizard(data as { id: number; name: string }[]))
-      .catch(() => setUtilisableForWizard([]));
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [addAffectationIds, addOrigine]);
+    api.get('/api/products?type=utilisable')
+      .then(({ data }) => setUtilisableForWizard((data as Product[]).map(u => ({ id: u.id, name: u.name }))))
+      .catch(() => {});
+    const actId = allActivities[0]?.id;
+    if (actId) {
+      api.get(`/api/entreprise/activites/${actId}/ingredients`)
+        .then(({ data }) => setAddIngredients(data as ActiviteIngredient[]))
+        .catch(() => setAddIngredients([]));
+    }
+  }, [allActivities]);
 
   const openPopup = async (type: PopupType, product: Product) => {
     setPopup({ type, productId: product.id, productName: product.name });
@@ -1499,20 +1483,26 @@ export default function ProductList() {
                 const baseSubProducts = addSubLines
                   .filter((l) => l.ingredientId && parseFloat(l.portion) > 0)
                   .map((l) => ({ subProductId: parseInt(l.ingredientId), portion: parseFloat(l.portion) }));
-                // L'affectation (labo XOR activité) est gérée par le backend selon origine + ids :
-                // labo → labo_pt_selections + PT des activités du labo ; activité → affectation/stock.
-                await api.post('/api/products', {
+                const { data: newProd } = await api.post('/api/products', {
                   name: addName.trim(),
                   refProduit: addRef.trim() || null,
                   type: tab === 'utilisable' ? 'utilisable' : 'vendable',
                   isSupplement: addIsSupplement,
                   categorieProduitId: tab === 'utilisable' ? null : (addCategorieId ? parseInt(addCategorieId) : null),
-                  origine: addOrigine,
-                  laboIds: addOrigine === 'labo' ? addAffectationIds : [],
-                  activiteIds: addOrigine === 'activite' ? addAffectationIds : [],
+                  activiteId: addAffectationIds[0] ?? null,
                   ingredients: baseIngredients,
                   subProducts: baseSubProducts,
                 });
+                const newId = (newProd as { id: number }).id;
+                if (isVendable && addAffectationIds.length > 0) {
+                  // Vendable: link to activités (display only — no stock)
+                  await api.post(`/api/produits/${newId}/affecter-activites`, { activiteIds: addAffectationIds });
+                } else if (!isVendable) {
+                  // Utilisable: assign to activités' stocks
+                  for (const actId of addAffectationIds) {
+                    await api.post(`/api/produits/${newId}/toggle-stock-ingredient`, { activiteId: actId });
+                  }
+                }
                 setAddSavedName(addName.trim());
                 setAddModal(6);
                 const reloadParams = new URLSearchParams();
@@ -1527,10 +1517,10 @@ export default function ProductList() {
             };
 
             const STEPS = [
-              { n: 1, d: 1, label: 'Affectation' },
-              { n: 2, d: 2, label: 'Identité' },
-              { n: 3, d: 3, label: 'Articles' },
-              { n: 4, d: 4, label: 'Produits Utilisables' },
+              { n: 1, d: 1, label: 'Identité' },
+              { n: 2, d: 2, label: 'Articles' },
+              { n: 3, d: 3, label: 'Produits Utilisables' },
+              { n: 4, d: 4, label: 'Affectation' },
               { n: 5, d: 5, label: 'Récap' },
             ];
 
@@ -1563,8 +1553,8 @@ export default function ProductList() {
                   </div>
 
                   <div style={{ padding: '20px 22px' }}>
-                    {/* Step 2 — Identité */}
-                    {addModal === 2 && (
+                    {/* Step 1 — Identité */}
+                    {addModal === 1 && (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                         <div>
                           <label style={{ display: 'block', fontWeight: 700, fontSize: '0.82rem', color: '#065f46', marginBottom: 6 }}>
@@ -1601,10 +1591,10 @@ export default function ProductList() {
                             ➕ Ce produit sera créé comme supplément vendable
                           </div>
                         )}
-                        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, paddingTop: 8 }}>
-                          <button className="btn btn-ghost" onClick={() => setAddModal(1)}>← Retour</button>
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, paddingTop: 8 }}>
+                          <button className="btn btn-ghost" onClick={() => setAddModal(null)}>Annuler</button>
                           <button disabled={!canGoStep2}
-                            onClick={() => setAddModal(3)}
+                            onClick={() => setAddModal(2)}
                             style={{ background: canGoStep2 ? 'linear-gradient(135deg, #047857, #059669)' : '#e5e7eb', border: 'none', borderRadius: 10, color: canGoStep2 ? '#fff' : '#9ca3af', fontWeight: 700, padding: '9px 22px', cursor: canGoStep2 ? 'pointer' : 'not-allowed' }}>
                             Suivant →
                           </button>
@@ -1612,8 +1602,8 @@ export default function ProductList() {
                       </div>
                     )}
 
-                    {/* Step 3 — Articles */}
-                    {addModal === 3 && (() => {
+                    {/* Step 2 — Articles */}
+                    {addModal === 2 && (() => {
                       // Build famille + catégorie option lists from available articles
                       const famOptions: { key: string; label: string }[] = [];
                       const famSeen = new Set<string>();
@@ -1715,8 +1705,8 @@ export default function ProductList() {
                           )}
 
                           <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 4 }}>
-                            <button className="btn btn-ghost" onClick={() => setAddModal(2)}>← Retour</button>
-                            <button onClick={() => setAddModal(4)}
+                            <button className="btn btn-ghost" onClick={() => setAddModal(1)}>← Retour</button>
+                            <button onClick={() => setAddModal(3)}
                               style={{ background: 'linear-gradient(135deg, #047857, #059669)', border: 'none', borderRadius: 10, color: '#fff', fontWeight: 700, padding: '9px 22px', cursor: 'pointer' }}>
                               Suivant →
                             </button>
@@ -1725,8 +1715,8 @@ export default function ProductList() {
                       );
                     })()}
 
-                    {/* Step 4 — Produits Utilisables */}
-                    {addModal === 4 && (() => {
+                    {/* Step 3 — Produits Utilisables */}
+                    {addModal === 3 && (() => {
                       return (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                           <div style={{ fontSize: '0.82rem', color: '#64748b' }}>
@@ -1783,8 +1773,8 @@ export default function ProductList() {
                             const canNext = addIsSupplement ? addTotalValid === 1 : addTotalValid >= 2;
                             return (
                               <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 8 }}>
-                                <button className="btn btn-ghost" onClick={() => setAddModal(3)}>← Retour</button>
-                                <button disabled={!canNext} onClick={() => setAddModal(5)}
+                                <button className="btn btn-ghost" onClick={() => setAddModal(2)}>← Retour</button>
+                                <button disabled={!canNext} onClick={() => setAddModal(4)}
                                   style={{ background: canNext ? 'linear-gradient(135deg, #047857, #059669)' : '#e5e7eb', border: 'none', borderRadius: 10, color: canNext ? '#fff' : '#9ca3af', fontWeight: 700, padding: '9px 22px', cursor: canNext ? 'pointer' : 'not-allowed' }}
                                   title={!canNext ? (addIsSupplement ? 'Sélectionnez exactement 1 article ou produit utilisable' : 'Au minimum 2 articles/produits utilisables requis') : undefined}>
                                   Suivant →
@@ -1796,78 +1786,60 @@ export default function ProductList() {
                       );
                     })()}
 
-                    {/* Step 1 — Affectation (labo XOR activité) */}
-                    {addModal === 1 && (() => {
-                      const opts = addOrigine === 'labo'
-                        ? allLabos.map((l) => ({ id: l.id, nom: l.nom, laboNom: undefined as string | undefined }))
-                        : allActivities.map((a) => ({ id: a.id, nom: a.nom, laboNom: (a as any).laboNom as string | undefined }));
-                      const allIds = opts.map((o) => o.id);
-                      return (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                          <div style={{ fontSize: '0.82rem', color: '#64748b' }}>
-                            Rattachez ce produit à <strong>un/des labo(s)</strong> (fabriqué au labo, transféré, vendu en valorisé dans les activités liées) <strong>OU</strong> à <strong>une/des activité(s)</strong> (recette consommée sur place). C'est <strong>exclusif</strong>.
-                          </div>
-                          {/* Toggle de mode : activité ⟷ labo */}
-                          <div style={{ display: 'flex', gap: 8 }}>
-                            {([['activite', '🍽️ Activité(s)'], ['labo', '🏭 Labo(s)']] as const).map(([key, label]) => {
-                              const active = addOrigine === key;
-                              const disabled = key === 'labo' && allLabos.length === 0;
-                              return (
-                                <button key={key} type="button" disabled={disabled}
-                                  onClick={() => { if (!active) { setAddOrigine(key); setAddAffectationIds([]); } }}
-                                  style={{ flex: 1, padding: '10px 14px', borderRadius: 10, border: `2px solid ${active ? '#059669' : '#e2e8f0'}`, background: active ? '#f0fdf4' : '#fff', color: active ? '#065f46' : (disabled ? '#cbd5e1' : '#374151'), fontWeight: active ? 800 : 600, fontSize: '0.9rem', cursor: disabled ? 'not-allowed' : 'pointer' }}>
-                                  {label}
-                                </button>
-                              );
-                            })}
-                          </div>
-                          {opts.length === 0 ? (
-                            <div style={{ padding: 16, background: '#f8fafc', borderRadius: 8, fontSize: '0.85rem', color: '#64748b', textAlign: 'center' }}>
-                              Aucun {addOrigine === 'labo' ? 'labo' : 'activité'} disponible.
-                            </div>
-                          ) : (
-                            <>
-                              <button type="button"
-                                onClick={() => setAddAffectationIds(addAffectationIds.length === allIds.length ? [] : allIds)}
-                                style={{ alignSelf: 'flex-start', background: 'transparent', border: '1.5px solid #059669', borderRadius: 8, color: '#059669', fontWeight: 700, padding: '5px 14px', cursor: 'pointer', fontSize: '0.8rem' }}>
-                                {addAffectationIds.length === allIds.length ? '☐ Tout désélectionner' : '☑ Tout sélectionner'}
-                              </button>
-                              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 240, overflowY: 'auto' }}>
-                                {opts.map((o) => {
-                                  const checked = addAffectationIds.includes(o.id);
-                                  return (
-                                    <div key={o.id}
-                                      onClick={() => setAddAffectationIds(prev => checked ? prev.filter(id => id !== o.id) : [...prev, o.id])}
-                                      style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', borderRadius: 9, cursor: 'pointer', background: checked ? '#f0fdf4' : '#f8fafc', border: `1.5px solid ${checked ? '#6ee7b7' : '#e2e8f0'}`, transition: 'all 0.12s' }}>
-                                      <input type="checkbox" checked={checked} readOnly
-                                        style={{ accentColor: '#059669', width: 16, height: 16, flexShrink: 0, cursor: 'pointer' }} />
-                                      <div style={{ flex: 1 }}>
-                                        <div style={{ fontWeight: 600, fontSize: '0.88rem', color: checked ? '#065f46' : '#374151' }}>{addOrigine === 'labo' ? '🏭 ' : ''}{o.nom}</div>
-                                        {addOrigine === 'activite' && o.laboNom && <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: 1 }}>🏭 Labo : {o.laboNom}</div>}
-                                      </div>
-                                      {checked && <span style={{ color: '#059669', fontSize: '0.9rem' }}>✓</span>}
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                              {addAffectationIds.length > 0 && (
-                                <div style={{ fontSize: '0.78rem', color: '#059669', fontWeight: 600 }}>
-                                  {addAffectationIds.length} {addOrigine === 'labo' ? 'labo' : 'activité'}{addAffectationIds.length > 1 ? 's' : ''} sélectionné{addAffectationIds.length > 1 ? 's' : ''}
-                                  {addOrigine === 'labo' && ' — produit transféré + vendu en valorisé dans les activités liées'}
-                                </div>
-                              )}
-                            </>
-                          )}
-                          <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 8 }}>
-                            <button className="btn btn-ghost" onClick={() => setAddModal(null)}>Annuler</button>
-                            <button disabled={addAffectationIds.length === 0} onClick={() => setAddModal(2)}
-                              style={{ background: addAffectationIds.length > 0 ? 'linear-gradient(135deg, #047857, #059669)' : '#e5e7eb', border: 'none', borderRadius: 10, color: addAffectationIds.length > 0 ? '#fff' : '#9ca3af', fontWeight: 700, padding: '9px 22px', cursor: addAffectationIds.length > 0 ? 'pointer' : 'not-allowed' }}>
-                              Suivant →
-                            </button>
-                          </div>
+                    {/* Step 4 — Affectation aux activités */}
+                    {addModal === 4 && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                        <div style={{ fontSize: '0.82rem', color: '#64748b' }}>
+                          {isVendable
+                            ? <>Sélectionnez les activités qui utiliseront ce produit. <strong style={{ color: '#ef4444' }}>Au moins 1 activité requise.</strong></>
+                            : <>Sélectionnez les activités où ce produit sera disponible en stock. <strong style={{ color: '#ef4444' }}>Au moins 1 activité requise.</strong></>
+                          }
                         </div>
-                      );
-                    })()}
+                        {allActivities.length === 0 ? (
+                          <div style={{ padding: 16, background: '#f8fafc', borderRadius: 8, fontSize: '0.85rem', color: '#64748b', textAlign: 'center' }}>
+                            Aucune activité disponible.
+                          </div>
+                        ) : (
+                          <>
+                            <button type="button"
+                              onClick={() => setAddAffectationIds(addAffectationIds.length === allActivities.length ? [] : allActivities.map(a => a.id))}
+                              style={{ alignSelf: 'flex-start', background: 'transparent', border: '1.5px solid #059669', borderRadius: 8, color: '#059669', fontWeight: 700, padding: '5px 14px', cursor: 'pointer', fontSize: '0.8rem' }}>
+                              {addAffectationIds.length === allActivities.length ? '☐ Tout désélectionner' : '☑ Tout sélectionner'}
+                            </button>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 260, overflowY: 'auto' }}>
+                              {allActivities.map(a => {
+                                const checked = addAffectationIds.includes(a.id);
+                                return (
+                                  <div key={a.id}
+                                    onClick={() => setAddAffectationIds(prev => checked ? prev.filter(id => id !== a.id) : [...prev, a.id])}
+                                    style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', borderRadius: 9, cursor: 'pointer', background: checked ? '#f0fdf4' : '#f8fafc', border: `1.5px solid ${checked ? '#6ee7b7' : '#e2e8f0'}`, transition: 'all 0.12s' }}>
+                                    <input type="checkbox" checked={checked} readOnly
+                                      style={{ accentColor: '#059669', width: 16, height: 16, flexShrink: 0, cursor: 'pointer' }} />
+                                    <div style={{ flex: 1 }}>
+                                      <div style={{ fontWeight: 600, fontSize: '0.88rem', color: checked ? '#065f46' : '#374151' }}>{a.nom}</div>
+                                      {(a as any).laboNom && <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: 1 }}>🏭 Labo : {(a as any).laboNom}</div>}
+                                    </div>
+                                    {checked && <span style={{ color: '#059669', fontSize: '0.9rem' }}>✓</span>}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                            {addAffectationIds.length > 0 && (
+                              <div style={{ fontSize: '0.78rem', color: '#059669', fontWeight: 600 }}>
+                                {addAffectationIds.length} activité{addAffectationIds.length > 1 ? 's' : ''} sélectionnée{addAffectationIds.length > 1 ? 's' : ''}
+                              </div>
+                            )}
+                          </>
+                        )}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 8 }}>
+                          <button className="btn btn-ghost" onClick={() => setAddModal(3)}>← Retour</button>
+                          <button disabled={addAffectationIds.length === 0} onClick={() => setAddModal(5)}
+                            style={{ background: addAffectationIds.length > 0 ? 'linear-gradient(135deg, #047857, #059669)' : '#e5e7eb', border: 'none', borderRadius: 10, color: addAffectationIds.length > 0 ? '#fff' : '#9ca3af', fontWeight: 700, padding: '9px 22px', cursor: addAffectationIds.length > 0 ? 'pointer' : 'not-allowed' }}>
+                            Suivant →
+                          </button>
+                        </div>
+                      </div>
+                    )}
 
                     {/* Step 5 — Récap & Confirmation */}
                     {addModal === 5 && (() => {
@@ -1936,15 +1908,13 @@ export default function ProductList() {
                           {addAffectationIds.length > 0 && (
                             <div>
                               <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#64748b', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                                {addOrigine === 'labo' ? '🏭 Labos (transfert + vente valorisée)' : (isVendable ? '📍 Activités' : '📍 Stocks activés')}
+                                {isVendable ? '📍 Activités' : '📍 Stocks activés'}
                               </div>
                               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                                 {addAffectationIds.map(id => {
-                                  const nom = addOrigine === 'labo'
-                                    ? allLabos.find(l => l.id === id)?.nom
-                                    : allActivities.find(a => a.id === id)?.nom;
-                                  return nom ? (
-                                    <span key={id} style={{ background: '#f0fdf4', border: '1px solid #a7f3d0', borderRadius: 20, padding: '3px 10px', fontSize: '0.78rem', color: '#065f46', fontWeight: 600 }}>{addOrigine === 'labo' ? '🏭 ' : ''}{nom}</span>
+                                  const act = allActivities.find(a => a.id === id);
+                                  return act ? (
+                                    <span key={id} style={{ background: '#f0fdf4', border: '1px solid #a7f3d0', borderRadius: 20, padding: '3px 10px', fontSize: '0.78rem', color: '#065f46', fontWeight: 600 }}>{act.nom}</span>
                                   ) : null;
                                 })}
                               </div>
@@ -1956,7 +1926,7 @@ export default function ProductList() {
                             </div>
                           )}
                           <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 4, borderTop: '1px solid var(--border)' }}>
-                            <button className="btn btn-ghost" onClick={() => setAddModal(4)}>← Retour</button>
+                            <button className="btn btn-ghost" onClick={() => setAddModal(isVendable ? 3 : 4)}>← Retour</button>
                             <button disabled={addSaving}
                               onClick={handleSave}
                               style={{ background: 'linear-gradient(135deg, #047857, #059669)', border: 'none', borderRadius: 10, color: '#fff', fontWeight: 700, padding: '10px 28px', cursor: addSaving ? 'not-allowed' : 'pointer', opacity: addSaving ? 0.7 : 1, fontSize: '0.9rem' }}>
