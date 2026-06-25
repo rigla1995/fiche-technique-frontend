@@ -345,8 +345,7 @@ export default function ProductList() {
   const searched = isVendable && filterCategorieId
     ? searchedAll.filter((p) => p.categorieProduitId === filterCategorieId)
     : searchedAll;
-  // Le filtre produit/supplément ne s'applique qu'à l'origine activité (les suppléments sont un concept activité).
-  const bySubTab = (isVendable && productOrigine === 'activite')
+  const bySubTab = isVendable
     ? searched.filter((p) => vendableSubTab === 'produit' ? !p.isSupplement : !!p.isSupplement)
     : searched;
   const totalPages = Math.max(1, Math.ceil(bySubTab.length / PAGE_SIZE));
@@ -444,14 +443,14 @@ export default function ProductList() {
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
               <div style={{ background: 'rgba(16,185,129,0.18)', border: '1px solid rgba(16,185,129,0.3)', borderRadius: 10, padding: '7px 9px', fontSize: '1.2rem', lineHeight: 1 }}>
-                {tab === 'fiche-technique' ? '📋' : productOrigine === 'labo' ? '🏭' : tab === 'utilisable' ? '🧪' : '🍽️'}
+                {tab === 'fiche-technique' ? '📋' : tab === 'utilisable' ? '🧪' : '🍽️'}
               </div>
               <h1 style={{ fontSize: '1.45rem', fontWeight: 800, color: '#fff', margin: 0, letterSpacing: '-0.01em', display: 'flex', alignItems: 'center', gap: 9 }}>
                 {tab === 'fiche-technique'
                   ? t('client.products.tab_fiche_technique')
                   : tab === 'utilisable'
-                    ? (productOrigine === 'labo' ? 'PU Labo' : 'PU Activité')
-                    : (productOrigine === 'labo' ? 'Produits Labo' : 'Produits Activités')}
+                    ? t('client.products.tab_utilisable')
+                    : t('client.products.tab_vendable')}
                 <HelpButton section={tab === 'fiche-technique' ? 'fiches-techniques' : tab === 'utilisable' ? 'produits-utilisables' : 'produits-vendables'} variant="solid" size={20} tip="Aide sur cette page" />
               </h1>
             </div>
@@ -459,12 +458,8 @@ export default function ProductList() {
               {tab === 'fiche-technique'
                 ? 'Exportez et consultez vos fiches techniques par produit'
                 : tab === 'utilisable'
-                  ? (productOrigine === 'labo'
-                      ? 'Produits utilisables fabriqués au labo, transférés vers les activités liées'
-                      : "Produits utilisables fabriqués au niveau de l'activité (sans transfert labo)")
-                  : (productOrigine === 'labo'
-                      ? 'Produits finis fabriqués au labo, transférés vers les activités et vendus comme valorisés'
-                      : "Produits finis vendables, fabriqués au niveau de l'activité")}
+                  ? 'Produits semi-finis utilisés dans la composition de vos recettes'
+                  : 'Produits finis destinés à la vente, définis par leurs fiches techniques'}
             </p>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
@@ -489,12 +484,12 @@ export default function ProductList() {
         />
       ) : (
         <>
-          {/* Sub-tabs for vendable tab — suppléments only on the activité side (concept activité) */}
-          {isVendable && productOrigine === 'activite' && (
+          {/* Sub-tabs for vendable tab */}
+          {isVendable && (
             <div style={{ display: 'flex', gap: 4, borderBottom: '2px solid #e2e8f0', marginBottom: 20 }}>
               {([
-                ['produit', '🍽️ Produits'],
-                ['supplement', '➕ Suppléments'],
+                ['produit', '🍽️ Produits vendables'],
+                ['supplement', '➕ Suppléments vendables'],
               ] as const).map(([key, label]) => (
                 <button key={key} onClick={() => { setVendableSubTab(key); setPage(1); }}
                   style={{
@@ -580,9 +575,7 @@ export default function ProductList() {
               {canWriteProducts && (
                 <button onClick={() => openAddModal(isVendable && vendableSubTab === 'supplement')}
                   style={{ padding: '9px 20px', borderRadius: 10, cursor: 'pointer', fontSize: '0.85rem', border: 'none', background: 'linear-gradient(135deg, #059669, #10b981)', color: '#fff', fontWeight: 700, boxShadow: '0 2px 8px rgba(16,185,129,0.25)', whiteSpace: 'nowrap' }}>
-                  + {isVendable
-                    ? (vendableSubTab === 'supplement' ? 'Supplément' : (productOrigine === 'labo' ? 'Produit Labo' : 'Produit Activité'))
-                    : (productOrigine === 'labo' ? 'PU Labo' : 'PU Activité')}
+                  + {isVendable ? (vendableSubTab === 'supplement' ? 'Supplément vendable' : 'Produit vendable') : 'Produit utilisable'}
                 </button>
               )}
             </div>
