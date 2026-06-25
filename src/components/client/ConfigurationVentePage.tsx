@@ -180,6 +180,8 @@ function ProduitTableRow({ row, idx, showPortion }: { row: ProduitRow; idx: numb
     return (row.vendable.prix_vente ?? 0) > 0;
   };
   const hasPrix = hasPrixDirect();
+  // Activation : on se base sur le prix ENREGISTRÉ (le backend refuse l'activation sans prix > 0).
+  const hasSavedPrix = (row.vendable?.prix_vente ?? 0) > 0;
 
   return (
     <tr style={{ borderBottom: `1px solid ${CB}`, background: idx % 2 === 0 ? '#fff' : '#fffdf7', opacity: row.vendable && !isActive ? 0.6 : 1 }}>
@@ -188,9 +190,11 @@ function ProduitTableRow({ row, idx, showPortion }: { row: ProduitRow; idx: numb
         {row.error && <div style={{ fontSize: '0.7rem', color: '#dc2626', marginTop: 2 }}>{row.error}</div>}
       </td>
       <td style={{ padding: '8px 16px', textAlign: 'center' }}>
-        <input type="checkbox" checked={isActive} disabled={row.saving}
+        <input type="checkbox" checked={isActive}
+          disabled={row.saving || (!!row.vendable && !isActive && !hasSavedPrix)}
+          title={(!!row.vendable && !isActive && !hasSavedPrix) ? 'Saisissez et enregistrez un prix de vente > 0 pour activer' : undefined}
           onChange={() => toggleVendable(row)}
-          style={{ accentColor: C, width: 17, height: 17, cursor: 'pointer' }} />
+          style={{ accentColor: C, width: 17, height: 17, cursor: (!!row.vendable && !isActive && !hasSavedPrix) ? 'not-allowed' : 'pointer' }} />
       </td>
       {showPortion && (
         <td style={{ padding: '8px 16px', textAlign: 'center' }}>
@@ -200,7 +204,7 @@ function ProduitTableRow({ row, idx, showPortion }: { row: ProduitRow; idx: numb
         </td>
       )}
       <td style={{ padding: '8px 16px', textAlign: 'center' }}>
-        {isActive && row.vendable
+        {row.vendable
           ? <PrixInput avId={row.vendable.id} savedPrix={row.vendable.prix_vente} />
           : <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>—</span>}
       </td>
@@ -614,12 +618,14 @@ export default function ConfigurationVentePage() {
     }
     try {
       if (row.vendable) {
+        // Le backend refuse l'activation sans prix > 0 (erreur affichée si besoin).
         await api.put(`/api/articles-vendables/${row.vendable.id}`, { actif: !row.vendable.actif });
       } else {
+        // 1ʳᵉ étape : ajoute au catalogue en INACTIF (prix à saisir avant d'activer).
         await api.post('/api/articles-vendables', {
           activite_id: selectedActiviteId,
           article_type: isIngredient ? 'ingredient' : 'produit',
-          article_id: row.produit.id, prix_vente: 0, portion: null, actif: true,
+          article_id: row.produit.id, prix_vente: 0, portion: null, actif: false,
         });
       }
       loadAll();

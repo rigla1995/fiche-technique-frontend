@@ -27,6 +27,9 @@ export default function ValorisesPage() {
   const [categories, setCategories] = useState<CategorieProduit[]>([]);
   const [composes, setComposes] = useState<Product[]>([]);
   const [showComposed, setShowComposed] = useState(false);
+  const [editComposeId, setEditComposeId] = useState<number | null>(null);
+  const [viewProduct, setViewProduct] = useState<Product | null>(null);
+  const [viewDetail, setViewDetail] = useState<{ ingredients: { ingredientName: string; portion: number; unitName: string }[]; subProducts: { subProductName: string; portion: number }[] } | null>(null);
   const [tab, setTab] = useState<'composes' | 'referentiel'>('composes');
   const [composePage, setComposePage] = useState(1);
   const [deletingId, setDeletingId] = useState<number | null>(null);
@@ -49,6 +52,11 @@ export default function ValorisesPage() {
       .catch(() => setLoading(false));
   };
   useEffect(() => { load(); }, []);
+
+  const openView = async (p: Product) => {
+    setViewProduct(p); setViewDetail(null);
+    try { const { data } = await api.get(`/api/products/${p.id}`); setViewDetail(data); } catch { /* */ }
+  };
 
   const deleteCompose = async (p: Product) => {
     if (!window.confirm(`Supprimer le produit valorisé composé « ${p.name} » ?`)) return;
@@ -162,16 +170,20 @@ export default function ValorisesPage() {
           <div className="card" style={{ overflow: 'hidden' }}>
             <div className="table-responsive">
               <table className="table" style={{ margin: 0 }}>
-                <thead><tr><th>Produit</th><th style={{ width: 180 }}>Catégorie</th><th style={{ width: 80, textAlign: 'center' }}>Articles</th><th style={{ width: 60 }}></th></tr></thead>
+                <thead><tr><th>Produit</th><th style={{ width: 170 }}>Catégorie</th><th style={{ width: 70, textAlign: 'center' }}>Articles</th><th style={{ width: 150, textAlign: 'right' }}>Actions</th></tr></thead>
                 <tbody>
                   {composes.slice((composePage - 1) * COMPOSES_PER_PAGE, composePage * COMPOSES_PER_PAGE).map((p) => (
                     <tr key={p.id}>
                       <td style={{ fontWeight: 600, color: '#0f172a' }}>💎 {p.name}{p.refProduit && <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginLeft: 6 }}>({p.refProduit})</span>}</td>
                       <td style={{ fontSize: '0.85rem', color: '#475569' }}>{p.categorieProduitName ?? '—'}</td>
                       <td style={{ textAlign: 'center', fontSize: '0.85rem', color: '#475569' }}>{p.ingredientsCount ?? 0}</td>
-                      <td style={{ textAlign: 'right' }}>
+                      <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+                        <button onClick={() => openView(p)} title="Consulter articles / PU"
+                          style={{ background: '#f1f5f9', border: '1px solid #e2e8f0', borderRadius: 7, color: '#475569', cursor: 'pointer', padding: '4px 8px', fontSize: '0.8rem', marginRight: 4 }}>👁</button>
+                        <button onClick={() => setEditComposeId(p.id)} title="Modifier"
+                          style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 7, color: '#1d4ed8', cursor: 'pointer', padding: '4px 8px', fontSize: '0.8rem', marginRight: 4 }}>✏️</button>
                         <button onClick={() => deleteCompose(p)} disabled={deletingId === p.id}
-                          title="Supprimer" style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 7, color: '#dc2626', cursor: 'pointer', padding: '4px 9px', fontSize: '0.8rem', fontWeight: 700 }}>🗑</button>
+                          title="Supprimer" style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 7, color: '#dc2626', cursor: 'pointer', padding: '4px 8px', fontSize: '0.8rem', fontWeight: 700 }}>🗑</button>
                       </td>
                     </tr>
                   ))}
@@ -299,12 +311,48 @@ export default function ValorisesPage() {
       )}
       </>)}
 
-      {showComposed && (
+      {(showComposed || editComposeId !== null) && (
         <ComposedValoriseModal
           categories={categories}
-          onClose={() => setShowComposed(false)}
-          onCreated={() => { setShowComposed(false); load(); }}
+          editProductId={editComposeId ?? undefined}
+          onClose={() => { setShowComposed(false); setEditComposeId(null); }}
+          onCreated={() => { setShowComposed(false); setEditComposeId(null); load(); }}
         />
+      )}
+
+      {viewProduct && (
+        <div className="modal-overlay" onClick={() => setViewProduct(null)}>
+          <div className="modal" style={{ maxWidth: 480 }} onClick={e => e.stopPropagation()}>
+            <div className="modal-header modal-header--primary">
+              <h2>💎 {viewProduct.name}</h2>
+              <button className="modal-close" onClick={() => setViewProduct(null)}>×</button>
+            </div>
+            <div className="modal-body">
+              {!viewDetail ? <div className="loading-text">Chargement…</div> : (
+                <>
+                  <div style={{ fontWeight: 700, fontSize: '0.8rem', color: '#065f46', marginBottom: 6 }}>🧂 Articles</div>
+                  {viewDetail.ingredients.length === 0 ? <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>—</div> :
+                    viewDetail.ingredients.map((i, k) => (
+                      <div key={k} style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 9px', fontSize: '0.85rem', borderRadius: 6, background: k % 2 ? '#f8fafc' : '#fff' }}>
+                        <span style={{ color: '#374151' }}>{i.ingredientName}</span><span style={{ color: '#64748b', fontWeight: 600 }}>{i.portion} {i.unitName}</span>
+                      </div>
+                    ))}
+                  {viewDetail.subProducts.length > 0 && (
+                    <>
+                      <div style={{ fontWeight: 700, fontSize: '0.8rem', color: '#7c3aed', margin: '12px 0 6px' }}>🔄 Produits utilisables</div>
+                      {viewDetail.subProducts.map((s, k) => (
+                        <div key={k} style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 9px', fontSize: '0.85rem', borderRadius: 6, background: '#faf5ff' }}>
+                          <span style={{ color: '#5b21b6' }}>{s.subProductName}</span><span style={{ color: '#7c3aed', fontWeight: 600 }}>{s.portion}</span>
+                        </div>
+                      ))}
+                    </>
+                  )}
+                </>
+              )}
+            </div>
+            <div className="modal-footer"><button className="btn btn-ghost" onClick={() => setViewProduct(null)}>Fermer</button></div>
+          </div>
+        </div>
       )}
     </div>
   );
