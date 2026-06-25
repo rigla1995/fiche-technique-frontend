@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import api from '../../api/client';
 import type { CategorieProduit, Product } from '../../types';
 import ComposedValoriseModal from './ComposedValoriseModal';
+import FicheTechniqueModal from './FicheTechniqueModal';
 
 const HERO = 'linear-gradient(135deg, #0a1628 0%, #0f2847 55%, #0d3b2e 100%)';
 const CATS_PER_PAGE = 10;
@@ -28,6 +29,7 @@ export default function ValorisesPage() {
   const [composes, setComposes] = useState<Product[]>([]);
   const [showComposed, setShowComposed] = useState(false);
   const [editComposeId, setEditComposeId] = useState<number | null>(null);
+  const [ftProduct, setFtProduct] = useState<Product | null>(null);
   const [viewProduct, setViewProduct] = useState<Product | null>(null);
   const [viewDetail, setViewDetail] = useState<{ ingredients: { ingredientName: string; portion: number; unitName: string }[]; subProducts: { subProductName: string; portion: number }[] } | null>(null);
   const [tab, setTab] = useState<'composes' | 'referentiel'>('composes');
@@ -189,10 +191,14 @@ export default function ValorisesPage() {
                       <div style={{ fontSize: '0.66rem', color: '#7c3aed' }}>PU</div>
                     </div>
                   </div>
-                  <div style={{ display: 'flex', gap: 6, borderTop: '1px solid var(--border)', paddingTop: 10 }}>
-                    <button onClick={() => openView(p)} style={{ flex: 1, background: '#f1f5f9', border: '1px solid #e2e8f0', borderRadius: 8, color: '#475569', cursor: 'pointer', padding: '6px', fontSize: '0.78rem', fontWeight: 600 }}>👁 Voir</button>
-                    <button onClick={() => setEditComposeId(p.id)} style={{ flex: 1, background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 8, color: '#1d4ed8', cursor: 'pointer', padding: '6px', fontSize: '0.78rem', fontWeight: 600 }}>✏️ Modifier</button>
-                    <button onClick={() => deleteCompose(p)} disabled={deletingId === p.id} title="Supprimer" style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, color: '#dc2626', cursor: 'pointer', padding: '6px 10px', fontSize: '0.78rem', fontWeight: 700 }}>🗑</button>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6, borderTop: '1px solid var(--border)', paddingTop: 10 }}>
+                    <button onClick={() => setFtProduct(p)} disabled={(p.ingredientsCount ?? 0) === 0} title="Générer la fiche technique (FT Stock / FT Manuel)"
+                      style={{ background: '#f0fdf4', border: '1px solid #6ee7b7', borderRadius: 8, color: '#047857', cursor: (p.ingredientsCount ?? 0) === 0 ? 'not-allowed' : 'pointer', padding: '7px', fontSize: '0.78rem', fontWeight: 700, opacity: (p.ingredientsCount ?? 0) === 0 ? 0.5 : 1 }}>📄 Fiche technique (XLS)</button>
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      <button onClick={() => openView(p)} style={{ flex: 1, background: '#f1f5f9', border: '1px solid #e2e8f0', borderRadius: 8, color: '#475569', cursor: 'pointer', padding: '6px', fontSize: '0.78rem', fontWeight: 600 }}>👁 Voir</button>
+                      <button onClick={() => setEditComposeId(p.id)} style={{ flex: 1, background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 8, color: '#1d4ed8', cursor: 'pointer', padding: '6px', fontSize: '0.78rem', fontWeight: 600 }}>✏️ Modifier</button>
+                      <button onClick={() => deleteCompose(p)} disabled={deletingId === p.id} title="Supprimer" style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, color: '#dc2626', cursor: 'pointer', padding: '6px 10px', fontSize: '0.78rem', fontWeight: 700 }}>🗑</button>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -360,6 +366,19 @@ export default function ValorisesPage() {
             <div className="modal-footer"><button className="btn btn-ghost" onClick={() => setViewProduct(null)}>Fermer</button></div>
           </div>
         </div>
+      )}
+
+      {ftProduct && (
+        <FicheTechniqueModal
+          productId={ftProduct.id}
+          productName={ftProduct.name}
+          hasIngredients={(ftProduct.ingredientsCount ?? 0) > 0}
+          resolvedActId={ftProduct.activites?.[0]?.id ?? 0}
+          contextLabel={ftProduct.activites?.[0]?.nom ? `Activité : ${ftProduct.activites[0].nom}` : ''}
+          activityName={ftProduct.activites?.[0]?.nom ?? ''}
+          activities={(ftProduct.activites ?? []).map(a => ({ id: a.id, nom: a.nom }))}
+          onClose={() => setFtProduct(null)}
+        />
       )}
     </div>
   );
