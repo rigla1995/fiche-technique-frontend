@@ -50,11 +50,13 @@ interface ArticleVendable {
 interface ArticleValorise {
   id: number;
   nom: string;
-  unite_nom: string;
+  unite_nom: string | null;
   categorie_nom: string | null;
   famille_nom: string | null;
   categorie_produit_id: number | null;
   categorie_produit_nom: string | null;
+  article_type?: 'produit' | 'ingredient';
+  compose?: boolean;
   vendable: ArticleVendable | null;
 }
 
@@ -595,7 +597,8 @@ export default function ConfigurationVentePage() {
   const produitRows = rows.filter(r => !r.produit.isSupplement);
   const supplementRows = rows.filter(r => r.produit.isSupplement);
   const valoriseRows: ProduitRow[] = valorises.map(v => ({
-    produit: { id: v.id, name: v.nom, isSupplement: false, type: 'ingredient' },
+    // Les composés labo sont des produits (article_type='produit') → type 'produit' pour un enregistrement correct.
+    produit: { id: v.id, name: v.nom, isSupplement: false, type: v.article_type === 'produit' ? 'produit' : 'ingredient' },
     vendable: v.vendable ?? undefined,
     categorieProduitId: v.categorie_produit_id,
     categorieProduitName: v.categorie_produit_nom,
