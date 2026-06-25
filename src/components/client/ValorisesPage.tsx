@@ -30,6 +30,9 @@ export default function ValorisesPage() {
   const [showComposed, setShowComposed] = useState(false);
   const [editComposeId, setEditComposeId] = useState<number | null>(null);
   const [ftProduct, setFtProduct] = useState<Product | null>(null);
+  const [ftLabos, setFtLabos] = useState<{ id: number; nom: string }[]>([]);
+  const [ftLaboId, setFtLaboId] = useState<number | null>(null);
+  const [ftLoading, setFtLoading] = useState(false);
   const [viewProduct, setViewProduct] = useState<Product | null>(null);
   const [viewDetail, setViewDetail] = useState<{ ingredients: { ingredientName: string; portion: number; unitName: string }[]; subProducts: { subProductName: string; portion: number }[] } | null>(null);
   const [tab, setTab] = useState<'composes' | 'referentiel'>('composes');
@@ -59,6 +62,22 @@ export default function ValorisesPage() {
     setViewProduct(p); setViewDetail(null);
     try { const { data } = await api.get(`/api/products/${p.id}`); setViewDetail(data); } catch { /* */ }
   };
+
+  // FT d'un composé : le coût se calcule sur les prix d'appro du/des LABO(s) de fabrication,
+  // indépendamment des activités. On récupère les labos liés ; sélecteur si plusieurs.
+  const openFt = async (p: Product) => {
+    setFtProduct(p); setFtLabos([]); setFtLaboId(null); setFtLoading(true);
+    try {
+      const { data } = await api.get(`/api/products/${p.id}`);
+      const labos = (data.labos ?? []) as { id: number; nom: string }[];
+      setFtLabos(labos);
+      if (labos.length === 1) setFtLaboId(labos[0].id);
+      else if (labos.length === 0) setFtLaboId(0); // repli : aucun labo → contexte activité
+    } catch {
+      setFtLaboId(0);
+    } finally { setFtLoading(false); }
+  };
+  const closeFt = () => { setFtProduct(null); setFtLabos([]); setFtLaboId(null); };
 
   const deleteCompose = async (p: Product) => {
     if (!window.confirm(`Supprimer le produit valorisé composé « ${p.name} » ?`)) return;
@@ -192,7 +211,7 @@ export default function ValorisesPage() {
                     </div>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 6, borderTop: '1px solid var(--border)', paddingTop: 10 }}>
-                    <button onClick={() => setFtProduct(p)} disabled={(p.ingredientsCount ?? 0) === 0} title="Générer la fiche technique (FT Stock / FT Manuel)"
+                    <button onClick={() => openFt(p)} disabled={(p.ingredientsCount ?? 0) === 0 || (ftLoading && ftProduct?.id === p.id)} title="Générer la fiche technique (prix d'appro du labo)"
                       style={{ background: '#f0fdf4', border: '1px solid #6ee7b7', borderRadius: 8, color: '#047857', cursor: (p.ingredientsCount ?? 0) === 0 ? 'not-allowed' : 'pointer', padding: '7px', fontSize: '0.78rem', fontWeight: 700, opacity: (p.ingredientsCount ?? 0) === 0 ? 0.5 : 1 }}>📄 Fiche technique (XLS)</button>
                     <div style={{ display: 'flex', gap: 6 }}>
                       <button onClick={() => openView(p)} style={{ flex: 1, background: '#f1f5f9', border: '1px solid #e2e8f0', borderRadius: 8, color: '#475569', cursor: 'pointer', padding: '6px', fontSize: '0.78rem', fontWeight: 600 }}>👁 Voir</button>
@@ -368,7 +387,52 @@ export default function ValorisesPage() {
         </div>
       )}
 
-      {ftProduct && (
+      {/* Sélecteur de labo si le composé est fabriqué dans plusieurs labos */}
+      {ftProduct && !ftLoading && ftLaboId === null && ftLabos.length > 1 && (
+        <div className="modal-overlay" onClick={closeFt}>
+          <div className="modal" style={{ maxWidth: 440 }} onClick={e => e.stopPropagation()}>
+            <div className="modal-header modal-header--primary">
+              <h2>📄 Fiche technique — choisir le labo</h2>
+              <button className="modal-close" onClick={closeFt}>×</button>
+            </div>
+            <div className="modal-body">
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: '0 0 14px' }}>
+                « {ftProduct.name} » est fabriqué dans plusieurs labos. Choisissez le labo dont les <strong>prix d'appro</strong> serviront au calcul du coût.
+              </p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {ftLabos.map(l => (
+                  <button key={l.id} onClick={() => setFtLaboId(l.id)}
+                    style={{ display: 'flex', alignItems: 'center', gap: 10, textAlign: 'left', padding: '12px 14px', borderRadius: 10, border: '1.5px solid #6ee7b7', background: '#f0fdf4', color: '#065f46', fontWeight: 700, cursor: 'pointer', fontSize: '0.9rem' }}>
+                    🏭 {l.nom}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="modal-footer"><button className="btn btn-ghost" onClick={closeFt}>Annuler</button></div>
+          </div>
+        </div>
+      )}
+
+      {/* Mode labo : coût sur les prix d'appro du labo */}
+      {ftProduct && ftLaboId !== null && ftLaboId > 0 && (() => {
+        const labo = ftLabos.find(l => l.id === ftLaboId);
+        return (
+          <FicheTechniqueModal
+            productId={ftProduct.id}
+            productName={ftProduct.name}
+            hasIngredients={(ftProduct.ingredientsCount ?? 0) > 0}
+            resolvedActId={0}
+            laboId={ftLaboId}
+            contextLabel={labo ? `Labo : ${labo.nom}` : ''}
+            activityName={labo?.nom ?? ''}
+            activities={[]}
+            onClose={closeFt}
+          />
+        );
+      })()}
+
+      {/* Repli (aucun labo associé) : contexte activité comme avant */}
+      {ftProduct && ftLaboId === 0 && (
         <FicheTechniqueModal
           productId={ftProduct.id}
           productName={ftProduct.name}
@@ -377,7 +441,7 @@ export default function ValorisesPage() {
           contextLabel={ftProduct.activites?.[0]?.nom ? `Activité : ${ftProduct.activites[0].nom}` : ''}
           activityName={ftProduct.activites?.[0]?.nom ?? ''}
           activities={(ftProduct.activites ?? []).map(a => ({ id: a.id, nom: a.nom }))}
-          onClose={() => setFtProduct(null)}
+          onClose={closeFt}
         />
       )}
     </div>
