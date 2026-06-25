@@ -623,6 +623,21 @@ export default function AbonnementsManagement() {
     return matchSearch && matchMode;
   });
 
+  // Affichage global (vue d'ensemble) — stats aérées + filtres par statut.
+  const countMode = (mode: string) => abonnements.filter((a) => a.modeCompte === mode).length;
+  const statStrip = [
+    { label: 'Clients', value: abonnements.length, color: '#0f172a' },
+    { label: 'Actifs', value: countMode('actif'), color: '#16a34a' },
+    { label: 'Promos', value: abonnements.filter((a) => a.hasActivePromo).length, color: '#d97706' },
+  ];
+  // « Tous » + uniquement les statuts présents (déclutter automatique).
+  const modeFilters = [
+    { value: '', label: 'Tous', color: '#0d9488', count: abonnements.length },
+    ...Object.entries(MODE_LABELS)
+      .map(([value, m]) => ({ value, label: m.label, color: m.color, count: countMode(value) }))
+      .filter((f) => f.count > 0),
+  ];
+
   // Promo availability derived vars
   const activePromos = selected?.promotions?.filter((p) => p.isActive) || [];
   const activeObPromo = activePromos.find((p) => ['onboarding', 'les_deux'].includes(p.appliesTo)) || null;
@@ -702,66 +717,60 @@ export default function AbonnementsManagement() {
     <div style={{ display: 'flex', gap: 24, minHeight: 600 }}>
       {/* List panel */}
       <div style={{ flex: '0 0 380px', background: '#fff', borderRadius: 16, border: '1px solid #e2e8f0', overflow: 'hidden', boxShadow: '0 4px 24px rgba(30,27,75,0.10)' }}>
-        {/* Hero */}
-        <div style={{ padding: '18px 18px 14px', background: 'linear-gradient(135deg,#0f766e 0%,#0d9488 55%,#14b8a6 100%)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-            <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>💳</div>
+        {/* Hero — épuré */}
+        <div style={{ padding: '20px 20px 16px', background: 'linear-gradient(135deg,#0f766e 0%,#0d9488 55%,#14b8a6 100%)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+            <div style={{ width: 40, height: 40, borderRadius: 12, background: 'rgba(255,255,255,0.16)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>💳</div>
             <div>
-              <h2 style={{ margin: 0, fontSize: 15, fontWeight: 800, color: '#fff' }}>Abonnements</h2>
-              <p style={{ margin: 0, fontSize: 11, color: 'rgba(255,255,255,0.6)' }}>{filtered.length} affiché{filtered.length !== 1 ? 's' : ''} · {abonnements.length} total</p>
+              <h2 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: '#fff', letterSpacing: '-0.01em' }}>Abonnements clients</h2>
+              <p style={{ margin: 0, fontSize: 11.5, color: 'rgba(255,255,255,0.7)' }}>{abonnements.length} client{abonnements.length !== 1 ? 's' : ''} · {countMode('actif')} actif{countMode('actif') !== 1 ? 's' : ''}</p>
             </div>
           </div>
-          {/* Stats row */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 6, marginBottom: 12 }}>
-            {([
-              { label: 'Total', value: abonnements.length, color: 'rgba(255,255,255,0.9)', bg: 'rgba(255,255,255,0.1)' },
-              { label: 'Actifs', value: abonnements.filter((a) => a.modeCompte === 'actif').length, color: '#86efac', bg: 'rgba(134,239,172,0.15)' },
-              { label: 'Promos', value: abonnements.filter((a) => a.hasActivePromo).length, color: '#fde047', bg: 'rgba(253,224,71,0.15)' },
-            ] as { label: string; value: number; color: string; bg: string }[]).map((s) => (
-              <div key={s.label} style={{ background: s.bg, borderRadius: 8, padding: '7px 0', textAlign: 'center' }}>
-                <div style={{ fontSize: 18, fontWeight: 800, color: s.color, lineHeight: 1 }}>{s.value}</div>
-                <div style={{ fontSize: 9, fontWeight: 600, color: s.color, opacity: 0.75, textTransform: 'uppercase', letterSpacing: '0.06em', marginTop: 2 }}>{s.label}</div>
-              </div>
-            ))}
-          </div>
-          {/* Search */}
+          {/* Search — aéré */}
           <div style={{ position: 'relative' }}>
-            <span style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', fontSize: 12, pointerEvents: 'none' }}>🔍</span>
+            <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 13, pointerEvents: 'none', opacity: 0.85 }}>🔍</span>
             <input
-              placeholder="Rechercher un client…"
+              placeholder="Rechercher par nom ou email…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              style={{ width: '100%', padding: '8px 10px 8px 30px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.2)', fontSize: 12, outline: 'none', background: 'rgba(255,255,255,0.12)', color: '#fff', boxSizing: 'border-box' }}
+              style={{ width: '100%', padding: '10px 12px 10px 34px', borderRadius: 11, border: '1px solid rgba(255,255,255,0.22)', fontSize: 12.5, outline: 'none', background: 'rgba(255,255,255,0.14)', color: '#fff', boxSizing: 'border-box' }}
             />
           </div>
         </div>
-        {/* Filter chips */}
-        <div style={{ padding: '10px 14px', background: '#f8fafc', borderBottom: '1px solid #e2e8f0', display: 'flex', gap: 5, flexWrap: 'wrap' }}>
-          {([
-            { value: 'actif', label: 'Actif' },
-            { value: 'read_only', label: 'Lecture seule' },
-            { value: 'bloque', label: 'Bloqué' },
-          ] as { value: string; label: string }[]).map(({ value, label }) => {
-            const isChipActive = filterMode === value;
-            const modeColor = MODE_LABELS[value]?.color || '#64748b';
-            const count = abonnements.filter((a) => a.modeCompte === value).length;
-            return (
-              <button key={value} onClick={() => setFilterMode(filterMode === value ? '' : value)}
-                style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600, cursor: 'pointer',
-                  border: `1.5px solid ${isChipActive ? modeColor : '#e2e8f0'}`,
-                  background: isChipActive ? (modeColor + '18') : '#fff',
-                  color: isChipActive ? modeColor : '#94a3b8',
-                  transition: 'all 0.15s',
-                }}>
-                {label}
-                {count > 0 && (
-                  <span style={{ background: isChipActive ? modeColor : '#e5e7eb', color: isChipActive ? '#fff' : '#6b7280', borderRadius: 10, padding: '0 5px', fontSize: 9, fontWeight: 800 }}>
+        {/* Bandeau statistiques — aéré, fond clair */}
+        <div style={{ display: 'flex', borderBottom: '1px solid #e2e8f0', background: '#fff' }}>
+          {statStrip.map((s, i) => (
+            <div key={s.label} style={{ flex: 1, padding: '13px 8px', textAlign: 'center', borderRight: i < statStrip.length - 1 ? '1px solid #f1f5f9' : 'none' }}>
+              <div style={{ fontSize: 19, fontWeight: 800, color: s.color, lineHeight: 1 }}>{s.value}</div>
+              <div style={{ fontSize: 9.5, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', marginTop: 5 }}>{s.label}</div>
+            </div>
+          ))}
+        </div>
+        {/* Filtres — segmenté, clair */}
+        <div style={{ padding: '12px 14px 11px', background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 9 }}>
+            <span style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#0d9488' }}>Filtrer par statut</span>
+            <span style={{ fontSize: 11, color: '#94a3b8', fontWeight: 600 }}>{filtered.length} résultat{filtered.length !== 1 ? 's' : ''}</span>
+          </div>
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            {modeFilters.map(({ value, label, color, count }) => {
+              const isChipActive = filterMode === value;
+              return (
+                <button key={value || 'all'} onClick={() => setFilterMode(value)}
+                  style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 11px', borderRadius: 20, fontSize: 11.5, fontWeight: 600, cursor: 'pointer',
+                    border: `1.5px solid ${isChipActive ? color : '#e2e8f0'}`,
+                    background: isChipActive ? (color + '15') : '#fff',
+                    color: isChipActive ? color : '#64748b',
+                    transition: 'all 0.15s',
+                  }}>
+                  {label}
+                  <span style={{ background: isChipActive ? color : '#eef2f7', color: isChipActive ? '#fff' : '#94a3b8', borderRadius: 10, padding: '0 6px', fontSize: 9.5, fontWeight: 800, lineHeight: '15px' }}>
                     {count}
                   </span>
-                )}
-              </button>
-            );
-          })}
+                </button>
+              );
+            })}
+          </div>
         </div>
         {/* Client list */}
         <div style={{ overflowY: 'auto', maxHeight: 520 }}>

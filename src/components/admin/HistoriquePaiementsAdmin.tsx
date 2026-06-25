@@ -46,6 +46,29 @@ export default function HistoriquePaiementsAdmin() {
   const [filtStatut, setFiltStatut] = useState('');
   const [filtMois, setFiltMois] = useState('');
   const [page, setPage] = useState(1);
+  const [downloadingId, setDownloadingId] = useState<number | null>(null);
+
+  const downloadFacture = useCallback(async (id: number) => {
+    setDownloadingId(id);
+    try {
+      const res = await api.get(`/api/abonnements/paiements/${id}/facture`, { responseType: 'blob' });
+      const cd = res.headers['content-disposition'] || '';
+      const m = cd.match(/filename="?([^"]+)"?/);
+      const filename = m ? m[1] : `facture-${id}.pdf`;
+      const url = window.URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', filename);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch {
+      alert('Facture indisponible pour ce paiement.');
+    } finally {
+      setDownloadingId(null);
+    }
+  }, []);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -255,6 +278,13 @@ export default function HistoriquePaiementsAdmin() {
                           </div>
                           <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 10, background: color + '18', color }}>{label}</span>
                         </div>
+                        {r.statut === 'payé' && (
+                          <button onClick={() => downloadFacture(r.id)} disabled={downloadingId === r.id}
+                            title="Télécharger la facture (PDF)"
+                            style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 12px', borderRadius: 9, border: '1.5px solid #c7d2fe', background: downloadingId === r.id ? '#eef2ff' : '#fff', color: '#4338ca', fontWeight: 700, fontSize: 12, cursor: downloadingId === r.id ? 'default' : 'pointer', flexShrink: 0 }}>
+                            🧾 {downloadingId === r.id ? '…' : 'Facture'}
+                          </button>
+                        )}
                       </div>
                     );
                   })}

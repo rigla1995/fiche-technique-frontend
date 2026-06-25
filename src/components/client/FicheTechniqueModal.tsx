@@ -35,11 +35,16 @@ interface Props {
   contextLabel: string;
   activityName: string;
   activities?: ActivityInfo[];
+  /** Contexte LABO (produit valorisé composé) : coût calculé sur les prix d'appro du labo, sans activité. */
+  laboId?: number;
   onClose: () => void;
 }
 
-export default function FicheTechniqueModal({ productId, productName, hasIngredients, resolvedActId, contextLabel, activityName, activities, onClose }: Props) {
+export default function FicheTechniqueModal({ productId, productName, hasIngredients, resolvedActId, contextLabel, activityName, activities, laboId, onClose }: Props) {
   const { t } = useTranslation();
+
+  // En mode labo, tout le contexte de prix/stock vient du labo (param laboId) — pas d'activité.
+  const laboMode = !!laboId && laboId > 0;
 
   const [mode, setMode] = useState<'stock' | 'manual' | null>(null);
 
@@ -71,11 +76,15 @@ export default function FicheTechniqueModal({ productId, productName, hasIngredi
 
   useEffect(() => {
     if (mode !== 'stock') { setStockCheckResult(null); return; }
-    const effectiveActId = resolvedActId || stockActId;
-    if (!resolvedActId && !stockActId) { setStockCheckResult(null); return; }
+    if (!laboMode && !resolvedActId && !stockActId) { setStockCheckResult(null); return; }
     setStockCheckLoading(true);
     const params = new URLSearchParams();
-    if (effectiveActId) params.set('activiteId', String(effectiveActId));
+    if (laboMode) {
+      params.set('laboId', String(laboId));
+    } else {
+      const effectiveActId = resolvedActId || stockActId;
+      if (effectiveActId) params.set('activiteId', String(effectiveActId));
+    }
     api.get(`/api/products/${productId}/stock-check?${params}`)
       .then(({ data }) => {
         const result = data as StockCheckResult;
@@ -96,7 +105,8 @@ export default function FicheTechniqueModal({ productId, productName, hasIngredi
     if (!mode || (mode === 'stock' && !stockPricingDp)) { setRealtimeCost(null); return; }
     setCostLoading(true);
     const params = new URLSearchParams({ mode });
-    if (resolvedActId) params.set('activiteId', String(resolvedActId));
+    if (laboMode) params.set('laboId', String(laboId));
+    else if (resolvedActId) params.set('activiteId', String(resolvedActId));
     api.get(`/api/products/${productId}/cout?${params}`)
       .then(({ data }) => setRealtimeCost((data as { totalCost: number }).totalCost ?? null))
       .catch(() => setRealtimeCost(null))
@@ -108,7 +118,8 @@ export default function FicheTechniqueModal({ productId, productName, hasIngredi
     if (mode !== 'stock' || !stockPricingMp || !stockCheckResult?.complete) { setRealtimeCostMp(null); return; }
     setCostLoadingMp(true);
     const params = new URLSearchParams({ mode: 'stock', pricingMethod: 'mp' });
-    if (resolvedActId) params.set('activiteId', String(resolvedActId));
+    if (laboMode) params.set('laboId', String(laboId));
+    else if (resolvedActId) params.set('activiteId', String(resolvedActId));
     api.get(`/api/products/${productId}/cout?${params}`)
       .then(({ data }) => setRealtimeCostMp((data as { totalCost: number }).totalCost ?? null))
       .catch(() => setRealtimeCostMp(null))
@@ -119,7 +130,7 @@ export default function FicheTechniqueModal({ productId, productName, hasIngredi
   const loadManualPrices = async () => {
     setManualLoading(true);
     try {
-      const qs = resolvedActId ? `?activiteId=${resolvedActId}` : '';
+      const qs = laboMode ? `?laboId=${laboId}` : (resolvedActId ? `?activiteId=${resolvedActId}` : '');
       const { data } = await api.get(`/api/products/${productId}/manual-prices${qs}`);
       const { prices, groups, updatedAt } = data as {
         prices: { ingredientId: number; nom: string; unite: string; prixUnitaire: number | null }[];
@@ -143,7 +154,7 @@ export default function FicheTechniqueModal({ productId, productName, hasIngredi
     setSavingManual(true);
     try {
       const payload = {
-        activiteId: resolvedActId,
+        ...(laboMode ? { laboId } : { activiteId: resolvedActId }),
         prices: manualPrices
           .filter((p) => p.prixUnitaire !== '' && !isNaN(parseFloat(p.prixUnitaire)))
           .map((p) => ({ ingredientId: p.ingredientId, prixUnitaire: parseFloat(p.prixUnitaire) })),
@@ -174,8 +185,12 @@ export default function FicheTechniqueModal({ productId, productName, hasIngredi
     setGenerating(true);
     try {
       const params = new URLSearchParams({ mode });
-      const effectiveActId = resolvedActId || (mode === 'stock' ? stockActId : null);
-      if (effectiveActId) params.set('activiteId', String(effectiveActId));
+      if (laboMode) {
+        params.set('laboId', String(laboId));
+      } else {
+        const effectiveActId = resolvedActId || (mode === 'stock' ? stockActId : null);
+        if (effectiveActId) params.set('activiteId', String(effectiveActId));
+      }
       if (mode === 'stock') {
         const pm = stockPricingDp && stockPricingMp ? 'both' : stockPricingMp ? 'mp' : 'dp';
         params.set('pricingMethod', pm);
@@ -229,7 +244,7 @@ export default function FicheTechniqueModal({ productId, productName, hasIngredi
                 const idx = s.indexOf(' : ');
                 return idx !== -1 ? { key: s.slice(0, idx), value: s.slice(idx + 3) } : { key: s, value: '' };
               });
-              const iconFor = (key: string) => key === 'Franchise' ? '🏢' : '🏪';
+              const iconFor = (key: string) => key === 'Franchise' ? '🏢' : key === 'Labo' ? '🏭' : '🏪';
               const hasActs = activities && activities.length > 0;
               return (
                 <div style={{ marginBottom: 18, borderRadius: 12, overflow: 'hidden', border: '1px solid #dbeafe', background: 'linear-gradient(135deg, #eff6ff 0%, #f8faff 100%)' }}>
