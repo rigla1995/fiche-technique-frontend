@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import api from '../../api/client';
-import type { CategorieProduit } from '../../types';
+import type { CategorieProduit, Product } from '../../types';
+import ComposedValoriseModal from './ComposedValoriseModal';
 
 const HERO = 'linear-gradient(135deg, #0a1628 0%, #0f2847 55%, #0d3b2e 100%)';
 const CATS_PER_PAGE = 10;
@@ -23,6 +24,8 @@ type StatutFilter = 'all' | 'assigned' | 'unassigned';
 export default function ValorisesPage() {
   const [articles, setArticles] = useState<ArticleValorisable[]>([]);
   const [categories, setCategories] = useState<CategorieProduit[]>([]);
+  const [composes, setComposes] = useState<Product[]>([]);
+  const [showComposed, setShowComposed] = useState(false);
   const [loading, setLoading] = useState(true);
   const [savingId, setSavingId] = useState<number | null>(null);
 
@@ -36,8 +39,9 @@ export default function ValorisesPage() {
     Promise.all([
       api.get('/api/articles-valorisables'),
       api.get('/api/categories-produit?type=valorise'),
+      api.get('/api/products?type=vendable&origine=labo'),
     ])
-      .then(([a, c]) => { setArticles(a.data); setCategories(c.data); setLoading(false); })
+      .then(([a, c, p]) => { setArticles(a.data); setCategories(c.data); setComposes(p.data as Product[]); setLoading(false); })
       .catch(() => setLoading(false));
   };
   useEffect(() => { load(); }, []);
@@ -104,15 +108,21 @@ export default function ValorisesPage() {
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
               <div style={{ background: 'rgba(16,185,129,0.18)', border: '1px solid rgba(16,185,129,0.3)', borderRadius: 10, padding: '7px 9px', fontSize: '1.2rem', lineHeight: 1 }}>💎</div>
-              <h1 style={{ fontSize: '1.45rem', fontWeight: 800, color: '#fff', margin: 0, letterSpacing: '-0.01em' }}>Articles valorisés</h1>
+              <h1 style={{ fontSize: '1.45rem', fontWeight: 800, color: '#fff', margin: 0, letterSpacing: '-0.01em' }}>Produits valorisés</h1>
             </div>
             <p style={{ color: 'rgba(255,255,255,0.55)', fontSize: '0.83rem', margin: 0 }}>
-              Articles des familles vendables non consommables — assignez une catégorie à chacun pour les rendre vendables
+              Vendus tels quels : articles du référentiel (catégorie à assigner) + produits composés fabriqués au labo
             </p>
           </div>
-          <div style={{ background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.22)', borderRadius: 14, padding: '10px 20px', textAlign: 'center', minWidth: 80 }}>
-            <div style={{ fontSize: '1.8rem', fontWeight: 900, color: '#10b981', lineHeight: 1 }}>{assignedCount}/{articles.length}</div>
-            <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.5)', marginTop: 2 }}>catégorisés</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{ background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.22)', borderRadius: 14, padding: '10px 20px', textAlign: 'center', minWidth: 80 }}>
+              <div style={{ fontSize: '1.8rem', fontWeight: 900, color: '#10b981', lineHeight: 1 }}>{assignedCount}/{articles.length}</div>
+              <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.5)', marginTop: 2 }}>articles catégorisés</div>
+            </div>
+            <button onClick={() => setShowComposed(true)}
+              style={{ background: 'linear-gradient(135deg, #047857, #10b981)', border: 'none', borderRadius: 12, color: '#fff', fontWeight: 700, padding: '12px 18px', cursor: 'pointer', fontSize: '0.85rem', whiteSpace: 'nowrap' }}>
+              + Produit valorisé composé
+            </button>
           </div>
         </div>
       </div>
@@ -151,6 +161,30 @@ export default function ValorisesPage() {
       {categories.length === 0 && !loading && (
         <div style={{ background: '#fffbeb', border: '1.5px solid #fcd34d', borderRadius: 12, padding: '12px 16px', marginBottom: 16, fontSize: '0.85rem', color: '#92400e' }}>
           ⚠️ Aucune catégorie de type « Article valorisé ». Créez-en d'abord dans <strong>Catégories Produits</strong>.
+        </div>
+      )}
+
+      {/* Produits valorisés composés (fabriqués au labo) */}
+      {composes.length > 0 && (
+        <div className="card" style={{ marginBottom: 16, overflow: 'hidden' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '11px 16px', background: 'linear-gradient(135deg,#eef2ff,#e0e7ff)', borderBottom: '1px solid #c7d2fe' }}>
+            <span style={{ fontWeight: 800, fontSize: '0.9rem', color: '#3730a3' }}>🏭 Produits composés (fabriqués au labo)</span>
+            <span style={{ marginLeft: 'auto', fontSize: '0.72rem', color: '#4338ca', fontWeight: 700, background: '#e0e7ff', borderRadius: 20, padding: '2px 9px' }}>{composes.length}</span>
+          </div>
+          <div className="table-responsive">
+            <table className="table" style={{ margin: 0 }}>
+              <thead><tr><th>Produit</th><th style={{ width: 180 }}>Catégorie</th><th style={{ width: 90, textAlign: 'center' }}>Articles</th></tr></thead>
+              <tbody>
+                {composes.map((p) => (
+                  <tr key={p.id}>
+                    <td style={{ fontWeight: 600, color: '#0f172a' }}>💎 {p.name}{p.refProduit && <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginLeft: 6 }}>({p.refProduit})</span>}</td>
+                    <td style={{ fontSize: '0.85rem', color: '#475569' }}>{p.categorieProduitName ?? '—'}</td>
+                    <td style={{ textAlign: 'center', fontSize: '0.85rem', color: '#475569' }}>{p.ingredientsCount ?? 0}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
@@ -223,6 +257,14 @@ export default function ValorisesPage() {
             </div>
           )}
         </>
+      )}
+
+      {showComposed && (
+        <ComposedValoriseModal
+          categories={categories}
+          onClose={() => setShowComposed(false)}
+          onCreated={() => { setShowComposed(false); load(); }}
+        />
       )}
     </div>
   );
