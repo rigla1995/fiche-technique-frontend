@@ -5,6 +5,7 @@ import ComposedValoriseModal from './ComposedValoriseModal';
 
 const HERO = 'linear-gradient(135deg, #0a1628 0%, #0f2847 55%, #0d3b2e 100%)';
 const CATS_PER_PAGE = 10;
+const COMPOSES_PER_PAGE = 12;
 
 const apiMsg = (e: unknown, fallback = 'Erreur') =>
   (e as { response?: { data?: { message?: string } } })?.response?.data?.message ?? fallback;
@@ -26,6 +27,9 @@ export default function ValorisesPage() {
   const [categories, setCategories] = useState<CategorieProduit[]>([]);
   const [composes, setComposes] = useState<Product[]>([]);
   const [showComposed, setShowComposed] = useState(false);
+  const [tab, setTab] = useState<'composes' | 'referentiel'>('composes');
+  const [composePage, setComposePage] = useState(1);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [savingId, setSavingId] = useState<number | null>(null);
 
@@ -45,6 +49,16 @@ export default function ValorisesPage() {
       .catch(() => setLoading(false));
   };
   useEffect(() => { load(); }, []);
+
+  const deleteCompose = async (p: Product) => {
+    if (!window.confirm(`Supprimer le produit valorisé composé « ${p.name} » ?`)) return;
+    setDeletingId(p.id);
+    try {
+      await api.delete(`/api/products/${p.id}`);
+      setComposes(prev => prev.filter(x => x.id !== p.id));
+    } catch (e: unknown) { alert(apiMsg(e, 'Erreur lors de la suppression')); }
+    finally { setDeletingId(null); }
+  };
 
   const assign = async (article: ArticleValorisable, categorieId: string) => {
     setSavingId(article.id);
@@ -127,6 +141,55 @@ export default function ValorisesPage() {
         </div>
       </div>
 
+      {/* Onglets */}
+      <div style={{ display: 'flex', gap: 4, borderBottom: '2px solid #e2e8f0', marginBottom: 18 }}>
+        {([['composes', `🏭 Composés (${composes.length})`], ['referentiel', `💎 Référentiel (${articles.length})`]] as const).map(([key, label]) => (
+          <button key={key} onClick={() => setTab(key)}
+            style={{ padding: '9px 20px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.9rem', fontWeight: tab === key ? 700 : 400, color: tab === key ? '#059669' : 'var(--text)', borderBottom: tab === key ? '3px solid #059669' : '3px solid transparent' }}>
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {tab === 'composes' && (
+        composes.length === 0 ? (
+          <div style={{ background: 'linear-gradient(135deg,#eef2ff,#e0e7ff)', border: '2px dashed #c7d2fe', borderRadius: 18, padding: '40px 32px', textAlign: 'center', color: '#3730a3' }}>
+            <div style={{ fontSize: '2.4rem', marginBottom: 10 }}>🏭</div>
+            <div style={{ fontWeight: 800, marginBottom: 6 }}>Aucun produit composé</div>
+            <div style={{ fontSize: '0.88rem' }}>Cliquez sur « + Produit valorisé composé » pour en créer un.</div>
+          </div>
+        ) : (
+          <div className="card" style={{ overflow: 'hidden' }}>
+            <div className="table-responsive">
+              <table className="table" style={{ margin: 0 }}>
+                <thead><tr><th>Produit</th><th style={{ width: 180 }}>Catégorie</th><th style={{ width: 80, textAlign: 'center' }}>Articles</th><th style={{ width: 60 }}></th></tr></thead>
+                <tbody>
+                  {composes.slice((composePage - 1) * COMPOSES_PER_PAGE, composePage * COMPOSES_PER_PAGE).map((p) => (
+                    <tr key={p.id}>
+                      <td style={{ fontWeight: 600, color: '#0f172a' }}>💎 {p.name}{p.refProduit && <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginLeft: 6 }}>({p.refProduit})</span>}</td>
+                      <td style={{ fontSize: '0.85rem', color: '#475569' }}>{p.categorieProduitName ?? '—'}</td>
+                      <td style={{ textAlign: 'center', fontSize: '0.85rem', color: '#475569' }}>{p.ingredientsCount ?? 0}</td>
+                      <td style={{ textAlign: 'right' }}>
+                        <button onClick={() => deleteCompose(p)} disabled={deletingId === p.id}
+                          title="Supprimer" style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 7, color: '#dc2626', cursor: 'pointer', padding: '4px 9px', fontSize: '0.8rem', fontWeight: 700 }}>🗑</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {composes.length > COMPOSES_PER_PAGE && (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 6, padding: '10px 14px', borderTop: '1px solid var(--border)' }}>
+                <button disabled={composePage <= 1} onClick={() => setComposePage(composePage - 1)} style={{ padding: '4px 12px', borderRadius: 7, border: '1px solid #c7d2fe', background: '#fff', color: '#4338ca', cursor: composePage <= 1 ? 'default' : 'pointer', fontWeight: 700, opacity: composePage <= 1 ? 0.4 : 1 }}>‹</button>
+                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{composePage} / {Math.ceil(composes.length / COMPOSES_PER_PAGE)}</span>
+                <button disabled={composePage >= Math.ceil(composes.length / COMPOSES_PER_PAGE)} onClick={() => setComposePage(composePage + 1)} style={{ padding: '4px 12px', borderRadius: 7, border: '1px solid #c7d2fe', background: '#fff', color: '#4338ca', cursor: 'pointer', fontWeight: 700, opacity: composePage >= Math.ceil(composes.length / COMPOSES_PER_PAGE) ? 0.4 : 1 }}>›</button>
+              </div>
+            )}
+          </div>
+        )
+      )}
+
+      {tab === 'referentiel' && (<>
       {/* Filtres */}
       <div style={{ background: 'var(--surface)', borderRadius: 14, padding: '14px 18px', marginBottom: 20, border: '1px solid var(--border)', boxShadow: '0 2px 8px rgba(0,0,0,0.04)', display: 'flex', alignItems: 'flex-end', gap: 12, flexWrap: 'wrap' }}>
         <div>
@@ -161,30 +224,6 @@ export default function ValorisesPage() {
       {categories.length === 0 && !loading && (
         <div style={{ background: '#fffbeb', border: '1.5px solid #fcd34d', borderRadius: 12, padding: '12px 16px', marginBottom: 16, fontSize: '0.85rem', color: '#92400e' }}>
           ⚠️ Aucune catégorie de type « Article valorisé ». Créez-en d'abord dans <strong>Catégories Produits</strong>.
-        </div>
-      )}
-
-      {/* Produits valorisés composés (fabriqués au labo) */}
-      {composes.length > 0 && (
-        <div className="card" style={{ marginBottom: 16, overflow: 'hidden' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '11px 16px', background: 'linear-gradient(135deg,#eef2ff,#e0e7ff)', borderBottom: '1px solid #c7d2fe' }}>
-            <span style={{ fontWeight: 800, fontSize: '0.9rem', color: '#3730a3' }}>🏭 Produits composés (fabriqués au labo)</span>
-            <span style={{ marginLeft: 'auto', fontSize: '0.72rem', color: '#4338ca', fontWeight: 700, background: '#e0e7ff', borderRadius: 20, padding: '2px 9px' }}>{composes.length}</span>
-          </div>
-          <div className="table-responsive">
-            <table className="table" style={{ margin: 0 }}>
-              <thead><tr><th>Produit</th><th style={{ width: 180 }}>Catégorie</th><th style={{ width: 90, textAlign: 'center' }}>Articles</th></tr></thead>
-              <tbody>
-                {composes.map((p) => (
-                  <tr key={p.id}>
-                    <td style={{ fontWeight: 600, color: '#0f172a' }}>💎 {p.name}{p.refProduit && <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginLeft: 6 }}>({p.refProduit})</span>}</td>
-                    <td style={{ fontSize: '0.85rem', color: '#475569' }}>{p.categorieProduitName ?? '—'}</td>
-                    <td style={{ textAlign: 'center', fontSize: '0.85rem', color: '#475569' }}>{p.ingredientsCount ?? 0}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
         </div>
       )}
 
@@ -258,6 +297,7 @@ export default function ValorisesPage() {
           )}
         </>
       )}
+      </>)}
 
       {showComposed && (
         <ComposedValoriseModal
