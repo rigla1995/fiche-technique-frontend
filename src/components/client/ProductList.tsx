@@ -36,6 +36,8 @@ export default function ProductList() {
   const [searchParams] = useSearchParams();
   const tab = (searchParams.get('tab') as TabType) || 'vendable';
   const laboId = searchParams.get('laboId') || '';
+  // Refonte Espace Produits : origine du périmètre de création/affichage (labo vs activité).
+  const productOrigine: 'labo' | 'activite' = searchParams.get('origine') === 'labo' ? 'labo' : 'activite';
 
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(false);
@@ -56,6 +58,7 @@ export default function ProductList() {
   const [loadingDetail, setLoadingDetail] = useState(false);
 
   const [allActivities, setAllActivities] = useState<Activite[]>([]);
+  const [allLabos, setAllLabos] = useState<{ id: number; nom: string }[]>([]);
   const [exportingXls, setExportingXls] = useState(false);
   const [exportModalOpen, setExportModalOpen] = useState(false);
   const [exportIncludeOther, setExportIncludeOther] = useState(false);
@@ -116,6 +119,9 @@ export default function ProductList() {
         const scoped = laboId ? all.filter((a) => String((a as any).laboId) === laboId) : all;
         setAllActivities(scoped);
       });
+    api.get('/api/labo')
+      .then(({ data }) => setAllLabos((data as { id: number; nom: string }[]).map((l) => ({ id: l.id, nom: l.nom }))))
+      .catch(() => setAllLabos([]));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.role, laboId]);
 
@@ -203,17 +209,27 @@ export default function ProductList() {
     setAddIngLines([]); setAddSubLines([]); setAddSubSearch(''); setAddIngSearch('');
     setAddSavedName(''); setAddFamilleFilter(''); setAddCatFilter(''); setAddIngVisible(20);
     setAddAffectationIds([]);
+    setAddIngredients([]); setUtilisableForWizard([]); // chargés réactivement selon le périmètre (step 1)
     setAddModal(1);
-    api.get('/api/products?type=utilisable')
-      .then(({ data }) => setUtilisableForWizard((data as Product[]).map(u => ({ id: u.id, name: u.name }))))
-      .catch(() => {});
-    const actId = allActivities[0]?.id;
-    if (actId) {
-      api.get(`/api/entreprise/activites/${actId}/ingredients`)
-        .then(({ data }) => setAddIngredients(data as ActiviteIngredient[]))
-        .catch(() => setAddIngredients([]));
-    }
-  }, [allActivities]);
+  }, []);
+
+  // Charge articles consommables ET produits utilisables selon le périmètre choisi — refonte Espace Produits.
+  // Origine labo → communs aux labos choisis ; origine activité → communs aux activités (+ PU des labos liés).
+  useEffect(() => {
+    if (addAffectationIds.length === 0) { setAddIngredients([]); setUtilisableForWizard([]); return; }
+    const ids = addAffectationIds.join(',');
+    const param = productOrigine === 'labo' ? 'laboIds' : 'activiteIds';
+    const path = productOrigine === 'labo'
+      ? '/api/labo/articles-consommables'
+      : '/api/entreprise/activites/articles-consommables';
+    api.get(`${path}?${param}=${ids}`)
+      .then(({ data }) => setAddIngredients(data as ActiviteIngredient[]))
+      .catch(() => setAddIngredients([]));
+    api.get(`/api/produits/utilisables-perimetre?origine=${productOrigine}&ids=${ids}`)
+      .then(({ data }) => setUtilisableForWizard(data as { id: number; name: string }[]))
+      .catch(() => setUtilisableForWizard([]));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [addAffectationIds, productOrigine]);
 
   const openPopup = async (type: PopupType, product: Product) => {
     setPopup({ type, productId: product.id, productName: product.name });
@@ -320,7 +336,7 @@ export default function ProductList() {
     setTogglingActivite(null);
   };
 
-  const byTab = products.filter((p) => p.type === tab);
+  const byTab = products.filter((p) => p.type === tab && (p.origine ?? 'activite') === productOrigine);
   const byActivite = filterActiviteId
     ? byTab.filter((p) => p.activites?.some((a) => a.id === filterActiviteId) || p.activiteId === filterActiviteId)
     : byTab;
@@ -1472,7 +1488,7 @@ export default function ProductList() {
             const updateSubPortion = (id: string, val: string) =>
               setAddSubLines((prev) => prev.map((l) => l.ingredientId === id ? { ...l, portion: val } : l));
 
-            const canGoStep2 = addName.trim().length > 0 && (!isVendable || !!addCategorieId);
+            const canGoStep2 = addName.trim().length > 0 && (!isVendable || !!addCategorieId) && addAffectationIds.length > 0;
             const handleSave = async () => {
               setAddSaving(true);
               setAddSaveError(null);
@@ -1483,26 +1499,20 @@ export default function ProductList() {
                 const baseSubProducts = addSubLines
                   .filter((l) => l.ingredientId && parseFloat(l.portion) > 0)
                   .map((l) => ({ subProductId: parseInt(l.ingredientId), portion: parseFloat(l.portion) }));
-                const { data: newProd } = await api.post('/api/products', {
+                // L'affectation découle de l'origine + périmètre : le backend crée labo_pt_selections /
+                // produit_activite_stock / produit_activite_affectation selon le cas (plus d'appels séparés).
+                await api.post('/api/products', {
                   name: addName.trim(),
                   refProduit: addRef.trim() || null,
                   type: tab === 'utilisable' ? 'utilisable' : 'vendable',
                   isSupplement: addIsSupplement,
                   categorieProduitId: tab === 'utilisable' ? null : (addCategorieId ? parseInt(addCategorieId) : null),
-                  activiteId: addAffectationIds[0] ?? null,
+                  origine: productOrigine,
+                  laboIds: productOrigine === 'labo' ? addAffectationIds : [],
+                  activiteIds: productOrigine === 'activite' ? addAffectationIds : [],
                   ingredients: baseIngredients,
                   subProducts: baseSubProducts,
                 });
-                const newId = (newProd as { id: number }).id;
-                if (isVendable && addAffectationIds.length > 0) {
-                  // Vendable: link to activités (display only — no stock)
-                  await api.post(`/api/produits/${newId}/affecter-activites`, { activiteIds: addAffectationIds });
-                } else if (!isVendable) {
-                  // Utilisable: assign to activités' stocks
-                  for (const actId of addAffectationIds) {
-                    await api.post(`/api/produits/${newId}/toggle-stock-ingredient`, { activiteId: actId });
-                  }
-                }
                 setAddSavedName(addName.trim());
                 setAddModal(6);
                 const reloadParams = new URLSearchParams();
@@ -1516,12 +1526,13 @@ export default function ProductList() {
               setAddSaving(false);
             };
 
+            // Périmètre (labo/activité) intégré au step 1 ; l'ancienne étape "Affectation" est supprimée
+            // (l'affectation découle désormais de l'origine + du périmètre, gérée côté backend).
             const STEPS = [
               { n: 1, d: 1, label: 'Identité' },
               { n: 2, d: 2, label: 'Articles' },
               { n: 3, d: 3, label: 'Produits Utilisables' },
-              { n: 4, d: 4, label: 'Affectation' },
-              { n: 5, d: 5, label: 'Récap' },
+              { n: 5, d: 4, label: 'Récap' },
             ];
 
             return (
@@ -1553,9 +1564,36 @@ export default function ProductList() {
                   </div>
 
                   <div style={{ padding: '20px 22px' }}>
-                    {/* Step 1 — Identité */}
+                    {/* Step 1 — Identité + Périmètre */}
                     {addModal === 1 && (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                        {/* Périmètre (refonte) : labo(s) ou activité(s) — détermine les articles disponibles */}
+                        <div>
+                          <label style={{ display: 'block', fontWeight: 700, fontSize: '0.82rem', color: '#065f46', marginBottom: 6 }}>
+                            {productOrigine === 'labo' ? 'Labo(s)' : 'Activité(s)'} <span style={{ color: '#ef4444' }}>*</span>
+                            <span style={{ fontWeight: 400, color: '#64748b', fontSize: '0.74rem', marginLeft: 6 }}>
+                              détermine les articles disponibles{(productOrigine === 'labo' ? allLabos.length : allActivities.length) > 1 ? ' (articles en commun si plusieurs)' : ''}
+                            </span>
+                          </label>
+                          {(() => {
+                            const opts = productOrigine === 'labo' ? allLabos : allActivities.map((a) => ({ id: a.id, nom: a.nom }));
+                            if (opts.length === 0) return <div style={{ fontSize: '0.82rem', color: '#b45309' }}>Aucun {productOrigine === 'labo' ? 'labo' : 'activité'} disponible.</div>;
+                            return (
+                              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                                {opts.map((o) => {
+                                  const checked = addAffectationIds.includes(o.id);
+                                  return (
+                                    <button type="button" key={o.id}
+                                      onClick={() => setAddAffectationIds((prev) => checked ? prev.filter((id) => id !== o.id) : [...prev, o.id])}
+                                      style={{ padding: '6px 12px', borderRadius: 8, border: `1.5px solid ${checked ? '#059669' : '#e2e8f0'}`, background: checked ? '#f0fdf4' : '#fff', color: checked ? '#065f46' : '#374151', fontWeight: checked ? 700 : 500, fontSize: '0.82rem', cursor: 'pointer' }}>
+                                      {productOrigine === 'labo' ? '🏭' : '🏪'} {o.nom}{checked ? ' ✓' : ''}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            );
+                          })()}
+                        </div>
                         <div>
                           <label style={{ display: 'block', fontWeight: 700, fontSize: '0.82rem', color: '#065f46', marginBottom: 6 }}>
                             Nom du produit <span style={{ color: '#ef4444' }}>*</span>
@@ -1774,7 +1812,7 @@ export default function ProductList() {
                             return (
                               <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 8 }}>
                                 <button className="btn btn-ghost" onClick={() => setAddModal(2)}>← Retour</button>
-                                <button disabled={!canNext} onClick={() => setAddModal(4)}
+                                <button disabled={!canNext} onClick={() => setAddModal(5)}
                                   style={{ background: canNext ? 'linear-gradient(135deg, #047857, #059669)' : '#e5e7eb', border: 'none', borderRadius: 10, color: canNext ? '#fff' : '#9ca3af', fontWeight: 700, padding: '9px 22px', cursor: canNext ? 'pointer' : 'not-allowed' }}
                                   title={!canNext ? (addIsSupplement ? 'Sélectionnez exactement 1 article ou produit utilisable' : 'Au minimum 2 articles/produits utilisables requis') : undefined}>
                                   Suivant →
@@ -1926,7 +1964,7 @@ export default function ProductList() {
                             </div>
                           )}
                           <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 4, borderTop: '1px solid var(--border)' }}>
-                            <button className="btn btn-ghost" onClick={() => setAddModal(isVendable ? 3 : 4)}>← Retour</button>
+                            <button className="btn btn-ghost" onClick={() => setAddModal(3)}>← Retour</button>
                             <button disabled={addSaving}
                               onClick={handleSave}
                               style={{ background: 'linear-gradient(135deg, #047857, #059669)', border: 'none', borderRadius: 10, color: '#fff', fontWeight: 700, padding: '10px 28px', cursor: addSaving ? 'not-allowed' : 'pointer', opacity: addSaving ? 0.7 : 1, fontSize: '0.9rem' }}>
