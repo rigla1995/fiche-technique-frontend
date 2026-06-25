@@ -7,13 +7,14 @@ interface Act { id: number; nom: string; laboId?: number | null; }
 
 interface Props {
   categories: CategorieProduit[]; // catégories de type 'valorise'
+  editProductId?: number;         // si fourni → mode édition
   onClose: () => void;
   onCreated: () => void;
 }
 
-// Création d'un PRODUIT VALORISÉ COMPOSÉ : un produit fabriqué au labo (recette d'articles du labo),
+// Création / édition d'un PRODUIT VALORISÉ COMPOSÉ : produit fabriqué au labo (recette d'articles du labo),
 // transféré vers les activités liées cochées (PT, pas d'appro manuel), vendu tel quel (valorisé).
-export default function ComposedValoriseModal({ categories, onClose, onCreated }: Props) {
+export default function ComposedValoriseModal({ categories, editProductId, onClose, onCreated }: Props) {
   const [name, setName] = useState('');
   const [refProduit, setRefProduit] = useState('');
   const [categorieId, setCategorieId] = useState('');
@@ -34,23 +35,41 @@ export default function ComposedValoriseModal({ categories, onClose, onCreated }
       .catch(() => {});
   }, []);
 
-  // Articles consommables communs aux labos choisis + pré-cochage des activités liées.
+  // Articles consommables communs aux labos choisis.
   useEffect(() => {
-    if (selectedLabos.length === 0) { setArticles([]); setCheckedActivites([]); return; }
+    if (selectedLabos.length === 0) { setArticles([]); return; }
     api.get(`/api/labo/articles-consommables?laboIds=${selectedLabos.join(',')}`)
       .then(({ data }) => setArticles(data as ActiviteIngredient[]))
       .catch(() => setArticles([]));
-    const linked = activites.filter((a) => a.laboId != null && selectedLabos.includes(Number(a.laboId))).map((a) => a.id);
-    setCheckedActivites(linked);
-  }, [selectedLabos, activites]);
+  }, [selectedLabos]);
+
+  // Mode édition : pré-remplit nom/réf/catégorie/labos/activités/recette.
+  useEffect(() => {
+    if (!editProductId) return;
+    api.get(`/api/products/${editProductId}`).then(({ data }) => {
+      const p = data as { name: string; refProduit?: string | null; categorieProduitId?: number | null; laboIds?: number[]; activiteStockIds?: number[]; ingredients?: { ingredientId: number; portion: number }[] };
+      setName(p.name || '');
+      setRefProduit(p.refProduit || '');
+      setCategorieId(p.categorieProduitId ? String(p.categorieProduitId) : '');
+      setSelectedLabos(p.laboIds || []);
+      setCheckedActivites(p.activiteStockIds || []);
+      setLines((p.ingredients || []).map((i) => ({ ingredientId: String(i.ingredientId), portion: String(i.portion) })));
+    }).catch(() => {});
+  }, [editProductId]);
 
   const linkedActivites = activites.filter((a) => a.laboId != null && selectedLabos.includes(Number(a.laboId)));
   const selectedIngIds = new Set(lines.map((l) => l.ingredientId));
   const toggleIng = (id: string) =>
     setLines((prev) => (selectedIngIds.has(id) ? prev.filter((l) => l.ingredientId !== id) : [...prev, { ingredientId: id, portion: '' }]));
   const setPortion = (id: string, v: string) => setLines((prev) => prev.map((l) => (l.ingredientId === id ? { ...l, portion: v } : l)));
+  // Toggle d'un labo + recalcul des activités liées pré-cochées (mode création / re-toggle).
   const toggleLabo = (id: number) =>
-    setSelectedLabos((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+    setSelectedLabos((prev) => {
+      const next = prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id];
+      const linked = activites.filter((a) => a.laboId != null && next.includes(Number(a.laboId))).map((a) => a.id);
+      setCheckedActivites(linked);
+      return next;
+    });
 
   const validLines = lines.filter((l) => l.ingredientId && parseFloat(l.portion) > 0);
   const canSave = !!name.trim() && !!categorieId && selectedLabos.length > 0 && validLines.length >= 1;
@@ -58,7 +77,7 @@ export default function ComposedValoriseModal({ categories, onClose, onCreated }
   const save = async () => {
     setSaving(true); setError(null);
     try {
-      await api.post('/api/products', {
+      const payload = {
         name: name.trim(),
         refProduit: refProduit.trim() || null,
         type: 'vendable',
@@ -68,7 +87,9 @@ export default function ComposedValoriseModal({ categories, onClose, onCreated }
         activiteIds: checkedActivites,
         ingredients: validLines.map((l) => ({ ingredientId: parseInt(l.ingredientId), portion: parseFloat(l.portion) })),
         subProducts: [],
-      });
+      };
+      if (editProductId) await api.put(`/api/products/${editProductId}`, payload);
+      else await api.post('/api/products', payload);
       onCreated();
     } catch (e: unknown) {
       setError((e as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Erreur lors de la création.');
@@ -82,7 +103,7 @@ export default function ComposedValoriseModal({ categories, onClose, onCreated }
     <div className="modal-overlay">
       <div className="modal" style={{ maxWidth: 600, width: '95vw', maxHeight: '92vh', overflow: 'auto' }} onClick={(e) => e.stopPropagation()}>
         <div className="modal-header modal-header--primary">
-          <h2>💎 Nouveau produit valorisé composé</h2>
+          <h2>💎 {editProductId ? 'Modifier le produit valorisé composé' : 'Nouveau produit valorisé composé'}</h2>
           <button className="modal-close" onClick={onClose}>×</button>
         </div>
         <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -192,7 +213,7 @@ export default function ComposedValoriseModal({ categories, onClose, onCreated }
         </div>
         <div className="modal-footer">
           <button className="btn btn-ghost" onClick={onClose}>Annuler</button>
-          <button className="btn btn-primary" disabled={!canSave || saving} onClick={save}>{saving ? 'Création…' : 'Créer le produit valorisé'}</button>
+          <button className="btn btn-primary" disabled={!canSave || saving} onClick={save}>{saving ? 'Enregistrement…' : (editProductId ? 'Enregistrer' : 'Créer le produit valorisé')}</button>
         </div>
       </div>
     </div>
