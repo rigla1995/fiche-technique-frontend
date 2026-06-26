@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useContext, createContext } from 'rea
 import { useSearchParams, Link } from 'react-router-dom';
 import api from '../../api/client';
 import HelpButton from '../common/HelpButton';
+import HistoryFilterBar, { FilterField, FilterInput, FilterSelect } from '../common/HistoryFilterBar';
 import { useAuth } from '../../context/AuthContext';
 import type { Activite } from '../../types';
 
@@ -24,13 +25,6 @@ const CD = '#78350f';
 const CL = '#fffbeb';
 const CB = '#fcd34d';
 const PAGE = 10;
-
-const ExcelIcon = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}>
-    <rect width="24" height="24" rx="3" fill="#1D6F42"/>
-    <path d="M7 7l3.5 5L7 17h2.5l2.5-3.5L14.5 17H17l-3.5-5L17 7h-2.5L12 10.5 9.5 7H7z" fill="white"/>
-  </svg>
-);
 
 // ── Interfaces ────────────────────────────────────────────────────────────────
 
@@ -655,53 +649,41 @@ export default function VentesPage() {
 
             {/* ── HISTORIQUE ── */}
             {!loading && activeTab === 'historique' && (
-              <div style={{ background: '#fff', borderRadius: 14, border: `1.5px solid ${CB}`, overflow: 'hidden', boxShadow: '0 2px 12px rgba(180,83,9,0.08)' }}>
-                <div style={{ display: 'flex', gap: 10, padding: '12px 16px', borderBottom: `1px solid ${CB}`, flexWrap: 'wrap', alignItems: 'center', background: '#fafafa' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: '0 0 auto' }}>
-                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>Du</span>
-                    <input type="date" value={histDateFrom} onChange={e => setHistDateFrom(e.target.value)}
-                      style={{ padding: '6px 8px', borderRadius: 8, border: `1.5px solid ${histDateFrom ? C : CB}`, background: histDateFrom ? CL : '#fff', fontSize: '0.8rem', color: CD, outline: 'none' }} />
-                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>Au</span>
-                    <input type="date" value={histDateTo} onChange={e => setHistDateTo(e.target.value)}
-                      style={{ padding: '6px 8px', borderRadius: 8, border: `1.5px solid ${histDateTo ? C : CB}`, background: histDateTo ? CL : '#fff', fontSize: '0.8rem', color: CD, outline: 'none' }} />
-                  </div>
-                  <select value={histType} onChange={e => { setHistType(e.target.value as typeof histType); setHistPage(0); }}
-                    style={{ flex: '0 0 150px', padding: '7px 10px', borderRadius: 8, border: `1.5px solid ${histType !== 'all' ? C : CB}`, background: histType !== 'all' ? CL : '#fff', fontSize: '0.83rem', color: CD, outline: 'none', cursor: 'pointer' }}>
+              <>
+              <HistoryFilterBar
+                accent={C} accentDark={CD}
+                subtitle={`${allExpandedRows.length} ligne${allExpandedRows.length > 1 ? 's' : ''}${selectedVenteIds.size > 0 ? ` · ${selectedVenteIds.size} sélectionnée${selectedVenteIds.size > 1 ? 's' : ''}` : ''}`}
+                onReset={() => { setHistDateFrom(''); setHistDateTo(''); setHistType('all'); setHistTypeProduit('all'); setHistPrestaId(''); setHistPage(0); }}
+                showReset={!!(histDateFrom || histDateTo || histType !== 'all' || histTypeProduit !== 'all' || histPrestaId)}
+                onExportExcel={handleExportXls} excelDisabled={exportingXls}
+              >
+                <FilterField label="📅 Du"><FilterInput type="date" value={histDateFrom} onChange={e => setHistDateFrom(e.target.value)} /></FilterField>
+                <FilterField label="📅 Au"><FilterInput type="date" value={histDateTo} onChange={e => setHistDateTo(e.target.value)} /></FilterField>
+                <FilterField label="🧾 Type vente">
+                  <FilterSelect value={histType} onChange={e => { setHistType(e.target.value as typeof histType); setHistPage(0); }}>
                     <option value="all">Tous types vente</option>
                     <option value="directe">Directe</option>
                     <option value="prestataire">Prestataire</option>
-                  </select>
-                  <select value={histTypeProduit} onChange={e => { setHistTypeProduit(e.target.value as typeof histTypeProduit); setHistPage(0); }}
-                    style={{ flex: '0 0 160px', padding: '7px 10px', borderRadius: 8, border: `1.5px solid ${histTypeProduit !== 'all' ? C : CB}`, background: histTypeProduit !== 'all' ? CL : '#fff', fontSize: '0.83rem', color: CD, outline: 'none', cursor: 'pointer' }}>
+                  </FilterSelect>
+                </FilterField>
+                <FilterField label="📦 Type produit">
+                  <FilterSelect value={histTypeProduit} onChange={e => { setHistTypeProduit(e.target.value as typeof histTypeProduit); setHistPage(0); }}>
                     <option value="all">Tous types produit</option>
                     <option value="produit">🛍️ Produit</option>
                     <option value="supplement">🧂 Supplément</option>
                     <option value="valorise">💎 Valorisé</option>
-                  </select>
-                  {activePrests.length > 0 && (
-                    <select value={histPrestaId} onChange={e => setHistPrestaId(e.target.value)}
-                      style={{ flex: '0 0 170px', padding: '7px 10px', borderRadius: 8, border: `1.5px solid ${histPrestaId ? C : CB}`, background: histPrestaId ? CL : '#fff', fontSize: '0.83rem', color: CD, outline: 'none', cursor: 'pointer' }}>
+                  </FilterSelect>
+                </FilterField>
+                {activePrests.length > 0 && (
+                  <FilterField label="🚚 Prestataire">
+                    <FilterSelect value={histPrestaId} onChange={e => setHistPrestaId(e.target.value)}>
                       <option value="">Tous prestataires</option>
                       {activePrests.map(ap => <option key={ap.id} value={ap.id}>{ap.prestataire_nom}</option>)}
-                    </select>
-                  )}
-                  {(histDateFrom || histDateTo || histType !== 'all' || histTypeProduit !== 'all' || histPrestaId) && (
-                    <button onClick={() => { setHistDateFrom(''); setHistDateTo(''); setHistType('all'); setHistTypeProduit('all'); setHistPrestaId(''); setHistPage(0); }}
-                      style={{ padding: '6px 12px', borderRadius: 8, border: `1px solid ${CB}`, background: '#fff', color: C, fontSize: '0.78rem', cursor: 'pointer', fontWeight: 600, whiteSpace: 'nowrap' }}>
-                      ✕ Réinitialiser
-                    </button>
-                  )}
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
-                    {allExpandedRows.length} ligne{allExpandedRows.length > 1 ? 's' : ''}
-                    {selectedVenteIds.size > 0 && (
-                      <span style={{ marginLeft: 6, color: '#FF6B00', fontWeight: 700 }}>· {selectedVenteIds.size} sélectionnée{selectedVenteIds.size > 1 ? 's' : ''}</span>
-                    )}
-                  </div>
-                  <button onClick={handleExportXls} disabled={exportingXls}
-                    style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6, padding: '6px 14px', borderRadius: 8, border: '1.5px solid #1D6F42', background: exportingXls ? '#f3f4f6' : '#f0fdf4', color: '#1D6F42', cursor: exportingXls ? 'default' : 'pointer', fontWeight: 700, fontSize: '0.8rem', whiteSpace: 'nowrap' }}>
-                    <ExcelIcon /> {exportingXls ? 'Export…' : 'Exporter XLS'}
-                  </button>
-                </div>
+                    </FilterSelect>
+                  </FilterField>
+                )}
+              </HistoryFilterBar>
+              <div style={{ background: '#fff', borderRadius: 14, border: `1.5px solid ${CB}`, overflow: 'hidden', boxShadow: '0 2px 12px rgba(180,83,9,0.08)' }}>
 
                 {allExpandedRows.length === 0 ? (
                   <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--text-muted)' }}>
@@ -789,6 +771,7 @@ export default function VentesPage() {
                   </>
                 )}
               </div>
+              </>
             )}
           </>
         )}

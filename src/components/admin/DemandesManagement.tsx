@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import api from '../../api/client';
 import type { Demande } from '../../types';
+import HistoryFilterBar, { FilterField, FilterSegmented } from '../common/HistoryFilterBar';
 
 const STATUT_COLORS: Record<string, { bg: string; color: string }> = {
   en_attente:  { bg: '#fef9c3', color: '#854d0e' },
@@ -66,30 +67,12 @@ export default function DemandesManagement() {
         <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0 }}>Demandes clients</h1>
       </div>
 
-      {/* Filter row */}
-      <div style={{
-        background: 'var(--surface)', borderRadius: 14, padding: '16px 20px', marginBottom: 20,
-        border: '1px solid var(--border)', boxShadow: '0 2px 12px rgba(0,0,0,0.05)',
-        display: 'flex', flexWrap: 'wrap', gap: 14, alignItems: 'flex-end',
-      }}>
-        <div style={{ width: '100%', marginBottom: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span style={{ fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#0d9488' }}>Filtres</span>
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column' }}>
-          <label style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>📊 Statut</label>
-          <div style={{ display: 'flex', gap: 8 }}>
-            {STATUT_OPTIONS.map((opt) => (
-              <button
-                key={opt.value}
-                onClick={() => setFilterStatut(opt.value)}
-                className={`btn btn-sm ${filterStatut === opt.value ? 'btn-primary' : 'btn-ghost'}`}
-              >
-                {opt.label}
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
+      {/* Barre de filtres (composant partagé) */}
+      <HistoryFilterBar accent="#0d9488" accentDark="#0f766e">
+        <FilterField label="📊 Statut" span>
+          <FilterSegmented options={STATUT_OPTIONS} value={filterStatut} onChange={setFilterStatut} accent="#0d9488" />
+        </FilterField>
+      </HistoryFilterBar>
 
       {loading ? (
         <div className="loading-text">Chargement…</div>
