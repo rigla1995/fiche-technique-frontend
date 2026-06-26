@@ -75,7 +75,6 @@ export default function InventairePage() {
       .catch(() => {});
   }, [section]);
 
-  const isClientMode = !laboId && !section && !activiteId;
   const isLaboMode = !!laboId;
   const themeColor = isLaboMode ? '#7e22ce' : '#1e40af';
   const themeDark = isLaboMode ? '#3b0764' : '#1e3a8a';
@@ -87,7 +86,7 @@ export default function InventairePage() {
   const heroShadow = isLaboMode ? '0 8px 32px rgba(126,34,206,0.28)' : '0 8px 32px rgba(30,64,175,0.28)';
 
   const loadStock = useCallback(async () => {
-    if (!laboId && !effectiveActiviteId && !isClientMode) return;
+    if (!laboId && !effectiveActiviteId) return;
     setLoading(true);
     setErrorMsg('');
     try {
@@ -96,8 +95,6 @@ export default function InventairePage() {
         url = `/api/labo/${laboId}/inventaire`;
         const laboRes = await api.get(`/api/labo/${laboId}`);
         setContextNom(laboRes.data?.nom || 'Labo');
-      } else if (isClientMode) {
-        url = '/api/stock/client/inventaire';
       } else {
         url = `/api/stock/entreprise/${effectiveActiviteId}/inventaire`;
         const act = activites.find((a) => a.id === effectiveActiviteId);
@@ -113,7 +110,7 @@ export default function InventairePage() {
       setOpenCategories(new Set());
     } catch { setErrorMsg('Erreur lors du chargement.'); }
     setLoading(false);
-  }, [laboId, effectiveActiviteId, activites, isClientMode]);
+  }, [laboId, effectiveActiviteId, activites]);
 
   useEffect(() => { loadStock(); }, [loadStock]);
 
@@ -171,8 +168,6 @@ export default function InventairePage() {
       }));
       const url = laboId
         ? `/api/labo/${laboId}/inventaire`
-        : isClientMode
-        ? '/api/stock/client/inventaire'
         : `/api/stock/entreprise/${effectiveActiviteId}/inventaire`;
       await api.post(url, { dateInventaire: date, entries });
       setSuccessMsg('Inventaire enregistré avec succès.');

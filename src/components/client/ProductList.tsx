@@ -30,7 +30,6 @@ const ExcelIcon = () => (
 export default function ProductList() {
   const { t } = useTranslation();
   const { canWrite, user } = useAuth();
-  const isEntreprise = true;
   const canWriteProducts = canWrite && user?.role !== 'gerant';
 
   const [searchParams] = useSearchParams();
@@ -144,7 +143,7 @@ export default function ProductList() {
       .then(({ data }) => setProducts(data as Product[]))
       .finally(() => setLoading(false));
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isEntreprise, laboId]);
+  }, [laboId]);
 
   const openEditModal = useCallback(async (p: Product) => {
     setEditProductId(p.id);
@@ -365,12 +364,10 @@ export default function ProductList() {
   const paginated = bySubTab.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
 
   const getProductResolvedActId = (p: Product): number => {
-    if (!isEntreprise) return 0;
     return p.activiteId || 0;
   };
 
   const getProductFtContext = (p: Product): { contextLabel: string; activityName: string } => {
-    if (!isEntreprise) return { contextLabel: '', activityName: '' };
     const act = allActivities.find((a) => a.id === p.activiteId);
     return act ? { contextLabel: `Activité : ${act.nom}`, activityName: act.nom } : { contextLabel: '', activityName: '' };
   };
@@ -491,7 +488,6 @@ export default function ProductList() {
 
       {tab === 'fiche-technique' ? (
         <FicheTechniqueTab
-          isEntreprise={isEntreprise}
           allActivities={allActivities}
         />
       ) : (

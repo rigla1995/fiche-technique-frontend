@@ -2,7 +2,6 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
-import { useSelection } from '../../context/SelectionContext';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -20,8 +19,6 @@ interface GlobalIngredient {
   categorie: string;
   // entreprise: per-context assignment
   contexts?: IngContext[];
-  // indépendant: single flag
-  selected?: boolean;
 }
 
 interface DeselectModal {
@@ -332,7 +329,6 @@ function FiltersBar({
 export default function GlobalCataloguePage() {
   const { t } = useTranslation();
   const { user, canWrite, advanceOnboarding } = useAuth();
-  const { refreshSelections } = useSelection();
 
   const [ingredients, setIngredients] = useState<GlobalIngredient[]>([]);
   const [loading, setLoading] = useState(false);
@@ -366,23 +362,6 @@ export default function GlobalCataloguePage() {
     on ? n.add(key) : n.delete(key);
     return n;
   });
-
-  const doToggleIndep = async (ingId: number, deleteHistory = false) => {
-    const key = String(ingId);
-    setTogglingKey(key, true);
-    try {
-      const { data } = await api.post(`/ingredients/${ingId}/select`);
-      refreshSelections();
-      if (data.selected && user?.onboardingStep === 3) {
-        await advanceOnboarding(0);
-        window.dispatchEvent(new Event('activites-changed'));
-      }
-      if (deleteHistory) await api.delete(`/api/stock/client/${ingId}/all-history`);
-      setIngredients((prev) => prev.map((i) => i.id === ingId ? { ...i, selected: data.selected } : i));
-    } finally {
-      setTogglingKey(key, false);
-    }
-  };
 
   // Entreprise bulk toggle (all contexts for one ingredient)
   const toggleContextAll = async (ingId: number, contexts: IngContext[], assign: boolean) => {
@@ -561,8 +540,6 @@ export default function GlobalCataloguePage() {
                     if (contextType === 'activite' && contextId != null) {
                       const ctx: IngContext = { type: 'activite', id: contextId, nom: '', assigned: true };
                       await doToggleContext(ingId, ctx, hasCascade);
-                    } else {
-                      await doToggleIndep(ingId, hasCascade);
                     }
                   }}
                 >
