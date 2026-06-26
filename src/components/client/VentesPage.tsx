@@ -504,6 +504,7 @@ export default function VentesPage() {
       if (histDateFrom) params.set('from', histDateFrom);
       if (histDateTo) params.set('to', histDateTo);
       if (histType !== 'all') params.set('type', histType);
+      if (histTypeProduit !== 'all') params.set('typeProduit', histTypeProduit);
       if (histPrestaId) params.set('prestataireId', histPrestaId);
       if (selectedVenteIds.size > 0) params.set('selectedIds', [...selectedVenteIds].join(','));
       const resp = await api.get(`/api/ventes/export-excel?${params}`, { responseType: 'blob' });

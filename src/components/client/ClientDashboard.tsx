@@ -6,6 +6,7 @@ import {
 } from 'recharts';
 import api from '../../api/client';
 import HelpButton from '../common/HelpButton';
+import HistoryFilterBar, { FilterField, FilterInput, FilterSelect, FilterSegmented } from '../common/HistoryFilterBar';
 import type { Activite } from '../../types';
 
 interface DashKpis {
@@ -140,26 +141,26 @@ export default function ClientDashboard() {
         {data?.periode && <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.8)', background: 'rgba(255,255,255,0.12)', borderRadius: 10, padding: '8px 14px' }}>{data.periode.from.split('-').reverse().join('/')} → {data.periode.to.split('-').reverse().join('/')}</div>}
       </div>
 
-      <div style={{ background: 'var(--surface)', borderRadius: 12, border: '1px solid var(--border)', padding: '10px 14px', marginBottom: 20, display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}>
-        <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Période</span>
-        {presets.map(p => (
-          <button key={p.key} onClick={() => setPreset(p.key)}
-            style={{ fontSize: '0.78rem', padding: '5px 11px', borderRadius: 8, cursor: 'pointer', fontWeight: 600, border: `1px solid ${preset === p.key ? '#4338ca' : 'var(--border)'}`, background: preset === p.key ? '#eef2ff' : 'var(--bg)', color: preset === p.key ? '#3730a3' : 'var(--text)' }}>{p.label}</button>
-        ))}
-        {preset === 'perso' && (
-          <>
-            <input type="date" value={customFrom} onChange={e => setCustomFrom(e.target.value)} style={{ fontSize: '0.78rem', padding: '5px 8px', borderRadius: 8, border: '1px solid var(--border)' }} />
-            <input type="date" value={customTo} onChange={e => setCustomTo(e.target.value)} style={{ fontSize: '0.78rem', padding: '5px 8px', borderRadius: 8, border: '1px solid var(--border)' }} />
-          </>
-        )}
-        <span style={{ width: 1, height: 20, background: 'var(--border)', margin: '0 4px' }} />
+      {/* Barre de filtres (composant partagé) — présets de période + activité */}
+      <HistoryFilterBar accent="#4338ca" accentDark="#3730a3">
+        <FilterField label="📅 Période" span>
+          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}>
+            <FilterSegmented options={presets.map(p => ({ value: p.key, label: p.label }))} value={preset} onChange={(v) => setPreset(v as Preset)} accent="#4338ca" />
+            {preset === 'perso' && (<>
+              <FilterInput type="date" value={customFrom} onChange={e => setCustomFrom(e.target.value)} style={{ width: 'auto', flex: '0 0 auto' }} />
+              <FilterInput type="date" value={customTo} onChange={e => setCustomTo(e.target.value)} style={{ width: 'auto', flex: '0 0 auto' }} />
+            </>)}
+          </div>
+        </FilterField>
         {activites.length > 1 && (
-          <select value={activiteId} onChange={e => setActiviteId(e.target.value)} style={{ fontSize: '0.78rem', padding: '6px 10px', borderRadius: 8, border: '1px solid var(--border)' }}>
-            <option value="">Toutes activités</option>
-            {activites.map(a => <option key={a.id} value={a.id}>{a.nom}</option>)}
-          </select>
+          <FilterField label="🏪 Activité">
+            <FilterSelect value={activiteId} onChange={e => setActiviteId(e.target.value)}>
+              <option value="">Toutes activités</option>
+              {activites.map(a => <option key={a.id} value={a.id}>{a.nom}</option>)}
+            </FilterSelect>
+          </FilterField>
         )}
-      </div>
+      </HistoryFilterBar>
 
       {loading ? (
         <div className="loading-text">Chargement…</div>

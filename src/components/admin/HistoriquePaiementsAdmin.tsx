@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import api from '../../api/client';
+import { FilterInput, FilterSegmented } from '../common/HistoryFilterBar';
 
 const STATUT_COLORS: Record<string, string> = {
   payé:       '#16a34a',
@@ -144,9 +145,9 @@ export default function HistoriquePaiementsAdmin() {
             ))}
           </div>
           <div style={{ position: 'relative' }}>
-            <span style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', fontSize: 12, pointerEvents: 'none' }}>🔍</span>
-            <input placeholder="Rechercher un client…" value={search} onChange={(e) => setSearch(e.target.value)}
-              style={{ width: '100%', padding: '8px 10px 8px 30px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.2)', fontSize: 12, outline: 'none', background: 'rgba(255,255,255,0.12)', color: '#fff', boxSizing: 'border-box' }} />
+            <span style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', fontSize: 12, pointerEvents: 'none', zIndex: 1 }}>🔍</span>
+            <FilterInput placeholder="Rechercher un client…" value={search} onChange={(e) => setSearch(e.target.value)}
+              style={{ height: 'auto', padding: '8px 10px 8px 30px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.2)', fontSize: 12, background: 'rgba(255,255,255,0.12)', color: '#fff' }} />
           </div>
         </div>
         <div style={{ overflowY: 'auto', maxHeight: 520 }}>
@@ -231,24 +232,21 @@ export default function HistoriquePaiementsAdmin() {
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14, alignItems: 'flex-end', marginTop: 14 }}>
                 <div style={{ display: 'flex', flexDirection: 'column' }}>
                   <label style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>📊 Statut</label>
-                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                    {(['', 'payé', 'en_attente', 'impayé', 'gratuit', 'remisé'] as const).map((v) => {
-                      const label = v === '' ? 'Tous' : STATUT_LABELS[v] || v;
-                      const color = v ? STATUT_COLORS[v] : '#64748b';
-                      const active = filtStatut === v;
-                      return (
-                        <button key={v} onClick={() => setFiltStatut(v)}
-                          style={{ padding: '4px 12px', borderRadius: 20, fontSize: 11, fontWeight: 600, cursor: 'pointer', border: `1.5px solid ${active ? color : '#e2e8f0'}`, background: active ? color + '18' : '#fff', color: active ? color : '#94a3b8' }}>
-                          {label}
-                        </button>
-                      );
-                    })}
-                  </div>
+                  <FilterSegmented
+                    options={(['', 'payé', 'en_attente', 'impayé', 'gratuit', 'remisé'] as const).map((v) => ({
+                      value: v,
+                      label: v === '' ? 'Tous' : STATUT_LABELS[v] || v,
+                      color: v ? STATUT_COLORS[v] : undefined,
+                    }))}
+                    value={filtStatut}
+                    onChange={setFiltStatut}
+                    accent="#0d9488"
+                  />
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column' }}>
                   <label style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>📅 Période</label>
-                  <input type="month" value={filtMois} onChange={(e) => setFiltMois(e.target.value)}
-                    style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid var(--border)', fontSize: '0.88rem', background: 'var(--background)', minWidth: 160 }} />
+                  <FilterInput type="month" value={filtMois} onChange={(e) => setFiltMois(e.target.value)}
+                    style={{ width: 'auto', minWidth: 160 }} />
                 </div>
               </div>
             </div>
