@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import api from '../../api/client';
 import HelpButton from '../common/HelpButton';
+import HistoryFilterBar, { FilterField, FilterInput, FilterSelect } from '../common/HistoryFilterBar';
 import type { Activite } from '../../types';
 import GuideButton from './GuideButton';
 
@@ -203,42 +204,27 @@ export default function FacturesApproPage() {
         </div>
       )}
 
-      {/* Filters */}
-      <div style={{ background: 'var(--surface)', borderRadius: 14, padding: '12px 16px', border: '1px solid var(--border)', boxShadow: '0 2px 12px rgba(0,0,0,0.05)', marginBottom: 24 }}>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'flex-end' }}>
-          <div>
-            <label style={{ fontSize: '0.62rem', fontWeight: 700, color: '#1e40af', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 4 }}>📅 Du</label>
-            <input type="date" style={{ padding: '6px 10px', borderRadius: 7, border: '1.5px solid #1e40af', fontSize: '0.82rem', background: '#eff6ff', fontWeight: 600 }}
-              value={startDate} onChange={(e) => setStartDate(e.target.value)} />
-          </div>
-          <div>
-            <label style={{ fontSize: '0.62rem', fontWeight: 700, color: '#1e40af', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 4 }}>📅 Au</label>
-            <input type="date" style={{ padding: '6px 10px', borderRadius: 7, border: '1.5px solid #1e40af', fontSize: '0.82rem', background: '#eff6ff', fontWeight: 600 }}
-              value={endDate} onChange={(e) => setEndDate(e.target.value)} />
-          </div>
-          {nonLaboFournisseurs.length > 0 && (
-            <div>
-              <label style={{ fontSize: '0.62rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 4 }}>🚚 Fournisseur</label>
-              <select style={{ padding: '6px 10px', borderRadius: 7, border: '1.5px solid #93c5fd', fontSize: '0.82rem', background: '#eff6ff', minWidth: 130 }}
-                value={selectedFournisseurId} onChange={(e) => setSelectedFournisseurId(e.target.value)}>
-                <option value="">— Tous —</option>
-                {nonLaboFournisseurs.map((f) => <option key={f.id} value={f.id}>{f.nom}</option>)}
-              </select>
-            </div>
-          )}
-          <div>
-            <label style={{ fontSize: '0.62rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 4 }}>🧾 Réf. Facture</label>
-            <input type="text" style={{ padding: '6px 10px', borderRadius: 7, border: '1.5px solid #93c5fd', fontSize: '0.82rem', background: '#eff6ff', minWidth: 120 }}
-              placeholder="Réf…" value={refFactureFilter} onChange={(e) => setRefFactureFilter(e.target.value)} />
-          </div>
-          {(selectedFournisseurId || refFactureFilter || startDate !== yearStart || endDate !== yearEnd) && (
-            <button onClick={() => { setSelectedFournisseurId(''); setRefFactureFilter(''); setStartDate(yearStart); setEndDate(yearEnd); }}
-              style={{ alignSelf: 'flex-end', background: 'transparent', border: '1.5px solid var(--border)', borderRadius: 7, padding: '5px 9px', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '0.85rem', fontWeight: 700 }}
-              title="Réinitialiser">✕</button>
-          )}
-          {loading && <span style={{ alignSelf: 'flex-end', fontSize: '0.78rem', color: 'var(--text-muted)', fontStyle: 'italic', paddingBottom: 6 }}>Chargement…</span>}
-        </div>
-      </div>
+      {/* Barre de filtres (composant partagé, mode direct) */}
+      <HistoryFilterBar
+        accent="#1e40af" accentDark="#1e3a8a"
+        subtitle={loading ? 'Chargement…' : undefined}
+        onReset={() => { setSelectedFournisseurId(''); setRefFactureFilter(''); setStartDate(yearStart); setEndDate(yearEnd); }}
+        showReset={!!(selectedFournisseurId || refFactureFilter || startDate !== yearStart || endDate !== yearEnd)}
+      >
+        <FilterField label="📅 Du"><FilterInput type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} /></FilterField>
+        <FilterField label="📅 Au"><FilterInput type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} /></FilterField>
+        {nonLaboFournisseurs.length > 0 && (
+          <FilterField label="🚚 Fournisseur">
+            <FilterSelect value={selectedFournisseurId} onChange={(e) => setSelectedFournisseurId(e.target.value)}>
+              <option value="">— Tous —</option>
+              {nonLaboFournisseurs.map((f) => <option key={f.id} value={f.id}>{f.nom}</option>)}
+            </FilterSelect>
+          </FilterField>
+        )}
+        <FilterField label="🧾 Réf. Facture">
+          <FilterInput type="text" placeholder="Réf…" value={refFactureFilter} onChange={(e) => setRefFactureFilter(e.target.value)} />
+        </FilterField>
+      </HistoryFilterBar>
 
       {/* Results */}
       {loading ? (

@@ -27,6 +27,15 @@ function Divider() {
   return <li style={{ borderTop: '1px solid var(--border)', margin: '8px 16px 4px' }} />;
 }
 
+// En-tête d'« espace » dans la sidebar admin (libellé de section, non cliquable).
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <li style={{ fontSize: '0.64rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', padding: '2px 18px 6px', userSelect: 'none' }}>
+      {children}
+    </li>
+  );
+}
+
 function CollapsibleHeader({
   label,
   icon,
@@ -241,43 +250,55 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
         <ul className="sidebar-nav" style={{ flex: 1 }}>
           {user?.role === 'super_admin' ? (
             <>
-              {/* ── Liens directs ── */}
+              {/* ── Tableau de bord (accueil) ── */}
               <li>
-                <NavLink to="/admin/rapports" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>
+                <NavLink to="/admin/dashboard" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>
                   <span className="link-icon">📊</span>
-                  <span className="link-label">Rapports</span>
+                  <span className="link-label">Tableau de bord</span>
                 </NavLink>
               </li>
+
+              <Divider />
+              <SectionLabel>Espace Clients</SectionLabel>
               <li>
                 <NavLink to="/admin/clients" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>
                   <span className="link-icon">👥</span>
                   <span className="link-label">{t('nav.clients')}</span>
                 </NavLink>
               </li>
-
-              <Divider />
-
-              {/* ══ ABONNEMENTS ══ */}
               <li>
                 <NavLink to="/admin/abonnements" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>
                   <span className="link-icon">💳</span>
                   <span className="link-label">Abonnements</span>
                 </NavLink>
               </li>
-
-              <Divider />
-
-              {/* ══ AGENTS IA ══ */}
               <li>
-                <NavLink to="/admin/active-agents" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>
-                  <span className="link-icon">🤖</span>
-                  <span className="link-label">Agents Actifs</span>
+                <NavLink to="/admin/support" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>
+                  <span className="link-icon">💬</span>
+                  <span className="link-label">Demandes</span>
+                </NavLink>
+              </li>
+              <li>
+                <NavLink to="/admin/rapports" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>
+                  <span className="link-icon">📈</span>
+                  <span className="link-label">Rapports</span>
                 </NavLink>
               </li>
 
               <Divider />
-
-              {/* ══ TARIFS ══ */}
+              <SectionLabel>Espace Configuration</SectionLabel>
+              <li>
+                <NavLink to="/admin/domaines" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>
+                  <span className="link-icon">🗂️</span>
+                  <span className="link-label">Domaines d'activités</span>
+                </NavLink>
+              </li>
+              <li>
+                <NavLink to="/admin/prestataires" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>
+                  <span className="link-icon">🚚</span>
+                  <span className="link-label">Prestataires</span>
+                </NavLink>
+              </li>
               <li>
                 <NavLink to="/admin/tarifs" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>
                   <span className="link-icon">⚙️</span>
@@ -286,25 +307,13 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
               </li>
 
               <Divider />
-
-              {/* ══ SUPPORT ══ */}
+              <SectionLabel>Espace IA</SectionLabel>
               <li>
-                <NavLink to="/admin/support" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>
-                  <span className="link-icon">💬</span>
-                  <span className="link-label">Demandes</span>
+                <NavLink to="/admin/active-agents" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>
+                  <span className="link-icon">🤖</span>
+                  <span className="link-label">Agents IA</span>
                 </NavLink>
               </li>
-
-              <Divider />
-
-              {/* ══ PRESTATAIRES ══ */}
-              <li>
-                <NavLink to="/admin/prestataires" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>
-                  <span className="link-icon">🚚</span>
-                  <span className="link-label">Prestataires</span>
-                </NavLink>
-              </li>
-              {/* ══ BASE DE CONNAISSANCES IA ══ */}
               <li>
                 <NavLink to="/admin/knowledge-base" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>
                   <span className="link-icon">🧠</span>

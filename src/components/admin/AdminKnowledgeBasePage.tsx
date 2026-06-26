@@ -13,6 +13,7 @@ interface KbEntry {
 }
 
 const empty = { titre: '', contenu: '', motsCles: '', categorie: '', actif: true };
+const PAGE_SIZE = 10;
 
 export default function AdminKnowledgeBasePage() {
   const [entries, setEntries] = useState<KbEntry[]>([]);
@@ -23,6 +24,7 @@ export default function AdminKnowledgeBasePage() {
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState('');
   const [search, setSearch] = useState('');
+  const [page, setPage] = useState(1);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -66,6 +68,10 @@ export default function AdminKnowledgeBasePage() {
   const filtered = entries.filter((e) =>
     !search || `${e.titre} ${e.categorie || ''} ${e.motsCles || ''}`.toLowerCase().includes(search.toLowerCase()));
   const activeCount = entries.filter((e) => e.actif).length;
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+  const pageEntries = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+  useEffect(() => { if (page > totalPages) setPage(totalPages); }, [totalPages, page]);
 
   return (
     <div className="page">
@@ -85,17 +91,18 @@ export default function AdminKnowledgeBasePage() {
       <HistoryFilterBar
         accent="#4338ca" accentDark="#3730a3"
         subtitle={`${filtered.length} article${filtered.length !== 1 ? 's' : ''}`}
-        onReset={() => setSearch('')} showReset={!!search}
+        onReset={() => { setSearch(''); setPage(1); }} showReset={!!search}
       >
         <FilterField label="🔍 Recherche">
-          <FilterInput value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Titre, catégorie, mots-clés…" />
+          <FilterInput value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} placeholder="Titre, catégorie, mots-clés…" />
         </FilterField>
       </HistoryFilterBar>
 
       {loading ? <div className="loading-text">Chargement…</div> : (
+        <>
         <div style={{ display: 'grid', gap: 10 }}>
           {filtered.length === 0 && <div style={{ color: 'var(--text-muted)', padding: 20, textAlign: 'center' }}>Aucun article.</div>}
-          {filtered.map((e) => (
+          {pageEntries.map((e) => (
             <div key={e.id} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderLeft: `4px solid ${e.actif ? '#4338ca' : '#cbd5e1'}`, borderRadius: 12, padding: '14px 16px', opacity: e.actif ? 1 : 0.6 }}>
               <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
@@ -116,6 +123,14 @@ export default function AdminKnowledgeBasePage() {
             </div>
           ))}
         </div>
+        {totalPages > 1 && (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 16 }}>
+            <button disabled={safePage <= 1} onClick={() => setPage(safePage - 1)} style={{ padding: '5px 12px', borderRadius: 8, border: '1px solid #c7d2fe', background: '#fff', color: '#4338ca', cursor: safePage <= 1 ? 'default' : 'pointer', fontWeight: 700, opacity: safePage <= 1 ? 0.4 : 1 }}>‹</button>
+            <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)', fontWeight: 600 }}>{safePage} / {totalPages}</span>
+            <button disabled={safePage >= totalPages} onClick={() => setPage(safePage + 1)} style={{ padding: '5px 12px', borderRadius: 8, border: '1px solid #c7d2fe', background: '#fff', color: '#4338ca', cursor: safePage >= totalPages ? 'default' : 'pointer', fontWeight: 700, opacity: safePage >= totalPages ? 0.4 : 1 }}>›</button>
+          </div>
+        )}
+        </>
       )}
 
       {/* Form modal */}
