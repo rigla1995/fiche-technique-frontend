@@ -9,8 +9,6 @@ interface Client {
   name: string;
   email: string;
   phone?: string;
-  compteType?: 'independant' | 'entreprise' | null;
-  onboardingStep?: number;
   createdAt?: string;
   activatedAt?: string | null;
   domaineIds?: number[];
@@ -327,20 +325,6 @@ export default function ClientsManagement() {
                           title="Renvoyer l'invitation"
                         >
                           {resendingId === c.id ? '…' : '✉️ Renvoyer'}
-                        </button>
-                      )}
-                      {c.compteType !== 'independant' && (c.onboardingStep ?? 0) > 0 && (
-                        <button
-                          className="btn btn-ghost btn-sm"
-                          style={{ color: 'var(--warning, #b45309)', borderColor: 'var(--warning, #b45309)' }}
-                          title="Réinitialiser l'onboarding"
-                          onClick={async () => {
-                            if (!window.confirm(`Réinitialiser l'onboarding de ${c.name} ?`)) return;
-                            await api.put(`/admin/clients/${c.id}`, { onboardingStep: 0 });
-                            setClients((prev) => prev.map((x) => x.id === c.id ? { ...x, onboardingStep: 0 } : x));
-                          }}
-                        >
-                          🔓 Reset
                         </button>
                       )}
                       <button className="btn btn-danger btn-sm" onClick={() => setDeleteTarget(c)} title="Supprimer">🗑️</button>
