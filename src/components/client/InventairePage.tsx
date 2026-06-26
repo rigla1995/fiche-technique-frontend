@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useSearchParams, Link, useNavigate } from 'react-router-dom';
 import api from '../../api/client';
 import HelpButton from '../common/HelpButton';
+import HistoryFilterBar, { FilterField, FilterInput, FilterSelect } from '../common/HistoryFilterBar';
 import { useAuth } from '../../context/AuthContext';
 
 const todayStr = () => new Date().toISOString().slice(0, 10);
@@ -265,48 +266,37 @@ export default function InventairePage() {
       )}
 
       <>
-        {/* ── Bloc unifié Filtres + Inventaire sur la même ligne ── */}
-          <div style={{
-            background: 'var(--surface)', borderRadius: 14, padding: '14px 20px', marginBottom: 20,
-            border: `1.5px solid ${themeBorder}`, boxShadow: isLaboMode ? '0 2px 12px rgba(126,34,206,0.08)' : '0 2px 12px rgba(30,64,175,0.08)',
-            display: 'flex', flexWrap: 'wrap', gap: 14, alignItems: 'flex-end',
-          }}>
-            <div>
-              <label style={{ fontSize: '0.62rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 4 }}>🏷️ Catégorie</label>
-              <select value={filterCategory} onChange={(e) => { setFilterCategory(e.target.value); setFilterIngredient(''); }}
-                style={{ padding: '7px 11px', borderRadius: 7, border: `1.5px solid ${themeBorder}`, fontSize: '0.82rem', background: themeLight, minWidth: 160 }}>
+        {/* Barre de filtres (composant partagé) — filtres + date d'inventaire + Enregistrer */}
+          <HistoryFilterBar
+            accent={themeColor} accentDark={themeDark}
+            onReset={resetFilters} showReset={!!(filterCategory || filterIngredient)}
+            actions={
+              <button onClick={handleSave} disabled={saving || !hasAnyQty || !canWrite} style={{
+                height: 36, background: hasAnyQty && canWrite ? `linear-gradient(135deg, ${themeDark} 0%, ${themeColor} 100%)` : '#e5e7eb',
+                borderRadius: 8, border: 'none', color: hasAnyQty && canWrite ? '#fff' : '#9ca3af',
+                fontWeight: 800, padding: '0 22px', cursor: hasAnyQty && canWrite ? 'pointer' : 'not-allowed',
+                opacity: saving ? 0.7 : 1, fontSize: '0.88rem', whiteSpace: 'nowrap',
+              }}>
+                {saving ? 'Enregistrement...' : `Enregistrer${filledCount > 0 ? ` (${filledCount})` : ''}`}
+              </button>
+            }
+          >
+            <FilterField label="🏷️ Catégorie">
+              <FilterSelect value={filterCategory} onChange={(e) => { setFilterCategory(e.target.value); setFilterIngredient(''); }}>
                 <option value="">— Toutes —</option>
                 {categories.map((c) => <option key={c} value={c}>{c}</option>)}
-              </select>
-            </div>
-            <div>
-              <label style={{ fontSize: '0.62rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 4 }}>🧂 Ingrédient</label>
-              <select value={filterIngredient} onChange={(e) => setFilterIngredient(e.target.value)}
-                disabled={!filterCategory}
-                style={{ padding: '7px 11px', borderRadius: 7, border: `1.5px solid ${themeBorder}`, fontSize: '0.82rem', background: themeLight, minWidth: 160 }}>
+              </FilterSelect>
+            </FilterField>
+            <FilterField label="🧂 Ingrédient">
+              <FilterSelect value={filterIngredient} disabled={!filterCategory} onChange={(e) => setFilterIngredient(e.target.value)}>
                 <option value="">— Tous —</option>
                 {ingredientsInCat.map((r) => <option key={r.ingredientId} value={String(r.ingredientId)}>{r.nom}</option>)}
-              </select>
-            </div>
-            <div>
-              <label style={{ fontSize: '0.62rem', fontWeight: 700, color: themeColor, textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 4 }}>📅 Date inventaire</label>
-              <input type="date" value={date} onChange={(e) => setDate(e.target.value)}
-                max={todayStr()}
-                style={{ padding: '7px 11px', borderRadius: 7, border: `1.5px solid ${themeBorder}`, fontSize: '0.82rem', fontWeight: 700, color: themeDark, background: themeLight }} />
-            </div>
-            <button onClick={handleSave} disabled={saving || !hasAnyQty || !canWrite} style={{
-              background: hasAnyQty && canWrite ? `linear-gradient(135deg, ${themeDark} 0%, ${themeColor} 100%)` : '#e5e7eb',
-              boxShadow: hasAnyQty && canWrite ? `0 4px 14px rgba(${isLaboMode ? '126,34,206' : '30,64,175'},0.35)` : 'none',
-              borderRadius: 9, border: 'none', color: hasAnyQty && canWrite ? '#fff' : '#9ca3af',
-              fontWeight: 800, padding: '7px 22px', cursor: hasAnyQty && canWrite ? 'pointer' : 'not-allowed',
-              opacity: saving ? 0.7 : 1, fontSize: '0.88rem', transition: 'all 0.15s', alignSelf: 'flex-end',
-            }}>
-              {saving ? 'Enregistrement...' : `Enregistrer${filledCount > 0 ? ` (${filledCount})` : ''}`}
-            </button>
-            {(filterCategory || filterIngredient) && (
-              <button onClick={resetFilters} style={{ alignSelf: 'flex-end', background: 'transparent', border: '1.5px solid var(--border)', borderRadius: 7, padding: '5px 9px', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '0.85rem', lineHeight: 1, fontWeight: 700 }} title="Réinitialiser">✕</button>
-            )}
-          </div>
+              </FilterSelect>
+            </FilterField>
+            <FilterField label="📅 Date inventaire">
+              <FilterInput type="date" value={date} max={todayStr()} onChange={(e) => setDate(e.target.value)} />
+            </FilterField>
+          </HistoryFilterBar>
 
           {/* ── Messages ── */}
           {errorMsg && (

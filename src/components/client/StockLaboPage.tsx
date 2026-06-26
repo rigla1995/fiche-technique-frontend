@@ -8,6 +8,7 @@ import PortionsModal from './PortionsModal';
 import InvoiceConfirmModal, { type InvoiceLineItem } from './InvoiceConfirmModal';
 import ApproPreviewPanel, { type PreviewLine } from './ApproPreviewPanel';
 import GuideButton from './GuideButton';
+import HistoryFilterBar, { FilterField, FilterInput, FilterSelect } from '../common/HistoryFilterBar';
 
 const currentYear = new Date().getFullYear();
 const yearStart = `${currentYear}-01-01`;
@@ -606,61 +607,44 @@ export default function StockLaboPage() {
         <>
 
 
-          {/* Filter panel — compact single-row layout */}
-          <div style={{
-            background: 'var(--surface)', borderRadius: 10, padding: '10px 14px', marginBottom: 20,
-            border: '1px solid var(--border)', boxShadow: '0 1px 6px rgba(0,0,0,0.04)',
-          }}>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'flex-end' }}>
-              {/* Catégorie */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                <label style={{ fontSize: '0.62rem', fontWeight: 800, color: '#7e22ce', textTransform: 'uppercase', letterSpacing: '0.07em' }}>🏷️ Catégorie</label>
-                <select style={{ padding: '6px 10px', borderRadius: 7, border: '1.5px solid #7e22ce', fontSize: '0.82rem', background: '#faf5ff', minWidth: 140 }} value={sFilterCat} onChange={(e) => { setSFilterCat(e.target.value); setSFilterIngId(''); }}>
-                  <option value="">{t('client.catalogue_franchise.all_categories')}</option>
-                  {allStockCats.map((c) => <option key={c} value={c}>{c}</option>)}
-                </select>
-              </div>
-              {/* Ingrédient */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                <label style={{ fontSize: '0.62rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>🧂 Article</label>
-                <select style={{ padding: '6px 10px', borderRadius: 7, border: '1.5px solid var(--border)', fontSize: '0.82rem', background: 'var(--background)', minWidth: 140 }} value={sFilterIngId} disabled={!sFilterCat} onChange={(e) => setSFilterIngId(e.target.value)}>
+          {/* Filter panel */}
+          <HistoryFilterBar
+            accent="#7e22ce"
+            accentDark="#6d28d9"
+            onReset={() => { setSFilterCat(''); setSFilterIngId(''); setSFilterNom(''); setSFilterFournisseur(''); setSFilterRefFacture(''); }}
+            showReset={!!(sFilterCat || sFilterIngId || sFilterNom || sFilterFournisseur || sFilterRefFacture)}
+          >
+            <FilterField label="🏷️ Catégorie">
+              <FilterSelect value={sFilterCat} onChange={(e) => { setSFilterCat(e.target.value); setSFilterIngId(''); }}>
+                <option value="">{t('client.catalogue_franchise.all_categories')}</option>
+                {allStockCats.map((c) => <option key={c} value={c}>{c}</option>)}
+              </FilterSelect>
+            </FilterField>
+            <FilterField label="🧂 Article">
+              <FilterSelect value={sFilterIngId} disabled={!sFilterCat} onChange={(e) => setSFilterIngId(e.target.value)}>
+                <option value="">— Tous —</option>
+                {stockInCat.map((r) => <option key={r.ingredientId} value={String(r.ingredientId)}>{r.nom}</option>)}
+              </FilterSelect>
+            </FilterField>
+            <FilterField label="🔍 Nom">
+              <FilterInput type="text" placeholder="Rechercher…" value={sFilterNom} onChange={(e) => setSFilterNom(e.target.value)} />
+            </FilterField>
+            <FilterField label="🚚 Fournisseur">
+              {hasFournisseurs ? (
+                <FilterSelect value={sFilterFournisseur} onChange={(e) => setSFilterFournisseur(e.target.value)}>
                   <option value="">— Tous —</option>
-                  {stockInCat.map((r) => <option key={r.ingredientId} value={String(r.ingredientId)}>{r.nom}</option>)}
-                </select>
-              </div>
-              {/* Nom */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                <label style={{ fontSize: '0.62rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>🔍 Nom</label>
-                <input type="text" style={{ padding: '6px 10px', borderRadius: 7, border: '1.5px solid var(--border)', fontSize: '0.82rem', background: 'var(--background)', minWidth: 130 }} placeholder="Rechercher…" value={sFilterNom} onChange={(e) => setSFilterNom(e.target.value)} />
-              </div>
-              {/* Fournisseur — always visible */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                <label style={{ fontSize: '0.62rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>🚚 Fournisseur</label>
-                {hasFournisseurs ? (
-                  <select style={{ padding: '6px 10px', borderRadius: 7, border: '1.5px solid var(--border)', fontSize: '0.82rem', background: 'var(--background)', minWidth: 140 }} value={sFilterFournisseur} onChange={(e) => setSFilterFournisseur(e.target.value)}>
-                    <option value="">— Tous —</option>
-                    {fournisseurs.map((f) => <option key={f.id} value={String(f.id)}>{f.nom}</option>)}
-                  </select>
-                ) : (
-                  <select style={{ padding: '6px 10px', borderRadius: 7, border: '2px solid #f97316', fontSize: '0.82rem', background: '#fff7ed', minWidth: 140, color: '#9a3412', fontStyle: 'italic' }} disabled>
-                    <option>⚠ Aucun fournisseur</option>
-                  </select>
-                )}
-              </div>
-              {/* Réf. Facture */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                <label style={{ fontSize: '0.62rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>🧾 Réf. Facture</label>
-                <input type="text" style={{ padding: '6px 10px', borderRadius: 7, border: '1.5px solid var(--border)', fontSize: '0.82rem', background: 'var(--background)', minWidth: 130 }} placeholder="Réf. facture…" value={sFilterRefFacture} onChange={(e) => setSFilterRefFacture(e.target.value)} />
-              </div>
-              {/* Reset */}
-              {(sFilterCat || sFilterIngId || sFilterNom || sFilterFournisseur || sFilterRefFacture) && (
-                <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', gap: 2 }}>
-                  <label style={{ fontSize: '0.62rem', opacity: 0 }}>x</label>
-                  <button onClick={() => { setSFilterCat(''); setSFilterIngId(''); setSFilterNom(''); setSFilterFournisseur(''); setSFilterRefFacture(''); }} style={{ alignSelf: 'flex-end', background: 'transparent', border: '1.5px solid var(--border)', borderRadius: 7, padding: '5px 9px', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '0.85rem', lineHeight: 1, fontWeight: 700 }} title="Réinitialiser">✕</button>
-                </div>
+                  {fournisseurs.map((f) => <option key={f.id} value={String(f.id)}>{f.nom}</option>)}
+                </FilterSelect>
+              ) : (
+                <FilterSelect disabled style={{ border: '2px solid #f97316', background: '#fff7ed', color: '#9a3412', fontStyle: 'italic' }}>
+                  <option>⚠ Aucun fournisseur</option>
+                </FilterSelect>
               )}
-            </div>
-          </div>
+            </FilterField>
+            <FilterField label="🧾 Réf. Facture">
+              <FilterInput type="text" placeholder="Réf. facture…" value={sFilterRefFacture} onChange={(e) => setSFilterRefFacture(e.target.value)} />
+            </FilterField>
+          </HistoryFilterBar>
 
           {/* Seuil min modal */}
           {seuilModal && (
@@ -978,45 +962,28 @@ export default function StockLaboPage() {
       {tab === 'ingredients' && (
         <>
           {/* Filter panel */}
-          <div style={{
-            background: 'var(--surface)', borderRadius: 14, padding: '16px 20px', marginBottom: 24,
-            border: '1px solid var(--border)', boxShadow: '0 2px 12px rgba(0,0,0,0.05)',
-          }}>
-            {/* Panel header */}
-            <div style={{ width: '100%', marginBottom: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: 12, borderBottom: '1px solid var(--border)' }}>
-              <span style={{ fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#7e22ce' }}>Filtres</span>
-              {(iFilterCat || iFilterIngId || iFilterNom) && (
-                <button onClick={() => { setIFilterCat(''); setIFilterIngId(''); setIFilterNom(''); }} style={{ background: 'transparent', border: '1.5px solid var(--border)', borderRadius: 7, padding: '5px 9px', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '0.85rem', lineHeight: 1, fontWeight: 700 }} title="Réinitialiser">✕</button>
-              )}
-            </div>
-            {/* Section: Produit */}
-            <div style={{ marginTop: 14 }}>
-              <div style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
-                <span style={{ width: 16, height: 2, background: '#7e22ce', display: 'inline-block', borderRadius: 2 }} />
-                Produit
-              </div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14, alignItems: 'flex-end' }}>
-                <div>
-                  <label style={{ fontSize: '0.68rem', fontWeight: 800, color: '#7e22ce', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>🏷️ Catégorie</label>
-                  <select style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid #7e22ce', fontSize: '0.88rem', background: '#faf5ff', minWidth: 160 }} value={iFilterCat} onChange={(e) => { setIFilterCat(e.target.value); setIFilterIngId(''); }}>
-                    <option value="">{t('client.catalogue_franchise.all_categories')}</option>
-                    {allIngCats.map((c) => <option key={c} value={c}>{c}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>🧂 Article</label>
-                  <select style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid var(--border)', fontSize: '0.88rem', background: 'var(--background)', minWidth: 160 }} value={iFilterIngId} disabled={!iFilterCat} onChange={(e) => setIFilterIngId(e.target.value)}>
-                    <option value="">— Tous —</option>
-                    {ingInCat.map((i) => <option key={i.ingredientId} value={String(i.ingredientId)}>{i.nom}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>🔍 Nom article</label>
-                  <input type="text" style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid var(--border)', fontSize: '0.88rem', background: 'var(--background)', minWidth: 160 }} placeholder="Rechercher…" value={iFilterNom} onChange={(e) => setIFilterNom(e.target.value)} />
-                </div>
-              </div>
-            </div>
-          </div>
+          <HistoryFilterBar
+            accent="#7e22ce"
+            accentDark="#6d28d9"
+            onReset={() => { setIFilterCat(''); setIFilterIngId(''); setIFilterNom(''); }}
+            showReset={!!(iFilterCat || iFilterIngId || iFilterNom)}
+          >
+            <FilterField label="🏷️ Catégorie">
+              <FilterSelect value={iFilterCat} onChange={(e) => { setIFilterCat(e.target.value); setIFilterIngId(''); }}>
+                <option value="">{t('client.catalogue_franchise.all_categories')}</option>
+                {allIngCats.map((c) => <option key={c} value={c}>{c}</option>)}
+              </FilterSelect>
+            </FilterField>
+            <FilterField label="🧂 Article">
+              <FilterSelect value={iFilterIngId} disabled={!iFilterCat} onChange={(e) => setIFilterIngId(e.target.value)}>
+                <option value="">— Tous —</option>
+                {ingInCat.map((i) => <option key={i.ingredientId} value={String(i.ingredientId)}>{i.nom}</option>)}
+              </FilterSelect>
+            </FilterField>
+            <FilterField label="🔍 Nom article">
+              <FilterInput type="text" placeholder="Rechercher…" value={iFilterNom} onChange={(e) => setIFilterNom(e.target.value)} />
+            </FilterField>
+          </HistoryFilterBar>
 
           {assignLoading ? (
             <p className="text-muted">{t('common.loading')}</p>
