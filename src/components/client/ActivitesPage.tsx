@@ -545,7 +545,16 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                         )}
                         <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
                           <button className="btn btn-ghost btn-sm" title={t('common.edit')} onClick={() => openEdit(act)}>✏️</button>
-                          <button className="btn btn-danger-ghost btn-sm" title={t('common.delete')} onClick={() => setDeleteTarget({ kind: 'activite', act })}>🗑</button>
+                          {(() => {
+                            const locked = (act.ingredientCount ?? 0) > 0;
+                            return (
+                              <span title={locked ? 'Suppression impossible : des articles sont affectés à cette activité.' : undefined}>
+                                <button className="btn btn-danger-ghost btn-sm" disabled={locked}
+                                  title={locked ? 'Suppression impossible : des articles sont affectés à cette activité.' : t('common.delete')}
+                                  onClick={() => setDeleteTarget({ kind: 'activite', act })}>🗑</button>
+                              </span>
+                            );
+                          })()}
                         </td>
                       </tr>
                     ))}
@@ -612,7 +621,16 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                           <td style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{labo.adresse || '—'}</td>
                           <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
                             <button className="btn btn-ghost btn-sm" title="Modifier" onClick={() => openEditLabo(labo)}>✏️</button>
-                            <button className="btn btn-danger-ghost btn-sm" title="Supprimer" onClick={() => setDeleteLaboTarget(labo)}>🗑</button>
+                            {(() => {
+                              const locked = (labo.ingredientCount ?? 0) > 0;
+                              return (
+                                <span title={locked ? 'Suppression impossible : des articles sont affectés à ce labo.' : undefined}>
+                                  <button className="btn btn-danger-ghost btn-sm" disabled={locked}
+                                    title={locked ? 'Suppression impossible : des articles sont affectés à ce labo.' : 'Supprimer'}
+                                    onClick={() => setDeleteLaboTarget(labo)}>🗑</button>
+                                </span>
+                              );
+                            })()}
                           </td>
                         </tr>
                       ))}

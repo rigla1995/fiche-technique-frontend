@@ -309,6 +309,7 @@ export interface Labo {
   adresse?: string | null;
   createdAt?: string;
   fournisseurCount?: number;
+  ingredientCount?: number;
 }
 
 export interface ActiviteTypesSummary {
