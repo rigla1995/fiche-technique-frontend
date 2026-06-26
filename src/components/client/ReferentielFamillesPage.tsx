@@ -2,14 +2,10 @@ import { useState, useEffect } from 'react';
 import api from '../../api/client';
 import type { Famille } from '../../types';
 import GuideButton from './GuideButton';
+import HistoryFilterBar, { FilterField, FilterInput } from '../common/HistoryFilterBar';
 
 const COLOR = '#16a34a';
 const GRADIENT = 'linear-gradient(135deg, #14532d 0%, #16a34a 55%, #4ade80 100%)';
-
-const LABEL: React.CSSProperties = {
-  fontSize: '0.68rem', fontWeight: 700, color: 'var(--text-muted)',
-  textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 3, display: 'block',
-};
 
 interface FamRow { nom: string; consommable: boolean; vendable: boolean; }
 const emptyRow = (): FamRow => ({ nom: '', consommable: true, vendable: true });
@@ -114,17 +110,16 @@ export default function ReferentielFamillesPage() {
         </div>
       </div>
 
-      {/* Filter bar */}
-      <div style={{ background: 'var(--surface)', borderRadius: 14, padding: '14px 18px', marginBottom: 20, border: '1px solid var(--border)', boxShadow: '0 2px 8px rgba(0,0,0,0.04)', display: 'flex', alignItems: 'flex-end', gap: 12, flexWrap: 'wrap' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 180 }}>
-          <span style={{ fontSize: '1.1rem', flexShrink: 0 }}>🔍</span>
-          <div style={{ flex: 1 }}>
-            <span style={LABEL}>Recherche</span>
-            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Filtrer les familles…" style={{ width: '100%', padding: '8px 11px', borderRadius: 8, border: '1.5px solid var(--border)', fontSize: '0.88rem', background: '#f8fafc', boxSizing: 'border-box' }} />
-          </div>
-        </div>
-        <button className="btn" onClick={openCreate} style={{ background: 'linear-gradient(135deg,#15803d,#16a34a)', color: '#fff', flexShrink: 0 }}>+ Nouvelle famille</button>
-      </div>
+      {/* Barre de filtres (composant partagé, mode direct) */}
+      <HistoryFilterBar
+        accent={COLOR} accentDark="#15803d"
+        subtitle={`${filtered.length} famille${filtered.length !== 1 ? 's' : ''}`}
+        onReset={() => setSearch('')}
+        showReset={!!search}
+        actions={<button className="btn" onClick={openCreate} style={{ background: 'linear-gradient(135deg,#15803d,#16a34a)', color: '#fff', border: 'none' }}>+ Nouvelle famille</button>}
+      >
+        <FilterField label="🔍 Recherche"><FilterInput value={search} onChange={e => setSearch(e.target.value)} placeholder="Filtrer les familles…" /></FilterField>
+      </HistoryFilterBar>
 
       {/* List */}
       {loading ? (

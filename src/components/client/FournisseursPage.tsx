@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import api from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
+import HistoryFilterBar, { FilterField, FilterInput } from '../common/HistoryFilterBar';
 import type { Fournisseur, FournisseurApproActivite, Activite, Labo } from '../../types';
 
 interface FournisseurFormData {
@@ -155,38 +156,36 @@ export default function FournisseursPage() {
         </div>
       </div>
 
-      {/* Filter panel */}
-      <div style={{
-        background: 'var(--surface)', borderRadius: 14, padding: '16px 20px', marginBottom: 24,
-        border: '1px solid var(--border)', boxShadow: '0 2px 12px rgba(0,0,0,0.05)',
-        display: 'flex', flexWrap: 'wrap', gap: 14, alignItems: 'flex-end',
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1 }}>
-          <span style={{ fontSize: '1rem' }}>🔍</span>
-          <input
-            type="text" placeholder="Rechercher par nom, téléphone, adresse…" value={search}
-            onChange={(e) => { setSearch(e.target.value); setFoPage(1); }}
-            style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid #92400e', fontSize: '0.88rem', background: '#fffbeb', flex: 1, minWidth: 160 }}
-          />
-          {search && (
-            <button className="btn btn-ghost btn-sm" style={{ fontSize: '0.78rem', whiteSpace: 'nowrap' }} onClick={() => { setSearch(''); setFoPage(1); }}>✕ Réinitialiser</button>
-          )}
-        </div>
-        {canWrite && (
+      {/* Filtres en direct */}
+      <HistoryFilterBar
+        accent="#ea580c"
+        accentDark="#c2410c"
+        subtitle={`${filteredFournisseurs.length} fournisseur${filteredFournisseurs.length > 1 ? 's' : ''}${search ? ` (filtré${filteredFournisseurs.length > 1 ? 's' : ''})` : ''}`}
+        onReset={() => { setSearch(''); setFoPage(1); }}
+        showReset={!!search}
+        actions={canWrite && (
           <button
             onClick={openCreate}
             style={{
+              height: 36, display: 'inline-flex', alignItems: 'center',
               background: 'linear-gradient(135deg, #92400e, #ea580c)',
               boxShadow: '0 4px 14px rgba(146,64,14,0.3)',
-              borderRadius: 10, border: 'none',
-              color: '#fff', fontWeight: 800, padding: '10px 22px',
-              cursor: 'pointer', fontSize: '0.9rem', whiteSpace: 'nowrap',
+              borderRadius: 8, border: 'none',
+              color: '#fff', fontWeight: 800, padding: '0 18px',
+              cursor: 'pointer', fontSize: '0.83rem', whiteSpace: 'nowrap',
             }}
           >
             + Nouveau fournisseur
           </button>
         )}
-      </div>
+      >
+        <FilterField label="Recherche" span>
+          <FilterInput
+            type="text" placeholder="Nom, téléphone, adresse…" value={search}
+            onChange={(e) => { setSearch(e.target.value); setFoPage(1); }}
+          />
+        </FilterField>
+      </HistoryFilterBar>
 
       {loading ? (
         <p className="text-muted">Chargement…</p>

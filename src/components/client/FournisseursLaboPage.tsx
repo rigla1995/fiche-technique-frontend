@@ -1,6 +1,10 @@
 import { useState, useEffect } from 'react';
 import api from '../../api/client';
+import HistoryFilterBar, { FilterField, FilterInput } from '../common/HistoryFilterBar';
 import type { Labo, Fournisseur } from '../../types';
+
+const ACCENT = '#ea580c';
+const ACCENT_DARK = '#c2410c';
 
 interface NewFournisseurForm {
   nom: string;
@@ -23,6 +27,9 @@ export default function FournisseursLaboPage() {
   const [newSaving, setNewSaving] = useState<Record<number, boolean>>({});
   const [newError, setNewError] = useState<Record<number, string>>({});
   const [showNewForm, setShowNewForm] = useState<Record<number, boolean>>({});
+
+  // Recherche en direct (filtre les labos par nom / réf)
+  const [search, setSearch] = useState('');
 
   const load = async () => {
     setLoading(true);
@@ -116,6 +123,13 @@ export default function FournisseursLaboPage() {
 
   if (loading) return <div className="page"><p className="text-muted">Chargement…</p></div>;
 
+  const filteredLabos = search.trim()
+    ? labos.filter((l) =>
+        l.nom.toLowerCase().includes(search.toLowerCase()) ||
+        (l.refLabo ?? '').toLowerCase().includes(search.toLowerCase())
+      )
+    : labos;
+
   return (
     <div className="page">
       {/* Hero header */}
@@ -140,14 +154,35 @@ export default function FournisseursLaboPage() {
         </div>
       </div>
 
+      {labos.length > 0 && (
+        <HistoryFilterBar
+          accent={ACCENT} accentDark={ACCENT_DARK}
+          subtitle={`${filteredLabos.length} labo${filteredLabos.length !== 1 ? 's' : ''}`}
+          onReset={() => setSearch('')}
+          showReset={!!search}
+        >
+          <FilterField label="🔍 Recherche">
+            <FilterInput
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Filtrer les labos par nom ou réf…"
+            />
+          </FilterField>
+        </HistoryFilterBar>
+      )}
+
       {labos.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '48px 24px', color: 'var(--text-muted)' }}>
           <div style={{ fontSize: '3rem', marginBottom: 12 }}>🏭</div>
           <p style={{ fontSize: '0.95rem' }}>Aucun labo enregistré.</p>
         </div>
+      ) : filteredLabos.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-muted)' }}>
+          Aucun labo ne correspond à cette recherche.
+        </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-          {labos.map((labo) => {
+          {filteredLabos.map((labo) => {
             const assigned = assignments[labo.id] ?? new Set();
             const isSaving = saving[labo.id] ?? false;
             const isShowingNew = showNewForm[labo.id] ?? false;
