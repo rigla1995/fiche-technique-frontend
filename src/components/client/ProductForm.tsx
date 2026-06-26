@@ -23,7 +23,6 @@ export default function ProductForm() {
   const { id } = useParams();
   const [searchParams] = useSearchParams();
   const isEdit = Boolean(id);
-  const isEntreprise = true;
 
   const buildBackUrl = (tab: string) => {
     const params = new URLSearchParams();
@@ -39,9 +38,7 @@ export default function ProductForm() {
   const [selectedActId, setSelectedActId] = useState<string>('');
 
   // preStepDone: for enterprise new products, need to pick activity first
-  const [preStepDone, setPreStepDone] = useState(
-    !isEntreprise || isEdit
-  );
+  const [preStepDone, setPreStepDone] = useState(isEdit);
 
   // ── Form state ───────────────────────────────────────────────────────────
   const [name, setName] = useState('');
@@ -65,7 +62,6 @@ export default function ProductForm() {
 
   // ── Load activities (enterprise) ─────────────────────────────────────────
   useEffect(() => {
-    if (!isEntreprise) return;
     // For gerant users, synthesize activity from user object
     if (user?.role === 'gerant' && user.gerantActiviteType === 'activite' && user.gerantActiviteId) {
       const act = { id: user.gerantActiviteId, nom: user.gerantActiviteNom ?? 'Activité', entrepriseId: 0 } as Activite;
@@ -87,7 +83,7 @@ export default function ProductForm() {
       }
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isEntreprise, user?.role, user?.gerantActiviteId]);
+  }, [user?.role, user?.gerantActiviteId]);
 
   // ── Load product categories (vendable mandatory selection) ────────────────
   useEffect(() => {
@@ -318,7 +314,7 @@ export default function ProductForm() {
   }
 
   // ── Enterprise pre-step (activity selection) ──────────────────────────────
-  if (isEntreprise && !isEdit && !preStepDone) {
+  if (!isEdit && !preStepDone) {
     return (
       <div className="page">
         <div style={{ maxWidth: 560, margin: '0 auto' }}>

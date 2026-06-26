@@ -74,8 +74,6 @@ export default function HistoriqueInventairePage() {
   const [editNote, setEditNote] = useState('');
   const [editSaving, setEditSaving] = useState(false);
 
-  const isClientMode = !laboId && !section && !activiteId;
-
   useEffect(() => {
     api.get('/api/labo').then(({ data }) => {
       const labs = data as { id: number; nom: string }[];
@@ -99,11 +97,9 @@ export default function HistoriqueInventairePage() {
   }, [section]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    if (!laboId && !effectiveActiviteId && !isClientMode) return;
+    if (!laboId && !effectiveActiviteId) return;
     const url = laboId
       ? `/api/labo/${laboId}/inventaire`
-      : isClientMode
-      ? '/api/stock/client/inventaire'
       : `/api/stock/entreprise/${effectiveActiviteId}/inventaire`;
     api.get(url).then(({ data }) => {
       setIngOptions(data.map((r: { ingredientId: number; nom: string; categorie: string }) => ({ ingredientId: r.ingredientId, nom: r.nom, categorie: r.categorie })));
@@ -111,7 +107,7 @@ export default function HistoriqueInventairePage() {
         api.get(`/api/labo/${laboId}`).then(({ data: l }) => setContextNom(l?.nom || 'Labo')).catch(() => {});
       }
     }).catch(() => {});
-  }, [laboId, effectiveActiviteId, isClientMode]);
+  }, [laboId, effectiveActiviteId]);
 
   const categories = [...new Set(ingOptions.map((i) => i.categorie))];
   const filteredIngOptions = filterCategorie
@@ -128,13 +124,11 @@ export default function HistoriqueInventairePage() {
 
   const getUrl = useCallback((suffix: string) => laboId
     ? `/api/labo/${laboId}/inventaire/historique${suffix}`
-    : isClientMode
-    ? `/api/stock/client/inventaire/historique${suffix}`
     : `/api/stock/entreprise/${effectiveActiviteId}/inventaire/historique${suffix}`,
-  [laboId, isClientMode, effectiveActiviteId]);
+  [laboId, effectiveActiviteId]);
 
   const search = useCallback(async () => {
-    if (!laboId && !effectiveActiviteId && !isClientMode) return;
+    if (!laboId && !effectiveActiviteId) return;
     setLoading(true);
     setApplied(true);
     setErrorMsg('');
@@ -148,7 +142,7 @@ export default function HistoriqueInventairePage() {
       setPage(1);
     } catch { setErrorMsg('Erreur lors de la recherche.'); }
     setLoading(false);
-  }, [laboId, effectiveActiviteId, buildParams, filterCategorie, getUrl, isClientMode]);
+  }, [laboId, effectiveActiviteId, buildParams, filterCategorie, getUrl]);
 
   const handleExport = async () => {
     const params = buildParams();
@@ -220,7 +214,7 @@ export default function HistoriqueInventairePage() {
     : contextNom || '';
 
   const showActiviteSelector = !!section && !activiteId && activites.length >= 1;
-  const canSearch = !!laboId || !!effectiveActiviteId || isClientMode;
+  const canSearch = !!laboId || !!effectiveActiviteId;
   const canExport = canWrite && applied && histRows.length > 0;
   const primaryBtn: React.CSSProperties = {
     display: 'flex', alignItems: 'center', gap: 6,

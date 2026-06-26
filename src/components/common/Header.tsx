@@ -30,7 +30,7 @@ export default function Header() {
   const handleNotifClick = (eventType: string) => {
     setOpen(false);
     if (eventType === 'new_inventaire') {
-      navigate('/client/inventaire/historique');
+      navigate('/client/inventaire/historique?section=activite');
     } else if (eventType === 'demande_capacite_validee') {
       navigate('/client/activites');
     } else if (eventType === 'demande_gerant_validee') {
