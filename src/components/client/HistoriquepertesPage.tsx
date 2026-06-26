@@ -157,7 +157,6 @@ function DeletePerteModal({ entry, onConfirm, onClose }: DeletePerteModalProps) 
 export default function HistoriquepertesPage() {
   const { user, canWrite } = useAuth();
   const [searchParams] = useSearchParams();
-  const isEntreprise = true;
   const type = searchParams.get('type');
   const urlActiviteId = searchParams.get('activiteId') || '';
   const isGerant = user?.role === 'gerant';
@@ -200,7 +199,7 @@ export default function HistoriquepertesPage() {
         const all = data as Activite[];
         setActivites(all);
       }).catch(() => {});
-  }, [isEntreprise, type]);
+  }, [type]);
 
   // Load scoped ingredients based on context
   useEffect(() => {
@@ -217,7 +216,7 @@ export default function HistoriquepertesPage() {
         .catch(() => {});
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isEntreprise, fActiviteId, type]);
+  }, [fActiviteId, type]);
 
   const [searched, setSearched] = useState(false);
 
@@ -232,16 +231,14 @@ export default function HistoriquepertesPage() {
       if (fType) params.set('typePerte', fType);
       if (fCategorie) params.set('categorieId', fCategorie);
       if (fIngredient) params.set('ingredientId', fIngredient);
-      if (isEntreprise && fActiviteId) params.set('activiteId', fActiviteId);
+      if (fActiviteId) params.set('activiteId', fActiviteId);
 
-      const url = isEntreprise
-        ? `/api/entreprise/pertes?${params}`
-        : `/api/stock/client/pertes?${params}`;
+      const url = `/api/entreprise/pertes?${params}`;
       const { data } = await api.get(url);
       setEntries(data as HistoriquePerteEntry[]);
     } catch { /* ignore */ }
     setLoading(false);
-  }, [isEntreprise, fActiviteId, fDateDebut, fDateFin, fType, fCategorie, fIngredient]);
+  }, [fActiviteId, fDateDebut, fDateFin, fType, fCategorie, fIngredient]);
 
 
   const totalQty = entries.reduce((s, e) => s + e.quantite, 0);
@@ -269,7 +266,7 @@ export default function HistoriquepertesPage() {
     if (fType) params.set('typePerte', fType);
     if (fCategorie) params.set('categorieId', fCategorie);
     if (fIngredient) params.set('ingredientId', fIngredient);
-    if (isEntreprise && fActiviteId) params.set('activiteId', fActiviteId);
+    if (fActiviteId) params.set('activiteId', fActiviteId);
     if (selected.size > 0) params.set('selectedIds', [...selected].join(','));
     return params;
   };
@@ -278,9 +275,7 @@ export default function HistoriquepertesPage() {
     setExporting(true);
     try {
       const params = buildPertesParams();
-      const url = isEntreprise
-        ? `/api/entreprise/pertes/export-excel?${params}`
-        : `/api/stock/client/pertes/export-excel?${params}`;
+      const url = `/api/entreprise/pertes/export-excel?${params}`;
       const { data } = await api.get(url, { responseType: 'blob' });
       const blobUrl = URL.createObjectURL(new Blob([data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
       const a = document.createElement('a'); a.href = blobUrl;
@@ -295,9 +290,7 @@ export default function HistoriquepertesPage() {
     setExportingPdf(true);
     try {
       const params = buildPertesParams();
-      const url = isEntreprise
-        ? `/api/entreprise/pertes/export-pdf?${params}`
-        : `/api/stock/client/pertes/export-pdf?${params}`;
+      const url = `/api/entreprise/pertes/export-pdf?${params}`;
       const { data } = await api.get(url, { responseType: 'blob' });
       const blobUrl = URL.createObjectURL(new Blob([data], { type: 'application/pdf' }));
       const a = document.createElement('a'); a.href = blobUrl;
@@ -308,13 +301,13 @@ export default function HistoriquepertesPage() {
   };
 
   const handleUpdate = async (id: number, quantite: number, typePerte: 'avarie' | 'dechet') => {
-    const url = isEntreprise ? `/api/entreprise/pertes/${id}` : `/api/stock/client/pertes/${id}`;
+    const url = `/api/entreprise/pertes/${id}`;
     await api.put(url, { quantite, typePerte });
     await loadPertes();
   };
 
   const handleDelete = async (id: number) => {
-    const url = isEntreprise ? `/api/entreprise/pertes/${id}` : `/api/stock/client/pertes/${id}`;
+    const url = `/api/entreprise/pertes/${id}`;
     await api.delete(url);
     await loadPertes();
   };
@@ -340,7 +333,7 @@ export default function HistoriquepertesPage() {
       </div>
 
       {/* Activité selector pills */}
-      {isEntreprise && activites.length > 0 && (
+      {activites.length > 0 && (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16, padding: '10px 14px', background: 'var(--card-bg)', borderRadius: 10, border: '1px solid var(--border)' }}>
           {!isActiviteGerant && <button onClick={() => setFActiviteId('')} style={{ padding: '4px 14px', borderRadius: 20, cursor: 'pointer', fontSize: '0.82rem', border: !fActiviteId ? '1.5px solid #1e40af' : '1.5px solid var(--border)', background: !fActiviteId ? '#1e40af' : 'var(--bg)', color: !fActiviteId ? '#fff' : 'var(--text)', fontWeight: !fActiviteId ? 700 : 400 }}>Toutes</button>}
           {activites.map((a) => (
@@ -451,7 +444,7 @@ export default function HistoriquepertesPage() {
             <thead>
               <tr style={{ background: 'linear-gradient(135deg, #1e3a8a, #1e40af)' }}>
                 <th style={{ width: 32, textAlign: 'center' }} />
-                {isEntreprise && <th>Activité</th>}
+                <th>Activité</th>
                 <th>Article</th>
                 <th>Date</th>
                 <th>Type</th>
@@ -474,7 +467,7 @@ export default function HistoriquepertesPage() {
                     <td style={{ textAlign: 'center' }} onClick={(e) => e.stopPropagation()}>
                       <input type="checkbox" checked={isSelected} onChange={() => toggleSelect(entry.id)} style={{ cursor: 'pointer', accentColor: '#1e40af' }} />
                     </td>
-                    {isEntreprise && <td style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{entry.activiteNom ?? '—'}</td>}
+                    <td style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{entry.activiteNom ?? '—'}</td>
                     <td>
                       <div style={{ fontWeight: 700, fontSize: '0.86rem' }}>{entry.ingredientNom}</div>
                       <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{entry.uniteNom} · {entry.categorieNom ?? '—'}</div>
@@ -521,7 +514,7 @@ export default function HistoriquepertesPage() {
             </tbody>
             <tfoot>
               <tr style={{ background: '#eff6ff', borderTop: '2px solid #93c5fd' }}>
-                <td colSpan={isEntreprise ? (canWrite ? 5 : 4) : (canWrite ? 4 : 3)} />
+                <td colSpan={canWrite ? 5 : 4} />
                 <td style={{ textAlign: 'right', fontWeight: 900, color: '#1e40af', fontSize: '0.95rem' }}>{totalQty.toFixed(3)}</td>
                 <td style={{ fontWeight: 700, fontSize: '0.75rem', color: '#1e3a8a', textTransform: 'uppercase' }}>Total</td>
                 <td />
