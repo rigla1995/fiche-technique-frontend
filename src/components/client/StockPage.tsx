@@ -83,12 +83,7 @@ function PerteModal({ ingredientId, nom, activiteId, stockDisponible, onSaveOver
     const fetchRange = async () => {
       setLoadingRange(true);
       try {
-        let res;
-        if (activiteId) {
-          res = await api.get(`/api/entreprise/pertes/date-range`, { params: { activiteId, ingredientId } });
-        } else {
-          res = await api.get(`/api/stock/client/pertes/date-range`, { params: { ingredientId } });
-        }
+        const res = await api.get(`/api/entreprise/pertes/date-range`, { params: { activiteId, ingredientId } });
         const { minDate, maxDate } = res.data;
         setDateMin(minDate ?? null);
         setDateMax(maxDate ?? null);
@@ -105,12 +100,7 @@ function PerteModal({ ingredientId, nom, activiteId, stockDisponible, onSaveOver
   const fetchPrix = async (date: string) => {
     setLoadingPrix(true);
     try {
-      let res;
-      if (activiteId) {
-        res = await api.get(`/api/entreprise/pertes/prix`, { params: { activiteId, ingredientId, date } });
-      } else {
-        res = await api.get(`/api/stock/client/pertes/prix`, { params: { ingredientId, date } });
-      }
+      const res = await api.get(`/api/entreprise/pertes/prix`, { params: { activiteId, ingredientId, date } });
       setPrixUnitaire(res.data.prixUnitaire ?? null);
     } catch {
       setPrixUnitaire(null);
@@ -566,9 +556,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
     if (historyData[id]) return historyData[id];
     const url = id < 0
       ? `/api/stock/pt/${-id}/history${activiteId ? `?activiteId=${activiteId}` : ''}`
-      : activiteId
-      ? `/api/stock/entreprise/${activiteId}/${id}/history`
-      : `/api/stock/client/${id}/history`;
+      : `/api/stock/entreprise/${activiteId}/${id}/history`;
     try {
       const { data } = await api.get(url);
       const entries: StockHistoryEntry[] = id < 0

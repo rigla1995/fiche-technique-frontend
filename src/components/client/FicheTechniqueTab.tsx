@@ -17,11 +17,10 @@ interface ManualPriceGroup {
 }
 
 interface Props {
-  isEntreprise: boolean;
   allActivities: Activite[];
 }
 
-export default function FicheTechniqueTab({ isEntreprise, allActivities }: Props) {
+export default function FicheTechniqueTab({ allActivities }: Props) {
   const { t } = useTranslation();
 
   // Activity picker for enterprise users
@@ -76,10 +75,10 @@ export default function FicheTechniqueTab({ isEntreprise, allActivities }: Props
   const [generating, setGenerating] = useState(false);
 
   // Resolved activity ID for API calls
-  const resolvedActId = isEntreprise && selectedActId ? parseInt(selectedActId) : 0;
+  const resolvedActId = selectedActId ? parseInt(selectedActId) : 0;
 
   // Whether the activity step is complete
-  const actStepDone = !isEntreprise || !!selectedActId;
+  const actStepDone = !!selectedActId;
 
   // Auto-select if only one activity
   useEffect(() => {
@@ -223,11 +222,7 @@ export default function FicheTechniqueTab({ isEntreprise, allActivities }: Props
           prixUnitaire: parseFloat(fill.price),
           dateAppro: fill.date || today,
         };
-        if (resolvedActId) {
-          await api.put(`/api/stock/entreprise/${resolvedActId}/${ing.ingredientId}`, payload);
-        } else {
-          await api.put(`/api/stock/client/${ing.ingredientId}`, payload);
-        }
+        await api.put(`/api/stock/entreprise/${resolvedActId}/${ing.ingredientId}`, payload);
       }
       // Re-check stock
       const params = new URLSearchParams();
@@ -344,7 +339,7 @@ export default function FicheTechniqueTab({ isEntreprise, allActivities }: Props
     <div style={{ maxWidth: 700 }}>
 
       {/* Step 1: Activity picker (enterprise only) */}
-      {isEntreprise && allActivities.length > 1 && (
+      {allActivities.length > 1 && (
         <div style={{ ...cardStyle, borderLeft: '4px solid var(--primary)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
             <span style={{ width: 22, height: 22, borderRadius: '50%', background: 'var(--primary)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.72rem', fontWeight: 800, flexShrink: 0 }}>1</span>
@@ -365,7 +360,7 @@ export default function FicheTechniqueTab({ isEntreprise, allActivities }: Props
       )}
 
       {/* Activity badge (when only 1 or auto-selected) */}
-      {isEntreprise && allActivities.length === 1 && selectedActivity && (
+      {allActivities.length === 1 && selectedActivity && (
         <div style={{ ...cardStyle, display: 'flex', alignItems: 'center', gap: 12, padding: '12px 18px' }}>
           <span style={{ ...stepLabel, margin: 0 }}>Activité</span>
           <span style={{ fontWeight: 700, color: 'var(--primary)' }}>🏪 {selectedActivity.nom}</span>
@@ -377,7 +372,7 @@ export default function FicheTechniqueTab({ isEntreprise, allActivities }: Props
         <div style={{ ...cardStyle, borderLeft: '4px solid #10b981' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
             <span style={{ width: 22, height: 22, borderRadius: '50%', background: '#10b981', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.72rem', fontWeight: 800, flexShrink: 0 }}>
-              {isEntreprise && allActivities.length > 1 ? '2' : '1'}
+              {allActivities.length > 1 ? '2' : '1'}
             </span>
             <span style={stepLabel}>Type de produit</span>
           </div>
@@ -421,7 +416,7 @@ export default function FicheTechniqueTab({ isEntreprise, allActivities }: Props
         <div style={{ ...cardStyle, borderLeft: '4px solid #f59e0b' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
             <span style={{ width: 22, height: 22, borderRadius: '50%', background: '#f59e0b', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.72rem', fontWeight: 800, flexShrink: 0 }}>
-              {isEntreprise && allActivities.length > 1 ? '3' : '2'}
+              {allActivities.length > 1 ? '3' : '2'}
             </span>
             <span style={stepLabel}>Produit</span>
           </div>
@@ -450,7 +445,7 @@ export default function FicheTechniqueTab({ isEntreprise, allActivities }: Props
         <div style={{ ...cardStyle, borderLeft: '4px solid #8b5cf6' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
             <span style={{ width: 22, height: 22, borderRadius: '50%', background: '#8b5cf6', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.72rem', fontWeight: 800, flexShrink: 0 }}>
-              {isEntreprise && allActivities.length > 1 ? '4' : '3'}
+              {allActivities.length > 1 ? '4' : '3'}
             </span>
             <span style={stepLabel}>{t('client.fiche_technique.choose_mode')}</span>
           </div>
