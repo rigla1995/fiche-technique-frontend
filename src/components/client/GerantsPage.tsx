@@ -14,8 +14,6 @@ interface GerantForm {
 const EMPTY_FORM: GerantForm = { nom: '', telephone: '', email: '', activiteIds: [], laboIds: [] };
 
 export default function GerantsPage() {
-  const isEntreprise = true;
-
   const [gerants, setGerants] = useState<Gerant[]>([]);
   const [activites, setActivites] = useState<Activite[]>([]);
   const [labos, setLabos] = useState<Labo[]>([]);
@@ -29,7 +27,7 @@ export default function GerantsPage() {
   const [abonnementConfig, setAbonnementConfig] = useState<AbonnementConfig | null>(null);
   const { emailExists: gerantEmailExists, emailChecking: gerantEmailChecking } = useEmailCheck(form.email);
 
-  const freeLimit = isEntreprise ? 3 : 1;
+  const freeLimit = 3;
   const freeCount = gerants.filter((g) => g.estGratuit).length;
   const canAddFree = freeCount < freeLimit;
   const maxGerants = abonnementConfig?.nbGerants ?? null;
@@ -39,11 +37,9 @@ export default function GerantsPage() {
     const calls: Promise<unknown>[] = [
       api.get('/api/abonnements/gerants'),
       api.get('/api/abonnements/mon-abonnement').catch(() => null),
+      api.get('/api/entreprise/activites'),
+      api.get('/api/labo/'),
     ];
-    if (isEntreprise) {
-      calls.push(api.get('/api/entreprise/activites'));
-      calls.push(api.get('/api/labo/'));
-    }
     Promise.all(calls).then(([gerantRes, aboRes, activiteRes, laboRes]) => {
       setGerants((gerantRes as { data: Gerant[] }).data);
       if ((aboRes as { data?: { config?: AbonnementConfig } } | null)?.data?.config) {
@@ -52,7 +48,7 @@ export default function GerantsPage() {
       if (activiteRes) setActivites((activiteRes as { data: Activite[] }).data || []);
       if (laboRes) setLabos((laboRes as { data: Labo[] }).data || []);
     }).finally(() => setLoading(false));
-  }, [isEntreprise]);
+  }, []);
 
   const submitForm = async () => {
     if (!form.nom || !form.telephone || !form.email) { setError('Nom, téléphone et email requis'); return; }
@@ -221,7 +217,7 @@ export default function GerantsPage() {
                 {gerantEmailChecking && <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 3 }}>Vérification…</div>}
                 {!gerantEmailChecking && gerantEmailExists && <div style={{ fontSize: 11, color: '#dc2626', marginTop: 3 }}>Cet email est déjà utilisé.</div>}
               </div>
-              {isEntreprise && (() => {
+              {(() => {
                 const allActIds = activites.map((a) => a.id);
                 const allLaboIds = labos.map((l) => l.id);
                 const allChecked = form.activiteIds.length === allActIds.length && form.laboIds.length === allLaboIds.length && (allActIds.length + allLaboIds.length) > 0;
@@ -338,7 +334,7 @@ export default function GerantsPage() {
                   <div style={{ fontSize: '0.8rem', color: '#6b7280' }}>
                     📧 {g.email}{g.telephone ? ` · 📞 ${g.telephone}` : ''}
                   </div>
-                  {isEntreprise && hasAffectation(g) && (
+                  {hasAffectation(g) && (
                     <div style={{ fontSize: '0.78rem', color: '#7c3aed', marginTop: 3, fontWeight: 600 }}>📍 {activiteLabel(g)}</div>
                   )}
                 </div>

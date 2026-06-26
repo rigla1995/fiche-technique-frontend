@@ -25,7 +25,6 @@ const thStyle: React.CSSProperties = {
 
 export default function FournisseursPage() {
   const { canWrite } = useAuth();
-  const isIndep = false;
 
   const [fournisseurs, setFournisseurs] = useState<Fournisseur[]>([]);
   const [activites, setActivites] = useState<Activite[]>([]);
@@ -44,31 +43,24 @@ export default function FournisseursPage() {
   const load = async () => {
     setLoading(true);
     try {
-      if (isIndep) {
-        const fr = await api.get('/api/fournisseurs');
-        setFournisseurs(fr.data as Fournisseur[]);
-      } else {
-        const [fr, ac, lb] = await Promise.all([
-          api.get('/api/entreprise/fournisseurs'),
-          api.get('/api/entreprise/activites'),
-          api.get('/api/labo'),
-        ]);
-        setFournisseurs(fr.data as Fournisseur[]);
-        setActivites(ac.data as Activite[]);
-        setLabos(lb.data as Labo[]);
-      }
+      const [fr, ac, lb] = await Promise.all([
+        api.get('/api/entreprise/fournisseurs'),
+        api.get('/api/entreprise/activites'),
+        api.get('/api/labo'),
+      ]);
+      setFournisseurs(fr.data as Fournisseur[]);
+      setActivites(ac.data as Activite[]);
+      setLabos(lb.data as Labo[]);
     } catch {
       setFournisseurs([]);
     }
     setLoading(false);
   };
 
-  useEffect(() => { load(); }, [isIndep]);
+  useEffect(() => { load(); }, []);
 
   const openCreate = () => {
-    const defaultForm: FournisseurFormData = isIndep
-      ? empty
-      : { ...empty, activiteIds: activites.map((a) => a.id) };
+    const defaultForm: FournisseurFormData = { ...empty, activiteIds: activites.map((a) => a.id) };
     setForm(defaultForm);
     setError('');
     setModal({ mode: 'create' });
@@ -93,11 +85,9 @@ export default function FournisseursPage() {
     try {
       const activiteIds = form.activiteIds;
       const laboIds = form.laboIds;
-      const payload = isIndep
-        ? { nom: form.nom.trim(), adresse: form.adresse.trim() || null, telephone: form.telephone.trim() || null }
-        : { nom: form.nom.trim(), adresse: form.adresse.trim() || null, telephone: form.telephone.trim() || null, activiteIds, laboIds };
+      const payload = { nom: form.nom.trim(), adresse: form.adresse.trim() || null, telephone: form.telephone.trim() || null, activiteIds, laboIds };
 
-      const base = isIndep ? '/api/fournisseurs' : '/api/entreprise/fournisseurs';
+      const base = '/api/entreprise/fournisseurs';
       if (modal?.mode === 'edit' && modal.item) {
         await api.put(`${base}/${modal.item.id}`, payload);
       } else {
@@ -115,7 +105,7 @@ export default function FournisseursPage() {
 
   const handleDelete = async (f: Fournisseur) => {
     try {
-      const base = isIndep ? '/api/fournisseurs' : '/api/entreprise/fournisseurs';
+      const base = '/api/entreprise/fournisseurs';
       await api.delete(`${base}/${f.id}`);
       setDeleteConfirm(null);
       load();
@@ -150,7 +140,7 @@ export default function FournisseursPage() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
             <div style={{ background: 'rgba(255,255,255,0.2)', borderRadius: 10, padding: '7px 9px', fontSize: '1.2rem' }}>🏪</div>
             <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0 }}>
-              Fournisseurs {isIndep ? 'Activité' : ''}
+              Fournisseurs
             </h1>
           </div>
           <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.85rem', margin: 0 }}>
@@ -208,7 +198,7 @@ export default function FournisseursPage() {
       ) : (
         <>
           {/* Labo fournisseurs (entreprise only, auto-managed) */}
-          {!isIndep && laboFournisseurs.length > 0 && (
+          {laboFournisseurs.length > 0 && (
             <div style={{ marginBottom: 24 }}>
               <h2 style={{ fontSize: '0.78rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--text-muted)', marginBottom: 10 }}>
                 🏭 Fournisseurs Labo (auto-gérés)
@@ -250,12 +240,8 @@ export default function FournisseursPage() {
                   <th style={thStyle}>Nom</th>
                   <th style={thStyle}>Téléphone</th>
                   <th style={thStyle}>Adresse</th>
-                  {!isIndep && (
-                    <>
-                      <th style={thStyle}>Activités liées</th>
-                      <th style={thStyle}>Labos liés</th>
-                    </>
-                  )}
+                  <th style={thStyle}>Activités liées</th>
+                  <th style={thStyle}>Labos liés</th>
                   <th style={{ ...thStyle, textAlign: 'center' }}>Appros</th>
                   <th style={thStyle}></th>
                 </tr>
@@ -275,24 +261,20 @@ export default function FournisseursPage() {
                     <td style={{ fontWeight: 700, padding: '10px 14px' }}>{f.nom}</td>
                     <td style={{ color: 'var(--text-muted)', padding: '10px 14px' }}>{f.telephone ?? '—'}</td>
                     <td style={{ color: 'var(--text-muted)', fontSize: '0.85rem', padding: '10px 14px' }}>{f.adresse ?? '—'}</td>
-                    {!isIndep && (
-                      <>
-                        <td style={{ padding: '10px 14px' }}>
-                          <div className="fournisseur-card-acts">
-                            {f.activiteIds.length === 0
-                              ? <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>—</span>
-                              : f.activiteIds.map((id) => <span key={id} className="act-chip">{activiteLabel(id)}</span>)}
-                          </div>
-                        </td>
-                        <td style={{ padding: '10px 14px' }}>
-                          <div className="fournisseur-card-acts">
-                            {(f.laboIds ?? []).length === 0
-                              ? <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>—</span>
-                              : (f.laboIds ?? []).map((id) => <span key={id} className="act-chip" style={{ background: '#ede9fe', color: '#7c3aed', borderColor: '#c4b5fd' }}>🏭 {laboLabel(id)}</span>)}
-                          </div>
-                        </td>
-                      </>
-                    )}
+                    <td style={{ padding: '10px 14px' }}>
+                      <div className="fournisseur-card-acts">
+                        {f.activiteIds.length === 0
+                          ? <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>—</span>
+                          : f.activiteIds.map((id) => <span key={id} className="act-chip">{activiteLabel(id)}</span>)}
+                      </div>
+                    </td>
+                    <td style={{ padding: '10px 14px' }}>
+                      <div className="fournisseur-card-acts">
+                        {(f.laboIds ?? []).length === 0
+                          ? <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>—</span>
+                          : (f.laboIds ?? []).map((id) => <span key={id} className="act-chip" style={{ background: '#ede9fe', color: '#7c3aed', borderColor: '#c4b5fd' }}>🏭 {laboLabel(id)}</span>)}
+                      </div>
+                    </td>
                     <td style={{ textAlign: 'center', padding: '10px 14px', verticalAlign: 'middle' }}>
                       {(f.approCount ?? 0) === 0 ? (
                         <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>—</span>
@@ -305,7 +287,7 @@ export default function FournisseursPage() {
                           }}>
                             {f.approCount}
                           </span>
-                          {!isIndep && (f.approByActivite ?? []).length > 0 && (
+                          {(f.approByActivite ?? []).length > 0 && (
                             <div style={{ marginTop: 5, display: 'flex', flexWrap: 'wrap', gap: 4, justifyContent: 'center' }}>
                               {(f.approByActivite as FournisseurApproActivite[]).map((a) => (
                                 <span key={a.activiteId} style={{
@@ -348,7 +330,7 @@ export default function FournisseursPage() {
                 ))}
                 {filteredFournisseurs.length === 0 && (
                   <tr>
-                    <td colSpan={isIndep ? 5 : 7} style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '32px 24px' }}>
+                    <td colSpan={7} style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '32px 24px' }}>
                       <div style={{ fontSize: '2rem', marginBottom: 8 }}>🔍</div>
                       <div>{search ? 'Aucun résultat.' : 'Aucun fournisseur. Cliquez sur "+ Nouveau fournisseur".'}</div>
                     </td>
@@ -423,35 +405,31 @@ export default function FournisseursPage() {
                 <label style={labelStyle}>Adresse</label>
                 <input className="input" style={{ width: '100%' }} placeholder="Adresse (optionnel)" value={form.adresse} onChange={(e) => setForm((p) => ({ ...p, adresse: e.target.value }))} />
               </div>
-              {!isIndep && (
-                  <>
-                    <div>
-                      <label style={labelStyle}>Activités liées</label>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, maxHeight: 140, overflowY: 'auto', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 10px' }}>
-                        {activites.length === 0
-                          ? <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>Aucune activité</span>
-                          : activites.map((a) => (
-                            <label key={a.id} style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: '0.85rem' }}>
-                              <input type="checkbox" checked={form.activiteIds.includes(a.id)} onChange={() => toggleActivite(a.id)} />
-                              {a.nom}
-                            </label>
-                          ))}
-                      </div>
-                    </div>
-                    {labos.length > 0 && (
-                      <div>
-                        <label style={labelStyle}>Labos liés</label>
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, border: '1px solid var(--border)', borderRadius: 8, padding: '8px 10px' }}>
-                          {labos.map((l) => (
-                            <label key={l.id} style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: '0.85rem' }}>
-                              <input type="checkbox" checked={form.laboIds.includes(l.id)} onChange={() => toggleLabo(l.id)} />
-                              🏭 {l.nom} {l.refLabo ? <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>({l.refLabo})</span> : null}
-                            </label>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </>
+              <div>
+                <label style={labelStyle}>Activités liées</label>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, maxHeight: 140, overflowY: 'auto', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 10px' }}>
+                  {activites.length === 0
+                    ? <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>Aucune activité</span>
+                    : activites.map((a) => (
+                      <label key={a.id} style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: '0.85rem' }}>
+                        <input type="checkbox" checked={form.activiteIds.includes(a.id)} onChange={() => toggleActivite(a.id)} />
+                        {a.nom}
+                      </label>
+                    ))}
+                </div>
+              </div>
+              {labos.length > 0 && (
+                <div>
+                  <label style={labelStyle}>Labos liés</label>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, border: '1px solid var(--border)', borderRadius: 8, padding: '8px 10px' }}>
+                    {labos.map((l) => (
+                      <label key={l.id} style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: '0.85rem' }}>
+                        <input type="checkbox" checked={form.laboIds.includes(l.id)} onChange={() => toggleLabo(l.id)} />
+                        🏭 {l.nom} {l.refLabo ? <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>({l.refLabo})</span> : null}
+                      </label>
+                    ))}
+                  </div>
+                </div>
               )}
               {error && <p style={{ color: 'var(--danger)', fontSize: '0.85rem' }}>{error}</p>}
             </div>

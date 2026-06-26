@@ -434,7 +434,6 @@ interface StockMatrixProps {
   fournisseurFilter?: string;
   refFactureFilter?: string;
   activiteId?: number;
-  isEntreprise: boolean;
   fournisseurs?: Fournisseur[];
   onSave: (ingredientId: number, quantite: string, prixUnitaire: string, dateAppro: string, fournisseurId?: number | null, refFacture?: string | null, tauxTva?: number | null, timbreFiscal?: boolean) => Promise<void>;
   onSavePT?: (produitId: number, quantite: string, dateAppro: string) => Promise<{ prixCalcule: number | null; dateAppro: string; totalQuantite: number }>;
@@ -443,7 +442,7 @@ interface StockMatrixProps {
   onRefresh?: () => void;
 }
 
-function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fournisseurFilter, refFactureFilter, activiteId, isEntreprise, fournisseurs = [], onSave, onSavePT: _onSavePT, onSaveSeuilMin, onSavePerte, onRefresh }: StockMatrixProps) {
+function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fournisseurFilter, refFactureFilter, activiteId, fournisseurs = [], onSave, onSavePT: _onSavePT, onSaveSeuilMin, onSavePerte, onRefresh }: StockMatrixProps) {
   const { t } = useTranslation();
   const { canWrite } = useAuth();
   const navigate = useNavigate();
@@ -567,7 +566,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
     if (historyData[id]) return historyData[id];
     const url = id < 0
       ? `/api/stock/pt/${-id}/history${activiteId ? `?activiteId=${activiteId}` : ''}`
-      : isEntreprise && activiteId
+      : activiteId
       ? `/api/stock/entreprise/${activiteId}/${id}/history`
       : `/api/stock/client/${id}/history`;
     try {
@@ -1129,7 +1128,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                                       🔧 Seuil
                                     </button>
                                   )}
-                                  {canWrite && ((isEntreprise && activiteId) || (!isEntreprise && onSavePerte)) && (
+                                  {canWrite && activiteId && (
                                     <button className="perte-btn" style={{ whiteSpace: 'nowrap' }} onClick={() => setPertesModal({ ingredientId: entry.ingredientId, nom: entry.nom, stockDisponible: entry.quantite ?? null })} title="Enregistrer une perte">📉 Perte</button>
                                   )}
                                 </div>
@@ -1191,7 +1190,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                                       style={{ fontSize: '0.75rem' }}
                                       onClick={() => {
                                         const params = new URLSearchParams({ ingredientId: String(entry.ingredientId) });
-                                        if (isEntreprise && activiteId) params.set('activiteId', String(activiteId));
+                                        if (activiteId) params.set('activiteId', String(activiteId));
                                         navigate(`/client/stock/historique?${params}`);
                                       }}
                                     >
@@ -1402,7 +1401,6 @@ function ActivityStockSection({ label: _label, activities, initialActiviteId, on
           fournisseurFilter={fournisseurFilter}
           refFactureFilter={refFactureFilter}
           activiteId={selectedId}
-          isEntreprise={true}
           fournisseurs={fournisseurs}
           onSave={handleSave}
           onSavePT={handleSavePT}

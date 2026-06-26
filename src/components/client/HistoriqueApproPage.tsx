@@ -26,11 +26,10 @@ interface Fournisseur { id: number; nom: string; isLabo?: boolean }
 interface EditModalProps {
   entry: HistoriqueApproEntry;
   fournisseurs: Fournisseur[];
-  isEntreprise: boolean;
   onSave: (id: number, data: { quantite: number | null; prixUnitaire: number | null; fournisseurId: number | null; refFacture: string | null }) => Promise<void>;
   onClose: () => void;
 }
-function EditModal({ entry, fournisseurs, isEntreprise: _isEntreprise, onSave, onClose }: EditModalProps) {
+function EditModal({ entry, fournisseurs, onSave, onClose }: EditModalProps) {
   const [qty, setQty] = useState(entry.quantite !== null ? String(entry.quantite) : '');
   const [prix, setPrix] = useState(entry.prixUnitaire !== null ? String(entry.prixUnitaire) : '');
   const [fId, setFId] = useState(entry.fournisseurId ? String(entry.fournisseurId) : '');
@@ -212,7 +211,6 @@ export default function HistoriqueApproPage() {
   const { t } = useTranslation();
   const { user, canWrite } = useAuth();
   const [searchParams] = useSearchParams();
-  const isEntreprise = true;
 
   const initIngredientId = searchParams.get('ingredientId') || '';
   const initActiviteId = searchParams.get('activiteId') || '';
@@ -291,7 +289,7 @@ export default function HistoriqueApproPage() {
         .then(({ data }) => setScopedIngredients(data as ScopedIngredient[])).catch(() => {});
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isEntreprise, laboId, selectedActiviteId]);
+  }, [laboId, selectedActiviteId]);
 
   useEffect(() => {
     if (selectedCategoryId !== 'pt') { setPtProducts([]); return; }
@@ -317,7 +315,7 @@ export default function HistoriqueApproPage() {
       })
       .finally(() => setActivitesLoading(false));
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isEntreprise]);
+  }, []);
 
 
   useEffect(() => {
@@ -325,7 +323,7 @@ export default function HistoriqueApproPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const activitiesForDropdown = isEntreprise ? allActivities : [];
+  const activitiesForDropdown = allActivities;
 
   const fetchResults = useCallback(async () => {
     setLoading(true);
@@ -334,14 +332,12 @@ export default function HistoriqueApproPage() {
     setSelectedIds(new Set());
     try {
       const params = new URLSearchParams();
-      if (isEntreprise) {
-        if (selectedActiviteId) {
-          params.set('activiteId', selectedActiviteId);
-        } else {
-          params.set('entType', 'activite');
-        }
-        if (laboId) params.set('laboId', laboId);
+      if (selectedActiviteId) {
+        params.set('activiteId', selectedActiviteId);
+      } else {
+        params.set('entType', 'activite');
       }
+      if (laboId) params.set('laboId', laboId);
       if (selectedCategoryId === 'pt') {
         params.set('ptOnly', 'true');
         if (selectedIngredientId) params.set('ptProduitId', String(-Number(selectedIngredientId)));
@@ -359,10 +355,10 @@ export default function HistoriqueApproPage() {
     }
     setLoading(false);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isEntreprise, selectedActiviteId, selectedIngredientId, selectedCategoryId, startDate, endDate, selectedFournisseurId]);
+  }, [selectedActiviteId, selectedIngredientId, selectedCategoryId, startDate, endDate, selectedFournisseurId]);
 
   const handleEdit = async (id: number, data: { quantite: number | null; prixUnitaire: number | null; fournisseurId: number | null; refFacture: string | null }) => {
-    await api.put(`/api/stock/historique/${id}`, { ...data, isEntreprise });
+    await api.put(`/api/stock/historique/${id}`, { ...data, isEntreprise: true });
     setResults((prev) => prev.map((r) => r.id === id ? {
       ...r,
       quantite: data.quantite,
@@ -374,16 +370,14 @@ export default function HistoriqueApproPage() {
   };
 
   const handleDelete = async (id: number) => {
-    await api.delete(`/api/stock/historique/${id}?isEntreprise=${isEntreprise}`);
+    await api.delete(`/api/stock/historique/${id}?isEntreprise=true`);
     setResults((prev) => prev.filter((r) => r.id !== id));
   };
 
   const buildApproParams = () => {
     const params = new URLSearchParams();
-    if (isEntreprise) {
-      if (selectedActiviteId) params.set('activiteId', selectedActiviteId);
-      else params.set('entType', 'activite');
-    }
+    if (selectedActiviteId) params.set('activiteId', selectedActiviteId);
+    else params.set('entType', 'activite');
     if (selectedCategoryId === 'pt') {
       params.set('ptOnly', 'true');
       if (selectedIngredientId) params.set('ptProduitId', String(-Number(selectedIngredientId)));
@@ -450,7 +444,7 @@ export default function HistoriqueApproPage() {
       </div>
 
       {/* Activité selector pills */}
-      {isEntreprise && activitiesForDropdown.length > 0 && (
+      {activitiesForDropdown.length > 0 && (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16, padding: '10px 14px', background: 'var(--card-bg)', borderRadius: 10, border: '1px solid var(--border)' }}>
           {!isActiviteGerant && (
             <button
@@ -493,7 +487,7 @@ export default function HistoriqueApproPage() {
               value={selectedCategoryId} onChange={(e) => { setSelectedCategoryId(e.target.value); setSelectedIngredientId(''); }}>
               <option value="">{t('client.historique_appro.all_categories')}</option>
               {categories.map((c) => <option key={c.id} value={c.id}>{c.nom}</option>)}
-              {(!isEntreprise || selectedActiviteId) && <option value="pt">Produits Transformés</option>}
+              {selectedActiviteId && <option value="pt">Produits Transformés</option>}
             </select>
           </div>
           <div>
@@ -556,7 +550,7 @@ export default function HistoriqueApproPage() {
             <table className="table" style={{ tableLayout: 'fixed', width: '100%', minWidth: 860 }}>
               <colgroup>
                 <col style={{ width: '30px' }} />
-                <col style={{ width: isEntreprise ? '108px' : '98px' }} />
+                <col style={{ width: '108px' }} />
                 <col style={{ width: '170px' }} />
                 <col style={{ width: '84px' }} />
                 <col style={{ width: '90px' }} />
@@ -607,15 +601,13 @@ export default function HistoriqueApproPage() {
                       <span style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 6, padding: '2px 8px', fontWeight: 700, fontSize: '0.8rem', color: '#1e40af', display: 'inline-block', whiteSpace: 'nowrap' }}>
                         {fmtDate(r.dateAppro)}
                       </span>
-                      {isEntreprise && (
-                        <span className={`badge-appro ${r.typeAppro === 'PT' ? 'pt' : (r.typeAppro ?? 'manuel')}`} style={{ fontSize: '0.65rem', display: 'block', marginTop: 3 }}>
-                          {r.typeAppro === 'transfert' ? 'Transfert'
-                            : r.typeAppro === 'vente' ? '💰 Vente'
-                            : r.typeAppro === 'annulation_vente' ? '↩️ Annul. vente'
-                            : r.typeAppro === 'PT' ? '🔄 PT'
-                            : 'Manuel'}
-                        </span>
-                      )}
+                      <span className={`badge-appro ${r.typeAppro === 'PT' ? 'pt' : (r.typeAppro ?? 'manuel')}`} style={{ fontSize: '0.65rem', display: 'block', marginTop: 3 }}>
+                        {r.typeAppro === 'transfert' ? 'Transfert'
+                          : r.typeAppro === 'vente' ? '💰 Vente'
+                          : r.typeAppro === 'annulation_vente' ? '↩️ Annul. vente'
+                          : r.typeAppro === 'PT' ? '🔄 PT'
+                          : 'Manuel'}
+                      </span>
                     </td>
                     <td style={{ textAlign: 'right', fontWeight: 800, color: '#0f766e', padding: '8px 10px', fontSize: '0.85rem' }}>
                       <div style={{ whiteSpace: 'nowrap' }}>{r.quantite ?? '—'}</div>
@@ -713,7 +705,6 @@ export default function HistoriqueApproPage() {
         <EditModal
           entry={editEntry}
           fournisseurs={fournisseurs}
-          isEntreprise={isEntreprise}
           onSave={handleEdit}
           onClose={() => setEditEntry(null)}
         />

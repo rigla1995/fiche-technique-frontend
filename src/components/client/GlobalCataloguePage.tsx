@@ -334,8 +334,6 @@ export default function GlobalCataloguePage() {
   const { user, canWrite, advanceOnboarding } = useAuth();
   const { refreshSelections } = useSelection();
 
-  const isEntreprise = true;
-
   const [ingredients, setIngredients] = useState<GlobalIngredient[]>([]);
   const [loading, setLoading] = useState(false);
   const [toggling, setToggling] = useState<Set<string>>(new Set());
@@ -357,7 +355,7 @@ export default function GlobalCataloguePage() {
     } finally {
       setLoading(false);
     }
-  }, [isEntreprise, t]);
+  }, [t]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -477,9 +475,7 @@ export default function GlobalCataloguePage() {
             <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0 }}>{t('nav.catalogue_global', 'Catalogue Global')}</h1>
           </div>
           <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.88rem', margin: 0 }}>
-            {isEntreprise
-              ? t('global_catalogue.subtitle_ent', 'Assignez vos articles par activité et par labo.')
-              : t('global_catalogue.subtitle', 'Assignez vos articles à vos activités.')}
+            {t('global_catalogue.subtitle_ent', 'Assignez vos articles par activité et par labo.')}
           </p>
         </div>
       </div>
@@ -492,12 +488,12 @@ export default function GlobalCataloguePage() {
           filterName={filterName}
           onCatChange={(v) => { setFilterCategory(v); setFilterIngId(''); }}
           onNameChange={setFilterName}
-          contexts={isEntreprise ? allContexts : undefined}
+          contexts={allContexts}
           filterContext={filterContext}
-          onContextChange={isEntreprise ? setFilterContext : undefined}
-          ingredientsInCategory={isEntreprise ? ingredientsInCategory : undefined}
-          filterIngId={isEntreprise ? filterIngId : undefined}
-          onIngIdChange={isEntreprise ? setFilterIngId : undefined}
+          onContextChange={setFilterContext}
+          ingredientsInCategory={ingredientsInCategory}
+          filterIngId={filterIngId}
+          onIngIdChange={setFilterIngId}
         />
       )}
 

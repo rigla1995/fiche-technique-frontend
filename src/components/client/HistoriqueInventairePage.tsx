@@ -42,8 +42,6 @@ export default function HistoriqueInventairePage() {
   const { clearByEventType } = useNotifications();
   const navigate = useNavigate();
   const isGerant = user?.role === 'gerant';
-  // Multi-affectations : sélecteur d'activité affiché (périmètre filtré côté backend).
-  const isActiviteGerant = false;
   const [searchParams] = useSearchParams();
   const laboId = searchParams.get('laboId');
   const activiteId = searchParams.get('activiteId');
@@ -221,7 +219,7 @@ export default function HistoriqueInventairePage() {
     ? contextNom || 'Activités'
     : contextNom || '';
 
-  const showActiviteSelector = !!section && (!activiteId || isActiviteGerant) && activites.length >= 1;
+  const showActiviteSelector = !!section && !activiteId && activites.length >= 1;
   const canSearch = !!laboId || !!effectiveActiviteId || isClientMode;
   const canExport = canWrite && applied && histRows.length > 0;
   const primaryBtn: React.CSSProperties = {
