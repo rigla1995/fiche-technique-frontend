@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
+import HistoryFilterBar, { FilterField, FilterInput } from '../common/HistoryFilterBar';
 import type { Activite, ActiviteIngredient, Labo, AbonnementConfig } from '../../types';
 
 type ActiviteForm = { nom: string; adresse: string };
@@ -474,21 +475,16 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
         </div>
       ) : showFullLayout ? (
         <>
-          {/* ── Unified filter bar ── */}
-          <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: '14px 18px', marginBottom: 20, boxShadow: '0 2px 8px rgba(0,0,0,0.04)', display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: '1 1 220px' }}>
-              <span style={{ fontSize: '1rem' }}>🔍</span>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 2, flex: 1 }}>
-                <span style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Nom</span>
-                <input
-                  type="text" className="input"
-                  placeholder="Filtrer activités et labos…"
-                  value={filterName} onChange={(e) => setFilterName(e.target.value)}
-                  style={{ minWidth: 180 }}
-                />
-              </div>
-            </div>
-          </div>
+          {/* Barre de filtres (composant partagé, mode direct) */}
+          <HistoryFilterBar
+            accent="#059669" accentDark="#047857"
+            subtitle={`${filteredActivites.length + filteredLabos.length} résultat${(filteredActivites.length + filteredLabos.length) !== 1 ? 's' : ''}`}
+            onReset={() => setFilterName('')} showReset={!!filterName}
+          >
+            <FilterField label="🔍 Nom">
+              <FilterInput type="text" placeholder="Filtrer activités et labos…" value={filterName} onChange={(e) => setFilterName(e.target.value)} />
+            </FilterField>
+          </HistoryFilterBar>
 
           {/* Activités section */}
           <div style={{ marginBottom: 32 }}>

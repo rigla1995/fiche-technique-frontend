@@ -41,6 +41,8 @@ import TarifsConfig from './components/admin/TarifsConfig';
 import DemandesManagement from './components/admin/DemandesManagement';
 import AdminRapportsPage from './components/admin/AdminRapportsPage';
 import AdminKnowledgeBasePage from './components/admin/AdminKnowledgeBasePage';
+import AdminDashboardPage from './components/admin/AdminDashboardPage';
+import AdminDomainesPage from './components/admin/AdminDomainesPage';
 import AdminSupportPage from './components/admin/AdminSupportPage';
 import ActiveAgentsPage from './components/admin/ActiveAgentsPage';
 import MonAbonnementPage from './components/client/MonAbonnementPage';
@@ -97,9 +99,11 @@ export default function App() {
 
           {/* Super Admin routes */}
           <Route element={<Layout requireRole="super_admin" />}>
-            <Route path="/admin" element={<Navigate to="/admin/rapports" replace />} />
+            <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
+            <Route path="/admin/dashboard" element={<AdminDashboardPage />} />
             <Route path="/admin/clients" element={<ClientsManagement />} />
             <Route path="/admin/rapports" element={<AdminRapportsPage />} />
+            <Route path="/admin/domaines" element={<AdminDomainesPage />} />
             <Route path="/admin/abonnements" element={<AbonnementsManagement />} />
             <Route path="/admin/abonnements/paiements"  element={<HistoriquePaiementsAdmin />} />
             <Route path="/admin/abonnements/promotions" element={<HistoriquePromotionsAdmin />} />
