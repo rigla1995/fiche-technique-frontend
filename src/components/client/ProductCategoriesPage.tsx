@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import api from '../../api/client';
 import type { CategorieProduit, TypeProduitCategorie } from '../../types';
+import HistoryFilterBar, { FilterField, FilterInput, FilterSelect } from '../common/HistoryFilterBar';
 
 const COLOR = '#059669';
 const HERO = 'linear-gradient(135deg, #0a1628 0%, #0f2847 55%, #0d3b2e 100%)';
@@ -111,18 +112,22 @@ export default function ProductCategoriesPage() {
         </div>
       </div>
 
-      {/* Filter bar */}
-      <div style={{ background: 'var(--surface)', borderRadius: 14, padding: '14px 18px', marginBottom: 20, border: '1px solid var(--border)', boxShadow: '0 2px 8px rgba(0,0,0,0.04)', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 180 }}>
-          <span style={{ fontSize: '1.1rem', flexShrink: 0 }}>🔍</span>
-          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Filtrer les catégories…" style={{ flex: 1, padding: '9px 13px', borderRadius: 9, border: '1.5px solid #6ee7b7', fontSize: '0.88rem', background: '#f0fdf4', boxSizing: 'border-box' }} />
-        </div>
-        <select value={filterType} onChange={e => setFilterType(e.target.value as '' | TypeProduitCategorie)} style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid #6ee7b7', fontSize: '0.88rem', background: '#f0fdf4', minWidth: 170 }}>
-          <option value="">Tous les types</option>
-          {TYPE_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.icon} {o.label}</option>)}
-        </select>
-        <button className="btn" onClick={openCreate} style={{ background: BTN, color: '#fff', flexShrink: 0, boxShadow: '0 2px 8px rgba(16,185,129,0.25)' }}>+ Nouvelle catégorie</button>
-      </div>
+      {/* Barre de filtres (composant partagé, mode direct) */}
+      <HistoryFilterBar
+        accent={COLOR} accentDark="#047857"
+        subtitle={`${filtered.length} catégorie${filtered.length !== 1 ? 's' : ''}`}
+        onReset={() => { setSearch(''); setFilterType(''); }}
+        showReset={!!(search || filterType)}
+        actions={<button className="btn" onClick={openCreate} style={{ background: BTN, color: '#fff', border: 'none' }}>+ Nouvelle catégorie</button>}
+      >
+        <FilterField label="🔍 Recherche"><FilterInput value={search} onChange={e => setSearch(e.target.value)} placeholder="Filtrer les catégories…" /></FilterField>
+        <FilterField label="🏷️ Type">
+          <FilterSelect value={filterType} onChange={e => setFilterType(e.target.value as '' | TypeProduitCategorie)}>
+            <option value="">Tous les types</option>
+            {TYPE_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.icon} {o.label}</option>)}
+          </FilterSelect>
+        </FilterField>
+      </HistoryFilterBar>
 
       {/* List */}
       {loading ? (

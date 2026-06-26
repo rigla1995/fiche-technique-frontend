@@ -11,10 +11,11 @@ interface Props {
   selected: Set<string>;
   onToggle: (key: string) => void;
   accent?: string;
+  id?: string;   // reçu de FilterField pour l'association label htmlFor → bouton déclencheur
 }
 
 // Champ déroulant multi-sélection (cases à cocher) pour filtrer par type d'appro.
-export default function TypeApproFilter({ selected, onToggle, accent = '#1e40af' }: Props) {
+export default function TypeApproFilter({ selected, onToggle, accent = '#1e40af', id }: Props) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -34,6 +35,7 @@ export default function TypeApproFilter({ selected, onToggle, accent = '#1e40af'
     <div ref={ref} style={{ position: 'relative', width: '100%' }}>
       <button
         type="button"
+        id={id}
         onClick={() => setOpen((o) => !o)}
         className="hist-ctrl"
         style={{

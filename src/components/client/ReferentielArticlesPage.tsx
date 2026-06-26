@@ -2,14 +2,11 @@ import { useState, useEffect, useCallback } from 'react';
 import api from '../../api/client';
 import type { Article, Activite, Category, Famille, Labo, Unit } from '../../types';
 import GuideButton from './GuideButton';
+import HistoryFilterBar, { FilterField, FilterInput, FilterSelect } from '../common/HistoryFilterBar';
 
 const COLOR = '#16a34a';
+const ACCENT_DARK = '#15803d';
 const GRADIENT = 'linear-gradient(135deg, #14532d 0%, #16a34a 55%, #4ade80 100%)';
-
-const LABEL: React.CSSProperties = {
-  fontSize: '0.68rem', fontWeight: 700, color: 'var(--text-muted)',
-  textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 3, display: 'block',
-};
 
 interface ArticleEditForm {
   nom: string;
@@ -343,54 +340,47 @@ export default function ReferentielArticlesPage() {
         </div>
       </div>
 
-      {/* ── Filter bar ── */}
-      <div style={{
-        background: 'var(--surface)', borderRadius: 14, padding: '14px 18px', marginBottom: 20,
-        border: '1px solid var(--border)', boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
-        display: 'flex', alignItems: 'flex-end', gap: 12, flexWrap: 'wrap',
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 180 }}>
-          <span style={{ fontSize: '1.1rem', flexShrink: 0 }}>🔍</span>
-          <div style={{ flex: 1 }}>
-            <span style={LABEL}>Recherche</span>
-            <input
-              value={search} onChange={e => setSearch(e.target.value)}
-              placeholder="Filtrer les articles…"
-              style={{ width: '100%', padding: '8px 11px', borderRadius: 8, border: '1.5px solid var(--border)', fontSize: '0.88rem', background: '#f8fafc', boxSizing: 'border-box' }}
-            />
-          </div>
-        </div>
+      {/* ── Filter bar (filtres en direct) ── */}
+      <HistoryFilterBar
+        accent={COLOR}
+        accentDark={ACCENT_DARK}
+        subtitle={loading ? undefined : `${filtered.length} article${filtered.length !== 1 ? 's' : ''}${(search || filterCat || filterFamille) ? ` sur ${articles.length}` : ''}`}
+        onReset={() => { setSearch(''); setFilterCat(''); setFilterFamille(''); }}
+        showReset={!!(search || filterCat || filterFamille)}
+        actions={
+          <>
+            <button className="btn btn-ghost" onClick={openMultiCreate} style={{ border: `1.5px solid ${COLOR}`, color: ACCENT_DARK }}>
+              + Ajout multiple
+            </button>
+            <button className="btn" onClick={openCreate} style={{ background: 'linear-gradient(135deg,#15803d,#16a34a)', color: '#fff' }}>
+              + Nouvel article
+            </button>
+          </>
+        }
+      >
+        <FilterField label="🔍 Recherche">
+          <FilterInput
+            value={search} onChange={e => setSearch(e.target.value)}
+            placeholder="Filtrer les articles…"
+          />
+        </FilterField>
         {familles.length > 0 && (
-          <div style={{ minWidth: 150 }}>
-            <span style={LABEL}>🗂️ Famille</span>
-            <select
-              value={filterFamille} onChange={e => { setFilterFamille(e.target.value); setFilterCat(''); }}
-              style={{ width: '100%', padding: '8px 11px', borderRadius: 8, border: '1.5px solid var(--border)', fontSize: '0.88rem', background: '#f8fafc' }}
-            >
+          <FilterField label="🗂️ Famille">
+            <FilterSelect value={filterFamille} onChange={e => { setFilterFamille(e.target.value); setFilterCat(''); }}>
               <option value="">Toutes</option>
               {familles.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
-            </select>
-          </div>
+            </FilterSelect>
+          </FilterField>
         )}
         {filteredCats.length > 0 && (
-          <div style={{ minWidth: 165 }}>
-            <span style={LABEL}>🏷️ Catégorie</span>
-            <select
-              value={filterCat} onChange={e => setFilterCat(e.target.value)}
-              style={{ width: '100%', padding: '8px 11px', borderRadius: 8, border: '1.5px solid var(--border)', fontSize: '0.88rem', background: '#f8fafc' }}
-            >
+          <FilterField label="🏷️ Catégorie">
+            <FilterSelect value={filterCat} onChange={e => setFilterCat(e.target.value)}>
               <option value="">Toutes</option>
               {filteredCats.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
-          </div>
+            </FilterSelect>
+          </FilterField>
         )}
-        <button className="btn btn-ghost" onClick={openMultiCreate} style={{ flexShrink: 0, border: '1.5px solid #16a34a', color: '#15803d' }}>
-          + Ajout multiple
-        </button>
-        <button className="btn" onClick={openCreate} style={{ background: 'linear-gradient(135deg,#15803d,#16a34a)', color: '#fff', flexShrink: 0 }}>
-          + Nouvel article
-        </button>
-      </div>
+      </HistoryFilterBar>
 
       {/* ── Grouped list ── */}
       {loading ? (
