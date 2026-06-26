@@ -326,6 +326,7 @@ export interface StockEntry {
   ingredientId: number;        // negative = PT product (-produitId)
   produitId?: number;          // set for PT rows
   isPT?: boolean;
+  origine?: string | null;     // PT: 'labo' = reçu par transfert uniquement (pas d'appro manuel côté activité) | 'activite'
   prixCalcule?: number | null; // PT: auto-calculated price from recipe
   prixPartiel?: boolean;       // PT: true if any recipe ingredient has no price
   coutTotal?: number | null;

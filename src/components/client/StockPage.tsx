@@ -1007,6 +1007,9 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                       const hasExisting = entry.quantite !== null;
                       const hasDateConflict = (hasExisting && bulkDate === entry.dateAppro) || histDatesSet.has(bulkDate);
                       const warnStyle = hasDateConflict ? { borderColor: '#f59e0b', boxShadow: '0 0 0 2px #fef3c7' } : {};
+                      // PT d'origine labo (valorisé composé ou PU limité au transfert) : reçu UNIQUEMENT
+                      // par transfert côté activité → saisie quantité bloquée, pas de "Max", indicateur affiché.
+                      const isLaboPT = !!entry.isPT && entry.origine === 'labo';
                       return (
                         <React.Fragment key={entry.ingredientId}>
                           <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
@@ -1019,6 +1022,14 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                                   {isHistOpen ? '📋 ▲' : '📋 Historique'}
                                 </button>
                               </div>
+                              {isLaboPT && (
+                                <div style={{ marginTop: 4 }}>
+                                  <span title="Produit fabriqué au labo — reçu uniquement par transfert depuis le labo, pas d'appro manuel ici."
+                                    style={{ fontSize: '0.66rem', background: '#ecfeff', color: '#0e7490', border: '1px solid #a5f3fc', borderRadius: 4, padding: '1px 7px', fontWeight: 700, whiteSpace: 'nowrap' }}>
+                                    ⇄ Transfert uniquement
+                                  </span>
+                                </div>
+                              )}
                               {entry.lastInvDate && (
                                 <div style={{ fontSize: '0.67rem', color: '#b45309', fontWeight: 600, marginTop: 3 }}>📦 {entry.lastInvDate.split('-').reverse().join('/')} · {entry.lastInvQty?.toFixed(3) ?? '—'}</div>
                               )}
@@ -1055,11 +1066,11 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                                 onChange={(e) => updateRow(entry.ingredientId, 'quantite', e.target.value)}
                                 style={{ width: 80, textAlign: 'right', padding: '5px 8px', borderRadius: 7, fontSize: '0.85rem', ...warnStyle }}
                                 className="input"
-                                disabled={!canWrite || (entry.isPT ? hasIngredientQuantity : hasPTQuantity)}
-                                title={entry.isPT && entry.prixPartiel ? '⚠️ Prix incomplet pour certains articles — calcul partiel' : undefined}
+                                disabled={!canWrite || isLaboPT || (entry.isPT ? hasIngredientQuantity : hasPTQuantity)}
+                                title={isLaboPT ? "Reçu uniquement par transfert depuis le labo — pas d'appro manuel ici." : (entry.isPT && entry.prixPartiel ? '⚠️ Prix incomplet pour certains articles — calcul partiel' : undefined)}
                                 onFocus={(e) => { e.target.select(); if (entry.isPT && entry.produitId) fetchPtMax(entry.produitId, ptRecipeMaxMap); }}
                               />
-                              {entry.isPT && entry.produitId && (() => {
+                              {entry.isPT && entry.produitId && !isLaboPT && (() => {
                                 const max = ptRecipeMaxMap[entry.produitId];
                                 if (max === undefined) return null;
                                 return (
@@ -1120,7 +1131,9 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                                     <button className="perte-btn" style={{ whiteSpace: 'nowrap' }} onClick={() => setPertesModal({ ingredientId: entry.ingredientId, nom: entry.nom, stockDisponible: entry.quantite ?? null })} title="Enregistrer une perte">📉 Perte</button>
                                   )}
                                 </div>
-                                {entry.isPT && entry.produitId && canWrite && (
+                                {/* PortionsModal = modale d'APPRO PT (exige une quantité). Inutile/contradictoire
+                                    sur un PT labo (reçu par transfert, pas d'appro manuel) → masqué comme l'input. */}
+                                {entry.isPT && entry.produitId && canWrite && !isLaboPT && (
                                   <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', justifyContent: 'center' }}>
                                     <button className="btn btn-ghost btn-sm" title="Portions personnalisées" style={{ fontSize: '0.78rem', padding: '3px 8px' }} onClick={() => setPortionsModal({ produitId: entry.produitId!, nom: entry.nom })}>⚙️ Personnaliser</button>
                                   </div>
