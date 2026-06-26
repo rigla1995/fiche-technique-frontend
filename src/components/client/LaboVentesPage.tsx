@@ -2,17 +2,11 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import api from '../../api/client';
 import HelpButton from '../common/HelpButton';
+import HistoryFilterBar, { FilterField, FilterInput, FilterSelect } from '../common/HistoryFilterBar';
 import type { Labo } from '../../types';
 
 const apiMsg = (e: unknown, fallback = 'Erreur') =>
   (e as { response?: { data?: { message?: string } } })?.response?.data?.message ?? fallback;
-
-const ExcelIcon = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}>
-    <rect width="24" height="24" rx="3" fill="#1D6F42"/>
-    <path d="M7 7l3.5 5L7 17h2.5l2.5-3.5L14.5 17H17l-3.5-5L17 7h-2.5L12 10.5 9.5 7H7z" fill="white"/>
-  </svg>
-);
 
 const fmtDate = (iso: string | null | undefined) => {
   if (!iso || iso.length < 10) return iso ?? '—';
@@ -158,10 +152,6 @@ export default function LaboVentesPage() {
     finally { setExportingXls(false); }
   };
 
-  const selectStyle: React.CSSProperties = {
-    padding: '7px 10px', borderRadius: 8, border: `1.5px solid ${CB}`,
-    background: CL, color: CD, fontSize: '0.84rem', outline: 'none', cursor: 'pointer',
-  };
 
   // col widths: checkbox, article, activité, qté, prix transfert, prix appro, écart
   const colW = [36, '28%', '17%', '8%', '14%', '14%', '13%'] as const;
@@ -213,63 +203,35 @@ export default function LaboVentesPage() {
         <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '60px 0' }}>Aucun labo disponible</div>
       ) : (
         <>
-          {/* Filters */}
-          <div style={{ background: '#fff', borderRadius: 12, border: `1.5px solid ${CB}`, padding: '14px 18px', marginBottom: 20, display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-end' }}>
-            <div>
-              <label style={{ fontSize: '0.7rem', display: 'block', marginBottom: 4, fontWeight: 700, color: C, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Du</label>
-              <input type="date" value={from} onChange={e => { setFrom(e.target.value); setPage(1); }}
-                style={{ padding: '7px 10px', borderRadius: 8, border: `1.5px solid ${CB}`, background: CL, color: CD, fontSize: '0.84rem' }} />
-            </div>
-            <div>
-              <label style={{ fontSize: '0.7rem', display: 'block', marginBottom: 4, fontWeight: 700, color: C, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Au</label>
-              <input type="date" value={to} onChange={e => { setTo(e.target.value); setPage(1); }}
-                style={{ padding: '7px 10px', borderRadius: 8, border: `1.5px solid ${CB}`, background: CL, color: CD, fontSize: '0.84rem' }} />
-            </div>
-            <button onClick={loadTransferts}
-              style={{ padding: '8px 14px', borderRadius: 8, border: `1.5px solid ${C}`, color: '#fff', background: C, cursor: 'pointer', fontWeight: 700, fontSize: '0.84rem' }}>
-              Filtrer dates
-            </button>
-
-            <div style={{ width: 1, background: CB, alignSelf: 'stretch', margin: '0 2px' }} />
-
-            <div>
-              <label style={{ fontSize: '0.7rem', display: 'block', marginBottom: 4, fontWeight: 700, color: C, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Catégorie</label>
-              <select value={filterCategorie} onChange={e => handleCategorieChange(e.target.value)} style={selectStyle}>
+          {/* Barre de filtres (composant partagé) — dates côté serveur (« Filtrer dates »), selects en direct */}
+          <HistoryFilterBar
+            accent={C} accentDark={CD}
+            subtitle={selectedIds.size > 0 ? `${selectedIds.size} sélectionnée${selectedIds.size > 1 ? 's' : ''}` : undefined}
+            onSearch={loadTransferts} searchLabel="Filtrer dates"
+            onReset={resetFilters} showReset={!!hasFilters}
+            onExportExcel={handleExportXls} excelDisabled={exportingXls}
+          >
+            <FilterField label="📅 Du"><FilterInput type="date" value={from} onChange={e => { setFrom(e.target.value); setPage(1); }} /></FilterField>
+            <FilterField label="📅 Au"><FilterInput type="date" value={to} onChange={e => { setTo(e.target.value); setPage(1); }} /></FilterField>
+            <FilterField label="🏷️ Catégorie">
+              <FilterSelect value={filterCategorie} onChange={e => handleCategorieChange(e.target.value)}>
                 <option value="">Toutes</option>
                 {categorieOptions.map(c => <option key={c} value={c}>{c}</option>)}
-              </select>
-            </div>
-            <div>
-              <label style={{ fontSize: '0.7rem', display: 'block', marginBottom: 4, fontWeight: 700, color: C, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Article</label>
-              <select value={filterArticle} onChange={e => { setFilterArticle(e.target.value); setPage(1); }} style={selectStyle}>
+              </FilterSelect>
+            </FilterField>
+            <FilterField label="📦 Article">
+              <FilterSelect value={filterArticle} onChange={e => { setFilterArticle(e.target.value); setPage(1); }}>
                 <option value="">Tous</option>
                 {articleOptions.map(a => <option key={a} value={a}>{a}</option>)}
-              </select>
-            </div>
-            <div>
-              <label style={{ fontSize: '0.7rem', display: 'block', marginBottom: 4, fontWeight: 700, color: C, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Activité</label>
-              <select value={filterActivite} onChange={e => { setFilterActivite(e.target.value); setPage(1); }} style={selectStyle}>
+              </FilterSelect>
+            </FilterField>
+            <FilterField label="🏪 Activité">
+              <FilterSelect value={filterActivite} onChange={e => { setFilterActivite(e.target.value); setPage(1); }}>
                 <option value="">Toutes</option>
                 {activiteOptions.map(a => <option key={a} value={a}>{a}</option>)}
-              </select>
-            </div>
-
-            {hasFilters && (
-              <button onClick={resetFilters}
-                style={{ padding: '7px 12px', borderRadius: 8, border: '1px solid var(--border)', background: 'none', cursor: 'pointer', fontSize: '0.82rem', color: 'var(--text-muted)' }}>
-                ✕ Réinitialiser
-              </button>
-            )}
-            {selectedIds.size > 0 && (
-              <span style={{ fontSize: '0.78rem', color: '#FF6B00', fontWeight: 700, whiteSpace: 'nowrap' }}>
-                {selectedIds.size} sélectionnée{selectedIds.size > 1 ? 's' : ''}
-              </span>
-            )}
-            <button onClick={handleExportXls} disabled={exportingXls}
-              style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 8, border: '1.5px solid #1D6F42', background: exportingXls ? '#f3f4f6' : '#f0fdf4', color: '#1D6F42', cursor: exportingXls ? 'default' : 'pointer', fontWeight: 700, fontSize: '0.82rem', whiteSpace: 'nowrap' }}>
-              <ExcelIcon /> {exportingXls ? 'Export…' : 'Exporter XLS'}
-            </button>
-          </div>
+              </FilterSelect>
+            </FilterField>
+          </HistoryFilterBar>
 
           {/* KPIs — order: Valeur totale achat | Valeur totale transferts | Écart total */}
           {filtered.length > 0 && (
