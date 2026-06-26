@@ -41,6 +41,8 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [msg, setMsg] = useState('');
+  const [lockMsg, setLockMsg] = useState('');
+  const flashLock = (text: string) => { setLockMsg(text); setTimeout(() => setLockMsg(''), 5000); };
 
   // Labo selection for activité modal (inline section)
   const [hasLabo, setHasLabo] = useState<boolean | null>(null);
@@ -419,6 +421,14 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
 
       {msg && <div className="alert alert-success">{msg}</div>}
 
+      {lockMsg && (
+        <div style={{ position: 'fixed', top: 76, left: '50%', transform: 'translateX(-50%)', zIndex: 2000, background: '#fffbeb', border: '1.5px solid #fcd34d', color: '#92400e', borderRadius: 12, padding: '12px 16px', fontSize: '0.88rem', fontWeight: 600, boxShadow: '0 8px 28px rgba(0,0,0,0.18)', display: 'flex', alignItems: 'center', gap: 10, maxWidth: 520 }}>
+          <span style={{ fontSize: '1.1rem', lineHeight: 1 }}>🔒</span>
+          <span style={{ flex: 1 }}>{lockMsg}</span>
+          <button onClick={() => setLockMsg('')} style={{ background: 'none', border: 'none', color: '#92400e', cursor: 'pointer', fontSize: '1.1rem', lineHeight: 1, padding: 0 }}>×</button>
+        </div>
+      )}
+
       {loading ? (
         <p className="text-muted">{t('common.loading')}</p>
       ) : showEmptyCard ? (
@@ -548,11 +558,11 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                           {(() => {
                             const locked = (act.ingredientCount ?? 0) > 0;
                             return (
-                              <span title={locked ? 'Suppression impossible : des articles sont affectés à cette activité.' : undefined}>
-                                <button className="btn btn-danger-ghost btn-sm" disabled={locked}
-                                  title={locked ? 'Suppression impossible : des articles sont affectés à cette activité.' : t('common.delete')}
-                                  onClick={() => setDeleteTarget({ kind: 'activite', act })}>🗑</button>
-                              </span>
+                              <button className="btn btn-danger-ghost btn-sm"
+                                title={locked ? 'Suppression impossible : des articles sont affectés à cette activité.' : t('common.delete')}
+                                onClick={() => locked
+                                  ? flashLock("Suppression impossible : des articles sont affectés à cette activité. Retirez d'abord ces articles pour pouvoir la supprimer.")
+                                  : setDeleteTarget({ kind: 'activite', act })}>🗑</button>
                             );
                           })()}
                         </td>
@@ -624,11 +634,11 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                             {(() => {
                               const locked = (labo.ingredientCount ?? 0) > 0;
                               return (
-                                <span title={locked ? 'Suppression impossible : des articles sont affectés à ce labo.' : undefined}>
-                                  <button className="btn btn-danger-ghost btn-sm" disabled={locked}
-                                    title={locked ? 'Suppression impossible : des articles sont affectés à ce labo.' : 'Supprimer'}
-                                    onClick={() => setDeleteLaboTarget(labo)}>🗑</button>
-                                </span>
+                                <button className="btn btn-danger-ghost btn-sm"
+                                  title={locked ? 'Suppression impossible : des articles sont affectés à ce labo.' : 'Supprimer'}
+                                  onClick={() => locked
+                                    ? flashLock("Suppression impossible : des articles sont affectés à ce labo. Retirez d'abord ces articles pour pouvoir le supprimer.")
+                                    : setDeleteLaboTarget(labo)}>🗑</button>
                               );
                             })()}
                           </td>
