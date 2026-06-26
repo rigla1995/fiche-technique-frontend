@@ -8,7 +8,7 @@ import api from '../../api/client';
 
 interface RapportsStats {
   clients: {
-    total: number; indep: number; entreprise: number;
+    total: number;
     activated: number; pendingInvite: number;
   };
   abonnements: {
@@ -112,7 +112,7 @@ export default function AdminRapportsPage() {
 
       {/* ── KPIs principaux ── */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 12 }}>
-        <KpiCard icon="👥" label="Clients total" value={clients.total} sub={`${clients.indep} indép · ${clients.entreprise} entreprise`} color="var(--primary)" />
+        <KpiCard icon="👥" label="Clients total" value={clients.total} sub={`${clients.activated} activé(s)`} color="var(--primary)" />
         <KpiCard icon="✅" label="Comptes activés" value={clients.activated} sub={clients.pendingInvite > 0 ? `${clients.pendingInvite} invitation(s) en attente` : 'Tous activés'} color="#16a34a" />
         <KpiCard icon="💰" label="Revenus ce mois" value={fmtDT(paiementsMonth.payeDt)} color="#16a34a" />
         <KpiCard icon="⚠️" label="Impayés ce mois" value={fmtDT(paiementsMonth.impayeDt)} color={paiementsMonth.impayeDt > 0 ? '#ef4444' : 'var(--text-muted)'} />

@@ -427,7 +427,7 @@ export default function AddClientModal({ onClose, onCreated }: Props) {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               <div>
                 <label style={labelStyle}>Nom complet *</label>
-                <input value={nom} onChange={(e) => setNom(e.target.value)} placeholder="Nom du client ou de l'entreprise" style={inputStyle} />
+                <input value={nom} onChange={(e) => setNom(e.target.value)} placeholder="Nom du client" style={inputStyle} />
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                 <div>

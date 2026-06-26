@@ -11,7 +11,6 @@ const STATUT_COLORS: Record<string, { bg: string; color: string }> = {
 const TYPE_LABELS: Record<string, string> = {
   gerant_sup:           'Gérant supplémentaire',
   labo_sup:             'Labo supplémentaire',
-  upgrade_entreprise:   'Passage compte Entreprise',
   activer_module_vente: 'Activation Module Vente',
 };
 
@@ -30,7 +29,6 @@ export default function DemandesManagement() {
   const [filterStatut, setFilterStatut] = useState('en_attente');
   const [traiting, setTraiting] = useState<Record<number, boolean>>({});
   const [notes, setNotes] = useState<Record<number, string>>({});
-  const [montantMigration, setMontantMigration] = useState<Record<number, string>>({});
 
   useEffect(() => { fetchDemandes(); }, [filterStatut]);
 
@@ -45,13 +43,10 @@ export default function DemandesManagement() {
     }
   };
 
-  const traiter = async (id: number, statut: 'validée' | 'refusée', isUpgrade?: boolean) => {
+  const traiter = async (id: number, statut: 'validée' | 'refusée') => {
     setTraiting((t) => ({ ...t, [id]: true }));
     try {
       const payload: Record<string, unknown> = { statut, notesAdmin: notes[id] || undefined };
-      if (isUpgrade && montantMigration[id] !== undefined) {
-        payload.montantMigration = parseFloat(montantMigration[id]) || 0;
-      }
       await api.put(`/api/abonnements/admin/demandes/${id}`, payload);
       fetchDemandes();
     } finally {
@@ -126,33 +121,12 @@ export default function DemandesManagement() {
 
                 <div style={{ display: 'flex', gap: 24, fontSize: '0.83rem', color: 'var(--text)', marginBottom: 12, flexWrap: 'wrap' }}>
                   <div><strong>Type :</strong> {TYPE_LABELS[d.typeDemande] || d.typeDemande}</div>
-                  {d.typeDemande === 'upgrade_entreprise' ? (
-                    <>
-                      <div><strong>Onboarding client payé :</strong> {d.montantOnboardingClient != null ? `${d.montantOnboardingClient} DT` : '—'}</div>
-                      <div><strong>Frais de migration :</strong> {d.montantMensuelDt != null ? `${d.montantMensuelDt} DT` : '—'}</div>
-                    </>
-                  ) : (
-                    <div><strong>Montant :</strong> {d.montantMensuelDt ? `${d.montantMensuelDt} DT/mois` : '—'}</div>
-                  )}
+                  <div><strong>Montant :</strong> {d.montantMensuelDt ? `${d.montantMensuelDt} DT/mois` : '—'}</div>
                   {d.notesClient && <div><strong>Note client :</strong> {d.notesClient}</div>}
                 </div>
 
                 {d.statut === 'en_attente' && (
                   <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', flexWrap: 'wrap' }}>
-                    {d.typeDemande === 'upgrade_entreprise' && (
-                      <div>
-                        <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block', marginBottom: 3 }}>
-                          Frais de migration (DT)
-                        </label>
-                        <input
-                          type="number"
-                          className="input"
-                          style={{ width: 110 }}
-                          value={montantMigration[d.id] ?? (d.montantMensuelDt ?? '')}
-                          onChange={(e) => setMontantMigration((m) => ({ ...m, [d.id]: e.target.value }))}
-                        />
-                      </div>
-                    )}
                     <input
                       className="input"
                       style={{ flex: 1, minWidth: 160 }}
@@ -163,14 +137,14 @@ export default function DemandesManagement() {
                     <button
                       className="btn btn-sm"
                       style={{ background: '#16a34a', color: '#fff', border: 'none' }}
-                      onClick={() => traiter(d.id, 'validée', d.typeDemande === 'upgrade_entreprise')}
+                      onClick={() => traiter(d.id, 'validée')}
                       disabled={traiting[d.id]}
                     >
                       {traiting[d.id] ? '…' : 'Valider'}
                     </button>
                     <button
                       className="btn btn-danger btn-sm"
-                      onClick={() => traiter(d.id, 'refusée', d.typeDemande === 'upgrade_entreprise')}
+                      onClick={() => traiter(d.id, 'refusée')}
                       disabled={traiting[d.id]}
                     >
                       Refuser

@@ -77,7 +77,6 @@ export interface Abonnement {
   clientId: number;
   clientNom: string;
   clientEmail: string;
-  compteType?: 'independant' | 'entreprise' | null;
   statutOnboarding: 'payé' | 'impayé' | 'offert' | 'gratuit' | 'en_attente';
   montantOnboarding: number;
   dateOnboarding: string | null;
@@ -135,7 +134,7 @@ export interface Demande {
   demandeurId: number;
   demandeurNom: string;
   demandeurType: string;
-  typeDemande: 'gerant_sup' | 'labo_sup' | 'upgrade_entreprise' | 'activer_module_vente';
+  typeDemande: 'gerant_sup' | 'labo_sup' | 'activer_module_vente';
   statut: 'en_attente' | 'validée' | 'refusée';
   montantMensuelDt: number | null;
   montantOnboardingClient?: number | null;
@@ -263,7 +262,6 @@ export interface Client {
   name: string;
   email: string;
   phone?: string;
-  compteType?: 'independant' | 'entreprise' | null;
   onboardingStep?: number;
   createdAt?: string;
   activatedAt?: string | null;
