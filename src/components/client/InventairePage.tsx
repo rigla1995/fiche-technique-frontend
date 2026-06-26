@@ -29,7 +29,6 @@ interface Activite { id: number; nom: string }
 export default function InventairePage() {
   const { canWrite } = useAuth();
   // Multi-affectations : sélecteur d'activité affiché (périmètre filtré côté backend).
-  const isActiviteGerant = false;
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const laboId = searchParams.get('laboId');
@@ -186,7 +185,6 @@ export default function InventairePage() {
   const filledCount = rows.filter((r) => qtys[r.ingredientId] !== '').length;
   const alarmTotal = rows.filter((r) => isAlarm(r)).length;
   const hasAnyQty = filledCount > 0;
-  const needsActiviteSelector = false;
   const [invPreviewMinimized, setInvPreviewMinimized] = useState(false);
 
   const invPreviewLines = rows
@@ -259,7 +257,7 @@ export default function InventairePage() {
       )}
 
       {/* ── Activite selector ── */}
-      {section && (!activiteId || isActiviteGerant) && activites.length >= 1 && (
+      {section && !activiteId && activites.length >= 1 && (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16, padding: '10px 14px', background: 'var(--card-bg)', borderRadius: 10, border: '1px solid var(--border)' }}>
           {activites.map((a) => (
             <button key={a.id} onClick={() => setSelectedActiviteId(a.id)}
@@ -271,9 +269,8 @@ export default function InventairePage() {
         </div>
       )}
 
-      {!needsActiviteSelector && (
-        <>
-          {/* ── Bloc unifié Filtres + Inventaire sur la même ligne ── */}
+      <>
+        {/* ── Bloc unifié Filtres + Inventaire sur la même ligne ── */}
           <div style={{
             background: 'var(--surface)', borderRadius: 14, padding: '14px 20px', marginBottom: 20,
             border: `1.5px solid ${themeBorder}`, boxShadow: isLaboMode ? '0 2px 12px rgba(126,34,206,0.08)' : '0 2px 12px rgba(30,64,175,0.08)',
@@ -468,8 +465,7 @@ export default function InventairePage() {
               </table>
             </div>
           )}
-        </>
-      )}
+      </>
 
       {/* ── Confirmation popup ── */}
       {confirmPopup && (() => {
