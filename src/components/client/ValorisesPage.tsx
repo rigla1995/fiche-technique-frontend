@@ -36,6 +36,7 @@ export default function ValorisesPage() {
   const [viewProduct, setViewProduct] = useState<Product | null>(null);
   const [viewDetail, setViewDetail] = useState<{ ingredients: { ingredientName: string; portion: number; unitName: string }[]; subProducts: { subProductName: string; portion: number }[] } | null>(null);
   const [tab, setTab] = useState<'composes' | 'referentiel'>('composes');
+  const [hasLabos, setHasLabos] = useState(false);
   const [composePage, setComposePage] = useState(1);
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
@@ -52,8 +53,17 @@ export default function ValorisesPage() {
       api.get('/api/articles-valorisables'),
       api.get('/api/categories-produit?type=valorise'),
       api.get('/api/products?type=vendable&origine=labo'),
+      api.get('/api/labo'),
     ])
-      .then(([a, c, p]) => { setArticles(a.data); setCategories(c.data); setComposes(p.data as Product[]); setLoading(false); })
+      .then(([a, c, p, l]) => {
+        setArticles(a.data); setCategories(c.data); setComposes(p.data as Product[]);
+        // Les produits composés sont fabriqués au labo : sans labo, pas d'onglet « Composés »
+        // ni de bouton d'ajout. On bascule alors sur l'onglet « Référentiel ».
+        const labosExist = Array.isArray(l.data) && l.data.length > 0;
+        setHasLabos(labosExist);
+        if (!labosExist) { setTab('referentiel'); setShowComposed(false); }
+        setLoading(false);
+      })
       .catch(() => setLoading(false));
   };
   useEffect(() => { load(); }, []);
@@ -162,17 +172,22 @@ export default function ValorisesPage() {
               <div style={{ fontSize: '1.8rem', fontWeight: 900, color: '#10b981', lineHeight: 1 }}>{assignedCount}/{articles.length}</div>
               <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.5)', marginTop: 2 }}>articles catégorisés</div>
             </div>
-            <button onClick={() => setShowComposed(true)}
-              style={{ background: 'linear-gradient(135deg, #047857, #10b981)', border: 'none', borderRadius: 12, color: '#fff', fontWeight: 700, padding: '12px 18px', cursor: 'pointer', fontSize: '0.85rem', whiteSpace: 'nowrap' }}>
-              + Produit valorisé composé
-            </button>
+            {hasLabos && (
+              <button onClick={() => setShowComposed(true)}
+                style={{ background: 'linear-gradient(135deg, #047857, #10b981)', border: 'none', borderRadius: 12, color: '#fff', fontWeight: 700, padding: '12px 18px', cursor: 'pointer', fontSize: '0.85rem', whiteSpace: 'nowrap' }}>
+                + Produit valorisé composé
+              </button>
+            )}
           </div>
         </div>
       </div>
 
-      {/* Onglets */}
+      {/* Onglets — l'onglet « Composés » n'apparaît que si le client a au moins un labo */}
       <div style={{ display: 'flex', gap: 4, borderBottom: '2px solid #e2e8f0', marginBottom: 18 }}>
-        {([['composes', `🏭 Composés (${composes.length})`], ['referentiel', `💎 Référentiel (${articles.length})`]] as const).map(([key, label]) => (
+        {(([
+          ...(hasLabos ? [['composes', `🏭 Composés (${composes.length})`]] : []),
+          ['referentiel', `💎 Référentiel (${articles.length})`],
+        ]) as ['composes' | 'referentiel', string][]).map(([key, label]) => (
           <button key={key} onClick={() => setTab(key)}
             style={{ padding: '9px 20px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.9rem', fontWeight: tab === key ? 700 : 400, color: tab === key ? '#059669' : 'var(--text)', borderBottom: tab === key ? '3px solid #059669' : '3px solid transparent' }}>
             {label}
@@ -180,7 +195,7 @@ export default function ValorisesPage() {
         ))}
       </div>
 
-      {tab === 'composes' && (
+      {hasLabos && tab === 'composes' && (
         composes.length === 0 ? (
           <div style={{ background: 'linear-gradient(135deg,#eef2ff,#e0e7ff)', border: '2px dashed #c7d2fe', borderRadius: 18, padding: '40px 32px', textAlign: 'center', color: '#3730a3' }}>
             <div style={{ fontSize: '2.4rem', marginBottom: 10 }}>🏭</div>
