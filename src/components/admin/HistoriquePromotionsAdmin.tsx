@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import api from '../../api/client';
+import { FilterInput, FilterSegmented, type SegmentedOption } from '../common/HistoryFilterBar';
 
 const TYPE_LABELS: Record<string, string> = {
   percent_off: '% Réduction',
@@ -113,7 +114,10 @@ export default function HistoriquePromotionsAdmin() {
   }, [rows, selectedClientId, filtActive, filtAppliesTo]);
 
   const totalActive = rows.filter(r => r.isActive).length;
-  const appliesEntries: [string, string][] = [['', 'Toutes'], ...Object.entries(APPLIES_LABELS)];
+  const appliesOptions: SegmentedOption[] = [
+    { value: '', label: 'Toutes', color: '#64748b' },
+    ...Object.entries(APPLIES_LABELS).map(([value, label]) => ({ value, label, color: APPLIES_COLORS[value] || '#4f46e5' })),
+  ];
 
   const PAGE_SIZE = 5;
   const totalPages = Math.max(1, Math.ceil(clientRows.length / PAGE_SIZE));
@@ -144,9 +148,9 @@ export default function HistoriquePromotionsAdmin() {
             ))}
           </div>
           <div style={{ position: 'relative' }}>
-            <span style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', fontSize: 12, pointerEvents: 'none' }}>🔍</span>
-            <input placeholder="Rechercher un client…" value={search} onChange={(e) => setSearch(e.target.value)}
-              style={{ width: '100%', padding: '8px 10px 8px 30px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.2)', fontSize: 12, outline: 'none', background: 'rgba(255,255,255,0.12)', color: '#fff', boxSizing: 'border-box' }} />
+            <span style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', fontSize: 12, pointerEvents: 'none', zIndex: 1 }}>🔍</span>
+            <FilterInput placeholder="Rechercher un client…" value={search} onChange={(e) => setSearch(e.target.value)}
+              style={{ height: 'auto', padding: '8px 10px 8px 30px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.2)', fontSize: 12, background: 'rgba(255,255,255,0.12)', color: '#fff' }} />
           </div>
         </div>
         <div style={{ overflowY: 'auto', maxHeight: 520 }}>
@@ -231,32 +235,15 @@ export default function HistoriquePromotionsAdmin() {
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14, alignItems: 'flex-end', marginTop: 14 }}>
                 <div style={{ display: 'flex', flexDirection: 'column' }}>
                   <label style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>📊 Statut</label>
-                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                    {([['', 'Tous'], ['1', 'Actives'], ['0', 'Expirées']] as [string, string][]).map(([v, label]) => {
-                      const active = filtActive === v;
-                      return (
-                        <button key={v} onClick={() => setFiltActive(v)}
-                          style={{ padding: '4px 12px', borderRadius: 20, fontSize: 11, fontWeight: 600, cursor: 'pointer', border: `1.5px solid ${active ? '#d97706' : '#e2e8f0'}`, background: active ? '#fef3c7' : '#fff', color: active ? '#92400e' : '#94a3b8' }}>
-                          {label}
-                        </button>
-                      );
-                    })}
-                  </div>
+                  <FilterSegmented
+                    options={[{ value: '', label: 'Tous' }, { value: '1', label: 'Actives' }, { value: '0', label: 'Expirées' }]}
+                    value={filtActive} onChange={setFiltActive} accent="#d97706" />
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column' }}>
                   <label style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>🏷️ Catégorie</label>
-                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                    {appliesEntries.map(([v, label]) => {
-                      const active = filtAppliesTo === v;
-                      const color = v ? (APPLIES_COLORS[v] || '#4f46e5') : '#64748b';
-                      return (
-                        <button key={v} onClick={() => setFiltAppliesTo(v)}
-                          style={{ padding: '4px 12px', borderRadius: 20, fontSize: 11, fontWeight: 600, cursor: 'pointer', border: `1.5px solid ${active ? color : '#e2e8f0'}`, background: active ? color + '15' : '#fff', color: active ? color : '#94a3b8' }}>
-                          {label}
-                        </button>
-                      );
-                    })}
-                  </div>
+                  <FilterSegmented
+                    options={appliesOptions}
+                    value={filtAppliesTo} onChange={setFiltAppliesTo} accent="#64748b" />
                 </div>
               </div>
             </div>

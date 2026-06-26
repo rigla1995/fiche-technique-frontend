@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import api from '../../api/client';
 import type { Abonnement, Promotion } from '../../types';
 import { MonthPicker } from './MonthPicker';
+import HistoryFilterBar, { FilterField, FilterInput, FilterSegmented } from '../common/HistoryFilterBar';
 
 const MODE_LABELS: Record<string, { label: string; color: string }> = {
   actif:     { label: 'Actif',        color: '#16a34a' },
@@ -726,16 +727,6 @@ export default function AbonnementsManagement() {
               <p style={{ margin: 0, fontSize: 11.5, color: 'rgba(255,255,255,0.7)' }}>{abonnements.length} client{abonnements.length !== 1 ? 's' : ''} · {countMode('actif')} actif{countMode('actif') !== 1 ? 's' : ''}</p>
             </div>
           </div>
-          {/* Search — aéré */}
-          <div style={{ position: 'relative' }}>
-            <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 13, pointerEvents: 'none', opacity: 0.85 }}>🔍</span>
-            <input
-              placeholder="Rechercher par nom ou email…"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              style={{ width: '100%', padding: '10px 12px 10px 34px', borderRadius: 11, border: '1px solid rgba(255,255,255,0.22)', fontSize: 12.5, outline: 'none', background: 'rgba(255,255,255,0.14)', color: '#fff', boxSizing: 'border-box' }}
-            />
-          </div>
         </div>
         {/* Bandeau statistiques — aéré, fond clair */}
         <div style={{ display: 'flex', borderBottom: '1px solid #e2e8f0', background: '#fff' }}>
@@ -746,31 +737,31 @@ export default function AbonnementsManagement() {
             </div>
           ))}
         </div>
-        {/* Filtres — segmenté, clair */}
-        <div style={{ padding: '12px 14px 11px', background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 9 }}>
-            <span style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#0d9488' }}>Filtrer par statut</span>
-            <span style={{ fontSize: 11, color: '#94a3b8', fontWeight: 600 }}>{filtered.length} résultat{filtered.length !== 1 ? 's' : ''}</span>
-          </div>
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-            {modeFilters.map(({ value, label, color, count }) => {
-              const isChipActive = filterMode === value;
-              return (
-                <button key={value || 'all'} onClick={() => setFilterMode(value)}
-                  style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 11px', borderRadius: 20, fontSize: 11.5, fontWeight: 600, cursor: 'pointer',
-                    border: `1.5px solid ${isChipActive ? color : '#e2e8f0'}`,
-                    background: isChipActive ? (color + '15') : '#fff',
-                    color: isChipActive ? color : '#64748b',
-                    transition: 'all 0.15s',
-                  }}>
-                  {label}
-                  <span style={{ background: isChipActive ? color : '#eef2f7', color: isChipActive ? '#fff' : '#94a3b8', borderRadius: 10, padding: '0 6px', fontSize: 9.5, fontWeight: 800, lineHeight: '15px' }}>
-                    {count}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
+        {/* Filtres — enveloppés dans HistoryFilterBar (recherche + statut segmenté) */}
+        <div style={{ padding: '12px 14px 0' }}>
+          <HistoryFilterBar
+            accent="#0d9488"
+            accentDark="#0f766e"
+            title="Filtrer par statut"
+            subtitle={`${filtered.length} résultat${filtered.length !== 1 ? 's' : ''}`}
+          >
+            <FilterField label="🔍 Recherche">
+              <FilterInput
+                type="text"
+                placeholder="Rechercher par nom ou email…"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </FilterField>
+            <FilterField label="📊 Statut" span>
+              <FilterSegmented
+                options={modeFilters.map(({ value, label, count }) => ({ value, label, count }))}
+                value={filterMode}
+                onChange={(v) => setFilterMode(v)}
+                accent="#0d9488"
+              />
+            </FilterField>
+          </HistoryFilterBar>
         </div>
         {/* Client list */}
         <div style={{ overflowY: 'auto', maxHeight: 520 }}>

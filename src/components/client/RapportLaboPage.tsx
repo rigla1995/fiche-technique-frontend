@@ -5,7 +5,11 @@ import {
 } from 'recharts';
 import api from '../../api/client';
 import HelpButton from '../common/HelpButton';
+import HistoryFilterBar, { FilterField, FilterSelect, FilterInput, FilterSegmented } from '../common/HistoryFilterBar';
 import type { Labo } from '../../types';
+
+const LABO_ACCENT = '#7e22ce';
+const LABO_ACCENT_DARK = '#6b21a8';
 
 interface LaboDash {
   periode: { from: string; to: string };
@@ -89,24 +93,33 @@ export default function RapportLaboPage() {
         <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.82rem', margin: '4px 0 0' }}>Stock, approvisionnements, pertes et transferts du labo</p>
       </div>
 
-      <div style={{ background: 'var(--surface)', borderRadius: 12, border: '1px solid var(--border)', padding: '10px 14px', marginBottom: 20, display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}>
+      <HistoryFilterBar accent={LABO_ACCENT} accentDark={LABO_ACCENT_DARK}>
         {labos.length > 1 && (
-          <select value={laboId} onChange={e => setLaboId(e.target.value)} style={{ fontSize: '0.78rem', padding: '6px 10px', borderRadius: 8, border: '1px solid var(--border)' }}>
-            {labos.map(l => <option key={l.id} value={l.id}>{l.nom}</option>)}
-          </select>
+          <FilterField label="Labo">
+            <FilterSelect value={laboId} onChange={e => setLaboId(e.target.value)}>
+              {labos.map(l => <option key={l.id} value={l.id}>{l.nom}</option>)}
+            </FilterSelect>
+          </FilterField>
         )}
-        <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Période</span>
-        {presets.map(p => (
-          <button key={p.key} onClick={() => setPreset(p.key)}
-            style={{ fontSize: '0.78rem', padding: '5px 11px', borderRadius: 8, cursor: 'pointer', fontWeight: 600, border: `1px solid ${preset === p.key ? '#7e22ce' : 'var(--border)'}`, background: preset === p.key ? '#f5f3ff' : 'var(--bg)', color: preset === p.key ? '#6b21a8' : 'var(--text)' }}>{p.label}</button>
-        ))}
+        <FilterField label="Période" span>
+          <FilterSegmented
+            accent={LABO_ACCENT}
+            value={preset}
+            onChange={(v) => setPreset(v as Preset)}
+            options={presets.map(p => ({ value: p.key, label: p.label }))}
+          />
+        </FilterField>
         {preset === 'perso' && (
           <>
-            <input type="date" value={customFrom} onChange={e => setCustomFrom(e.target.value)} style={{ fontSize: '0.78rem', padding: '5px 8px', borderRadius: 8, border: '1px solid var(--border)' }} />
-            <input type="date" value={customTo} onChange={e => setCustomTo(e.target.value)} style={{ fontSize: '0.78rem', padding: '5px 8px', borderRadius: 8, border: '1px solid var(--border)' }} />
+            <FilterField label="Du">
+              <FilterInput type="date" value={customFrom} onChange={e => setCustomFrom(e.target.value)} />
+            </FilterField>
+            <FilterField label="Au">
+              <FilterInput type="date" value={customTo} onChange={e => setCustomTo(e.target.value)} />
+            </FilterField>
           </>
         )}
-      </div>
+      </HistoryFilterBar>
 
       {loading ? <div className="loading-text">Chargement…</div> : !data ? (
         <div style={{ textAlign: 'center', padding: '50px 20px', color: 'var(--text-muted)' }}>Aucune donnée pour ce labo / cette période.</div>
