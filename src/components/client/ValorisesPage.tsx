@@ -47,6 +47,10 @@ export default function ValorisesPage() {
   const [filterStatut, setFilterStatut] = useState<StatutFilter>('all');
   const [page, setPage] = useState(1);
 
+  // Filtres de l'onglet « Composés »
+  const [composeSearch, setComposeSearch] = useState('');
+  const [composeCat, setComposeCat] = useState('');
+
   const load = () => {
     setLoading(true);
     Promise.all([
@@ -118,6 +122,24 @@ export default function ValorisesPage() {
 
   const assignedCount = articles.filter(a => a.categorie_produit_id).length;
 
+  // Composés — catégories présentes + filtrage (recherche nom/réf + catégorie produit)
+  const composeCats = useMemo(
+    () => Array.from(new Set(composes.map(c => c.categorieProduitName).filter(Boolean))).sort() as string[],
+    [composes]
+  );
+  const hasComposeFilters = !!composeSearch || !!composeCat;
+  const filteredComposes = useMemo(() => composes.filter(p => {
+    if (composeSearch && !`${p.name} ${p.refProduit ?? ''}`.toLowerCase().includes(composeSearch.toLowerCase())) return false;
+    if (composeCat && (p.categorieProduitName ?? '') !== composeCat) return false;
+    return true;
+  }), [composes, composeSearch, composeCat]);
+  const composeTotalPages = Math.max(1, Math.ceil(filteredComposes.length / COMPOSES_PER_PAGE));
+  const safeComposePage = Math.min(composePage, composeTotalPages);
+  const resetComposeFilters = () => { setComposeSearch(''); setComposeCat(''); setComposePage(1); };
+  // Re-borne la page dans l'état quand le nombre de pages diminue (suppression, reload, filtre élargi) :
+  // sans ça, composePage peut rester sur une page disparue et faire atterrir sur la mauvaise page au prochain agrandissement de la liste.
+  useEffect(() => { if (composePage > composeTotalPages) setComposePage(composeTotalPages); }, [composeTotalPages, composePage]);
+
   const filtered = articles.filter(a => {
     if (search && !a.nom.toLowerCase().includes(search.toLowerCase())) return false;
     if (filterFamille && a.famille_nom !== filterFamille) return false;
@@ -145,6 +167,8 @@ export default function ValorisesPage() {
 
   const totalPages = Math.max(1, Math.ceil(groups.length / CATS_PER_PAGE));
   const safePage = Math.min(page, totalPages);
+  // Idem onglet Référentiel : re-borne la page si le nombre de pages diminue (filtres).
+  useEffect(() => { if (page > totalPages) setPage(totalPages); }, [totalPages, page]);
   const pageGroups = groups.slice((safePage - 1) * CATS_PER_PAGE, safePage * CATS_PER_PAGE);
 
   const resetFilters = () => { setSearch(''); setFilterFamille(''); setFilterStatut('all'); setPage(1); };
@@ -172,12 +196,6 @@ export default function ValorisesPage() {
               <div style={{ fontSize: '1.8rem', fontWeight: 900, color: '#10b981', lineHeight: 1 }}>{assignedCount}/{articles.length}</div>
               <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.5)', marginTop: 2 }}>articles catégorisés</div>
             </div>
-            {hasLabos && (
-              <button onClick={() => setShowComposed(true)}
-                style={{ background: 'linear-gradient(135deg, #047857, #10b981)', border: 'none', borderRadius: 12, color: '#fff', fontWeight: 700, padding: '12px 18px', cursor: 'pointer', fontSize: '0.85rem', whiteSpace: 'nowrap' }}>
-                + Produit valorisé composé
-              </button>
-            )}
           </div>
         </div>
       </div>
@@ -195,17 +213,48 @@ export default function ValorisesPage() {
         ))}
       </div>
 
-      {hasLabos && tab === 'composes' && (
-        composes.length === 0 ? (
+      {hasLabos && tab === 'composes' && (<>
+        {/* Bloc filtres + action — le bouton d'ajout vit ici (déplacé depuis l'en-tête) */}
+        <div style={{ background: 'var(--surface)', borderRadius: 14, padding: '14px 18px', marginBottom: 18, border: '1px solid var(--border)', boxShadow: '0 2px 8px rgba(0,0,0,0.04)', display: 'flex', alignItems: 'flex-end', gap: 12, flexWrap: 'wrap' }}>
+          {composes.length > 0 && (<>
+            <div>
+              <label style={labelStyle}>🔍 Produit</label>
+              <input value={composeSearch} onChange={e => { setComposeSearch(e.target.value); setComposePage(1); }} placeholder="Nom ou réf…" style={inputStyle} />
+            </div>
+            {composeCats.length > 0 && (
+              <div>
+                <label style={labelStyle}>🏷️ Catégorie</label>
+                <select value={composeCat} onChange={e => { setComposeCat(e.target.value); setComposePage(1); }} style={inputStyle}>
+                  <option value="">Toutes les catégories</option>
+                  {composeCats.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
+            )}
+            {hasComposeFilters && (
+              <button onClick={resetComposeFilters} style={{ padding: '9px 14px', borderRadius: 9, border: '1.5px solid #6ee7b7', background: '#fff', color: '#059669', fontWeight: 700, fontSize: '0.82rem', cursor: 'pointer' }}>✕ Réinitialiser</button>
+            )}
+            <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 600 }}>
+              {filteredComposes.length} produit{filteredComposes.length !== 1 ? 's' : ''}
+            </span>
+          </>)}
+          <button onClick={() => setShowComposed(true)}
+            style={{ marginLeft: 'auto', background: 'linear-gradient(135deg, #047857, #10b981)', border: 'none', borderRadius: 10, color: '#fff', fontWeight: 700, padding: '10px 18px', cursor: 'pointer', fontSize: '0.85rem', whiteSpace: 'nowrap', boxShadow: '0 2px 8px rgba(4,120,87,0.25)' }}>
+            + Produit valorisé composé
+          </button>
+        </div>
+
+        {composes.length === 0 ? (
           <div style={{ background: 'linear-gradient(135deg,#eef2ff,#e0e7ff)', border: '2px dashed #c7d2fe', borderRadius: 18, padding: '40px 32px', textAlign: 'center', color: '#3730a3' }}>
             <div style={{ fontSize: '2.4rem', marginBottom: 10 }}>🏭</div>
             <div style={{ fontWeight: 800, marginBottom: 6 }}>Aucun produit composé</div>
-            <div style={{ fontSize: '0.88rem' }}>Cliquez sur « + Produit valorisé composé » pour en créer un.</div>
+            <div style={{ fontSize: '0.88rem' }}>Cliquez sur « + Produit valorisé composé » ci-dessus pour en créer un.</div>
           </div>
+        ) : filteredComposes.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-muted)' }}>Aucun produit composé pour ces filtres.</div>
         ) : (
           <>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 14 }}>
-              {composes.slice((composePage - 1) * COMPOSES_PER_PAGE, composePage * COMPOSES_PER_PAGE).map((p) => (
+              {filteredComposes.slice((safeComposePage - 1) * COMPOSES_PER_PAGE, safeComposePage * COMPOSES_PER_PAGE).map((p) => (
                 <div key={p.id} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: '14px 16px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column', gap: 10 }}>
                   <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
                     <div style={{ width: 38, height: 38, borderRadius: 10, background: 'linear-gradient(135deg,#6366f1,#4338ca)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem', flexShrink: 0 }}>💎</div>
@@ -237,16 +286,16 @@ export default function ValorisesPage() {
                 </div>
               ))}
             </div>
-            {composes.length > COMPOSES_PER_PAGE && (
+            {filteredComposes.length > COMPOSES_PER_PAGE && (
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 18 }}>
-                <button disabled={composePage <= 1} onClick={() => setComposePage(composePage - 1)} style={{ padding: '4px 12px', borderRadius: 7, border: '1px solid #c7d2fe', background: '#fff', color: '#4338ca', cursor: composePage <= 1 ? 'default' : 'pointer', fontWeight: 700, opacity: composePage <= 1 ? 0.4 : 1 }}>‹</button>
-                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{composePage} / {Math.ceil(composes.length / COMPOSES_PER_PAGE)}</span>
-                <button disabled={composePage >= Math.ceil(composes.length / COMPOSES_PER_PAGE)} onClick={() => setComposePage(composePage + 1)} style={{ padding: '4px 12px', borderRadius: 7, border: '1px solid #c7d2fe', background: '#fff', color: '#4338ca', cursor: 'pointer', fontWeight: 700, opacity: composePage >= Math.ceil(composes.length / COMPOSES_PER_PAGE) ? 0.4 : 1 }}>›</button>
+                <button disabled={safeComposePage <= 1} onClick={() => setComposePage(safeComposePage - 1)} style={{ padding: '4px 12px', borderRadius: 7, border: '1px solid #c7d2fe', background: '#fff', color: '#4338ca', cursor: safeComposePage <= 1 ? 'default' : 'pointer', fontWeight: 700, opacity: safeComposePage <= 1 ? 0.4 : 1 }}>‹</button>
+                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{safeComposePage} / {composeTotalPages}</span>
+                <button disabled={safeComposePage >= composeTotalPages} onClick={() => setComposePage(safeComposePage + 1)} style={{ padding: '4px 12px', borderRadius: 7, border: '1px solid #c7d2fe', background: '#fff', color: '#4338ca', cursor: 'pointer', fontWeight: 700, opacity: safeComposePage >= composeTotalPages ? 0.4 : 1 }}>›</button>
               </div>
             )}
           </>
-        )
-      )}
+        )}
+      </>)}
 
       {tab === 'referentiel' && (<>
       {/* Filtres */}
