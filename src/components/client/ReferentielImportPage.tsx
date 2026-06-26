@@ -75,6 +75,12 @@ export default function ReferentielImportPage() {
       });
       setResult(res.data);
       setFile(null);
+      // Les articles importés sont auto-affectés aux activités/labos du client : on notifie
+      // le Sidebar pour qu'il rafraîchisse son résumé et débloque dynamiquement les espaces
+      // (Espace Activités, Espace Labo si le client a des labos, Espace Produits).
+      window.dispatchEvent(new Event('articles-changed'));
+      window.dispatchEvent(new Event('activites-changed'));
+      window.dispatchEvent(new Event('labos-changed'));
     } catch (e: unknown) {
       setUploadError((e as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Erreur lors du traitement');
     } finally {
