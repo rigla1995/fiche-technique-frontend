@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useSearchParams, Link, useNavigate } from 'react-router-dom';
 import api from '../../api/client';
 import HelpButton from '../common/HelpButton';
+import HistoryFilterBar, { FilterField, FilterInput, FilterSelect } from '../common/HistoryFilterBar';
 import { useAuth } from '../../context/AuthContext';
 import { useNotifications } from '../../context/NotificationContext';
 
@@ -216,19 +217,6 @@ export default function HistoriqueInventairePage() {
   const showActiviteSelector = !!section && !activiteId && activites.length >= 1;
   const canSearch = !!laboId || !!effectiveActiviteId;
   const canExport = canWrite && applied && histRows.length > 0;
-  const primaryBtn: React.CSSProperties = {
-    display: 'flex', alignItems: 'center', gap: 6,
-    background: `linear-gradient(135deg, ${themeDark} 0%, ${themeColor} 100%)`,
-    boxShadow: `0 4px 14px rgba(${isLaboMode ? '126,34,206' : '30,64,175'},0.35)`,
-    borderRadius: 9, border: 'none', color: '#fff', fontWeight: 800,
-    padding: '8px 18px', cursor: 'pointer', transition: 'all 0.15s',
-  };
-  const greenBtn = primaryBtn;
-  const greenBtnDisabled: React.CSSProperties = {
-    ...primaryBtn,
-    background: '#e5e7eb', boxShadow: 'none',
-    color: 'var(--text-muted)', cursor: 'not-allowed', opacity: 0.55,
-  };
 
   return (
     <div className="page">
@@ -297,57 +285,39 @@ export default function HistoriqueInventairePage() {
       {canSearch && (
         <>
           {/* ── Filters ── */}
-          <div style={{
-            background: 'var(--surface)', borderRadius: 14, padding: '14px 18px', marginBottom: 20,
-            border: '1px solid var(--border)', boxShadow: '0 2px 12px rgba(0,0,0,0.05)',
-          }}>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'flex-end', marginBottom: 12 }}>
-              <div>
-                <label style={{ fontSize: '0.65rem', fontWeight: 800, color: themeColor, textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 3 }}>📅 Du</label>
-                <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)}
-                  style={{ padding: '6px 10px', borderRadius: 8, border: `1.5px solid ${themeBorder}`, fontSize: '0.83rem', background: themeLight, minWidth: 130, fontWeight: 600 }} />
-              </div>
-              <div>
-                <label style={{ fontSize: '0.65rem', fontWeight: 800, color: themeColor, textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 3 }}>📅 Au</label>
-                <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)}
-                  style={{ padding: '6px 10px', borderRadius: 8, border: `1.5px solid ${themeBorder}`, fontSize: '0.83rem', background: themeLight, minWidth: 130, fontWeight: 600 }} />
-              </div>
-              <div>
-                <label style={{ fontSize: '0.65rem', fontWeight: 800, color: themeColor, textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 3 }}>🏷️ Catégorie</label>
-                <select value={filterCategorie} onChange={(e) => setFilterCategorie(e.target.value)}
-                  style={{ padding: '6px 10px', borderRadius: 8, border: `1.5px solid ${themeBorder}`, fontSize: '0.83rem', background: themeLight, minWidth: 140 }}>
-                  <option value="">Toutes</option>
-                  {categories.map((c) => <option key={c} value={c}>{c}</option>)}
-                </select>
-              </div>
-              <div>
-                <label style={{ fontSize: '0.65rem', fontWeight: 800, color: themeColor, textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 3 }}>🧂 Article</label>
-                <select value={filterIngredientId} onChange={(e) => setFilterIngredientId(e.target.value)}
-                  style={{ padding: '6px 10px', borderRadius: 8, border: `1.5px solid ${themeBorder}`, fontSize: '0.83rem', background: themeLight, minWidth: 140 }}>
-                  <option value="">Tous</option>
-                  {filteredIngOptions.map((i) => <option key={i.ingredientId} value={i.ingredientId}>{i.nom}</option>)}
-                </select>
-              </div>
-              {(startDate !== `${currentYear}-01-01` || endDate !== `${currentYear}-12-31` || filterIngredientId || filterCategorie) && (
-                <button onClick={() => { setStartDate(`${currentYear}-01-01`); setEndDate(`${currentYear}-12-31`); setFilterIngredientId(''); setFilterCategorie(''); }}
-                  style={{ alignSelf: 'flex-end', marginLeft: 'auto', background: 'transparent', border: '1.5px solid var(--border)', borderRadius: 7, padding: '5px 9px', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '0.85rem', lineHeight: 1, fontWeight: 700 }}
-                  title="Réinitialiser">✕</button>
-              )}
-            </div>
-
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, flexWrap: 'wrap' }}>
-              <button onClick={search} disabled={loading} style={{ ...greenBtn, opacity: loading ? 0.7 : 1, cursor: loading ? 'not-allowed' : 'pointer' }}>
-                🔍 {loading ? 'Recherche…' : 'Rechercher'}
-              </button>
-              <button onClick={handleExport} disabled={!canExport} style={canExport ? greenBtn : greenBtnDisabled}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}><rect width="24" height="24" rx="3" fill="#217346"/><path d="M14 2H6C4.9 2 4 2.9 4 4V20C4 21.1 4.9 22 6 22H18C19.1 22 20 21.1 20 20V8L14 2Z" fill="#185C37"/><path d="M14 2V8H20L14 2Z" fill="#107C41"/><text x="7" y="18" fill="white" fontSize="8" fontWeight="bold" fontFamily="Arial,sans-serif">XLS</text></svg>
-                {selectedIds.size > 0 ? `Exporter (${selectedIds.size})` : 'Exporter'}
-              </button>
-              <button onClick={handleExportPdf} disabled={exportingPdf || !canExport} style={(canExport && !exportingPdf) ? greenBtn : greenBtnDisabled}>
-                <span>🔴</span> {exportingPdf ? '…' : 'PDF'}
-              </button>
-            </div>
-          </div>
+          <HistoryFilterBar
+            accent={themeColor}
+            accentDark={themeDark}
+            onSearch={search}
+            searching={loading}
+            onReset={() => { setStartDate(`${currentYear}-01-01`); setEndDate(`${currentYear}-12-31`); setFilterIngredientId(''); setFilterCategorie(''); }}
+            showReset={startDate !== `${currentYear}-01-01` || endDate !== `${currentYear}-12-31` || !!filterIngredientId || !!filterCategorie}
+            onExportExcel={handleExport}
+            excelLabel={selectedIds.size > 0 ? `Exporter (${selectedIds.size})` : 'Exporter'}
+            excelDisabled={!canExport}
+            onExportPdf={handleExportPdf}
+            pdfDisabled={!canExport}
+            exportingPdf={exportingPdf}
+          >
+            <FilterField label="📅 Du">
+              <FilterInput type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+            </FilterField>
+            <FilterField label="📅 Au">
+              <FilterInput type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+            </FilterField>
+            <FilterField label="🏷️ Catégorie">
+              <FilterSelect value={filterCategorie} onChange={(e) => setFilterCategorie(e.target.value)}>
+                <option value="">Toutes</option>
+                {categories.map((c) => <option key={c} value={c}>{c}</option>)}
+              </FilterSelect>
+            </FilterField>
+            <FilterField label="🧂 Article">
+              <FilterSelect value={filterIngredientId} onChange={(e) => setFilterIngredientId(e.target.value)}>
+                <option value="">Tous</option>
+                {filteredIngOptions.map((i) => <option key={i.ingredientId} value={i.ingredientId}>{i.nom}</option>)}
+              </FilterSelect>
+            </FilterField>
+          </HistoryFilterBar>
 
           {errorMsg && (
             <div style={{ background: '#fef2f2', border: '1.5px solid #fca5a5', borderRadius: 10, padding: '11px 16px', marginBottom: 14, fontSize: '0.85rem', color: '#991b1b', display: 'flex', alignItems: 'center', gap: 8 }}>

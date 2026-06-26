@@ -31,18 +31,19 @@ export default function TypeApproFilter({ selected, onToggle, accent = '#1e40af'
   const label = count === 0 ? 'Tous les types' : OPTIONS.filter(([k]) => selected.has(k)).map(([, l]) => l).join(', ');
 
   return (
-    <div ref={ref} style={{ position: 'relative' }}>
+    <div ref={ref} style={{ position: 'relative', width: '100%' }}>
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
+        className="hist-ctrl"
         style={{
-          padding: '6px 10px', borderRadius: 7, border: `1.5px solid ${count ? accent : '#cbd5e1'}`,
-          background: '#fff', color: '#334155', fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer',
-          minWidth: 150, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8,
+          height: 36, padding: '0 10px', borderRadius: 8, border: `1px solid ${count ? accent : 'var(--border)'}`,
+          background: 'var(--surface)', color: 'var(--text)', fontSize: '0.84rem', fontWeight: 500, cursor: 'pointer',
+          width: '100%', boxSizing: 'border-box', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8,
         }}
       >
-        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 150 }}>{label}</span>
-        <span style={{ fontSize: '0.6rem', color: '#94a3b8' }}>▼</span>
+        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{label}</span>
+        <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)' }}>▼</span>
       </button>
       {open && (
         <div style={{
