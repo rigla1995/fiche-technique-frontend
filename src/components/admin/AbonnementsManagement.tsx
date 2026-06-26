@@ -799,7 +799,7 @@ export default function AbonnementsManagement() {
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontWeight: 700, fontSize: 13, color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ab.clientNom}</div>
                     <div style={{ fontSize: 11, color: '#6b7280', marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ab.clientEmail}</div>
-                    <div style={{ fontSize: 10, color: '#9ca3af', marginTop: 2 }}>{ab.compteType === 'independant' ? 'Indép.' : 'Entreprise'} · {fmtDate(ab.dateDebut)}</div>
+                    <div style={{ fontSize: 10, color: '#9ca3af', marginTop: 2 }}>Depuis {fmtDate(ab.dateDebut)}</div>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-end', flexShrink: 0 }}>
                     <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 10, background: m.color + '18', color: m.color, whiteSpace: 'nowrap' }}>{m.label}</span>
@@ -834,7 +834,7 @@ export default function AbonnementsManagement() {
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: 17, fontWeight: 800, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{selected.clientNom}</div>
                     <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.65)', marginTop: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{selected.clientEmail}</div>
-                    <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)', marginTop: 2 }}>{selected.compteType === 'independant' ? 'Indépendant' : 'Entreprise'} · depuis {fmtDate(selected.dateDebut)}</div>
+                    <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)', marginTop: 2 }}>Client depuis {fmtDate(selected.dateDebut)}</div>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-end', flexShrink: 0 }}>
                     <span style={{ fontSize: 12, fontWeight: 700, padding: '5px 14px', borderRadius: 20, background: 'rgba(255,255,255,0.15)', color: '#fff', border: `1.5px solid ${detailM.color}60` }}>

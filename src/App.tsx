@@ -49,7 +49,6 @@ import GerantsPage from './components/client/GerantsPage';
 import SupportPage from './components/client/SupportPage';
 import GuidePage from './components/client/GuidePage';
 import AIAssistantPage from './components/client/AIAssistantPage';
-import UpgradeWizard from './components/client/UpgradeWizard';
 import RapportActivitesPage from './components/client/RapportActivitesPage';
 import VentesPage from './components/client/VentesPage';
 import LaboVentesPage from './components/client/LaboVentesPage';
@@ -79,7 +78,6 @@ function RootRedirect() {
   // Gérant : toujours son tableau de bord
   if (user.role === 'gerant') return <Navigate to="/client/dashboard" replace />;
   // Onboarding steps
-  if ((user.onboardingStep ?? 0) === 50) return <Navigate to="/client/upgrade-wizard" replace />;
   if ((user.onboardingStep ?? 0) === 1) return <Navigate to="/client/profile" replace />;
   if ((user.onboardingStep ?? 0) === 2) return <Navigate to="/client/activites" replace />;
   // Client post-onboarding : sans activité → mes activités, sinon → tableau de bord
@@ -149,7 +147,6 @@ export default function App() {
             <Route path="/client/abonnement" element={<MonAbonnementPage />} />
             <Route path="/client/historique-paiement" element={<HistoriquePaiementPage />} />
             <Route path="/client/gerants" element={<GerantsPage />} />
-            <Route path="/client/upgrade-wizard" element={<UpgradeWizard />} />
             <Route path="/client/rapports" element={<RapportActivitesPage />} />
             <Route path="/client/rapports/labo" element={<RapportLaboPage />} />
             <Route path="/client/support" element={<SupportPage />} />
