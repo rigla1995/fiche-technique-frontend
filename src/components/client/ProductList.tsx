@@ -8,6 +8,7 @@ import type { Product, Activite, ActiviteIngredient, CategorieProduit } from '..
 import FicheTechniqueTab from './FicheTechniqueTab';
 import FicheTechniqueModal from './FicheTechniqueModal';
 import GuideButton from './GuideButton';
+import HistoryFilterBar, { FilterField, FilterInput, FilterSelect } from '../common/HistoryFilterBar';
 
 interface ProductDetail {
   ingredients: { ingredientName: string; portion: number; unitName: string; unitPrice: number; categorieName?: string | null }[];
@@ -516,78 +517,49 @@ export default function ProductList() {
             </div>
           )}
 
-          {/* Search bar + create button */}
-          <div style={{
-            background: 'var(--surface)', borderRadius: 14, padding: '16px 20px', marginBottom: 24,
-            border: '1px solid var(--border)', boxShadow: '0 2px 12px rgba(0,0,0,0.05)',
-            display: 'flex', flexWrap: 'wrap', gap: 14, alignItems: 'flex-end',
-          }}>
-            {byTab.length > 0 && allActivities.length > 0 && (
-              <div>
-                <label style={{ fontSize: '0.68rem', fontWeight: 800, color: '#059669', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>📍 Activité</label>
-                <select
-                  value={filterActiviteId ?? ''}
-                  onChange={(e) => { setFilterActiviteId(e.target.value ? Number(e.target.value) : null); setPage(1); }}
-                  style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid #6ee7b7', fontSize: '0.88rem', background: '#f0fdf4', minWidth: 160 }}
-                >
-                  <option value="">Toutes les activités</option>
-                  {allActivities.map((a) => <option key={a.id} value={a.id}>{a.nom}</option>)}
-                </select>
-              </div>
-            )}
-            {byTab.length > 0 && isVendable && categoriesProduit.length > 0 && (
-              <div>
-                <label style={{ fontSize: '0.68rem', fontWeight: 800, color: '#059669', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>🏷️ Catégorie</label>
-                <select
-                  value={filterCategorieId ?? ''}
-                  onChange={(e) => { setFilterCategorieId(e.target.value ? Number(e.target.value) : null); setPage(1); }}
-                  style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid #6ee7b7', fontSize: '0.88rem', background: '#f0fdf4', minWidth: 160 }}
-                >
-                  <option value="">Toutes les catégories</option>
-                  {categoriesProduit.filter((c) => c.typeProduit === (vendableSubTab === 'supplement' ? 'supplement' : 'vendable')).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-                </select>
-              </div>
-            )}
-            {byTab.length > 0 && (
-              <div>
-                <label style={{ fontSize: '0.68rem', fontWeight: 800, color: '#059669', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>🔍 Nom</label>
-                <input type="text" placeholder={t('common.search') + '...'}
-                  value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-                  style={{ padding: '9px 13px', borderRadius: 9, border: '1.5px solid #6ee7b7', fontSize: '0.88rem', background: '#f0fdf4', minWidth: 160 }} />
-              </div>
-            )}
-            <div style={{ display: 'flex', alignItems: 'flex-end', marginTop: 'auto' }}>
+          {/* Barre de filtres (composant partagé, mode direct) */}
+          <HistoryFilterBar
+            accent="#059669" accentDark="#047857"
+            subtitle={`${bySubTab.length} résultat${bySubTab.length !== 1 ? 's' : ''}`}
+            onReset={() => { setSearch(''); setFilterActiviteId(null); setPage(1); }}
+            showReset={!!(search || filterActiviteId)}
+            actions={<>
               <button
-                className="btn btn-ghost btn-sm"
-                onClick={() => { setSearch(''); setFilterActiviteId(null); setPage(1); }}
-                disabled={!search && !filterActiviteId}
-                style={{ fontSize: '0.78rem', opacity: (!search && !filterActiviteId) ? 0.35 : 1, transition: 'opacity 0.15s' }}
-              >
-                ✕ Réinitialiser
-              </button>
-            </div>
-            <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, alignItems: 'flex-end' }}>
-              <button
-                onClick={() => {
-                  if (tab !== 'vendable') {
-                    handleExportXls(false);
-                  } else {
-                    setExportIncludeOther(false);
-                    setExportModalOpen(true);
-                  }
-                }}
+                onClick={() => { if (tab !== 'vendable') { handleExportXls(false); } else { setExportIncludeOther(false); setExportModalOpen(true); } }}
                 disabled={exportingXls || bySubTab.length === 0}
-                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 14px', borderRadius: 10, border: '1.5px solid #1D6F42', background: (exportingXls || bySubTab.length === 0) ? '#f3f4f6' : '#f0fdf4', color: '#1D6F42', cursor: (exportingXls || bySubTab.length === 0) ? 'default' : 'pointer', fontWeight: 700, fontSize: '0.82rem', whiteSpace: 'nowrap', opacity: bySubTab.length === 0 ? 0.5 : 1 }}>
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 6, height: 36, padding: '0 14px', borderRadius: 8, border: '1.5px solid #1D6F42', background: (exportingXls || bySubTab.length === 0) ? '#f3f4f6' : '#f0fdf4', color: '#1D6F42', cursor: (exportingXls || bySubTab.length === 0) ? 'default' : 'pointer', fontWeight: 700, fontSize: '0.82rem', whiteSpace: 'nowrap', opacity: bySubTab.length === 0 ? 0.5 : 1 }}>
                 <ExcelIcon /> {exportingXls ? 'Export…' : 'Exporter XLS'}
               </button>
               {canWriteProducts && (
                 <button onClick={() => openAddModal(isVendable && vendableSubTab === 'supplement')}
-                  style={{ padding: '9px 20px', borderRadius: 10, cursor: 'pointer', fontSize: '0.85rem', border: 'none', background: 'linear-gradient(135deg, #059669, #10b981)', color: '#fff', fontWeight: 700, boxShadow: '0 2px 8px rgba(16,185,129,0.25)', whiteSpace: 'nowrap' }}>
+                  style={{ height: 36, padding: '0 20px', borderRadius: 8, cursor: 'pointer', fontSize: '0.85rem', border: 'none', background: 'linear-gradient(135deg, #059669, #10b981)', color: '#fff', fontWeight: 700, whiteSpace: 'nowrap' }}>
                   + {isVendable ? (vendableSubTab === 'supplement' ? 'Supplément vendable' : 'Produit vendable') : 'Produit utilisable'}
                 </button>
               )}
-            </div>
-          </div>
+            </>}
+          >
+            {byTab.length > 0 && allActivities.length > 0 && (
+              <FilterField label="📍 Activité">
+                <FilterSelect value={filterActiviteId ?? ''} onChange={(e) => { setFilterActiviteId(e.target.value ? Number(e.target.value) : null); setPage(1); }}>
+                  <option value="">Toutes les activités</option>
+                  {allActivities.map((a) => <option key={a.id} value={a.id}>{a.nom}</option>)}
+                </FilterSelect>
+              </FilterField>
+            )}
+            {byTab.length > 0 && isVendable && categoriesProduit.length > 0 && (
+              <FilterField label="🏷️ Catégorie">
+                <FilterSelect value={filterCategorieId ?? ''} onChange={(e) => { setFilterCategorieId(e.target.value ? Number(e.target.value) : null); setPage(1); }}>
+                  <option value="">Toutes les catégories</option>
+                  {categoriesProduit.filter((c) => c.typeProduit === (vendableSubTab === 'supplement' ? 'supplement' : 'vendable')).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </FilterSelect>
+              </FilterField>
+            )}
+            {byTab.length > 0 && (
+              <FilterField label="🔍 Nom">
+                <FilterInput type="text" placeholder={t('common.search') + '...'} value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} />
+              </FilterField>
+            )}
+          </HistoryFilterBar>
 
           {loading ? (
             <div className="loading-text">{t('common.loading')}</div>

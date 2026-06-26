@@ -3,6 +3,7 @@ import api from '../../api/client';
 import type { CategorieProduit, Product } from '../../types';
 import ComposedValoriseModal from './ComposedValoriseModal';
 import FicheTechniqueModal from './FicheTechniqueModal';
+import HistoryFilterBar, { FilterField, FilterInput, FilterSelect } from '../common/HistoryFilterBar';
 
 const HERO = 'linear-gradient(135deg, #0a1628 0%, #0f2847 55%, #0d3b2e 100%)';
 const CATS_PER_PAGE = 10;
@@ -174,8 +175,6 @@ export default function ValorisesPage() {
   const resetFilters = () => { setSearch(''); setFilterFamille(''); setFilterStatut('all'); setPage(1); };
   const hasFilters = !!search || !!filterFamille || filterStatut !== 'all';
 
-  const labelStyle: React.CSSProperties = { fontSize: '0.68rem', fontWeight: 800, color: '#059669', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 };
-  const inputStyle: React.CSSProperties = { padding: '9px 13px', borderRadius: 9, border: '1.5px solid #6ee7b7', fontSize: '0.88rem', background: '#f0fdf4', minWidth: 160 };
 
   return (
     <div className="page">
@@ -214,34 +213,26 @@ export default function ValorisesPage() {
       </div>
 
       {hasLabos && tab === 'composes' && (<>
-        {/* Bloc filtres + action — le bouton d'ajout vit ici (déplacé depuis l'en-tête) */}
-        <div style={{ background: 'var(--surface)', borderRadius: 14, padding: '14px 18px', marginBottom: 18, border: '1px solid var(--border)', boxShadow: '0 2px 8px rgba(0,0,0,0.04)', display: 'flex', alignItems: 'flex-end', gap: 12, flexWrap: 'wrap' }}>
+        {/* Barre de filtres (composant partagé, mode direct) — bouton d'ajout dans actions */}
+        <HistoryFilterBar
+          accent="#059669" accentDark="#047857"
+          subtitle={composes.length > 0 ? `${filteredComposes.length} produit${filteredComposes.length !== 1 ? 's' : ''}` : undefined}
+          onReset={resetComposeFilters}
+          showReset={hasComposeFilters}
+          actions={<button onClick={() => setShowComposed(true)} style={{ height: 36, background: 'linear-gradient(135deg, #047857, #10b981)', border: 'none', borderRadius: 8, color: '#fff', fontWeight: 700, padding: '0 18px', cursor: 'pointer', fontSize: '0.85rem', whiteSpace: 'nowrap' }}>+ Produit valorisé composé</button>}
+        >
           {composes.length > 0 && (<>
-            <div>
-              <label style={labelStyle}>🔍 Produit</label>
-              <input value={composeSearch} onChange={e => { setComposeSearch(e.target.value); setComposePage(1); }} placeholder="Nom ou réf…" style={inputStyle} />
-            </div>
+            <FilterField label="🔍 Produit"><FilterInput value={composeSearch} onChange={e => { setComposeSearch(e.target.value); setComposePage(1); }} placeholder="Nom ou réf…" /></FilterField>
             {composeCats.length > 0 && (
-              <div>
-                <label style={labelStyle}>🏷️ Catégorie</label>
-                <select value={composeCat} onChange={e => { setComposeCat(e.target.value); setComposePage(1); }} style={inputStyle}>
+              <FilterField label="🏷️ Catégorie">
+                <FilterSelect value={composeCat} onChange={e => { setComposeCat(e.target.value); setComposePage(1); }}>
                   <option value="">Toutes les catégories</option>
                   {composeCats.map(c => <option key={c} value={c}>{c}</option>)}
-                </select>
-              </div>
+                </FilterSelect>
+              </FilterField>
             )}
-            {hasComposeFilters && (
-              <button onClick={resetComposeFilters} style={{ padding: '9px 14px', borderRadius: 9, border: '1.5px solid #6ee7b7', background: '#fff', color: '#059669', fontWeight: 700, fontSize: '0.82rem', cursor: 'pointer' }}>✕ Réinitialiser</button>
-            )}
-            <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 600 }}>
-              {filteredComposes.length} produit{filteredComposes.length !== 1 ? 's' : ''}
-            </span>
           </>)}
-          <button onClick={() => setShowComposed(true)}
-            style={{ marginLeft: 'auto', background: 'linear-gradient(135deg, #047857, #10b981)', border: 'none', borderRadius: 10, color: '#fff', fontWeight: 700, padding: '10px 18px', cursor: 'pointer', fontSize: '0.85rem', whiteSpace: 'nowrap', boxShadow: '0 2px 8px rgba(4,120,87,0.25)' }}>
-            + Produit valorisé composé
-          </button>
-        </div>
+        </HistoryFilterBar>
 
         {composes.length === 0 ? (
           <div style={{ background: 'linear-gradient(135deg,#eef2ff,#e0e7ff)', border: '2px dashed #c7d2fe', borderRadius: 18, padding: '40px 32px', textAlign: 'center', color: '#3730a3' }}>
@@ -298,36 +289,30 @@ export default function ValorisesPage() {
       </>)}
 
       {tab === 'referentiel' && (<>
-      {/* Filtres */}
-      <div style={{ background: 'var(--surface)', borderRadius: 14, padding: '14px 18px', marginBottom: 20, border: '1px solid var(--border)', boxShadow: '0 2px 8px rgba(0,0,0,0.04)', display: 'flex', alignItems: 'flex-end', gap: 12, flexWrap: 'wrap' }}>
-        <div>
-          <label style={labelStyle}>🔍 Article</label>
-          <input value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} placeholder="Nom de l'article…" style={inputStyle} />
-        </div>
+      {/* Barre de filtres (composant partagé, mode direct) */}
+      <HistoryFilterBar
+        accent="#059669" accentDark="#047857"
+        subtitle={`${filtered.length} article${filtered.length !== 1 ? 's' : ''} · ${groups.length} catégorie${groups.length !== 1 ? 's' : ''}`}
+        onReset={resetFilters}
+        showReset={hasFilters}
+      >
+        <FilterField label="🔍 Article"><FilterInput value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} placeholder="Nom de l'article…" /></FilterField>
         {familles.length > 0 && (
-          <div>
-            <label style={labelStyle}>🗂️ Famille</label>
-            <select value={filterFamille} onChange={e => { setFilterFamille(e.target.value); setPage(1); }} style={inputStyle}>
+          <FilterField label="🗂️ Famille">
+            <FilterSelect value={filterFamille} onChange={e => { setFilterFamille(e.target.value); setPage(1); }}>
               <option value="">Toutes les familles</option>
               {familles.map(f => <option key={f} value={f}>{f}</option>)}
-            </select>
-          </div>
+            </FilterSelect>
+          </FilterField>
         )}
-        <div>
-          <label style={labelStyle}>🏷️ Statut</label>
-          <select value={filterStatut} onChange={e => { setFilterStatut(e.target.value as StatutFilter); setPage(1); }} style={inputStyle}>
+        <FilterField label="🏷️ Statut">
+          <FilterSelect value={filterStatut} onChange={e => { setFilterStatut(e.target.value as StatutFilter); setPage(1); }}>
             <option value="all">Tous</option>
             <option value="assigned">Catégorisés</option>
             <option value="unassigned">Non catégorisés</option>
-          </select>
-        </div>
-        {hasFilters && (
-          <button onClick={resetFilters} style={{ padding: '9px 14px', borderRadius: 9, border: '1.5px solid #6ee7b7', background: '#fff', color: '#059669', fontWeight: 700, fontSize: '0.82rem', cursor: 'pointer' }}>✕ Réinitialiser</button>
-        )}
-        <div style={{ marginLeft: 'auto', fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 600 }}>
-          {filtered.length} article{filtered.length !== 1 ? 's' : ''} · {groups.length} catégorie{groups.length !== 1 ? 's' : ''}
-        </div>
-      </div>
+          </FilterSelect>
+        </FilterField>
+      </HistoryFilterBar>
 
       {categories.length === 0 && !loading && (
         <div style={{ background: '#fffbeb', border: '1.5px solid #fcd34d', borderRadius: 12, padding: '12px 16px', marginBottom: 16, fontSize: '0.85rem', color: '#92400e' }}>

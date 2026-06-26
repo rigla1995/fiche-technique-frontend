@@ -58,7 +58,7 @@ interface HistoryFilterBarProps {
   title?: string;             // défaut « Filtres »
   subtitle?: ReactNode;       // hint à droite de l'en-tête (ex. nb de résultats)
   children: ReactNode;        // les <FilterField> de la page
-  onSearch: () => void;
+  onSearch?: () => void;      // si absent → mode « filtres en direct » (pas de bouton Rechercher)
   searching?: boolean;
   searchDisabled?: boolean;   // désactiver sans afficher « Chargement… » (ex. aucun labo sélectionné)
   searchLabel?: string;       // défaut « Rechercher »
@@ -70,6 +70,7 @@ interface HistoryFilterBarProps {
   onExportPdf?: () => void;
   pdfDisabled?: boolean;
   exportingPdf?: boolean;
+  actions?: ReactNode;        // boutons additionnels dans le pied à droite (ex. « + Nouveau »)
 }
 
 export default function HistoryFilterBar({
@@ -77,9 +78,10 @@ export default function HistoryFilterBar({
   onSearch, searching, searchDisabled, searchLabel = 'Rechercher',
   onReset, showReset = true,
   onExportExcel, excelLabel = 'Exporter XLS', excelDisabled,
-  onExportPdf, pdfDisabled, exportingPdf,
+  onExportPdf, pdfDisabled, exportingPdf, actions,
 }: HistoryFilterBarProps) {
   const dark = accentDark || accent;
+  const hasFooter = !!((onReset && showReset) || onSearch || onExportExcel || onExportPdf || actions);
   const outline = (disabled?: boolean): CSSProperties => ({
     height: 36, display: 'inline-flex', alignItems: 'center', gap: 6, borderRadius: 8, padding: '0 14px',
     fontSize: '0.82rem', fontWeight: 600, cursor: disabled ? 'not-allowed' : 'pointer', background: 'var(--surface)',
@@ -100,29 +102,62 @@ export default function HistoryFilterBar({
       <div style={{ padding: '14px 16px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12, alignItems: 'end' }}>
         {children}
       </div>
-      {/* Actions */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', borderTop: '1px solid var(--border)', background: 'var(--bg)', flexWrap: 'wrap' }}>
-        {onReset && showReset && (
-          <button onClick={onReset} style={{ height: 36, display: 'inline-flex', alignItems: 'center', gap: 5, borderRadius: 8, padding: '0 12px', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-muted)' }}>
-            ✕ Réinitialiser
+      {/* Actions (masqué si rien à afficher — mode filtres en direct sans reset) */}
+      {hasFooter && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', borderTop: '1px solid var(--border)', background: 'var(--bg)', flexWrap: 'wrap' }}>
+          {onReset && showReset && (
+            <button onClick={onReset} style={{ height: 36, display: 'inline-flex', alignItems: 'center', gap: 5, borderRadius: 8, padding: '0 12px', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-muted)' }}>
+              ✕ Réinitialiser
+            </button>
+          )}
+          <div style={{ flex: 1 }} />
+          {onSearch && (
+            <button onClick={onSearch} disabled={searching || searchDisabled}
+              style={{ height: 36, display: 'inline-flex', alignItems: 'center', gap: 6, borderRadius: 8, padding: '0 18px', fontSize: '0.83rem', fontWeight: 700, cursor: (searching || searchDisabled) ? 'not-allowed' : 'pointer', background: accent, border: 'none', color: '#fff', opacity: (searching || searchDisabled) ? 0.7 : 1 }}>
+              🔍 {searching ? 'Chargement…' : searchLabel}
+            </button>
+          )}
+          {onExportExcel && (
+            <button onClick={onExportExcel} disabled={excelDisabled} style={outline(excelDisabled)}>
+              <XlsIcon /> {excelLabel}
+            </button>
+          )}
+          {onExportPdf && (
+            <button onClick={onExportPdf} disabled={pdfDisabled || exportingPdf} style={outline(pdfDisabled || exportingPdf)}>
+              <span style={{ color: '#dc2626', fontSize: '0.7rem' }}>●</span> {exportingPdf ? '…' : 'PDF'}
+            </button>
+          )}
+          {actions}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Filtre « statut » segmenté (pills), pour aligner les écrans admin sur le même style.
+export interface SegmentedOption { value: string; label: string; count?: number; color?: string; }
+export function FilterSegmented({ options, value, onChange, accent = 'var(--primary)' }: {
+  options: SegmentedOption[]; value: string; onChange: (v: string) => void; accent?: string;
+}) {
+  return (
+    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+      {options.map((o) => {
+        const on = value === o.value;
+        const c = o.color || accent;
+        return (
+          <button key={o.value} type="button" onClick={() => onChange(o.value)}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 6, height: 32, padding: '0 12px', borderRadius: 20,
+              fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer', transition: 'all 0.12s',
+              border: `1px solid ${on ? c : 'var(--border)'}`, background: on ? c : 'var(--surface)', color: on ? '#fff' : 'var(--text-muted)',
+            }}>
+            {o.label}
+            {o.count != null && (
+              <span style={{ fontSize: '0.68rem', fontWeight: 800, borderRadius: 10, padding: '1px 6px', background: on ? 'rgba(255,255,255,0.25)' : 'var(--bg)', color: on ? '#fff' : 'var(--text-muted)' }}>{o.count}</span>
+            )}
           </button>
-        )}
-        <div style={{ flex: 1 }} />
-        <button onClick={onSearch} disabled={searching || searchDisabled}
-          style={{ height: 36, display: 'inline-flex', alignItems: 'center', gap: 6, borderRadius: 8, padding: '0 18px', fontSize: '0.83rem', fontWeight: 700, cursor: (searching || searchDisabled) ? 'not-allowed' : 'pointer', background: accent, border: 'none', color: '#fff', opacity: (searching || searchDisabled) ? 0.7 : 1 }}>
-          🔍 {searching ? 'Chargement…' : searchLabel}
-        </button>
-        {onExportExcel && (
-          <button onClick={onExportExcel} disabled={excelDisabled} style={outline(excelDisabled)}>
-            <XlsIcon /> {excelLabel}
-          </button>
-        )}
-        {onExportPdf && (
-          <button onClick={onExportPdf} disabled={pdfDisabled || exportingPdf} style={outline(pdfDisabled || exportingPdf)}>
-            <span style={{ color: '#dc2626', fontSize: '0.7rem' }}>●</span> {exportingPdf ? '…' : 'PDF'}
-          </button>
-        )}
-      </div>
+        );
+      })}
     </div>
   );
 }
