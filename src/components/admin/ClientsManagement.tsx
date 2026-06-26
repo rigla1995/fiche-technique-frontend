@@ -3,6 +3,7 @@ import api from '../../api/client';
 import type { Abonnement, DomaineActivite } from '../../types';
 import AddClientModal from './AddClientModal';
 import { generateContractPdf } from '../../utils/contractPdf';
+import HistoryFilterBar, { FilterField, FilterInput, FilterSegmented } from '../common/HistoryFilterBar';
 
 interface Client {
   id: number;
@@ -200,37 +201,20 @@ export default function ClientsManagement() {
         </button>
       </div>
 
-      {/* Barre recherche + filtres statut (aérée, claire) */}
-      <div style={{
-        background: 'var(--surface)', borderRadius: 14, padding: '13px 18px', marginBottom: 18,
-        border: '1px solid var(--border)', boxShadow: '0 2px 12px rgba(0,0,0,0.04)',
-        display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap',
-      }}>
-        <div style={{ position: 'relative', flex: 1, minWidth: 240 }}>
-          <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 13, pointerEvents: 'none', opacity: 0.5 }}>🔍</span>
-          <input
-            type="text"
-            placeholder="Rechercher par nom, email ou téléphone…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            style={{ width: '100%', padding: '9px 12px 9px 34px', borderRadius: 10, border: '1.5px solid var(--border)', fontSize: '0.88rem', background: 'var(--background)', boxSizing: 'border-box' }}
-          />
-        </div>
-        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-          {statusFilters.map(({ value, label, count, color }) => {
-            const active = filterStatus === value;
-            return (
-              <button key={value || 'all'} onClick={() => setFilterStatus(value)}
-                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 13px', borderRadius: 20, fontSize: 12, fontWeight: 600, cursor: 'pointer',
-                  border: `1.5px solid ${active ? color : '#e2e8f0'}`, background: active ? color + '15' : '#fff', color: active ? color : '#64748b', transition: 'all 0.15s' }}>
-                {label}
-                <span style={{ background: active ? color : '#eef2f7', color: active ? '#fff' : '#94a3b8', borderRadius: 10, padding: '0 6px', fontSize: 9.5, fontWeight: 800, lineHeight: '15px' }}>{count}</span>
-              </button>
-            );
-          })}
-        </div>
-        <span style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--text-muted)', fontWeight: 600 }}>{filtered.length} résultat{filtered.length !== 1 ? 's' : ''}</span>
-      </div>
+      {/* Barre de filtres (composant partagé) — recherche + statut segmenté avec compteurs */}
+      <HistoryFilterBar
+        accent="#0d9488" accentDark="#0f766e"
+        subtitle={`${filtered.length} résultat${filtered.length !== 1 ? 's' : ''}`}
+        onReset={() => { setSearch(''); setFilterStatus(''); }}
+        showReset={!!(search || filterStatus)}
+      >
+        <FilterField label="🔍 Recherche">
+          <FilterInput type="text" placeholder="Nom, email ou téléphone…" value={search} onChange={(e) => setSearch(e.target.value)} />
+        </FilterField>
+        <FilterField label="📊 Statut" span>
+          <FilterSegmented options={statusFilters} value={filterStatus} onChange={(v) => setFilterStatus(v as '' | 'active' | 'pending')} accent="#0d9488" />
+        </FilterField>
+      </HistoryFilterBar>
 
       {loading ? (
         <div className="loading-text">Chargement…</div>

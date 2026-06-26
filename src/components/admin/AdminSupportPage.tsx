@@ -3,6 +3,8 @@ import api from '../../api/client';
 import type { SupportDemande } from '../../types';
 import { useNotifications } from '../../context/NotificationContext';
 import { generateAvenantPdf } from '../../utils/contractPdf';
+import { FilterSegmented, FilterInput } from '../common/HistoryFilterBar';
+import type { SegmentedOption } from '../common/HistoryFilterBar';
 
 const TYPE_INFO: Record<string, { label: string; icon: string; color: string; bg: string }> = {
   ingredient_manquant: { label: 'Ingrédient manquant', icon: '🥕', color: '#92400e', bg: '#fef3c7' },
@@ -422,6 +424,17 @@ export default function AdminSupportPage() {
   const pagedDemandes = clientDemandes.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
   const pendingTotal = demandes.filter(d => d.statut === 'en_attente').length;
 
+  const statutOptions: SegmentedOption[] = [
+    { value: '', label: 'Tous' },
+    { value: 'en_attente', label: '⏳ En attente', color: '#d97706' },
+    { value: 'validée', label: '✅ Validée', color: '#16a34a' },
+    { value: 'refusée', label: '❌ Refusée', color: '#dc2626' },
+  ];
+  const typeOptions: SegmentedOption[] = [
+    { value: '', label: 'Tous' },
+    ...Object.entries(TYPE_INFO).map(([v, info]) => ({ value: v, label: `${info.icon} ${info.label}`, color: info.color })),
+  ];
+
   return (
     <>
       {detailDemande && (
@@ -456,9 +469,9 @@ export default function AdminSupportPage() {
               ))}
             </div>
             <div style={{ position: 'relative' }}>
-              <span style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', fontSize: 12, pointerEvents: 'none' }}>🔍</span>
-              <input placeholder="Rechercher un client…" value={search} onChange={(e) => setSearch(e.target.value)}
-                style={{ width: '100%', padding: '8px 10px 8px 30px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.2)', fontSize: 12, outline: 'none', background: 'rgba(255,255,255,0.12)', color: '#fff', boxSizing: 'border-box' }} />
+              <span style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', fontSize: 12, pointerEvents: 'none', zIndex: 1 }}>🔍</span>
+              <FilterInput placeholder="Rechercher un client…" value={search} onChange={(e) => setSearch(e.target.value)}
+                style={{ height: 'auto', padding: '8px 10px 8px 30px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.2)', fontSize: 12, background: 'rgba(255,255,255,0.12)', color: '#fff' }} />
             </div>
           </div>
           <div style={{ overflowY: 'auto', maxHeight: 520 }}>
@@ -530,27 +543,9 @@ export default function AdminSupportPage() {
               {/* Filters */}
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 16, alignItems: 'center' }}>
                 <span style={{ fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', marginRight: 2 }}>Statut</span>
-                {([['', 'Tous'], ['en_attente', '⏳ En attente'], ['validée', '✅ Validée'], ['refusée', '❌ Refusée']] as [string, string][]).map(([v, label]) => {
-                  const active = filterStatut === v;
-                  const color = v === 'en_attente' ? '#d97706' : v === 'validée' ? '#16a34a' : v === 'refusée' ? '#dc2626' : '#64748b';
-                  return (
-                    <button key={v} onClick={() => setFilterStatut(v)}
-                      style={{ padding: '4px 12px', borderRadius: 20, fontSize: 11, fontWeight: 600, cursor: 'pointer', border: `1.5px solid ${active ? color : '#e2e8f0'}`, background: active ? color + '18' : '#fff', color: active ? color : '#94a3b8' }}>
-                      {label}
-                    </button>
-                  );
-                })}
+                <FilterSegmented value={filterStatut} onChange={setFilterStatut} options={statutOptions} />
                 <span style={{ fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', marginLeft: 8, marginRight: 2 }}>Type</span>
-                {([['', 'Tous'], ['ingredient_manquant', ''], ['supplement', ''], ['aide', '']] as [string, string][]).map(([v]) => {
-                  const info = v ? TYPE_INFO[v] : null;
-                  const active = filterType === v;
-                  return (
-                    <button key={v} onClick={() => setFilterType(v)}
-                      style={{ padding: '4px 12px', borderRadius: 20, fontSize: 11, fontWeight: 600, cursor: 'pointer', border: `1.5px solid ${active ? (info?.color || '#64748b') : '#e2e8f0'}`, background: active ? (info?.bg || '#f1f5f9') : '#fff', color: active ? (info?.color || '#64748b') : '#94a3b8' }}>
-                      {info ? `${info.icon} ${info.label}` : 'Tous'}
-                    </button>
-                  );
-                })}
+                <FilterSegmented value={filterType} onChange={setFilterType} options={typeOptions} />
                 {(filterStatut || filterType) && (
                   <button onClick={() => { setFilterStatut(''); setFilterType(''); }}
                     style={{ padding: '4px 10px', borderRadius: 8, border: '1px solid #fecaca', background: '#fff', color: '#dc2626', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>✕</button>

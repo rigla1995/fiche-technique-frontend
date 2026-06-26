@@ -4,6 +4,7 @@ import {
 } from 'recharts';
 import api from '../../api/client';
 import HelpButton from '../common/HelpButton';
+import HistoryFilterBar, { FilterField, FilterInput, FilterSelect, FilterSegmented } from '../common/HistoryFilterBar';
 import type { Activite, CategorieProduit } from '../../types';
 
 interface RVProduit { nom: string; type: 'produit' | 'supplement' | 'valorise'; qte: number; ca: number; marge: number; food_cost_pct: number | null }
@@ -112,30 +113,40 @@ export default function RapportVentePage() {
         <button onClick={exportExcel} style={{ fontSize: '0.82rem', padding: '8px 14px', borderRadius: 9, border: '1.5px solid rgba(255,255,255,0.5)', background: 'rgba(255,255,255,0.15)', color: '#fff', cursor: 'pointer', fontWeight: 600 }}>📊 Export Excel</button>
       </div>
 
-      <div style={{ background: 'var(--surface)', borderRadius: 12, border: '1px solid var(--border)', padding: '10px 14px', marginBottom: 20, display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}>
-        <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Période</span>
-        {presets.map(p => (
-          <button key={p.key} onClick={() => setPreset(p.key)} style={{ fontSize: '0.78rem', padding: '5px 11px', borderRadius: 8, cursor: 'pointer', fontWeight: 600, border: `1px solid ${preset === p.key ? '#b45309' : 'var(--border)'}`, background: preset === p.key ? '#fffbeb' : 'var(--bg)', color: preset === p.key ? '#92400e' : 'var(--text)' }}>{p.label}</button>
-        ))}
-        {preset === 'perso' && (<>
-          <input type="date" value={customFrom} onChange={e => setCustomFrom(e.target.value)} style={{ fontSize: '0.78rem', padding: '5px 8px', borderRadius: 8, border: '1px solid var(--border)' }} />
-          <input type="date" value={customTo} onChange={e => setCustomTo(e.target.value)} style={{ fontSize: '0.78rem', padding: '5px 8px', borderRadius: 8, border: '1px solid var(--border)' }} />
-        </>)}
-        <span style={{ width: 1, height: 20, background: 'var(--border)', margin: '0 4px' }} />
+      <HistoryFilterBar accent="#b45309" accentDark="#92400e">
+        <FilterField label="📅 Période" span>
+          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}>
+            <FilterSegmented options={presets.map(p => ({ value: p.key, label: p.label }))} value={preset} onChange={(v) => setPreset(v as Preset)} accent="#b45309" />
+            {preset === 'perso' && (<>
+              <FilterInput type="date" value={customFrom} onChange={e => setCustomFrom(e.target.value)} style={{ width: 'auto', flex: '0 0 auto' }} />
+              <FilterInput type="date" value={customTo} onChange={e => setCustomTo(e.target.value)} style={{ width: 'auto', flex: '0 0 auto' }} />
+            </>)}
+          </div>
+        </FilterField>
         {activites.length > 1 && (
-          <select value={activiteId} onChange={e => setActiviteId(e.target.value)} style={{ fontSize: '0.78rem', padding: '6px 10px', borderRadius: 8, border: '1px solid var(--border)' }}>
-            <option value="">Toutes activités</option>{activites.map(a => <option key={a.id} value={a.id}>{a.nom}</option>)}
-          </select>
+          <FilterField label="🏪 Activité">
+            <FilterSelect value={activiteId} onChange={e => setActiviteId(e.target.value)}>
+              <option value="">Toutes activités</option>
+              {activites.map(a => <option key={a.id} value={a.id}>{a.nom}</option>)}
+            </FilterSelect>
+          </FilterField>
         )}
         {categories.length > 0 && (
-          <select value={categorieId} onChange={e => setCategorieId(e.target.value)} style={{ fontSize: '0.78rem', padding: '6px 10px', borderRadius: 8, border: '1px solid var(--border)' }}>
-            <option value="">Toutes catégories</option>{categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-          </select>
+          <FilterField label="🏷️ Catégorie">
+            <FilterSelect value={categorieId} onChange={e => setCategorieId(e.target.value)}>
+              <option value="">Toutes catégories</option>
+              {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </FilterSelect>
+          </FilterField>
         )}
-        <select value={canal} onChange={e => setCanal(e.target.value)} style={{ fontSize: '0.78rem', padding: '6px 10px', borderRadius: 8, border: '1px solid var(--border)' }}>
-          <option value="">Tous canaux</option><option value="directe">Direct</option><option value="prestataire">Prestataires</option>
-        </select>
-      </div>
+        <FilterField label="🛒 Canal">
+          <FilterSelect value={canal} onChange={e => setCanal(e.target.value)}>
+            <option value="">Tous canaux</option>
+            <option value="directe">Direct</option>
+            <option value="prestataire">Prestataires</option>
+          </FilterSelect>
+        </FilterField>
+      </HistoryFilterBar>
 
       {loading ? <div className="loading-text">Chargement…</div> : !data || data.vide ? (
         <div style={{ textAlign: 'center', padding: '50px 20px', color: 'var(--text-muted)' }}>Aucune vente sur cette période.</div>

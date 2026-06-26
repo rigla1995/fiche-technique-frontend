@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
+import HistoryFilterBar, { FilterField, FilterSelect } from '../common/HistoryFilterBar';
 
 const MONTHS_FR = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc'];
 const MONTHS_LONG = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
@@ -112,14 +113,6 @@ export default function DashboardGerantPage() {
   const yearOptions = [currentYear - 1, currentYear];
   const periodLabel = month ? MONTHS_LONG[month - 1] + ' ' + year : `Année ${year}`;
 
-  const filterSelectStyle: React.CSSProperties = {
-    padding: '6px 10px', borderRadius: 7, border: '1.5px solid #93c5fd',
-    fontSize: '0.82rem', background: '#eff6ff', minWidth: 130,
-  };
-  const filterLabelStyle: React.CSSProperties = {
-    fontSize: '0.62rem', fontWeight: 700, color: 'var(--text-muted)',
-    textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 4,
-  };
   const isFiltered = month !== null || typeAppro !== '' || year !== currentYear;
 
   if (loading) {
@@ -170,47 +163,35 @@ export default function DashboardGerantPage() {
         </div>
       </div>
 
-      {/* Filters bar — same layout as Historique Appro */}
-      <div style={{
-        background: 'var(--surface)', borderRadius: 14, padding: '12px 16px',
-        border: '1px solid var(--border)', boxShadow: '0 2px 12px rgba(0,0,0,0.05)',
-        marginBottom: 20,
-      }}>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'flex-end' }}>
-          {/* Année */}
-          <div>
-            <label style={filterLabelStyle}>📅 Année</label>
-            <select value={year} onChange={(e) => setYear(Number(e.target.value))} style={filterSelectStyle}>
-              {yearOptions.map((y) => <option key={y} value={y}>{y}</option>)}
-            </select>
-          </div>
-          {/* Mois */}
-          <div>
-            <label style={filterLabelStyle}>📆 Mois</label>
-            <select value={month ?? ''} onChange={(e) => setMonth(e.target.value ? Number(e.target.value) : null)} style={filterSelectStyle}>
-              <option value="">Toute l'année</option>
-              {MONTHS_LONG.map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
-            </select>
-          </div>
-          {/* Type appro */}
-          <div>
-            <label style={filterLabelStyle}>🏷️ Type d'appro</label>
-            <select value={typeAppro} onChange={(e) => setTypeAppro(e.target.value)} style={filterSelectStyle}>
-              <option value="">Tous les types</option>
-              <option value="manuel">Manuel</option>
-              <option value="transfert">Transfert</option>
-              {isLabo && <option value="PT">Prod. Transformé</option>}
-              {(data?.hasVente) && <option value="vente">Vente</option>}
-            </select>
-          </div>
-          {/* Reset */}
-          {isFiltered && (
-            <button onClick={() => { setYear(currentYear); setMonth(null); setTypeAppro(''); }}
-              style={{ alignSelf: 'flex-end', background: 'transparent', border: '1.5px solid var(--border)', borderRadius: 7, padding: '5px 9px', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '0.85rem', lineHeight: 1, fontWeight: 700 }}
-              title="Réinitialiser">✕</button>
-          )}
-        </div>
-      </div>
+      {/* Barre de filtres (composant partagé) — année / mois / type d'appro */}
+      <HistoryFilterBar
+        accent={themeColor}
+        accentDark={themeDark}
+        subtitle={periodLabel}
+        onReset={() => { setYear(currentYear); setMonth(null); setTypeAppro(''); }}
+        showReset={isFiltered}
+      >
+        <FilterField label="📅 Année">
+          <FilterSelect value={year} onChange={(e) => setYear(Number(e.target.value))}>
+            {yearOptions.map((y) => <option key={y} value={y}>{y}</option>)}
+          </FilterSelect>
+        </FilterField>
+        <FilterField label="📆 Mois">
+          <FilterSelect value={month ?? ''} onChange={(e) => setMonth(e.target.value ? Number(e.target.value) : null)}>
+            <option value="">Toute l'année</option>
+            {MONTHS_LONG.map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
+          </FilterSelect>
+        </FilterField>
+        <FilterField label="🏷️ Type d'appro">
+          <FilterSelect value={typeAppro} onChange={(e) => setTypeAppro(e.target.value)}>
+            <option value="">Tous les types</option>
+            <option value="manuel">Manuel</option>
+            <option value="transfert">Transfert</option>
+            {isLabo && <option value="PT">Prod. Transformé</option>}
+            {(data?.hasVente) && <option value="vente">Vente</option>}
+          </FilterSelect>
+        </FilterField>
+      </HistoryFilterBar>
 
       {/* KPI cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 14, marginBottom: 16 }}>
