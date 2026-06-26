@@ -647,6 +647,10 @@ export default function ProductList() {
                             {isVendable && p.categorieProduitName && (
                               <span style={{ fontSize: '0.62rem', fontWeight: 700, letterSpacing: '0.04em', background: '#d1fae5', color: '#065f46', border: '1px solid #6ee7b7', borderRadius: 20, padding: '2px 8px', flexShrink: 0 }}>🏷️ {p.categorieProduitName}</span>
                             )}
+                            {(p.origine ?? 'activite') === 'labo' && (
+                              <span title="Fabriqué au labo — reçu uniquement par transfert (pas d'appro manuel en activité)."
+                                style={{ fontSize: '0.62rem', fontWeight: 700, letterSpacing: '0.04em', background: '#ecfeff', color: '#0e7490', border: '1px solid #a5f3fc', borderRadius: 20, padding: '2px 8px', flexShrink: 0, whiteSpace: 'nowrap' }}>⇄ Transfert uniquement</span>
+                            )}
                           </div>
                           {!isVendable && (
                             <button

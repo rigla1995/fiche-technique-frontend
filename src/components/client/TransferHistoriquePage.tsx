@@ -3,6 +3,7 @@ import { useSearchParams, Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
 import HelpButton from '../common/HelpButton';
+import HistoryFilterBar, { FilterField, FilterInput, FilterSelect } from '../common/HistoryFilterBar';
 
 const currentYear = new Date().getFullYear();
 const yearStart = `${currentYear}-01-01`;
@@ -236,58 +237,32 @@ export default function TransferHistoriquePage() {
         </div>
       )}
 
-      {/* Filter panel */}
-      <div style={{ background: 'var(--surface)', borderRadius: 14, padding: '14px 18px', border: '1px solid var(--border)', boxShadow: '0 2px 12px rgba(0,0,0,0.05)', marginBottom: 24 }}>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'flex-end', marginBottom: 12 }}>
-          <div>
-            <label style={{ fontSize: '0.65rem', fontWeight: 800, color: '#7e22ce', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 3 }}>📅 Du</label>
-            <input type="date" style={{ padding: '6px 10px', borderRadius: 8, border: '1.5px solid #7e22ce', fontSize: '0.83rem', background: '#faf5ff', minWidth: 130, fontWeight: 600 }}
-              value={startDate} onChange={(e) => setStartDate(e.target.value)} />
-          </div>
-          <div>
-            <label style={{ fontSize: '0.65rem', fontWeight: 800, color: '#7e22ce', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 3 }}>📅 Au</label>
-            <input type="date" style={{ padding: '6px 10px', borderRadius: 8, border: '1.5px solid #7e22ce', fontSize: '0.83rem', background: '#faf5ff', minWidth: 130, fontWeight: 600 }}
-              value={endDate} onChange={(e) => setEndDate(e.target.value)} />
-          </div>
-          {activites.length > 0 && (
-            <div>
-              <label style={{ fontSize: '0.65rem', fontWeight: 800, color: '#7e22ce', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 3 }}>🏪 {t('client.labo.filter_activite')}</label>
-              <select style={{ padding: '6px 10px', borderRadius: 8, border: '1.5px solid #7e22ce', fontSize: '0.83rem', background: '#faf5ff', minWidth: 140 }} value={filterActiviteId} onChange={(e) => setFilterActiviteId(e.target.value)}>
-                <option value="">{t('client.labo.all_activites')}</option>
-                {activites.map((a) => <option key={a.id} value={a.id}>{a.nom}</option>)}
-              </select>
-            </div>
-          )}
-          <div>
-            <label style={{ fontSize: '0.65rem', fontWeight: 800, color: '#7e22ce', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 3 }}>🏷️ Catégorie</label>
-            <select style={{ padding: '6px 10px', borderRadius: 8, border: '1.5px solid #7e22ce', fontSize: '0.83rem', background: '#faf5ff', minWidth: 130 }} value={filterCategorie}
-              onChange={(e) => { setFilterCategorie(e.target.value); setPage(1); }}>
-              <option value="">{t('client.catalogue_franchise.all_categories')}</option>
-              {allCategories.map((c) => <option key={c} value={c}>{c}</option>)}
-            </select>
-          </div>
-          {(startDate !== yearStart || endDate !== yearEnd || filterActiviteId || filterCategorie) && (
-            <button onClick={() => { setStartDate(yearStart); setEndDate(yearEnd); setFilterActiviteId(''); setFilterCategorie(''); setPage(1); }}
-              style={{ alignSelf: 'flex-end', marginLeft: 'auto', background: 'transparent', border: '1.5px solid var(--border)', borderRadius: 7, padding: '5px 9px', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '0.85rem', lineHeight: 1, fontWeight: 700 }}
-              title="Réinitialiser">✕</button>
-          )}
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, flexWrap: 'wrap' }}>
-          <button onClick={fetchResults} disabled={loading}
-            style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'linear-gradient(135deg, #3b0764 0%, #7e22ce 100%)', boxShadow: '0 4px 14px rgba(126,34,206,0.35)', borderRadius: 9, border: 'none', color: '#fff', fontWeight: 800, padding: '8px 20px', cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.7 : 1 }}>
-            🔍 {loading ? t('common.loading') : 'Rechercher'}
-          </button>
-          <button onClick={exportExcel} disabled={exporting || !searched || results.length === 0}
-            style={{ display: 'flex', alignItems: 'center', gap: 6, background: (searched && results.length > 0) ? 'linear-gradient(135deg, #3b0764 0%, #7e22ce 100%)' : '#e5e7eb', boxShadow: (searched && results.length > 0) ? '0 4px 14px rgba(126,34,206,0.3)' : 'none', borderRadius: 9, border: 'none', color: (searched && results.length > 0) ? '#fff' : 'var(--text-muted)', fontWeight: 800, padding: '8px 18px', cursor: (!searched || results.length === 0) ? 'not-allowed' : 'pointer', opacity: (!searched || results.length === 0) ? 0.55 : 1, transition: 'all 0.15s' }}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}><rect width="24" height="24" rx="3" fill="#217346"/><path d="M14 2H6C4.9 2 4 2.9 4 4V20C4 21.1 4.9 22 6 22H18C19.1 22 20 21.1 20 20V8L14 2Z" fill="#185C37"/><path d="M14 2V8H20L14 2Z" fill="#107C41"/><text x="7" y="18" fill="white" fontSize="8" fontWeight="bold" fontFamily="Arial,sans-serif">XLS</text></svg>
-            {selectedIds.size > 0 ? `Exporter (${selectedIds.size})` : 'Exporter'}
-          </button>
-          <button onClick={exportPdf} disabled={exportingPdf || !searched || results.length === 0}
-            style={{ display: 'flex', alignItems: 'center', gap: 6, background: (searched && results.length > 0) ? 'linear-gradient(135deg, #3b0764 0%, #7e22ce 100%)' : '#e5e7eb', boxShadow: (searched && results.length > 0) ? '0 4px 14px rgba(126,34,206,0.3)' : 'none', borderRadius: 9, border: 'none', color: (searched && results.length > 0) ? '#fff' : 'var(--text-muted)', fontWeight: 800, padding: '8px 18px', cursor: (exportingPdf || !searched || results.length === 0) ? 'not-allowed' : 'pointer', opacity: (exportingPdf || !searched || results.length === 0) ? 0.55 : 1, transition: 'all 0.15s' }}>
-            <span>🔴</span> {exportingPdf ? '…' : 'PDF'}
-          </button>
-        </div>
-      </div>
+      {/* Barre de filtres (composant partagé) */}
+      <HistoryFilterBar
+        accent="#7e22ce" accentDark="#6d28d9"
+        onSearch={fetchResults} searching={loading}
+        onReset={() => { setStartDate(yearStart); setEndDate(yearEnd); setFilterActiviteId(''); setFilterCategorie(''); setPage(1); }}
+        showReset={!!(startDate !== yearStart || endDate !== yearEnd || filterActiviteId || filterCategorie)}
+        onExportExcel={exportExcel} excelDisabled={exporting || !searched || results.length === 0} excelLabel={`Exporter${selectedIds.size > 0 ? ` (${selectedIds.size})` : ''}`}
+        onExportPdf={exportPdf} pdfDisabled={!searched || results.length === 0} exportingPdf={exportingPdf}
+      >
+        <FilterField label="📅 Du"><FilterInput type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} /></FilterField>
+        <FilterField label="📅 Au"><FilterInput type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} /></FilterField>
+        {activites.length > 0 && (
+          <FilterField label={`🏪 ${t('client.labo.filter_activite')}`}>
+            <FilterSelect value={filterActiviteId} onChange={(e) => setFilterActiviteId(e.target.value)}>
+              <option value="">{t('client.labo.all_activites')}</option>
+              {activites.map((a) => <option key={a.id} value={a.id}>{a.nom}</option>)}
+            </FilterSelect>
+          </FilterField>
+        )}
+        <FilterField label="🏷️ Catégorie">
+          <FilterSelect value={filterCategorie} onChange={(e) => { setFilterCategorie(e.target.value); setPage(1); }}>
+            <option value="">{t('client.catalogue_franchise.all_categories')}</option>
+            {allCategories.map((c) => <option key={c} value={c}>{c}</option>)}
+          </FilterSelect>
+        </FilterField>
+      </HistoryFilterBar>
 
       {/* Results */}
       {!searched ? null : loading ? (

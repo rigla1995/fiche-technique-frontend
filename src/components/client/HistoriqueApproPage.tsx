@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
 import HelpButton from '../common/HelpButton';
 import TypeApproFilter from '../common/TypeApproFilter';
+import HistoryFilterBar, { FilterField, FilterInput, FilterSelect } from '../common/HistoryFilterBar';
 import { useAuth } from '../../context/AuthContext';
 import type { Activite, HistoriqueApproEntry } from '../../types';
 
@@ -464,77 +465,40 @@ export default function HistoriqueApproPage() {
         </div>
       )}
 
-      {/* ── Filter/toolbar bar ─────────────────────────────────────────────── */}
-      <div style={{
-        background: 'var(--surface)', borderRadius: 14, padding: '12px 16px',
-        border: '1px solid var(--border)', boxShadow: '0 2px 12px rgba(0,0,0,0.05)',
-        marginBottom: 24,
-      }}>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'flex-end', marginBottom: 12 }}>
-          <div>
-            <label style={{ fontSize: '0.62rem', fontWeight: 700, color: '#1e40af', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 4 }}>📅 Du</label>
-            <input type="date" style={{ padding: '6px 10px', borderRadius: 7, border: '1.5px solid #1e40af', fontSize: '0.82rem', background: '#eff6ff', fontWeight: 600 }}
-              value={startDate} onChange={(e) => setStartDate(e.target.value)} />
-          </div>
-          <div>
-            <label style={{ fontSize: '0.62rem', fontWeight: 700, color: '#1e40af', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 4 }}>📅 Au</label>
-            <input type="date" style={{ padding: '6px 10px', borderRadius: 7, border: '1.5px solid #1e40af', fontSize: '0.82rem', background: '#eff6ff', fontWeight: 600 }}
-              value={endDate} onChange={(e) => setEndDate(e.target.value)} />
-          </div>
-          <div>
-            <label style={{ fontSize: '0.62rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 4 }}>🏷️ Catégorie</label>
-            <select style={{ padding: '6px 10px', borderRadius: 7, border: '1.5px solid #93c5fd', fontSize: '0.82rem', background: '#eff6ff', minWidth: 130 }}
-              value={selectedCategoryId} onChange={(e) => { setSelectedCategoryId(e.target.value); setSelectedIngredientId(''); }}>
-              <option value="">{t('client.historique_appro.all_categories')}</option>
-              {categories.map((c) => <option key={c.id} value={c.id}>{c.nom}</option>)}
-              {selectedActiviteId && <option value="pt">Produits Transformés</option>}
-            </select>
-          </div>
-          <div>
-            <label style={{ fontSize: '0.62rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 4 }}>🧂 Article</label>
-            <select style={{ padding: '6px 10px', borderRadius: 7, border: '1.5px solid #93c5fd', fontSize: '0.82rem', background: '#eff6ff', minWidth: 130 }}
-              value={selectedIngredientId} onChange={(e) => setSelectedIngredientId(e.target.value)} disabled={!selectedCategoryId}>
-              <option value="">{t('client.historique_appro.all_ingredients')}</option>
-              {selectedCategoryId === 'pt' ? ptProducts.map((p) => <option key={p.id} value={p.id}>{p.nom}</option>) : ingredientsInCat.map((i) => <option key={i.id} value={i.id}>{i.nom}</option>)}
-            </select>
-          </div>
-          {fournisseurs.length > 0 && (
-            <div>
-              <label style={{ fontSize: '0.62rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 4 }}>🚚 Fourn.</label>
-              <select style={{ padding: '6px 10px', borderRadius: 7, border: '1.5px solid #93c5fd', fontSize: '0.82rem', background: '#eff6ff', minWidth: 130 }}
-                value={selectedFournisseurId} onChange={(e) => setSelectedFournisseurId(e.target.value)}>
-                <option value="">— Tous —</option>
-                {fournisseurs.map((f) => <option key={f.id} value={f.id}>{f.nom}</option>)}
-              </select>
-            </div>
-          )}
-          <div>
-            <label style={{ fontSize: '0.62rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 4 }}>🏷️ Type d'appro</label>
-            <TypeApproFilter selected={selectedTypes} onToggle={toggleType} accent="#1e40af" />
-          </div>
-          {(selectedCategoryId || selectedIngredientId || selectedFournisseurId || selectedTypes.size > 0 || startDate !== yearStart || endDate !== yearEnd) && (
-            <button onClick={() => { setSelectedCategoryId(''); setSelectedIngredientId(''); setSelectedFournisseurId(''); setSelectedTypes(new Set()); setStartDate(yearStart); setEndDate(yearEnd); }}
-              style={{ alignSelf: 'flex-end', background: 'transparent', border: '1.5px solid var(--border)', borderRadius: 7, padding: '5px 9px', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '0.85rem', lineHeight: 1, fontWeight: 700 }}
-              title="Réinitialiser">✕</button>
-          )}
-        </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, flexWrap: 'wrap' }}>
-          <button onClick={fetchResults} disabled={loading}
-            style={{ background: 'linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%)', boxShadow: '0 4px 14px rgba(30,64,175,0.35)', borderRadius: 9, border: 'none', color: '#fff', fontWeight: 800, padding: '8px 20px', cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.7 : 1, display: 'flex', alignItems: 'center', gap: 6 }}>
-            🔍 {loading ? t('common.loading') : 'Rechercher'}
-          </button>
-          <button onClick={exportExcel} disabled={results.length === 0 || !canWrite}
-            style={{ display: 'flex', alignItems: 'center', gap: 6, background: (results.length > 0 && canWrite) ? 'linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%)' : '#e5e7eb', boxShadow: (results.length > 0 && canWrite) ? '0 4px 14px rgba(30,64,175,0.3)' : 'none', borderRadius: 9, border: 'none', color: (results.length > 0 && canWrite) ? '#fff' : 'var(--text-muted)', fontWeight: 800, padding: '8px 18px', cursor: (results.length === 0 || !canWrite) ? 'not-allowed' : 'pointer', opacity: (results.length === 0 || !canWrite) ? 0.55 : 1, transition: 'all 0.15s' }}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}><rect width="24" height="24" rx="3" fill="#217346"/><path d="M14 2H6C4.9 2 4 2.9 4 4V20C4 21.1 4.9 22 6 22H18C19.1 22 20 21.1 20 20V8L14 2Z" fill="#185C37"/><path d="M14 2V8H20L14 2Z" fill="#107C41"/><text x="7" y="18" fill="white" fontSize="8" fontWeight="bold" fontFamily="Arial,sans-serif">XLS</text></svg>
-            Exporter{selectedIds.size > 0 ? ` (${selectedIds.size})` : ''}
-          </button>
-          <button onClick={exportPdf} disabled={exportingPdf || results.length === 0}
-            style={{ display: 'flex', alignItems: 'center', gap: 6, background: results.length > 0 ? 'linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%)' : '#e5e7eb', boxShadow: results.length > 0 ? '0 4px 14px rgba(30,64,175,0.3)' : 'none', borderRadius: 9, border: 'none', color: results.length > 0 ? '#fff' : 'var(--text-muted)', fontWeight: 800, padding: '8px 18px', cursor: (exportingPdf || results.length === 0) ? 'not-allowed' : 'pointer', opacity: (exportingPdf || results.length === 0) ? 0.55 : 1, transition: 'all 0.15s' }}>
-            <span>🔴</span> {exportingPdf ? '…' : 'PDF'}
-          </button>
-        </div>
-      </div>
+      {/* ── Barre de filtres (composant partagé) ───────────────────────────── */}
+      <HistoryFilterBar
+        accent="#1e40af" accentDark="#1e3a8a"
+        onSearch={fetchResults} searching={loading}
+        onReset={() => { setSelectedCategoryId(''); setSelectedIngredientId(''); setSelectedFournisseurId(''); setSelectedTypes(new Set()); setStartDate(yearStart); setEndDate(yearEnd); }}
+        showReset={!!(selectedCategoryId || selectedIngredientId || selectedFournisseurId || selectedTypes.size > 0 || startDate !== yearStart || endDate !== yearEnd)}
+        onExportExcel={exportExcel} excelDisabled={results.length === 0 || !canWrite} excelLabel={`Exporter${selectedIds.size > 0 ? ` (${selectedIds.size})` : ''}`}
+        onExportPdf={exportPdf} pdfDisabled={results.length === 0} exportingPdf={exportingPdf}
+      >
+        <FilterField label="📅 Du"><FilterInput type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} /></FilterField>
+        <FilterField label="📅 Au"><FilterInput type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} /></FilterField>
+        <FilterField label="🏷️ Catégorie">
+          <FilterSelect value={selectedCategoryId} onChange={(e) => { setSelectedCategoryId(e.target.value); setSelectedIngredientId(''); }}>
+            <option value="">{t('client.historique_appro.all_categories')}</option>
+            {categories.map((c) => <option key={c.id} value={c.id}>{c.nom}</option>)}
+            {selectedActiviteId && <option value="pt">Produits Transformés</option>}
+          </FilterSelect>
+        </FilterField>
+        <FilterField label="🧂 Article">
+          <FilterSelect value={selectedIngredientId} disabled={!selectedCategoryId} onChange={(e) => setSelectedIngredientId(e.target.value)}>
+            <option value="">{t('client.historique_appro.all_ingredients')}</option>
+            {selectedCategoryId === 'pt' ? ptProducts.map((p) => <option key={p.id} value={p.id}>{p.nom}</option>) : ingredientsInCat.map((i) => <option key={i.id} value={i.id}>{i.nom}</option>)}
+          </FilterSelect>
+        </FilterField>
+        {fournisseurs.length > 0 && (
+          <FilterField label="🚚 Fournisseur">
+            <FilterSelect value={selectedFournisseurId} onChange={(e) => setSelectedFournisseurId(e.target.value)}>
+              <option value="">— Tous —</option>
+              {fournisseurs.map((f) => <option key={f.id} value={f.id}>{f.nom}</option>)}
+            </FilterSelect>
+          </FilterField>
+        )}
+        <FilterField label="⇄ Type d'appro"><TypeApproFilter selected={selectedTypes} onToggle={toggleType} accent="#1e40af" /></FilterField>
+      </HistoryFilterBar>
 
       {/* ── Results ────────────────────────────────────────────────────── */}
       {!searched ? null : loading ? (

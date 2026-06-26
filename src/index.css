@@ -285,6 +285,12 @@ p { margin: 0; }
 }
 .input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(59,91,219,.1); }
 select.input { cursor: pointer; }
+
+/* Barre de filtres d'historique partagée (HistoryFilterBar) : accent neutre + focus/hover accent. */
+.hist-ctrl { transition: border-color 0.12s, box-shadow 0.12s; }
+.hist-ctrl:hover:not(:disabled) { border-color: var(--hist-accent, var(--primary)); }
+.hist-ctrl:focus { outline: none; border-color: var(--hist-accent, var(--primary)); box-shadow: 0 0 0 3px color-mix(in srgb, var(--hist-accent, var(--primary)) 16%, transparent); }
+.hist-ctrl:disabled { opacity: 0.55; cursor: not-allowed; background: var(--bg); }
 .search-bar { margin-bottom: 16px; }
 .search-bar .input { max-width: 320px; }
 .form-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 10px; padding-top: 14px; border-top: 1px solid var(--border-light); }
