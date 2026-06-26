@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import api from '../../api/client';
 import HelpButton from '../common/HelpButton';
+import HistoryFilterBar, { FilterField, FilterInput, FilterSelect } from '../common/HistoryFilterBar';
 import type { Labo } from '../../types';
 
 const currentYear = new Date().getFullYear();
@@ -147,18 +148,6 @@ export default function LaboHistoriquepertesPage() {
 
   const laboLabel = labo?.nom || `Labo #${laboId}`;
   const canExport = searched && entries.length > 0;
-  const purpleBtn: React.CSSProperties = {
-    display: 'flex', alignItems: 'center', gap: 6,
-    background: 'linear-gradient(135deg, #3b0764 0%, #7e22ce 100%)',
-    boxShadow: '0 4px 14px rgba(126,34,206,0.35)',
-    borderRadius: 9, border: 'none', color: '#fff', fontWeight: 800,
-    padding: '8px 18px', cursor: 'pointer', transition: 'all 0.15s',
-  };
-  const purpleBtnDisabled: React.CSSProperties = {
-    ...purpleBtn,
-    background: '#e5e7eb', boxShadow: 'none',
-    color: 'var(--text-muted)', cursor: 'not-allowed', opacity: 0.55,
-  };
 
   return (
     <div className="page-content">
@@ -208,62 +197,37 @@ export default function LaboHistoriquepertesPage() {
         </div>
       )}
 
-      {/* Filters */}
-      <div style={{
-        background: 'var(--surface)', borderRadius: 14, padding: '14px 18px', marginBottom: 24,
-        border: '1px solid var(--border)', boxShadow: '0 2px 12px rgba(0,0,0,0.05)',
-      }}>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'flex-end', marginBottom: 12 }}>
-          <div>
-            <label style={{ fontSize: '0.65rem', fontWeight: 800, color: '#7e22ce', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 3 }}>📅 Du</label>
-            <input type="date" style={{ padding: '6px 10px', borderRadius: 8, border: '1.5px solid #7e22ce', fontSize: '0.83rem', background: '#faf5ff', minWidth: 130, fontWeight: 600 }} value={fDateDebut} onChange={(e) => setFDateDebut(e.target.value)} />
-          </div>
-          <div>
-            <label style={{ fontSize: '0.65rem', fontWeight: 800, color: '#7e22ce', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 3 }}>📅 Au</label>
-            <input type="date" style={{ padding: '6px 10px', borderRadius: 8, border: '1.5px solid #7e22ce', fontSize: '0.83rem', background: '#faf5ff', minWidth: 130, fontWeight: 600 }} value={fDateFin} onChange={(e) => setFDateFin(e.target.value)} />
-          </div>
-          <div>
-            <label style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 3 }}>🏷️ Catégorie</label>
-            <select style={{ padding: '6px 10px', borderRadius: 8, border: '1.5px solid var(--border)', fontSize: '0.83rem', background: 'var(--bg)', minWidth: 130 }} value={fCategorie} onChange={(e) => { setFCategorie(e.target.value); setFIngredient(''); }}>
-              <option value="">— Toutes —</option>
-              {categories.map((c) => <option key={c.id} value={c.id}>{c.nom}</option>)}
-            </select>
-          </div>
-          <div>
-            <label style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 3 }}>🧂 Article</label>
-            <select style={{ padding: '6px 10px', borderRadius: 8, border: '1.5px solid var(--border)', fontSize: '0.83rem', background: 'var(--bg)', minWidth: 130 }} value={fIngredient} disabled={!fCategorie} onChange={(e) => setFIngredient(e.target.value)}>
-              <option value="">— Tous —</option>
-              {ingredientsInCat.map((i) => <option key={i.id} value={i.id}>{i.nom}</option>)}
-            </select>
-          </div>
-          <div>
-            <label style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 3 }}>📋 Type</label>
-            <select style={{ padding: '6px 10px', borderRadius: 8, border: '1.5px solid var(--border)', fontSize: '0.83rem', background: 'var(--bg)', minWidth: 120 }} value={fType} onChange={(e) => setFType(e.target.value)}>
-              <option value="">— Tous —</option>
-              <option value="avarie">Avarie</option>
-              <option value="dechet">Déchet</option>
-            </select>
-          </div>
-          {(fCategorie || fIngredient || fType || fDateDebut !== yearStart || fDateFin !== yearEnd) && (
-            <button onClick={resetFilters} style={{ alignSelf: 'flex-end', marginLeft: 'auto', background: 'transparent', border: '1.5px solid var(--border)', borderRadius: 7, padding: '5px 9px', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '0.85rem', lineHeight: 1, fontWeight: 700 }} title="Réinitialiser">✕</button>
-          )}
-        </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, flexWrap: 'wrap' }}>
-          <button onClick={loadPertes} disabled={loading || !laboId} style={{ ...purpleBtn, opacity: (loading || !laboId) ? 0.7 : 1, cursor: (loading || !laboId) ? 'not-allowed' : 'pointer' }}>
-            🔍 {loading ? 'Chargement…' : 'Rechercher'}
-          </button>
-          <button onClick={handleExport} disabled={exporting || !canExport}
-            style={canExport ? purpleBtn : purpleBtnDisabled}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}><rect width="24" height="24" rx="3" fill="#217346"/><path d="M14 2H6C4.9 2 4 2.9 4 4V20C4 21.1 4.9 22 6 22H18C19.1 22 20 21.1 20 20V8L14 2Z" fill="#185C37"/><path d="M14 2V8H20L14 2Z" fill="#107C41"/><text x="7" y="18" fill="white" fontSize="8" fontWeight="bold" fontFamily="Arial,sans-serif">XLS</text></svg>
-            {selected.size > 0 ? `Exporter (${selected.size})` : 'Exporter'}
-          </button>
-          <button onClick={handleExportPdf} disabled={exportingPdf || !canExport}
-            style={canExport ? purpleBtn : purpleBtnDisabled}>
-            <span>🔴</span> {exportingPdf ? '…' : 'PDF'}
-          </button>
-        </div>
-      </div>
+      {/* Barre de filtres (composant partagé) */}
+      <HistoryFilterBar
+        accent="#7e22ce" accentDark="#6d28d9"
+        onSearch={loadPertes} searching={loading} searchDisabled={!laboId}
+        onReset={resetFilters}
+        showReset={!!(fCategorie || fIngredient || fType || fDateDebut !== yearStart || fDateFin !== yearEnd)}
+        onExportExcel={handleExport} excelDisabled={exporting || !canExport} excelLabel={`Exporter${selected.size > 0 ? ` (${selected.size})` : ''}`}
+        onExportPdf={handleExportPdf} pdfDisabled={!canExport} exportingPdf={exportingPdf}
+      >
+        <FilterField label="📅 Du"><FilterInput type="date" value={fDateDebut} onChange={(e) => setFDateDebut(e.target.value)} /></FilterField>
+        <FilterField label="📅 Au"><FilterInput type="date" value={fDateFin} onChange={(e) => setFDateFin(e.target.value)} /></FilterField>
+        <FilterField label="🏷️ Catégorie">
+          <FilterSelect value={fCategorie} onChange={(e) => { setFCategorie(e.target.value); setFIngredient(''); }}>
+            <option value="">— Toutes —</option>
+            {categories.map((c) => <option key={c.id} value={c.id}>{c.nom}</option>)}
+          </FilterSelect>
+        </FilterField>
+        <FilterField label="🧂 Article">
+          <FilterSelect value={fIngredient} disabled={!fCategorie} onChange={(e) => setFIngredient(e.target.value)}>
+            <option value="">— Tous —</option>
+            {ingredientsInCat.map((i) => <option key={i.id} value={i.id}>{i.nom}</option>)}
+          </FilterSelect>
+        </FilterField>
+        <FilterField label="📋 Type">
+          <FilterSelect value={fType} onChange={(e) => setFType(e.target.value)}>
+            <option value="">— Tous —</option>
+            <option value="avarie">Avarie</option>
+            <option value="dechet">Déchet</option>
+          </FilterSelect>
+        </FilterField>
+      </HistoryFilterBar>
 
       {!searched ? null : loading ? (
         <p className="text-muted">Chargement…</p>
