@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import api from '../../api/client';
+import HistoryFilterBar, { FilterField, FilterInput } from '../common/HistoryFilterBar';
 
 interface KbEntry {
   id: number;
@@ -81,10 +82,15 @@ export default function AdminKnowledgeBasePage() {
         </button>
       </div>
 
-      <div style={{ marginBottom: 16 }}>
-        <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Rechercher (titre, catégorie, mots-clés)…"
-          style={{ width: '100%', maxWidth: 420, padding: '10px 14px', borderRadius: 10, border: '1px solid var(--border)', fontSize: '0.9rem' }} />
-      </div>
+      <HistoryFilterBar
+        accent="#4338ca" accentDark="#3730a3"
+        subtitle={`${filtered.length} article${filtered.length !== 1 ? 's' : ''}`}
+        onReset={() => setSearch('')} showReset={!!search}
+      >
+        <FilterField label="🔍 Recherche">
+          <FilterInput value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Titre, catégorie, mots-clés…" />
+        </FilterField>
+      </HistoryFilterBar>
 
       {loading ? <div className="loading-text">Chargement…</div> : (
         <div style={{ display: 'grid', gap: 10 }}>
