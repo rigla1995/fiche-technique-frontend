@@ -3,6 +3,7 @@ import { useSearchParams, Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
 import HelpButton from '../common/HelpButton';
+import HistoryFilterBar, { FilterField, FilterInput, FilterSelect } from '../common/HistoryFilterBar';
 import TransferConfirmModal, { type TransferActiviteGroup, type TransferLine } from './TransferConfirmModal';
 import ApproPreviewPanel, { type PreviewLine } from './ApproPreviewPanel';
 import GuideButton from './GuideButton';
@@ -606,41 +607,33 @@ export default function TransferPage() {
       )}
 
       {!loading && stock.length > 0 && activites.length > 0 && (
-        <div style={{ background: 'var(--surface)', borderRadius: 10, padding: '10px 14px', marginBottom: 20, border: '1px solid var(--border)', boxShadow: '0 1px 6px rgba(0,0,0,0.04)' }}>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'flex-end' }}>
-            <div>
-              <label style={{ fontSize: '0.62rem', fontWeight: 700, color: '#7e22ce', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 3 }}>🏪 Activité</label>
-              <select style={{ padding: '6px 10px', borderRadius: 7, border: '1.5px solid #7e22ce', fontSize: '0.82rem', background: '#faf5ff', minWidth: 150 }} value={filterActiviteId}
-                onChange={(e) => setFilterActiviteId(e.target.value === '' ? '' : Number(e.target.value))}>
-                <option value="">— Toutes —</option>
-                {activites.map((a) => <option key={a.id} value={a.id}>{a.nom}</option>)}
-              </select>
-            </div>
-            <div>
-              <label style={{ fontSize: '0.62rem', fontWeight: 700, color: '#7e22ce', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 3 }}>🏷️ Catégorie</label>
-              <select style={{ padding: '6px 10px', borderRadius: 7, border: '1.5px solid #7e22ce', fontSize: '0.82rem', background: '#faf5ff', minWidth: 150 }} value={filterCategorie} onChange={(e) => { setFilterCategorie(e.target.value); setFilterIngredientId(''); }}>
-                <option value="">{t('client.catalogue_franchise.all_categories')}</option>
-                {allCategories.map((c) => <option key={c} value={c}>{c}</option>)}
-              </select>
-            </div>
-            <div>
-              <label style={{ fontSize: '0.62rem', fontWeight: 700, color: '#7e22ce', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 3 }}>🧂 Article</label>
-              <select style={{ padding: '6px 10px', borderRadius: 7, border: '1.5px solid #7e22ce', fontSize: '0.82rem', background: '#faf5ff', minWidth: 150 }} value={filterIngredientId} disabled={!filterCategorie}
-                onChange={(e) => setFilterIngredientId(e.target.value === '' ? '' : Number(e.target.value))}>
-                <option value="">— Tous —</option>
-                {ingredientsInCategory.map((r) => <option key={r.ingredientId} value={r.ingredientId}>{r.nom}</option>)}
-              </select>
-            </div>
-            <div>
-              <label style={{ fontSize: '0.62rem', fontWeight: 700, color: '#7e22ce', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 3 }}>🔍 Nom</label>
-              <input type="text" style={{ padding: '6px 10px', borderRadius: 7, border: '1.5px solid #7e22ce', fontSize: '0.82rem', background: '#faf5ff', minWidth: 150 }} placeholder="Rechercher…"
-                value={filterNom} onChange={(e) => setFilterNom(e.target.value)} />
-            </div>
-            {(filterCategorie || filterIngredientId !== '' || filterNom || filterActiviteId !== '') && (
-              <button onClick={() => { setFilterCategorie(''); setFilterIngredientId(''); setFilterNom(''); setFilterActiviteId(''); }} style={{ alignSelf: 'flex-end', marginLeft: 'auto', background: 'transparent', border: '1.5px solid var(--border)', borderRadius: 7, padding: '5px 9px', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '0.85rem', lineHeight: 1, fontWeight: 700 }} title="Réinitialiser">✕</button>
-            )}
-          </div>
-        </div>
+        <HistoryFilterBar
+          accent="#7e22ce" accentDark="#6d28d9"
+          onReset={() => { setFilterCategorie(''); setFilterIngredientId(''); setFilterNom(''); setFilterActiviteId(''); }}
+          showReset={!!(filterCategorie || filterIngredientId !== '' || filterNom || filterActiviteId !== '')}
+        >
+          <FilterField label="🏪 Activité">
+            <FilterSelect value={filterActiviteId} onChange={(e) => setFilterActiviteId(e.target.value === '' ? '' : Number(e.target.value))}>
+              <option value="">— Toutes —</option>
+              {activites.map((a) => <option key={a.id} value={a.id}>{a.nom}</option>)}
+            </FilterSelect>
+          </FilterField>
+          <FilterField label="🏷️ Catégorie">
+            <FilterSelect value={filterCategorie} onChange={(e) => { setFilterCategorie(e.target.value); setFilterIngredientId(''); }}>
+              <option value="">{t('client.catalogue_franchise.all_categories')}</option>
+              {allCategories.map((c) => <option key={c} value={c}>{c}</option>)}
+            </FilterSelect>
+          </FilterField>
+          <FilterField label="🧂 Article">
+            <FilterSelect value={filterIngredientId} disabled={!filterCategorie} onChange={(e) => setFilterIngredientId(e.target.value === '' ? '' : Number(e.target.value))}>
+              <option value="">— Tous —</option>
+              {ingredientsInCategory.map((r) => <option key={r.ingredientId} value={r.ingredientId}>{r.nom}</option>)}
+            </FilterSelect>
+          </FilterField>
+          <FilterField label="🔍 Nom">
+            <FilterInput type="text" placeholder="Rechercher…" value={filterNom} onChange={(e) => setFilterNom(e.target.value)} />
+          </FilterField>
+        </HistoryFilterBar>
       )}
 
       {/* Confirmation block — Date, Réf + Transférer / Réinitialiser buttons */}

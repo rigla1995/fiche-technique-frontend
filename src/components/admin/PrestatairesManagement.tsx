@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import api from '../../api/client';
+import HistoryFilterBar, { FilterField, FilterInput, FilterSegmented } from '../common/HistoryFilterBar';
 
 interface Prestataire {
   id: string;
@@ -19,6 +20,8 @@ export default function PrestatairesManagement() {
   const [commission, setCommission] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [search, setSearch] = useState('');
+  const [filterStatut, setFilterStatut] = useState<'' | 'actif' | 'inactif'>('');
 
   const load = useCallback(() => {
     setLoading(true);
@@ -65,6 +68,17 @@ export default function PrestatairesManagement() {
     }
   };
 
+  const activeCount = prestataires.filter((p) => p.actif).length;
+  const statusFilters = [
+    { value: '', label: 'Tous', count: prestataires.length },
+    { value: 'actif', label: 'Actifs', count: activeCount, color: '#16a34a' },
+    { value: 'inactif', label: 'Inactifs', count: prestataires.length - activeCount, color: '#64748b' },
+  ];
+  const filtered = prestataires.filter((p) =>
+    (!search || p.nom.toLowerCase().includes(search.toLowerCase())) &&
+    (filterStatut === '' || (filterStatut === 'actif' ? p.actif : !p.actif))
+  );
+
   return (
     <div className="page">
       {/* Header */}
@@ -86,6 +100,23 @@ export default function PrestatairesManagement() {
         </button>
       </div>
 
+      {/* Barre de filtres (composant partagé) */}
+      {!loading && prestataires.length > 0 && (
+        <HistoryFilterBar
+          accent="#6366f1" accentDark="#4f46e5"
+          subtitle={`${filtered.length} prestataire${filtered.length !== 1 ? 's' : ''}`}
+          onReset={() => { setSearch(''); setFilterStatut(''); }}
+          showReset={!!(search || filterStatut)}
+        >
+          <FilterField label="🔍 Recherche">
+            <FilterInput type="text" placeholder="Nom du prestataire…" value={search} onChange={(e) => setSearch(e.target.value)} />
+          </FilterField>
+          <FilterField label="📊 Statut" span>
+            <FilterSegmented options={statusFilters} value={filterStatut} onChange={(v) => setFilterStatut(v as '' | 'actif' | 'inactif')} accent="#6366f1" />
+          </FilterField>
+        </HistoryFilterBar>
+      )}
+
       {/* Table */}
       {loading ? (
         <div className="loading-text">Chargement…</div>
@@ -95,6 +126,8 @@ export default function PrestatairesManagement() {
           <p>Aucun prestataire de livraison.</p>
           <button className="btn btn-primary" onClick={openNew}>Créer le premier prestataire</button>
         </div>
+      ) : filtered.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-muted)' }}>Aucun prestataire pour ces filtres.</div>
       ) : (
         <div className="table-responsive card">
           <table className="table">
@@ -106,7 +139,7 @@ export default function PrestatairesManagement() {
               </tr>
             </thead>
             <tbody>
-              {prestataires.map(p => (
+              {filtered.map(p => (
                 <tr key={p.id} style={{ opacity: p.actif ? 1 : 0.6 }}>
                   <td>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
