@@ -222,6 +222,7 @@ export default function LaboHistoriqueApproPage() {
   const [allLabos, setAllLabos] = useState<Labo[]>([]);
   const [fournisseurs, setFournisseurs] = useState<LaboFournisseur[]>([]);
   const [laboIngredients, setLaboIngredients] = useState<LaboIngredient[]>([]);
+  const [ptProducts, setPtProducts] = useState<{ id: number; nom: string }[]>([]);
 
   const [results, setResults] = useState<HistEntry[]>([]);
   const [loading, setLoading] = useState(false);
@@ -259,6 +260,14 @@ export default function LaboHistoriqueApproPage() {
     )).catch(() => {});
   }, [laboId]);
 
+  // Produits transformés du labo — chargés quand la catégorie « PT » est sélectionnée
+  useEffect(() => {
+    if (filterCategorieId !== 'pt' || !laboId) { setPtProducts([]); return; }
+    api.get(`/api/labo/${laboId}/pt`)
+      .then(({ data }) => setPtProducts((data as Array<{ produitId: number; nom: string }>).map((p) => ({ id: -(p.produitId), nom: p.nom }))))
+      .catch(() => {});
+  }, [filterCategorieId, laboId]);
+
   // Derived: unique categories from labo ingredients
   const categories = Array.from(
     new Map(
@@ -283,7 +292,10 @@ export default function LaboHistoriqueApproPage() {
       const params = new URLSearchParams();
       if (startDate) params.set('startDate', startDate);
       if (endDate) params.set('endDate', endDate);
-      if (filterIngredientId) params.set('ingredientId', filterIngredientId);
+      if (filterCategorieId === 'pt') {
+        params.set('ptOnly', 'true');
+        if (filterIngredientId) params.set('ptProduitId', String(-Number(filterIngredientId)));
+      } else if (filterIngredientId) params.set('ingredientId', filterIngredientId);
       else if (filterCategorieId) params.set('categorieId', filterCategorieId);
       if (filterFournisseurId) params.set('fournisseurId', filterFournisseurId);
       const { data } = await api.get(`/api/labo/${laboId}/historique?${params}`);
@@ -298,7 +310,10 @@ export default function LaboHistoriqueApproPage() {
     const params = new URLSearchParams();
     if (startDate) params.set('startDate', startDate);
     if (endDate) params.set('endDate', endDate);
-    if (filterIngredientId) params.set('ingredientId', filterIngredientId);
+    if (filterCategorieId === 'pt') {
+      params.set('ptOnly', 'true');
+      if (filterIngredientId) params.set('ptProduitId', String(-Number(filterIngredientId)));
+    } else if (filterIngredientId) params.set('ingredientId', filterIngredientId);
     else if (filterCategorieId) params.set('categorieId', filterCategorieId);
     if (filterFournisseurId) params.set('fournisseurId', filterFournisseurId);
     if (selectedIds.size > 0) params.set('selectedIds', [...selectedIds].join(','));
@@ -409,12 +424,13 @@ export default function LaboHistoriqueApproPage() {
           <FilterSelect value={filterCategorieId} onChange={(e) => { setFilterCategorieId(e.target.value); setFilterIngredientId(''); }}>
             <option value="">— Toutes —</option>
             {categories.map((c) => <option key={c.id} value={c.id}>{c.nom}</option>)}
+            <option value="pt">Produits Transformés</option>
           </FilterSelect>
         </FilterField>
         <FilterField label="🧂 Article">
           <FilterSelect value={filterIngredientId} disabled={!filterCategorieId} onChange={(e) => setFilterIngredientId(e.target.value)}>
             <option value="">— Tous —</option>
-            {ingredientsInCat.map((i) => <option key={i.id} value={i.id}>{i.nom}</option>)}
+            {(filterCategorieId === 'pt' ? ptProducts : ingredientsInCat).map((i) => <option key={i.id} value={i.id}>{i.nom}</option>)}
           </FilterSelect>
         </FilterField>
         {fournisseurs.length > 0 && (
