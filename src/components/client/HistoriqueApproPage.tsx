@@ -480,7 +480,7 @@ export default function HistoriqueApproPage() {
           <FilterSelect value={selectedCategoryId} onChange={(e) => { setSelectedCategoryId(e.target.value); setSelectedIngredientId(''); }}>
             <option value="">{t('client.historique_appro.all_categories')}</option>
             {categories.map((c) => <option key={c.id} value={c.id}>{c.nom}</option>)}
-            {selectedActiviteId && <option value="pt">Produits Transformés</option>}
+            <option value="pt">Produits Transformés</option>
           </FilterSelect>
         </FilterField>
         <FilterField label="🧂 Article">

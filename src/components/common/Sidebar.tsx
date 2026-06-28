@@ -339,14 +339,14 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                 {lockLevel0 ? (
                   <LockedLink label={t('nav.rapports', 'Rapports')} />
                 ) : (
-                  <NavLink
+                  <Link
                     to="/client/rapports"
-                    className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
+                    className={`sidebar-link ${location.pathname === '/client/rapports' && currentSearch.get('scope') !== 'activite' ? 'active' : ''}`}
                     onClick={onClose}
                   >
                     <span className="link-icon">📈</span>
                     <span className="link-label">{t('nav.rapports', 'Rapports')}</span>
-                  </NavLink>
+                  </Link>
                 )}
               </li>
 
@@ -441,7 +441,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                         </Link>
                       </li>
                       <li>
-                        <Link to="/client/rapports?scope=activite" className={`sidebar-link ${location.pathname === '/client/rapports' ? 'active' : ''}`} onClick={onClose}>
+                        <Link to="/client/rapports?scope=activite" className={`sidebar-link ${location.pathname === '/client/rapports' && currentSearch.get('scope') === 'activite' ? 'active' : ''}`} onClick={onClose}>
                           <span className="link-icon">📈</span><span className="link-label">Rapport activités</span>
                         </Link>
                       </li>
