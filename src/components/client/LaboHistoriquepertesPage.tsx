@@ -56,11 +56,14 @@ export default function LaboHistoriquepertesPage() {
   const [fDateDebut, setFDateDebut] = useState(yearStart);
   const [fDateFin, setFDateFin] = useState(yearEnd);
   const [fType, setFType] = useState('');
+  const [ptProducts, setPtProducts] = useState<{ id: number; nom: string }[]>([]);
 
   const categories = Array.from(
     new Map(laboIngredients.filter((i) => i.categorieId !== null).map((i) => [i.categorieId, { id: i.categorieId as number, nom: i.categorie }])).values()
   );
-  const ingredientsInCat = fCategorie ? laboIngredients.filter((i) => String(i.categorieId) === fCategorie) : [];
+  const ingredientsInCat = fCategorie === 'pt'
+    ? ptProducts
+    : (fCategorie ? laboIngredients.filter((i) => String(i.categorieId) === fCategorie) : []);
 
   useEffect(() => {
     api.get('/api/labo').then(({ data }) => setAllLabos(data)).catch(() => {});
@@ -74,13 +77,26 @@ export default function LaboHistoriquepertesPage() {
       .catch(() => {});
   }, [laboId]);
 
+  // Produits transformés du labo — chargés quand la catégorie « PT » est sélectionnée
+  useEffect(() => {
+    if (fCategorie !== 'pt' || !laboId) { setPtProducts([]); return; }
+    api.get(`/api/labo/${laboId}/pt`)
+      .then(({ data }) => setPtProducts((data as Array<{ produitId: number; nom: string }>).map((p) => ({ id: -(p.produitId), nom: p.nom }))))
+      .catch(() => {});
+  }, [fCategorie, laboId]);
+
   const buildParams = () => {
     const params = new URLSearchParams();
     if (fDateDebut) params.set('dateDebut', fDateDebut);
     if (fDateFin) params.set('dateFin', fDateFin);
     if (fType) params.set('typePerte', fType);
-    if (fCategorie) params.set('categorieId', fCategorie);
-    if (fIngredient) params.set('ingredientId', fIngredient);
+    if (fCategorie === 'pt') {
+      params.set('ptOnly', 'true');
+      if (fIngredient) params.set('ptProduitId', String(-Number(fIngredient)));
+    } else {
+      if (fCategorie) params.set('categorieId', fCategorie);
+      if (fIngredient) params.set('ingredientId', fIngredient);
+    }
     return params;
   };
 
@@ -212,6 +228,7 @@ export default function LaboHistoriquepertesPage() {
           <FilterSelect value={fCategorie} onChange={(e) => { setFCategorie(e.target.value); setFIngredient(''); }}>
             <option value="">— Toutes —</option>
             {categories.map((c) => <option key={c.id} value={c.id}>{c.nom}</option>)}
+            <option value="pt">Produits Transformés</option>
           </FilterSelect>
         </FilterField>
         <FilterField label="🧂 Article">

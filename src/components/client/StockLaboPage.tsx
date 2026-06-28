@@ -40,6 +40,8 @@ interface LaboStockRow {
   ingredientId: number;
   produitId?: number;
   isPT?: boolean;
+  type?: string;
+  origine?: string | null;
   nom: string;
   unite: string;
   categorie: string;
@@ -792,6 +794,12 @@ export default function StockLaboPage() {
                                         <div style={{ fontWeight: 700, fontSize: '0.88rem' }}>
                                           {r.isPT && <span style={{ fontSize: '0.68rem', background: '#7c3aed', color: '#fff', borderRadius: 4, padding: '1px 5px', marginRight: 5, fontWeight: 700 }}>PT</span>}
                                           {r.nom}
+                                          {r.isPT && r.origine === 'labo' && r.type === 'vendable' && (
+                                            <span title="Produit valorisé composé — fabriqué au labo puis transféré vers les activités (vendu en valorisé)."
+                                              style={{ fontSize: '0.62rem', fontWeight: 700, letterSpacing: '0.04em', background: '#ecfeff', color: '#0e7490', border: '1px solid #a5f3fc', borderRadius: 20, padding: '2px 8px', whiteSpace: 'nowrap', marginLeft: 6 }}>
+                                              ◆ Composé valorisé
+                                            </span>
+                                          )}
                                         </div>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 3, justifyContent: 'center' }}>
                                           <span style={{ fontSize: '0.7rem', background: '#f5f3ff', color: '#7e22ce', borderRadius: 4, padding: '1px 7px', fontWeight: 600 }}>{r.unite}</span>

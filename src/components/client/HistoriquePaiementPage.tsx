@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import api from '../../api/client';
 import type { Paiement } from '../../types';
+import HistoryFilterBar, { FilterField, FilterInput, FilterSelect } from '../common/HistoryFilterBar';
 
 const STATUT_COLORS: Record<string, string> = {
   payé: '#16a34a', impayé: '#dc2626', en_attente: '#d97706', remisé: '#7c3aed', gratuit: '#16a34a',
@@ -132,33 +133,27 @@ export default function HistoriquePaiementPage() {
         </div>
       )}
 
-      {/* Filter bar */}
-      <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, padding: '12px 16px', marginBottom: 16, display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#374151', whiteSpace: 'nowrap' }}>Mois / Année</label>
-          <input type="month" value={filterMois} onChange={e => setFilterMois(e.target.value)}
-            style={{ fontSize: '0.82rem', border: '1px solid #e2e8f0', borderRadius: 8, padding: '5px 10px', color: '#374151', background: '#f9fafb', cursor: 'pointer' }} />
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#374151' }}>Statut</label>
-          <select value={filterStatut} onChange={e => setFilterStatut(e.target.value)}
-            style={{ fontSize: '0.82rem', border: '1px solid #e2e8f0', borderRadius: 8, padding: '5px 10px', color: '#374151', background: '#f9fafb', cursor: 'pointer' }}>
+      {/* Barre de filtres (composant partagé, mode direct) */}
+      <HistoryFilterBar
+        accent="#1e40af" accentDark="#1e3a8a"
+        subtitle={`${filtered.length} enregistrement${filtered.length > 1 ? 's' : ''}`}
+        onReset={() => { setFilterMois(''); setFilterStatut(''); }}
+        showReset={!!(filterMois || filterStatut)}
+      >
+        <FilterField label="📅 Mois / Année">
+          <FilterInput type="month" value={filterMois} onChange={e => setFilterMois(e.target.value)} />
+        </FilterField>
+        <FilterField label="📊 Statut">
+          <FilterSelect value={filterStatut} onChange={e => setFilterStatut(e.target.value)}>
             <option value="">Tous</option>
             <option value="payé">Payé</option>
             <option value="impayé">Impayé</option>
             <option value="en_attente">En attente</option>
             <option value="remisé">Remisé</option>
             <option value="gratuit">Gratuit</option>
-          </select>
-        </div>
-        {(filterMois || filterStatut) && (
-          <button onClick={() => { setFilterMois(''); setFilterStatut(''); }}
-            style={{ fontSize: '0.78rem', padding: '5px 12px', borderRadius: 8, border: '1px solid #e2e8f0', background: '#fff', color: '#64748b', cursor: 'pointer', fontWeight: 600 }}>
-            Réinitialiser
-          </button>
-        )}
-        <span style={{ marginLeft: 'auto', fontSize: '0.78rem', color: '#9ca3af' }}>{filtered.length} enregistrement(s)</span>
-      </div>
+          </FilterSelect>
+        </FilterField>
+      </HistoryFilterBar>
 
       {/* History table */}
       <div style={{ background: '#fff', borderRadius: 16, border: '1px solid #e5e7eb', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
