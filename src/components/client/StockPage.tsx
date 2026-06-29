@@ -1074,6 +1074,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                               {entry.isPT && entry.produitId && !isLaboPT && (() => {
                                 const max = ptRecipeMaxMap[entry.produitId];
                                 if (max === undefined) return null;
+                                if (max !== null && max <= 0) return null; // pas de « Max » si 0 (comme stock labo)
                                 return (
                                   <div style={{ fontSize: '0.7rem', marginTop: 2, fontWeight: 700, color: max !== null && parseFloat(row.quantite) > max ? '#dc2626' : '#2563eb' }}>
                                     Max: {max !== null ? max.toFixed(3) : '∞'}
