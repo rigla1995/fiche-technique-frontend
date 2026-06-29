@@ -1,9 +1,10 @@
 import { useState, useEffect, useMemo } from 'react';
 import api from '../../api/client';
-import type { CategorieProduit, Product } from '../../types';
+import type { CategorieProduit, Product, Activite } from '../../types';
 import ComposedValoriseModal from './ComposedValoriseModal';
 import FicheTechniqueModal from './FicheTechniqueModal';
 import RecipeTree from './RecipeTree';
+import ProductCard from './ProductCard';
 import HistoryFilterBar, { FilterField, FilterInput, FilterSelect } from '../common/HistoryFilterBar';
 import { PRODUCT_THEME } from '../../theme/productTheme';
 
@@ -43,6 +44,36 @@ export default function ValorisesPage() {
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [savingId, setSavingId] = useState<number | null>(null);
+  const [allActivities, setAllActivities] = useState<Activite[]>([]);
+  const [allLabos, setAllLabos] = useState<{ id: number; nom: string }[]>([]);
+  const [togglingActivite, setTogglingActivite] = useState<string | null>(null);
+  const [togglingLabo, setTogglingLabo] = useState<string | null>(null);
+
+  const toggleActiviteAssignment = async (p: Product, activiteId: number) => {
+    setTogglingActivite(`${p.id}-${activiteId}`);
+    try {
+      const endpoint = p.type === 'vendable' ? 'toggle-affectation' : 'toggle-stock-ingredient';
+      await api.post(`/api/produits/${p.id}/${endpoint}`, { activiteId });
+      const assigned = p.activites?.some((a) => a.id === activiteId) ?? false;
+      setComposes((prev) => prev.map((prod) => prod.id !== p.id ? prod : {
+        ...prod,
+        activites: assigned ? (prod.activites || []).filter((a) => a.id !== activiteId) : [...(prod.activites || []), allActivities.find((a) => a.id === activiteId)!].filter(Boolean),
+      }));
+    } catch { /* ignore */ }
+    setTogglingActivite(null);
+  };
+  const toggleLaboAssignment = async (p: Product, laboId: number) => {
+    setTogglingLabo(`${p.id}-${laboId}`);
+    try {
+      await api.post(`/api/produits/${p.id}/toggle-labo`, { laboId });
+      const assigned = p.labos?.some((l) => l.id === laboId) ?? false;
+      setComposes((prev) => prev.map((prod) => prod.id !== p.id ? prod : {
+        ...prod,
+        labos: assigned ? (prod.labos || []).filter((l) => l.id !== laboId) : [...(prod.labos || []), allLabos.find((l) => l.id === laboId)!].filter(Boolean),
+      }));
+    } catch { /* ignore */ }
+    setTogglingLabo(null);
+  };
 
   const [search, setSearch] = useState('');
   const [filterFamille, setFilterFamille] = useState('');
@@ -60,9 +91,12 @@ export default function ValorisesPage() {
       api.get('/api/categories-produit?type=valorise'),
       api.get('/api/products?type=vendable&origine=labo'),
       api.get('/api/labo'),
+      api.get('/api/entreprise/activites'),
     ])
-      .then(([a, c, p, l]) => {
+      .then(([a, c, p, l, act]) => {
         setArticles(a.data); setCategories(c.data); setComposes(p.data as Product[]);
+        setAllLabos((l.data as { id: number; nom: string }[] || []).map((x) => ({ id: x.id, nom: x.nom })));
+        setAllActivities((act.data as Activite[]) || []);
         // Les produits composés sont fabriqués au labo : sans labo, pas d'onglet « Composés »
         // ni de bouton d'ajout. On bascule alors sur l'onglet « Référentiel ».
         const labosExist = Array.isArray(l.data) && l.data.length > 0;
@@ -243,37 +277,44 @@ export default function ValorisesPage() {
         ) : (
           <>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 14 }}>
-              {filteredComposes.slice((safeComposePage - 1) * COMPOSES_PER_PAGE, safeComposePage * COMPOSES_PER_PAGE).map((p) => (
-                <div key={p.id} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: '14px 16px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-                    <div style={{ width: 38, height: 38, borderRadius: 10, background: 'linear-gradient(135deg,#6366f1,#4338ca)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem', flexShrink: 0 }}>💎</div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#0f172a' }}>{p.name}</div>
-                      {p.refProduit && <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Réf : {p.refProduit}</div>}
-                      <div style={{ fontSize: '0.74rem', color: '#4338ca', marginTop: 3, background: '#eef2ff', borderRadius: 6, padding: '1px 7px', display: 'inline-block' }}>{p.categorieProduitName ?? 'Sans catégorie'}</div>
-                    </div>
-                  </div>
-                  <div style={{ display: 'flex', gap: 8 }}>
-                    <div style={{ flex: 1, background: '#f8fafc', borderRadius: 8, padding: '6px 8px', textAlign: 'center' }}>
-                      <div style={{ fontWeight: 800, color: '#0f172a' }}>{p.ingredientsCount ?? 0}</div>
-                      <div style={{ fontSize: '0.66rem', color: '#64748b' }}>articles</div>
-                    </div>
-                    <div style={{ flex: 1, background: '#faf5ff', borderRadius: 8, padding: '6px 8px', textAlign: 'center' }}>
-                      <div style={{ fontWeight: 800, color: '#5b21b6' }}>{p.subProductsCount ?? 0}</div>
-                      <div style={{ fontSize: '0.66rem', color: '#7c3aed' }}>PU</div>
-                    </div>
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6, borderTop: '1px solid var(--border)', paddingTop: 10 }}>
-                    <button onClick={() => openFt(p)} disabled={(p.ingredientsCount ?? 0) === 0 || (ftLoading && ftProduct?.id === p.id)} title="Générer la fiche technique (prix d'appro du labo)"
-                      style={{ background: '#f0fdf4', border: '1px solid #c7d2fe', borderRadius: 8, color: '#4338ca', cursor: (p.ingredientsCount ?? 0) === 0 ? 'not-allowed' : 'pointer', padding: '7px', fontSize: '0.78rem', fontWeight: 700, opacity: (p.ingredientsCount ?? 0) === 0 ? 0.5 : 1 }}>📄 Fiche technique (XLS)</button>
-                    <div style={{ display: 'flex', gap: 6 }}>
-                      <button onClick={() => openView(p)} style={{ flex: 1, background: '#f1f5f9', border: '1px solid #e2e8f0', borderRadius: 8, color: '#475569', cursor: 'pointer', padding: '6px', fontSize: '0.78rem', fontWeight: 600 }}>👁 Voir</button>
-                      <button onClick={() => setEditComposeId(p.id)} style={{ flex: 1, background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 8, color: '#1d4ed8', cursor: 'pointer', padding: '6px', fontSize: '0.78rem', fontWeight: 600 }}>✏️ Modifier</button>
-                      <button onClick={() => deleteCompose(p)} disabled={deletingId === p.id} title="Supprimer" style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, color: '#dc2626', cursor: 'pointer', padding: '6px 10px', fontSize: '0.78rem', fontWeight: 700 }}>🗑</button>
-                    </div>
-                  </div>
-                </div>
-              ))}
+              {filteredComposes.slice((safeComposePage - 1) * COMPOSES_PER_PAGE, safeComposePage * COMPOSES_PER_PAGE).map((p) => {
+                const nbArt = p.ingredientsCount ?? 0;
+                const nbSub = p.subProductsCount ?? 0;
+                const summaryParts: string[] = [];
+                if (nbArt) summaryParts.push(`${nbArt} article${nbArt > 1 ? 's' : ''}`);
+                if (nbSub) summaryParts.push(`${nbSub} PU`);
+                const togId = (key: string | null) => (key && key.startsWith(`${p.id}-`)) ? Number(key.slice(`${p.id}-`.length)) : null;
+                return (
+                  <ProductCard
+                    key={p.id}
+                    product={p}
+                    icon="💎"
+                    iconGradient="linear-gradient(135deg,#6366f1,#4338ca)"
+                    badges={<span style={{ fontSize: '0.72rem', color: '#4338ca', background: '#eef2ff', borderRadius: 6, padding: '1px 7px' }}>{p.categorieProduitName ?? 'Sans catégorie'}</span>}
+                    onVoir={() => openView(p)}
+                    voirSummary={summaryParts.join('  ·  ') || undefined}
+                    actions={(
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, width: '100%' }}>
+                        <button onClick={() => openFt(p)} disabled={(p.ingredientsCount ?? 0) === 0 || (ftLoading && ftProduct?.id === p.id)} title="Générer la fiche technique (prix d'appro du labo)"
+                          style={{ background: '#f0fdf4', border: '1px solid #c7d2fe', borderRadius: 8, color: '#4338ca', cursor: (p.ingredientsCount ?? 0) === 0 ? 'not-allowed' : 'pointer', padding: '7px', fontSize: '0.78rem', fontWeight: 700, opacity: (p.ingredientsCount ?? 0) === 0 ? 0.5 : 1 }}>📄 Fiche technique (XLS)</button>
+                        <div style={{ display: 'flex', gap: 6 }}>
+                          <button onClick={() => setEditComposeId(p.id)} style={{ flex: 1, background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 8, color: '#1d4ed8', cursor: 'pointer', padding: '6px', fontSize: '0.78rem', fontWeight: 600 }}>✏️ Modifier</button>
+                          <button onClick={() => deleteCompose(p)} disabled={deletingId === p.id} title="Supprimer" style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, color: '#dc2626', cursor: 'pointer', padding: '6px 10px', fontSize: '0.78rem', fontWeight: 700 }}>🗑</button>
+                        </div>
+                      </div>
+                    )}
+                    activities={allActivities.map((a) => ({ id: a.id, nom: a.nom }))}
+                    assignedActiviteIds={new Set((p.activites ?? []).map((a) => a.id))}
+                    togglingActiviteId={togId(togglingActivite)}
+                    onToggleActivite={(id) => toggleActiviteAssignment(p, id)}
+                    labos={allLabos}
+                    assignedLaboIds={new Set((p.labos ?? []).map((l) => l.id))}
+                    togglingLaboId={togId(togglingLabo)}
+                    onToggleLabo={(id) => toggleLaboAssignment(p, id)}
+                    canWrite={true}
+                  />
+                );
+              })}
             </div>
             {filteredComposes.length > COMPOSES_PER_PAGE && (
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 18 }}>

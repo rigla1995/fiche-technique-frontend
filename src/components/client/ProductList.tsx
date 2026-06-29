@@ -8,6 +8,7 @@ import type { Product, Activite, ActiviteIngredient, CategorieProduit } from '..
 import FicheTechniqueTab from './FicheTechniqueTab';
 import FicheTechniqueModal from './FicheTechniqueModal';
 import RecipeTree from './RecipeTree';
+import ProductCard from './ProductCard';
 import GuideButton from './GuideButton';
 import HistoryFilterBar, { FilterField, FilterInput, FilterSelect } from '../common/HistoryFilterBar';
 
@@ -44,7 +45,7 @@ export default function ProductList() {
   const [filterActiviteId, setFilterActiviteId] = useState<number | null>(null);
   const [filterCategorieId, setFilterCategorieId] = useState<number | null>(null);
   const [page, setPage] = useState(1);
-  const [togglingPT, setTogglingPT] = useState<number | null>(null);
+  const [, setTogglingPT] = useState<number | null>(null);
   const [ptDeselectModal, setPtDeselectModal] = useState<{ id: number; nom: string; historyCount: number } | null>(null);
   const [deleteModal, setDeleteModal] = useState<{ product: Product; historyCount?: number } | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -298,23 +299,6 @@ export default function ProductList() {
     setDeleting(false);
   };
 
-  const togglePT = async (p: Product) => {
-    if (p.isStockIngredient) {
-      setTogglingPT(p.id);
-      let histCount = 0;
-      try {
-        const { data: hist } = await api.get(`/api/stock/pt/${p.id}/history`);
-        histCount = Array.isArray(hist) ? hist.length : 0;
-      } catch { /* ignore */ }
-      setTogglingPT(null);
-      if (histCount > 0) {
-        setPtDeselectModal({ id: p.id, nom: p.name, historyCount: histCount });
-        return;
-      }
-    }
-    await doTogglePT(p.id);
-  };
-
   const doTogglePT = async (id: number, deleteHistory = false) => {
     setTogglingPT(id);
     try {
@@ -344,6 +328,23 @@ export default function ProductList() {
       }));
     } catch { /* ignore */ }
     setTogglingActivite(null);
+  };
+
+  const [togglingLabo, setTogglingLabo] = useState<string | null>(null); // "produitId-laboId"
+  const toggleLaboAssignment = async (p: Product, laboId: number) => {
+    setTogglingLabo(`${p.id}-${laboId}`);
+    try {
+      await api.post(`/api/produits/${p.id}/toggle-labo`, { laboId });
+      const currentlyAssigned = p.labos?.some((l) => l.id === laboId) ?? false;
+      setProducts((prev) => prev.map((prod) => {
+        if (prod.id !== p.id) return prod;
+        const newLabos = currentlyAssigned
+          ? (prod.labos || []).filter((l) => l.id !== laboId)
+          : [...(prod.labos || []), allLabos.find((l) => l.id === laboId)!].filter(Boolean);
+        return { ...prod, labos: newLabos };
+      }));
+    } catch { /* ignore */ }
+    setTogglingLabo(null);
   };
 
   // Onglet Vendables = produits d'activité ; les composés (origine labo) vivent dans Produits Valorisés.
@@ -591,108 +592,45 @@ export default function ProductList() {
               {(() => {
                 const renderProductCard = (p: Product) => {
                   const isSup = !!p.isSupplement;
+                  const icon = isSup ? '➕' : (isVendable ? '🍽️' : '🧪');
                   const iconGradient = isSup ? 'linear-gradient(135deg, #d97706 0%, #b45309 100%)' : 'linear-gradient(135deg, #6366f1 0%, #4338ca 100%)';
-                  return (
-                    <div key={p.id} style={{
-                      background: 'var(--surface)', borderRadius: 14,
-                      border: '1px solid var(--border)',
-                      boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
-                      display: 'flex', flexDirection: 'column', gap: 10, padding: '14px 16px',
-                    }}>
-                      {/* Card header */}
-                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-                        <div style={{ width: 38, height: 38, borderRadius: 10, flexShrink: 0, background: iconGradient, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem' }}>
-                          {isSup ? '➕' : (isVendable ? '🍽️' : '🧪')}
-                        </div>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap' }}>
-                            <span style={{ fontWeight: 700, fontSize: '0.92rem', color: '#0f172a', lineHeight: 1.3 }}>{p.name}</span>
-                            {isVendable && p.categorieProduitName && (
-                              <span style={{ fontSize: '0.62rem', fontWeight: 700, letterSpacing: '0.04em', background: '#e0e7ff', color: '#3730a3', border: '1px solid #c7d2fe', borderRadius: 20, padding: '2px 8px', flexShrink: 0 }}>🏷️ {p.categorieProduitName}</span>
-                            )}
-                            {(p.origine ?? 'activite') === 'labo' && (
-                              <span title="Fabriqué au labo — reçu uniquement par transfert (pas d'appro manuel en activité)."
-                                style={{ fontSize: '0.62rem', fontWeight: 700, letterSpacing: '0.04em', background: '#ecfeff', color: '#0e7490', border: '1px solid #a5f3fc', borderRadius: 20, padding: '2px 8px', flexShrink: 0, whiteSpace: 'nowrap' }}>⇄ Transfert uniquement</span>
-                            )}
-                          </div>
-                          {!isVendable && (
-                            <button
-                              onClick={() => togglePT(p)}
-                              disabled={togglingPT === p.id || !canWriteProducts}
-                              title={p.isStockIngredient ? 'Désactiver le stock' : 'Activer le stock'}
-                              style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: 'none', border: 'none', padding: 0, marginTop: 5, cursor: canWriteProducts ? 'pointer' : 'default', opacity: togglingPT === p.id ? 0.5 : 1 }}
-                            >
-                              <div style={{ width: 30, height: 17, borderRadius: 9, position: 'relative', flexShrink: 0, background: p.isStockIngredient ? '#6366f1' : '#cbd5e1', transition: 'background 0.2s' }}>
-                                <div style={{ position: 'absolute', top: 2, left: p.isStockIngredient ? 15 : 2, width: 13, height: 13, borderRadius: '50%', background: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.25)', transition: 'left 0.2s' }} />
-                              </div>
-                              <span style={{ fontSize: '0.67rem', fontWeight: 600, color: p.isStockIngredient ? '#3730a3' : '#94a3b8', whiteSpace: 'nowrap' }}>
-                                {togglingPT === p.id ? '…' : p.isStockIngredient ? 'Activé dans le stock' : 'Inactif'}
-                              </span>
-                            </button>
-                          )}
-                          {p.refProduit && (
-                            <div style={{ fontSize: '0.68rem', color: '#9ca3af', fontWeight: 500, marginTop: 2 }}>Réf : {p.refProduit}</div>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Voir composition (recette décomposée en arborescence) */}
-                      {(() => {
-                        const nbArt = p.ingredientsCount ?? 0;
-                        const nbSub = p.subProductsCount ?? 0;
-                        const total = nbArt + nbSub;
-                        const parts: string[] = [];
-                        if (nbArt) parts.push(`${nbArt} article${nbArt > 1 ? 's' : ''}`);
-                        if (nbSub) parts.push(isVendable ? `${nbSub} PU` : `${nbSub} sous-produit${nbSub > 1 ? 's' : ''}`);
-                        return (
-                          <button
-                            onClick={() => openPopup('ingredients', p)}
-                            disabled={!total}
-                            title={total ? 'Voir la composition (articles + sous-produits)' : 'Aucune composition'}
-                            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, width: '100%', padding: '9px 10px', borderRadius: 10, border: `1px solid ${total ? '#c7d2fe' : '#f1f5f9'}`, background: total ? '#eef2ff' : '#f8fafc', color: total ? '#4338ca' : '#9ca3af', cursor: total ? 'pointer' : 'default', opacity: total ? 1 : 0.6, fontWeight: 700, fontSize: '0.82rem' }}
-                          >
-                            <span style={{ fontSize: '0.95rem', lineHeight: 1 }}>👁</span>
-                            <span>Voir composition</span>
-                            {parts.length > 0 && <span style={{ fontWeight: 500, fontSize: '0.72rem', color: '#6366f1' }}>· {parts.join(' · ')}</span>}
-                          </button>
-                        );
-                      })()}
-
-                      {/* Actions footer */}
-                      <div style={{ borderTop: '1px solid var(--border)', paddingTop: 10, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-                        {renderActions(p)}
-                      </div>
-
-                      {/* Activité assignments — assignables pour tous les types */}
-                      {allActivities.length > 0 && (
-                        <div style={{ borderTop: '1px solid var(--border)', paddingTop: 10 }}>
-                          <div style={{ fontSize: '0.6rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>Activités</div>
-                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
-                            {allActivities.map((act) => {
-                              const assigned = p.activites?.some((a) => a.id === act.id) ?? false;
-                              const toggling = togglingActivite === `${p.id}-${act.id}`;
-                              return (
-                                <button
-                                  key={act.id}
-                                  onClick={() => toggleActiviteAssignment(p, act.id)}
-                                  disabled={toggling || !canWriteProducts}
-                                  style={{
-                                    fontSize: '0.68rem', fontWeight: 600, padding: '3px 9px', borderRadius: 20, cursor: canWriteProducts ? 'pointer' : 'default',
-                                    border: `1px solid ${assigned ? '#c7d2fe' : '#e2e8f0'}`,
-                                    background: assigned ? '#eef2ff' : '#f8fafc',
-                                    color: assigned ? '#3730a3' : '#94a3b8',
-                                    opacity: toggling ? 0.5 : 1,
-                                    transition: 'background 0.15s, color 0.15s',
-                                  }}
-                                >
-                                  {toggling ? '…' : (assigned ? '✓ ' : '') + act.nom}
-                                </button>
-                              );
-                            })}
-                          </div>
-                        </div>
+                  const nbArt = p.ingredientsCount ?? 0;
+                  const nbSub = p.subProductsCount ?? 0;
+                  const summaryParts: string[] = [];
+                  if (nbArt) summaryParts.push(`${nbArt} article${nbArt > 1 ? 's' : ''}`);
+                  if (nbSub) summaryParts.push(isVendable ? `${nbSub} PU` : `${nbSub} sous-produit${nbSub > 1 ? 's' : ''}`);
+                  const badges = (
+                    <>
+                      {isVendable && p.categorieProduitName && (
+                        <span style={{ fontSize: '0.62rem', fontWeight: 700, letterSpacing: '0.04em', background: '#e0e7ff', color: '#3730a3', border: '1px solid #c7d2fe', borderRadius: 20, padding: '2px 8px' }}>🏷️ {p.categorieProduitName}</span>
                       )}
-                    </div>
+                      {(p.origine ?? 'activite') === 'labo' && (
+                        <span title="Fabriqué au labo — reçu uniquement par transfert (pas d'appro manuel en activité)."
+                          style={{ fontSize: '0.62rem', fontWeight: 700, letterSpacing: '0.04em', background: '#ecfeff', color: '#0e7490', border: '1px solid #a5f3fc', borderRadius: 20, padding: '2px 8px', whiteSpace: 'nowrap' }}>⇄ Transfert uniquement</span>
+                      )}
+                    </>
+                  );
+                  const togId = (key: string | null) => (key && key.startsWith(`${p.id}-`)) ? Number(key.slice(`${p.id}-`.length)) : null;
+                  return (
+                    <ProductCard
+                      key={p.id}
+                      product={p}
+                      icon={icon}
+                      iconGradient={iconGradient}
+                      badges={badges}
+                      onVoir={() => openPopup('ingredients', p)}
+                      voirSummary={summaryParts.join('  ·  ') || undefined}
+                      actions={renderActions(p)}
+                      activities={allActivities.map((a) => ({ id: a.id, nom: a.nom }))}
+                      assignedActiviteIds={new Set((p.activites ?? []).map((a) => a.id))}
+                      togglingActiviteId={togId(togglingActivite)}
+                      onToggleActivite={(id) => toggleActiviteAssignment(p, id)}
+                      labos={allLabos}
+                      assignedLaboIds={new Set((p.labos ?? []).map((l) => l.id))}
+                      togglingLaboId={togId(togglingLabo)}
+                      onToggleLabo={(id) => toggleLaboAssignment(p, id)}
+                      canWrite={canWriteProducts}
+                    />
                   );
                 };
 
