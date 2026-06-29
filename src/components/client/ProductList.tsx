@@ -636,43 +636,27 @@ export default function ProductList() {
                         </div>
                       </div>
 
-                      {/* Metrics row */}
-                      <div style={{ display: 'flex', gap: 8 }}>
-                        <button
-                          onClick={() => openPopup('ingredients', p)}
-                          disabled={!p.ingredientsCount}
-                          title={p.ingredientsCount ? 'Voir les articles' : 'Aucun article'}
-                          style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, padding: '8px 4px', borderRadius: 10, border: `1px solid ${p.ingredientsCount ? '#c7d2fe' : '#f1f5f9'}`, background: p.ingredientsCount ? '#eef2ff' : '#f8fafc', cursor: p.ingredientsCount ? 'pointer' : 'default', opacity: p.ingredientsCount ? 1 : 0.5, transition: 'background 0.12s' }}
-                        >
-                          <span style={{ fontSize: '1rem', lineHeight: 1 }}>🧂</span>
-                          <span style={{ fontWeight: 800, fontSize: '1rem', color: p.ingredientsCount ? '#6366f1' : '#9ca3af', lineHeight: 1 }}>{p.ingredientsCount ?? 0}</span>
-                          <span style={{ fontSize: '0.6rem', color: '#9ca3af', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>articles</span>
-                        </button>
-                        {isVendable && (
+                      {/* Voir composition (recette décomposée en arborescence) */}
+                      {(() => {
+                        const nbArt = p.ingredientsCount ?? 0;
+                        const nbSub = p.subProductsCount ?? 0;
+                        const total = nbArt + nbSub;
+                        const parts: string[] = [];
+                        if (nbArt) parts.push(`${nbArt} article${nbArt > 1 ? 's' : ''}`);
+                        if (nbSub) parts.push(isVendable ? `${nbSub} PU` : `${nbSub} sous-produit${nbSub > 1 ? 's' : ''}`);
+                        return (
                           <button
-                            onClick={() => openPopup('subProducts', p)}
-                            disabled={!p.subProductsCount}
-                            title={p.subProductsCount ? 'Voir les produits utilisables' : 'Aucun produit utilisable'}
-                            style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, padding: '8px 4px', borderRadius: 10, border: `1px solid ${p.subProductsCount ? '#bfdbfe' : '#f1f5f9'}`, background: p.subProductsCount ? '#eff6ff' : '#f8fafc', cursor: p.subProductsCount ? 'pointer' : 'default', opacity: p.subProductsCount ? 1 : 0.5, transition: 'background 0.12s' }}
+                            onClick={() => openPopup('ingredients', p)}
+                            disabled={!total}
+                            title={total ? 'Voir la composition (articles + sous-produits)' : 'Aucune composition'}
+                            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, width: '100%', padding: '9px 10px', borderRadius: 10, border: `1px solid ${total ? '#c7d2fe' : '#f1f5f9'}`, background: total ? '#eef2ff' : '#f8fafc', color: total ? '#4338ca' : '#9ca3af', cursor: total ? 'pointer' : 'default', opacity: total ? 1 : 0.6, fontWeight: 700, fontSize: '0.82rem' }}
                           >
-                            <span style={{ fontSize: '1rem', lineHeight: 1 }}>📦</span>
-                            <span style={{ fontWeight: 800, fontSize: '1rem', color: p.subProductsCount ? '#2563eb' : '#9ca3af', lineHeight: 1 }}>{p.subProductsCount ?? 0}</span>
-                            <span style={{ fontSize: '0.6rem', color: '#9ca3af', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>util.</span>
+                            <span style={{ fontSize: '0.95rem', lineHeight: 1 }}>👁</span>
+                            <span>Voir composition</span>
+                            {parts.length > 0 && <span style={{ fontWeight: 500, fontSize: '0.72rem', color: '#6366f1' }}>· {parts.join(' · ')}</span>}
                           </button>
-                        )}
-                        {!isVendable && (
-                          <button
-                            onClick={() => openPopup('subProducts', p)}
-                            disabled={!p.subProductsCount}
-                            title={p.subProductsCount ? `Voir les ${p.subProductsCount} sous-produit(s)` : 'Aucun sous-produit'}
-                            style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, padding: '8px 4px', borderRadius: 10, border: `1px solid ${p.subProductsCount ? '#bfdbfe' : '#f1f5f9'}`, background: p.subProductsCount ? '#eff6ff' : '#f8fafc', cursor: p.subProductsCount ? 'pointer' : 'default', opacity: p.subProductsCount ? 1 : 0.5, transition: 'background 0.12s' }}
-                          >
-                            <span style={{ fontSize: '1rem', lineHeight: 1 }}>🍽️</span>
-                            <span style={{ fontWeight: 800, fontSize: '1rem', color: p.subProductsCount ? '#2563eb' : '#9ca3af', lineHeight: 1 }}>{p.subProductsCount ?? 0}</span>
-                            <span style={{ fontSize: '0.6rem', color: '#9ca3af', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>utilisé</span>
-                          </button>
-                        )}
-                      </div>
+                        );
+                      })()}
 
                       {/* Actions footer */}
                       <div style={{ borderTop: '1px solid var(--border)', paddingTop: 10, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
