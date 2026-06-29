@@ -5,7 +5,7 @@ import ComposedValoriseModal from './ComposedValoriseModal';
 import FicheTechniqueModal from './FicheTechniqueModal';
 import HistoryFilterBar, { FilterField, FilterInput, FilterSelect } from '../common/HistoryFilterBar';
 
-const HERO = 'linear-gradient(135deg, #0a1628 0%, #0f2847 55%, #0d3b2e 100%)';
+const HERO = 'linear-gradient(135deg, #1e1b4b 0%, #312e81 55%, #4338ca 100%)';
 const CATS_PER_PAGE = 10;
 const COMPOSES_PER_PAGE = 12;
 
@@ -179,11 +179,11 @@ export default function ValorisesPage() {
   return (
     <div className="page">
       {/* Hero */}
-      <div style={{ background: HERO, borderRadius: 18, padding: '24px 28px', marginBottom: 24, boxShadow: '0 8px 32px rgba(10,22,40,0.35)' }}>
+      <div style={{ background: HERO, borderRadius: 18, padding: '24px 28px', marginBottom: 24, boxShadow: '0 8px 32px rgba(30,27,75,0.35)' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
-              <div style={{ background: 'rgba(16,185,129,0.18)', border: '1px solid rgba(16,185,129,0.3)', borderRadius: 10, padding: '7px 9px', fontSize: '1.2rem', lineHeight: 1 }}>💎</div>
+              <div style={{ background: 'rgba(99,102,241,0.18)', border: '1px solid rgba(99,102,241,0.3)', borderRadius: 10, padding: '7px 9px', fontSize: '1.2rem', lineHeight: 1 }}>💎</div>
               <h1 style={{ fontSize: '1.45rem', fontWeight: 800, color: '#fff', margin: 0, letterSpacing: '-0.01em' }}>Produits valorisés</h1>
             </div>
             <p style={{ color: 'rgba(255,255,255,0.55)', fontSize: '0.83rem', margin: 0 }}>
@@ -191,8 +191,8 @@ export default function ValorisesPage() {
             </p>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <div style={{ background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.22)', borderRadius: 14, padding: '10px 20px', textAlign: 'center', minWidth: 80 }}>
-              <div style={{ fontSize: '1.8rem', fontWeight: 900, color: '#10b981', lineHeight: 1 }}>{assignedCount}/{articles.length}</div>
+            <div style={{ background: 'rgba(99,102,241,0.12)', border: '1px solid rgba(99,102,241,0.22)', borderRadius: 14, padding: '10px 20px', textAlign: 'center', minWidth: 80 }}>
+              <div style={{ fontSize: '1.8rem', fontWeight: 900, color: '#818cf8', lineHeight: 1 }}>{assignedCount}/{articles.length}</div>
               <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.5)', marginTop: 2 }}>articles catégorisés</div>
             </div>
           </div>
@@ -206,7 +206,7 @@ export default function ValorisesPage() {
           ['referentiel', `💎 Référentiel (${articles.length})`],
         ]) as ['composes' | 'referentiel', string][]).map(([key, label]) => (
           <button key={key} onClick={() => setTab(key)}
-            style={{ padding: '9px 20px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.9rem', fontWeight: tab === key ? 700 : 400, color: tab === key ? '#059669' : 'var(--text)', borderBottom: tab === key ? '3px solid #059669' : '3px solid transparent' }}>
+            style={{ padding: '9px 20px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.9rem', fontWeight: tab === key ? 700 : 400, color: tab === key ? '#6366f1' : 'var(--text)', borderBottom: tab === key ? '3px solid #6366f1' : '3px solid transparent' }}>
             {label}
           </button>
         ))}
@@ -215,11 +215,11 @@ export default function ValorisesPage() {
       {hasLabos && tab === 'composes' && (<>
         {/* Barre de filtres (composant partagé, mode direct) — bouton d'ajout dans actions */}
         <HistoryFilterBar
-          accent="#059669" accentDark="#047857"
+          accent="#6366f1" accentDark="#4338ca"
           subtitle={composes.length > 0 ? `${filteredComposes.length} produit${filteredComposes.length !== 1 ? 's' : ''}` : undefined}
           onReset={resetComposeFilters}
           showReset={hasComposeFilters}
-          actions={<button onClick={() => setShowComposed(true)} style={{ height: 36, background: 'linear-gradient(135deg, #047857, #10b981)', border: 'none', borderRadius: 8, color: '#fff', fontWeight: 700, padding: '0 18px', cursor: 'pointer', fontSize: '0.85rem', whiteSpace: 'nowrap' }}>+ Produit valorisé composé</button>}
+          actions={<button onClick={() => setShowComposed(true)} style={{ height: 36, background: 'linear-gradient(135deg, #4338ca, #818cf8)', border: 'none', borderRadius: 8, color: '#fff', fontWeight: 700, padding: '0 18px', cursor: 'pointer', fontSize: '0.85rem', whiteSpace: 'nowrap' }}>+ Produit valorisé composé</button>}
         >
           {composes.length > 0 && (<>
             <FilterField label="🔍 Produit"><FilterInput value={composeSearch} onChange={e => { setComposeSearch(e.target.value); setComposePage(1); }} placeholder="Nom ou réf…" /></FilterField>
@@ -267,7 +267,7 @@ export default function ValorisesPage() {
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 6, borderTop: '1px solid var(--border)', paddingTop: 10 }}>
                     <button onClick={() => openFt(p)} disabled={(p.ingredientsCount ?? 0) === 0 || (ftLoading && ftProduct?.id === p.id)} title="Générer la fiche technique (prix d'appro du labo)"
-                      style={{ background: '#f0fdf4', border: '1px solid #6ee7b7', borderRadius: 8, color: '#047857', cursor: (p.ingredientsCount ?? 0) === 0 ? 'not-allowed' : 'pointer', padding: '7px', fontSize: '0.78rem', fontWeight: 700, opacity: (p.ingredientsCount ?? 0) === 0 ? 0.5 : 1 }}>📄 Fiche technique (XLS)</button>
+                      style={{ background: '#f0fdf4', border: '1px solid #c7d2fe', borderRadius: 8, color: '#4338ca', cursor: (p.ingredientsCount ?? 0) === 0 ? 'not-allowed' : 'pointer', padding: '7px', fontSize: '0.78rem', fontWeight: 700, opacity: (p.ingredientsCount ?? 0) === 0 ? 0.5 : 1 }}>📄 Fiche technique (XLS)</button>
                     <div style={{ display: 'flex', gap: 6 }}>
                       <button onClick={() => openView(p)} style={{ flex: 1, background: '#f1f5f9', border: '1px solid #e2e8f0', borderRadius: 8, color: '#475569', cursor: 'pointer', padding: '6px', fontSize: '0.78rem', fontWeight: 600 }}>👁 Voir</button>
                       <button onClick={() => setEditComposeId(p.id)} style={{ flex: 1, background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 8, color: '#1d4ed8', cursor: 'pointer', padding: '6px', fontSize: '0.78rem', fontWeight: 600 }}>✏️ Modifier</button>
@@ -291,7 +291,7 @@ export default function ValorisesPage() {
       {tab === 'referentiel' && (<>
       {/* Barre de filtres (composant partagé, mode direct) */}
       <HistoryFilterBar
-        accent="#059669" accentDark="#047857"
+        accent="#6366f1" accentDark="#4338ca"
         subtitle={`${filtered.length} article${filtered.length !== 1 ? 's' : ''} · ${groups.length} catégorie${groups.length !== 1 ? 's' : ''}`}
         onReset={resetFilters}
         showReset={hasFilters}
@@ -324,7 +324,7 @@ export default function ValorisesPage() {
       {loading ? (
         <div className="loading-text">Chargement…</div>
       ) : articles.length === 0 ? (
-        <div style={{ background: 'linear-gradient(135deg,#f0fdf4,#dcfce7)', border: '2px dashed #86efac', borderRadius: 18, padding: '48px 32px', textAlign: 'center' }}>
+        <div style={{ background: 'linear-gradient(135deg,#f0fdf4,#dcfce7)', border: '2px dashed #c7d2fe', borderRadius: 18, padding: '48px 32px', textAlign: 'center' }}>
           <div style={{ fontSize: '2.8rem', marginBottom: 14 }}>💎</div>
           <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#14532d', margin: '0 0 8px' }}>Aucun article valorisable</h3>
           <p style={{ color: '#166534', fontSize: '0.88rem', margin: 0, maxWidth: 440, marginInline: 'auto' }}>Les articles valorisables proviennent des familles marquées « vendable » et « non consommable » dans votre référentiel.</p>
@@ -336,7 +336,7 @@ export default function ValorisesPage() {
           {pageGroups.map(group => (
             <div key={group.cat} className="card" style={{ marginBottom: 16, overflow: 'hidden' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '11px 16px', background: 'linear-gradient(135deg,#f0fdf4,#dcfce7)', borderBottom: '1px solid #bbf7d0' }}>
-                <span style={{ fontWeight: 800, fontSize: '0.9rem', color: '#065f46' }}>🗂️ {group.cat}</span>
+                <span style={{ fontWeight: 800, fontSize: '0.9rem', color: '#3730a3' }}>🗂️ {group.cat}</span>
                 {group.famille && <span style={{ fontSize: '0.72rem', color: '#16a34a', fontWeight: 600 }}>· {group.famille}</span>}
                 <span style={{ marginLeft: 'auto', fontSize: '0.72rem', color: '#16a34a', fontWeight: 700, background: '#dcfce7', borderRadius: 20, padding: '2px 9px' }}>{group.items.length}</span>
               </div>
@@ -360,7 +360,7 @@ export default function ValorisesPage() {
                             value={a.categorie_produit_id ? String(a.categorie_produit_id) : ''}
                             disabled={savingId === a.id || categories.length === 0}
                             onChange={e => assign(a, e.target.value)}
-                            style={{ minWidth: 180, padding: '7px 10px', borderRadius: 8, border: `1.5px solid ${a.categorie_produit_id ? '#6ee7b7' : '#fca5a5'}`, background: a.categorie_produit_id ? '#f0fdf4' : '#fef2f2', fontSize: '0.85rem', color: '#0f172a', cursor: 'pointer' }}
+                            style={{ minWidth: 180, padding: '7px 10px', borderRadius: 8, border: `1.5px solid ${a.categorie_produit_id ? '#c7d2fe' : '#fca5a5'}`, background: a.categorie_produit_id ? '#f0fdf4' : '#fef2f2', fontSize: '0.85rem', color: '#0f172a', cursor: 'pointer' }}
                           >
                             <option value="">— Aucune —</option>
                             {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -380,11 +380,11 @@ export default function ValorisesPage() {
                 Catégories {(safePage - 1) * CATS_PER_PAGE + 1}–{Math.min(safePage * CATS_PER_PAGE, groups.length)} sur {groups.length}
               </span>
               <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-                <button disabled={safePage <= 1} onClick={() => setPage(safePage - 1)} style={{ padding: '4px 12px', borderRadius: 7, border: '1px solid #6ee7b7', background: '#fff', color: '#059669', cursor: safePage <= 1 ? 'default' : 'pointer', fontWeight: 700, opacity: safePage <= 1 ? 0.4 : 1 }}>‹</button>
+                <button disabled={safePage <= 1} onClick={() => setPage(safePage - 1)} style={{ padding: '4px 12px', borderRadius: 7, border: '1px solid #c7d2fe', background: '#fff', color: '#6366f1', cursor: safePage <= 1 ? 'default' : 'pointer', fontWeight: 700, opacity: safePage <= 1 ? 0.4 : 1 }}>‹</button>
                 {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
-                  <button key={p} onClick={() => setPage(p)} style={{ minWidth: 32, padding: '4px 9px', borderRadius: 7, border: `1.5px solid ${p === safePage ? '#059669' : '#6ee7b7'}`, background: p === safePage ? '#059669' : '#fff', color: p === safePage ? '#fff' : '#065f46', fontWeight: p === safePage ? 800 : 500, cursor: 'pointer' }}>{p}</button>
+                  <button key={p} onClick={() => setPage(p)} style={{ minWidth: 32, padding: '4px 9px', borderRadius: 7, border: `1.5px solid ${p === safePage ? '#6366f1' : '#c7d2fe'}`, background: p === safePage ? '#6366f1' : '#fff', color: p === safePage ? '#fff' : '#3730a3', fontWeight: p === safePage ? 800 : 500, cursor: 'pointer' }}>{p}</button>
                 ))}
-                <button disabled={safePage >= totalPages} onClick={() => setPage(safePage + 1)} style={{ padding: '4px 12px', borderRadius: 7, border: '1px solid #6ee7b7', background: '#fff', color: '#059669', cursor: safePage >= totalPages ? 'default' : 'pointer', fontWeight: 700, opacity: safePage >= totalPages ? 0.4 : 1 }}>›</button>
+                <button disabled={safePage >= totalPages} onClick={() => setPage(safePage + 1)} style={{ padding: '4px 12px', borderRadius: 7, border: '1px solid #c7d2fe', background: '#fff', color: '#6366f1', cursor: safePage >= totalPages ? 'default' : 'pointer', fontWeight: 700, opacity: safePage >= totalPages ? 0.4 : 1 }}>›</button>
               </div>
             </div>
           )}
@@ -411,7 +411,7 @@ export default function ValorisesPage() {
             <div className="modal-body">
               {!viewDetail ? <div className="loading-text">Chargement…</div> : (
                 <>
-                  <div style={{ fontWeight: 700, fontSize: '0.8rem', color: '#065f46', marginBottom: 6 }}>🧂 Articles</div>
+                  <div style={{ fontWeight: 700, fontSize: '0.8rem', color: '#3730a3', marginBottom: 6 }}>🧂 Articles</div>
                   {viewDetail.ingredients.length === 0 ? <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>—</div> :
                     viewDetail.ingredients.map((i, k) => (
                       <div key={k} style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 9px', fontSize: '0.85rem', borderRadius: 6, background: k % 2 ? '#f8fafc' : '#fff' }}>
@@ -451,7 +451,7 @@ export default function ValorisesPage() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {ftLabos.map(l => (
                   <button key={l.id} onClick={() => setFtLaboId(l.id)}
-                    style={{ display: 'flex', alignItems: 'center', gap: 10, textAlign: 'left', padding: '12px 14px', borderRadius: 10, border: '1.5px solid #6ee7b7', background: '#f0fdf4', color: '#065f46', fontWeight: 700, cursor: 'pointer', fontSize: '0.9rem' }}>
+                    style={{ display: 'flex', alignItems: 'center', gap: 10, textAlign: 'left', padding: '12px 14px', borderRadius: 10, border: '1.5px solid #c7d2fe', background: '#f0fdf4', color: '#3730a3', fontWeight: 700, cursor: 'pointer', fontSize: '0.9rem' }}>
                     🏭 {l.nom}
                   </button>
                 ))}
