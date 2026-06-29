@@ -185,14 +185,22 @@ export default function TransferPage() {
   useEffect(() => { load(); }, [load]);
   useEffect(() => { api.get('/api/labo').then(({ data }) => setAllLabos(data)).catch(() => {}); }, []);
 
+  // La colonne prix affiche/édite le TTC. Pour les PT, prixCalcule est déjà TTC (PMP TTC).
+  // Pour les articles, le PMP est HT → on pré-remplit le TTC = HT × (1 + TVA). La TVA est
+  // conservée (tauxTvaMap, non affichée) pour reconvertir en HT à l'envoi.
   const initPrixFromStock = (rows: LaboStockRow[]) => {
     const prix: Record<number, string> = {};
     const tva: Record<number, string> = {};
     for (const r of rows) {
-      const suggested = r.isPT
-        ? (r.prixCalcule ?? r.prixUnitaire)
-        : (r.pmpUnitHT ?? r.prixUnitaire);
-      prix[r.ingredientId] = suggested != null ? String(Math.round(suggested * 1000) / 1000) : '';
+      const taux = r.tauxTva != null ? r.tauxTva : 0;
+      let suggestedTtc: number | null;
+      if (r.isPT) {
+        suggestedTtc = r.prixCalcule ?? r.prixUnitaire;
+      } else {
+        const ht = r.pmpUnitHT ?? r.prixUnitaire;
+        suggestedTtc = ht != null ? ht * (1 + taux / 100) : null;
+      }
+      prix[r.ingredientId] = suggestedTtc != null ? String(Math.round(suggestedTtc * 1000) / 1000) : '';
       tva[r.ingredientId] = r.tauxTva != null ? String(r.tauxTva) : '';
     }
     setPrixUnitaireMap(prix);
@@ -286,7 +294,11 @@ export default function TransferPage() {
         setErrorMsg(`Prix unitaire obligatoire pour "${row.nom}".`);
         return;
       }
-      const prixUnit = parseFloat(prixStr);
+      // La saisie est en TTC → on reconvertit en HT (TTC / (1 + TVA)) pour le backend,
+      // qui recompose le TTC = HT × (1 + TVA). Pour les PT (TVA absente), HT = TTC.
+      const prixTtc = parseFloat(prixStr);
+      const taux = tauxTvaMap[row.ingredientId]?.trim() ? parseFloat(tauxTvaMap[row.ingredientId]) : 0;
+      const prixUnit = taux > 0 ? prixTtc / (1 + taux / 100) : prixTtc;
       for (const tr of transfers) tr.prixUnitaire = prixUnit;
 
       if (row.quantite !== null) {
@@ -735,7 +747,6 @@ export default function TransferPage() {
             </div>
           ) : Object.entries(groups).sort(([a], [b]) => a.localeCompare(b)).map(([cat, rows]) => {
             const isOpen = openCats.has(cat);
-            const isPTGroup = rows[0]?.isPT === true;
             return (
               <div key={cat} style={{ marginBottom: 8 }}>
                 <button onClick={() => toggleCat(cat)} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0', width: '100%', textAlign: 'left', borderBottom: '2px solid var(--border)', marginBottom: isOpen ? 10 : 0 }}>
@@ -750,8 +761,7 @@ export default function TransferPage() {
                         <tr style={{ background: 'linear-gradient(135deg, #3b0764, #7e22ce)', borderBottom: '1px solid rgba(255,255,255,0.2)' }}>
                           <th style={{ minWidth: 140, fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '10px 14px 4px', color: '#fff', background: 'transparent', borderBottom: 'none', textAlign: 'center' }}>Article</th>
                           <th style={{ textAlign: 'center', minWidth: 100, fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '10px 14px 4px', color: '#fff', background: 'transparent', borderBottom: 'none' }}>{t('client.labo.labo_stock')}</th>
-                          <th style={{ textAlign: 'center', minWidth: 110, fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '10px 14px 4px', color: '#fff', background: 'transparent', borderBottom: 'none' }}>Prix</th>
-                          {!isPTGroup && <th style={{ textAlign: 'center', minWidth: 80, fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '10px 14px 4px', color: '#e9d5ff', background: 'transparent', borderBottom: 'none' }}>TVA (%)</th>}
+                          <th style={{ textAlign: 'center', minWidth: 110, fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '10px 14px 4px', color: '#fff', background: 'transparent', borderBottom: 'none' }}>Prix unitaire</th>
                           {activites.map((act) => (
                             <th key={act.id} style={{ textAlign: 'center', minWidth: 120, fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '10px 14px 4px', color: '#e9d5ff', background: 'transparent', borderBottom: 'none' }}>{act.nom}</th>
                           ))}
@@ -760,8 +770,7 @@ export default function TransferPage() {
                           {[
                             { sub: 'Hist.Transfert · Unité' },
                             { sub: 'Disponible' },
-                            { sub: 'Unité' },
-                            ...(!isPTGroup ? [{ sub: 'Optionnel' }] : []),
+                            { sub: 'TTC' },
                           ].map(({ sub }, i) => (
                             <th key={i} style={{ fontWeight: 400, fontSize: '0.62rem', color: 'rgba(255,255,255,0.65)', letterSpacing: '0.04em', padding: '2px 14px 8px', textAlign: 'center', background: 'transparent', borderBottom: 'none' }}>
                               {sub}
@@ -800,9 +809,6 @@ export default function TransferPage() {
                                   <span style={{ fontWeight: 800, color: qtyExceedsStock ? '#ef4444' : qtyColor(r.quantite), fontSize: '1rem' }}>
                                     {r.quantite !== null ? parseFloat(r.quantite.toFixed(3)) : '—'}
                                   </span>
-                                  {r.prixUnitaire !== null && (
-                                    <div style={{ fontSize: '0.67rem', color: 'var(--text-muted)', marginTop: 2 }}>{r.prixUnitaire.toFixed(3)} DT</div>
-                                  )}
                                   {qtyExceedsStock && (
                                     <div style={{ fontSize: '0.68rem', color: '#ef4444', fontWeight: 700, marginTop: 2 }}>
                                       ⚠ -{(totalQtyForRow - r.quantite!).toFixed(3)}
@@ -810,39 +816,15 @@ export default function TransferPage() {
                                   )}
                                 </td>
                                 <td style={{ textAlign: 'center', padding: '10px 14px', verticalAlign: 'middle' }}>
-                                  {r.isPT ? (
-                                    <span title="Calculé automatiquement depuis les prix des articles du labo">
-                                      {r.prixCalcule != null && r.prixCalcule > 0 ? (
-                                        <span style={{ fontSize: '0.88rem', color: '#7c3aed', fontWeight: 600 }}>{r.prixCalcule.toFixed(3)}</span>
-                                      ) : r.prixUnitaire != null ? (
-                                        <span style={{ fontSize: '0.88rem', color: '#6b7280', fontWeight: 500 }}>{r.prixUnitaire.toFixed(3)}</span>
-                                      ) : (
-                                        <span style={{ fontSize: '0.78rem', color: '#9ca3af' }}>—</span>
-                                      )}
-                                    </span>
-                                  ) : (
-                                    <input
-                                      type="number" min="0" step="0.001" className="input"
-                                      style={{ width: 90, textAlign: 'right', padding: '5px 8px', borderRadius: 7, fontSize: '0.85rem', borderColor: (!prixUnitaireMap[r.ingredientId]?.trim() && Object.values(qtys[r.ingredientId] || {}).some((v) => parseFloat(v) > 0)) ? '#ef4444' : undefined }}
-                                      value={prixUnitaireMap[r.ingredientId] ?? ''}
-                                      onChange={(e) => setPrixUnitaireMap((prev) => ({ ...prev, [r.ingredientId]: e.target.value }))}
-                                      onFocus={(e) => e.target.select()}
-                                      placeholder="—"
-                                    />
-                                  )}
+                                  <input
+                                    type="number" min="0" step="0.001" className="input"
+                                    style={{ width: 90, textAlign: 'right', padding: '5px 8px', borderRadius: 7, fontSize: '0.85rem', borderColor: (!prixUnitaireMap[r.ingredientId]?.trim() && Object.values(qtys[r.ingredientId] || {}).some((v) => parseFloat(v) > 0)) ? '#ef4444' : undefined }}
+                                    value={prixUnitaireMap[r.ingredientId] ?? ''}
+                                    onChange={(e) => setPrixUnitaireMap((prev) => ({ ...prev, [r.ingredientId]: e.target.value }))}
+                                    onFocus={(e) => e.target.select()}
+                                    placeholder="—"
+                                  />
                                 </td>
-                                {!isPTGroup && (
-                                  <td style={{ textAlign: 'center', padding: '10px 14px', verticalAlign: 'middle' }}>
-                                    <input
-                                      type="number" min="0" max="100" step="0.1" className="input"
-                                      style={{ width: 62, textAlign: 'right', padding: '5px 8px', borderRadius: 7, fontSize: '0.85rem' }}
-                                      value={tauxTvaMap[r.ingredientId] ?? ''}
-                                      onChange={(e) => setTauxTvaMap((prev) => ({ ...prev, [r.ingredientId]: e.target.value }))}
-                                      onFocus={(e) => e.target.select()}
-                                      placeholder="—"
-                                    />
-                                  </td>
-                                )}
                                 {activites.map((act) => {
                                   const isAssigned = assignedSet.has(`${r.ingredientId}-${act.id}`);
                                   return (
