@@ -2,10 +2,11 @@ import { useState, useEffect } from 'react';
 import api from '../../api/client';
 import type { CategorieProduit, TypeProduitCategorie } from '../../types';
 import HistoryFilterBar, { FilterField, FilterInput, FilterSelect } from '../common/HistoryFilterBar';
+import { PRODUCT_THEME } from '../../theme/productTheme';
 
-const COLOR = '#059669';
-const HERO = 'linear-gradient(135deg, #0a1628 0%, #0f2847 55%, #0d3b2e 100%)';
-const BTN = 'linear-gradient(135deg, #059669, #10b981)';
+const COLOR = PRODUCT_THEME.accent;
+const HERO = PRODUCT_THEME.heroGradient;
+const BTN = PRODUCT_THEME.btnGradient;
 
 const TYPE_OPTIONS: { value: TypeProduitCategorie; label: string; icon: string }[] = [
   { value: 'vendable', label: 'Produit vendable', icon: '🍽️' },
@@ -94,19 +95,19 @@ export default function ProductCategoriesPage() {
   return (
     <div className="page">
       {/* Hero — même thème que l'Espace Produit */}
-      <div style={{ background: HERO, borderRadius: 18, padding: '24px 28px', marginBottom: 24, boxShadow: '0 8px 32px rgba(10,22,40,0.35)' }}>
+      <div style={{ background: HERO, borderRadius: 18, padding: '24px 28px', marginBottom: 24, boxShadow: '0 8px 32px rgba(30,27,75,0.35)' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
-              <div style={{ background: 'rgba(16,185,129,0.18)', border: '1px solid rgba(16,185,129,0.3)', borderRadius: 10, padding: '7px 9px', fontSize: '1.2rem', lineHeight: 1 }}>🏷️</div>
+              <div style={{ background: 'rgba(99,102,241,0.18)', border: '1px solid rgba(99,102,241,0.3)', borderRadius: 10, padding: '7px 9px', fontSize: '1.2rem', lineHeight: 1 }}>🏷️</div>
               <h1 style={{ fontSize: '1.45rem', fontWeight: 800, color: '#fff', margin: 0, letterSpacing: '-0.01em' }}>Catégories de produit</h1>
             </div>
             <p style={{ color: 'rgba(255,255,255,0.55)', fontSize: '0.83rem', margin: 0, letterSpacing: '0.01em' }}>
               Classez vos produits vendables, suppléments et articles valorisés par catégorie
             </p>
           </div>
-          <div style={{ background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.22)', borderRadius: 14, padding: '10px 20px', textAlign: 'center', minWidth: 80 }}>
-            <div style={{ fontSize: '1.8rem', fontWeight: 900, color: '#10b981', lineHeight: 1 }}>{categories.length}</div>
+          <div style={{ background: 'rgba(99,102,241,0.12)', border: '1px solid rgba(99,102,241,0.22)', borderRadius: 14, padding: '10px 20px', textAlign: 'center', minWidth: 80 }}>
+            <div style={{ fontSize: '1.8rem', fontWeight: 900, color: '#818cf8', lineHeight: 1 }}>{categories.length}</div>
             <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.5)', marginTop: 2 }}>catégorie{categories.length !== 1 ? 's' : ''}</div>
           </div>
         </div>
@@ -114,7 +115,7 @@ export default function ProductCategoriesPage() {
 
       {/* Barre de filtres (composant partagé, mode direct) */}
       <HistoryFilterBar
-        accent={COLOR} accentDark="#047857"
+        accent={COLOR} accentDark="#4338ca"
         subtitle={`${filtered.length} catégorie${filtered.length !== 1 ? 's' : ''}`}
         onReset={() => { setSearch(''); setFilterType(''); }}
         showReset={!!(search || filterType)}
@@ -133,7 +134,7 @@ export default function ProductCategoriesPage() {
       {loading ? (
         <div className="loading-text">Chargement…</div>
       ) : categories.length === 0 ? (
-        <div style={{ background: 'linear-gradient(135deg,#f0fdf4,#dcfce7)', border: '2px dashed #86efac', borderRadius: 18, padding: '48px 32px', textAlign: 'center' }}>
+        <div style={{ background: 'linear-gradient(135deg,#f0fdf4,#dcfce7)', border: '2px dashed #c7d2fe', borderRadius: 18, padding: '48px 32px', textAlign: 'center' }}>
           <div style={{ fontSize: '2.8rem', marginBottom: 14 }}>🏷️</div>
           <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#14532d', margin: '0 0 8px' }}>Aucune catégorie de produit</h3>
           <p style={{ color: '#166534', fontSize: '0.88rem', margin: '0 0 20px', maxWidth: 440, marginInline: 'auto' }}>Les catégories servent à classer vos produits vendables et suppléments (obligatoire à la création) ainsi que vos articles valorisés.</p>
@@ -156,7 +157,7 @@ export default function ProductCategoriesPage() {
               {filtered.map(c => (
                 <tr key={c.id}>
                   <td style={{ fontWeight: 600, color: '#0f172a' }}>{c.name}</td>
-                  <td><span style={{ fontSize: '0.74rem', fontWeight: 700, background: '#d1fae5', color: '#065f46', border: '1px solid #6ee7b7', borderRadius: 20, padding: '2px 9px', whiteSpace: 'nowrap' }}>{typeIcon(c.typeProduit)} {typeLabel(c.typeProduit)}</span></td>
+                  <td><span style={{ fontSize: '0.74rem', fontWeight: 700, background: '#e0e7ff', color: '#3730a3', border: '1px solid #c7d2fe', borderRadius: 20, padding: '2px 9px', whiteSpace: 'nowrap' }}>{typeIcon(c.typeProduit)} {typeLabel(c.typeProduit)}</span></td>
                   <td><span style={{ fontSize: '0.82rem', color: COLOR, fontWeight: 600 }}>{c.produitsCount ?? 0} produit{(c.produitsCount ?? 0) !== 1 ? 's' : ''}</span></td>
                   <td className="actions-cell" style={{ justifyContent: 'flex-end' }}>
                     <button className="btn btn-ghost btn-sm" onClick={() => openEdit(c)}>✏️ Modifier</button>
@@ -180,13 +181,13 @@ export default function ProductCategoriesPage() {
             <div className="modal-body">
               {createError && <div style={{ background: '#fee2e2', color: '#dc2626', border: '1px solid #fecaca', borderRadius: 6, padding: '8px 12px', marginBottom: 12, fontSize: '0.85rem' }}>{createError}</div>}
               <div style={{ marginBottom: 14 }}>
-                <label style={{ display: 'block', fontWeight: 700, fontSize: '0.82rem', color: '#065f46', marginBottom: 6 }}>Type <span style={{ color: '#ef4444' }}>*</span></label>
+                <label style={{ display: 'block', fontWeight: 700, fontSize: '0.82rem', color: '#3730a3', marginBottom: 6 }}>Type <span style={{ color: '#ef4444' }}>*</span></label>
                 <select className="input" value={createType} onChange={e => setCreateType(e.target.value as TypeProduitCategorie)} style={{ width: '100%' }}>
                   {TYPE_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.icon} {o.label}</option>)}
                 </select>
                 <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: 4 }}>Ces catégories ne seront proposées que pour ce type.</div>
               </div>
-              <label style={{ display: 'block', fontWeight: 700, fontSize: '0.82rem', color: '#065f46', marginBottom: 6 }}>Nom(s)</label>
+              <label style={{ display: 'block', fontWeight: 700, fontSize: '0.82rem', color: '#3730a3', marginBottom: 6 }}>Nom(s)</label>
               {rows.map((row, i) => (
                 <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 8, alignItems: 'center' }}>
                   <input
@@ -200,7 +201,7 @@ export default function ProductCategoriesPage() {
                   <button onClick={() => removeRow(i)} disabled={rows.length === 1} style={{ width: 32, height: 32, border: 'none', borderRadius: 6, background: rows.length === 1 ? '#f1f5f9' : '#fee2e2', color: rows.length === 1 ? '#94a3b8' : '#dc2626', cursor: rows.length === 1 ? 'not-allowed' : 'pointer', fontWeight: 700, flexShrink: 0 }}>×</button>
                 </div>
               ))}
-              <button onClick={addRow} style={{ background: 'none', border: '1.5px dashed #86efac', borderRadius: 8, padding: '7px 16px', color: COLOR, fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer', width: '100%', marginTop: 4 }}>+ Ajouter une ligne</button>
+              <button onClick={addRow} style={{ background: 'none', border: '1.5px dashed #c7d2fe', borderRadius: 8, padding: '7px 16px', color: COLOR, fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer', width: '100%', marginTop: 4 }}>+ Ajouter une ligne</button>
               <div className="modal-footer" style={{ marginTop: 16 }}>
                 <button className="btn btn-ghost" onClick={closeCreate}>Annuler</button>
                 <button className="btn" disabled={creating} onClick={handleCreate} style={{ background: BTN, color: '#fff' }}>
