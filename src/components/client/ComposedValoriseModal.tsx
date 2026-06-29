@@ -107,10 +107,10 @@ export default function ComposedValoriseModal({ categories, editProductId, onClo
     { n: 1, label: 'Affectation' }, { n: 2, label: 'Identité' }, { n: 3, label: 'Articles' },
     { n: 4, label: 'Produits Utilisables' }, { n: 5, label: 'Récap' },
   ];
-  const lbl: React.CSSProperties = { display: 'block', fontWeight: 700, fontSize: '0.8rem', color: '#065f46', marginBottom: 5 };
+  const lbl: React.CSSProperties = { display: 'block', fontWeight: 700, fontSize: '0.8rem', color: '#3730a3', marginBottom: 5 };
   const nextBtn = (enabled: boolean, to: Step) => (
     <button disabled={!enabled} onClick={() => setStep(to)}
-      style={{ background: enabled ? 'linear-gradient(135deg,#047857,#059669)' : '#e5e7eb', border: 'none', borderRadius: 10, color: enabled ? '#fff' : '#9ca3af', fontWeight: 700, padding: '9px 22px', cursor: enabled ? 'pointer' : 'not-allowed' }}>Suivant →</button>
+      style={{ background: enabled ? 'linear-gradient(135deg,#4338ca,#6366f1)' : '#e5e7eb', border: 'none', borderRadius: 10, color: enabled ? '#fff' : '#9ca3af', fontWeight: 700, padding: '9px 22px', cursor: enabled ? 'pointer' : 'not-allowed' }}>Suivant →</button>
   );
   const filteredArticles = articles.filter((a) => !search || a.nom.toLowerCase().includes(search.toLowerCase()));
   const filteredUtil = utilisables.filter((u) => !subSearch || u.name.toLowerCase().includes(subSearch.toLowerCase()));
@@ -118,7 +118,7 @@ export default function ComposedValoriseModal({ categories, editProductId, onClo
   return (
     <div className="modal-overlay">
       <div className="modal" style={{ maxWidth: 600, width: '95vw', maxHeight: '92vh', overflow: 'auto' }} onClick={(e) => e.stopPropagation()}>
-        <div style={{ background: 'linear-gradient(135deg, #0a1628 0%, #0f2847 100%)', padding: '18px 22px 14px', borderRadius: '12px 12px 0 0' }}>
+        <div style={{ background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 100%)', padding: '18px 22px 14px', borderRadius: '12px 12px 0 0' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
             <div style={{ color: '#fff', fontWeight: 800, fontSize: '1rem', marginBottom: 12 }}>💎 {editProductId ? 'Modifier' : 'Nouveau'} produit valorisé composé</div>
             <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: 8, color: '#fff', fontWeight: 900, fontSize: '1.1rem', cursor: 'pointer', padding: '2px 9px', lineHeight: 1 }}>×</button>
@@ -144,7 +144,7 @@ export default function ComposedValoriseModal({ categories, editProductId, onClo
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                     {labos.map((l) => { const on = selectedLabos.includes(l.id); return (
                       <button type="button" key={l.id} onClick={() => toggleLabo(l.id)}
-                        style={{ padding: '6px 12px', borderRadius: 8, border: `1.5px solid ${on ? '#059669' : '#e2e8f0'}`, background: on ? '#f0fdf4' : '#fff', color: on ? '#065f46' : '#374151', fontWeight: on ? 700 : 500, fontSize: '0.82rem', cursor: 'pointer' }}>🏭 {l.nom}{on ? ' ✓' : ''}</button>
+                        style={{ padding: '6px 12px', borderRadius: 8, border: `1.5px solid ${on ? '#6366f1' : '#e2e8f0'}`, background: on ? '#f0fdf4' : '#fff', color: on ? '#3730a3' : '#374151', fontWeight: on ? 700 : 500, fontSize: '0.82rem', cursor: 'pointer' }}>🏭 {l.nom}{on ? ' ✓' : ''}</button>
                     ); })}
                   </div>
                 )}
@@ -156,7 +156,7 @@ export default function ComposedValoriseModal({ categories, editProductId, onClo
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                       {linkedActivites.map((a) => { const on = checkedActivites.includes(a.id); return (
                         <button type="button" key={a.id} onClick={() => setCheckedActivites((p) => on ? p.filter((x) => x !== a.id) : [...p, a.id])}
-                          style={{ padding: '5px 12px', borderRadius: 20, border: `1.5px solid ${on ? '#059669' : '#e2e8f0'}`, background: on ? '#f0fdf4' : '#fff', color: on ? '#065f46' : '#94a3b8', fontWeight: on ? 700 : 500, fontSize: '0.78rem', cursor: 'pointer' }}>{on ? '✓ ' : ''}{a.nom}</button>
+                          style={{ padding: '5px 12px', borderRadius: 20, border: `1.5px solid ${on ? '#6366f1' : '#e2e8f0'}`, background: on ? '#f0fdf4' : '#fff', color: on ? '#3730a3' : '#94a3b8', fontWeight: on ? 700 : 500, fontSize: '0.78rem', cursor: 'pointer' }}>{on ? '✓ ' : ''}{a.nom}</button>
                       ); })}
                     </div>
                   )}
@@ -178,7 +178,7 @@ export default function ComposedValoriseModal({ categories, editProductId, onClo
                   <input className="input" value={refProduit} onChange={(e) => setRefProduit(e.target.value)} placeholder="REF-001" style={{ width: '100%' }} /></div>
               </div>
               <div><label style={lbl}>Catégorie (valorisé) <span style={{ color: '#ef4444' }}>*</span></label>
-                <select className="input" value={categorieId} onChange={(e) => setCategorieId(e.target.value)} style={{ width: '100%', maxWidth: 320, borderColor: categorieId ? '#6ee7b7' : '#fca5a5' }}>
+                <select className="input" value={categorieId} onChange={(e) => setCategorieId(e.target.value)} style={{ width: '100%', maxWidth: 320, borderColor: categorieId ? '#c7d2fe' : '#fca5a5' }}>
                   <option value="">— Sélectionner —</option>{categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
                 {categories.length === 0 && <div style={{ fontSize: '0.76rem', color: '#b45309', marginTop: 4 }}>Aucune catégorie « valorisé ». Créez-en dans Catégories Produits.</div>}
@@ -197,12 +197,12 @@ export default function ComposedValoriseModal({ categories, editProductId, onClo
               <div style={{ maxHeight: 230, overflowY: 'auto', border: '1px solid var(--border)', borderRadius: 10, padding: 6, display: 'flex', flexDirection: 'column', gap: 2 }}>
                 {filteredArticles.length === 0 ? <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '20px 0', fontSize: '0.85rem' }}>Aucun article consommable commun aux labos.</div> :
                   filteredArticles.map((ing) => { const sid = String(ing.id); const sel = ingIds.has(sid); const line = ingLines.find((l) => l.id === sid); const valid = sel && parseFloat(line?.portion || '0') > 0; return (
-                    <div key={ing.id} onClick={() => toggleIng(sid)} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '7px 10px', borderRadius: 8, background: sel ? (valid ? '#ecfdf5' : '#fef3c7') : 'transparent', cursor: 'pointer' }}>
-                      <input type="checkbox" checked={sel} readOnly style={{ accentColor: '#059669', width: 15, height: 15, flexShrink: 0 }} />
-                      <span style={{ flex: 1, fontSize: '0.84rem', fontWeight: sel ? 600 : 400, color: sel ? '#065f46' : '#374151' }}>{ing.nom}</span>
+                    <div key={ing.id} onClick={() => toggleIng(sid)} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '7px 10px', borderRadius: 8, background: sel ? (valid ? '#eef2ff' : '#fef3c7') : 'transparent', cursor: 'pointer' }}>
+                      <input type="checkbox" checked={sel} readOnly style={{ accentColor: '#6366f1', width: 15, height: 15, flexShrink: 0 }} />
+                      <span style={{ flex: 1, fontSize: '0.84rem', fontWeight: sel ? 600 : 400, color: sel ? '#3730a3' : '#374151' }}>{ing.nom}</span>
                       {sel && <div style={{ display: 'flex', alignItems: 'center', gap: 4 }} onClick={(e) => e.stopPropagation()}>
                         <input type="number" step="0.001" min="0" placeholder="portion" value={line?.portion || ''} onChange={(e) => setIngPortion(sid, e.target.value)}
-                          style={{ width: 72, padding: '3px 6px', borderRadius: 6, border: `1.5px solid ${valid ? '#6ee7b7' : '#ef4444'}`, fontSize: '0.82rem', textAlign: 'right' }} />
+                          style={{ width: 72, padding: '3px 6px', borderRadius: 6, border: `1.5px solid ${valid ? '#c7d2fe' : '#ef4444'}`, fontSize: '0.82rem', textAlign: 'right' }} />
                         <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{ing.unite}</span></div>}
                     </div>
                   ); })}
@@ -243,9 +243,9 @@ export default function ComposedValoriseModal({ categories, editProductId, onClo
           {/* Step 5 — Récap */}
           {step === 5 && (
             <>
-              <div style={{ background: 'linear-gradient(135deg,#f0fdf4,#d1fae5)', border: '1.5px solid #a7f3d0', borderRadius: 14, padding: '14px 16px' }}>
-                <div style={{ fontWeight: 800, color: '#065f46', fontSize: '1.05rem' }}>💎 {name || '—'}</div>
-                <div style={{ fontSize: '0.8rem', color: '#059669', marginTop: 2 }}>{categories.find((c) => String(c.id) === categorieId)?.name ?? '—'} · {validIng.length} article(s) · {validSub.length} PU</div>
+              <div style={{ background: 'linear-gradient(135deg,#f0fdf4,#e0e7ff)', border: '1.5px solid #c7d2fe', borderRadius: 14, padding: '14px 16px' }}>
+                <div style={{ fontWeight: 800, color: '#3730a3', fontSize: '1.05rem' }}>💎 {name || '—'}</div>
+                <div style={{ fontSize: '0.8rem', color: '#6366f1', marginTop: 2 }}>{categories.find((c) => String(c.id) === categorieId)?.name ?? '—'} · {validIng.length} article(s) · {validSub.length} PU</div>
                 <div style={{ fontSize: '0.78rem', color: '#475569', marginTop: 8 }}>🏭 {selectedLabos.map((id) => labos.find((l) => l.id === id)?.nom).filter(Boolean).join(', ')}</div>
                 <div style={{ fontSize: '0.78rem', color: '#475569', marginTop: 2 }}>🔄 Reçu par : {checkedActivites.length === 0 ? '— (non distribué)' : checkedActivites.map((id) => activites.find((a) => a.id === id)?.nom).filter(Boolean).join(', ')}</div>
               </div>

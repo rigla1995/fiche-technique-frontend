@@ -369,9 +369,9 @@ export default function FicheTechniqueTab({ allActivities }: Props) {
 
       {/* Step 2: Product type */}
       {actStepDone && (
-        <div style={{ ...cardStyle, borderLeft: '4px solid #10b981' }}>
+        <div style={{ ...cardStyle, borderLeft: '4px solid #818cf8' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-            <span style={{ width: 22, height: 22, borderRadius: '50%', background: '#10b981', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.72rem', fontWeight: 800, flexShrink: 0 }}>
+            <span style={{ width: 22, height: 22, borderRadius: '50%', background: '#818cf8', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.72rem', fontWeight: 800, flexShrink: 0 }}>
               {allActivities.length > 1 ? '2' : '1'}
             </span>
             <span style={stepLabel}>Type de produit</span>

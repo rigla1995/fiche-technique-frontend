@@ -445,14 +445,14 @@ export default function ProductList() {
     <div className="page">
       {/* ── Hero header ── */}
       <div style={{
-        background: 'linear-gradient(135deg, #0a1628 0%, #0f2847 55%, #0d3b2e 100%)',
+        background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 55%, #4338ca 100%)',
         borderRadius: 18, padding: '24px 28px', marginBottom: 24,
-        boxShadow: '0 8px 32px rgba(10,22,40,0.35)',
+        boxShadow: '0 8px 32px rgba(30,27,75,0.35)',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
-              <div style={{ background: 'rgba(16,185,129,0.18)', border: '1px solid rgba(16,185,129,0.3)', borderRadius: 10, padding: '7px 9px', fontSize: '1.2rem', lineHeight: 1 }}>
+              <div style={{ background: 'rgba(99,102,241,0.18)', border: '1px solid rgba(99,102,241,0.3)', borderRadius: 10, padding: '7px 9px', fontSize: '1.2rem', lineHeight: 1 }}>
                 {tab === 'fiche-technique' ? '📋' : tab === 'utilisable' ? '🧪' : '🍽️'}
               </div>
               <h1 style={{ fontSize: '1.45rem', fontWeight: 800, color: '#fff', margin: 0, letterSpacing: '-0.01em', display: 'flex', alignItems: 'center', gap: 9 }}>
@@ -474,8 +474,8 @@ export default function ProductList() {
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
             {tab !== 'fiche-technique' && (
-              <div style={{ background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.22)', borderRadius: 14, padding: '10px 20px', textAlign: 'center', minWidth: 80 }}>
-                <div style={{ fontSize: '1.8rem', fontWeight: 900, color: '#10b981', lineHeight: 1 }}>{byTab.length}</div>
+              <div style={{ background: 'rgba(99,102,241,0.12)', border: '1px solid rgba(99,102,241,0.22)', borderRadius: 14, padding: '10px 20px', textAlign: 'center', minWidth: 80 }}>
+                <div style={{ fontSize: '1.8rem', fontWeight: 900, color: '#818cf8', lineHeight: 1 }}>{byTab.length}</div>
                 <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.5)', marginTop: 2 }}>
                   produit{byTab.length !== 1 ? 's' : ''}
                 </div>
@@ -504,12 +504,12 @@ export default function ProductList() {
                   style={{
                     padding: '9px 22px', background: 'none', border: 'none', cursor: 'pointer',
                     fontSize: '0.92rem', fontWeight: vendableSubTab === key ? 700 : 400,
-                    color: vendableSubTab === key ? '#059669' : 'var(--text)',
-                    borderBottom: vendableSubTab === key ? '3px solid #059669' : '3px solid transparent',
+                    color: vendableSubTab === key ? '#6366f1' : 'var(--text)',
+                    borderBottom: vendableSubTab === key ? '3px solid #6366f1' : '3px solid transparent',
                     marginBottom: -2, whiteSpace: 'nowrap',
                   }}>
                   {label}
-                  <span style={{ marginLeft: 7, fontSize: '0.72rem', fontWeight: 700, color: '#fff', background: vendableSubTab === key ? '#059669' : '#94a3b8', borderRadius: 20, padding: '1px 8px' }}>
+                  <span style={{ marginLeft: 7, fontSize: '0.72rem', fontWeight: 700, color: '#fff', background: vendableSubTab === key ? '#6366f1' : '#94a3b8', borderRadius: 20, padding: '1px 8px' }}>
                     {searched.filter(p => key === 'produit' ? !p.isSupplement : !!p.isSupplement).length}
                   </span>
                 </button>
@@ -519,7 +519,7 @@ export default function ProductList() {
 
           {/* Barre de filtres (composant partagé, mode direct) */}
           <HistoryFilterBar
-            accent="#059669" accentDark="#047857"
+            accent="#6366f1" accentDark="#4338ca"
             subtitle={`${bySubTab.length} résultat${bySubTab.length !== 1 ? 's' : ''}`}
             onReset={() => { setSearch(''); setFilterActiviteId(null); setPage(1); }}
             showReset={!!(search || filterActiviteId)}
@@ -532,7 +532,7 @@ export default function ProductList() {
               </button>
               {canWriteProducts && (
                 <button onClick={() => openAddModal(isVendable && vendableSubTab === 'supplement')}
-                  style={{ height: 36, padding: '0 20px', borderRadius: 8, cursor: 'pointer', fontSize: '0.85rem', border: 'none', background: 'linear-gradient(135deg, #059669, #10b981)', color: '#fff', fontWeight: 700, whiteSpace: 'nowrap' }}>
+                  style={{ height: 36, padding: '0 20px', borderRadius: 8, cursor: 'pointer', fontSize: '0.85rem', border: 'none', background: 'linear-gradient(135deg, #6366f1, #818cf8)', color: '#fff', fontWeight: 700, whiteSpace: 'nowrap' }}>
                   + {isVendable ? (vendableSubTab === 'supplement' ? 'Supplément vendable' : 'Produit vendable') : 'Produit utilisable'}
                 </button>
               )}
@@ -566,7 +566,7 @@ export default function ProductList() {
           ) : bySubTab.length === 0 ? (
             byTab.length === 0 ? (
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '60px 24px', textAlign: 'center' }}>
-                <div style={{ width: 72, height: 72, borderRadius: 20, background: 'linear-gradient(135deg, #0a1628 0%, #0f2847 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem', marginBottom: 20, boxShadow: '0 8px 24px rgba(10,22,40,0.22)' }}>
+                <div style={{ width: 72, height: 72, borderRadius: 20, background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem', marginBottom: 20, boxShadow: '0 8px 24px rgba(30,27,75,0.22)' }}>
                   {isVendable ? '🍽️' : '🧪'}
                 </div>
                 <h2 style={{ margin: '0 0 8px', fontSize: '1.15rem', fontWeight: 700, color: 'var(--text)' }}>
@@ -592,8 +592,8 @@ export default function ProductList() {
               {(() => {
                 const renderProductCard = (p: Product) => {
                   const isSup = !!p.isSupplement;
-                  const accentColor = isSup ? '#d97706' : '#059669';
-                  const accentDark = isSup ? '#b45309' : '#047857';
+                  const accentColor = isSup ? '#d97706' : '#6366f1';
+                  const accentDark = isSup ? '#b45309' : '#4338ca';
                   const accentLight = isSup ? '#fffbeb' : '#f0fdf4';
                   const accentShadow = isSup ? 'rgba(217,119,6,0.18)' : 'rgba(5,150,105,0.15)';
                   return (
@@ -617,7 +617,7 @@ export default function ProductList() {
                           <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap' }}>
                             <span style={{ fontWeight: 700, fontSize: '0.92rem', color: '#0f172a', lineHeight: 1.3 }}>{p.name}</span>
                             {isVendable && p.categorieProduitName && (
-                              <span style={{ fontSize: '0.62rem', fontWeight: 700, letterSpacing: '0.04em', background: '#d1fae5', color: '#065f46', border: '1px solid #6ee7b7', borderRadius: 20, padding: '2px 8px', flexShrink: 0 }}>🏷️ {p.categorieProduitName}</span>
+                              <span style={{ fontSize: '0.62rem', fontWeight: 700, letterSpacing: '0.04em', background: '#e0e7ff', color: '#3730a3', border: '1px solid #c7d2fe', borderRadius: 20, padding: '2px 8px', flexShrink: 0 }}>🏷️ {p.categorieProduitName}</span>
                             )}
                             {(p.origine ?? 'activite') === 'labo' && (
                               <span title="Fabriqué au labo — reçu uniquement par transfert (pas d'appro manuel en activité)."
@@ -631,10 +631,10 @@ export default function ProductList() {
                               title={p.isStockIngredient ? 'Désactiver le stock' : 'Activer le stock'}
                               style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: 'none', border: 'none', padding: 0, marginTop: 5, cursor: canWriteProducts ? 'pointer' : 'default', opacity: togglingPT === p.id ? 0.5 : 1 }}
                             >
-                              <div style={{ width: 30, height: 17, borderRadius: 9, position: 'relative', flexShrink: 0, background: p.isStockIngredient ? '#059669' : '#cbd5e1', transition: 'background 0.2s' }}>
+                              <div style={{ width: 30, height: 17, borderRadius: 9, position: 'relative', flexShrink: 0, background: p.isStockIngredient ? '#6366f1' : '#cbd5e1', transition: 'background 0.2s' }}>
                                 <div style={{ position: 'absolute', top: 2, left: p.isStockIngredient ? 15 : 2, width: 13, height: 13, borderRadius: '50%', background: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.25)', transition: 'left 0.2s' }} />
                               </div>
-                              <span style={{ fontSize: '0.67rem', fontWeight: 600, color: p.isStockIngredient ? '#065f46' : '#94a3b8', whiteSpace: 'nowrap' }}>
+                              <span style={{ fontSize: '0.67rem', fontWeight: 600, color: p.isStockIngredient ? '#3730a3' : '#94a3b8', whiteSpace: 'nowrap' }}>
                                 {togglingPT === p.id ? '…' : p.isStockIngredient ? 'Activé dans le stock' : 'Inactif'}
                               </span>
                             </button>
@@ -651,10 +651,10 @@ export default function ProductList() {
                           onClick={() => openPopup('ingredients', p)}
                           disabled={!p.ingredientsCount}
                           title={p.ingredientsCount ? 'Voir les articles' : 'Aucun article'}
-                          style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, padding: '8px 4px', borderRadius: 10, border: `1px solid ${p.ingredientsCount ? '#a7f3d0' : '#f1f5f9'}`, background: p.ingredientsCount ? '#ecfdf5' : '#f8fafc', cursor: p.ingredientsCount ? 'pointer' : 'default', opacity: p.ingredientsCount ? 1 : 0.5, transition: 'background 0.12s' }}
+                          style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, padding: '8px 4px', borderRadius: 10, border: `1px solid ${p.ingredientsCount ? '#c7d2fe' : '#f1f5f9'}`, background: p.ingredientsCount ? '#eef2ff' : '#f8fafc', cursor: p.ingredientsCount ? 'pointer' : 'default', opacity: p.ingredientsCount ? 1 : 0.5, transition: 'background 0.12s' }}
                         >
                           <span style={{ fontSize: '1rem', lineHeight: 1 }}>🧂</span>
-                          <span style={{ fontWeight: 800, fontSize: '1rem', color: p.ingredientsCount ? '#059669' : '#9ca3af', lineHeight: 1 }}>{p.ingredientsCount ?? 0}</span>
+                          <span style={{ fontWeight: 800, fontSize: '1rem', color: p.ingredientsCount ? '#6366f1' : '#9ca3af', lineHeight: 1 }}>{p.ingredientsCount ?? 0}</span>
                           <span style={{ fontSize: '0.6rem', color: '#9ca3af', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>articles</span>
                         </button>
                         {isVendable && (
@@ -703,9 +703,9 @@ export default function ProductList() {
                                   disabled={toggling || !canWriteProducts}
                                   style={{
                                     fontSize: '0.68rem', fontWeight: 600, padding: '3px 9px', borderRadius: 20, cursor: canWriteProducts ? 'pointer' : 'default',
-                                    border: `1px solid ${assigned ? '#6ee7b7' : '#e2e8f0'}`,
-                                    background: assigned ? '#ecfdf5' : '#f8fafc',
-                                    color: assigned ? '#065f46' : '#94a3b8',
+                                    border: `1px solid ${assigned ? '#c7d2fe' : '#e2e8f0'}`,
+                                    background: assigned ? '#eef2ff' : '#f8fafc',
+                                    color: assigned ? '#3730a3' : '#94a3b8',
                                     opacity: toggling ? 0.5 : 1,
                                     transition: 'background 0.15s, color 0.15s',
                                   }}
@@ -754,7 +754,7 @@ export default function ProductList() {
                   <button onClick={() => setExportModalOpen(false)} style={{ background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: 8, color: '#fff', fontWeight: 900, fontSize: '1.1rem', cursor: 'pointer', padding: '2px 9px', lineHeight: 1 }}>×</button>
                 </div>
                 <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                  <div style={{ background: '#f0fdf4', border: '1px solid #a7f3d0', borderRadius: 8, padding: '12px 14px', fontSize: '0.88rem', color: '#064e3b' }}>
+                  <div style={{ background: '#f0fdf4', border: '1px solid #c7d2fe', borderRadius: 8, padding: '12px 14px', fontSize: '0.88rem', color: '#064e3b' }}>
                     <strong>{bySubTab.length}</strong> {vendableSubTab === 'supplement' ? 'supplément(s) vendable(s)' : tab === 'vendable' ? 'produit(s) vendable(s)' : 'produit(s) utilisable(s)'} seront exportés avec les filtres actuels.
                   </div>
                   {tab === 'vendable' && (
@@ -929,7 +929,7 @@ export default function ProductList() {
                       </div>
                     </div>
                     {isUtilisable && (
-                      <div style={{ background: hasPtHistory ? '#fff1f2' : '#f0fdf4', border: `1px solid ${hasPtHistory ? '#fecdd3' : '#a7f3d0'}`, borderRadius: 8, padding: '12px 14px' }}>
+                      <div style={{ background: hasPtHistory ? '#fff1f2' : '#f0fdf4', border: `1px solid ${hasPtHistory ? '#fecdd3' : '#c7d2fe'}`, borderRadius: 8, padding: '12px 14px' }}>
                         {hasPtHistory ? (
                           <>
                             <div style={{ fontWeight: 800, color: '#b91c1c', fontSize: '0.88rem', marginBottom: 6 }}>
@@ -941,7 +941,7 @@ export default function ProductList() {
                             </ul>
                           </>
                         ) : (
-                          <div style={{ fontSize: '0.83rem', color: '#065f46' }}>
+                          <div style={{ fontSize: '0.83rem', color: '#3730a3' }}>
                             Aucun historique PT — les données de stock seront nettoyées proprement.
                           </div>
                         )}
@@ -1100,7 +1100,7 @@ export default function ProductList() {
               <div className="modal-overlay">
                 <div className="modal" style={{ maxWidth: 560, width: '95vw', maxHeight: '90vh', overflow: 'auto' }} onClick={(e) => e.stopPropagation()}>
                   {/* Header */}
-                  <div style={{ background: 'linear-gradient(135deg, #0a1628 0%, #0f2847 100%)', padding: '18px 22px 14px', borderRadius: '12px 12px 0 0', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+                  <div style={{ background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 100%)', padding: '18px 22px 14px', borderRadius: '12px 12px 0 0', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
                     <div style={{ flex: 1 }}>
                       <div style={{ color: '#fff', fontWeight: 800, fontSize: '1rem', marginBottom: 2 }}>
                         ✏️ Modifier — {editName || '…'}
@@ -1115,7 +1115,7 @@ export default function ProductList() {
                           <div key={s.n} style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4 }}>
                             <div style={{ height: 4, borderRadius: 4, background: s.n <= editModal ? '#fff' : 'rgba(255,255,255,0.28)', transition: 'background 0.2s' }} />
                             <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                              <div style={{ width: 18, height: 18, borderRadius: '50%', flexShrink: 0, background: s.n <= editModal ? '#fff' : 'rgba(255,255,255,0.28)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.62rem', fontWeight: 800, color: s.n <= editModal ? '#059669' : 'rgba(255,255,255,0.55)' }}>
+                              <div style={{ width: 18, height: 18, borderRadius: '50%', flexShrink: 0, background: s.n <= editModal ? '#fff' : 'rgba(255,255,255,0.28)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.62rem', fontWeight: 800, color: s.n <= editModal ? '#6366f1' : 'rgba(255,255,255,0.55)' }}>
                                 {s.n < editModal ? '✓' : s.display}
                               </div>
                               <span style={{ fontSize: '0.68rem', color: s.n <= editModal ? '#fff' : 'rgba(255,255,255,0.5)', fontWeight: 600 }}>{s.label}</span>
@@ -1523,7 +1523,7 @@ export default function ProductList() {
               <div className="modal-overlay">
                 <div className="modal" style={{ maxWidth: 560, width: '95vw', maxHeight: '90vh', overflow: 'auto' }} onClick={(e) => e.stopPropagation()}>
                   {/* Header */}
-                  <div style={{ background: 'linear-gradient(135deg, #0a1628 0%, #0f2847 100%)', padding: '18px 22px 14px', borderRadius: '12px 12px 0 0', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+                  <div style={{ background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 100%)', padding: '18px 22px 14px', borderRadius: '12px 12px 0 0', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
                     <div style={{ flex: 1 }}>
                       <div style={{ color: '#fff', fontWeight: 800, fontSize: '1rem', marginBottom: addModal !== 6 ? 12 : 0 }}>
                         {addModal === 6 ? '✅ Produit créé' : isVendable ? (addIsSupplement ? 'Nouveau supplément vendable' : 'Nouveau produit vendable') : 'Nouveau produit utilisable'}
@@ -1534,7 +1534,7 @@ export default function ProductList() {
                             <div key={s.n} style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4 }}>
                               <div style={{ height: 4, borderRadius: 4, background: s.n <= addModal ? '#fff' : 'rgba(255,255,255,0.28)', transition: 'background 0.2s' }} />
                               <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                                <div style={{ width: 18, height: 18, borderRadius: '50%', flexShrink: 0, background: s.n <= addModal ? '#fff' : 'rgba(255,255,255,0.28)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.62rem', fontWeight: 800, color: s.n <= addModal ? '#059669' : 'rgba(255,255,255,0.55)' }}>
+                                <div style={{ width: 18, height: 18, borderRadius: '50%', flexShrink: 0, background: s.n <= addModal ? '#fff' : 'rgba(255,255,255,0.28)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.62rem', fontWeight: 800, color: s.n <= addModal ? '#6366f1' : 'rgba(255,255,255,0.55)' }}>
                                   {s.n < addModal ? '✓' : s.d}
                                 </div>
                                 <span style={{ fontSize: '0.68rem', color: s.n <= addModal ? '#fff' : 'rgba(255,255,255,0.5)', fontWeight: 600 }}>{s.label}</span>
@@ -1552,27 +1552,27 @@ export default function ProductList() {
                     {addModal === 2 && (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                         <div>
-                          <label style={{ display: 'block', fontWeight: 700, fontSize: '0.82rem', color: '#065f46', marginBottom: 6 }}>
+                          <label style={{ display: 'block', fontWeight: 700, fontSize: '0.82rem', color: '#3730a3', marginBottom: 6 }}>
                             Nom du produit <span style={{ color: '#ef4444' }}>*</span>
                           </label>
                           <input className="input" placeholder="Ex. Burger Classic, Pizza Margherita…" value={addName}
                             onChange={(e) => setAddName(e.target.value)} autoFocus
-                            style={{ width: '100%', borderColor: '#6ee7b7' }} />
+                            style={{ width: '100%', borderColor: '#c7d2fe' }} />
                         </div>
                         <div>
-                          <label style={{ display: 'block', fontWeight: 700, fontSize: '0.82rem', color: '#065f46', marginBottom: 6 }}>
+                          <label style={{ display: 'block', fontWeight: 700, fontSize: '0.82rem', color: '#3730a3', marginBottom: 6 }}>
                             Réf. produit <span style={{ fontSize: '0.75rem', fontWeight: 400, color: 'var(--text-muted)' }}>(optionnel)</span>
                           </label>
                           <input className="input" placeholder="Ex. BRG-001" value={addRef}
                             onChange={(e) => setAddRef(e.target.value)}
-                            style={{ width: '100%', maxWidth: 280, borderColor: '#6ee7b7' }} />
+                            style={{ width: '100%', maxWidth: 280, borderColor: '#c7d2fe' }} />
                         </div>
                         {isVendable && (
                           <div>
-                            <label style={{ display: 'block', fontWeight: 700, fontSize: '0.82rem', color: '#065f46', marginBottom: 6 }}>
+                            <label style={{ display: 'block', fontWeight: 700, fontSize: '0.82rem', color: '#3730a3', marginBottom: 6 }}>
                               Catégorie de produit <span style={{ color: '#ef4444' }}>*</span>
                             </label>
-                            <select className="input" value={addCategorieId} onChange={(e) => setAddCategorieId(e.target.value)} style={{ width: '100%', maxWidth: 320, borderColor: addCategorieId ? '#6ee7b7' : '#fca5a5' }}>
+                            <select className="input" value={addCategorieId} onChange={(e) => setAddCategorieId(e.target.value)} style={{ width: '100%', maxWidth: 320, borderColor: addCategorieId ? '#c7d2fe' : '#fca5a5' }}>
                               <option value="">— Sélectionner une catégorie —</option>
                               {categoriesProduit.filter((c) => c.typeProduit === (addIsSupplement ? 'supplement' : 'vendable')).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                             </select>
@@ -1590,7 +1590,7 @@ export default function ProductList() {
                           <button className="btn btn-ghost" onClick={() => setAddModal(1)}>← Retour</button>
                           <button disabled={!canGoStep2}
                             onClick={() => setAddModal(3)}
-                            style={{ background: canGoStep2 ? 'linear-gradient(135deg, #047857, #059669)' : '#e5e7eb', border: 'none', borderRadius: 10, color: canGoStep2 ? '#fff' : '#9ca3af', fontWeight: 700, padding: '9px 22px', cursor: canGoStep2 ? 'pointer' : 'not-allowed' }}>
+                            style={{ background: canGoStep2 ? 'linear-gradient(135deg, #4338ca, #6366f1)' : '#e5e7eb', border: 'none', borderRadius: 10, color: canGoStep2 ? '#fff' : '#9ca3af', fontWeight: 700, padding: '9px 22px', cursor: canGoStep2 ? 'pointer' : 'not-allowed' }}>
                             Suivant →
                           </button>
                         </div>
@@ -1666,12 +1666,12 @@ export default function ProductList() {
                               const line = addIngLines.find((l) => l.ingredientId === sid);
                               const portionValid = sel && parseFloat(line?.portion || '0') > 0;
                               return (
-                                <div key={ing.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '7px 10px', borderRadius: 8, background: sel ? (portionValid ? '#ecfdf5' : '#fef3c7') : 'transparent', cursor: 'pointer', transition: 'background 0.12s' }}
+                                <div key={ing.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '7px 10px', borderRadius: 8, background: sel ? (portionValid ? '#eef2ff' : '#fef3c7') : 'transparent', cursor: 'pointer', transition: 'background 0.12s' }}
                                   onClick={() => toggleIngredient(ing)}>
                                   <input type="checkbox" checked={sel} onChange={() => toggleIngredient(ing)}
                                     onClick={e => e.stopPropagation()}
-                                    style={{ accentColor: '#059669', width: 15, height: 15, flexShrink: 0, cursor: 'pointer' }} />
-                                  <span style={{ flex: 1, fontSize: '0.84rem', fontWeight: sel ? 600 : 400, color: sel ? '#065f46' : '#374151' }}>{ing.nom}</span>
+                                    style={{ accentColor: '#6366f1', width: 15, height: 15, flexShrink: 0, cursor: 'pointer' }} />
+                                  <span style={{ flex: 1, fontSize: '0.84rem', fontWeight: sel ? 600 : 400, color: sel ? '#3730a3' : '#374151' }}>{ing.nom}</span>
                                   {ing.categorie && (
                                     <span style={{ fontSize: '0.68rem', color: '#64748b', background: '#f1f5f9', borderRadius: 6, padding: '1px 6px', flexShrink: 0 }}>{ing.categorie}</span>
                                   )}
@@ -1680,7 +1680,7 @@ export default function ProductList() {
                                       <input type="number" step="0.001" min="0" placeholder="portion"
                                         value={line?.portion || ''}
                                         onChange={(e) => updatePortion(sid, e.target.value)}
-                                        style={{ width: 72, padding: '3px 6px', borderRadius: 6, border: `1.5px solid ${portionValid ? '#6ee7b7' : '#ef4444'}`, fontSize: '0.82rem', textAlign: 'right' }} />
+                                        style={{ width: 72, padding: '3px 6px', borderRadius: 6, border: `1.5px solid ${portionValid ? '#c7d2fe' : '#ef4444'}`, fontSize: '0.82rem', textAlign: 'right' }} />
                                       <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{ing.unite}</span>
                                     </div>
                                   )}
@@ -1694,7 +1694,7 @@ export default function ProductList() {
                             )}
                           </div>
                           {addIngLines.some(l => l.ingredientId) && (
-                            <div style={{ fontSize: '0.78rem', color: '#059669', fontWeight: 600 }}>
+                            <div style={{ fontSize: '0.78rem', color: '#6366f1', fontWeight: 600 }}>
                               {addIngLines.filter(l => l.ingredientId && parseFloat(l.portion) > 0).length} article{addIngLines.filter(l => l.ingredientId && parseFloat(l.portion) > 0).length !== 1 ? 's' : ''} valide{addIngLines.filter(l => l.ingredientId && parseFloat(l.portion) > 0).length !== 1 ? 's' : ''} (portion &gt; 0)
                             </div>
                           )}
@@ -1702,7 +1702,7 @@ export default function ProductList() {
                           <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 4 }}>
                             <button className="btn btn-ghost" onClick={() => setAddModal(2)}>← Retour</button>
                             <button onClick={() => setAddModal(4)}
-                              style={{ background: 'linear-gradient(135deg, #047857, #059669)', border: 'none', borderRadius: 10, color: '#fff', fontWeight: 700, padding: '9px 22px', cursor: 'pointer' }}>
+                              style={{ background: 'linear-gradient(135deg, #4338ca, #6366f1)', border: 'none', borderRadius: 10, color: '#fff', fontWeight: 700, padding: '9px 22px', cursor: 'pointer' }}>
                               Suivant →
                             </button>
                           </div>
@@ -1770,7 +1770,7 @@ export default function ProductList() {
                               <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 8 }}>
                                 <button className="btn btn-ghost" onClick={() => setAddModal(3)}>← Retour</button>
                                 <button disabled={!canNext} onClick={() => setAddModal(5)}
-                                  style={{ background: canNext ? 'linear-gradient(135deg, #047857, #059669)' : '#e5e7eb', border: 'none', borderRadius: 10, color: canNext ? '#fff' : '#9ca3af', fontWeight: 700, padding: '9px 22px', cursor: canNext ? 'pointer' : 'not-allowed' }}
+                                  style={{ background: canNext ? 'linear-gradient(135deg, #4338ca, #6366f1)' : '#e5e7eb', border: 'none', borderRadius: 10, color: canNext ? '#fff' : '#9ca3af', fontWeight: 700, padding: '9px 22px', cursor: canNext ? 'pointer' : 'not-allowed' }}
                                   title={!canNext ? (addIsSupplement ? 'Sélectionnez exactement 1 article ou produit utilisable' : 'Au minimum 2 articles/produits utilisables requis') : undefined}>
                                   Suivant →
                                 </button>
@@ -1806,9 +1806,9 @@ export default function ProductList() {
                                 return (
                                   <button key={key} type="button" disabled={disabled}
                                     onClick={() => { if (!active) { setAddOrigine(key); setAddAffectationIds([]); setAddCheckedActivites([]); } }}
-                                    style={{ flex: 1, padding: '9px 12px', borderRadius: 10, border: `2px solid ${active ? '#059669' : '#e2e8f0'}`, background: active ? '#f0fdf4' : '#fff', cursor: disabled ? 'not-allowed' : 'pointer', textAlign: 'left', opacity: disabled ? 0.5 : 1 }}>
-                                    <div style={{ fontWeight: active ? 800 : 700, fontSize: '0.84rem', color: active ? '#065f46' : '#374151' }}>{label}</div>
-                                    <div style={{ fontSize: '0.68rem', color: active ? '#047857' : '#94a3b8', marginTop: 2 }}>{desc}</div>
+                                    style={{ flex: 1, padding: '9px 12px', borderRadius: 10, border: `2px solid ${active ? '#6366f1' : '#e2e8f0'}`, background: active ? '#f0fdf4' : '#fff', cursor: disabled ? 'not-allowed' : 'pointer', textAlign: 'left', opacity: disabled ? 0.5 : 1 }}>
+                                    <div style={{ fontWeight: active ? 800 : 700, fontSize: '0.84rem', color: active ? '#3730a3' : '#374151' }}>{label}</div>
+                                    <div style={{ fontSize: '0.68rem', color: active ? '#4338ca' : '#94a3b8', marginTop: 2 }}>{desc}</div>
                                   </button>
                                 );
                               })}
@@ -1829,7 +1829,7 @@ export default function ProductList() {
                             <>
                               <button type="button"
                                 onClick={() => setAddAffectationIds(addAffectationIds.length === allIds.length ? [] : allIds)}
-                                style={{ alignSelf: 'flex-start', background: 'transparent', border: '1.5px solid #059669', borderRadius: 8, color: '#059669', fontWeight: 700, padding: '5px 14px', cursor: 'pointer', fontSize: '0.8rem' }}>
+                                style={{ alignSelf: 'flex-start', background: 'transparent', border: '1.5px solid #6366f1', borderRadius: 8, color: '#6366f1', fontWeight: 700, padding: '5px 14px', cursor: 'pointer', fontSize: '0.8rem' }}>
                                 {addAffectationIds.length === allIds.length ? '☐ Tout désélectionner' : '☑ Tout sélectionner'}
                               </button>
                               <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 190, overflowY: 'auto' }}>
@@ -1838,13 +1838,13 @@ export default function ProductList() {
                                   return (
                                     <div key={o.id}
                                       onClick={() => setAddAffectationIds(prev => checked ? prev.filter(id => id !== o.id) : [...prev, o.id])}
-                                      style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', borderRadius: 9, cursor: 'pointer', background: checked ? '#f0fdf4' : '#f8fafc', border: `1.5px solid ${checked ? '#6ee7b7' : '#e2e8f0'}` }}>
-                                      <input type="checkbox" checked={checked} readOnly style={{ accentColor: '#059669', width: 16, height: 16, flexShrink: 0 }} />
+                                      style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', borderRadius: 9, cursor: 'pointer', background: checked ? '#f0fdf4' : '#f8fafc', border: `1.5px solid ${checked ? '#c7d2fe' : '#e2e8f0'}` }}>
+                                      <input type="checkbox" checked={checked} readOnly style={{ accentColor: '#6366f1', width: 16, height: 16, flexShrink: 0 }} />
                                       <div style={{ flex: 1 }}>
-                                        <div style={{ fontWeight: 600, fontSize: '0.88rem', color: checked ? '#065f46' : '#374151' }}>{isLaboMode ? '🏭 ' : ''}{o.nom}</div>
+                                        <div style={{ fontWeight: 600, fontSize: '0.88rem', color: checked ? '#3730a3' : '#374151' }}>{isLaboMode ? '🏭 ' : ''}{o.nom}</div>
                                         {!isLaboMode && o.laboNom && <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: 1 }}>🏭 Labo : {o.laboNom}</div>}
                                       </div>
-                                      {checked && <span style={{ color: '#059669', fontSize: '0.9rem' }}>✓</span>}
+                                      {checked && <span style={{ color: '#6366f1', fontSize: '0.9rem' }}>✓</span>}
                                     </div>
                                   );
                                 })}
@@ -1852,7 +1852,7 @@ export default function ProductList() {
                               {/* Mode labo : activités liées cochables (reçoivent le PT par transfert) */}
                               {isLaboMode && addAffectationIds.length > 0 && (
                                 <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: 10 }}>
-                                  <div style={{ fontSize: '0.76rem', fontWeight: 700, color: '#065f46', marginBottom: 6 }}>
+                                  <div style={{ fontSize: '0.76rem', fontWeight: 700, color: '#3730a3', marginBottom: 6 }}>
                                     Activités liées qui recevront le produit (transfert) — décochez pour exclure :
                                   </div>
                                   {linkedActivites.length === 0 ? (
@@ -1864,7 +1864,7 @@ export default function ProductList() {
                                         return (
                                           <button type="button" key={a.id}
                                             onClick={() => setAddCheckedActivites(prev => on ? prev.filter(id => id !== a.id) : [...prev, a.id])}
-                                            style={{ padding: '5px 12px', borderRadius: 20, border: `1.5px solid ${on ? '#059669' : '#e2e8f0'}`, background: on ? '#f0fdf4' : '#fff', color: on ? '#065f46' : '#94a3b8', fontWeight: on ? 700 : 500, fontSize: '0.78rem', cursor: 'pointer' }}>
+                                            style={{ padding: '5px 12px', borderRadius: 20, border: `1.5px solid ${on ? '#6366f1' : '#e2e8f0'}`, background: on ? '#f0fdf4' : '#fff', color: on ? '#3730a3' : '#94a3b8', fontWeight: on ? 700 : 500, fontSize: '0.78rem', cursor: 'pointer' }}>
                                             {on ? '✓ ' : ''}{a.nom}
                                           </button>
                                         );
@@ -1878,7 +1878,7 @@ export default function ProductList() {
                           <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 8 }}>
                             <button className="btn btn-ghost" onClick={() => setAddModal(null)}>Annuler</button>
                             <button disabled={!canNext} onClick={() => setAddModal(2)}
-                              style={{ background: canNext ? 'linear-gradient(135deg, #047857, #059669)' : '#e5e7eb', border: 'none', borderRadius: 10, color: canNext ? '#fff' : '#9ca3af', fontWeight: 700, padding: '9px 22px', cursor: canNext ? 'pointer' : 'not-allowed' }}>
+                              style={{ background: canNext ? 'linear-gradient(135deg, #4338ca, #6366f1)' : '#e5e7eb', border: 'none', borderRadius: 10, color: canNext ? '#fff' : '#9ca3af', fontWeight: 700, padding: '9px 22px', cursor: canNext ? 'pointer' : 'not-allowed' }}>
                               Suivant →
                             </button>
                           </div>
@@ -1893,22 +1893,22 @@ export default function ProductList() {
                       return (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                           {/* Product identity card */}
-                          <div style={{ background: 'linear-gradient(135deg,#f0fdf4,#d1fae5)', border: '1.5px solid #a7f3d0', borderRadius: 14, padding: '16px 18px' }}>
+                          <div style={{ background: 'linear-gradient(135deg,#f0fdf4,#e0e7ff)', border: '1.5px solid #c7d2fe', borderRadius: 14, padding: '16px 18px' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
-                              <div style={{ width: 42, height: 42, borderRadius: 10, background: '#059669', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.3rem', flexShrink: 0 }}>📦</div>
+                              <div style={{ width: 42, height: 42, borderRadius: 10, background: '#6366f1', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.3rem', flexShrink: 0 }}>📦</div>
                               <div>
-                                <div style={{ fontWeight: 800, fontSize: '1.05rem', color: '#065f46' }}>{addName}</div>
-                                {addRef && <div style={{ fontSize: '0.75rem', color: '#059669', marginTop: 1 }}>Réf : {addRef}</div>}
+                                <div style={{ fontWeight: 800, fontSize: '1.05rem', color: '#3730a3' }}>{addName}</div>
+                                {addRef && <div style={{ fontSize: '0.75rem', color: '#6366f1', marginTop: 1 }}>Réf : {addRef}</div>}
                               </div>
-                              <div style={{ marginLeft: 'auto', background: '#059669', color: '#fff', borderRadius: 20, padding: '3px 10px', fontSize: '0.72rem', fontWeight: 700 }}>
+                              <div style={{ marginLeft: 'auto', background: '#6366f1', color: '#fff', borderRadius: 20, padding: '3px 10px', fontSize: '0.72rem', fontWeight: 700 }}>
                                 {isVendable ? 'Vendable' : 'Utilisable'}{addIsSupplement ? ' · Suppl.' : ''}
                               </div>
                             </div>
                             {/* Stats row */}
                             <div style={{ display: 'flex', gap: 10 }}>
                               <div style={{ flex: 1, background: 'rgba(255,255,255,0.6)', borderRadius: 8, padding: '8px 10px', textAlign: 'center' }}>
-                                <div style={{ fontSize: '1.2rem', fontWeight: 900, color: '#065f46' }}>{ingCount}</div>
-                                <div style={{ fontSize: '0.7rem', color: '#059669' }}>article{ingCount !== 1 ? 's' : ''}</div>
+                                <div style={{ fontSize: '1.2rem', fontWeight: 900, color: '#3730a3' }}>{ingCount}</div>
+                                <div style={{ fontSize: '0.7rem', color: '#6366f1' }}>article{ingCount !== 1 ? 's' : ''}</div>
                               </div>
                               {subCount > 0 && (
                                 <div style={{ flex: 1, background: 'rgba(255,255,255,0.6)', borderRadius: 8, padding: '8px 10px', textAlign: 'center' }}>
@@ -1961,7 +1961,7 @@ export default function ProductList() {
                                     ? allLabos.find(l => l.id === id)?.nom
                                     : allActivities.find(a => a.id === id)?.nom;
                                   return nom ? (
-                                    <span key={id} style={{ background: '#f0fdf4', border: '1px solid #a7f3d0', borderRadius: 20, padding: '3px 10px', fontSize: '0.78rem', color: '#065f46', fontWeight: 600 }}>{addOrigine === 'labo' ? '🏭 ' : ''}{nom}</span>
+                                    <span key={id} style={{ background: '#f0fdf4', border: '1px solid #c7d2fe', borderRadius: 20, padding: '3px 10px', fontSize: '0.78rem', color: '#3730a3', fontWeight: 600 }}>{addOrigine === 'labo' ? '🏭 ' : ''}{nom}</span>
                                   ) : null;
                                 })}
                               </div>
@@ -1993,7 +1993,7 @@ export default function ProductList() {
                             <button className="btn btn-ghost" onClick={() => setAddModal(4)}>← Retour</button>
                             <button disabled={addSaving}
                               onClick={handleSave}
-                              style={{ background: 'linear-gradient(135deg, #047857, #059669)', border: 'none', borderRadius: 10, color: '#fff', fontWeight: 700, padding: '10px 28px', cursor: addSaving ? 'not-allowed' : 'pointer', opacity: addSaving ? 0.7 : 1, fontSize: '0.9rem' }}>
+                              style={{ background: 'linear-gradient(135deg, #4338ca, #6366f1)', border: 'none', borderRadius: 10, color: '#fff', fontWeight: 700, padding: '10px 28px', cursor: addSaving ? 'not-allowed' : 'pointer', opacity: addSaving ? 0.7 : 1, fontSize: '0.9rem' }}>
                               {addSaving ? 'Création…' : 'Créer le produit ✓'}
                             </button>
                           </div>
@@ -2012,7 +2012,7 @@ export default function ProductList() {
                         <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
                           <button className="btn btn-ghost" onClick={() => setAddModal(null)}>Fermer</button>
                           <button onClick={() => openAddModal(addIsSupplement)}
-                            style={{ background: 'linear-gradient(135deg, #047857, #059669)', border: 'none', borderRadius: 10, color: '#fff', fontWeight: 700, padding: '9px 22px', cursor: 'pointer' }}>
+                            style={{ background: 'linear-gradient(135deg, #4338ca, #6366f1)', border: 'none', borderRadius: 10, color: '#fff', fontWeight: 700, padding: '9px 22px', cursor: 'pointer' }}>
                             + Ajouter un autre
                           </button>
                         </div>
