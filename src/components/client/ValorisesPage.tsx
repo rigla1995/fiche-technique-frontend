@@ -3,9 +3,11 @@ import api from '../../api/client';
 import type { CategorieProduit, Product } from '../../types';
 import ComposedValoriseModal from './ComposedValoriseModal';
 import FicheTechniqueModal from './FicheTechniqueModal';
+import RecipeTree from './RecipeTree';
 import HistoryFilterBar, { FilterField, FilterInput, FilterSelect } from '../common/HistoryFilterBar';
+import { PRODUCT_THEME } from '../../theme/productTheme';
 
-const HERO = 'linear-gradient(135deg, #1e1b4b 0%, #312e81 55%, #4338ca 100%)';
+const HERO = PRODUCT_THEME.heroGradient;
 const CATS_PER_PAGE = 10;
 const COMPOSES_PER_PAGE = 12;
 
@@ -35,7 +37,6 @@ export default function ValorisesPage() {
   const [ftLaboId, setFtLaboId] = useState<number | null>(null);
   const [ftLoading, setFtLoading] = useState(false);
   const [viewProduct, setViewProduct] = useState<Product | null>(null);
-  const [viewDetail, setViewDetail] = useState<{ ingredients: { ingredientName: string; portion: number; unitName: string }[]; subProducts: { subProductName: string; portion: number }[] } | null>(null);
   const [tab, setTab] = useState<'composes' | 'referentiel'>('composes');
   const [hasLabos, setHasLabos] = useState(false);
   const [composePage, setComposePage] = useState(1);
@@ -73,10 +74,7 @@ export default function ValorisesPage() {
   };
   useEffect(() => { load(); }, []);
 
-  const openView = async (p: Product) => {
-    setViewProduct(p); setViewDetail(null);
-    try { const { data } = await api.get(`/api/products/${p.id}`); setViewDetail(data); } catch { /* */ }
-  };
+  const openView = (p: Product) => { setViewProduct(p); };
 
   // FT d'un composé : le coût se calcule sur les prix d'appro du/des LABO(s) de fabrication,
   // indépendamment des activités. On récupère les labos liés ; sélecteur si plusieurs.
@@ -409,27 +407,7 @@ export default function ValorisesPage() {
               <button className="modal-close" onClick={() => setViewProduct(null)}>×</button>
             </div>
             <div className="modal-body">
-              {!viewDetail ? <div className="loading-text">Chargement…</div> : (
-                <>
-                  <div style={{ fontWeight: 700, fontSize: '0.8rem', color: '#3730a3', marginBottom: 6 }}>🧂 Articles</div>
-                  {viewDetail.ingredients.length === 0 ? <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>—</div> :
-                    viewDetail.ingredients.map((i, k) => (
-                      <div key={k} style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 9px', fontSize: '0.85rem', borderRadius: 6, background: k % 2 ? '#f8fafc' : '#fff' }}>
-                        <span style={{ color: '#374151' }}>{i.ingredientName}</span><span style={{ color: '#64748b', fontWeight: 600 }}>{i.portion} {i.unitName}</span>
-                      </div>
-                    ))}
-                  {viewDetail.subProducts.length > 0 && (
-                    <>
-                      <div style={{ fontWeight: 700, fontSize: '0.8rem', color: '#7c3aed', margin: '12px 0 6px' }}>🔄 Produits utilisables</div>
-                      {viewDetail.subProducts.map((s, k) => (
-                        <div key={k} style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 9px', fontSize: '0.85rem', borderRadius: 6, background: '#faf5ff' }}>
-                          <span style={{ color: '#5b21b6' }}>{s.subProductName}</span><span style={{ color: '#7c3aed', fontWeight: 600 }}>{s.portion}</span>
-                        </div>
-                      ))}
-                    </>
-                  )}
-                </>
-              )}
+              <RecipeTree productId={viewProduct.id} />
             </div>
             <div className="modal-footer"><button className="btn btn-ghost" onClick={() => setViewProduct(null)}>Fermer</button></div>
           </div>
