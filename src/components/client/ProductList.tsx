@@ -591,25 +591,17 @@ export default function ProductList() {
               {(() => {
                 const renderProductCard = (p: Product) => {
                   const isSup = !!p.isSupplement;
-                  const accentColor = isSup ? '#d97706' : '#6366f1';
-                  const accentDark = isSup ? '#b45309' : '#4338ca';
-                  const accentLight = isSup ? '#fffbeb' : '#f0fdf4';
-                  const accentShadow = isSup ? 'rgba(217,119,6,0.18)' : 'rgba(5,150,105,0.15)';
+                  const iconGradient = isSup ? 'linear-gradient(135deg, #d97706 0%, #b45309 100%)' : 'linear-gradient(135deg, #6366f1 0%, #4338ca 100%)';
                   return (
                     <div key={p.id} style={{
-                      background: '#fff', borderRadius: 14,
-                      border: '1px solid #e2e8f0',
-                      borderLeft: `4px solid ${accentColor}`,
-                      boxShadow: '0 2px 10px rgba(0,0,0,0.05)',
-                      display: 'flex', flexDirection: 'column', overflow: 'hidden',
-                      transition: 'box-shadow 0.15s, transform 0.15s',
-                    }}
-                      onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.boxShadow = `0 6px 24px ${accentShadow}`; (e.currentTarget as HTMLDivElement).style.transform = 'translateY(-2px)'; }}
-                      onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.boxShadow = '0 2px 10px rgba(0,0,0,0.05)'; (e.currentTarget as HTMLDivElement).style.transform = 'none'; }}
-                    >
+                      background: 'var(--surface)', borderRadius: 14,
+                      border: '1px solid var(--border)',
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
+                      display: 'flex', flexDirection: 'column', gap: 10, padding: '14px 16px',
+                    }}>
                       {/* Card header */}
-                      <div style={{ padding: '14px 16px 10px', display: 'flex', alignItems: 'flex-start', gap: 12, background: accentLight }}>
-                        <div style={{ width: 40, height: 40, borderRadius: 10, flexShrink: 0, background: `linear-gradient(135deg, ${accentColor} 0%, ${accentDark} 100%)`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem', boxShadow: `0 4px 10px ${accentShadow}` }}>
+                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+                        <div style={{ width: 38, height: 38, borderRadius: 10, flexShrink: 0, background: iconGradient, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem' }}>
                           {isSup ? '➕' : (isVendable ? '🍽️' : '🧪')}
                         </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
@@ -645,7 +637,7 @@ export default function ProductList() {
                       </div>
 
                       {/* Metrics row */}
-                      <div style={{ padding: '10px 16px', display: 'flex', gap: 8, borderBottom: '1px solid #f1f5f9' }}>
+                      <div style={{ display: 'flex', gap: 8 }}>
                         <button
                           onClick={() => openPopup('ingredients', p)}
                           disabled={!p.ingredientsCount}
@@ -683,13 +675,13 @@ export default function ProductList() {
                       </div>
 
                       {/* Actions footer */}
-                      <div style={{ padding: '10px 14px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                      <div style={{ borderTop: '1px solid var(--border)', paddingTop: 10, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
                         {renderActions(p)}
                       </div>
 
                       {/* Activité assignments — assignables pour tous les types */}
                       {allActivities.length > 0 && (
-                        <div style={{ padding: '8px 14px 12px', borderTop: '1px solid #f1f5f9' }}>
+                        <div style={{ borderTop: '1px solid var(--border)', paddingTop: 10 }}>
                           <div style={{ fontSize: '0.6rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>Activités</div>
                           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
                             {allActivities.map((act) => {
