@@ -7,6 +7,7 @@ import { useAuth } from '../../context/AuthContext';
 import type { Product, Activite, ActiviteIngredient, CategorieProduit } from '../../types';
 import FicheTechniqueTab from './FicheTechniqueTab';
 import FicheTechniqueModal from './FicheTechniqueModal';
+import RecipeTree from './RecipeTree';
 import GuideButton from './GuideButton';
 import HistoryFilterBar, { FilterField, FilterInput, FilterSelect } from '../common/HistoryFilterBar';
 
@@ -245,15 +246,13 @@ export default function ProductList() {
   const openPopup = async (type: PopupType, product: Product) => {
     setPopup({ type, productId: product.id, productName: product.name });
     setDetail(null);
+    // « ingredients » / « subProducts » → la recette décomposée est chargée par <RecipeTree>.
+    // Seul « parentProducts » (Utilisé dans) a besoin d'un fetch dédié ici.
+    if (type !== 'parentProducts') return;
     setLoadingDetail(true);
     try {
-      if (type === 'parentProducts') {
-        const { data } = await api.get(`/api/produits/${product.id}/parent-products`);
-        setDetail({ ingredients: [], subProducts: [], parentProducts: data });
-      } else {
-        const { data } = await api.get(`/api/products/${product.id}`);
-        setDetail(data);
-      }
+      const { data } = await api.get(`/api/produits/${product.id}/parent-products`);
+      setDetail({ ingredients: [], subProducts: [], parentProducts: data });
     } finally {
       setLoadingDetail(false);
     }
@@ -804,53 +803,16 @@ export default function ProductList() {
               <div className="modal" onClick={(e) => e.stopPropagation()}>
                 <div className="modal-header" style={{ background: 'linear-gradient(135deg, #1e1b4b, #4338ca)', borderBottom: 'none' }}>
                   <h2 style={{ color: '#fff', margin: 0 }}>
-                    {popup.type === 'ingredients'
-                      ? t('client.products.popup_ingredients_title')
-                      : popup.type === 'parentProducts'
-                      ? 'Utilisé dans'
-                      : t('client.products.popup_subproducts_title')} — {popup.productName}
+                    {popup.type === 'parentProducts' ? 'Utilisé dans' : 'Recette'} — {popup.productName}
                   </h2>
                   <button className="modal-close" onClick={closePopup}>×</button>
                 </div>
                 <div className="modal-body">
-                  {loadingDetail ? (
+                  {popup.type !== 'parentProducts' ? (
+                    <RecipeTree productId={popup.productId} />
+                  ) : loadingDetail ? (
                     <div className="loading-text">{t('common.loading')}</div>
-                  ) : popup.type === 'ingredients' ? (
-                    detail?.ingredients && detail.ingredients.length > 0 ? (
-                      <table className="table" style={{ borderCollapse: 'separate', borderSpacing: 0 }}>
-                        <thead style={{ background: 'linear-gradient(135deg, #1e1b4b, #4338ca)' }}>
-                          <tr>
-                            <th style={{ color: '#fff', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase' }}>{t('client.products.popup_col_ingredient')}</th>
-                            <th style={{ textAlign: 'right', color: '#fff', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase' }}>{t('client.products.popup_col_portion')}</th>
-                            <th style={{ color: '#fff', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase' }}>{t('client.products.popup_col_unit')}</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {detail.ingredients.map((ing, i) => (
-                            <tr key={i} style={{ background: i % 2 === 0 ? '#f8fafc' : '#fff', transition: 'background 0.12s' }}
-                              onMouseEnter={e => (e.currentTarget.style.background = '#eef2ff')}
-                              onMouseLeave={e => (e.currentTarget.style.background = i % 2 === 0 ? '#f8fafc' : '#fff')}>
-                              <td>
-                                <div style={{ fontWeight: 600, color: '#1e1b4b' }}>{ing.ingredientName}</div>
-                                {ing.categorieName && (
-                                  <span style={{ background: '#ede9fe', color: '#5b21b6', borderRadius: 6, padding: '1px 7px', fontSize: '0.72rem', fontWeight: 600, marginTop: 2, display: 'inline-block' }}>
-                                    {ing.categorieName}
-                                  </span>
-                                )}
-                              </td>
-                              <td style={{ textAlign: 'right', fontWeight: 700, color: '#374151' }}>{ing.portion}</td>
-                              <td style={{ color: '#64748b', fontSize: '0.85rem' }}>{ing.unitName}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    ) : (
-                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '32px 0' }}>
-                        <span style={{ fontSize: '2rem', marginBottom: 8 }}>🧂</span>
-                        <p style={{ color: 'var(--text-muted)', textAlign: 'center', margin: 0 }}>{t('client.products.popup_no_ingredients')}</p>
-                      </div>
-                    )
-                  ) : popup.type === 'parentProducts' ? (
+                  ) : (
                     detail?.parentProducts && detail.parentProducts.length > 0 ? (
                       <table className="table">
                         <thead style={{ background: 'linear-gradient(135deg, #1e1b4b, #4338ca)' }}>
@@ -872,30 +834,6 @@ export default function ProductList() {
                       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '32px 0' }}>
                         <span style={{ fontSize: '2rem', marginBottom: 8 }}>🍽️</span>
                         <p style={{ color: 'var(--text-muted)', textAlign: 'center', margin: 0 }}>Aucun produit n'utilise ce produit transformé.</p>
-                      </div>
-                    )
-                  ) : (
-                    detail?.subProducts && detail.subProducts.length > 0 ? (
-                      <table className="table">
-                        <thead style={{ background: 'linear-gradient(135deg, #1e1b4b, #4338ca)' }}>
-                          <tr>
-                            <th style={{ color: '#fff', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase' }}>{t('client.products.popup_col_subproduct')}</th>
-                            <th style={{ textAlign: 'right', color: '#fff', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase' }}>{t('client.products.popup_col_portion')}</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {detail.subProducts.map((sp, i) => (
-                            <tr key={i}>
-                              <td>{sp.subProductName}</td>
-                              <td style={{ textAlign: 'right' }}>{sp.portion}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    ) : (
-                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '32px 0' }}>
-                        <span style={{ fontSize: '2rem', marginBottom: 8 }}>📦</span>
-                        <p style={{ color: 'var(--text-muted)', textAlign: 'center', margin: 0 }}>{t('client.products.popup_no_subproducts')}</p>
                       </div>
                     )
                   )}
