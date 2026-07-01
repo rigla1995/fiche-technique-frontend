@@ -1175,6 +1175,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                                                   : h.typeAppro === 'vente' ? '💰 Vente'
                                                   : h.typeAppro === 'annulation_vente' ? '↩️ Annul. vente'
                                                   : h.typeAppro === 'PT' ? '🔄 PT'
+                                                  : h.typeAppro === 'perte' ? '🗑️ Perte'
                                                   : 'Manuel'}
                                               </span>
                                             </td>
