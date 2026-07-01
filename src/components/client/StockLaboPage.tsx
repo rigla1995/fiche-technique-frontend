@@ -925,7 +925,9 @@ export default function StockLaboPage() {
                                                     <td>
                                                       {h.typeAppro === 'manuel' && <span style={{ background: '#dcfce7', color: '#15803d', borderRadius: 5, padding: '1px 7px', fontSize: '0.7rem', fontWeight: 700 }}>Manuel</span>}
                                                       {h.typeAppro === 'transfert' && <span style={{ background: '#e0f2fe', color: '#0369a1', borderRadius: 5, padding: '1px 7px', fontSize: '0.7rem', fontWeight: 700 }}>Transfert</span>}
-                                                      {h.typeAppro && h.typeAppro !== 'manuel' && h.typeAppro !== 'transfert' && <span style={{ background: '#f3e8ff', color: '#7c3aed', borderRadius: 5, padding: '1px 7px', fontSize: '0.7rem', fontWeight: 700 }}>PT</span>}
+                                                      {h.typeAppro === 'PT' && <span style={{ background: '#f3e8ff', color: '#7c3aed', borderRadius: 5, padding: '1px 7px', fontSize: '0.7rem', fontWeight: 700 }}>🔄 PT</span>}
+                                                      {h.typeAppro === 'perte' && <span style={{ background: '#fee2e2', color: '#b91c1c', borderRadius: 5, padding: '1px 7px', fontSize: '0.7rem', fontWeight: 700 }}>🗑️ Perte</span>}
+                                                      {h.typeAppro === 'vente' && <span style={{ background: '#fef3c7', color: '#b45309', borderRadius: 5, padding: '1px 7px', fontSize: '0.7rem', fontWeight: 700 }}>💰 Vente</span>}
                                                       {!h.typeAppro && '—'}
                                                     </td>
                                                     <td style={{ textAlign: 'right' }}>{h.quantite ?? '—'}</td>
