@@ -610,7 +610,7 @@ export default function ProductList() {
                       assignedActiviteIds={new Set((p.activites ?? []).map((a) => a.id))}
                       togglingActiviteId={togId(togglingActivite)}
                       onToggleActivite={(id) => toggleActiviteAssignment(p, id)}
-                      labos={allLabos}
+                      labos={p.type === 'utilisable' ? allLabos : []}
                       assignedLaboIds={new Set((p.labos ?? []).map((l) => l.id))}
                       togglingLaboId={togId(togglingLabo)}
                       onToggleLabo={(id) => toggleLaboAssignment(p, id)}
