@@ -13,14 +13,12 @@ export interface RecipeNode {
   totalCost: number;
 }
 
-const fmt = (n: number | null | undefined) => (n != null ? Number(n).toFixed(3) : null);
-
 function Leaf({ ing }: { ing: RecipeIngredient }) {
   return (
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, padding: '4px 8px', fontSize: '0.83rem' }}>
       <span style={{ color: '#374151' }}>🧂 {ing.name}</span>
       <span style={{ color: '#64748b', fontWeight: 600, whiteSpace: 'nowrap' }}>
-        {ing.portion} {ing.unit}{ing.cost > 0 ? `  ·  ${fmt(ing.cost)} DT` : ''}
+        {ing.portion} {ing.unit}
       </span>
     </div>
   );
@@ -38,7 +36,7 @@ function Branch({ sp, depth }: { sp: RecipeNode['subProducts'][number]; depth: n
         <span style={{ color: PRODUCT_THEME.accentText, fontSize: '0.65rem', width: 10 }}>{open ? '▼' : '▶'}</span>
         <span style={{ color: '#5b21b6', fontWeight: 600 }}>🔄 {sp.name}</span>
         <span style={{ marginLeft: 'auto', color: PRODUCT_THEME.accent, fontWeight: 600, whiteSpace: 'nowrap' }}>
-          ×{sp.portion}{sp.cost > 0 ? `  ·  ${fmt(sp.cost)} DT` : ''}
+          ×{sp.portion}
         </span>
       </button>
       {open && <div style={{ marginTop: 2 }}><TreeNode node={sp.details} depth={depth + 1} /></div>}
@@ -80,12 +78,6 @@ export default function RecipeTree({ productId, laboId }: { productId: number; l
   return (
     <div>
       <TreeNode node={node} depth={0} />
-      {node.totalCost > 0 && (
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 10, paddingTop: 8, borderTop: `1px solid ${PRODUCT_THEME.borderSoft}`, fontSize: '0.85rem', fontWeight: 700 }}>
-          <span style={{ color: PRODUCT_THEME.accentText }}>Coût total</span>
-          <span style={{ color: PRODUCT_THEME.accent }}>{fmt(node.totalCost)} DT</span>
-        </div>
-      )}
     </div>
   );
 }
