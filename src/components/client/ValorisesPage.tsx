@@ -52,8 +52,10 @@ export default function ValorisesPage() {
   const toggleActiviteAssignment = async (p: Product, activiteId: number) => {
     setTogglingActivite(`${p.id}-${activiteId}`);
     try {
-      const endpoint = p.type === 'vendable' ? 'toggle-affectation' : 'toggle-stock-ingredient';
-      await api.post(`/api/produits/${p.id}/${endpoint}`, { activiteId });
+      // Composés valorisés (origine=labo) : cocher une activité les ajoute au STOCK de
+      // l'activité (produit_activite_stock) en mode « transfert uniquement » — et non une
+      // simple affectation d'affichage. Le badge/blocage d'appro découle de origine='labo'.
+      await api.post(`/api/produits/${p.id}/toggle-stock-ingredient`, { activiteId });
       const assigned = p.activites?.some((a) => a.id === activiteId) ?? false;
       setComposes((prev) => prev.map((prod) => prod.id !== p.id ? prod : {
         ...prod,
