@@ -45,8 +45,6 @@ export default function ProductList() {
   const [filterActiviteId, setFilterActiviteId] = useState<number | null>(null);
   const [filterCategorieId, setFilterCategorieId] = useState<number | null>(null);
   const [page, setPage] = useState(1);
-  const [, setTogglingPT] = useState<number | null>(null);
-  const [ptDeselectModal, setPtDeselectModal] = useState<{ id: number; nom: string; historyCount: number } | null>(null);
   const [deleteModal, setDeleteModal] = useState<{ product: Product; historyCount?: number } | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
@@ -264,13 +262,11 @@ export default function ProductList() {
   const handleDelete = async (product: Product) => {
     if (product.type === 'utilisable') {
       // Check PT history count
-      setTogglingPT(product.id);
       let histCount = 0;
       try {
         const { data: hist } = await api.get(`/api/stock/pt/${product.id}/history`);
         histCount = Array.isArray(hist) ? hist.length : 0;
       } catch { /* ignore */ }
-      setTogglingPT(null);
       setDeleteError(null);
       setDeleteModal({ product, historyCount: histCount });
     } else {
@@ -297,17 +293,6 @@ export default function ProductList() {
       setDeleteError(msg || 'Erreur lors de la suppression.');
     }
     setDeleting(false);
-  };
-
-  const doTogglePT = async (id: number, deleteHistory = false) => {
-    setTogglingPT(id);
-    try {
-      await api.post(`/api/produits/${id}/toggle-stock-ingredient`, {});
-      if (deleteHistory) await api.delete(`/api/produits/${id}/stock-pt-history`);
-      setProducts((prev) => prev.map((p) => p.id === id ? { ...p, isStockIngredient: !p.isStockIngredient } : p));
-    } finally {
-      setTogglingPT(null);
-    }
   };
 
   const [togglingActivite, setTogglingActivite] = useState<string | null>(null); // "produitId-activiteId"
@@ -822,46 +807,6 @@ export default function ProductList() {
               </div>
             );
           })()}
-
-          {ptDeselectModal && (
-            <div className="modal-overlay">
-              <div className="modal" style={{ maxWidth: 440 }} onClick={(e) => e.stopPropagation()}>
-                <div className="modal-header" style={{ background: '#fff7ed', borderBottom: '1px solid #fbd38d' }}>
-                  <h2 style={{ color: '#c05621' }}>⚠️ Retirer du stock</h2>
-                  <button className="modal-close" onClick={() => setPtDeselectModal(null)}>×</button>
-                </div>
-                <div className="modal-body">
-                  <p style={{ marginBottom: 12 }}>
-                    Vous êtes sur le point de retirer <strong>"{ptDeselectModal.nom}"</strong> du stock.
-                  </p>
-                  {ptDeselectModal.historyCount > 0 ? (
-                    <p style={{ color: 'var(--danger)', fontSize: '0.88rem' }}>
-                      Ce produit possède <strong>{ptDeselectModal.historyCount}</strong> entrée{ptDeselectModal.historyCount > 1 ? 's' : ''} d'approvisionnement.
-                      En confirmant, <strong>tout l'historique sera supprimé définitivement</strong>.
-                    </p>
-                  ) : (
-                    <p style={{ color: '#92400e', fontSize: '0.88rem' }}>
-                      Si vous continuez, le produit ne sera plus visible dans votre stock. Cette action est réversible (vous pourrez le ré-activer).
-                    </p>
-                  )}
-                </div>
-                <div className="modal-footer">
-                  <button className="btn btn-ghost" onClick={() => setPtDeselectModal(null)}>Annuler</button>
-                  <button
-                    className="btn btn-danger"
-                    style={{ background: 'var(--danger)', color: '#fff', border: 'none' }}
-                    onClick={async () => {
-                      const m = ptDeselectModal;
-                      setPtDeselectModal(null);
-                      await doTogglePT(m.id, true);
-                    }}
-                  >
-                    Retirer et supprimer
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
 
           {/* ── Edit product modal (3 steps) ── */}
           {editModal && (() => {
