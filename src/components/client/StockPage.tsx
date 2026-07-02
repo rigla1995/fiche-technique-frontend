@@ -82,6 +82,7 @@ function PerteModal({ ingredientId, nom, activiteId, stockDisponible, onSaveOver
   // Fetch allowed date range (all-time first appro) on open
   useEffect(() => {
     const fetchRange = async () => {
+      if (ingredientId < 0) { setDateMin(null); setDateMax(null); setLoadingRange(false); return; } // PT : pas d'appro article
       setLoadingRange(true);
       try {
         const res = await api.get(`/api/entreprise/pertes/date-range`, { params: { activiteId, ingredientId } });
@@ -99,6 +100,7 @@ function PerteModal({ ingredientId, nom, activiteId, stockDisponible, onSaveOver
   }, [ingredientId, activiteId]);
 
   const fetchPrix = async (date: string) => {
+    if (ingredientId < 0) { setPrixUnitaire(null); return; } // PT : pas de prix article
     setLoadingPrix(true);
     try {
       const res = await api.get(`/api/entreprise/pertes/prix`, { params: { activiteId, ingredientId, date } });
@@ -157,7 +159,7 @@ function PerteModal({ ingredientId, nom, activiteId, stockDisponible, onSaveOver
             <p style={{ color: 'var(--text-muted)', textAlign: 'center' }}>…</p>
           ) : done ? (
             <p style={{ color: 'var(--success)', fontWeight: 700, textAlign: 'center' }}>✓ Perte enregistrée</p>
-          ) : !dateMin ? (
+          ) : (ingredientId >= 0 && !dateMin) ? (
             <div style={{ background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: 8, padding: '14px 16px', textAlign: 'center' }}>
               <p style={{ margin: 0, color: '#92400e', fontWeight: 600, fontSize: '0.9rem' }}>
                 Aucun approvisionnement enregistré pour cet article.
@@ -197,17 +199,21 @@ function PerteModal({ ingredientId, nom, activiteId, stockDisponible, onSaveOver
               <div>
                 <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: 4 }}>Date de la perte</label>
                 <input type="date" className="input" style={{ width: '100%' }}
-                  min={dateMin} max={todayStr()} value={datePerte} onChange={(e) => setDatePerte(e.target.value)} />
-                <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: 3 }}>
-                  Premier appro : {dateMin.split('-').reverse().join('/')}
-                </p>
+                  min={dateMin || undefined} max={todayStr()} value={datePerte} onChange={(e) => setDatePerte(e.target.value)} />
+                {dateMin && (
+                  <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: 3 }}>
+                    Premier appro : {dateMin.split('-').reverse().join('/')}
+                  </p>
+                )}
               </div>
-              <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 6, padding: '8px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: '0.8rem', color: '#7f1d1d', fontWeight: 600 }}>Prix unitaire appro</span>
-                <span style={{ fontWeight: 700, color: '#991b1b', fontSize: '0.95rem' }}>
-                  {loadingPrix ? '…' : prixUnitaire != null ? `${prixUnitaire.toFixed(3)} DT` : '—'}
-                </span>
-              </div>
+              {ingredientId >= 0 && (
+                <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 6, padding: '8px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: '0.8rem', color: '#7f1d1d', fontWeight: 600 }}>Prix unitaire appro</span>
+                  <span style={{ fontWeight: 700, color: '#991b1b', fontSize: '0.95rem' }}>
+                    {loadingPrix ? '…' : prixUnitaire != null ? `${prixUnitaire.toFixed(3)} DT` : '—'}
+                  </span>
+                </div>
+              )}
               {coutTotal != null && (
                 <div style={{ background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: 6, padding: '8px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <span style={{ fontSize: '0.8rem', color: '#7c2d12', fontWeight: 600 }}>Coût total</span>
@@ -221,7 +227,7 @@ function PerteModal({ ingredientId, nom, activiteId, stockDisponible, onSaveOver
         {!done && (
           <div className="modal-footer">
             <button className="btn btn-ghost" onClick={onClose}>Annuler</button>
-            {!loadingRange && dateMin && (
+            {!loadingRange && (dateMin || ingredientId < 0) && (
               <button
                 className="btn btn-danger btn-sm"
                 style={{ background: '#be123c', color: '#fff', borderColor: '#be123c' }}
