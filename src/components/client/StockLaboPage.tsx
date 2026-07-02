@@ -1090,7 +1090,7 @@ export default function StockLaboPage() {
             <div className="modal-body">
               {perteLoadingRange ? (
                 <p style={{ color: 'var(--text-muted)', textAlign: 'center' }}>…</p>
-              ) : !perteDateMin ? (
+              ) : (perteModal.ingredientId >= 0 && !perteDateMin) ? (
                 <>
                   <div style={{ background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: 8, padding: '14px 16px', textAlign: 'center', marginBottom: 16 }}>
                     <p style={{ margin: 0, color: '#92400e', fontWeight: 600, fontSize: '0.9rem' }}>
@@ -1136,11 +1136,13 @@ export default function StockLaboPage() {
                   </select>
                   <label style={{ ...LABEL, display: 'block', marginBottom: 6 }}>Date de perte</label>
                   <input className="input" type="date" style={{ width: '100%', fontSize: '0.9rem' }}
-                    min={perteDateMin} max={todayStr()} value={perteDate}
+                    min={perteDateMin || undefined} max={todayStr()} value={perteDate}
                     onChange={(e) => { setPerteDate(e.target.value); if (perteModal) fetchPertePrix(perteModal.ingredientId, e.target.value); }} />
-                  <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: 3, marginBottom: 12 }}>
-                    Premier appro : {perteDateMin.split('-').reverse().join('/')}
-                  </p>
+                  {perteDateMin && (
+                    <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: 3, marginBottom: 12 }}>
+                      Premier appro : {perteDateMin.split('-').reverse().join('/')}
+                    </p>
+                  )}
                   {perteModal && perteModal.ingredientId >= 0 && (
                     <div style={{ marginBottom: 16, display: 'flex', flexDirection: 'column', gap: 6 }}>
                       <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 6, padding: '7px 12px', display: 'flex', justifyContent: 'space-between' }}>
