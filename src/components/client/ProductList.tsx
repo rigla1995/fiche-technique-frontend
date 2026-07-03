@@ -108,8 +108,12 @@ export default function ProductList() {
   // Affectation au step 1 : mode (labo/activité) + (mode labo) activités liées cochées qui reçoivent le PT.
   const [addOrigine, setAddOrigine] = useState<'labo' | 'activite'>('activite');
   const [addCheckedActivites, setAddCheckedActivites] = useState<number[]>([]);
+  // Mode APPROS LIBRES (PU) : labos cochés qui géreront aussi le produit (appro manuel labo).
+  const [addCheckedLabos, setAddCheckedLabos] = useState<number[]>([]);
   const [editAffectationIds, setEditAffectationIds] = useState<number[]>([]);
   const [editOriginalAffectationIds, setEditOriginalAffectationIds] = useState<number[]>([]);
+  const [editLaboIds, setEditLaboIds] = useState<number[]>([]);
+  const [editOriginalLaboIds, setEditOriginalLaboIds] = useState<number[]>([]);
   const [vendableSubTab, setVendableSubTab] = useState<'produit' | 'supplement'>('produit');
 
   // Load activities (filtré au périmètre du gérant côté backend pour les gérants)
@@ -168,6 +172,10 @@ export default function ProductList() {
         setEditAffectationIds([]);
         setEditOriginalAffectationIds([]);
       });
+    // Labos actuels du produit (PU) — gérés au step Affectation de l'édition.
+    const currentLaboIds = p.type === 'utilisable' ? (p.labos ?? []).map((l) => l.id) : [];
+    setEditLaboIds(currentLaboIds);
+    setEditOriginalLaboIds(currentLaboIds);
     if (contextActId) {
       api.get(`/api/products?type=utilisable&activiteId=${contextActId}`)
         .then(({ data }) => setUtilisableForWizard((data as Product[]).filter(u => u.id !== p.id).map(u => ({ id: u.id, name: u.name }))))
@@ -209,10 +217,19 @@ export default function ProductList() {
     setAddName(''); setAddRef(''); setAddIsSupplement(isSupplement); setAddCategorieId('');
     setAddIngLines([]); setAddSubLines([]); setAddSubSearch(''); setAddIngSearch('');
     setAddSavedName(''); setAddFamilleFilter(''); setAddCatFilter(''); setAddIngVisible(20);
-    setAddAffectationIds([]); setAddOrigine('activite'); setAddCheckedActivites([]);
+    setAddOrigine('activite'); setAddCheckedActivites([]);
+    // PU en mode appros libres : l'ENSEMBLE des activités ET des labos est AUTO-sélectionné
+    // à l'ouverture — le client décoche pour exclure. (Vendables : sélection vide, inchangé.)
+    if (tab === 'vendable') {
+      setAddAffectationIds([]); setAddCheckedLabos([]);
+    } else {
+      setAddAffectationIds(allActivities.map((a) => a.id));
+      setAddCheckedLabos(allLabos.map((l) => l.id));
+    }
     setAddIngredients([]); setUtilisableForWizard([]); // chargés réactivement selon le périmètre (step 1)
     setAddModal(1);
-  }, []);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab, allActivities, allLabos]);
 
   // Mode labo : pré-coche toutes les activités rattachées aux labos choisis (décochables au step 1).
   useEffect(() => {
@@ -855,9 +872,13 @@ export default function ProductList() {
                 });
                 const added = editAffectationIds.filter(id => !editOriginalAffectationIds.includes(id));
                 const removed = editOriginalAffectationIds.filter(id => !editAffectationIds.includes(id));
+                const laboAdded = editLaboIds.filter(id => !editOriginalLaboIds.includes(id));
+                const laboRemoved = editOriginalLaboIds.filter(id => !editLaboIds.includes(id));
                 await Promise.all([
                   ...added.map(actId => api.post(`/api/produits/${editProductId}/toggle-stock-ingredient`, { activiteId: actId })),
                   ...removed.map(actId => api.post(`/api/produits/${editProductId}/toggle-stock-ingredient`, { activiteId: actId })),
+                  // Labos (PU) : le toggle est idempotent par sens (ajout/retrait selon l'état courant).
+                  ...[...laboAdded, ...laboRemoved].map(lId => api.post(`/api/produits/${editProductId}/toggle-labo`, { laboId: lId })),
                 ]);
                 setEditModal(null);
                 const reloadParams = new URLSearchParams();
@@ -870,7 +891,10 @@ export default function ProductList() {
 
             const isEditVendable = editProductType === 'vendable';
 
-            const EDIT_STEPS = [{ n: 2, display: 1, label: 'Articles' }, { n: 3, display: 2, label: 'Produits Utilisables' }, { n: 5, display: 3, label: 'Récap' }];
+            // PU : l'étape Affectation (activités + labos) est éditable ; vendables : inchangé.
+            const EDIT_STEPS = isEditVendable
+              ? [{ n: 2, display: 1, label: 'Articles' }, { n: 3, display: 2, label: 'Produits Utilisables' }, { n: 5, display: 3, label: 'Récap' }]
+              : [{ n: 2, display: 1, label: 'Articles' }, { n: 3, display: 2, label: 'Produits Utilisables' }, { n: 4, display: 3, label: 'Affectation' }, { n: 5, display: 4, label: 'Récap' }];
 
             // Compute filter options for step 2
             const eFamOptions: { key: string; label: string }[] = [];
@@ -1073,7 +1097,7 @@ export default function ProductList() {
                           return (
                             <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 8 }}>
                               <button className="btn btn-ghost" onClick={() => setEditModal(2)}>← Retour</button>
-                              <button disabled={!canNext} onClick={() => setEditModal(5)}
+                              <button disabled={!canNext} onClick={() => setEditModal(isEditVendable ? 5 : 4)}
                                 style={{ background: canNext ? 'linear-gradient(135deg, #1e40af, #3b82f6)' : '#e5e7eb', border: 'none', borderRadius: 10, color: canNext ? '#fff' : '#9ca3af', fontWeight: 700, padding: '9px 22px', cursor: canNext ? 'pointer' : 'not-allowed' }}
                                 title={!canNext ? 'Ajoutez au moins 1 article ou produit utilisable' : undefined}>
                                 Suivant →
@@ -1125,6 +1149,26 @@ export default function ProductList() {
                               </div>
                             )}
                           </>
+                        )}
+                        {/* Labos où le PU est géré (appro manuel labo) — même logique que le wizard de création */}
+                        {allLabos.length > 0 && (
+                          <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: 10 }}>
+                            <div style={{ fontSize: '0.76rem', fontWeight: 700, color: '#1e40af', marginBottom: 6 }}>
+                              Labos où ce produit est géré (appro manuel au labo) :
+                            </div>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                              {allLabos.map((l) => {
+                                const on = editLaboIds.includes(l.id);
+                                return (
+                                  <button type="button" key={l.id}
+                                    onClick={() => setEditLaboIds(prev => on ? prev.filter(id => id !== l.id) : [...prev, l.id])}
+                                    style={{ padding: '5px 12px', borderRadius: 20, border: `1.5px solid ${on ? '#3b82f6' : '#e2e8f0'}`, background: on ? '#eff6ff' : '#fff', color: on ? '#1e40af' : '#94a3b8', fontWeight: on ? 700 : 500, fontSize: '0.78rem', cursor: 'pointer' }}>
+                                    {on ? '✓ ' : ''}🏭 {l.nom}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
                         )}
                         <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 8 }}>
                           <button className="btn btn-ghost" onClick={() => setEditModal(3)}>← Retour</button>
@@ -1211,7 +1255,7 @@ export default function ProductList() {
                             </div>
                           )}
                           <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 4, borderTop: '1px solid var(--border)' }}>
-                            <button className="btn btn-ghost" onClick={() => setEditModal(3)}>← Retour</button>
+                            <button className="btn btn-ghost" onClick={() => setEditModal(isEditVendable ? 3 : 4)}>← Retour</button>
                             <button disabled={editSaving || (isEditVendable && !editCategorieId)}
                               onClick={handleEditSave}
                               title={isEditVendable && !editCategorieId ? 'Sélectionnez une catégorie de produit' : undefined}
@@ -1289,7 +1333,8 @@ export default function ProductList() {
                   isSupplement: addIsSupplement,
                   categorieProduitId: tab === 'utilisable' ? null : (addCategorieId ? parseInt(addCategorieId) : null),
                   origine: addOrigine,
-                  laboIds: addOrigine === 'labo' ? addAffectationIds : [],
+                  // mode libre (PU) : labos COCHÉS qui gèrent aussi le produit (appro manuel labo).
+                  laboIds: addOrigine === 'labo' ? addAffectationIds : addCheckedLabos,
                   // mode labo : activités COCHÉES qui reçoivent le PT ; mode activité : les activités choisies.
                   activiteIds: addOrigine === 'labo' ? addCheckedActivites : addAffectationIds,
                   ingredients: baseIngredients,
@@ -1602,7 +1647,17 @@ export default function ProductList() {
                                 const disabled = key === 'labo' && allLabos.length === 0;
                                 return (
                                   <button key={key} type="button" disabled={disabled}
-                                    onClick={() => { if (!active) { setAddOrigine(key); setAddAffectationIds([]); setAddCheckedActivites([]); } }}
+                                    onClick={() => {
+                                      if (active) return;
+                                      setAddOrigine(key); setAddCheckedActivites([]);
+                                      // Retour en appros libres → tout ré-auto-sélectionner ; mode labo → choix explicite des labos.
+                                      if (key === 'activite') {
+                                        setAddAffectationIds(allActivities.map((a) => a.id));
+                                        setAddCheckedLabos(allLabos.map((l) => l.id));
+                                      } else {
+                                        setAddAffectationIds([]); setAddCheckedLabos([]);
+                                      }
+                                    }}
                                     style={{ flex: 1, padding: '9px 12px', borderRadius: 10, border: `2px solid ${active ? '#6366f1' : '#e2e8f0'}`, background: active ? '#f0fdf4' : '#fff', cursor: disabled ? 'not-allowed' : 'pointer', textAlign: 'left', opacity: disabled ? 0.5 : 1 }}>
                                     <div style={{ fontWeight: active ? 800 : 700, fontSize: '0.84rem', color: active ? '#3730a3' : '#374151' }}>{label}</div>
                                     <div style={{ fontSize: '0.68rem', color: active ? '#4338ca' : '#94a3b8', marginTop: 2 }}>{desc}</div>
@@ -1646,6 +1701,26 @@ export default function ProductList() {
                                   );
                                 })}
                               </div>
+                              {/* Mode appros libres (PU) : labos cochables (gèrent aussi le produit — appro manuel labo) */}
+                              {!isVendable && !isLaboMode && allLabos.length > 0 && (
+                                <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: 10 }}>
+                                  <div style={{ fontSize: '0.76rem', fontWeight: 700, color: '#3730a3', marginBottom: 6 }}>
+                                    Labos où ce produit sera aussi géré (appro manuel au labo) — décochez pour exclure :
+                                  </div>
+                                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                                    {allLabos.map((l) => {
+                                      const on = addCheckedLabos.includes(l.id);
+                                      return (
+                                        <button type="button" key={l.id}
+                                          onClick={() => setAddCheckedLabos(prev => on ? prev.filter(id => id !== l.id) : [...prev, l.id])}
+                                          style={{ padding: '5px 12px', borderRadius: 20, border: `1.5px solid ${on ? '#6366f1' : '#e2e8f0'}`, background: on ? '#f0fdf4' : '#fff', color: on ? '#3730a3' : '#94a3b8', fontWeight: on ? 700 : 500, fontSize: '0.78rem', cursor: 'pointer' }}>
+                                          {on ? '✓ ' : ''}🏭 {l.nom}
+                                        </button>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+                              )}
                               {/* Mode labo : activités liées cochables (reçoivent le PT par transfert) */}
                               {isLaboMode && addAffectationIds.length > 0 && (
                                 <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: 10 }}>
