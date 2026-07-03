@@ -66,10 +66,16 @@ export default function ComposedValoriseModal({ categories, editProductId, onClo
   }, [editProductId]);
 
   const linkedActivites = activites.filter((a) => a.laboId != null && selectedLabos.includes(Number(a.laboId)));
+  // Toggle d'un labo : n'ajuste QUE les activités de CE labo (auto-cochées à l'ajout,
+  // retirées au retrait) — les décoches manuelles sur les autres labos sont préservées.
   const toggleLabo = (id: number) =>
     setSelectedLabos((prev) => {
-      const next = prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id];
-      setCheckedActivites(activites.filter((a) => a.laboId != null && next.includes(Number(a.laboId))).map((a) => a.id));
+      const isOn = prev.includes(id);
+      const next = isOn ? prev.filter((x) => x !== id) : [...prev, id];
+      const laboActs = activites.filter((a) => Number(a.laboId) === id).map((a) => a.id);
+      setCheckedActivites((ca) => isOn
+        ? ca.filter((x) => !laboActs.includes(x))
+        : [...new Set([...ca, ...laboActs])]);
       return next;
     });
 
