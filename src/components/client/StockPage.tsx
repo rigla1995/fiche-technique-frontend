@@ -768,12 +768,29 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
   const previewLines: PreviewLine[] = Object.entries(rows)
     .filter(([idStr, row]) => {
       const entry = entries.find((e) => e.ingredientId === Number(idStr));
-      if (entry?.isPT) return false;
+      // PT : pas de prix saisi (coût recette calculé) — la quantité suffit pour l'aperçu.
+      if (entry?.isPT) return parseFloat(row.quantite) > 0;
       return parseFloat(row.quantite) > 0 && parseFloat(row.prixUnitaire) > 0;
     })
     .map(([idStr, row]) => {
       const entry = entries.find((e) => e.ingredientId === Number(idStr))!;
       const qty = parseFloat(row.quantite);
+      if (entry.isPT) {
+        // Coût recette TTC affiché sur la ligne (TVA 0 pour un PT → HT = TTC).
+        const prixPT = (entry.prixCalcule != null && entry.prixCalcule > 0)
+          ? entry.prixCalcule
+          : (entry.prixUnitaire != null && entry.prixUnitaire > 0 ? entry.prixUnitaire : 0);
+        return {
+          nom: entry.nom,
+          unite: 'unité',
+          quantite: qty,
+          prixHT: prixPT,
+          tva: null,
+          prixTTCPerUnit: prixPT,
+          totalHT: qty * prixPT,
+          totalTTC: qty * prixPT,
+        };
+      }
       const prixHT = parseFloat(row.prixUnitaire);
       const tva = row.tauxTva.trim() ? parseFloat(row.tauxTva) : null;
       const prixTTCPerUnit = tva != null ? prixHT * (1 + tva / 100) : prixHT;
@@ -1289,7 +1306,8 @@ function ActivityStockSection({ label: _label, activities, initialActiviteId, on
 
   const handleSaveSeuilMin = async (ingredientId: number, seuilMin: number | null) => {
     if (ingredientId < 0) {
-      await api.put(`/api/stock/pt/${-ingredientId}/seuil-min`, { seuilMin });
+      // Seuil PT PAR ACTIVITÉ (migr 139) — même granularité que les articles.
+      await api.put(`/api/stock/pt/${-ingredientId}/seuil-min`, { seuilMin, activiteId: selectedId });
     } else {
       await api.put(`/api/stock/entreprise/${selectedId}/${ingredientId}/seuil-min`, { seuilMin });
     }
