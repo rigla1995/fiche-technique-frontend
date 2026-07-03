@@ -525,12 +525,29 @@ export default function StockLaboPage() {
   const previewLines: PreviewLine[] = Object.entries(rowState)
     .filter(([idStr, rs]) => {
       const row = stock.find((r) => r.ingredientId === Number(idStr));
-      if (row?.isPT) return false;
+      // PT : pas de prix saisi (coût recette calculé) — la quantité suffit pour l'aperçu.
+      if (row?.isPT) return parseFloat(rs.quantite) > 0;
       return parseFloat(rs.quantite) > 0 && parseFloat(rs.prixUnitaire) > 0;
     })
     .map(([idStr, rs]) => {
       const row = stock.find((r) => r.ingredientId === Number(idStr))!;
       const qty = parseFloat(rs.quantite);
+      if (row.isPT) {
+        // Coût recette TTC affiché sur la ligne (TVA 0 pour un PT → HT = TTC).
+        const prixPT = (row.prixCalcule != null && row.prixCalcule > 0)
+          ? row.prixCalcule
+          : (row.prixUnitaire != null && row.prixUnitaire > 0 ? row.prixUnitaire : 0);
+        return {
+          nom: row.nom,
+          unite: 'unité',
+          quantite: qty,
+          prixHT: prixPT,
+          tva: null,
+          prixTTCPerUnit: prixPT,
+          totalHT: qty * prixPT,
+          totalTTC: qty * prixPT,
+        };
+      }
       const prixHT = parseFloat(rs.prixUnitaire);
       const tva = rs.tauxTva.trim() ? parseFloat(rs.tauxTva) : null;
       const prixTTCPerUnit = tva != null ? prixHT * (1 + tva / 100) : prixHT;
