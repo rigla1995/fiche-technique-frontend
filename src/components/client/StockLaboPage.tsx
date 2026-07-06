@@ -833,14 +833,12 @@ export default function StockLaboPage() {
                                         <span className={cls} style={{ fontSize: '1rem', fontWeight: 800 }}>
                                           {r.quantite !== null ? r.quantite.toFixed(3) : '—'}
                                         </span>
-                                        {r.pertesDepuisInv != null && r.pertesDepuisInv > 0 && (
-                                          <div style={{ fontSize: '0.68rem', color: '#dc2626', fontWeight: 500, marginTop: 2 }}>↘ Pertes: {r.pertesDepuisInv.toFixed(3)}</div>
-                                        )}
+                                        {/* Ventilation par défaut — même lecture que le stock activité (transferts en négatif) */}
+                                        <div style={{ fontSize: '0.67rem', color: '#16a34a', fontWeight: 600, marginTop: 2 }}>↑ appro {parseFloat(((r as any).approDepuisInv ?? 0).toFixed(3))}</div>
+                                        <div style={{ fontSize: '0.67rem', color: '#0891b2', fontWeight: 600, marginTop: 1 }}>⇄ transf {(r.transfertsDepuisInv ?? 0) > 0 ? `-${parseFloat((r.transfertsDepuisInv as number).toFixed(3))}` : 0}</div>
+                                        <div style={{ fontSize: '0.67rem', color: '#dc2626', fontWeight: 500, marginTop: 1 }}>↘ pertes {(r.pertesDepuisInv ?? 0) > 0 ? `-${parseFloat((r.pertesDepuisInv as number).toFixed(3))}` : 0}</div>
                                         {r.ptUsageDepuisInv != null && r.ptUsageDepuisInv > 0 && (
-                                          <div style={{ fontSize: '0.68rem', color: '#7c3aed', fontWeight: 500, marginTop: 1 }}>↘ PT: {r.ptUsageDepuisInv.toFixed(3)}</div>
-                                        )}
-                                        {r.transfertsDepuisInv != null && r.transfertsDepuisInv > 0 && (
-                                          <div style={{ fontSize: '0.68rem', color: '#0369a1', fontWeight: 500, marginTop: 1 }}>↘ Transfert: {r.transfertsDepuisInv.toFixed(3)}</div>
+                                          <div style={{ fontSize: '0.68rem', color: '#7c3aed', fontWeight: 500, marginTop: 1 }}>PT -{parseFloat(r.ptUsageDepuisInv.toFixed(3))}</div>
                                         )}
                                       </td>
                                       <td style={{ textAlign: 'center', padding: '10px 14px', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
