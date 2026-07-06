@@ -301,15 +301,17 @@ export default function ClientDashboard() {
         )}
       </div>
 
-      {/* Contenu */}
-      {loading ? (
-        <div className="loading-text" style={{ padding: 40 }}>Chargement…</div>
-      ) : erreur ? (
+      {/* Contenu — on ne rend un onglet QUE si les données chargées lui appartiennent
+          (au changement d'onglet, `data` contient encore la réponse de l'onglet précédent
+          pendant un rendu, avant que le chargement ne démarre). */}
+      {erreur ? (
         <div style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#b91c1c', borderRadius: 12, padding: '16px 20px', fontSize: '0.88rem' }}>
           Impossible de charger le tableau de bord.{' '}
           <button onClick={load} style={{ border: 'none', background: 'none', color: '#b91c1c', fontWeight: 800, cursor: 'pointer', textDecoration: 'underline' }}>Réessayer</button>
         </div>
-      ) : data ? (
+      ) : loading || !data || data.tab !== tab ? (
+        <div className="loading-text" style={{ padding: 40 }}>Chargement…</div>
+      ) : (
         <>
           {tab === 'overview' && <OverviewTab data={data} />}
           {tab === 'ventes' && <VentesTab data={data} />}
@@ -317,7 +319,7 @@ export default function ClientDashboard() {
           {tab === 'pertes' && <PertesTab data={data} />}
           {tab === 'labo' && <LaboTab data={data} />}
         </>
-      ) : null}
+      )}
     </div>
   );
 }
