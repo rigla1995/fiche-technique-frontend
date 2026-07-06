@@ -162,7 +162,6 @@ export default function HistoriquepertesPage() {
   const urlActiviteId = searchParams.get('activiteId') || '';
   const isGerant = user?.role === 'gerant';
   // Multi-affectations : sélecteur d'activité affiché pour le gérant.
-  const isActiviteGerant = false;
 
   // Data
   const [entries, setEntries] = useState<HistoriquePerteEntry[]>([]);
@@ -201,6 +200,15 @@ export default function HistoriquepertesPage() {
         setActivites(all);
       }).catch(() => {});
   }, [type]);
+
+  // Plus de vue « Toutes » : les pertes se consultent activité par activité —
+  // la première activité est sélectionnée par défaut.
+  useEffect(() => {
+    if (!fActiviteId && activites.length > 0) {
+      setFActiviteId(String(activites[0].id));
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activites]);
 
   // Load scoped ingredients based on context
   useEffect(() => {
@@ -336,7 +344,6 @@ export default function HistoriquepertesPage() {
       {/* Activité selector pills */}
       {activites.length > 0 && (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16, padding: '10px 14px', background: 'var(--card-bg)', borderRadius: 10, border: '1px solid var(--border)' }}>
-          {!isActiviteGerant && <button onClick={() => setFActiviteId('')} style={{ padding: '4px 14px', borderRadius: 20, cursor: 'pointer', fontSize: '0.82rem', border: !fActiviteId ? '1.5px solid #1e40af' : '1.5px solid var(--border)', background: !fActiviteId ? '#1e40af' : 'var(--bg)', color: !fActiviteId ? '#fff' : 'var(--text)', fontWeight: !fActiviteId ? 700 : 400 }}>Toutes</button>}
           {activites.map((a) => (
             <button key={a.id} onClick={() => setFActiviteId(String(a.id))} style={{ padding: '4px 14px', borderRadius: 20, cursor: 'pointer', fontSize: '0.82rem', border: fActiviteId === String(a.id) ? '1.5px solid #1e40af' : '1.5px solid var(--border)', background: fActiviteId === String(a.id) ? '#1e40af' : 'var(--bg)', color: fActiviteId === String(a.id) ? '#fff' : 'var(--text)', fontWeight: fActiviteId === String(a.id) ? 700 : 400 }}>🏪 {a.nom}</button>
           ))}
