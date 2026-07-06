@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
@@ -82,27 +82,9 @@ export default function ProductList() {
   const [addSavedName, setAddSavedName] = useState('');
   const [addSaveError, setAddSaveError] = useState<string | null>(null);
 
-  // Edit product modal state — steps: 2=Articles, 3=Récap, 4=Succès (step 1 is skipped)
-  type EditStep = 1 | 2 | 3 | 4 | 5;
-  const [editModal, setEditModal] = useState<EditStep | null>(null);
-  const [editProductId, setEditProductId] = useState<number | null>(null);
-  const [editProductType, setEditProductType] = useState<'vendable' | 'utilisable'>('vendable');
-  const [editName, setEditName] = useState('');
-  const [editRef, setEditRef] = useState('');
-  const [editIsSupplement, setEditIsSupplement] = useState(false);
-  const [editCategorieId, setEditCategorieId] = useState('');
+  // ÉDITION = même wizard que l'ajout (5 étapes), pré-rempli — editingId ≠ null.
+  const [editingId, setEditingId] = useState<number | null>(null);
   const [categoriesProduit, setCategoriesProduit] = useState<CategorieProduit[]>([]);
-  const [editIngLines, setEditIngLines] = useState<IngLine[]>([]);
-  const [editSubLines, setEditSubLines] = useState<IngLine[]>([]);
-  const [editSubSearch, setEditSubSearch] = useState('');
-  const [editIngredients, setEditIngredients] = useState<ActiviteIngredient[]>([]);
-  const [editIngSearch, setEditIngSearch] = useState('');
-  const [editFamilleFilter, setEditFamilleFilter] = useState('');
-  const [editCatFilter, setEditCatFilter] = useState('');
-  const [editIngVisible, setEditIngVisible] = useState(20);
-  const [editSaving, setEditSaving] = useState(false);
-  const [editLoadingData, setEditLoadingData] = useState(false);
-  const [editActiviteNom, setEditActiviteNom] = useState('');
 
   const [addAffectationIds, setAddAffectationIds] = useState<number[]>([]);
   // Affectation au step 1 : mode (labo/activité) + (mode labo) activités liées cochées qui reçoivent le PT.
@@ -110,10 +92,6 @@ export default function ProductList() {
   const [addCheckedActivites, setAddCheckedActivites] = useState<number[]>([]);
   // Mode APPROS LIBRES (PU) : labos cochés qui géreront aussi le produit (appro manuel labo).
   const [addCheckedLabos, setAddCheckedLabos] = useState<number[]>([]);
-  const [editAffectationIds, setEditAffectationIds] = useState<number[]>([]);
-  const [editOriginalAffectationIds, setEditOriginalAffectationIds] = useState<number[]>([]);
-  const [editLaboIds, setEditLaboIds] = useState<number[]>([]);
-  const [editOriginalLaboIds, setEditOriginalLaboIds] = useState<number[]>([]);
   const [vendableSubTab, setVendableSubTab] = useState<'produit' | 'supplement'>('produit');
 
   // Load activities (filtré au périmètre du gérant côté backend pour les gérants)
@@ -150,70 +128,58 @@ export default function ProductList() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [laboId]);
 
+  // Ouvre le wizard (celui de l'ajout) pré-rempli avec le produit : mêmes 5 étapes,
+  // mêmes règles — la sauvegarde bascule en PUT quand editingId est renseigné.
   const openEditModal = useCallback(async (p: Product) => {
-    setEditProductId(p.id);
-    setEditProductType(p.type);
-    setEditName(''); setEditRef(''); setEditIsSupplement(false);
-    setEditIngLines([]); setEditSubLines([]); setEditSubSearch('');
-    setEditIngredients([]); setEditIngSearch('');
-    setEditFamilleFilter(''); setEditCatFilter(''); setEditIngVisible(20);
-    const contextActId = p.activiteId;
-    setEditActiviteNom(allActivities.find((a) => a.id === contextActId)?.nom || '');
-    setEditLoadingData(true);
-    setEditModal(2);
-    // Load current stock affectations for this product
-    api.get(`/api/produits/${p.id}/stock-activites`)
-      .then(({ data }) => {
-        const ids = data as number[];
-        setEditAffectationIds(ids);
-        setEditOriginalAffectationIds(ids);
-      })
-      .catch(() => {
-        setEditAffectationIds([]);
-        setEditOriginalAffectationIds([]);
-      });
-    // Labos actuels du produit (PU) — gérés au step Affectation de l'édition.
-    const currentLaboIds = p.type === 'utilisable' ? (p.labos ?? []).map((l) => l.id) : [];
-    setEditLaboIds(currentLaboIds);
-    setEditOriginalLaboIds(currentLaboIds);
-    if (contextActId) {
-      api.get(`/api/products?type=utilisable&activiteId=${contextActId}`)
-        .then(({ data }) => setUtilisableForWizard((data as Product[]).filter(u => u.id !== p.id).map(u => ({ id: u.id, name: u.name }))))
-        .catch(() => {});
+    setEditingId(p.id);
+    setAddIsSupplement(p.isSupplement ?? false);
+    setAddName(p.name); setAddRef(''); setAddCategorieId('');
+    setAddIngLines([]); setAddSubLines([]); setAddSubSearch(''); setAddIngSearch('');
+    setAddSavedName(''); setAddFamilleFilter(''); setAddCatFilter(''); setAddIngVisible(20);
+    setAddIngredients([]); setUtilisableForWizard([]); // chargés réactivement selon le périmètre
+    // Affectation ACTUELLE du produit (pas d'auto-sélection : on reflète l'existant)
+    const origine: 'labo' | 'activite' = p.origine === 'labo' ? 'labo' : 'activite';
+    setAddOrigine(origine);
+    if (origine === 'labo') {
+      skipAutoCheckRef.current = true; // conserver le sous-ensemble d'activités réellement affectées
+      setAddAffectationIds((p.labos ?? []).map((l) => l.id));
+      setAddCheckedActivites((p.activites ?? []).map((a) => a.id));
+      setAddCheckedLabos([]);
+    } else {
+      setAddAffectationIds((p.activites ?? []).map((a) => a.id));
+      setAddCheckedLabos((p.labos ?? []).map((l) => l.id));
+      setAddCheckedActivites([]);
     }
+    setAddModal(1);
     try {
-      const actId = contextActId;
-      const [productRes, ingRes] = await Promise.all([
-        api.get(`/api/products/${p.id}`),
-        actId ? api.get(`/api/entreprise/activites/${actId}/ingredients`) : Promise.resolve({ data: [] }),
-      ]);
-      const pdata = productRes.data as {
+      const { data } = await api.get(`/api/products/${p.id}`);
+      const pdata = data as {
         name: string; refProduit?: string; isSupplement?: boolean; categorieProduitId?: number | null;
-        ingredients: { ingredientId: number; portion: number; ingredientName?: string; unitName?: string }[];
-        subProducts: { subProductId: number; portion: number; subProductName?: string }[];
+        laboIds?: number[]; activiteStockIds?: number[];
+        ingredients: { ingredientId: number; portion: number }[];
+        subProducts: { subProductId: number; portion: number }[];
       };
-      const ings = ingRes.data as ActiviteIngredient[];
-      const ingMerged = [...ings];
-      for (const pi of pdata.ingredients) {
-        if (!ingMerged.find((x) => x.id === pi.ingredientId)) {
-          ingMerged.push({ id: pi.ingredientId, nom: pi.ingredientName || String(pi.ingredientId), unite: pi.unitName || '', categorie: '', categorieId: null, familleId: null, familleNom: null, prixUnitaire: null, selected: true });
+      setAddName(pdata.name);
+      setAddRef(pdata.refProduit || '');
+      setAddIsSupplement(pdata.isSupplement ?? p.isSupplement ?? false);
+      setAddCategorieId(pdata.categorieProduitId ? String(pdata.categorieProduitId) : '');
+      setAddIngLines(pdata.ingredients.map((i) => ({ ingredientId: String(i.ingredientId), portion: String(i.portion) })));
+      setAddSubLines((pdata.subProducts || []).map((sp) => ({ ingredientId: String(sp.subProductId), portion: String(sp.portion) })));
+      // Affectation depuis le détail si disponible (plus fiable que la card)
+      if (origine === 'labo') {
+        if (Array.isArray(pdata.laboIds) && pdata.laboIds.length > 0) {
+          skipAutoCheckRef.current = true;
+          setAddAffectationIds(pdata.laboIds);
         }
+        if (Array.isArray(pdata.activiteStockIds)) setAddCheckedActivites(pdata.activiteStockIds);
+      } else if (p.type === 'utilisable' && Array.isArray(pdata.activiteStockIds) && pdata.activiteStockIds.length > 0) {
+        setAddAffectationIds(pdata.activiteStockIds);
       }
-      setEditIngredients(ingMerged);
-      setEditName(pdata.name);
-      setEditRef(pdata.refProduit || '');
-      setEditIsSupplement(pdata.isSupplement ?? false);
-      setEditCategorieId(pdata.categorieProduitId ? String(pdata.categorieProduitId) : '');
-      const loadedLines = pdata.ingredients.map((i) => ({ ingredientId: String(i.ingredientId), portion: String(i.portion) }));
-      setEditIngLines(loadedLines);
-      const loadedSubLines = (pdata.subProducts || []).map((sp) => ({ ingredientId: String(sp.subProductId), portion: String(sp.portion) }));
-      setEditSubLines(loadedSubLines);
-    } finally {
-      setEditLoadingData(false);
-    }
-  }, [allActivities]);
+    } catch { /* le wizard reste utilisable avec les données de la card */ }
+  }, []);
 
   const openAddModal = useCallback((isSupplement = false) => {
+    setEditingId(null);
     setAddName(''); setAddRef(''); setAddIsSupplement(isSupplement); setAddCategorieId('');
     setAddIngLines([]); setAddSubLines([]); setAddSubSearch(''); setAddIngSearch('');
     setAddSavedName(''); setAddFamilleFilter(''); setAddCatFilter(''); setAddIngVisible(20);
@@ -232,8 +198,12 @@ export default function ProductList() {
   }, [tab, allActivities, allLabos]);
 
   // Mode labo : pré-coche toutes les activités rattachées aux labos choisis (décochables au step 1).
+  // skipAutoCheckRef : à l'ouverture en ÉDITION, on conserve le sous-ensemble réellement affecté
+  // (l'auto-cochage ne rejoue que sur un changement de sélection par l'utilisateur).
+  const skipAutoCheckRef = useRef(false);
   useEffect(() => {
     if (addOrigine !== 'labo') return;
+    if (skipAutoCheckRef.current) { skipAutoCheckRef.current = false; return; }
     const linked = allActivities
       .filter((a) => a.laboId != null && addAffectationIds.includes(Number(a.laboId)))
       .map((a) => a.id);
@@ -825,453 +795,6 @@ export default function ProductList() {
             );
           })()}
 
-          {/* ── Edit product modal (3 steps) ── */}
-          {editModal && (() => {
-            const editIngIds = new Set(editIngLines.map((l) => l.ingredientId).filter(Boolean));
-            const availableEditIngs = editIngredients.filter((i) => i.selected || editIngIds.has(String(i.id)));
-
-            const editToggleIng = (ing: ActiviteIngredient) => {
-              const sid = String(ing.id);
-              if (editIsSupplement) {
-                setEditIngLines([{ ingredientId: sid, portion: '' }]);
-              } else if (editIngIds.has(sid)) {
-                setEditIngLines((prev) => prev.filter((l) => l.ingredientId !== sid));
-              } else {
-                setEditIngLines((prev) => [...prev, { ingredientId: sid, portion: '' }]);
-              }
-            };
-
-            const editUpdatePortion = (ingId: string, val: string) => {
-              setEditIngLines((prev) => prev.map((l) => l.ingredientId === ingId ? { ...l, portion: val } : l));
-            };
-
-            const editSubIds = new Set(editSubLines.map((l) => l.ingredientId).filter(Boolean));
-            const editToggleSub = (id: number) => {
-              const sid = String(id);
-              if (editSubIds.has(sid)) setEditSubLines((prev) => prev.filter((l) => l.ingredientId !== sid));
-              else setEditSubLines((prev) => [...prev, { ingredientId: sid, portion: '' }]);
-            };
-            const editUpdateSubPortion = (id: string, val: string) =>
-              setEditSubLines((prev) => prev.map((l) => l.ingredientId === id ? { ...l, portion: val } : l));
-
-            const handleEditSave = async () => {
-              if (!editProductId) return;
-              setEditSaving(true);
-              try {
-                await api.put(`/api/products/${editProductId}`, {
-                  name: editName.trim(),
-                  refProduit: editRef.trim() || null,
-                  isSupplement: editIsSupplement,
-                  categorieProduitId: isEditVendable ? (editCategorieId ? parseInt(editCategorieId) : null) : null,
-                  ingredients: editIngLines
-                    .filter((l) => l.ingredientId && parseFloat(l.portion) > 0)
-                    .map((l) => ({ ingredientId: parseInt(l.ingredientId), portion: parseFloat(l.portion) })),
-                  subProducts: editSubLines
-                    .filter((l) => l.ingredientId && parseFloat(l.portion) > 0)
-                    .map((l) => ({ subProductId: parseInt(l.ingredientId), portion: parseFloat(l.portion) })),
-                });
-                const added = editAffectationIds.filter(id => !editOriginalAffectationIds.includes(id));
-                const removed = editOriginalAffectationIds.filter(id => !editAffectationIds.includes(id));
-                const laboAdded = editLaboIds.filter(id => !editOriginalLaboIds.includes(id));
-                const laboRemoved = editOriginalLaboIds.filter(id => !editLaboIds.includes(id));
-                await Promise.all([
-                  ...added.map(actId => api.post(`/api/produits/${editProductId}/toggle-stock-ingredient`, { activiteId: actId })),
-                  ...removed.map(actId => api.post(`/api/produits/${editProductId}/toggle-stock-ingredient`, { activiteId: actId })),
-                  // Labos (PU) : le toggle est idempotent par sens (ajout/retrait selon l'état courant).
-                  ...[...laboAdded, ...laboRemoved].map(lId => api.post(`/api/produits/${editProductId}/toggle-labo`, { laboId: lId })),
-                ]);
-                setEditModal(null);
-                const reloadParams = new URLSearchParams();
-                if (laboId) reloadParams.set('laboId', laboId);
-                const reloadQs = reloadParams.toString();
-                api.get(`/api/products${reloadQs ? `?${reloadQs}` : ''}`).then(({ data }) => setProducts(data as Product[]));
-              } catch { /* ignore */ }
-              setEditSaving(false);
-            };
-
-            const isEditVendable = editProductType === 'vendable';
-
-            // PU : l'étape Affectation (activités + labos) est éditable ; vendables : inchangé.
-            const EDIT_STEPS = isEditVendable
-              ? [{ n: 2, display: 1, label: 'Articles' }, { n: 3, display: 2, label: 'Produits Utilisables' }, { n: 5, display: 3, label: 'Récap' }]
-              : [{ n: 2, display: 1, label: 'Articles' }, { n: 3, display: 2, label: 'Produits Utilisables' }, { n: 4, display: 3, label: 'Affectation' }, { n: 5, display: 4, label: 'Récap' }];
-
-            // Compute filter options for step 2
-            const eFamOptions: { key: string; label: string }[] = [];
-            const eFamSeen = new Set<string>();
-            const eCatOptions: { key: string; label: string; famKey: string }[] = [];
-            const eCatSeen = new Set<string>();
-            for (const ing of availableEditIngs) {
-              const fk = ing.familleId != null ? String(ing.familleId) : '';
-              const fl = ing.familleNom ?? '';
-              if (fk && !eFamSeen.has(fk)) { eFamSeen.add(fk); eFamOptions.push({ key: fk, label: fl }); }
-              const ck = String(ing.categorieId ?? '');
-              const cl = ing.categorie || 'Sans catégorie';
-              if (!eCatSeen.has(ck)) { eCatSeen.add(ck); eCatOptions.push({ key: ck, label: cl, famKey: fk }); }
-            }
-            const eFilteredCats = editFamilleFilter ? eCatOptions.filter((c) => c.famKey === editFamilleFilter) : eCatOptions;
-            const eArticlesFiltered = availableEditIngs.filter((i) => {
-              if (editIngSearch && !i.nom.toLowerCase().includes(editIngSearch.toLowerCase())) return false;
-              if (editFamilleFilter && String(i.familleId ?? '') !== editFamilleFilter) return false;
-              if (editCatFilter && String(i.categorieId ?? '') !== editCatFilter) return false;
-              return true;
-            });
-
-            return (
-              <div className="modal-overlay">
-                <div className="modal" style={{ maxWidth: 560, width: '95vw', maxHeight: '90vh', overflow: 'auto' }} onClick={(e) => e.stopPropagation()}>
-                  {/* Header */}
-                  <div style={{ background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 100%)', padding: '18px 22px 14px', borderRadius: '12px 12px 0 0', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ color: '#fff', fontWeight: 800, fontSize: '1rem', marginBottom: 2 }}>
-                        ✏️ Modifier — {editName || '…'}
-                      </div>
-                      {editActiviteNom && (
-                        <div style={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.78rem', fontWeight: 600, marginBottom: 12 }}>
-                          📍 {editActiviteNom}
-                        </div>
-                      )}
-                      <div style={{ display: 'flex', gap: 10, width: '100%' }}>
-                        {EDIT_STEPS.map((s) => (
-                          <div key={s.n} style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4 }}>
-                            <div style={{ height: 4, borderRadius: 4, background: s.n <= editModal ? '#fff' : 'rgba(255,255,255,0.28)', transition: 'background 0.2s' }} />
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                              <div style={{ width: 18, height: 18, borderRadius: '50%', flexShrink: 0, background: s.n <= editModal ? '#fff' : 'rgba(255,255,255,0.28)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.62rem', fontWeight: 800, color: s.n <= editModal ? '#6366f1' : 'rgba(255,255,255,0.55)' }}>
-                                {s.n < editModal ? '✓' : s.display}
-                              </div>
-                              <span style={{ fontSize: '0.68rem', color: s.n <= editModal ? '#fff' : 'rgba(255,255,255,0.5)', fontWeight: 600 }}>{s.label}</span>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                    <button onClick={() => setEditModal(null)} style={{ background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: 8, color: '#fff', fontWeight: 900, fontSize: '1.1rem', cursor: 'pointer', padding: '2px 9px', lineHeight: 1, flexShrink: 0 }}>×</button>
-                  </div>
-
-                  <div style={{ padding: '20px 22px' }}>
-                    {/* Step 2 — Articles */}
-                    {editModal === 2 && (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                        <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#1e1b4b', marginBottom: 2 }}>
-                          {editName || '…'}
-                          {editRef && <span style={{ fontSize: '0.75rem', fontWeight: 400, color: '#64748b', marginLeft: 6 }}>— {editRef}</span>}
-                        </div>
-                        {editIsSupplement && (
-                          <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, padding: '8px 12px', fontSize: '0.82rem', color: '#475569', fontWeight: 600 }}>
-                            Mode supplément — sélectionnez un seul article
-                          </div>
-                        )}
-                        <input className="input" placeholder="🔍 Rechercher…" value={editIngSearch}
-                          onChange={(e) => { setEditIngSearch(e.target.value); setEditIngVisible(20); }}
-                          style={{ fontSize: '0.82rem' }} />
-                        <div style={{ display: 'flex', gap: 8 }}>
-                          <select value={editFamilleFilter}
-                            onChange={(e) => { setEditFamilleFilter(e.target.value); setEditCatFilter(''); setEditIngVisible(20); }}
-                            style={{ flex: 1, padding: '6px 10px', borderRadius: 8, border: '1px solid var(--border)', fontSize: '0.8rem', background: editFamilleFilter ? '#eff6ff' : '#fff', color: '#374151', cursor: 'pointer' }}>
-                            <option value="">Toutes les familles</option>
-                            {eFamOptions.map((f) => <option key={f.key} value={f.key}>{f.label}</option>)}
-                          </select>
-                          <select value={editCatFilter}
-                            onChange={(e) => { setEditCatFilter(e.target.value); setEditIngVisible(20); }}
-                            style={{ flex: 1, padding: '6px 10px', borderRadius: 8, border: '1px solid var(--border)', fontSize: '0.8rem', background: editCatFilter ? '#eff6ff' : '#fff', color: '#374151', cursor: 'pointer' }}>
-                            <option value="">Toutes les catégories</option>
-                            {eFilteredCats.map((c) => <option key={c.key} value={c.key}>{c.label}</option>)}
-                          </select>
-                        </div>
-                        <div
-                          style={{ height: 210, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 2, border: '1px solid var(--border)', borderRadius: 10, padding: '6px' }}
-                          onScroll={(e) => {
-                            const el = e.currentTarget;
-                            if (el.scrollHeight - el.scrollTop - el.clientHeight < 60) setEditIngVisible((v) => v + 20);
-                          }}
-                        >
-                          {editLoadingData && (
-                            <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '32px 0', fontSize: '0.85rem' }}>⏳ Chargement des articles…</div>
-                          )}
-                          {!editLoadingData && eArticlesFiltered.length === 0 && (
-                            <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '24px 0', fontSize: '0.85rem' }}>Aucun article trouvé</div>
-                          )}
-                          {!editLoadingData && eArticlesFiltered.slice(0, editIngVisible).map((ing) => {
-                            const sid = String(ing.id);
-                            const sel = editIngIds.has(sid);
-                            const line = editIngLines.find((l) => l.ingredientId === sid);
-                            const portionValid = sel && parseFloat(line?.portion || '0') > 0;
-                            return (
-                              <div key={ing.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '7px 10px', borderRadius: 8, background: sel ? (portionValid ? '#eff6ff' : '#fef3c7') : 'transparent', cursor: 'pointer', transition: 'background 0.12s' }}
-                                onClick={() => editToggleIng(ing)}>
-                                <input type="checkbox" checked={sel} onChange={() => editToggleIng(ing)}
-                                  onClick={(e) => e.stopPropagation()}
-                                  style={{ accentColor: '#3b82f6', width: 15, height: 15, flexShrink: 0, cursor: 'pointer' }} />
-                                <span style={{ flex: 1, fontSize: '0.84rem', fontWeight: sel ? 600 : 400, color: sel ? '#1e40af' : '#374151' }}>{ing.nom}</span>
-                                {ing.categorie && (
-                                  <span style={{ fontSize: '0.68rem', color: '#64748b', background: '#f1f5f9', borderRadius: 6, padding: '1px 6px', flexShrink: 0 }}>{ing.categorie}</span>
-                                )}
-                                {sel && (
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }} onClick={(e) => e.stopPropagation()}>
-                                    <input type="number" step="0.001" min="0" placeholder="portion"
-                                      value={line?.portion || ''}
-                                      onChange={(e) => editUpdatePortion(sid, e.target.value)}
-                                      style={{ width: 72, padding: '3px 6px', borderRadius: 6, border: `1.5px solid ${portionValid ? '#93c5fd' : '#ef4444'}`, fontSize: '0.82rem', textAlign: 'right' }} />
-                                    <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{ing.unite}</span>
-                                  </div>
-                                )}
-                              </div>
-                            );
-                          })}
-                          {eArticlesFiltered.length > editIngVisible && (
-                            <div style={{ textAlign: 'center', padding: '8px 0', fontSize: '0.73rem', color: '#94a3b8' }}>
-                              ↓ {eArticlesFiltered.length - editIngVisible} article{eArticlesFiltered.length - editIngVisible > 1 ? 's' : ''} de plus — faites défiler
-                            </div>
-                          )}
-                        </div>
-                        {editIngLines.some((l) => l.ingredientId) && (
-                          <div style={{ fontSize: '0.78rem', color: '#3b82f6', fontWeight: 600 }}>
-                            {editIngLines.filter((l) => l.ingredientId && parseFloat(l.portion) > 0).length} article{editIngLines.filter((l) => l.ingredientId && parseFloat(l.portion) > 0).length !== 1 ? 's' : ''} valide{editIngLines.filter((l) => l.ingredientId && parseFloat(l.portion) > 0).length !== 1 ? 's' : ''} (portion &gt; 0)
-                          </div>
-                        )}
-
-                        <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 4 }}>
-                          <button className="btn btn-ghost" onClick={() => setEditModal(null)}>Annuler</button>
-                          <button disabled={editLoadingData}
-                            onClick={() => setEditModal(3)}
-                            style={{ background: !editLoadingData ? 'linear-gradient(135deg, #1e40af, #3b82f6)' : '#e5e7eb', border: 'none', borderRadius: 10, color: !editLoadingData ? '#fff' : '#9ca3af', fontWeight: 700, padding: '9px 22px', cursor: !editLoadingData ? 'pointer' : 'not-allowed' }}>
-                            Suivant →
-                          </button>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Step 3 — Produits Utilisables */}
-                    {editModal === 3 && (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                        <div style={{ fontSize: '0.82rem', color: '#64748b' }}>
-                          Ajoutez des produits utilisables de <strong>{editActiviteNom || 'cette activité'}</strong> comme sous-composants. Au moins 1 article ou produit utilisable requis.
-                        </div>
-                        {utilisableForWizard.length === 0 ? (
-                          <div style={{ padding: 16, borderRadius: 8, background: '#faf5ff', border: '1px solid #ede9fe', fontSize: '0.85rem', color: '#5b21b6', textAlign: 'center' }}>
-                            Aucun produit utilisable disponible pour cette activité.
-                          </div>
-                        ) : (
-                          <>
-                            <input className="input" placeholder="🔍 Rechercher un produit transformé…" value={editSubSearch}
-                              onChange={(e) => setEditSubSearch(e.target.value)}
-                              style={{ fontSize: '0.82rem' }} />
-                            <div style={{ maxHeight: 240, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 2, border: '1px solid #ede9fe', borderRadius: 10, padding: '6px', background: '#faf5ff' }}>
-                              {utilisableForWizard
-                                .filter(u => !editSubSearch || u.name.toLowerCase().includes(editSubSearch.toLowerCase()))
-                                .map((u) => {
-                                  const sid = String(u.id);
-                                  const sel = editSubIds.has(sid);
-                                  const line = editSubLines.find(l => l.ingredientId === sid);
-                                  const portionValid = sel && parseFloat(line?.portion || '0') > 0;
-                                  return (
-                                    <div key={u.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '7px 10px', borderRadius: 8, background: sel ? (portionValid ? '#f3e8ff' : '#fef3c7') : 'transparent', cursor: 'pointer', transition: 'background 0.12s' }}
-                                      onClick={() => editToggleSub(u.id)}>
-                                      <input type="checkbox" checked={sel} onChange={() => editToggleSub(u.id)}
-                                        onClick={(e) => e.stopPropagation()}
-                                        style={{ accentColor: '#7c3aed', width: 15, height: 15, flexShrink: 0, cursor: 'pointer' }} />
-                                      <span style={{ flex: 1, fontSize: '0.84rem', fontWeight: sel ? 600 : 400, color: sel ? '#5b21b6' : '#374151' }}>{u.name}</span>
-                                      {sel && (
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }} onClick={(e) => e.stopPropagation()}>
-                                          <input type="number" step="0.001" min="0" placeholder="portion"
-                                            value={line?.portion || ''}
-                                            onChange={(e) => editUpdateSubPortion(sid, e.target.value)}
-                                            style={{ width: 72, padding: '3px 6px', borderRadius: 6, border: `1.5px solid ${portionValid ? '#c4b5fd' : '#ef4444'}`, fontSize: '0.82rem', textAlign: 'right' }} />
-                                          <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>unité</span>
-                                        </div>
-                                      )}
-                                    </div>
-                                  );
-                                })}
-                            </div>
-                            {editSubLines.some(l => l.ingredientId && parseFloat(l.portion) > 0) && (
-                              <div style={{ fontSize: '0.78rem', color: '#7c3aed', fontWeight: 600 }}>
-                                {editSubLines.filter(l => l.ingredientId && parseFloat(l.portion) > 0).length} produit(s) utilisable(s) sélectionné(s)
-                              </div>
-                            )}
-                          </>
-                        )}
-                        {(() => {
-                          const editTotalValid = editIngLines.filter(l => l.ingredientId && parseFloat(l.portion) > 0).length + editSubLines.filter(l => l.ingredientId && parseFloat(l.portion) > 0).length;
-                          const canNext = editIsSupplement ? editTotalValid === 1 : editTotalValid >= 2;
-                          return (
-                            <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 8 }}>
-                              <button className="btn btn-ghost" onClick={() => setEditModal(2)}>← Retour</button>
-                              <button disabled={!canNext} onClick={() => setEditModal(isEditVendable ? 5 : 4)}
-                                style={{ background: canNext ? 'linear-gradient(135deg, #1e40af, #3b82f6)' : '#e5e7eb', border: 'none', borderRadius: 10, color: canNext ? '#fff' : '#9ca3af', fontWeight: 700, padding: '9px 22px', cursor: canNext ? 'pointer' : 'not-allowed' }}
-                                title={!canNext ? 'Ajoutez au moins 1 article ou produit utilisable' : undefined}>
-                                Suivant →
-                              </button>
-                            </div>
-                          );
-                        })()}
-                      </div>
-                    )}
-
-                    {/* Step 4 — Affectation aux stocks (utilisable only) */}
-                    {editModal === 4 && !isEditVendable && (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                        <div style={{ fontSize: '0.82rem', color: '#64748b' }}>
-                          Gérez les activités où ce produit est disponible en stock.
-                        </div>
-                        {allActivities.length === 0 ? (
-                          <div style={{ padding: 16, background: '#f8fafc', borderRadius: 8, fontSize: '0.85rem', color: '#64748b', textAlign: 'center' }}>
-                            Aucune activité disponible.
-                          </div>
-                        ) : (
-                          <>
-                            <button type="button"
-                              onClick={() => setEditAffectationIds(editAffectationIds.length === allActivities.length ? [] : allActivities.map(a => a.id))}
-                              style={{ alignSelf: 'flex-start', background: 'transparent', border: '1.5px solid #3b82f6', borderRadius: 8, color: '#3b82f6', fontWeight: 700, padding: '5px 14px', cursor: 'pointer', fontSize: '0.8rem' }}>
-                              {editAffectationIds.length === allActivities.length ? '☐ Tout désélectionner' : '☑ Tout sélectionner'}
-                            </button>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 260, overflowY: 'auto' }}>
-                              {allActivities.map(a => {
-                                const checked = editAffectationIds.includes(a.id);
-                                return (
-                                  <div key={a.id}
-                                    onClick={() => setEditAffectationIds(prev => checked ? prev.filter(id => id !== a.id) : [...prev, a.id])}
-                                    style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', borderRadius: 9, cursor: 'pointer', background: checked ? '#eff6ff' : '#f8fafc', border: `1.5px solid ${checked ? '#93c5fd' : '#e2e8f0'}`, transition: 'all 0.12s' }}>
-                                    <input type="checkbox" checked={checked} readOnly
-                                      style={{ accentColor: '#3b82f6', width: 16, height: 16, flexShrink: 0, cursor: 'pointer' }} />
-                                    <div style={{ flex: 1 }}>
-                                      <div style={{ fontWeight: 600, fontSize: '0.88rem', color: checked ? '#1e40af' : '#374151' }}>{a.nom}</div>
-                                      {(a as any).laboNom && <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: 1 }}>🏭 Labo : {(a as any).laboNom}</div>}
-                                    </div>
-                                    {checked && <span style={{ color: '#3b82f6', fontSize: '0.9rem' }}>✓</span>}
-                                  </div>
-                                );
-                              })}
-                            </div>
-                            {editAffectationIds.length > 0 && (
-                              <div style={{ fontSize: '0.78rem', color: '#3b82f6', fontWeight: 600 }}>
-                                {editAffectationIds.length} activité{editAffectationIds.length > 1 ? 's' : ''} sélectionnée{editAffectationIds.length > 1 ? 's' : ''}
-                              </div>
-                            )}
-                          </>
-                        )}
-                        {/* Labos où le PU est géré (appro manuel labo) — même logique que le wizard de création */}
-                        {allLabos.length > 0 && (
-                          <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: 10 }}>
-                            <div style={{ fontSize: '0.76rem', fontWeight: 700, color: '#1e40af', marginBottom: 6 }}>
-                              Labos où ce produit est géré (appro manuel au labo) :
-                            </div>
-                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                              {allLabos.map((l) => {
-                                const on = editLaboIds.includes(l.id);
-                                return (
-                                  <button type="button" key={l.id}
-                                    onClick={() => setEditLaboIds(prev => on ? prev.filter(id => id !== l.id) : [...prev, l.id])}
-                                    style={{ padding: '5px 12px', borderRadius: 20, border: `1.5px solid ${on ? '#3b82f6' : '#e2e8f0'}`, background: on ? '#eff6ff' : '#fff', color: on ? '#1e40af' : '#94a3b8', fontWeight: on ? 700 : 500, fontSize: '0.78rem', cursor: 'pointer' }}>
-                                    {on ? '✓ ' : ''}🏭 {l.nom}
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        )}
-                        <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 8 }}>
-                          <button className="btn btn-ghost" onClick={() => setEditModal(3)}>← Retour</button>
-                          <button onClick={() => setEditModal(5)}
-                            style={{ background: 'linear-gradient(135deg, #1e40af, #3b82f6)', border: 'none', borderRadius: 10, color: '#fff', fontWeight: 700, padding: '9px 22px', cursor: 'pointer' }}>
-                            Suivant →
-                          </button>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Step 5 — Récap & Confirmation */}
-                    {editModal === 5 && (() => {
-                      const ingCount = editIngLines.filter((l) => l.ingredientId && parseFloat(l.portion) > 0).length;
-                      const subCount = editSubLines.filter((l) => l.ingredientId && parseFloat(l.portion) > 0).length;
-                      return (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                          <div style={{ background: 'linear-gradient(135deg,#eff6ff,#dbeafe)', border: '1.5px solid #93c5fd', borderRadius: 14, padding: '16px 18px' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
-                              <div style={{ width: 42, height: 42, borderRadius: 10, background: '#3b82f6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.3rem', flexShrink: 0 }}>📦</div>
-                              <div>
-                                <div style={{ fontWeight: 800, fontSize: '1.05rem', color: '#1e40af' }}>{editName}</div>
-                                {editRef && <div style={{ fontSize: '0.75rem', color: '#3b82f6', marginTop: 1 }}>Réf : {editRef}</div>}
-                              </div>
-                              <div style={{ marginLeft: 'auto', background: '#3b82f6', color: '#fff', borderRadius: 20, padding: '3px 10px', fontSize: '0.72rem', fontWeight: 700 }}>
-                                {isEditVendable ? 'Vendable' : 'Utilisable'}{editIsSupplement ? ' · Suppl.' : ''}
-                              </div>
-                            </div>
-                            <div style={{ display: 'flex', gap: 8 }}>
-                              <div style={{ background: 'rgba(255,255,255,0.6)', borderRadius: 8, padding: '8px 10px', textAlign: 'center', minWidth: 70 }}>
-                                <div style={{ fontSize: '1.2rem', fontWeight: 900, color: '#1e40af' }}>{ingCount}</div>
-                                <div style={{ fontSize: '0.7rem', color: '#3b82f6' }}>article{ingCount !== 1 ? 's' : ''}</div>
-                              </div>
-                              {subCount > 0 && (
-                                <div style={{ background: 'rgba(255,255,255,0.6)', borderRadius: 8, padding: '8px 10px', textAlign: 'center', minWidth: 70 }}>
-                                  <div style={{ fontSize: '1.2rem', fontWeight: 900, color: '#5b21b6' }}>{subCount}</div>
-                                  <div style={{ fontSize: '0.7rem', color: '#7c3aed' }}>transformé{subCount !== 1 ? 's' : ''}</div>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                          {isEditVendable && (
-                            <div>
-                              <label style={{ display: 'block', fontWeight: 700, fontSize: '0.82rem', color: '#1e40af', marginBottom: 6 }}>
-                                Catégorie de produit <span style={{ color: '#ef4444' }}>*</span>
-                              </label>
-                              <select className="input" value={editCategorieId} onChange={(e) => setEditCategorieId(e.target.value)} style={{ width: '100%', maxWidth: 320, borderColor: editCategorieId ? '#93c5fd' : '#fca5a5' }}>
-                                <option value="">— Sélectionner une catégorie —</option>
-                                {categoriesProduit.filter((c) => c.typeProduit === (editIsSupplement ? 'supplement' : 'vendable')).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-                              </select>
-                              {categoriesProduit.length === 0 && (
-                                <div style={{ fontSize: '0.76rem', color: '#b45309', marginTop: 4 }}>Aucune catégorie. Créez-en dans « Configuration Catégorie ».</div>
-                              )}
-                            </div>
-                          )}
-                          <div>
-                            <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#64748b', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Articles sélectionnés</div>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: 4, maxHeight: 160, overflowY: 'auto' }}>
-                              {editIngLines.filter((l) => l.ingredientId && parseFloat(l.portion) > 0).map((l) => {
-                                const ing = editIngredients.find((i) => String(i.id) === l.ingredientId);
-                                return (
-                                  <div key={l.ingredientId} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '5px 10px', borderRadius: 7, background: '#f8fafc', fontSize: '0.82rem' }}>
-                                    <span style={{ color: '#374151', fontWeight: 500 }}>{ing?.nom ?? l.ingredientId}</span>
-                                    <span style={{ color: '#64748b', fontWeight: 600 }}>{l.portion} {ing?.unite}</span>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          </div>
-                          {subCount > 0 && (
-                            <div>
-                              <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#7c3aed', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.06em' }}>🔄 Produits transformés</div>
-                              <div style={{ display: 'flex', flexDirection: 'column', gap: 4, maxHeight: 120, overflowY: 'auto' }}>
-                                {editSubLines.filter((l) => l.ingredientId && parseFloat(l.portion) > 0).map((l) => {
-                                  const sp = utilisableForWizard.find((u) => String(u.id) === l.ingredientId);
-                                  return (
-                                    <div key={l.ingredientId} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '5px 10px', borderRadius: 7, background: '#faf5ff', fontSize: '0.82rem', border: '1px solid #ede9fe' }}>
-                                      <span style={{ color: '#5b21b6', fontWeight: 500 }}>🔄 {sp?.name ?? l.ingredientId}</span>
-                                      <span style={{ color: '#7c3aed', fontWeight: 600 }}>{l.portion} unité</span>
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            </div>
-                          )}
-                          <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 4, borderTop: '1px solid var(--border)' }}>
-                            <button className="btn btn-ghost" onClick={() => setEditModal(isEditVendable ? 3 : 4)}>← Retour</button>
-                            <button disabled={editSaving || (isEditVendable && !editCategorieId)}
-                              onClick={handleEditSave}
-                              title={isEditVendable && !editCategorieId ? 'Sélectionnez une catégorie de produit' : undefined}
-                              style={{ background: 'linear-gradient(135deg, #1e40af, #3b82f6)', border: 'none', borderRadius: 10, color: '#fff', fontWeight: 700, padding: '10px 28px', cursor: (editSaving || (isEditVendable && !editCategorieId)) ? 'not-allowed' : 'pointer', opacity: (editSaving || (isEditVendable && !editCategorieId)) ? 0.7 : 1, fontSize: '0.9rem' }}>
-                              {editSaving ? 'Enregistrement…' : 'Enregistrer les modifications ✓'}
-                            </button>
-                          </div>
-                        </div>
-                      );
-                    })()}
-
-                  </div>
-                </div>
-              </div>
-            );
-          })()}
 
           {/* ── Add product modal (4 steps) ── */}
           {addModal && (() => {
@@ -1326,7 +849,7 @@ export default function ProductList() {
                   .map((l) => ({ subProductId: parseInt(l.ingredientId), portion: parseFloat(l.portion) }));
                 // L'affectation (labo XOR activité) est gérée par le backend selon origine + ids :
                 // labo → labo_pt_selections + PT des activités du labo ; activité → affectation/stock.
-                await api.post('/api/products', {
+                const payload = {
                   name: addName.trim(),
                   refProduit: addRef.trim() || null,
                   type: tab === 'utilisable' ? 'utilisable' : 'vendable',
@@ -1339,7 +862,16 @@ export default function ProductList() {
                   activiteIds: addOrigine === 'labo' ? addCheckedActivites : addAffectationIds,
                   ingredients: baseIngredients,
                   subProducts: baseSubProducts,
-                });
+                };
+                // ÉDITION : même wizard, même payload — le backend recompose l'affectation.
+                if (editingId) {
+                  const putPayload: Record<string, unknown> = { ...payload };
+                  // PU : ne pas envoyer categorieProduitId (le backend le refuse hors vendable)
+                  if (tab === 'utilisable') delete putPayload.categorieProduitId;
+                  await api.put(`/api/products/${editingId}`, putPayload);
+                } else {
+                  await api.post('/api/products', payload);
+                }
                 setAddSavedName(addName.trim());
                 setAddModal(6);
                 const reloadParams = new URLSearchParams();
@@ -1348,7 +880,7 @@ export default function ProductList() {
                 api.get(`/api/products${reloadQs ? `?${reloadQs}` : ''}`).then(({ data }) => setProducts(data as Product[]));
               } catch (err: unknown) {
                 const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
-                setAddSaveError(msg || 'Erreur lors de la création du produit.');
+                setAddSaveError(msg || (editingId ? 'Erreur lors de la modification du produit.' : 'Erreur lors de la création du produit.'));
               }
               setAddSaving(false);
             };
@@ -1368,7 +900,9 @@ export default function ProductList() {
                   <div style={{ background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 100%)', padding: '18px 22px 14px', borderRadius: '12px 12px 0 0', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
                     <div style={{ flex: 1 }}>
                       <div style={{ color: '#fff', fontWeight: 800, fontSize: '1rem', marginBottom: addModal !== 6 ? 12 : 0 }}>
-                        {addModal === 6 ? '✅ Produit créé' : isVendable ? (addIsSupplement ? 'Nouveau supplément vendable' : 'Nouveau produit vendable') : 'Nouveau produit utilisable'}
+                        {addModal === 6 ? (editingId ? '✅ Produit modifié' : '✅ Produit créé')
+                          : editingId ? (isVendable ? (addIsSupplement ? 'Modifier le supplément vendable' : 'Modifier le produit vendable') : 'Modifier le produit utilisable')
+                          : isVendable ? (addIsSupplement ? 'Nouveau supplément vendable' : 'Nouveau produit vendable') : 'Nouveau produit utilisable'}
                       </div>
                       {addModal !== 6 && (
                         <div style={{ display: 'flex', gap: 10, width: '100%' }}>
@@ -1877,16 +1411,20 @@ export default function ProductList() {
                     {addModal === 6 && (
                       <div style={{ textAlign: 'center', padding: '16px 0 8px' }}>
                         <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'linear-gradient(135deg, #22c55e, #16a34a)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.6rem', margin: '0 auto 14px' }}>✓</div>
-                        <div style={{ fontWeight: 700, fontSize: '1rem', color: '#166534', marginBottom: 6 }}>Produit créé avec succès</div>
+                        <div style={{ fontWeight: 700, fontSize: '1rem', color: '#166534', marginBottom: 6 }}>
+                          {editingId ? 'Produit modifié avec succès' : 'Produit créé avec succès'}
+                        </div>
                         <div style={{ fontSize: '0.88rem', color: 'var(--text-muted)', marginBottom: 22 }}>
-                          <strong>{addSavedName}</strong> a été ajouté à votre liste.
+                          <strong>{addSavedName}</strong> {editingId ? 'a été mis à jour.' : 'a été ajouté à votre liste.'}
                         </div>
                         <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
                           <button className="btn btn-ghost" onClick={() => setAddModal(null)}>Fermer</button>
-                          <button onClick={() => openAddModal(addIsSupplement)}
-                            style={{ background: 'linear-gradient(135deg, #4338ca, #6366f1)', border: 'none', borderRadius: 10, color: '#fff', fontWeight: 700, padding: '9px 22px', cursor: 'pointer' }}>
-                            + Ajouter un autre
-                          </button>
+                          {!editingId && (
+                            <button onClick={() => openAddModal(addIsSupplement)}
+                              style={{ background: 'linear-gradient(135deg, #4338ca, #6366f1)', border: 'none', borderRadius: 10, color: '#fff', fontWeight: 700, padding: '9px 22px', cursor: 'pointer' }}>
+                              + Ajouter un autre
+                            </button>
+                          )}
                         </div>
                       </div>
                     )}
