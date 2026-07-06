@@ -33,6 +33,7 @@ interface TransferRecord {
   prixUnitaire: number | null;
   tauxTva: number | null;
   prixUnitaireTva: number | null;
+  refFacture: string | null;
 }
 
 const currentYear = new Date().getFullYear();
@@ -870,21 +871,11 @@ export default function TransferPage() {
                                                 {actNames.map((an) => (
                                                   <th key={an} style={{ textAlign: 'right', color: '#7c3aed', fontWeight: 700, padding: '4px 8px' }}>↗ {an}</th>
                                                 ))}
-                                                <th style={{ textAlign: 'right', color: '#7c3aed', fontWeight: 700, padding: '4px 8px' }}>Prix U. HT</th>
-                                                <th style={{ textAlign: 'right', color: '#7c3aed', fontWeight: 700, padding: '4px 8px' }}>TVA %</th>
                                                 <th style={{ textAlign: 'right', color: '#7c3aed', fontWeight: 700, padding: '4px 8px' }}>Prix U. TTC</th>
+                                                <th style={{ textAlign: 'left', color: '#7c3aed', fontWeight: 700, padding: '4px 8px' }}>Réf.</th>
                                               </tr>
                                             </thead>
                                             <tbody>
-                                              <tr style={{ fontWeight: 700, background: '#f5f3ff' }}>
-                                                <td style={{ padding: '4px 8px', color: 'var(--text-muted)', fontSize: '0.72rem', textTransform: 'uppercase' }}>Total</td>
-                                                {actNames.map((an) => (
-                                                  <td key={an} style={{ textAlign: 'right', padding: '4px 8px', color: '#7c3aed' }}>
-                                                    {actTotals[an]?.toFixed(3) ?? '0.000'}
-                                                  </td>
-                                                ))}
-                                                <td colSpan={3} />
-                                              </tr>
                                               {realTransfers.map((tr, i) => (
                                                 <tr key={i} style={{ borderTop: '1px solid #f3e8ff', fontSize: '0.75rem' }}>
                                                   <td style={{ padding: '2px 8px' }}>
@@ -897,17 +888,24 @@ export default function TransferPage() {
                                                       {tr.activiteNom === an ? tr.quantite.toFixed(3) : '—'}
                                                     </td>
                                                   ))}
-                                                  <td style={{ textAlign: 'right', padding: '2px 8px', color: '#374151', fontWeight: 600 }}>
-                                                    {tr.prixUnitaire != null ? `${tr.prixUnitaire.toFixed(3)} DT` : '—'}
-                                                  </td>
-                                                  <td style={{ textAlign: 'right', padding: '2px 8px', color: '#374151' }}>
-                                                    {tr.tauxTva != null ? `${tr.tauxTva}%` : '—'}
-                                                  </td>
+                                                  {/* Prix de cession TTC (les PT partent en TVA 0 → TTC = prix saisi ; repli HT si ligne ancienne) */}
                                                   <td style={{ textAlign: 'right', padding: '2px 8px', color: '#059669', fontWeight: 700 }}>
-                                                    {tr.prixUnitaireTva != null ? `${tr.prixUnitaireTva.toFixed(3)} DT` : '—'}
+                                                    {tr.prixUnitaireTva != null ? `${tr.prixUnitaireTva.toFixed(3)} DT`
+                                                      : tr.prixUnitaire != null ? `${tr.prixUnitaire.toFixed(3)} DT` : '—'}
                                                   </td>
+                                                  <td style={{ padding: '2px 8px', color: 'var(--text-muted)' }}>{tr.refFacture ?? '—'}</td>
                                                 </tr>
                                               ))}
+                                              {/* Total en pied de tableau */}
+                                              <tr style={{ fontWeight: 700, background: '#f5f3ff', borderTop: '2px solid #d8b4fe' }}>
+                                                <td style={{ padding: '4px 8px', color: 'var(--text-muted)', fontSize: '0.72rem', textTransform: 'uppercase' }}>Total</td>
+                                                {actNames.map((an) => (
+                                                  <td key={an} style={{ textAlign: 'right', padding: '4px 8px', color: '#7c3aed' }}>
+                                                    {actTotals[an]?.toFixed(3) ?? '0.000'}
+                                                  </td>
+                                                ))}
+                                                <td colSpan={2} />
+                                              </tr>
                                             </tbody>
                                           </table>
                                         </div>
