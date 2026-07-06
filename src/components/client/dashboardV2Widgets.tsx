@@ -108,8 +108,8 @@ export function EvolutionChart({ data, grain }: { data: { bucket: string; ca: nu
 }
 
 // ── Cascade de la marge (CA → coût → commissions → charges → nette) ─────────
-export function WaterfallChart({ data }: { data: { ca: number; cout_matiere: number; commissions: number; charges: number; marge_nette: number } }) {
-  if (!data.ca) return <EmptyHint />;
+export function WaterfallChart({ data }: { data?: { ca: number; cout_matiere: number; commissions: number; charges: number; marge_nette: number } }) {
+  if (!data || !data.ca) return <EmptyHint />;
   let running = data.ca;
   const steps = [{ name: 'CA', base: 0, val: data.ca, color: '#2563eb' }];
   for (const [name, montant, color] of [

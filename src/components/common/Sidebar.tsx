@@ -433,11 +433,6 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                           <span className="link-icon">📊</span><span className="link-label">Historique Inventaire</span>
                         </Link>
                       </li>
-                      <li>
-                        <Link to="/client/dashboard?tab=achats" className={`sidebar-link ${location.pathname === '/client/dashboard' && currentSearch.get('tab') === 'achats' ? 'active' : ''}`} onClick={onClose}>
-                          <span className="link-icon">📈</span><span className="link-label">Rapport activités</span>
-                        </Link>
-                      </li>
                     </>
                   )}
                   </>
@@ -460,7 +455,6 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                             <li><Link to={`/client/labo/historique-transferts?laboId=${firstLaboId}`} className={`sidebar-link ${location.pathname === '/client/labo/historique-transferts' ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📋</span><span className="link-label">Historique Transferts</span></Link></li>
                             <li><Link to={`/client/labo/inventaire?laboId=${firstLaboId}`} className={`sidebar-link ${location.pathname === '/client/labo/inventaire' ? 'active' : ''}`} onClick={onClose}><span className="link-icon">🔢</span><span className="link-label">Inventaire</span></Link></li>
                             <li><Link to={`/client/labo/inventaire/historique?laboId=${firstLaboId}`} className={`sidebar-link ${location.pathname === '/client/labo/inventaire/historique' ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📊</span><span className="link-label">Historique Inventaire</span></Link></li>
-                            <li><Link to="/client/dashboard?tab=labo" className={`sidebar-link ${location.pathname === '/client/dashboard' && currentSearch.get('tab') === 'labo' ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📈</span><span className="link-label">Rapport labo</span></Link></li>
                           </>
                         )}
                       </>
@@ -481,7 +475,6 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                           {labos.length > 0 && (
                             <li><Link to={`/client/labo/ventes?laboId=${labos[0].id}`} className={`sidebar-link ${location.pathname === '/client/labo/ventes' ? 'active' : ''}`} onClick={onClose}><span className="link-icon">🏭</span><span className="link-label">Ventes Labo</span></Link></li>
                           )}
-                          {user?.role === 'client' && <li><Link to="/client/dashboard?tab=ventes" className={`sidebar-link ${location.pathname === '/client/dashboard' && currentSearch.get('tab') === 'ventes' ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📊</span><span className="link-label">Rapport Vente</span></Link></li>}
                         </>
                       )}
                     </>
