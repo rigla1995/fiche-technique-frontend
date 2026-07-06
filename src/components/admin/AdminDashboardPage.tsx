@@ -42,6 +42,7 @@ const ESPACES: { titre: string; color: string; liens: { to: string; icon: string
   { titre: 'Espace IA', color: '#6366f1', liens: [
     { to: '/admin/active-agents', icon: '🤖', label: 'Agents IA' },
     { to: '/admin/knowledge-base', icon: '🧠', label: 'Base IA' },
+    { to: '/admin/manuel', icon: '📖', label: 'Manuel' },
   ] },
 ];
 
