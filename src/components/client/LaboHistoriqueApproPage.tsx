@@ -262,7 +262,7 @@ export default function LaboHistoriqueApproPage() {
 
   // Produits transformés du labo — chargés quand la catégorie « PT » est sélectionnée
   useEffect(() => {
-    if (filterCategorieId !== 'pt' || !laboId) { setPtProducts([]); return; }
+    if (!filterCategorieId.startsWith('pt') || !laboId) { setPtProducts([]); return; }
     api.get(`/api/labo/${laboId}/pt`)
       .then(({ data }) => setPtProducts((data as Array<{ produitId: number; nom: string }>).map((p) => ({ id: -(p.produitId), nom: p.nom }))))
       .catch(() => {});
@@ -292,8 +292,9 @@ export default function LaboHistoriqueApproPage() {
       const params = new URLSearchParams();
       if (startDate) params.set('startDate', startDate);
       if (endDate) params.set('endDate', endDate);
-      if (filterCategorieId === 'pt') {
+      if (filterCategorieId.startsWith('pt')) {
         params.set('ptOnly', 'true');
+        if (filterCategorieId.length > 3) params.set('ptType', filterCategorieId.slice(3));
         if (filterIngredientId) params.set('ptProduitId', String(-Number(filterIngredientId)));
       } else if (filterIngredientId) params.set('ingredientId', filterIngredientId);
       else if (filterCategorieId) params.set('categorieId', filterCategorieId);
@@ -310,8 +311,9 @@ export default function LaboHistoriqueApproPage() {
     const params = new URLSearchParams();
     if (startDate) params.set('startDate', startDate);
     if (endDate) params.set('endDate', endDate);
-    if (filterCategorieId === 'pt') {
+    if (filterCategorieId.startsWith('pt')) {
       params.set('ptOnly', 'true');
+        if (filterCategorieId.length > 3) params.set('ptType', filterCategorieId.slice(3));
       if (filterIngredientId) params.set('ptProduitId', String(-Number(filterIngredientId)));
     } else if (filterIngredientId) params.set('ingredientId', filterIngredientId);
     else if (filterCategorieId) params.set('categorieId', filterCategorieId);
@@ -424,13 +426,15 @@ export default function LaboHistoriqueApproPage() {
           <FilterSelect value={filterCategorieId} onChange={(e) => { setFilterCategorieId(e.target.value); setFilterIngredientId(''); }}>
             <option value="">— Toutes —</option>
             {categories.map((c) => <option key={c.id} value={c.id}>{c.nom}</option>)}
-            <option value="pt">Produits Transformés</option>
+            <option value="pt-utilisable">Produits Transformés Utilisables</option>
+            <option value="pt-vendable">Produits Transformés Vendables</option>
+            <option value="pt-valorise">Produits Composés Valorisés</option>
           </FilterSelect>
         </FilterField>
         <FilterField label="🧂 Article">
           <FilterSelect value={filterIngredientId} disabled={!filterCategorieId} onChange={(e) => setFilterIngredientId(e.target.value)}>
             <option value="">— Tous —</option>
-            {(filterCategorieId === 'pt' ? ptProducts : ingredientsInCat).map((i) => <option key={i.id} value={i.id}>{i.nom}</option>)}
+            {(filterCategorieId.startsWith('pt') ? ptProducts : ingredientsInCat).map((i) => <option key={i.id} value={i.id}>{i.nom}</option>)}
           </FilterSelect>
         </FilterField>
         {fournisseurs.length > 0 && (
