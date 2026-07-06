@@ -116,7 +116,7 @@ export default function AIAssistantPage() {
         </div>
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 16, fontWeight: 700, color: '#0f172a' }}>Assistant IA LabFlow</div>
-          <div style={{ fontSize: 12, color: '#64748b' }}>Analyse votre stock, pertes et inventaires — posez vos questions</div>
+          <div style={{ fontSize: 12, color: '#64748b' }}>Analyse vos données (stock, ventes, pertes…) et répond à vos questions sur le fonctionnement de LabFlow</div>
         </div>
         {messages.length > 0 && (
           <button
@@ -143,7 +143,8 @@ export default function AIAssistantPage() {
               {[
                 'Quel est mon stock critique actuellement ?',
                 'Comment réduire mes pertes ?',
-                'Analyse mes inventaires récents',
+                'Comment fonctionnent les transferts labo → activités ?',
+                'Comment la valeur de mon stock est-elle calculée ?',
               ].map((suggestion) => (
                 <button
                   key={suggestion}

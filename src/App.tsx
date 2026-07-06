@@ -41,6 +41,7 @@ import TarifsConfig from './components/admin/TarifsConfig';
 import DemandesManagement from './components/admin/DemandesManagement';
 import AdminRapportsPage from './components/admin/AdminRapportsPage';
 import AdminKnowledgeBasePage from './components/admin/AdminKnowledgeBasePage';
+import AdminManuelPage from './components/admin/AdminManuelPage';
 import AdminDashboardPage from './components/admin/AdminDashboardPage';
 import AdminDomainesPage from './components/admin/AdminDomainesPage';
 import AdminSupportPage from './components/admin/AdminSupportPage';
@@ -113,6 +114,7 @@ export default function App() {
             <Route path="/admin/active-agents" element={<ActiveAgentsPage />} />
             <Route path="/admin/prestataires" element={<PrestatairesManagement />} />
             <Route path="/admin/knowledge-base" element={<AdminKnowledgeBasePage />} />
+            <Route path="/admin/manuel" element={<AdminManuelPage />} />
           </Route>
 
           {/* Client + Gérant routes */}

@@ -320,6 +320,15 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                   <span className="link-label">Base IA</span>
                 </NavLink>
               </li>
+
+              <Divider />
+              <SectionLabel>Contenu</SectionLabel>
+              <li>
+                <NavLink to="/admin/manuel" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>
+                  <span className="link-icon">📖</span>
+                  <span className="link-label">Manuel</span>
+                </NavLink>
+              </li>
             </>
           ) : (
             <>
@@ -564,6 +573,12 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                   </NavLink>
                 </li>
                 <li>
+                  <NavLink to="/client/ai-assistant" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>
+                    <span className="link-icon">🤖</span>
+                    <span className="link-label">Assistant IA</span>
+                  </NavLink>
+                </li>
+                <li>
                   <NavLink to="/client/guide" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>
                     <span className="link-icon">📖</span>
                     <span className="link-label">Manuel d'utilisation</span>
@@ -577,6 +592,12 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                 <NavLink to="/client/gerant-abonnement" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>
                   <span className="link-icon">💳</span>
                   <span className="link-label">Mon abonnement</span>
+                </NavLink>
+              </li>
+              <li>
+                <NavLink to="/client/ai-assistant" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>
+                  <span className="link-icon">🤖</span>
+                  <span className="link-label">Assistant IA</span>
                 </NavLink>
               </li>
               <li>
