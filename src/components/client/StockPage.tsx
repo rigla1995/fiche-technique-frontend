@@ -570,11 +570,16 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
         ? (data as any[]).map((e) => ({
             dateAppro: e.dateAppro,
             quantite: e.quantite,
-            prixUnitaire: e.prixCalcule != null ? parseFloat(e.prixCalcule) : null,
+            // HT (repli TTC : TVA 0 pour un PT → mêmes valeurs)
+            prixUnitaire: e.prixUnitaire != null ? parseFloat(e.prixUnitaire)
+              : (e.prixCalcule != null ? parseFloat(e.prixCalcule) : null),
+            tauxTva: e.tauxTva != null ? parseFloat(e.tauxTva) : null,
+            prixUnitaireTva: e.prixUnitaireTva != null ? parseFloat(e.prixUnitaireTva)
+              : (e.prixCalcule != null ? parseFloat(e.prixCalcule) : null),
             updatedAt: e.createdAt ?? null,
             typeAppro: (e as any).typeAppro ?? ((e.quantite != null && parseFloat(e.quantite) < 0) ? 'vente' : 'manuel'),
-            fournisseurNom: null,
-            refFacture: null,
+            fournisseurNom: e.fournisseurNom ?? null,
+            refFacture: e.refFacture ?? null,
           }))
         : (data as StockHistoryEntry[]);
       setHistoryData((prev) => ({ ...prev, [id]: entries }));
