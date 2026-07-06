@@ -80,7 +80,7 @@ export default function AdminKnowledgeBasePage() {
         <div>
           <h1 style={{ fontSize: '1.45rem', fontWeight: 800, color: '#fff', margin: 0 }}>🧠 Base de connaissances IA</h1>
           <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.82rem', margin: '4px 0 0' }}>
-            Le savoir métier que les agents Messenger/Telegram utilisent pour répondre ({activeCount} actif{activeCount > 1 ? 's' : ''} / {entries.length}).
+            Le savoir métier que l'assistant IA et l'agent Messenger utilisent pour répondre ({activeCount} actif{activeCount > 1 ? 's' : ''} / {entries.length}).
           </p>
         </div>
         <button onClick={openCreate} style={{ background: '#fff', color: '#4338ca', border: 'none', borderRadius: 10, padding: '10px 18px', fontWeight: 800, fontSize: '0.85rem', cursor: 'pointer', boxShadow: '0 2px 10px rgba(0,0,0,0.12)' }}>

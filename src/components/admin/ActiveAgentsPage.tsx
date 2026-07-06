@@ -7,7 +7,6 @@ interface Agent {
   clientEmail: string;
   reportEmail: string | null;
   enabled: boolean;
-  telegramLinked: boolean;
   messengerLinked: boolean;
   messageCount: number;
   lastActivity: string | null;
@@ -15,7 +14,6 @@ interface Agent {
   avgConfidenceMonth: number | null;
   tokensMonth: number;
   tokensTotal: number;
-  inviteLink: string | null;
   messengerInviteLink: string | null;
   activatedAt: string | null;
 }
@@ -48,11 +46,13 @@ const ConfBadge = ({ value, label }: { value: number | null; label: string }) =>
   );
 };
 
-const StatusBadge = ({ enabled, telegramLinked, messengerLinked }: { enabled: boolean; telegramLinked: boolean; messengerLinked: boolean }) => {
+const StatusBadge = ({ enabled, messengerLinked }: { enabled: boolean; messengerLinked: boolean }) => {
   if (!enabled) return <span className="badge" style={{ background: '#f1f5f9', color: '#64748b' }}>⭕ Inactif</span>;
-  const linked = telegramLinked || messengerLinked;
-  if (!linked) return <span className="badge" style={{ background: '#fef3c7', color: '#92400e' }}>⏳ En attente</span>;
-  return <span className="badge" style={{ background: '#dcfce7', color: '#16a34a' }}>🟢 Actif</span>;
+  return (
+    <span className="badge" style={{ background: '#dcfce7', color: '#16a34a' }}>
+      🟢 Actif{messengerLinked ? ' · 💬 Messenger' : ''}
+    </span>
+  );
 };
 
 export default function ActiveAgentsPage() {
@@ -61,7 +61,7 @@ export default function ActiveAgentsPage() {
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [saving, setSaving] = useState<number | null>(null);
   const [copiedLink, setCopiedLink] = useState<string | null>(null);
-  const [filter, setFilter] = useState<'all' | 'active' | 'pending' | 'inactive'>('all');
+  const [filter, setFilter] = useState<'all' | 'active' | 'inactive'>('all');
   const [generatingInvite, setGeneratingInvite] = useState<string | null>(null);
   const [messengerEmail, setMessengerEmail] = useState<Record<number, string>>({});
 
@@ -97,17 +97,6 @@ export default function ActiveAgentsPage() {
     setTimeout(() => setCopiedLink(null), 2000);
   };
 
-  const generateTelegramInvite = async (agent: Agent) => {
-    const key = `tg-${agent.clientId}`;
-    setGeneratingInvite(key);
-    try {
-      const res = await api.post(`/api/ai-assistant/config/${agent.clientId}/invite`);
-      setAgents(prev => prev.map(a => a.clientId === agent.clientId ? { ...a, inviteLink: res.data.inviteLink, telegramLinked: false } : a));
-    } finally {
-      setGeneratingInvite(null);
-    }
-  };
-
   const generateMessengerInvite = async (agent: Agent) => {
     const key = `ms-${agent.clientId}`;
     setGeneratingInvite(key);
@@ -123,17 +112,15 @@ export default function ActiveAgentsPage() {
   };
 
   const filtered = agents.filter(a => {
-    const linked = a.telegramLinked || a.messengerLinked;
-    if (filter === 'active') return a.enabled && linked;
-    if (filter === 'pending') return a.enabled && !linked;
+    if (filter === 'active') return a.enabled;
     if (filter === 'inactive') return !a.enabled;
     return true;
   });
 
   const counts = {
     total: agents.length,
-    active: agents.filter(a => a.enabled && (a.telegramLinked || a.messengerLinked)).length,
-    pending: agents.filter(a => a.enabled && !a.telegramLinked && !a.messengerLinked).length,
+    active: agents.filter(a => a.enabled).length,
+    messenger: agents.filter(a => a.enabled && a.messengerLinked).length,
     inactive: agents.filter(a => !a.enabled).length,
     tokensMonth: agents.reduce((s, a) => s + (a.tokensMonth || 0), 0),
   };
@@ -149,9 +136,9 @@ export default function ActiveAgentsPage() {
       }}>
         <div style={{ background: 'rgba(255,255,255,0.18)', borderRadius: 10, padding: '7px 9px', fontSize: '1.2rem' }}>🤖</div>
         <div>
-          <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0 }}>Agents IA actifs</h1>
+          <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0 }}>Assistants IA actifs</h1>
           <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.7)', margin: '4px 0 0' }}>
-            Agents Telegram &amp; Messenger par client — activation, score de confiance, lien d'invitation
+            Assistant IA par client — activation, canal Messenger optionnel, score de confiance, consommation
           </p>
         </div>
         <button onClick={fetchAgents} style={{ marginLeft: 'auto', padding: '8px 16px', borderRadius: 8, border: 'none', background: 'rgba(255,255,255,0.18)', color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
@@ -164,7 +151,7 @@ export default function ActiveAgentsPage() {
         {[
           { label: 'Total', value: counts.total, color: 'var(--primary)', icon: '📋' },
           { label: 'Actifs', value: counts.active, color: '#16a34a', icon: '🟢' },
-          { label: 'En attente', value: counts.pending, color: '#f59e0b', icon: '⏳' },
+          { label: 'Liés Messenger', value: counts.messenger, color: '#1877f2', icon: '💬' },
           { label: 'Inactifs', value: counts.inactive, color: '#94a3b8', icon: '⭕' },
           { label: 'Tokens ce mois', value: counts.tokensMonth.toLocaleString('fr-FR'), color: counts.tokensMonth > 100000 ? '#ef4444' : '#6366f1', icon: '🔋' },
         ].map(s => (
@@ -178,7 +165,7 @@ export default function ActiveAgentsPage() {
 
       {/* Filter tabs */}
       <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
-        {([['all', 'Tous'], ['active', 'Actifs'], ['pending', 'En attente'], ['inactive', 'Inactifs']] as const).map(([key, label]) => (
+        {([['all', 'Tous'], ['active', 'Actifs'], ['inactive', 'Inactifs']] as const).map(([key, label]) => (
           <button
             key={key}
             onClick={() => setFilter(key)}
@@ -224,7 +211,7 @@ export default function ActiveAgentsPage() {
                     <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{agent.clientEmail}</div>
                   </div>
 
-                  <StatusBadge enabled={agent.enabled} telegramLinked={agent.telegramLinked} messengerLinked={agent.messengerLinked} />
+                  <StatusBadge enabled={agent.enabled} messengerLinked={agent.messengerLinked} />
 
                   {/* Confidence scores */}
                   <div style={{ display: 'flex', gap: 20, padding: '8px 16px', background: 'var(--bg-soft)', borderRadius: 10 }}>
@@ -271,36 +258,7 @@ export default function ActiveAgentsPage() {
 
                 {agent.enabled && (
                   <>
-                    {/* Row 3: Telegram invite */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, borderTop: '1px solid var(--border)', paddingTop: 10, flexWrap: 'wrap' }}>
-                      <span style={{ fontSize: 11, fontWeight: 700, color: '#2563eb', background: '#eff6ff', padding: '2px 8px', borderRadius: 6 }}>✈️ Telegram</span>
-                      {agent.telegramLinked ? (
-                        <span style={{ fontSize: 12, color: '#16a34a', fontWeight: 600 }}>✅ Client lié</span>
-                      ) : agent.inviteLink ? (
-                        <>
-                          <code style={{ fontSize: 11, background: 'var(--bg-soft)', border: '1px solid var(--border)', borderRadius: 6, padding: '3px 8px', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 280 }}>
-                            {agent.inviteLink}
-                          </code>
-                          <button
-                            onClick={() => copyLink(`tg-${agent.clientId}`, agent.inviteLink!)}
-                            style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, border: '1px solid var(--border)', background: copiedLink === `tg-${agent.clientId}` ? '#dcfce7' : '#fff', color: copiedLink === `tg-${agent.clientId}` ? '#16a34a' : 'var(--text)', cursor: 'pointer', fontWeight: 600, flexShrink: 0 }}
-                          >
-                            {copiedLink === `tg-${agent.clientId}` ? '✅ Copié' : '📋 Copier'}
-                          </button>
-                        </>
-                      ) : (
-                        <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Aucun lien</span>
-                      )}
-                      <button
-                        onClick={() => generateTelegramInvite(agent)}
-                        disabled={generatingInvite === `tg-${agent.clientId}`}
-                        style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, border: '1px solid var(--border)', background: '#fff', color: 'var(--primary)', cursor: 'pointer', fontWeight: 600, marginLeft: 'auto', flexShrink: 0 }}
-                      >
-                        {generatingInvite === `tg-${agent.clientId}` ? 'Génération…' : '🔗 Nouveau lien'}
-                      </button>
-                    </div>
-
-                    {/* Row 4: Messenger activation (email + invite) */}
+                    {/* Row 3: Messenger activation (email + invite) */}
                     <div style={{ borderTop: '1px solid var(--border)', paddingTop: 10, display: 'flex', flexDirection: 'column', gap: 8 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                         <span style={{ fontSize: 11, fontWeight: 700, color: '#1877f2', background: '#eff6ff', padding: '2px 8px', borderRadius: 6 }}>💬 Messenger</span>
