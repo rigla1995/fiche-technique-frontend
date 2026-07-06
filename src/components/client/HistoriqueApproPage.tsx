@@ -301,7 +301,7 @@ export default function HistoriqueApproPage() {
   }, [laboId, selectedActiviteId]);
 
   useEffect(() => {
-    if (selectedCategoryId !== 'pt') { setPtProducts([]); return; }
+    if (!selectedCategoryId.startsWith('pt')) { setPtProducts([]); return; }
     const ptUrl = selectedActiviteId ? `/api/stock/pt?activiteId=${selectedActiviteId}` : '/api/stock/pt';
     api.get(ptUrl)
       .then(({ data }) => setPtProducts((data as Array<{ produitId: number; nom: string }>).map((p) => ({ id: -(p.produitId), nom: p.nom }))))
@@ -347,8 +347,9 @@ export default function HistoriqueApproPage() {
         params.set('entType', 'activite');
       }
       if (laboId) params.set('laboId', laboId);
-      if (selectedCategoryId === 'pt') {
+      if (selectedCategoryId.startsWith('pt')) {
         params.set('ptOnly', 'true');
+        if (selectedCategoryId.length > 3) params.set('ptType', selectedCategoryId.slice(3));
         if (selectedIngredientId) params.set('ptProduitId', String(-Number(selectedIngredientId)));
       } else {
         if (selectedIngredientId) params.set('ingredientId', selectedIngredientId);
@@ -387,8 +388,9 @@ export default function HistoriqueApproPage() {
     const params = new URLSearchParams();
     if (selectedActiviteId) params.set('activiteId', selectedActiviteId);
     else params.set('entType', 'activite');
-    if (selectedCategoryId === 'pt') {
+    if (selectedCategoryId.startsWith('pt')) {
       params.set('ptOnly', 'true');
+        if (selectedCategoryId.length > 3) params.set('ptType', selectedCategoryId.slice(3));
       if (selectedIngredientId) params.set('ptProduitId', String(-Number(selectedIngredientId)));
     } else {
       if (selectedIngredientId) params.set('ingredientId', selectedIngredientId);
@@ -480,13 +482,15 @@ export default function HistoriqueApproPage() {
           <FilterSelect value={selectedCategoryId} onChange={(e) => { setSelectedCategoryId(e.target.value); setSelectedIngredientId(''); }}>
             <option value="">{t('client.historique_appro.all_categories')}</option>
             {categories.map((c) => <option key={c.id} value={c.id}>{c.nom}</option>)}
-            <option value="pt">Produits Transformés</option>
+            <option value="pt-utilisable">Produits Transformés Utilisables</option>
+            <option value="pt-vendable">Produits Transformés Vendables</option>
+            <option value="pt-valorise">Produits Composés Valorisés</option>
           </FilterSelect>
         </FilterField>
         <FilterField label="🧂 Article">
           <FilterSelect value={selectedIngredientId} disabled={!selectedCategoryId} onChange={(e) => setSelectedIngredientId(e.target.value)}>
             <option value="">{t('client.historique_appro.all_ingredients')}</option>
-            {selectedCategoryId === 'pt' ? ptProducts.map((p) => <option key={p.id} value={p.id}>{p.nom}</option>) : ingredientsInCat.map((i) => <option key={i.id} value={i.id}>{i.nom}</option>)}
+            {selectedCategoryId.startsWith('pt') ? ptProducts.map((p) => <option key={p.id} value={p.id}>{p.nom}</option>) : ingredientsInCat.map((i) => <option key={i.id} value={i.id}>{i.nom}</option>)}
           </FilterSelect>
         </FilterField>
         {fournisseurs.length > 0 && (
