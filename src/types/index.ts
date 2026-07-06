@@ -362,6 +362,8 @@ export interface StockHistoryEntry {
   typeAppro: string;
   fournisseurNom: string | null;
   refFacture: string | null;
+  tauxTva?: number | null;
+  prixUnitaireTva?: number | null;
 }
 
 export interface HistoriqueApproEntry {
