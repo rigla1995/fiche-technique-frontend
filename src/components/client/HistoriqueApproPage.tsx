@@ -218,8 +218,6 @@ export default function HistoriqueApproPage() {
   const laboId = searchParams.get('laboId') || '';
   const isGerant = user?.role === 'gerant';
   const isReadOnly = isGerant && !!laboId;
-  // Multi-affectations : le gérant peut choisir parmi ses activités (sélecteur affiché).
-  const isActiviteGerant = false;
 
   const [allActivities, setAllActivities] = useState<Activite[]>([]);
   const [_activitesLoading, setActivitesLoading] = useState(false);
@@ -236,6 +234,16 @@ export default function HistoriqueApproPage() {
 
   const [startDate, setStartDate] = useState(yearStart);
   const [endDate, setEndDate] = useState(yearEnd);
+
+  // Plus de vue « Toutes » : l'historique se consulte activité par activité —
+  // la première activité est sélectionnée par défaut (hors contexte labo).
+  useEffect(() => {
+    if (laboId) return;
+    if (!selectedActiviteId && allActivities.length > 0) {
+      setSelectedActiviteId(String(allActivities[0].id));
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allActivities, laboId]);
 
   const categories = Array.from(
     new Map(scopedIngredients.filter((i) => i.categorieId !== null).map((i) => [i.categorieId, { id: i.categorieId as number, nom: i.categorie }])).values()
@@ -447,14 +455,6 @@ export default function HistoriqueApproPage() {
       {/* Activité selector pills */}
       {activitiesForDropdown.length > 0 && (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16, padding: '10px 14px', background: 'var(--card-bg)', borderRadius: 10, border: '1px solid var(--border)' }}>
-          {!isActiviteGerant && (
-            <button
-              onClick={() => setSelectedActiviteId('')}
-              style={{ padding: '4px 14px', borderRadius: 20, cursor: 'pointer', fontSize: '0.82rem', border: !selectedActiviteId ? '1.5px solid #1e40af' : '1.5px solid var(--border)', background: !selectedActiviteId ? '#1e40af' : 'var(--bg)', color: !selectedActiviteId ? '#fff' : 'var(--text)', fontWeight: !selectedActiviteId ? 700 : 400 }}
-            >
-              Toutes
-            </button>
-          )}
           {activitiesForDropdown.map((a) => (
             <button key={a.id}
               onClick={() => setSelectedActiviteId(String(a.id))}
