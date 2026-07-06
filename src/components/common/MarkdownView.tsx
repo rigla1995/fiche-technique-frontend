@@ -12,9 +12,9 @@ import type { CSSProperties, ReactNode } from 'react';
  *   :::formule Libellé  EXPRESSION  note: …  :::
  */
 
-type CalloutKind = 'astuce' | 'attention' | 'regle' | 'exemple';
+export type CalloutKind = 'astuce' | 'attention' | 'regle' | 'exemple';
 
-type Block =
+export type Block =
   | { type: 'h2'; text: string }
   | { type: 'h3'; text: string }
   | { type: 'p'; text: string }
@@ -29,7 +29,7 @@ const isOl = (t: string) => /^\d+[.)] /.test(t);
 const isBlockStart = (t: string) =>
   !t || t.startsWith('## ') || t.startsWith('### ') || t.startsWith(':::') || isUl(t) || isOl(t) || t.startsWith('|');
 
-function parseBlocks(md: string): Block[] {
+export function parseBlocks(md: string): Block[] {
   const lines = md.replace(/\r\n/g, '\n').split('\n');
   const blocks: Block[] = [];
   let i = 0;

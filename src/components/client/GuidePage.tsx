@@ -2,6 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import api from '../../api/client';
 import MarkdownView from '../common/MarkdownView';
+import OnboardingChecklist from './OnboardingChecklist';
+import { buildManuelPdf } from '../../utils/manuelPdf';
 
 /**
  * Centre d'aide — le contenu du manuel vient de la base (table manuel_sections,
@@ -29,7 +31,7 @@ export default function GuidePage() {
   const contentRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    api.get('/manuel')
+    api.get('/api/manuel')
       .then(({ data }) => setSections(data))
       .catch(() => setError(true))
       .finally(() => setLoading(false));
@@ -75,7 +77,7 @@ export default function GuidePage() {
   return (
     <div className="page" style={{ padding: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
       {/* Hero */}
-      <div style={{ background: 'linear-gradient(135deg,#1e40af 0%,#3b82f6 100%)', padding: '20px 28px', flexShrink: 0 }}>
+      <div style={{ background: 'linear-gradient(135deg,#1e40af 0%,#3b82f6 100%)', padding: '20px 28px', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <div style={{ width: 40, height: 40, borderRadius: 10, background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>
             📖
@@ -85,6 +87,18 @@ export default function GuidePage() {
             <p style={{ margin: 0, fontSize: '0.78rem', color: 'rgba(255,255,255,0.75)', marginTop: 2 }}>Guide complet de l'application LabFlow</p>
           </div>
         </div>
+        <button
+          onClick={() => buildManuelPdf(sections)}
+          disabled={loading || sections.length === 0}
+          style={{
+            background: 'rgba(255,255,255,0.16)', color: '#fff', border: '1px solid rgba(255,255,255,0.45)',
+            borderRadius: 10, padding: '9px 16px', fontWeight: 700, fontSize: '0.82rem',
+            cursor: loading || sections.length === 0 ? 'default' : 'pointer',
+            opacity: loading || sections.length === 0 ? 0.5 : 1,
+          }}
+        >
+          📄 Télécharger en PDF
+        </button>
       </div>
 
       {/* Body */}
@@ -155,6 +169,7 @@ export default function GuidePage() {
                 <div style={{ fontSize: '0.7rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10 }}>
                   {active.partie}
                 </div>
+                {active.slug === 'onboarding-suivi' && <OnboardingChecklist />}
                 <MarkdownView content={active.contenu} onNavigate={(slug) => setActiveSlug(slug)} />
               </>
             )}
