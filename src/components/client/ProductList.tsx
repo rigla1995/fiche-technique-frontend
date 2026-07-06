@@ -92,6 +92,9 @@ export default function ProductList() {
   const [addCheckedActivites, setAddCheckedActivites] = useState<number[]>([]);
   // Mode APPROS LIBRES (PU) : labos cochés qui géreront aussi le produit (appro manuel labo).
   const [addCheckedLabos, setAddCheckedLabos] = useState<number[]>([]);
+  // Vendable géré en STOCK (option, défaut décoché) : catégorie « Produits Transformés
+  // Vendables », logique appros libres complète (manuel/transfert/perte/seuil/inventaire).
+  const [addStockActif, setAddStockActif] = useState(false);
   const [vendableSubTab, setVendableSubTab] = useState<'produit' | 'supplement'>('produit');
 
   // Load activities (filtré au périmètre du gérant côté backend pour les gérants)
@@ -174,12 +177,18 @@ export default function ProductList() {
         if (Array.isArray(pdata.activiteStockIds)) setAddCheckedActivites(pdata.activiteStockIds);
       } else if (p.type === 'utilisable' && Array.isArray(pdata.activiteStockIds) && pdata.activiteStockIds.length > 0) {
         setAddAffectationIds(pdata.activiteStockIds);
+      } else if (p.type === 'vendable') {
+        // Vendable : géré en stock si des lignes de stock/labo existent (option du wizard)
+        const sa = ((pdata.activiteStockIds?.length ?? 0) > 0) || ((pdata.laboIds?.length ?? 0) > 0);
+        setAddStockActif(sa);
+        if (Array.isArray(pdata.laboIds)) setAddCheckedLabos(pdata.laboIds);
       }
     } catch { /* le wizard reste utilisable avec les données de la card */ }
   }, []);
 
   const openAddModal = useCallback((isSupplement = false) => {
     setEditingId(null);
+    setAddStockActif(false);
     setAddName(''); setAddRef(''); setAddIsSupplement(isSupplement); setAddCategorieId('');
     setAddIngLines([]); setAddSubLines([]); setAddSubSearch(''); setAddIngSearch('');
     setAddSavedName(''); setAddFamilleFilter(''); setAddCatFilter(''); setAddIngVisible(20);
@@ -856,6 +865,8 @@ export default function ProductList() {
                   isSupplement: addIsSupplement,
                   categorieProduitId: tab === 'utilisable' ? null : (addCategorieId ? parseInt(addCategorieId) : null),
                   origine: addOrigine,
+                  // Vendable : gestion de stock optionnelle (appros libres) — défaut décoché.
+                  stockActif: isVendable ? (addStockActif && !addIsSupplement) : undefined,
                   // mode libre (PU) : labos COCHÉS qui gèrent aussi le produit (appro manuel labo).
                   laboIds: addOrigine === 'labo' ? addAffectationIds : addCheckedLabos,
                   // mode labo : activités COCHÉES qui reçoivent le PT ; mode activité : les activités choisies.
@@ -960,6 +971,39 @@ export default function ProductList() {
                         {isVendable && addIsSupplement && (
                           <div style={{ background: '#fffbeb', borderRadius: 10, padding: '10px 16px', border: '1.5px solid #fcd34d', fontSize: '0.82rem', color: '#92400e', fontWeight: 600 }}>
                             ➕ Ce produit sera créé comme supplément vendable
+                          </div>
+                        )}
+                        {/* Vendable géré en STOCK (option, défaut décoché) — logique appros libres */}
+                        {isVendable && !addIsSupplement && (
+                          <div style={{ background: '#f0fdfa', borderRadius: 10, padding: '12px 16px', border: '1.5px solid #99f6e4' }}>
+                            <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', fontWeight: 700, fontSize: '0.85rem', color: '#0f766e' }}>
+                              <input type="checkbox" checked={addStockActif} onChange={(e) => setAddStockActif(e.target.checked)}
+                                style={{ accentColor: '#0d9488', width: 16, height: 16 }} />
+                              📦 Gérer ce produit en stock (appros libres)
+                            </label>
+                            <div style={{ fontSize: '0.75rem', color: '#115e59', marginTop: 6 }}>
+                              Le produit sera suivi dans le stock des activités choisies à l'étape 1 — catégorie
+                              « Produits Transformés Vendables » : appros manuels, transferts, pertes, seuil et inventaire.
+                            </div>
+                            {addStockActif && allLabos.length > 0 && (
+                              <div style={{ marginTop: 10 }}>
+                                <div style={{ fontSize: '0.76rem', fontWeight: 700, color: '#0f766e', marginBottom: 6 }}>
+                                  Labos où ce produit sera aussi géré (appro manuel au labo) :
+                                </div>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                                  {allLabos.map((l) => {
+                                    const on = addCheckedLabos.includes(l.id);
+                                    return (
+                                      <button type="button" key={l.id}
+                                        onClick={() => setAddCheckedLabos(prev => on ? prev.filter(id => id !== l.id) : [...prev, l.id])}
+                                        style={{ padding: '5px 12px', borderRadius: 20, border: `1.5px solid ${on ? '#0d9488' : '#e2e8f0'}`, background: on ? '#f0fdfa' : '#fff', color: on ? '#0f766e' : '#94a3b8', fontWeight: on ? 700 : 500, fontSize: '0.78rem', cursor: 'pointer' }}>
+                                        {on ? '✓ ' : ''}🏭 {l.nom}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            )}
                           </div>
                         )}
                         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, paddingTop: 8 }}>
