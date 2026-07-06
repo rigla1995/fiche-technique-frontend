@@ -343,22 +343,6 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                   </NavLink>
                 )}
               </li>
-              {/* Rapports */}
-              <li>
-                {lockLevel0 ? (
-                  <LockedLink label={t('nav.rapports', 'Rapports')} />
-                ) : (
-                  <Link
-                    to="/client/rapports"
-                    className={`sidebar-link ${location.pathname === '/client/rapports' && currentSearch.get('scope') !== 'activite' ? 'active' : ''}`}
-                    onClick={onClose}
-                  >
-                    <span className="link-icon">📈</span>
-                    <span className="link-label">{t('nav.rapports', 'Rapports')}</span>
-                  </Link>
-                )}
-              </li>
-
               <Divider />
 
               {/* Mes Activités — gestion (CRUD) réservée au client propriétaire */}
@@ -450,7 +434,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                         </Link>
                       </li>
                       <li>
-                        <Link to="/client/rapports?scope=activite" className={`sidebar-link ${location.pathname === '/client/rapports' && currentSearch.get('scope') === 'activite' ? 'active' : ''}`} onClick={onClose}>
+                        <Link to="/client/dashboard?tab=achats" className={`sidebar-link ${location.pathname === '/client/dashboard' && currentSearch.get('tab') === 'achats' ? 'active' : ''}`} onClick={onClose}>
                           <span className="link-icon">📈</span><span className="link-label">Rapport activités</span>
                         </Link>
                       </li>
@@ -476,7 +460,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                             <li><Link to={`/client/labo/historique-transferts?laboId=${firstLaboId}`} className={`sidebar-link ${location.pathname === '/client/labo/historique-transferts' ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📋</span><span className="link-label">Historique Transferts</span></Link></li>
                             <li><Link to={`/client/labo/inventaire?laboId=${firstLaboId}`} className={`sidebar-link ${location.pathname === '/client/labo/inventaire' ? 'active' : ''}`} onClick={onClose}><span className="link-icon">🔢</span><span className="link-label">Inventaire</span></Link></li>
                             <li><Link to={`/client/labo/inventaire/historique?laboId=${firstLaboId}`} className={`sidebar-link ${location.pathname === '/client/labo/inventaire/historique' ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📊</span><span className="link-label">Historique Inventaire</span></Link></li>
-                            <li><Link to={`/client/rapports/labo?laboId=${firstLaboId}`} className={`sidebar-link ${location.pathname === '/client/rapports/labo' ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📈</span><span className="link-label">Rapport labo</span></Link></li>
+                            <li><Link to="/client/dashboard?tab=labo" className={`sidebar-link ${location.pathname === '/client/dashboard' && currentSearch.get('tab') === 'labo' ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📈</span><span className="link-label">Rapport labo</span></Link></li>
                           </>
                         )}
                       </>
@@ -497,7 +481,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                           {labos.length > 0 && (
                             <li><Link to={`/client/labo/ventes?laboId=${labos[0].id}`} className={`sidebar-link ${location.pathname === '/client/labo/ventes' ? 'active' : ''}`} onClick={onClose}><span className="link-icon">🏭</span><span className="link-label">Ventes Labo</span></Link></li>
                           )}
-                          {user?.role === 'client' && <li><NavLink to="/client/ventes/rapport" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📊</span><span className="link-label">Rapport Vente</span></NavLink></li>}
+                          {user?.role === 'client' && <li><Link to="/client/dashboard?tab=ventes" className={`sidebar-link ${location.pathname === '/client/dashboard' && currentSearch.get('tab') === 'ventes' ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📊</span><span className="link-label">Rapport Vente</span></Link></li>}
                         </>
                       )}
                     </>

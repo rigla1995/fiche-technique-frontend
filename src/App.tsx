@@ -7,7 +7,6 @@ import InvitePage from './components/auth/InvitePage';
 import ClientsManagement from './components/admin/ClientsManagement';
 import ProductList from './components/client/ProductList';
 import ClientDashboard from './components/client/ClientDashboard';
-import RapportLaboPage from './components/client/RapportLaboPage';
 import ProductForm from './components/client/ProductForm';
 import ProductCategoriesPage from './components/client/ProductCategoriesPage';
 import ValorisesPage from './components/client/ValorisesPage';
@@ -52,15 +51,12 @@ import GerantsPage from './components/client/GerantsPage';
 import SupportPage from './components/client/SupportPage';
 import GuidePage from './components/client/GuidePage';
 import AIAssistantPage from './components/client/AIAssistantPage';
-import RapportActivitesPage from './components/client/RapportActivitesPage';
 import VentesPage from './components/client/VentesPage';
 import LaboVentesPage from './components/client/LaboVentesPage';
-import DashboardGerantPage from './components/client/DashboardGerantPage';
 import AbonnementGerantPage from './components/client/AbonnementGerantPage';
 import ConfigurationVentePage from './components/client/ConfigurationVentePage';
 import ConfigPrestatairesPage from './components/client/ConfigPrestatairesPage';
 import ConfigChargesPage from './components/client/ConfigChargesPage';
-import RapportVentePage from './components/client/RapportVentePage';
 import VenteGuard from './components/client/VenteGuard';
 import PrestatairesManagement from './components/admin/PrestatairesManagement';
 import './i18n';
@@ -153,11 +149,12 @@ export default function App() {
             <Route path="/client/abonnement" element={<MonAbonnementPage />} />
             <Route path="/client/historique-paiement" element={<HistoriquePaiementPage />} />
             <Route path="/client/gerants" element={<GerantsPage />} />
-            <Route path="/client/rapports" element={<RapportActivitesPage />} />
-            <Route path="/client/rapports/labo" element={<RapportLaboPage />} />
+            {/* Anciennes pages Rapports : intégrées au Tableau de bord (onglets) */}
+            <Route path="/client/rapports" element={<Navigate to="/client/dashboard?tab=achats" replace />} />
+            <Route path="/client/rapports/labo" element={<Navigate to="/client/dashboard?tab=labo" replace />} />
             <Route path="/client/support" element={<SupportPage />} />
             <Route path="/client/guide" element={<GuidePage />} />
-            <Route path="/client/gerant-dashboard" element={<DashboardGerantPage />} />
+            <Route path="/client/gerant-dashboard" element={<Navigate to="/client/dashboard" replace />} />
             <Route path="/client/gerant-abonnement" element={<AbonnementGerantPage />} />
             <Route path="/client/ai-assistant" element={<AIAssistantPage />} />
             <Route element={<VenteGuard />}>
@@ -165,7 +162,7 @@ export default function App() {
               <Route path="/client/ventes/configuration" element={<ConfigurationVentePage />} />
               <Route path="/client/ventes/prestataires" element={<ConfigPrestatairesPage />} />
               <Route path="/client/ventes/charges" element={<ConfigChargesPage />} />
-              <Route path="/client/ventes/rapport" element={<RapportVentePage />} />
+              <Route path="/client/ventes/rapport" element={<Navigate to="/client/dashboard?tab=ventes" replace />} />
               <Route path="/client/labo/ventes" element={<LaboVentesPage />} />
             </Route>
           </Route>

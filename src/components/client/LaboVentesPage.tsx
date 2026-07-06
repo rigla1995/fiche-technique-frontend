@@ -176,7 +176,7 @@ export default function LaboVentesPage() {
             Historique des transferts valorisés avec analyse prix / coût
           </p>
         </div>
-        <Link to="/client/ventes/rapport" style={{ background: 'rgba(255,255,255,0.18)', color: '#fff', borderRadius: 20, padding: '5px 14px', fontSize: '0.82rem', fontWeight: 600, textDecoration: 'none', border: '1px solid rgba(255,255,255,0.3)' }}>
+        <Link to="/client/dashboard?tab=ventes" style={{ background: 'rgba(255,255,255,0.18)', color: '#fff', borderRadius: 20, padding: '5px 14px', fontSize: '0.82rem', fontWeight: 600, textDecoration: 'none', border: '1px solid rgba(255,255,255,0.3)' }}>
           📊 Rapport
         </Link>
       </div>

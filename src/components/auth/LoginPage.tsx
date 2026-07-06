@@ -48,7 +48,7 @@ export default function LoginPage() {
     try {
       const loggedUser = await login(email, password);
       if (loggedUser.role === 'gerant') {
-        navigate('/client/gerant-dashboard', { replace: true });
+        navigate('/client/dashboard', { replace: true });
       } else if (loggedUser.role === 'super_admin') {
         navigate('/admin', { replace: true });
       } else {
