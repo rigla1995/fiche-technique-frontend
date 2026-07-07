@@ -5,13 +5,13 @@ import { AuthShell, PasswordFields, pwdValid, authSubmit, authErrorBox } from '.
 
 type State = 'loading' | 'ready' | 'invalid';
 
-export default function InvitePage() {
+export default function ResetPasswordPage() {
   const { token } = useParams<{ token: string }>();
   const navigate = useNavigate();
 
   const [state, setState] = useState<State>('loading');
-  const [nom, setNom] = useState('');
   const [email, setEmail] = useState('');
+  const [nom, setNom] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [saving, setSaving] = useState(false);
@@ -19,7 +19,7 @@ export default function InvitePage() {
 
   useEffect(() => {
     if (!token) { setState('invalid'); return; }
-    api.get(`/auth/invite/${token}`)
+    api.get(`/auth/reset/${token}`)
       .then(({ data }) => { setNom(data.nom); setEmail(data.email); setState('ready'); })
       .catch(() => setState('invalid'));
   }, [token]);
@@ -32,9 +32,8 @@ export default function InvitePage() {
     setSaving(true);
     setErr('');
     try {
-      await api.post('/auth/invite/accept', { token, password });
-      // Redirection directe vers la connexion, email pré-rempli — le client n'a plus qu'à saisir son mot de passe.
-      navigate('/login', { replace: true, state: { email, activated: true } });
+      await api.post('/auth/reset', { token, password });
+      navigate('/login', { replace: true, state: { email, reset: true } });
     } catch (e: unknown) {
       setErr((e as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Erreur, veuillez réessayer.');
     } finally {
@@ -61,10 +60,15 @@ export default function InvitePage() {
           <div style={{ width: 56, height: 56, margin: '0 auto 16px', borderRadius: '50%', background: '#fef2f2', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.6rem' }}>🔗</div>
           <h1 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#0f172a', margin: '0 0 8px' }}>Lien invalide ou expiré</h1>
           <p style={{ color: '#6b7280', fontSize: '0.88rem', margin: '0 0 22px', lineHeight: 1.55 }}>
-            Ce lien d'activation n'est plus valide (durée : 48&nbsp;h).<br />
-            Contactez votre administrateur pour en recevoir un nouveau.
+            Ce lien de réinitialisation n'est plus valide (durée : 1&nbsp;h).<br />
+            Vous pouvez refaire une demande à tout moment.
           </p>
-          <Link to="/login" style={{ color: '#4338ca', fontWeight: 700, fontSize: '0.88rem', textDecoration: 'none' }}>← Retour à la connexion</Link>
+          <Link to="/forgot-password" style={{ display: 'inline-block', marginBottom: 12, color: '#fff', fontWeight: 700, fontSize: '0.88rem', textDecoration: 'none', background: 'linear-gradient(135deg, #4338ca, #6366f1)', borderRadius: 12, padding: '11px 24px', boxShadow: '0 8px 20px rgba(67,56,202,0.3)' }}>
+            Refaire une demande
+          </Link>
+          <p style={{ margin: 0 }}>
+            <Link to="/login" style={{ color: '#64748b', fontWeight: 600, fontSize: '0.8rem', textDecoration: 'none' }}>← Retour à la connexion</Link>
+          </p>
         </div>
       </AuthShell>
     );
@@ -74,18 +78,18 @@ export default function InvitePage() {
     <AuthShell>
       <div style={{ textAlign: 'center', marginBottom: 24 }}>
         <h1 style={{ fontSize: '1.3rem', fontWeight: 800, color: '#0f172a', margin: '0 0 6px', letterSpacing: '-0.01em' }}>
-          Bonjour, {nom}
+          Nouveau mot de passe
         </h1>
         <p style={{ color: '#6b7280', fontSize: '0.87rem', margin: 0, lineHeight: 1.55 }}>
-          Choisissez un mot de passe pour activer<br /><strong style={{ color: '#4338ca', fontWeight: 700 }}>{email}</strong>
+          {nom ? <>Bonjour, {nom} — c</> : 'C'}hoisissez un nouveau mot de passe pour<br /><strong style={{ color: '#4338ca', fontWeight: 700 }}>{email}</strong>
         </p>
       </div>
 
       <form onSubmit={handleSubmit}>
-        <PasswordFields password={password} confirm={confirm} onPassword={setPassword} onConfirm={setConfirm} />
+        <PasswordFields password={password} confirm={confirm} onPassword={setPassword} onConfirm={setConfirm} label="Nouveau mot de passe" />
         {err && <div style={authErrorBox}>{err}</div>}
         <button type="submit" disabled={saving || !ready} style={authSubmit(saving || !ready)}>
-          {saving ? 'Activation…' : 'Activer mon compte'}
+          {saving ? 'Enregistrement…' : 'Réinitialiser le mot de passe'}
         </button>
       </form>
     </AuthShell>

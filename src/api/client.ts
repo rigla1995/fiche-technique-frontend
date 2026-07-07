@@ -20,7 +20,15 @@ api.interceptors.response.use(
     if (status === 401) {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
-      window.location.href = '/login';
+      // Sur les pages auth publiques (reset, invitation…), un vieux JWT expiré en
+      // localStorage provoque un 401 de /auth/me : purger sans arracher l'utilisateur
+      // de la page (sinon le 1er clic sur un lien email atterrit sur /login).
+      const path = window.location.pathname;
+      const publicAuthPrefixes = ['/login', '/forgot-password', '/reset-password', '/invite'];
+      const onPublicAuthPage = publicAuthPrefixes.some((p) => path === p || path.startsWith(p + '/'));
+      if (!onPublicAuthPage) {
+        window.location.href = '/login';
+      }
       return Promise.reject(error);
     }
     if (status === 403) {
