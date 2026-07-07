@@ -62,7 +62,9 @@ export default function PortionsModal({ produitNom, recipeUrl, stockMap, onSave,
 
   useEffect(() => {
     api.get(recipeUrl).then(({ data }) => {
-      const rows = data as RecipeIngredient[];
+      // Les portions personnalisées ne portent que sur les ARTICLES : on ignore les
+      // lignes sous-PT que l'endpoint recette renvoie désormais (contrôle de stock).
+      const rows = (data as (RecipeIngredient & { ingredientId?: number })[]).filter((r) => r.ingredientId != null) as RecipeIngredient[];
       setRecipe(rows);
       const init: Record<number, string> = {};
       for (const r of rows) init[r.ingredientId] = String(r.portionStandard);
