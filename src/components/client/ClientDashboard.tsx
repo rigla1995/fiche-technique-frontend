@@ -117,9 +117,13 @@ export default function ClientDashboard() {
     api.get('/api/dashboard/v2?tab=filtres').then(({ data: d }) => setOptions(d)).catch(() => setOptions(null));
   }, []);
 
-  // Persistance URL + localStorage (les dates ne vivent que dans l'URL).
+  // Persistance URL + localStorage (les dates ne vivent que dans l'URL, et seulement
+  // si l'utilisateur a quitté le défaut du jour — sinon un F5/marque-page figerait
+  // la période sur des dates périmées au lieu de re-résoudre « 1er du mois → aujourd'hui »).
   useEffect(() => {
-    const params: Record<string, string> = { tab, from, to };
+    const def = defaultRange();
+    const params: Record<string, string> = { tab };
+    if (from !== def.from || to !== def.to) { params.from = from; params.to = to; }
     for (const k of FILTRE_KEYS) if (filtres[k].length) params[k] = filtres[k].join(',');
     setSearchParams(params, { replace: true });
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...params, from: undefined, to: undefined })); } catch { /* stockage indisponible : tant pis */ }

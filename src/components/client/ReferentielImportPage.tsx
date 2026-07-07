@@ -110,9 +110,10 @@ export default function ReferentielImportPage() {
       <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 14, padding: '14px 18px', marginBottom: 20 }}>
         <span style={{ fontSize: '1.2rem', lineHeight: 1 }}>🔗</span>
         <div style={{ fontSize: '0.84rem', color: '#1e3a8a', lineHeight: 1.55 }}>
-          <strong>Gestion de stock automatique</strong> — chaque article importé est assigné en gestion de stock
-          à l'ensemble de vos activités et labos. Vous pouvez le modifier à tout moment depuis la fiche de
-          l'article (Référentiel → Articles) ou le Catalogue Global.
+          <strong>Gestion de stock automatique</strong> — chaque nouvel article importé (ou article existant
+          encore sans affectation) est assigné en gestion de stock à l'ensemble de vos activités et labos ;
+          les articles déjà affectés conservent leur configuration. Vous pouvez le modifier à tout moment
+          depuis la fiche de l'article (Référentiel → Articles) ou le Catalogue Global.
         </div>
       </div>
 
@@ -234,7 +235,8 @@ export default function ReferentielImportPage() {
           </div>
 
           <p style={{ fontSize: '0.8rem', color: '#64748b', margin: '0 0 20px' }}>
-            🔗 Les articles importés sont gérés en stock dans toutes vos activités et labos —
+            🔗 Les nouveaux articles (et les existants sans affectation) sont gérés en stock dans toutes
+            vos activités et labos ; les articles déjà affectés conservent leur configuration —
             modifiable à tout moment depuis la fiche de l'article (Référentiel → Articles).
           </p>
 

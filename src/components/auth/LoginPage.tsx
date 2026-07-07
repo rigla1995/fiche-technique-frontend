@@ -158,7 +158,7 @@ export default function LoginPage() {
             <div style={{ marginBottom: 22 }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <label htmlFor="password" style={fieldLabel}>Mot de passe</label>
-                <Link to="/forgot-password" tabIndex={-1} style={{ fontSize: '0.74rem', fontWeight: 700, color: '#4338ca', textDecoration: 'none', marginBottom: 7 }}>
+                <Link to="/forgot-password" style={{ fontSize: '0.74rem', fontWeight: 700, color: '#4338ca', textDecoration: 'none', marginBottom: 7 }}>
                   Mot de passe oublié&nbsp;?
                 </Link>
               </div>
