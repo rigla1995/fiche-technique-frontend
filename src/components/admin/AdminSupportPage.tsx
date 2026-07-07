@@ -30,10 +30,6 @@ interface SupplPricing {
   nbGerants: number;
 }
 
-interface CatItem { id: number; name: string }
-interface UniteItem { id: number; name: string }
-interface DomaineItem { id: number; nom: string }
-
 // ── Details popup ─────────────────────────────────────────────────────────────
 function DetailsPopup({
   demande,
@@ -53,14 +49,11 @@ function DetailsPopup({
   const [pricing, setPricing] = useState<SupplPricing | null>(null);
   // Avenant PDF (generated client-side from pricing)
   const [avenantPdfBase64, setAvenantPdfBase64] = useState<string | null>(null);
-  // Editable ingredient fields
-  const [ingNom, setIngNom] = useState(demande.nomIngredient || '');
-  const [ingCatNom, setIngCatNom] = useState(demande.categorieNom || '');
-  const [ingUniteNom, setIngUniteNom] = useState(demande.uniteNom || '');
-  const [ingDomaineIds, setIngDomaineIds] = useState<number[]>(demande.domaineId ? [demande.domaineId] : []);
-  const [domaines, setDomaines] = useState<DomaineItem[]>([]);
-  const [categories, setCategories] = useState<CatItem[]>([]);
-  const [unites, setUnites] = useState<UniteItem[]>([]);
+  // Infos de la demande d'ingrédient — LECTURE SEULE : chaque client gère son
+  // propre référentiel, la validation ne crée plus rien côté admin.
+  const ingNom = demande.nomIngredient || '';
+  const ingCatNom = demande.categorieNom || '';
+  const ingUniteNom = demande.uniteNom || '';
   // Notes admin
   const [notesAdmin, setNotesAdmin] = useState(demande.notesAdmin || '');
   const [saving, setSaving] = useState(false);
@@ -70,11 +63,6 @@ function DetailsPopup({
     if (demande.type === 'supplement') {
       api.get(`/api/abonnements/client/${demande.clientId}/supplement-pricing`)
         .then(({ data }) => setPricing(data)).catch(() => {});
-    }
-    if (demande.type === 'ingredient_manquant') {
-      api.get('/api/domaines').then(({ data }) => setDomaines(data)).catch(() => {});
-      api.get('/api/categories').then(({ data }) => setCategories(data)).catch(() => {});
-      api.get('/api/unites?all=true').then(({ data }) => setUnites(data)).catch(() => {});
     }
   }, [demande.clientId, demande.type]);
 
@@ -108,14 +96,7 @@ function DetailsPopup({
     setSaving(true);
     setError('');
     try {
-      const extra: Record<string, unknown> = {};
-      if (demande.type === 'ingredient_manquant') {
-        extra.nomIngredient = ingNom.trim();
-        extra.categorieNom = ingCatNom.trim();
-        extra.uniteNom = ingUniteNom.trim();
-        if (ingDomaineIds.length > 0) extra.domaineIds = ingDomaineIds;
-      }
-      await onAction(demande.id, statut, { ...extra, notesAdmin: notesAdmin.trim() || null });
+      await onAction(demande.id, statut, { notesAdmin: notesAdmin.trim() || null });
       onClose();
     } catch {
       setError('Erreur lors de la mise à jour.');
@@ -229,76 +210,34 @@ function DetailsPopup({
                 </div>
               )}
 
-              {/* Ingrédient manquant */}
+              {/* Ingrédient manquant — lecture seule : chaque client gère son référentiel */}
               {demande.type === 'ingredient_manquant' && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  {isPending && (
-                    <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 8, padding: '8px 12px', fontSize: '0.78rem', color: '#166534', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <span>✏️</span> Vous pouvez modifier les informations avant de valider.
-                    </div>
-                  )}
                   <div>
-                    <label style={lbl}>Nom de l'ingrédient {isPending && '*'}</label>
-                    {isPending
-                      ? <input value={ingNom} onChange={(e) => setIngNom(e.target.value)} style={inp} />
-                      : <div style={readOnly}>{ingNom || '—'}</div>}
+                    <label style={lbl}>Nom de l'ingrédient</label>
+                    <div style={readOnly}>{ingNom || '—'}</div>
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                     <div>
                       <label style={lbl}>Catégorie</label>
-                      {isPending
-                        ? (
-                          <select value={ingCatNom} onChange={(e) => setIngCatNom(e.target.value)} style={inp}>
-                            <option value="">— Sélectionner —</option>
-                            {ingCatNom && !categories.find(c => c.name === ingCatNom) && (
-                              <option value={ingCatNom}>{ingCatNom}</option>
-                            )}
-                            {categories.map((c) => <option key={c.id} value={c.name}>{c.name}</option>)}
-                          </select>
-                        )
-                        : <div style={readOnly}>{ingCatNom || '—'}</div>}
+                      <div style={readOnly}>{ingCatNom || '—'}</div>
                     </div>
                     <div>
                       <label style={lbl}>Unité</label>
-                      {isPending
-                        ? (
-                          <select value={ingUniteNom} onChange={(e) => setIngUniteNom(e.target.value)} style={inp}>
-                            <option value="">— Sélectionner —</option>
-                            {ingUniteNom && !unites.find(u => u.name === ingUniteNom) && (
-                              <option value={ingUniteNom}>{ingUniteNom}</option>
-                            )}
-                            {unites.map((u) => <option key={u.id} value={u.name}>{u.name}</option>)}
-                          </select>
-                        )
-                        : <div style={readOnly}>{ingUniteNom || '—'}</div>}
+                      <div style={readOnly}>{ingUniteNom || '—'}</div>
                     </div>
                   </div>
                   <div>
-                    <label style={lbl}>Domaines d'activité</label>
-                    {isPending
-                      ? (
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, padding: '8px 0' }}>
-                          {domaines.map((d) => {
-                            const checked = ingDomaineIds.includes(d.id);
-                            return (
-                              <label key={d.id} style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', padding: '5px 10px', borderRadius: 8, border: `1.5px solid ${checked ? '#0d9488' : '#e2e8f0'}`, background: checked ? '#f0fdfa' : '#fff', fontSize: '0.82rem', fontWeight: checked ? 700 : 500, color: checked ? '#0f766e' : '#374151' }}>
-                                <input
-                                  type="checkbox"
-                                  checked={checked}
-                                  onChange={(e) => {
-                                    if (e.target.checked) setIngDomaineIds(prev => [...prev, d.id]);
-                                    else setIngDomaineIds(prev => prev.filter(id => id !== d.id));
-                                  }}
-                                  style={{ accentColor: '#0d9488' }}
-                                />
-                                {d.nom}
-                              </label>
-                            );
-                          })}
-                        </div>
-                      )
-                      : <div style={readOnly}>{demande.domaineNom || '—'}</div>}
+                    <label style={lbl}>Domaine d'activité</label>
+                    <div style={readOnly}>{demande.domaineNom || '—'}</div>
                   </div>
+                  {isPending && (
+                    <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 8, padding: '8px 12px', fontSize: '0.78rem', color: '#1e40af', fontWeight: 600 }}>
+                      ℹ️ Chaque client gère son propre référentiel : la validation n'ajoute rien
+                      automatiquement. Guidez le client via la note ci-dessous — il peut créer
+                      l'article lui-même dans Référentiel → Articles.
+                    </div>
+                  )}
                 </div>
               )}
             </div>
