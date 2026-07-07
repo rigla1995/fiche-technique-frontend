@@ -25,7 +25,6 @@ import HistoriquepertesPage from './components/client/HistoriquepertesPage';
 import StockLaboPage from './components/client/StockLaboPage';
 import TransferPage from './components/client/TransferPage';
 import TransferHistoriquePage from './components/client/TransferHistoriquePage';
-import GlobalCataloguePage from './components/client/GlobalCataloguePage';
 import FournisseursPage from './components/client/FournisseursPage';
 import FournisseursLaboPage from './components/client/FournisseursLaboPage';
 import LaboHistoriqueApproPage from './components/client/LaboHistoriqueApproPage';
@@ -126,7 +125,9 @@ export default function App() {
             <Route path="/client/products/valorises" element={<ValorisesPage />} />
             <Route path="/client/products/new" element={<ProductForm />} />
             <Route path="/client/products/:id/edit" element={<ProductForm />} />
-            <Route path="/client/catalogue-global" element={<GlobalCataloguePage />} />
+            {/* Ancienne page « Catalogue Global » supprimée — les affectations se gèrent
+                depuis la fiche de chaque article (Référentiel → Articles). */}
+            <Route path="/client/catalogue-global" element={<Navigate to="/client/referentiel/articles" replace />} />
             <Route path="/client/referentiel/unites" element={<ReferentielUnitesPage />} />
             <Route path="/client/referentiel/familles" element={<ReferentielFamillesPage />} />
             <Route path="/client/referentiel/categories" element={<ReferentielCategoriesPage />} />

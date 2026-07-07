@@ -6,7 +6,7 @@ import { useNotifications } from '../../context/NotificationContext';
 import { useAuth } from '../../context/AuthContext';
 
 const TYPE_LABELS: Record<string, { label: string; icon: string; desc: string }> = {
-  ingredient_manquant: { label: 'Ingrédient manquant', icon: '🥕', desc: 'Demander l\'ajout d\'un ingrédient absent du catalogue' },
+  ingredient_manquant: { label: 'Ingrédient manquant', icon: '🥕', desc: 'Besoin d\'aide sur un ingrédient absent de votre référentiel' },
   supplement:          { label: 'Ajout de capacité',   icon: '➕', desc: 'Demander l\'ajout d\'activités, labos ou gérants' },
   aide:                { label: 'Besoin d\'aide',       icon: '💬', desc: 'Nous décrire votre besoin ou signaler un problème' },
 };
