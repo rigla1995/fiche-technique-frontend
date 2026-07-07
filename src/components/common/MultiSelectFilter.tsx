@@ -16,6 +16,8 @@ interface Props {
   accent?: string;
   /** au-delà de ce nombre d'options, une recherche interne s'affiche */
   searchThreshold?: number;
+  /** afficher le bouton même sans aucune option (panneau avec message) */
+  alwaysShow?: boolean;
 }
 
 /**
@@ -24,7 +26,7 @@ interface Props {
  * filtre (toutes les valeurs) — le bouton l'affiche comme « Tous ».
  */
 export default function MultiSelectFilter({
-  label, icon, options, selected, onChange, accent = '#2563eb', searchThreshold = 8,
+  label, icon, options, selected, onChange, accent = '#2563eb', searchThreshold = 8, alwaysShow = false,
 }: Props) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
@@ -54,14 +56,11 @@ export default function MultiSelectFilter({
   };
 
   const allSelected = selected.length === 0;
-  // Résumé = libellés cochés (tronqués par le conteneur) — le badge porte déjà le compte,
-  // inutile d'écrire « n sélections » dans le champ.
-  const resume = allSelected
-    ? 'Tous'
-    : selected.map((v) => options.find((o) => o.value === v)?.label ?? v).join(', ');
 
-  if (options.length === 0) return null;
+  if (options.length === 0 && !alwaysShow) return null;
 
+  // Champ compact : « Tous » ou juste le NOMBRE de choix cochés (jamais les
+  // libellés — demande client 2026-07-07). Le bouton tient sur une seule ligne.
   return (
     <div ref={rootRef} style={{ position: 'relative', display: 'inline-block' }}>
       <button
@@ -74,15 +73,14 @@ export default function MultiSelectFilter({
           background: allSelected ? '#fff' : `${accent}14`,
           fontSize: '0.8rem', fontWeight: 600,
           color: allSelected ? '#475569' : accent,
-          maxWidth: 230,
+          whiteSpace: 'nowrap',
         }}
       >
         {icon && <span>{icon}</span>}
-        <span style={{ color: '#94a3b8', fontWeight: 700, fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{label}</span>
-        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{resume}</span>
-        {!allSelected && (
-          <span style={{ background: accent, color: '#fff', borderRadius: 20, fontSize: '0.66rem', fontWeight: 800, padding: '1px 7px' }}>{selected.length}</span>
-        )}
+        <span style={{ color: '#94a3b8', fontWeight: 700, fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.04em', whiteSpace: 'nowrap' }}>{label}</span>
+        {allSelected
+          ? <span>Tous</span>
+          : <span style={{ background: accent, color: '#fff', borderRadius: 20, fontSize: '0.7rem', fontWeight: 800, padding: '1px 8px' }}>{selected.length}</span>}
         <span style={{ fontSize: '0.6rem', color: '#94a3b8' }}>{open ? '▲' : '▼'}</span>
       </button>
 
@@ -108,7 +106,8 @@ export default function MultiSelectFilter({
             </div>
           )}
           <div style={{ maxHeight: 260, overflowY: 'auto', padding: '6px 0' }}>
-            {visible.length === 0 && <div style={{ padding: '10px 14px', fontSize: '0.78rem', color: '#94a3b8' }}>Aucun résultat.</div>}
+            {options.length === 0 && <div style={{ padding: '10px 14px', fontSize: '0.78rem', color: '#94a3b8' }}>Aucune option disponible pour ce compte.</div>}
+            {options.length > 0 && visible.length === 0 && <div style={{ padding: '10px 14px', fontSize: '0.78rem', color: '#94a3b8' }}>Aucun résultat.</div>}
             {visible.map((o) => {
               const checked = selected.includes(o.value);
               return (
