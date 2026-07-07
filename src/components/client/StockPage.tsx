@@ -439,6 +439,22 @@ interface StockMatrixProps {
   onRefresh?: () => void;
 }
 
+interface PtComposant {
+  key: string;
+  nom: string;
+  isSousPt: boolean;
+  portion: number;
+  stockCourant: number;
+  lastPrix: number | null;
+}
+interface PtRecipeInfo {
+  composants: PtComposant[];
+  /** max produisible d'après les stocks courants serveur (null si recette vide) */
+  max: number | null;
+  /** true si TOUS les composants ont un prix (PMP) */
+  prixComplet: boolean;
+}
+
 function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fournisseurFilter, refFactureFilter, activiteId, fournisseurs = [], onSave, onSavePT: _onSavePT, onSaveSeuilMin, onSavePerte, onRefresh }: StockMatrixProps) {
   const { t } = useTranslation();
   const { canWrite } = useAuth();
@@ -454,25 +470,36 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
   const [, setSeuilSaving] = useState<Record<number, boolean>>({});
   const [totalOverrides, setTotalOverrides] = useState<Record<number, number>>({});
   const [portionsModal, setPortionsModal] = useState<{ produitId: number; nom: string } | null>(null);
-  const [ptRecipeMaxMap, setPtRecipeMaxMap] = useState<Record<number, number | null>>({});
+  // Recette + stocks courants SERVEUR par produit PT (mêmes chiffres que la garde 422
+  // de production) : alimente le « Max », le bloc d'alertes dynamique et l'aperçu.
+  const [ptRecipeMap, setPtRecipeMap] = useState<Record<number, PtRecipeInfo | null>>({});
 
-  const fetchPtMax = async (produitId: number, map: Record<number, number | null>) => {
-    if (map[produitId] !== undefined) return;
+  const fetchPtRecipe = async (produitId: number) => {
+    if (ptRecipeMap[produitId] !== undefined) return;
     try {
       const url = activiteId
         ? `/api/stock/pt/${produitId}/recipe?activiteId=${activiteId}`
         : `/api/stock/pt/${produitId}/recipe`;
       const { data } = await api.get(url);
-      const ingStock = Object.fromEntries(entries.filter((e) => !e.isPT).map((e) => [e.ingredientId, (e.totalQuantite ?? 0) as number]));
-      let min = Infinity;
-      for (const r of data as Array<{ ingredientId: number; portionStandard: number }>) {
-        if (!r.portionStandard || r.portionStandard <= 0) continue;
-        min = Math.min(min, (ingStock[r.ingredientId] ?? 0) / r.portionStandard);
+      const composants: PtComposant[] = (data as Array<{ type?: string; ingredientId?: number; sousProduitId?: number; nom: string; portionStandard: number; lastPrix: number | null; stockCourant?: number }>)
+        .map((r) => ({
+          key: r.type === 'sous_pt' ? `sp-${r.sousProduitId}` : `art-${r.ingredientId}`,
+          nom: r.nom,
+          isSousPt: r.type === 'sous_pt',
+          portion: r.portionStandard,
+          stockCourant: r.stockCourant ?? 0,
+          lastPrix: r.lastPrix,
+        }));
+      let max: number | null = null;
+      for (const c of composants) {
+        if (!c.portion || c.portion <= 0) continue;
+        const m = Math.max(0, c.stockCourant) / c.portion;
+        max = max === null ? m : Math.min(max, m);
       }
-      const maxVal = isFinite(min) && min >= 0 ? min : null;
-      setPtRecipeMaxMap((prev) => ({ ...prev, [produitId]: maxVal }));
+      const prixComplet = composants.every((c) => c.lastPrix != null);
+      setPtRecipeMap((prev) => ({ ...prev, [produitId]: { composants, max, prixComplet } }));
     } catch {
-      setPtRecipeMaxMap((prev) => ({ ...prev, [produitId]: null }));
+      setPtRecipeMap((prev) => ({ ...prev, [produitId]: null }));
     }
   };
 
@@ -504,6 +531,8 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
   useEffect(() => {
     setRows(buildInitialRowState(entries));
     setTotalOverrides({});
+    // Les stocks ont pu changer (enregistrement, rechargement) : re-demander les recettes.
+    setPtRecipeMap({});
     const initial: Record<number, string> = {};
     for (const e of entries) {
       initial[e.ingredientId] = e.seuilMin !== null ? String(e.seuilMin) : '';
@@ -531,6 +560,12 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
         },
       }));
     } else {
+      // Saisie d'une quantité sur un PT : charger la recette + stocks serveur pour le
+      // contrôle dynamique (le focus seul peut être raté par un collage/autofill).
+      if (field === 'quantite') {
+        const entry = entries.find((e) => e.ingredientId === id);
+        if (entry?.isPT && entry.produitId) fetchPtRecipe(entry.produitId);
+      }
       setRows((prev) => ({ ...prev, [id]: { ...prev[id], [field]: value, saved: false, error: '' } }));
     }
   };
@@ -767,8 +802,46 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
     return !entry?.isPT && parseFloat(row.quantite) > 0;
   });
 
+  // ── Contrôle dynamique des productions PT saisies (mêmes chiffres que la garde
+  //    serveur) : manques par composant (bloquant) + prix incomplets (avertissement).
+  //    Les besoins sont AGRÉGÉS entre les PT saisis simultanément (un même article
+  //    peut être consommé par plusieurs recettes).
+  const ptChecks = (() => {
+    const besoins = new Map<string, { nom: string; sousPt: boolean; dispo: number; besoin: number }>();
+    const prixIncomplets: string[] = [];
+    let enChargement = false;
+    for (const [idStr, row] of Object.entries(rows)) {
+      const entry = entries.find((e) => e.ingredientId === Number(idStr));
+      if (!entry?.isPT || !entry.produitId) continue;
+      const qty = parseFloat(row.quantite);
+      if (!(qty > 0)) continue;
+      const info = ptRecipeMap[entry.produitId];
+      if (info === undefined) { enChargement = true; continue; }
+      if (info === null) continue; // recette illisible : la garde serveur tranchera à l'enregistrement
+      if (!info.prixComplet) prixIncomplets.push(entry.nom);
+      for (const c of info.composants) {
+        const prev = besoins.get(c.key);
+        besoins.set(c.key, {
+          nom: c.nom,
+          sousPt: c.isSousPt,
+          dispo: Math.max(0, c.stockCourant),
+          besoin: (prev?.besoin ?? 0) + c.portion * qty,
+        });
+      }
+    }
+    const manquants = [...besoins.values()]
+      .filter((b) => b.besoin > b.dispo + 0.0005)
+      .map((b) => ({
+        ...b,
+        besoin: Math.round(b.besoin * 1000) / 1000,
+        manque: Math.round((b.besoin - b.dispo) * 1000) / 1000,
+      }))
+      .sort((a, b) => b.manque - a.manque);
+    return { manquants, prixIncomplets, enChargement };
+  })();
+
   const canSaveBulk = (readyCount > 0 && !!bulkDate.trim() && (!hasFournisseurs || !!bulkFournisseurId) && !!bulkRefFacture.trim())
-    || (ptReadyCount > 0 && !!bulkDate.trim() && !hasIngredientQuantity);
+    || (ptReadyCount > 0 && !!bulkDate.trim() && !hasIngredientQuantity && ptChecks.manquants.length === 0);
 
   const previewLines: PreviewLine[] = Object.entries(rows)
     .filter(([idStr, row]) => {
@@ -813,7 +886,50 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
 
   return (
     <div>
-      <ApproPreviewPanel lines={previewLines} />
+      {/* Bloc d'alertes dynamique : quantités manquantes pour les productions PT saisies.
+          L'aperçu de saisie ne s'affiche que lorsque tout est couvert. */}
+      {ptChecks.manquants.length > 0 ? (
+        <div style={{ background: '#fef2f2', border: '1.5px solid #fca5a5', borderRadius: 12, padding: '14px 18px', marginBottom: 14 }}>
+          <div style={{ fontWeight: 800, color: '#b91c1c', fontSize: '0.9rem', marginBottom: 4 }}>
+            ⚠️ Production impossible en l'état — quantités manquantes
+          </div>
+          <div style={{ fontSize: '0.78rem', color: '#7f1d1d', marginBottom: 10 }}>
+            Complétez d'abord le stock des composants ci-dessous (approvisionnement, transfert ou production du sous-produit). L'aperçu de saisie s'affichera quand tout sera couvert.
+          </div>
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ borderCollapse: 'collapse', fontSize: '0.8rem', minWidth: 420 }}>
+              <thead>
+                <tr>
+                  {['Composant', 'Disponible', 'Nécessaire', 'Manquant'].map((h) => (
+                    <th key={h} style={{ textAlign: h === 'Composant' ? 'left' : 'right', padding: '5px 12px', color: '#991b1b', borderBottom: '1px solid #fecaca', fontWeight: 800 }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {ptChecks.manquants.map((m) => (
+                  <tr key={m.nom}>
+                    <td style={{ padding: '5px 12px', color: '#7f1d1d', fontWeight: 700 }}>
+                      {m.nom}{m.sousPt && <span style={{ fontSize: '0.68rem', fontWeight: 700, color: '#7c3aed', background: '#f3e8ff', borderRadius: 20, padding: '1px 7px', marginLeft: 6 }}>sous-produit</span>}
+                    </td>
+                    <td style={{ padding: '5px 12px', textAlign: 'right', color: '#7f1d1d' }}>{m.dispo.toFixed(3)}</td>
+                    <td style={{ padding: '5px 12px', textAlign: 'right', color: '#7f1d1d' }}>{m.besoin.toFixed(3)}</td>
+                    <td style={{ padding: '5px 12px', textAlign: 'right', color: '#dc2626', fontWeight: 800 }}>{m.manque.toFixed(3)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ) : (
+        <>
+          {ptChecks.prixIncomplets.length > 0 && (
+            <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 10, padding: '10px 16px', marginBottom: 12, fontSize: '0.8rem', color: '#92400e' }}>
+              ℹ️ Prix incomplet pour <strong>{ptChecks.prixIncomplets.join(', ')}</strong> : certains composants n'ont pas encore de prix (PMP) — le coût de production sera partiel, le prix unitaire n'est donc pas affiché.
+            </div>
+          )}
+          <ApproPreviewPanel lines={previewLines} />
+        </>
+      )}
       {conflictModal && (
         <ApproConflictModal
           date={conflictModal.date}
@@ -1097,15 +1213,16 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                                 className="input"
                                 disabled={!canWrite || isLaboPT || (entry.isPT ? hasIngredientQuantity : hasPTQuantity)}
                                 title={isLaboPT ? "Reçu uniquement par transfert depuis le labo — pas d'appro manuel ici." : (entry.isPT && entry.prixPartiel ? '⚠️ Prix incomplet pour certains articles — calcul partiel' : undefined)}
-                                onFocus={(e) => { e.target.select(); if (entry.isPT && entry.produitId) fetchPtMax(entry.produitId, ptRecipeMaxMap); }}
+                                onFocus={(e) => { e.target.select(); if (entry.isPT && entry.produitId) fetchPtRecipe(entry.produitId); }}
                               />
                               {entry.isPT && entry.produitId && !isLaboPT && (() => {
-                                const max = ptRecipeMaxMap[entry.produitId];
-                                if (max === undefined) return null;
-                                if (max !== null && max <= 0) return null; // pas de « Max » si 0 (comme stock labo)
+                                const info = ptRecipeMap[entry.produitId];
+                                // Max produisible d'après les stocks courants SERVEUR (aucun « ∞ » :
+                                // sans recette il n'y a simplement pas d'indication).
+                                if (!info || info.max === null || info.max <= 0) return null;
                                 return (
-                                  <div style={{ fontSize: '0.7rem', marginTop: 2, fontWeight: 700, color: max !== null && parseFloat(row.quantite) > max ? '#dc2626' : '#2563eb' }}>
-                                    Max: {max !== null ? max.toFixed(3) : '∞'}
+                                  <div style={{ fontSize: '0.7rem', marginTop: 2, fontWeight: 700, color: parseFloat(row.quantite) > info.max ? '#dc2626' : '#2563eb' }}>
+                                    Max: {info.max.toFixed(3)}
                                     {entry.prixPartiel && ' ⚠️'}
                                   </div>
                                 );
@@ -1113,6 +1230,11 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                             </td>
                             <td style={{ textAlign: 'center', padding: '10px 14px', verticalAlign: 'middle' }}>
                               {entry.isPT ? (
+                                entry.prixPartiel ? (
+                                  // PMP incomplet sur au moins un composant : afficher un prix serait
+                                  // trompeur (coût partiel) — on masque et on explique.
+                                  <span title="Prix indisponible : certains composants de la recette n'ont pas encore de prix (PMP)." style={{ fontSize: '0.82rem', color: '#d97706', fontWeight: 800, cursor: 'help' }}>—&nbsp;⚠️</span>
+                                ) : (
                                 <span title="Calculé automatiquement depuis les prix des articles">
                                   {entry.prixCalcule != null && entry.prixCalcule > 0 ? (
                                     <span style={{ fontSize: '0.88rem', color: '#7c3aed', fontWeight: 600 }}>{entry.prixCalcule.toFixed(3)}</span>
@@ -1122,6 +1244,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                                     <span style={{ fontSize: '0.78rem', color: '#9ca3af' }}>—</span>
                                   )}
                                 </span>
+                                )
                               ) : (
                                 <input
                                   type="number" min="0" step="0.001" placeholder="—"
