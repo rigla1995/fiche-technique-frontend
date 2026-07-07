@@ -549,12 +549,8 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                     <span className="link-label">Historique paiements</span>
                   </NavLink>
                 </li>
-                <li>
-                  <NavLink to="/client/ai-assistant" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>
-                    <span className="link-icon">🤖</span>
-                    <span className="link-label">Assistant IA</span>
-                  </NavLink>
-                </li>
+                {/* Lien Assistant IA masqué temporairement (à finaliser) — la page
+                    /client/ai-assistant reste accessible par URL. */}
                 <li>
                   <NavLink to="/client/guide" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>
                     <span className="link-icon">📖</span>
@@ -571,12 +567,8 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                   <span className="link-label">Mon abonnement</span>
                 </NavLink>
               </li>
-              <li>
-                <NavLink to="/client/ai-assistant" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>
-                  <span className="link-icon">🤖</span>
-                  <span className="link-label">Assistant IA</span>
-                </NavLink>
-              </li>
+              {/* Lien Assistant IA masqué temporairement (à finaliser) — la page
+                  /client/ai-assistant reste accessible par URL. */}
               <li>
                 <NavLink to="/client/guide" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>
                   <span className="link-icon">📖</span>
