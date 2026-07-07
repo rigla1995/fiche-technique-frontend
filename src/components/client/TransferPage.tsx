@@ -720,10 +720,10 @@ export default function TransferPage() {
           </div>
           <div style={{ fontSize: '0.9rem', color: 'var(--text-muted)', maxWidth: 460, margin: '0 auto 20px', lineHeight: 1.6 }}>
             Les activités assignées à ce labo ne sont pas encore configurées.
-            Pour pouvoir effectuer des transferts, accédez au <strong>Catalogue Global</strong> et
-            assignez des articles aux activités liées à ce labo.
+            Pour pouvoir effectuer des transferts, assignez des articles aux activités
+            liées à ce labo depuis votre <strong>référentiel</strong> (fiche de l'article).
           </div>
-          <Link to="/client/catalogue-global"
+          <Link to="/client/referentiel/articles"
             style={{
               display: 'inline-flex', alignItems: 'center', gap: 8,
               background: 'linear-gradient(135deg, #7e22ce, #a855f7)',
@@ -731,7 +731,7 @@ export default function TransferPage() {
               fontWeight: 700, fontSize: '0.9rem', textDecoration: 'none',
               boxShadow: '0 4px 16px rgba(126,34,206,0.35)',
             }}>
-            🌐 Aller au Catalogue Global →
+            🧂 Aller aux Articles →
           </Link>
         </div>
       ) : activites.length === 0 ? (

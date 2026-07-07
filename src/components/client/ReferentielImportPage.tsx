@@ -113,7 +113,7 @@ export default function ReferentielImportPage() {
           <strong>Gestion de stock automatique</strong> — chaque nouvel article importé (ou article existant
           encore sans affectation) est assigné en gestion de stock à l'ensemble de vos activités et labos ;
           les articles déjà affectés conservent leur configuration. Vous pouvez le modifier à tout moment
-          depuis la fiche de l'article (Référentiel → Articles) ou le Catalogue Global.
+          depuis la fiche de l'article (Référentiel → Articles).
         </div>
       </div>
 
