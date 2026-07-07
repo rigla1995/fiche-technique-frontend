@@ -25,30 +25,13 @@ const TABS: { key: TabKey; icon: string; label: string }[] = [
   { key: 'labo', icon: '🧪', label: 'Labo' },
 ];
 
-const PRESETS: { key: string; label: string }[] = [
-  { key: 'mois', label: 'Mois en cours' },
-  { key: '7j', label: '7 jours' },
-  { key: '30j', label: '30 jours' },
-  { key: 'mois-prec', label: 'Mois dernier' },
-  { key: 'trimestre', label: 'Trimestre' },
-  { key: 'annee', label: 'Année' },
-  { key: 'perso', label: 'Personnalisé' },
-];
-
 const fmtIso = (d: Date) => d.toISOString().slice(0, 10);
+const isIsoDate = (s: string) => /^\d{4}-\d{2}-\d{2}$/.test(s);
 
-const presetRange = (preset: string): { from: string; to: string } => {
+// Période par défaut : du 1er du mois courant à aujourd'hui.
+const defaultRange = (): { from: string; to: string } => {
   const now = new Date();
-  const utc = (y: number, m: number, d: number) => new Date(Date.UTC(y, m, d));
-  const y = now.getUTCFullYear(); const m = now.getUTCMonth();
-  switch (preset) {
-    case '7j': { const f = new Date(now); f.setUTCDate(f.getUTCDate() - 6); return { from: fmtIso(f), to: fmtIso(now) }; }
-    case '30j': { const f = new Date(now); f.setUTCDate(f.getUTCDate() - 29); return { from: fmtIso(f), to: fmtIso(now) }; }
-    case 'mois-prec': return { from: fmtIso(utc(y, m - 1, 1)), to: fmtIso(utc(y, m, 0)) };
-    case 'trimestre': { const qm = Math.floor(m / 3) * 3; return { from: fmtIso(utc(y, qm, 1)), to: fmtIso(utc(y, qm + 3, 0)) }; }
-    case 'annee': return { from: fmtIso(utc(y, 0, 1)), to: fmtIso(utc(y, 11, 31)) };
-    default: return { from: fmtIso(utc(y, m, 1)), to: fmtIso(utc(y, m + 1, 0)) };
-  }
+  return { from: fmtIso(new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1))), to: fmtIso(now) };
 };
 
 interface FiltresOptions {
@@ -106,19 +89,20 @@ export default function ClientDashboard() {
       try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null'); } catch { return null; }
     })();
     const get = (k: string) => searchParams.get(k) ?? stored?.[k] ?? '';
-    const preset = get('preset') || 'mois';
-    const range = preset === 'perso' && get('from') && get('to')
-      ? { from: get('from'), to: get('to') }
-      : presetRange(preset);
+    // Dates : URL uniquement (une visite fraîche repart toujours du défaut
+    // « 1er du mois → aujourd'hui » — on ne restaure pas une période périmée).
+    const def = defaultRange();
+    const urlFrom = searchParams.get('from') ?? '';
+    const urlTo = searchParams.get('to') ?? '';
+    const range = isIsoDate(urlFrom) && isIsoDate(urlTo) ? { from: urlFrom, to: urlTo } : def;
     const filtres = emptyFiltres();
     for (const k of FILTRE_KEYS) filtres[k] = String(get(k) || '').split(',').filter(Boolean);
     const tab = (TABS.some((t) => t.key === get('tab')) ? get('tab') : 'overview') as TabKey;
-    return { tab, preset, ...range, filtres };
+    return { tab, ...range, filtres };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const [tab, setTab] = useState<TabKey>(init.tab);
-  const [preset, setPreset] = useState(init.preset);
   const [from, setFrom] = useState(init.from);
   const [to, setTo] = useState(init.to);
   const [filtres, setFiltres] = useState<FiltresState>(init.filtres);
@@ -133,16 +117,19 @@ export default function ClientDashboard() {
     api.get('/api/dashboard/v2?tab=filtres').then(({ data: d }) => setOptions(d)).catch(() => setOptions(null));
   }, []);
 
-  // Persistance URL + localStorage.
+  // Persistance URL + localStorage (les dates ne vivent que dans l'URL, et seulement
+  // si l'utilisateur a quitté le défaut du jour — sinon un F5/marque-page figerait
+  // la période sur des dates périmées au lieu de re-résoudre « 1er du mois → aujourd'hui »).
   useEffect(() => {
-    const params: Record<string, string> = { tab, preset };
-    if (preset === 'perso') { params.from = from; params.to = to; }
+    const def = defaultRange();
+    const params: Record<string, string> = { tab };
+    if (from !== def.from || to !== def.to) { params.from = from; params.to = to; }
     for (const k of FILTRE_KEYS) if (filtres[k].length) params[k] = filtres[k].join(',');
     setSearchParams(params, { replace: true });
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(params)); } catch { /* stockage indisponible : tant pis */ }
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...params, from: undefined, to: undefined })); } catch { /* stockage indisponible : tant pis */ }
     // setSearchParams volontairement hors deps : son identité peut changer à chaque rendu.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tab, preset, from, to, filtres]);
+  }, [tab, from, to, filtres]);
 
   // Chargement des données de l'onglet courant.
   const load = useCallback(() => {
@@ -151,18 +138,15 @@ export default function ClientDashboard() {
     abortRef.current = ctrl;
     setLoading(true);
     setErreur(false);
-    const qs = new URLSearchParams({ tab, from, to });
+    // Bornes remises dans l'ordre si l'utilisateur les inverse.
+    const [f, t] = from <= to ? [from, to] : [to, from];
+    const qs = new URLSearchParams({ tab, from: f, to: t });
     for (const k of FILTRE_KEYS) if (filtres[k].length) qs.set(k, filtres[k].join(','));
     api.get(`/api/dashboard/v2?${qs.toString()}`, { signal: ctrl.signal })
       .then(({ data: d }) => { setData(d); setLoading(false); })
       .catch((e) => { if (e?.code !== 'ERR_CANCELED') { setErreur(true); setLoading(false); } });
   }, [tab, from, to, filtres]);
   useEffect(() => { load(); }, [load]);
-
-  const applyPreset = (p: string) => {
-    setPreset(p);
-    if (p !== 'perso') { const r = presetRange(p); setFrom(r.from); setTo(r.to); }
-  };
 
   const setFiltre = (k: keyof FiltresState) => (values: string[]) => setFiltres((f) => ({ ...f, [k]: values }));
   const filtresActifs = FILTRE_KEYS.reduce((n, k) => n + (filtres[k].length ? 1 : 0), 0);
@@ -254,23 +238,13 @@ export default function ClientDashboard() {
 
       {/* Barre de filtres */}
       <div style={{ background: '#fff', border: '1px solid var(--border)', borderRadius: 14, padding: '12px 14px', marginBottom: 16, display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
-        <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', alignItems: 'center' }}>
-          {PRESETS.map((p) => (
-            <button key={p.key} onClick={() => applyPreset(p.key)}
-              style={{
-                padding: '6px 11px', borderRadius: 20, border: 'none', cursor: 'pointer', fontSize: '0.74rem', fontWeight: 700,
-                background: preset === p.key ? '#2563eb' : '#f1f5f9', color: preset === p.key ? '#fff' : '#64748b',
-              }}>
-              {p.label}
-            </button>
-          ))}
-          {preset === 'perso' && (
-            <span style={{ display: 'inline-flex', gap: 6, alignItems: 'center', marginLeft: 4 }}>
-              <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} style={dateInp} />
-              <span style={{ color: '#94a3b8' }}>→</span>
-              <input type="date" value={to} onChange={(e) => setTo(e.target.value)} style={dateInp} />
-            </span>
-          )}
+        {/* Période — même gabarit que les autres champs de filtre. */}
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '4px 12px', borderRadius: 10, border: '1.5px solid #e2e8f0', background: '#fff' }}>
+          <span>📅</span>
+          <span style={{ color: '#94a3b8', fontWeight: 700, fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Période</span>
+          <input type="date" value={from} max={to || undefined} onChange={(e) => e.target.value && setFrom(e.target.value)} style={dateInp} aria-label="Date début" />
+          <span style={{ color: '#94a3b8' }}>→</span>
+          <input type="date" value={to} min={from || undefined} onChange={(e) => e.target.value && setTo(e.target.value)} style={dateInp} aria-label="Date fin" />
         </div>
         <div style={{ width: 1, alignSelf: 'stretch', background: '#e2e8f0', margin: '0 4px' }} />
         {options && (
@@ -324,7 +298,7 @@ export default function ClientDashboard() {
   );
 }
 
-const dateInp: React.CSSProperties = { padding: '5px 8px', borderRadius: 8, border: '1px solid #e2e8f0', fontSize: '0.76rem', fontFamily: 'inherit' };
+const dateInp: React.CSSProperties = { padding: '5px 6px', borderRadius: 8, border: 'none', background: '#f8fafc', fontSize: '0.78rem', fontWeight: 600, color: '#475569', fontFamily: 'inherit', outline: 'none' };
 const kpiGrid: React.CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(195px, 1fr))', gap: 10, marginBottom: 16 };
 const twoCols: React.CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(330px, 1fr))', gap: 14, marginBottom: 14 };
 

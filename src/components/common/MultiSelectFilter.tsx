@@ -54,11 +54,11 @@ export default function MultiSelectFilter({
   };
 
   const allSelected = selected.length === 0;
+  // Résumé = libellés cochés (tronqués par le conteneur) — le badge porte déjà le compte,
+  // inutile d'écrire « n sélections » dans le champ.
   const resume = allSelected
     ? 'Tous'
-    : selected.length === 1
-      ? (options.find((o) => o.value === selected[0])?.label ?? '1 sélection')
-      : `${selected.length} sélections`;
+    : selected.map((v) => options.find((o) => o.value === v)?.label ?? v).join(', ');
 
   if (options.length === 0) return null;
 
