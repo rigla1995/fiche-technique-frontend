@@ -7,7 +7,7 @@ import HistoryFilterBar, { FilterField, FilterInput, FilterSelect } from '../com
 import { useAuth } from '../../context/AuthContext';
 import PortionsModal from './PortionsModal';
 import InvoiceConfirmModal, { type InvoiceLineItem } from './InvoiceConfirmModal';
-import ApproPreviewPanel, { type PreviewLine } from './ApproPreviewPanel';
+import ApproPreviewPanel, { ProductionAlertPanel, type PreviewLine } from './ApproPreviewPanel';
 import type { Activite, StockEntry, StockHistoryEntry, ActiviteTypesSummary, Fournisseur } from '../../types';
 import GuideButton from './GuideButton';
 
@@ -809,12 +809,14 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
   const ptChecks = (() => {
     const besoins = new Map<string, { nom: string; sousPt: boolean; dispo: number; besoin: number }>();
     const prixIncomplets: string[] = [];
+    const productions: { nom: string; quantite: number }[] = [];
     let enChargement = false;
     for (const [idStr, row] of Object.entries(rows)) {
       const entry = entries.find((e) => e.ingredientId === Number(idStr));
       if (!entry?.isPT || !entry.produitId) continue;
       const qty = parseFloat(row.quantite);
       if (!(qty > 0)) continue;
+      productions.push({ nom: entry.nom, quantite: qty });
       const info = ptRecipeMap[entry.produitId];
       if (info === undefined) { enChargement = true; continue; }
       if (info === null) continue; // recette illisible : la garde serveur tranchera à l'enregistrement
@@ -837,7 +839,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
         manque: Math.round((b.besoin - b.dispo) * 1000) / 1000,
       }))
       .sort((a, b) => b.manque - a.manque);
-    return { manquants, prixIncomplets, enChargement };
+    return { manquants, prixIncomplets, productions, enChargement };
   })();
 
   const canSaveBulk = (readyCount > 0 && !!bulkDate.trim() && (!hasFournisseurs || !!bulkFournisseurId) && !!bulkRefFacture.trim())
@@ -886,49 +888,17 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
 
   return (
     <div>
-      {/* Bloc d'alertes dynamique : quantités manquantes pour les productions PT saisies.
-          L'aperçu de saisie ne s'affiche que lorsque tout est couvert. */}
+      {/* Même emplacement flottant (bas droite) : panneau d'alerte de production si des
+          quantités manquent, sinon l'aperçu de saisie. */}
       {ptChecks.manquants.length > 0 ? (
-        <div style={{ background: '#fef2f2', border: '1.5px solid #fca5a5', borderRadius: 12, padding: '14px 18px', marginBottom: 14 }}>
-          <div style={{ fontWeight: 800, color: '#b91c1c', fontSize: '0.9rem', marginBottom: 4 }}>
-            ⚠️ Production impossible en l'état — quantités manquantes
-          </div>
-          <div style={{ fontSize: '0.78rem', color: '#7f1d1d', marginBottom: 10 }}>
-            Complétez d'abord le stock des composants ci-dessous (approvisionnement, transfert ou production du sous-produit). L'aperçu de saisie s'affichera quand tout sera couvert.
-          </div>
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ borderCollapse: 'collapse', fontSize: '0.8rem', minWidth: 420 }}>
-              <thead>
-                <tr>
-                  {['Composant', 'Disponible', 'Nécessaire', 'Manquant'].map((h) => (
-                    <th key={h} style={{ textAlign: h === 'Composant' ? 'left' : 'right', padding: '5px 12px', color: '#991b1b', borderBottom: '1px solid #fecaca', fontWeight: 800 }}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {ptChecks.manquants.map((m) => (
-                  <tr key={m.nom}>
-                    <td style={{ padding: '5px 12px', color: '#7f1d1d', fontWeight: 700 }}>
-                      {m.nom}{m.sousPt && <span style={{ fontSize: '0.68rem', fontWeight: 700, color: '#7c3aed', background: '#f3e8ff', borderRadius: 20, padding: '1px 7px', marginLeft: 6 }}>sous-produit</span>}
-                    </td>
-                    <td style={{ padding: '5px 12px', textAlign: 'right', color: '#7f1d1d' }}>{m.dispo.toFixed(3)}</td>
-                    <td style={{ padding: '5px 12px', textAlign: 'right', color: '#7f1d1d' }}>{m.besoin.toFixed(3)}</td>
-                    <td style={{ padding: '5px 12px', textAlign: 'right', color: '#dc2626', fontWeight: 800 }}>{m.manque.toFixed(3)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+        <ProductionAlertPanel productions={ptChecks.productions} manquants={ptChecks.manquants} />
       ) : (
-        <>
-          {ptChecks.prixIncomplets.length > 0 && (
-            <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 10, padding: '10px 16px', marginBottom: 12, fontSize: '0.8rem', color: '#92400e' }}>
-              ℹ️ Prix incomplet pour <strong>{ptChecks.prixIncomplets.join(', ')}</strong> : certains composants n'ont pas encore de prix (PMP) — le coût de production sera partiel, le prix unitaire n'est donc pas affiché.
-            </div>
-          )}
-          <ApproPreviewPanel lines={previewLines} />
-        </>
+        <ApproPreviewPanel lines={previewLines} />
+      )}
+      {ptChecks.manquants.length === 0 && ptChecks.prixIncomplets.length > 0 && (
+        <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 10, padding: '10px 16px', marginBottom: 12, fontSize: '0.8rem', color: '#92400e' }}>
+          ℹ️ Prix incomplet pour <strong>{ptChecks.prixIncomplets.join(', ')}</strong> : certains composants n'ont pas encore de prix (PMP) — le coût de production sera partiel, le prix unitaire n'est donc pas affiché.
+        </div>
       )}
       {conflictModal && (
         <ApproConflictModal
@@ -1235,7 +1205,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                                   // trompeur (coût partiel) — on masque et on explique.
                                   <span title="Prix indisponible : certains composants de la recette n'ont pas encore de prix (PMP)." style={{ fontSize: '0.82rem', color: '#d97706', fontWeight: 800, cursor: 'help' }}>—&nbsp;⚠️</span>
                                 ) : (
-                                <span title="Calculé automatiquement depuis les prix des articles">
+                                <span title={isLaboPT ? 'PMP des transferts reçus du labo' : 'Calculé automatiquement depuis les prix des articles'}>
                                   {entry.prixCalcule != null && entry.prixCalcule > 0 ? (
                                     <span style={{ fontSize: '0.88rem', color: '#7c3aed', fontWeight: 600 }}>{entry.prixCalcule.toFixed(3)}</span>
                                   ) : entry.prixUnitaire != null && entry.prixUnitaire > 0 ? (
