@@ -6,7 +6,21 @@ import HelpButton from '../common/HelpButton';
 import { useAuth } from '../../context/AuthContext';
 import PortionsModal from './PortionsModal';
 import InvoiceConfirmModal, { type InvoiceLineItem } from './InvoiceConfirmModal';
-import ApproPreviewPanel, { type PreviewLine } from './ApproPreviewPanel';
+import ApproPreviewPanel, { ProductionAlertPanel, type PreviewLine } from './ApproPreviewPanel';
+
+interface PtComposantLabo {
+  key: string;
+  nom: string;
+  isSousPt: boolean;
+  portion: number;
+  stockCourant: number;
+  lastPrix: number | null;
+}
+interface PtRecipeInfoLabo {
+  composants: PtComposantLabo[];
+  max: number | null;
+  prixComplet: boolean;
+}
 import GuideButton from './GuideButton';
 import HistoryFilterBar, { FilterField, FilterInput, FilterSelect } from '../common/HistoryFilterBar';
 
@@ -40,6 +54,7 @@ interface LaboStockRow {
   ingredientId: number;
   produitId?: number;
   isPT?: boolean;
+  prixPartiel?: boolean;
   type?: string;
   origine?: string | null;
   nom: string;
@@ -147,6 +162,36 @@ export default function StockLaboPage() {
   // ── PT recipe / stock popup
   const [portionsModal, setPortionsModal] = useState<{ produitId: number; nom: string } | null>(null);
 
+  // Recette + stocks courants SERVEUR par produit PT (mêmes chiffres que la garde 422
+  // d'updateLaboStock) : alimente le « Max » et le panneau d'alertes dynamique.
+  const [ptRecipeMap, setPtRecipeMap] = useState<Record<number, PtRecipeInfoLabo | null>>({});
+
+  const fetchPtRecipe = async (produitId: number) => {
+    if (ptRecipeMap[produitId] !== undefined) return;
+    try {
+      const { data } = await api.get(`/api/labo/${laboId}/pt/${produitId}/recipe`);
+      const composants: PtComposantLabo[] = (data as Array<{ type?: string; ingredientId?: number; sousProduitId?: number; nom: string; portionStandard: number; lastPrix: number | null; stockCourant?: number }>)
+        .map((r) => ({
+          key: r.type === 'sous_pt' ? `sp-${r.sousProduitId}` : `art-${r.ingredientId}`,
+          nom: r.nom,
+          isSousPt: r.type === 'sous_pt',
+          portion: r.portionStandard,
+          stockCourant: r.stockCourant ?? 0,
+          lastPrix: r.lastPrix,
+        }));
+      let max: number | null = null;
+      for (const c of composants) {
+        if (!c.portion || c.portion <= 0) continue;
+        const m = Math.max(0, c.stockCourant) / c.portion;
+        max = max === null ? m : Math.min(max, m);
+      }
+      const prixComplet = composants.every((c) => c.lastPrix != null);
+      setPtRecipeMap((prev) => ({ ...prev, [produitId]: { composants, max, prixComplet } }));
+    } catch {
+      setPtRecipeMap((prev) => ({ ...prev, [produitId]: null }));
+    }
+  };
+
   // ── Bulk appro
   const [bulkDate, setBulkDate] = useState(todayStr());
   const [bulkFournisseurId, setBulkFournisseurId] = useState('');
@@ -172,6 +217,8 @@ export default function StockLaboPage() {
       const { data } = await api.get(`/api/labo/${laboId}/stock`);
       const rows = data as LaboStockRow[];
       setStock(rows);
+      // Les stocks ont pu changer : re-demander les recettes au prochain besoin.
+      setPtRecipeMap({});
       const init: Record<number, RowState> = {};
       const seuilInit: Record<number, string> = {};
       for (const r of rows) {
@@ -217,6 +264,12 @@ export default function StockLaboPage() {
   }, []);
 
   const setField = (ingredientId: number, field: keyof RowState, value: unknown) => {
+    // Saisie d'une quantité sur un PT : charger la recette + stocks serveur pour le
+    // contrôle dynamique (les manques s'affichent sans cliquer Enregistrer).
+    if (field === 'quantite') {
+      const row = stock.find((r) => r.ingredientId === ingredientId);
+      if (row?.isPT && row.produitId) fetchPtRecipe(row.produitId);
+    }
     setRowState((prev) => ({ ...prev, [ingredientId]: { ...prev[ingredientId], [field]: value } }));
   };
 
@@ -518,9 +571,47 @@ export default function StockLaboPage() {
     return !stockRow?.isPT && parseFloat(rs.quantite) > 0;
   });
 
+  // ── Contrôle dynamique des productions PT saisies (mêmes chiffres que la garde
+  //    serveur d'updateLaboStock) : manques par composant, besoins AGRÉGÉS entre PT.
+  const ptChecks = (() => {
+    const besoins = new Map<string, { nom: string; sousPt: boolean; dispo: number; besoin: number }>();
+    const prixIncomplets: string[] = [];
+    const productions: { nom: string; quantite: number }[] = [];
+    let enChargement = false;
+    for (const [idStr, rs] of Object.entries(rowState)) {
+      const row = stock.find((r) => r.ingredientId === Number(idStr));
+      if (!row?.isPT || !row.produitId) continue;
+      const qty = parseFloat(rs.quantite);
+      if (!(qty > 0)) continue;
+      productions.push({ nom: row.nom, quantite: qty });
+      const info = ptRecipeMap[row.produitId];
+      if (info === undefined) { enChargement = true; continue; }
+      if (info === null) continue; // recette illisible : la garde serveur tranchera
+      if (!info.prixComplet) prixIncomplets.push(row.nom);
+      for (const c of info.composants) {
+        const prev = besoins.get(c.key);
+        besoins.set(c.key, {
+          nom: c.nom,
+          sousPt: c.isSousPt,
+          dispo: Math.max(0, c.stockCourant),
+          besoin: (prev?.besoin ?? 0) + c.portion * qty,
+        });
+      }
+    }
+    const manquants = [...besoins.values()]
+      .filter((b) => b.besoin > b.dispo + 0.0005)
+      .map((b) => ({
+        ...b,
+        besoin: Math.round(b.besoin * 1000) / 1000,
+        manque: Math.round((b.besoin - b.dispo) * 1000) / 1000,
+      }))
+      .sort((a, b) => b.manque - a.manque);
+    return { manquants, prixIncomplets, productions, enChargement };
+  })();
+
   const hasFournisseurs = fournisseurs.length > 0;
   const canSaveBulk = (readyCount > 0 && !!bulkDate.trim() && (!hasFournisseurs || !!bulkFournisseurId) && !!bulkRefFacture.trim())
-    || (ptReadyCount > 0 && !!bulkDate.trim() && !hasIngredientQuantity);
+    || (ptReadyCount > 0 && !!bulkDate.trim() && !hasIngredientQuantity && ptChecks.manquants.length === 0);
 
   const previewLines: PreviewLine[] = Object.entries(rowState)
     .filter(([idStr, rs]) => {
@@ -567,7 +658,18 @@ export default function StockLaboPage() {
 
   return (
     <div className="page">
-      <ApproPreviewPanel lines={previewLines} />
+      {/* Même emplacement flottant : panneau d'alerte de production si des quantités
+          manquent, sinon l'aperçu de saisie. */}
+      {ptChecks.manquants.length > 0 ? (
+        <ProductionAlertPanel productions={ptChecks.productions} manquants={ptChecks.manquants} />
+      ) : (
+        <ApproPreviewPanel lines={previewLines} />
+      )}
+      {ptChecks.manquants.length === 0 && ptChecks.prixIncomplets.length > 0 && (
+        <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 10, padding: '10px 16px', marginBottom: 12, fontSize: '0.8rem', color: '#92400e' }}>
+          ℹ️ Prix incomplet pour <strong>{ptChecks.prixIncomplets.join(', ')}</strong> : certains composants n'ont pas encore de prix (PMP) — le coût de production sera partiel, le prix unitaire n'est donc pas affiché.
+        </div>
+      )}
       {/* Hero header */}
       <div style={{
         background: 'linear-gradient(135deg, #3b0764 0%, #7e22ce 55%, #a855f7 100%)',
@@ -857,10 +959,23 @@ export default function StockLaboPage() {
                                         ) : <span style={{ color: '#cbd5e1', fontSize: '0.8rem' }}>—</span>}
                                       </td>
                                       <td style={{ textAlign: 'center', padding: '10px 14px', verticalAlign: 'middle' }}>
-                                        <input type="number" min="0" step="0.001" placeholder="—" value={rs.quantite} onChange={(e) => setField(r.ingredientId, 'quantite', e.target.value)} onFocus={(e) => e.target.select()} style={{ width: 76, textAlign: 'right', padding: '5px 8px', borderRadius: 7, fontSize: '0.85rem', ...warnStyle }} className="input" disabled={r.isPT ? hasIngredientQuantity : hasPTQuantity} />
+                                        <input type="number" min="0" step="0.001" placeholder="—" value={rs.quantite} onChange={(e) => setField(r.ingredientId, 'quantite', e.target.value)} onFocus={(e) => { e.target.select(); if (r.isPT && r.produitId) fetchPtRecipe(r.produitId); }} style={{ width: 76, textAlign: 'right', padding: '5px 8px', borderRadius: 7, fontSize: '0.85rem', ...warnStyle }} className="input" disabled={r.isPT ? hasIngredientQuantity : hasPTQuantity} />
+                                        {r.isPT && r.produitId && (() => {
+                                          const info = ptRecipeMap[r.produitId];
+                                          if (!info || info.max === null || info.max <= 0) return null;
+                                          return (
+                                            <div style={{ fontSize: '0.7rem', marginTop: 2, fontWeight: 700, color: parseFloat(rs.quantite) > info.max ? '#dc2626' : '#7c3aed' }}>
+                                              Max: {info.max.toFixed(3)}
+                                              {r.prixPartiel && ' ⚠️'}
+                                            </div>
+                                          );
+                                        })()}
                                       </td>
                                       <td style={{ textAlign: 'center', padding: '10px 14px', verticalAlign: 'middle' }}>
                                         {r.isPT ? (
+                                          r.prixPartiel ? (
+                                            <span title="Prix indisponible : certains composants de la recette n'ont pas encore de prix (PMP)." style={{ fontSize: '0.82rem', color: '#d97706', fontWeight: 800, cursor: 'help' }}>—&nbsp;⚠️</span>
+                                          ) : (
                                           <span title="Calculé automatiquement depuis les prix des articles du labo">
                                             {r.prixCalcule != null && r.prixCalcule > 0 ? (
                                               <span style={{ fontSize: '0.88rem', color: '#7c3aed', fontWeight: 600 }}>{r.prixCalcule.toFixed(3)}</span>
@@ -870,6 +985,7 @@ export default function StockLaboPage() {
                                               <span style={{ fontSize: '0.78rem', color: '#9ca3af' }}>—</span>
                                             )}
                                           </span>
+                                          )
                                         ) : (
                                           <input type="number" min="0" step="0.001" placeholder="—" value={rs.prixUnitaire} onChange={(e) => setField(r.ingredientId, 'prixUnitaire', e.target.value)} onFocus={(e) => e.target.select()} style={{ width: 84, textAlign: 'right', padding: '5px 8px', borderRadius: 7, fontSize: '0.85rem', ...warnStyle }} className="input" />
                                         )}
