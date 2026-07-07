@@ -4,6 +4,8 @@ import { NotificationProvider } from './context/NotificationContext';
 import Layout from './components/common/Layout';
 import LoginPage from './components/auth/LoginPage';
 import InvitePage from './components/auth/InvitePage';
+import ForgotPasswordPage from './components/auth/ForgotPasswordPage';
+import ResetPasswordPage from './components/auth/ResetPasswordPage';
 import ClientsManagement from './components/admin/ClientsManagement';
 import ProductList from './components/client/ProductList';
 import ClientDashboard from './components/client/ClientDashboard';
@@ -92,6 +94,8 @@ export default function App() {
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/invite/:token" element={<InvitePage />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
           <Route path="/" element={<RootRedirect />} />
 
           {/* Super Admin routes */}

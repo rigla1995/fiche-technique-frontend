@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import LabFlowLogo from '../common/LabFlowLogo';
 
@@ -26,13 +26,14 @@ export default function LoginPage() {
   const { login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const prefill = (location.state as { email?: string; activated?: boolean } | null) || {};
+  const prefill = (location.state as { email?: string; activated?: boolean; reset?: boolean } | null) || {};
   const [email, setEmail] = useState(prefill.email || '');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPwd, setShowPwd] = useState(false);
   const [justActivated] = useState(!!prefill.activated);
+  const [justReset] = useState(!!prefill.reset);
   const pwdRef = useRef<HTMLInputElement>(null);
 
   // Si on arrive depuis l'activation avec l'email pré-rempli, on met le focus sur le mot de passe.
@@ -120,6 +121,11 @@ export default function LoginPage() {
                 ✅ Compte activé ! Saisissez votre mot de passe pour vous connecter.
               </div>
             )}
+            {justReset && !error && (
+              <div style={{ marginBottom: 20, background: '#ecfdf5', border: '1px solid #a7f3d0', color: '#047857', borderRadius: 10, padding: '11px 14px', fontSize: '0.86rem', fontWeight: 600 }}>
+                ✅ Mot de passe modifié ! Connectez-vous avec votre nouveau mot de passe.
+              </div>
+            )}
             {error && (
               <div className="alert alert-error" style={{ marginBottom: 20 }}>
                 ⚠️ {error}
@@ -150,7 +156,12 @@ export default function LoginPage() {
             </div>
 
             <div style={{ marginBottom: 22 }}>
-              <label htmlFor="password" style={fieldLabel}>Mot de passe</label>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <label htmlFor="password" style={fieldLabel}>Mot de passe</label>
+                <Link to="/forgot-password" tabIndex={-1} style={{ fontSize: '0.74rem', fontWeight: 700, color: '#4338ca', textDecoration: 'none', marginBottom: 7 }}>
+                  Mot de passe oublié&nbsp;?
+                </Link>
+              </div>
               <div style={{ position: 'relative' }}>
                 <span style={fieldIcon}>
                   <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
