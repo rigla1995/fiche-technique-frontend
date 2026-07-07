@@ -21,6 +21,152 @@ const fmtDT = (n: number) => n.toFixed(3);
 
 const HEADER_H = 62;
 
+// Style du créneau flottant partagé (bas droite, sous le header).
+const SLOT_STYLE: CSSProperties = {
+  position: 'fixed',
+  bottom: 14,
+  right: 14,
+  zIndex: 1100,
+  pointerEvents: 'none',
+  top: HEADER_H + 14,
+  width: 370,
+  display: 'flex',
+  flexDirection: 'column',
+  justifyContent: 'flex-end',
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Panneau d'alerte de production PT — occupe le MÊME emplacement que l'aperçu
+// de saisie : quantités saisies + composants manquants (sous-produits inclus).
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface ProductionSaisie {
+  nom: string;
+  quantite: number;
+}
+export interface ComposantManquant {
+  nom: string;
+  sousPt: boolean;
+  dispo: number;
+  besoin: number;
+  manque: number;
+}
+
+export function ProductionAlertPanel({ productions, manquants }: { productions: ProductionSaisie[]; manquants: ComposantManquant[] }) {
+  const [minimized, setMinimized] = useState(false);
+  if (manquants.length === 0) return <div style={SLOT_STYLE} />;
+
+  if (minimized) {
+    return (
+      <div style={SLOT_STYLE}>
+        <button
+          onClick={() => setMinimized(false)}
+          style={{
+            pointerEvents: 'auto', display: 'flex', alignItems: 'center', gap: 10,
+            margin: '0 0 0 auto', padding: '8px 14px',
+            background: 'linear-gradient(135deg,#b91c1c,#ef4444)',
+            border: 'none', borderRadius: 30, cursor: 'pointer',
+            boxShadow: '0 4px 16px rgba(220,38,38,0.35)', color: '#fff',
+          }}
+        >
+          <span style={{ fontSize: '0.85rem' }}>⚠️</span>
+          <span style={{ fontSize: '0.72rem', fontWeight: 700 }}>
+            {manquants.length} composant{manquants.length > 1 ? 's' : ''} manquant{manquants.length > 1 ? 's' : ''}
+          </span>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="18 15 12 9 6 15"/>
+          </svg>
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div style={SLOT_STYLE}>
+      <div style={{
+        pointerEvents: 'auto', background: '#fff', borderRadius: 12,
+        boxShadow: '0 8px 32px rgba(220,38,38,0.22), 0 2px 8px rgba(0,0,0,0.08)',
+        display: 'flex', flexDirection: 'column',
+        maxHeight: `calc(100vh - ${HEADER_H}px - 28px)`, overflow: 'hidden',
+        border: '1.5px solid #fca5a5',
+      }}>
+        {/* Header */}
+        <div style={{
+          padding: '10px 14px 8px', background: 'linear-gradient(135deg,#b91c1c 0%,#ef4444 100%)',
+          flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontSize: '0.85rem' }}>⚠️</span>
+            <span style={{ fontSize: '0.70rem', fontWeight: 800, color: '#fff', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+              Production impossible
+            </span>
+          </div>
+          <button
+            onClick={() => setMinimized(true)}
+            title="Réduire"
+            style={{
+              background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: 6, cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', width: 26, height: 26, padding: 0, color: '#fff',
+            }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="6 9 12 15 18 9"/>
+            </svg>
+          </button>
+        </div>
+
+        <div style={{ flex: 1, overflowY: 'auto', overscrollBehavior: 'contain' }}>
+          {/* Productions saisies */}
+          <div style={{ padding: '9px 14px 7px', borderBottom: '1px solid #fee2e2', background: '#fef2f2' }}>
+            <div style={{ fontSize: '0.62rem', fontWeight: 800, color: '#991b1b', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>
+              Production saisie
+            </div>
+            {productions.map((p, i) => (
+              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', gap: 8, fontSize: '0.76rem', color: '#7f1d1d', padding: '1px 0' }}>
+                <span style={{ fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.nom}</span>
+                <span style={{ fontWeight: 800, flexShrink: 0 }}>× {fmtQty(p.quantite)}</span>
+              </div>
+            ))}
+          </div>
+
+          {/* Manquants */}
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr style={{ background: '#fff1f2' }}>
+                {['Composant', 'Dispo', 'Nécess.', 'Manque'].map((h, i) => (
+                  <th key={h} style={{ padding: '7px 10px', fontSize: '0.60rem', fontWeight: 800, color: '#991b1b', textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: i === 0 ? 'left' : 'right', borderBottom: '1px solid #fecaca', whiteSpace: 'nowrap' }}>
+                    {h}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {manquants.map((m, i) => (
+                <tr key={i} style={{ background: i % 2 === 0 ? '#fff' : '#fffbfb' }}>
+                  <td style={{ padding: '7px 10px', borderBottom: '1px solid #fee2e2', maxWidth: 130, overflow: 'hidden' }}>
+                    <div style={{ fontSize: '0.74rem', fontWeight: 700, color: '#7f1d1d', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.nom}</div>
+                    {m.sousPt && <div style={{ fontSize: '0.58rem', fontWeight: 700, color: '#7c3aed' }}>sous-produit</div>}
+                  </td>
+                  <td style={{ padding: '7px 10px', borderBottom: '1px solid #fee2e2', textAlign: 'right', fontSize: '0.74rem', color: '#7f1d1d', whiteSpace: 'nowrap' }}>{fmtQty(m.dispo)}</td>
+                  <td style={{ padding: '7px 10px', borderBottom: '1px solid #fee2e2', textAlign: 'right', fontSize: '0.74rem', color: '#7f1d1d', whiteSpace: 'nowrap' }}>{fmtQty(m.besoin)}</td>
+                  <td style={{ padding: '7px 10px', borderBottom: '1px solid #fee2e2', textAlign: 'right', fontSize: '0.76rem', fontWeight: 800, color: '#dc2626', whiteSpace: 'nowrap' }}>{fmtQty(m.manque)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Footer */}
+        <div style={{ padding: '9px 14px', background: '#fef2f2', borderTop: '2px solid #fecaca', flexShrink: 0 }}>
+          <span style={{ fontSize: '0.70rem', color: '#991b1b', lineHeight: 1.5 }}>
+            Complétez le stock des composants (appro, transfert ou production du sous-produit). L'aperçu de saisie s'affichera quand tout sera couvert.
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function ApproPreviewPanel({ lines }: Props) {
   const [minimized, setMinimized] = useState(false);
   const visible = lines.length > 0;
