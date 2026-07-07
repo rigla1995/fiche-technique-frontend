@@ -253,7 +253,7 @@ export default function ClientDashboard() {
             {visibles.includes('labos') && <MultiSelectFilter label="Labos" icon="🧪" options={toOpts(options.labos)} selected={filtres.labos} onChange={setFiltre('labos')} />}
             {visibles.includes('canaux') && <MultiSelectFilter label="Type de vente" icon="🛒" options={CANAUX_OPTS} selected={filtres.canaux} onChange={setFiltre('canaux')} />}
             {visibles.includes('prestataires') && <MultiSelectFilter label="Prestataires" icon="🚚" options={toOpts(options.prestataires)} selected={filtres.prestataires} onChange={setFiltre('prestataires')} />}
-            {visibles.includes('catProduits') && <MultiSelectFilter label="Catégories produits" icon="🍽️" options={toOpts(options.categories_produit)} selected={filtres.catProduits} onChange={setFiltre('catProduits')} />}
+            {visibles.includes('catProduits') && <MultiSelectFilter label="Catégories produits" icon="🍽️" options={toOpts(options.categories_produit)} selected={filtres.catProduits} onChange={setFiltre('catProduits')} alwaysShow />}
             {visibles.includes('typesProduit') && <MultiSelectFilter label="Types" icon="🏷️" options={TYPES_PRODUIT_OPTS} selected={filtres.typesProduit} onChange={setFiltre('typesProduit')} />}
             {visibles.includes('catArticles') && <MultiSelectFilter label="Catégories articles" icon="🧂" options={toOpts(options.categories_articles)} selected={filtres.catArticles} onChange={setFiltre('catArticles')} />}
             {visibles.includes('familles') && <MultiSelectFilter label="Familles" icon="🗂️" options={toOpts(options.familles)} selected={filtres.familles} onChange={setFiltre('familles')} />}
