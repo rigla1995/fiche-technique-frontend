@@ -4,7 +4,7 @@ import api from '../api/client';
 
 export interface AppNotification {
   id: string;
-  eventType: 'new_demande' | 'demande_traitee' | 'new_inventaire' | 'demande_capacite_validee' | 'demande_gerant_validee';
+  eventType: 'new_demande' | 'demande_traitee' | 'new_inventaire' | 'demande_capacite_validee' | 'demande_gerant_validee' | 'nouvelle_commande_acheteur';
   demandeId?: number;
   type: string;
   clientNom?: string;
@@ -100,6 +100,9 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       });
       es.addEventListener('demande_gerant_validee', (e) => {
         try { push('demande_gerant_validee', JSON.parse(e.data)); } catch { /* ignore */ }
+      });
+      es.addEventListener('nouvelle_commande_acheteur', (e) => {
+        try { push('nouvelle_commande_acheteur', JSON.parse(e.data)); } catch { /* ignore */ }
       });
 
       es.onerror = () => {
