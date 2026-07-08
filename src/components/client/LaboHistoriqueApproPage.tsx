@@ -532,7 +532,10 @@ export default function LaboHistoriqueApproPage() {
                       {r.typeAppro === 'transfert' && (
                         <span style={{ background: '#e0f2fe', color: '#0369a1', borderRadius: 6, padding: '2px 6px', fontSize: '0.7rem', fontWeight: 700 }}>Transf.</span>
                       )}
-                      {r.typeAppro && r.typeAppro !== 'manuel' && r.typeAppro !== 'transfert' && (
+                      {r.typeAppro === 'vente' && (
+                        <span style={{ background: '#ede9fe', color: '#6d28d9', borderRadius: 6, padding: '2px 6px', fontSize: '0.7rem', fontWeight: 700 }}>Vente</span>
+                      )}
+                      {r.typeAppro && r.typeAppro !== 'manuel' && r.typeAppro !== 'transfert' && r.typeAppro !== 'vente' && (
                         <span style={{ background: '#f3e8ff', color: '#7c3aed', borderRadius: 6, padding: '2px 6px', fontSize: '0.7rem', fontWeight: 700 }}>PT</span>
                       )}
                       {!r.typeAppro && <span style={{ color: 'var(--text-muted)' }}>—</span>}

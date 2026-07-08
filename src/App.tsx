@@ -62,6 +62,9 @@ import VenteGuard from './components/client/VenteGuard';
 import AcheteursGuard from './components/client/AcheteursGuard';
 import AcheteursPage from './components/client/AcheteursPage';
 import AcheteursImportPage from './components/client/AcheteursImportPage';
+import TarifsAcheteursPage from './components/client/TarifsAcheteursPage';
+import VenteAcheteurPage from './components/client/VenteAcheteurPage';
+import CommandesAcheteursPage from './components/client/CommandesAcheteursPage';
 import PortailAcheteurPage from './components/portail/PortailAcheteurPage';
 import PrestatairesManagement from './components/admin/PrestatairesManagement';
 import './i18n';
@@ -191,6 +194,9 @@ export default function App() {
             <Route element={<AcheteursGuard />}>
               <Route path="/client/acheteurs" element={<AcheteursPage />} />
               <Route path="/client/acheteurs/import" element={<AcheteursImportPage />} />
+              <Route path="/client/acheteurs/tarifs" element={<TarifsAcheteursPage />} />
+              <Route path="/client/acheteurs/vente" element={<VenteAcheteurPage />} />
+              <Route path="/client/acheteurs/commandes" element={<CommandesAcheteursPage />} />
             </Route>
           </Route>
 
