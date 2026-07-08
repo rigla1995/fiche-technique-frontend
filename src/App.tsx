@@ -82,7 +82,8 @@ function RequireAcheteur({ children }: { children: React.ReactElement }) {
 function ClientDefaultRedirect() {
   const { user } = useAuth();
   if (user?.role === 'gerant') return <Navigate to="/client/dashboard" replace />;
-  if ((user?.activitesCount ?? 0) === 0) return <Navigate to="/client/activites" replace />;
+  // Compte dépôt (labo sans activité) : le dashboard reste la maison
+  if ((user?.activitesCount ?? 0) === 0 && (user?.labosCount ?? 0) === 0) return <Navigate to="/client/activites" replace />;
   return <Navigate to="/client/dashboard" replace />;
 }
 
@@ -98,8 +99,9 @@ function RootRedirect() {
   // Onboarding steps
   if ((user.onboardingStep ?? 0) === 1) return <Navigate to="/client/profile" replace />;
   if ((user.onboardingStep ?? 0) === 2) return <Navigate to="/client/activites" replace />;
-  // Client post-onboarding : sans activité → mes activités, sinon → tableau de bord
-  if ((user.activitesCount ?? 0) === 0) return <Navigate to="/client/activites" replace />;
+  // Client post-onboarding : sans activité NI labo → mes activités, sinon → tableau de bord
+  // (un compte dépôt = labo + acheteurs sans activité atterrit sur le dashboard)
+  if ((user.activitesCount ?? 0) === 0 && (user.labosCount ?? 0) === 0) return <Navigate to="/client/activites" replace />;
   return <Navigate to="/client/dashboard" replace />;
 }
 
