@@ -118,6 +118,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
     isAdmin ? new Set(['admin-ref']) : new Set()
   );
   const [moduleVenteActif, setModuleVenteActif] = useState(false);
+  const [moduleAcheteursActif, setModuleAcheteursActif] = useState(false);
 
   const location = useLocation();
   const step = user?.onboardingStep ?? 0;
@@ -176,7 +177,10 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
     if (!isEntreprise) return;
     fetchLabos();
     api.get('/api/entreprise')
-      .then(({ data }) => setModuleVenteActif(!!data?.module_vente_actif))
+      .then(({ data }) => {
+        setModuleVenteActif(!!data?.module_vente_actif);
+        setModuleAcheteursActif(!!data?.module_acheteurs_actif);
+      })
       .catch(() => {});
     if (!isGerant) {
       fetchSummary();
@@ -475,6 +479,20 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                           {labos.length > 0 && (
                             <li><Link to={`/client/labo/ventes?laboId=${labos[0].id}`} className={`sidebar-link ${location.pathname === '/client/labo/ventes' ? 'active' : ''}`} onClick={onClose}><span className="link-icon">🏭</span><span className="link-label">Ventes Labo</span></Link></li>
                           )}
+                        </>
+                      )}
+                    </>
+                  )}
+
+                  {/* ══ ESPACE ACHETEURS ══ — module opt-in (le carnet ne dépend pas des articles) */}
+                  {moduleAcheteursActif && (
+                    <>
+                      <Divider />
+                      <CollapsibleHeader label="Espace Acheteurs" icon="🤝" isOpen={openSections.has('acheteurs')} locked={false} onToggle={() => toggleSection('acheteurs')} />
+                      {openSections.has('acheteurs') && (
+                        <>
+                          <li><NavLink to="/client/acheteurs" end className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}><span className="link-icon">🤝</span><span className="link-label">Carnet d'Acheteurs</span></NavLink></li>
+                          <li><NavLink to="/client/acheteurs/import" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📥</span><span className="link-label">Ajout Dynamique</span></NavLink></li>
                         </>
                       )}
                     </>
