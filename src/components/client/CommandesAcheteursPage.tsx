@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import api from '../../api/client';
+import GuideButton from './GuideButton';
 
 // Thème violet de l'Espace Acheteurs
 const C = '#6d28d9';
@@ -94,6 +95,41 @@ export default function CommandesAcheteursPage() {
     }).catch(() => {});
   }, []);
 
+  const [exporting, setExporting] = useState(false);
+  const exportExcel = async () => {
+    if (commandes.length === 0 || exporting) return;
+    setExporting(true);
+    try {
+      const ExcelJS = (await import('exceljs')).default;
+      const wb = new ExcelJS.Workbook();
+      const ws = wb.addWorksheet('Ventes Acheteurs');
+      ws.addRow(['LabFlow — Ventes & commandes acheteurs']).font = { bold: true, size: 14 };
+      ws.addRow([`Exporté le ${new Date().toLocaleDateString('fr-FR')}${from || to ? ` · période ${from || '…'} → ${to || '…'}` : ''}`]);
+      ws.addRow([]);
+      const header = ws.addRow(['Date', 'Acheteur', 'Entreprise', 'Labo', 'Source', 'Statut', 'Lignes', 'Remise %', 'Brut TTC', 'Facture', 'Net TTC facturé', 'Motif annulation']);
+      header.font = { bold: true };
+      for (const c of commandes) {
+        ws.addRow([
+          c.dateCommande, c.acheteurNom, c.acheteurEntreprise || '', c.laboNom || '',
+          c.source === 'portail' ? 'Portail' : 'Vente directe',
+          c.statut === 'validee' ? 'Validée' : c.statut === 'en_attente' ? 'En attente' : 'Annulée',
+          c.nbLignes, c.remisePct, c.totalBrutTtc,
+          c.factureNumero || '', c.factureTtc ?? '', c.motifAnnulation || '',
+        ]);
+      }
+      ws.columns.forEach((col) => { col.width = 16; });
+      const buf = await wb.xlsx.writeBuffer();
+      const url = URL.createObjectURL(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
+      const a = document.createElement('a');
+      a.href = url; a.download = `ventes_acheteurs_${new Date().toISOString().slice(0, 10)}.xlsx`; a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      setError('Erreur lors de l\'export Excel');
+    } finally {
+      setExporting(false);
+    }
+  };
+
   const valider = async () => {
     if (!validerCmd || !validerLaboId) { setValiderErr('Choisissez le labo source'); return; }
     setValiderSaving(true); setValiderErr(''); setValiderManquants([]);
@@ -166,9 +202,15 @@ export default function CommandesAcheteursPage() {
             <div style={{ fontSize: '1.2rem', fontWeight: 900, color: '#fff' }}>{fmt(totalPeriode)}</div>
             <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.75)', fontWeight: 600 }}>CA validé (filtre)</div>
           </div>
+          <button onClick={exportExcel} disabled={exporting || commandes.length === 0}
+            title={commandes.length === 0 ? 'Rien à exporter' : 'Exporter la liste filtrée en Excel'}
+            style={{ background: 'rgba(255,255,255,0.14)', border: '1px solid rgba(255,255,255,0.3)', color: '#fff', borderRadius: 10, padding: '10px 16px', fontWeight: 700, fontSize: '0.82rem', cursor: exporting || commandes.length === 0 ? 'default' : 'pointer', opacity: exporting || commandes.length === 0 ? 0.6 : 1 }}>
+            {exporting ? '…' : '📤 Exporter (Excel)'}
+          </button>
           <Link to="/client/acheteurs/vente" style={{ background: '#fff', color: CD, borderRadius: 10, padding: '10px 18px', fontWeight: 800, fontSize: '0.85rem', textDecoration: 'none' }}>
             + Nouvelle vente
           </Link>
+          <GuideButton section="acheteurs-ventes" />
         </div>
       </div>
 
