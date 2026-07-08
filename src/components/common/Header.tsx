@@ -31,6 +31,8 @@ export default function Header() {
     setOpen(false);
     if (eventType === 'new_inventaire') {
       navigate('/client/inventaire/historique?section=activite');
+    } else if (eventType === 'nouvelle_commande_acheteur') {
+      navigate('/client/acheteurs/commandes?statut=en_attente');
     } else if (eventType === 'demande_capacite_validee') {
       navigate('/client/activites');
     } else if (eventType === 'demande_gerant_validee') {
@@ -175,6 +177,8 @@ export default function Header() {
                         fontSize: '1rem',
                         background: n.eventType === 'new_inventaire'
                           ? 'linear-gradient(135deg,#eff6ff,#dbeafe)'
+                          : n.eventType === 'nouvelle_commande_acheteur'
+                          ? 'linear-gradient(135deg,#f5f3ff,#ede9fe)'
                           : n.eventType === 'new_demande'
                           ? 'linear-gradient(135deg,#fef3c7,#fde68a)'
                           : n.statut === 'validée'
@@ -182,6 +186,7 @@ export default function Header() {
                           : 'linear-gradient(135deg,#fee2e2,#fecaca)',
                       }}>
                         {n.eventType === 'new_inventaire' ? '📦'
+                          : n.eventType === 'nouvelle_commande_acheteur' ? '🤝'
                           : n.eventType === 'new_demande' ? '📥'
                           : n.statut === 'validée' ? '✅' : '❌'}
                       </div>
@@ -189,6 +194,8 @@ export default function Header() {
                         <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#0f172a', lineHeight: 1.35 }}>
                           {n.eventType === 'new_inventaire'
                             ? 'Inventaire ajouté par un gérant'
+                            : n.eventType === 'nouvelle_commande_acheteur'
+                            ? `Nouvelle commande acheteur${n.notesAdmin ? ` — ${n.notesAdmin}` : ''}`
                             : n.eventType === 'new_demande'
                             ? `Nouvelle demande — ${typeLabel(n.type)}`
                             : `Demande ${n.statut === 'validée' ? 'validée ✓' : 'refusée ✗'} — ${typeLabel(n.type)}`}

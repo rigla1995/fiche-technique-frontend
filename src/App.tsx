@@ -66,6 +66,7 @@ import TarifsAcheteursPage from './components/client/TarifsAcheteursPage';
 import VenteAcheteurPage from './components/client/VenteAcheteurPage';
 import CommandesAcheteursPage from './components/client/CommandesAcheteursPage';
 import PortailAcheteurPage from './components/portail/PortailAcheteurPage';
+import PortailCommandesPage from './components/portail/PortailCommandesPage';
 import PrestatairesManagement from './components/admin/PrestatairesManagement';
 import './i18n';
 import './index.css';
@@ -119,6 +120,7 @@ export default function App() {
 
           {/* Portail acheteur (plein écran, rôle acheteur) */}
           <Route path="/portail" element={<RequireAcheteur><PortailAcheteurPage /></RequireAcheteur>} />
+          <Route path="/portail/commandes" element={<RequireAcheteur><PortailCommandesPage /></RequireAcheteur>} />
 
           {/* Super Admin routes */}
           <Route element={<Layout requireRole="super_admin" />}>
