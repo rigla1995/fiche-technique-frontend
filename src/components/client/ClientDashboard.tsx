@@ -497,6 +497,10 @@ function LaboTab({ data }: { data: any }) {
         <KpiCard icon="🔁" label="Transferts émis" value={fmtDT(k.transferts)} accent="#2563eb" sub={`${k.nb_transferts} transfert${k.nb_transferts > 1 ? 's' : ''}`} />
         <KpiCard icon="🗑️" label="Pertes labo" value={fmtDT(k.pertes)} accent="#ef4444" />
         {k.ventes_labo > 0 && <KpiCard icon="💵" label="Ventes labo" value={fmtDT(k.ventes_labo)} sub={`${k.nb_ventes_labo} vente${k.nb_ventes_labo > 1 ? 's' : ''}`} />}
+        {(k.ventes_acheteurs > 0 || k.nb_ventes_acheteurs > 0) && (
+          <KpiCard icon="🤝" label="Ventes acheteurs" value={fmtDT(k.ventes_acheteurs)} accent="#6d28d9"
+            sub={`${k.nb_ventes_acheteurs} facture${k.nb_ventes_acheteurs > 1 ? 's' : ''} (TTC)`} />
+        )}
       </div>
       <div style={twoCols}>
         <ChartCard title="Production par produit (valeur)" height="auto">

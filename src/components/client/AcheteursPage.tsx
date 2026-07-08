@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../../api/client';
+import GuideButton from './GuideButton';
 
 // Thème violet de l'Espace Acheteurs
 const C = '#6d28d9';
@@ -159,9 +160,12 @@ export default function AcheteursPage() {
             Vos clients B2B — ajoutez-les, invitez-les et préparez vos ventes depuis le stock labo
           </p>
         </div>
-        <div style={{ background: 'rgba(255,255,255,0.14)', border: '1px solid rgba(255,255,255,0.25)', borderRadius: 14, padding: '10px 20px', textAlign: 'center', minWidth: 90 }}>
-          <div style={{ fontSize: '1.4rem', fontWeight: 900, color: '#fff' }}>{acheteurs.length}<span style={{ fontSize: '0.85rem', fontWeight: 600, opacity: 0.7 }}> / {quota}</span></div>
-          <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.75)', fontWeight: 600 }}>acheteurs</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ background: 'rgba(255,255,255,0.14)', border: '1px solid rgba(255,255,255,0.25)', borderRadius: 14, padding: '10px 20px', textAlign: 'center', minWidth: 90 }}>
+            <div style={{ fontSize: '1.4rem', fontWeight: 900, color: '#fff' }}>{acheteurs.length}<span style={{ fontSize: '0.85rem', fontWeight: 600, opacity: 0.7 }}> / {quota}</span></div>
+            <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.75)', fontWeight: 600 }}>acheteurs</div>
+          </div>
+          <GuideButton section="acheteurs-carnet" />
         </div>
       </div>
 
