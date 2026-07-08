@@ -2,7 +2,7 @@ export interface User {
   id: number;
   name: string;
   email: string;
-  role: 'super_admin' | 'client' | 'gerant';
+  role: 'super_admin' | 'client' | 'gerant' | 'acheteur';
   onboardingStep?: number;
   phone?: string;
   entrepriseName?: string | null;
@@ -41,6 +41,7 @@ export interface AbonnementConfig {
   nbActivites: number;
   nbLabos: number;
   nbGerants: number;
+  nbAcheteurs?: number;
   montantOnboarding: number;
   createdAt: string;
   updatedAt: string;
@@ -88,6 +89,8 @@ export interface Abonnement {
   inviteSent?: boolean;
   moduleVenteActif?: boolean;
   moduleVenteActivatedAt?: string | null;
+  moduleAcheteursActif?: boolean;
+  moduleAcheteursActivatedAt?: string | null;
   contratAccepteLe?: string | null;
   contratAccepteIp?: string | null;
   config?: AbonnementConfig | null;
@@ -187,6 +190,8 @@ export interface Famille {
   name: string;
   consommable: boolean;
   vendable: boolean;
+  /** Module Acheteurs : articles proposables aux acheteurs */
+  achetable?: boolean;
   hasAppros?: boolean;
   clientId: number;
 }

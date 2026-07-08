@@ -59,9 +59,22 @@ import ConfigurationVentePage from './components/client/ConfigurationVentePage';
 import ConfigPrestatairesPage from './components/client/ConfigPrestatairesPage';
 import ConfigChargesPage from './components/client/ConfigChargesPage';
 import VenteGuard from './components/client/VenteGuard';
+import AcheteursGuard from './components/client/AcheteursGuard';
+import AcheteursPage from './components/client/AcheteursPage';
+import AcheteursImportPage from './components/client/AcheteursImportPage';
+import PortailAcheteurPage from './components/portail/PortailAcheteurPage';
 import PrestatairesManagement from './components/admin/PrestatairesManagement';
 import './i18n';
 import './index.css';
+
+// Portail acheteur : plein écran (pas de Layout client), réservé au rôle acheteur.
+function RequireAcheteur({ children }: { children: React.ReactElement }) {
+  const { user, isLoading } = useAuth();
+  if (isLoading) return <div className="page-loading"><div className="spinner" /></div>;
+  if (!user) return <Navigate to="/login" replace />;
+  if (user.role !== 'acheteur') return <Navigate to="/" replace />;
+  return children;
+}
 
 function ClientDefaultRedirect() {
   const { user } = useAuth();
@@ -75,6 +88,8 @@ function RootRedirect() {
   if (isLoading) return <div className="page-loading"><div className="spinner" /></div>;
   if (!user) return <Navigate to="/login" replace />;
   if (user.role === 'super_admin') return <Navigate to="/admin" replace />;
+  // Acheteur : son portail dédié
+  if (user.role === 'acheteur') return <Navigate to="/portail" replace />;
   // Gérant : toujours son tableau de bord
   if (user.role === 'gerant') return <Navigate to="/client/dashboard" replace />;
   // Onboarding steps
@@ -96,6 +111,9 @@ export default function App() {
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
           <Route path="/" element={<RootRedirect />} />
+
+          {/* Portail acheteur (plein écran, rôle acheteur) */}
+          <Route path="/portail" element={<RequireAcheteur><PortailAcheteurPage /></RequireAcheteur>} />
 
           {/* Super Admin routes */}
           <Route element={<Layout requireRole="super_admin" />}>
@@ -169,6 +187,10 @@ export default function App() {
               <Route path="/client/ventes/charges" element={<ConfigChargesPage />} />
               <Route path="/client/ventes/rapport" element={<Navigate to="/client/dashboard?tab=ventes" replace />} />
               <Route path="/client/labo/ventes" element={<LaboVentesPage />} />
+            </Route>
+            <Route element={<AcheteursGuard />}>
+              <Route path="/client/acheteurs" element={<AcheteursPage />} />
+              <Route path="/client/acheteurs/import" element={<AcheteursImportPage />} />
             </Route>
           </Route>
 
