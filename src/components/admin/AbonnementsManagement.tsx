@@ -294,6 +294,16 @@ export default function AbonnementsManagement() {
   const [moduleVenteSaving, setModuleVenteSaving] = useState(false);
   const [moduleVenteError, setModuleVenteError] = useState<string | null>(null);
 
+  // module acheteurs
+  const [moduleAcheteursSaving, setModuleAcheteursSaving] = useState(false);
+  const [moduleAcheteursError, setModuleAcheteursError] = useState<string | null>(null);
+  const [nbAcheteursInput, setNbAcheteursInput] = useState('0');
+  // Synchronise le champ quota avec la config du client sélectionné
+  useEffect(() => {
+    setNbAcheteursInput(String(selected?.config?.nbAcheteurs ?? 0));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selected?.clientId, selected?.config?.nbAcheteurs]);
+
   // Assistant IA (intégré à l'application)
   const [aiEnabled, setAiEnabled] = useState(false);
   const [aiSaving, setAiSaving] = useState(false);
@@ -368,6 +378,33 @@ export default function AbonnementsManagement() {
       setModuleVenteError((err as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Erreur');
     } finally {
       setModuleVenteSaving(false);
+    }
+  };
+
+  // Module Acheteurs : activation + quota nb_acheteurs (contrôlé côté serveur à la création d'acheteurs)
+  const saveModuleAcheteurs = async (newActif: boolean) => {
+    if (!selected || moduleAcheteursSaving) return;
+    setModuleAcheteursError(null);
+    setModuleAcheteursSaving(true);
+    try {
+      const nb = parseInt(nbAcheteursInput, 10);
+      const payload: { actif: boolean; nbAcheteurs?: number } = { actif: newActif };
+      if (Number.isFinite(nb) && nb >= 0) payload.nbAcheteurs = nb;
+      const res = await api.put(`/api/abonnements/client/${selected.clientId}/module-acheteurs`, payload);
+      if (payload.nbAcheteurs !== undefined && res.data.nbAcheteurs == null) {
+        setModuleAcheteursError("Quota non enregistré — définissez d'abord la configuration d'abonnement (activités/labos/gérants)");
+      }
+      setSelected(s => s ? {
+        ...s,
+        moduleAcheteursActif: newActif,
+        moduleAcheteursActivatedAt: res.data.moduleAcheteursActivatedAt ?? null,
+        config: s.config ? { ...s.config, nbAcheteurs: res.data.nbAcheteurs ?? s.config.nbAcheteurs } : s.config,
+      } : s);
+      fetchList();
+    } catch (err: unknown) {
+      setModuleAcheteursError((err as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Erreur');
+    } finally {
+      setModuleAcheteursSaving(false);
     }
   };
 
@@ -1449,6 +1486,50 @@ export default function AbonnementsManagement() {
                   </span>
                 )}
                 {moduleVenteError && <span style={{ fontSize: 11, color: '#dc2626' }}>{moduleVenteError}</span>}
+              </div>
+            </div>
+
+            {/* ── Module Acheteurs ────────────────────────────────────── */}
+            <div style={{ background: '#fff', borderRadius: 12, border: '1.5px solid #c4b5fd', overflow: 'hidden', marginBottom: 20 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 18px', background: 'linear-gradient(135deg,#f5f3ff 0%,#ede9fe 100%)', borderBottom: '1px solid #c4b5fd' }}>
+                <span style={{ fontSize: 20 }}>🤝</span>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: '#4c1d95' }}>Module Acheteurs</div>
+                  <div style={{ fontSize: 11, color: '#6d28d9', marginTop: 1 }}>Carnet d'acheteurs B2B, vente depuis le stock labo, portail de commande</div>
+                </div>
+                <span style={{ padding: '4px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700, background: selected.moduleAcheteursActif ? '#dcfce7' : '#fee2e2', color: selected.moduleAcheteursActif ? '#166534' : '#991b1b' }}>
+                  {selected.moduleAcheteursActif ? '✅ Actif' : '🔒 Inactif'}
+                </span>
+              </div>
+              <div style={{ padding: '14px 18px', display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 600, color: '#4c1d95' }}>
+                  Quota acheteurs
+                  <input value={nbAcheteursInput} onChange={e => setNbAcheteursInput(e.target.value)}
+                    style={{ width: 64, padding: '6px 8px', borderRadius: 8, border: '1px solid #c4b5fd', fontSize: 12, fontFamily: 'inherit' }} />
+                </label>
+                {selected.moduleAcheteursActif ? (
+                  <>
+                    <button onClick={() => saveModuleAcheteurs(true)} disabled={moduleAcheteursSaving}
+                      style={{ fontSize: 12, padding: '7px 16px', borderRadius: 8, border: '1.5px solid #6d28d9', background: '#fff', color: '#6d28d9', cursor: moduleAcheteursSaving ? 'default' : 'pointer', fontWeight: 700, opacity: moduleAcheteursSaving ? 0.7 : 1 }}>
+                      {moduleAcheteursSaving ? '…' : '💾 Enregistrer le quota'}
+                    </button>
+                    <button onClick={() => saveModuleAcheteurs(false)} disabled={moduleAcheteursSaving}
+                      style={{ fontSize: 12, padding: '7px 16px', borderRadius: 8, border: '1.5px solid #dc2626', background: '#fff', color: '#dc2626', cursor: moduleAcheteursSaving ? 'default' : 'pointer', fontWeight: 700, opacity: moduleAcheteursSaving ? 0.7 : 1 }}>
+                      {moduleAcheteursSaving ? '…' : '🔒 Désactiver'}
+                    </button>
+                  </>
+                ) : (
+                  <button onClick={() => saveModuleAcheteurs(true)} disabled={moduleAcheteursSaving}
+                    style={{ fontSize: 12, padding: '7px 16px', borderRadius: 8, border: 'none', background: 'linear-gradient(135deg,#4c1d95,#6d28d9)', color: '#fff', cursor: moduleAcheteursSaving ? 'default' : 'pointer', fontWeight: 700, opacity: moduleAcheteursSaving ? 0.7 : 1 }}>
+                    {moduleAcheteursSaving ? '…' : '🚀 Activer'}
+                  </button>
+                )}
+                {selected.moduleAcheteursActivatedAt && (
+                  <span style={{ fontSize: 11, color: '#6d28d9' }}>
+                    Activé le {fmtDate(selected.moduleAcheteursActivatedAt)}
+                  </span>
+                )}
+                {moduleAcheteursError && <span style={{ fontSize: 11, color: '#dc2626' }}>{moduleAcheteursError}</span>}
               </div>
             </div>
 

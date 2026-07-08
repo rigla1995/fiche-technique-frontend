@@ -52,6 +52,8 @@ export default function LoginPage() {
         navigate('/client/dashboard', { replace: true });
       } else if (loggedUser.role === 'super_admin') {
         navigate('/admin', { replace: true });
+      } else if (loggedUser.role === 'acheteur') {
+        navigate('/portail', { replace: true });
       } else {
         navigate('/', { replace: true });
       }

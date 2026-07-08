@@ -7,8 +7,12 @@ import { useAuth } from '../../context/AuthContext';
 import { SelectionProvider } from '../../context/SelectionContext';
 
 interface LayoutProps {
-  requireRole?: 'super_admin' | 'client' | 'gerant';
+  requireRole?: 'super_admin' | 'client' | 'gerant' | 'acheteur';
 }
+
+// Espace « maison » de chaque rôle (cible de redirection quand l'accès est refusé).
+const homeOf = (role: string) =>
+  role === 'super_admin' ? '/admin' : role === 'acheteur' ? '/portail' : '/client';
 
 export default function Layout({ requireRole }: LayoutProps) {
   const { user, isLoading } = useAuth();
@@ -20,7 +24,7 @@ export default function Layout({ requireRole }: LayoutProps) {
 
   if (!user) return <Navigate to="/login" replace />;
   if (requireRole && user.role !== requireRole && !(requireRole === 'client' && user.role === 'gerant')) {
-    return <Navigate to={user.role === 'super_admin' ? '/admin' : '/client'} replace />;
+    return <Navigate to={homeOf(user.role)} replace />;
   }
 
   return (
