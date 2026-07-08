@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import api from '../../api/client';
 
 // Thème violet de l'Espace Acheteurs
@@ -48,11 +48,16 @@ const inp: React.CSSProperties = { padding: '7px 10px', borderRadius: 8, border:
 const fmt = (n: number | null | undefined) => n != null ? `${Number(n).toFixed(3)} DT` : '—';
 const fmtDate = (d: string) => { const [y, m, j] = d.split('-'); return `${j}/${m}/${y}`; };
 
+interface Manquant { nom: string; unite: string; disponible: number; necessaire: number; manquant: number }
+interface LaboOpt { id: number; nom: string }
+
 export default function CommandesAcheteursPage() {
+  const [searchParams] = useSearchParams();
   const [commandes, setCommandes] = useState<Commande[]>([]);
   const [acheteurs, setAcheteurs] = useState<AcheteurOpt[]>([]);
+  const [labos, setLabos] = useState<LaboOpt[]>([]);
   const [loading, setLoading] = useState(true);
-  const [statut, setStatut] = useState('');
+  const [statut, setStatut] = useState(searchParams.get('statut') || '');
   const [acheteurId, setAcheteurId] = useState('');
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
@@ -60,6 +65,13 @@ export default function CommandesAcheteursPage() {
   const [flash, setFlash] = useState('');
   const [detail, setDetail] = useState<CommandeDetail | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  // Validation d'une commande portail : choix du labo source + timbre
+  const [validerCmd, setValiderCmd] = useState<Commande | null>(null);
+  const [validerLaboId, setValiderLaboId] = useState('');
+  const [validerTimbre, setValiderTimbre] = useState(true);
+  const [validerErr, setValiderErr] = useState('');
+  const [validerManquants, setValiderManquants] = useState<Manquant[]>([]);
+  const [validerSaving, setValiderSaving] = useState(false);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -76,7 +88,34 @@ export default function CommandesAcheteursPage() {
   useEffect(() => { load(); }, [load]);
   useEffect(() => {
     api.get('/api/acheteurs').then(({ data }) => setAcheteurs(data.acheteurs)).catch(() => {});
+    api.get('/api/labo').then(({ data }) => {
+      setLabos(data);
+      if (data.length === 1) setValiderLaboId(String(data[0].id));
+    }).catch(() => {});
   }, []);
+
+  const valider = async () => {
+    if (!validerCmd || !validerLaboId) { setValiderErr('Choisissez le labo source'); return; }
+    setValiderSaving(true); setValiderErr(''); setValiderManquants([]);
+    try {
+      const { data } = await api.post(`/api/acheteurs/commandes/${validerCmd.id}/valider`, {
+        laboId: Number(validerLaboId), timbreFiscal: validerTimbre,
+      });
+      setValiderCmd(null);
+      setFlash(`Commande validée — facture ${data.facture.numero} (${fmt(data.facture.montantTtc)})`);
+      load();
+    } catch (e: unknown) {
+      const resp = (e as { response?: { status?: number; data?: { message?: string; manquants?: Manquant[] } } })?.response;
+      if (resp?.status === 422 && resp.data?.manquants) {
+        setValiderManquants(resp.data.manquants);
+        setValiderErr('Stock labo insuffisant :');
+      } else {
+        setValiderErr(resp?.data?.message ?? 'Erreur lors de la validation');
+      }
+    } finally {
+      setValiderSaving(false);
+    }
+  };
 
   const openDetail = async (id: string) => {
     try {
@@ -93,7 +132,9 @@ export default function CommandesAcheteursPage() {
   };
 
   const annuler = async (c: Commande) => {
-    const motif = window.prompt(`Annuler la vente du ${fmtDate(c.dateCommande)} à ${c.acheteurNom} ?\n\nLe stock sera réintégré et la facture ${c.factureNumero || ''} supprimée.\n\nMotif (optionnel) :`);
+    const msgValidee = `Annuler la vente du ${fmtDate(c.dateCommande)} à ${c.acheteurNom} ?\n\nLe stock sera réintégré et la facture ${c.factureNumero || ''} supprimée.`;
+    const msgAttente = `Refuser la commande du ${fmtDate(c.dateCommande)} de ${c.acheteurNom} ?${c.source === 'portail' ? '\n\nL\'acheteur sera prévenu par email.' : ''}`;
+    const motif = window.prompt(`${c.statut === 'validee' ? msgValidee : msgAttente}\n\nMotif (optionnel) :`);
     if (motif === null) return;
     setBusyId(c.id); setError('');
     try {
@@ -197,6 +238,9 @@ export default function CommandesAcheteursPage() {
                       </td>
                       <td style={{ padding: '9px 14px' }}>
                         <span title={c.motifAnnulation || undefined} style={{ padding: '3px 10px', borderRadius: 20, fontSize: '0.72rem', fontWeight: 700, background: badge.bg, color: badge.color, whiteSpace: 'nowrap' }}>{badge.label}</span>
+                        {c.source === 'portail' && (
+                          <div style={{ fontSize: '0.68rem', color: C, fontWeight: 700, marginTop: 3 }}>🌐 portail</div>
+                        )}
                       </td>
                       <td style={{ padding: '9px 14px', whiteSpace: 'nowrap' }}>
                         {c.factureId ? (
@@ -208,8 +252,16 @@ export default function CommandesAcheteursPage() {
                       </td>
                       <td style={{ padding: '9px 14px', whiteSpace: 'nowrap' }}>
                         <button onClick={() => openDetail(c.id)} title="Détail" style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1rem', padding: '4px 6px' }}>👁️</button>
-                        {c.statut === 'validee' && (
-                          <button onClick={() => annuler(c)} disabled={busyId === c.id} title="Annuler (réintègre le stock)"
+                        {c.statut === 'en_attente' && (
+                          <button onClick={() => { setValiderCmd(c); setValiderErr(''); setValiderManquants([]); setValiderTimbre(true); }}
+                            title="Valider (choisir le labo, déduire le stock, facturer)"
+                            style={{ background: '#dcfce7', border: '1px solid #86efac', color: '#166534', borderRadius: 8, padding: '4px 10px', fontWeight: 700, fontSize: '0.76rem', cursor: 'pointer', marginRight: 4 }}>
+                            ✅ Valider
+                          </button>
+                        )}
+                        {(c.statut === 'validee' || c.statut === 'en_attente') && (
+                          <button onClick={() => annuler(c)} disabled={busyId === c.id}
+                            title={c.statut === 'validee' ? 'Annuler (réintègre le stock)' : 'Refuser la commande'}
                             style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1rem', padding: '4px 6px' }}>
                             {busyId === c.id ? '…' : '↩️'}
                           </button>
@@ -223,6 +275,52 @@ export default function CommandesAcheteursPage() {
           </div>
         )}
       </div>
+
+      {/* Modal validation commande portail */}
+      {validerCmd && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.55)', zIndex: 400, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+          <div style={{ background: '#fff', borderRadius: 16, width: '100%', maxWidth: 480, padding: 24 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+              <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: CD }}>✅ Valider la commande</h2>
+              <button onClick={() => setValiderCmd(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.1rem' }}>✕</button>
+            </div>
+            <div style={{ fontSize: '0.84rem', color: '#475569', marginBottom: 16 }}>
+              {validerCmd.acheteurNom} · {fmtDate(validerCmd.dateCommande)} · {validerCmd.nbLignes} ligne{validerCmd.nbLignes > 1 ? 's' : ''} · {fmt(validerCmd.totalBrutTtc)} brut
+              {validerCmd.remisePct > 0 ? ` · remise ${validerCmd.remisePct}%` : ''}
+            </div>
+            <div style={{ marginBottom: 12 }}>
+              <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 700, color: CD, marginBottom: 5 }}>Labo source (stock déduit) *</label>
+              <select value={validerLaboId} onChange={e => setValiderLaboId(e.target.value)} style={{ ...inp, width: '100%', boxSizing: 'border-box' }}>
+                <option value="">— Choisir —</option>
+                {labos.map(l => <option key={l.id} value={l.id}>{l.nom}</option>)}
+              </select>
+            </div>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.84rem', fontWeight: 600, color: validerTimbre ? CD : '#64748b', cursor: 'pointer', marginBottom: 14 }}>
+              <input type="checkbox" checked={validerTimbre} onChange={e => setValiderTimbre(e.target.checked)} style={{ accentColor: C }} />
+              Timbre fiscal (1.000 DT)
+            </label>
+            {validerErr && (
+              <div style={{ background: '#fee2e2', border: '1px solid #fca5a5', color: '#991b1b', borderRadius: 10, padding: '10px 14px', marginBottom: 12, fontSize: '0.82rem', fontWeight: 600 }}>
+                ⚠️ {validerErr}
+                {validerManquants.length > 0 && (
+                  <ul style={{ margin: '8px 0 0', paddingLeft: 18 }}>
+                    {validerManquants.map((m, i) => (
+                      <li key={i}>{m.nom} : dispo {m.disponible}, nécessaire {m.necessaire} (manque {m.manquant})</li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+              <button onClick={() => setValiderCmd(null)} style={{ padding: '9px 18px', borderRadius: 10, border: '1px solid #e2e8f0', background: '#fff', cursor: 'pointer', fontWeight: 600, fontSize: '0.85rem' }}>Fermer</button>
+              <button onClick={valider} disabled={validerSaving || !validerLaboId}
+                style={{ padding: '9px 22px', borderRadius: 10, border: 'none', background: validerLaboId ? 'linear-gradient(135deg,#166534,#16a34a)' : '#cbd5e1', color: '#fff', cursor: validerSaving ? 'default' : 'pointer', fontWeight: 700, fontSize: '0.85rem' }}>
+                {validerSaving ? 'Validation…' : '✅ Valider et facturer'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal détail */}
       {detail && (
