@@ -13,6 +13,7 @@ export interface User {
   gerantActiviteType?: 'labo' | 'activite';
   gerantActiviteNom?: string | null;
   activitesCount?: number;
+  labosCount?: number;
 }
 
 export interface Promotion {

@@ -312,7 +312,8 @@ export default function AddClientModal({ onClose, onCreated }: Props) {
     !emailCheckFailed &&
     telValid &&
     selectedDomaines.length > 0;
-  const step2Valid = nbActivites >= 1 && montantOnboarding !== '';
+  // 0 activité = compte dépôt (labo + acheteurs) : exige alors au moins 1 labo
+  const step2Valid = (nbActivites >= 1 || (nbActivites === 0 && nbLabos >= 1)) && montantOnboarding !== '';
   const nextDisabled = (step === 0 && !step1Valid) || (step === 1 && !step2Valid);
 
   const next = () => {
@@ -522,8 +523,13 @@ export default function AddClientModal({ onClose, onCreated }: Props) {
           {/* ── STEP 2: Configuration ── */}
           {step === 1 && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              <Counter label="Activités" sub="Unités de production / points de vente" value={nbActivites} onChange={(n) => setNbActivites(n)} min={1} />
+              <Counter label="Activités" sub="Unités de production / points de vente — 0 = compte dépôt (labo seul)" value={nbActivites} onChange={(n) => setNbActivites(n)} min={0} />
               <Counter label="Labos" sub="Laboratoires de production centralisée" value={nbLabos} onChange={(n) => setNbLabos(n)} />
+              {nbActivites === 0 && nbLabos < 1 && (
+                <div style={{ background: '#fef3c7', border: '1px solid #fcd34d', borderRadius: 8, padding: '8px 12px', fontSize: '0.78rem', color: '#92400e', fontWeight: 600 }}>
+                  ⚠️ Un compte sans activité (dépôt) doit avoir au moins un labo.
+                </div>
+              )}
               <Counter label="Gérants" sub="Comptes gérants supplémentaires" value={nbGerants} onChange={(n) => setNbGerants(n)} />
               {previewLoading ? (
                 <div style={{ textAlign: 'center', color: '#94a3b8', fontSize: 12, padding: 12 }}>Calcul en cours…</div>
