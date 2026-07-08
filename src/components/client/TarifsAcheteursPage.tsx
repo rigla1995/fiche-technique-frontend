@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../../api/client';
+import GuideButton from './GuideButton';
 
 // Thème violet de l'Espace Acheteurs
 const C = '#6d28d9';
@@ -122,9 +123,12 @@ export default function TarifsAcheteursPage() {
             Prix à l'unité et par lot (TTC) des articles et produits composés proposés à vos acheteurs
           </p>
         </div>
-        <div style={{ background: 'rgba(255,255,255,0.14)', border: '1px solid rgba(255,255,255,0.25)', borderRadius: 14, padding: '10px 20px', textAlign: 'center', minWidth: 90 }}>
-          <div style={{ fontSize: '1.4rem', fontWeight: 900, color: '#fff' }}>{nbActifs}</div>
-          <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.75)', fontWeight: 600 }}>proposé{nbActifs !== 1 ? 's' : ''}</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ background: 'rgba(255,255,255,0.14)', border: '1px solid rgba(255,255,255,0.25)', borderRadius: 14, padding: '10px 20px', textAlign: 'center', minWidth: 90 }}>
+            <div style={{ fontSize: '1.4rem', fontWeight: 900, color: '#fff' }}>{nbActifs}</div>
+            <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.75)', fontWeight: 600 }}>proposé{nbActifs !== 1 ? 's' : ''}</div>
+          </div>
+          <GuideButton section="acheteurs-tarifs" />
         </div>
       </div>
 
