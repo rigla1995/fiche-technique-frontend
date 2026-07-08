@@ -493,6 +493,9 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                         <>
                           <li><NavLink to="/client/acheteurs" end className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}><span className="link-icon">🤝</span><span className="link-label">Carnet d'Acheteurs</span></NavLink></li>
                           <li><NavLink to="/client/acheteurs/import" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📥</span><span className="link-label">Ajout Dynamique</span></NavLink></li>
+                          <li><NavLink to="/client/acheteurs/tarifs" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}><span className="link-icon">💲</span><span className="link-label">Tarifs Acheteurs</span></NavLink></li>
+                          <li><NavLink to="/client/acheteurs/vente" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}><span className="link-icon">🧾</span><span className="link-label">Nouvelle Vente</span></NavLink></li>
+                          <li><NavLink to="/client/acheteurs/commandes" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📦</span><span className="link-label">Ventes Acheteurs</span></NavLink></li>
                         </>
                       )}
                     </>
