@@ -43,6 +43,7 @@ export interface AbonnementConfig {
   nbLabos: number;
   nbGerants: number;
   nbAcheteurs?: number;
+  formuleActivites?: 'basique' | 'premium' | null;
   montantOnboarding: number;
   createdAt: string;
   updatedAt: string;
@@ -105,9 +106,11 @@ export interface Abonnement {
     activePromoMensuel: Promotion | null;
     activePromoOnboarding: Promotion | null;
     configBreakdown?: {
+      formuleActivites?: 'basique' | 'premium' | null;
       activite: { nb: number; total: number };
       labo:     { nb: number; total: number };
       gerant:   { nb: number; total: number };
+      acheteurs?: { nb: number; palier: 10 | 20 | 50 | 100 | null; total: number };
       prixActiviteSup: number;
       prixLaboSup: number;
       prixGerantSup: number;

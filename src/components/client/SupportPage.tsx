@@ -402,6 +402,7 @@ export default function SupportPage() {
                       <div>
                         <div style={{ fontSize: '0.78rem', color: '#6d28d9', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Nouveau total estimé</div>
                         <div style={{ fontSize: '0.78rem', color: '#7c3aed', marginTop: 2 }}>+{supplDelta.toFixed(0)} DT/mois de plus</div>
+                        <div style={{ fontSize: '0.7rem', color: '#8b5cf6', marginTop: 3 }}>Base : mensualité actuelle (option Acheteurs incluse le cas échéant)</div>
                       </div>
                       <div style={{ textAlign: 'right' }}>
                         {supplHasMensPromo && (

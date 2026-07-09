@@ -31,6 +31,10 @@ export interface ContractPdfParams {
   promos?: ContractPromo[];
   preview?: ContractPricingPreview;
   appName: string;
+  /** Formule d'activités du compte ('basique' = sans Espace Produit, 'premium' = avec). */
+  formuleActivites?: 'basique' | 'premium';
+  /** Option Acheteurs : nombre d'acheteurs souscrits (0 ou absent = pas d'option). */
+  nbAcheteurs?: number;
 }
 
 export interface AvenantPdfParams {
@@ -48,6 +52,14 @@ export interface AvenantPdfParams {
   notesAdmin?: string;
   appName: string;
   dateAvenant?: string; // ISO date string
+  /** Coûts mensuels TOTAUX par poste (fournis par le backend). Absents → aucun prix affiché. */
+  activiteCost?: number;
+  laboCost?: number;
+  gerantCost?: number;
+  /** Option Acheteurs : quota souscrit (absent → ligne affichée sans quantité). */
+  nbAcheteurs?: number;
+  /** Option Acheteurs : coût mensuel du palier (0 ou absent → pas de ligne). */
+  acheteursCost?: number;
 }
 
 // ── Shared helpers ────────────────────────────────────────────────────────────
@@ -123,7 +135,8 @@ const PRESTATAIRE = {
 // (mêmes articles, mêmes infos légales, même section promo) avec les prix effectifs.
 export function generateContractPdf(params: ContractPdfParams): string {
   const { clientNom, clientEmail, nbActivites, nbLabos, nbGerants,
-          montantOnboarding, totalMensuel, promos = [], appName } = params;
+          montantOnboarding, totalMensuel, promos = [], appName,
+          formuleActivites, nbAcheteurs = 0 } = params;
 
   const mensPromo = promos.find((p) => ['mensualite', 'les_deux'].includes(p.appliesTo));
   const obPromo   = promos.find((p) => ['onboarding', 'les_deux'].includes(p.appliesTo));
@@ -175,7 +188,7 @@ export function generateContractPdf(params: ContractPdfParams): string {
   setFont(10, 'normal', '#fde68a'); txt('CONTRAT D\'ABONNEMENT', ML, 27);
   setFont(8, 'normal', '#fbbf24');  txt(`Réf. CTR-${Date.now().toString().slice(-8)}`, RX, 17, { align: 'right' });
   setFont(8, 'normal', '#fcd34d');  txt(`Émis le ${todayFr()}`, RX, 24, { align: 'right' });
-  y = 52;
+  y = 48;
 
   // ── ENTRE LES SOUSSIGNÉS ───────────────────────────────────────────────────
   y = sectionHeader('ENTRE LES SOUSSIGNÉS', y);
@@ -192,7 +205,7 @@ export function generateContractPdf(params: ContractPdfParams): string {
   setFont(9, 'bold', '#0f172a');  txt(clientNom, mid + 4, y + 13);
   setFont(7, 'normal', '#64748b'); if (clientEmail) txt(clientEmail, mid + 4, y + 19);
   setFont(7, 'normal', '#94a3b8'); txt('Ci-après dénommé « le Client »', mid + 4, y + 26);
-  y += 38;
+  y += 34;
 
   // ── ARTICLE 1 — OBJET ──────────────────────────────────────────────────────
   y = sectionHeader('ARTICLE 1 — OBJET', y);
@@ -202,23 +215,30 @@ export function generateContractPdf(params: ContractPdfParams): string {
     `${appName} met à la disposition du Client, sur abonnement, une plateforme logicielle en mode SaaS accessible par navigateur web, dédiée à la gestion des stocks, approvisionnements, pertes, inventaires, fiches techniques et ventes pour les métiers de la restauration.`,
     CW - 8);
   let oy = y + 5; for (const l of objet) { txt(l, ML + 4, oy); oy += 4; }
-  y += 22;
+  y += 20;
 
   // ── ARTICLE 2 — CONFIGURATION SOUSCRITE ────────────────────────────────────
   y = sectionHeader('ARTICLE 2 — CONFIGURATION SOUSCRITE', y);
   rect(ML, y, CW, 7, '#eef2ff'); setFont(7, 'bold', '#4338ca');
   txt('Ressource', ML + 4, y + 5); txt('Quantité souscrite', RX - 4, y + 5, { align: 'right' });
   y += 7; hrule(y, '#c7d2fe'); y += 2;
-  const confRows: [string, number][] = [
-    ['Points de vente (activités)', nbActivites], ['Laboratoires de production', nbLabos], ['Comptes gérants', nbGerants],
-  ];
-  confRows.forEach(([label, qty], i) => {
-    if (i % 2 === 0) rect(ML, y, CW, 8, '#fafbff');
-    setFont(9, 'normal', '#0f172a'); txt(label, ML + 4, y + 5.5);
-    setFont(9, 'bold', '#4338ca');   txt(String(qty), RX - 4, y + 5.5, { align: 'right' });
-    hrule(y + 8, '#f1f5f9'); y += 8;
+  // Palier de l'option Acheteurs : 10 / 20 / 50 / 100 acheteurs max
+  const palierAcheteurs = (n: number): number => (n <= 10 ? 10 : n <= 20 ? 20 : n <= 50 ? 50 : 100);
+  const confRows: [string, string][] = [['Points de vente (activités)', String(nbActivites)]];
+  if (nbActivites >= 1 && formuleActivites) {
+    confRows.push(['Formule d\'activités', formuleActivites === 'premium' ? 'Activité Premium' : 'Activité Basique']);
+  }
+  confRows.push(['Laboratoires de production', String(nbLabos)], ['Comptes gérants', String(nbGerants)]);
+  if (nbAcheteurs > 0) {
+    confRows.push(['Option Acheteurs', `palier jusqu'à ${palierAcheteurs(nbAcheteurs)} acheteurs`]);
+  }
+  confRows.forEach(([label, val], i) => {
+    if (i % 2 === 0) rect(ML, y, CW, 7, '#fafbff');
+    setFont(9, 'normal', '#0f172a'); txt(label, ML + 4, y + 5);
+    setFont(9, 'bold', '#4338ca');   txt(val, RX - 4, y + 5, { align: 'right' });
+    hrule(y + 7, '#f1f5f9'); y += 7;
   });
-  y += 4;
+  y += 3;
 
   // ── ARTICLE 3 — PRIX ET MODALITÉS ──────────────────────────────────────────
   y = sectionHeader('ARTICLE 3 — PRIX ET MODALITÉS DE PAIEMENT', y);
@@ -288,6 +308,8 @@ export function generateAvenantPdf(params: AvenantPdfParams): string {
     ancienMensuel, nouveauMensuel, effectifMensuel,
     notesAdmin = '', appName,
     dateAvenant,
+    activiteCost, laboCost, gerantCost,
+    nbAcheteurs, acheteursCost,
   } = params;
 
   const { doc, PW, PH, ML, CW, RX, setFont, txt, rect, hrule, sectionHeader } = makeDoc();
@@ -351,12 +373,18 @@ export function generateAvenantPdf(params: AvenantPdfParams): string {
   txt('Tarif mensuel', RX - 4, y + 5, { align: 'right' });
   y += 7; hrule(y, '#c7d2fe'); y += 2;
 
-  const newRows: { label: string; qty: string; price: string }[] = [];
-  if (nbActivites === 1)      newRows.push({ label: 'Activité', qty: '1', price: '200 DT / mois' });
-  else if (nbActivites === 2) newRows.push({ label: 'Activités', qty: '2', price: '350 DT / mois (forfait)' });
-  else                         newRows.push({ label: 'Activités', qty: String(nbActivites), price: `${nbActivites} × 120 = ${nbActivites * 120} DT / mois` });
-  if (nbLabos > 0)   newRows.push({ label: 'Labo(s)', qty: String(nbLabos), price: `${nbLabos} × 160 = ${nbLabos * 160} DT / mois` });
-  if (nbGerants > 0) newRows.push({ label: 'Gérant(s) sup.', qty: String(nbGerants), price: `${nbGerants} × 80 = ${nbGerants * 80} DT / mois` });
+  // Coûts mensuels par poste fournis par le backend (barème formules) ;
+  // absents → aucun prix affiché (on n'invente jamais de montant côté front).
+  const posteTarif = (cost?: number): string => (cost != null ? `${fmt(cost)} / mois` : '—');
+  const newRows: { label: string; qty: string; price: string }[] = [
+    { label: nbActivites > 1 ? 'Activités' : 'Activité', qty: String(nbActivites), price: posteTarif(activiteCost) },
+  ];
+  if (nbLabos > 0)   newRows.push({ label: 'Labo(s)', qty: String(nbLabos), price: posteTarif(laboCost) });
+  if (nbGerants > 0) newRows.push({ label: 'Gérant(s) sup.', qty: String(nbGerants), price: posteTarif(gerantCost) });
+  // Option Acheteurs : sans cette ligne, les postes ne sommeraient pas au nouveau mensuel affiché.
+  if (acheteursCost != null && acheteursCost > 0) {
+    newRows.push({ label: 'Option Acheteurs', qty: nbAcheteurs != null ? String(nbAcheteurs) : '—', price: posteTarif(acheteursCost) });
+  }
 
   for (let i = 0; i < newRows.length; i++) {
     const row = newRows[i];

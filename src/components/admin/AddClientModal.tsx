@@ -9,12 +9,16 @@ import { useEmailCheck } from '../../hooks/useEmailCheck';
 
 interface ActLine { label: string; unitPrice?: number; total: number; }
 interface PricingPreview {
+  formuleActivites?: 'basique' | 'premium' | null;
   activite: { nb: number; total: number; lines?: ActLine[] };
   labo:     { nb: number; unitPrice: number; total: number };
   gerant:   { nb: number; unitPrice: number; total: number };
+  acheteurs?: { nb: number; palier: 10 | 20 | 50 | 100 | null; total: number };
   totalMensuel: number;
   onboardingPrice?: number;
 }
+
+type Formule = 'basique' | 'premium';
 
 interface PromoForm {
   type: Promotion['type'];
@@ -119,6 +123,12 @@ function PricingCard({ preview, promos }: { preview: PricingPreview | null; prom
     <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 12, padding: '16px 18px', marginTop: 14 }}>
       <div style={{ fontSize: 11, fontWeight: 700, color: '#1d4ed8', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Récapitulatif tarifaire</div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        {/* Formule d'activités — entête des lignes activités */}
+        {preview.formuleActivites && preview.activite.nb > 0 && (
+          <div style={{ fontSize: 10, fontWeight: 700, color: '#6366f1', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            Formule : Activité {preview.formuleActivites === 'basique' ? 'Basique' : 'Premium'}
+          </div>
+        )}
         {/* Activity breakdown — tier lines */}
         {preview.activite.lines && preview.activite.lines.length > 0
           ? preview.activite.lines.map((l, i) => (
@@ -140,6 +150,7 @@ function PricingCard({ preview, promos }: { preview: PricingPreview | null; prom
         )}
         {preview.labo.nb > 0 && row(`${preview.labo.nb} Labo${preview.labo.nb > 1 ? 's' : ''}`, preview.labo.total, `(${preview.labo.nb} × ${fmt(preview.labo.unitPrice)})`)}
         {preview.gerant.nb > 0 && row(`${preview.gerant.nb} Gérant${preview.gerant.nb > 1 ? 's' : ''}`, preview.gerant.total, `(${preview.gerant.nb} × ${fmt(preview.gerant.unitPrice)})`)}
+        {preview.acheteurs && preview.acheteurs.total > 0 && row(`Option Acheteurs (palier jusqu'à ${preview.acheteurs.palier ?? preview.acheteurs.nb})`, preview.acheteurs.total)}
 
         {/* Mensualité total + optional promo */}
         <div style={{ borderTop: '1px solid #bfdbfe', paddingTop: 8, marginTop: 4 }}>
@@ -236,6 +247,8 @@ export default function AddClientModal({ onClose, onCreated }: Props) {
   const [nbActivites, setNbActivites] = useState(1);
   const [nbLabos, setNbLabos] = useState(0);
   const [nbGerants, setNbGerants] = useState(0);
+  const [formuleActivites, setFormuleActivites] = useState<Formule>('premium');
+  const [nbAcheteurs, setNbAcheteurs] = useState(0);
   const [montantOnboarding, setMontantOnboarding] = useState('');
   const [preview, setPreview] = useState<PricingPreview | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
@@ -266,10 +279,10 @@ export default function AddClientModal({ onClose, onCreated }: Props) {
   }, [pdfBase64]);
 
   // Fetch pricing preview whenever config changes; auto-set onboarding price from response
-  const fetchPreview = useCallback(async (na: number, nl: number, ng: number) => {
+  const fetchPreview = useCallback(async (na: number, nl: number, ng: number, nach: number, formule: Formule) => {
     setPreviewLoading(true);
     try {
-      const { data } = await api.get('/api/abonnements/pricing-preview', { params: { nbActivites: na, nbLabos: nl, nbGerants: ng } });
+      const { data } = await api.get('/api/abonnements/pricing-preview', { params: { nbActivites: na, nbLabos: nl, nbGerants: ng, nbAcheteurs: nach, formuleActivites: formule } });
       setPreview(data);
       if (data.onboardingPrice != null) setMontantOnboarding(String(data.onboardingPrice));
     } catch { setPreview(null); }
@@ -277,8 +290,8 @@ export default function AddClientModal({ onClose, onCreated }: Props) {
   }, []);
 
   useEffect(() => {
-    if (step === 1 || step === 3) fetchPreview(nbActivites, nbLabos, nbGerants);
-  }, [step, nbActivites, nbLabos, nbGerants, fetchPreview]);
+    if (step === 1 || step === 3) fetchPreview(nbActivites, nbLabos, nbGerants, nbAcheteurs, formuleActivites);
+  }, [step, nbActivites, nbLabos, nbGerants, nbAcheteurs, formuleActivites, fetchPreview]);
 
   // Step 4: generate PDF whenever we arrive
   useEffect(() => {
@@ -286,6 +299,7 @@ export default function AddClientModal({ onClose, onCreated }: Props) {
       const base64 = generateContractPdf({
         clientNom: nom, clientEmail: email, clientTel: tel,
         nbActivites, nbLabos, nbGerants,
+        formuleActivites, nbAcheteurs,
         montantOnboarding: parseFloat(montantOnboarding) || 0,
         totalMensuel: preview?.totalMensuel || 0,
         promos: promos.map((p) => ({
@@ -298,7 +312,7 @@ export default function AddClientModal({ onClose, onCreated }: Props) {
       });
       setPdfBase64(base64);
     }
-  }, [step, nom, email, tel, nbActivites, nbLabos, nbGerants, montantOnboarding, preview, promos]);
+  }, [step, nom, email, tel, nbActivites, nbLabos, nbGerants, formuleActivites, nbAcheteurs, montantOnboarding, preview, promos]);
 
   // ── Step validation ──
 
@@ -381,6 +395,7 @@ export default function AddClientModal({ onClose, onCreated }: Props) {
         nom, email, telephone: tel,
         domaineIds: selectedDomaines,
         nbActivites, nbLabos, nbGerants,
+        formuleActivites, nbAcheteurs,
         montantOnboarding: parseFloat(montantOnboarding) || 0,
         contractPdfBase64: pdfBase64,
         promotions: promos.map(mapPromoForApi),
@@ -524,12 +539,68 @@ export default function AddClientModal({ onClose, onCreated }: Props) {
           {step === 1 && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               <Counter label="Activités" sub="Unités de production / points de vente — 0 = compte dépôt (labo seul)" value={nbActivites} onChange={(n) => setNbActivites(n)} min={0} />
-              <Counter label="Labos" sub="Laboratoires de production centralisée" value={nbLabos} onChange={(n) => setNbLabos(n)} />
+
+              {/* Formule d'activités */}
+              {nbActivites >= 1 && (
+                <div>
+                  <label style={labelStyle}>Formule d'activités</label>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                    {([
+                      { value: 'basique' as Formule, title: 'Activité Basique', desc: 'Stock + Ventes d\'articles, sans Espace Produit' },
+                      { value: 'premium' as Formule, title: 'Activité Premium', desc: 'Stock + Ventes + Espace Produit complet' },
+                    ]).map((f) => {
+                      const sel = formuleActivites === f.value;
+                      return (
+                        <button key={f.value} type="button" onClick={() => setFormuleActivites(f.value)}
+                          style={{
+                            textAlign: 'left', padding: '12px 14px', borderRadius: 12, cursor: 'pointer',
+                            border: `1.5px solid ${sel ? '#6366f1' : '#e2e8f0'}`,
+                            background: sel ? '#eef2ff' : '#fff',
+                            transition: 'all 0.15s',
+                          }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <span style={{
+                              width: 16, height: 16, borderRadius: '50%', flexShrink: 0,
+                              border: `1.5px solid ${sel ? '#6366f1' : '#cbd5e1'}`,
+                              background: sel ? '#6366f1' : '#fff',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              color: '#fff', fontSize: 9, fontWeight: 700,
+                            }}>{sel ? '✓' : ''}</span>
+                            <span style={{ fontSize: 13, fontWeight: 700, color: sel ? '#4338ca' : '#0f172a' }}>{f.title}</span>
+                          </div>
+                          <div style={{ fontSize: 11, color: sel ? '#6366f1' : '#64748b', marginTop: 4, lineHeight: 1.4 }}>{f.desc}</div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              <Counter label="Labos" sub="Laboratoires de production centralisée" value={nbLabos} onChange={(n) => { setNbLabos(n); if (n === 0) setNbAcheteurs(0); }} />
               {nbActivites === 0 && nbLabos < 1 && (
                 <div style={{ background: '#fef3c7', border: '1px solid #fcd34d', borderRadius: 8, padding: '8px 12px', fontSize: '0.78rem', color: '#92400e', fontWeight: 600 }}>
                   ⚠️ Un compte sans activité (dépôt) doit avoir au moins un labo.
                 </div>
               )}
+
+              {/* Option Acheteurs */}
+              <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, padding: '14px 16px', opacity: nbLabos === 0 ? 0.6 : 1 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: '#0f172a' }}>Option Acheteurs</div>
+                <div style={{ fontSize: 11, color: '#64748b', marginTop: 2, marginBottom: 8 }}>Carnet d'acheteurs B2B facturé par palier — nécessite au moins un labo</div>
+                <select
+                  value={nbAcheteurs}
+                  onChange={(e) => setNbAcheteurs(parseInt(e.target.value, 10) || 0)}
+                  disabled={nbLabos === 0}
+                  style={{ ...selectStyle, cursor: nbLabos === 0 ? 'default' : 'pointer', background: nbLabos === 0 ? '#f8fafc' : '#fff' }}
+                >
+                  <option value={0}>Aucun</option>
+                  <option value={10}>Palier 1 à 10 acheteurs</option>
+                  <option value={20}>Palier 11 à 20 acheteurs</option>
+                  <option value={50}>Palier 21 à 50 acheteurs</option>
+                  <option value={100}>Palier 51 à 100 acheteurs</option>
+                </select>
+              </div>
+
               <Counter label="Gérants" sub="Comptes gérants supplémentaires" value={nbGerants} onChange={(n) => setNbGerants(n)} />
               {previewLoading ? (
                 <div style={{ textAlign: 'center', color: '#94a3b8', fontSize: 12, padding: 12 }}>Calcul en cours…</div>

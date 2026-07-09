@@ -60,6 +60,7 @@ import ConfigPrestatairesPage from './components/client/ConfigPrestatairesPage';
 import ConfigChargesPage from './components/client/ConfigChargesPage';
 import VenteGuard from './components/client/VenteGuard';
 import AcheteursGuard from './components/client/AcheteursGuard';
+import FormuleGuard from './components/client/FormuleGuard';
 import AcheteursPage from './components/client/AcheteursPage';
 import AcheteursImportPage from './components/client/AcheteursImportPage';
 import TarifsAcheteursPage from './components/client/TarifsAcheteursPage';
@@ -145,11 +146,16 @@ export default function App() {
           <Route element={<Layout requireRole="client" />}>
             <Route path="/client" element={<ClientDefaultRedirect />} />
             <Route path="/client/dashboard" element={<ClientDashboard />} />
-            <Route path="/client/products" element={<ProductList />} />
+            {/* Espace Produit réservé à la formule Activité Premium.
+                Catégories Produits et Articles Valorisés restent accessibles en
+                formule Basique (configuration des articles valorisés vendus). */}
+            <Route element={<FormuleGuard />}>
+              <Route path="/client/products" element={<ProductList />} />
+              <Route path="/client/products/new" element={<ProductForm />} />
+              <Route path="/client/products/:id/edit" element={<ProductForm />} />
+            </Route>
             <Route path="/client/products/categories" element={<ProductCategoriesPage />} />
             <Route path="/client/products/valorises" element={<ValorisesPage />} />
-            <Route path="/client/products/new" element={<ProductForm />} />
-            <Route path="/client/products/:id/edit" element={<ProductForm />} />
             {/* Ancienne page « Catalogue Global » supprimée — les affectations se gèrent
                 depuis la fiche de chaque article (Référentiel → Articles). */}
             <Route path="/client/catalogue-global" element={<Navigate to="/client/referentiel/articles" replace />} />
