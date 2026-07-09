@@ -4,7 +4,8 @@ import type { TarifsConfig as TarifsConfigData } from '../../types';
 
 // Keys used in the tarifs API
 const TARIF_KEYS = [
-  'prix_base_activite',
+  'prix_base_activite_basique',
+  'prix_base_activite_premium',
   'remise_2eme_sans_labo',
   'remise_3eme_plus_sans_labo',
   'remise_avec_labo',
@@ -12,13 +13,18 @@ const TARIF_KEYS = [
   'gerant_sup_mensuel',
   'onboarding_sans_labo',
   'onboarding_avec_labo',
-  'module_vente',
+  'acheteurs_palier_10',
+  'acheteurs_palier_20',
+  'acheteurs_palier_50',
+  'acheteurs_palier_100',
 ] as const;
 
 type TarifKey = typeof TARIF_KEYS[number];
+type Formule = 'basique' | 'premium';
 
 const DEFAULTS: Record<TarifKey, number> = {
-  prix_base_activite:          200,
+  prix_base_activite_basique:  150,
+  prix_base_activite_premium:  200,
   remise_2eme_sans_labo:       20,
   remise_3eme_plus_sans_labo:  40,
   remise_avec_labo:            30,
@@ -26,7 +32,10 @@ const DEFAULTS: Record<TarifKey, number> = {
   gerant_sup_mensuel:          80,
   onboarding_sans_labo:        500,
   onboarding_avec_labo:        700,
-  module_vente:                100,
+  acheteurs_palier_10:         50,
+  acheteurs_palier_20:         90,
+  acheteurs_palier_50:         150,
+  acheteurs_palier_100:        220,
 };
 
 // ── Calculation helpers ──────────────────────────────────────────────────────
@@ -37,36 +46,53 @@ function getVals(editing: Record<string, string>): Record<TarifKey, number> {
   ) as Record<TarifKey, number>;
 }
 
+function basePrice(formule: Formule, v: Record<TarifKey, number>): number {
+  return formule === 'basique' ? v.prix_base_activite_basique : v.prix_base_activite_premium;
+}
+
+function palierPrice(palier: number, v: Record<TarifKey, number>): number {
+  if (palier === 10) return v.acheteurs_palier_10;
+  if (palier === 20) return v.acheteurs_palier_20;
+  if (palier === 50) return v.acheteurs_palier_50;
+  if (palier === 100) return v.acheteurs_palier_100;
+  return 0;
+}
+
 function calcMensuel(
   nbAct: number,
   hasLabo: boolean,
   nbLabos: number,
   nbGerants: number,
+  formule: Formule,
+  palier: number,
   v: Record<TarifKey, number>
-): { activites: number; labos: number; gerants: number; total: number } {
+): { activites: number; labos: number; gerants: number; acheteurs: number; total: number } {
+  const base = basePrice(formule, v);
   let activites = 0;
   if (hasLabo) {
-    activites = Math.round(nbAct * v.prix_base_activite * (1 - v.remise_avec_labo / 100));
+    activites = Math.round(nbAct * base * (1 - v.remise_avec_labo / 100));
   } else {
     for (let i = 1; i <= nbAct; i++) {
-      if (i === 1) activites += v.prix_base_activite;
-      else if (i === 2) activites += Math.round(v.prix_base_activite * (1 - v.remise_2eme_sans_labo / 100));
-      else activites += Math.round(v.prix_base_activite * (1 - v.remise_3eme_plus_sans_labo / 100));
+      if (i === 1) activites += base;
+      else if (i === 2) activites += Math.round(base * (1 - v.remise_2eme_sans_labo / 100));
+      else activites += Math.round(base * (1 - v.remise_3eme_plus_sans_labo / 100));
     }
   }
   const labos = nbLabos * v.labo_sup_mensuel;
   const gerants = nbGerants * v.gerant_sup_mensuel;
-  return { activites, labos, gerants, total: activites + labos + gerants };
+  const acheteurs = palierPrice(palier, v);
+  return { activites, labos, gerants, acheteurs, total: activites + labos + gerants + acheteurs };
 }
 
-function priceForTier(tier: 1 | 2 | 3, v: Record<TarifKey, number>): number {
-  if (tier === 1) return v.prix_base_activite;
-  if (tier === 2) return Math.round(v.prix_base_activite * (1 - v.remise_2eme_sans_labo / 100));
-  return Math.round(v.prix_base_activite * (1 - v.remise_3eme_plus_sans_labo / 100));
+function priceForTier(tier: 1 | 2 | 3, formule: Formule, v: Record<TarifKey, number>): number {
+  const base = basePrice(formule, v);
+  if (tier === 1) return base;
+  if (tier === 2) return Math.round(base * (1 - v.remise_2eme_sans_labo / 100));
+  return Math.round(base * (1 - v.remise_3eme_plus_sans_labo / 100));
 }
 
-function priceWithLabo(v: Record<TarifKey, number>): number {
-  return Math.round(v.prix_base_activite * (1 - v.remise_avec_labo / 100));
+function priceWithLabo(formule: Formule, v: Record<TarifKey, number>): number {
+  return Math.round(basePrice(formule, v) * (1 - v.remise_avec_labo / 100));
 }
 
 // ── Inline field component ────────────────────────────────────────────────────
@@ -136,6 +162,8 @@ export default function TarifsConfig() {
   const [simLabo, setSimLabo] = useState(false);
   const [simNbLabos, setSimNbLabos] = useState(1);
   const [simGerants, setSimGerants] = useState(0);
+  const [simFormule, setSimFormule] = useState<Formule>('premium');
+  const [simPalier, setSimPalier] = useState(0);
 
   useEffect(() => {
     api.get('/api/abonnements/tarifs').then((res) => {
@@ -169,7 +197,7 @@ export default function TarifsConfig() {
 
   const fieldProps = { editing, onChange: handleChange, onSave: save, saving, saved, isDirty };
   const v = getVals(editing);
-  const sim = calcMensuel(simAct, simLabo, simLabo ? simNbLabos : 0, simGerants, v);
+  const sim = calcMensuel(simAct, simLabo, simLabo ? simNbLabos : 0, simGerants, simFormule, simPalier, v);
   const simOnboarding = simLabo ? v.onboarding_avec_labo : v.onboarding_sans_labo;
 
   const cardStyle: React.CSSProperties = {
@@ -215,10 +243,11 @@ export default function TarifsConfig() {
         {/* Left column — tarif sections */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
 
-          {/* ── 1. Prix de base ─────────────────────────────────────── */}
+          {/* ── 1. Formules d'activités ─────────────────────────────── */}
           <div style={cardStyle}>
-            {sectionHeader('💰', 'Prix de base', 'Référence pour le calcul de toutes les remises', 'linear-gradient(135deg,#eff6ff,#dbeafe)', '#1e40af')}
-            <TarifField cle="prix_base_activite" label="Prix de base — Activité" hint="Référence avant remise" unit="DT/mois" min={0} step={10} accentColor="#2563eb" {...fieldProps} />
+            {sectionHeader('💰', 'Formules d\'activités', 'Prix de base par activité selon la formule — référence pour le calcul des remises', 'linear-gradient(135deg,#eff6ff,#dbeafe)', '#1e40af')}
+            <TarifField cle="prix_base_activite_basique" label="Formule Basique" hint="Stock + Ventes d'articles, sans Espace Produit" unit="DT/mois" min={0} step={10} accentColor="#0ea5e9" {...fieldProps} />
+            <TarifField cle="prix_base_activite_premium" label="Formule Premium" hint="Basique + Espace Produit complet" unit="DT/mois" min={0} step={10} accentColor="#2563eb" {...fieldProps} />
           </div>
 
           {/* ── 2. Matrice sans labo ─────────────────────────────────── */}
@@ -234,14 +263,15 @@ export default function TarifsConfig() {
               ]).map(({ tier, label, badge, badgeBg, badgeText }) => (
                 <div key={tier} style={{ flex: 1, background: '#f8fafc', borderRadius: 12, padding: '14px 12px', border: '1px solid #e2e8f0', textAlign: 'center' }}>
                   <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{label}</div>
-                  <div style={{ fontSize: 22, fontWeight: 900, color: '#0f172a', marginBottom: 6 }}>{priceForTier(tier, v)} DT</div>
+                  <div style={{ fontSize: 17, fontWeight: 900, color: '#0f172a' }}>{priceForTier(tier, 'basique', v)} DT <span style={{ fontSize: 10, fontWeight: 700, color: '#0ea5e9' }}>Basique</span></div>
+                  <div style={{ fontSize: 17, fontWeight: 900, color: '#0f172a', marginBottom: 6 }}>{priceForTier(tier, 'premium', v)} DT <span style={{ fontSize: 10, fontWeight: 700, color: '#2563eb' }}>Premium</span></div>
                   <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 10, background: badgeBg, color: badgeText }}>{badge}</span>
                 </div>
               ))}
             </div>
 
-            <TarifField cle="remise_2eme_sans_labo" label="Remise — 2ème activité" hint={`Effectif : ${priceForTier(2, v)} DT/mois`} unit="%" min={0} max={100} step={1} accentColor="#15803d" {...fieldProps} />
-            <TarifField cle="remise_3eme_plus_sans_labo" label="Remise — 3ème activité et suivantes" hint={`Effectif : ${priceForTier(3, v)} DT/mois · s'applique aussi aux suppléments`} unit="%" min={0} max={100} step={1} accentColor="#15803d" {...fieldProps} />
+            <TarifField cle="remise_2eme_sans_labo" label="Remise — 2ème activité" hint={`Effectif : ${priceForTier(2, 'basique', v)} DT (Basique) · ${priceForTier(2, 'premium', v)} DT (Premium) / mois`} unit="%" min={0} max={100} step={1} accentColor="#15803d" {...fieldProps} />
+            <TarifField cle="remise_3eme_plus_sans_labo" label="Remise — 3ème activité et suivantes" hint={`Effectif : ${priceForTier(3, 'basique', v)} DT (Basique) · ${priceForTier(3, 'premium', v)} DT (Premium) / mois · s'applique aussi aux suppléments`} unit="%" min={0} max={100} step={1} accentColor="#15803d" {...fieldProps} />
           </div>
 
           {/* ── 3. Remise avec labo ──────────────────────────────────── */}
@@ -251,14 +281,15 @@ export default function TarifsConfig() {
             <div style={{ padding: '16px 22px 4px', display: 'flex', gap: 10, alignItems: 'center' }}>
               <div style={{ flex: 1, background: '#f5f3ff', borderRadius: 12, padding: '14px 18px', border: '1px solid #ddd6fe' }}>
                 <div style={{ fontSize: 11, fontWeight: 700, color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>Toutes les activités</div>
-                <div style={{ fontSize: 26, fontWeight: 900, color: '#4c1d95' }}>{priceWithLabo(v)} DT</div>
+                <div style={{ fontSize: 20, fontWeight: 900, color: '#4c1d95' }}>{priceWithLabo('basique', v)} DT <span style={{ fontSize: 10, fontWeight: 700, color: '#7c3aed' }}>Basique</span></div>
+                <div style={{ fontSize: 20, fontWeight: 900, color: '#4c1d95' }}>{priceWithLabo('premium', v)} DT <span style={{ fontSize: 10, fontWeight: 700, color: '#7c3aed' }}>Premium</span></div>
                 <div style={{ fontSize: 11, color: '#7c3aed', marginTop: 4 }}>par activité / mois · s'applique aussi aux suppléments</div>
               </div>
               <div style={{ textAlign: 'center', color: '#c4b5fd', fontSize: 22, padding: '0 4px' }}>→</div>
               <div style={{ flex: 1, background: '#f0fdf4', borderRadius: 12, padding: '14px 18px', border: '1px solid #bbf7d0' }}>
                 <div style={{ fontSize: 11, fontWeight: 700, color: '#15803d', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>Économie vs base</div>
                 <div style={{ fontSize: 26, fontWeight: 900, color: '#166534' }}>-{v.remise_avec_labo}%</div>
-                <div style={{ fontSize: 11, color: '#15803d', marginTop: 4 }}>soit -{v.prix_base_activite - priceWithLabo(v)} DT par activité</div>
+                <div style={{ fontSize: 11, color: '#15803d', marginTop: 4 }}>soit -{v.prix_base_activite_basique - priceWithLabo('basique', v)} DT (Basique) · -{v.prix_base_activite_premium - priceWithLabo('premium', v)} DT (Premium) par activité</div>
               </div>
             </div>
 
@@ -279,10 +310,13 @@ export default function TarifsConfig() {
             <TarifField cle="onboarding_avec_labo" label="Onboarding — Client avec Labo" hint="Versement unique · au moins 1 labo sur le compte" unit="DT" min={0} step={50} accentColor="#0ea5e9" {...fieldProps} />
           </div>
 
-          {/* ── 6. Module Vente ────────────────────────────────────── */}
+          {/* ── 6. Option Acheteurs (paliers) ───────────────────────── */}
           <div style={cardStyle}>
-            {sectionHeader('🛒', 'Module Vente', 'Supplément mensuel activé manuellement par l\'admin', 'linear-gradient(135deg,#fffbeb,#fef3c7)', '#78350f')}
-            <TarifField cle="module_vente" label="Module Vente" hint="Supplément mensuel ajouté à la facture du client" unit="DT/mois" min={0} step={10} accentColor="#b45309" {...fieldProps} />
+            {sectionHeader('🤝', 'Option Acheteurs (paliers)', 'Supplément mensuel selon le palier d\'acheteurs · nécessite au moins 1 labo', 'linear-gradient(135deg,#fffbeb,#fef3c7)', '#78350f')}
+            <TarifField cle="acheteurs_palier_10" label="Palier — 1 à 10 acheteurs" hint="Supplément mensuel pour un quota jusqu'à 10 acheteurs" unit="DT/mois" min={0} step={10} accentColor="#b45309" {...fieldProps} />
+            <TarifField cle="acheteurs_palier_20" label="Palier — 11 à 20 acheteurs" hint="Supplément mensuel pour un quota jusqu'à 20 acheteurs" unit="DT/mois" min={0} step={10} accentColor="#b45309" {...fieldProps} />
+            <TarifField cle="acheteurs_palier_50" label="Palier — 21 à 50 acheteurs" hint="Supplément mensuel pour un quota jusqu'à 50 acheteurs" unit="DT/mois" min={0} step={10} accentColor="#b45309" {...fieldProps} />
+            <TarifField cle="acheteurs_palier_100" label="Palier — 51 à 100 acheteurs" hint="Supplément mensuel pour un quota jusqu'à 100 acheteurs" unit="DT/mois" min={0} step={10} accentColor="#b45309" {...fieldProps} />
           </div>
 
         </div>
@@ -305,6 +339,19 @@ export default function TarifsConfig() {
             <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 14 }}>
               {/* Controls */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {/* Formule */}
+                <div>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>Formule</div>
+                  <select
+                    value={simFormule}
+                    onChange={(e) => setSimFormule(e.target.value as Formule)}
+                    style={{ width: '100%', padding: '8px 10px', borderRadius: 9, border: '1.5px solid #e2e8f0', fontSize: 13, fontWeight: 600, color: '#374151', background: '#f8fafc', cursor: 'pointer', outline: 'none' }}
+                  >
+                    <option value="basique">Basique — {v.prix_base_activite_basique} DT</option>
+                    <option value="premium">Premium — {v.prix_base_activite_premium} DT</option>
+                  </select>
+                </div>
+
                 {/* Nb activités */}
                 <div>
                   <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>Activités</div>
@@ -366,6 +413,22 @@ export default function TarifsConfig() {
                     ))}
                   </div>
                 </div>
+
+                {/* Palier acheteurs */}
+                <div>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>Palier acheteurs</div>
+                  <select
+                    value={simPalier}
+                    onChange={(e) => setSimPalier(Number(e.target.value))}
+                    style={{ width: '100%', padding: '8px 10px', borderRadius: 9, border: '1.5px solid #e2e8f0', fontSize: 13, fontWeight: 600, color: '#374151', background: '#f8fafc', cursor: 'pointer', outline: 'none' }}
+                  >
+                    <option value={0}>Aucun</option>
+                    <option value={10}>1 à 10 acheteurs — {v.acheteurs_palier_10} DT</option>
+                    <option value={20}>11 à 20 acheteurs — {v.acheteurs_palier_20} DT</option>
+                    <option value={50}>21 à 50 acheteurs — {v.acheteurs_palier_50} DT</option>
+                    <option value={100}>51 à 100 acheteurs — {v.acheteurs_palier_100} DT</option>
+                  </select>
+                </div>
               </div>
 
               {/* Result breakdown */}
@@ -378,14 +441,14 @@ export default function TarifsConfig() {
                 {Array.from({ length: simAct }, (_, i) => {
                   const tier = i + 1;
                   const price = simLabo
-                    ? priceWithLabo(v)
-                    : tier === 1 ? v.prix_base_activite
-                    : tier === 2 ? priceForTier(2, v)
-                    : priceForTier(3, v);
+                    ? priceWithLabo(simFormule, v)
+                    : tier === 1 ? basePrice(simFormule, v)
+                    : tier === 2 ? priceForTier(2, simFormule, v)
+                    : priceForTier(3, simFormule, v);
                   return (
                     <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 14px', borderBottom: '1px solid #f1f5f9' }}>
                       <span style={{ fontSize: 12, color: '#374151' }}>
-                        Activité {tier}
+                        Activité {tier} {simFormule === 'basique' ? 'Basique' : 'Premium'}
                         {!simLabo && tier === 2 && <span style={{ fontSize: 10, color: '#d97706', marginLeft: 4 }}>(-{v.remise_2eme_sans_labo}%)</span>}
                         {!simLabo && tier >= 3 && <span style={{ fontSize: 10, color: '#dc2626', marginLeft: 4 }}>(-{v.remise_3eme_plus_sans_labo}%)</span>}
                         {simLabo && <span style={{ fontSize: 10, color: '#7c3aed', marginLeft: 4 }}>(-{v.remise_avec_labo}%)</span>}
@@ -410,6 +473,14 @@ export default function TarifsConfig() {
                     <span style={{ fontSize: 13, fontWeight: 700, color: '#0f172a' }}>{v.gerant_sup_mensuel} DT</span>
                   </div>
                 ))}
+
+                {/* Option Acheteurs */}
+                {simPalier > 0 && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 14px', borderBottom: '1px solid #f1f5f9' }}>
+                    <span style={{ fontSize: 12, color: '#374151' }}>Option Acheteurs <span style={{ fontSize: 10, color: '#b45309', marginLeft: 4 }}>(palier {simPalier})</span></span>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: '#0f172a' }}>{sim.acheteurs} DT</span>
+                  </div>
+                )}
 
                 {/* Total mensuel */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 14px', background: 'linear-gradient(135deg,#eff6ff,#dbeafe)', borderTop: '2px solid #bfdbfe' }}>

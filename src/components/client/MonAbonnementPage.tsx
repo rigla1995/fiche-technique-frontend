@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import api from '../../api/client';
-import type { Abonnement, Promotion } from '../../types';
+import type { Abonnement, AbonnementConfig, Promotion } from '../../types';
 
 const MODE_INFO: Record<string, { label: string; color: string; bg: string; icon: string; desc: string }> = {
   actif:     { label: 'Actif',         color: '#16a34a', bg: '#dcfce7', icon: '✅', desc: 'Votre compte est pleinement opérationnel.' },
@@ -41,10 +41,17 @@ interface ConfigBreakdown {
   activite: { nb: number; total: number };
   labo:     { nb: number; total: number };
   gerant:   { nb: number; total: number };
+  acheteurs?: { nb: number; palier: number; total: number };
+  formuleActivites?: 'basique' | 'premium' | null;
   prixActiviteSup: number;
   prixLaboSup: number;
   prixGerantSup: number;
 }
+
+const FORMULE_INFO: Record<'basique' | 'premium', { label: string; bg: string; color: string; icon: string }> = {
+  basique: { label: 'Activité Basique', bg: '#f3f4f6', color: '#374151', icon: '📦' },
+  premium: { label: 'Activité Premium', bg: '#dcfce7', color: '#166534', icon: '💎' },
+};
 
 export default function MonAbonnementPage() {
   const [abo, setAbo] = useState<Abonnement | null>(null);
@@ -54,6 +61,10 @@ export default function MonAbonnementPage() {
   const [requestingVente, setRequestingVente] = useState(false);
   const [requestedVente, setRequestedVente] = useState(false);
   const [requestErrorVente, setRequestErrorVente] = useState('');
+  const [hasPendingPremium, setHasPendingPremium] = useState(false);
+  const [requestingPremium, setRequestingPremium] = useState(false);
+  const [requestedPremium, setRequestedPremium] = useState(false);
+  const [requestErrorPremium, setRequestErrorPremium] = useState('');
   const [contratInfo, setContratInfo] = useState<{ available: boolean; date: string | null } | null>(null);
 
   const fetchAll = useCallback(async () => {
@@ -70,9 +81,9 @@ export default function MonAbonnementPage() {
         api.get('/api/abonnements/demandes'),
       ]);
       setModuleVenteActif(!!entRes.data?.module_vente_actif);
-      const pending = (demRes.data as { typeDemande: string; statut: string }[])
-        .some(d => d.typeDemande === 'activer_module_vente' && d.statut === 'en_attente');
-      setHasPendingVente(pending);
+      const demandes = demRes.data as { typeDemande: string; statut: string }[];
+      setHasPendingVente(demandes.some(d => d.typeDemande === 'activer_module_vente' && d.statut === 'en_attente'));
+      setHasPendingPremium(demandes.some(d => d.typeDemande === 'passer_formule_premium' && d.statut === 'en_attente'));
     } catch { /* module vente section simply won't show */ }
     try {
       const { data } = await api.get('/api/abonnements/contrat-actif?info=1');
@@ -103,6 +114,18 @@ export default function MonAbonnementPage() {
     }
   };
 
+  const handleRequestPremium = async () => {
+    setRequestingPremium(true); setRequestErrorPremium('');
+    try {
+      await api.post('/api/abonnements/demandes', { typeDemande: 'passer_formule_premium' });
+      setRequestedPremium(true); setHasPendingPremium(true);
+    } catch (e: unknown) {
+      setRequestErrorPremium((e as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Erreur');
+    } finally {
+      setRequestingPremium(false);
+    }
+  };
+
   const downloadContrat = async () => {
     try {
       const res = await api.get('/api/abonnements/contrat-actif', { responseType: 'blob' });
@@ -122,6 +145,11 @@ export default function MonAbonnementPage() {
   const pricing = abo.pricing;
   const config = abo.config;
   const breakdown = pricing?.configBreakdown as ConfigBreakdown | undefined;
+  // Formule d'activités du compte ('basique' | 'premium' | null si compte dépôt).
+  const formuleActivites = (config
+    ? (config as AbonnementConfig & { formuleActivites?: 'basique' | 'premium' | null }).formuleActivites
+    : null) ?? breakdown?.formuleActivites ?? null;
+  const formuleInfo = formuleActivites ? FORMULE_INFO[formuleActivites] : null;
   const effectifMensuel = pricing?.effectifMensuel ?? pricing?.baseMensuel;
   const activeSupplActivitePromo = abo.promotions?.find((p) => p.appliesTo === 'supplement_activite' && p.isActive) ?? null;
   const activeSupplLaboPromo     = abo.promotions?.find((p) => p.appliesTo === 'supplement_labo'     && p.isActive) ?? null;
@@ -180,6 +208,34 @@ export default function MonAbonnementPage() {
                   }
                 </div>
               ))}
+              {(config.nbActivites ?? 0) >= 1 && formuleInfo && (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid #f3f4f6' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <span style={{ fontSize: '1.1rem' }}>{formuleInfo.icon}</span>
+                    <span style={{ fontWeight: 600, fontSize: '0.88rem', color: '#374151' }}>Formule</span>
+                  </div>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 800, padding: '3px 10px', borderRadius: 20, background: formuleInfo.bg, color: formuleInfo.color }}>
+                    {formuleInfo.label}
+                  </span>
+                </div>
+              )}
+              {(config.nbActivites ?? 0) >= 1 && formuleActivites === 'basique' && (
+                (hasPendingPremium || requestedPremium) ? (
+                  <div style={{ marginTop: 10, background: '#fef9c3', borderRadius: 8, padding: '8px 12px', fontSize: '0.8rem', color: '#854d0e', fontWeight: 600 }}>
+                    ⏳ Demande de passage en Premium en attente de validation
+                  </div>
+                ) : (
+                  <>
+                    <button
+                      onClick={handleRequestPremium}
+                      disabled={requestingPremium}
+                      style={{ marginTop: 10, width: '100%', padding: '9px 12px', borderRadius: 8, border: '1.5px solid #16a34a', background: '#fff', color: '#16a34a', fontSize: '0.82rem', fontWeight: 700, cursor: requestingPremium ? 'default' : 'pointer', opacity: requestingPremium ? 0.7 : 1 }}>
+                      {requestingPremium ? 'Envoi…' : '💎 Passer en Premium'}
+                    </button>
+                    {requestErrorPremium && <div style={{ color: '#dc2626', fontSize: '0.78rem', marginTop: 6 }}>{requestErrorPremium}</div>}
+                  </>
+                )
+              )}
               {abo.prolongationJours > 0 && (
                 <div style={{ marginTop: 10, background: '#ede9fe', borderRadius: 8, padding: '8px 12px', fontSize: '0.8rem', color: '#6d28d9', fontWeight: 600 }}>
                   ✚ Prolongation accordée : {abo.prolongationJours} jour(s)
@@ -229,6 +285,14 @@ export default function MonAbonnementPage() {
                         }
                       </div>
                     ))}
+                    {breakdown.acheteurs && breakdown.acheteurs.total > 0 && (
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.84rem', marginBottom: 8, paddingBottom: 8, borderBottom: '1px solid #f1f5f9' }}>
+                        <span style={{ color: '#374151' }}>
+                          🤝 Option Acheteurs (palier jusqu'à {breakdown.acheteurs.palier})
+                        </span>
+                        <span style={{ fontWeight: 700, color: '#111827' }}>{breakdown.acheteurs.total.toFixed(2)} DT</span>
+                      </div>
+                    )}
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 4 }}>
                       <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#1e40af' }}>Total mensuel</span>
                       <div style={{ textAlign: 'right' }}>
