@@ -32,6 +32,8 @@ export default function VenteAcheteurPage() {
   const [acheteurId, setAcheteurId] = useState('');
   const [laboId, setLaboId] = useState('');
   const [dateCommande, setDateCommande] = useState(new Date().toISOString().slice(0, 10));
+  const [statutVente, setStatutVente] = useState<'expediee' | 'livree'>('expediee');
+  const [dateLivraison, setDateLivraison] = useState(new Date().toISOString().slice(0, 10));
   const [remise, setRemise] = useState('0');
   const [timbre, setTimbre] = useState(true);
   const [notes, setNotes] = useState('');
@@ -101,6 +103,9 @@ export default function VenteAcheteurPage() {
         acheteurId: Number(acheteurId),
         laboId: Number(laboId),
         dateCommande,
+        statut: statutVente,
+        dateExpedition: dateCommande,
+        dateLivraison: statutVente === 'livree' ? dateLivraison : undefined,
         remisePct: totaux.remisePct,
         timbreFiscal: timbre,
         notes: notes.trim() || undefined,
@@ -210,9 +215,22 @@ export default function VenteAcheteurPage() {
           </select>
         </div>
         <div>
-          <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: CD, marginBottom: 4 }}>Date</label>
+          <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: CD, marginBottom: 4 }}>Date (commande & expédition)</label>
           <input type="date" value={dateCommande} onChange={e => setDateCommande(e.target.value)} style={inp} />
         </div>
+        <div>
+          <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: CD, marginBottom: 4 }}>État initial</label>
+          <select value={statutVente} onChange={e => setStatutVente(e.target.value as 'expediee' | 'livree')} style={inp}>
+            <option value="expediee">🚚 Expédiée</option>
+            <option value="livree">✅ Livrée</option>
+          </select>
+        </div>
+        {statutVente === 'livree' && (
+          <div>
+            <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: CD, marginBottom: 4 }}>Date de livraison</label>
+            <input type="date" value={dateLivraison} onChange={e => setDateLivraison(e.target.value)} style={inp} />
+          </div>
+        )}
         <div>
           <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: CD, marginBottom: 4 }}>Remise %</label>
           <input value={remise} onChange={e => setRemise(e.target.value)} style={{ ...inp, width: 70, textAlign: 'right' }} />
