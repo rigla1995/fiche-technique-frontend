@@ -191,8 +191,6 @@ export interface Famille {
   name: string;
   consommable: boolean;
   vendable: boolean;
-  /** Module Acheteurs : articles proposables aux acheteurs */
-  achetable?: boolean;
   hasAppros?: boolean;
   clientId: number;
 }
@@ -209,6 +207,8 @@ export interface Article {
   familleName?: string | null;
   clientId?: number | null;
   hasAppros?: boolean;
+  /** Module Acheteurs : article proposable aux acheteurs (opt-in) */
+  commandable?: boolean;
 }
 
 // Legacy alias for backward compatibility during migration

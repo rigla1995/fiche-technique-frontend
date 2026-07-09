@@ -28,8 +28,8 @@ interface Commande {
 }
 
 interface LigneDetail {
-  designation: string; mode: 'unite' | 'lot'; quantite: number; tailleLot: number | null;
-  quantiteUnites: number; prixTtc: number; tauxTva: number;
+  designation: string; quantite: number; quantiteUnites: number;
+  prixHt: number; prixTtc: number; tauxTva: number;
 }
 interface CommandeDetail extends Commande {
   notes: string | null;
@@ -66,10 +66,11 @@ export default function CommandesAcheteursPage() {
   const [flash, setFlash] = useState('');
   const [detail, setDetail] = useState<CommandeDetail | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
-  // Validation d'une commande portail : choix du labo source + timbre
+  // Validation d'une commande portail : choix du labo source + remise + timbre
   const [validerCmd, setValiderCmd] = useState<Commande | null>(null);
   const [validerLaboId, setValiderLaboId] = useState('');
   const [validerTimbre, setValiderTimbre] = useState(true);
+  const [validerRemise, setValiderRemise] = useState('0');
   const [validerErr, setValiderErr] = useState('');
   const [validerManquants, setValiderManquants] = useState<Manquant[]>([]);
   const [validerSaving, setValiderSaving] = useState(false);
@@ -132,10 +133,13 @@ export default function CommandesAcheteursPage() {
 
   const valider = async () => {
     if (!validerCmd || !validerLaboId) { setValiderErr('Choisissez le labo source'); return; }
+    const remise = validerRemise === '' ? 0 : Number(String(validerRemise).replace(',', '.'));
+    if (!Number.isFinite(remise) || remise < 0 || remise > 100) { setValiderErr('Remise invalide (0 à 100)'); return; }
     setValiderSaving(true); setValiderErr(''); setValiderManquants([]);
     try {
       const { data } = await api.post(`/api/acheteurs/commandes/${validerCmd.id}/valider`, {
         laboId: Number(validerLaboId), timbreFiscal: validerTimbre,
+        remisePct: remise,
       });
       setValiderCmd(null);
       setFlash(`Commande validée — facture ${data.facture.numero} (${fmt(data.facture.montantTtc)})`);
@@ -295,7 +299,7 @@ export default function CommandesAcheteursPage() {
                       <td style={{ padding: '9px 14px', whiteSpace: 'nowrap' }}>
                         <button onClick={() => openDetail(c.id)} title="Détail" style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1rem', padding: '4px 6px' }}>👁️</button>
                         {c.statut === 'en_attente' && (
-                          <button onClick={() => { setValiderCmd(c); setValiderErr(''); setValiderManquants([]); setValiderTimbre(true); }}
+                          <button onClick={() => { setValiderCmd(c); setValiderErr(''); setValiderManquants([]); setValiderTimbre(true); setValiderRemise(String(c.remisePct || 0)); }}
                             title="Valider (choisir le labo, déduire le stock, facturer)"
                             style={{ background: '#dcfce7', border: '1px solid #86efac', color: '#166534', borderRadius: 8, padding: '4px 10px', fontWeight: 700, fontSize: '0.76rem', cursor: 'pointer', marginRight: 4 }}>
                             ✅ Valider
@@ -337,10 +341,17 @@ export default function CommandesAcheteursPage() {
                 {labos.map(l => <option key={l.id} value={l.id}>{l.nom}</option>)}
               </select>
             </div>
-            <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.84rem', fontWeight: 600, color: validerTimbre ? CD : '#64748b', cursor: 'pointer', marginBottom: 14 }}>
-              <input type="checkbox" checked={validerTimbre} onChange={e => setValiderTimbre(e.target.checked)} style={{ accentColor: C }} />
-              Timbre fiscal (1.000 DT)
-            </label>
+            <div style={{ display: 'flex', gap: 16, alignItems: 'center', marginBottom: 14, flexWrap: 'wrap' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 700, color: CD, marginBottom: 5 }}>Remise % (cette commande)</label>
+                <input value={validerRemise} onChange={e => setValiderRemise(e.target.value)} placeholder="0"
+                  style={{ ...inp, width: 80, textAlign: 'right' }} />
+              </div>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.84rem', fontWeight: 600, color: validerTimbre ? CD : '#64748b', cursor: 'pointer', marginTop: 16 }}>
+                <input type="checkbox" checked={validerTimbre} onChange={e => setValiderTimbre(e.target.checked)} style={{ accentColor: C }} />
+                Timbre fiscal (1.000 DT)
+              </label>
+            </div>
             {validerErr && (
               <div style={{ background: '#fee2e2', border: '1px solid #fca5a5', color: '#991b1b', borderRadius: 10, padding: '10px 14px', marginBottom: 12, fontSize: '0.82rem', fontWeight: 600 }}>
                 ⚠️ {validerErr}
@@ -382,7 +393,7 @@ export default function CommandesAcheteursPage() {
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem', marginBottom: 14 }}>
               <thead>
                 <tr style={{ background: CL }}>
-                  {['Désignation', 'Qté', 'Prix TTC', 'TVA', 'Total'].map(h => (
+                  {['Désignation', 'Qté', 'PU HT', 'TVA', 'Total HT'].map(h => (
                     <th key={h} style={{ textAlign: h === 'Désignation' ? 'left' : 'right', padding: '7px 10px', color: CD, fontSize: '0.72rem' }}>{h}</th>
                   ))}
                 </tr>
@@ -391,12 +402,10 @@ export default function CommandesAcheteursPage() {
                 {detail.lignes.map((l, i) => (
                   <tr key={i} style={{ borderBottom: '1px solid #f1f5f9' }}>
                     <td style={{ padding: '7px 10px', fontWeight: 600 }}>{l.designation}</td>
-                    <td style={{ padding: '7px 10px', textAlign: 'right' }}>
-                      {l.mode === 'lot' ? `${l.quantite} lot${l.quantite > 1 ? 's' : ''} (×${l.tailleLot})` : l.quantite}
-                    </td>
-                    <td style={{ padding: '7px 10px', textAlign: 'right' }}>{fmt(l.prixTtc)}</td>
+                    <td style={{ padding: '7px 10px', textAlign: 'right' }}>{l.quantite}</td>
+                    <td style={{ padding: '7px 10px', textAlign: 'right' }}>{fmt(l.prixHt)}</td>
                     <td style={{ padding: '7px 10px', textAlign: 'right' }}>{l.tauxTva} %</td>
-                    <td style={{ padding: '7px 10px', textAlign: 'right', fontWeight: 700 }}>{fmt(l.prixTtc * l.quantite)}</td>
+                    <td style={{ padding: '7px 10px', textAlign: 'right', fontWeight: 700 }}>{fmt(l.prixHt * l.quantite)}</td>
                   </tr>
                 ))}
               </tbody>
