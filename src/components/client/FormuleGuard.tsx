@@ -8,9 +8,11 @@ const CD = '#166534';
 const CL = '#f0fdf4';
 const CB = '#86efac';
 
-// Gating de la formule d'activités : la formule 'basique' (Stock + Ventes
-// d'articles valorisés) n'a pas accès à l'Espace Produit. Les formules
-// 'premium' et les comptes sans activité (formule null) passent.
+// Gating de la formule d'activités — aligné sur la règle serveur : l'Espace
+// Produit est verrouillé UNIQUEMENT si formule 'basique' ET aucun labo (la base
+// Labo inclut la gestion des produits, nécessaire à la production PT du labo).
+// Les formules 'premium', les comptes avec labo et les comptes sans activité
+// (formule null) passent.
 export default function FormuleGuard() {
   const [status, setStatus] = useState<'loading' | 'allowed' | 'locked'>('loading');
   const [hasPending, setHasPending] = useState(false);
@@ -22,11 +24,13 @@ export default function FormuleGuard() {
     Promise.all([
       api.get('/api/entreprise'),
       api.get('/api/abonnements/demandes'),
-    ]).then(([pe, dem]) => {
+      api.get('/api/labo'),
+    ]).then(([pe, dem, lab]) => {
       const basique = pe.data?.formule_activites === 'basique';
+      const labos = Array.isArray(lab.data) ? lab.data : [];
       const pending = (dem.data as { typeDemande: string; statut: string }[])
         .some(d => d.typeDemande === 'passer_formule_premium' && d.statut === 'en_attente');
-      setStatus(basique ? 'locked' : 'allowed');
+      setStatus(basique && labos.length === 0 ? 'locked' : 'allowed');
       setHasPending(pending);
     // En cas d'erreur réseau on laisse passer : le backend renvoie de toute
     // façon 403 FORMULE_BASIQUE sur les écritures produits en formule basique.
@@ -75,10 +79,11 @@ export default function FormuleGuard() {
           Formule Activité Premium requise
         </h2>
         <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', lineHeight: 1.6, marginBottom: 24 }}>
-          Votre compte est en formule <strong>Activité Basique</strong> (stock et ventes d'articles valorisés).
-          L'Espace Produit — produits vendables, utilisables, composés et production — est réservé à la
-          formule <strong>Activité Premium</strong>. Les pages Catégories Produits et Articles Valorisés
-          restent accessibles depuis le menu.
+          Votre compte est en formule <strong>Activité Basique</strong> (stock et ventes d'articles valorisés)
+          et sans labo. L'Espace Produit — produits vendables, utilisables, composés et production — est
+          disponible avec la formule <strong>Activité Premium</strong>, ou automatiquement inclus avec la
+          base <strong>Labo</strong> (nécessaire à la production). Les pages Catégories Produits et Articles
+          Valorisés restent accessibles depuis le menu.
         </p>
 
         {(hasPending || requested) ? (

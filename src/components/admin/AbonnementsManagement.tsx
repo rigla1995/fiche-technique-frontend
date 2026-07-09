@@ -245,6 +245,7 @@ interface MontantMoisInfo {
     mensualite: { base: number; effectif: number; hasPromo: boolean; promoType: string | null; coversAll?: boolean; baseActivite?: number; baseGerant?: number; baseLabo?: number };
     supplementGerant: { base: number; effectif: number; active: boolean; hasPromo: boolean; promoType: string | null };
     supplementLabo: { base: number; effectif: number; active: boolean; hasPromo: boolean; promoType: string | null };
+    optionAcheteurs?: { base: number; effectif: number; active: boolean; palier: number | null };
   };
   total: number;
 }
@@ -408,6 +409,12 @@ export default function AbonnementsManagement() {
         moduleAcheteursActivatedAt: res.data.moduleAcheteursActivatedAt ?? null,
         config: s.config ? { ...s.config, nbAcheteurs: res.data.nbAcheteurs ?? (newActif ? s.config.nbAcheteurs : 0) } : s.config,
       } : s);
+      // Recharge le détail complet pour que la carte « Configuration souscrite »
+      // (breakdown + total mensuel) reflète le nouveau palier de l'option Acheteurs.
+      try {
+        const abRes = await api.get(`/api/abonnements/client/${selected.clientId}?withPricing=1`);
+        setSelected(abRes.data);
+      } catch { /* mise à jour optimiste déjà appliquée ci-dessus */ }
       fetchList();
     } catch (err: unknown) {
       setModuleAcheteursError((err as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Erreur');
@@ -423,7 +430,10 @@ export default function AbonnementsManagement() {
     const courante: 'basique' | 'premium' = cfg.formuleActivites ?? 'premium';
     const autre: 'basique' | 'premium' = courante === 'premium' ? 'basique' : 'premium';
     const autreLbl = autre === 'premium' ? 'Activité Premium' : 'Activité Basique';
-    if (!window.confirm(`Changer la formule d'activités vers « ${autreLbl} » ? La mensualité sera recalculée.`)) return;
+    const avertissement = autre === 'basique'
+      ? "\n\nAttention : en Basique sans labo, l'Espace Produit du client sera verrouillé (ses produits existants restent en base)."
+      : '';
+    if (!window.confirm(`Changer la formule d'activités vers « ${autreLbl} » ? La mensualité sera recalculée.${avertissement}`)) return;
     setFormuleError(null);
     setFormuleSaving(true);
     try {
@@ -963,21 +973,32 @@ export default function AbonnementsManagement() {
                     <span style={{ fontSize: 14, fontWeight: 800, color: '#4c1d95' }}>{totalMensuel} DT/mois</span>
                   </div>
                   <div style={{ padding: '14px 18px', display: 'flex', flexDirection: 'column', gap: 8 }}>
-                    {/* Formule d'activités : badge + changement */}
+                    {/* Formule d'activités : badge + changement — sans objet pour un compte dépôt (0 activité) */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                      <span style={{
-                        fontSize: 11, fontWeight: 800, padding: '4px 12px', borderRadius: 12,
-                        background: formule === 'basique' ? '#e0f2fe' : '#ede9fe',
-                        color: formule === 'basique' ? '#0369a1' : '#6d28d9',
-                        border: `1px solid ${formule === 'basique' ? '#bae6fd' : '#ddd6fe'}`,
-                      }}>
-                        {formuleLbl}
-                      </span>
-                      <button onClick={changerFormule} disabled={formuleSaving}
-                        style={{ fontSize: 11, padding: '4px 12px', borderRadius: 8, border: '1px solid #c4b5fd', background: '#fff', color: '#6d28d9', cursor: formuleSaving ? 'default' : 'pointer', fontWeight: 700, opacity: formuleSaving ? 0.7 : 1 }}>
-                        {formuleSaving ? '…' : '⇄ Changer de formule'}
-                      </button>
-                      {formuleError && <span style={{ fontSize: 11, color: '#dc2626' }}>{formuleError}</span>}
+                      {cfg.nbActivites === 0 ? (
+                        <span style={{
+                          fontSize: 11, fontWeight: 800, padding: '4px 12px', borderRadius: 12,
+                          background: '#f1f5f9', color: '#64748b', border: '1px solid #e2e8f0',
+                        }}>
+                          Compte dépôt (sans activité)
+                        </span>
+                      ) : (
+                        <>
+                          <span style={{
+                            fontSize: 11, fontWeight: 800, padding: '4px 12px', borderRadius: 12,
+                            background: formule === 'basique' ? '#e0f2fe' : '#ede9fe',
+                            color: formule === 'basique' ? '#0369a1' : '#6d28d9',
+                            border: `1px solid ${formule === 'basique' ? '#bae6fd' : '#ddd6fe'}`,
+                          }}>
+                            {formuleLbl}
+                          </span>
+                          <button onClick={changerFormule} disabled={formuleSaving}
+                            style={{ fontSize: 11, padding: '4px 12px', borderRadius: 8, border: '1px solid #c4b5fd', background: '#fff', color: '#6d28d9', cursor: formuleSaving ? 'default' : 'pointer', fontWeight: 700, opacity: formuleSaving ? 0.7 : 1 }}>
+                            {formuleSaving ? '…' : '⇄ Changer de formule'}
+                          </button>
+                          {formuleError && <span style={{ fontSize: 11, color: '#dc2626' }}>{formuleError}</span>}
+                        </>
+                      )}
                     </div>
                     {items.map((item, i) => (
                       <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -1435,6 +1456,21 @@ export default function AbonnementsManagement() {
                               </div>
                             );
                           });
+                        })()}
+
+                        {/* Option Acheteurs — supplément par palier (somme avec les autres postes = Total à régler) */}
+                        {pMontantInfo.breakdown.optionAcheteurs?.active && (() => {
+                          const oa = pMontantInfo.breakdown.optionAcheteurs!;
+                          return (
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 80px 1fr 90px', gap: 0, padding: '10px 14px', borderTop: '1px solid #e2e8f0', background: '#fff' }}>
+                              <div style={{ display: 'flex', alignItems: 'center' }}>
+                                <span style={{ fontSize: 13, fontWeight: 600, color: '#0f172a' }}>Option Acheteurs{oa.palier != null ? ` (palier ${oa.palier})` : ''}</span>
+                              </div>
+                              <div style={{ display: 'flex', alignItems: 'center' }}><span style={{ fontSize: 13, color: '#374151' }}>{oa.base} DT</span></div>
+                              <div style={{ display: 'flex', alignItems: 'center' }}><span style={{ fontSize: 11, color: '#cbd5e1' }}>—</span></div>
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}><span style={{ fontSize: 14, fontWeight: 800, color: '#0f172a' }}>{oa.effectif} DT</span></div>
+                            </div>
+                          );
                         })()}
 
                         {/* Total row */}

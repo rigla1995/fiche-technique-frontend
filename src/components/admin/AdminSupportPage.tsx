@@ -32,6 +32,7 @@ interface SupplPricing {
   activiteCost?: number;
   laboCost?: number;
   gerantCost?: number;
+  acheteursCost?: number;
 }
 
 // ── Details popup ─────────────────────────────────────────────────────────────
@@ -96,6 +97,8 @@ function DetailsPopup({
       activiteCost: coutApres(pricing.activiteCost, nbAAdded, pricing.prixActiviteSup),
       laboCost:     coutApres(pricing.laboCost,     nbLAdded, pricing.prixLaboSup),
       gerantCost:   coutApres(pricing.gerantCost,   nbGAdded, pricing.prixGerantSup),
+      // Option Acheteurs : quota non renvoyé par supplement-pricing → ligne sans quantité.
+      acheteursCost: pricing.acheteursCost,
       appName: 'LabFlow',
       dateAvenant: new Date().toISOString(),
     });

@@ -56,6 +56,10 @@ export interface AvenantPdfParams {
   activiteCost?: number;
   laboCost?: number;
   gerantCost?: number;
+  /** Option Acheteurs : quota souscrit (absent → ligne affichée sans quantité). */
+  nbAcheteurs?: number;
+  /** Option Acheteurs : coût mensuel du palier (0 ou absent → pas de ligne). */
+  acheteursCost?: number;
 }
 
 // ── Shared helpers ────────────────────────────────────────────────────────────
@@ -305,6 +309,7 @@ export function generateAvenantPdf(params: AvenantPdfParams): string {
     notesAdmin = '', appName,
     dateAvenant,
     activiteCost, laboCost, gerantCost,
+    nbAcheteurs, acheteursCost,
   } = params;
 
   const { doc, PW, PH, ML, CW, RX, setFont, txt, rect, hrule, sectionHeader } = makeDoc();
@@ -376,6 +381,10 @@ export function generateAvenantPdf(params: AvenantPdfParams): string {
   ];
   if (nbLabos > 0)   newRows.push({ label: 'Labo(s)', qty: String(nbLabos), price: posteTarif(laboCost) });
   if (nbGerants > 0) newRows.push({ label: 'Gérant(s) sup.', qty: String(nbGerants), price: posteTarif(gerantCost) });
+  // Option Acheteurs : sans cette ligne, les postes ne sommeraient pas au nouveau mensuel affiché.
+  if (acheteursCost != null && acheteursCost > 0) {
+    newRows.push({ label: 'Option Acheteurs', qty: nbAcheteurs != null ? String(nbAcheteurs) : '—', price: posteTarif(acheteursCost) });
+  }
 
   for (let i = 0; i < newRows.length; i++) {
     const row = newRows[i];

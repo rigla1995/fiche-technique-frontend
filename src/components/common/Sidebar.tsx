@@ -516,9 +516,10 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                           <span className="link-icon">🏷️</span><span className="link-label">Catégories Produits</span>
                         </Link>
                       </li>
-                      {/* Formule basique : seuls Catégories Produits et Produits Valorisés
-                          restent visibles (configuration des articles valorisés vendus). */}
-                      {formuleActivites !== 'basique' && (
+                      {/* Formule basique SANS labo : seuls Catégories Produits et Produits Valorisés
+                          restent visibles (configuration des articles valorisés vendus). Avec au moins
+                          un labo, la base Labo inclut l'Espace Produit complet (règle serveur). */}
+                      {!(formuleActivites === 'basique' && labos.length === 0) && (
                         <>
                           <li>
                             <Link to="/client/products?tab=vendable" className={`sidebar-link ${isProductsPage && currentProductTab === 'vendable' ? 'active' : ''}`} onClick={onClose}>

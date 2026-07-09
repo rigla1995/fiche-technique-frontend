@@ -40,6 +40,9 @@ const DEFAULTS: Record<TarifKey, number> = {
 
 // ── Calculation helpers ──────────────────────────────────────────────────────
 
+// Arrondi à 2 décimales — identique au calcul backend (pas d'arrondi à l'entier).
+const round2 = (x: number) => Math.round(x * 100) / 100;
+
 function getVals(editing: Record<string, string>): Record<TarifKey, number> {
   return Object.fromEntries(
     TARIF_KEYS.map((k) => [k, Number(editing[k] ?? DEFAULTS[k]) || DEFAULTS[k]])
@@ -70,29 +73,30 @@ function calcMensuel(
   const base = basePrice(formule, v);
   let activites = 0;
   if (hasLabo) {
-    activites = Math.round(nbAct * base * (1 - v.remise_avec_labo / 100));
+    activites = round2(nbAct * base * (1 - v.remise_avec_labo / 100));
   } else {
     for (let i = 1; i <= nbAct; i++) {
       if (i === 1) activites += base;
-      else if (i === 2) activites += Math.round(base * (1 - v.remise_2eme_sans_labo / 100));
-      else activites += Math.round(base * (1 - v.remise_3eme_plus_sans_labo / 100));
+      else if (i === 2) activites += round2(base * (1 - v.remise_2eme_sans_labo / 100));
+      else activites += round2(base * (1 - v.remise_3eme_plus_sans_labo / 100));
     }
+    activites = round2(activites);
   }
   const labos = nbLabos * v.labo_sup_mensuel;
   const gerants = nbGerants * v.gerant_sup_mensuel;
   const acheteurs = palierPrice(palier, v);
-  return { activites, labos, gerants, acheteurs, total: activites + labos + gerants + acheteurs };
+  return { activites, labos, gerants, acheteurs, total: round2(activites + labos + gerants + acheteurs) };
 }
 
 function priceForTier(tier: 1 | 2 | 3, formule: Formule, v: Record<TarifKey, number>): number {
   const base = basePrice(formule, v);
   if (tier === 1) return base;
-  if (tier === 2) return Math.round(base * (1 - v.remise_2eme_sans_labo / 100));
-  return Math.round(base * (1 - v.remise_3eme_plus_sans_labo / 100));
+  if (tier === 2) return round2(base * (1 - v.remise_2eme_sans_labo / 100));
+  return round2(base * (1 - v.remise_3eme_plus_sans_labo / 100));
 }
 
 function priceWithLabo(formule: Formule, v: Record<TarifKey, number>): number {
-  return Math.round(basePrice(formule, v) * (1 - v.remise_avec_labo / 100));
+  return round2(basePrice(formule, v) * (1 - v.remise_avec_labo / 100));
 }
 
 // ── Inline field component ────────────────────────────────────────────────────
@@ -197,7 +201,7 @@ export default function TarifsConfig() {
 
   const fieldProps = { editing, onChange: handleChange, onSave: save, saving, saved, isDirty };
   const v = getVals(editing);
-  const sim = calcMensuel(simAct, simLabo, simLabo ? simNbLabos : 0, simGerants, simFormule, simPalier, v);
+  const sim = calcMensuel(simAct, simLabo, simLabo ? simNbLabos : 0, simGerants, simFormule, simLabo ? simPalier : 0, v);
   const simOnboarding = simLabo ? v.onboarding_avec_labo : v.onboarding_sans_labo;
 
   const cardStyle: React.CSSProperties = {
@@ -289,7 +293,7 @@ export default function TarifsConfig() {
               <div style={{ flex: 1, background: '#f0fdf4', borderRadius: 12, padding: '14px 18px', border: '1px solid #bbf7d0' }}>
                 <div style={{ fontSize: 11, fontWeight: 700, color: '#15803d', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>Économie vs base</div>
                 <div style={{ fontSize: 26, fontWeight: 900, color: '#166534' }}>-{v.remise_avec_labo}%</div>
-                <div style={{ fontSize: 11, color: '#15803d', marginTop: 4 }}>soit -{v.prix_base_activite_basique - priceWithLabo('basique', v)} DT (Basique) · -{v.prix_base_activite_premium - priceWithLabo('premium', v)} DT (Premium) par activité</div>
+                <div style={{ fontSize: 11, color: '#15803d', marginTop: 4 }}>soit -{round2(v.prix_base_activite_basique - priceWithLabo('basique', v))} DT (Basique) · -{round2(v.prix_base_activite_premium - priceWithLabo('premium', v))} DT (Premium) par activité</div>
               </div>
             </div>
 
@@ -372,7 +376,7 @@ export default function TarifsConfig() {
                   <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>Labo</div>
                   <div style={{ display: 'flex', gap: 6 }}>
                     {[false, true].map((has) => (
-                      <button key={String(has)} onClick={() => setSimLabo(has)} style={{
+                      <button key={String(has)} onClick={() => { setSimLabo(has); if (!has) setSimPalier(0); }} style={{
                         padding: '7px 16px', borderRadius: 9, border: `1.5px solid ${simLabo === has ? '#7c3aed' : '#e2e8f0'}`,
                         background: simLabo === has ? '#7c3aed' : '#f8fafc',
                         color: simLabo === has ? '#fff' : '#374151',
@@ -414,13 +418,15 @@ export default function TarifsConfig() {
                   </div>
                 </div>
 
-                {/* Palier acheteurs */}
+                {/* Palier acheteurs — l'option nécessite au moins 1 labo : désactivé (et remis à 0) en mode « Sans labo » */}
                 <div>
                   <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>Palier acheteurs</div>
                   <select
-                    value={simPalier}
+                    value={simLabo ? simPalier : 0}
+                    disabled={!simLabo}
+                    title={!simLabo ? "L'option Acheteurs nécessite au moins 1 labo" : undefined}
                     onChange={(e) => setSimPalier(Number(e.target.value))}
-                    style={{ width: '100%', padding: '8px 10px', borderRadius: 9, border: '1.5px solid #e2e8f0', fontSize: 13, fontWeight: 600, color: '#374151', background: '#f8fafc', cursor: 'pointer', outline: 'none' }}
+                    style={{ width: '100%', padding: '8px 10px', borderRadius: 9, border: '1.5px solid #e2e8f0', fontSize: 13, fontWeight: 600, color: '#374151', background: '#f8fafc', cursor: simLabo ? 'pointer' : 'not-allowed', opacity: simLabo ? 1 : 0.55, outline: 'none' }}
                   >
                     <option value={0}>Aucun</option>
                     <option value={10}>1 à 10 acheteurs — {v.acheteurs_palier_10} DT</option>
