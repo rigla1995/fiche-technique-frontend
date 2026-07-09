@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import api from '../../api/client';
 import GuideButton from './GuideButton';
@@ -9,10 +9,14 @@ const CD = '#4c1d95';
 const CL = '#f5f3ff';
 const CB = '#c4b5fd';
 
+type Statut = 'en_attente' | 'expediee' | 'livree' | 'annulee';
+
 interface Commande {
   id: string;
   dateCommande: string;
-  statut: 'en_attente' | 'validee' | 'annulee';
+  dateExpedition: string | null;
+  dateLivraison: string | null;
+  statut: Statut;
   source: 'client' | 'portail';
   acheteurNom: string;
   acheteurEntreprise: string | null;
@@ -28,26 +32,32 @@ interface Commande {
 }
 
 interface LigneDetail {
-  designation: string; quantite: number; quantiteUnites: number;
+  id: number; designation: string; quantite: number; quantiteUnites: number;
   prixHt: number; prixTtc: number; tauxTva: number;
 }
+interface HistoEtat { statut: Statut; dateEffet: string | null; motif: string | null; parNom: string | null; le: string }
 interface CommandeDetail extends Commande {
   notes: string | null;
   lignes: LigneDetail[];
+  historique: HistoEtat[];
   facture: { id: number; numero: string; montantBrutTtc: number; montantHt: number; montantTva: number; timbreFiscal: boolean; montantTimbre: number; montantTtc: number } | null;
 }
 
 interface AcheteurOpt { id: number; nom: string }
 
-const STATUT_BADGE: Record<Commande['statut'], { label: string; bg: string; color: string }> = {
+const STATUT_BADGE: Record<Statut, { label: string; bg: string; color: string }> = {
   en_attente: { label: '⏳ En attente', bg: '#fef3c7', color: '#92400e' },
-  validee: { label: '✅ Validée', bg: '#dcfce7', color: '#166534' },
+  expediee: { label: '🚚 Expédiée', bg: '#dbeafe', color: '#1d4ed8' },
+  livree: { label: '✅ Livrée', bg: '#dcfce7', color: '#166534' },
   annulee: { label: '✕ Annulée', bg: '#fee2e2', color: '#991b1b' },
 };
+// Fallback : un statut inattendu (ex. skew de déploiement) ne doit pas casser la page
+const badgeOf = (s: string) => STATUT_BADGE[s as Statut] || { label: s, bg: '#f1f5f9', color: '#475569' };
 
 const inp: React.CSSProperties = { padding: '7px 10px', borderRadius: 8, border: '1px solid #e2e8f0', fontSize: '0.84rem', fontFamily: 'inherit' };
 const fmt = (n: number | null | undefined) => n != null ? `${Number(n).toFixed(3)} DT` : '—';
-const fmtDate = (d: string) => { const [y, m, j] = d.split('-'); return `${j}/${m}/${y}`; };
+const fmtDate = (d: string | null | undefined) => { if (!d) return '—'; const [y, m, j] = d.split('-'); return `${j}/${m}/${y}`; };
+const today = () => new Date().toISOString().slice(0, 10);
 
 interface Manquant { nom: string; unite: string; disponible: number; necessaire: number; manquant: number }
 interface LaboOpt { id: number; nom: string }
@@ -66,14 +76,24 @@ export default function CommandesAcheteursPage() {
   const [flash, setFlash] = useState('');
   const [detail, setDetail] = useState<CommandeDetail | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
-  // Validation d'une commande portail : choix du labo source + remise + timbre
-  const [validerCmd, setValiderCmd] = useState<Commande | null>(null);
-  const [validerLaboId, setValiderLaboId] = useState('');
-  const [validerTimbre, setValiderTimbre] = useState(true);
-  const [validerRemise, setValiderRemise] = useState('0');
-  const [validerErr, setValiderErr] = useState('');
-  const [validerManquants, setValiderManquants] = useState<Manquant[]>([]);
-  const [validerSaving, setValiderSaving] = useState(false);
+
+  // Expédition d'une commande en attente : labo + quantités ajustables + remise + timbre + date
+  const [expCmd, setExpCmd] = useState<Commande | null>(null);
+  const [expLignes, setExpLignes] = useState<{ id: number; designation: string; quantite: string; prixTtc: number }[]>([]);
+  const [expLignesLoading, setExpLignesLoading] = useState(false);
+  const [expLaboId, setExpLaboId] = useState('');
+  const [expTimbre, setExpTimbre] = useState(true);
+  const [expRemise, setExpRemise] = useState('0');
+  const [expDate, setExpDate] = useState(today());
+  const [expErr, setExpErr] = useState('');
+  const [expManquants, setExpManquants] = useState<Manquant[]>([]);
+  const [expSaving, setExpSaving] = useState(false);
+
+  // Livraison d'une commande expédiée
+  const [livCmd, setLivCmd] = useState<Commande | null>(null);
+  const [livDate, setLivDate] = useState(today());
+  const [livErr, setLivErr] = useState('');
+  const [livSaving, setLivSaving] = useState(false);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -92,7 +112,7 @@ export default function CommandesAcheteursPage() {
     api.get('/api/acheteurs').then(({ data }) => setAcheteurs(data.acheteurs)).catch(() => {});
     api.get('/api/labo').then(({ data }) => {
       setLabos(data);
-      if (data.length === 1) setValiderLaboId(String(data[0].id));
+      if (data.length === 1) setExpLaboId(String(data[0].id));
     }).catch(() => {});
   }, []);
 
@@ -107,13 +127,14 @@ export default function CommandesAcheteursPage() {
       ws.addRow(['LabFlow — Ventes & commandes acheteurs']).font = { bold: true, size: 14 };
       ws.addRow([`Exporté le ${new Date().toLocaleDateString('fr-FR')}${from || to ? ` · période ${from || '…'} → ${to || '…'}` : ''}`]);
       ws.addRow([]);
-      const header = ws.addRow(['Date', 'Acheteur', 'Entreprise', 'Labo', 'Source', 'Statut', 'Lignes', 'Remise %', 'Brut TTC', 'Facture', 'Net TTC facturé', 'Motif annulation']);
+      const header = ws.addRow(['Date', 'Acheteur', 'Entreprise', 'Labo', 'Source', 'Statut', 'Expédiée le', 'Livrée le', 'Lignes', 'Remise %', 'Brut TTC', 'Facture', 'Net TTC facturé', 'Motif annulation']);
       header.font = { bold: true };
       for (const c of commandes) {
         ws.addRow([
           c.dateCommande, c.acheteurNom, c.acheteurEntreprise || '', c.laboNom || '',
           c.source === 'portail' ? 'Portail' : 'Vente directe',
-          c.statut === 'validee' ? 'Validée' : c.statut === 'en_attente' ? 'En attente' : 'Annulée',
+          badgeOf(c.statut).label.replace(/^\S+\s/, ''),
+          c.dateExpedition || '', c.dateLivraison || '',
           c.nbLignes, c.remisePct, c.totalBrutTtc,
           c.factureNumero || '', c.factureTtc ?? '', c.motifAnnulation || '',
         ]);
@@ -122,7 +143,7 @@ export default function CommandesAcheteursPage() {
       const buf = await wb.xlsx.writeBuffer();
       const url = URL.createObjectURL(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
       const a = document.createElement('a');
-      a.href = url; a.download = `ventes_acheteurs_${new Date().toISOString().slice(0, 10)}.xlsx`; a.click();
+      a.href = url; a.download = `ventes_acheteurs_${today()}.xlsx`; a.click();
       URL.revokeObjectURL(url);
     } catch {
       setError('Erreur lors de l\'export Excel');
@@ -131,29 +152,67 @@ export default function CommandesAcheteursPage() {
     }
   };
 
-  const valider = async () => {
-    if (!validerCmd || !validerLaboId) { setValiderErr('Choisissez le labo source'); return; }
-    const remise = validerRemise === '' ? 0 : Number(String(validerRemise).replace(',', '.'));
-    if (!Number.isFinite(remise) || remise < 0 || remise > 100) { setValiderErr('Remise invalide (0 à 100)'); return; }
-    setValiderSaving(true); setValiderErr(''); setValiderManquants([]);
+  const expReqSeq = useRef(0);
+  const openExpedier = async (c: Commande) => {
+    setExpCmd(c); setExpErr(''); setExpManquants([]); setExpTimbre(true);
+    setExpRemise(String(c.remisePct || 0)); setExpDate(today());
+    // Labo réinitialisé à chaque ouverture (pas d'héritage silencieux de l'expédition précédente)
+    setExpLaboId(labos.length === 1 ? String(labos[0].id) : '');
+    setExpLignes([]); setExpLignesLoading(true);
+    const seq = ++expReqSeq.current;
     try {
-      const { data } = await api.post(`/api/acheteurs/commandes/${validerCmd.id}/valider`, {
-        laboId: Number(validerLaboId), timbreFiscal: validerTimbre,
-        remisePct: remise,
+      const { data } = await api.get(`/api/acheteurs/commandes/${c.id}`);
+      if (seq !== expReqSeq.current) return; // une autre commande a été ouverte entre-temps
+      setExpLignes((data.lignes as LigneDetail[]).map(l => ({ id: l.id, designation: l.designation, quantite: String(l.quantite), prixTtc: l.prixTtc })));
+    } catch { if (seq === expReqSeq.current) setExpErr('Erreur de chargement des lignes — fermez et rouvrez la commande'); }
+    finally { if (seq === expReqSeq.current) setExpLignesLoading(false); }
+  };
+
+  const expedier = async () => {
+    if (!expCmd || !expLaboId) { setExpErr('Choisissez le labo source'); return; }
+    const remise = expRemise === '' ? 0 : Number(String(expRemise).replace(',', '.'));
+    if (!Number.isFinite(remise) || remise < 0 || remise > 100) { setExpErr('Remise invalide (0 à 100)'); return; }
+    if (expLignes.length === 0) { setExpErr('Lignes non chargées — fermez et rouvrez la commande'); return; }
+    const quantites: { ligneId: number; quantite: number }[] = [];
+    for (const l of expLignes) {
+      const q = Number(String(l.quantite).replace(',', '.'));
+      if (!Number.isFinite(q) || Math.round(q * 1000) / 1000 <= 0) { setExpErr(`Quantité invalide pour « ${l.designation} »`); return; }
+      quantites.push({ ligneId: l.id, quantite: q });
+    }
+    setExpSaving(true); setExpErr(''); setExpManquants([]);
+    try {
+      const { data } = await api.post(`/api/acheteurs/commandes/${expCmd.id}/expedier`, {
+        laboId: Number(expLaboId), timbreFiscal: expTimbre, remisePct: remise,
+        dateExpedition: expDate, quantites,
       });
-      setValiderCmd(null);
-      setFlash(`Commande validée — facture ${data.facture.numero} (${fmt(data.facture.montantTtc)})`);
+      setExpCmd(null);
+      setFlash(`Commande expédiée — facture ${data.facture.numero} (${fmt(data.facture.montantTtc)})`);
       load();
     } catch (e: unknown) {
       const resp = (e as { response?: { status?: number; data?: { message?: string; manquants?: Manquant[] } } })?.response;
       if (resp?.status === 422 && resp.data?.manquants) {
-        setValiderManquants(resp.data.manquants);
-        setValiderErr('Stock labo insuffisant :');
+        setExpManquants(resp.data.manquants);
+        setExpErr('Stock labo insuffisant :');
       } else {
-        setValiderErr(resp?.data?.message ?? 'Erreur lors de la validation');
+        setExpErr(resp?.data?.message ?? 'Erreur lors de l\'expédition');
       }
     } finally {
-      setValiderSaving(false);
+      setExpSaving(false);
+    }
+  };
+
+  const livrer = async () => {
+    if (!livCmd) return;
+    setLivSaving(true); setLivErr('');
+    try {
+      await api.post(`/api/acheteurs/commandes/${livCmd.id}/livrer`, { dateLivraison: livDate });
+      setLivCmd(null);
+      setFlash('Commande livrée');
+      load();
+    } catch (e: unknown) {
+      setLivErr((e as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Erreur lors de la livraison');
+    } finally {
+      setLivSaving(false);
     }
   };
 
@@ -172,21 +231,21 @@ export default function CommandesAcheteursPage() {
   };
 
   const annuler = async (c: Commande) => {
-    const msgValidee = `Annuler la vente du ${fmtDate(c.dateCommande)} à ${c.acheteurNom} ?\n\nLe stock sera réintégré et la facture ${c.factureNumero || ''} supprimée.`;
+    const msgStock = `Annuler la commande du ${fmtDate(c.dateCommande)} à ${c.acheteurNom} ?\n\nLe stock sera réintégré et la facture ${c.factureNumero || ''} supprimée.`;
     const msgAttente = `Refuser la commande du ${fmtDate(c.dateCommande)} de ${c.acheteurNom} ?${c.source === 'portail' ? '\n\nL\'acheteur sera prévenu par email.' : ''}`;
-    const motif = window.prompt(`${c.statut === 'validee' ? msgValidee : msgAttente}\n\nMotif (optionnel) :`);
+    const motif = window.prompt(`${c.statut === 'en_attente' ? msgAttente : msgStock}\n\nMotif (optionnel) :`);
     if (motif === null) return;
     setBusyId(c.id); setError('');
     try {
-      await api.post(`/api/acheteurs/commandes/${c.id}/annuler`, { motif });
-      setFlash('Vente annulée — stock réintégré');
+      const { data } = await api.post(`/api/acheteurs/commandes/${c.id}/annuler`, { motif });
+      setFlash(data.message || 'Commande annulée');
       load();
     } catch (e: unknown) {
       setError((e as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Erreur lors de l\'annulation');
     } finally { setBusyId(null); }
   };
 
-  const totalPeriode = commandes.filter(c => c.statut === 'validee').reduce((s, c) => s + (c.factureTtc ?? 0), 0);
+  const totalPeriode = commandes.filter(c => c.statut === 'expediee' || c.statut === 'livree').reduce((s, c) => s + (c.factureTtc ?? 0), 0);
 
   return (
     <div className="page-content">
@@ -198,13 +257,13 @@ export default function CommandesAcheteursPage() {
             <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0 }}>Ventes Acheteurs</h1>
           </div>
           <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.85rem', margin: 0 }}>
-            Historique des ventes et commandes — factures téléchargeables
+            En attente → expédiée (stock déduit + facture) → livrée — historique complet par commande
           </p>
         </div>
         <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
           <div style={{ background: 'rgba(255,255,255,0.14)', border: '1px solid rgba(255,255,255,0.25)', borderRadius: 14, padding: '10px 20px', textAlign: 'center' }}>
             <div style={{ fontSize: '1.2rem', fontWeight: 900, color: '#fff' }}>{fmt(totalPeriode)}</div>
-            <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.75)', fontWeight: 600 }}>CA validé (filtre)</div>
+            <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.75)', fontWeight: 600 }}>CA facturé (filtre)</div>
           </div>
           <button onClick={exportExcel} disabled={exporting || commandes.length === 0}
             title={commandes.length === 0 ? 'Rien à exporter' : 'Exporter la liste filtrée en Excel'}
@@ -225,8 +284,9 @@ export default function CommandesAcheteursPage() {
       <div className="card" style={{ padding: '12px 16px', marginBottom: 16, display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
         <select value={statut} onChange={e => setStatut(e.target.value)} style={inp}>
           <option value="">Tous les statuts</option>
-          <option value="validee">Validées</option>
           <option value="en_attente">En attente</option>
+          <option value="expediee">Expédiées</option>
+          <option value="livree">Livrées</option>
           <option value="annulee">Annulées</option>
         </select>
         <select value={acheteurId} onChange={e => setAcheteurId(e.target.value)} style={{ ...inp, minWidth: 170 }}>
@@ -268,7 +328,7 @@ export default function CommandesAcheteursPage() {
               </thead>
               <tbody>
                 {commandes.map(c => {
-                  const badge = STATUT_BADGE[c.statut];
+                  const badge = badgeOf(c.statut);
                   return (
                     <tr key={c.id} style={{ borderBottom: '1px solid #f1f5f9', opacity: c.statut === 'annulee' ? 0.6 : 1 }}>
                       <td style={{ padding: '9px 14px', whiteSpace: 'nowrap', fontWeight: 600 }}>{fmtDate(c.dateCommande)}</td>
@@ -284,6 +344,12 @@ export default function CommandesAcheteursPage() {
                       </td>
                       <td style={{ padding: '9px 14px' }}>
                         <span title={c.motifAnnulation || undefined} style={{ padding: '3px 10px', borderRadius: 20, fontSize: '0.72rem', fontWeight: 700, background: badge.bg, color: badge.color, whiteSpace: 'nowrap' }}>{badge.label}</span>
+                        {c.statut === 'expediee' && c.dateExpedition && (
+                          <div style={{ fontSize: '0.68rem', color: '#1d4ed8', fontWeight: 600, marginTop: 3 }}>le {fmtDate(c.dateExpedition)}</div>
+                        )}
+                        {c.statut === 'livree' && c.dateLivraison && (
+                          <div style={{ fontSize: '0.68rem', color: '#166534', fontWeight: 600, marginTop: 3 }}>le {fmtDate(c.dateLivraison)}</div>
+                        )}
                         {c.source === 'portail' && (
                           <div style={{ fontSize: '0.68rem', color: C, fontWeight: 700, marginTop: 3 }}>🌐 portail</div>
                         )}
@@ -299,15 +365,22 @@ export default function CommandesAcheteursPage() {
                       <td style={{ padding: '9px 14px', whiteSpace: 'nowrap' }}>
                         <button onClick={() => openDetail(c.id)} title="Détail" style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1rem', padding: '4px 6px' }}>👁️</button>
                         {c.statut === 'en_attente' && (
-                          <button onClick={() => { setValiderCmd(c); setValiderErr(''); setValiderManquants([]); setValiderTimbre(true); setValiderRemise(String(c.remisePct || 0)); }}
-                            title="Valider (choisir le labo, déduire le stock, facturer)"
-                            style={{ background: '#dcfce7', border: '1px solid #86efac', color: '#166534', borderRadius: 8, padding: '4px 10px', fontWeight: 700, fontSize: '0.76rem', cursor: 'pointer', marginRight: 4 }}>
-                            ✅ Valider
+                          <button onClick={() => openExpedier(c)}
+                            title="Expédier (ajuster les quantités, déduire le stock, facturer)"
+                            style={{ background: '#dbeafe', border: '1px solid #93c5fd', color: '#1d4ed8', borderRadius: 8, padding: '4px 10px', fontWeight: 700, fontSize: '0.76rem', cursor: 'pointer', marginRight: 4 }}>
+                            🚚 Expédier
                           </button>
                         )}
-                        {(c.statut === 'validee' || c.statut === 'en_attente') && (
+                        {c.statut === 'expediee' && (
+                          <button onClick={() => { setLivCmd(c); setLivErr(''); setLivDate(today()); }}
+                            title="Marquer comme livrée"
+                            style={{ background: '#dcfce7', border: '1px solid #86efac', color: '#166534', borderRadius: 8, padding: '4px 10px', fontWeight: 700, fontSize: '0.76rem', cursor: 'pointer', marginRight: 4 }}>
+                            ✅ Livrer
+                          </button>
+                        )}
+                        {c.statut !== 'annulee' && (
                           <button onClick={() => annuler(c)} disabled={busyId === c.id}
-                            title={c.statut === 'validee' ? 'Annuler (réintègre le stock)' : 'Refuser la commande'}
+                            title={c.statut === 'en_attente' ? 'Refuser la commande' : 'Annuler (réintègre le stock)'}
                             style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1rem', padding: '4px 6px' }}>
                             {busyId === c.id ? '…' : '↩️'}
                           </button>
@@ -322,42 +395,80 @@ export default function CommandesAcheteursPage() {
         )}
       </div>
 
-      {/* Modal validation commande portail */}
-      {validerCmd && (
+      {/* Modal expédition (commande en attente) */}
+      {expCmd && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.55)', zIndex: 400, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-          <div style={{ background: '#fff', borderRadius: 16, width: '100%', maxWidth: 480, padding: 24 }}>
+          <div style={{ background: '#fff', borderRadius: 16, width: '100%', maxWidth: 560, maxHeight: '88vh', overflowY: 'auto', padding: 24 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-              <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: CD }}>✅ Valider la commande</h2>
-              <button onClick={() => setValiderCmd(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.1rem' }}>✕</button>
+              <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: CD }}>🚚 Expédier la commande</h2>
+              <button onClick={() => setExpCmd(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.1rem' }}>✕</button>
             </div>
-            <div style={{ fontSize: '0.84rem', color: '#475569', marginBottom: 16 }}>
-              {validerCmd.acheteurNom} · {fmtDate(validerCmd.dateCommande)} · {validerCmd.nbLignes} ligne{validerCmd.nbLignes > 1 ? 's' : ''} · {fmt(validerCmd.totalBrutTtc)} brut
-              {validerCmd.remisePct > 0 ? ` · remise ${validerCmd.remisePct}%` : ''}
+            <div style={{ fontSize: '0.84rem', color: '#475569', marginBottom: 14 }}>
+              {expCmd.acheteurNom} · commandée le {fmtDate(expCmd.dateCommande)} — le stock est déduit et la facture générée à l'expédition.
             </div>
-            <div style={{ marginBottom: 12 }}>
-              <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 700, color: CD, marginBottom: 5 }}>Labo source (stock déduit) *</label>
-              <select value={validerLaboId} onChange={e => setValiderLaboId(e.target.value)} style={{ ...inp, width: '100%', boxSizing: 'border-box' }}>
-                <option value="">— Choisir —</option>
-                {labos.map(l => <option key={l.id} value={l.id}>{l.nom}</option>)}
-              </select>
+
+            {/* Quantités ajustables */}
+            <div style={{ marginBottom: 14 }}>
+              <div style={{ fontSize: '0.74rem', fontWeight: 700, color: CD, marginBottom: 6 }}>Lignes (quantités ajustables)</div>
+              {expLignesLoading ? (
+                <div style={{ color: 'var(--text-muted)', fontSize: '0.82rem' }}>Chargement…</div>
+              ) : (
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
+                  <thead>
+                    <tr style={{ background: CL }}>
+                      <th style={{ textAlign: 'left', padding: '6px 10px', color: CD, fontSize: '0.7rem' }}>Article</th>
+                      <th style={{ textAlign: 'right', padding: '6px 10px', color: CD, fontSize: '0.7rem' }}>Qté demandée</th>
+                      <th style={{ textAlign: 'right', padding: '6px 10px', color: CD, fontSize: '0.7rem' }}>PU TTC</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {expLignes.map((l, i) => (
+                      <tr key={l.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                        <td style={{ padding: '6px 10px', fontWeight: 600 }}>{l.designation}</td>
+                        <td style={{ padding: '6px 10px', textAlign: 'right' }}>
+                          <input value={l.quantite}
+                            onChange={e => setExpLignes(prev => prev.map((x, xi) => xi === i ? { ...x, quantite: e.target.value } : x))}
+                            style={{ ...inp, width: 76, textAlign: 'right', padding: '5px 8px' }} />
+                        </td>
+                        <td style={{ padding: '6px 10px', textAlign: 'right', whiteSpace: 'nowrap' }}>{fmt(l.prixTtc)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+
+            <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 12 }}>
+              <div style={{ flex: 1, minWidth: 180 }}>
+                <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 700, color: CD, marginBottom: 5 }}>Labo source (stock déduit) *</label>
+                <select value={expLaboId} onChange={e => setExpLaboId(e.target.value)} style={{ ...inp, width: '100%', boxSizing: 'border-box' }}>
+                  <option value="">— Choisir —</option>
+                  {labos.map(l => <option key={l.id} value={l.id}>{l.nom}</option>)}
+                </select>
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 700, color: CD, marginBottom: 5 }}>Date d'expédition</label>
+                <input type="date" value={expDate} onChange={e => setExpDate(e.target.value)}
+                  min={expCmd.dateCommande} max={today()} style={inp} />
+              </div>
             </div>
             <div style={{ display: 'flex', gap: 16, alignItems: 'center', marginBottom: 14, flexWrap: 'wrap' }}>
               <div>
                 <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 700, color: CD, marginBottom: 5 }}>Remise % (cette commande)</label>
-                <input value={validerRemise} onChange={e => setValiderRemise(e.target.value)} placeholder="0"
+                <input value={expRemise} onChange={e => setExpRemise(e.target.value)} placeholder="0"
                   style={{ ...inp, width: 80, textAlign: 'right' }} />
               </div>
-              <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.84rem', fontWeight: 600, color: validerTimbre ? CD : '#64748b', cursor: 'pointer', marginTop: 16 }}>
-                <input type="checkbox" checked={validerTimbre} onChange={e => setValiderTimbre(e.target.checked)} style={{ accentColor: C }} />
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.84rem', fontWeight: 600, color: expTimbre ? CD : '#64748b', cursor: 'pointer', marginTop: 16 }}>
+                <input type="checkbox" checked={expTimbre} onChange={e => setExpTimbre(e.target.checked)} style={{ accentColor: C }} />
                 Timbre fiscal (1.000 DT)
               </label>
             </div>
-            {validerErr && (
+            {expErr && (
               <div style={{ background: '#fee2e2', border: '1px solid #fca5a5', color: '#991b1b', borderRadius: 10, padding: '10px 14px', marginBottom: 12, fontSize: '0.82rem', fontWeight: 600 }}>
-                ⚠️ {validerErr}
-                {validerManquants.length > 0 && (
+                ⚠️ {expErr}
+                {expManquants.length > 0 && (
                   <ul style={{ margin: '8px 0 0', paddingLeft: 18 }}>
-                    {validerManquants.map((m, i) => (
+                    {expManquants.map((m, i) => (
                       <li key={i}>{m.nom} : dispo {m.disponible}, nécessaire {m.necessaire} (manque {m.manquant})</li>
                     ))}
                   </ul>
@@ -365,10 +476,36 @@ export default function CommandesAcheteursPage() {
               </div>
             )}
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
-              <button onClick={() => setValiderCmd(null)} style={{ padding: '9px 18px', borderRadius: 10, border: '1px solid #e2e8f0', background: '#fff', cursor: 'pointer', fontWeight: 600, fontSize: '0.85rem' }}>Fermer</button>
-              <button onClick={valider} disabled={validerSaving || !validerLaboId}
-                style={{ padding: '9px 22px', borderRadius: 10, border: 'none', background: validerLaboId ? 'linear-gradient(135deg,#166534,#16a34a)' : '#cbd5e1', color: '#fff', cursor: validerSaving ? 'default' : 'pointer', fontWeight: 700, fontSize: '0.85rem' }}>
-                {validerSaving ? 'Validation…' : '✅ Valider et facturer'}
+              <button onClick={() => setExpCmd(null)} style={{ padding: '9px 18px', borderRadius: 10, border: '1px solid #e2e8f0', background: '#fff', cursor: 'pointer', fontWeight: 600, fontSize: '0.85rem' }}>Fermer</button>
+              <button onClick={expedier} disabled={expSaving || !expLaboId || expLignesLoading || expLignes.length === 0}
+                style={{ padding: '9px 22px', borderRadius: 10, border: 'none', background: expLaboId ? 'linear-gradient(135deg,#1e40af,#3b82f6)' : '#cbd5e1', color: '#fff', cursor: expSaving ? 'default' : 'pointer', fontWeight: 700, fontSize: '0.85rem' }}>
+                {expSaving ? 'Expédition…' : '🚚 Expédier et facturer'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal livraison (commande expédiée) */}
+      {livCmd && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.55)', zIndex: 400, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+          <div style={{ background: '#fff', borderRadius: 16, width: '100%', maxWidth: 420, padding: 24 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+              <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: CD }}>✅ Marquer comme livrée</h2>
+              <button onClick={() => setLivCmd(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.1rem' }}>✕</button>
+            </div>
+            <div style={{ fontSize: '0.84rem', color: '#475569', marginBottom: 14 }}>
+              {livCmd.acheteurNom} · expédiée le {fmtDate(livCmd.dateExpedition)}{livCmd.factureNumero ? ` · ${livCmd.factureNumero}` : ''}
+            </div>
+            <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 700, color: CD, marginBottom: 5 }}>Date de livraison</label>
+            <input type="date" value={livDate} onChange={e => setLivDate(e.target.value)}
+              min={livCmd.dateExpedition || undefined} style={{ ...inp, marginBottom: 14 }} />
+            {livErr && <div style={{ background: '#fee2e2', border: '1px solid #fca5a5', color: '#991b1b', borderRadius: 10, padding: '10px 14px', marginBottom: 12, fontSize: '0.82rem', fontWeight: 600 }}>⚠️ {livErr}</div>}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+              <button onClick={() => setLivCmd(null)} style={{ padding: '9px 18px', borderRadius: 10, border: '1px solid #e2e8f0', background: '#fff', cursor: 'pointer', fontWeight: 600, fontSize: '0.85rem' }}>Fermer</button>
+              <button onClick={livrer} disabled={livSaving}
+                style={{ padding: '9px 22px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg,#166534,#16a34a)', color: '#fff', cursor: livSaving ? 'default' : 'pointer', fontWeight: 700, fontSize: '0.85rem' }}>
+                {livSaving ? '…' : '✅ Confirmer la livraison'}
               </button>
             </div>
           </div>
@@ -381,12 +518,14 @@ export default function CommandesAcheteursPage() {
           <div style={{ background: '#fff', borderRadius: 16, width: '100%', maxWidth: 680, maxHeight: '88vh', overflowY: 'auto', padding: 24 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
               <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: CD }}>
-                Vente du {fmtDate(detail.dateCommande)} — {detail.acheteurNom}
+                Commande du {fmtDate(detail.dateCommande)} — {detail.acheteurNom}
               </h2>
               <button onClick={() => setDetail(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.1rem' }}>✕</button>
             </div>
             <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: 14 }}>
-              {detail.laboNom ? `Labo : ${detail.laboNom} · ` : ''}{STATUT_BADGE[detail.statut].label}
+              {detail.laboNom ? `Labo : ${detail.laboNom} · ` : ''}{badgeOf(detail.statut).label}
+              {detail.dateExpedition ? ` · Expédiée le ${fmtDate(detail.dateExpedition)}` : ''}
+              {detail.dateLivraison ? ` · Livrée le ${fmtDate(detail.dateLivraison)}` : ''}
               {detail.motifAnnulation ? ` · Motif : ${detail.motifAnnulation}` : ''}
               {detail.notes ? ` · ${detail.notes}` : ''}
             </div>
@@ -411,8 +550,9 @@ export default function CommandesAcheteursPage() {
               </tbody>
             </table>
             {detail.facture && (
-              <div style={{ background: CL, borderRadius: 12, padding: '12px 16px', display: 'flex', gap: 18, flexWrap: 'wrap', alignItems: 'center', fontSize: '0.82rem', color: CD }}>
+              <div style={{ background: CL, borderRadius: 12, padding: '12px 16px', display: 'flex', gap: 18, flexWrap: 'wrap', alignItems: 'center', fontSize: '0.82rem', color: CD, marginBottom: 14 }}>
                 <strong>{detail.facture.numero}</strong>
+                {detail.remisePct > 0 && <span style={{ color: '#b91c1c' }}>Remise {detail.remisePct}%</span>}
                 <span>HT {fmt(detail.facture.montantHt)}</span>
                 <span>TVA {fmt(detail.facture.montantTva)}</span>
                 {detail.facture.timbreFiscal && <span>Timbre {fmt(detail.facture.montantTimbre)}</span>}
@@ -421,6 +561,26 @@ export default function CommandesAcheteursPage() {
                   style={{ background: CD, color: '#fff', border: 'none', borderRadius: 8, padding: '7px 14px', fontWeight: 700, fontSize: '0.78rem', cursor: 'pointer' }}>
                   📄 PDF
                 </button>
+              </div>
+            )}
+            {/* Historique des états */}
+            {detail.historique?.length > 0 && (
+              <div>
+                <div style={{ fontSize: '0.74rem', fontWeight: 700, color: CD, marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Historique des états</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {detail.historique.map((h, i) => {
+                    const b = badgeOf(h.statut);
+                    return (
+                      <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: '0.8rem', color: '#475569' }}>
+                        <span style={{ padding: '2px 9px', borderRadius: 20, fontSize: '0.7rem', fontWeight: 700, background: b.bg, color: b.color, whiteSpace: 'nowrap', minWidth: 92, textAlign: 'center' }}>{b.label}</span>
+                        <span>{h.dateEffet ? `le ${fmtDate(h.dateEffet)}` : ''}</span>
+                        {h.parNom && <span style={{ color: '#94a3b8' }}>par {h.parNom}</span>}
+                        {h.motif && <span style={{ color: '#b91c1c' }}>— {h.motif}</span>}
+                        <span style={{ marginLeft: 'auto', color: '#cbd5e1', fontSize: '0.72rem' }}>{new Date(h.le).toLocaleString('fr-FR')}</span>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             )}
           </div>
