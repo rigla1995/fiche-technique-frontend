@@ -7,11 +7,8 @@ import HistoryFilterBar, { FilterField, FilterInput } from '../common/HistoryFil
 const COLOR = '#16a34a';
 const GRADIENT = 'linear-gradient(135deg, #14532d 0%, #16a34a 55%, #4ade80 100%)';
 
-interface FamRow { nom: string; consommable: boolean; vendable: boolean; achetable: boolean; }
-const emptyRow = (): FamRow => ({ nom: '', consommable: true, vendable: true, achetable: false });
-
-// Couleur du toggle « Achetable » (thème violet du module Acheteurs)
-const ACH = '#7c3aed';
+interface FamRow { nom: string; consommable: boolean; vendable: boolean; }
+const emptyRow = (): FamRow => ({ nom: '', consommable: true, vendable: true });
 
 export default function ReferentielFamillesPage() {
   const [familles, setFamilles] = useState<Famille[]>([]);
@@ -28,25 +25,17 @@ export default function ReferentielFamillesPage() {
   const [editNom, setEditNom] = useState('');
   const [editConsommable, setEditConsommable] = useState(true);
   const [editVendable, setEditVendable] = useState(true);
-  const [editAchetable, setEditAchetable] = useState(false);
   const [saving, setSaving] = useState(false);
   const [editError, setEditError] = useState('');
 
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [search, setSearch] = useState('');
-  // Le toggle « Achetable » n'apparaît que si le module Acheteurs est actif sur le compte
-  const [moduleAcheteursActif, setModuleAcheteursActif] = useState(false);
 
   const load = () => {
     setLoading(true);
     api.get('/api/familles').then(r => { setFamilles(r.data); setLoading(false); }).catch(() => setLoading(false));
   };
   useEffect(() => { load(); }, []);
-  useEffect(() => {
-    api.get('/api/entreprise')
-      .then(({ data }) => setModuleAcheteursActif(!!data?.module_acheteurs_actif))
-      .catch(() => {});
-  }, []);
 
   const openCreate = () => { setRows([emptyRow()]); setCreateError(''); setShowCreate(true); };
   const closeCreate = () => setShowCreate(false);
@@ -60,20 +49,20 @@ export default function ReferentielFamillesPage() {
     if (!valid.length) { setCreateError('Au moins un nom requis'); return; }
     setCreating(true); setCreateError('');
     try {
-      await Promise.all(valid.map(r => api.post('/api/familles', { nom: r.nom.trim(), consommable: r.consommable, vendable: r.vendable, achetable: r.achetable })));
+      await Promise.all(valid.map(r => api.post('/api/familles', { nom: r.nom.trim(), consommable: r.consommable, vendable: r.vendable })));
       closeCreate(); load();
     } catch (e: unknown) {
       setCreateError((e as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Erreur lors de l\'enregistrement');
     } finally { setCreating(false); }
   };
 
-  const openEdit = (f: Famille) => { setEditItem(f); setEditNom(f.name); setEditConsommable(f.consommable); setEditVendable(f.vendable !== false); setEditAchetable(f.achetable === true); setEditError(''); setSaving(false); };
+  const openEdit = (f: Famille) => { setEditItem(f); setEditNom(f.name); setEditConsommable(f.consommable); setEditVendable(f.vendable !== false); setEditError(''); setSaving(false); };
   const closeEdit = () => setEditItem(null);
 
   const handleSave = async () => {
     if (!editNom.trim()) { setEditError('Nom requis'); return; }
     setSaving(true);
-    try { await api.put(`/api/familles/${editItem!.id}`, { nom: editNom.trim(), consommable: editConsommable, vendable: editVendable, achetable: editAchetable }); closeEdit(); load(); }
+    try { await api.put(`/api/familles/${editItem!.id}`, { nom: editNom.trim(), consommable: editConsommable, vendable: editVendable }); closeEdit(); load(); }
     catch (e: unknown) { setEditError((e as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Erreur'); }
     finally { setSaving(false); }
   };
@@ -89,13 +78,6 @@ export default function ReferentielFamillesPage() {
     try {
       await api.put(`/api/familles/${f.id}`, { nom: f.name, consommable: f.consommable, vendable: !f.vendable });
       setFamilles(prev => prev.map(x => x.id === f.id ? { ...x, vendable: !f.vendable } : x));
-    } catch { load(); }
-  };
-
-  const toggleAchetable = async (f: Famille) => {
-    try {
-      await api.put(`/api/familles/${f.id}`, { nom: f.name, achetable: !f.achetable });
-      setFamilles(prev => prev.map(x => x.id === f.id ? { ...x, achetable: !f.achetable } : x));
     } catch { load(); }
   };
 
@@ -154,7 +136,7 @@ export default function ReferentielFamillesPage() {
       ) : (
         <div className="table-responsive card">
           <table className="table">
-            <thead><tr><th>Nom</th><th style={{ textAlign: 'center' }}>Consommable</th><th style={{ textAlign: 'center' }}>Vendable</th>{moduleAcheteursActif && <th style={{ textAlign: 'center' }}>Achetable</th>}<th style={{ textAlign: 'right' }}>Actions</th></tr></thead>
+            <thead><tr><th>Nom</th><th style={{ textAlign: 'center' }}>Consommable</th><th style={{ textAlign: 'center' }}>Vendable</th><th style={{ textAlign: 'right' }}>Actions</th></tr></thead>
             <tbody>
               {filtered.map(f => (
                 <tr key={f.id}>
@@ -180,16 +162,6 @@ export default function ReferentielFamillesPage() {
                       <span style={{ fontSize: '0.75rem', fontWeight: 600, color: f.vendable !== false ? '#065f46' : '#64748b' }}>{f.vendable !== false ? 'Oui' : 'Non'}</span>
                     </button>
                   </td>
-                  {moduleAcheteursActif && (
-                    <td style={{ textAlign: 'center' }}>
-                      <button onClick={() => toggleAchetable(f)} title={f.achetable ? 'Les articles de cette famille sont proposables aux acheteurs — cliquer pour désactiver' : 'Cliquer pour proposer les articles de cette famille aux acheteurs'} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', cursor: 'pointer', padding: '4px 8px', borderRadius: 8 }}>
-                        <div style={{ width: 36, height: 20, borderRadius: 10, position: 'relative', flexShrink: 0, background: f.achetable ? ACH : '#cbd5e1', transition: 'background 0.2s' }}>
-                          <div style={{ position: 'absolute', top: 2, left: f.achetable ? 18 : 2, width: 16, height: 16, borderRadius: '50%', background: '#fff', boxShadow: '0 1px 4px rgba(0,0,0,0.18)', transition: 'left 0.2s' }} />
-                        </div>
-                        <span style={{ fontSize: '0.75rem', fontWeight: 600, color: f.achetable ? '#5b21b6' : '#64748b' }}>{f.achetable ? 'Oui' : 'Non'}</span>
-                      </button>
-                    </td>
-                  )}
                   <td className="actions-cell" style={{ justifyContent: 'flex-end' }}>
                     <button className="btn btn-ghost btn-sm" onClick={() => openEdit(f)}>✏️ Modifier</button>
                     <button className="btn btn-danger btn-sm" disabled={f.hasAppros} title={f.hasAppros ? 'Cette famille ne peut pas être supprimée car des articles liés ont des approvisionnements enregistrés' : undefined} onClick={() => !f.hasAppros && setDeleteId(f.id)} style={f.hasAppros ? { opacity: 0.4, cursor: 'not-allowed' } : undefined}>🗑️</button>
@@ -215,7 +187,6 @@ export default function ReferentielFamillesPage() {
                 <div style={{ flex: 1 }}>Nom *</div>
                 <div style={{ width: 100 }}>Consommable</div>
                 <div style={{ width: 100 }}>Vendable</div>
-                {moduleAcheteursActif && <div style={{ width: 100 }}>Achetable</div>}
                 <div style={{ width: 32 }} />
               </div>
               {rows.map((row, i) => (
@@ -244,16 +215,6 @@ export default function ReferentielFamillesPage() {
                     </button>
                     <span style={{ fontSize: '0.78rem', color: row.vendable ? '#065f46' : '#64748b', fontWeight: 600 }}>{row.vendable ? 'Oui' : 'Non'}</span>
                   </div>
-                  {moduleAcheteursActif && (
-                    <div style={{ width: 100, display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <button type="button" onClick={() => updateRow(i, 'achetable', !row.achetable)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
-                        <div style={{ width: 36, height: 20, borderRadius: 10, position: 'relative', background: row.achetable ? ACH : '#cbd5e1', transition: 'background 0.2s' }}>
-                          <div style={{ position: 'absolute', top: 2, left: row.achetable ? 18 : 2, width: 16, height: 16, borderRadius: '50%', background: '#fff', boxShadow: '0 1px 4px rgba(0,0,0,0.18)', transition: 'left 0.2s' }} />
-                        </div>
-                      </button>
-                      <span style={{ fontSize: '0.78rem', color: row.achetable ? '#5b21b6' : '#64748b', fontWeight: 600 }}>{row.achetable ? 'Oui' : 'Non'}</span>
-                    </div>
-                  )}
                   <button onClick={() => removeRow(i)} disabled={rows.length === 1} style={{ width: 32, height: 38, border: 'none', borderRadius: 6, background: rows.length === 1 ? '#f1f5f9' : '#fee2e2', color: rows.length === 1 ? '#94a3b8' : '#dc2626', cursor: rows.length === 1 ? 'not-allowed' : 'pointer', fontWeight: 700, flexShrink: 0 }}>×</button>
                 </div>
               ))}
@@ -303,18 +264,6 @@ export default function ReferentielFamillesPage() {
                   <span style={{ fontSize: '0.88rem', fontWeight: 600, color: editVendable ? '#065f46' : '#64748b' }}>Vendable {editVendable ? '(activé)' : '(désactivé)'}</span>
                 </label>
               </div>
-              {moduleAcheteursActif && (
-                <div className="form-group">
-                  <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', userSelect: 'none' }}>
-                    <button type="button" onClick={() => setEditAchetable(v => !v)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
-                      <div style={{ width: 40, height: 22, borderRadius: 11, position: 'relative', background: editAchetable ? ACH : '#cbd5e1', transition: 'background 0.2s' }}>
-                        <div style={{ position: 'absolute', top: 3, left: editAchetable ? 20 : 3, width: 16, height: 16, borderRadius: '50%', background: '#fff', boxShadow: '0 1px 4px rgba(0,0,0,0.18)', transition: 'left 0.2s' }} />
-                      </div>
-                    </button>
-                    <span style={{ fontSize: '0.88rem', fontWeight: 600, color: editAchetable ? '#5b21b6' : '#64748b' }}>Achetable {editAchetable ? '(proposable aux acheteurs)' : '(désactivé)'}</span>
-                  </label>
-                </div>
-              )}
               <div className="modal-footer">
                 <button className="btn btn-ghost" onClick={closeEdit}>Annuler</button>
                 <button className="btn" disabled={saving || !editNom.trim()} onClick={handleSave} style={{ background: 'linear-gradient(135deg,#15803d,#16a34a)', color: '#fff' }}>

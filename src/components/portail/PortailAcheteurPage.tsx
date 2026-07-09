@@ -9,6 +9,8 @@ const C = '#6d28d9';
 const CD = '#4c1d95';
 const CB = '#c4b5fd';
 
+const PAGE_SIZE = 10;
+
 interface OffreCatalogue {
   articleType: 'ingredient' | 'produit';
   articleId: number;
@@ -16,11 +18,9 @@ interface OffreCatalogue {
   unite: string;
   categorie: string;
   prixUnitaireTtc: number;
-  tailleLot: number | null;
-  prixLotTtc: number | null;
   disponible: boolean;
 }
-interface Panier { mode: 'unite' | 'lot'; quantite: string }
+interface Panier { quantite: string }
 
 const keyOf = (o: { articleType: string; articleId: number }) => `${o.articleType}:${o.articleId}`;
 const parseNum = (v: string) => Number(String(v).replace(',', '.'));
@@ -29,11 +29,11 @@ const fmt = (n: number) => `${n.toFixed(3)} DT`;
 export default function PortailAcheteurPage() {
   const navigate = useNavigate();
   const [vendeur, setVendeur] = useState('');
-  const [remisePct, setRemisePct] = useState(0);
   const [offres, setOffres] = useState<OffreCatalogue[]>([]);
   const [loading, setLoading] = useState(true);
   const [moduleOff, setModuleOff] = useState(false);
   const [search, setSearch] = useState('');
+  const [page, setPage] = useState(1);
   const [panier, setPanier] = useState<Record<string, Panier>>({});
   const [notes, setNotes] = useState('');
   const [saving, setSaving] = useState(false);
@@ -42,7 +42,7 @@ export default function PortailAcheteurPage() {
 
   useEffect(() => {
     api.get('/api/portail/catalogue')
-      .then(({ data }) => { setVendeur(data.vendeur); setRemisePct(data.remisePct || 0); setOffres(data.offres); })
+      .then(({ data }) => { setVendeur(data.vendeur); setOffres(data.offres); })
       .catch((e) => {
         if (e?.response?.data?.code === 'MODULE_ACHETEURS_INACTIVE') setModuleOff(true);
         else setError('Erreur de chargement du catalogue');
@@ -50,7 +50,7 @@ export default function PortailAcheteurPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  const getP = (k: string): Panier => panier[k] || { mode: 'unite', quantite: '' };
+  const getP = (k: string): Panier => panier[k] || { quantite: '' };
   const setP = (k: string, patch: Partial<Panier>) => setPanier(prev => ({ ...prev, [k]: { ...getP(k), ...patch } }));
 
   const lignesPanier = useMemo(() =>
@@ -58,11 +58,7 @@ export default function PortailAcheteurPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [offres, panier]);
 
-  const totalBrut = lignesPanier.reduce((s, { o, p }) => {
-    const prix = p.mode === 'lot' ? (o.prixLotTtc ?? 0) : o.prixUnitaireTtc;
-    return s + prix * parseNum(p.quantite);
-  }, 0);
-  const totalNet = totalBrut * (1 - remisePct / 100);
+  const totalBrut = lignesPanier.reduce((s, { o, p }) => s + o.prixUnitaireTtc * parseNum(p.quantite), 0);
 
   const commander = async () => {
     if (lignesPanier.length === 0) return;
@@ -71,7 +67,7 @@ export default function PortailAcheteurPage() {
       await api.post('/api/portail/commandes', {
         notes: notes.trim() || undefined,
         lignes: lignesPanier.map(({ o, p }) => ({
-          articleType: o.articleType, articleId: o.articleId, mode: p.mode, quantite: parseNum(p.quantite),
+          articleType: o.articleType, articleId: o.articleId, quantite: parseNum(p.quantite),
         })),
       });
       setPanier({}); setNotes(''); setSuccess(true);
@@ -83,7 +79,22 @@ export default function PortailAcheteurPage() {
     }
   };
 
+  // Filtre + pagination (10 articles par page), l'ordre par catégorie vient du serveur
   const filtered = offres.filter(o => !search.trim() || o.nom.toLowerCase().includes(search.trim().toLowerCase()));
+  const nbPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const pageCourante = Math.min(page, nbPages);
+  const pageItems = filtered.slice((pageCourante - 1) * PAGE_SIZE, pageCourante * PAGE_SIZE);
+
+  // Regroupement de la page courante par catégorie (sections)
+  const groupes = useMemo(() => {
+    const map = new Map<string, OffreCatalogue[]>();
+    for (const o of pageItems) {
+      const g = map.get(o.categorie) || [];
+      g.push(o);
+      map.set(o.categorie, g);
+    }
+    return [...map.entries()];
+  }, [pageItems]);
 
   return (
     <PortailShell>
@@ -91,7 +102,6 @@ export default function PortailAcheteurPage() {
         <h1 style={{ fontSize: '1.35rem', fontWeight: 900, color: '#0f172a', margin: '0 0 4px' }}>Catalogue — {vendeur}</h1>
         <p style={{ color: '#64748b', fontSize: '0.86rem', margin: 0 }}>
           Choisissez vos quantités puis envoyez votre commande : votre fournisseur la validera.
-          {remisePct > 0 && <> Votre remise : <strong style={{ color: C }}>{remisePct}%</strong>.</>}
         </p>
       </div>
 
@@ -125,48 +135,73 @@ export default function PortailAcheteurPage() {
         </div>
       ) : (
         <>
-          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="🔍 Rechercher un article…"
+          <input value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} placeholder="🔍 Rechercher un article…"
             style={{ padding: '9px 14px', borderRadius: 10, border: '1px solid #e2e8f0', fontSize: '0.86rem', fontFamily: 'inherit', width: 280, marginBottom: 14 }} />
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: 14 }}>
-            {filtered.map(o => {
-              const k = keyOf(o);
-              const p = getP(k);
-              const prix = p.mode === 'lot' ? (o.prixLotTtc ?? 0) : o.prixUnitaireTtc;
-              const qte = parseNum(p.quantite) || 0;
-              return (
-                <div key={k} style={{ background: '#fff', border: `1.5px solid ${qte > 0 ? CB : '#e2e8f0'}`, borderRadius: 14, padding: '16px 16px 14px', opacity: o.disponible ? 1 : 0.65 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, marginBottom: 4 }}>
-                    <div style={{ fontWeight: 800, color: '#0f172a', fontSize: '0.92rem' }}>{o.nom}</div>
-                    <span style={{ flexShrink: 0, padding: '2px 9px', borderRadius: 20, fontSize: '0.68rem', fontWeight: 700, background: o.disponible ? '#dcfce7' : '#fee2e2', color: o.disponible ? '#166534' : '#991b1b', height: 'fit-content' }}>
-                      {o.disponible ? 'Disponible' : 'Rupture'}
-                    </span>
+          {filtered.length === 0 ? (
+            <div style={{ padding: 30, textAlign: 'center', color: '#64748b' }}>Aucun article ne correspond à votre recherche.</div>
+          ) : (
+            <>
+              {groupes.map(([cat, items]) => (
+                <div key={cat} style={{ marginBottom: 20 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '0 0 10px' }}>
+                    <span style={{ fontWeight: 800, color: CD, fontSize: '0.95rem' }}>{cat}</span>
+                    <span style={{ flex: 1, height: 1, background: '#e2e8f0' }} />
                   </div>
-                  <div style={{ fontSize: '0.74rem', color: '#94a3b8', marginBottom: 10 }}>{o.unite} · {o.categorie}</div>
-                  <div style={{ fontSize: '0.86rem', color: CD, fontWeight: 700, marginBottom: 10 }}>
-                    {fmt(o.prixUnitaireTtc)} / {o.unite}
-                    {o.tailleLot && <span style={{ display: 'block', fontSize: '0.76rem', color: C, fontWeight: 600 }}>Lot de {o.tailleLot} : {fmt(o.prixLotTtc ?? 0)}</span>}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: 14 }}>
+                    {items.map(o => {
+                      const k = keyOf(o);
+                      const p = getP(k);
+                      const qte = parseNum(p.quantite) || 0;
+                      return (
+                        <div key={k} style={{ background: '#fff', border: `1.5px solid ${qte > 0 ? CB : '#e2e8f0'}`, borderRadius: 14, padding: '16px 16px 14px', opacity: o.disponible ? 1 : 0.65 }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, marginBottom: 4 }}>
+                            <div style={{ fontWeight: 800, color: '#0f172a', fontSize: '0.92rem' }}>{o.nom}</div>
+                            <span style={{ flexShrink: 0, padding: '2px 9px', borderRadius: 20, fontSize: '0.68rem', fontWeight: 700, background: o.disponible ? '#dcfce7' : '#fee2e2', color: o.disponible ? '#166534' : '#991b1b', height: 'fit-content' }}>
+                              {o.disponible ? 'Disponible' : 'Rupture'}
+                            </span>
+                          </div>
+                          <div style={{ fontSize: '0.74rem', color: '#94a3b8', marginBottom: 10 }}>{o.unite}</div>
+                          <div style={{ fontSize: '0.86rem', color: CD, fontWeight: 700, marginBottom: 10 }}>
+                            {fmt(o.prixUnitaireTtc)} / {o.unite}
+                          </div>
+                          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                            <div style={{ flex: 1, fontSize: '0.78rem', color: '#94a3b8' }}>Quantité</div>
+                            <input value={p.quantite} onChange={e => setP(k, { quantite: e.target.value })} placeholder="Qté"
+                              disabled={!o.disponible}
+                              style={{ width: 68, padding: '7px 8px', borderRadius: 8, border: `1px solid ${qte > 0 ? C : '#e2e8f0'}`, fontSize: '0.82rem', fontFamily: 'inherit', textAlign: 'right' }} />
+                          </div>
+                          {qte > 0 && (
+                            <div style={{ marginTop: 8, fontSize: '0.8rem', fontWeight: 800, color: CD, textAlign: 'right' }}>= {fmt(o.prixUnitaireTtc * qte)}</div>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
-                  <div style={{ display: 'flex', gap: 8 }}>
-                    {o.tailleLot ? (
-                      <select value={p.mode} onChange={e => setP(k, { mode: e.target.value as 'unite' | 'lot' })}
-                        disabled={!o.disponible}
-                        style={{ padding: '7px 8px', borderRadius: 8, border: '1px solid #e2e8f0', fontSize: '0.78rem', fontFamily: 'inherit', flex: 1 }}>
-                        <option value="unite">Unité</option>
-                        <option value="lot">Lot de {o.tailleLot}</option>
-                      </select>
-                    ) : <div style={{ flex: 1, fontSize: '0.78rem', color: '#94a3b8', alignSelf: 'center' }}>À l'unité</div>}
-                    <input value={p.quantite} onChange={e => setP(k, { quantite: e.target.value })} placeholder="Qté"
-                      disabled={!o.disponible}
-                      style={{ width: 68, padding: '7px 8px', borderRadius: 8, border: `1px solid ${qte > 0 ? C : '#e2e8f0'}`, fontSize: '0.82rem', fontFamily: 'inherit', textAlign: 'right' }} />
-                  </div>
-                  {qte > 0 && (
-                    <div style={{ marginTop: 8, fontSize: '0.8rem', fontWeight: 800, color: CD, textAlign: 'right' }}>= {fmt(prix * qte)}</div>
-                  )}
                 </div>
-              );
-            })}
-          </div>
+              ))}
+
+              {/* Pagination (10 articles par page) */}
+              {nbPages > 1 && (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 8 }}>
+                  <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={pageCourante === 1}
+                    style={{ padding: '7px 14px', borderRadius: 8, border: '1px solid #e2e8f0', background: '#fff', color: pageCourante === 1 ? '#cbd5e1' : CD, fontWeight: 700, fontSize: '0.82rem', cursor: pageCourante === 1 ? 'default' : 'pointer' }}>
+                    ← Précédent
+                  </button>
+                  {Array.from({ length: nbPages }, (_, i) => i + 1).map(n => (
+                    <button key={n} onClick={() => setPage(n)}
+                      style={{ minWidth: 34, padding: '7px 0', borderRadius: 8, border: `1px solid ${n === pageCourante ? C : '#e2e8f0'}`, background: n === pageCourante ? C : '#fff', color: n === pageCourante ? '#fff' : '#475569', fontWeight: 700, fontSize: '0.82rem', cursor: 'pointer' }}>
+                      {n}
+                    </button>
+                  ))}
+                  <button onClick={() => setPage(p => Math.min(nbPages, p + 1))} disabled={pageCourante === nbPages}
+                    style={{ padding: '7px 14px', borderRadius: 8, border: '1px solid #e2e8f0', background: '#fff', color: pageCourante === nbPages ? '#cbd5e1' : CD, fontWeight: 700, fontSize: '0.82rem', cursor: pageCourante === nbPages ? 'default' : 'pointer' }}>
+                    Suivant →
+                  </button>
+                </div>
+              )}
+            </>
+          )}
 
           {/* Panier flottant */}
           {lignesPanier.length > 0 && (
@@ -174,11 +209,6 @@ export default function PortailAcheteurPage() {
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', color: '#475569', marginBottom: 4 }}>
                 <span>🧺 {lignesPanier.length} article{lignesPanier.length > 1 ? 's' : ''}</span><strong>{fmt(totalBrut)}</strong>
               </div>
-              {remisePct > 0 && (
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', color: '#166534', marginBottom: 4 }}>
-                  <span>Après remise {remisePct}%</span><strong>≈ {fmt(totalNet)}</strong>
-                </div>
-              )}
               <input value={notes} onChange={e => setNotes(e.target.value)} placeholder="Note pour le fournisseur (optionnel)"
                 style={{ width: '100%', boxSizing: 'border-box', padding: '7px 10px', borderRadius: 8, border: '1px solid #e2e8f0', fontSize: '0.78rem', fontFamily: 'inherit', margin: '6px 0 10px' }} />
               <button onClick={commander} disabled={saving}
@@ -186,7 +216,7 @@ export default function PortailAcheteurPage() {
                 {saving ? 'Envoi…' : '📨 Envoyer la commande'}
               </button>
               <div style={{ fontSize: '0.68rem', color: '#94a3b8', marginTop: 6, textAlign: 'center' }}>
-                Le montant final (remise, timbre) sera confirmé sur la facture.
+                Le montant final (remise éventuelle, timbre) sera confirmé sur la facture.
               </div>
             </div>
           )}

@@ -23,7 +23,7 @@ interface Commande {
 }
 interface Detail extends Commande {
   notes: string | null;
-  lignes: { designation: string; mode: 'unite' | 'lot'; quantite: number; tailleLot: number | null; prixTtc: number }[];
+  lignes: { designation: string; quantite: number; prixTtc: number }[];
 }
 
 const BADGE: Record<Commande['statut'], { label: string; bg: string; color: string }> = {
@@ -98,7 +98,7 @@ export default function PortailCommandesPage() {
                       <td style={{ padding: '10px 14px', fontWeight: 600, whiteSpace: 'nowrap' }}>{fmtDate(c.dateCommande)}</td>
                       <td style={{ padding: '10px 14px' }}>{c.nbLignes} ligne{c.nbLignes > 1 ? 's' : ''}</td>
                       <td style={{ padding: '10px 14px', fontWeight: 800, color: CD, whiteSpace: 'nowrap' }}>
-                        {c.factureTtc != null ? fmt(c.factureTtc) : `≈ ${fmt(c.totalBrutTtc * (1 - c.remisePct / 100))}`}
+                        {c.factureTtc != null ? fmt(c.factureTtc) : `≈ ${fmt(c.totalBrutTtc)}`}
                       </td>
                       <td style={{ padding: '10px 14px' }}>
                         <span title={c.motifAnnulation || undefined} style={{ padding: '3px 10px', borderRadius: 20, fontSize: '0.72rem', fontWeight: 700, background: b.bg, color: b.color, whiteSpace: 'nowrap' }}>{b.label}</span>
@@ -141,9 +141,7 @@ export default function PortailCommandesPage() {
                 {detail.lignes.map((l, i) => (
                   <tr key={i} style={{ borderBottom: '1px solid #f1f5f9' }}>
                     <td style={{ padding: '7px 4px', fontWeight: 600 }}>{l.designation}</td>
-                    <td style={{ padding: '7px 4px', textAlign: 'right', color: '#64748b' }}>
-                      {l.mode === 'lot' ? `${l.quantite} lot${l.quantite > 1 ? 's' : ''} (×${l.tailleLot})` : l.quantite}
-                    </td>
+                    <td style={{ padding: '7px 4px', textAlign: 'right', color: '#64748b' }}>{l.quantite}</td>
                     <td style={{ padding: '7px 4px', textAlign: 'right', fontWeight: 700, whiteSpace: 'nowrap' }}>{fmt(l.prixTtc * l.quantite)}</td>
                   </tr>
                 ))}
