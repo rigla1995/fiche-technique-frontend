@@ -119,6 +119,9 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   );
   const [moduleVenteActif, setModuleVenteActif] = useState(false);
   const [moduleAcheteursActif, setModuleAcheteursActif] = useState(false);
+  // Formule d'activités du compte : 'basique' = Stock + Ventes d'articles valorisés
+  // (Espace Produit réduit), 'premium' = tout, null = compte dépôt sans activité.
+  const [formuleActivites, setFormuleActivites] = useState<'basique' | 'premium' | null>(null);
 
   const location = useLocation();
   const step = user?.onboardingStep ?? 0;
@@ -180,6 +183,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
       .then(({ data }) => {
         setModuleVenteActif(!!data?.module_vente_actif);
         setModuleAcheteursActif(!!data?.module_acheteurs_actif);
+        setFormuleActivites(data?.formule_activites === 'basique' || data?.formule_activites === 'premium' ? data.formule_activites : null);
       })
       .catch(() => {});
     if (!isGerant) {
@@ -512,16 +516,23 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                           <span className="link-icon">🏷️</span><span className="link-label">Catégories Produits</span>
                         </Link>
                       </li>
-                      <li>
-                        <Link to="/client/products?tab=vendable" className={`sidebar-link ${isProductsPage && currentProductTab === 'vendable' ? 'active' : ''}`} onClick={onClose}>
-                          <span className="link-icon">🍔</span><span className="link-label">Produits Vendables</span>
-                        </Link>
-                      </li>
-                      <li>
-                        <Link to="/client/products?tab=utilisable" className={`sidebar-link ${isProductsPage && currentProductTab === 'utilisable' ? 'active' : ''}`} onClick={onClose}>
-                          <span className="link-icon">🧪</span><span className="link-label">Produits Utilisables</span>
-                        </Link>
-                      </li>
+                      {/* Formule basique SANS labo : seuls Catégories Produits et Produits Valorisés
+                          restent visibles (configuration des articles valorisés vendus). Avec au moins
+                          un labo, la base Labo inclut l'Espace Produit complet (règle serveur). */}
+                      {!(formuleActivites === 'basique' && labos.length === 0) && (
+                        <>
+                          <li>
+                            <Link to="/client/products?tab=vendable" className={`sidebar-link ${isProductsPage && currentProductTab === 'vendable' ? 'active' : ''}`} onClick={onClose}>
+                              <span className="link-icon">🍔</span><span className="link-label">Produits Vendables</span>
+                            </Link>
+                          </li>
+                          <li>
+                            <Link to="/client/products?tab=utilisable" className={`sidebar-link ${isProductsPage && currentProductTab === 'utilisable' ? 'active' : ''}`} onClick={onClose}>
+                              <span className="link-icon">🧪</span><span className="link-label">Produits Utilisables</span>
+                            </Link>
+                          </li>
+                        </>
+                      )}
                       <li>
                         <Link to="/client/products/valorises" className={`sidebar-link ${location.pathname === '/client/products/valorises' ? 'active' : ''}`} onClick={onClose}>
                           <span className="link-icon">💎</span><span className="link-label">Produits Valorisés</span>

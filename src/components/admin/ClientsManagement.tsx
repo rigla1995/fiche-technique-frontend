@@ -78,6 +78,10 @@ export default function ClientsManagement() {
       nbActivites: abo.config.nbActivites,
       nbLabos: abo.config.nbLabos,
       nbGerants: abo.config.nbGerants,
+      // Formule + option Acheteurs : sans elles, le contrat re-téléchargé serait
+      // incohérent avec le mensuel affiché (qui inclut l'option acheteurs).
+      formuleActivites: abo.config.formuleActivites ?? undefined,
+      nbAcheteurs: abo.config.nbAcheteurs ?? 0,
       montantOnboarding: abo.config.montantOnboarding,
       totalMensuel: abo.pricing?.effectifMensuel ?? abo.pricing?.baseMensuel ?? 0,
       promos: [],

@@ -40,6 +40,9 @@ export default function ValorisesPage() {
   const [viewProduct, setViewProduct] = useState<Product | null>(null);
   const [tab, setTab] = useState<'composes' | 'referentiel'>('composes');
   const [hasLabos, setHasLabos] = useState(false);
+  // Formule d'activités du compte : les actions « produits composés » (endpoints
+  // produits) sont verrouillées côté serveur si formule 'basique' ET aucun labo.
+  const [formuleBasique, setFormuleBasique] = useState(false);
   const [composePage, setComposePage] = useState(1);
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
@@ -61,7 +64,7 @@ export default function ValorisesPage() {
         ...prod,
         activites: assigned ? (prod.activites || []).filter((a) => a.id !== activiteId) : [...(prod.activites || []), allActivities.find((a) => a.id === activiteId)!].filter(Boolean),
       }));
-    } catch { /* ignore */ }
+    } catch (e: unknown) { alert(apiMsg(e, "Erreur lors de l'assignation à l'activité")); }
     setTogglingActivite(null);
   };
   const toggleLaboAssignment = async (p: Product, laboId: number) => {
@@ -73,7 +76,7 @@ export default function ValorisesPage() {
         ...prod,
         labos: assigned ? (prod.labos || []).filter((l) => l.id !== laboId) : [...(prod.labos || []), allLabos.find((l) => l.id === laboId)!].filter(Boolean),
       }));
-    } catch { /* ignore */ }
+    } catch (e: unknown) { alert(apiMsg(e, "Erreur lors de l'assignation au labo")); }
     setTogglingLabo(null);
   };
 
@@ -94,11 +97,13 @@ export default function ValorisesPage() {
       api.get('/api/products?type=vendable&origine=labo'),
       api.get('/api/labo'),
       api.get('/api/entreprise/activites'),
+      api.get('/api/entreprise'),
     ])
-      .then(([a, c, p, l, act]) => {
+      .then(([a, c, p, l, act, ent]) => {
         setArticles(a.data); setCategories(c.data); setComposes(p.data as Product[]);
         setAllLabos((l.data as { id: number; nom: string }[] || []).map((x) => ({ id: x.id, nom: x.nom })));
         setAllActivities((act.data as Activite[]) || []);
+        setFormuleBasique(ent.data?.formule_activites === 'basique');
         // Les produits composés sont fabriqués au labo : sans labo, pas d'onglet « Composés »
         // ni de bouton d'ajout. On bascule alors sur l'onglet « Référentiel ».
         const labosExist = Array.isArray(l.data) && l.data.length > 0;
@@ -209,6 +214,16 @@ export default function ValorisesPage() {
   const resetFilters = () => { setSearch(''); setFilterFamille(''); setFilterStatut('all'); setPage(1); };
   const hasFilters = !!search || !!filterFamille || filterStatut !== 'all';
 
+  // Règle serveur : les actions produits composés (création/édition/suppression,
+  // assignations) renvoient 403 FORMULE_BASIQUE si formule 'basique' ET aucun labo.
+  // On masque donc ces actions et on affiche une note discrète à la place.
+  const composedLocked = formuleBasique && !hasLabos;
+  const composedLockedNote = (
+    <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontStyle: 'italic', whiteSpace: 'nowrap' }}>
+      Produits composés : formule Premium requise
+    </span>
+  );
+
 
   return (
     <div className="page">
@@ -244,6 +259,10 @@ export default function ValorisesPage() {
             {label}
           </button>
         ))}
+        {/* Formule basique sans labo : les produits composés ne sont pas disponibles */}
+        {!loading && composedLocked && (
+          <span style={{ marginLeft: 'auto', alignSelf: 'center', padding: '0 4px' }}>{composedLockedNote}</span>
+        )}
       </div>
 
       {hasLabos && tab === 'composes' && (<>
@@ -253,7 +272,7 @@ export default function ValorisesPage() {
           subtitle={composes.length > 0 ? `${filteredComposes.length} produit${filteredComposes.length !== 1 ? 's' : ''}` : undefined}
           onReset={resetComposeFilters}
           showReset={hasComposeFilters}
-          actions={<button onClick={() => setShowComposed(true)} style={{ height: 36, background: 'linear-gradient(135deg, #4338ca, #818cf8)', border: 'none', borderRadius: 8, color: '#fff', fontWeight: 700, padding: '0 18px', cursor: 'pointer', fontSize: '0.85rem', whiteSpace: 'nowrap' }}>+ Produit valorisé composé</button>}
+          actions={composedLocked ? composedLockedNote : <button onClick={() => setShowComposed(true)} style={{ height: 36, background: 'linear-gradient(135deg, #4338ca, #818cf8)', border: 'none', borderRadius: 8, color: '#fff', fontWeight: 700, padding: '0 18px', cursor: 'pointer', fontSize: '0.85rem', whiteSpace: 'nowrap' }}>+ Produit valorisé composé</button>}
         >
           {composes.length > 0 && (<>
             <FilterField label="🔍 Produit"><FilterInput value={composeSearch} onChange={e => { setComposeSearch(e.target.value); setComposePage(1); }} placeholder="Nom ou réf…" /></FilterField>
@@ -299,10 +318,14 @@ export default function ValorisesPage() {
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 6, width: '100%' }}>
                         <button onClick={() => openFt(p)} disabled={(p.ingredientsCount ?? 0) === 0 || (ftLoading && ftProduct?.id === p.id)} title="Générer la fiche technique (prix d'appro du labo)"
                           style={{ background: '#f0fdf4', border: '1px solid #c7d2fe', borderRadius: 8, color: '#4338ca', cursor: (p.ingredientsCount ?? 0) === 0 ? 'not-allowed' : 'pointer', padding: '7px', fontSize: '0.78rem', fontWeight: 700, opacity: (p.ingredientsCount ?? 0) === 0 ? 0.5 : 1 }}>📄 Fiche technique (XLS)</button>
-                        <div style={{ display: 'flex', gap: 6 }}>
-                          <button onClick={() => setEditComposeId(p.id)} style={{ flex: 1, background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 8, color: '#1d4ed8', cursor: 'pointer', padding: '6px', fontSize: '0.78rem', fontWeight: 600 }}>✏️ Modifier</button>
-                          <button onClick={() => deleteCompose(p)} disabled={deletingId === p.id} title="Supprimer" style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, color: '#dc2626', cursor: 'pointer', padding: '6px 10px', fontSize: '0.78rem', fontWeight: 700 }}>🗑</button>
-                        </div>
+                        {composedLocked ? (
+                          <div style={{ textAlign: 'center' }}>{composedLockedNote}</div>
+                        ) : (
+                          <div style={{ display: 'flex', gap: 6 }}>
+                            <button onClick={() => setEditComposeId(p.id)} style={{ flex: 1, background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 8, color: '#1d4ed8', cursor: 'pointer', padding: '6px', fontSize: '0.78rem', fontWeight: 600 }}>✏️ Modifier</button>
+                            <button onClick={() => deleteCompose(p)} disabled={deletingId === p.id} title="Supprimer" style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, color: '#dc2626', cursor: 'pointer', padding: '6px 10px', fontSize: '0.78rem', fontWeight: 700 }}>🗑</button>
+                          </div>
+                        )}
                       </div>
                     )}
                     activities={allActivities.map((a) => ({ id: a.id, nom: a.nom }))}
@@ -313,7 +336,7 @@ export default function ValorisesPage() {
                     assignedLaboIds={new Set((p.labos ?? []).map((l) => l.id))}
                     togglingLaboId={togId(togglingLabo)}
                     onToggleLabo={(id) => toggleLaboAssignment(p, id)}
-                    canWrite={true}
+                    canWrite={!composedLocked}
                   />
                 );
               })}

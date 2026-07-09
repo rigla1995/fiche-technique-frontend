@@ -245,6 +245,7 @@ interface MontantMoisInfo {
     mensualite: { base: number; effectif: number; hasPromo: boolean; promoType: string | null; coversAll?: boolean; baseActivite?: number; baseGerant?: number; baseLabo?: number };
     supplementGerant: { base: number; effectif: number; active: boolean; hasPromo: boolean; promoType: string | null };
     supplementLabo: { base: number; effectif: number; active: boolean; hasPromo: boolean; promoType: string | null };
+    optionAcheteurs?: { base: number; effectif: number; active: boolean; palier: number | null };
   };
   total: number;
 }
@@ -297,12 +298,17 @@ export default function AbonnementsManagement() {
   // module acheteurs
   const [moduleAcheteursSaving, setModuleAcheteursSaving] = useState(false);
   const [moduleAcheteursError, setModuleAcheteursError] = useState<string | null>(null);
-  const [nbAcheteursInput, setNbAcheteursInput] = useState('0');
-  // Synchronise le champ quota avec la config du client sélectionné
+  const [nbAcheteursInput, setNbAcheteursInput] = useState('10');
+  // Synchronise le palier sélectionné avec la config du client sélectionné (palier par défaut : 10)
   useEffect(() => {
-    setNbAcheteursInput(String(selected?.config?.nbAcheteurs ?? 0));
+    const quota = selected?.config?.nbAcheteurs ?? 0;
+    setNbAcheteursInput(quota > 0 ? String(quota) : '10');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selected?.clientId, selected?.config?.nbAcheteurs]);
+
+  // formule d'activités (configuration)
+  const [formuleSaving, setFormuleSaving] = useState(false);
+  const [formuleError, setFormuleError] = useState<string | null>(null);
 
   // Assistant IA (intégré à l'application)
   const [aiEnabled, setAiEnabled] = useState(false);
@@ -381,30 +387,71 @@ export default function AbonnementsManagement() {
     }
   };
 
-  // Module Acheteurs : activation + quota nb_acheteurs (contrôlé côté serveur à la création d'acheteurs)
+  // Module Acheteurs : activation + palier nb_acheteurs (contrôlé côté serveur à la création d'acheteurs)
   const saveModuleAcheteurs = async (newActif: boolean) => {
     if (!selected || moduleAcheteursSaving) return;
     setModuleAcheteursError(null);
     setModuleAcheteursSaving(true);
     try {
-      const nb = parseInt(nbAcheteursInput, 10);
+      // Activer / mettre à jour : envoie le palier choisi ; désactiver : le serveur remet le quota à 0
       const payload: { actif: boolean; nbAcheteurs?: number } = { actif: newActif };
-      if (Number.isFinite(nb) && nb >= 0) payload.nbAcheteurs = nb;
+      if (newActif) {
+        const nb = parseInt(nbAcheteursInput, 10);
+        if (Number.isFinite(nb) && nb > 0) payload.nbAcheteurs = nb;
+      }
       const res = await api.put(`/api/abonnements/client/${selected.clientId}/module-acheteurs`, payload);
       if (payload.nbAcheteurs !== undefined && res.data.nbAcheteurs == null) {
-        setModuleAcheteursError("Quota non enregistré — définissez d'abord la configuration d'abonnement (activités/labos/gérants)");
+        setModuleAcheteursError("Palier non enregistré — définissez d'abord la configuration d'abonnement (activités/labos/gérants)");
       }
       setSelected(s => s ? {
         ...s,
         moduleAcheteursActif: newActif,
         moduleAcheteursActivatedAt: res.data.moduleAcheteursActivatedAt ?? null,
-        config: s.config ? { ...s.config, nbAcheteurs: res.data.nbAcheteurs ?? s.config.nbAcheteurs } : s.config,
+        config: s.config ? { ...s.config, nbAcheteurs: res.data.nbAcheteurs ?? (newActif ? s.config.nbAcheteurs : 0) } : s.config,
       } : s);
+      // Recharge le détail complet pour que la carte « Configuration souscrite »
+      // (breakdown + total mensuel) reflète le nouveau palier de l'option Acheteurs.
+      try {
+        const abRes = await api.get(`/api/abonnements/client/${selected.clientId}?withPricing=1`);
+        setSelected(abRes.data);
+      } catch { /* mise à jour optimiste déjà appliquée ci-dessus */ }
       fetchList();
     } catch (err: unknown) {
       setModuleAcheteursError((err as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Erreur');
     } finally {
       setModuleAcheteursSaving(false);
+    }
+  };
+
+  // Changement de formule d'activités (basique ⇄ premium) — recalcule la mensualité côté serveur
+  const changerFormule = async () => {
+    if (!selected || !selected.config || formuleSaving) return;
+    const cfg = selected.config;
+    const courante: 'basique' | 'premium' = cfg.formuleActivites ?? 'premium';
+    const autre: 'basique' | 'premium' = courante === 'premium' ? 'basique' : 'premium';
+    const autreLbl = autre === 'premium' ? 'Activité Premium' : 'Activité Basique';
+    const avertissement = autre === 'basique'
+      ? "\n\nAttention : en Basique sans labo, l'Espace Produit du client sera verrouillé (ses produits existants restent en base)."
+      : '';
+    if (!window.confirm(`Changer la formule d'activités vers « ${autreLbl} » ? La mensualité sera recalculée.${avertissement}`)) return;
+    setFormuleError(null);
+    setFormuleSaving(true);
+    try {
+      await api.put(`/api/abonnements/client/${selected.clientId}/config`, {
+        nbActivites: cfg.nbActivites,
+        nbLabos: cfg.nbLabos,
+        nbGerants: cfg.nbGerants,
+        montantOnboarding: cfg.montantOnboarding,
+        formuleActivites: autre,
+      });
+      // Recharge le détail pour récupérer le nouveau breakdown
+      const abRes = await api.get(`/api/abonnements/client/${selected.clientId}?withPricing=1`);
+      setSelected(abRes.data);
+      fetchList();
+    } catch (err: unknown) {
+      setFormuleError((err as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Erreur lors du changement de formule');
+    } finally {
+      setFormuleSaving(false);
     }
   };
 
@@ -890,11 +937,14 @@ export default function AbonnementsManagement() {
               const totalActivite = bd?.activite.total ?? (selected.pricing?.baseMensuel ?? 0);
               const totalLabo     = bd?.labo.total     ?? 0;
               const totalGerant   = bd?.gerant.total   ?? 0;
+              const totalAcheteurs = bd?.acheteurs?.total ?? 0;
               const totalMensuel  = bd
-                ? (bd.activite.total + bd.labo.total + bd.gerant.total)
+                ? (bd.activite.total + bd.labo.total + bd.gerant.total + totalAcheteurs)
                 : (selected.pricing?.baseMensuel ?? 0);
               const pLaboUnit   = bd?.prixLaboSup;
               const pGerantUnit = bd?.prixGerantSup;
+              const formule = cfg.formuleActivites ?? bd?.formuleActivites ?? null;
+              const formuleLbl = formule === 'basique' ? 'Activité Basique' : 'Activité Premium';
 
               const activiteLabel = `${cfg.nbActivites} activité${cfg.nbActivites > 1 ? 's' : ''} — ${totalActivite} DT/mois`;
               const items = [
@@ -906,6 +956,10 @@ export default function AbonnementsManagement() {
                 ...(cfg.nbGerants > 0 ? [{
                   icon: '👤', label: 'Gérant(s)',
                   value: `${cfg.nbGerants} gérant${cfg.nbGerants > 1 ? 's' : ''}${pGerantUnit ? ` — ${cfg.nbGerants} × ${pGerantUnit} DT` : ''} — ${totalGerant} DT/mois`,
+                }] : []),
+                ...(bd?.acheteurs && totalAcheteurs > 0 ? [{
+                  icon: '🤝', label: 'Option Acheteurs',
+                  value: `Palier jusqu'à ${bd.acheteurs.palier ?? bd.acheteurs.nb} acheteurs : ${totalAcheteurs} DT/mois`,
                 }] : []),
               ];
               return (
@@ -919,6 +973,33 @@ export default function AbonnementsManagement() {
                     <span style={{ fontSize: 14, fontWeight: 800, color: '#4c1d95' }}>{totalMensuel} DT/mois</span>
                   </div>
                   <div style={{ padding: '14px 18px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {/* Formule d'activités : badge + changement — sans objet pour un compte dépôt (0 activité) */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                      {cfg.nbActivites === 0 ? (
+                        <span style={{
+                          fontSize: 11, fontWeight: 800, padding: '4px 12px', borderRadius: 12,
+                          background: '#f1f5f9', color: '#64748b', border: '1px solid #e2e8f0',
+                        }}>
+                          Compte dépôt (sans activité)
+                        </span>
+                      ) : (
+                        <>
+                          <span style={{
+                            fontSize: 11, fontWeight: 800, padding: '4px 12px', borderRadius: 12,
+                            background: formule === 'basique' ? '#e0f2fe' : '#ede9fe',
+                            color: formule === 'basique' ? '#0369a1' : '#6d28d9',
+                            border: `1px solid ${formule === 'basique' ? '#bae6fd' : '#ddd6fe'}`,
+                          }}>
+                            {formuleLbl}
+                          </span>
+                          <button onClick={changerFormule} disabled={formuleSaving}
+                            style={{ fontSize: 11, padding: '4px 12px', borderRadius: 8, border: '1px solid #c4b5fd', background: '#fff', color: '#6d28d9', cursor: formuleSaving ? 'default' : 'pointer', fontWeight: 700, opacity: formuleSaving ? 0.7 : 1 }}>
+                            {formuleSaving ? '…' : '⇄ Changer de formule'}
+                          </button>
+                          {formuleError && <span style={{ fontSize: 11, color: '#dc2626' }}>{formuleError}</span>}
+                        </>
+                      )}
+                    </div>
                     {items.map((item, i) => (
                       <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                         <span style={{ width: 28, height: 28, background: '#f5f3ff', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, flexShrink: 0 }}>{item.icon}</span>
@@ -1377,6 +1458,21 @@ export default function AbonnementsManagement() {
                           });
                         })()}
 
+                        {/* Option Acheteurs — supplément par palier (somme avec les autres postes = Total à régler) */}
+                        {pMontantInfo.breakdown.optionAcheteurs?.active && (() => {
+                          const oa = pMontantInfo.breakdown.optionAcheteurs!;
+                          return (
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 80px 1fr 90px', gap: 0, padding: '10px 14px', borderTop: '1px solid #e2e8f0', background: '#fff' }}>
+                              <div style={{ display: 'flex', alignItems: 'center' }}>
+                                <span style={{ fontSize: 13, fontWeight: 600, color: '#0f172a' }}>Option Acheteurs{oa.palier != null ? ` (palier ${oa.palier})` : ''}</span>
+                              </div>
+                              <div style={{ display: 'flex', alignItems: 'center' }}><span style={{ fontSize: 13, color: '#374151' }}>{oa.base} DT</span></div>
+                              <div style={{ display: 'flex', alignItems: 'center' }}><span style={{ fontSize: 11, color: '#cbd5e1' }}>—</span></div>
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}><span style={{ fontSize: 14, fontWeight: 800, color: '#0f172a' }}>{oa.effectif} DT</span></div>
+                            </div>
+                          );
+                        })()}
+
                         {/* Total row */}
                         <div style={{
                           display: 'grid', gridTemplateColumns: '1fr 80px 1fr 90px', gap: 0,
@@ -1503,15 +1599,20 @@ export default function AbonnementsManagement() {
               </div>
               <div style={{ padding: '14px 18px', display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
                 <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 600, color: '#4c1d95' }}>
-                  Quota acheteurs
-                  <input value={nbAcheteursInput} onChange={e => setNbAcheteursInput(e.target.value)}
-                    style={{ width: 64, padding: '6px 8px', borderRadius: 8, border: '1px solid #c4b5fd', fontSize: 12, fontFamily: 'inherit' }} />
+                  Palier acheteurs
+                  <select value={nbAcheteursInput} onChange={e => setNbAcheteursInput(e.target.value)}
+                    style={{ padding: '6px 8px', borderRadius: 8, border: '1px solid #c4b5fd', fontSize: 12, fontFamily: 'inherit', background: '#fff', cursor: 'pointer' }}>
+                    <option value="10">1 à 10 acheteurs</option>
+                    <option value="20">11 à 20 acheteurs</option>
+                    <option value="50">21 à 50 acheteurs</option>
+                    <option value="100">51 à 100 acheteurs</option>
+                  </select>
                 </label>
                 {selected.moduleAcheteursActif ? (
                   <>
                     <button onClick={() => saveModuleAcheteurs(true)} disabled={moduleAcheteursSaving}
                       style={{ fontSize: 12, padding: '7px 16px', borderRadius: 8, border: '1.5px solid #6d28d9', background: '#fff', color: '#6d28d9', cursor: moduleAcheteursSaving ? 'default' : 'pointer', fontWeight: 700, opacity: moduleAcheteursSaving ? 0.7 : 1 }}>
-                      {moduleAcheteursSaving ? '…' : '💾 Enregistrer le quota'}
+                      {moduleAcheteursSaving ? '…' : '💾 Enregistrer le palier'}
                     </button>
                     <button onClick={() => saveModuleAcheteurs(false)} disabled={moduleAcheteursSaving}
                       style={{ fontSize: 12, padding: '7px 16px', borderRadius: 8, border: '1.5px solid #dc2626', background: '#fff', color: '#dc2626', cursor: moduleAcheteursSaving ? 'default' : 'pointer', fontWeight: 700, opacity: moduleAcheteursSaving ? 0.7 : 1 }}>

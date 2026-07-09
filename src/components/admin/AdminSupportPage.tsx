@@ -24,10 +24,15 @@ interface SupplPricing {
   prixActiviteSup: number;
   prixLaboSup: number;
   prixGerantSup: number;
-  currentMensuel: number;
+  currentMensuel: number; // inclut l'option Acheteurs le cas échéant
   nbActivites: number;
   nbLabos: number;
   nbGerants: number;
+  // Coûts mensuels totaux par poste AVANT ajout (barème formules, calculés backend)
+  activiteCost?: number;
+  laboCost?: number;
+  gerantCost?: number;
+  acheteursCost?: number;
 }
 
 // ── Details popup ─────────────────────────────────────────────────────────────
@@ -75,6 +80,9 @@ function DetailsPopup({
     const delta = nbAAdded * (pricing.prixActiviteSup || 0)
                 + nbLAdded * (pricing.prixLaboSup     || 0)
                 + nbGAdded * (pricing.prixGerantSup   || 0);
+    // Coût mensuel du poste APRÈS ajout ≈ coût actuel + nb ajoutés × prix unitaire sup.
+    const coutApres = (cost: number | undefined, added: number, prixSup: number | undefined): number | undefined =>
+      cost != null ? cost + added * (prixSup || 0) : undefined;
     const base64 = generateAvenantPdf({
       clientNom:       demande.clientNom   || 'Client',
       clientEmail:     demande.clientEmail || '',
@@ -86,6 +94,11 @@ function DetailsPopup({
       nbGerants:   (pricing.nbGerants   || 0) + nbGAdded,
       ancienMensuel:   pricing.currentMensuel || 0,
       nouveauMensuel:  (pricing.currentMensuel || 0) + delta,
+      activiteCost: coutApres(pricing.activiteCost, nbAAdded, pricing.prixActiviteSup),
+      laboCost:     coutApres(pricing.laboCost,     nbLAdded, pricing.prixLaboSup),
+      gerantCost:   coutApres(pricing.gerantCost,   nbGAdded, pricing.prixGerantSup),
+      // Option Acheteurs : quota non renvoyé par supplement-pricing → ligne sans quantité.
+      acheteursCost: pricing.acheteursCost,
       appName: 'LabFlow',
       dateAvenant: new Date().toISOString(),
     });
