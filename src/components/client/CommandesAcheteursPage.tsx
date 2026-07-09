@@ -133,11 +133,13 @@ export default function CommandesAcheteursPage() {
 
   const valider = async () => {
     if (!validerCmd || !validerLaboId) { setValiderErr('Choisissez le labo source'); return; }
+    const remise = validerRemise === '' ? 0 : Number(String(validerRemise).replace(',', '.'));
+    if (!Number.isFinite(remise) || remise < 0 || remise > 100) { setValiderErr('Remise invalide (0 à 100)'); return; }
     setValiderSaving(true); setValiderErr(''); setValiderManquants([]);
     try {
       const { data } = await api.post(`/api/acheteurs/commandes/${validerCmd.id}/valider`, {
         laboId: Number(validerLaboId), timbreFiscal: validerTimbre,
-        remisePct: validerRemise === '' ? 0 : Number(String(validerRemise).replace(',', '.')),
+        remisePct: remise,
       });
       setValiderCmd(null);
       setFlash(`Commande validée — facture ${data.facture.numero} (${fmt(data.facture.montantTtc)})`);

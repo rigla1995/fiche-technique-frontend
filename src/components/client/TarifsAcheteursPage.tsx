@@ -75,9 +75,11 @@ export default function TarifsAcheteursPage() {
   const filtered = rows.filter(r => {
     if (search.trim() && !r.nom.toLowerCase().includes(search.trim().toLowerCase())) return false;
     if (catFilter && r.categorie !== catFilter) return false;
-    const e = edits[keyOf(r)];
-    if (etatFilter === 'proposes' && !e?.actif) return false;
-    if (etatFilter === 'non' && e?.actif) return false;
+    // Filtre d'état évalué sur l'état ENREGISTRÉ : une ligne en cours d'édition
+    // ne disparaît pas de l'écran quand on bascule son toggle.
+    const b = baseline[keyOf(r)];
+    if (etatFilter === 'proposes' && !b?.actif) return false;
+    if (etatFilter === 'non' && b?.actif) return false;
     return true;
   });
 
@@ -127,9 +129,13 @@ export default function TarifsAcheteursPage() {
       }
     }
     setSaving(false);
-    if (errors.length) setError(errors.join(' — '));
-    else setFlash(`${dirtyKeys.length} tarif${dirtyKeys.length > 1 ? 's' : ''} enregistré${dirtyKeys.length > 1 ? 's' : ''}`);
-    load();
+    if (errors.length) {
+      // Ne PAS recharger : les saisies non enregistrées resteraient sinon écrasées
+      setError(errors.join(' — '));
+    } else {
+      setFlash(`${dirtyKeys.length} tarif${dirtyKeys.length > 1 ? 's' : ''} enregistré${dirtyKeys.length > 1 ? 's' : ''}`);
+      load();
+    }
   };
 
   const nbActifs = [...articles, ...produits].filter(r => edits[keyOf(r)]?.actif).length;

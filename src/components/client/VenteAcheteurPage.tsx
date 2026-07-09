@@ -92,13 +92,16 @@ export default function VenteAcheteurPage() {
     if (!acheteurId) { setError('Choisissez un acheteur'); return; }
     if (!laboId) { setError('Choisissez un labo'); return; }
     if (lignesActives.length === 0) { setError('Saisissez au moins une quantité'); return; }
+    if (remise !== '' && !Number.isFinite(parseNum(remise))) { setError('Remise invalide (0 à 100)'); return; }
+    const ligneInvalide = lignesActives.find(({ l }) => l.prix !== '' && !(Number.isFinite(parseNum(l.prix)) && parseNum(l.prix) >= 0));
+    if (ligneInvalide) { setError(`Prix invalide pour « ${ligneInvalide.o.nom} »`); return; }
     setSaving(true);
     try {
       const { data } = await api.post('/api/acheteurs/ventes', {
         acheteurId: Number(acheteurId),
         laboId: Number(laboId),
         dateCommande,
-        remisePct: remise,
+        remisePct: totaux.remisePct,
         timbreFiscal: timbre,
         notes: notes.trim() || undefined,
         lignes: lignesActives.map(({ o, l }) => ({
