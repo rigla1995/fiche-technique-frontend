@@ -1,5 +1,6 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import LabFlowLogo from '../common/LabFlowLogo';
 
 // En-tête + navigation du portail acheteur (plein écran, hors Layout client).
 const C = '#6d28d9';
@@ -25,8 +26,7 @@ export default function PortailShell({ children }: { children: React.ReactNode }
     <div style={{ minHeight: '100vh', background: '#f8fafc', display: 'flex', flexDirection: 'column' }}>
       <header style={{ background: `linear-gradient(135deg, ${CD} 0%, ${C} 100%)`, padding: '12px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, flexWrap: 'wrap' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span style={{ fontSize: '1.2rem' }}>💠</span>
-          <span style={{ color: '#fff', fontWeight: 900, fontSize: '1.05rem' }}>Lab<span style={{ opacity: 0.75 }}>Flow</span></span>
+          <LabFlowLogo height={30} />
           <span style={{ background: 'rgba(255,255,255,0.16)', border: '1px solid rgba(255,255,255,0.25)', color: '#fff', fontSize: '0.68rem', fontWeight: 700, padding: '3px 10px', borderRadius: 20 }}>
             Portail Acheteur
           </span>

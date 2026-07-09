@@ -17,16 +17,16 @@ interface Acheteur {
   telephone: string | null;
   adresse: string | null;
   matriculeFiscal: string | null;
-  remisePct: number;
   notes: string | null;
   actif: boolean;
   compte: 'aucun' | 'invite' | 'actif';
 }
 
-interface AddRow {
-  nom: string; entreprise: string; email: string; telephone: string; remisePct: string; creerCompte: boolean;
+interface FormState {
+  nom: string; entreprise: string; email: string; telephone: string;
+  adresse: string; matriculeFiscal: string; notes: string; creerCompte: boolean;
 }
-const emptyRow = (): AddRow => ({ nom: '', entreprise: '', email: '', telephone: '', remisePct: '0', creerCompte: false });
+const emptyForm = (): FormState => ({ nom: '', entreprise: '', email: '', telephone: '', adresse: '', matriculeFiscal: '', notes: '', creerCompte: false });
 
 const inp: React.CSSProperties = { width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid #e2e8f0', fontSize: '0.84rem', fontFamily: 'inherit', boxSizing: 'border-box' };
 const lbl: React.CSSProperties = { display: 'block', fontSize: '0.74rem', fontWeight: 700, color: '#475569', marginBottom: 4 };
@@ -44,16 +44,12 @@ export default function AcheteursPage() {
   const [search, setSearch] = useState('');
   const [globalError, setGlobalError] = useState('');
 
-  // Multi-ajout
-  const [addOpen, setAddOpen] = useState(false);
-  const [rows, setRows] = useState<AddRow[]>([emptyRow()]);
-  const [addError, setAddError] = useState('');
+  // Formulaire UNIQUE ajout/édition (editingId : null = ajout)
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editing, setEditing] = useState<Acheteur | null>(null);
+  const [form, setForm] = useState<FormState>(emptyForm());
+  const [formError, setFormError] = useState('');
   const [saving, setSaving] = useState(false);
-
-  // Édition
-  const [editItem, setEditItem] = useState<Acheteur | null>(null);
-  const [editForm, setEditForm] = useState<Partial<Acheteur>>({});
-  const [editError, setEditError] = useState('');
 
   // Actions par ligne (invitation / suppression)
   const [busyId, setBusyId] = useState<number | null>(null);
@@ -74,42 +70,39 @@ export default function AcheteursPage() {
     return [a.nom, a.entreprise, a.email, a.telephone].some(v => (v || '').toLowerCase().includes(q));
   });
 
-  const updateRow = (i: number, k: keyof AddRow, v: string | boolean) =>
-    setRows(prev => prev.map((r, idx) => idx === i ? { ...r, [k]: v } : r));
-
-  const submitAdd = async () => {
-    const valid = rows.filter(r => r.nom.trim());
-    if (valid.length === 0) { setAddError('Renseignez au moins un nom'); return; }
-    for (const r of valid) {
-      if (r.creerCompte && !r.email.trim()) { setAddError(`« ${r.nom} » : un email est requis pour créer un compte`); return; }
-    }
-    setSaving(true); setAddError('');
-    try {
-      const { data } = await api.post('/api/acheteurs', {
-        acheteurs: valid.map(r => ({
-          nom: r.nom.trim(), entreprise: r.entreprise.trim(), email: r.email.trim(),
-          telephone: r.telephone.trim(), remisePct: r.remisePct, creerCompte: r.creerCompte,
-        })),
-      });
-      setAddOpen(false); setRows([emptyRow()]);
-      const w = (data.warnings || []) as string[];
-      setFlash(`${valid.length} acheteur${valid.length > 1 ? 's' : ''} ajouté${valid.length > 1 ? 's' : ''}${data.invitations ? ` · ${data.invitations} invitation${data.invitations > 1 ? 's' : ''} envoyée${data.invitations > 1 ? 's' : ''}` : ''}${w.length ? ` · ⚠️ ${w.join(' — ')}` : ''}`);
-      load();
-    } catch (e: unknown) {
-      setAddError((e as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Erreur lors de l\'ajout');
-    } finally {
-      setSaving(false);
-    }
+  const openAdd = () => { setEditing(null); setForm(emptyForm()); setFormError(''); setModalOpen(true); };
+  const openEdit = (a: Acheteur) => {
+    setEditing(a);
+    setForm({
+      nom: a.nom, entreprise: a.entreprise || '', email: a.email || '', telephone: a.telephone || '',
+      adresse: a.adresse || '', matriculeFiscal: a.matriculeFiscal || '', notes: a.notes || '', creerCompte: false,
+    });
+    setFormError(''); setModalOpen(true);
   };
 
-  const submitEdit = async () => {
-    if (!editItem) return;
-    setSaving(true); setEditError('');
+  const set = (k: keyof FormState) => (v: string | boolean) => setForm(f => ({ ...f, [k]: v }));
+
+  const submit = async () => {
+    if (!form.nom.trim()) { setFormError('Le nom est requis'); return; }
+    if (!editing && form.creerCompte && !form.email.trim()) { setFormError('Un email est requis pour créer un compte portail'); return; }
+    setSaving(true); setFormError('');
+    const payload = {
+      nom: form.nom.trim(), entreprise: form.entreprise.trim(), email: form.email.trim(),
+      telephone: form.telephone.trim(), adresse: form.adresse.trim(),
+      matriculeFiscal: form.matriculeFiscal.trim(), notes: form.notes.trim(),
+    };
     try {
-      await api.put(`/api/acheteurs/${editItem.id}`, editForm);
-      setEditItem(null); load();
+      if (editing) {
+        await api.put(`/api/acheteurs/${editing.id}`, payload);
+        setFlash(`« ${form.nom.trim()} » mis à jour`);
+      } else {
+        const { data } = await api.post('/api/acheteurs', { ...payload, creerCompte: form.creerCompte });
+        const w = (data.warnings || []) as string[];
+        setFlash(`« ${form.nom.trim()} » ajouté${data.invitations ? ' · invitation envoyée' : ''}${w.length ? ` · ⚠️ ${w.join(' — ')}` : ''}`);
+      }
+      setModalOpen(false); load();
     } catch (e: unknown) {
-      setEditError((e as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Erreur');
+      setFormError((e as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Erreur lors de l\'enregistrement');
     } finally {
       setSaving(false);
     }
@@ -190,10 +183,10 @@ export default function AcheteursPage() {
           <Link to="/client/acheteurs/import" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '9px 16px', borderRadius: 10, border: `1.5px solid ${CB}`, background: CL, color: C, fontWeight: 700, fontSize: '0.85rem', textDecoration: 'none' }}>
             📥 Ajout Dynamique
           </Link>
-          <button onClick={() => { setAddOpen(true); setRows([emptyRow()]); setAddError(''); }} disabled={quotaAtteint}
+          <button onClick={openAdd} disabled={quotaAtteint}
             title={quotaAtteint ? 'Quota atteint — demandez une augmentation de capacité' : undefined}
             style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '9px 18px', borderRadius: 10, border: 'none', background: quotaAtteint ? '#cbd5e1' : `linear-gradient(135deg, ${CD}, ${C})`, color: '#fff', fontWeight: 700, fontSize: '0.85rem', cursor: quotaAtteint ? 'not-allowed' : 'pointer', boxShadow: quotaAtteint ? 'none' : '0 4px 14px rgba(109,40,217,0.3)' }}>
-            ➕ Ajouter des acheteurs
+            ➕ Ajouter un acheteur
           </button>
         </div>
       </div>
@@ -217,7 +210,7 @@ export default function AcheteursPage() {
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.84rem' }}>
               <thead>
                 <tr style={{ background: CL, borderBottom: `2px solid ${CB}` }}>
-                  {['Acheteur', 'Contact', 'Remise', 'Compte portail', 'Actif', 'Actions'].map(h => (
+                  {['Acheteur', 'Contact', 'Matricule fiscal', 'Compte portail', 'Actif', 'Actions'].map(h => (
                     <th key={h} style={{ textAlign: 'left', padding: '10px 14px', color: CD, fontSize: '0.74rem', textTransform: 'uppercase', letterSpacing: '0.03em' }}>{h}</th>
                   ))}
                 </tr>
@@ -236,8 +229,8 @@ export default function AcheteursPage() {
                         <div>{a.email || <span style={{ color: '#cbd5e1' }}>—</span>}</div>
                         {a.telephone && <div style={{ fontSize: '0.76rem', color: 'var(--text-muted)' }}>{a.telephone}</div>}
                       </td>
-                      <td style={{ padding: '10px 14px', fontWeight: 700, color: a.remisePct > 0 ? C : '#94a3b8' }}>
-                        {a.remisePct > 0 ? `${a.remisePct} %` : '—'}
+                      <td style={{ padding: '10px 14px', color: a.matriculeFiscal ? '#334155' : '#cbd5e1' }}>
+                        {a.matriculeFiscal || '—'}
                       </td>
                       <td style={{ padding: '10px 14px' }}>
                         <span style={{ padding: '3px 10px', borderRadius: 20, fontSize: '0.72rem', fontWeight: 700, background: badge.bg, color: badge.color }}>{badge.label}</span>
@@ -251,7 +244,7 @@ export default function AcheteursPage() {
                         </button>
                       </td>
                       <td style={{ padding: '10px 14px', whiteSpace: 'nowrap' }}>
-                        <button onClick={() => { setEditItem(a); setEditForm({ nom: a.nom, entreprise: a.entreprise || '', email: a.email || '', telephone: a.telephone || '', adresse: a.adresse || '', matriculeFiscal: a.matriculeFiscal || '', remisePct: a.remisePct, notes: a.notes || '' }); setEditError(''); }}
+                        <button onClick={() => openEdit(a)}
                           title="Modifier" style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1rem', padding: '4px 6px' }}>✏️</button>
                         {a.compte !== 'actif' && (
                           <button onClick={() => inviter(a)} disabled={busy || !a.email}
@@ -272,73 +265,38 @@ export default function AcheteursPage() {
         )}
       </div>
 
-      {/* Modale multi-ajout */}
-      {addOpen && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.55)', zIndex: 400, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-          <div style={{ background: '#fff', borderRadius: 16, width: '100%', maxWidth: 860, maxHeight: '88vh', overflowY: 'auto', padding: 24 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-              <h2 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: CD }}>➕ Ajouter des acheteurs</h2>
-              <button onClick={() => setAddOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.1rem' }}>✕</button>
-            </div>
-            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: 14 }}>
-              Une ligne par acheteur. Cochez « Compte » pour envoyer une invitation par email (l'acheteur pourra se connecter au portail de commande).
-            </div>
-            {rows.map((r, i) => (
-              <div key={i} style={{ display: 'grid', gridTemplateColumns: '1.2fr 1.2fr 1.4fr 1fr 70px 88px 30px', gap: 8, marginBottom: 8, alignItems: 'center' }}>
-                <input placeholder="Nom *" value={r.nom} onChange={e => updateRow(i, 'nom', e.target.value)} style={inp} />
-                <input placeholder="Entreprise" value={r.entreprise} onChange={e => updateRow(i, 'entreprise', e.target.value)} style={inp} />
-                <input placeholder="Email" type="email" value={r.email} onChange={e => updateRow(i, 'email', e.target.value)} style={inp} />
-                <input placeholder="Téléphone" value={r.telephone} onChange={e => updateRow(i, 'telephone', e.target.value)} style={inp} />
-                <input placeholder="Rem. %" value={r.remisePct} onChange={e => updateRow(i, 'remisePct', e.target.value)} style={inp} title="Remise %" />
-                <label style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.76rem', fontWeight: 600, color: r.creerCompte ? C : '#64748b', cursor: 'pointer' }}>
-                  <input type="checkbox" checked={r.creerCompte} onChange={e => updateRow(i, 'creerCompte', e.target.checked)} style={{ accentColor: C }} />
-                  Compte
-                </label>
-                <button onClick={() => setRows(prev => prev.length > 1 ? prev.filter((_, idx) => idx !== i) : prev)} title="Retirer la ligne"
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', fontWeight: 800 }}>✕</button>
-              </div>
-            ))}
-            <button onClick={() => setRows(prev => [...prev, emptyRow()])}
-              style={{ background: 'none', border: `1.5px dashed ${CB}`, color: C, borderRadius: 8, padding: '7px 14px', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 700, marginBottom: 16 }}>
-              + Ajouter une ligne
-            </button>
-            {addError && <div style={{ color: '#dc2626', fontSize: '0.82rem', marginBottom: 12, fontWeight: 600 }}>{addError}</div>}
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
-              <button onClick={() => setAddOpen(false)} style={{ padding: '9px 18px', borderRadius: 10, border: '1px solid #e2e8f0', background: '#fff', cursor: 'pointer', fontWeight: 600, fontSize: '0.85rem' }}>Annuler</button>
-              <button onClick={submitAdd} disabled={saving}
-                style={{ padding: '9px 22px', borderRadius: 10, border: 'none', background: `linear-gradient(135deg, ${CD}, ${C})`, color: '#fff', cursor: saving ? 'default' : 'pointer', fontWeight: 700, fontSize: '0.85rem', opacity: saving ? 0.7 : 1 }}>
-                {saving ? 'Enregistrement…' : 'Enregistrer'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modale édition */}
-      {editItem && (
+      {/* Formulaire unique ajout / édition */}
+      {modalOpen && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.55)', zIndex: 400, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
           <div style={{ background: '#fff', borderRadius: 16, width: '100%', maxWidth: 560, maxHeight: '88vh', overflowY: 'auto', padding: 24 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-              <h2 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: CD }}>✏️ {editItem.nom}</h2>
-              <button onClick={() => setEditItem(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.1rem' }}>✕</button>
+              <h2 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: CD }}>
+                {editing ? `✏️ ${editing.nom}` : '➕ Ajouter un acheteur'}
+              </h2>
+              <button onClick={() => setModalOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.1rem' }}>✕</button>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-              <div><label style={lbl}>Nom *</label><input value={String(editForm.nom ?? '')} onChange={e => setEditForm(f => ({ ...f, nom: e.target.value }))} style={inp} /></div>
-              <div><label style={lbl}>Entreprise</label><input value={String(editForm.entreprise ?? '')} onChange={e => setEditForm(f => ({ ...f, entreprise: e.target.value }))} style={inp} /></div>
+              <div><label style={lbl}>Nom *</label><input value={form.nom} onChange={e => set('nom')(e.target.value)} style={inp} /></div>
+              <div><label style={lbl}>Entreprise</label><input value={form.entreprise} onChange={e => set('entreprise')(e.target.value)} style={inp} /></div>
               <div>
-                <label style={lbl}>Email {editItem.compte !== 'aucun' && <span style={{ color: '#94a3b8', fontWeight: 500 }}>(compte lié — non modifiable)</span>}</label>
-                <input value={String(editForm.email ?? '')} onChange={e => setEditForm(f => ({ ...f, email: e.target.value }))} style={inp} disabled={editItem.compte !== 'aucun'} />
+                <label style={lbl}>Email {editing && editing.compte !== 'aucun' && <span style={{ color: '#94a3b8', fontWeight: 500 }}>(compte lié — non modifiable)</span>}</label>
+                <input type="email" value={form.email} onChange={e => set('email')(e.target.value)} style={inp} disabled={!!editing && editing.compte !== 'aucun'} />
               </div>
-              <div><label style={lbl}>Téléphone</label><input value={String(editForm.telephone ?? '')} onChange={e => setEditForm(f => ({ ...f, telephone: e.target.value }))} style={inp} /></div>
-              <div style={{ gridColumn: '1 / -1' }}><label style={lbl}>Adresse</label><input value={String(editForm.adresse ?? '')} onChange={e => setEditForm(f => ({ ...f, adresse: e.target.value }))} style={inp} /></div>
-              <div><label style={lbl}>Matricule fiscal</label><input value={String(editForm.matriculeFiscal ?? '')} onChange={e => setEditForm(f => ({ ...f, matriculeFiscal: e.target.value }))} style={inp} /></div>
-              <div><label style={lbl}>Remise (%)</label><input value={String(editForm.remisePct ?? '0')} onChange={e => setEditForm(f => ({ ...f, remisePct: e.target.value as unknown as number }))} style={inp} /></div>
-              <div style={{ gridColumn: '1 / -1' }}><label style={lbl}>Notes</label><textarea value={String(editForm.notes ?? '')} onChange={e => setEditForm(f => ({ ...f, notes: e.target.value }))} style={{ ...inp, minHeight: 60, resize: 'vertical' }} /></div>
+              <div><label style={lbl}>Téléphone</label><input value={form.telephone} onChange={e => set('telephone')(e.target.value)} style={inp} /></div>
+              <div style={{ gridColumn: '1 / -1' }}><label style={lbl}>Adresse</label><input value={form.adresse} onChange={e => set('adresse')(e.target.value)} style={inp} /></div>
+              <div><label style={lbl}>Matricule fiscal</label><input value={form.matriculeFiscal} onChange={e => set('matriculeFiscal')(e.target.value)} style={inp} /></div>
+              <div style={{ gridColumn: '1 / -1' }}><label style={lbl}>Notes</label><textarea value={form.notes} onChange={e => set('notes')(e.target.value)} style={{ ...inp, minHeight: 60, resize: 'vertical' }} /></div>
+              {!editing && (
+                <label style={{ gridColumn: '1 / -1', display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.82rem', fontWeight: 600, color: form.creerCompte ? C : '#64748b', cursor: 'pointer', background: form.creerCompte ? CL : '#f8fafc', border: `1.5px solid ${form.creerCompte ? CB : '#e2e8f0'}`, borderRadius: 10, padding: '10px 12px' }}>
+                  <input type="checkbox" checked={form.creerCompte} onChange={e => set('creerCompte')(e.target.checked)} style={{ accentColor: C }} />
+                  Créer le compte portail — une invitation est envoyée par email, l'acheteur pourra commander en ligne
+                </label>
+              )}
             </div>
-            {editError && <div style={{ color: '#dc2626', fontSize: '0.82rem', margin: '12px 0 0', fontWeight: 600 }}>{editError}</div>}
+            {formError && <div style={{ color: '#dc2626', fontSize: '0.82rem', margin: '12px 0 0', fontWeight: 600 }}>{formError}</div>}
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 18 }}>
-              <button onClick={() => setEditItem(null)} style={{ padding: '9px 18px', borderRadius: 10, border: '1px solid #e2e8f0', background: '#fff', cursor: 'pointer', fontWeight: 600, fontSize: '0.85rem' }}>Annuler</button>
-              <button onClick={submitEdit} disabled={saving}
+              <button onClick={() => setModalOpen(false)} style={{ padding: '9px 18px', borderRadius: 10, border: '1px solid #e2e8f0', background: '#fff', cursor: 'pointer', fontWeight: 600, fontSize: '0.85rem' }}>Annuler</button>
+              <button onClick={submit} disabled={saving}
                 style={{ padding: '9px 22px', borderRadius: 10, border: 'none', background: `linear-gradient(135deg, ${CD}, ${C})`, color: '#fff', cursor: saving ? 'default' : 'pointer', fontWeight: 700, fontSize: '0.85rem', opacity: saving ? 0.7 : 1 }}>
                 {saving ? 'Enregistrement…' : 'Enregistrer'}
               </button>

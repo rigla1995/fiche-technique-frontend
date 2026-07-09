@@ -7,6 +7,8 @@ import HistoryFilterBar, { FilterField, FilterInput, FilterSelect } from '../com
 const COLOR = '#16a34a';
 const ACCENT_DARK = '#15803d';
 const GRADIENT = 'linear-gradient(135deg, #14532d 0%, #16a34a 55%, #4ade80 100%)';
+// Couleur du toggle « Commandable » (thème violet du module Acheteurs)
+const CMD = '#7c3aed';
 
 interface ArticleEditForm {
   nom: string;
@@ -64,6 +66,20 @@ export default function ReferentielArticlesPage() {
   const [filterCat, setFilterCat] = useState('');
   const [filterFamille, setFilterFamille] = useState('');
   const [openCats, setOpenCats] = useState<Set<string>>(new Set());
+  // Le toggle « Commandable » (proposable aux acheteurs) n'apparaît que si le module Acheteurs est actif
+  const [moduleAcheteursActif, setModuleAcheteursActif] = useState(false);
+  useEffect(() => {
+    api.get('/api/entreprise')
+      .then(({ data }) => setModuleAcheteursActif(!!data?.module_acheteurs_actif))
+      .catch(() => {});
+  }, []);
+
+  const toggleCommandable = async (a: Article) => {
+    try {
+      await api.put(`/api/articles/${a.id}`, { commandable: !a.commandable });
+      setArticles(prev => prev.map(x => x.id === a.id ? { ...x, commandable: !a.commandable } : x));
+    } catch { load(); }
+  };
 
   const load = useCallback(() => {
     setLoading(true);
@@ -480,6 +496,16 @@ export default function ReferentielArticlesPage() {
                               <span style={{ background: '#e0e7ff', color: '#4338ca', padding: '2px 8px', borderRadius: 6, fontWeight: 600, fontSize: '0.72rem' }}>
                                 {a.unitName || a.unit?.name || '—'}
                               </span>
+                              {moduleAcheteursActif && (
+                                <button onClick={() => toggleCommandable(a)}
+                                  title={a.commandable ? 'Commandable — proposable aux acheteurs (cliquer pour retirer)' : 'Cliquer pour proposer cet article aux acheteurs'}
+                                  style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', cursor: 'pointer', padding: '2px 6px', borderRadius: 8, flexShrink: 0 }}>
+                                  <div style={{ width: 36, height: 20, borderRadius: 10, position: 'relative', flexShrink: 0, background: a.commandable ? CMD : '#cbd5e1', transition: 'background 0.2s' }}>
+                                    <div style={{ position: 'absolute', top: 2, left: a.commandable ? 18 : 2, width: 16, height: 16, borderRadius: '50%', background: '#fff', boxShadow: '0 1px 4px rgba(0,0,0,0.18)', transition: 'left 0.2s' }} />
+                                  </div>
+                                  <span style={{ fontSize: '0.72rem', fontWeight: 600, color: a.commandable ? '#5b21b6' : '#94a3b8' }}>Commandable</span>
+                                </button>
+                              )}
                               <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
                                 <button className="btn btn-ghost btn-sm" onClick={() => openEdit(a)}>✏️ Modifier</button>
                                 <button className="btn btn-danger btn-sm" disabled={a.hasAppros} title={a.hasAppros ? 'Cet article ne peut pas être supprimé car il a des approvisionnements enregistrés' : undefined} onClick={() => !a.hasAppros && setDeleteId(a.id)} style={a.hasAppros ? { opacity: 0.4, cursor: 'not-allowed' } : undefined}>🗑️</button>

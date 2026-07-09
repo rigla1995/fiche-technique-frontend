@@ -9,13 +9,13 @@ const CD = '#4c1d95';
 const CL = '#f5f3ff';
 const CB = '#c4b5fd';
 
-interface Acheteur { id: number; nom: string; entreprise: string | null; remisePct: number; actif: boolean }
+interface Acheteur { id: number; nom: string; entreprise: string | null; actif: boolean }
 interface Labo { id: number; nom: string }
 interface Offre {
   articleType: 'ingredient' | 'produit'; articleId: number; nom: string; unite: string; categorie: string;
-  prixUnitaireTtc: number; tauxTva: number; tailleLot: number | null; prixLotTtc: number | null; actif: boolean;
+  prixUnitaireHt: number; tauxTva: number; prixUnitaireTtc: number; actif: boolean;
 }
-interface Ligne { mode: 'unite' | 'lot'; quantite: string; prix: string }
+interface Ligne { quantite: string; prix: string }
 interface Manquant { nom: string; unite: string; disponible: number; necessaire: number; manquant: number }
 
 const keyOf = (o: { articleType: string; articleId: number }) => `${o.articleType}:${o.articleId}`;
@@ -58,17 +58,9 @@ export default function VenteAcheteurPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  // Remise pré-remplie depuis la fiche acheteur (modifiable)
-  useEffect(() => {
-    const a = acheteurs.find(x => String(x.id) === acheteurId);
-    if (a) setRemise(String(a.remisePct ?? 0));
-  }, [acheteurId, acheteurs]);
-
-  const getLigne = (k: string): Ligne => lignes[k] || { mode: 'unite', quantite: '', prix: '' };
+  const getLigne = (k: string): Ligne => lignes[k] || { quantite: '', prix: '' };
   const setLigne = (k: string, patch: Partial<Ligne>) =>
     setLignes(prev => ({ ...prev, [k]: { ...getLigne(k), ...patch } }));
-
-  const prixDefaut = (o: Offre, mode: 'unite' | 'lot') => mode === 'lot' ? (o.prixLotTtc ?? 0) : o.prixUnitaireTtc;
 
   const lignesActives = useMemo(() =>
     offres.map(o => ({ o, l: getLigne(keyOf(o)) }))
@@ -76,16 +68,21 @@ export default function VenteAcheteurPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [offres, lignes]);
 
+  // Prix saisis HT : remise sur le HT, TVA ligne à ligne sur le net, TTC dérivé.
   const totaux = useMemo(() => {
-    let brut = 0;
-    for (const { o, l } of lignesActives) {
-      const prix = l.prix !== '' ? parseNum(l.prix) : prixDefaut(o, l.mode);
-      brut += (Number.isFinite(prix) ? prix : 0) * parseNum(l.quantite);
-    }
     const r = Math.min(Math.max(parseNum(remise) || 0, 0), 100);
-    const net = brut * (1 - r / 100);
+    const facteur = 1 - r / 100;
+    let brutHt = 0;
+    let tva = 0;
+    for (const { o, l } of lignesActives) {
+      const prixHt = l.prix !== '' ? parseNum(l.prix) : o.prixUnitaireHt;
+      const ht = (Number.isFinite(prixHt) ? prixHt : 0) * parseNum(l.quantite);
+      brutHt += ht;
+      tva += ht * facteur * (o.tauxTva || 0) / 100;
+    }
+    const netHt = brutHt * facteur;
     const timbreVal = timbre ? 1 : 0;
-    return { brut, remisePct: r, remiseVal: brut - net, net, timbreVal, total: net + timbreVal };
+    return { brutHt, remisePct: r, remiseVal: brutHt - netHt, netHt, tva, timbreVal, total: netHt + tva + timbreVal };
   }, [lignesActives, remise, timbre]);
 
   const fmt = (n: number) => `${n.toFixed(3)} DT`;
@@ -95,21 +92,23 @@ export default function VenteAcheteurPage() {
     if (!acheteurId) { setError('Choisissez un acheteur'); return; }
     if (!laboId) { setError('Choisissez un labo'); return; }
     if (lignesActives.length === 0) { setError('Saisissez au moins une quantité'); return; }
+    if (remise !== '' && !Number.isFinite(parseNum(remise))) { setError('Remise invalide (0 à 100)'); return; }
+    const ligneInvalide = lignesActives.find(({ l }) => l.prix !== '' && !(Number.isFinite(parseNum(l.prix)) && parseNum(l.prix) >= 0));
+    if (ligneInvalide) { setError(`Prix invalide pour « ${ligneInvalide.o.nom} »`); return; }
     setSaving(true);
     try {
       const { data } = await api.post('/api/acheteurs/ventes', {
         acheteurId: Number(acheteurId),
         laboId: Number(laboId),
         dateCommande,
-        remisePct: remise,
+        remisePct: totaux.remisePct,
         timbreFiscal: timbre,
         notes: notes.trim() || undefined,
         lignes: lignesActives.map(({ o, l }) => ({
           articleType: o.articleType,
           articleId: o.articleId,
-          mode: l.mode,
           quantite: parseNum(l.quantite),
-          prixTtc: l.prix !== '' ? parseNum(l.prix) : undefined,
+          prixHt: l.prix !== '' ? parseNum(l.prix) : undefined,
         })),
       });
       setSuccess({ numero: data.facture.numero, factureId: data.facture.id, montantTtc: data.facture.montantTtc });
@@ -248,7 +247,7 @@ export default function VenteAcheteurPage() {
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.84rem' }}>
                 <thead>
                   <tr style={{ background: CL, borderBottom: `2px solid ${CB}` }}>
-                    {['Article / Produit', 'Vendu par', 'Quantité', 'Prix TTC', 'Total ligne'].map(h => (
+                    {['Article / Produit', 'Tarif', 'Quantité', 'Prix HT', 'Total HT'].map(h => (
                       <th key={h} style={{ textAlign: h === 'Article / Produit' ? 'left' : 'center', padding: '10px 14px', color: CD, fontSize: '0.74rem', textTransform: 'uppercase', letterSpacing: '0.03em' }}>{h}</th>
                     ))}
                   </tr>
@@ -257,24 +256,17 @@ export default function VenteAcheteurPage() {
                   {offresFiltrees.map(o => {
                     const k = keyOf(o);
                     const l = getLigne(k);
-                    const prix = l.prix !== '' ? parseNum(l.prix) : prixDefaut(o, l.mode);
+                    const prixHt = l.prix !== '' ? parseNum(l.prix) : o.prixUnitaireHt;
                     const qte = parseNum(l.quantite) || 0;
-                    const total = qte > 0 && Number.isFinite(prix) ? prix * qte : 0;
+                    const total = qte > 0 && Number.isFinite(prixHt) ? prixHt * qte : 0;
                     return (
                       <tr key={k} style={{ borderBottom: '1px solid #f1f5f9', background: qte > 0 ? '#f5f3ff55' : 'transparent' }}>
                         <td style={{ padding: '9px 14px' }}>
                           <div style={{ fontWeight: 700, color: '#1e293b' }}>{o.nom}</div>
                           <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>{o.unite} · {o.categorie}</div>
                         </td>
-                        <td style={{ padding: '9px 14px', textAlign: 'center' }}>
-                          {o.tailleLot ? (
-                            <select value={l.mode} onChange={e => setLigne(k, { mode: e.target.value as 'unite' | 'lot', prix: '' })} style={{ ...inp, padding: '6px 8px' }}>
-                              <option value="unite">Unité ({o.prixUnitaireTtc.toFixed(3)} DT)</option>
-                              <option value="lot">Lot de {o.tailleLot} ({(o.prixLotTtc ?? 0).toFixed(3)} DT)</option>
-                            </select>
-                          ) : (
-                            <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>Unité ({o.prixUnitaireTtc.toFixed(3)} DT)</span>
-                          )}
+                        <td style={{ padding: '9px 14px', textAlign: 'center', fontSize: '0.78rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
+                          {o.prixUnitaireHt.toFixed(3)} DT HT · TVA {o.tauxTva || 0}%
                         </td>
                         <td style={{ padding: '9px 14px', textAlign: 'center' }}>
                           <input value={l.quantite} onChange={e => setLigne(k, { quantite: e.target.value })} placeholder="0"
@@ -282,8 +274,8 @@ export default function VenteAcheteurPage() {
                         </td>
                         <td style={{ padding: '9px 14px', textAlign: 'center' }}>
                           <input value={l.prix} onChange={e => setLigne(k, { prix: e.target.value })}
-                            placeholder={prixDefaut(o, l.mode).toFixed(3)}
-                            title="Prix TTC (modifiable pour cette vente)"
+                            placeholder={o.prixUnitaireHt.toFixed(3)}
+                            title="Prix HT (modifiable pour cette vente)"
                             style={{ ...inp, width: 88, textAlign: 'right' }} />
                         </td>
                         <td style={{ padding: '9px 14px', textAlign: 'right', fontWeight: 800, color: total > 0 ? CD : '#cbd5e1', whiteSpace: 'nowrap' }}>
@@ -300,13 +292,16 @@ export default function VenteAcheteurPage() {
           {/* Récap flottant */}
           <div style={{ position: 'fixed', bottom: 18, right: 24, zIndex: 90, background: '#fff', border: `1.5px solid ${CB}`, borderRadius: 14, boxShadow: '0 12px 36px rgba(76,29,149,0.22)', padding: '14px 18px', minWidth: 280 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: '#475569', marginBottom: 4 }}>
-              <span>Total brut ({lignesActives.length} ligne{lignesActives.length > 1 ? 's' : ''})</span><strong>{fmt(totaux.brut)}</strong>
+              <span>Total brut HT ({lignesActives.length} ligne{lignesActives.length > 1 ? 's' : ''})</span><strong>{fmt(totaux.brutHt)}</strong>
             </div>
             {totaux.remisePct > 0 && (
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: '#b91c1c', marginBottom: 4 }}>
                 <span>Remise {totaux.remisePct}%</span><strong>− {fmt(totaux.remiseVal)}</strong>
               </div>
             )}
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: '#475569', marginBottom: 4 }}>
+              <span>TVA</span><strong>{fmt(totaux.tva)}</strong>
+            </div>
             {timbre && (
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: '#475569', marginBottom: 4 }}>
                 <span>Timbre fiscal</span><strong>{fmt(totaux.timbreVal)}</strong>
