@@ -8,6 +8,7 @@ import PortailShell from './PortailShell';
 const C = '#6d28d9';
 const CD = '#4c1d95';
 const CB = '#c4b5fd';
+const CL = '#f5f3ff';
 
 const PAGE_SIZE = 10;
 
@@ -33,6 +34,8 @@ export default function PortailAcheteurPage() {
   const [loading, setLoading] = useState(true);
   const [moduleOff, setModuleOff] = useState(false);
   const [search, setSearch] = useState('');
+  const [catFilter, setCatFilter] = useState('');
+  const [dispoOnly, setDispoOnly] = useState(false);
   const [page, setPage] = useState(1);
   const [panier, setPanier] = useState<Record<string, Panier>>({});
   const [notes, setNotes] = useState('');
@@ -52,6 +55,11 @@ export default function PortailAcheteurPage() {
 
   const getP = (k: string): Panier => panier[k] || { quantite: '' };
   const setP = (k: string, patch: Partial<Panier>) => setPanier(prev => ({ ...prev, [k]: { ...getP(k), ...patch } }));
+  const stepP = (k: string, delta: number) => {
+    const cur = parseNum(getP(k).quantite) || 0;
+    const next = Math.max(0, Math.round((cur + delta) * 1000) / 1000);
+    setP(k, { quantite: next > 0 ? String(next) : '' });
+  };
 
   const lignesPanier = useMemo(() =>
     offres.map(o => ({ o, p: getP(keyOf(o)) })).filter(({ p }) => parseNum(p.quantite) > 0),
@@ -79,8 +87,15 @@ export default function PortailAcheteurPage() {
     }
   };
 
-  // Filtre + pagination (10 articles par page), l'ordre par catégorie vient du serveur
-  const filtered = offres.filter(o => !search.trim() || o.nom.toLowerCase().includes(search.trim().toLowerCase()));
+  const categories = useMemo(() => [...new Set(offres.map(o => o.categorie))], [offres]);
+
+  // Filtres + pagination (10 articles par page), l'ordre par catégorie vient du serveur
+  const filtered = offres.filter(o => {
+    if (search.trim() && !o.nom.toLowerCase().includes(search.trim().toLowerCase())) return false;
+    if (catFilter && o.categorie !== catFilter) return false;
+    if (dispoOnly && !o.disponible) return false;
+    return true;
+  });
   const nbPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const pageCourante = Math.min(page, nbPages);
   const pageItems = filtered.slice((pageCourante - 1) * PAGE_SIZE, pageCourante * PAGE_SIZE);
@@ -96,12 +111,14 @@ export default function PortailAcheteurPage() {
     return [...map.entries()];
   }, [pageItems]);
 
+  const resetPage = () => setPage(1);
+
   return (
     <PortailShell>
       <div style={{ marginBottom: 18 }}>
         <h1 style={{ fontSize: '1.35rem', fontWeight: 900, color: '#0f172a', margin: '0 0 4px' }}>Catalogue — {vendeur}</h1>
         <p style={{ color: '#64748b', fontSize: '0.86rem', margin: 0 }}>
-          Choisissez vos quantités puis envoyez votre commande : votre fournisseur la validera.
+          Choisissez vos quantités puis envoyez votre commande : votre fournisseur la prépare et l'expédie.
         </p>
       </div>
 
@@ -135,45 +152,66 @@ export default function PortailAcheteurPage() {
         </div>
       ) : (
         <>
-          <input value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} placeholder="🔍 Rechercher un article…"
-            style={{ padding: '9px 14px', borderRadius: 10, border: '1px solid #e2e8f0', fontSize: '0.86rem', fontFamily: 'inherit', width: 280, marginBottom: 14 }} />
+          {/* Barre de filtres */}
+          <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, padding: '12px 14px', marginBottom: 16, display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+            <input value={search} onChange={e => { setSearch(e.target.value); resetPage(); }} placeholder="🔍 Rechercher un article…"
+              style={{ padding: '9px 14px', borderRadius: 10, border: '1px solid #e2e8f0', fontSize: '0.86rem', fontFamily: 'inherit', flex: 1, minWidth: 180 }} />
+            <select value={catFilter} onChange={e => { setCatFilter(e.target.value); resetPage(); }}
+              style={{ padding: '9px 10px', borderRadius: 10, border: '1px solid #e2e8f0', fontSize: '0.84rem', fontFamily: 'inherit', maxWidth: 220 }}>
+              <option value="">Toutes les catégories</option>
+              {categories.map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: '0.82rem', fontWeight: 600, color: dispoOnly ? CD : '#64748b', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+              <input type="checkbox" checked={dispoOnly} onChange={e => { setDispoOnly(e.target.checked); resetPage(); }} style={{ accentColor: C }} />
+              Disponibles uniquement
+            </label>
+            <span style={{ fontSize: '0.78rem', color: '#94a3b8', whiteSpace: 'nowrap' }}>
+              {filtered.length} article{filtered.length !== 1 ? 's' : ''}
+            </span>
+          </div>
 
           {filtered.length === 0 ? (
-            <div style={{ padding: 30, textAlign: 'center', color: '#64748b' }}>Aucun article ne correspond à votre recherche.</div>
+            <div style={{ padding: 30, textAlign: 'center', color: '#64748b' }}>Aucun article ne correspond à vos filtres.</div>
           ) : (
             <>
               {groupes.map(([cat, items]) => (
                 <div key={cat} style={{ marginBottom: 20 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '0 0 10px' }}>
                     <span style={{ fontWeight: 800, color: CD, fontSize: '0.95rem' }}>{cat}</span>
+                    <span style={{ fontSize: '0.72rem', color: '#94a3b8', fontWeight: 600 }}>{items.length}</span>
                     <span style={{ flex: 1, height: 1, background: '#e2e8f0' }} />
                   </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: 14 }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 14 }}>
                     {items.map(o => {
                       const k = keyOf(o);
                       const p = getP(k);
                       const qte = parseNum(p.quantite) || 0;
                       return (
-                        <div key={k} style={{ background: '#fff', border: `1.5px solid ${qte > 0 ? CB : '#e2e8f0'}`, borderRadius: 14, padding: '16px 16px 14px', opacity: o.disponible ? 1 : 0.65 }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, marginBottom: 4 }}>
+                        <div key={k} style={{ background: '#fff', border: `1.5px solid ${qte > 0 ? CB : '#e2e8f0'}`, borderRadius: 14, padding: '14px 16px', opacity: o.disponible ? 1 : 0.6, boxShadow: qte > 0 ? '0 4px 14px rgba(109,40,217,0.10)' : 'none', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
                             <div style={{ fontWeight: 800, color: '#0f172a', fontSize: '0.92rem' }}>{o.nom}</div>
-                            <span style={{ flexShrink: 0, padding: '2px 9px', borderRadius: 20, fontSize: '0.68rem', fontWeight: 700, background: o.disponible ? '#dcfce7' : '#fee2e2', color: o.disponible ? '#166534' : '#991b1b', height: 'fit-content' }}>
-                              {o.disponible ? 'Disponible' : 'Rupture'}
+                            <span style={{ flexShrink: 0, padding: '2px 9px', borderRadius: 20, fontSize: '0.66rem', fontWeight: 700, background: o.disponible ? '#dcfce7' : '#fee2e2', color: o.disponible ? '#166534' : '#991b1b', height: 'fit-content' }}>
+                              {o.disponible ? '● Disponible' : '● Rupture'}
                             </span>
                           </div>
-                          <div style={{ fontSize: '0.74rem', color: '#94a3b8', marginBottom: 10 }}>{o.unite}</div>
-                          <div style={{ fontSize: '0.86rem', color: CD, fontWeight: 700, marginBottom: 10 }}>
-                            {fmt(o.prixUnitaireTtc)} / {o.unite}
+                          <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+                            <span style={{ fontSize: '1.05rem', color: CD, fontWeight: 900 }}>{fmt(o.prixUnitaireTtc)}</span>
+                            <span style={{ fontSize: '0.74rem', color: '#94a3b8' }}>TTC / {o.unite}</span>
                           </div>
-                          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                            <div style={{ flex: 1, fontSize: '0.78rem', color: '#94a3b8' }}>Quantité</div>
-                            <input value={p.quantite} onChange={e => setP(k, { quantite: e.target.value })} placeholder="Qté"
-                              disabled={!o.disponible}
-                              style={{ width: 68, padding: '7px 8px', borderRadius: 8, border: `1px solid ${qte > 0 ? C : '#e2e8f0'}`, fontSize: '0.82rem', fontFamily: 'inherit', textAlign: 'right' }} />
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 'auto' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', border: '1px solid #e2e8f0', borderRadius: 10, overflow: 'hidden' }}>
+                              <button onClick={() => stepP(k, -1)} disabled={!o.disponible || qte === 0}
+                                style={{ width: 30, height: 32, border: 'none', background: '#f8fafc', color: qte > 0 ? CD : '#cbd5e1', fontWeight: 800, cursor: o.disponible && qte > 0 ? 'pointer' : 'default', fontSize: '0.95rem' }}>−</button>
+                              <input value={p.quantite} onChange={e => setP(k, { quantite: e.target.value })} placeholder="0"
+                                disabled={!o.disponible}
+                                style={{ width: 54, height: 30, padding: 0, border: 'none', borderLeft: '1px solid #e2e8f0', borderRight: '1px solid #e2e8f0', fontSize: '0.85rem', fontFamily: 'inherit', textAlign: 'center', outline: 'none', color: '#0f172a', fontWeight: 700 }} />
+                              <button onClick={() => stepP(k, 1)} disabled={!o.disponible}
+                                style={{ width: 30, height: 32, border: 'none', background: '#f8fafc', color: o.disponible ? CD : '#cbd5e1', fontWeight: 800, cursor: o.disponible ? 'pointer' : 'default', fontSize: '0.95rem' }}>+</button>
+                            </div>
+                            <span style={{ marginLeft: 'auto', fontSize: '0.82rem', fontWeight: 800, color: qte > 0 ? CD : '#cbd5e1', whiteSpace: 'nowrap' }}>
+                              {qte > 0 ? `= ${fmt(o.prixUnitaireTtc * qte)}` : ''}
+                            </span>
                           </div>
-                          {qte > 0 && (
-                            <div style={{ marginTop: 8, fontSize: '0.8rem', fontWeight: 800, color: CD, textAlign: 'right' }}>= {fmt(o.prixUnitaireTtc * qte)}</div>
-                          )}
                         </div>
                       );
                     })}
@@ -203,14 +241,28 @@ export default function PortailAcheteurPage() {
             </>
           )}
 
-          {/* Panier flottant */}
+          {/* Panier flottant détaillé */}
           {lignesPanier.length > 0 && (
-            <div style={{ position: 'fixed', bottom: 18, right: 24, zIndex: 90, background: '#fff', border: `1.5px solid ${CB}`, borderRadius: 14, boxShadow: '0 12px 36px rgba(76,29,149,0.22)', padding: '14px 18px', minWidth: 290 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', color: '#475569', marginBottom: 4 }}>
-                <span>🧺 {lignesPanier.length} article{lignesPanier.length > 1 ? 's' : ''}</span><strong>{fmt(totalBrut)}</strong>
+            <div style={{ position: 'fixed', bottom: 18, right: 24, zIndex: 90, background: '#fff', border: `1.5px solid ${CB}`, borderRadius: 14, boxShadow: '0 12px 36px rgba(76,29,149,0.22)', padding: '14px 18px', width: 330, maxHeight: '60vh', display: 'flex', flexDirection: 'column' }}>
+              <div style={{ fontWeight: 800, color: CD, fontSize: '0.9rem', marginBottom: 8 }}>
+                🧺 Mon panier <span style={{ fontWeight: 600, color: '#94a3b8', fontSize: '0.76rem' }}>({lignesPanier.length} article{lignesPanier.length > 1 ? 's' : ''})</span>
+              </div>
+              <div style={{ overflowY: 'auto', marginBottom: 8, flex: 1 }}>
+                {lignesPanier.map(({ o, p }) => (
+                  <div key={keyOf(o)} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.78rem', padding: '4px 0', borderBottom: '1px solid #f1f5f9' }}>
+                    <span style={{ flex: 1, fontWeight: 600, color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{o.nom}</span>
+                    <span style={{ color: '#64748b', whiteSpace: 'nowrap' }}>× {parseNum(p.quantite)}</span>
+                    <span style={{ fontWeight: 700, color: CD, whiteSpace: 'nowrap' }}>{fmt(o.prixUnitaireTtc * parseNum(p.quantite))}</span>
+                    <button onClick={() => setP(keyOf(o), { quantite: '' })} title="Retirer"
+                      style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', fontWeight: 800, padding: '0 2px' }}>✕</button>
+                  </div>
+                ))}
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.88rem', color: CD, marginBottom: 8, background: CL, borderRadius: 8, padding: '8px 10px' }}>
+                <strong>Total TTC</strong><strong>{fmt(totalBrut)}</strong>
               </div>
               <input value={notes} onChange={e => setNotes(e.target.value)} placeholder="Note pour le fournisseur (optionnel)"
-                style={{ width: '100%', boxSizing: 'border-box', padding: '7px 10px', borderRadius: 8, border: '1px solid #e2e8f0', fontSize: '0.78rem', fontFamily: 'inherit', margin: '6px 0 10px' }} />
+                style={{ width: '100%', boxSizing: 'border-box', padding: '7px 10px', borderRadius: 8, border: '1px solid #e2e8f0', fontSize: '0.78rem', fontFamily: 'inherit', marginBottom: 10 }} />
               <button onClick={commander} disabled={saving}
                 style={{ width: '100%', padding: '11px 0', borderRadius: 10, border: 'none', background: `linear-gradient(135deg, ${CD}, ${C})`, color: '#fff', fontWeight: 800, fontSize: '0.9rem', cursor: saving ? 'default' : 'pointer' }}>
                 {saving ? 'Envoi…' : '📨 Envoyer la commande'}

@@ -9,10 +9,14 @@ const CD = '#4c1d95';
 const CL = '#f5f3ff';
 const CB = '#c4b5fd';
 
+type Statut = 'en_attente' | 'expediee' | 'livree' | 'annulee';
+
 interface Commande {
   id: string;
   dateCommande: string;
-  statut: 'en_attente' | 'validee' | 'annulee';
+  dateExpedition: string | null;
+  dateLivraison: string | null;
+  statut: Statut;
   remisePct: number;
   motifAnnulation: string | null;
   nbLignes: number;
@@ -23,16 +27,22 @@ interface Commande {
 }
 interface Detail extends Commande {
   notes: string | null;
-  lignes: { designation: string; quantite: number; prixTtc: number }[];
+  lignes: { designation: string; quantite: number; prixTtc: number; tauxTva: number }[];
+  historique: { statut: Statut; dateEffet: string | null; motif: string | null; le: string }[];
+  facture: {
+    id: number; numero: string; montantBrutTtc: number; remisePct: number;
+    montantHt: number; montantTva: number; timbreFiscal: boolean; montantTimbre: number; montantTtc: number;
+  } | null;
 }
 
-const BADGE: Record<Commande['statut'], { label: string; bg: string; color: string }> = {
+const BADGE: Record<Statut, { label: string; bg: string; color: string }> = {
   en_attente: { label: '⏳ En attente', bg: '#fef3c7', color: '#92400e' },
-  validee: { label: '✅ Validée', bg: '#dcfce7', color: '#166534' },
+  expediee: { label: '🚚 Expédiée', bg: '#dbeafe', color: '#1d4ed8' },
+  livree: { label: '✅ Livrée', bg: '#dcfce7', color: '#166534' },
   annulee: { label: '✕ Annulée', bg: '#fee2e2', color: '#991b1b' },
 };
 const fmt = (n: number | null | undefined) => n != null ? `${Number(n).toFixed(3)} DT` : '—';
-const fmtDate = (d: string) => { const [y, m, j] = d.split('-'); return `${j}/${m}/${y}`; };
+const fmtDate = (d: string | null | undefined) => { if (!d) return '—'; const [y, m, j] = d.split('-'); return `${j}/${m}/${y}`; };
 
 export default function PortailCommandesPage() {
   const [commandes, setCommandes] = useState<Commande[]>([]);
@@ -60,6 +70,8 @@ export default function PortailCommandesPage() {
       window.open(URL.createObjectURL(res.data), '_blank');
     } catch { setError('Erreur lors de l\'ouverture de la facture'); }
   };
+
+  const brutLignes = (d: Detail) => d.lignes.reduce((s, l) => s + l.prixTtc * l.quantite, 0);
 
   return (
     <PortailShell>
@@ -102,6 +114,12 @@ export default function PortailCommandesPage() {
                       </td>
                       <td style={{ padding: '10px 14px' }}>
                         <span title={c.motifAnnulation || undefined} style={{ padding: '3px 10px', borderRadius: 20, fontSize: '0.72rem', fontWeight: 700, background: b.bg, color: b.color, whiteSpace: 'nowrap' }}>{b.label}</span>
+                        {c.statut === 'expediee' && c.dateExpedition && (
+                          <div style={{ fontSize: '0.7rem', color: '#1d4ed8', marginTop: 3 }}>le {fmtDate(c.dateExpedition)}</div>
+                        )}
+                        {c.statut === 'livree' && c.dateLivraison && (
+                          <div style={{ fontSize: '0.7rem', color: '#166534', marginTop: 3 }}>le {fmtDate(c.dateLivraison)}</div>
+                        )}
                         {c.statut === 'annulee' && c.motifAnnulation && (
                           <div style={{ fontSize: '0.7rem', color: '#991b1b', marginTop: 3 }}>{c.motifAnnulation}</div>
                         )}
@@ -128,25 +146,97 @@ export default function PortailCommandesPage() {
 
       {detail && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.55)', zIndex: 400, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-          <div style={{ background: '#fff', borderRadius: 16, width: '100%', maxWidth: 560, maxHeight: '85vh', overflowY: 'auto', padding: 24 }}>
+          <div style={{ background: '#fff', borderRadius: 16, width: '100%', maxWidth: 600, maxHeight: '85vh', overflowY: 'auto', padding: 24 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-              <h2 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: CD }}>Commande du {fmtDate(detail.dateCommande)}</h2>
+              <h2 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: CD }}>
+                Commande du {fmtDate(detail.dateCommande)}
+                {detail.facture && <span style={{ marginLeft: 10, fontSize: '0.8rem', fontWeight: 700, color: '#64748b' }}>Réf. {detail.facture.numero}</span>}
+              </h2>
               <button onClick={() => setDetail(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.1rem' }}>✕</button>
             </div>
-            <div style={{ fontSize: '0.8rem', color: '#64748b', marginBottom: 12 }}>
-              {BADGE[detail.statut].label}{detail.notes ? ` · ${detail.notes}` : ''}
+            <div style={{ fontSize: '0.8rem', color: '#64748b', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+              <span style={{ padding: '2px 9px', borderRadius: 20, fontSize: '0.7rem', fontWeight: 700, background: BADGE[detail.statut].bg, color: BADGE[detail.statut].color }}>{BADGE[detail.statut].label}</span>
+              {detail.dateExpedition && <span>Expédiée le {fmtDate(detail.dateExpedition)}</span>}
+              {detail.dateLivraison && <span>· Livrée le {fmtDate(detail.dateLivraison)}</span>}
+              {detail.notes && <span>· {detail.notes}</span>}
             </div>
+
+            {/* Lignes */}
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
+              <thead>
+                <tr style={{ background: CL }}>
+                  {['Article', 'Qté', 'PU TTC', 'TVA', 'Total'].map(h => (
+                    <th key={h} style={{ textAlign: h === 'Article' ? 'left' : 'right', padding: '6px 8px', color: CD, fontSize: '0.7rem' }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
               <tbody>
                 {detail.lignes.map((l, i) => (
                   <tr key={i} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                    <td style={{ padding: '7px 4px', fontWeight: 600 }}>{l.designation}</td>
-                    <td style={{ padding: '7px 4px', textAlign: 'right', color: '#64748b' }}>{l.quantite}</td>
-                    <td style={{ padding: '7px 4px', textAlign: 'right', fontWeight: 700, whiteSpace: 'nowrap' }}>{fmt(l.prixTtc * l.quantite)}</td>
+                    <td style={{ padding: '7px 8px', fontWeight: 600 }}>{l.designation}</td>
+                    <td style={{ padding: '7px 8px', textAlign: 'right', color: '#64748b' }}>{l.quantite}</td>
+                    <td style={{ padding: '7px 8px', textAlign: 'right', color: '#64748b', whiteSpace: 'nowrap' }}>{fmt(l.prixTtc)}</td>
+                    <td style={{ padding: '7px 8px', textAlign: 'right', color: '#64748b' }}>{l.tauxTva} %</td>
+                    <td style={{ padding: '7px 8px', textAlign: 'right', fontWeight: 700, whiteSpace: 'nowrap' }}>{fmt(l.prixTtc * l.quantite)}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
+
+            {/* Totaux : facture si émise, sinon estimation */}
+            <div style={{ background: '#f8fafc', borderRadius: 12, padding: '12px 16px', margin: '14px 0 0', fontSize: '0.84rem' }}>
+              {detail.facture ? (
+                <>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, color: '#475569' }}>
+                    <span>Total brut TTC</span><strong>{fmt(detail.facture.montantBrutTtc)}</strong>
+                  </div>
+                  {detail.facture.remisePct > 0 && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, color: '#b91c1c' }}>
+                      <span>Remise {detail.facture.remisePct}%</span>
+                      <strong>− {fmt(detail.facture.montantBrutTtc - (detail.facture.montantHt + detail.facture.montantTva))}</strong>
+                    </div>
+                  )}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, color: '#475569' }}>
+                    <span>Total HT</span><strong>{fmt(detail.facture.montantHt)}</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, color: '#475569' }}>
+                    <span>TVA</span><strong>{fmt(detail.facture.montantTva)}</strong>
+                  </div>
+                  {detail.facture.timbreFiscal && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, color: '#475569' }}>
+                      <span>Timbre fiscal</span><strong>{fmt(detail.facture.montantTimbre)}</strong>
+                    </div>
+                  )}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: `1px solid ${CB}`, paddingTop: 8, marginTop: 6, color: CD, fontSize: '0.95rem' }}>
+                    <strong>NET À PAYER</strong><strong>{fmt(detail.facture.montantTtc)}</strong>
+                  </div>
+                </>
+              ) : (
+                <div style={{ display: 'flex', justifyContent: 'space-between', color: '#475569' }}>
+                  <span>Total estimé (avant remise et timbre)</span><strong>≈ {fmt(brutLignes(detail))}</strong>
+                </div>
+              )}
+            </div>
+
+            {/* Historique des états */}
+            {detail.historique?.length > 0 && (
+              <div style={{ marginTop: 14 }}>
+                <div style={{ fontSize: '0.72rem', fontWeight: 700, color: CD, marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Historique</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                  {detail.historique.map((h, i) => {
+                    const b = BADGE[h.statut];
+                    return (
+                      <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: '0.78rem', color: '#475569' }}>
+                        <span style={{ padding: '2px 8px', borderRadius: 20, fontSize: '0.68rem', fontWeight: 700, background: b.bg, color: b.color, whiteSpace: 'nowrap', minWidth: 88, textAlign: 'center' }}>{b.label}</span>
+                        <span>{h.dateEffet ? `le ${fmtDate(h.dateEffet)}` : ''}</span>
+                        {h.motif && <span style={{ color: '#b91c1c' }}>— {h.motif}</span>}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             {detail.factureId && (
               <button onClick={() => ouvrirFacture(detail.factureId!)}
                 style={{ marginTop: 14, background: CD, color: '#fff', border: 'none', borderRadius: 8, padding: '9px 16px', fontWeight: 700, fontSize: '0.8rem', cursor: 'pointer' }}>
