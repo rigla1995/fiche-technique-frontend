@@ -35,12 +35,16 @@ interface Detail extends Commande {
   } | null;
 }
 
-const BADGE: Record<Statut, { label: string; bg: string; color: string }> = {
+const BADGE_MAP: Record<Statut, { label: string; bg: string; color: string }> = {
   en_attente: { label: '⏳ En attente', bg: '#fef3c7', color: '#92400e' },
   expediee: { label: '🚚 Expédiée', bg: '#dbeafe', color: '#1d4ed8' },
   livree: { label: '✅ Livrée', bg: '#dcfce7', color: '#166534' },
   annulee: { label: '✕ Annulée', bg: '#fee2e2', color: '#991b1b' },
 };
+// Fallback : un statut inattendu ne doit pas casser la page
+const BADGE = new Proxy(BADGE_MAP, {
+  get: (t, k: string) => t[k as Statut] || { label: k, bg: '#f1f5f9', color: '#475569' },
+}) as Record<string, { label: string; bg: string; color: string }>;
 const fmt = (n: number | null | undefined) => n != null ? `${Number(n).toFixed(3)} DT` : '—';
 const fmtDate = (d: string | null | undefined) => { if (!d) return '—'; const [y, m, j] = d.split('-'); return `${j}/${m}/${y}`; };
 

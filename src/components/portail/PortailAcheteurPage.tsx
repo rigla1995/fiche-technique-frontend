@@ -56,9 +56,12 @@ export default function PortailAcheteurPage() {
   const getP = (k: string): Panier => panier[k] || { quantite: '' };
   const setP = (k: string, patch: Partial<Panier>) => setPanier(prev => ({ ...prev, [k]: { ...getP(k), ...patch } }));
   const stepP = (k: string, delta: number) => {
-    const cur = parseNum(getP(k).quantite) || 0;
-    const next = Math.max(0, Math.round((cur + delta) * 1000) / 1000);
-    setP(k, { quantite: next > 0 ? String(next) : '' });
+    // setState fonctionnel : les clics rapprochés s'accumulent correctement
+    setPanier(prev => {
+      const cur = parseNum(prev[k]?.quantite || '') || 0;
+      const next = Math.max(0, Math.round((cur + delta) * 1000) / 1000);
+      return { ...prev, [k]: { quantite: next > 0 ? String(next) : '' } };
+    });
   };
 
   const lignesPanier = useMemo(() =>
@@ -70,6 +73,8 @@ export default function PortailAcheteurPage() {
 
   const commander = async () => {
     if (lignesPanier.length === 0) return;
+    const invalide = lignesPanier.find(({ p }) => Math.round(parseNum(p.quantite) * 1000) / 1000 <= 0);
+    if (invalide) { setError(`Quantité invalide pour « ${invalide.o.nom} » (minimum 0.001)`); return; }
     setSaving(true); setError('');
     try {
       await api.post('/api/portail/commandes', {

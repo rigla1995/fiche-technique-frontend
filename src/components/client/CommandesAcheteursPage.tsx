@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import api from '../../api/client';
 import GuideButton from './GuideButton';
@@ -51,6 +51,8 @@ const STATUT_BADGE: Record<Statut, { label: string; bg: string; color: string }>
   livree: { label: '✅ Livrée', bg: '#dcfce7', color: '#166534' },
   annulee: { label: '✕ Annulée', bg: '#fee2e2', color: '#991b1b' },
 };
+// Fallback : un statut inattendu (ex. skew de déploiement) ne doit pas casser la page
+const badgeOf = (s: string) => STATUT_BADGE[s as Statut] || { label: s, bg: '#f1f5f9', color: '#475569' };
 
 const inp: React.CSSProperties = { padding: '7px 10px', borderRadius: 8, border: '1px solid #e2e8f0', fontSize: '0.84rem', fontFamily: 'inherit' };
 const fmt = (n: number | null | undefined) => n != null ? `${Number(n).toFixed(3)} DT` : '—';
@@ -131,7 +133,7 @@ export default function CommandesAcheteursPage() {
         ws.addRow([
           c.dateCommande, c.acheteurNom, c.acheteurEntreprise || '', c.laboNom || '',
           c.source === 'portail' ? 'Portail' : 'Vente directe',
-          STATUT_BADGE[c.statut].label.replace(/^\S+\s/, ''),
+          badgeOf(c.statut).label.replace(/^\S+\s/, ''),
           c.dateExpedition || '', c.dateLivraison || '',
           c.nbLignes, c.remisePct, c.totalBrutTtc,
           c.factureNumero || '', c.factureTtc ?? '', c.motifAnnulation || '',
@@ -150,25 +152,31 @@ export default function CommandesAcheteursPage() {
     }
   };
 
+  const expReqSeq = useRef(0);
   const openExpedier = async (c: Commande) => {
     setExpCmd(c); setExpErr(''); setExpManquants([]); setExpTimbre(true);
     setExpRemise(String(c.remisePct || 0)); setExpDate(today());
+    // Labo réinitialisé à chaque ouverture (pas d'héritage silencieux de l'expédition précédente)
+    setExpLaboId(labos.length === 1 ? String(labos[0].id) : '');
     setExpLignes([]); setExpLignesLoading(true);
+    const seq = ++expReqSeq.current;
     try {
       const { data } = await api.get(`/api/acheteurs/commandes/${c.id}`);
+      if (seq !== expReqSeq.current) return; // une autre commande a été ouverte entre-temps
       setExpLignes((data.lignes as LigneDetail[]).map(l => ({ id: l.id, designation: l.designation, quantite: String(l.quantite), prixTtc: l.prixTtc })));
-    } catch { setExpErr('Erreur de chargement des lignes'); }
-    finally { setExpLignesLoading(false); }
+    } catch { if (seq === expReqSeq.current) setExpErr('Erreur de chargement des lignes — fermez et rouvrez la commande'); }
+    finally { if (seq === expReqSeq.current) setExpLignesLoading(false); }
   };
 
   const expedier = async () => {
     if (!expCmd || !expLaboId) { setExpErr('Choisissez le labo source'); return; }
     const remise = expRemise === '' ? 0 : Number(String(expRemise).replace(',', '.'));
     if (!Number.isFinite(remise) || remise < 0 || remise > 100) { setExpErr('Remise invalide (0 à 100)'); return; }
+    if (expLignes.length === 0) { setExpErr('Lignes non chargées — fermez et rouvrez la commande'); return; }
     const quantites: { ligneId: number; quantite: number }[] = [];
     for (const l of expLignes) {
       const q = Number(String(l.quantite).replace(',', '.'));
-      if (!Number.isFinite(q) || q <= 0) { setExpErr(`Quantité invalide pour « ${l.designation} »`); return; }
+      if (!Number.isFinite(q) || Math.round(q * 1000) / 1000 <= 0) { setExpErr(`Quantité invalide pour « ${l.designation} »`); return; }
       quantites.push({ ligneId: l.id, quantite: q });
     }
     setExpSaving(true); setExpErr(''); setExpManquants([]);
@@ -320,7 +328,7 @@ export default function CommandesAcheteursPage() {
               </thead>
               <tbody>
                 {commandes.map(c => {
-                  const badge = STATUT_BADGE[c.statut];
+                  const badge = badgeOf(c.statut);
                   return (
                     <tr key={c.id} style={{ borderBottom: '1px solid #f1f5f9', opacity: c.statut === 'annulee' ? 0.6 : 1 }}>
                       <td style={{ padding: '9px 14px', whiteSpace: 'nowrap', fontWeight: 600 }}>{fmtDate(c.dateCommande)}</td>
@@ -440,7 +448,8 @@ export default function CommandesAcheteursPage() {
               </div>
               <div>
                 <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 700, color: CD, marginBottom: 5 }}>Date d'expédition</label>
-                <input type="date" value={expDate} onChange={e => setExpDate(e.target.value)} style={inp} />
+                <input type="date" value={expDate} onChange={e => setExpDate(e.target.value)}
+                  min={expCmd.dateCommande} max={today()} style={inp} />
               </div>
             </div>
             <div style={{ display: 'flex', gap: 16, alignItems: 'center', marginBottom: 14, flexWrap: 'wrap' }}>
@@ -468,7 +477,7 @@ export default function CommandesAcheteursPage() {
             )}
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
               <button onClick={() => setExpCmd(null)} style={{ padding: '9px 18px', borderRadius: 10, border: '1px solid #e2e8f0', background: '#fff', cursor: 'pointer', fontWeight: 600, fontSize: '0.85rem' }}>Fermer</button>
-              <button onClick={expedier} disabled={expSaving || !expLaboId || expLignesLoading}
+              <button onClick={expedier} disabled={expSaving || !expLaboId || expLignesLoading || expLignes.length === 0}
                 style={{ padding: '9px 22px', borderRadius: 10, border: 'none', background: expLaboId ? 'linear-gradient(135deg,#1e40af,#3b82f6)' : '#cbd5e1', color: '#fff', cursor: expSaving ? 'default' : 'pointer', fontWeight: 700, fontSize: '0.85rem' }}>
                 {expSaving ? 'Expédition…' : '🚚 Expédier et facturer'}
               </button>
@@ -489,7 +498,8 @@ export default function CommandesAcheteursPage() {
               {livCmd.acheteurNom} · expédiée le {fmtDate(livCmd.dateExpedition)}{livCmd.factureNumero ? ` · ${livCmd.factureNumero}` : ''}
             </div>
             <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 700, color: CD, marginBottom: 5 }}>Date de livraison</label>
-            <input type="date" value={livDate} onChange={e => setLivDate(e.target.value)} style={{ ...inp, marginBottom: 14 }} />
+            <input type="date" value={livDate} onChange={e => setLivDate(e.target.value)}
+              min={livCmd.dateExpedition || undefined} style={{ ...inp, marginBottom: 14 }} />
             {livErr && <div style={{ background: '#fee2e2', border: '1px solid #fca5a5', color: '#991b1b', borderRadius: 10, padding: '10px 14px', marginBottom: 12, fontSize: '0.82rem', fontWeight: 600 }}>⚠️ {livErr}</div>}
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
               <button onClick={() => setLivCmd(null)} style={{ padding: '9px 18px', borderRadius: 10, border: '1px solid #e2e8f0', background: '#fff', cursor: 'pointer', fontWeight: 600, fontSize: '0.85rem' }}>Fermer</button>
@@ -513,7 +523,7 @@ export default function CommandesAcheteursPage() {
               <button onClick={() => setDetail(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.1rem' }}>✕</button>
             </div>
             <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: 14 }}>
-              {detail.laboNom ? `Labo : ${detail.laboNom} · ` : ''}{STATUT_BADGE[detail.statut].label}
+              {detail.laboNom ? `Labo : ${detail.laboNom} · ` : ''}{badgeOf(detail.statut).label}
               {detail.dateExpedition ? ` · Expédiée le ${fmtDate(detail.dateExpedition)}` : ''}
               {detail.dateLivraison ? ` · Livrée le ${fmtDate(detail.dateLivraison)}` : ''}
               {detail.motifAnnulation ? ` · Motif : ${detail.motifAnnulation}` : ''}
@@ -559,7 +569,7 @@ export default function CommandesAcheteursPage() {
                 <div style={{ fontSize: '0.74rem', fontWeight: 700, color: CD, marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Historique des états</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                   {detail.historique.map((h, i) => {
-                    const b = STATUT_BADGE[h.statut];
+                    const b = badgeOf(h.statut);
                     return (
                       <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: '0.8rem', color: '#475569' }}>
                         <span style={{ padding: '2px 9px', borderRadius: 20, fontSize: '0.7rem', fontWeight: 700, background: b.bg, color: b.color, whiteSpace: 'nowrap', minWidth: 92, textAlign: 'center' }}>{b.label}</span>
