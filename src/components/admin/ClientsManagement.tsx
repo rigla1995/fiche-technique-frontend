@@ -124,6 +124,9 @@ export default function ClientsManagement() {
       await api.delete(`/admin/clients/${deleteTarget.id}`);
       setDeleteTarget(null);
       fetchClients();
+    } catch (err: unknown) {
+      alert((err as { response?: { data?: { message?: string } } })?.response?.data?.message
+        || 'Erreur lors de la suppression du client');
     } finally {
       setDeleting(false);
     }
@@ -467,6 +470,8 @@ export default function ClientsManagement() {
                   '🔄 Transferts',
                   '📋 Abonnements',
                   '🏷️ Promotions',
+                  '🛒 Base acheteurs (carnet + comptes portail)',
+                  '🧾 Commandes & factures acheteurs',
                   '📊 Tout l\'historique',
                 ].map((item) => (
                   <div key={item} style={{ fontSize: 12, color: '#dc2626', display: 'flex', alignItems: 'center', gap: 4 }}>
