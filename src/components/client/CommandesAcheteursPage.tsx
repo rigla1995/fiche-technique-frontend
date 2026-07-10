@@ -292,6 +292,7 @@ export default function CommandesAcheteursPage() {
         <select value={acheteurId} onChange={e => setAcheteurId(e.target.value)} style={{ ...inp, minWidth: 170 }}>
           <option value="">Tous les acheteurs</option>
           {acheteurs.map(a => <option key={a.id} value={a.id}>{a.nom}</option>)}
+          <option value="supprimes">🗑️ Acheteurs supprimés</option>
         </select>
         <input type="date" value={from} onChange={e => setFrom(e.target.value)} style={inp} />
         <span style={{ color: '#94a3b8' }}>→</span>

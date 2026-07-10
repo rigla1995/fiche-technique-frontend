@@ -128,11 +128,18 @@ export default function AcheteursPage() {
   };
 
   const supprimer = async (a: Acheteur) => {
-    if (!window.confirm(`Supprimer « ${a.nom} » de votre carnet ?${a.compte !== 'aucun' ? ' Son compte de connexion sera aussi supprimé.' : ''}`)) return;
+    const lignes = [
+      `Supprimer « ${a.nom} » de votre carnet ?`,
+      '',
+      '• Ses commandes expédiées ou livrées et leurs factures sont CONSERVÉES dans l\'historique (le stock ne bouge pas).',
+      '• Ses commandes encore en attente seront annulées.',
+      ...(a.compte !== 'aucun' ? ['• Son compte de connexion au portail sera supprimé.'] : []),
+    ];
+    if (!window.confirm(lignes.join('\n'))) return;
     setBusyId(a.id); setGlobalError('');
     try {
       await api.delete(`/api/acheteurs/${a.id}`);
-      setFlash(`« ${a.nom} » supprimé`); load();
+      setFlash(`« ${a.nom} » supprimé — ses commandes et factures restent dans l'historique`); load();
     } catch (e: unknown) {
       setGlobalError((e as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Erreur lors de la suppression');
     } finally { setBusyId(null); }
