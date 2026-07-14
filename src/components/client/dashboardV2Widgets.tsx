@@ -155,15 +155,20 @@ export function TimeBarChart({ data, grain, color = '#2563eb' }: { data: { bucke
 }
 
 // ── Camembert générique ──────────────────────────────────────────────────────
-export function DonutChart({ data, nameKey, valueKey = 'valeur' }: { data: Record<string, unknown>[]; nameKey: string; valueKey?: string }) {
+// formatter : rendu de la valeur au survol — défaut monétaire (DT) ; passer un
+// formateur numérique pour des comptes (ex. nombre de commandes).
+export function DonutChart({ data, nameKey, valueKey = 'valeur', formatter }: {
+  data: Record<string, unknown>[]; nameKey: string; valueKey?: string; formatter?: (v: number) => string;
+}) {
   if (!data.length) return <EmptyHint />;
+  const fmt = formatter ?? ((v: number) => fmtDT(v));
   return (
     <ResponsiveContainer width="100%" height="100%">
       <PieChart>
         <Pie data={data} dataKey={valueKey} nameKey={nameKey} innerRadius="52%" outerRadius="80%" paddingAngle={2}>
           {data.map((_, i) => <Cell key={i} fill={PALETTE[i % PALETTE.length]} />)}
         </Pie>
-        <Tooltip formatter={(v) => fmtDT(Number(v))} />
+        <Tooltip formatter={(v) => fmt(Number(v))} />
         <Legend wrapperStyle={{ fontSize: 11.5 }} />
       </PieChart>
     </ResponsiveContainer>
