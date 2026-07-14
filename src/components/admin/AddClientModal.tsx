@@ -260,23 +260,10 @@ export default function AddClientModal({ onClose, onCreated }: Props) {
 
   // Step 4
   const [pdfBase64, setPdfBase64] = useState<string | null>(null);
-  const [pdfObjectUrl, setPdfObjectUrl] = useState<string | null>(null);
 
   useEffect(() => {
     api.get('/api/domaines?hasIngredients=true').then(({ data }) => setDomaines(data)).catch(() => {});
   }, []);
-
-  // Build blob URL for PDF preview
-  useEffect(() => {
-    if (!pdfBase64) { setPdfObjectUrl(null); return; }
-    const byteChars = atob(pdfBase64);
-    const byteArr = new Uint8Array(byteChars.length);
-    for (let i = 0; i < byteChars.length; i++) byteArr[i] = byteChars.charCodeAt(i);
-    const blob = new Blob([byteArr], { type: 'application/pdf' });
-    const url = URL.createObjectURL(blob);
-    setPdfObjectUrl(url);
-    return () => URL.revokeObjectURL(url);
-  }, [pdfBase64]);
 
   // Fetch pricing preview whenever config changes; auto-set onboarding price from response
   const fetchPreview = useCallback(async (na: number, nl: number, ng: number, nach: number, formule: Formule) => {
@@ -326,8 +313,9 @@ export default function AddClientModal({ onClose, onCreated }: Props) {
     !emailCheckFailed &&
     telValid &&
     selectedDomaines.length > 0;
-  // 0 activité = compte dépôt (labo + acheteurs) : exige alors au moins 1 labo
-  const step2Valid = (nbActivites >= 1 || (nbActivites === 0 && nbLabos >= 1)) && montantOnboarding !== '';
+  // 0 activité = compte dépôt : exige au moins 1 labo ET l'option Acheteurs
+  // (un labo seul n'est pas une composition valide — labo+activités / labo+acheteurs / les trois).
+  const step2Valid = (nbActivites >= 1 || (nbActivites === 0 && nbLabos >= 1 && nbAcheteurs > 0)) && montantOnboarding !== '';
   const nextDisabled = (step === 0 && !step1Valid) || (step === 1 && !step2Valid);
 
   const next = () => {
@@ -341,7 +329,12 @@ export default function AddClientModal({ onClose, onCreated }: Props) {
       if (!telValid) { setError('Téléphone invalide — format tunisien requis (ex: 20 123 456 ou +216 20 123 456).'); return; }
       if (selectedDomaines.length === 0) { setError('Veuillez sélectionner au moins un domaine d\'activité.'); return; }
     }
-    if (step === 1 && !step2Valid) { setError('Configurez au moins 1 activité (chargement du tarif en cours…).'); return; }
+    if (step === 1 && !step2Valid) {
+      setError(nbActivites === 0
+        ? "Un compte sans activité (dépôt) nécessite au moins 1 labo ET l'option Acheteurs."
+        : 'Configurez au moins 1 activité (chargement du tarif en cours…).');
+      return;
+    }
     setStep((s) => s + 1);
   };
   const prev = () => { setError(null); setStep((s) => s - 1); };
@@ -538,7 +531,7 @@ export default function AddClientModal({ onClose, onCreated }: Props) {
           {/* ── STEP 2: Configuration ── */}
           {step === 1 && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              <Counter label="Activités" sub="Unités de production / points de vente — 0 = compte dépôt (labo seul)" value={nbActivites} onChange={(n) => setNbActivites(n)} min={0} />
+              <Counter label="Activités" sub="Unités de production / points de vente — 0 = compte dépôt (labo + acheteurs)" value={nbActivites} onChange={(n) => setNbActivites(n)} min={0} />
 
               {/* Formule d'activités */}
               {nbActivites >= 1 && (
@@ -580,6 +573,11 @@ export default function AddClientModal({ onClose, onCreated }: Props) {
               {nbActivites === 0 && nbLabos < 1 && (
                 <div style={{ background: '#fef3c7', border: '1px solid #fcd34d', borderRadius: 8, padding: '8px 12px', fontSize: '0.78rem', color: '#92400e', fontWeight: 600 }}>
                   ⚠️ Un compte sans activité (dépôt) doit avoir au moins un labo.
+                </div>
+              )}
+              {nbActivites === 0 && nbLabos >= 1 && nbAcheteurs === 0 && (
+                <div style={{ background: '#fef3c7', border: '1px solid #fcd34d', borderRadius: 8, padding: '8px 12px', fontSize: '0.78rem', color: '#92400e', fontWeight: 600 }}>
+                  ⚠️ Un labo sans activité nécessite l'option Acheteurs (compte dépôt = labo + acheteurs) — sélectionnez un palier ci-dessous.
                 </div>
               )}
 
@@ -741,35 +739,34 @@ export default function AddClientModal({ onClose, onCreated }: Props) {
 
               <PricingCard preview={preview} promos={promos} />
 
-              {/* PDF Preview */}
-              <div style={{ marginTop: 14 }}>
-                <div style={{ fontSize: 12, fontWeight: 700, color: '#374151', marginBottom: 8 }}>
-                  📄 Aperçu du contrat
-                  {pdfBase64 && (
-                    <button
-                      onClick={() => {
-                        const link = document.createElement('a');
-                        link.href = `data:application/pdf;base64,${pdfBase64}`;
-                        link.download = `contrat-${nom.replace(/\s+/g, '-').toLowerCase()}.pdf`;
-                        link.click();
-                      }}
-                      style={{ marginLeft: 10, fontSize: 11, fontWeight: 600, color: '#4338ca', background: '#eef2ff', border: '1px solid #c7d2fe', borderRadius: 6, padding: '2px 10px', cursor: 'pointer' }}
-                    >
-                      ⬇ Télécharger
-                    </button>
-                  )}
-                </div>
-                {pdfObjectUrl ? (
-                  <iframe
-                    src={pdfObjectUrl}
-                    title="Aperçu du contrat"
-                    style={{ width: '100%', height: 420, border: '1.5px solid #e2e8f0', borderRadius: 10, display: 'block' }}
-                  />
-                ) : (
-                  <div style={{ height: 80, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f8fafc', border: '1.5px dashed #e2e8f0', borderRadius: 10 }}>
-                    <span style={{ fontSize: 12, color: '#94a3b8' }}>Génération du contrat…</span>
+              {/* Contrat : téléchargement uniquement (pas d'aperçu embarqué) */}
+              <div style={{ marginTop: 14, background: '#f8fafc', border: '1.5px solid #e2e8f0', borderRadius: 12, padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 14 }}>
+                <div style={{ width: 42, height: 42, borderRadius: 10, background: '#eef2ff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>📄</div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: '#0f172a' }}>Contrat d'abonnement</div>
+                  <div style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>
+                    {pdfBase64 ? 'Prêt — téléchargez-le pour le consulter avant l\'envoi.' : 'Génération du contrat…'}
                   </div>
-                )}
+                </div>
+                <button
+                  disabled={!pdfBase64}
+                  onClick={() => {
+                    if (!pdfBase64) return;
+                    const link = document.createElement('a');
+                    link.href = `data:application/pdf;base64,${pdfBase64}`;
+                    link.download = `contrat-${nom.replace(/\s+/g, '-').toLowerCase()}.pdf`;
+                    link.click();
+                  }}
+                  style={{
+                    fontSize: 12, fontWeight: 700, borderRadius: 8, padding: '9px 16px', cursor: pdfBase64 ? 'pointer' : 'default',
+                    color: pdfBase64 ? '#fff' : '#9ca3af',
+                    background: pdfBase64 ? 'linear-gradient(135deg,#4338ca,#6366f1)' : '#e5e7eb',
+                    border: 'none', whiteSpace: 'nowrap',
+                    boxShadow: pdfBase64 ? '0 4px 12px rgba(99,102,241,0.3)' : 'none',
+                  }}
+                >
+                  ⬇ Télécharger le contrat
+                </button>
               </div>
 
               <div style={{ marginTop: 12, background: '#fefce8', border: '1px solid #fde68a', borderRadius: 10, padding: '10px 14px' }}>

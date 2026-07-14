@@ -241,7 +241,9 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
     </div>
   ) : (isEntreprise && lockLevel0) ? (
     <div style={{ background: '#fef9c3', borderRadius: 8, padding: '10px 12px', margin: '8px 12px', fontSize: '0.78rem', color: '#854d0e', lineHeight: 1.5 }}>
-      🏢 Créez vos activités ou votre labo pour débloquer le référentiel et le tableau de bord.
+      {aboConfig && aboConfig.nbActivites === 0
+        ? '🏭 Créez votre labo pour débloquer le référentiel et vos ventes aux acheteurs.'
+        : '🏢 Créez vos activités ou votre labo pour débloquer le référentiel et le tableau de bord.'}
     </div>
   ) : (isEntreprise && lockLevel1) ? (
     <div style={{ background: '#f0fdf4', borderRadius: 8, padding: '10px 12px', margin: '8px 12px', fontSize: '0.78rem', color: '#166534', lineHeight: 1.5 }}>

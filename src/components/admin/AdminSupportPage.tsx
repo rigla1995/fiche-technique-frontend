@@ -33,6 +33,11 @@ interface SupplPricing {
   laboCost?: number;
   gerantCost?: number;
   acheteursCost?: number;
+  // Option Acheteurs : quota actuel + barème des paliers (pour chiffrer une cible)
+  nbAcheteurs?: number;
+  palierAcheteurs?: number | null;
+  paliersAcheteurs?: { palier: number; prix: number }[];
+  formuleActivites?: 'basique' | 'premium' | null;
 }
 
 // ── Details popup ─────────────────────────────────────────────────────────────
@@ -77,9 +82,17 @@ function DetailsPopup({
     const nbAAdded = demande.nbActivitesSupp || 0;
     const nbLAdded = demande.nbLabosSupp     || 0;
     const nbGAdded = demande.nbGerantsSupp   || 0;
+    // Option Acheteurs : la cible REMPLACE le palier actuel — delta = différence de prix
+    const cible = demande.nbAcheteursCible || 0;
+    const ciblePrix = cible > 0
+      ? (pricing.paliersAcheteurs?.find((p) => p.palier === cible)?.prix ?? null)
+      : null;
+    const acheteursApres = ciblePrix != null ? ciblePrix : pricing.acheteursCost;
+    const acheteursDelta = ciblePrix != null ? Math.max(0, ciblePrix - (pricing.acheteursCost ?? 0)) : 0;
     const delta = nbAAdded * (pricing.prixActiviteSup || 0)
                 + nbLAdded * (pricing.prixLaboSup     || 0)
-                + nbGAdded * (pricing.prixGerantSup   || 0);
+                + nbGAdded * (pricing.prixGerantSup   || 0)
+                + acheteursDelta;
     // Coût mensuel du poste APRÈS ajout ≈ coût actuel + nb ajoutés × prix unitaire sup.
     const coutApres = (cost: number | undefined, added: number, prixSup: number | undefined): number | undefined =>
       cost != null ? cost + added * (prixSup || 0) : undefined;
@@ -89,6 +102,7 @@ function DetailsPopup({
       nbActivitesAdded: nbAAdded,
       nbLabosAdded:     nbLAdded,
       nbGerantsAdded:   nbGAdded,
+      acheteursCible:   cible > 0 ? cible : undefined,
       nbActivites: (pricing.nbActivites || 1) + nbAAdded,
       nbLabos:     (pricing.nbLabos     || 0) + nbLAdded,
       nbGerants:   (pricing.nbGerants   || 0) + nbGAdded,
@@ -97,8 +111,9 @@ function DetailsPopup({
       activiteCost: coutApres(pricing.activiteCost, nbAAdded, pricing.prixActiviteSup),
       laboCost:     coutApres(pricing.laboCost,     nbLAdded, pricing.prixLaboSup),
       gerantCost:   coutApres(pricing.gerantCost,   nbGAdded, pricing.prixGerantSup),
-      // Option Acheteurs : quota non renvoyé par supplement-pricing → ligne sans quantité.
-      acheteursCost: pricing.acheteursCost,
+      formuleActivites: pricing.formuleActivites ?? undefined,
+      nbAcheteurs: cible > 0 ? cible : pricing.nbAcheteurs,
+      acheteursCost: acheteursApres,
       appName: 'LabFlow',
       dateAvenant: new Date().toISOString(),
     });
@@ -121,6 +136,9 @@ function DetailsPopup({
     ? (demande.nbActivitesSupp || 0) * pricing.prixActiviteSup
       + (demande.nbLabosSupp || 0) * pricing.prixLaboSup
       + (demande.nbGerantsSupp || 0) * pricing.prixGerantSup
+      + ((demande.nbAcheteursCible || 0) > 0
+        ? Math.max(0, (pricing.paliersAcheteurs?.find((p) => p.palier === demande.nbAcheteursCible)?.prix ?? 0) - (pricing.acheteursCost ?? 0))
+        : 0)
     : null;
   const newTotal = pricing && pricingDelta !== null ? pricing.currentMensuel + pricingDelta : null;
 
@@ -184,6 +202,7 @@ function DetailsPopup({
                       demande.nbActivitesSupp && `+${demande.nbActivitesSupp} activité${(demande.nbActivitesSupp || 0) > 1 ? 's' : ''}`,
                       demande.nbLabosSupp && `+${demande.nbLabosSupp} labo${(demande.nbLabosSupp || 0) > 1 ? 's' : ''}`,
                       demande.nbGerantsSupp && `+${demande.nbGerantsSupp} gérant${(demande.nbGerantsSupp || 0) > 1 ? 's' : ''}`,
+                      demande.nbAcheteursCible && `Option Acheteurs → palier jusqu'à ${demande.nbAcheteursCible} acheteurs`,
                     ].filter(Boolean).map((part, i) => <div key={i} style={{ color: '#15803d', fontWeight: 600 }}>{part}</div>)}
                   </div>
                   {newTotal !== null && pricingDelta !== null && (

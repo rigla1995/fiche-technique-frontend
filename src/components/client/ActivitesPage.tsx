@@ -51,6 +51,7 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
 
   const [labos, setLabos] = useState<Labo[]>([]);
   const [abonnementConfig, setAbonnementConfig] = useState<AbonnementConfig | null>(null);
+  const [moduleAcheteursActif, setModuleAcheteursActif] = useState(false);
   const [filterName, setFilterName] = useState('');
   const [laboPopup, setLaboPopup] = useState<{ nom: string; tel: string | null; adresse: string | null } | null>(null);
   const [deleteLaboTarget, setDeleteLaboTarget] = useState<Labo | null>(null);
@@ -95,14 +96,16 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [actRes, laboRes, aboRes] = await Promise.all([
+      const [actRes, laboRes, aboRes, epRes] = await Promise.all([
         api.get('/api/entreprise/activites'),
         api.get('/api/labo'),
         api.get('/api/abonnements/mon-abonnement').catch(() => null),
+        api.get('/api/entreprise').catch(() => null),
       ]);
       setActivites(actRes.data);
       setLabos(laboRes.data);
       if (aboRes?.data?.config) setAbonnementConfig(aboRes.data.config);
+      setModuleAcheteursActif(!!epRes?.data?.module_acheteurs_actif);
     } catch { /* ignore */ }
     setLoading(false);
   }, []);
@@ -392,6 +395,7 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
           <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
             {!loading && abonnementConfig && (
               <>
+                {abonnementConfig.nbActivites > 0 && (
                 <div style={{
                   background: atActiviteLimit ? '#fef2f2' : activites.length > 0 ? '#f0fdf4' : 'rgba(255,255,255,0.1)',
                   borderRadius: 12, padding: '10px 20px', textAlign: 'center', minWidth: 90,
@@ -402,6 +406,7 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                     {activites.length}<span style={{ fontSize: '0.8rem', fontWeight: 600, color: atActiviteLimit || activites.length > 0 ? '#6b7280' : 'rgba(255,255,255,0.6)' }}> / {abonnementConfig.nbActivites}</span>
                   </div>
                 </div>
+                )}
                 {abonnementConfig.nbLabos > 0 && (
                   <div style={{
                     background: atLaboLimit ? '#fef2f2' : usedLabos > 0 ? '#f5f3ff' : 'rgba(255,255,255,0.1)',
@@ -439,39 +444,75 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
           padding: '52px 36px', textAlign: 'center', maxWidth: 580, margin: '0 auto',
           boxShadow: '0 4px 24px rgba(0,0,0,0.06)',
         }}>
-          <div style={{ fontSize: 52, marginBottom: 18 }}>🚀</div>
-          <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#111827', marginBottom: 10 }}>
-            Démarrez votre activité
-          </h2>
-          <p style={{ fontSize: '0.88rem', color: '#6b7280', marginBottom: 32, lineHeight: 1.7, maxWidth: 400, margin: '0 auto 32px' }}>
-            {configHasLabo
-              ? `Votre abonnement inclut jusqu'à ${maxActivites} activité(s) et ${maxLabos} labo(s). Configurez votre business en quelques étapes.`
-              : `Votre abonnement inclut jusqu'à ${maxActivites} activité(s). Créez votre première activité pour commencer.`
-            }
-          </p>
-          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center' }}>
-            {atActiviteLimit ? (
-              <div style={{ fontSize: 13, color: '#6b7280', background: '#f3f4f6', border: '1px solid #e5e7eb', borderRadius: 8, padding: '8px 16px' }}>
-                🔒 Limite atteinte
-              </div>
-            ) : configHasLabo ? (
-              <button
-                style={{
-                  padding: '13px 28px', borderRadius: 12, background: 'linear-gradient(135deg, #1e3a8a 0%, #4338ca 45%, #7e22ce 80%, #a855f7 100%)',
-                  color: '#fff', fontWeight: 800, fontSize: '0.95rem', cursor: 'pointer',
-                  border: 'none', boxShadow: '0 4px 16px rgba(67,56,202,0.35)',
-                  display: 'flex', alignItems: 'center', gap: 8,
-                }}
-                onClick={openBizWizard}
-              >
-                ✨ Créer mon business
-              </button>
-            ) : (
-              <button className="btn btn-primary" style={{ padding: '11px 26px', fontWeight: 700 }} onClick={() => openAdd()}>
-                + Ajouter mon activité
-              </button>
-            )}
-          </div>
+          {(() => {
+            // Compte dépôt (0 activité au contrat) : la seule structure à créer est le labo —
+            // « Limite atteinte » sur les activités ne doit JAMAIS bloquer la création du labo.
+            const isDepot = maxActivites === 0 && configHasLabo;
+            const canAddLabo = configHasLabo && !atLaboLimit;
+            const canAddActivite = !atActiviteLimit;
+            return (
+              <>
+                <div style={{ fontSize: 52, marginBottom: 18 }}>{isDepot ? '🏭' : '🚀'}</div>
+                <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#111827', marginBottom: 10 }}>
+                  {isDepot ? 'Démarrez votre labo' : 'Démarrez votre activité'}
+                </h2>
+                <p style={{ fontSize: '0.88rem', color: '#6b7280', marginBottom: 32, lineHeight: 1.7, maxWidth: 420, margin: '0 auto 32px' }}>
+                  {isDepot
+                    ? `Votre abonnement inclut ${maxLabos} labo(s)${moduleAcheteursActif ? " et l'Espace Acheteurs (ventes B2B)" : ''}. Créez votre labo pour débloquer le référentiel, le stock${moduleAcheteursActif ? ' et les ventes aux acheteurs' : ''}.`
+                    : configHasLabo
+                      ? `Votre abonnement inclut jusqu'à ${maxActivites} activité(s) et ${maxLabos} labo(s). Configurez votre business en quelques étapes.`
+                      : `Votre abonnement inclut jusqu'à ${maxActivites} activité(s). Créez votre première activité pour commencer.`
+                  }
+                </p>
+                <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center' }}>
+                  {isDepot && canAddLabo ? (
+                    <button
+                      style={{
+                        padding: '13px 28px', borderRadius: 12, background: 'linear-gradient(135deg, #3b0764 0%, #7e22ce 55%, #a855f7 100%)',
+                        color: '#fff', fontWeight: 800, fontSize: '0.95rem', cursor: 'pointer',
+                        border: 'none', boxShadow: '0 4px 16px rgba(126,34,206,0.35)',
+                        display: 'flex', alignItems: 'center', gap: 8,
+                      }}
+                      onClick={openAddLabo}
+                    >
+                      🏭 Créer mon labo
+                    </button>
+                  ) : canAddActivite && configHasLabo ? (
+                    <button
+                      style={{
+                        padding: '13px 28px', borderRadius: 12, background: 'linear-gradient(135deg, #1e3a8a 0%, #4338ca 45%, #7e22ce 80%, #a855f7 100%)',
+                        color: '#fff', fontWeight: 800, fontSize: '0.95rem', cursor: 'pointer',
+                        border: 'none', boxShadow: '0 4px 16px rgba(67,56,202,0.35)',
+                        display: 'flex', alignItems: 'center', gap: 8,
+                      }}
+                      onClick={openBizWizard}
+                    >
+                      ✨ Créer mon business
+                    </button>
+                  ) : canAddActivite ? (
+                    <button className="btn btn-primary" style={{ padding: '11px 26px', fontWeight: 700 }} onClick={() => openAdd()}>
+                      + Ajouter mon activité
+                    </button>
+                  ) : canAddLabo ? (
+                    <button
+                      style={{
+                        padding: '13px 28px', borderRadius: 12, background: 'linear-gradient(135deg, #3b0764 0%, #7e22ce 55%, #a855f7 100%)',
+                        color: '#fff', fontWeight: 800, fontSize: '0.95rem', cursor: 'pointer',
+                        border: 'none', boxShadow: '0 4px 16px rgba(126,34,206,0.35)',
+                      }}
+                      onClick={openAddLabo}
+                    >
+                      🏭 Créer mon labo
+                    </button>
+                  ) : (
+                    <div style={{ fontSize: 13, color: '#6b7280', background: '#f3f4f6', border: '1px solid #e5e7eb', borderRadius: 8, padding: '8px 16px' }}>
+                      🔒 Limite atteinte
+                    </div>
+                  )}
+                </div>
+              </>
+            );
+          })()}
         </div>
       ) : showFullLayout ? (
         <>

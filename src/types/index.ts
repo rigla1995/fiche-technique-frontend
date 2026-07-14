@@ -64,6 +64,8 @@ export interface SupportDemande {
   nbActivitesSupp?: number | null;
   nbLabosSupp?: number | null;
   nbGerantsSupp?: number | null;
+  /** Option Acheteurs : QUOTA TOTAL cible (borne de palier 10/20/50/100), pas un incrément. */
+  nbAcheteursCible?: number | null;
   docusealSubmissionId?: string | null;
   description?: string | null;
   notesAdmin?: string | null;

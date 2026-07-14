@@ -43,6 +43,10 @@ export interface AvenantPdfParams {
   nbActivitesAdded: number;
   nbLabosAdded: number;
   nbGerantsAdded: number;
+  /** Option Acheteurs : QUOTA TOTAL cible demandé (palier 10/20/50/100) — absent = pas de changement. */
+  acheteursCible?: number;
+  /** Formule d'activités du compte (affichée sur la ligne Activités). */
+  formuleActivites?: 'basique' | 'premium';
   nbActivites: number;
   nbLabos: number;
   nbGerants: number;
@@ -303,13 +307,13 @@ export function generateContractPdf(params: ContractPdfParams): string {
 export function generateAvenantPdf(params: AvenantPdfParams): string {
   const {
     clientNom, clientEmail = '',
-    nbActivitesAdded, nbLabosAdded, nbGerantsAdded,
+    nbActivitesAdded, nbLabosAdded, nbGerantsAdded, acheteursCible,
     nbActivites, nbLabos, nbGerants,
     ancienMensuel, nouveauMensuel, effectifMensuel,
     notesAdmin = '', appName,
     dateAvenant,
     activiteCost, laboCost, gerantCost,
-    nbAcheteurs, acheteursCost,
+    formuleActivites, nbAcheteurs, acheteursCost,
   } = params;
 
   const { doc, PW, PH, ML, CW, RX, setFont, txt, rect, hrule, sectionHeader } = makeDoc();
@@ -357,6 +361,7 @@ export function generateAvenantPdf(params: AvenantPdfParams): string {
   if (nbActivitesAdded > 0) addedParts.push(`+${nbActivitesAdded} activité${nbActivitesAdded > 1 ? 's' : ''}`);
   if (nbLabosAdded > 0)     addedParts.push(`+${nbLabosAdded} labo${nbLabosAdded > 1 ? 's' : ''}`);
   if (nbGerantsAdded > 0)   addedParts.push(`+${nbGerantsAdded} gérant${nbGerantsAdded > 1 ? 's' : ''}`);
+  if (acheteursCible && acheteursCible > 0) addedParts.push(`Option Acheteurs → palier ${acheteursCible}`);
 
   // Green highlight for added capacity
   rect(ML, y, CW, 16, '#f0fdf4');
@@ -376,8 +381,11 @@ export function generateAvenantPdf(params: AvenantPdfParams): string {
   // Coûts mensuels par poste fournis par le backend (barème formules) ;
   // absents → aucun prix affiché (on n'invente jamais de montant côté front).
   const posteTarif = (cost?: number): string => (cost != null ? `${fmt(cost)} / mois` : '—');
+  const formuleSuffix = nbActivites >= 1 && formuleActivites
+    ? ` (${formuleActivites === 'basique' ? 'Basique' : 'Premium'})`
+    : '';
   const newRows: { label: string; qty: string; price: string }[] = [
-    { label: nbActivites > 1 ? 'Activités' : 'Activité', qty: String(nbActivites), price: posteTarif(activiteCost) },
+    { label: `${nbActivites > 1 ? 'Activités' : 'Activité'}${formuleSuffix}`, qty: String(nbActivites), price: posteTarif(activiteCost) },
   ];
   if (nbLabos > 0)   newRows.push({ label: 'Labo(s)', qty: String(nbLabos), price: posteTarif(laboCost) });
   if (nbGerants > 0) newRows.push({ label: 'Gérant(s) sup.', qty: String(nbGerants), price: posteTarif(gerantCost) });
