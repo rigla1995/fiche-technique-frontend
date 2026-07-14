@@ -4,6 +4,7 @@ import type { Abonnement, DomaineActivite } from '../../types';
 import AddClientModal from './AddClientModal';
 import { generateContractPdf } from '../../utils/contractPdf';
 import HistoryFilterBar, { FilterField, FilterInput, FilterSegmented } from '../common/HistoryFilterBar';
+import Pagination from '../common/Pagination';
 
 interface Client {
   id: number;
@@ -33,6 +34,8 @@ export default function ClientsManagement() {
   const [resendingId, setResendingId] = useState<number | null>(null);
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState<'' | 'active' | 'pending'>('');
+  const [page, setPage] = useState(1);
+  const PER_PAGE = 12;
 
   // Delete confirmation modal
   const [deleteTarget, setDeleteTarget] = useState<Client | null>(null);
@@ -155,6 +158,8 @@ export default function ClientsManagement() {
       (filterStatus === 'pending' && !c.activatedAt);
     return matchSearch && matchStatus;
   });
+  const safePage = Math.min(page, Math.max(1, Math.ceil(filtered.length / PER_PAGE)));
+  const paged = filtered.slice((safePage - 1) * PER_PAGE, safePage * PER_PAGE);
 
   const modeLabelMap: Record<string, { label: string; bg: string; color: string }> = {
     actif:     { label: 'Actif',      bg: '#dcfce7', color: '#15803d' },
@@ -212,123 +217,136 @@ export default function ClientsManagement() {
       <HistoryFilterBar
         accent="#0d9488" accentDark="#0f766e"
         subtitle={`${filtered.length} résultat${filtered.length !== 1 ? 's' : ''}`}
-        onReset={() => { setSearch(''); setFilterStatus(''); }}
+        onReset={() => { setSearch(''); setFilterStatus(''); setPage(1); }}
         showReset={!!(search || filterStatus)}
       >
         <FilterField label="🔍 Recherche">
-          <FilterInput type="text" placeholder="Nom, email ou téléphone…" value={search} onChange={(e) => setSearch(e.target.value)} />
+          <FilterInput type="text" placeholder="Nom, email ou téléphone…" value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} />
         </FilterField>
         <FilterField label="📊 Statut" span>
-          <FilterSegmented options={statusFilters} value={filterStatus} onChange={(v) => setFilterStatus(v as '' | 'active' | 'pending')} accent="#0d9488" />
+          <FilterSegmented options={statusFilters} value={filterStatus} onChange={(v) => { setFilterStatus(v as '' | 'active' | 'pending'); setPage(1); }} accent="#0d9488" />
         </FilterField>
       </HistoryFilterBar>
 
       {loading ? (
         <div className="loading-text">Chargement…</div>
-      ) : (
-        <div className="table-responsive card">
-          <table className="table">
-            <thead>
-              <tr>
-                <th>Client</th>
-                <th>Téléphone</th>
-                <th>Domaines</th>
-                <th>Statut</th>
-                <th>Abonnement</th>
-                <th style={{ textAlign: 'right' }}>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((c) => {
-                const domCount = (c.domaineIds || []).length;
-                const av = avatarFor(c.name);
-                return (
-                  <tr key={c.id} style={!c.activatedAt ? { background: '#fffdf5' } : {}}>
-                    {/* Client = avatar + nom + email */}
-                    <td>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
-                        <div style={{ width: 38, height: 38, borderRadius: 11, background: av.bg, color: av.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 13, flexShrink: 0 }}>{av.initials}</div>
-                        <div style={{ minWidth: 0 }}>
-                          <div style={{ fontWeight: 700, color: '#0f172a', fontSize: '0.9rem' }}>{c.name}</div>
-                          <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>{c.email}</div>
-                        </div>
-                      </div>
-                    </td>
-
-                    <td style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{c.phone || '—'}</td>
-
-                    {/* Domaines — count badge */}
-                    <td>
-                      {domCount === 0 ? (
-                        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>—</span>
-                      ) : (
-                        <button
-                          onClick={() => setDomainesPopup({ name: c.name, ids: c.domaineIds || [] })}
-                          style={{
-                            background: '#dbeafe', color: '#1d4ed8', border: '1px solid #bfdbfe',
-                            borderRadius: 20, padding: '2px 10px', fontSize: '0.75rem', fontWeight: 700,
-                            cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4,
-                          }}
-                        >
-                          🏷️ {domCount}
-                        </button>
-                      )}
-                    </td>
-
-                    {/* Statut */}
-                    <td>
-                      {c.activatedAt ? (
-                        <span style={{ background: '#dcfce7', color: '#15803d', fontSize: '0.72rem', fontWeight: 700, padding: '3px 10px', borderRadius: 20, whiteSpace: 'nowrap' }}>✅ Activé</span>
-                      ) : (
-                        <span style={{ background: '#fef3c7', color: '#b45309', fontSize: '0.72rem', fontWeight: 700, padding: '3px 10px', borderRadius: 20, whiteSpace: 'nowrap' }}>⏳ En attente</span>
-                      )}
-                    </td>
-
-                    {/* Abonnement = Config + Contrat regroupés */}
-                    <td>
-                      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                        <button
-                          onClick={() => openConfig(c)}
-                          style={{ background: '#f0fdf4', color: '#15803d', border: '1px solid #bbf7d0', borderRadius: 7, padding: '4px 10px', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 5 }}
-                        >
-                          ⚙️ Config
-                        </button>
-                        {c.activatedAt && (
-                          <button
-                            onClick={() => downloadContract(c)}
-                            style={{ background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe', borderRadius: 7, padding: '4px 10px', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 5 }}
-                          >
-                            📄 Contrat
-                          </button>
-                        )}
-                      </div>
-                    </td>
-
-                    {/* Actions */}
-                    <td className="actions-cell" style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
-                      <button className="btn btn-ghost btn-sm" onClick={() => openEdit(c)} title="Modifier">✏️ Modifier</button>
-                      {!c.activatedAt && (
-                        <button
-                          className="btn btn-ghost btn-sm"
-                          style={{ color: '#4338ca', borderColor: '#4338ca' }}
-                          disabled={resendingId === c.id}
-                          onClick={() => handleResendInvite(c.id, c.email)}
-                          title="Renvoyer l'invitation"
-                        >
-                          {resendingId === c.id ? '…' : '✉️ Renvoyer'}
-                        </button>
-                      )}
-                      <button className="btn btn-danger btn-sm" onClick={() => setDeleteTarget(c)} title="Supprimer">🗑️</button>
-                    </td>
-                  </tr>
-                );
-              })}
-              {filtered.length === 0 && (
-                <tr><td colSpan={6} className="empty-cell">Aucun résultat</td></tr>
-              )}
-            </tbody>
-          </table>
+      ) : filtered.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: 56, background: '#f8fafc', borderRadius: 16, border: '1px dashed #e2e8f0' }}>
+          <div style={{ fontSize: '2.5rem', marginBottom: 12 }}>👥</div>
+          <div style={{ fontSize: '0.92rem', fontWeight: 700, color: '#374151', marginBottom: 6 }}>Aucun client trouvé</div>
+          <div style={{ fontSize: '0.82rem', color: '#94a3b8' }}>
+            {clients.length === 0 ? 'Ajoutez votre premier client pour commencer.' : 'Ajustez la recherche ou les filtres.'}
+          </div>
         </div>
+      ) : (
+        <>
+          {/* Grille de cards clients */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(310px, 1fr))', gap: 16 }}>
+            {paged.map((c) => {
+              const domCount = (c.domaineIds || []).length;
+              const av = avatarFor(c.name);
+              const active = !!c.activatedAt;
+              return (
+                <div key={c.id} style={{
+                  background: '#fff', borderRadius: 16, border: '1px solid #e5e7eb',
+                  boxShadow: '0 2px 12px rgba(15,23,42,0.06)', overflow: 'hidden',
+                  display: 'flex', flexDirection: 'column',
+                  transition: 'box-shadow 0.15s, transform 0.15s',
+                }}
+                  onMouseEnter={(e) => { e.currentTarget.style.boxShadow = '0 8px 28px rgba(15,23,42,0.12)'; e.currentTarget.style.transform = 'translateY(-2px)'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.boxShadow = '0 2px 12px rgba(15,23,42,0.06)'; e.currentTarget.style.transform = 'none'; }}
+                >
+                  {/* Liseré de statut */}
+                  <div style={{ height: 4, background: active ? 'linear-gradient(90deg,#0d9488,#14b8a6)' : 'linear-gradient(90deg,#f59e0b,#fbbf24)' }} />
+
+                  {/* En-tête : avatar + identité + statut */}
+                  <div style={{ padding: '16px 18px 12px', display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+                    <div style={{ width: 46, height: 46, borderRadius: 13, background: av.bg, color: av.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 15, flexShrink: 0 }}>{av.initials}</div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontWeight: 800, color: '#0f172a', fontSize: '0.95rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={c.name}>{c.name}</div>
+                      <div style={{ fontSize: '0.76rem', color: '#64748b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={c.email}>{c.email}</div>
+                    </div>
+                    {active ? (
+                      <span style={{ background: '#f0fdfa', color: '#0f766e', border: '1px solid #99f6e4', fontSize: '0.68rem', fontWeight: 700, padding: '3px 9px', borderRadius: 20, whiteSpace: 'nowrap', flexShrink: 0 }}>● Activé</span>
+                    ) : (
+                      <span style={{ background: '#fffbeb', color: '#b45309', border: '1px solid #fde68a', fontSize: '0.68rem', fontWeight: 700, padding: '3px 9px', borderRadius: 20, whiteSpace: 'nowrap', flexShrink: 0 }}>⏳ En attente</span>
+                    )}
+                  </div>
+
+                  {/* Infos : téléphone, domaines, date */}
+                  <div style={{ padding: '0 18px 12px', display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
+                    <span style={{ fontSize: '0.76rem', color: '#475569', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, padding: '3px 9px' }}>
+                      📱 {c.phone || '—'}
+                    </span>
+                    <button
+                      onClick={() => domCount > 0 && setDomainesPopup({ name: c.name, ids: c.domaineIds || [] })}
+                      style={{
+                        fontSize: '0.76rem', fontWeight: 600, borderRadius: 8, padding: '3px 9px',
+                        background: domCount > 0 ? '#eff6ff' : '#f8fafc',
+                        color: domCount > 0 ? '#1d4ed8' : '#94a3b8',
+                        border: `1px solid ${domCount > 0 ? '#bfdbfe' : '#e2e8f0'}`,
+                        cursor: domCount > 0 ? 'pointer' : 'default',
+                      }}
+                    >
+                      🏷️ {domCount} domaine{domCount > 1 ? 's' : ''}
+                    </button>
+                    {c.createdAt && (
+                      <span style={{ fontSize: '0.72rem', color: '#94a3b8', marginLeft: 'auto' }}>
+                        Créé le {new Date(c.createdAt).toLocaleDateString('fr-FR')}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Actions */}
+                  <div style={{ marginTop: 'auto', padding: '12px 14px', borderTop: '1px solid #f1f5f9', background: '#fafbfc', display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                    <button
+                      onClick={() => openConfig(c)}
+                      style={{ flex: 1, minWidth: 86, background: '#f0fdf4', color: '#15803d', border: '1px solid #bbf7d0', borderRadius: 8, padding: '7px 8px', fontSize: '0.76rem', fontWeight: 700, cursor: 'pointer' }}
+                    >
+                      ⚙️ Config
+                    </button>
+                    {active && (
+                      <button
+                        onClick={() => downloadContract(c)}
+                        style={{ flex: 1, minWidth: 86, background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe', borderRadius: 8, padding: '7px 8px', fontSize: '0.76rem', fontWeight: 700, cursor: 'pointer' }}
+                      >
+                        📄 Contrat
+                      </button>
+                    )}
+                    {!active && (
+                      <button
+                        disabled={resendingId === c.id}
+                        onClick={() => handleResendInvite(c.id, c.email)}
+                        style={{ flex: 1, minWidth: 86, background: '#eef2ff', color: '#4338ca', border: '1px solid #c7d2fe', borderRadius: 8, padding: '7px 8px', fontSize: '0.76rem', fontWeight: 700, cursor: resendingId === c.id ? 'default' : 'pointer', opacity: resendingId === c.id ? 0.6 : 1 }}
+                      >
+                        {resendingId === c.id ? '…' : '✉️ Renvoyer'}
+                      </button>
+                    )}
+                    <button
+                      onClick={() => openEdit(c)}
+                      title="Modifier les domaines"
+                      style={{ background: '#fff', color: '#475569', border: '1px solid #e2e8f0', borderRadius: 8, padding: '7px 10px', fontSize: '0.76rem', fontWeight: 700, cursor: 'pointer' }}
+                    >
+                      ✏️
+                    </button>
+                    <button
+                      onClick={() => setDeleteTarget(c)}
+                      title="Supprimer"
+                      style={{ background: '#fff', color: '#dc2626', border: '1px solid #fecaca', borderRadius: 8, padding: '7px 10px', fontSize: '0.76rem', fontWeight: 700, cursor: 'pointer' }}
+                    >
+                      🗑️
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Pagination */}
+          <div style={{ marginTop: 16, background: '#fff', borderRadius: 10, border: '1px solid #e5e7eb', overflow: 'hidden' }}>
+            <Pagination total={filtered.length} page={safePage} perPage={PER_PAGE} onChange={setPage} />
+          </div>
+        </>
       )}
     </div>
 
