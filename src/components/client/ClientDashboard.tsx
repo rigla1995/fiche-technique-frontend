@@ -15,7 +15,7 @@ import type { ColonneDef, Kpis } from './dashboardV2Widgets';
 // multi-sélection (remplace l'ancien dashboard et les pages Rapports).
 // ─────────────────────────────────────────────────────────────────────────────
 
-type TabKey = 'overview' | 'ventes' | 'achats' | 'pertes' | 'labo';
+type TabKey = 'overview' | 'ventes' | 'achats' | 'pertes' | 'labo' | 'acheteurs';
 
 const TABS: { key: TabKey; icon: string; label: string }[] = [
   { key: 'overview', icon: '📊', label: "Vue d'ensemble" },
@@ -23,7 +23,42 @@ const TABS: { key: TabKey; icon: string; label: string }[] = [
   { key: 'achats', icon: '📦', label: 'Achats & stock' },
   { key: 'pertes', icon: '🗑️', label: 'Pertes' },
   { key: 'labo', icon: '🧪', label: 'Labo' },
+  { key: 'acheteurs', icon: '🤝', label: 'Acheteurs (B2B)' },
 ];
+
+// Onglets visibles selon la CONFIG RÉELLE du compte (activités/labos existants,
+// modules actifs) — le tableau de bord suit l'abonnement et s'adapte à chaque
+// ajout de capacité. Tant que les options ne sont pas chargées, on garde le
+// comportement historique (tout sauf labo/acheteurs) pour éviter le flash.
+const computeTabsVisibles = (options: FiltresOptions | null) => {
+  if (!options) return TABS.filter((t) => t.key !== 'labo' && t.key !== 'acheteurs');
+  const hasAct = options.activites.length > 0;
+  const hasLabo = options.labos.length > 0;
+  // `modules` absent (backend pas encore à jour pendant un déploiement) :
+  // vente ⇒ permissif (comportement historique — ne JAMAIS masquer Vue d'ensemble
+  // et Ventes par défaut) ; acheteurs ⇒ restrictif (l'ancien backend ne connaît
+  // pas l'onglet et répondrait 400).
+  const vente = options.modules?.vente ?? true;
+  const acheteurs = options.modules?.acheteurs ?? false;
+  return TABS.filter((t) => {
+    switch (t.key) {
+      case 'overview': return hasAct && vente;   // vue centrée ventes/marges
+      case 'ventes': return hasAct && vente;
+      case 'achats': return hasAct;
+      case 'pertes': return hasAct || hasLabo;
+      case 'labo': return hasLabo;
+      case 'acheteurs': return acheteurs;
+      default: return true;
+    }
+  });
+};
+
+// Onglet d'atterrissage selon la config (ex. compte dépôt → Labo).
+const TAB_PRIORITE: TabKey[] = ['overview', 'achats', 'labo', 'acheteurs', 'ventes', 'pertes'];
+const pickDefaultTab = (visibles: { key: TabKey }[]): TabKey => {
+  const keys = new Set(visibles.map((t) => t.key));
+  return TAB_PRIORITE.find((k) => keys.has(k)) ?? visibles[0]?.key ?? 'overview';
+};
 
 const fmtIso = (d: Date) => d.toISOString().slice(0, 10);
 const isIsoDate = (s: string) => /^\d{4}-\d{2}-\d{2}$/.test(s);
@@ -43,6 +78,9 @@ interface FiltresOptions {
   familles: { id: number; nom: string }[];
   fournisseurs: { id: number; nom: string }[];
   role: string;
+  /** Métadonnées de config (backend tab=filtres) — pilotent les onglets visibles. */
+  modules?: { vente: boolean; acheteurs: boolean };
+  formule_activites?: 'basique' | 'premium' | null;
 }
 
 interface FiltresState {
@@ -61,6 +99,7 @@ const FILTRES_PAR_TAB: Record<TabKey, (keyof FiltresState)[]> = {
   achats: ['activites', 'catArticles', 'familles', 'fournisseurs'],
   pertes: ['activites', 'labos', 'catArticles', 'familles', 'typesPerte'],
   labo: ['labos'],
+  acheteurs: ['labos'],
 };
 
 const CANAUX_OPTS: MultiSelectOption[] = [
@@ -112,10 +151,20 @@ export default function ClientDashboard() {
   const [erreur, setErreur] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
 
-  // Options des filtres (une fois).
-  useEffect(() => {
+  // Options des filtres + config (au montage, puis à chaque ajout de capacité —
+  // création d'activité ou de labo — signalé par les événements globaux).
+  const fetchOptions = useCallback(() => {
     api.get('/api/dashboard/v2?tab=filtres').then(({ data: d }) => setOptions(d)).catch(() => setOptions(null));
   }, []);
+  useEffect(() => {
+    fetchOptions();
+    window.addEventListener('activites-changed', fetchOptions);
+    window.addEventListener('labos-changed', fetchOptions);
+    return () => {
+      window.removeEventListener('activites-changed', fetchOptions);
+      window.removeEventListener('labos-changed', fetchOptions);
+    };
+  }, [fetchOptions]);
 
   // Persistance URL + localStorage (les dates ne vivent que dans l'URL, et seulement
   // si l'utilisateur a quitté le défaut du jour — sinon un F5/marque-page figerait
@@ -153,7 +202,16 @@ export default function ClientDashboard() {
   const visibles = FILTRES_PAR_TAB[tab];
   // Filtres posés sur un autre onglet, invisibles ici (ils n'affectent pas ces données).
   const filtresCaches = FILTRE_KEYS.reduce((n, k) => n + (filtres[k].length && !visibles.includes(k) ? 1 : 0), 0);
-  const tabsVisibles = TABS.filter((t) => t.key !== 'labo' || (options?.labos.length ?? 0) > 0);
+  const tabsVisibles = computeTabsVisibles(options);
+
+  // Onglet courant devenu invisible (config chargée, capacité retirée, vieux lien
+  // ?tab= ou localStorage) → bascule vers l'onglet d'atterrissage de la config.
+  useEffect(() => {
+    if (!options) return;
+    const vis = computeTabsVisibles(options);
+    if (!vis.some((t) => t.key === tab)) setTab(pickDefaultTab(vis));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [options]);
 
   const toOpts = (rows: { id: number | string; nom: string }[]): MultiSelectOption[] =>
     rows.map((r) => ({ value: String(r.id), label: r.nom }));
@@ -210,7 +268,17 @@ export default function ClientDashboard() {
               Tableau de bord <HelpButton section="dashboard" variant="solid" tip="Comprendre le tableau de bord" />
             </h1>
             <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.8rem', margin: '3px 0 0' }}>
-              Pilotage complet : ventes, marges, achats, stocks, pertes et labo — tout en TTC.
+              {(() => {
+                // Sous-titre fidèle à la config : on n'annonce que ce que le compte couvre.
+                const keys = new Set(tabsVisibles.map((t) => t.key));
+                const parts: string[] = [];
+                if (keys.has('ventes') || keys.has('overview')) parts.push('ventes, marges');
+                if (keys.has('achats')) parts.push('achats, stocks');
+                if (keys.has('pertes')) parts.push('pertes');
+                if (keys.has('labo')) parts.push('labo');
+                if (keys.has('acheteurs')) parts.push('ventes B2B');
+                return `Pilotage complet : ${parts.join(', ') || 'votre activité'} — tout en TTC.`;
+              })()}
             </p>
           </div>
         </div>
@@ -291,7 +359,8 @@ export default function ClientDashboard() {
           {tab === 'ventes' && <VentesTab data={data} />}
           {tab === 'achats' && <AchatsTab data={data} />}
           {tab === 'pertes' && <PertesTab data={data} />}
-          {tab === 'labo' && <LaboTab data={data} />}
+          {tab === 'labo' && <LaboTab data={data} moduleAcheteurs={!!options?.modules?.acheteurs} />}
+          {tab === 'acheteurs' && <AcheteursTab data={data} />}
         </>
       )}
     </div>
@@ -308,6 +377,7 @@ const twoCols: React.CSSProperties = { display: 'grid', gridTemplateColumns: 're
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 function OverviewTab({ data }: { data: any }) {
+  if (data.vide || !data.kpis) return <EmptyHint text="Aucune donnée dans le périmètre." />;
   const k: Kpis = data.kpis;
   const a = data.alertes ?? {};
   return (
@@ -320,6 +390,11 @@ function OverviewTab({ data }: { data: any }) {
         <KpiCard icon="🍔" label="Food cost" value={k.food_cost_pct != null ? `${k.food_cost_pct}%` : '—'} delta={k.deltas?.food_cost_pts} inverse accent={k.food_cost_pct != null && k.food_cost_pct > 40 ? '#dc2626' : '#2563eb'} sub={`coût matière ${fmtDT(k.cout_matiere)}`} />
         <KpiCard icon="🗑️" label="Pertes" value={fmtDT(k.pertes)} delta={k.deltas?.pertes} inverse accent="#ef4444" sub={k.pertes_pct_ca != null ? `${fmtNum(k.pertes_pct_ca)}% du CA` : undefined} />
         <KpiCard icon="🏬" label="Valeur du stock" value={fmtDT(k.valeur_stock ?? 0)} accent="#8b5cf6" sub="à l'instant (hors période)" />
+        {/* Présent seulement si le module Acheteurs est actif (champ omis sinon) */}
+        {(k as any).ventes_acheteurs != null && (
+          <KpiCard icon="🤝" label="Ventes acheteurs (B2B)" value={fmtDT((k as any).ventes_acheteurs)} accent="#6d28d9"
+            sub={`${(k as any).nb_ventes_acheteurs ?? 0} facture${((k as any).nb_ventes_acheteurs ?? 0) > 1 ? 's' : ''} — hors CA activités`} />
+        )}
       </div>
 
       {(a.stock_bas > 0 || a.food_cost_eleve > 0 || a.jours_inventaire == null || a.jours_inventaire > 30) && (
@@ -454,6 +529,7 @@ function AchatsTab({ data }: { data: any }) {
 }
 
 function PertesTab({ data }: { data: any }) {
+  if (data.vide) return <EmptyHint text="Aucune donnée dans le périmètre." />;
   const k = data.kpis ?? {};
   return (
     <>
@@ -485,7 +561,7 @@ function PertesTab({ data }: { data: any }) {
   );
 }
 
-function LaboTab({ data }: { data: any }) {
+function LaboTab({ data, moduleAcheteurs = false }: { data: any; moduleAcheteurs?: boolean }) {
   if (data.vide) return <EmptyHint text="Aucun labo dans le périmètre." />;
   const k = data.kpis ?? {};
   return (
@@ -497,7 +573,8 @@ function LaboTab({ data }: { data: any }) {
         <KpiCard icon="🔁" label="Transferts émis" value={fmtDT(k.transferts)} accent="#2563eb" sub={`${k.nb_transferts} transfert${k.nb_transferts > 1 ? 's' : ''}`} />
         <KpiCard icon="🗑️" label="Pertes labo" value={fmtDT(k.pertes)} accent="#ef4444" />
         {k.ventes_labo > 0 && <KpiCard icon="💵" label="Ventes labo" value={fmtDT(k.ventes_labo)} sub={`${k.nb_ventes_labo} vente${k.nb_ventes_labo > 1 ? 's' : ''}`} />}
-        {(k.ventes_acheteurs > 0 || k.nb_ventes_acheteurs > 0) && (
+        {/* Module actif : la carte reste visible même à 0 (le compte suit son option) */}
+        {(moduleAcheteurs || k.ventes_acheteurs > 0 || k.nb_ventes_acheteurs > 0) && (
           <KpiCard icon="🤝" label="Ventes acheteurs" value={fmtDT(k.ventes_acheteurs)} accent="#6d28d9"
             sub={`${k.nb_ventes_acheteurs} facture${k.nb_ventes_acheteurs > 1 ? 's' : ''} (TTC)`} />
         )}
@@ -518,6 +595,51 @@ function LaboTab({ data }: { data: any }) {
           <HBarList rows={(data.pertes_par_type ?? []).map((t: any) => ({ ...t, label: t.type === 'avarie' ? 'Avaries' : 'Déchets' }))} labelKey="label" color="#ef4444" max={4} />
         </ChartCard>
       </div>
+    </>
+  );
+}
+
+// Onglet Acheteurs (B2B) — CA facturé, fiscalité, commandes et carnet.
+// Conventions module : flux = commandes expédiées/livrées, montants TTC facturés.
+function AcheteursTab({ data }: { data: any }) {
+  if (data.vide) return <EmptyHint text="Le module Acheteurs n'est pas actif sur ce compte." />;
+  const k = data.kpis ?? {};
+  const STATUT_LABELS: Record<string, string> = {
+    en_attente: 'En attente', expediee: 'Expédiées', livree: 'Livrées', annulee: 'Annulées',
+  };
+  const achCols: ColonneDef<any>[] = [
+    { key: 'acheteur', label: 'Acheteur', align: 'left', fmt: (v) => <strong>{String(v)}</strong> },
+    { key: 'nb', label: 'Factures', fmt: (v) => fmtNum(Number(v)) },
+    { key: 'valeur', label: 'CA TTC', fmt: (v) => <strong>{fmtDT(Number(v))}</strong> },
+  ];
+  return (
+    <>
+      <div style={kpiGrid}>
+        <KpiCard icon="💵" label="CA acheteurs (TTC)" value={fmtDT(k.ca)} delta={k.deltas?.ca} accent="#6d28d9"
+          sub={`${k.nb_factures} facture${k.nb_factures > 1 ? 's' : ''}`} />
+        <KpiCard icon="🧾" label="Total HT" value={fmtDT(k.total_ht)} sub={`TVA ${fmtDT(k.total_tva)}${k.total_timbre > 0 ? ` · timbre ${fmtDT(k.total_timbre)}` : ''}`} />
+        <KpiCard icon="⏳" label="Commandes en attente" value={String(k.commandes_en_attente ?? 0)}
+          accent={k.commandes_en_attente > 0 ? '#d97706' : '#16a34a'} sub="à traiter (tous labos)" />
+        <KpiCard icon="🤝" label="Acheteurs servis" value={String(k.acheteurs_factures ?? 0)} accent="#2563eb"
+          sub={`carnet : ${k.carnet_actifs ?? 0} actif${(k.carnet_actifs ?? 0) > 1 ? 's' : ''} / ${k.carnet_total ?? 0}`} />
+      </div>
+      <ChartCard title={`Évolution du CA acheteurs (par ${data.grain === 'day' ? 'jour' : data.grain === 'week' ? 'semaine' : 'mois'})`} height={240}>
+        <TimeBarChart data={data.evolution ?? []} grain={data.grain} color="#6d28d9" />
+      </ChartCard>
+      <div style={{ height: 14 }} />
+      <div style={twoCols}>
+        <ChartCard title="🏆 Meilleurs acheteurs (CA TTC)" height="auto">
+          <SortableTable rows={data.top_acheteurs ?? []} colonnes={achCols} defaultSort="valeur" maxHeight={300} />
+        </ChartCard>
+        <ChartCard title="Commandes de la période par état" height={260}>
+          <DonutChart data={(data.par_statut ?? []).map((s: any) => ({ ...s, label: STATUT_LABELS[s.statut] ?? s.statut }))}
+            nameKey="label" valueKey="nb"
+            formatter={(v) => `${fmtNum(v)} commande${v > 1 ? 's' : ''}`} />
+        </ChartCard>
+      </div>
+      <ChartCard title="Articles les plus vendus aux acheteurs (TTC)" height="auto">
+        <HBarList rows={data.top_articles ?? []} labelKey="nom" valueKey="valeur" color="#6d28d9" max={10} />
+      </ChartCard>
     </>
   );
 }
