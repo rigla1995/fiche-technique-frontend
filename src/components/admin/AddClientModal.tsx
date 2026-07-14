@@ -1,7 +1,6 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import api from '../../api/client';
 import type { DomaineActivite, Promotion } from '../../types';
-import { generateContractPdf } from '../../utils/contractPdf';
 import { MonthPicker } from './MonthPicker';
 import { useEmailCheck } from '../../hooks/useEmailCheck';
 
@@ -260,6 +259,8 @@ export default function AddClientModal({ onClose, onCreated }: Props) {
 
   // Step 4
   const [pdfBase64, setPdfBase64] = useState<string | null>(null);
+  const [pdfError, setPdfError] = useState(false);
+  const previewSeq = useRef(0);
 
   useEffect(() => {
     api.get('/api/domaines?hasIngredients=true').then(({ data }) => setDomaines(data)).catch(() => {});
@@ -280,26 +281,28 @@ export default function AddClientModal({ onClose, onCreated }: Props) {
     if (step === 1 || step === 3) fetchPreview(nbActivites, nbLabos, nbGerants, nbAcheteurs, formuleActivites);
   }, [step, nbActivites, nbLabos, nbGerants, nbAcheteurs, formuleActivites, fetchPreview]);
 
-  // Step 4: generate PDF whenever we arrive
+  // Step 4 : le contrat téléchargeable = EXACTEMENT le document contractuel
+  // généré par le backend (même builder/charte que l'envoi en signature DocuSeal).
   useEffect(() => {
-    if (step === 3) {
-      const base64 = generateContractPdf({
-        clientNom: nom, clientEmail: email, clientTel: tel,
-        nbActivites, nbLabos, nbGerants,
-        formuleActivites, nbAcheteurs,
-        montantOnboarding: parseFloat(montantOnboarding) || 0,
-        totalMensuel: preview?.totalMensuel || 0,
-        promos: promos.map((p) => ({
-          appliesTo: p.appliesTo, type: p.type,
-          discountVal: p.discountVal, fixedVal: p.fixedVal,
-          months: p.months, moisDebut: p.moisDebut,
-        })),
-        preview: preview ?? undefined,
-        appName: 'LabFlow',
-      });
-      setPdfBase64(base64);
-    }
-  }, [step, nom, email, tel, nbActivites, nbLabos, nbGerants, formuleActivites, nbAcheteurs, montantOnboarding, preview, promos]);
+    if (step !== 3) return;
+    const seq = ++previewSeq.current;
+    setPdfBase64(null);
+    setPdfError(false);
+    api.post('/api/abonnements/contrat-preview', {
+      nom, email, telephone: tel,
+      nbActivites, nbLabos, nbGerants, formuleActivites, nbAcheteurs,
+      montantOnboarding: parseFloat(montantOnboarding) || 0,
+      promotions: promos.map(mapPromoForApi),
+    })
+      .then(({ data }) => {
+        if (seq !== previewSeq.current) return;
+        if (data?.pdfBase64) setPdfBase64(data.pdfBase64);
+        else setPdfError(true);
+      })
+      .catch(() => { if (seq === previewSeq.current) setPdfError(true); });
+    // mapPromoForApi est stable (fonction pure du composant) — promos suffit en dépendance
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, nom, email, tel, nbActivites, nbLabos, nbGerants, formuleActivites, nbAcheteurs, montantOnboarding, promos]);
 
   // ── Step validation ──
 
@@ -380,7 +383,10 @@ export default function AddClientModal({ onClose, onCreated }: Props) {
   };
 
   const handleSubmit = async () => {
-    if (!pdfBase64) { setError('Génération du contrat en cours…'); return; }
+    // Génération en cours : on attend. Échec de génération : on N'EMPÊCHE PAS la
+    // création — le backend génère lui-même le document (repli) et le flux
+    // DocuSeal produit de toute façon son propre contrat à la signature.
+    if (!pdfBase64 && !pdfError) { setError('Génération du contrat en cours…'); return; }
     setSaving(true);
     setError(null);
     try {
@@ -390,7 +396,7 @@ export default function AddClientModal({ onClose, onCreated }: Props) {
         nbActivites, nbLabos, nbGerants,
         formuleActivites, nbAcheteurs,
         montantOnboarding: parseFloat(montantOnboarding) || 0,
-        contractPdfBase64: pdfBase64,
+        contractPdfBase64: pdfBase64 || null,
         promotions: promos.map(mapPromoForApi),
       });
       onCreated();
@@ -744,8 +750,12 @@ export default function AddClientModal({ onClose, onCreated }: Props) {
                 <div style={{ width: 42, height: 42, borderRadius: 10, background: '#eef2ff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>📄</div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 13, fontWeight: 700, color: '#0f172a' }}>Contrat d'abonnement</div>
-                  <div style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>
-                    {pdfBase64 ? 'Prêt — téléchargez-le pour le consulter avant l\'envoi.' : 'Génération du contrat…'}
+                  <div style={{ fontSize: 11, color: pdfError ? '#dc2626' : '#64748b', marginTop: 2 }}>
+                    {pdfBase64
+                      ? 'Prêt — téléchargez-le pour le consulter avant l\'envoi. C\'est le document exact qui partira en signature.'
+                      : pdfError
+                        ? 'Impossible de générer le contrat — revenez en arrière puis réessayez.'
+                        : 'Génération du contrat…'}
                   </div>
                 </div>
                 <button
@@ -798,14 +808,20 @@ export default function AddClientModal({ onClose, onCreated }: Props) {
               style={{ padding: '9px 28px', borderRadius: 9, border: 'none', background: nextDisabled ? '#e5e7eb' : 'linear-gradient(135deg,#4338ca,#6366f1)', color: nextDisabled ? '#9ca3af' : '#fff', fontSize: 13, fontWeight: 700, cursor: nextDisabled ? 'default' : 'pointer', boxShadow: nextDisabled ? 'none' : '0 4px 14px rgba(99,102,241,0.35)' }}>
               {step === 0 && emailChecking ? 'Vérification…' : 'Suivant →'}
             </button>
-          ) : (
-            <button
-              onClick={handleSubmit}
-              disabled={saving || !pdfBase64}
-              style={{ padding: '9px 28px', borderRadius: 9, border: 'none', background: saving || !pdfBase64 ? '#e5e7eb' : 'linear-gradient(135deg,#059669,#10b981)', color: saving || !pdfBase64 ? '#9ca3af' : '#fff', fontSize: 13, fontWeight: 700, cursor: saving || !pdfBase64 ? 'default' : 'pointer', boxShadow: saving || !pdfBase64 ? 'none' : '0 4px 14px rgba(16,185,129,0.35)' }}>
-              {saving ? 'Création en cours…' : '✓ Créer le compte & Envoyer'}
-            </button>
-          )}
+          ) : (() => {
+            // Désactivé pendant la génération seulement — un échec de génération
+            // n'empêche pas la création (repli backend).
+            const waiting = !pdfBase64 && !pdfError;
+            const disabled = saving || waiting;
+            return (
+              <button
+                onClick={handleSubmit}
+                disabled={disabled}
+                style={{ padding: '9px 28px', borderRadius: 9, border: 'none', background: disabled ? '#e5e7eb' : 'linear-gradient(135deg,#059669,#10b981)', color: disabled ? '#9ca3af' : '#fff', fontSize: 13, fontWeight: 700, cursor: disabled ? 'default' : 'pointer', boxShadow: disabled ? 'none' : '0 4px 14px rgba(16,185,129,0.35)' }}>
+                {saving ? 'Création en cours…' : '✓ Créer le compte & Envoyer'}
+              </button>
+            );
+          })()}
         </div>
       </div>
     </div>

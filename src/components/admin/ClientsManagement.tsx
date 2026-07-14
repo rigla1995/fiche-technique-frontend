@@ -2,8 +2,6 @@ import { useEffect, useState } from 'react';
 import api from '../../api/client';
 import type { Abonnement, DomaineActivite } from '../../types';
 import AddClientModal from './AddClientModal';
-import { generateContractPdf } from '../../utils/contractPdf';
-import HistoryFilterBar, { FilterField, FilterInput, FilterSegmented } from '../common/HistoryFilterBar';
 import Pagination from '../common/Pagination';
 
 interface Client {
@@ -11,6 +9,7 @@ interface Client {
   name: string;
   email: string;
   phone?: string;
+  adresse?: string | null;
   createdAt?: string;
   activatedAt?: string | null;
   domaineIds?: number[];
@@ -25,11 +24,17 @@ export default function ClientsManagement() {
 
   const [showAddModal, setShowAddModal] = useState(false);
 
-  // Edit modal — domain-only
+  // Modal domaines — liste complète, assignation/désassignation directe par l'admin
   const [editClient, setEditClient] = useState<Client | null>(null);
   const [editDomaines, setEditDomaines] = useState<number[]>([]);
   const [editSaving, setEditSaving] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
+
+  // Modal « Consulter » — informations de base en lecture seule
+  const [viewClient, setViewClient] = useState<Client | null>(null);
+
+  // Téléchargement du contrat (spinner par client)
+  const [contractLoadingId, setContractLoadingId] = useState<number | null>(null);
 
   const [resendingId, setResendingId] = useState<number | null>(null);
   const [search, setSearch] = useState('');
@@ -43,7 +48,6 @@ export default function ClientsManagement() {
 
   // Popups
   const [configPopup, setConfigPopup] = useState<{ client: Client; data: Abonnement | null; loading: boolean } | null>(null);
-  const [domainesPopup, setDomainesPopup] = useState<{ name: string; ids: number[] } | null>(null);
 
   const fetchClients = () => {
     setLoading(true);
@@ -67,33 +71,31 @@ export default function ClientsManagement() {
   };
 
   // ── Contrat download ──────────────────────────────────────────────────────
+  // Le VRAI contrat : celui signé via DocuSeal si disponible, sinon le document
+  // régénéré par le backend avec la charte contractuelle (même builder que l'envoi).
   const downloadContract = async (client: Client) => {
-    let abo: Abonnement | null = null;
+    if (contractLoadingId !== null) return; // un téléchargement à la fois
+    setContractLoadingId(client.id);
     try {
-      const { data } = await api.get(`/api/abonnements/client/${client.id}?withPricing=1`);
-      abo = data;
-    } catch { return; }
-    if (!abo?.config) return;
-    const base64 = generateContractPdf({
-      clientNom: client.name,
-      clientEmail: client.email,
-      clientTel: client.phone || '',
-      nbActivites: abo.config.nbActivites,
-      nbLabos: abo.config.nbLabos,
-      nbGerants: abo.config.nbGerants,
-      // Formule + option Acheteurs : sans elles, le contrat re-téléchargé serait
-      // incohérent avec le mensuel affiché (qui inclut l'option acheteurs).
-      formuleActivites: abo.config.formuleActivites ?? undefined,
-      nbAcheteurs: abo.config.nbAcheteurs ?? 0,
-      montantOnboarding: abo.config.montantOnboarding,
-      totalMensuel: abo.pricing?.effectifMensuel ?? abo.pricing?.baseMensuel ?? 0,
-      promos: [],
-      appName: 'LabFlow',
-    });
-    const link = document.createElement('a');
-    link.href = `data:application/pdf;base64,${base64}`;
-    link.download = `contrat-${client.name.replace(/\s+/g, '-').toLowerCase()}.pdf`;
-    link.click();
+      const res = await api.get(`/api/abonnements/client/${client.id}/contrat-pdf`, { responseType: 'blob' });
+      const blob = new Blob([res.data], { type: 'application/pdf' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `contrat-${client.name.replace(/\s+/g, '-').toLowerCase()}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (err: unknown) {
+      const status = (err as { response?: { status?: number } })?.response?.status;
+      // 404 = vraiment aucun contrat ; autres statuts = indisponibilité passagère
+      alert(status === 404
+        ? "Aucun contrat n'existe pour ce client."
+        : 'Le contrat est momentanément indisponible — réessayez dans un instant.');
+    } finally {
+      setContractLoadingId(null);
+    }
   };
 
   // ── Edit ──────────────────────────────────────────────────────────────────
@@ -213,20 +215,70 @@ export default function ClientsManagement() {
         </button>
       </div>
 
-      {/* Barre de filtres (composant partagé) — recherche + statut segmenté avec compteurs */}
-      <HistoryFilterBar
-        accent="#0d9488" accentDark="#0f766e"
-        subtitle={`${filtered.length} résultat${filtered.length !== 1 ? 's' : ''}`}
-        onReset={() => { setSearch(''); setFilterStatus(''); setPage(1); }}
-        showReset={!!(search || filterStatus)}
-      >
-        <FilterField label="🔍 Recherche">
-          <FilterInput type="text" placeholder="Nom, email ou téléphone…" value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} />
-        </FilterField>
-        <FilterField label="📊 Statut" span>
-          <FilterSegmented options={statusFilters} value={filterStatus} onChange={(v) => { setFilterStatus(v as '' | 'active' | 'pending'); setPage(1); }} accent="#0d9488" />
-        </FilterField>
-      </HistoryFilterBar>
+      {/* Barre de filtres — recherche arrondie + pills de statut avec compteurs */}
+      <div style={{
+        background: '#fff', border: '1px solid #e5e7eb', borderRadius: 16, padding: '12px 16px',
+        marginBottom: 18, display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap',
+        boxShadow: '0 2px 12px rgba(15,23,42,0.05)',
+      }}>
+        {/* Recherche */}
+        <div style={{ position: 'relative', flex: '1 1 260px', minWidth: 220 }}>
+          <span style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', fontSize: 14, pointerEvents: 'none', opacity: 0.55 }}>🔍</span>
+          <input
+            type="text"
+            placeholder="Rechercher un client — nom, email, téléphone…"
+            value={search}
+            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+            style={{
+              width: '100%', boxSizing: 'border-box', padding: '10px 36px 10px 38px',
+              borderRadius: 24, border: '1.5px solid #e2e8f0', outline: 'none',
+              fontSize: '0.85rem', color: '#0f172a', background: '#f8fafc',
+              transition: 'border-color 0.15s, background 0.15s',
+            }}
+            onFocus={(e) => { e.currentTarget.style.borderColor = '#0d9488'; e.currentTarget.style.background = '#fff'; }}
+            onBlur={(e) => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.background = '#f8fafc'; }}
+          />
+          {search && (
+            <button
+              onClick={() => { setSearch(''); setPage(1); }}
+              style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', border: 'none', background: '#e2e8f0', color: '#475569', borderRadius: '50%', width: 20, height: 20, fontSize: 11, cursor: 'pointer', lineHeight: 1 }}
+            >✕</button>
+          )}
+        </div>
+
+        {/* Pills de statut */}
+        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+          {statusFilters.map(({ value, label, count, color }) => {
+            const active = filterStatus === value;
+            return (
+              <button
+                key={value || 'tous'}
+                onClick={() => { setFilterStatus(value); setPage(1); }}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 7, padding: '8px 15px', borderRadius: 22,
+                  border: `1.5px solid ${active ? color : '#e5e7eb'}`,
+                  background: active ? color : '#fff',
+                  color: active ? '#fff' : '#475569',
+                  fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer',
+                  transition: 'all 0.15s', whiteSpace: 'nowrap',
+                }}
+              >
+                {label}
+                <span style={{
+                  fontSize: '0.7rem', fontWeight: 800, padding: '1px 7px', borderRadius: 10,
+                  background: active ? 'rgba(255,255,255,0.25)' : '#f1f5f9',
+                  color: active ? '#fff' : '#64748b',
+                }}>{count}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Compteur de résultats */}
+        <span style={{ marginLeft: 'auto', fontSize: '0.76rem', color: '#94a3b8', fontWeight: 600, whiteSpace: 'nowrap' }}>
+          {filtered.length} résultat{filtered.length !== 1 ? 's' : ''}
+        </span>
+      </div>
 
       {loading ? (
         <div className="loading-text">Chargement…</div>
@@ -279,13 +331,14 @@ export default function ClientsManagement() {
                       📱 {c.phone || '—'}
                     </span>
                     <button
-                      onClick={() => domCount > 0 && setDomainesPopup({ name: c.name, ids: c.domaineIds || [] })}
+                      onClick={() => openEdit(c)}
+                      title="Gérer les domaines d'activité"
                       style={{
                         fontSize: '0.76rem', fontWeight: 600, borderRadius: 8, padding: '3px 9px',
                         background: domCount > 0 ? '#eff6ff' : '#f8fafc',
                         color: domCount > 0 ? '#1d4ed8' : '#94a3b8',
                         border: `1px solid ${domCount > 0 ? '#bfdbfe' : '#e2e8f0'}`,
-                        cursor: domCount > 0 ? 'pointer' : 'default',
+                        cursor: 'pointer',
                       }}
                     >
                       🏷️ {domCount} domaine{domCount > 1 ? 's' : ''}
@@ -307,10 +360,11 @@ export default function ClientsManagement() {
                     </button>
                     {active && (
                       <button
+                        disabled={contractLoadingId === c.id}
                         onClick={() => downloadContract(c)}
-                        style={{ flex: 1, minWidth: 86, background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe', borderRadius: 8, padding: '7px 8px', fontSize: '0.76rem', fontWeight: 700, cursor: 'pointer' }}
+                        style={{ flex: 1, minWidth: 86, background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe', borderRadius: 8, padding: '7px 8px', fontSize: '0.76rem', fontWeight: 700, cursor: contractLoadingId === c.id ? 'default' : 'pointer', opacity: contractLoadingId === c.id ? 0.6 : 1 }}
                       >
-                        📄 Contrat
+                        {contractLoadingId === c.id ? '…' : '📄 Contrat'}
                       </button>
                     )}
                     {!active && (
@@ -323,11 +377,11 @@ export default function ClientsManagement() {
                       </button>
                     )}
                     <button
-                      onClick={() => openEdit(c)}
-                      title="Modifier les domaines"
-                      style={{ background: '#fff', color: '#475569', border: '1px solid #e2e8f0', borderRadius: 8, padding: '7px 10px', fontSize: '0.76rem', fontWeight: 700, cursor: 'pointer' }}
+                      onClick={() => setViewClient(c)}
+                      title="Consulter les informations du client"
+                      style={{ flex: 1, minWidth: 96, background: '#fff', color: '#475569', border: '1px solid #e2e8f0', borderRadius: 8, padding: '7px 8px', fontSize: '0.76rem', fontWeight: 700, cursor: 'pointer' }}
                     >
-                      ✏️
+                      👁 Consulter
                     </button>
                     <button
                       onClick={() => setDeleteTarget(c)}
@@ -350,29 +404,72 @@ export default function ClientsManagement() {
       )}
     </div>
 
-    {/* ── POPUP : Domaines ─────────────────────────────────────────────── */}
-    {domainesPopup && (
-      <div className="modal-overlay" onClick={() => setDomainesPopup(null)}>
-        <div className="modal modal-sm" onClick={(e) => e.stopPropagation()}>
-          <div className="modal-header modal-header--info">
-            <h2>🏷️ Domaines — {domainesPopup.name}</h2>
-            <button className="modal-close" onClick={() => setDomainesPopup(null)}>×</button>
+    {/* ── MODAL : Consulter (informations de base, lecture seule) ─────── */}
+    {viewClient && (() => {
+      const av = avatarFor(viewClient.name);
+      const activeV = !!viewClient.activatedAt;
+      const infoRow = (icon: string, label: string, value: string | null | undefined) => (
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '11px 14px', background: '#f8fafc', border: '1px solid #eef1f5', borderRadius: 10 }}>
+          <span style={{ fontSize: '1rem', lineHeight: 1.4 }}>{icon}</span>
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontSize: '0.66rem', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.07em' }}>{label}</div>
+            <div style={{ fontSize: '0.88rem', fontWeight: 600, color: value ? '#0f172a' : '#cbd5e1', marginTop: 2, wordBreak: 'break-word' }}>{value || 'Non renseigné'}</div>
           </div>
-          <div className="modal-body">
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-              {domainesPopup.ids.map((id) => {
-                const d = domaines.find((x) => x.id === id);
-                return (
-                  <span key={id} style={{ background: '#dbeafe', color: '#1d4ed8', border: '1px solid #bfdbfe', borderRadius: 20, padding: '4px 14px', fontSize: '0.85rem', fontWeight: 600 }}>
-                    {d ? d.nom : `Domaine #${id}`}
-                  </span>
-                );
-              })}
+        </div>
+      );
+      return (
+        <div className="modal-overlay" onClick={() => setViewClient(null)}>
+          <div className="modal modal-sm" onClick={(e) => e.stopPropagation()} style={{ borderRadius: 16, overflow: 'hidden' }}>
+            <div style={{ background: 'linear-gradient(135deg, #0f766e 0%, #0d9488 55%, #14b8a6 100%)', padding: '20px 22px', display: 'flex', alignItems: 'center', gap: 14 }}>
+              <div style={{ width: 48, height: 48, borderRadius: 13, background: 'rgba(255,255,255,0.18)', border: '2px solid rgba(255,255,255,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 16, color: '#fff', flexShrink: 0 }}>{av.initials}</div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: '1.02rem', fontWeight: 800, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{viewClient.name}</div>
+                <div style={{ fontSize: '0.74rem', color: 'rgba(255,255,255,0.75)', marginTop: 2 }}>
+                  {activeV ? '● Compte activé' : '⏳ En attente d\'activation'}
+                  {viewClient.createdAt ? ` · créé le ${new Date(viewClient.createdAt).toLocaleDateString('fr-FR')}` : ''}
+                </div>
+              </div>
+              <button onClick={() => setViewClient(null)} style={{ background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: 8, color: '#fff', fontSize: '1rem', cursor: 'pointer', padding: '5px 9px', lineHeight: 1 }}>✕</button>
+            </div>
+            <div style={{ padding: '18px 22px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {infoRow('👤', 'Nom complet', viewClient.name)}
+              {infoRow('📧', 'Email', viewClient.email)}
+              {infoRow('📱', 'Téléphone', viewClient.phone)}
+              {infoRow('📍', 'Adresse', viewClient.adresse)}
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '11px 14px', background: '#f8fafc', border: '1px solid #eef1f5', borderRadius: 10 }}>
+                <span style={{ fontSize: '1rem', lineHeight: 1.4 }}>🏷️</span>
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <div style={{ fontSize: '0.66rem', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Domaines d'activité</div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 6 }}>
+                    {(viewClient.domaineIds || []).length === 0 ? (
+                      <span style={{ fontSize: '0.82rem', color: '#cbd5e1', fontWeight: 600 }}>Aucun domaine assigné</span>
+                    ) : (viewClient.domaineIds || []).map((id) => {
+                      const d = domaines.find((x) => x.id === id);
+                      return (
+                        <span key={id} style={{ background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe', borderRadius: 16, padding: '2px 11px', fontSize: '0.76rem', fontWeight: 600 }}>
+                          {d ? d.nom : `Domaine #${id}`}
+                        </span>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div style={{ padding: '12px 22px 18px', display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+              <button
+                onClick={() => { const c = viewClient; setViewClient(null); openEdit(c); }}
+                style={{ padding: '9px 18px', borderRadius: 9, border: '1px solid #bfdbfe', background: '#eff6ff', color: '#1d4ed8', fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer' }}
+              >
+                🏷️ Gérer les domaines
+              </button>
+              <button onClick={() => setViewClient(null)} style={{ padding: '9px 18px', borderRadius: 9, border: 'none', background: '#0d9488', color: '#fff', fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer' }}>
+                Fermer
+              </button>
             </div>
           </div>
         </div>
-      </div>
-    )}
+      );
+    })()}
 
     {/* ── POPUP : Configuration ────────────────────────────────────────── */}
     {configPopup && (
@@ -518,68 +615,73 @@ export default function ClientsManagement() {
       </div>
     )}
 
-    {/* ── MODAL : Modifier client ──────────────────────────────────────── */}
+    {/* ── MODAL : Domaines d'activité (assignation/désassignation) ─────── */}
     {editClient && (
       <div className="modal-overlay">
-        <div className="modal modal-sm" onClick={(e) => e.stopPropagation()}>
-          <div className="modal-header modal-header--primary">
-            <h2>✏️ Modifier — {editClient.name}</h2>
-            <button className="modal-close" onClick={closeEdit}>×</button>
+        <div className="modal modal-sm" onClick={(e) => e.stopPropagation()} style={{ borderRadius: 16, overflow: 'hidden' }}>
+          <div style={{ background: 'linear-gradient(135deg,#1e3a8a 0%,#1d4ed8 55%,#3b82f6 100%)', padding: '18px 22px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+            <div>
+              <div style={{ fontSize: '0.66rem', fontWeight: 700, color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 3 }}>Domaines d'activité</div>
+              <div style={{ fontSize: '1rem', fontWeight: 800, color: '#fff' }}>🏷️ {editClient.name}</div>
+            </div>
+            <button onClick={closeEdit} style={{ background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: 8, color: '#fff', fontSize: '1rem', cursor: 'pointer', padding: '5px 9px', lineHeight: 1 }}>✕</button>
           </div>
-          <form onSubmit={handleEditSubmit} className="modal-body">
-            <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginBottom: 16, lineHeight: 1.5 }}>
-              Vous pouvez ajouter ou retirer des domaines d'activité. Les autres champs sont gérés via l'espace Abonnements.
-            </p>
-
-            <div className="form-group">
-              <label style={{ fontWeight: 700, marginBottom: 8, display: 'block' }}>
-                Domaines d'activité
-              </label>
+          <form onSubmit={handleEditSubmit}>
+            <div style={{ padding: '18px 22px' }}>
+              <p style={{ fontSize: '0.8rem', color: '#64748b', margin: '0 0 14px', lineHeight: 1.55 }}>
+                Cochez les domaines à assigner au client — ils déterminent les ingrédients accessibles dans son référentiel.
+              </p>
               {domaines.length === 0 ? (
-                <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>Aucun domaine configuré dans le référentiel.</p>
+                <p style={{ fontSize: '0.82rem', color: '#94a3b8' }}>Aucun domaine configuré dans le référentiel.</p>
               ) : (
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: '46vh', overflowY: 'auto', paddingRight: 4 }}>
                   {domaines.map((d) => {
                     const checked = editDomaines.includes(d.id);
                     return (
                       <label
                         key={d.id}
                         style={{
-                          display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer',
-                          padding: '6px 14px', borderRadius: 20, fontSize: '0.84rem', fontWeight: 600,
-                          border: `1.5px solid ${checked ? '#4338ca' : 'var(--border)'}`,
-                          background: checked ? '#eef2ff' : '#f8fafc',
-                          color: checked ? '#4338ca' : 'var(--text-muted)',
-                          userSelect: 'none', transition: 'all 0.12s',
+                          display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer',
+                          padding: '10px 14px', borderRadius: 10,
+                          border: `1.5px solid ${checked ? '#3b82f6' : '#e5e7eb'}`,
+                          background: checked ? '#eff6ff' : '#fff',
+                          transition: 'all 0.12s', userSelect: 'none',
                         }}
                       >
                         <input
                           type="checkbox"
-                          style={{ display: 'none' }}
                           checked={checked}
                           onChange={() => setEditDomaines((prev) =>
                             checked ? prev.filter((id) => id !== d.id) : [...prev, d.id]
                           )}
+                          style={{ accentColor: '#2563eb', width: 16, height: 16, flexShrink: 0 }}
                         />
-                        {checked ? '✓ ' : ''}{d.nom}
+                        <span style={{ flex: 1, fontSize: '0.88rem', fontWeight: checked ? 700 : 500, color: checked ? '#1d4ed8' : '#374151' }}>{d.nom}</span>
+                        {checked && <span style={{ fontSize: '0.68rem', fontWeight: 700, color: '#1d4ed8', background: '#dbeafe', borderRadius: 10, padding: '2px 9px' }}>assigné</span>}
                       </label>
                     );
                   })}
                 </div>
               )}
+
+              {editError && (
+                <div style={{ background: '#fee2e2', color: '#dc2626', border: '1px solid #fecaca', borderRadius: 8, padding: '8px 12px', fontSize: '0.82rem', marginTop: 12 }}>
+                  {editError}
+                </div>
+              )}
             </div>
 
-            {editError && (
-              <div style={{ background: '#fee2e2', color: '#dc2626', border: '1px solid #fecaca', borderRadius: 6, padding: '8px 12px', fontSize: '0.85rem', marginTop: 8 }}>
-                {editError}
+            <div style={{ padding: '12px 22px 18px', display: 'flex', alignItems: 'center', gap: 10, borderTop: '1px solid #f1f5f9' }}>
+              <span style={{ fontSize: '0.76rem', color: '#64748b', fontWeight: 600 }}>
+                {editDomaines.length} domaine{editDomaines.length > 1 ? 's' : ''} sélectionné{editDomaines.length > 1 ? 's' : ''}
+              </span>
+              <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
+                <button type="button" onClick={closeEdit} style={{ padding: '9px 18px', borderRadius: 9, border: '1px solid #e2e8f0', background: '#fff', color: '#374151', fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer' }}>Annuler</button>
+                <button type="submit" disabled={editSaving}
+                  style={{ padding: '9px 20px', borderRadius: 9, border: 'none', background: editSaving ? '#93c5fd' : 'linear-gradient(135deg,#1d4ed8,#3b82f6)', color: '#fff', fontSize: '0.82rem', fontWeight: 700, cursor: editSaving ? 'default' : 'pointer', boxShadow: editSaving ? 'none' : '0 4px 12px rgba(59,130,246,0.35)' }}>
+                  {editSaving ? 'Enregistrement…' : '✓ Enregistrer'}
+                </button>
               </div>
-            )}
-
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 20, paddingTop: 14, borderTop: '1px solid var(--border)' }}>
-              <button type="button" className="btn btn-ghost" onClick={closeEdit}>Annuler</button>
-              <button type="submit" className="btn btn-primary" disabled={editSaving}>
-                {editSaving ? 'Enregistrement…' : '✓ Enregistrer'}
-              </button>
             </div>
           </form>
         </div>
