@@ -19,31 +19,59 @@ interface Step {
 /**
  * Checklist dynamique de mise en route, affichée en tête de la fiche
  * « Suivi de votre mise en route » du manuel. L'état est lu en direct
- * (mêmes sources que le déverrouillage progressif du menu).
+ * (mêmes sources que le déverrouillage progressif du menu) et les étapes
+ * s'adaptent à la configuration du compte : compte dépôt (0 activité au
+ * contrat = labo + acheteurs), labo, module Acheteurs.
  */
 export default function OnboardingChecklist() {
   const [summary, setSummary] = useState<Summary | null>(null);
   const [nbLabos, setNbLabos] = useState(0);
+  const [maxActivites, setMaxActivites] = useState<number | null>(null);
+  const [moduleAcheteurs, setModuleAcheteurs] = useState(false);
+  const [hasOffreActive, setHasOffreActive] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     Promise.all([
       api.get('/api/entreprise/activites/types-summary').then(({ data }) => data as Summary).catch(() => null),
       api.get('/api/labo').then(({ data }) => (Array.isArray(data) ? data.length : 0)).catch(() => 0),
-    ]).then(([s, n]) => { setSummary(s); setNbLabos(n); }).finally(() => setLoading(false));
+      api.get('/api/abonnements/mon-abonnement').then(({ data }) => data?.config?.nbActivites ?? null).catch(() => null),
+      api.get('/api/entreprise').then(({ data }) => !!data?.module_acheteurs_actif).catch(() => false),
+    ]).then(async ([s, n, maxAct, modAch]) => {
+      setSummary(s); setNbLabos(n); setMaxActivites(maxAct); setModuleAcheteurs(modAch);
+      if (modAch) {
+        // Une offre active = l'Espace Acheteurs est prêt à vendre (l'étape est cochée)
+        try {
+          const { data } = await api.get('/api/acheteurs/offres');
+          const all = [...(data?.articles ?? []), ...(data?.produits ?? [])];
+          setHasOffreActive(all.some((o: { actif?: boolean }) => !!o.actif));
+        } catch { /* module gated ou pas encore accessible */ }
+      }
+    }).finally(() => setLoading(false));
   }, []);
 
   if (loading || summary === null) return null;
 
+  const isDepot = maxActivites === 0;
   const hasStructure = !!summary.hasActivites || nbLabos > 0;
   const hasArticles = !!summary.hasArticles;
   const hasAffectations = !!summary.hasSelections || !!summary.hasLaboIngredients;
 
   const steps: Step[] = [
     { done: true, titre: 'Compte activé & contrat signé', detail: 'Votre accès LabFlow est ouvert.', to: null },
-    { done: hasStructure, titre: 'Créer vos activités (et labo)', detail: 'Déclarez vos points de vente, et votre labo central si vous en avez un.', to: '/client/activites' },
+    isDepot
+      ? { done: hasStructure, titre: 'Créer votre labo', detail: 'Déclarez votre laboratoire de production — c\'est lui qui porte le stock et les ventes.', to: '/client/activites' }
+      : { done: hasStructure, titre: 'Créer vos activités (et labo)', detail: 'Déclarez vos points de vente, et votre labo central si vous en avez un.', to: '/client/activites' },
     { done: hasArticles, titre: 'Constituer le référentiel', detail: 'Créez vos unités, familles et catégories, puis vos articles.', to: '/client/referentiel/articles' },
-    { done: hasAffectations, titre: 'Affecter les articles', detail: 'Indiquez quels articles sont utilisés par chaque activité ou labo.', to: '/client/activites' },
+    isDepot
+      ? { done: hasAffectations, titre: 'Affecter les articles au labo', detail: 'Indiquez quels articles sont gérés par votre labo.', to: '/client/activites' }
+      : { done: hasAffectations, titre: 'Affecter les articles', detail: 'Indiquez quels articles sont utilisés par chaque activité ou labo.', to: '/client/activites' },
+    ...(moduleAcheteurs ? [{
+      done: hasOffreActive,
+      titre: 'Configurer l\'Espace Acheteurs',
+      detail: 'Rendez vos articles commandables, créez votre carnet d\'acheteurs et fixez vos tarifs B2B.',
+      to: '/client/acheteurs/tarifs',
+    }] : []),
   ];
   const doneCount = steps.filter((s) => s.done).length;
   const allDone = doneCount === steps.length;
@@ -93,7 +121,9 @@ export default function OnboardingChecklist() {
 
       {allDone && (
         <div style={{ marginTop: 12, fontSize: '0.8rem', color: '#15803d', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 10, padding: '10px 14px' }}>
-          Prochaines étapes : saisissez vos <Link to="/client/stock" style={{ color: '#15803d', fontWeight: 700 }}>approvisionnements</Link> puis composez vos <Link to="/client/products" style={{ color: '#15803d', fontWeight: 700 }}>produits et fiches techniques</Link>.
+          {isDepot
+            ? <>Prochaines étapes : saisissez vos <Link to="/client/labo/stock" style={{ color: '#15803d', fontWeight: 700 }}>approvisionnements labo</Link> puis vendez à vos <Link to="/client/acheteurs/vente" style={{ color: '#15803d', fontWeight: 700 }}>acheteurs</Link>.</>
+            : <>Prochaines étapes : saisissez vos <Link to="/client/stock" style={{ color: '#15803d', fontWeight: 700 }}>approvisionnements</Link> puis composez vos <Link to="/client/products" style={{ color: '#15803d', fontWeight: 700 }}>produits et fiches techniques</Link>.</>}
         </div>
       )}
     </div>

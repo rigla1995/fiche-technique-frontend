@@ -7,7 +7,7 @@ import { useAuth } from '../../context/AuthContext';
 
 const TYPE_LABELS: Record<string, { label: string; icon: string; desc: string }> = {
   ingredient_manquant: { label: 'Ingrédient manquant', icon: '🥕', desc: 'Besoin d\'aide sur un ingrédient absent de votre référentiel' },
-  supplement:          { label: 'Ajout de capacité',   icon: '➕', desc: 'Demander l\'ajout d\'activités, labos ou gérants' },
+  supplement:          { label: 'Ajout de capacité',   icon: '➕', desc: 'Demander l\'ajout d\'activités, labos, gérants ou de l\'option Acheteurs' },
   aide:                { label: 'Besoin d\'aide',       icon: '💬', desc: 'Nous décrire votre besoin ou signaler un problème' },
 };
 
@@ -41,6 +41,12 @@ interface SupplPricing {
   nbActivites: number;
   nbLabos: number;
   nbGerants: number;
+  /** Option Acheteurs : quota actuel, palier couvrant, coût mensuel actuel, barème. */
+  nbAcheteurs?: number;
+  palierAcheteurs?: number | null;
+  acheteursCost?: number;
+  paliersAcheteurs?: { palier: number; prix: number }[];
+  formuleActivites?: 'basique' | 'premium' | null;
   activitePromo?: PromoInfo | null;
   laboPromo?:     PromoInfo | null;
   gerantPromo?:   PromoInfo | null;
@@ -96,6 +102,12 @@ export default function SupportPage() {
   const [nbActivites, setNbActivites] = useState(0);
   const [nbLabos, setNbLabos] = useState(0);
   const [nbGerants, setNbGerants] = useState(0);
+  // Option Acheteurs : palier cible (0 = pas de changement)
+  const [acheteursCible, setAcheteursCible] = useState(0);
+
+  // Passage en formule Premium (demande dédiée, dédupliquée côté serveur)
+  const [hasPendingPremium, setHasPendingPremium] = useState(false);
+  const [requestingPremium, setRequestingPremium] = useState(false);
 
   // Aide form
   const [description, setDescription] = useState('');
@@ -115,13 +127,35 @@ export default function SupportPage() {
     api.get('/api/categories').then(({ data }) => setCategories(data)).catch(() => {});
     api.get('/api/unites?all=true').then(({ data }) => setUnites(data)).catch(() => {});
     api.get('/api/abonnements/supplement-pricing').then(({ data }) => setSupplPricing(data)).catch(() => {});
+    api.get('/api/abonnements/demandes')
+      .then(({ data }) => setHasPendingPremium((data as { typeDemande: string; statut: string }[])
+        .some(d => d.typeDemande === 'passer_formule_premium' && d.statut === 'en_attente')))
+      .catch(() => {});
   }, [fetchDemandes, clearAllFromDB]);
 
   const resetForm = () => {
     setFormType(null);
     setDomaineId(''); setCategorieId(''); setUniteId(''); setNomIngredient('');
-    setNbActivites(0); setNbLabos(0); setNbGerants(0); setDescription('');
+    setNbActivites(0); setNbLabos(0); setNbGerants(0); setAcheteursCible(0); setDescription('');
     setError(null);
+  };
+
+  // Demande de passage en formule Premium (endpoint dédié — dédup 409 serveur)
+  const requestPremium = async () => {
+    setRequestingPremium(true);
+    setError(null);
+    try {
+      await api.post('/api/abonnements/demandes', { typeDemande: 'passer_formule_premium' });
+      setHasPendingPremium(true);
+      setSuccess('Demande de passage en formule Activité Premium envoyée — nous revenons vers vous sous 24h.');
+      setShowForm(false);
+      resetForm();
+      setTimeout(() => setSuccess(null), 8000);
+    } catch (err: unknown) {
+      const e = err as { response?: { status?: number; data?: { message?: string } } };
+      if (e?.response?.status === 409) setHasPendingPremium(true);
+      setError(e?.response?.data?.message || 'Erreur lors de l\'envoi');
+    } finally { setRequestingPremium(false); }
   };
 
   const deleteDemande = async (id: number) => {
@@ -152,8 +186,14 @@ export default function SupportPage() {
           nomIngredient: nomIngredient.trim(),
         };
       } else if (formType === 'supplement') {
-        if (nbActivites + nbLabos + nbGerants === 0) { setError('Indiquez au moins un supplément'); setSaving(false); return; }
+        if (nbActivites + nbLabos + nbGerants + acheteursCible === 0) { setError('Indiquez au moins un supplément'); setSaving(false); return; }
+        if (acheteursCible > 0 && acheteursNeedsLabo) {
+          setError("L'option Acheteurs nécessite au moins un labo — ajoutez-en un à votre demande.");
+          setSaving(false);
+          return;
+        }
         body = { ...body, nbActivitesSupp: nbActivites, nbLabosSupp: nbLabos, nbGerantsSupp: nbGerants };
+        if (acheteursCible > 0) body.nbAcheteursCible = acheteursCible;
       } else {
         if (!description.trim()) { setError('Description requise'); setSaving(false); return; }
         body = { ...body, description: description.trim() };
@@ -209,16 +249,27 @@ export default function SupportPage() {
     : 'Promotion active';
 
   // Supplement live pricing
+  // Option Acheteurs : le palier cible REMPLACE le palier actuel — le delta est la
+  // différence de prix entre les deux paliers (pas une addition).
+  const paliersDispo = (supplPricing?.paliersAcheteurs ?? []).filter(p => p.palier > (supplPricing?.nbAcheteurs ?? 0));
+  const cibleInfo = supplPricing?.paliersAcheteurs?.find(p => p.palier === acheteursCible) ?? null;
+  const acheteursDelta = acheteursCible > 0 && cibleInfo
+    ? Math.max(0, cibleInfo.prix - (supplPricing?.acheteursCost ?? 0))
+    : 0;
+  // L'option exige un labo : existant, ou ajouté dans cette même demande
+  const acheteursNeedsLabo = (supplPricing?.nbLabos ?? 0) + nbLabos < 1;
   const supplTotal = supplPricing
     ? (supplPricing.currentMensuel ?? 0)
       + nbActivites * (supplPricing.prixActiviteSup ?? 0)
       + nbLabos * (supplPricing.prixLaboSup ?? 0)
       + nbGerants * (supplPricing.prixGerantSup ?? 0)
+      + acheteursDelta
     : null;
   const supplDelta = supplPricing
     ? nbActivites * (supplPricing.prixActiviteSup ?? 0)
       + nbLabos * (supplPricing.prixLaboSup ?? 0)
       + nbGerants * (supplPricing.prixGerantSup ?? 0)
+      + acheteursDelta
     : 0;
   // Total après application de la promo mensualité active (= ce qui sera sur l'avenant signé)
   const supplTotalEff = supplTotal != null ? applyMensPromo(supplTotal, supplPricing?.mensPromo) : null;
@@ -286,6 +337,32 @@ export default function SupportPage() {
                   <span style={{ marginLeft: 'auto', color: '#94a3b8', fontSize: '1rem' }}>→</span>
                 </button>
               ))}
+
+              {/* Passage en formule Premium — visible seulement pour les comptes en formule Basique */}
+              {!isGerant && supplPricing?.formuleActivites === 'basique' && (
+                <button
+                  onClick={hasPendingPremium || requestingPremium ? undefined : requestPremium}
+                  disabled={hasPendingPremium || requestingPremium}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 14, padding: '14px 18px', borderRadius: 12,
+                    border: '1.5px solid #fcd34d', background: '#fffbeb', textAlign: 'left',
+                    cursor: hasPendingPremium || requestingPremium ? 'default' : 'pointer',
+                    opacity: hasPendingPremium ? 0.75 : 1,
+                  }}>
+                  <div style={{ width: 44, height: 44, borderRadius: 12, background: '#fef3c7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.4rem', flexShrink: 0 }}>⭐</div>
+                  <div>
+                    <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#78350f' }}>Passer en formule Activité Premium</div>
+                    <div style={{ fontSize: '0.78rem', color: '#92400e', marginTop: 2 }}>
+                      {hasPendingPremium
+                        ? 'Demande déjà envoyée — en attente de validation.'
+                        : 'Débloquez l\'Espace Produit complet : produits composés, fiches techniques, production.'}
+                    </div>
+                  </div>
+                  <span style={{ marginLeft: 'auto', color: '#b45309', fontSize: '0.85rem', fontWeight: 700 }}>
+                    {requestingPremium ? '…' : hasPendingPremium ? '⏳' : 'Demander →'}
+                  </span>
+                </button>
+              )}
               <button onClick={() => { resetForm(); setShowForm(false); }}
                 style={{ marginTop: 4, padding: '9px', borderRadius: 9, border: '1px solid #e2e8f0', background: '#fff', color: '#64748b', fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer' }}>
                 Annuler
@@ -397,6 +474,51 @@ export default function SupportPage() {
                       )}
                     </div>
                   );})}
+
+                  {/* Option Acheteurs — activation ou passage à un palier supérieur */}
+                  {supplPricing && paliersDispo.length > 0 && (
+                    <div style={{ padding: '12px 16px', background: '#faf5ff', borderRadius: 10, border: '1px solid #ddd6fe' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                        <div style={{ flex: 1, minWidth: 180 }}>
+                          <div style={{ fontSize: '0.85rem', fontWeight: 600, color: '#374151' }}>
+                            🤝 Option Acheteurs
+                            {(supplPricing.nbAcheteurs ?? 0) > 0 && (
+                              <span style={{ marginLeft: 8, fontSize: '0.68rem', fontWeight: 700, padding: '1px 8px', borderRadius: 8, background: '#ede9fe', color: '#6d28d9' }}>
+                                palier actuel : jusqu'à {supplPricing.palierAcheteurs} acheteurs
+                              </span>
+                            )}
+                          </div>
+                          <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: 2 }}>
+                            {(supplPricing.nbAcheteurs ?? 0) > 0
+                              ? 'Passez à un palier supérieur — le nouveau palier remplace l\'actuel.'
+                              : 'Activez le carnet d\'acheteurs B2B (ventes depuis votre labo, portail de commande).'}
+                          </div>
+                          {acheteursNeedsLabo && (
+                            <div style={{ fontSize: '0.72rem', color: '#b45309', marginTop: 4, fontWeight: 600 }}>
+                              ⚠️ Nécessite au moins un labo — ajoutez-en un à cette demande pour activer l'option.
+                            </div>
+                          )}
+                        </div>
+                        <select
+                          value={acheteursCible}
+                          onChange={(e) => setAcheteursCible(parseInt(e.target.value, 10) || 0)}
+                          style={{ ...inp, width: 'auto', minWidth: 210, cursor: 'pointer' }}
+                        >
+                          <option value={0}>{(supplPricing.nbAcheteurs ?? 0) > 0 ? 'Palier inchangé' : 'Non merci'}</option>
+                          {paliersDispo.map(({ palier, prix }) => (
+                            <option key={palier} value={palier}>
+                              Jusqu'à {palier} acheteurs — {prix.toFixed(0)} DT/mois
+                            </option>
+                          ))}
+                        </select>
+                        {acheteursCible > 0 && (
+                          <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#6d28d9', minWidth: 60, textAlign: 'right' }}>
+                            +{acheteursDelta.toFixed(0)} DT
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  )}
                   {supplDelta > 0 && supplPricing && (
                     <div style={{ background: 'linear-gradient(135deg,#f5f3ff,#ede9fe)', border: '1px solid #ddd6fe', borderRadius: 12, padding: '14px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <div>
@@ -526,6 +648,7 @@ export default function SupportPage() {
                         d.nbActivitesSupp && `+${d.nbActivitesSupp} activité${(d.nbActivitesSupp || 0) > 1 ? 's' : ''}`,
                         d.nbLabosSupp && `+${d.nbLabosSupp} labo${(d.nbLabosSupp || 0) > 1 ? 's' : ''}`,
                         d.nbGerantsSupp && `+${d.nbGerantsSupp} gérant${(d.nbGerantsSupp || 0) > 1 ? 's' : ''}`,
+                        d.nbAcheteursCible && `Option Acheteurs → palier jusqu'à ${d.nbAcheteursCible}`,
                       ].filter(Boolean).join(' · ')}
                     </span>
                   )}
