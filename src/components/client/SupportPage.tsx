@@ -257,8 +257,11 @@ export default function SupportPage() {
 
   // Supplement live pricing
   // Option Acheteurs : le palier cible REMPLACE le palier actuel — le delta est la
-  // différence de prix entre les deux paliers (pas une addition).
-  const paliersDispo = (supplPricing?.paliersAcheteurs ?? []).filter(p => p.palier > (supplPricing?.nbAcheteurs ?? 0));
+  // différence de prix entre les deux paliers (pas une addition). Seuls les
+  // paliers STRICTEMENT SUPÉRIEURS au palier COURANT sont proposés (comparer au
+  // quota brut laissait le palier déjà détenu dans la liste — ex. quota 4 →
+  // palier actuel 10 mais « Jusqu'à 10 » encore proposé).
+  const paliersDispo = (supplPricing?.paliersAcheteurs ?? []).filter(p => p.palier > (supplPricing?.palierAcheteurs ?? 0));
   const cibleInfo = supplPricing?.paliersAcheteurs?.find(p => p.palier === acheteursCible) ?? null;
   const acheteursDelta = acheteursCible > 0 && cibleInfo
     ? Math.max(0, cibleInfo.prix - (supplPricing?.acheteursCost ?? 0))

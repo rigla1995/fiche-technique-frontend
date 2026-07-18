@@ -73,7 +73,7 @@ interface FiltresOptions {
   activites: { id: number; nom: string }[];
   labos: { id: number; nom: string }[];
   prestataires: { id: string; nom: string }[];
-  categories_produit: { id: number; nom: string }[];
+  categories_produit: { id: number; nom: string; type_produit?: 'vendable' | 'supplement' | 'valorise' | null }[];
   categories_articles: { id: number; nom: string }[];
   familles: { id: number; nom: string }[];
   fournisseurs: { id: number; nom: string }[];
@@ -215,6 +215,19 @@ export default function ClientDashboard() {
 
   const toOpts = (rows: { id: number | string; nom: string }[]): MultiSelectOption[] =>
     rows.map((r) => ({ value: String(r.id), label: r.nom }));
+
+  // Catégories produits : le type préfixe le nom (« P. Vendable / Burger » vs
+  // « P. Valorisé / Burger ») — deux catégories homonymes restent différenciables.
+  const TYPE_PRODUIT_PREFIX: Record<string, string> = {
+    vendable: 'P. Vendable', supplement: 'Supplément', valorise: 'P. Valorisé',
+  };
+  const toCatProduitOpts = (rows: FiltresOptions['categories_produit']): MultiSelectOption[] =>
+    rows.map((r) => ({
+      value: String(r.id),
+      label: r.type_produit && TYPE_PRODUIT_PREFIX[r.type_produit]
+        ? `${TYPE_PRODUIT_PREFIX[r.type_produit]} / ${r.nom}`
+        : r.nom,
+    }));
 
   // ── Export Excel de l'onglet courant ──
   const [exporting, setExporting] = useState(false);
@@ -378,7 +391,7 @@ export default function ClientDashboard() {
             {visibles.includes('labos') && <MultiSelectFilter label="Labos" icon="🧪" options={toOpts(options.labos)} selected={filtres.labos} onChange={setFiltre('labos')} />}
             {visibles.includes('canaux') && <MultiSelectFilter label="Type de vente" icon="🛒" options={CANAUX_OPTS} selected={filtres.canaux} onChange={setFiltre('canaux')} />}
             {visibles.includes('prestataires') && <MultiSelectFilter label="Prestataires" icon="🚚" options={toOpts(options.prestataires)} selected={filtres.prestataires} onChange={setFiltre('prestataires')} />}
-            {visibles.includes('catProduits') && <MultiSelectFilter label="Catégories produits" icon="🍽️" options={toOpts(options.categories_produit)} selected={filtres.catProduits} onChange={setFiltre('catProduits')} alwaysShow />}
+            {visibles.includes('catProduits') && <MultiSelectFilter label="Catégories produits" icon="🍽️" options={toCatProduitOpts(options.categories_produit)} selected={filtres.catProduits} onChange={setFiltre('catProduits')} alwaysShow />}
             {visibles.includes('typesProduit') && <MultiSelectFilter label="Types" icon="🏷️" options={TYPES_PRODUIT_OPTS} selected={filtres.typesProduit} onChange={setFiltre('typesProduit')} />}
             {visibles.includes('catArticles') && <MultiSelectFilter label="Catégories articles" icon="🧂" options={toOpts(options.categories_articles)} selected={filtres.catArticles} onChange={setFiltre('catArticles')} />}
             {visibles.includes('familles') && <MultiSelectFilter label="Familles" icon="🗂️" options={toOpts(options.familles)} selected={filtres.familles} onChange={setFiltre('familles')} />}
