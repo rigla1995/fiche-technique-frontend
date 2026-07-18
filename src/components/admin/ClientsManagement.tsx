@@ -502,12 +502,18 @@ export default function ClientsManagement() {
                   {/* Config de base */}
                   <div style={{ marginBottom: 14 }}>
                     <div style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>Configuration souscrite</div>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
-                      {[
-                        { label: 'Activités', value: cfg.nbActivites, icon: '🏪' },
-                        { label: 'Labos', value: cfg.nbLabos, icon: '🔬' },
-                        { label: 'Gérants', value: cfg.nbGerants, icon: '👤' },
-                      ].map(({ label, value, icon }) => (
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
+                      {(() => {
+                        // Base acheteurs : palier de facturation couvrant le quota (1-10 / 11-20 / 21-50 / 51-100)
+                        const nAch = cfg.nbAcheteurs ?? 0;
+                        const palierAch = nAch <= 0 ? 0 : nAch <= 10 ? 10 : nAch <= 20 ? 20 : nAch <= 50 ? 50 : 100;
+                        return [
+                          { label: 'Activités', value: String(cfg.nbActivites), icon: '🏪' },
+                          { label: 'Labos', value: String(cfg.nbLabos), icon: '🔬' },
+                          { label: 'Gérants', value: String(cfg.nbGerants), icon: '👤' },
+                          { label: 'Base acheteurs', value: palierAch > 0 ? `≤ ${palierAch}` : '—', icon: '🤝' },
+                        ];
+                      })().map(({ label, value, icon }) => (
                         <div key={label} style={{ textAlign: 'center', background: '#f8fafc', border: '1px solid var(--border)', borderRadius: 10, padding: '12px 8px' }}>
                           <div style={{ fontSize: '1.5rem', marginBottom: 2 }}>{icon}</div>
                           <div style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--primary)', lineHeight: 1 }}>{value}</div>

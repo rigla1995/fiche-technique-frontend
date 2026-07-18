@@ -233,7 +233,7 @@ export default function HistoriquePaiementsAdmin() {
                 <div style={{ display: 'flex', flexDirection: 'column' }}>
                   <label style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 5 }}>📊 Statut</label>
                   <FilterSegmented
-                    options={(['', 'payé', 'en_attente', 'impayé', 'gratuit', 'remisé'] as const).map((v) => ({
+                    options={(['', 'payé', 'en_attente'] as const).map((v) => ({
                       value: v,
                       label: v === '' ? 'Tous' : STATUT_LABELS[v] || v,
                       color: v ? STATUT_COLORS[v] : undefined,

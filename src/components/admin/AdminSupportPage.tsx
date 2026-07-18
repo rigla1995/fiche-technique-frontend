@@ -7,9 +7,8 @@ import { FilterSegmented, FilterInput } from '../common/HistoryFilterBar';
 import type { SegmentedOption } from '../common/HistoryFilterBar';
 
 const TYPE_INFO: Record<string, { label: string; icon: string; color: string; bg: string }> = {
-  ingredient_manquant: { label: 'Ingrédient manquant', icon: '🥕', color: '#92400e', bg: '#fef3c7' },
-  supplement:          { label: 'Ajout de capacité',   icon: '➕', color: '#1e40af', bg: '#dbeafe' },
-  aide:                { label: 'Besoin d\'aide',       icon: '💬', color: '#4c1d95', bg: '#ede9fe' },
+  supplement: { label: 'Ajout de capacité', icon: '➕', color: '#1e40af', bg: '#dbeafe' },
+  aide:       { label: 'Besoin d\'aide',     icon: '💬', color: '#4c1d95', bg: '#ede9fe' },
 };
 
 const STATUT_INFO: Record<string, { label: string; bg: string; text: string; border: string }> = {
@@ -51,7 +50,7 @@ function DetailsPopup({
   onAction: (id: number, statut: 'validée' | 'refusée', extra?: Record<string, unknown>) => Promise<void>;
 }) {
   const isPending = demande.statut === 'en_attente';
-  const canValidate = isPending && (demande.type === 'supplement' || demande.type === 'ingredient_manquant');
+  const canValidate = isPending && demande.type === 'supplement';
   const s = STATUT_INFO[demande.statut] || STATUT_INFO.en_attente;
   const t = TYPE_INFO[demande.type] || { label: demande.type, icon: '📝', color: '#374151', bg: '#f3f4f6' };
 
@@ -59,11 +58,6 @@ function DetailsPopup({
   const [pricing, setPricing] = useState<SupplPricing | null>(null);
   // Avenant PDF (generated client-side from pricing)
   const [avenantPdfBase64, setAvenantPdfBase64] = useState<string | null>(null);
-  // Infos de la demande d'ingrédient — LECTURE SEULE : chaque client gère son
-  // propre référentiel, la validation ne crée plus rien côté admin.
-  const ingNom = demande.nomIngredient || '';
-  const ingCatNom = demande.categorieNom || '';
-  const ingUniteNom = demande.uniteNom || '';
   // Notes admin
   const [notesAdmin, setNotesAdmin] = useState(demande.notesAdmin || '');
   const [saving, setSaving] = useState(false);
@@ -242,36 +236,6 @@ function DetailsPopup({
                 </div>
               )}
 
-              {/* Ingrédient manquant — lecture seule : chaque client gère son référentiel */}
-              {demande.type === 'ingredient_manquant' && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  <div>
-                    <label style={lbl}>Nom de l'ingrédient</label>
-                    <div style={readOnly}>{ingNom || '—'}</div>
-                  </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                    <div>
-                      <label style={lbl}>Catégorie</label>
-                      <div style={readOnly}>{ingCatNom || '—'}</div>
-                    </div>
-                    <div>
-                      <label style={lbl}>Unité</label>
-                      <div style={readOnly}>{ingUniteNom || '—'}</div>
-                    </div>
-                  </div>
-                  <div>
-                    <label style={lbl}>Domaine d'activité</label>
-                    <div style={readOnly}>{demande.domaineNom || '—'}</div>
-                  </div>
-                  {isPending && (
-                    <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 8, padding: '8px 12px', fontSize: '0.78rem', color: '#1e40af', fontWeight: 600 }}>
-                      ℹ️ Chaque client gère son propre référentiel : la validation n'ajoute rien
-                      automatiquement. Guidez le client via la note ci-dessous — il peut créer
-                      l'article lui-même dans Référentiel → Articles.
-                    </div>
-                  )}
-                </div>
-              )}
             </div>
           </div>
 
