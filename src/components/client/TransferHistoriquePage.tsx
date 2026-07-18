@@ -50,7 +50,6 @@ export default function TransferHistoriquePage() {
   const [page, setPage] = useState(1);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [exporting, setExporting] = useState(false);
-  const [exportingPdf, setExportingPdf] = useState(false);
 
   // Server-side filters
   const [startDate, setStartDate] = useState(yearStart);
@@ -106,23 +105,6 @@ export default function TransferHistoriquePage() {
       URL.revokeObjectURL(url);
     } catch { /* ignore */ }
     setExporting(false);
-  };
-
-  const exportPdf = async () => {
-    if (!laboId) return;
-    setExportingPdf(true);
-    try {
-      const params = buildParams();
-      if (selectedIds.size > 0) params.set('selectedIds', [...selectedIds].join(','));
-      const { data } = await api.get(`/api/labo/${laboId}/transfers/export-pdf?${params}`, { responseType: 'blob' });
-      const url = URL.createObjectURL(new Blob([data], { type: 'application/pdf' }));
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `historique-transferts-${new Date().toISOString().slice(0, 10)}.pdf`;
-      a.click();
-      URL.revokeObjectURL(url);
-    } catch { /* ignore */ }
-    setExportingPdf(false);
   };
 
   const toggleSelect = (id: number) => setSelectedIds((prev) => { const n = new Set(prev); if (n.has(id)) n.delete(id); else n.add(id); return n; });
@@ -244,7 +226,6 @@ export default function TransferHistoriquePage() {
         onReset={() => { setStartDate(yearStart); setEndDate(yearEnd); setFilterActiviteId(''); setFilterCategorie(''); setPage(1); }}
         showReset={!!(startDate !== yearStart || endDate !== yearEnd || filterActiviteId || filterCategorie)}
         onExportExcel={exportExcel} excelDisabled={exporting || !searched || results.length === 0} excelLabel={`Exporter${selectedIds.size > 0 ? ` (${selectedIds.size})` : ''}`}
-        onExportPdf={exportPdf} pdfDisabled={!searched || results.length === 0} exportingPdf={exportingPdf}
       >
         <FilterField label="📅 Du"><FilterInput type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} /></FilterField>
         <FilterField label="📅 Au"><FilterInput type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} /></FilterField>

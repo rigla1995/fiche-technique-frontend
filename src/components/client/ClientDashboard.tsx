@@ -223,28 +223,85 @@ export default function ClientDashboard() {
     setExporting(true);
     try {
       const ExcelJS = (await import('exceljs')).default;
-      const wb = new ExcelJS.Workbook();
+      const { brandHeader, headerRow, dataRowStyle, brandFooter, finalize, BRAND, FMT_DT } =
+        await import('../../services/excelBrand');
       const tabDef = TABS.find((t) => t.key === tab)!;
-      const ws = wb.addWorksheet('Export');
-      ws.addRow([`LabFlow — Tableau de bord · ${tabDef.label}`]).font = { bold: true, size: 14 };
-      ws.addRow([`Période : ${from} → ${to}`]);
-      ws.addRow([]);
-      const addSection = (titre: string, rows: Record<string, unknown>[]) => {
-        if (!rows?.length) return;
-        ws.addRow([titre]).font = { bold: true, size: 12 };
-        const keys = Object.keys(rows[0]);
-        ws.addRow(keys).font = { bold: true };
-        for (const r of rows) ws.addRow(keys.map((k) => r[k] as string | number));
-        ws.addRow([]);
+
+      // Auto-détection des sections (inchangée) : KPIs scalaires, puis chaque
+      // liste (tableau d'objets) renvoyée par l'onglet courant.
+      const kpis = (data.kpis ?? {}) as Record<string, unknown>;
+      const kpiEntries = Object.entries(kpis).filter(([, v]) => typeof v !== 'object' || v === null);
+      const listes = (Object.entries(data) as [string, unknown][]).filter(
+        ([, v]) => Array.isArray(v) && v.length > 0 && typeof v[0] === 'object' && v[0] !== null,
+      ) as [string, Record<string, unknown>[]][];
+
+      const human = (s: string) => s.replace(/_/g, ' ').replace(/^./, (c) => c.toUpperCase());
+      // Montants en DT — heuristique sur les clés (jamais les compteurs/pourcentages).
+      const isMoney = (k: string) =>
+        !/(^|_)(nb|pct|pts|qte|quantite|seuil|jours|part)(_|$)/.test(k)
+        && /(^|_)(ca|marge|valeur|montant|total|pertes?|achats?|commissions?|panier|couts?|prix|appros?|transferts?|production|ventes?|ht|tva|timbre|charges?)(_|$)/.test(k);
+      const cellValue = (v: unknown) =>
+        typeof v === 'number' || typeof v === 'string' ? v : v == null ? '' : String(v);
+
+      const colCount = Math.max(2, ...listes.map(([, rows]) => Object.keys(rows[0]).length));
+      const wb = new ExcelJS.Workbook();
+      const ws = wb.addWorksheet(tabDef.label);
+      let r = await brandHeader(wb, ws, {
+        titre: `Tableau de bord — ${tabDef.label}`,
+        sousTitre: 'Montants en TTC · filtres du tableau de bord appliqués',
+        meta: `Exporté le ${new Date().toLocaleDateString('fr-FR')} · Onglet ${tabDef.label} · Période ${from} → ${to}`,
+        colCount,
+      });
+
+      const sectionTitle = (titre: string) => {
+        ws.mergeCells(r, 1, r, colCount);
+        const cell = ws.getCell(r, 1);
+        cell.value = titre;
+        cell.font = { name: 'Calibri', size: 11.5, bold: true, color: { argb: BRAND.indigoInk } };
+        ws.getRow(r).height = 20;
+        r += 1;
       };
-      const kpis = data.kpis as Record<string, unknown> | undefined;
-      if (kpis) addSection('Indicateurs', [Object.fromEntries(Object.entries(kpis).filter(([, v]) => typeof v !== 'object' || v === null))]);
-      for (const [key, val] of Object.entries(data)) {
-        if (Array.isArray(val) && val.length && typeof val[0] === 'object') {
-          addSection(key.replace(/_/g, ' '), val as Record<string, unknown>[]);
-        }
+
+      // Section KPIs — liste « Indicateur / Valeur », lisible quel que soit l'onglet.
+      if (kpiEntries.length) {
+        sectionTitle('Indicateurs');
+        headerRow(ws, r, ['Indicateur', 'Valeur']);
+        r += 1;
+        kpiEntries.forEach(([k, v], i) => {
+          const row = ws.getRow(r);
+          row.getCell(1).value = human(k);
+          row.getCell(2).value = cellValue(v);
+          if (typeof v === 'number' && isMoney(k)) row.getCell(2).numFmt = FMT_DT;
+          dataRowStyle(row, { index: i, colCount: 2 });
+          r += 1;
+        });
+        r += 1; // respiration entre sections
       }
-      ws.columns.forEach((c) => { c.width = 22; });
+
+      // Sections listes — en-têtes charte + zébrage.
+      for (const [key, rows] of listes) {
+        const keys = Object.keys(rows[0]);
+        sectionTitle(human(key));
+        headerRow(ws, r, keys.map(human));
+        r += 1;
+        rows.forEach((rec, i) => {
+          const row = ws.getRow(r);
+          keys.forEach((k, ci) => {
+            const v = rec[k];
+            row.getCell(ci + 1).value = cellValue(v);
+            if (typeof v === 'number' && isMoney(k)) row.getCell(ci + 1).numFmt = FMT_DT;
+          });
+          dataRowStyle(row, { index: i, colCount: keys.length });
+          r += 1;
+        });
+        r += 1;
+      }
+
+      ws.getColumn(1).width = 30;
+      for (let c = 2; c <= colCount; c++) ws.getColumn(c).width = 17;
+      brandFooter(ws, colCount);
+      // Bandeau + filet + méta figés au défilement ; pas d'auto-filtre (multi-sections).
+      finalize(ws, { headerRowIdx: 5, colCount, lastDataRow: r - 1, autoFilter: false });
       const buf = await wb.xlsx.writeBuffer();
       const url = URL.createObjectURL(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
       const a = document.createElement('a');

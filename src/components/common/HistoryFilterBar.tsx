@@ -67,9 +67,6 @@ interface HistoryFilterBarProps {
   onExportExcel?: () => void;
   excelLabel?: string;        // défaut « Exporter XLS »
   excelDisabled?: boolean;
-  onExportPdf?: () => void;
-  pdfDisabled?: boolean;
-  exportingPdf?: boolean;
   actions?: ReactNode;        // boutons additionnels dans le pied à droite (ex. « + Nouveau »)
 }
 
@@ -78,10 +75,10 @@ export default function HistoryFilterBar({
   onSearch, searching, searchDisabled, searchLabel = 'Rechercher',
   onReset, showReset = true,
   onExportExcel, excelLabel = 'Exporter XLS', excelDisabled,
-  onExportPdf, pdfDisabled, exportingPdf, actions,
+  actions,
 }: HistoryFilterBarProps) {
   const dark = accentDark || accent;
-  const hasFooter = !!((onReset && showReset) || onSearch || onExportExcel || onExportPdf || actions);
+  const hasFooter = !!((onReset && showReset) || onSearch || onExportExcel || actions);
   const outline = (disabled?: boolean): CSSProperties => ({
     height: 36, display: 'inline-flex', alignItems: 'center', gap: 6, borderRadius: 8, padding: '0 14px',
     fontSize: '0.82rem', fontWeight: 600, cursor: disabled ? 'not-allowed' : 'pointer', background: 'var(--surface)',
@@ -120,11 +117,6 @@ export default function HistoryFilterBar({
           {onExportExcel && (
             <button onClick={onExportExcel} disabled={excelDisabled} style={outline(excelDisabled)}>
               <XlsIcon /> {excelLabel}
-            </button>
-          )}
-          {onExportPdf && (
-            <button onClick={onExportPdf} disabled={pdfDisabled || exportingPdf} style={outline(pdfDisabled || exportingPdf)}>
-              <span style={{ color: '#dc2626', fontSize: '0.7rem' }}>●</span> {exportingPdf ? '…' : 'PDF'}
             </button>
           )}
           {actions}

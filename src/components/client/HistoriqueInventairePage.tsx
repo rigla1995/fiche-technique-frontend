@@ -66,7 +66,6 @@ export default function HistoriqueInventairePage() {
 
   const [ingOptions, setIngOptions] = useState<IngOption[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [exportingPdf, setExportingPdf] = useState(false);
 
   const [page, setPage] = useState(1);
 
@@ -160,22 +159,6 @@ export default function HistoriqueInventairePage() {
       a.click();
       URL.revokeObjectURL(blobUrl);
     } catch { setErrorMsg("Erreur lors de l'export Excel."); }
-  };
-
-  const handleExportPdf = async () => {
-    setExportingPdf(true);
-    try {
-      const params = buildParams();
-      if (selectedIds.size > 0) params.set('selectedIds', [...selectedIds].join(','));
-      const { data } = await api.get(`${getUrl('/export-pdf')}?${params}`, { responseType: 'blob' });
-      const url = URL.createObjectURL(new Blob([data], { type: 'application/pdf' }));
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `historique-inventaire-${new Date().toISOString().slice(0, 10)}.pdf`;
-      a.click();
-      URL.revokeObjectURL(url);
-    } catch { setErrorMsg("Erreur lors de l'export PDF."); }
-    setExportingPdf(false);
   };
 
   const toggleSelect = (id: string) => setSelectedIds((prev) => {
@@ -295,9 +278,6 @@ export default function HistoriqueInventairePage() {
             onExportExcel={handleExport}
             excelLabel={selectedIds.size > 0 ? `Exporter (${selectedIds.size})` : 'Exporter'}
             excelDisabled={!canExport}
-            onExportPdf={handleExportPdf}
-            pdfDisabled={!canExport}
-            exportingPdf={exportingPdf}
           >
             <FilterField label="📅 Du">
               <FilterInput type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
