@@ -54,13 +54,8 @@ export interface SupportDemande {
   clientId: number;
   clientNom: string | null;
   clientEmail: string | null;
-  type: 'ingredient_manquant' | 'supplement' | 'aide';
+  type: 'supplement' | 'aide';
   statut: 'en_attente' | 'validée' | 'refusée';
-  domaineId?: number | null;
-  domaineNom?: string | null;
-  categorieNom?: string | null;
-  uniteNom?: string | null;
-  nomIngredient?: string | null;
   nbActivitesSupp?: number | null;
   nbLabosSupp?: number | null;
   nbGerantsSupp?: number | null;
