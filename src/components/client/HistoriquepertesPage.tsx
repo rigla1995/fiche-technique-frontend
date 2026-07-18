@@ -294,21 +294,6 @@ export default function HistoriquepertesPage() {
     setExporting(false);
   };
 
-  const [exportingPdf, setExportingPdf] = useState(false);
-  const handleExportPdf = async () => {
-    setExportingPdf(true);
-    try {
-      const params = buildPertesParams();
-      const url = `/api/entreprise/pertes/export-pdf?${params}`;
-      const { data } = await api.get(url, { responseType: 'blob' });
-      const blobUrl = URL.createObjectURL(new Blob([data], { type: 'application/pdf' }));
-      const a = document.createElement('a'); a.href = blobUrl;
-      a.download = `historique-pertes-${new Date().toISOString().slice(0, 10)}.pdf`;
-      a.click(); URL.revokeObjectURL(blobUrl);
-    } catch { /* ignore */ }
-    setExportingPdf(false);
-  };
-
   const handleUpdate = async (id: number, quantite: number, typePerte: 'avarie' | 'dechet') => {
     const url = `/api/entreprise/pertes/${id}`;
     await api.put(url, { quantite, typePerte });
@@ -358,7 +343,6 @@ export default function HistoriquepertesPage() {
         onReset={resetFilters}
         showReset={!!(fActiviteId || fCategorie || fIngredient || fDateDebut !== yearStart || fDateFin !== yearEnd || fType)}
         onExportExcel={handleExport} excelDisabled={exporting || !searched || entries.length === 0} excelLabel={`Exporter${selected.size > 0 ? ` (${selected.size})` : ''}`}
-        onExportPdf={handleExportPdf} pdfDisabled={!searched || entries.length === 0} exportingPdf={exportingPdf}
       >
         <FilterField label="📅 Du"><FilterInput type="date" value={fDateDebut} onChange={(e) => setFDateDebut(e.target.value)} /></FilterField>
         <FilterField label="📅 Au"><FilterInput type="date" value={fDateFin} onChange={(e) => setFDateFin(e.target.value)} /></FilterField>

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import api from '../../api/client';
+import { brandHeader, headerRow, dataRowStyle, totalRowStyle, brandFooter, finalize, FMT_DT } from '../../services/excelBrand';
 import GuideButton from './GuideButton';
 import CommandeStepper from '../common/CommandeStepper';
 import { useConfirm } from '../common/ConfirmDialog';
@@ -99,6 +100,10 @@ export default function CommandesAcheteursPage() {
   const [livErr, setLivErr] = useState('');
   const [livSaving, setLivSaving] = useState(false);
 
+  // Sélection de lignes — purement visuelle : l'export contient TOUTES les lignes
+  // filtrées, les lignes cochées sont simplement surlignées (ambre) dans le fichier.
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
   const load = useCallback(() => {
     setLoading(true);
     const qs = new URLSearchParams();
@@ -107,7 +112,12 @@ export default function CommandesAcheteursPage() {
     if (from) qs.set('from', from);
     if (to) qs.set('to', to);
     api.get(`/api/acheteurs/commandes?${qs}`)
-      .then(({ data }) => setCommandes(data))
+      .then(({ data }) => {
+        setCommandes(data);
+        // La sélection (surbrillance export) ne conserve que des lignes encore listées
+        setSelectedIds(prev => prev.size === 0 ? prev
+          : new Set(Array.from(prev).filter(id => (data as Commande[]).some(c => c.id === id))));
+      })
       .catch(() => setError('Erreur de chargement'))
       .finally(() => setLoading(false));
   }, [statut, acheteurId, from, to]);
@@ -120,6 +130,14 @@ export default function CommandesAcheteursPage() {
     }).catch(() => {});
   }, []);
 
+  const toggleSelect = (id: string) => setSelectedIds(prev => {
+    const next = new Set(prev);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    return next;
+  });
+  const allSelected = commandes.length > 0 && commandes.every(c => selectedIds.has(c.id));
+  const toggleSelectAll = () => setSelectedIds(allSelected ? new Set<string>() : new Set(commandes.map(c => c.id)));
+
   const [exporting, setExporting] = useState(false);
   const exportExcel = async () => {
     if (commandes.length === 0 || exporting) return;
@@ -128,22 +146,38 @@ export default function CommandesAcheteursPage() {
       const ExcelJS = (await import('exceljs')).default;
       const wb = new ExcelJS.Workbook();
       const ws = wb.addWorksheet('Ventes Acheteurs');
-      ws.addRow(['LabFlow — Ventes & commandes acheteurs']).font = { bold: true, size: 14 };
-      ws.addRow([`Exporté le ${new Date().toLocaleDateString('fr-FR')}${from || to ? ` · période ${from || '…'} → ${to || '…'}` : ''}`]);
-      ws.addRow([]);
-      const header = ws.addRow(['Date', 'Acheteur', 'Entreprise', 'Labo', 'Source', 'Statut', 'Expédiée le', 'Livrée le', 'Lignes', 'Remise %', 'Brut TTC', 'Facture', 'Net TTC facturé', 'Motif annulation']);
-      header.font = { bold: true };
-      for (const c of commandes) {
-        ws.addRow([
-          c.dateCommande, c.acheteurNom, c.acheteurEntreprise || '', c.laboNom || '',
+      const COLS = 14;
+      const periode = from || to ? `Période ${from ? fmtDate(from) : '…'} → ${to ? fmtDate(to) : '…'}` : 'Toutes dates';
+      const headerIdx = await brandHeader(wb, ws, {
+        titre: 'Ventes & commandes acheteurs',
+        sousTitre: 'Suivi des commandes — expéditions, livraisons et facturation',
+        meta: `${periode} · ${commandes.length} ligne(s) · exporté le ${new Date().toLocaleDateString('fr-FR')}`,
+        colCount: COLS,
+      });
+      headerRow(ws, headerIdx,
+        ['Date', 'Acheteur', 'Entreprise', 'Labo', 'Source', 'Statut', 'Expédiée le', 'Livrée le', 'Lignes', 'Remise %', 'Brut TTC', 'Facture', 'Net TTC facturé', 'Motif annulation'],
+        { widths: [12, 22, 18, 15, 13, 12, 12, 12, 8, 10, 14, 13, 15, 24] });
+      commandes.forEach((c, i) => {
+        const row = ws.addRow([
+          fmtDate(c.dateCommande), c.acheteurNom, c.acheteurEntreprise || '', c.laboNom || '',
           c.source === 'portail' ? 'Portail' : 'Vente directe',
           badgeOf(c.statut).label.replace(/^\S+\s/, ''),
-          c.dateExpedition || '', c.dateLivraison || '',
+          c.dateExpedition ? fmtDate(c.dateExpedition) : '', c.dateLivraison ? fmtDate(c.dateLivraison) : '',
           c.nbLignes, c.remisePct, c.totalBrutTtc,
           c.factureNumero || '', c.factureTtc ?? '', c.motifAnnulation || '',
         ]);
-      }
-      ws.columns.forEach((col) => { col.width = 16; });
+        dataRowStyle(row, { index: i, selected: selectedIds.has(c.id), colCount: COLS });
+        row.getCell(11).numFmt = FMT_DT;
+        row.getCell(13).numFmt = FMT_DT;
+      });
+      const lastDataRow = ws.rowCount;
+      const totalRow = ws.addRow(['Total — CA TTC facturé (expédiées/livrées)', '', '', '', '', '', '', '', '', '', '', '', totalPeriode, '']);
+      ws.mergeCells(totalRow.number, 1, totalRow.number, 12);
+      totalRowStyle(totalRow, { colCount: COLS });
+      totalRow.getCell(1).alignment = { horizontal: 'right', vertical: 'middle' };
+      totalRow.getCell(13).numFmt = FMT_DT;
+      brandFooter(ws, COLS);
+      finalize(ws, { headerRowIdx: headerIdx, colCount: COLS, lastDataRow });
       const buf = await wb.xlsx.writeBuffer();
       const url = URL.createObjectURL(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
       const a = document.createElement('a');
@@ -281,6 +315,11 @@ export default function CommandesAcheteursPage() {
             <div style={{ fontSize: '1.2rem', fontWeight: 900, color: '#fff' }}>{fmt(totalPeriode)}</div>
             <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.75)', fontWeight: 600 }}>CA facturé (filtre)</div>
           </div>
+          {selectedIds.size > 0 && (
+            <span title="Lignes surlignées dans l'export Excel" style={{ fontSize: '0.72rem', fontWeight: 700, color: '#fde68a' }}>
+              {selectedIds.size} sélectionnée{selectedIds.size > 1 ? 's' : ''}
+            </span>
+          )}
           <button onClick={exportExcel} disabled={exporting || commandes.length === 0}
             title={commandes.length === 0 ? 'Rien à exporter' : 'Exporter la liste filtrée en Excel'}
             style={{ background: 'rgba(255,255,255,0.14)', border: '1px solid rgba(255,255,255,0.3)', color: '#fff', borderRadius: 10, padding: '10px 16px', fontWeight: 700, fontSize: '0.82rem', cursor: exporting || commandes.length === 0 ? 'default' : 'pointer', opacity: exporting || commandes.length === 0 ? 0.6 : 1 }}>
@@ -338,6 +377,11 @@ export default function CommandesAcheteursPage() {
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.84rem' }}>
               <thead>
                 <tr style={{ background: CL, borderBottom: `2px solid ${CB}` }}>
+                  <th style={{ width: 34, padding: '10px 6px 10px 14px', textAlign: 'left' }}>
+                    <input type="checkbox" checked={allSelected} onChange={toggleSelectAll}
+                      title="Tout sélectionner (surbrillance dans l'export Excel)"
+                      style={{ accentColor: C, cursor: 'pointer' }} />
+                  </th>
                   {['Date', 'Acheteur', 'Labo', 'Lignes', 'Total TTC', 'Statut', 'Facture', 'Actions'].map(h => (
                     <th key={h} style={{ textAlign: 'left', padding: '10px 14px', color: CD, fontSize: '0.74rem', textTransform: 'uppercase', letterSpacing: '0.03em' }}>{h}</th>
                   ))}
@@ -346,8 +390,14 @@ export default function CommandesAcheteursPage() {
               <tbody>
                 {commandes.map(c => {
                   const badge = badgeOf(c.statut);
+                  const isSel = selectedIds.has(c.id);
                   return (
-                    <tr key={c.id} style={{ borderBottom: '1px solid #f1f5f9', opacity: c.statut === 'annulee' ? 0.6 : 1 }}>
+                    <tr key={c.id} style={{ borderBottom: '1px solid #f1f5f9', opacity: c.statut === 'annulee' ? 0.6 : 1, background: isSel ? '#fffbeb' : undefined }}>
+                      <td style={{ padding: '9px 6px 9px 14px' }}>
+                        <input type="checkbox" checked={isSel} onChange={() => toggleSelect(c.id)}
+                          title="Sélectionner (surbrillance dans l'export Excel)"
+                          style={{ accentColor: C, cursor: 'pointer' }} />
+                      </td>
                       <td style={{ padding: '9px 14px', whiteSpace: 'nowrap', fontWeight: 600 }}>{fmtDate(c.dateCommande)}</td>
                       <td style={{ padding: '9px 14px' }}>
                         <div style={{ fontWeight: 700, color: '#1e293b' }}>{c.acheteurNom}</div>

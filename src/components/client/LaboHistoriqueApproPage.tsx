@@ -332,21 +332,6 @@ export default function LaboHistoriqueApproPage() {
     a.click(); URL.revokeObjectURL(url);
   };
 
-  const [exportingPdf, setExportingPdf] = useState(false);
-  const exportPdf = async () => {
-    if (!laboId) return;
-    setExportingPdf(true);
-    try {
-      const params = buildLaboApproParams();
-      const { data } = await api.get(`/api/labo/${laboId}/historique/export-pdf?${params}`, { responseType: 'blob' });
-      const url = URL.createObjectURL(new Blob([data], { type: 'application/pdf' }));
-      const a = document.createElement('a'); a.href = url;
-      a.download = `historique-labo-${labo?.nom ?? 'appro'}-${new Date().toISOString().slice(0, 10)}.pdf`;
-      a.click(); URL.revokeObjectURL(url);
-    } catch { /* ignore */ }
-    setExportingPdf(false);
-  };
-
   const handleSaved = (id: number, updated: Partial<HistEntry>) => {
     setResults((prev) => prev.map((r) => r.id === id ? { ...r, ...updated } : r));
   };
@@ -418,7 +403,6 @@ export default function LaboHistoriqueApproPage() {
         onReset={() => { setFilterCategorieId(''); setFilterIngredientId(''); setFilterFournisseurId(''); setSelectedTypes(new Set()); }}
         showReset={!!(filterCategorieId || filterIngredientId || filterFournisseurId || selectedTypes.size > 0)}
         onExportExcel={exportExcel} excelDisabled={results.length === 0} excelLabel={`Exporter${selectedIds.size > 0 ? ` (${selectedIds.size})` : ''}`}
-        onExportPdf={exportPdf} pdfDisabled={results.length === 0} exportingPdf={exportingPdf}
       >
         <FilterField label="📅 Du"><FilterInput type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} /></FilterField>
         <FilterField label="📅 Au"><FilterInput type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} /></FilterField>
