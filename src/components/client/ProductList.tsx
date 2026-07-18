@@ -5,7 +5,6 @@ import api from '../../api/client';
 import HelpButton from '../common/HelpButton';
 import { useAuth } from '../../context/AuthContext';
 import type { Product, Activite, ActiviteIngredient, CategorieProduit } from '../../types';
-import FicheTechniqueTab from './FicheTechniqueTab';
 import FicheTechniqueModal from './FicheTechniqueModal';
 import RecipeTree from './RecipeTree';
 import ProductCard from './ProductCard';
@@ -19,7 +18,7 @@ interface ProductDetail {
 }
 
 type PopupType = 'ingredients' | 'subProducts' | 'parentProducts' | null;
-type TabType = 'vendable' | 'utilisable' | 'fiche-technique';
+type TabType = 'vendable' | 'utilisable';
 
 const PAGE_SIZE = 9;
 
@@ -49,7 +48,7 @@ export default function ProductList() {
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
-  const [ftPopup, setFtPopup] = useState<{ productId: number; productName: string; hasIngredients: boolean; resolvedActId: number; contextLabel: string; activityName: string; activities: Activite[] } | null>(null);
+  const [ftPopup, setFtPopup] = useState<{ productId: number; productName: string; hasIngredients: boolean; fallbackActId: number } | null>(null);
 
   const [popup, setPopup] = useState<{ type: PopupType; productId: number; productName: string } | null>(null);
   const [detail, setDetail] = useState<ProductDetail | null>(null);
@@ -349,11 +348,6 @@ export default function ProductList() {
     return p.activiteId || 0;
   };
 
-  const getProductFtContext = (p: Product): { contextLabel: string; activityName: string } => {
-    const act = allActivities.find((a) => a.id === p.activiteId);
-    return act ? { contextLabel: `Activité : ${act.nom}`, activityName: act.nom } : { contextLabel: '', activityName: '' };
-  };
-
   const handleExportXls = async (withOtherSubTab = false) => {
     setExportingXls(true);
     try {
@@ -384,8 +378,7 @@ export default function ProductList() {
         title="Générer la Fiche Technique"
         disabled={!canWriteProducts}
         onClick={() => {
-          const ctx = getProductFtContext(p);
-          setFtPopup({ productId: p.id, productName: p.name, hasIngredients: !!(p.ingredientsCount && p.ingredientsCount > 0), resolvedActId: getProductResolvedActId(p), activities: [], ...ctx });
+          setFtPopup({ productId: p.id, productName: p.name, hasIngredients: !!(p.ingredientsCount && p.ingredientsCount > 0), fallbackActId: getProductResolvedActId(p) });
         }}
       >
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect width="24" height="24" rx="3" fill="#217346"/><path d="M14 2H6C4.9 2 4 2.9 4 4V20C4 21.1 4.9 22 6 22H18C19.1 22 20 21.1 20 20V8L14 2Z" fill="#185C37"/><path d="M14 2V8H20L14 2Z" fill="#107C41"/><text x="7" y="18" fill="white" fontSize="8" fontWeight="bold" fontFamily="Arial,sans-serif">XLS</text></svg>
@@ -434,46 +427,35 @@ export default function ProductList() {
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
               <div style={{ background: 'rgba(99,102,241,0.18)', border: '1px solid rgba(99,102,241,0.3)', borderRadius: 10, padding: '7px 9px', fontSize: '1.2rem', lineHeight: 1 }}>
-                {tab === 'fiche-technique' ? '📋' : tab === 'utilisable' ? '🧪' : '🍽️'}
+                {tab === 'utilisable' ? '🧪' : '🍽️'}
               </div>
               <h1 style={{ fontSize: '1.45rem', fontWeight: 800, color: '#fff', margin: 0, letterSpacing: '-0.01em', display: 'flex', alignItems: 'center', gap: 9 }}>
-                {tab === 'fiche-technique'
-                  ? t('client.products.tab_fiche_technique')
-                  : tab === 'utilisable'
-                    ? t('client.products.tab_utilisable')
-                    : t('client.products.tab_vendable')}
-                <HelpButton section={tab === 'fiche-technique' ? 'fiches-techniques' : tab === 'utilisable' ? 'produits-utilisables' : 'produits-vendables'} variant="solid" size={20} tip="Aide sur cette page" />
+                {tab === 'utilisable'
+                  ? t('client.products.tab_utilisable')
+                  : t('client.products.tab_vendable')}
+                <HelpButton section={tab === 'utilisable' ? 'produits-utilisables' : 'produits-vendables'} variant="solid" size={20} tip="Aide sur cette page" />
               </h1>
             </div>
             <p style={{ color: 'rgba(255,255,255,0.55)', margin: 0, fontSize: '0.83rem', letterSpacing: '0.01em' }}>
-              {tab === 'fiche-technique'
-                ? 'Exportez et consultez vos fiches techniques par produit'
-                : tab === 'utilisable'
-                  ? 'Produits semi-finis utilisés dans la composition de vos recettes'
-                  : 'Produits finis destinés à la vente, définis par leurs fiches techniques'}
+              {tab === 'utilisable'
+                ? 'Produits semi-finis utilisés dans la composition de vos recettes'
+                : 'Produits finis destinés à la vente, définis par leurs fiches techniques'}
             </p>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
-            {tab !== 'fiche-technique' && (
-              <div style={{ background: 'rgba(99,102,241,0.12)', border: '1px solid rgba(99,102,241,0.22)', borderRadius: 14, padding: '10px 20px', textAlign: 'center', minWidth: 80 }}>
-                <div style={{ fontSize: '1.8rem', fontWeight: 900, color: '#818cf8', lineHeight: 1 }}>{byTab.length}</div>
-                <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.5)', marginTop: 2 }}>
-                  produit{byTab.length !== 1 ? 's' : ''}
-                </div>
+            <div style={{ background: 'rgba(99,102,241,0.12)', border: '1px solid rgba(99,102,241,0.22)', borderRadius: 14, padding: '10px 20px', textAlign: 'center', minWidth: 80 }}>
+              <div style={{ fontSize: '1.8rem', fontWeight: 900, color: '#818cf8', lineHeight: 1 }}>{byTab.length}</div>
+              <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.5)', marginTop: 2 }}>
+                produit{byTab.length !== 1 ? 's' : ''}
               </div>
-            )}
-            <GuideButton section={tab === 'fiche-technique' ? 'fiches-techniques' : 'produits'} />
+            </div>
+            <GuideButton section="produits" />
           </div>
         </div>
       </div>
 
 
-      {tab === 'fiche-technique' ? (
-        <FicheTechniqueTab
-          allActivities={allActivities}
-        />
-      ) : (
-        <>
+      <>
           {/* Sub-tabs for vendable tab */}
           {isVendable && (
             <div style={{ display: 'flex', gap: 4, borderBottom: '2px solid #e2e8f0', marginBottom: 20 }}>
@@ -685,10 +667,7 @@ export default function ProductList() {
               productId={ftPopup.productId}
               productName={ftPopup.productName}
               hasIngredients={ftPopup.hasIngredients}
-              resolvedActId={ftPopup.resolvedActId}
-              contextLabel={ftPopup.contextLabel}
-              activityName={ftPopup.activityName}
-              activities={ftPopup.activities}
+              fallbackActId={ftPopup.fallbackActId}
               onClose={() => setFtPopup(null)}
             />
           )}
@@ -1477,8 +1456,7 @@ export default function ProductList() {
               </div>
             );
           })()}
-        </>
-      )}
+      </>
     </div>
   );
 }

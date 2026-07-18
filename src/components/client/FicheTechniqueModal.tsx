@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
 
@@ -15,49 +15,78 @@ interface ManualPriceGroup {
   ingredients: { ingredientId: number; nom: string; unite: string }[];
 }
 
-interface StockCheckResult {
-  complete: boolean;
-  missing: { ingredientId: number; nom: string; unite: string; categorie: string | null; lastQty: number | null; lastPrice: number | null; lastDate: string | null }[];
-  groups: { label: string; depth: number; ingredients: { ingredientId: number; nom: string; unite: string }[] }[];
+interface RecetteIngredient {
+  nom: string;
+  portion: number;
+  unite: string;
+  categorie: string | null;
 }
 
-interface ActivityInfo {
+interface RecetteSousProduit {
+  nom: string;
+  portion: number;
+  ingredients: RecetteIngredient[];
+  sousProduits: RecetteSousProduit[];
+}
+
+interface FtContextesResponse {
+  origine: string;
+  limiteTransferts: boolean;
+  activites: { id: number; nom: string }[];
+  labos: { id: number; nom: string }[];
+  recette: { ingredients: RecetteIngredient[]; sousProduits: RecetteSousProduit[] } | null;
+}
+
+interface FtContext {
+  type: 'activite' | 'labo';
   id: number;
   nom: string;
-  adresse?: string;
+}
+
+interface CostLine {
+  loading: boolean;
+  cost: number | null;
+}
+
+interface CtxCheck {
+  loading: boolean;
+  incomplete: boolean;
+  missingCount: number;
 }
 
 interface Props {
   productId: number;
   productName: string;
   hasIngredients: boolean;
-  resolvedActId: number;
-  contextLabel: string;
-  activityName: string;
-  activities?: ActivityInfo[];
-  /** Contexte LABO (produit valorisé composé) : coût calculé sur les prix d'appro du labo, sans activité. */
-  laboId?: number;
+  /** Repli du FT Manuel quand le produit n'a aucun contexte assigné (0 = aucun repli, contexte global). */
+  fallbackActId: number;
   onClose: () => void;
 }
 
-export default function FicheTechniqueModal({ productId, productName, hasIngredients, resolvedActId, contextLabel, activityName, activities, laboId, onClose }: Props) {
+const ctxKey = (c: FtContext) => `${c.type}:${c.id}`;
+const ctxIcon = (c: FtContext) => (c.type === 'labo' ? '🏭' : '🏪');
+
+export default function FicheTechniqueModal({ productId, productName, hasIngredients, fallbackActId, onClose }: Props) {
   const { t } = useTranslation();
 
-  // En mode labo, tout le contexte de prix/stock vient du labo (param laboId) — pas d'activité.
-  const laboMode = !!laboId && laboId > 0;
+  // Contextes + recette du produit
+  const [ftCtx, setFtCtx] = useState<FtContextesResponse | null>(null);
+  const [ftCtxLoading, setFtCtxLoading] = useState(true);
 
   const [mode, setMode] = useState<'stock' | 'manual' | null>(null);
 
-  // FP Stock
-  const [stockActId, setStockActId] = useState<number | null>(null);
-  const [stockCheckResult, setStockCheckResult] = useState<StockCheckResult | null>(null);
-  const [stockCheckLoading, setStockCheckLoading] = useState(false);
+  // FT Stock
+  const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set());
   const [stockPricingDp, setStockPricingDp] = useState(true);
   const [stockPricingMp, setStockPricingMp] = useState(false);
-  const [realtimeCostMp, setRealtimeCostMp] = useState<number | null>(null);
-  const [costLoadingMp, setCostLoadingMp] = useState(false);
+  const [costLines, setCostLines] = useState<Record<string, CostLine>>({});
+  const [stockChecks, setStockChecks] = useState<Record<string, CtxCheck>>({});
+  const costSeqRef = useRef(0);
+  const checkSeqRef = useRef(0);
 
-  // FP Manuel
+  // FT Manuel
+  const [manualKey, setManualKey] = useState<string | null>(null);
+  const manualSeqRef = useRef(0);
   const [manualPrices, setManualPrices] = useState<ManualPriceEntry[]>([]);
   const [manualPriceGroups, setManualPriceGroups] = useState<ManualPriceGroup[]>([]);
   const [manualLoading, setManualLoading] = useState(false);
@@ -67,71 +96,139 @@ export default function FicheTechniqueModal({ productId, productName, hasIngredi
   const [savingManual, setSavingManual] = useState(false);
   const [showZeroWarning, setShowZeroWarning] = useState(false);
   const [zeroWarningPrices, setZeroWarningPrices] = useState<ManualPriceEntry[]>([]);
-
-  // Cost + generate
-  const [realtimeCost, setRealtimeCost] = useState<number | null>(null);
-  const [costLoading, setCostLoading] = useState(false);
+  const [manualCost, setManualCost] = useState<number | null>(null);
+  const [manualCostLoading, setManualCostLoading] = useState(false);
   const [costRefreshKey, setCostRefreshKey] = useState(0);
+
   const [generating, setGenerating] = useState(false);
 
-  useEffect(() => {
-    if (mode !== 'stock') { setStockCheckResult(null); return; }
-    if (!laboMode && !resolvedActId && !stockActId) { setStockCheckResult(null); return; }
-    setStockCheckLoading(true);
-    const params = new URLSearchParams();
-    if (laboMode) {
-      params.set('laboId', String(laboId));
-    } else {
-      const effectiveActId = resolvedActId || stockActId;
-      if (effectiveActId) params.set('activiteId', String(effectiveActId));
-    }
-    api.get(`/api/products/${productId}/stock-check?${params}`)
-      .then(({ data }) => {
-        const result = data as StockCheckResult;
-        setStockCheckResult(result);
-      })
-      .catch(() => setStockCheckResult(null))
-      .finally(() => setStockCheckLoading(false));
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode, stockActId]);
+  // Liste unifiée des contextes : activités (🏪) puis labos (🏭)
+  const contexts = useMemo<FtContext[]>(() => {
+    if (!ftCtx) return [];
+    return [
+      ...ftCtx.activites.map((a) => ({ type: 'activite' as const, id: a.id, nom: a.nom })),
+      ...ftCtx.labos.map((l) => ({ type: 'labo' as const, id: l.id, nom: l.nom })),
+    ];
+  }, [ftCtx]);
 
+  const selectedContexts = useMemo(() => contexts.filter((c) => selectedKeys.has(ctxKey(c))), [contexts, selectedKeys]);
+  const methods = useMemo<('dp' | 'mp')[]>(
+    () => [...(stockPricingDp ? ['dp' as const] : []), ...(stockPricingMp ? ['mp' as const] : [])],
+    [stockPricingDp, stockPricingMp],
+  );
+  const manualCtx = useMemo(() => contexts.find((c) => ctxKey(c) === manualKey) ?? null, [contexts, manualKey]);
+  // Le repli fallbackActId ne vaut QUE pour un produit sans aucun contexte
+  // assigné : si des contextes existent, l'utilisateur DOIT en choisir un
+  // (sinon les prix manuels partiraient dans un contexte invisible).
+  const manualReady = manualCtx !== null || contexts.length === 0;
+
+  const applyManualCtxParams = useCallback((params: URLSearchParams) => {
+    if (manualCtx) params.set(manualCtx.type === 'labo' ? 'laboId' : 'activiteId', String(manualCtx.id));
+    else if (contexts.length === 0 && fallbackActId > 0) params.set('activiteId', String(fallbackActId));
+  }, [manualCtx, contexts.length, fallbackActId]);
+
+  // Chargement des contextes + recette au montage
   useEffect(() => {
-    if (mode !== 'manual') return;
+    let cancelled = false;
+    setFtCtxLoading(true);
+    api.get(`/api/products/${productId}/ft-contextes`)
+      .then(({ data }) => { if (!cancelled) setFtCtx(data as FtContextesResponse); })
+      .catch(() => { if (!cancelled) setFtCtx(null); })
+      .finally(() => { if (!cancelled) setFtCtxLoading(false); });
+    return () => { cancelled = true; };
+  }, [productId]);
+
+  // Auto-sélection si un seul contexte (stock + manuel)
+  useEffect(() => {
+    if (contexts.length === 1) {
+      const key = ctxKey(contexts[0]);
+      setSelectedKeys(new Set([key]));
+      setManualKey(key);
+    }
+  }, [contexts]);
+
+  // FT Stock — coûts temps réel : chaque contexte sélectionné × chaque méthode cochée
+  useEffect(() => {
+    if (mode !== 'stock') { setCostLines({}); return; }
+    const seq = ++costSeqRef.current;
+    if (selectedContexts.length === 0 || methods.length === 0) { setCostLines({}); return; }
+    const init: Record<string, CostLine> = {};
+    for (const c of selectedContexts) for (const m of methods) init[`${ctxKey(c)}|${m}`] = { loading: true, cost: null };
+    setCostLines(init);
+    for (const c of selectedContexts) {
+      for (const m of methods) {
+        const lineKey = `${ctxKey(c)}|${m}`;
+        const params = new URLSearchParams({ mode: 'stock', pricingMethod: m });
+        params.set(c.type === 'labo' ? 'laboId' : 'activiteId', String(c.id));
+        api.get(`/api/products/${productId}/cout?${params}`)
+          .then(({ data }) => {
+            if (costSeqRef.current !== seq) return;
+            setCostLines((prev) => ({ ...prev, [lineKey]: { loading: false, cost: (data as { totalCost: number }).totalCost ?? null } }));
+          })
+          .catch(() => {
+            if (costSeqRef.current !== seq) return;
+            setCostLines((prev) => ({ ...prev, [lineKey]: { loading: false, cost: null } }));
+          });
+      }
+    }
+  }, [mode, selectedContexts, methods, productId]);
+
+  // FT Stock — stock-check par contexte sélectionné (informatif, ne bloque pas la génération)
+  useEffect(() => {
+    if (mode !== 'stock') { setStockChecks({}); return; }
+    const seq = ++checkSeqRef.current;
+    if (selectedContexts.length === 0) { setStockChecks({}); return; }
+    const init: Record<string, CtxCheck> = {};
+    for (const c of selectedContexts) init[ctxKey(c)] = { loading: true, incomplete: false, missingCount: 0 };
+    setStockChecks(init);
+    for (const c of selectedContexts) {
+      const key = ctxKey(c);
+      const params = new URLSearchParams();
+      params.set(c.type === 'labo' ? 'laboId' : 'activiteId', String(c.id));
+      api.get(`/api/products/${productId}/stock-check?${params}`)
+        .then(({ data }) => {
+          if (checkSeqRef.current !== seq) return;
+          const result = data as { complete: boolean; missing: { ingredientId: number }[] };
+          setStockChecks((prev) => ({ ...prev, [key]: { loading: false, incomplete: !result.complete, missingCount: result.missing?.length ?? 0 } }));
+        })
+        .catch(() => {
+          if (checkSeqRef.current !== seq) return;
+          setStockChecks((prev) => ({ ...prev, [key]: { loading: false, incomplete: false, missingCount: 0 } }));
+        });
+    }
+  }, [mode, selectedContexts, productId]);
+
+  // FT Manuel — chargement des prix (au choix du mode et à chaque changement de contexte)
+  useEffect(() => {
+    if (mode !== 'manual' || !manualReady) return;
     loadManualPrices();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode]);
+  }, [mode, manualKey, manualReady]);
 
+  // FT Manuel — coût temps réel
   useEffect(() => {
-    if (!mode || (mode === 'stock' && !stockPricingDp)) { setRealtimeCost(null); return; }
-    setCostLoading(true);
-    const params = new URLSearchParams({ mode });
-    if (laboMode) params.set('laboId', String(laboId));
-    else if (resolvedActId) params.set('activiteId', String(resolvedActId));
+    if (mode !== 'manual' || !manualReady) { setManualCost(null); return; }
+    let cancelled = false;
+    setManualCostLoading(true);
+    const params = new URLSearchParams({ mode: 'manual' });
+    applyManualCtxParams(params);
     api.get(`/api/products/${productId}/cout?${params}`)
-      .then(({ data }) => setRealtimeCost((data as { totalCost: number }).totalCost ?? null))
-      .catch(() => setRealtimeCost(null))
-      .finally(() => setCostLoading(false));
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode, costRefreshKey, stockPricingDp]);
-
-  useEffect(() => {
-    if (mode !== 'stock' || !stockPricingMp || !stockCheckResult?.complete) { setRealtimeCostMp(null); return; }
-    setCostLoadingMp(true);
-    const params = new URLSearchParams({ mode: 'stock', pricingMethod: 'mp' });
-    if (laboMode) params.set('laboId', String(laboId));
-    else if (resolvedActId) params.set('activiteId', String(resolvedActId));
-    api.get(`/api/products/${productId}/cout?${params}`)
-      .then(({ data }) => setRealtimeCostMp((data as { totalCost: number }).totalCost ?? null))
-      .catch(() => setRealtimeCostMp(null))
-      .finally(() => setCostLoadingMp(false));
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode, costRefreshKey, stockPricingMp, stockCheckResult]);
+      .then(({ data }) => { if (!cancelled) setManualCost((data as { totalCost: number }).totalCost ?? null); })
+      .catch(() => { if (!cancelled) setManualCost(null); })
+      .finally(() => { if (!cancelled) setManualCostLoading(false); });
+    return () => { cancelled = true; };
+  }, [mode, costRefreshKey, applyManualCtxParams, productId, manualReady]);
 
   const loadManualPrices = async () => {
+    // Anti-course : un changement de contexte pendant le chargement invalide la réponse
+    const seq = ++manualSeqRef.current;
     setManualLoading(true);
     try {
-      const qs = laboMode ? `?laboId=${laboId}` : (resolvedActId ? `?activiteId=${resolvedActId}` : '');
+      const params = new URLSearchParams();
+      applyManualCtxParams(params);
+      const qs = params.toString() ? `?${params}` : '';
       const { data } = await api.get(`/api/products/${productId}/manual-prices${qs}`);
+      if (manualSeqRef.current !== seq) return;
       const { prices, groups, updatedAt } = data as {
         prices: { ingredientId: number; nom: string; unite: string; prixUnitaire: number | null }[];
         groups: ManualPriceGroup[];
@@ -146,19 +243,20 @@ export default function FicheTechniqueModal({ productId, productName, hasIngredi
       setManualPriceGroups(groups || []);
       setManualUpdatedAt(updatedAt ? updatedAt.slice(0, 10) : null);
     } finally {
-      setManualLoading(false);
+      if (manualSeqRef.current === seq) setManualLoading(false);
     }
   };
 
   const doSaveManualPrices = async () => {
     setSavingManual(true);
     try {
-      const payload = {
-        ...(laboMode ? { laboId } : { activiteId: resolvedActId }),
+      const payload: { activiteId?: number; laboId?: number; prices: { ingredientId: number; prixUnitaire: number }[] } = {
         prices: manualPrices
           .filter((p) => p.prixUnitaire !== '' && !isNaN(parseFloat(p.prixUnitaire)))
           .map((p) => ({ ingredientId: p.ingredientId, prixUnitaire: parseFloat(p.prixUnitaire) })),
       };
+      if (manualCtx) payload[manualCtx.type === 'labo' ? 'laboId' : 'activiteId'] = manualCtx.id;
+      else if (contexts.length === 0 && fallbackActId > 0) payload.activiteId = fallbackActId;
       await api.post(`/api/products/${productId}/manual-prices`, payload);
       setShowManualPopup(false);
       setShowZeroWarning(false);
@@ -180,39 +278,44 @@ export default function FicheTechniqueModal({ productId, productName, hasIngredi
     await doSaveManualPrices();
   };
 
+  const downloadBlob = (data: BlobPart, filename: string) => {
+    const url = window.URL.createObjectURL(new Blob([data]));
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', filename);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
+  };
+
   const generateExcel = async () => {
     if (!mode) return;
     setGenerating(true);
     try {
-      const params = new URLSearchParams({ mode });
-      if (laboMode) {
-        params.set('laboId', String(laboId));
-      } else {
-        const effectiveActId = resolvedActId || (mode === 'stock' ? stockActId : null);
-        if (effectiveActId) params.set('activiteId', String(effectiveActId));
-      }
       if (mode === 'stock') {
+        // Boucle séquentielle : 1 fichier Excel par contexte sélectionné
         const pm = stockPricingDp && stockPricingMp ? 'both' : stockPricingMp ? 'mp' : 'dp';
-        params.set('pricingMethod', pm);
+        for (const c of selectedContexts) {
+          const params = new URLSearchParams({ mode: 'stock', pricingMethod: pm });
+          params.set(c.type === 'labo' ? 'laboId' : 'activiteId', String(c.id));
+          const response = await api.get(`/api/products/${productId}/export?${params}`, { responseType: 'blob' });
+          downloadBlob(response.data, `FT-${c.nom}-${productName}.xlsx`);
+        }
+      } else {
+        const params = new URLSearchParams({ mode: 'manual' });
+        applyManualCtxParams(params);
+        const response = await api.get(`/api/products/${productId}/export?${params}`, { responseType: 'blob' });
+        downloadBlob(response.data, manualCtx ? `FT-${manualCtx.nom}-${productName}.xlsx` : `FT-${productName}.xlsx`);
       }
-      const response = await api.get(`/api/products/${productId}/export?${params}`, { responseType: 'blob' });
-      const url = window.URL.createObjectURL(new Blob([response.data]));
-      const link = document.createElement('a');
-      link.href = url;
-      const dlName = activityName ? `FT-${activityName}-${productName}.xlsx` : `FT-${productName}.xlsx`;
-      link.setAttribute('download', dlName);
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.URL.revokeObjectURL(url);
     } finally {
       setGenerating(false);
     }
   };
 
   const allManualPricesFilled = manualPrices.length > 0 && manualPrices.every((p) => { const v = parseFloat(p.prixUnitaire); return !isNaN(v) && v > 0; });
-  const canGenerateStock = mode === 'stock' && stockCheckResult?.complete === true && (stockPricingDp || stockPricingMp);
-  const canGenerateManual = mode === 'manual' && allManualPricesFilled;
+  const canGenerateStock = mode === 'stock' && selectedContexts.length > 0 && methods.length > 0;
+  const canGenerateManual = mode === 'manual' && manualReady && allManualPricesFilled;
   const canGenerate = canGenerateStock || canGenerateManual;
 
   const chipBtn = (active: boolean, disabled = false): React.CSSProperties => ({
@@ -224,6 +327,41 @@ export default function FicheTechniqueModal({ productId, productName, hasIngredi
     transition: 'all 0.15s',
     textAlign: 'left' as const,
   });
+
+  const ctxChip = (active: boolean): React.CSSProperties => ({
+    display: 'inline-flex', alignItems: 'center', gap: 6,
+    padding: '6px 12px', borderRadius: 20,
+    border: '2px solid', borderColor: active ? '#4338ca' : 'var(--border)',
+    background: active ? '#eef2ff' : 'var(--bg)',
+    color: active ? '#4338ca' : 'var(--text)',
+    fontWeight: 600, fontSize: '0.8rem', cursor: 'pointer', transition: 'all 0.12s',
+  });
+
+  const sectionLabel: React.CSSProperties = {
+    fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 8,
+  };
+
+  // Rendu récursif de la recette (indentation par profondeur)
+  const renderRecetteLines = (ings: RecetteIngredient[], sps: RecetteSousProduit[], depth: number, path: string): React.ReactNode[] => {
+    const lines: React.ReactNode[] = [];
+    ings.forEach((ing, i) => {
+      lines.push(
+        <div key={`${path}i${i}`} style={{ padding: `2px 0 2px ${depth * 16}px`, fontSize: '0.82rem', color: '#334155' }}>
+          <span style={{ fontWeight: 500 }}>{ing.nom}</span>
+          <span style={{ color: '#64748b' }}> — {ing.portion} {ing.unite}</span>
+        </div>
+      );
+    });
+    sps.forEach((sp, i) => {
+      lines.push(
+        <div key={`${path}s${i}`} style={{ padding: `4px 0 2px ${depth * 16}px`, fontSize: '0.82rem', fontWeight: 700, color: '#4338ca' }}>
+          ↳ {sp.nom} — {sp.portion}
+        </div>
+      );
+      lines.push(...renderRecetteLines(sp.ingredients || [], sp.sousProduits || [], depth + 1, `${path}s${i}-`));
+    });
+    return lines;
+  };
 
   return (
     <>
@@ -238,214 +376,197 @@ export default function FicheTechniqueModal({ productId, productName, hasIngredi
           </div>
 
           <div className="modal-body" style={{ padding: '20px 24px' }}>
-            {/* Context info */}
-            {contextLabel && (() => {
-              const parts = contextLabel.split(' / ').map((s) => {
-                const idx = s.indexOf(' : ');
-                return idx !== -1 ? { key: s.slice(0, idx), value: s.slice(idx + 3) } : { key: s, value: '' };
-              });
-              const iconFor = (key: string) => key === 'Franchise' ? '🏢' : key === 'Labo' ? '🏭' : '🏪';
-              const hasActs = activities && activities.length > 0;
-              return (
-                <div style={{ marginBottom: 18, borderRadius: 12, overflow: 'hidden', border: '1px solid #dbeafe', background: 'linear-gradient(135deg, #eff6ff 0%, #f8faff 100%)' }}>
-                  <div style={{ padding: '12px 16px', display: 'flex', gap: 20, flexWrap: 'wrap', alignItems: 'center', borderBottom: hasActs ? '1px solid #dbeafe' : 'none' }}>
-                    {parts.map(({ key, value }) => (
-                      <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                        <div style={{ width: 34, height: 34, borderRadius: 9, background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem', flexShrink: 0 }}>
-                          {iconFor(key)}
-                        </div>
-                        <div>
-                          <div style={{ fontSize: '0.62rem', fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase', color: '#6b7280', marginBottom: 1 }}>{key}</div>
-                          <div style={{ fontWeight: 700, fontSize: '0.92rem', color: '#1e40af' }}>{value}</div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  {hasActs && (
-                    <div style={{ padding: '10px 16px 12px' }}>
-                      <div style={{ fontSize: '0.62rem', fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase', color: '#6b7280', marginBottom: 7 }}>
-                        Activités ({activities!.length})
-                      </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                        {activities!.map((a) => (
-                          <div key={a.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 10px', background: '#fff', borderRadius: 8, border: '1px solid #dbeafe' }}>
-                            <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#3b82f6', flexShrink: 0 }} />
-                            <span style={{ fontWeight: 600, fontSize: '0.85rem', color: '#1e3a8a' }}>{a.nom}</span>
-                            {a.adresse && (
-                              <span style={{ color: '#6b7280', fontSize: '0.78rem', marginLeft: 'auto' }}>📍 {a.adresse}</span>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+            {/* Composition */}
+            <div style={{ marginBottom: 18 }}>
+              <div style={sectionLabel}>Composition</div>
+              {!hasIngredients ? (
+                <div style={{ padding: '12px 14px', borderRadius: 10, background: '#f8fafc', border: '1px solid var(--border)', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                  {t('client.fiche_technique.no_ingredients')}
                 </div>
-              );
-            })()}
+              ) : ftCtxLoading ? (
+                <div style={{ padding: '12px 14px', borderRadius: 10, background: '#f8fafc', border: '1px solid var(--border)', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                  ⏳ {t('common.loading')}
+                </div>
+              ) : (
+                <div style={{ maxHeight: 200, overflowY: 'auto', padding: '10px 14px', borderRadius: 10, background: '#f8fafc', border: '1px solid var(--border)' }}>
+                  {renderRecetteLines(ftCtx?.recette?.ingredients || [], ftCtx?.recette?.sousProduits || [], 0, 'r-')}
+                </div>
+              )}
+            </div>
 
             {/* Mode selection */}
-            <div style={{ fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 10 }}>
-              {t('client.fiche_technique.choose_mode')}
-            </div>
+            <div style={sectionLabel}>{t('client.fiche_technique.choose_mode')}</div>
             <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 20 }}>
-
-              {/* FP Stock */}
-              {(() => {
-                const stockNoAppro = stockCheckResult !== null && !stockCheckResult.complete;
-                const stockDisabled = !hasIngredients || stockNoAppro;
-                const stockTitle = stockNoAppro ? "Aucune approvisionnement enregistrée pour les articles de ce produit" : undefined;
-                return (
-              <div
-                style={chipBtn(mode === 'stock', stockDisabled)}
-                title={stockTitle}
-                onClick={() => { if (!stockDisabled) { setMode('stock'); setStockActId(null); setStockCheckResult(null); } }}>
+              <div style={chipBtn(mode === 'stock', !hasIngredients)} onClick={() => { if (hasIngredients) setMode('stock'); }}>
                 <div style={{ fontWeight: 700, marginBottom: 4, color: mode === 'stock' ? 'var(--primary)' : 'var(--text)' }}>
-                  📦 FP Stock
+                  📦 FT Stock
                 </div>
-                <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: mode === 'stock' ? 8 : 0 }}>
-                  {!hasIngredients ? 'Aucun article' : 'Utilise les derniers prix d\'appro'}
+                <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                  {!hasIngredients ? 'Aucun article' : 'Prix issus de vos approvisionnements'}
                 </div>
-                {mode === 'stock' && (
-                  <div style={{ marginTop: 4 }} onClick={(e) => e.stopPropagation()}>
-                    {/* Franchise-wide: show activity picker first */}
-                    {!resolvedActId && activities && activities.length > 0 && !stockActId ? (
-                      <div>
-                        <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>
-                          Choisissez l'activité :
-                        </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                          {activities.map((act) => (
-                            <button key={act.id} className="btn btn-ghost btn-sm"
-                              style={{ textAlign: 'left', justifyContent: 'flex-start', fontSize: '0.82rem', padding: '5px 10px' }}
-                              onClick={() => setStockActId(act.id)}>
-                              🏪 {act.nom}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    ) : (
-                      <div>
-                        {!resolvedActId && stockActId && (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
-                            <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#1e40af' }}>
-                              🏪 {activities?.find((a) => a.id === stockActId)?.nom}
-                            </span>
-                            <button
-                              style={{ fontSize: '0.68rem', color: '#6b7280', background: 'none', border: '1px solid #d1d5db', borderRadius: 4, padding: '1px 6px', cursor: 'pointer' }}
-                              onClick={() => { setStockActId(null); setStockCheckResult(null); }}
-                            >
-                              changer
-                            </button>
-                          </div>
-                        )}
-                        {/* Stock check status */}
-                        {stockCheckLoading ? (
-                          <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>{t('common.loading')}</span>
-                        ) : stockCheckResult?.complete ? (
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: '0.78rem', fontWeight: 600, color: '#16a34a', background: '#dcfce7', borderRadius: 20, padding: '3px 10px' }}>
-                              ✓ {t('client.stock.stock_complete')}
-                            </span>
-                            <div style={{ display: 'flex', gap: 6, marginTop: 2 }}>
-                              <button
-                                title="DP — Dernier Prix : prix du dernier approvisionnement"
-                                onClick={(e) => { e.stopPropagation(); if (!stockPricingMp || stockPricingDp) setStockPricingDp((v) => !v); }}
-                                style={{ padding: '3px 10px', borderRadius: 6, border: '2px solid', borderColor: stockPricingDp ? '#2563eb' : '#d1d5db', background: stockPricingDp ? '#dbeafe' : 'transparent', color: stockPricingDp ? '#1d4ed8' : 'var(--text-muted)', fontWeight: 700, fontSize: '0.72rem', cursor: 'pointer', transition: 'all 0.12s' }}
-                              >DP</button>
-                              <button
-                                title="MP — Moyenne des Prix : moyenne des prix depuis le dernier inventaire"
-                                onClick={(e) => { e.stopPropagation(); if (!stockPricingDp || stockPricingMp) setStockPricingMp((v) => !v); }}
-                                style={{ padding: '3px 10px', borderRadius: 6, border: '2px solid', borderColor: stockPricingMp ? '#7c3aed' : '#d1d5db', background: stockPricingMp ? '#ede9fe' : 'transparent', color: stockPricingMp ? '#6d28d9' : 'var(--text-muted)', fontWeight: 700, fontSize: '0.72rem', cursor: 'pointer', transition: 'all 0.12s' }}
-                              >MP</button>
-                            </div>
-                          </div>
-                        ) : stockCheckResult && !stockCheckResult.complete ? (
-                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: '0.78rem', fontWeight: 600, color: '#b45309', background: '#fef3c7', borderRadius: 20, padding: '3px 10px' }}>
-                            ⚠ {stockCheckResult.missing.length} article(s) sans appro
-                          </span>
-                        ) : null}
-                      </div>
-                    )}
-                  </div>
-                )}
               </div>
-                ); })()}
-
-              {/* FP Manuel */}
               <div style={chipBtn(mode === 'manual', !hasIngredients)} onClick={() => { if (hasIngredients) setMode('manual'); }}>
                 <div style={{ fontWeight: 700, marginBottom: 4, color: mode === 'manual' ? 'var(--primary)' : 'var(--text)' }}>
-                  ✏️ FP Manuel
+                  ✏️ FT Manuel
                 </div>
-                <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: mode === 'manual' ? 10 : 0 }}>
-                  {!hasIngredients ? 'Aucun article' : 'Saisissez vos prix manuellement'}
+                <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                  {!hasIngredients ? 'Aucun article' : 'Prix saisis manuellement'}
                 </div>
-                {mode === 'manual' && (
-                  <div>
-                    <button
-                      className="btn btn-ghost btn-sm"
-                      style={{ fontSize: '0.8rem' }}
-                      onClick={(e) => { e.stopPropagation(); setShowManualPopup(true); }}
-                    >
-                      ✏️ {t('client.fiche_technique.edit_manual_prices')}
-                    </button>
-                    {manualUpdatedAt && (
-                      <div style={{ fontSize: '0.75rem', marginTop: 6, color: 'var(--text-muted)' }}>
-                        {t('client.fiche_technique.last_updated')} :{' '}
-                        <span style={{ fontWeight: 700, color: '#d97706', background: '#fef3c7', borderRadius: 4, padding: '1px 6px' }}>{manualUpdatedAt}</span>
+              </div>
+            </div>
+
+            {/* FT Stock — base de prix + méthode */}
+            {mode === 'stock' && (
+              <div style={{ marginBottom: 20, padding: 16, borderRadius: 12, border: '1px solid var(--border)', background: 'var(--surface)' }}>
+                <div style={sectionLabel}>Base de prix</div>
+                {!ftCtxLoading && contexts.length === 0 ? (
+                  <div style={{ fontSize: '0.82rem', fontWeight: 600, color: '#b45309', background: '#fef3c7', borderRadius: 8, padding: '8px 12px' }}>
+                    Assignez ce produit à une activité ou un labo pour générer une FT Stock
+                  </div>
+                ) : (
+                  <>
+                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                      {contexts.map((c) => {
+                        const key = ctxKey(c);
+                        const active = selectedKeys.has(key);
+                        return (
+                          <button
+                            key={key}
+                            style={ctxChip(active)}
+                            onClick={() => setSelectedKeys((prev) => {
+                              const next = new Set(prev);
+                              if (next.has(key)) next.delete(key); else next.add(key);
+                              return next;
+                            })}
+                          >
+                            {ctxIcon(c)} {c.nom}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    {ftCtx?.limiteTransferts && (
+                      <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: 8 }}>
+                        Produit fabriqué au labo — bases labo uniquement (côté activité, approvisionnement par transfert)
                       </div>
                     )}
-                    {!allManualPricesFilled && manualPrices.length > 0 && !manualLoading && (
-                      <div style={{ fontSize: '0.75rem', color: '#dc2626', marginTop: 6 }}>
-                        ⚠ Saisissez tous les prix pour générer la Fiche technique
-                      </div>
-                    )}
+                    <div style={{ ...sectionLabel, marginTop: 14 }}>Méthode</div>
+                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                      <button
+                        title="DP — Dernier Prix : prix du dernier approvisionnement"
+                        onClick={() => { if (!stockPricingDp || stockPricingMp) setStockPricingDp((v) => !v); }}
+                        style={{ padding: '5px 12px', borderRadius: 6, border: '2px solid', borderColor: stockPricingDp ? '#2563eb' : '#d1d5db', background: stockPricingDp ? '#dbeafe' : 'transparent', color: stockPricingDp ? '#1d4ed8' : 'var(--text-muted)', fontWeight: 700, fontSize: '0.75rem', cursor: 'pointer', transition: 'all 0.12s' }}
+                      >Dernier Prix (DP)</button>
+                      <button
+                        title="PMP — Prix Moyen Pondéré : moyenne pondérée de vos prix d'approvisionnement"
+                        onClick={() => { if (!stockPricingMp || stockPricingDp) setStockPricingMp((v) => !v); }}
+                        style={{ padding: '5px 12px', borderRadius: 6, border: '2px solid', borderColor: stockPricingMp ? '#7c3aed' : '#d1d5db', background: stockPricingMp ? '#ede9fe' : 'transparent', color: stockPricingMp ? '#6d28d9' : 'var(--text-muted)', fontWeight: 700, fontSize: '0.75rem', cursor: 'pointer', transition: 'all 0.12s' }}
+                      >PMP — Prix Moyen Pondéré</button>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+
+            {/* FT Manuel — contexte + saisie */}
+            {mode === 'manual' && (
+              <div style={{ marginBottom: 20, padding: 16, borderRadius: 12, border: '1px solid var(--border)', background: 'var(--surface)' }}>
+                {contexts.length > 0 && (
+                  <>
+                    <div style={sectionLabel}>Base de prix</div>
+                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
+                      {contexts.map((c) => {
+                        const key = ctxKey(c);
+                        return (
+                          <button key={key} style={ctxChip(manualKey === key)} onClick={() => setManualKey(key)}>
+                            {ctxIcon(c)} {c.nom}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </>
+                )}
+                {!manualReady && (
+                  <div style={{ fontSize: '0.78rem', color: '#b45309', background: '#fef3c7', borderRadius: 8, padding: '7px 10px', marginBottom: 10 }}>
+                    Choisissez d'abord une base de prix ci-dessus.
+                  </div>
+                )}
+                <button
+                  className="btn btn-ghost btn-sm"
+                  style={{ fontSize: '0.8rem', opacity: manualReady ? 1 : 0.45, cursor: manualReady ? 'pointer' : 'not-allowed' }}
+                  disabled={!manualReady}
+                  onClick={() => setShowManualPopup(true)}
+                >
+                  ✏️ {t('client.fiche_technique.edit_manual_prices')}
+                </button>
+                {manualUpdatedAt && (
+                  <div style={{ fontSize: '0.75rem', marginTop: 6, color: 'var(--text-muted)' }}>
+                    {t('client.fiche_technique.last_updated')} :{' '}
+                    <span style={{ fontWeight: 700, color: '#d97706', background: '#fef3c7', borderRadius: 4, padding: '1px 6px' }}>{manualUpdatedAt}</span>
+                  </div>
+                )}
+                {!allManualPricesFilled && manualPrices.length > 0 && !manualLoading && (
+                  <div style={{ fontSize: '0.75rem', color: '#dc2626', marginTop: 6 }}>
+                    ⚠ Saisissez tous les prix pour générer la Fiche technique
                   </div>
                 )}
               </div>
-            </div>
+            )}
 
             {/* Cost + Generate */}
             {mode && (
               <div style={{ display: 'flex', alignItems: 'center', gap: 0, background: 'var(--surface)', borderRadius: 14, border: '1px solid var(--border)', boxShadow: '0 2px 8px rgba(0,0,0,0.07)', overflow: 'hidden' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 22px', flex: 1 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 22px', flex: 1, minWidth: 0 }}>
                   <div style={{ width: 40, height: 40, borderRadius: 10, flexShrink: 0, background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem' }}>💰</div>
-                  <div>
+                  <div style={{ minWidth: 0, flex: 1 }}>
                     <div style={{ fontSize: '0.68rem', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 2 }}>
                       {t('client.products.real_time_cost')}
                     </div>
-                    {(costLoading || costLoadingMp) ? (
+                    {mode === 'stock' ? (
+                      selectedContexts.length === 0 || methods.length === 0 ? (
+                        <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                          {contexts.length === 0 ? '—' : 'Sélectionnez au moins une base de prix'}
+                        </div>
+                      ) : (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                          {selectedContexts.flatMap((c) => {
+                            const key = ctxKey(c);
+                            const check = stockChecks[key];
+                            const incomplete = !!check && !check.loading && check.incomplete;
+                            return methods.map((m) => {
+                              const line = costLines[`${key}|${m}`];
+                              return (
+                                <div key={`${key}|${m}`} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.82rem', flexWrap: 'wrap' }}>
+                                  <span style={{ fontWeight: 600, color: 'var(--text)' }}>{ctxIcon(c)} {c.nom}</span>
+                                  <span style={{ color: 'var(--text-muted)' }}>·</span>
+                                  <span style={{ fontWeight: 700, color: m === 'dp' ? '#1d4ed8' : '#6d28d9' }}>{m === 'dp' ? 'Dernier Prix' : 'PMP'}</span>
+                                  <span style={{ color: 'var(--text-muted)' }}>=</span>
+                                  {!line || line.loading ? (
+                                    <span style={{ color: 'var(--text-muted)' }}>…</span>
+                                  ) : line.cost !== null ? (
+                                    <span style={{ fontWeight: 800, color: m === 'dp' ? '#2563eb' : '#7c3aed' }}>
+                                      {line.cost.toFixed(3)}{' '}
+                                      <span style={{ fontWeight: 600, fontSize: '0.72rem', color: 'var(--text-muted)' }}>{t('currency')}</span>
+                                    </span>
+                                  ) : (
+                                    <span style={{ color: 'var(--text-muted)' }}>—</span>
+                                  )}
+                                  {incomplete && (
+                                    <span style={{ fontSize: '0.68rem', fontWeight: 600, color: '#b45309', background: '#fef3c7', borderRadius: 10, padding: '1px 7px' }}>
+                                      ⚠ {check.missingCount} article(s) sans appro — coût partiel
+                                    </span>
+                                  )}
+                                </div>
+                              );
+                            });
+                          })}
+                        </div>
+                      )
+                    ) : manualCostLoading ? (
                       <div style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>…</div>
-                    ) : mode === 'stock' && !stockCheckLoading && stockCheckResult && !stockCheckResult.complete ? (
-                      <div style={{ fontSize: '0.8rem', color: '#b45309', fontWeight: 600 }}>
-                        ⚠ {t('client.stock.missing_stock_msg').split('.')[0]}
-                      </div>
-                    ) : mode === 'stock' && stockPricingDp && stockPricingMp && realtimeCost !== null && realtimeCostMp !== null ? (
-                      <div style={{ display: 'flex', gap: 14 }}>
-                        <div>
-                          <div style={{ fontSize: '0.6rem', fontWeight: 700, color: '#1d4ed8', letterSpacing: '0.05em', textTransform: 'uppercase', marginBottom: 1 }}>DP</div>
-                          <div style={{ display: 'flex', alignItems: 'baseline', gap: 3 }}>
-                            <span style={{ fontWeight: 800, fontSize: '1.2rem', color: '#2563eb', letterSpacing: '-0.02em', lineHeight: 1 }}>{realtimeCost.toFixed(3)}</span>
-                            <span style={{ fontWeight: 600, fontSize: '0.75rem', color: 'var(--text-muted)' }}>{t('currency')}</span>
-                          </div>
-                        </div>
-                        <div style={{ width: 1, alignSelf: 'stretch', background: 'var(--border)' }} />
-                        <div>
-                          <div style={{ fontSize: '0.6rem', fontWeight: 700, color: '#6d28d9', letterSpacing: '0.05em', textTransform: 'uppercase', marginBottom: 1 }}>MP</div>
-                          <div style={{ display: 'flex', alignItems: 'baseline', gap: 3 }}>
-                            <span style={{ fontWeight: 800, fontSize: '1.2rem', color: '#7c3aed', letterSpacing: '-0.02em', lineHeight: 1 }}>{realtimeCostMp.toFixed(3)}</span>
-                            <span style={{ fontWeight: 600, fontSize: '0.75rem', color: 'var(--text-muted)' }}>{t('currency')}</span>
-                          </div>
-                        </div>
-                      </div>
-                    ) : mode === 'stock' && stockPricingMp && !stockPricingDp && realtimeCostMp !== null ? (
-                      <div style={{ display: 'flex', alignItems: 'baseline', gap: 5 }}>
-                        <span style={{ fontWeight: 800, fontSize: '1.5rem', color: '#7c3aed', letterSpacing: '-0.02em', lineHeight: 1 }}>{realtimeCostMp.toFixed(3)}</span>
-                        <span style={{ fontWeight: 600, fontSize: '0.8rem', color: 'var(--text-muted)' }}>{t('currency')}</span>
-                      </div>
-                    ) : realtimeCost !== null ? (
+                    ) : manualCost !== null ? (
                       <div style={{ display: 'flex', alignItems: 'baseline', gap: 5 }}>
                         <span style={{ fontWeight: 800, fontSize: '1.5rem', color: 'var(--primary)', letterSpacing: '-0.02em', lineHeight: 1 }}>
-                          {realtimeCost.toFixed(3)}
+                          {manualCost.toFixed(3)}
                         </span>
                         <span style={{ fontWeight: 600, fontSize: '0.8rem', color: 'var(--text-muted)' }}>{t('currency')}</span>
                       </div>
@@ -463,7 +584,11 @@ export default function FicheTechniqueModal({ productId, productName, hasIngredi
                     onClick={generateExcel}
                   >
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}><rect width="24" height="24" rx="3" fill="#217346"/><path d="M14 2H6C4.9 2 4 2.9 4 4V20C4 21.1 4.9 22 6 22H18C19.1 22 20 21.1 20 20V8L14 2Z" fill="#185C37"/><path d="M14 2V8H20L14 2Z" fill="#107C41"/><text x="7" y="18" fill="white" fontSize="8" fontWeight="bold" fontFamily="Arial,sans-serif">XLS</text></svg>
-                    {generating ? t('common.loading') : t('client.fiche_technique.generate')}
+                    {generating
+                      ? t('common.loading')
+                      : mode === 'stock'
+                        ? `Générer ${selectedContexts.length} fichier(s) Excel`
+                        : t('client.fiche_technique.generate')}
                   </button>
                 </div>
               </div>
@@ -505,7 +630,10 @@ export default function FicheTechniqueModal({ productId, productName, hasIngredi
               <div style={{ background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 100%)', padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
                 <div>
                   <div style={{ color: '#fff', fontWeight: 800, fontSize: '0.95rem', marginBottom: 2 }}>✏️ Prix Articles</div>
-                  <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.78rem', fontWeight: 600 }}>{productName}</div>
+                  <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.78rem', fontWeight: 600 }}>
+                    {productName}
+                    {manualCtx ? ` — ${ctxIcon(manualCtx)} ${manualCtx.nom}` : ''}
+                  </div>
                 </div>
                 <button onClick={() => { setShowManualPopup(false); setManualSearch(''); }} style={{ background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: 8, color: '#fff', fontWeight: 900, fontSize: '1.1rem', cursor: 'pointer', padding: '2px 9px', lineHeight: 1, flexShrink: 0 }}>×</button>
               </div>
