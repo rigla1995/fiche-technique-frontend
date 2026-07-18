@@ -19,6 +19,7 @@ interface OffreCatalogue {
   nom: string;
   unite: string;
   categorie: string;
+  categorieProduit: string | null; // catégorie produit du vendeur (produits uniquement)
   prixUnitaireTtc: number;
 }
 interface Panier { quantite: string }
@@ -218,7 +219,9 @@ export default function PortailAcheteurPage() {
                               </span>
                               <div style={{ minWidth: 0, flex: 1 }}>
                                 <div style={{ fontWeight: 800, color: '#0f172a', fontSize: '0.95rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={o.nom}>{o.nom}</div>
-                                <div style={{ fontSize: '0.7rem', color: '#94a3b8', fontWeight: 600 }}>{o.categorie}</div>
+                                <div style={{ fontSize: '0.7rem', color: '#94a3b8', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                  {o.categorieProduit || o.categorie}
+                                </div>
                               </div>
                               {qte > 0 && (
                                 <span style={{ flexShrink: 0, fontSize: '0.66rem', fontWeight: 800, color: CD, background: CL, border: `1px solid ${CB}`, borderRadius: 20, padding: '3px 8px', whiteSpace: 'nowrap' }}>
