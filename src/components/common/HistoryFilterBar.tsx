@@ -68,6 +68,9 @@ interface HistoryFilterBarProps {
   excelLabel?: string;        // défaut « Exporter XLS »
   excelDisabled?: boolean;
   actions?: ReactNode;        // boutons additionnels dans le pied à droite (ex. « + Nouveau »)
+  /** Variante compacte (écrans admin, panneaux étroits) : pas d'en-tête ni de
+      pied — champs et actions sur une même rangée, chrome allégé. */
+  compact?: boolean;
 }
 
 export default function HistoryFilterBar({
@@ -75,7 +78,7 @@ export default function HistoryFilterBar({
   onSearch, searching, searchDisabled, searchLabel = 'Rechercher',
   onReset, showReset = true,
   onExportExcel, excelLabel = 'Exporter XLS', excelDisabled,
-  actions,
+  actions, compact = false,
 }: HistoryFilterBarProps) {
   const dark = accentDark || accent;
   const hasFooter = !!((onReset && showReset) || onSearch || onExportExcel || actions);
@@ -85,6 +88,42 @@ export default function HistoryFilterBar({
     border: `1px solid ${disabled ? 'var(--border)' : accent}`, color: disabled ? 'var(--text-muted)' : dark,
     opacity: disabled ? 0.6 : 1, transition: 'all 0.12s',
   });
+
+  if (compact) {
+    // Rangée unique : champs (grille serrée) + actions/hint alignés à droite —
+    // proportionné aux panneaux étroits et aux pages admin à 2 contrôles.
+    return (
+      <div className="hist-filter" style={{ ['--hist-accent']: accent, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, marginBottom: 14, padding: '10px 12px', display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'flex-end' } as CSSProperties}>
+        <div style={{ flex: 1, minWidth: 0, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 10, alignItems: 'end' }}>
+          {children}
+        </div>
+        {(subtitle != null || hasFooter) && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginLeft: 'auto', paddingBottom: 3 }}>
+            {subtitle != null && <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{subtitle}</span>}
+            {onReset && showReset && (
+              <button onClick={onReset} title="Réinitialiser les filtres"
+                style={{ height: 30, display: 'inline-flex', alignItems: 'center', borderRadius: 8, padding: '0 10px', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer', background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-muted)' }}>
+                ✕
+              </button>
+            )}
+            {onSearch && (
+              <button onClick={onSearch} disabled={searching || searchDisabled}
+                style={{ height: 30, display: 'inline-flex', alignItems: 'center', gap: 5, borderRadius: 8, padding: '0 12px', fontSize: '0.78rem', fontWeight: 700, cursor: (searching || searchDisabled) ? 'not-allowed' : 'pointer', background: accent, border: 'none', color: '#fff', opacity: (searching || searchDisabled) ? 0.7 : 1 }}>
+                🔍 {searching ? '…' : searchLabel}
+              </button>
+            )}
+            {onExportExcel && (
+              <button onClick={onExportExcel} disabled={excelDisabled} style={{ ...outline(excelDisabled), height: 30, padding: '0 10px', fontSize: '0.78rem' }}>
+                <XlsIcon /> {excelLabel}
+              </button>
+            )}
+            {actions}
+          </div>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="hist-filter" style={{ ['--hist-accent']: accent, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, overflow: 'hidden', marginBottom: 24, boxShadow: '0 2px 12px rgba(0,0,0,0.05)' } as CSSProperties}>
       {/* En-tête */}

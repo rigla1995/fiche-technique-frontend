@@ -802,15 +802,18 @@ export default function AbonnementsManagement() {
             </div>
           ))}
         </div>
-        {/* Filtres — enveloppés dans HistoryFilterBar (recherche + statut segmenté) */}
+        {/* Filtres — variante COMPACTE : le panneau liste fait 380px, le chrome
+            complet (en-tête + pied) y était disproportionné */}
         <div style={{ padding: '12px 14px 0' }}>
           <HistoryFilterBar
             accent="#0d9488"
             accentDark="#0f766e"
-            title="Filtrer par statut"
+            compact
             subtitle={`${filtered.length} résultat${filtered.length !== 1 ? 's' : ''}`}
+            onReset={() => { setSearch(''); setFilterMode('actif'); }}
+            showReset={!!search || filterMode !== 'actif'}
           >
-            <FilterField label="🔍 Recherche">
+            <FilterField label="🔍 Recherche" span>
               <FilterInput
                 type="text"
                 placeholder="Rechercher par nom ou email…"
