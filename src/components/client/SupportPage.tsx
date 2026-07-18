@@ -1,15 +1,14 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import api from '../../api/client';
-import type { SupportDemande, DomaineActivite } from '../../types';
+import type { SupportDemande } from '../../types';
 import { useNotifications } from '../../context/NotificationContext';
 import { useAuth } from '../../context/AuthContext';
 import { useConfirm } from '../common/ConfirmDialog';
 
 const TYPE_LABELS: Record<string, { label: string; icon: string; desc: string }> = {
-  ingredient_manquant: { label: 'Ingrédient manquant', icon: '🥕', desc: 'Besoin d\'aide sur un ingrédient absent de votre référentiel' },
-  supplement:          { label: 'Ajout de capacité',   icon: '➕', desc: 'Demander l\'ajout d\'activités, labos, gérants ou de l\'option Acheteurs' },
-  aide:                { label: 'Besoin d\'aide',       icon: '💬', desc: 'Nous décrire votre besoin ou signaler un problème' },
+  supplement: { label: 'Ajout de capacité', icon: '➕', desc: 'Demander l\'ajout d\'activités, labos, gérants ou de l\'option Acheteurs' },
+  aide:       { label: 'Besoin d\'aide',     icon: '💬', desc: 'Nous décrire votre besoin ou signaler un problème' },
 };
 
 const STATUT: Record<string, { label: string; bg: string; text: string; border: string }> = {
@@ -29,8 +28,6 @@ type FilterKey = typeof FILTERS[number]['key'];
 
 const fmtDate = (d: string) => new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });
 
-interface CatItem { id: number; name: string }
-interface UniteItem { id: number; name: string }
 interface PromoInfo { type: string; discount?: number | null; fixed?: number | null; }
 interface SupplPricing {
   prixActiviteSup: number;
@@ -73,11 +70,11 @@ export default function SupportPage() {
   const [deleting, setDeleting] = useState<Record<number, boolean>>({});
   const [formType, setFormType] = useState<SupportDemande['type'] | null>(() => {
     const t = searchParams.get('type');
-    return t && ['supplement', 'ingredient_manquant', 'aide'].includes(t) ? t as SupportDemande['type'] : null;
+    return t && ['supplement', 'aide'].includes(t) ? t as SupportDemande['type'] : null;
   });
   const [showForm, setShowForm] = useState(() => {
     const t = searchParams.get('type');
-    return !!(t && ['supplement', 'ingredient_manquant', 'aide'].includes(t));
+    return !!(t && ['supplement', 'aide'].includes(t));
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -89,16 +86,7 @@ export default function SupportPage() {
   const PAGE_SIZE = 5;
 
   // Reference data
-  const [domaines, setDomaines] = useState<DomaineActivite[]>([]);
-  const [categories, setCategories] = useState<CatItem[]>([]);
-  const [unites, setUnites] = useState<UniteItem[]>([]);
   const [supplPricing, setSupplPricing] = useState<SupplPricing | null>(null);
-
-  // Ingredient form
-  const [domaineId, setDomaineId] = useState('');
-  const [categorieId, setCategorieId] = useState('');
-  const [uniteId, setUniteId] = useState('');
-  const [nomIngredient, setNomIngredient] = useState('');
 
   // Supplement form
   const [nbActivites, setNbActivites] = useState(0);
@@ -125,9 +113,6 @@ export default function SupportPage() {
   useEffect(() => {
     fetchDemandes();
     clearAllFromDB();
-    api.get('/api/domaines').then(({ data }) => setDomaines(data)).catch(() => {});
-    api.get('/api/categories').then(({ data }) => setCategories(data)).catch(() => {});
-    api.get('/api/unites?all=true').then(({ data }) => setUnites(data)).catch(() => {});
     api.get('/api/abonnements/supplement-pricing').then(({ data }) => setSupplPricing(data)).catch(() => {});
     api.get('/api/abonnements/demandes')
       .then(({ data }) => setHasPendingPremium((data as { typeDemande: string; statut: string }[])
@@ -137,7 +122,6 @@ export default function SupportPage() {
 
   const resetForm = () => {
     setFormType(null);
-    setDomaineId(''); setCategorieId(''); setUniteId(''); setNomIngredient('');
     setNbActivites(0); setNbLabos(0); setNbGerants(0); setAcheteursCible(0); setDescription('');
     setError(null);
   };
@@ -181,18 +165,7 @@ export default function SupportPage() {
     setSaving(true);
     try {
       let body: Record<string, unknown> = { type: formType };
-      if (formType === 'ingredient_manquant') {
-        if (!nomIngredient.trim()) { setError('Nom de l\'ingrédient requis'); setSaving(false); return; }
-        const cat = categories.find(c => String(c.id) === categorieId);
-        const uni = unites.find(u => String(u.id) === uniteId);
-        body = {
-          ...body,
-          domaineId: domaineId ? Number(domaineId) : null,
-          categorieNom: cat?.name || '',
-          uniteNom: uni?.name || '',
-          nomIngredient: nomIngredient.trim(),
-        };
-      } else if (formType === 'supplement') {
+      if (formType === 'supplement') {
         if (nbActivites + nbLabos + nbGerants + acheteursCible === 0) { setError('Indiquez au moins un supplément'); setSaving(false); return; }
         if (acheteursCible > 0 && acheteursNeedsLabo) {
           setError("L'option Acheteurs nécessite au moins un labo — ajoutez-en un à votre demande.");
@@ -334,7 +307,7 @@ export default function SupportPage() {
 
           {!formType ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {Object.entries(TYPE_LABELS).filter(([key]) => key !== 'ingredient_manquant' && !(isGerant && key === 'supplement')).map(([key, { label, icon, desc }]) => (
+              {Object.entries(TYPE_LABELS).filter(([key]) => !(isGerant && key === 'supplement')).map(([key, { label, icon, desc }]) => (
                 <button key={key} onClick={() => setFormType(key as SupportDemande['type'])}
                   style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 18px', borderRadius: 12, border: '1.5px solid #e2e8f0', background: '#fff', cursor: 'pointer', textAlign: 'left' }}
                   onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#6366f1'; e.currentTarget.style.background = '#f5f3ff'; }}
@@ -387,39 +360,6 @@ export default function SupportPage() {
                 <span style={{ fontSize: '1.25rem' }}>{TYPE_LABELS[formType].icon}</span>
                 <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#4c1d95' }}>{TYPE_LABELS[formType].label}</span>
               </div>
-
-              {/* Ingredient form */}
-              {formType === 'ingredient_manquant' && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                  <div>
-                    <label style={lbl}>Domaine d'activité</label>
-                    <select value={domaineId} onChange={(e) => setDomaineId(e.target.value)} style={inp}>
-                      <option value="">— Sélectionner —</option>
-                      {domaines.map((d) => <option key={d.id} value={d.id}>{d.nom}</option>)}
-                    </select>
-                  </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                    <div>
-                      <label style={lbl}>Catégorie</label>
-                      <select value={categorieId} onChange={(e) => setCategorieId(e.target.value)} style={inp}>
-                        <option value="">— Sélectionner —</option>
-                        {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-                      </select>
-                    </div>
-                    <div>
-                      <label style={lbl}>Unité</label>
-                      <select value={uniteId} onChange={(e) => setUniteId(e.target.value)} style={inp}>
-                        <option value="">— Sélectionner —</option>
-                        {unites.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
-                      </select>
-                    </div>
-                  </div>
-                  <div>
-                    <label style={lbl}>Nom de l'ingrédient *</label>
-                    <input value={nomIngredient} onChange={(e) => setNomIngredient(e.target.value)} placeholder="Nom exact de l'ingrédient" style={inp} />
-                  </div>
-                </div>
-              )}
 
               {/* Supplement form */}
               {formType === 'supplement' && (
@@ -624,7 +564,8 @@ export default function SupportPage() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {paginated.map((d) => {
             const s = STATUT[d.statut] || STATUT.en_attente;
-            const t = TYPE_LABELS[d.type];
+            // Repli pour d'éventuelles anciennes demandes d'un type retiré (ex. ingrédient manquant)
+            const t = TYPE_LABELS[d.type] || { label: 'Demande', icon: '📝', desc: '' };
             return (
               <div key={d.id} style={{ background: '#fff', border: `1px solid #e2e8f0`, borderLeft: `4px solid ${s.border}`, borderRadius: 14, padding: '16px 18px', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
@@ -649,9 +590,6 @@ export default function SupportPage() {
                   )}
                 </div>
                 <div style={{ fontSize: '0.82rem', color: '#374151' }}>
-                  {d.type === 'ingredient_manquant' && d.nomIngredient && (
-                    <span>🥕 <strong>{d.nomIngredient}</strong>{d.categorieNom ? ` · ${d.categorieNom}` : ''}{d.uniteNom ? ` · ${d.uniteNom}` : ''}</span>
-                  )}
                   {d.type === 'supplement' && (
                     <span>
                       {[

@@ -1808,8 +1808,9 @@ export default function AbonnementsManagement() {
               <>
               {/* Filter buttons */}
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 16 }}>
-                {(['', 'payé', 'impayé', 'en_attente', 'remisé', 'gratuit'] as const).map((val) => {
-                  const labelMap: Record<string, string> = { '': 'Tous', payé: 'Payé', impayé: 'Impayé', en_attente: 'En attente', remisé: 'Remisé', gratuit: 'Gratuit' };
+                {/* 2 statuts réels par mois : en attente ou payé (remisé/gratuit = affichage promo) */}
+                {(['', 'payé', 'en_attente'] as const).map((val) => {
+                  const labelMap: Record<string, string> = { '': 'Tous', payé: 'Payé', en_attente: 'En attente' };
                   const isActive = paiementFilterStatut === val;
                   return (
                     <button key={val} onClick={() => setPaiementFilterStatut(val)} style={{ padding: '4px 12px', borderRadius: 20, fontSize: 11, fontWeight: 600, cursor: 'pointer', border: `1.5px solid ${isActive ? '#0d9488' : '#e2e8f0'}`, background: isActive ? '#0d948818' : '#fff', color: isActive ? '#0d9488' : '#94a3b8' }}>

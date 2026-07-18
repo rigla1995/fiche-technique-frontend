@@ -3,11 +3,13 @@ import api from '../../api/client';
 import type { Paiement } from '../../types';
 import HistoryFilterBar, { FilterField, FilterInput, FilterSelect } from '../common/HistoryFilterBar';
 
+// Un mois de paiement n'a que 2 statuts réels : en attente ou payé.
+// remisé/gratuit sont conservés pour l'AFFICHAGE des mois couverts par une promotion.
 const STATUT_COLORS: Record<string, string> = {
-  payé: '#16a34a', impayé: '#dc2626', en_attente: '#d97706', remisé: '#7c3aed', gratuit: '#16a34a',
+  payé: '#16a34a', en_attente: '#d97706', remisé: '#7c3aed', gratuit: '#16a34a',
 };
 const STATUT_LABELS: Record<string, string> = {
-  payé: 'Payé', impayé: 'Impayé', en_attente: 'En attente', remisé: 'Remisé', gratuit: 'Gratuit',
+  payé: 'Payé', en_attente: 'En attente', remisé: 'Remisé', gratuit: 'Gratuit',
 };
 
 const fmtMois = (d: string) => d ? new Date(d).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' }) : '—';
@@ -16,10 +18,6 @@ const isoMois = (d: string) => d ? d.slice(0, 7) : '';
 
 function resolveStatut(p: Paiement): string {
   if (p.statut === 'payé' || p.statut === 'remisé' || p.statut === 'gratuit') return p.statut;
-  const now = new Date();
-  const moisStr = isoMois(p.mois);
-  const currentStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-  if (moisStr < currentStr) return 'impayé';
   return 'en_attente';
 }
 
@@ -147,10 +145,7 @@ export default function HistoriquePaiementPage() {
           <FilterSelect value={filterStatut} onChange={e => setFilterStatut(e.target.value)}>
             <option value="">Tous</option>
             <option value="payé">Payé</option>
-            <option value="impayé">Impayé</option>
             <option value="en_attente">En attente</option>
-            <option value="remisé">Remisé</option>
-            <option value="gratuit">Gratuit</option>
           </FilterSelect>
         </FilterField>
       </HistoryFilterBar>

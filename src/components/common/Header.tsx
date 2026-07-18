@@ -49,7 +49,6 @@ export default function Header() {
   };
 
   const typeLabel = (type: string) => {
-    if (type === 'ingredient_manquant') return 'Ingrédient manquant';
     if (type === 'supplement') return 'Ajout de capacité';
     return 'Aide';
   };
