@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import api from '../../api/client';
 import GuideButton from './GuideButton';
+import CommandeStepper from '../common/CommandeStepper';
 
 // Thème violet de l'Espace Acheteurs
 const C = '#6d28d9';
@@ -77,9 +78,10 @@ export default function CommandesAcheteursPage() {
   const [detail, setDetail] = useState<CommandeDetail | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
 
-  // Expédition d'une commande en attente : labo + quantités ajustables + remise + timbre + date
+  // Expédition d'une commande en attente : labo + quantités ajustables (une
+  // ligne peut être retirée : quantité 0 envoyée au serveur) + remise + timbre + date
   const [expCmd, setExpCmd] = useState<Commande | null>(null);
-  const [expLignes, setExpLignes] = useState<{ id: number; designation: string; quantite: string; prixTtc: number }[]>([]);
+  const [expLignes, setExpLignes] = useState<{ id: number; designation: string; quantite: string; prixTtc: number; retiree: boolean }[]>([]);
   const [expLignesLoading, setExpLignesLoading] = useState(false);
   const [expLaboId, setExpLaboId] = useState('');
   const [expTimbre, setExpTimbre] = useState(true);
@@ -163,7 +165,7 @@ export default function CommandesAcheteursPage() {
     try {
       const { data } = await api.get(`/api/acheteurs/commandes/${c.id}`);
       if (seq !== expReqSeq.current) return; // une autre commande a été ouverte entre-temps
-      setExpLignes((data.lignes as LigneDetail[]).map(l => ({ id: l.id, designation: l.designation, quantite: String(l.quantite), prixTtc: l.prixTtc })));
+      setExpLignes((data.lignes as LigneDetail[]).map(l => ({ id: l.id, designation: l.designation, quantite: String(l.quantite), prixTtc: l.prixTtc, retiree: false })));
     } catch { if (seq === expReqSeq.current) setExpErr('Erreur de chargement des lignes — fermez et rouvrez la commande'); }
     finally { if (seq === expReqSeq.current) setExpLignesLoading(false); }
   };
@@ -173,8 +175,10 @@ export default function CommandesAcheteursPage() {
     const remise = expRemise === '' ? 0 : Number(String(expRemise).replace(',', '.'));
     if (!Number.isFinite(remise) || remise < 0 || remise > 100) { setExpErr('Remise invalide (0 à 100)'); return; }
     if (expLignes.length === 0) { setExpErr('Lignes non chargées — fermez et rouvrez la commande'); return; }
+    if (expLignes.every(l => l.retiree)) { setExpErr('Toutes les lignes sont retirées — refusez plutôt la commande (↩️)'); return; }
     const quantites: { ligneId: number; quantite: number }[] = [];
     for (const l of expLignes) {
+      if (l.retiree) { quantites.push({ ligneId: l.id, quantite: 0 }); continue; }
       const q = Number(String(l.quantite).replace(',', '.'));
       if (!Number.isFinite(q) || Math.round(q * 1000) / 1000 <= 0) { setExpErr(`Quantité invalide pour « ${l.designation} »`); return; }
       quantites.push({ ligneId: l.id, quantite: q });
@@ -408,9 +412,9 @@ export default function CommandesAcheteursPage() {
               {expCmd.acheteurNom} · commandée le {fmtDate(expCmd.dateCommande)} — le stock est déduit et la facture générée à l'expédition.
             </div>
 
-            {/* Quantités ajustables */}
+            {/* Quantités ajustables + retrait de lignes */}
             <div style={{ marginBottom: 14 }}>
-              <div style={{ fontSize: '0.74rem', fontWeight: 700, color: CD, marginBottom: 6 }}>Lignes (quantités ajustables)</div>
+              <div style={{ fontSize: '0.74rem', fontWeight: 700, color: CD, marginBottom: 6 }}>Lignes — ajustez les quantités ou retirez ce qui ne part pas</div>
               {expLignesLoading ? (
                 <div style={{ color: 'var(--text-muted)', fontSize: '0.82rem' }}>Chargement…</div>
               ) : (
@@ -418,22 +422,42 @@ export default function CommandesAcheteursPage() {
                   <thead>
                     <tr style={{ background: CL }}>
                       <th style={{ textAlign: 'left', padding: '6px 10px', color: CD, fontSize: '0.7rem' }}>Article</th>
-                      <th style={{ textAlign: 'right', padding: '6px 10px', color: CD, fontSize: '0.7rem' }}>Qté demandée</th>
+                      <th style={{ textAlign: 'right', padding: '6px 10px', color: CD, fontSize: '0.7rem' }}>Qté expédiée</th>
                       <th style={{ textAlign: 'right', padding: '6px 10px', color: CD, fontSize: '0.7rem' }}>PU TTC</th>
+                      <th style={{ width: 34 }} />
                     </tr>
                   </thead>
                   <tbody>
-                    {expLignes.map((l, i) => (
-                      <tr key={l.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                        <td style={{ padding: '6px 10px', fontWeight: 600 }}>{l.designation}</td>
-                        <td style={{ padding: '6px 10px', textAlign: 'right' }}>
-                          <input value={l.quantite}
-                            onChange={e => setExpLignes(prev => prev.map((x, xi) => xi === i ? { ...x, quantite: e.target.value } : x))}
-                            style={{ ...inp, width: 76, textAlign: 'right', padding: '5px 8px' }} />
-                        </td>
-                        <td style={{ padding: '6px 10px', textAlign: 'right', whiteSpace: 'nowrap' }}>{fmt(l.prixTtc)}</td>
-                      </tr>
-                    ))}
+                    {expLignes.map((l, i) => {
+                      const derniere = !l.retiree && expLignes.filter(x => !x.retiree).length === 1;
+                      return (
+                        <tr key={l.id} style={{ borderBottom: '1px solid #f1f5f9', opacity: l.retiree ? 0.55 : 1 }}>
+                          <td style={{ padding: '6px 10px', fontWeight: 600, textDecoration: l.retiree ? 'line-through' : 'none', color: l.retiree ? '#94a3b8' : undefined }}>{l.designation}</td>
+                          <td style={{ padding: '6px 10px', textAlign: 'right' }}>
+                            {l.retiree ? (
+                              <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#b91c1c' }}>retirée</span>
+                            ) : (
+                              <input value={l.quantite}
+                                onChange={e => setExpLignes(prev => prev.map((x, xi) => xi === i ? { ...x, quantite: e.target.value } : x))}
+                                style={{ ...inp, width: 76, textAlign: 'right', padding: '5px 8px' }} />
+                            )}
+                          </td>
+                          <td style={{ padding: '6px 10px', textAlign: 'right', whiteSpace: 'nowrap', textDecoration: l.retiree ? 'line-through' : 'none', color: l.retiree ? '#94a3b8' : undefined }}>{fmt(l.prixTtc)}</td>
+                          <td style={{ padding: '6px 4px', textAlign: 'center' }}>
+                            {l.retiree ? (
+                              <button onClick={() => setExpLignes(prev => prev.map((x, xi) => xi === i ? { ...x, retiree: false } : x))}
+                                title="Rétablir la ligne"
+                                style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.9rem', color: CD }}>↩️</button>
+                            ) : (
+                              <button onClick={() => setExpLignes(prev => prev.map((x, xi) => xi === i ? { ...x, retiree: true } : x))}
+                                disabled={derniere}
+                                title={derniere ? 'Impossible de retirer la dernière ligne — refusez plutôt la commande' : 'Retirer cette ligne de la commande'}
+                                style={{ background: 'none', border: 'none', cursor: derniere ? 'default' : 'pointer', fontSize: '0.9rem', color: derniere ? '#e2e8f0' : '#ef4444', fontWeight: 800 }}>✕</button>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               )}
@@ -564,26 +588,11 @@ export default function CommandesAcheteursPage() {
                 </button>
               </div>
             )}
-            {/* Historique des états */}
-            {detail.historique?.length > 0 && (
-              <div>
-                <div style={{ fontSize: '0.74rem', fontWeight: 700, color: CD, marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Historique des états</div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  {detail.historique.map((h, i) => {
-                    const b = badgeOf(h.statut);
-                    return (
-                      <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: '0.8rem', color: '#475569' }}>
-                        <span style={{ padding: '2px 9px', borderRadius: 20, fontSize: '0.7rem', fontWeight: 700, background: b.bg, color: b.color, whiteSpace: 'nowrap', minWidth: 92, textAlign: 'center' }}>{b.label}</span>
-                        <span>{h.dateEffet ? `le ${fmtDate(h.dateEffet)}` : ''}</span>
-                        {h.parNom && <span style={{ color: '#94a3b8' }}>par {h.parNom}</span>}
-                        {h.motif && <span style={{ color: '#b91c1c' }}>— {h.motif}</span>}
-                        <span style={{ marginLeft: 'auto', color: '#cbd5e1', fontSize: '0.72rem' }}>{new Date(h.le).toLocaleString('fr-FR')}</span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
+            {/* Suivi de la commande — stepper d'états */}
+            <div style={{ background: '#fbfaff', border: '1px solid #ede9fe', borderRadius: 12, padding: '16px 12px 14px' }}>
+              <div style={{ fontSize: '0.74rem', fontWeight: 700, color: CD, marginBottom: 14, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Suivi de la commande</div>
+              <CommandeStepper statut={detail.statut} historique={detail.historique || []} dateCommande={detail.dateCommande} showAuteur />
+            </div>
           </div>
         </div>
       )}

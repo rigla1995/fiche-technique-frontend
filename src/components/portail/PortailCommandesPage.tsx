@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../../api/client';
 import PortailShell from './PortailShell';
+import CommandeStepper from '../common/CommandeStepper';
 
 // Portail acheteur — suivi des commandes + factures.
 const C = '#6d28d9';
@@ -222,24 +223,11 @@ export default function PortailCommandesPage() {
               )}
             </div>
 
-            {/* Historique des états */}
-            {detail.historique?.length > 0 && (
-              <div style={{ marginTop: 14 }}>
-                <div style={{ fontSize: '0.72rem', fontWeight: 700, color: CD, marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Historique</div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-                  {detail.historique.map((h, i) => {
-                    const b = BADGE[h.statut];
-                    return (
-                      <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: '0.78rem', color: '#475569' }}>
-                        <span style={{ padding: '2px 8px', borderRadius: 20, fontSize: '0.68rem', fontWeight: 700, background: b.bg, color: b.color, whiteSpace: 'nowrap', minWidth: 88, textAlign: 'center' }}>{b.label}</span>
-                        <span>{h.dateEffet ? `le ${fmtDate(h.dateEffet)}` : ''}</span>
-                        {h.motif && <span style={{ color: '#b91c1c' }}>— {h.motif}</span>}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
+            {/* Suivi de la commande — stepper d'états */}
+            <div style={{ marginTop: 18, background: '#fbfaff', border: '1px solid #ede9fe', borderRadius: 12, padding: '16px 12px 14px' }}>
+              <div style={{ fontSize: '0.72rem', fontWeight: 700, color: CD, marginBottom: 14, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Suivi de la commande</div>
+              <CommandeStepper statut={detail.statut} historique={detail.historique || []} dateCommande={detail.dateCommande} />
+            </div>
 
             {detail.factureId && (
               <button onClick={() => ouvrirFacture(detail.factureId!)}
