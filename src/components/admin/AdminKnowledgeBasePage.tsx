@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import api from '../../api/client';
 import HistoryFilterBar, { FilterField, FilterInput } from '../common/HistoryFilterBar';
+import { useConfirm } from '../common/ConfirmDialog';
 
 interface KbEntry {
   id: number;
@@ -16,6 +17,7 @@ const empty = { titre: '', contenu: '', motsCles: '', categorie: '', actif: true
 const PAGE_SIZE = 10;
 
 export default function AdminKnowledgeBasePage() {
+  const { confirm } = useConfirm();
   const [entries, setEntries] = useState<KbEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<KbEntry | null>(null);
@@ -60,7 +62,13 @@ export default function AdminKnowledgeBasePage() {
   };
 
   const remove = async (e: KbEntry) => {
-    if (!window.confirm(`Supprimer « ${e.titre} » de la base de connaissances ?`)) return;
+    const ok = await confirm({
+      title: `Supprimer « ${e.titre} » ?`,
+      message: 'Cet article sera retiré de la base de connaissances.',
+      tone: 'danger',
+      confirmLabel: 'Supprimer',
+    });
+    if (!ok) return;
     await api.delete(`/admin/knowledge-base/${e.id}`).catch(() => {});
     load();
   };

@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback, useMemo } from 'react';
 import api from '../../api/client';
 import HistoryFilterBar, { FilterField, FilterInput, FilterSelect } from '../common/HistoryFilterBar';
 import MarkdownView from '../common/MarkdownView';
+import { useConfirm } from '../common/ConfirmDialog';
 
 interface ManuelSection {
   id: number;
@@ -26,6 +27,7 @@ const emptyForm = {
 const MD_HELP = '## Titre · ### Sous-titre · **gras** · *italique* · `code` · [lien](#slug) · - liste · 1. étapes · | tableau | · :::astuce / :::attention / :::regle / :::exemple … ::: · :::formule Libellé … note: … :::';
 
 export default function AdminManuelPage() {
+  const { confirm } = useConfirm();
   const [sections, setSections] = useState<ManuelSection[]>([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<ManuelSection | null>(null);
@@ -92,13 +94,25 @@ export default function AdminManuelPage() {
   };
 
   const restore = async (s: ManuelSection) => {
-    if (!window.confirm(`Restaurer la version d'origine de « ${s.titre} » ? Vos modifications de contenu seront perdues.`)) return;
+    const ok = await confirm({
+      title: `Restaurer la version d'origine de « ${s.titre} » ?`,
+      message: 'Vos modifications de contenu seront perdues.',
+      confirmLabel: 'Restaurer',
+      tone: 'primary',
+      icon: '♻️',
+    });
+    if (!ok) return;
     await api.post(`/admin/manuel/${s.id}/restore`).catch(() => window.alert('La restauration a échoué.'));
     load();
   };
 
   const remove = async (s: ManuelSection) => {
-    if (!window.confirm(`Supprimer la section « ${s.titre} » du manuel ?`)) return;
+    const ok = await confirm({
+      title: `Supprimer la section « ${s.titre} » du manuel ?`,
+      confirmLabel: 'Supprimer',
+      tone: 'danger',
+    });
+    if (!ok) return;
     await api.delete(`/admin/manuel/${s.id}`).catch(() => window.alert('La suppression a échoué.'));
     load();
   };

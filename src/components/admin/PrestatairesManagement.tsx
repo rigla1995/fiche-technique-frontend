@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import api from '../../api/client';
 import HistoryFilterBar, { FilterField, FilterInput, FilterSegmented } from '../common/HistoryFilterBar';
+import { useConfirm } from '../common/ConfirmDialog';
 
 interface Prestataire {
   id: string;
@@ -22,6 +23,7 @@ export default function PrestatairesManagement() {
   const [error, setError] = useState('');
   const [search, setSearch] = useState('');
   const [filterStatut, setFilterStatut] = useState<'' | 'actif' | 'inactif'>('');
+  const { confirm } = useConfirm();
 
   const load = useCallback(() => {
     setLoading(true);
@@ -58,10 +60,15 @@ export default function PrestatairesManagement() {
     } catch {}
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Supprimer ce prestataire ?')) return;
+  const handleDelete = async (p: Prestataire) => {
+    const ok = await confirm({
+      title: `Supprimer le prestataire « ${p.nom} » ?`,
+      confirmLabel: 'Supprimer',
+      tone: 'danger',
+    });
+    if (!ok) return;
     try {
-      await api.delete(`/api/admin/prestataires/${id}`);
+      await api.delete(`/api/admin/prestataires/${p.id}`);
       load();
     } catch (e: any) {
       alert(e.response?.data?.message || 'Erreur');
@@ -164,7 +171,7 @@ export default function PrestatairesManagement() {
                     >
                       {p.actif ? '⏸ Désactiver' : '▶ Activer'}
                     </button>
-                    <button className="btn btn-danger btn-sm" onClick={() => handleDelete(p.id)}>🗑️</button>
+                    <button className="btn btn-danger btn-sm" onClick={() => handleDelete(p)}>🗑️</button>
                   </td>
                 </tr>
               ))}

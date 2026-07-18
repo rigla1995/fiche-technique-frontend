@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import api from '../../api/client';
 import type { Gerant, Activite, Labo, AbonnementConfig } from '../../types';
 import { useEmailCheck } from '../../hooks/useEmailCheck';
+import { useConfirm } from '../common/ConfirmDialog';
 
 interface GerantForm {
   nom: string;
@@ -26,6 +27,7 @@ export default function GerantsPage() {
   const [error, setError] = useState('');
   const [abonnementConfig, setAbonnementConfig] = useState<AbonnementConfig | null>(null);
   const { emailExists: gerantEmailExists, emailChecking: gerantEmailChecking } = useEmailCheck(form.email);
+  const { confirm } = useConfirm();
 
   const freeLimit = 3;
   const freeCount = gerants.filter((g) => g.estGratuit).length;
@@ -80,10 +82,16 @@ export default function GerantsPage() {
     setGerants((gs) => gs.map((x) => x.id === g.id ? { ...x, actif: !g.actif } : x));
   };
 
-  const deleteGerant = async (id: number) => {
-    if (!confirm('Supprimer ce gérant ?')) return;
-    await api.delete(`/api/abonnements/gerants/${id}`);
-    setGerants((gs) => gs.filter((g) => g.id !== id));
+  const deleteGerant = async (g: Gerant) => {
+    const ok = await confirm({
+      title: `Supprimer le gérant « ${g.nom} » ?`,
+      message: 'Son compte et son accès à ses espaces seront supprimés.',
+      tone: 'danger',
+      confirmLabel: 'Supprimer',
+    });
+    if (!ok) return;
+    await api.delete(`/api/abonnements/gerants/${g.id}`);
+    setGerants((gs) => gs.filter((x) => x.id !== g.id));
   };
 
   const handleResendInvite = async (id: number, email: string) => {
@@ -350,7 +358,7 @@ export default function GerantsPage() {
                     style={{ padding: '6px 12px', background: g.actif ? '#fff' : '#f0fdf4', border: `1px solid ${g.actif ? '#e2e8f0' : '#bbf7d0'}`, borderRadius: 8, fontSize: '0.78rem', cursor: 'pointer', color: g.actif ? '#374151' : '#166534', fontWeight: 700 }}>
                     {g.actif ? '⏸ Désactiver' : '▶ Activer'}
                   </button>
-                  <button onClick={() => deleteGerant(g.id)}
+                  <button onClick={() => deleteGerant(g)}
                     style={{ padding: '6px 12px', background: '#fff', border: '1px solid #fecdd3', borderRadius: 8, fontSize: '0.78rem', cursor: 'pointer', color: '#be123c', fontWeight: 700 }}>
                     🗑
                   </button>

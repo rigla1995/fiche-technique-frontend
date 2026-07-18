@@ -4,6 +4,7 @@ import api from '../../api/client';
 import type { SupportDemande, DomaineActivite } from '../../types';
 import { useNotifications } from '../../context/NotificationContext';
 import { useAuth } from '../../context/AuthContext';
+import { useConfirm } from '../common/ConfirmDialog';
 
 const TYPE_LABELS: Record<string, { label: string; icon: string; desc: string }> = {
   ingredient_manquant: { label: 'Ingrédient manquant', icon: '🥕', desc: 'Besoin d\'aide sur un ingrédient absent de votre référentiel' },
@@ -65,6 +66,7 @@ export default function SupportPage() {
   const { user } = useAuth();
   const isGerant = user?.role === 'gerant';
   const { clearAllFromDB } = useNotifications();
+  const { confirm } = useConfirm();
   const [searchParams] = useSearchParams();
   const [demandes, setDemandes] = useState<SupportDemande[]>([]);
   const [loading, setLoading] = useState(true);
@@ -159,7 +161,12 @@ export default function SupportPage() {
   };
 
   const deleteDemande = async (id: number) => {
-    if (!window.confirm('Supprimer cette demande ?')) return;
+    const ok = await confirm({
+      title: 'Supprimer cette demande ?',
+      tone: 'danger',
+      confirmLabel: 'Supprimer',
+    });
+    if (!ok) return;
     setDeleting(d => ({ ...d, [id]: true }));
     try {
       await api.delete(`/api/abonnements/support/${id}`);

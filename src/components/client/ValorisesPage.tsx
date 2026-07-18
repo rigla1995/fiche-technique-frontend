@@ -6,6 +6,7 @@ import FicheTechniqueModal from './FicheTechniqueModal';
 import RecipeTree from './RecipeTree';
 import ProductCard from './ProductCard';
 import HistoryFilterBar, { FilterField, FilterInput, FilterSelect } from '../common/HistoryFilterBar';
+import { useConfirm } from '../common/ConfirmDialog';
 import { PRODUCT_THEME } from '../../theme/productTheme';
 
 const HERO = PRODUCT_THEME.heroGradient;
@@ -28,6 +29,7 @@ interface ArticleValorisable {
 type StatutFilter = 'all' | 'assigned' | 'unassigned';
 
 export default function ValorisesPage() {
+  const { confirm } = useConfirm();
   const [articles, setArticles] = useState<ArticleValorisable[]>([]);
   const [categories, setCategories] = useState<CategorieProduit[]>([]);
   const [composes, setComposes] = useState<Product[]>([]);
@@ -134,7 +136,12 @@ export default function ValorisesPage() {
   const closeFt = () => { setFtProduct(null); setFtLabos([]); setFtLaboId(null); };
 
   const deleteCompose = async (p: Product) => {
-    if (!window.confirm(`Supprimer le produit valorisé composé « ${p.name} » ?`)) return;
+    if (!(await confirm({
+      title: `Supprimer « ${p.name} » ?`,
+      message: 'Ce produit valorisé composé sera définitivement supprimé.',
+      confirmLabel: 'Supprimer',
+      tone: 'danger',
+    }))) return;
     setDeletingId(p.id);
     try {
       await api.delete(`/api/products/${p.id}`);

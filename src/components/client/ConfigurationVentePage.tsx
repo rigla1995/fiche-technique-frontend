@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useContext, createContext } from 'rea
 import { useSearchParams, Link } from 'react-router-dom';
 import api from '../../api/client';
 import HelpButton from '../common/HelpButton';
+import { useConfirm } from '../common/ConfirmDialog';
 import type { Activite } from '../../types';
 
 const apiMsg = (e: unknown, fallback = 'Erreur') =>
@@ -532,6 +533,7 @@ function HistoriqueTab() {
 // ── Page ─────────────────────────────────────────────────────────────────────
 
 export default function ConfigurationVentePage() {
+  const { confirm } = useConfirm();
   const [searchParams, setSearchParams] = useSearchParams();
   const [activites, setActivites] = useState<Activite[]>([]);
   const [selectedActiviteId, setSelectedActiviteId] = useState<number | null>(null);
@@ -666,7 +668,13 @@ export default function ConfigurationVentePage() {
   };
 
   const handleDeleteHistEntry = async (id: number) => {
-    if (!confirm('Supprimer cette entrée de l\'historique ?')) return;
+    const ok = await confirm({
+      title: 'Supprimer cette entrée de l\'historique ?',
+      message: 'Cette entrée sera définitivement retirée de l\'historique des prix.',
+      confirmLabel: 'Supprimer',
+      tone: 'danger',
+    });
+    if (!ok) return;
     try {
       await api.delete(`/api/articles-vendables/historique/${id}`);
       loadHistorique();
