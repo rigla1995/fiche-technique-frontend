@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../../api/client';
 import GuideButton from './GuideButton';
+import { useConfirm } from '../common/ConfirmDialog';
 
 // Thème violet de l'Espace Acheteurs
 const C = '#6d28d9';
@@ -38,6 +39,7 @@ const COMPTE_BADGE: Record<Acheteur['compte'], { label: string; bg: string; colo
 };
 
 export default function AcheteursPage() {
+  const { confirm } = useConfirm();
   const [acheteurs, setAcheteurs] = useState<Acheteur[]>([]);
   const [quota, setQuota] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -128,14 +130,17 @@ export default function AcheteursPage() {
   };
 
   const supprimer = async (a: Acheteur) => {
-    const lignes = [
-      `Supprimer « ${a.nom} » de votre carnet ?`,
-      '',
-      '• Ses commandes expédiées ou livrées et leurs factures sont CONSERVÉES dans l\'historique (le stock ne bouge pas).',
-      '• Ses commandes encore en attente seront annulées.',
-      ...(a.compte !== 'aucun' ? ['• Son compte de connexion au portail sera supprimé.'] : []),
-    ];
-    if (!window.confirm(lignes.join('\n'))) return;
+    const ok = await confirm({
+      title: `Supprimer « ${a.nom} » de votre carnet ?`,
+      details: [
+        'Ses commandes expédiées ou livrées et leurs factures sont CONSERVÉES dans l\'historique (le stock ne bouge pas).',
+        'Ses commandes encore en attente seront annulées.',
+        ...(a.compte !== 'aucun' ? ['Son compte de connexion au portail sera supprimé.'] : []),
+      ],
+      tone: 'danger',
+      confirmLabel: 'Supprimer',
+    });
+    if (!ok) return;
     setBusyId(a.id); setGlobalError('');
     try {
       await api.delete(`/api/acheteurs/${a.id}`);

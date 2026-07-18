@@ -3,6 +3,7 @@ import { useSearchParams, Link } from 'react-router-dom';
 import api from '../../api/client';
 import HelpButton from '../common/HelpButton';
 import HistoryFilterBar, { FilterField, FilterInput, FilterSelect } from '../common/HistoryFilterBar';
+import { useConfirm } from '../common/ConfirmDialog';
 import { useAuth } from '../../context/AuthContext';
 import type { Activite } from '../../types';
 
@@ -331,6 +332,7 @@ function SaisieTable({ subset, page, setPage, label, emptyIcon = '🛍️', empt
 
 export default function VentesPage() {
   const { user } = useAuth();
+  const { confirm } = useConfirm();
   const [searchParams, setSearchParams] = useSearchParams();
   const [activites, setActivites] = useState<Activite[]>([]);
   const [selectedActiviteId, setSelectedActiviteId] = useState<number | null>(null);
@@ -491,7 +493,14 @@ export default function VentesPage() {
   };
 
   const handleAnnuler = async (id: string) => {
-    if (!confirm('Annuler cette vente et réintégrer le stock ?')) return;
+    const ok = await confirm({
+      title: 'Annuler cette vente ?',
+      message: 'Le stock des articles vendus sera réintégré.',
+      tone: 'danger',
+      confirmLabel: 'Oui, annuler la vente',
+      cancelLabel: 'Retour',
+    });
+    if (!ok) return;
     try { await api.delete(`/api/ventes/${id}`); loadData(); }
     catch (e: unknown) { alert(apiMsg(e)); }
   };

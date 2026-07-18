@@ -3,6 +3,7 @@ import api from '../../api/client';
 import type { Abonnement, Promotion } from '../../types';
 import { MonthPicker } from './MonthPicker';
 import HistoryFilterBar, { FilterField, FilterInput, FilterSegmented } from '../common/HistoryFilterBar';
+import { useConfirm } from '../common/ConfirmDialog';
 
 const MODE_LABELS: Record<string, { label: string; color: string }> = {
   actif:     { label: 'Actif',        color: '#16a34a' },
@@ -251,6 +252,7 @@ interface MontantMoisInfo {
 }
 
 export default function AbonnementsManagement() {
+  const { confirm } = useConfirm();
   const [abonnements, setAbonnements] = useState<Abonnement[]>([]);
   const [selected, setSelected] = useState<Abonnement | null>(null);
   const [loading, setLoading] = useState(true);
@@ -431,9 +433,17 @@ export default function AbonnementsManagement() {
     const autre: 'basique' | 'premium' = courante === 'premium' ? 'basique' : 'premium';
     const autreLbl = autre === 'premium' ? 'Activité Premium' : 'Activité Basique';
     const avertissement = autre === 'basique'
-      ? "\n\nAttention : en Basique sans labo, l'Espace Produit du client sera verrouillé (ses produits existants restent en base)."
+      ? "Attention : en Basique sans labo, l'Espace Produit du client sera verrouillé (ses produits existants restent en base)."
       : '';
-    if (!window.confirm(`Changer la formule d'activités vers « ${autreLbl} » ? La mensualité sera recalculée.${avertissement}`)) return;
+    const ok = await confirm({
+      title: `Changer la formule d'activités vers « ${autreLbl} » ?`,
+      message: 'La mensualité sera recalculée.',
+      details: avertissement ? [avertissement] : undefined,
+      tone: 'primary',
+      icon: '🔁',
+      confirmLabel: 'Changer de formule',
+    });
+    if (!ok) return;
     setFormuleError(null);
     setFormuleSaving(true);
     try {

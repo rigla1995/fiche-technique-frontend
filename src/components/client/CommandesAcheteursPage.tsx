@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import api from '../../api/client';
 import GuideButton from './GuideButton';
 import CommandeStepper from '../common/CommandeStepper';
+import { useConfirm } from '../common/ConfirmDialog';
 
 // Thème violet de l'Espace Acheteurs
 const C = '#6d28d9';
@@ -64,6 +65,7 @@ interface Manquant { nom: string; unite: string; disponible: number; necessaire:
 interface LaboOpt { id: number; nom: string }
 
 export default function CommandesAcheteursPage() {
+  const { prompt } = useConfirm();
   const [searchParams] = useSearchParams();
   const [commandes, setCommandes] = useState<Commande[]>([]);
   const [acheteurs, setAcheteurs] = useState<AcheteurOpt[]>([]);
@@ -235,9 +237,19 @@ export default function CommandesAcheteursPage() {
   };
 
   const annuler = async (c: Commande) => {
-    const msgStock = `Annuler la commande du ${fmtDate(c.dateCommande)} à ${c.acheteurNom} ?\n\nLe stock sera réintégré et la facture ${c.factureNumero || ''} supprimée.`;
-    const msgAttente = `Refuser la commande du ${fmtDate(c.dateCommande)} de ${c.acheteurNom} ?${c.source === 'portail' ? '\n\nL\'acheteur sera prévenu par email.' : ''}`;
-    const motif = window.prompt(`${c.statut === 'en_attente' ? msgAttente : msgStock}\n\nMotif (optionnel) :`);
+    const enAttente = c.statut === 'en_attente';
+    const motif = await prompt({
+      title: enAttente ? 'Refuser la commande ?' : 'Annuler la commande ?',
+      message: enAttente
+        ? `Commande du ${fmtDate(c.dateCommande)} de ${c.acheteurNom}.${c.source === 'portail' ? '\n\nL\'acheteur sera prévenu par email.' : ''}`
+        : `Commande du ${fmtDate(c.dateCommande)} à ${c.acheteurNom}.\n\nLe stock sera réintégré et la facture ${c.factureNumero || ''} supprimée.`,
+      inputLabel: 'Motif (optionnel)',
+      multiline: true,
+      tone: 'danger',
+      icon: '↩️',
+      confirmLabel: enAttente ? 'Refuser la commande' : 'Annuler la commande',
+      cancelLabel: 'Retour',
+    });
     if (motif === null) return;
     setBusyId(c.id); setError('');
     try {
