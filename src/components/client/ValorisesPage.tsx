@@ -36,9 +36,6 @@ export default function ValorisesPage() {
   const [showComposed, setShowComposed] = useState(false);
   const [editComposeId, setEditComposeId] = useState<number | null>(null);
   const [ftProduct, setFtProduct] = useState<Product | null>(null);
-  const [ftLabos, setFtLabos] = useState<{ id: number; nom: string }[]>([]);
-  const [ftLaboId, setFtLaboId] = useState<number | null>(null);
-  const [ftLoading, setFtLoading] = useState(false);
   const [viewProduct, setViewProduct] = useState<Product | null>(null);
   const [tab, setTab] = useState<'composes' | 'referentiel'>('composes');
   const [hasLabos, setHasLabos] = useState(false);
@@ -119,21 +116,10 @@ export default function ValorisesPage() {
 
   const openView = (p: Product) => { setViewProduct(p); };
 
-  // FT d'un composé : le coût se calcule sur les prix d'appro du/des LABO(s) de fabrication,
-  // indépendamment des activités. On récupère les labos liés ; sélecteur si plusieurs.
-  const openFt = async (p: Product) => {
-    setFtProduct(p); setFtLabos([]); setFtLaboId(null); setFtLoading(true);
-    try {
-      const { data } = await api.get(`/api/products/${p.id}`);
-      const labos = (data.labos ?? []) as { id: number; nom: string }[];
-      setFtLabos(labos);
-      if (labos.length === 1) setFtLaboId(labos[0].id);
-      else if (labos.length === 0) setFtLaboId(0); // repli : aucun labo → contexte activité
-    } catch {
-      setFtLaboId(0);
-    } finally { setFtLoading(false); }
-  };
-  const closeFt = () => { setFtProduct(null); setFtLabos([]); setFtLaboId(null); };
+  // FT d'un composé : le modal charge lui-même les contextes assignés (activités + labos)
+  // via GET /api/products/:id/ft-contextes — plus de sélection préalable du labo ici.
+  const openFt = (p: Product) => setFtProduct(p);
+  const closeFt = () => setFtProduct(null);
 
   const deleteCompose = async (p: Product) => {
     if (!(await confirm({
@@ -318,21 +304,55 @@ export default function ValorisesPage() {
                     product={p}
                     icon="💎"
                     iconGradient="linear-gradient(135deg,#6366f1,#4338ca)"
-                    badges={<span style={{ fontSize: '0.72rem', color: '#4338ca', background: '#eef2ff', borderRadius: 6, padding: '1px 7px' }}>{p.categorieProduitName ?? 'Sans catégorie'}</span>}
+                    badges={<span style={{ fontSize: '0.62rem', fontWeight: 700, letterSpacing: '0.04em', background: '#e0e7ff', color: '#3730a3', border: '1px solid #c7d2fe', borderRadius: 20, padding: '2px 8px' }}>🏷️ {p.categorieProduitName ?? 'Sans catégorie'}</span>}
                     onVoir={() => openView(p)}
                     voirSummary={summaryParts.join('  ·  ') || undefined}
                     actions={(
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 6, width: '100%' }}>
-                        <button onClick={() => openFt(p)} disabled={(p.ingredientsCount ?? 0) === 0 || (ftLoading && ftProduct?.id === p.id)} title="Générer la fiche technique (prix d'appro du labo)"
-                          style={{ background: '#f0fdf4', border: '1px solid #c7d2fe', borderRadius: 8, color: '#4338ca', cursor: (p.ingredientsCount ?? 0) === 0 ? 'not-allowed' : 'pointer', padding: '7px', fontSize: '0.78rem', fontWeight: 700, opacity: (p.ingredientsCount ?? 0) === 0 ? 0.5 : 1 }}>📄 Fiche technique (XLS)</button>
-                        {composedLocked ? (
-                          <div style={{ textAlign: 'center' }}>{composedLockedNote}</div>
-                        ) : (
-                          <div style={{ display: 'flex', gap: 6 }}>
-                            <button onClick={() => setEditComposeId(p.id)} style={{ flex: 1, background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 8, color: '#1d4ed8', cursor: 'pointer', padding: '6px', fontSize: '0.78rem', fontWeight: 600 }}>✏️ Modifier</button>
-                            <button onClick={() => deleteCompose(p)} disabled={deletingId === p.id} title="Supprimer" style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, color: '#dc2626', cursor: 'pointer', padding: '6px 10px', fontSize: '0.78rem', fontWeight: 700 }}>🗑</button>
-                          </div>
-                        )}
+                        {/* Rangée d'actions alignée sur renderActions de ProductList : icône + label empilés */}
+                        <div style={{ display: 'flex', gap: 6, justifyContent: 'center', alignItems: 'center', width: '100%' }}>
+                          <button
+                            onClick={() => openFt(p)}
+                            disabled={(p.ingredientsCount ?? 0) === 0}
+                            title="Générer la Fiche Technique"
+                            style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: 2, padding: '5px 8px', borderRadius: 7, fontSize: '0.6rem', fontWeight: 600, minWidth: 54, background: '#eef2ff', border: '1px solid #c7d2fe', color: '#4338ca', cursor: (p.ingredientsCount ?? 0) === 0 ? 'not-allowed' : 'pointer', opacity: (p.ingredientsCount ?? 0) === 0 ? 0.5 : 1 }}
+                          >
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect width="24" height="24" rx="3" fill="#217346"/><path d="M14 2H6C4.9 2 4 2.9 4 4V20C4 21.1 4.9 22 6 22H18C19.1 22 20 21.1 20 20V8L14 2Z" fill="#185C37"/><path d="M14 2V8H20L14 2Z" fill="#107C41"/><text x="7" y="18" fill="white" fontSize="8" fontWeight="bold" fontFamily="Arial,sans-serif">XLS</text></svg>
+                            Fiche tech.
+                          </button>
+                          {!composedLocked && (
+                            <>
+                              <button
+                                className="btn btn-ghost btn-sm"
+                                title="Modifier"
+                                onClick={() => setEditComposeId(p.id)}
+                                style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: 2, padding: '5px 8px', borderRadius: 7, fontSize: '0.6rem', fontWeight: 600, color: '#374151', minWidth: 54 }}
+                              >
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                                </svg>
+                                Modifier
+                              </button>
+                              <button
+                                className="btn btn-danger btn-sm"
+                                title="Supprimer"
+                                onClick={() => deleteCompose(p)}
+                                disabled={deletingId === p.id}
+                                style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: 2, padding: '5px 8px', borderRadius: 7, fontSize: '0.6rem', fontWeight: 600, minWidth: 54 }}
+                              >
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                  <polyline points="3 6 5 6 21 6"/>
+                                  <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+                                  <path d="M10 11v6M14 11v6"/>
+                                  <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+                                </svg>
+                                Supprimer
+                              </button>
+                            </>
+                          )}
+                        </div>
+                        {composedLocked && <div style={{ textAlign: 'center' }}>{composedLockedNote}</div>}
                       </div>
                     )}
                     activities={allActivities.map((a) => ({ id: a.id, nom: a.nom }))}
@@ -395,10 +415,10 @@ export default function ValorisesPage() {
       {loading ? (
         <div className="loading-text">Chargement…</div>
       ) : articles.length === 0 ? (
-        <div style={{ background: 'linear-gradient(135deg,#f0fdf4,#dcfce7)', border: '2px dashed #c7d2fe', borderRadius: 18, padding: '48px 32px', textAlign: 'center' }}>
+        <div style={{ background: 'linear-gradient(135deg,#eef2ff,#e0e7ff)', border: '2px dashed #c7d2fe', borderRadius: 18, padding: '48px 32px', textAlign: 'center' }}>
           <div style={{ fontSize: '2.8rem', marginBottom: 14 }}>💎</div>
-          <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#14532d', margin: '0 0 8px' }}>Aucun article valorisable</h3>
-          <p style={{ color: '#166534', fontSize: '0.88rem', margin: 0, maxWidth: 440, marginInline: 'auto' }}>Les articles valorisables proviennent des familles marquées « vendable » et « non consommable » dans votre référentiel.</p>
+          <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#3730a3', margin: '0 0 8px' }}>Aucun article valorisable</h3>
+          <p style={{ color: '#4338ca', fontSize: '0.88rem', margin: 0, maxWidth: 440, marginInline: 'auto' }}>Les articles valorisables proviennent des familles marquées « vendable » et « non consommable » dans votre référentiel.</p>
         </div>
       ) : groups.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-muted)' }}>Aucun résultat pour ces filtres.</div>
@@ -406,10 +426,10 @@ export default function ValorisesPage() {
         <>
           {pageGroups.map(group => (
             <div key={group.cat} className="card" style={{ marginBottom: 16, overflow: 'hidden' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '11px 16px', background: 'linear-gradient(135deg,#f0fdf4,#dcfce7)', borderBottom: '1px solid #bbf7d0' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '11px 16px', background: 'linear-gradient(135deg,#eef2ff,#e0e7ff)', borderBottom: '1px solid #c7d2fe' }}>
                 <span style={{ fontWeight: 800, fontSize: '0.9rem', color: '#3730a3' }}>🗂️ {group.cat}</span>
-                {group.famille && <span style={{ fontSize: '0.72rem', color: '#16a34a', fontWeight: 600 }}>· {group.famille}</span>}
-                <span style={{ marginLeft: 'auto', fontSize: '0.72rem', color: '#16a34a', fontWeight: 700, background: '#dcfce7', borderRadius: 20, padding: '2px 9px' }}>{group.items.length}</span>
+                {group.famille && <span style={{ fontSize: '0.72rem', color: '#4338ca', fontWeight: 600 }}>· {group.famille}</span>}
+                <span style={{ marginLeft: 'auto', fontSize: '0.72rem', color: '#4338ca', fontWeight: 700, background: '#e0e7ff', border: '1px solid #c7d2fe', borderRadius: 20, padding: '2px 9px' }}>{group.items.length}</span>
               </div>
               <div className="table-responsive">
                 <table className="table" style={{ margin: 0 }}>
@@ -431,7 +451,7 @@ export default function ValorisesPage() {
                             value={a.categorie_produit_id ? String(a.categorie_produit_id) : ''}
                             disabled={savingId === a.id || categories.length === 0}
                             onChange={e => assign(a, e.target.value)}
-                            style={{ minWidth: 180, padding: '7px 10px', borderRadius: 8, border: `1.5px solid ${a.categorie_produit_id ? '#c7d2fe' : '#fca5a5'}`, background: a.categorie_produit_id ? '#f0fdf4' : '#fef2f2', fontSize: '0.85rem', color: '#0f172a', cursor: 'pointer' }}
+                            style={{ minWidth: 180, padding: '7px 10px', borderRadius: 8, border: `1.5px solid ${a.categorie_produit_id ? '#c7d2fe' : '#fca5a5'}`, background: a.categorie_produit_id ? '#eef2ff' : '#fef2f2', fontSize: '0.85rem', color: '#0f172a', cursor: 'pointer' }}
                           >
                             <option value="">— Aucune —</option>
                             {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -487,60 +507,15 @@ export default function ValorisesPage() {
         </div>
       )}
 
-      {/* Sélecteur de labo si le composé est fabriqué dans plusieurs labos */}
-      {ftProduct && !ftLoading && ftLaboId === null && ftLabos.length > 1 && (
-        <div className="modal-overlay" onClick={closeFt}>
-          <div className="modal" style={{ maxWidth: 440 }} onClick={e => e.stopPropagation()}>
-            <div className="modal-header modal-header--primary">
-              <h2>📄 Fiche technique — choisir le labo</h2>
-              <button className="modal-close" onClick={closeFt}>×</button>
-            </div>
-            <div className="modal-body">
-              <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: '0 0 14px' }}>
-                « {ftProduct.name} » est fabriqué dans plusieurs labos. Choisissez le labo dont les <strong>prix d'appro</strong> serviront au calcul du coût.
-              </p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {ftLabos.map(l => (
-                  <button key={l.id} onClick={() => setFtLaboId(l.id)}
-                    style={{ display: 'flex', alignItems: 'center', gap: 10, textAlign: 'left', padding: '12px 14px', borderRadius: 10, border: '1.5px solid #c7d2fe', background: '#f0fdf4', color: '#3730a3', fontWeight: 700, cursor: 'pointer', fontSize: '0.9rem' }}>
-                    🏭 {l.nom}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div className="modal-footer"><button className="btn btn-ghost" onClick={closeFt}>Annuler</button></div>
-          </div>
-        </div>
-      )}
-
-      {/* Mode labo : coût sur les prix d'appro du labo */}
-      {ftProduct && ftLaboId !== null && ftLaboId > 0 && (() => {
-        const labo = ftLabos.find(l => l.id === ftLaboId);
-        return (
-          <FicheTechniqueModal
-            productId={ftProduct.id}
-            productName={ftProduct.name}
-            hasIngredients={(ftProduct.ingredientsCount ?? 0) > 0}
-            resolvedActId={0}
-            laboId={ftLaboId}
-            contextLabel={labo ? `Labo : ${labo.nom}` : ''}
-            activityName={labo?.nom ?? ''}
-            activities={[]}
-            onClose={closeFt}
-          />
-        );
-      })()}
-
-      {/* Repli (aucun labo associé) : contexte activité comme avant */}
-      {ftProduct && ftLaboId === 0 && (
+      {/* FT : le modal charge lui-même les contextes assignés (activités + labos).
+          Repli FT Manuel (produit sans aucun contexte) : première activité, comme
+          l'ancienne branche « composé sans labo » — continuité des prix manuels. */}
+      {ftProduct && (
         <FicheTechniqueModal
           productId={ftProduct.id}
           productName={ftProduct.name}
           hasIngredients={(ftProduct.ingredientsCount ?? 0) > 0}
-          resolvedActId={ftProduct.activites?.[0]?.id ?? 0}
-          contextLabel={ftProduct.activites?.[0]?.nom ? `Activité : ${ftProduct.activites[0].nom}` : ''}
-          activityName={ftProduct.activites?.[0]?.nom ?? ''}
-          activities={(ftProduct.activites ?? []).map(a => ({ id: a.id, nom: a.nom }))}
+          fallbackActId={ftProduct.activites?.[0]?.id ?? 0}
           onClose={closeFt}
         />
       )}
