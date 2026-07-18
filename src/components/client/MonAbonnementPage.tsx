@@ -10,6 +10,8 @@ const MODE_INFO: Record<string, { label: string; color: string; bg: string; icon
 };
 
 const fmtDate = (d: string) => d ? new Date(d).toLocaleDateString('fr-FR') : '—';
+// Lendemain d'une date (fin de promo → premier jour au tarif normal)
+const lendemain = (d: string) => { const dt = new Date(d); dt.setDate(dt.getDate() + 1); return dt.toLocaleDateString('fr-FR'); };
 
 const STATUT_COLORS: Record<string, string> = {
   payé:       '#16a34a',
@@ -56,11 +58,6 @@ const FORMULE_INFO: Record<'basique' | 'premium', { label: string; bg: string; c
 export default function MonAbonnementPage() {
   const [abo, setAbo] = useState<Abonnement | null>(null);
   const [loading, setLoading] = useState(true);
-  const [moduleVenteActif, setModuleVenteActif] = useState(false);
-  const [hasPendingVente, setHasPendingVente] = useState(false);
-  const [requestingVente, setRequestingVente] = useState(false);
-  const [requestedVente, setRequestedVente] = useState(false);
-  const [requestErrorVente, setRequestErrorVente] = useState('');
   const [hasPendingPremium, setHasPendingPremium] = useState(false);
   const [requestingPremium, setRequestingPremium] = useState(false);
   const [requestedPremium, setRequestedPremium] = useState(false);
@@ -76,15 +73,10 @@ export default function MonAbonnementPage() {
     }
     // supplementary calls — failures must not block the main page
     try {
-      const [entRes, demRes] = await Promise.all([
-        api.get('/api/entreprise'),
-        api.get('/api/abonnements/demandes'),
-      ]);
-      setModuleVenteActif(!!entRes.data?.module_vente_actif);
+      const demRes = await api.get('/api/abonnements/demandes');
       const demandes = demRes.data as { typeDemande: string; statut: string }[];
-      setHasPendingVente(demandes.some(d => d.typeDemande === 'activer_module_vente' && d.statut === 'en_attente'));
       setHasPendingPremium(demandes.some(d => d.typeDemande === 'passer_formule_premium' && d.statut === 'en_attente'));
-    } catch { /* module vente section simply won't show */ }
+    } catch { /* bouton Premium simplement sans état « en attente » */ }
     try {
       const { data } = await api.get('/api/abonnements/contrat-actif?info=1');
       setContratInfo(data);
@@ -101,18 +93,6 @@ export default function MonAbonnementPage() {
 
   if (loading) return <div style={{ padding: 40, textAlign: 'center', color: '#9ca3af' }}>Chargement…</div>;
   if (!abo) return <div style={{ padding: 40, textAlign: 'center', color: '#9ca3af' }}>Abonnement introuvable</div>;
-
-  const handleRequestVente = async () => {
-    setRequestingVente(true); setRequestErrorVente('');
-    try {
-      await api.post('/api/abonnements/demandes', { typeDemande: 'activer_module_vente' });
-      setRequestedVente(true); setHasPendingVente(true);
-    } catch (e: unknown) {
-      setRequestErrorVente((e as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Erreur');
-    } finally {
-      setRequestingVente(false);
-    }
-  };
 
   const handleRequestPremium = async () => {
     setRequestingPremium(true); setRequestErrorPremium('');
@@ -208,6 +188,19 @@ export default function MonAbonnementPage() {
                   }
                 </div>
               ))}
+              {/* Base acheteurs (option B2B) — palier du carnet quand l'option est active */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid #f3f4f6' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <span style={{ fontSize: '1.1rem' }}>🤝</span>
+                  <span style={{ fontWeight: 600, fontSize: '0.88rem', color: '#374151' }}>Base acheteurs</span>
+                </div>
+                {(config.nbAcheteurs ?? 0) > 0
+                  ? <span style={{ fontSize: '0.75rem', fontWeight: 800, padding: '3px 10px', borderRadius: 20, background: '#f5f3ff', color: '#6d28d9' }}>
+                      jusqu'à {breakdown?.acheteurs?.palier ?? config.nbAcheteurs} acheteurs
+                    </span>
+                  : <span style={{ fontSize: '0.75rem', color: '#9ca3af', fontStyle: 'italic' }}>Non incluse</span>
+                }
+              </div>
               {(config.nbActivites ?? 0) >= 1 && formuleInfo && (
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid #f3f4f6' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -308,8 +301,23 @@ export default function MonAbonnementPage() {
                       </div>
                     </div>
                     {pricing.activePromoMensuel && (
-                      <div style={{ marginTop: 8, background: '#f5f3ff', borderRadius: 6, padding: '4px 10px', display: 'inline-block', fontSize: '0.75rem', color: '#7c3aed', fontWeight: 700 }}>
-                        🎉 Promotion appliquée — {promoTypeLabel(pricing.activePromoMensuel)}
+                      <div style={{ marginTop: 8 }}>
+                        <div style={{ background: '#f5f3ff', borderRadius: 6, padding: '4px 10px', display: 'inline-block', fontSize: '0.75rem', color: '#7c3aed', fontWeight: 700 }}>
+                          🎉 Promotion appliquée — {promoTypeLabel(pricing.activePromoMensuel)}
+                        </div>
+                        {/* Durée de la promotion : période à ce prix, puis retour au tarif normal */}
+                        <div style={{ marginTop: 5, fontSize: '0.74rem', color: '#6b7280', lineHeight: 1.5 }}>
+                          {pricing.activePromoMensuel.dateFin ? (
+                            <>
+                              Du <strong>{fmtDate(pricing.activePromoMensuel.dateDebut)}</strong> au{' '}
+                              <strong>{fmtDate(pricing.activePromoMensuel.dateFin)}</strong> à ce prix — à partir du{' '}
+                              <strong>{lendemain(pricing.activePromoMensuel.dateFin)}</strong> :{' '}
+                              <strong style={{ color: '#1e40af' }}>{(pricing.baseMensuel ?? 0).toFixed(2)} DT/mois</strong>
+                            </>
+                          ) : (
+                            <>Depuis le <strong>{fmtDate(pricing.activePromoMensuel.dateDebut)}</strong> — promotion permanente</>
+                          )}
+                        </div>
                       </div>
                     )}
                   </div>
@@ -392,52 +400,6 @@ export default function MonAbonnementPage() {
           <span style={{ fontSize: '0.72rem', fontWeight: 700, padding: '4px 10px', borderRadius: 20, background: '#fef3c7', color: '#92400e', border: '1px solid #fde68a' }}>Active</span>
         </div>
       ))}
-
-      {/* Module Vente */}
-      <div style={{ background: 'var(--card-bg)', borderRadius: 16, border: '1.5px solid #fcd34d', overflow: 'hidden', marginBottom: 16, boxShadow: '0 2px 8px rgba(180,83,9,0.08)' }}>
-        <div style={{ background: 'linear-gradient(135deg, #fffbeb, #fef3c7)', padding: '14px 20px', borderBottom: '1px solid #fcd34d', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ fontWeight: 800, fontSize: '0.9rem', color: '#78350f', display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span>🛒</span> Module Vente
-          </div>
-          <span style={{
-            fontSize: '0.75rem', fontWeight: 700, padding: '3px 10px', borderRadius: 20,
-            background: moduleVenteActif ? '#dcfce7' : '#fee2e2',
-            color: moduleVenteActif ? '#166534' : '#991b1b',
-          }}>
-            {moduleVenteActif ? '✅ Actif' : '🔒 Inactif'}
-          </span>
-        </div>
-        <div style={{ padding: '16px 20px' }}>
-          <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: 14, lineHeight: 1.6 }}>
-            Gérez votre catalogue vendable, vos prestataires de livraison et suivez vos ventes avec le rapport de rentabilité.
-          </p>
-          {moduleVenteActif ? (
-            <div style={{ background: '#dcfce7', borderRadius: 10, padding: '10px 16px', color: '#166534', fontWeight: 600, fontSize: '0.88rem' }}>
-              ✅ Module activé — accédez à l'espace Vente depuis le menu
-            </div>
-          ) : (hasPendingVente || requestedVente) ? (
-            <div style={{ background: '#fef9c3', borderRadius: 10, padding: '10px 16px', color: '#854d0e', fontWeight: 600, fontSize: '0.88rem' }}>
-              ⏳ Demande en attente de validation par l'administrateur
-            </div>
-          ) : (
-            <>
-              <button
-                onClick={handleRequestVente}
-                disabled={requestingVente}
-                style={{
-                  background: 'linear-gradient(135deg, #78350f 0%, #b45309 100%)',
-                  color: '#fff', border: 'none', borderRadius: 10, padding: '10px 22px',
-                  cursor: requestingVente ? 'default' : 'pointer', fontWeight: 700, fontSize: '0.9rem',
-                  opacity: requestingVente ? 0.7 : 1,
-                  boxShadow: '0 4px 14px rgba(180,83,9,0.3)',
-                }}>
-                {requestingVente ? 'Envoi…' : '🚀 Demander l\'activation'}
-              </button>
-              {requestErrorVente && <div style={{ color: '#dc2626', fontSize: '0.82rem', marginTop: 8 }}>{requestErrorVente}</div>}
-            </>
-          )}
-        </div>
-      </div>
 
     </div>
   );
