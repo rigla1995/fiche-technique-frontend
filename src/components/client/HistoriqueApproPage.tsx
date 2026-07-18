@@ -412,21 +412,6 @@ export default function HistoriqueApproPage() {
     a.click(); URL.revokeObjectURL(url);
   };
 
-  const [exportingPdf, setExportingPdf] = useState(false);
-  const exportPdf = async () => {
-    setExportingPdf(true);
-    try {
-      const params = buildApproParams();
-      const { data } = await api.get(`/api/stock/historique/export-pdf?${params}`, { responseType: 'blob' });
-      const url = URL.createObjectURL(new Blob([data], { type: 'application/pdf' }));
-      const a = document.createElement('a'); a.href = url;
-      a.download = `historique-appro-${new Date().toISOString().slice(0, 10)}.pdf`;
-      a.click(); URL.revokeObjectURL(url);
-    } catch { /* ignore */ }
-    setExportingPdf(false);
-  };
-
-
   const pageTitle = t('client.historique_appro.title');
   const contextSubtitle = 'Consultation et export de l\'historique des approvisionnements';
 
@@ -474,7 +459,6 @@ export default function HistoriqueApproPage() {
         onReset={() => { setSelectedCategoryId(''); setSelectedIngredientId(''); setSelectedFournisseurId(''); setSelectedTypes(new Set()); setStartDate(yearStart); setEndDate(yearEnd); }}
         showReset={!!(selectedCategoryId || selectedIngredientId || selectedFournisseurId || selectedTypes.size > 0 || startDate !== yearStart || endDate !== yearEnd)}
         onExportExcel={exportExcel} excelDisabled={results.length === 0 || !canWrite} excelLabel={`Exporter${selectedIds.size > 0 ? ` (${selectedIds.size})` : ''}`}
-        onExportPdf={exportPdf} pdfDisabled={results.length === 0} exportingPdf={exportingPdf}
       >
         <FilterField label="📅 Du"><FilterInput type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} /></FilterField>
         <FilterField label="📅 Au"><FilterInput type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} /></FilterField>
