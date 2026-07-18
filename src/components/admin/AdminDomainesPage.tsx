@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import api from '../../api/client';
 import HistoryFilterBar, { FilterField, FilterInput } from '../common/HistoryFilterBar';
+import { useConfirm } from '../common/ConfirmDialog';
 
 interface Domaine { id: number; nom: string }
 
@@ -16,6 +17,7 @@ export default function AdminDomainesPage() {
   const [nom, setNom] = useState('');
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState('');
+  const { confirm } = useConfirm();
 
   const load = () => {
     setLoading(true);
@@ -42,7 +44,12 @@ export default function AdminDomainesPage() {
   };
 
   const remove = async (d: Domaine) => {
-    if (!window.confirm(`Supprimer le domaine « ${d.nom} » ?`)) return;
+    const ok = await confirm({
+      title: `Supprimer le domaine « ${d.nom} » ?`,
+      tone: 'danger',
+      confirmLabel: 'Supprimer',
+    });
+    if (!ok) return;
     try {
       await api.delete(`/api/domaines/${d.id}`);
       setDomaines((prev) => prev.filter((x) => x.id !== d.id));

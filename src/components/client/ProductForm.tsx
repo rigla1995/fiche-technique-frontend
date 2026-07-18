@@ -3,6 +3,7 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
+import { useConfirm } from '../common/ConfirmDialog';
 import type { Activite, ActiviteTypesSummary, Category, CategorieProduit, Ingredient, Product } from '../../types';
 
 interface IngredientLine {
@@ -19,6 +20,7 @@ interface SubProductLine {
 export default function ProductForm() {
   const { t } = useTranslation();
   const { canWrite, user } = useAuth();
+  const { confirm } = useConfirm();
   const navigate = useNavigate();
   const { id } = useParams();
   const [searchParams] = useSearchParams();
@@ -277,7 +279,12 @@ export default function ProductForm() {
   };
 
   const handleDelete = async () => {
-    if (!window.confirm(t('client.products.delete_confirm'))) return;
+    const ok = await confirm({
+      title: t('client.products.delete_confirm'),
+      tone: 'danger',
+      confirmLabel: 'Supprimer',
+    });
+    if (!ok) return;
     await api.delete(`/products/${id}`);
     navigate(buildBackUrl(productType));
   };
