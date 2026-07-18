@@ -16,6 +16,7 @@ interface OffreRow {
   unite: string;
   categorie: string;
   famille: string | null;
+  categorieProduit?: string | null; // catégorie produit (onglet produits)
   offreId: number | null;
   prixUnitaireHt: number;
   tauxTva: number;
@@ -249,7 +250,14 @@ export default function TarifsAcheteursPage() {
                         return (
                           <tr key={k} style={{ borderBottom: '1px solid #f1f5f9', background: dirty ? '#fffbeb' : 'transparent' }}>
                             <td style={{ padding: '9px 14px' }}>
-                              <div style={{ fontWeight: 700, color: '#1e293b' }}>{r.nom}</div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                                <span style={{ fontWeight: 700, color: '#1e293b' }}>{r.nom}</span>
+                                {r.categorieProduit && (
+                                  <span style={{ fontSize: '0.68rem', fontWeight: 700, color: CD, background: CL, border: `1px solid ${CB}`, borderRadius: 20, padding: '2px 9px', whiteSpace: 'nowrap' }}>
+                                    🏷️ {r.categorieProduit}
+                                  </span>
+                                )}
+                              </div>
                               <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
                                 {r.unite}{r.famille ? ` · ${r.famille}` : ''}
                               </div>
