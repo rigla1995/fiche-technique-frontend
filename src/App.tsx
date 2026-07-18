@@ -85,6 +85,11 @@ function RequireAcheteur({ children }: { children: React.ReactElement }) {
 function ClientDefaultRedirect() {
   const { user } = useAuth();
   if (user?.role === 'gerant') return <Navigate to="/client/dashboard" replace />;
+  // Compteurs pas encore connus (session en cache d'avant le login enrichi,
+  // /auth/me en cours) : attendre plutôt que de supposer 0 et rediriger à tort.
+  if (user?.role === 'client' && user.activitesCount === undefined && user.labosCount === undefined) {
+    return <div className="page-loading"><div className="spinner" /></div>;
+  }
   // Compte dépôt (labo sans activité) : le dashboard reste la maison
   if ((user?.activitesCount ?? 0) === 0 && (user?.labosCount ?? 0) === 0) return <Navigate to="/client/activites" replace />;
   return <Navigate to="/client/dashboard" replace />;
@@ -102,6 +107,11 @@ function RootRedirect() {
   // Onboarding steps
   if ((user.onboardingStep ?? 0) === 1) return <Navigate to="/client/profile" replace />;
   if ((user.onboardingStep ?? 0) === 2) return <Navigate to="/client/activites" replace />;
+  // Compteurs pas encore connus (session en cache, /auth/me en cours) :
+  // attendre plutôt que de supposer 0 et envoyer vers Mes Activités à tort.
+  if (user.activitesCount === undefined && user.labosCount === undefined) {
+    return <div className="page-loading"><div className="spinner" /></div>;
+  }
   // Client post-onboarding : sans activité NI labo → mes activités, sinon → tableau de bord
   // (un compte dépôt = labo + acheteurs sans activité atterrit sur le dashboard)
   if ((user.activitesCount ?? 0) === 0 && (user.labosCount ?? 0) === 0) return <Navigate to="/client/activites" replace />;
