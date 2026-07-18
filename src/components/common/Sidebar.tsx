@@ -391,23 +391,6 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                 </>
               )}
 
-              {/* Gérants — visible only if subscription allows; unlocks at level 1 (≥1 activité/labo) */}
-              {isEntreprise && user?.role === 'client' && showGerants && (
-                <>
-                <Divider />
-                <li>
-                  {!lockLevel0 ? (
-                    <NavLink to="/client/gerants" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>
-                      <span className="link-icon">👥</span>
-                      <span className="link-label">Gérants</span>
-                    </NavLink>
-                  ) : (
-                    <LockedLink label="Gérants" reason="Créez une activité ou un labo pour débloquer" />
-                  )}
-                </li>
-                </>
-              )}
-
               {/* Entreprise layout */}
               {isEntreprise && (
                 <>
@@ -570,6 +553,23 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                       : <NavLink to="/client/fournisseurs" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}><span className="link-icon">🚚</span><span className="link-label">Fournisseurs</span></NavLink>
                     }
                   </li>
+
+                  {/* Gérants — sous Fournisseurs ; visible si l'abonnement le permet, déverrouillé au niveau 1 */}
+                  {user?.role === 'client' && showGerants && (
+                    <>
+                      <Divider />
+                      <li>
+                        {!lockLevel0 ? (
+                          <NavLink to="/client/gerants" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>
+                            <span className="link-icon">👥</span>
+                            <span className="link-label">Gérants</span>
+                          </NavLink>
+                        ) : (
+                          <LockedLink label="Gérants" reason="Créez une activité ou un labo pour débloquer" />
+                        )}
+                      </li>
+                    </>
+                  )}
 
                   {/* Demandes — toujours actif */}
                   <Divider />
