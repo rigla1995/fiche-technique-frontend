@@ -141,6 +141,14 @@ export default function LaboFacturesApproPage() {
     });
   };
 
+  // Facture PDF (charte des factures acheteurs : émetteur = fournisseur)
+  const ouvrirPdf = async (id: number) => {
+    try {
+      const res = await api.get(`/api/factures/${id}/pdf`, { responseType: 'blob' });
+      window.open(URL.createObjectURL(res.data), '_blank');
+    } catch { /* facture indisponible : rien à ouvrir */ }
+  };
+
   const totalPages = Math.max(1, Math.ceil(factures.length / PAGE_SIZE));
   const pagedFactures = factures.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
@@ -271,6 +279,13 @@ export default function LaboFacturesApproPage() {
                       <div style={{ fontSize: '0.68rem', color: '#059669', fontWeight: 600, textTransform: 'uppercase' }}>Total TTC</div>
                       <div style={{ fontWeight: 800, color: '#059669', fontSize: '0.92rem' }}>{f.montantTTC.toFixed(3)} DT</div>
                     </div>
+                    {/* span cliquable (l'en-tête entier est déjà un <button>) */}
+                    <span role="button" tabIndex={0} title="Ouvrir la facture PDF"
+                      onClick={(e) => { e.stopPropagation(); ouvrirPdf(f.id); }}
+                      onKeyDown={(e) => { if (e.key === 'Enter') { e.stopPropagation(); ouvrirPdf(f.id); } }}
+                      style={{ background: '#fff', border: '1px solid #c4b5fd', color: '#6d28d9', borderRadius: 8, padding: '5px 10px', fontWeight: 700, fontSize: '0.76rem', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                      📄 PDF
+                    </span>
                     <span style={{ color: '#7c3aed', fontSize: '1rem' }}>{isExpanded ? '▼' : '▶'}</span>
                   </div>
                 </button>

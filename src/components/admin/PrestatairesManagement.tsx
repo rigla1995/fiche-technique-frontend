@@ -107,10 +107,12 @@ export default function PrestatairesManagement() {
         </button>
       </div>
 
-      {/* Barre de filtres (composant partagé) */}
+      {/* Barre de filtres (composant partagé, variante compacte : 2 contrôles
+          seulement — recherche et statut côte à côte sur une rangée) */}
       {!loading && prestataires.length > 0 && (
         <HistoryFilterBar
           accent="#6366f1" accentDark="#4f46e5"
+          compact
           subtitle={`${filtered.length} prestataire${filtered.length !== 1 ? 's' : ''}`}
           onReset={() => { setSearch(''); setFilterStatut(''); }}
           showReset={!!(search || filterStatut)}
@@ -118,7 +120,7 @@ export default function PrestatairesManagement() {
           <FilterField label="🔍 Recherche">
             <FilterInput type="text" placeholder="Nom du prestataire…" value={search} onChange={(e) => setSearch(e.target.value)} />
           </FilterField>
-          <FilterField label="📊 Statut" span>
+          <FilterField label="📊 Statut">
             <FilterSegmented options={statusFilters} value={filterStatut} onChange={(v) => setFilterStatut(v as '' | 'actif' | 'inactif')} accent="#6366f1" />
           </FilterField>
         </HistoryFilterBar>

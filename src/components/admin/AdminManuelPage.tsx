@@ -2,7 +2,10 @@ import { useEffect, useState, useCallback, useMemo } from 'react';
 import api from '../../api/client';
 import HistoryFilterBar, { FilterField, FilterInput, FilterSelect } from '../common/HistoryFilterBar';
 import MarkdownView from '../common/MarkdownView';
+import Pagination from '../common/Pagination';
 import { useConfirm } from '../common/ConfirmDialog';
+
+const PER_PAGE = 20;
 
 interface ManuelSection {
   id: number;
@@ -38,6 +41,7 @@ export default function AdminManuelPage() {
   const [err, setErr] = useState('');
   const [search, setSearch] = useState('');
   const [partieFilter, setPartieFilter] = useState('');
+  const [page, setPage] = useState(1);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -121,14 +125,19 @@ export default function AdminManuelPage() {
     (!partieFilter || s.partie === partieFilter) &&
     (!search || `${s.titre} ${s.slug} ${s.partie} ${s.motsCles || ''}`.toLowerCase().includes(search.toLowerCase())));
 
+  // Pagination sur la liste plate (une partie peut donc s'étaler sur deux pages)
+  const safePage = Math.min(page, Math.max(1, Math.ceil(filtered.length / PER_PAGE)));
+  const paged = filtered.slice((safePage - 1) * PER_PAGE, safePage * PER_PAGE);
+
   const grouped = useMemo(() => {
     const map = new Map<string, ManuelSection[]>();
-    for (const s of filtered) {
+    for (const s of paged) {
       if (!map.has(s.partie)) map.set(s.partie, []);
       map.get(s.partie)!.push(s);
     }
     return [...map.entries()];
-  }, [filtered]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filtered, safePage]);
 
   const activeCount = sections.filter((s) => s.actif).length;
 
@@ -150,13 +159,13 @@ export default function AdminManuelPage() {
       <HistoryFilterBar
         accent="#2563eb" accentDark="#1e40af"
         subtitle={`${filtered.length} section${filtered.length !== 1 ? 's' : ''}`}
-        onReset={() => { setSearch(''); setPartieFilter(''); }} showReset={!!search || !!partieFilter}
+        onReset={() => { setSearch(''); setPartieFilter(''); setPage(1); }} showReset={!!search || !!partieFilter}
       >
         <FilterField label="🔍 Recherche">
-          <FilterInput value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Titre, slug, mots-clés…" />
+          <FilterInput value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} placeholder="Titre, slug, mots-clés…" />
         </FilterField>
         <FilterField label="📂 Partie">
-          <FilterSelect value={partieFilter} onChange={(e) => setPartieFilter(e.target.value)}>
+          <FilterSelect value={partieFilter} onChange={(e) => { setPartieFilter(e.target.value); setPage(1); }}>
             <option value="">— Toutes —</option>
             {parties.map((p) => <option key={p} value={p}>{p}</option>)}
           </FilterSelect>
@@ -197,6 +206,7 @@ export default function AdminManuelPage() {
               </div>
             </div>
           ))}
+          <Pagination total={filtered.length} page={safePage} perPage={PER_PAGE} onChange={setPage} />
         </div>
       )}
 
