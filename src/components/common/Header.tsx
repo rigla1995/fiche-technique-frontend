@@ -63,7 +63,7 @@ export default function Header() {
       <div className="header-left">
         <button
           onClick={handleLogoClick}
-          title="Tableau de bord"
+          title="Accueil"
           style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center' }}
         >
           <LabFlowLogo height={36} />
