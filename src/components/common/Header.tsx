@@ -37,6 +37,9 @@ export default function Header() {
       navigate('/client/activites');
     } else if (eventType === 'demande_gerant_validee') {
       navigate('/client/gerants');
+    } else if (eventType === 'demande_acces_recue') {
+      // Demande d'accès reçue via le site vitrine → file admin dédiée
+      navigate('/admin/site/demandes');
     } else {
       navigate(user?.role === 'super_admin' ? '/admin/support' : '/client/support');
     }

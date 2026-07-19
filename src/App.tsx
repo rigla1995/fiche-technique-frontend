@@ -46,6 +46,8 @@ import AdminManuelPage from './components/admin/AdminManuelPage';
 import AdminDashboardPage from './components/admin/AdminDashboardPage';
 import AdminDomainesPage from './components/admin/AdminDomainesPage';
 import AdminSupportPage from './components/admin/AdminSupportPage';
+import AdminDemandesAccesPage from './components/admin/AdminDemandesAccesPage';
+import AdminPartenairesSitePage from './components/admin/AdminPartenairesSitePage';
 import ActiveAgentsPage from './components/admin/ActiveAgentsPage';
 import MonAbonnementPage from './components/client/MonAbonnementPage';
 import HistoriquePaiementPage from './components/client/HistoriquePaiementPage';
@@ -148,6 +150,8 @@ export default function App() {
             <Route path="/admin/tarifs" element={<TarifsConfig />} />
             <Route path="/admin/demandes" element={<DemandesManagement />} />
             <Route path="/admin/support" element={<AdminSupportPage />} />
+            <Route path="/admin/site/demandes" element={<AdminDemandesAccesPage />} />
+            <Route path="/admin/site/partenaires" element={<AdminPartenairesSitePage />} />
             <Route path="/admin/active-agents" element={<ActiveAgentsPage />} />
             <Route path="/admin/prestataires" element={<PrestatairesManagement />} />
             <Route path="/admin/knowledge-base" element={<AdminKnowledgeBasePage />} />

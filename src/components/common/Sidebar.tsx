@@ -322,6 +322,21 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
               </li>
 
               <Divider />
+              <SectionLabel>Site LabFlow</SectionLabel>
+              <li>
+                <NavLink to="/admin/site/demandes" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>
+                  <span className="link-icon">🌐</span>
+                  <span className="link-label">Demandes d'accès</span>
+                </NavLink>
+              </li>
+              <li>
+                <NavLink to="/admin/site/partenaires" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>
+                  <span className="link-icon">🤝</span>
+                  <span className="link-label">Partenaires</span>
+                </NavLink>
+              </li>
+
+              <Divider />
               <SectionLabel>Espace IA</SectionLabel>
               <li>
                 <NavLink to="/admin/active-agents" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>
