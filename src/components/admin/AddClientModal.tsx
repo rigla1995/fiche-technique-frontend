@@ -226,18 +226,23 @@ function Counter({ label, sub, value, onChange, min = 0 }: {
 
 interface Props {
   onClose: () => void;
-  onCreated: () => void;
+  // L'id du client créé est transmis quand la réponse de création le fournit
+  // (utilisé par la conversion des demandes d'accès du site vitrine). Les
+  // appelants existants qui ignorent l'argument restent compatibles.
+  onCreated: (createdClientId?: number) => void;
+  // Pré-remplissage optionnel de l'étape 1 (conversion d'une demande d'accès).
+  initialValues?: { nom?: string; email?: string; telephone?: string };
 }
 
-export default function AddClientModal({ onClose, onCreated }: Props) {
+export default function AddClientModal({ onClose, onCreated, initialValues }: Props) {
   const [step, setStep] = useState(0);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Step 1
-  const [nom, setNom] = useState('');
-  const [email, setEmail] = useState('');
-  const [tel, setTel] = useState('');
+  const [nom, setNom] = useState(initialValues?.nom ?? '');
+  const [email, setEmail] = useState(initialValues?.email ?? '');
+  const [tel, setTel] = useState(initialValues?.telephone ?? '');
   const [telTouched, setTelTouched] = useState(false);
   const [domaines, setDomaines] = useState<DomaineActivite[]>([]);
   const [selectedDomaines, setSelectedDomaines] = useState<number[]>([]);
@@ -390,7 +395,7 @@ export default function AddClientModal({ onClose, onCreated }: Props) {
     setSaving(true);
     setError(null);
     try {
-      await api.post('/admin/clients', {
+      const { data } = await api.post('/admin/clients', {
         nom, email, telephone: tel,
         domaineIds: selectedDomaines,
         nbActivites, nbLabos, nbGerants,
@@ -399,7 +404,13 @@ export default function AddClientModal({ onClose, onCreated }: Props) {
         contractPdfBase64: pdfBase64 || null,
         promotions: promos.map(mapPromoForApi),
       });
-      onCreated();
+      // Id du client créé si la réponse le fournit (plusieurs formes tolérées).
+      const createdClientId: number | undefined =
+        typeof data?.id === 'number' ? data.id
+        : typeof data?.clientId === 'number' ? data.clientId
+        : typeof data?.client?.id === 'number' ? data.client.id
+        : undefined;
+      onCreated(createdClientId);
       onClose();
     } catch (err: unknown) {
       setError((err as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Erreur lors de la création');
