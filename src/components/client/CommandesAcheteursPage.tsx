@@ -275,7 +275,9 @@ export default function CommandesAcheteursPage() {
     const motif = await prompt({
       title: enAttente ? 'Refuser la commande ?' : 'Annuler la commande ?',
       message: enAttente
-        ? `Commande du ${fmtDate(c.dateCommande)} de ${c.acheteurNom}.${c.source === 'portail' ? '\n\nL\'acheteur sera prévenu par email.' : ''}`
+        // Aucun email n'est envoyé à l'acheteur (décision produit 2026-07-20) :
+        // il retrouve le motif dans « Mes commandes » sur son portail.
+        ? `Commande du ${fmtDate(c.dateCommande)} de ${c.acheteurNom}.${c.source === 'portail' ? '\n\nLe motif s\'affichera à l\'acheteur dans « Mes commandes » sur son portail (aucun email envoyé).' : ''}`
         : `Commande du ${fmtDate(c.dateCommande)} à ${c.acheteurNom}.\n\nLe stock sera réintégré et la facture ${c.factureNumero || ''} supprimée.`,
       inputLabel: 'Motif (optionnel)',
       multiline: true,
