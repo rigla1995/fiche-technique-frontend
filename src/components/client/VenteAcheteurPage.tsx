@@ -14,7 +14,14 @@ interface Labo { id: number; nom: string }
 interface Offre {
   articleType: 'ingredient' | 'produit'; articleId: number; nom: string; unite: string; categorie: string;
   prixUnitaireHt: number; tauxTva: number; prixUnitaireTtc: number; actif: boolean;
+  // Promotions (migration 174) : prixPromoHt est le prix RÉELLEMENT appliqué par le
+  // serveur quand aucun prix n'est saisi sur la ligne — il vaut prixUnitaireHt hors promo.
+  promoPct?: number; promoActive?: boolean; prixPromoHt?: number;
 }
+
+/** Prix HT par défaut d'une offre = prix promo s'il y en a un (aligné sur le serveur). */
+const prixDefautHt = (o: Offre) =>
+  o.promoActive && (o.prixPromoHt ?? 0) > 0 ? o.prixPromoHt as number : o.prixUnitaireHt;
 interface Ligne { quantite: string; prix: string }
 interface Manquant { nom: string; unite: string; disponible: number; necessaire: number; manquant: number }
 
@@ -77,7 +84,7 @@ export default function VenteAcheteurPage() {
     let brutHt = 0;
     let tva = 0;
     for (const { o, l } of lignesActives) {
-      const prixHt = l.prix !== '' ? parseNum(l.prix) : o.prixUnitaireHt;
+      const prixHt = l.prix !== '' ? parseNum(l.prix) : prixDefautHt(o);
       const ht = (Number.isFinite(prixHt) ? prixHt : 0) * parseNum(l.quantite);
       brutHt += ht;
       tva += ht * facteur * (o.tauxTva || 0) / 100;
@@ -274,7 +281,8 @@ export default function VenteAcheteurPage() {
                   {offresFiltrees.map(o => {
                     const k = keyOf(o);
                     const l = getLigne(k);
-                    const prixHt = l.prix !== '' ? parseNum(l.prix) : o.prixUnitaireHt;
+                    const prixHt = l.prix !== '' ? parseNum(l.prix) : prixDefautHt(o);
+                    const enPromo = !!o.promoActive && (o.promoPct ?? 0) > 0;
                     const qte = parseNum(l.quantite) || 0;
                     const total = qte > 0 && Number.isFinite(prixHt) ? prixHt * qte : 0;
                     return (
@@ -284,7 +292,16 @@ export default function VenteAcheteurPage() {
                           <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>{o.unite} · {o.categorie}</div>
                         </td>
                         <td style={{ padding: '9px 14px', textAlign: 'center', fontSize: '0.78rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
-                          {o.prixUnitaireHt.toFixed(3)} DT HT · TVA {o.tauxTva || 0}%
+                          {enPromo ? (
+                            <>
+                              <span style={{ textDecoration: 'line-through' }}>{o.prixUnitaireHt.toFixed(3)}</span>{' '}
+                              <strong style={{ color: '#b45309' }}>{prixDefautHt(o).toFixed(3)} DT HT</strong>
+                              <span style={{ marginLeft: 5, fontSize: '0.66rem', fontWeight: 800, background: '#fef3c7', color: '#92400e', borderRadius: 20, padding: '1px 7px' }}>−{o.promoPct}%</span>
+                              <div style={{ fontSize: '0.72rem' }}>TVA {o.tauxTva || 0}%</div>
+                            </>
+                          ) : (
+                            <>{o.prixUnitaireHt.toFixed(3)} DT HT · TVA {o.tauxTva || 0}%</>
+                          )}
                         </td>
                         <td style={{ padding: '9px 14px', textAlign: 'center' }}>
                           <input value={l.quantite} onChange={e => setLigne(k, { quantite: e.target.value })} placeholder="0"
@@ -292,8 +309,8 @@ export default function VenteAcheteurPage() {
                         </td>
                         <td style={{ padding: '9px 14px', textAlign: 'center' }}>
                           <input value={l.prix} onChange={e => setLigne(k, { prix: e.target.value })}
-                            placeholder={o.prixUnitaireHt.toFixed(3)}
-                            title="Prix HT (modifiable pour cette vente)"
+                            placeholder={prixDefautHt(o).toFixed(3)}
+                            title={enPromo ? `Prix HT promo (−${o.promoPct} %) — modifiable pour cette vente` : 'Prix HT (modifiable pour cette vente)'}
                             style={{ ...inp, width: 88, textAlign: 'right' }} />
                         </td>
                         <td style={{ padding: '9px 14px', textAlign: 'right', fontWeight: 800, color: total > 0 ? CD : '#cbd5e1', whiteSpace: 'nowrap' }}>

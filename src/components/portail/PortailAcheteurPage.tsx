@@ -11,7 +11,10 @@ const CD = '#4c1d95';
 const CB = '#c4b5fd';
 const CL = '#f5f3ff';
 
-const PAGE_SIZE = 10;
+// Pagination à deux niveaux pour ne jamais surcharger l'écran :
+// 5 catégories affichées à la fois, et 9 articles par catégorie.
+const CATS_PAR_PAGE = 5;
+const ARTICLES_PAR_CAT = 9;
 
 interface OffreCatalogue {
   articleType: 'ingredient' | 'produit';
@@ -20,7 +23,9 @@ interface OffreCatalogue {
   unite: string;
   categorie: string;
   categorieProduit: string | null; // catégorie produit du vendeur (produits uniquement)
-  prixUnitaireTtc: number;
+  prixUnitaireTtc: number;         // prix à payer (promo déduite)
+  prixInitialTtc: number | null;   // prix barré — null hors promo
+  promoPct: number;
 }
 interface Panier { quantite: string }
 
@@ -49,7 +54,8 @@ export default function PortailAcheteurPage() {
   const [moduleOff, setModuleOff] = useState(false);
   const [search, setSearch] = useState('');
   const [catFilter, setCatFilter] = useState('');
-  const [page, setPage] = useState(1);
+  const [page, setPage] = useState(1);                                  // page de catégories
+  const [pageCat, setPageCat] = useState<Record<string, number>>({});   // page d'articles par catégorie
   const [panier, setPanier] = useState<Record<string, Panier>>({});
   const [notes, setNotes] = useState('');
   const [saving, setSaving] = useState(false);
@@ -107,28 +113,35 @@ export default function PortailAcheteurPage() {
 
   const categories = useMemo(() => [...new Set(offres.map(o => o.categorie))], [offres]);
 
-  // Filtres + pagination (10 articles par page), l'ordre par catégorie vient du serveur
+  // Filtres (l'ordre par catégorie vient du serveur)
   const filtered = offres.filter(o => {
     if (search.trim() && !o.nom.toLowerCase().includes(search.trim().toLowerCase())) return false;
     if (catFilter && o.categorie !== catFilter) return false;
     return true;
   });
-  const nbPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  const pageCourante = Math.min(page, nbPages);
-  const pageItems = filtered.slice((pageCourante - 1) * PAGE_SIZE, pageCourante * PAGE_SIZE);
 
-  // Regroupement de la page courante par catégorie (sections)
-  const groupes = useMemo(() => {
+  // Regroupement complet par catégorie, puis pagination des CATÉGORIES (5 par page)
+  const groupesTous = useMemo(() => {
     const map = new Map<string, OffreCatalogue[]>();
-    for (const o of pageItems) {
+    for (const o of filtered) {
       const g = map.get(o.categorie) || [];
       g.push(o);
       map.set(o.categorie, g);
     }
     return [...map.entries()];
-  }, [pageItems]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [offres, search, catFilter]);
 
-  const resetPage = () => setPage(1);
+  const nbPages = Math.max(1, Math.ceil(groupesTous.length / CATS_PAR_PAGE));
+  const pageCourante = Math.min(page, nbPages);
+  const groupes = groupesTous.slice((pageCourante - 1) * CATS_PAR_PAGE, pageCourante * CATS_PAR_PAGE);
+
+  // Pagination interne à chaque catégorie (9 articles) — clé = nom de catégorie
+  const pageDeCat = (cat: string) => pageCat[cat] || 1;
+  const setPageDeCat = (cat: string, n: number) => setPageCat(prev => ({ ...prev, [cat]: n }));
+
+  // Un changement de filtre remet à zéro les deux niveaux de pagination
+  const resetPage = () => { setPage(1); setPageCat({}); };
 
   return (
     <PortailShell>
@@ -195,6 +208,10 @@ export default function PortailAcheteurPage() {
               `}</style>
               {groupes.map(([cat, items]) => {
                 const [pc1, pc2] = paletteOf(cat);
+                // Pagination interne : 9 articles par catégorie
+                const nbPagesCat = Math.max(1, Math.ceil(items.length / ARTICLES_PAR_CAT));
+                const pCat = Math.min(pageDeCat(cat), nbPagesCat);
+                const itemsPage = items.slice((pCat - 1) * ARTICLES_PAR_CAT, pCat * ARTICLES_PAR_CAT);
                 return (
                   <div key={cat} style={{ marginBottom: 22 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 9, margin: '0 0 12px' }}>
@@ -204,9 +221,18 @@ export default function PortailAcheteurPage() {
                         {items.length} article{items.length > 1 ? 's' : ''}
                       </span>
                       <span style={{ flex: 1, height: 1, background: '#eceaf5' }} />
+                      {nbPagesCat > 1 && (
+                        <span style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                          <button onClick={() => setPageDeCat(cat, Math.max(1, pCat - 1))} disabled={pCat === 1} aria-label={`${cat} : articles précédents`}
+                            style={{ width: 26, height: 26, borderRadius: 7, border: '1px solid #e2e8f0', background: '#fff', color: pCat === 1 ? '#cbd5e1' : CD, fontWeight: 800, cursor: pCat === 1 ? 'default' : 'pointer', lineHeight: 1 }}>‹</button>
+                          <span style={{ fontSize: '0.72rem', color: '#94a3b8', fontWeight: 700, whiteSpace: 'nowrap' }}>{pCat}/{nbPagesCat}</span>
+                          <button onClick={() => setPageDeCat(cat, Math.min(nbPagesCat, pCat + 1))} disabled={pCat === nbPagesCat} aria-label={`${cat} : articles suivants`}
+                            style={{ width: 26, height: 26, borderRadius: 7, border: '1px solid #e2e8f0', background: '#fff', color: pCat === nbPagesCat ? '#cbd5e1' : CD, fontWeight: 800, cursor: pCat === nbPagesCat ? 'default' : 'pointer', lineHeight: 1 }}>›</button>
+                        </span>
+                      )}
                     </div>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: 14 }}>
-                      {items.map(o => {
+                      {itemsPage.map(o => {
                         const k = keyOf(o);
                         const p = getP(k);
                         const qte = parseNum(p.quantite) || 0;
@@ -223,14 +249,25 @@ export default function PortailAcheteurPage() {
                                   {o.categorieProduit || o.categorie}
                                 </div>
                               </div>
+                              {o.promoPct > 0 && (
+                                <span title={`Promotion de ${o.promoPct} %`}
+                                  style={{ flexShrink: 0, fontSize: '0.68rem', fontWeight: 900, color: '#fff', background: 'linear-gradient(135deg,#f59e0b,#f97316)', borderRadius: 20, padding: '3px 9px', whiteSpace: 'nowrap', boxShadow: '0 2px 6px rgba(245,158,11,0.35)' }}>
+                                  −{o.promoPct}%
+                                </span>
+                              )}
                               {qte > 0 && (
                                 <span style={{ flexShrink: 0, fontSize: '0.66rem', fontWeight: 800, color: CD, background: CL, border: `1px solid ${CB}`, borderRadius: 20, padding: '3px 8px', whiteSpace: 'nowrap' }}>
                                   🧺 ×{qte}
                                 </span>
                               )}
                             </div>
-                            <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
-                              <span style={{ fontSize: '1.25rem', color: CD, fontWeight: 900, letterSpacing: '-0.01em' }}>{fmt(o.prixUnitaireTtc)}</span>
+                            <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, flexWrap: 'wrap' }}>
+                              {o.promoPct > 0 && o.prixInitialTtc != null && (
+                                <span style={{ fontSize: '0.85rem', color: '#94a3b8', fontWeight: 700, textDecoration: 'line-through', textDecorationThickness: 2 }}>
+                                  {fmt(o.prixInitialTtc)}
+                                </span>
+                              )}
+                              <span style={{ fontSize: '1.25rem', color: o.promoPct > 0 ? '#b45309' : CD, fontWeight: 900, letterSpacing: '-0.01em' }}>{fmt(o.prixUnitaireTtc)}</span>
                               <span style={{ fontSize: '0.72rem', color: '#94a3b8', fontWeight: 600 }}>TTC / {o.unite}</span>
                             </div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 'auto' }}>
@@ -254,9 +291,12 @@ export default function PortailAcheteurPage() {
                 );
               })}
 
-              {/* Pagination (10 articles par page) */}
+              {/* Pagination des catégories (5 par page) */}
               {nbPages > 1 && (
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 8 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
+                  <span style={{ width: '100%', textAlign: 'center', fontSize: '0.74rem', color: '#94a3b8', fontWeight: 600, marginBottom: 2 }}>
+                    Catégories {(pageCourante - 1) * CATS_PAR_PAGE + 1}–{Math.min(pageCourante * CATS_PAR_PAGE, groupesTous.length)} sur {groupesTous.length}
+                  </span>
                   <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={pageCourante === 1}
                     style={{ padding: '7px 14px', borderRadius: 8, border: '1px solid #e2e8f0', background: '#fff', color: pageCourante === 1 ? '#cbd5e1' : CD, fontWeight: 700, fontSize: '0.82rem', cursor: pageCourante === 1 ? 'default' : 'pointer' }}>
                     ← Précédent
