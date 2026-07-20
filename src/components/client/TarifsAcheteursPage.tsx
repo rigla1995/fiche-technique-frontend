@@ -22,20 +22,42 @@ interface OffreRow {
   tauxTva: number;
   prixUnitaireTtc: number;
   actif: boolean;
+  promoPct: number;
+  promoActive: boolean;
 }
 
-interface EditState { prixU: string; tva: string; actif: boolean }
+interface EditState { prixU: string; tva: string; actif: boolean; promo: string; promoOn: boolean }
 
 const keyOf = (r: { articleType: string; articleId: number }) => `${r.articleType}:${r.articleId}`;
 const toEdit = (r: OffreRow): EditState => ({
   prixU: r.prixUnitaireHt ? String(r.prixUnitaireHt) : '',
   tva: String(r.tauxTva ?? 0),
   actif: r.actif,
+  promo: r.promoPct ? String(r.promoPct) : '',
+  promoOn: r.promoActive === true,
 });
-const sameEdit = (a: EditState, b: EditState) => a.prixU === b.prixU && a.tva === b.tva && a.actif === b.actif;
+const sameEdit = (a: EditState, b: EditState) =>
+  a.prixU === b.prixU && a.tva === b.tva && a.actif === b.actif && a.promo === b.promo && a.promoOn === b.promoOn;
 
 const numOf = (v: string) => Number(String(v).replace(',', '.')) || 0;
-const ttcOf = (e: EditState) => Math.round(numOf(e.prixU) * (1 + numOf(e.tva) / 100) * 1000) / 1000;
+const round3 = (v: number) => Math.round(v * 1000) / 1000;
+// Le serveur stocke le taux en NUMERIC(5,2) et refuse hors [0 ; 100] :
+// on applique EXACTEMENT la même règle en saisie pour ne pas afficher un aperçu
+// de prix qui serait ensuite rejeté à l'enregistrement.
+const promoSaisieInvalide = (v: string) => {
+  if (v === '') return false;
+  const n = Number(String(v).replace(',', '.'));
+  if (!Number.isFinite(n) || n < 0 || n > 100) return true;
+  return n > 0 && Math.round(n * 100) / 100 === 0; // < 0,005 → arrondi à 0 côté base
+};
+const ttcOf = (e: EditState) => round3(numOf(e.prixU) * (1 + numOf(e.tva) / 100));
+// Taux réellement appliqué : une promo désactivée (ou à 0) ne remise rien
+const promoAppliquee = (e: EditState) => (e.promoOn && numOf(e.promo) > 0 ? Math.min(100, numOf(e.promo)) : 0);
+// Prix TTC effectivement facturé, promo comprise
+const ttcPromoOf = (e: EditState) => {
+  const pct = promoAppliquee(e);
+  return pct > 0 ? round3(round3(numOf(e.prixU) * (1 - pct / 100)) * (1 + numOf(e.tva) / 100)) : ttcOf(e);
+};
 
 const cellInp: React.CSSProperties = { width: 76, padding: '6px 8px', borderRadius: 8, border: '1px solid #e2e8f0', fontSize: '0.82rem', fontFamily: 'inherit', textAlign: 'right' };
 
@@ -100,6 +122,12 @@ export default function TarifsAcheteursPage() {
     () => Object.keys(edits).filter(k => baseline[k] && !sameEdit(edits[k], baseline[k])),
     [edits, baseline]
   );
+  // Lignes dont le taux de promo serait refusé par le serveur : on bloque
+  // l'enregistrement en amont plutôt que d'encaisser un 400 après coup.
+  const promoInvalides = useMemo(
+    () => dirtyKeys.filter(k => promoSaisieInvalide(edits[k].promo)),
+    [dirtyKeys, edits]
+  );
   const dirtyInCat = (items: OffreRow[]) => items.filter(r => {
     const k = keyOf(r);
     return baseline[k] && edits[k] && !sameEdit(edits[k], baseline[k]);
@@ -110,6 +138,10 @@ export default function TarifsAcheteursPage() {
 
   const saveAll = async () => {
     if (dirtyKeys.length === 0) return;
+    if (promoInvalides.length > 0) {
+      setError(`Taux de promotion invalide sur ${promoInvalides.length} ligne${promoInvalides.length > 1 ? 's' : ''} — valeur attendue entre 0,01 et 100.`);
+      return;
+    }
     setSaving(true); setError(''); setFlash('');
     const all = [...articles, ...produits];
     const errors: string[] = [];
@@ -123,6 +155,8 @@ export default function TarifsAcheteursPage() {
           prixUnitaireHt: e.prixU === '' ? 0 : numOf(e.prixU),
           tauxTva: e.tva === '' ? 0 : numOf(e.tva),
           actif: e.actif,
+          promoPct: e.promo === '' ? 0 : numOf(e.promo),
+          promoActive: e.promoOn && numOf(e.promo) > 0,
         });
       } catch (err: unknown) {
         const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Erreur';
@@ -140,6 +174,11 @@ export default function TarifsAcheteursPage() {
   };
 
   const nbActifs = [...articles, ...produits].filter(r => edits[keyOf(r)]?.actif).length;
+  // Promos en vigueur : offre proposée + promo activée avec un taux
+  const nbPromos = [...articles, ...produits].filter(r => {
+    const e = edits[keyOf(r)];
+    return e?.actif && promoAppliquee(e) > 0;
+  }).length;
 
   return (
     <div className="page-content">
@@ -151,7 +190,8 @@ export default function TarifsAcheteursPage() {
             <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0 }}>Tarifs Acheteurs</h1>
           </div>
           <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.85rem', margin: 0 }}>
-            Prix unitaires HT (+ TVA) des articles et produits proposés à vos acheteurs — le TTC se calcule tout seul
+            Prix unitaires HT (+ TVA) des articles et produits proposés à vos acheteurs — le TTC se calcule tout seul.
+            Une promotion active s'affiche à vos acheteurs, prix initial barré.
           </p>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -159,6 +199,12 @@ export default function TarifsAcheteursPage() {
             <div style={{ fontSize: '1.4rem', fontWeight: 900, color: '#fff' }}>{nbActifs}</div>
             <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.75)', fontWeight: 600 }}>proposé{nbActifs !== 1 ? 's' : ''}</div>
           </div>
+          {nbPromos > 0 && (
+            <div style={{ background: 'rgba(251,191,36,0.22)', border: '1px solid rgba(251,191,36,0.55)', borderRadius: 14, padding: '10px 20px', textAlign: 'center', minWidth: 90 }}>
+              <div style={{ fontSize: '1.4rem', fontWeight: 900, color: '#fde68a' }}>{nbPromos}</div>
+              <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.85)', fontWeight: 600 }}>en promo</div>
+            </div>
+          )}
           <GuideButton section="acheteurs-tarifs" />
         </div>
       </div>
@@ -187,8 +233,9 @@ export default function TarifsAcheteursPage() {
           <option value="proposes">Proposés</option>
           <option value="non">Non proposés</option>
         </select>
-        <button onClick={saveAll} disabled={saving || dirtyKeys.length === 0}
-          style={{ marginLeft: 'auto', padding: '10px 22px', borderRadius: 10, border: 'none', background: dirtyKeys.length ? `linear-gradient(135deg, ${CD}, ${C})` : '#cbd5e1', color: '#fff', fontWeight: 700, fontSize: '0.86rem', cursor: dirtyKeys.length ? 'pointer' : 'default', boxShadow: dirtyKeys.length ? '0 4px 14px rgba(109,40,217,0.3)' : 'none' }}>
+        <button onClick={saveAll} disabled={saving || dirtyKeys.length === 0 || promoInvalides.length > 0}
+          title={promoInvalides.length > 0 ? 'Corrigez les taux de promotion en rouge (0,01 à 100)' : undefined}
+          style={{ marginLeft: 'auto', padding: '10px 22px', borderRadius: 10, border: 'none', background: dirtyKeys.length && !promoInvalides.length ? `linear-gradient(135deg, ${CD}, ${C})` : '#cbd5e1', color: '#fff', fontWeight: 700, fontSize: '0.86rem', cursor: dirtyKeys.length && !promoInvalides.length ? 'pointer' : 'default', boxShadow: dirtyKeys.length && !promoInvalides.length ? '0 4px 14px rgba(109,40,217,0.3)' : 'none' }}>
           {saving ? 'Enregistrement…' : `💾 Enregistrer${dirtyKeys.length ? ` (${dirtyKeys.length})` : ''}`}
         </button>
       </div>
@@ -235,7 +282,7 @@ export default function TarifsAcheteursPage() {
                   <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.84rem' }}>
                     <thead>
                       <tr style={{ background: '#faf9ff', borderBottom: `1px solid ${CB}` }}>
-                        {[tab === 'articles' ? 'Article' : 'Produit', 'Prix unité HT', 'TVA %', 'Prix TTC', 'Proposé'].map(h => (
+                        {[tab === 'articles' ? 'Article' : 'Produit', 'Prix unité HT', 'TVA %', 'Promo %', 'Promo active', 'Prix TTC', 'Proposé'].map(h => (
                           <th key={h} style={{ textAlign: h === 'Article' || h === 'Produit' ? 'left' : 'center', padding: '8px 14px', color: CD, fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.03em' }}>{h}</th>
                         ))}
                       </tr>
@@ -247,6 +294,9 @@ export default function TarifsAcheteursPage() {
                         if (!e) return null;
                         const dirty = baseline[k] && !sameEdit(e, baseline[k]);
                         const prixValide = numOf(e.prixU) > 0;
+                        const pctPromo = promoAppliquee(e);
+                        const promoKo = promoSaisieInvalide(e.promo);
+                        const promoPossible = prixValide && numOf(e.promo) > 0 && !promoKo;
                         return (
                           <tr key={k} style={{ borderBottom: '1px solid #f1f5f9', background: dirty ? '#fffbeb' : 'transparent' }}>
                             <td style={{ padding: '9px 14px' }}>
@@ -268,8 +318,32 @@ export default function TarifsAcheteursPage() {
                             <td style={{ padding: '9px 14px', textAlign: 'center' }}>
                               <input value={e.tva} onChange={ev => setField(k, 'tva', ev.target.value)} placeholder="0" style={{ ...cellInp, width: 52 }} />
                             </td>
+                            <td style={{ padding: '9px 14px', textAlign: 'center' }}>
+                              <input value={e.promo} onChange={ev => setField(k, 'promo', ev.target.value)} placeholder="0"
+                                aria-invalid={promoKo}
+                                title={promoKo ? 'Taux invalide : saisissez une valeur entre 0,01 et 100' : 'Remise en % appliquée au prix de vente acheteur'}
+                                style={{ ...cellInp, width: 52, borderColor: promoKo ? '#dc2626' : pctPromo > 0 ? '#f59e0b' : '#e2e8f0', background: promoKo ? '#fef2f2' : '#fff' }} />
+                              {promoKo && <div style={{ fontSize: '0.66rem', color: '#b91c1c', fontWeight: 700, marginTop: 3 }}>0,01 à 100</div>}
+                            </td>
+                            <td style={{ padding: '9px 14px', textAlign: 'center' }}>
+                              <button onClick={() => (promoPossible || e.promoOn) ? setField(k, 'promoOn', !e.promoOn) : undefined}
+                                title={!promoPossible && !e.promoOn ? 'Renseignez un prix HT > 0 et un taux de promo > 0' : 'Appliquer cette promotion à vos acheteurs'}
+                                style={{ background: 'none', border: 'none', cursor: promoPossible || e.promoOn ? 'pointer' : 'not-allowed', padding: 0, opacity: promoPossible || e.promoOn ? 1 : 0.45 }}>
+                                <div style={{ width: 36, height: 20, borderRadius: 10, position: 'relative', background: e.promoOn ? '#f59e0b' : '#cbd5e1', transition: 'background 0.2s', margin: '0 auto' }}>
+                                  <div style={{ position: 'absolute', top: 2, left: e.promoOn ? 18 : 2, width: 16, height: 16, borderRadius: '50%', background: '#fff', boxShadow: '0 1px 4px rgba(0,0,0,0.18)', transition: 'left 0.2s' }} />
+                                </div>
+                              </button>
+                            </td>
                             <td style={{ padding: '9px 14px', textAlign: 'center', fontWeight: 700, color: prixValide ? CD : '#cbd5e1', whiteSpace: 'nowrap' }}>
-                              {prixValide ? `${ttcOf(e).toFixed(3)} DT` : '—'}
+                              {!prixValide ? '—' : pctPromo > 0 ? (
+                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', lineHeight: 1.25 }}>
+                                  <span style={{ textDecoration: 'line-through', color: '#94a3b8', fontWeight: 600, fontSize: '0.78rem' }}>{ttcOf(e).toFixed(3)} DT</span>
+                                  <span style={{ color: '#b45309' }}>
+                                    {ttcPromoOf(e).toFixed(3)} DT
+                                    <span style={{ marginLeft: 5, fontSize: '0.66rem', fontWeight: 800, background: '#fef3c7', color: '#92400e', borderRadius: 20, padding: '1px 7px' }}>−{pctPromo}%</span>
+                                  </span>
+                                </div>
+                              ) : `${ttcOf(e).toFixed(3)} DT`}
                             </td>
                             <td style={{ padding: '9px 14px', textAlign: 'center' }}>
                               <button onClick={() => prixValide || e.actif ? setField(k, 'actif', !e.actif) : undefined}
