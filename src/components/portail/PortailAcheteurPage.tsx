@@ -16,6 +16,12 @@ const CL = '#f5f3ff';
 const CATS_PAR_PAGE = 5;
 const ARTICLES_PAR_CAT = 9;
 
+interface HistoArticle {
+  nbCommandes: number;       // ≥ 1
+  derniereDate: string;      // 'YYYY-MM-DD'
+  derniereQuantite: number;  // en unités, telle qu'expédiée
+  dernierStatut: 'en_attente' | 'expediee' | 'livree';
+}
 interface OffreCatalogue {
   articleType: 'ingredient' | 'produit';
   articleId: number;
@@ -26,12 +32,49 @@ interface OffreCatalogue {
   prixUnitaireTtc: number;         // prix à payer (promo déduite)
   prixInitialTtc: number | null;   // prix barré — null hors promo
   promoPct: number;
+  prixUnitaireHt: number;          // le pro raisonne en HT (il récupère la TVA)
+  tauxTva: number;
+  fabriqueMaison: boolean;         // produit composé fabriqué par le vendeur
+  histo: HistoArticle | null;      // habitudes de CET acheteur, null si jamais pris
 }
 interface Panier { quantite: string }
 
 const keyOf = (o: { articleType: string; articleId: number }) => `${o.articleType}:${o.articleId}`;
 const parseNum = (v: string) => Number(String(v).replace(',', '.'));
 const fmt = (n: number) => `${n.toFixed(3)} DT`;
+const q3 = (n: number) => Math.round(n * 1000) / 1000;          // tue les zéros de NUMERIC(10,3)
+// Seules les unités écrites en toutes lettres s'accordent ; les symboles (kg, L…)
+// sont invariables.
+const PLURIELS: Record<string, string> = {
+  'unité': 'unités', 'unite': 'unites', 'pièce': 'pièces', 'piece': 'pieces',
+  'boîte': 'boîtes', 'boite': 'boites', 'sac': 'sacs', 'carton': 'cartons',
+  'barquette': 'barquettes', 'bouteille': 'bouteilles', 'plaque': 'plaques',
+};
+const uniteFmt = (n: number, u: string) => (n > 1 ? PLURIELS[(u || '').trim().toLowerCase()] || u : u);
+const qteFmt = (n: number, u: string) => `${q3(n)} ${uniteFmt(q3(n), u)}`;
+const pctFmt = (n: number) => String(Math.round(n * 100) / 100);
+
+/** « il y a 6 j » / « il y a 3 sem. » — repère court, sans date complète. */
+const depuis = (iso: string) => {
+  const j = Math.floor((Date.now() - new Date(`${iso}T00:00:00`).getTime()) / 86400000);
+  if (j <= 0) return "aujourd'hui";
+  if (j === 1) return 'hier';
+  if (j < 7) return `il y a ${j} j`;
+  if (j < 31) return `il y a ${Math.floor(j / 7)} sem.`;
+  if (j < 365) return `il y a ${Math.floor(j / 30)} mois`;
+  return 'il y a + d\'un an';
+};
+
+// Quantités proposées en un tap pour un article jamais commandé. Liste blanche :
+// mieux vaut aucun raccourci qu'un non-sens (« 12 g de safran »).
+const UNITES_POIDS = new Set(['kg', 'l', 'litre', 'litres']);
+const UNITES_PIECE = new Set(['unité', 'unite', 'pièce', 'piece', 'pieces', 'pièces']);
+const chipsDe = (unite: string): number[] => {
+  const u = (unite || '').trim().toLowerCase();
+  if (UNITES_POIDS.has(u)) return [1, 5, 10];
+  if (UNITES_PIECE.has(u)) return [1, 6, 12];
+  return [];
+};
 
 // Accent visuel des cartes : dégradé stable par catégorie (hash du nom)
 const PALETTES: [string, string][] = [
@@ -46,6 +89,144 @@ const paletteOf = (categorie: string): [string, string] => {
 };
 const initialeOf = (nom: string) => (nom.trim()[0] || '?').toUpperCase();
 
+/**
+ * Carte d'un article du catalogue.
+ * Elle ne décrit pas seulement l'article (il n'y a ni photo, ni stock, ni avis à
+ * montrer) mais la RELATION de cet acheteur avec lui : ce qu'il en a pris la
+ * dernière fois, quand, à quelle fréquence — d'où le bouton « Reprendre ».
+ * Ordre des blocs : identité · prix TTC · prix HT · raccourci · stepper.
+ */
+function ArticleCard({ o, p, onSet, onStep }: {
+  o: OffreCatalogue;
+  p: Panier;
+  onSet: (v: string) => void;
+  onStep: (delta: number) => void;
+}) {
+  const [pc1, pc2] = paletteOf(o.categorie);
+  const qte = parseNum(p.quantite) || 0;
+  const h = o.histo;
+  const enPromo = o.promoPct > 0 && o.prixInitialTtc != null;
+  // Habituel dès 3 commandes ; « Déjà pris » pour 1-2 ; rien sinon (pas de badge
+  // « Nouveau » : sur 200 articles ce serait 185 badges sans information).
+  const badge = !h ? null : h.nbCommandes >= 3 ? '★ Habituel' : 'Déjà pris';
+  const qteHabituelle = h ? q3(h.derniereQuantite) : 0;
+  const atteint = !!h && q3(qte) === qteHabituelle;
+  const enAttente = h?.dernierStatut === 'en_attente';
+  const chips = h ? [] : chipsDe(o.unite);
+
+  return (
+    <div className="pcat-card"
+      style={{ background: '#fff', border: `1.5px solid ${qte > 0 ? CB : '#eceaf5'}`, borderRadius: 16, padding: '16px 16px 14px', boxShadow: qte > 0 ? '0 6px 18px rgba(109,40,217,0.12)' : '0 1px 3px rgba(15,23,42,0.04)', display: 'flex', flexDirection: 'column', gap: 9 }}>
+
+      {/* B1 — identité */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 11, minWidth: 0 }}>
+        <span style={{ width: 40, height: 40, borderRadius: 13, flexShrink: 0, background: `linear-gradient(135deg, ${pc1}, ${pc2})`, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '1.05rem', boxShadow: `0 4px 10px ${pc1}33` }}>
+          {initialeOf(o.nom)}
+        </span>
+        <div style={{ minWidth: 0, flex: 1 }}>
+          <div style={{ fontWeight: 800, color: '#0f172a', fontSize: '0.95rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={o.nom}>{o.nom}</div>
+          <div style={{ fontSize: '0.7rem', color: '#94a3b8', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 5, minWidth: 0 }}>
+            {o.fabriqueMaison && (
+              <span title="Fabriqué par votre fournisseur"
+                style={{ flexShrink: 0, fontSize: '0.62rem', fontWeight: 800, color: CD, background: CL, border: `1px solid ${CB}`, borderRadius: 6, padding: '1px 6px' }}>
+                Maison
+              </span>
+            )}
+            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {o.categorieProduit || o.categorie}
+            </span>
+          </div>
+        </div>
+        {badge && (
+          <span title={`Commandé ${h!.nbCommandes} fois sur les 12 derniers mois`}
+            style={{ flexShrink: 0, fontSize: '0.64rem', fontWeight: 800, color: CD, background: CL, border: `1px solid ${CB}`, borderRadius: 20, padding: '3px 8px', whiteSpace: 'nowrap' }}>
+            {badge}
+          </span>
+        )}
+      </div>
+
+      {/* B2 — prix à payer */}
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, flexWrap: 'wrap' }}>
+        {enPromo && (
+          <span style={{ fontSize: '0.85rem', color: '#94a3b8', fontWeight: 700, textDecoration: 'line-through', textDecorationThickness: 2 }}>
+            {fmt(o.prixInitialTtc as number)}
+          </span>
+        )}
+        <span style={{ fontSize: '1.25rem', color: enPromo ? '#b45309' : CD, fontWeight: 900, letterSpacing: '-0.01em' }}>{fmt(o.prixUnitaireTtc)}</span>
+        <span style={{ fontSize: '0.72rem', color: '#94a3b8', fontWeight: 600 }}>TTC / {o.unite}</span>
+        {enPromo && (
+          <span title={`Promotion de ${o.promoPct} %`}
+            style={{ fontSize: '0.66rem', fontWeight: 900, color: '#fff', background: 'linear-gradient(135deg,#f59e0b,#f97316)', borderRadius: 20, padding: '3px 8px', whiteSpace: 'nowrap' }}>
+            −{pctFmt(o.promoPct)}%
+          </span>
+        )}
+      </div>
+
+      {/* B3 — base HT : le pro récupère la TVA, c'est son vrai repère */}
+      <div className="pcat-ht" style={{ marginTop: -5, fontSize: '0.7rem', fontWeight: 600, color: '#94a3b8' }}>
+        {fmt(o.prixUnitaireHt)} HT · {o.tauxTva > 0 ? `TVA ${pctFmt(o.tauxTva)} %` : 'Sans TVA'}
+      </div>
+
+      {/* B4 — raccourci : au plus UN (bouton mémoire, sinon chips, sinon rien) */}
+      <div style={{ marginTop: 'auto' }}>
+        {h ? (
+          <button type="button" className="pcat-reprendre"
+            onClick={() => onSet(String(qteHabituelle))}
+            aria-label={`Reprendre la quantité de la dernière fois : ${qteFmt(h.derniereQuantite, o.unite)}${enAttente ? ', commande en attente' : ''}`}
+            style={{
+              width: '100%', height: 38, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              gap: 8, padding: '0 11px', fontFamily: 'inherit', fontSize: '0.78rem', fontWeight: 800, cursor: 'pointer', textAlign: 'left',
+              background: atteint ? `linear-gradient(135deg, ${CD}, ${C})` : enAttente ? '#fffbeb' : CL,
+              border: `1.5px solid ${atteint ? 'transparent' : enAttente ? '#fde68a' : CB}`,
+              color: atteint ? '#fff' : enAttente ? '#92400e' : CD,
+            }}>
+            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>
+              {atteint ? '✓ Quantité habituelle' : `⟲ Reprendre ${qteFmt(h.derniereQuantite, o.unite)}`}
+            </span>
+            {!atteint && (
+              <span style={{ flexShrink: 0, fontWeight: 700, opacity: 0.75 }}>
+                {enAttente ? '⏳ en attente' : depuis(h.derniereDate)}
+              </span>
+            )}
+          </button>
+        ) : chips.length > 0 ? (
+          <div style={{ display: 'flex', gap: 6 }}>
+            {chips.map(v => (
+              <button key={v} type="button" className="pcat-chip"
+                onClick={() => onSet(String(v))}
+                aria-label={`Quantité ${v} ${o.unite}`}
+                style={{
+                  fontSize: '0.7rem', fontWeight: 700, borderRadius: 8, padding: '6px 11px', fontFamily: 'inherit', cursor: 'pointer',
+                  color: CD,
+                  background: q3(qte) === v ? CL : '#f8fafc',
+                  border: `1px solid ${q3(qte) === v ? CB : '#e2e8f0'}`,
+                }}>
+                {v} {uniteFmt(v, o.unite)}
+              </button>
+            ))}
+          </div>
+        ) : null}
+      </div>
+
+      {/* B5 — saisie */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <div style={{ display: 'flex', alignItems: 'center', border: `1px solid ${qte > 0 ? CB : '#e2e8f0'}`, borderRadius: 11, overflow: 'hidden', background: '#fff' }}>
+          <button className="pcat-qbtn" onClick={() => onStep(-1)} disabled={qte === 0} aria-label={`Retirer 1 ${o.unite}`}
+            style={{ width: 34, height: 36, border: 'none', background: '#f8fafc', color: qte > 0 ? CD : '#cbd5e1', fontWeight: 800, cursor: qte > 0 ? 'pointer' : 'default', fontSize: '1rem' }}>−</button>
+          <input value={p.quantite} onChange={e => onSet(e.target.value)} placeholder="0" inputMode="decimal"
+            aria-label={`Quantité de ${o.nom} en ${o.unite}`}
+            style={{ width: 56, height: 34, padding: 0, border: 'none', borderLeft: '1px solid #eceaf5', borderRight: '1px solid #eceaf5', fontSize: '0.9rem', fontFamily: 'inherit', textAlign: 'center', outline: 'none', color: '#0f172a', fontWeight: 800 }} />
+          <button className="pcat-qbtn" onClick={() => onStep(1)} aria-label={`Ajouter 1 ${o.unite}`}
+            style={{ width: 34, height: 36, border: 'none', background: '#f8fafc', color: CD, fontWeight: 800, cursor: 'pointer', fontSize: '1rem' }}>+</button>
+        </div>
+        <span style={{ marginLeft: 'auto', fontSize: '0.84rem', fontWeight: 800, color: qte > 0 ? CD : '#cbd5e1', whiteSpace: 'nowrap' }}>
+          {qte > 0 ? `= ${fmt(o.prixUnitaireTtc * qte)}` : ''}
+        </span>
+      </div>
+    </div>
+  );
+}
+
 export default function PortailAcheteurPage() {
   const navigate = useNavigate();
   const [vendeur, setVendeur] = useState('');
@@ -54,6 +235,7 @@ export default function PortailAcheteurPage() {
   const [moduleOff, setModuleOff] = useState(false);
   const [search, setSearch] = useState('');
   const [catFilter, setCatFilter] = useState('');
+  const [habitOnly, setHabitOnly] = useState(false); // « Mes habituels »
   const [page, setPage] = useState(1);                                  // page de catégories
   const [pageCat, setPageCat] = useState<Record<string, number>>({});   // page d'articles par catégorie
   const [panier, setPanier] = useState<Record<string, Panier>>({});
@@ -112,15 +294,18 @@ export default function PortailAcheteurPage() {
   };
 
   const categories = useMemo(() => [...new Set(offres.map(o => o.categorie))], [offres]);
+  const nbHabituels = useMemo(() => offres.filter(o => o.histo).length, [offres]);
 
   // Filtres (l'ordre par catégorie vient du serveur)
   const filtered = offres.filter(o => {
     if (search.trim() && !o.nom.toLowerCase().includes(search.trim().toLowerCase())) return false;
     if (catFilter && o.categorie !== catFilter) return false;
+    if (habitOnly && !o.histo) return false;
     return true;
   });
 
   // Regroupement complet par catégorie, puis pagination des CATÉGORIES (5 par page)
+  // ⚠️ deps : toute nouvelle variable de `filtered` DOIT être ajoutée ici.
   const groupesTous = useMemo(() => {
     const map = new Map<string, OffreCatalogue[]>();
     for (const o of filtered) {
@@ -130,7 +315,7 @@ export default function PortailAcheteurPage() {
     }
     return [...map.entries()];
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [offres, search, catFilter]);
+  }, [offres, search, catFilter, habitOnly]);
 
   const nbPages = Math.max(1, Math.ceil(groupesTous.length / CATS_PAR_PAGE));
   const pageCourante = Math.min(page, nbPages);
@@ -191,10 +376,31 @@ export default function PortailAcheteurPage() {
               <option value="">Toutes les catégories</option>
               {categories.map(c => <option key={c} value={c}>{c}</option>)}
             </select>
+            {nbHabituels > 0 && (
+              <button type="button" onClick={() => { setHabitOnly(v => !v); resetPage(); }}
+                aria-pressed={habitOnly}
+                title="N'afficher que les articles que vous avez déjà commandés"
+                style={{
+                  padding: '9px 15px', borderRadius: 999, fontSize: '0.82rem', fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit',
+                  whiteSpace: 'nowrap',
+                  background: habitOnly ? `linear-gradient(135deg, ${CD}, ${C})` : '#fff',
+                  border: `1.5px solid ${habitOnly ? 'transparent' : '#e2e8f0'}`,
+                  color: habitOnly ? '#fff' : CD,
+                }}>
+                ★ Mes habituels ({nbHabituels})
+              </button>
+            )}
             <span style={{ fontSize: '0.78rem', color: '#94a3b8', whiteSpace: 'nowrap' }}>
               {filtered.length} article{filtered.length !== 1 ? 's' : ''}
             </span>
           </div>
+
+          {/* Première visite : on annonce ce que la carte saura faire ensuite */}
+          {nbHabituels === 0 && (
+            <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 10, padding: '9px 14px', marginBottom: 14, fontSize: '0.78rem', color: '#64748b' }}>
+              💡 Dès votre première commande, chaque article affichera ce que vous aviez pris la dernière fois — un tap suffira pour le reprendre.
+            </div>
+          )}
 
           {filtered.length === 0 ? (
             <div style={{ padding: 30, textAlign: 'center', color: '#64748b' }}>Aucun article ne correspond à vos filtres.</div>
@@ -205,6 +411,21 @@ export default function PortailAcheteurPage() {
                 .pcat-card:hover { transform: translateY(-3px); box-shadow: 0 12px 28px rgba(76,29,149,0.13); border-color: ${CB}; }
                 .pcat-qbtn { transition: background .15s ease; }
                 .pcat-qbtn:hover:not(:disabled) { background: #ede9fe !important; }
+                .pcat-reprendre { transition: filter .15s ease, background .15s ease; }
+                .pcat-reprendre:hover { filter: brightness(0.97); }
+                .pcat-chip { transition: border-color .15s ease, color .15s ease; }
+                .pcat-chip:hover { border-color: ${CB}; color: ${CD}; }
+                /* Les styles inline ne portent pas de media query : tout le responsive
+                   des cartes et du panier passe par ce bloc. */
+                @media (max-width: 420px) {
+                  .pcat-card { padding: 13px 13px 12px; gap: 8px; }
+                  .pcat-ht { font-size: .66rem; }
+                  .pcat-reprendre { height: 44px; font-size: .8rem; }
+                  .pcat-chip { padding: 10px 13px; }
+                  .pcat-panier { left: 0; right: 0; bottom: 0; width: auto !important;
+                    max-height: 70vh; border-radius: 14px 14px 0 0;
+                    padding-bottom: calc(14px + env(safe-area-inset-bottom)); }
+                }
               `}</style>
               {groupes.map(([cat, items]) => {
                 const [pc1, pc2] = paletteOf(cat);
@@ -232,60 +453,11 @@ export default function PortailAcheteurPage() {
                       )}
                     </div>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: 14 }}>
-                      {itemsPage.map(o => {
-                        const k = keyOf(o);
-                        const p = getP(k);
-                        const qte = parseNum(p.quantite) || 0;
-                        return (
-                          <div key={k} className="pcat-card"
-                            style={{ background: '#fff', border: `1.5px solid ${qte > 0 ? CB : '#eceaf5'}`, borderRadius: 16, padding: '16px 16px 14px', boxShadow: qte > 0 ? '0 6px 18px rgba(109,40,217,0.12)' : '0 1px 3px rgba(15,23,42,0.04)', display: 'flex', flexDirection: 'column', gap: 12 }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
-                              <span style={{ width: 42, height: 42, borderRadius: 13, flexShrink: 0, background: `linear-gradient(135deg, ${pc1}, ${pc2})`, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '1.1rem', boxShadow: `0 4px 10px ${pc1}33` }}>
-                                {initialeOf(o.nom)}
-                              </span>
-                              <div style={{ minWidth: 0, flex: 1 }}>
-                                <div style={{ fontWeight: 800, color: '#0f172a', fontSize: '0.95rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={o.nom}>{o.nom}</div>
-                                <div style={{ fontSize: '0.7rem', color: '#94a3b8', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                  {o.categorieProduit || o.categorie}
-                                </div>
-                              </div>
-                              {o.promoPct > 0 && (
-                                <span title={`Promotion de ${o.promoPct} %`}
-                                  style={{ flexShrink: 0, fontSize: '0.68rem', fontWeight: 900, color: '#fff', background: 'linear-gradient(135deg,#f59e0b,#f97316)', borderRadius: 20, padding: '3px 9px', whiteSpace: 'nowrap', boxShadow: '0 2px 6px rgba(245,158,11,0.35)' }}>
-                                  −{o.promoPct}%
-                                </span>
-                              )}
-                              {qte > 0 && (
-                                <span style={{ flexShrink: 0, fontSize: '0.66rem', fontWeight: 800, color: CD, background: CL, border: `1px solid ${CB}`, borderRadius: 20, padding: '3px 8px', whiteSpace: 'nowrap' }}>
-                                  🧺 ×{qte}
-                                </span>
-                              )}
-                            </div>
-                            <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, flexWrap: 'wrap' }}>
-                              {o.promoPct > 0 && o.prixInitialTtc != null && (
-                                <span style={{ fontSize: '0.85rem', color: '#94a3b8', fontWeight: 700, textDecoration: 'line-through', textDecorationThickness: 2 }}>
-                                  {fmt(o.prixInitialTtc)}
-                                </span>
-                              )}
-                              <span style={{ fontSize: '1.25rem', color: o.promoPct > 0 ? '#b45309' : CD, fontWeight: 900, letterSpacing: '-0.01em' }}>{fmt(o.prixUnitaireTtc)}</span>
-                              <span style={{ fontSize: '0.72rem', color: '#94a3b8', fontWeight: 600 }}>TTC / {o.unite}</span>
-                            </div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 'auto' }}>
-                              <div style={{ display: 'flex', alignItems: 'center', border: `1px solid ${qte > 0 ? CB : '#e2e8f0'}`, borderRadius: 11, overflow: 'hidden', background: '#fff' }}>
-                                <button className="pcat-qbtn" onClick={() => stepP(k, -1)} disabled={qte === 0}
-                                  style={{ width: 34, height: 36, border: 'none', background: '#f8fafc', color: qte > 0 ? CD : '#cbd5e1', fontWeight: 800, cursor: qte > 0 ? 'pointer' : 'default', fontSize: '1rem' }}>−</button>
-                                <input value={p.quantite} onChange={e => setP(k, { quantite: e.target.value })} placeholder="0"
-                                  style={{ width: 56, height: 34, padding: 0, border: 'none', borderLeft: '1px solid #eceaf5', borderRight: '1px solid #eceaf5', fontSize: '0.9rem', fontFamily: 'inherit', textAlign: 'center', outline: 'none', color: '#0f172a', fontWeight: 800 }} />
-                                <button className="pcat-qbtn" onClick={() => stepP(k, 1)}
-                                  style={{ width: 34, height: 36, border: 'none', background: '#f8fafc', color: CD, fontWeight: 800, cursor: 'pointer', fontSize: '1rem' }}>+</button>
-                              </div>
-                              <span style={{ marginLeft: 'auto', fontSize: '0.84rem', fontWeight: 800, color: qte > 0 ? CD : '#cbd5e1', whiteSpace: 'nowrap' }}>
-                                {qte > 0 ? `= ${fmt(o.prixUnitaireTtc * qte)}` : ''}
-                              </span>
-                            </div>
-                          </div>
-                        );
-                      })}
+                      {itemsPage.map(o => (
+                        <ArticleCard key={keyOf(o)} o={o} p={getP(keyOf(o))}
+                          onSet={v => setP(keyOf(o), { quantite: v })}
+                          onStep={d => stepP(keyOf(o), d)} />
+                      ))}
                     </div>
                   </div>
                 );
@@ -318,7 +490,7 @@ export default function PortailAcheteurPage() {
 
           {/* Panier flottant détaillé */}
           {lignesPanier.length > 0 && (
-            <div style={{ position: 'fixed', bottom: 18, right: 24, zIndex: 90, background: '#fff', border: `1.5px solid ${CB}`, borderRadius: 14, boxShadow: '0 12px 36px rgba(76,29,149,0.22)', padding: '14px 18px', width: 330, maxHeight: '60vh', display: 'flex', flexDirection: 'column' }}>
+            <div className="pcat-panier" style={{ position: 'fixed', bottom: 18, right: 24, zIndex: 90, background: '#fff', border: `1.5px solid ${CB}`, borderRadius: 14, boxShadow: '0 12px 36px rgba(76,29,149,0.22)', padding: '14px 18px', width: 330, maxHeight: '60vh', display: 'flex', flexDirection: 'column' }}>
               <div style={{ fontWeight: 800, color: CD, fontSize: '0.9rem', marginBottom: 8 }}>
                 🧺 Mon panier <span style={{ fontWeight: 600, color: '#94a3b8', fontSize: '0.76rem' }}>({lignesPanier.length} article{lignesPanier.length > 1 ? 's' : ''})</span>
               </div>
