@@ -97,7 +97,7 @@ function InfoPill({ icon, children }: { icon: string; children: React.ReactNode 
 // ── Page ─────────────────────────────────────────────────────────────────────
 
 export default function AdminDemandesAccesPage() {
-  const { prompt } = useConfirm();
+  const { confirm } = useConfirm();
   const [demandes, setDemandes] = useState<DemandeAcces[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -149,20 +149,16 @@ export default function AdminDemandesAccesPage() {
   const handleContactee = (d: DemandeAcces) => applyUpdate(d.id, { statut: 'contactee' });
 
   const handleRefuse = async (d: DemandeAcces) => {
-    const note = await prompt({
+    // Refus = suppression définitive + email de courtoisie automatique au demandeur.
+    const ok = await confirm({
       title: 'Refuser la demande',
-      message: `La demande d'accès de ${d.nom} sera marquée comme refusée.`,
-      inputLabel: 'Note interne (optionnelle)',
-      placeholder: 'Raison du refus…',
-      multiline: true,
+      message: `La demande d'accès de ${d.nom} sera définitivement supprimée et un email de refus (poli, sans motif) sera envoyé à ${d.email}.`,
       tone: 'danger',
       icon: '✕',
-      confirmLabel: 'Refuser',
+      confirmLabel: 'Refuser et notifier',
     });
-    if (note === null) return; // annulé
-    const body: DemandeUpdateBody = { statut: 'refusee' };
-    if (note.trim()) body.notesAdmin = note.trim();
-    await applyUpdate(d.id, body);
+    if (!ok) return;
+    await applyUpdate(d.id, { statut: 'refusee' });
   };
 
   // Conversion : le wizard AddClientModal est pré-rempli avec la demande ;
