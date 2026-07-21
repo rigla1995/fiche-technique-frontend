@@ -4,8 +4,18 @@ import api from '../api/client';
 
 export interface AppNotification {
   id: string;
-  eventType: 'new_demande' | 'demande_traitee' | 'new_inventaire' | 'demande_capacite_validee' | 'demande_gerant_validee' | 'nouvelle_commande_acheteur';
+  eventType:
+    | 'new_demande'
+    | 'demande_traitee'
+    | 'new_inventaire'
+    | 'demande_capacite_validee'
+    | 'demande_gerant_validee'
+    | 'nouvelle_commande_acheteur'
+    | 'demande_acces_recue'
+    | 'avenant_signe';
   demandeId?: number;
+  refId?: number;
+  refKind?: string;
   type: string;
   clientNom?: string;
   statut?: string;
@@ -18,6 +28,8 @@ interface NotificationContextValue {
   notifications: AppNotification[];
   unreadCount: number;
   markAllRead: () => void;
+  /** Ouverture du panneau : marque tout comme lu localement + purge serveur des notifs informatives. */
+  markSeen: () => void;
   clear: () => void;
   clearAllFromDB: () => Promise<void>;
   clearByEventType: (eventType: string) => Promise<void>;
@@ -27,6 +39,7 @@ const NotificationContext = createContext<NotificationContextValue>({
   notifications: [],
   unreadCount: 0,
   markAllRead: () => {},
+  markSeen: () => {},
   clear: () => {},
   clearAllFromDB: async () => {},
   clearByEventType: async () => {},
@@ -42,17 +55,20 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     if (!user) { setNotifications([]); return; }
     api.get('/api/notifications').then(({ data }) => {
       const mapped: AppNotification[] = data.map((r: {
-        id: number; eventType: string; demandeId?: number; type: string;
-        clientNom?: string; statut?: string; notesAdmin?: string | null; createdAt: string;
+        id: number; eventType: string; demandeId?: number; refId?: number; refKind?: string;
+        type: string; clientNom?: string; statut?: string; notesAdmin?: string | null;
+        readAt?: string | null; createdAt: string;
       }) => ({
         id: String(r.id),
         eventType: r.eventType as AppNotification['eventType'],
         demandeId: r.demandeId,
+        refId: r.refId,
+        refKind: r.refKind,
         type: r.type,
         clientNom: r.clientNom,
         statut: r.statut,
         notesAdmin: r.notesAdmin,
-        readAt: null,
+        readAt: r.readAt ? new Date(r.readAt).getTime() : null,
         createdAt: new Date(r.createdAt).getTime(),
       }));
       setNotifications(mapped);
@@ -64,6 +80,8 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       id: `${Date.now()}-${Math.random()}`,
       eventType,
       demandeId: data.demandeId as number | undefined,
+      refId: data.refId as number | undefined,
+      refKind: data.refKind as string | undefined,
       type: data.type as string,
       clientNom: data.clientNom as string | undefined,
       statut: data.statut as string | undefined,
@@ -104,6 +122,24 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       es.addEventListener('nouvelle_commande_acheteur', (e) => {
         try { push('nouvelle_commande_acheteur', JSON.parse(e.data)); } catch { /* ignore */ }
       });
+      // Demande d'accès reçue via le site vitrine (admins) — était NON écouté :
+      // c'est la cause du « pas instantané » (la notif n'apparaissait qu'au reload).
+      es.addEventListener('demande_acces_recue', (e) => {
+        try { push('demande_acces_recue', JSON.parse(e.data)); } catch { /* ignore */ }
+      });
+      es.addEventListener('avenant_signe', (e) => {
+        try { push('avenant_signe', JSON.parse(e.data)); } catch { /* ignore */ }
+      });
+      // Retrait instantané d'une notif « file d'attente » quand l'entité source est
+      // traitée côté serveur (ex. demande d'accès passée en contactée/refusée/convertie).
+      es.addEventListener('notif_removed', (e) => {
+        try {
+          const d = JSON.parse(e.data);
+          setNotifications((prev) => prev.filter(
+            (n) => !(n.refKind === d.refKind && n.refId === d.refId)
+          ));
+        } catch { /* ignore */ }
+      });
 
       es.onerror = () => {
         es.close();
@@ -117,6 +153,15 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
   const markAllRead = useCallback(() => {
     setNotifications((prev) => prev.map((n) => ({ ...n, readAt: n.readAt ?? Date.now() })));
+  }, []);
+
+  // À l'ouverture du panneau : on marque tout comme lu localement, et on demande au
+  // serveur de PURGER les notifs informatives (règle « ouvertes = supprimées »). Les
+  // notifs « file d'attente » restent (le serveur les marque seulement lues). On garde
+  // l'affichage local pour la session en cours pour que les clics fonctionnent encore.
+  const markSeen = useCallback(() => {
+    setNotifications((prev) => prev.map((n) => ({ ...n, readAt: n.readAt ?? Date.now() })));
+    api.post('/api/notifications/seen').catch(() => {});
   }, []);
 
   const clear = useCallback(() => setNotifications([]), []);
@@ -134,7 +179,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   const unreadCount = notifications.filter((n) => !n.readAt).length;
 
   return (
-    <NotificationContext.Provider value={{ notifications, unreadCount, markAllRead, clear, clearAllFromDB, clearByEventType }}>
+    <NotificationContext.Provider value={{ notifications, unreadCount, markAllRead, markSeen, clear, clearAllFromDB, clearByEventType }}>
       {children}
     </NotificationContext.Provider>
   );

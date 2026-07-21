@@ -7,7 +7,7 @@ import LabFlowLogo from './LabFlowLogo';
 export default function Header() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const { notifications, unreadCount, markAllRead } = useNotifications();
+  const { notifications, unreadCount, markSeen } = useNotifications();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -24,7 +24,9 @@ export default function Header() {
 
   const handleBell = () => {
     setOpen((v) => !v);
-    if (!open && unreadCount > 0) markAllRead();
+    // À l'ouverture : marque tout comme lu + purge serveur des notifs informatives
+    // (les « demande d'accès » restent jusqu'à leur traitement).
+    if (!open) markSeen();
   };
 
   const handleNotifClick = (eventType: string) => {
@@ -40,6 +42,8 @@ export default function Header() {
     } else if (eventType === 'demande_acces_recue') {
       // Demande d'accès reçue via le site vitrine → file admin dédiée
       navigate('/admin/site/demandes');
+    } else if (eventType === 'avenant_signe') {
+      navigate('/admin/clients');
     } else {
       navigate(user?.role === 'super_admin' ? '/admin/support' : '/client/support');
     }
@@ -183,6 +187,10 @@ export default function Header() {
                           ? 'linear-gradient(135deg,#f5f3ff,#ede9fe)'
                           : n.eventType === 'new_demande'
                           ? 'linear-gradient(135deg,#fef3c7,#fde68a)'
+                          : n.eventType === 'demande_acces_recue'
+                          ? 'linear-gradient(135deg,#e0e7ff,#c7d2fe)'
+                          : n.eventType === 'avenant_signe'
+                          ? 'linear-gradient(135deg,#d1fae5,#a7f3d0)'
                           : n.statut === 'validée'
                           ? 'linear-gradient(135deg,#d1fae5,#a7f3d0)'
                           : 'linear-gradient(135deg,#fee2e2,#fecaca)',
@@ -190,6 +198,8 @@ export default function Header() {
                         {n.eventType === 'new_inventaire' ? '📦'
                           : n.eventType === 'nouvelle_commande_acheteur' ? '🤝'
                           : n.eventType === 'new_demande' ? '📥'
+                          : n.eventType === 'demande_acces_recue' ? '🌐'
+                          : n.eventType === 'avenant_signe' ? '✅'
                           : n.statut === 'validée' ? '✅' : '❌'}
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
@@ -200,6 +210,10 @@ export default function Header() {
                             ? `Nouvelle commande acheteur${n.notesAdmin ? ` — ${n.notesAdmin}` : ''}`
                             : n.eventType === 'new_demande'
                             ? `Nouvelle demande — ${typeLabel(n.type)}`
+                            : n.eventType === 'demande_acces_recue'
+                            ? "Nouvelle demande d'accès"
+                            : n.eventType === 'avenant_signe'
+                            ? 'Avenant signé — capacité ajoutée'
                             : `Demande ${n.statut === 'validée' ? 'validée ✓' : 'refusée ✗'} — ${typeLabel(n.type)}`}
                         </div>
                         {n.clientNom && (
