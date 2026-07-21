@@ -48,6 +48,8 @@ import AdminDomainesPage from './components/admin/AdminDomainesPage';
 import AdminSupportPage from './components/admin/AdminSupportPage';
 import AdminDemandesAccesPage from './components/admin/AdminDemandesAccesPage';
 import AdminPartenairesSitePage from './components/admin/AdminPartenairesSitePage';
+import BossAdminsPage from './components/admin/BossAdminsPage';
+import BossAnnuairePage from './components/admin/BossAnnuairePage';
 import ActiveAgentsPage from './components/admin/ActiveAgentsPage';
 import MonAbonnementPage from './components/client/MonAbonnementPage';
 import HistoriquePaiementPage from './components/client/HistoriquePaiementPage';
@@ -101,7 +103,7 @@ function RootRedirect() {
   const { user, isLoading } = useAuth();
   if (isLoading) return <div className="page-loading"><div className="spinner" /></div>;
   if (!user) return <Navigate to="/login" replace />;
-  if (user.role === 'super_admin') return <Navigate to="/admin" replace />;
+  if (user.role === 'super_admin' || user.role === 'boss') return <Navigate to="/admin" replace />;
   // Acheteur : son portail dédié
   if (user.role === 'acheteur') return <Navigate to="/portail" replace />;
   // Gérant : toujours son tableau de bord
@@ -152,6 +154,8 @@ export default function App() {
             <Route path="/admin/support" element={<AdminSupportPage />} />
             <Route path="/admin/site/demandes" element={<AdminDemandesAccesPage />} />
             <Route path="/admin/site/partenaires" element={<AdminPartenairesSitePage />} />
+            <Route path="/admin/boss/admins" element={<BossAdminsPage />} />
+            <Route path="/admin/boss/annuaire" element={<BossAnnuairePage />} />
             <Route path="/admin/active-agents" element={<ActiveAgentsPage />} />
             <Route path="/admin/prestataires" element={<PrestatairesManagement />} />
             <Route path="/admin/knowledge-base" element={<AdminKnowledgeBasePage />} />
