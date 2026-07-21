@@ -297,7 +297,9 @@ export default function AddClientModal({ onClose, onCreated, initialValues }: Pr
       nom, email, telephone: tel,
       nbActivites, nbLabos, nbGerants, formuleActivites, nbAcheteurs,
       montantOnboarding: parseFloat(montantOnboarding) || 0,
-      promotions: promos.map(mapPromoForApi),
+      // aperçu = promos manuelles + la promo « 1er mois offert » (sauf si l'admin
+      // a déjà une promo mensualité). Ne PAS la mettre dans le POST de création.
+      promotions: [...(aDejaPromoMensuelle ? [] : [promoPremierMoisApi()]), ...promos.map(mapPromoForApi)],
     })
       .then(({ data }) => {
         if (seq !== previewSeq.current) return;
@@ -386,6 +388,22 @@ export default function AddClientModal({ onClose, onCreated, initialValues }: Pr
       fixedSupplement: p.type === 'fixed_price' && isSup ? parseFloat(p.fixedVal) : null,
     };
   };
+
+  // Promo SYSTÈME « 1er mois offert » : créée automatiquement par le backend à la
+  // création (mensualité du mois courant à 0 DT, non supprimable). On l'injecte
+  // UNIQUEMENT dans l'aperçu du contrat (pour que l'admin la voie), jamais dans le
+  // POST /admin/clients — sinon le backend la créerait en double.
+  const promoPremierMoisApi = () => ({
+    type: 'free_months' as const,
+    appliesTo: 'mensualite' as const,
+    dateDebut: `${new Date().toISOString().slice(0, 7)}-01`,
+    monthsDuration: 1,
+    discountOnboarding: null, discountMensualite: null, discountSupplement: null,
+    fixedOnboarding: null, fixedMensualite: null, fixedSupplement: null,
+  });
+  // La promo système est ignorée si l'admin a déjà posé une promo sur la mensualité
+  // (la sienne prime, exactement comme côté backend).
+  const aDejaPromoMensuelle = promos.some((p) => ['mensualite', 'les_deux'].includes(p.appliesTo));
 
   const handleSubmit = async () => {
     // Génération en cours : on attend. Échec de génération : on N'EMPÊCHE PAS la
@@ -664,6 +682,15 @@ export default function AddClientModal({ onClose, onCreated, initialValues }: Pr
                 <div style={{ fontSize: 13, color: '#374151', marginBottom: 14, lineHeight: 1.5 }}>
                   Optionnel — ajoutez des promotions de lancement. Elles seront appliquées dès la création du compte.
                 </div>
+
+                {/* Promo système « 1er mois offert » : toujours appliquée, verrouillée.
+                    Masquée si l'admin pose sa propre promo mensualité (qui prime). */}
+                {!aDejaPromoMensuelle && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#ecfdf5', border: '1px solid #a7f3d0', borderRadius: 8, padding: '8px 12px', marginBottom: 6 }}>
+                    <span style={{ flex: 1, fontSize: 12, color: '#047857', fontWeight: 600 }}>🎁 1er mois d'abonnement offert — appliqué automatiquement</span>
+                    <span title="Promotion par défaut, non supprimable" style={{ fontSize: 11, color: '#059669', background: '#d1fae5', border: '1px solid #a7f3d0', borderRadius: 5, padding: '2px 8px' }}>🔒 verrouillée</span>
+                  </div>
+                )}
 
                 {promos.length > 0 && (
                   <div style={{ marginBottom: 14 }}>
