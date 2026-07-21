@@ -12,7 +12,7 @@ interface LayoutProps {
 
 // Espace « maison » de chaque rôle (cible de redirection quand l'accès est refusé).
 const homeOf = (role: string) =>
-  role === 'super_admin' ? '/admin' : role === 'acheteur' ? '/portail' : '/client';
+  role === 'super_admin' || role === 'boss' ? '/admin' : role === 'acheteur' ? '/portail' : '/client';
 
 export default function Layout({ requireRole }: LayoutProps) {
   const { user, isLoading } = useAuth();
@@ -23,7 +23,13 @@ export default function Layout({ requireRole }: LayoutProps) {
   }
 
   if (!user) return <Navigate to="/login" replace />;
-  if (requireRole && user.role !== requireRole && !(requireRole === 'client' && user.role === 'gerant')) {
+  // Le Boss hérite de l'accès super_admin ; un gérant partage l'espace client.
+  const roleOk = requireRole
+    ? user.role === requireRole
+      || (requireRole === 'client' && user.role === 'gerant')
+      || (requireRole === 'super_admin' && user.role === 'boss')
+    : true;
+  if (!roleOk) {
     return <Navigate to={homeOf(user.role)} replace />;
   }
 

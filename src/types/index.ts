@@ -2,7 +2,7 @@ export interface User {
   id: number;
   name: string;
   email: string;
-  role: 'super_admin' | 'client' | 'gerant' | 'acheteur';
+  role: 'super_admin' | 'boss' | 'client' | 'gerant' | 'acheteur';
   onboardingStep?: number;
   phone?: string;
   entrepriseName?: string | null;
