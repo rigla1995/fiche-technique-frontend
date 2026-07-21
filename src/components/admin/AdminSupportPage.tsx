@@ -298,7 +298,7 @@ const PAGE_SIZE = 5;
 
 // ── Main page ─────────────────────────────────────────────────────────────────
 export default function AdminSupportPage() {
-  const { clearAllFromDB } = useNotifications();
+  const { clearByEventType } = useNotifications();
   const [demandes, setDemandes] = useState<SupportDemande[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedClientId, setSelectedClientId] = useState<number | null>(null);
@@ -318,7 +318,9 @@ export default function AdminSupportPage() {
     }
   }, []);
 
-  useEffect(() => { fetchDemandes(); clearAllFromDB(); }, [fetchDemandes, clearAllFromDB]);
+  // Ne vider QUE les notifs de support (new_demande) : les « demande d'accès »
+  // du site vitrine doivent rester jusqu'à leur traitement.
+  useEffect(() => { fetchDemandes(); clearByEventType('new_demande'); }, [fetchDemandes, clearByEventType]);
   useEffect(() => { setPage(1); }, [selectedClientId, filterStatut, filterType]);
 
   const handleAction = async (id: number, statut: 'validée' | 'refusée', extra: Record<string, unknown> = {}) => {
