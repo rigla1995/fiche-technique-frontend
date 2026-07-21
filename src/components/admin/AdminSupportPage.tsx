@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import api from '../../api/client';
 import type { SupportDemande } from '../../types';
 import { useNotifications } from '../../context/NotificationContext';
-import { generateAvenantPdf } from '../../utils/contractPdf';
+// jsPDF (~113 Ko gzip) ne se charge qu'à l'ouverture d'une demande supplément (import dynamique).
 import { FilterSegmented, FilterInput } from '../common/HistoryFilterBar';
 import type { SegmentedOption } from '../common/HistoryFilterBar';
 
@@ -90,7 +90,10 @@ function DetailsPopup({
     // Coût mensuel du poste APRÈS ajout ≈ coût actuel + nb ajoutés × prix unitaire sup.
     const coutApres = (cost: number | undefined, added: number, prixSup: number | undefined): number | undefined =>
       cost != null ? cost + added * (prixSup || 0) : undefined;
-    const base64 = generateAvenantPdf({
+    let cancelled = false;
+    import('../../utils/contractPdf').then(({ generateAvenantPdf }) => {
+      if (cancelled) return;
+      const base64 = generateAvenantPdf({
       clientNom:       demande.clientNom   || 'Client',
       clientEmail:     demande.clientEmail || '',
       nbActivitesAdded: nbAAdded,
@@ -110,8 +113,10 @@ function DetailsPopup({
       acheteursCost: acheteursApres,
       appName: 'LabFlow',
       dateAvenant: new Date().toISOString(),
+      });
+      setAvenantPdfBase64(base64);
     });
-    setAvenantPdfBase64(base64);
+    return () => { cancelled = true; };
   }, [pricing, demande]);
 
   const handleAction = async (statut: 'validée' | 'refusée') => {

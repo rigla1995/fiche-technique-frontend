@@ -3,7 +3,7 @@ import { useLocation } from 'react-router-dom';
 import api from '../../api/client';
 import MarkdownView from '../common/MarkdownView';
 import OnboardingChecklist from './OnboardingChecklist';
-import { buildManuelPdf } from '../../utils/manuelPdf';
+// jsPDF (~113 Ko gzip) ne se charge qu'au clic « Export PDF » (import dynamique).
 
 /**
  * Centre d'aide — le contenu du manuel vient de la base (table manuel_sections,
@@ -88,7 +88,7 @@ export default function GuidePage() {
           </div>
         </div>
         <button
-          onClick={() => buildManuelPdf(sections)}
+          onClick={async () => { const { buildManuelPdf } = await import('../../utils/manuelPdf'); buildManuelPdf(sections); }}
           disabled={loading || sections.length === 0}
           style={{
             background: 'rgba(255,255,255,0.16)', color: '#fff', border: '1px solid rgba(255,255,255,0.45)',

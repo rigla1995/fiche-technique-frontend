@@ -1,86 +1,94 @@
+import { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { NotificationProvider } from './context/NotificationContext';
 import { ConfirmProvider } from './components/common/ConfirmDialog';
 import Layout from './components/common/Layout';
-import LoginPage from './components/auth/LoginPage';
-import InvitePage from './components/auth/InvitePage';
-import ForgotPasswordPage from './components/auth/ForgotPasswordPage';
-import ResetPasswordPage from './components/auth/ResetPasswordPage';
-import ClientsManagement from './components/admin/ClientsManagement';
-import ProductList from './components/client/ProductList';
-import ClientDashboard from './components/client/ClientDashboard';
-import ProductForm from './components/client/ProductForm';
-import ProductCategoriesPage from './components/client/ProductCategoriesPage';
-import ValorisesPage from './components/client/ValorisesPage';
-import ReferentielUnitesPage from './components/client/ReferentielUnitesPage';
-import ReferentielFamillesPage from './components/client/ReferentielFamillesPage';
-import ReferentielCategoriesPage from './components/client/ReferentielCategoriesPage';
-import ReferentielArticlesPage from './components/client/ReferentielArticlesPage';
-import ReferentielImportPage from './components/client/ReferentielImportPage';
-import Profile from './components/client/Profile';
-import ActivitesPage from './components/client/ActivitesPage';
-import StockPage from './components/client/StockPage';
-import HistoriqueApproPage from './components/client/HistoriqueApproPage';
-import HistoriquepertesPage from './components/client/HistoriquepertesPage';
-import StockLaboPage from './components/client/StockLaboPage';
-import TransferPage from './components/client/TransferPage';
-import TransferHistoriquePage from './components/client/TransferHistoriquePage';
-import FournisseursPage from './components/client/FournisseursPage';
-import FournisseursLaboPage from './components/client/FournisseursLaboPage';
-import LaboHistoriqueApproPage from './components/client/LaboHistoriqueApproPage';
-import LaboHistoriquepertesPage from './components/client/LaboHistoriquepertesPage';
-import FacturesApproPage from './components/client/FacturesApproPage';
-import LaboFacturesApproPage from './components/client/LaboFacturesApproPage';
-import InventairePage from './components/client/InventairePage';
-import HistoriqueInventairePage from './components/client/HistoriqueInventairePage';
-import ErrorPage from './components/common/ErrorPage';
-import AbonnementsManagement from './components/admin/AbonnementsManagement';
-import HistoriquePaiementsAdmin from './components/admin/HistoriquePaiementsAdmin';
-import HistoriquePromotionsAdmin from './components/admin/HistoriquePromotionsAdmin';
-import TarifsConfig from './components/admin/TarifsConfig';
-import DemandesManagement from './components/admin/DemandesManagement';
-import AdminRapportsPage from './components/admin/AdminRapportsPage';
-import AdminKnowledgeBasePage from './components/admin/AdminKnowledgeBasePage';
-import AdminManuelPage from './components/admin/AdminManuelPage';
-import AdminDashboardPage from './components/admin/AdminDashboardPage';
-import AdminDomainesPage from './components/admin/AdminDomainesPage';
-import AdminSupportPage from './components/admin/AdminSupportPage';
-import AdminDemandesAccesPage from './components/admin/AdminDemandesAccesPage';
-import AdminPartenairesSitePage from './components/admin/AdminPartenairesSitePage';
-import BossAdminsPage from './components/admin/BossAdminsPage';
-import BossAnnuairePage from './components/admin/BossAnnuairePage';
-import ActiveAgentsPage from './components/admin/ActiveAgentsPage';
-import MonAbonnementPage from './components/client/MonAbonnementPage';
-import HistoriquePaiementPage from './components/client/HistoriquePaiementPage';
-import GerantsPage from './components/client/GerantsPage';
-import SupportPage from './components/client/SupportPage';
-import GuidePage from './components/client/GuidePage';
-import AIAssistantPage from './components/client/AIAssistantPage';
-import VentesPage from './components/client/VentesPage';
-import LaboVentesPage from './components/client/LaboVentesPage';
-import AbonnementGerantPage from './components/client/AbonnementGerantPage';
-import ConfigurationVentePage from './components/client/ConfigurationVentePage';
-import ConfigPrestatairesPage from './components/client/ConfigPrestatairesPage';
-import ConfigChargesPage from './components/client/ConfigChargesPage';
 import VenteGuard from './components/client/VenteGuard';
 import AcheteursGuard from './components/client/AcheteursGuard';
 import FormuleGuard from './components/client/FormuleGuard';
-import AcheteursPage from './components/client/AcheteursPage';
-import AcheteursImportPage from './components/client/AcheteursImportPage';
-import TarifsAcheteursPage from './components/client/TarifsAcheteursPage';
-import VenteAcheteurPage from './components/client/VenteAcheteurPage';
-import CommandesAcheteursPage from './components/client/CommandesAcheteursPage';
-import PortailAcheteurPage from './components/portail/PortailAcheteurPage';
-import PortailCommandesPage from './components/portail/PortailCommandesPage';
-import PrestatairesManagement from './components/admin/PrestatairesManagement';
 import './i18n';
 import './index.css';
+
+// ── Code-splitting par route ──────────────────────────────────────────────────
+// Chaque page est un chunk chargé À LA DEMANDE (React.lazy) : le bundle initial
+// ne contient plus que le shell (providers + Layout + guards). Les vendors lourds
+// (recharts, jspdf…) suivent automatiquement leurs pages dans des chunks async.
+const LoginPage = lazy(() => import('./components/auth/LoginPage'));
+const InvitePage = lazy(() => import('./components/auth/InvitePage'));
+const ForgotPasswordPage = lazy(() => import('./components/auth/ForgotPasswordPage'));
+const ResetPasswordPage = lazy(() => import('./components/auth/ResetPasswordPage'));
+const ClientsManagement = lazy(() => import('./components/admin/ClientsManagement'));
+const ProductList = lazy(() => import('./components/client/ProductList'));
+const ClientDashboard = lazy(() => import('./components/client/ClientDashboard'));
+const ProductForm = lazy(() => import('./components/client/ProductForm'));
+const ProductCategoriesPage = lazy(() => import('./components/client/ProductCategoriesPage'));
+const ValorisesPage = lazy(() => import('./components/client/ValorisesPage'));
+const ReferentielUnitesPage = lazy(() => import('./components/client/ReferentielUnitesPage'));
+const ReferentielFamillesPage = lazy(() => import('./components/client/ReferentielFamillesPage'));
+const ReferentielCategoriesPage = lazy(() => import('./components/client/ReferentielCategoriesPage'));
+const ReferentielArticlesPage = lazy(() => import('./components/client/ReferentielArticlesPage'));
+const ReferentielImportPage = lazy(() => import('./components/client/ReferentielImportPage'));
+const Profile = lazy(() => import('./components/client/Profile'));
+const ActivitesPage = lazy(() => import('./components/client/ActivitesPage'));
+const StockPage = lazy(() => import('./components/client/StockPage'));
+const HistoriqueApproPage = lazy(() => import('./components/client/HistoriqueApproPage'));
+const HistoriquepertesPage = lazy(() => import('./components/client/HistoriquepertesPage'));
+const StockLaboPage = lazy(() => import('./components/client/StockLaboPage'));
+const TransferPage = lazy(() => import('./components/client/TransferPage'));
+const TransferHistoriquePage = lazy(() => import('./components/client/TransferHistoriquePage'));
+const FournisseursPage = lazy(() => import('./components/client/FournisseursPage'));
+const FournisseursLaboPage = lazy(() => import('./components/client/FournisseursLaboPage'));
+const LaboHistoriqueApproPage = lazy(() => import('./components/client/LaboHistoriqueApproPage'));
+const LaboHistoriquepertesPage = lazy(() => import('./components/client/LaboHistoriquepertesPage'));
+const FacturesApproPage = lazy(() => import('./components/client/FacturesApproPage'));
+const LaboFacturesApproPage = lazy(() => import('./components/client/LaboFacturesApproPage'));
+const InventairePage = lazy(() => import('./components/client/InventairePage'));
+const HistoriqueInventairePage = lazy(() => import('./components/client/HistoriqueInventairePage'));
+const ErrorPage = lazy(() => import('./components/common/ErrorPage'));
+const AbonnementsManagement = lazy(() => import('./components/admin/AbonnementsManagement'));
+const HistoriquePaiementsAdmin = lazy(() => import('./components/admin/HistoriquePaiementsAdmin'));
+const HistoriquePromotionsAdmin = lazy(() => import('./components/admin/HistoriquePromotionsAdmin'));
+const TarifsConfig = lazy(() => import('./components/admin/TarifsConfig'));
+const DemandesManagement = lazy(() => import('./components/admin/DemandesManagement'));
+const AdminRapportsPage = lazy(() => import('./components/admin/AdminRapportsPage'));
+const AdminKnowledgeBasePage = lazy(() => import('./components/admin/AdminKnowledgeBasePage'));
+const AdminManuelPage = lazy(() => import('./components/admin/AdminManuelPage'));
+const AdminDashboardPage = lazy(() => import('./components/admin/AdminDashboardPage'));
+const AdminDomainesPage = lazy(() => import('./components/admin/AdminDomainesPage'));
+const AdminSupportPage = lazy(() => import('./components/admin/AdminSupportPage'));
+const AdminDemandesAccesPage = lazy(() => import('./components/admin/AdminDemandesAccesPage'));
+const AdminPartenairesSitePage = lazy(() => import('./components/admin/AdminPartenairesSitePage'));
+const BossAdminsPage = lazy(() => import('./components/admin/BossAdminsPage'));
+const BossAnnuairePage = lazy(() => import('./components/admin/BossAnnuairePage'));
+const ActiveAgentsPage = lazy(() => import('./components/admin/ActiveAgentsPage'));
+const MonAbonnementPage = lazy(() => import('./components/client/MonAbonnementPage'));
+const HistoriquePaiementPage = lazy(() => import('./components/client/HistoriquePaiementPage'));
+const GerantsPage = lazy(() => import('./components/client/GerantsPage'));
+const SupportPage = lazy(() => import('./components/client/SupportPage'));
+const GuidePage = lazy(() => import('./components/client/GuidePage'));
+const AIAssistantPage = lazy(() => import('./components/client/AIAssistantPage'));
+const VentesPage = lazy(() => import('./components/client/VentesPage'));
+const LaboVentesPage = lazy(() => import('./components/client/LaboVentesPage'));
+const AbonnementGerantPage = lazy(() => import('./components/client/AbonnementGerantPage'));
+const ConfigurationVentePage = lazy(() => import('./components/client/ConfigurationVentePage'));
+const ConfigPrestatairesPage = lazy(() => import('./components/client/ConfigPrestatairesPage'));
+const ConfigChargesPage = lazy(() => import('./components/client/ConfigChargesPage'));
+const AcheteursPage = lazy(() => import('./components/client/AcheteursPage'));
+const AcheteursImportPage = lazy(() => import('./components/client/AcheteursImportPage'));
+const TarifsAcheteursPage = lazy(() => import('./components/client/TarifsAcheteursPage'));
+const VenteAcheteurPage = lazy(() => import('./components/client/VenteAcheteurPage'));
+const CommandesAcheteursPage = lazy(() => import('./components/client/CommandesAcheteursPage'));
+const PortailAcheteurPage = lazy(() => import('./components/portail/PortailAcheteurPage'));
+const PortailCommandesPage = lazy(() => import('./components/portail/PortailCommandesPage'));
+const PrestatairesManagement = lazy(() => import('./components/admin/PrestatairesManagement'));
+
+const PageLoader = () => <div className="page-loading"><div className="spinner" /></div>;
 
 // Portail acheteur : plein écran (pas de Layout client), réservé au rôle acheteur.
 function RequireAcheteur({ children }: { children: React.ReactElement }) {
   const { user, isLoading } = useAuth();
-  if (isLoading) return <div className="page-loading"><div className="spinner" /></div>;
+  if (isLoading) return <PageLoader />;
   if (!user) return <Navigate to="/login" replace />;
   if (user.role !== 'acheteur') return <Navigate to="/" replace />;
   return children;
@@ -92,7 +100,7 @@ function ClientDefaultRedirect() {
   // Compteurs pas encore connus (session en cache d'avant le login enrichi,
   // /auth/me en cours) : attendre plutôt que de supposer 0 et rediriger à tort.
   if (user?.role === 'client' && user.activitesCount === undefined && user.labosCount === undefined) {
-    return <div className="page-loading"><div className="spinner" /></div>;
+    return <PageLoader />;
   }
   // Compte dépôt (labo sans activité) : le dashboard reste la maison
   if ((user?.activitesCount ?? 0) === 0 && (user?.labosCount ?? 0) === 0) return <Navigate to="/client/activites" replace />;
@@ -101,7 +109,7 @@ function ClientDefaultRedirect() {
 
 function RootRedirect() {
   const { user, isLoading } = useAuth();
-  if (isLoading) return <div className="page-loading"><div className="spinner" /></div>;
+  if (isLoading) return <PageLoader />;
   if (!user) return <Navigate to="/login" replace />;
   if (user.role === 'super_admin' || user.role === 'boss') return <Navigate to="/admin" replace />;
   // Acheteur : son portail dédié
@@ -114,7 +122,7 @@ function RootRedirect() {
   // Compteurs pas encore connus (session en cache, /auth/me en cours) :
   // attendre plutôt que de supposer 0 et envoyer vers Mes Activités à tort.
   if (user.activitesCount === undefined && user.labosCount === undefined) {
-    return <div className="page-loading"><div className="spinner" /></div>;
+    return <PageLoader />;
   }
   // Client post-onboarding : sans activité NI labo → mes activités, sinon → tableau de bord
   // (un compte dépôt = labo + acheteurs sans activité atterrit sur le dashboard)
@@ -128,6 +136,7 @@ export default function App() {
       <AuthProvider>
         <NotificationProvider>
         <ConfirmProvider>
+        <Suspense fallback={<PageLoader />}>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/invite/:token" element={<InvitePage />} />
@@ -234,6 +243,7 @@ export default function App() {
           <Route path="/error/:code" element={<ErrorPage />} />
           <Route path="*" element={<ErrorPage code={404} />} />
         </Routes>
+        </Suspense>
         </ConfirmProvider>
         </NotificationProvider>
       </AuthProvider>
