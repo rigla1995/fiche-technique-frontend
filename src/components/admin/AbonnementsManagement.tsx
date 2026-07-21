@@ -1072,6 +1072,12 @@ export default function AbonnementsManagement() {
                       <span style={{ fontSize: 10, fontWeight: 700, borderRadius: 6, padding: '2px 7px', flexShrink: 0, background: badgeBg, color: '#fff' }}>
                         {badge}
                       </span>
+                      {p.isSystem && (
+                        <span title="Offert automatiquement à la création du client — non supprimable"
+                          style={{ fontSize: 10, fontWeight: 700, borderRadius: 6, padding: '2px 7px', flexShrink: 0, background: '#ecfdf5', color: '#047857', border: '1px solid #a7f3d0' }}>
+                          🎁 1er mois offert · verrouillé
+                        </span>
+                      )}
                       <span style={{ fontSize: 12, fontWeight: 600, color: '#374151' }}>
                         {APPLIES_LABELS[p.appliesTo] || p.appliesTo}
                       </span>
@@ -1082,7 +1088,7 @@ export default function AbonnementsManagement() {
                       <span style={{ fontSize: 11, color: '#9ca3af', marginLeft: 'auto' }}>
                         {fmtDate(p.dateDebut)} → {p.dateFin ? fmtDate(p.dateFin) : 'Permanent'}
                       </span>
-                      {showActions && (
+                      {showActions && !p.isSystem && (
                         <>
                           <button
                             onClick={() => isEditing ? (setEditingPromo(null), setPromoMoisDebut(''), setPromoMonths(''), setPromoDiscountVal(''), setPromoFixedVal('')) : startEditPromo(p)}

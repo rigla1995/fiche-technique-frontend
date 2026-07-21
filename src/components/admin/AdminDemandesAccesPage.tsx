@@ -101,7 +101,9 @@ export default function AdminDemandesAccesPage() {
   const [demandes, setDemandes] = useState<DemandeAcces[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [filterStatut, setFilterStatut] = useState<DemandeStatut | ''>('nouvelle');
+  // Filtre par défaut « Toutes » ('') : la liste s'ouvre sur l'ensemble des
+  // demandes (la notification « demande reçue » y mène aussi, cf. Header).
+  const [filterStatut, setFilterStatut] = useState<DemandeStatut | ''>('');
   const [page, setPage] = useState(1);
   const [expanded, setExpanded] = useState<Set<number>>(new Set());
   const [actioningId, setActioningId] = useState<number | null>(null);
