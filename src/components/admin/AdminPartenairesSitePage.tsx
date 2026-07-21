@@ -1,6 +1,9 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import api from '../../api/client';
 import { useConfirm } from '../common/ConfirmDialog';
+import Pagination from '../common/Pagination';
+
+const PER_PAGE = 12;
 
 // ── Types (contrat backend /admin/site/partenaires) ──────────────────────────
 
@@ -62,6 +65,7 @@ export default function AdminPartenairesSitePage() {
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<number | null>(null);
   const [search, setSearch] = useState('');
+  const [page, setPage] = useState(1);
 
   // Un seul input file caché pour toute la grille ; la cible est mémorisée en ref
   // (pas de re-render nécessaire entre le clic et le choix du fichier).
@@ -146,6 +150,14 @@ export default function AdminPartenairesSitePage() {
     const q = search.toLowerCase();
     return partenaires.filter((p) => p.nom.toLowerCase().includes(q) || p.email.toLowerCase().includes(q));
   }, [partenaires, search]);
+
+  // Pagination client-side (même schéma que les demandes d'accès / le manuel).
+  useEffect(() => { setPage(1); }, [search]);
+  const safePage = Math.min(page, Math.max(1, Math.ceil(filtered.length / PER_PAGE)));
+  const paged = useMemo(
+    () => filtered.slice((safePage - 1) * PER_PAGE, safePage * PER_PAGE),
+    [filtered, safePage],
+  );
 
   return (
     <div className="page">
@@ -248,7 +260,7 @@ export default function AdminPartenairesSitePage() {
         </div>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 16 }}>
-          {filtered.map((p) => {
+          {paged.map((p) => {
             const busy = busyId === p.clientId;
             const hasLogo = !!p.logoSite;
             return (
@@ -332,6 +344,10 @@ export default function AdminPartenairesSitePage() {
             );
           })}
         </div>
+      )}
+
+      {!loading && filtered.length > 0 && (
+        <Pagination total={filtered.length} page={safePage} perPage={PER_PAGE} onChange={setPage} />
       )}
     </div>
   );

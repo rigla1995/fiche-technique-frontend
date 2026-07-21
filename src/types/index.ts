@@ -33,6 +33,7 @@ export interface Promotion {
   notes: string | null;
   createdAt: string;
   isActive: boolean;
+  isSystem?: boolean; // promo « 1er mois offert » verrouillée : non supprimable/éditable
   statutPromo: 'actif' | 'expiré';
 }
 
