@@ -2,6 +2,9 @@ import { useState, useEffect, useCallback } from 'react';
 import { Navigate } from 'react-router-dom';
 import api from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
+import Pagination from '../common/Pagination';
+
+const PER_PAGE = 12;
 
 interface AnnuaireRow {
   id: number;
@@ -33,6 +36,7 @@ export default function BossAnnuairePage() {
   const [cryptoConfigured, setCryptoConfigured] = useState(true);
   const [search, setSearch] = useState('');
   const [role, setRole] = useState('');
+  const [page, setPage] = useState(1);
 
   // Flux de révélation
   const [target, setTarget] = useState<AnnuaireRow | null>(null);
@@ -64,6 +68,9 @@ export default function BossAnnuairePage() {
     const h = window.setTimeout(load, 300);
     return () => window.clearTimeout(h);
   }, [load]);
+
+  // Retour en page 1 quand la recherche ou le filtre change.
+  useEffect(() => { setPage(1); }, [search, role]);
 
   // Compte à rebours d'affichage du mot de passe en clair (masqué à 0).
   useEffect(() => {
@@ -102,12 +109,29 @@ export default function BossAnnuairePage() {
     }
   };
 
+  const safePage = Math.min(page, Math.max(1, Math.ceil(items.length / PER_PAGE)));
+  const paged = items.slice((safePage - 1) * PER_PAGE, safePage * PER_PAGE);
+
   return (
     <div style={{ maxWidth: 1000, margin: '0 auto', padding: '8px 4px 40px' }}>
-      <h1 style={{ fontSize: '1.4rem', fontWeight: 800, color: '#0f172a', margin: '0 0 4px' }}>🔑 Annuaire identifiants</h1>
-      <p style={{ color: '#64748b', fontSize: '0.9rem', margin: '0 0 16px' }}>
-        Emails et mots de passe (hashés) des comptes clients, gérants et acheteurs. Révélation d'un mot de passe protégée par code envoyé à votre email.
-      </p>
+      <div style={{
+        background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 55%, #6366f1 100%)',
+        borderRadius: 18, padding: '20px 24px', marginBottom: 20,
+        boxShadow: '0 8px 32px rgba(49,46,129,0.28)',
+        display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap',
+      }}>
+        <div style={{ background: 'rgba(255,255,255,0.18)', borderRadius: 12, padding: '8px 11px', fontSize: '1.3rem' }}>🔑</div>
+        <div style={{ flex: 1, minWidth: 240 }}>
+          <h1 style={{ fontSize: '1.4rem', fontWeight: 900, color: '#fff', margin: 0, lineHeight: 1.1 }}>Annuaire identifiants</h1>
+          <p style={{ margin: '4px 0 0', fontSize: '0.82rem', color: 'rgba(255,255,255,0.82)', lineHeight: 1.5, maxWidth: 640 }}>
+            Emails et mots de passe (hashés) des comptes clients, gérants et acheteurs. La révélation d'un mot de passe est protégée par un code envoyé à votre email et n'apparaît que 2 minutes.
+          </p>
+        </div>
+        <div style={{ background: 'rgba(255,255,255,0.12)', borderRadius: 10, padding: '8px 14px', textAlign: 'center' }}>
+          <div style={{ fontSize: 17, fontWeight: 800, color: '#c7d2fe', lineHeight: 1 }}>{items.length}</div>
+          <div style={{ fontSize: 9, fontWeight: 700, color: 'rgba(255,255,255,0.75)', textTransform: 'uppercase', letterSpacing: '0.06em', marginTop: 3 }}>Comptes</div>
+        </div>
+      </div>
 
       {!cryptoConfigured && (
         <div style={{ background: '#fef3c7', border: '1px solid #fde68a', color: '#92400e', borderRadius: 10, padding: '12px 16px', marginBottom: 16, fontSize: '0.85rem' }}>
@@ -155,7 +179,7 @@ export default function BossAnnuairePage() {
               <tr><td colSpan={5} style={{ padding: 28, textAlign: 'center', color: '#94a3b8' }}>Chargement…</td></tr>
             ) : items.length === 0 ? (
               <tr><td colSpan={5} style={{ padding: 28, textAlign: 'center', color: '#94a3b8' }}>Aucun compte.</td></tr>
-            ) : items.map((r) => (
+            ) : paged.map((r) => (
               <tr key={r.id} style={{ borderTop: '1px solid #f1f5f9' }}>
                 <td style={{ padding: '11px 14px', fontWeight: 600, color: '#0f172a' }}>
                   {r.nom}
@@ -188,6 +212,12 @@ export default function BossAnnuairePage() {
           </tbody>
         </table>
       </div>
+
+      {items.length > PER_PAGE && (
+        <div style={{ marginTop: 14 }}>
+          <Pagination total={items.length} page={safePage} perPage={PER_PAGE} onChange={setPage} />
+        </div>
+      )}
 
       {/* Modal de révélation */}
       {target && (
