@@ -196,7 +196,11 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
         .then(({ data }) => { if (data?.config) setAboConfig(data.config); })
         .catch(() => {});
     }
-  }, [isEntreprise, isGerant, location.pathname, user?.role, fetchLabos, fetchSummary]);
+    // ⚠️ PERF : ne PAS remettre location.pathname dans les deps — la Sidebar est un
+    // élément de route parent qui reste monté, et ce dep re-déclenchait les 4 GET
+    // ci-dessus à CHAQUE navigation. La fraîcheur est déjà assurée par les
+    // événements labos-changed / activites-changed / articles-changed plus bas.
+  }, [isEntreprise, isGerant, user?.role, fetchLabos, fetchSummary]);
 
   // Auto-redirect to Référentiel when first activité/labo is created (level 0 → level 1 transition).
   // Jamais pour un gérant : il ne crée ni activité ni labo, et au montage la course
