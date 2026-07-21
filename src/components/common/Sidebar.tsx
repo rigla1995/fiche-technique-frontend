@@ -112,7 +112,8 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const [typesSummary, setTypesSummary] = useState<ActiviteTypesSummary | null>(null);
   const [labos, setLabos] = useState<Labo[]>([]);
   const [aboConfig, setAboConfig] = useState<AbonnementConfig | null>(null);
-  const isAdmin = user?.role === 'super_admin';
+  const isBoss = user?.role === 'boss';
+  const isAdmin = user?.role === 'super_admin' || isBoss;
   const isGerant = user?.role === 'gerant';
   const [openSections, setOpenSections] = useState<Set<string>>(
     isAdmin ? new Set(['admin-ref']) : new Set()
@@ -263,7 +264,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
         {sidebarBanner}
 
         <ul className="sidebar-nav" style={{ flex: 1 }}>
-          {user?.role === 'super_admin' ? (
+          {isAdmin ? (
             <>
               {/* ── Tableau de bord (accueil) ── */}
               <li>
@@ -359,6 +360,26 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                   <span className="link-label">Manuel</span>
                 </NavLink>
               </li>
+
+              {/* ── Espace Boss (réservé au rôle boss) ── */}
+              {isBoss && (
+                <>
+                  <Divider />
+                  <SectionLabel>Espace Boss</SectionLabel>
+                  <li>
+                    <NavLink to="/admin/boss/admins" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>
+                      <span className="link-icon">🛡️</span>
+                      <span className="link-label">Comptes Admin</span>
+                    </NavLink>
+                  </li>
+                  <li>
+                    <NavLink to="/admin/boss/annuaire" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>
+                      <span className="link-icon">🔑</span>
+                      <span className="link-label">Annuaire identifiants</span>
+                    </NavLink>
+                  </li>
+                </>
+              )}
             </>
           ) : (
             <>

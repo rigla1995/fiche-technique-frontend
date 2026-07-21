@@ -92,7 +92,9 @@ export default function Header() {
           <div style={{ lineHeight: 1.25 }}>
             <div style={{ fontSize: '0.84rem', fontWeight: 700, color: '#fff' }}>{user?.name}</div>
             <div style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.6)', fontWeight: 500, letterSpacing: '0.03em' }}>
-              {user?.role === 'super_admin'
+              {user?.role === 'boss'
+                ? 'Boss'
+                : user?.role === 'super_admin'
                 ? 'Administrateur'
                 : user?.role === 'gerant'
                 ? (user.gerantActiviteNom || 'Gérant')
