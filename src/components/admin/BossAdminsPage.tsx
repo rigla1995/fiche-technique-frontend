@@ -3,6 +3,9 @@ import { Navigate } from 'react-router-dom';
 import api from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 import { useConfirm } from '../common/ConfirmDialog';
+import Pagination from '../common/Pagination';
+
+const PER_PAGE = 10;
 
 interface AdminRow {
   id: number;
@@ -28,6 +31,7 @@ export default function BossAdminsPage() {
   const [rows, setRows] = useState<AdminRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [msg, setMsg] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
+  const [page, setPage] = useState(1);
 
   const [nom, setNom] = useState('');
   const [email, setEmail] = useState('');
@@ -102,12 +106,29 @@ export default function BossAdminsPage() {
     }
   };
 
+  const safePage = Math.min(page, Math.max(1, Math.ceil(rows.length / PER_PAGE)));
+  const paged = rows.slice((safePage - 1) * PER_PAGE, safePage * PER_PAGE);
+
   return (
     <div style={{ maxWidth: 880, margin: '0 auto', padding: '8px 4px 40px' }}>
-      <h1 style={{ fontSize: '1.4rem', fontWeight: 800, color: '#0f172a', margin: '0 0 4px' }}>🛡️ Comptes Admin</h1>
-      <p style={{ color: '#64748b', fontSize: '0.9rem', margin: '0 0 20px' }}>
-        Gestion des comptes super administrateur (réservé au Boss).
-      </p>
+      <div style={{
+        background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 55%, #6366f1 100%)',
+        borderRadius: 18, padding: '20px 24px', marginBottom: 20,
+        boxShadow: '0 8px 32px rgba(49,46,129,0.28)',
+        display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap',
+      }}>
+        <div style={{ background: 'rgba(255,255,255,0.18)', borderRadius: 12, padding: '8px 11px', fontSize: '1.3rem' }}>🛡️</div>
+        <div style={{ flex: 1, minWidth: 220 }}>
+          <h1 style={{ fontSize: '1.4rem', fontWeight: 900, color: '#fff', margin: 0, lineHeight: 1.1 }}>Comptes Admin</h1>
+          <p style={{ margin: '4px 0 0', fontSize: '0.82rem', color: 'rgba(255,255,255,0.82)', lineHeight: 1.5, maxWidth: 620 }}>
+            Créez, modifiez (email &amp; mot de passe) ou supprimez les comptes super administrateur. Espace réservé au compte Boss.
+          </p>
+        </div>
+        <div style={{ background: 'rgba(255,255,255,0.12)', borderRadius: 10, padding: '8px 14px', textAlign: 'center' }}>
+          <div style={{ fontSize: 17, fontWeight: 800, color: '#c7d2fe', lineHeight: 1 }}>{rows.length}</div>
+          <div style={{ fontSize: 9, fontWeight: 700, color: 'rgba(255,255,255,0.75)', textTransform: 'uppercase', letterSpacing: '0.06em', marginTop: 3 }}>Comptes</div>
+        </div>
+      </div>
 
       {msg && (
         <div style={{
@@ -139,7 +160,7 @@ export default function BossAdminsPage() {
           <div style={{ padding: 28, textAlign: 'center', color: '#94a3b8' }}>Chargement…</div>
         ) : rows.length === 0 ? (
           <div style={{ padding: 28, textAlign: 'center', color: '#94a3b8' }}>Aucun compte.</div>
-        ) : rows.map((r) => (
+        ) : paged.map((r) => (
           <div key={r.id} style={{ borderBottom: '1px solid #f1f5f9', padding: '14px 18px' }}>
             {editId === r.id ? (
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center' }}>
@@ -172,6 +193,11 @@ export default function BossAdminsPage() {
             )}
           </div>
         ))}
+        {rows.length > PER_PAGE && (
+          <div style={{ padding: '12px 16px' }}>
+            <Pagination total={rows.length} page={safePage} perPage={PER_PAGE} onChange={setPage} />
+          </div>
+        )}
       </div>
     </div>
   );
