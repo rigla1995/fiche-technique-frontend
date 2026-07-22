@@ -5,8 +5,12 @@ import Pagination from '../common/Pagination';
 import { useConfirm } from '../common/ConfirmDialog';
 
 // ── Types (contrat backend /admin/site/demandes-acces) ───────────────────────
+// La file ne contient QUE des demandes ouvertes : un refus supprime la demande
+// (email de courtoisie), une conversion la supprime aussi (le client créé porte
+// origine='site'). 'convertie'/'refusee' n'existent que comme statuts d'ACTION.
 
-type DemandeStatut = 'nouvelle' | 'contactee' | 'convertie' | 'refusee';
+type DemandeStatut = 'nouvelle' | 'contactee';
+type DemandeAction = DemandeStatut | 'convertie' | 'refusee';
 
 interface DemandeAcces {
   id: number;
@@ -29,7 +33,7 @@ interface DemandeAcces {
 }
 
 interface DemandeUpdateBody {
-  statut?: DemandeStatut;
+  statut?: DemandeAction;
   notesAdmin?: string;
   convertedClientId?: number;
 }
@@ -39,12 +43,10 @@ interface DemandeUpdateBody {
 const STATUT_INFO: Record<DemandeStatut, { label: string; icon: string; color: string; bg: string; text: string; border: string }> = {
   nouvelle:  { label: 'Nouvelles',  icon: '⏳', color: '#d97706', bg: '#fef3c7', text: '#92400e', border: '#f59e0b' },
   contactee: { label: 'Contactées', icon: '📞', color: '#2563eb', bg: '#dbeafe', text: '#1e40af', border: '#3b82f6' },
-  convertie: { label: 'Converties', icon: '✅', color: '#16a34a', bg: '#dcfce7', text: '#166534', border: '#22c55e' },
-  refusee:   { label: 'Refusées',   icon: '✕',  color: '#dc2626', bg: '#fee2e2', text: '#991b1b', border: '#ef4444' },
 };
 
 const STATUT_SINGULIER: Record<DemandeStatut, string> = {
-  nouvelle: 'Nouvelle', contactee: 'Contactée', convertie: 'Convertie', refusee: 'Refusée',
+  nouvelle: 'Nouvelle', contactee: 'Contactée',
 };
 
 const TYPE_ACTIVITE_LABELS: Record<string, string> = {
@@ -104,6 +106,7 @@ export default function AdminDemandesAccesPage() {
   // Filtre par défaut « Toutes » ('') : la liste s'ouvre sur l'ensemble des
   // demandes (la notification « demande reçue » y mène aussi, cf. Header).
   const [filterStatut, setFilterStatut] = useState<DemandeStatut | ''>('');
+  const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [expanded, setExpanded] = useState<Set<number>>(new Set());
   const [actioningId, setActioningId] = useState<number | null>(null);
@@ -125,10 +128,10 @@ export default function AdminDemandesAccesPage() {
   }, []);
 
   useEffect(() => { fetchDemandes(true); }, [fetchDemandes]);
-  useEffect(() => { setPage(1); }, [filterStatut]);
+  useEffect(() => { setPage(1); }, [filterStatut, search]);
 
   const counts = useMemo(() => {
-    const c: Record<DemandeStatut, number> = { nouvelle: 0, contactee: 0, convertie: 0, refusee: 0 };
+    const c: Record<DemandeStatut, number> = { nouvelle: 0, contactee: 0 };
     for (const d of demandes) if (c[d.statut] !== undefined) c[d.statut]++;
     return c;
   }, [demandes]);
@@ -175,10 +178,18 @@ export default function AdminDemandesAccesPage() {
     return next;
   });
 
-  const filtered = useMemo(
-    () => (filterStatut ? demandes.filter((d) => d.statut === filterStatut) : demandes),
-    [demandes, filterStatut],
-  );
+  const filtered = useMemo(() => {
+    let list = filterStatut ? demandes.filter((d) => d.statut === filterStatut) : demandes;
+    const q = search.trim().toLowerCase();
+    if (q) {
+      list = list.filter((d) =>
+        d.nom.toLowerCase().includes(q)
+        || d.email.toLowerCase().includes(q)
+        || (d.telephone || '').toLowerCase().includes(q)
+      );
+    }
+    return list;
+  }, [demandes, filterStatut, search]);
   const safePage = Math.min(page, Math.max(1, Math.ceil(filtered.length / PER_PAGE)));
   const paged = filtered.slice((safePage - 1) * PER_PAGE, safePage * PER_PAGE);
 
@@ -230,8 +241,6 @@ export default function AdminDemandesAccesPage() {
               { label: 'Total', value: demandes.length, color: 'rgba(255,255,255,0.95)' },
               { label: 'Nouvelles', value: counts.nouvelle, color: '#fde047' },
               { label: 'Contactées', value: counts.contactee, color: '#93c5fd' },
-              { label: 'Converties', value: counts.convertie, color: '#86efac' },
-              { label: 'Refusées', value: counts.refusee, color: '#fca5a5' },
             ].map((s) => (
               <div key={s.label} style={{ background: 'rgba(255,255,255,0.12)', borderRadius: 10, padding: '8px 14px', textAlign: 'center', minWidth: 72 }}>
                 <div style={{ fontSize: 17, fontWeight: 800, color: s.color, lineHeight: 1 }}>{s.value}</div>
@@ -271,7 +280,17 @@ export default function AdminDemandesAccesPage() {
               </button>
             );
           })}
-          <span style={{ marginLeft: 'auto', fontSize: '0.76rem', color: '#94a3b8', fontWeight: 600, whiteSpace: 'nowrap' }}>
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="🔎 Nom, email ou téléphone…"
+            style={{
+              flex: 1, minWidth: 200, marginLeft: 'auto',
+              padding: '8px 13px', borderRadius: 22, border: '1.5px solid #e5e7eb',
+              fontSize: '0.8rem', color: '#334155', outline: 'none',
+            }}
+          />
+          <span style={{ fontSize: '0.76rem', color: '#94a3b8', fontWeight: 600, whiteSpace: 'nowrap' }}>
             {filtered.length} résultat{filtered.length !== 1 ? 's' : ''}
           </span>
         </div>
@@ -291,7 +310,7 @@ export default function AdminDemandesAccesPage() {
             <div style={{ fontSize: '0.82rem', color: '#94a3b8' }}>
               {demandes.length === 0
                 ? 'Les demandes d\'accès envoyées depuis le site vitrine apparaîtront ici.'
-                : 'Aucune demande pour ce statut — changez de filtre.'}
+                : 'Aucune demande ne correspond — changez de filtre ou de recherche.'}
             </div>
           </div>
         ) : (
