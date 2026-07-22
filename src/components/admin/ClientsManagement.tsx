@@ -12,6 +12,8 @@ interface Client {
   adresse?: string | null;
   createdAt?: string;
   activatedAt?: string | null;
+  /** 'site' = converti depuis une demande d'accès du site vitrine ; 'manuel' = ajout admin. */
+  origine?: 'site' | 'manuel';
   domaineIds?: number[];
 }
 
@@ -317,6 +319,12 @@ export default function ClientsManagement() {
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontWeight: 800, color: '#0f172a', fontSize: '0.95rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={c.name}>{c.name}</div>
                       <div style={{ fontSize: '0.76rem', color: '#64748b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={c.email}>{c.email}</div>
+                      {c.origine === 'site' && (
+                        <span title="Client converti depuis une demande d'accès du site vitrine"
+                          style={{ display: 'inline-block', marginTop: 4, background: '#f0f9ff', color: '#0369a1', border: '1px solid #bae6fd', fontSize: '0.64rem', fontWeight: 700, padding: '2px 8px', borderRadius: 20 }}>
+                          🌐 Site vitrine
+                        </span>
+                      )}
                     </div>
                     {active ? (
                       <span style={{ background: '#f0fdfa', color: '#0f766e', border: '1px solid #99f6e4', fontSize: '0.68rem', fontWeight: 700, padding: '3px 9px', borderRadius: 20, whiteSpace: 'nowrap', flexShrink: 0 }}>● Activé</span>
