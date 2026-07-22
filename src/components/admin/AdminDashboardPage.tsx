@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import api from '../../api/client';
 
 interface Stats {
-  clients: { total: number; activated: number; pendingInvite: number };
+  clients: { total: number; activated: number; pendingInvite: number; fromSite?: number };
   abonnements: { total: number; actif: number; readOnly: number; desactive: number; archive: number };
   paiementsMonth: { payeDt: number; impayeDt: number; enAttenteDt: number; remiseDt: number };
   demandes: { total: number; gerantSup: number; laboSup: number };
@@ -80,7 +80,7 @@ export default function AdminDashboardPage() {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 14, marginBottom: 26 }}>
             <Kpi icon="👥" label="Clients" color="#0d9488"
               value={String(stats.clients.total)}
-              sub={`${stats.clients.activated} activé${stats.clients.activated > 1 ? 's' : ''} · ${stats.clients.pendingInvite} en attente`} />
+              sub={`${stats.clients.activated} activé${stats.clients.activated > 1 ? 's' : ''} · ${stats.clients.pendingInvite} en attente${(stats.clients.fromSite ?? 0) > 0 ? ` · 🌐 ${stats.clients.fromSite} via le site` : ''}`} />
             <Kpi icon="💳" label="Abonnements actifs" color="#2563eb"
               value={String(stats.abonnements.actif)}
               sub={`sur ${stats.abonnements.total} au total`} />
