@@ -113,7 +113,7 @@ export default function BossAnnuairePage() {
   const paged = items.slice((safePage - 1) * PER_PAGE, safePage * PER_PAGE);
 
   return (
-    <div style={{ maxWidth: 1000, margin: '0 auto', padding: '8px 4px 40px' }}>
+    <div className="page">
       <div style={{
         background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 55%, #6366f1 100%)',
         borderRadius: 18, padding: '20px 24px', marginBottom: 20,
