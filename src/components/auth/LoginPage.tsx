@@ -2,25 +2,17 @@ import { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import LabFlowLogo from '../common/LabFlowLogo';
+import { FlagTN } from './AuthShell';
 
-const FEATURES = [
-  { icon: '🧾', label: 'Fiches techniques' },
-  { icon: '📦', label: 'Stocks & inventaire' },
-  { icon: '🛒', label: 'Module vente' },
-  { icon: '🤖', label: 'Agent IA' },
+// Piliers du site vitrine (hero) — pas de chiffres inventés (règles de véracité).
+const PILIERS = [
+  { icon: '🛒', label: 'Achats' },
+  { icon: '📦', label: 'Stock' },
+  { icon: '💰', label: 'Ventes' },
+  { icon: '📊', label: 'Marges' },
+  { icon: '🧑‍🍳', label: 'Recettes' },
+  { icon: '🧾', label: 'Factures' },
 ];
-
-const STATS = [
-  { num: '3×', label: 'plus rapide' },
-  { num: '−30%', label: 'de gaspillage' },
-  { num: '100%', label: 'en ligne' },
-];
-
-const fieldLabel: React.CSSProperties = { display: 'block', fontSize: '0.74rem', fontWeight: 700, color: '#475569', marginBottom: 7, letterSpacing: '0.02em' };
-const fieldIcon: React.CSSProperties = { position: 'absolute', left: 13, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', display: 'flex', pointerEvents: 'none' };
-const fieldInput: React.CSSProperties = { width: '100%', padding: '13px 14px 13px 42px', borderRadius: 12, border: '1.5px solid #e5e7eb', fontSize: '0.93rem', background: '#f8fafc', color: '#0f172a', outline: 'none', transition: 'border-color 0.15s, background 0.15s, box-shadow 0.15s' };
-const onFieldFocus = (e: React.FocusEvent<HTMLInputElement>) => { e.currentTarget.style.borderColor = '#6366f1'; e.currentTarget.style.background = '#fff'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(99,102,241,0.12)'; };
-const onFieldBlur = (e: React.FocusEvent<HTMLInputElement>) => { e.currentTarget.style.borderColor = '#e5e7eb'; e.currentTarget.style.background = '#f8fafc'; e.currentTarget.style.boxShadow = 'none'; };
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -50,7 +42,7 @@ export default function LoginPage() {
       const loggedUser = await login(email, password);
       if (loggedUser.role === 'gerant') {
         navigate('/client/dashboard', { replace: true });
-      } else if (loggedUser.role === 'super_admin') {
+      } else if (loggedUser.role === 'super_admin' || loggedUser.role === 'boss') {
         navigate('/admin', { replace: true });
       } else if (loggedUser.role === 'acheteur') {
         navigate('/portail', { replace: true });
@@ -68,22 +60,27 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="login-page">
-      {/* Brand panel */}
+    <div className="login-page auth-nuit">
+      {/* ── Panneau de marque : la nuit + l'aurore du site vitrine ── */}
       <div className="login-panel-brand">
         <div className="login-brand-content">
 
-          <div className="login-logo-hero">
-            <LabFlowLogo height={80} variant="dark" />
-          </div>
+          <LabFlowLogo height={54} variant="light" />
+
+          <div className="login-pastille"><i aria-hidden="true"></i>Achats · Stock · Ventes · Marges</div>
 
           <h1 className="login-brand-headline">
-            Pilotez votre cuisine.<br />
-            <span className="login-brand-headline-accent">L'IA fait le reste.</span>
+            Tout votre commerce<br />
+            dans <span className="login-brand-headline-accent">un seul écran</span>.
           </h1>
 
+          <p className="login-brand-sub">
+            Vous entrez l'achat — <b>le reste se met à jour seul</b>.<br />
+            Stock, coût réel et marge se recalculent au moment où vous enregistrez.
+          </p>
+
           <div className="login-feat-grid">
-            {FEATURES.map(({ icon, label }) => (
+            {PILIERS.map(({ icon, label }) => (
               <div key={label} className="login-feat-chip">
                 <span className="login-feat-chip-icon">{icon}</span>
                 <span>{label}</span>
@@ -91,53 +88,46 @@ export default function LoginPage() {
             ))}
           </div>
 
-          <div className="login-stats-row">
-            {STATS.map(({ num, label }, i) => (
-              <div key={num} style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
-                {i > 0 && <div className="login-stat-sep" />}
-                <div className="login-stat">
-                  <span className="login-stat-num">{num}</span>
-                  <span className="login-stat-label">{label}</span>
-                </div>
-              </div>
-            ))}
+          <div className="login-brand-footer">
+            <span>Conçu en Tunisie <FlagTN /></span>
+            <a href="https://labflow-tn.com" target="_blank" rel="noopener">labflow-tn.com</a>
           </div>
 
         </div>
       </div>
 
-      {/* Form panel */}
+      {/* ── Panneau formulaire ── */}
       <div className="login-panel-form">
         <div className="login-form-inner">
 
           <div style={{ marginBottom: 26 }}>
-            <LabFlowLogo height={30} variant="dark" />
+            <LabFlowLogo height={30} variant="light" />
           </div>
 
-          <h2 style={{ fontSize: '1.75rem', fontWeight: 900, color: '#0f172a', margin: '0 0 6px', letterSpacing: '-0.6px' }}>Bon retour&nbsp;👋</h2>
-          <p style={{ color: '#64748b', fontSize: '0.9rem', margin: '0 0 28px' }}>Connectez-vous à votre espace LabFlow.</p>
+          <h2 className="login-form-heading">Bon retour&nbsp;👋</h2>
+          <p className="login-form-subheading">Connectez-vous à votre espace LabFlow.</p>
 
           <form onSubmit={handleSubmit}>
             {justActivated && !error && (
-              <div style={{ marginBottom: 20, background: '#ecfdf5', border: '1px solid #a7f3d0', color: '#047857', borderRadius: 10, padding: '11px 14px', fontSize: '0.86rem', fontWeight: 600 }}>
+              <div className="auth-alert-ok" style={{ marginBottom: 20 }}>
                 ✅ Compte activé ! Saisissez votre mot de passe pour vous connecter.
               </div>
             )}
             {justReset && !error && (
-              <div style={{ marginBottom: 20, background: '#ecfdf5', border: '1px solid #a7f3d0', color: '#047857', borderRadius: 10, padding: '11px 14px', fontSize: '0.86rem', fontWeight: 600 }}>
+              <div className="auth-alert-ok" style={{ marginBottom: 20 }}>
                 ✅ Mot de passe modifié ! Connectez-vous avec votre nouveau mot de passe.
               </div>
             )}
             {error && (
-              <div className="alert alert-error" style={{ marginBottom: 20 }}>
+              <div className="auth-alert-err" style={{ marginBottom: 20 }}>
                 ⚠️ {error}
               </div>
             )}
 
             <div style={{ marginBottom: 16 }}>
-              <label htmlFor="email" style={fieldLabel}>Adresse email</label>
+              <label htmlFor="email" className="auth-label">Adresse email</label>
               <div style={{ position: 'relative' }}>
-                <span style={fieldIcon}>
+                <span className="auth-champ-icone">
                   <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 5L2 7"/>
                   </svg>
@@ -145,27 +135,25 @@ export default function LoginPage() {
                 <input
                   id="email"
                   type="email"
+                  className="auth-champ avec-icone"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
                   autoComplete="email"
                   placeholder="votre@email.com"
-                  style={fieldInput}
-                  onFocus={onFieldFocus}
-                  onBlur={onFieldBlur}
                 />
               </div>
             </div>
 
             <div style={{ marginBottom: 22 }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <label htmlFor="password" style={fieldLabel}>Mot de passe</label>
-                <Link to="/forgot-password" style={{ fontSize: '0.74rem', fontWeight: 700, color: '#4338ca', textDecoration: 'none', marginBottom: 7 }}>
+                <label htmlFor="password" className="auth-label">Mot de passe</label>
+                <Link to="/forgot-password" style={{ fontSize: '0.74rem', fontWeight: 600, color: '#A5B4FC', textDecoration: 'none', marginBottom: 7 }}>
                   Mot de passe oublié&nbsp;?
                 </Link>
               </div>
-              <div style={{ position: 'relative' }}>
-                <span style={fieldIcon}>
+              <div className="login-pwd-wrap">
+                <span className="auth-champ-icone">
                   <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
                   </svg>
@@ -174,14 +162,13 @@ export default function LoginPage() {
                   ref={pwdRef}
                   id="password"
                   type={showPwd ? 'text' : 'password'}
+                  className="auth-champ avec-icone"
+                  style={{ paddingRight: 44 }}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   autoComplete="current-password"
                   placeholder="••••••••"
-                  style={{ ...fieldInput, paddingRight: 44 }}
-                  onFocus={onFieldFocus}
-                  onBlur={onFieldBlur}
                 />
                 <button
                   type="button"
@@ -219,7 +206,13 @@ export default function LoginPage() {
             </button>
           </form>
 
-          <p className="login-footer-note">Accès réservé aux utilisateurs autorisés</p>
+          <div className="login-acces">
+            Pas encore de compte&nbsp;?{' '}
+            <a href="https://labflow-tn.com/demande-acces.html" target="_blank" rel="noopener">Demander un accès</a>
+            <span className="cadeau">🎁 Votre premier mois d'abonnement est offert.</span>
+          </div>
+
+          <p className="login-footer-note">Connexion sécurisée · LabFlow</p>
         </div>
       </div>
     </div>
