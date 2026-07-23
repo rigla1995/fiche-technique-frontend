@@ -45,8 +45,8 @@ export default function ResetPasswordPage() {
     return (
       <AuthShell>
         <div style={{ textAlign: 'center', padding: '20px 0' }}>
-          <div style={{ width: 34, height: 34, margin: '0 auto 14px', border: '3px solid #e0e7ff', borderTopColor: '#4338ca', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
-          <p style={{ color: '#6b7280', fontSize: '0.9rem', margin: 0 }}>Vérification du lien…</p>
+          <div style={{ width: 34, height: 34, margin: '0 auto 14px', border: '3px solid rgba(255,255,255,0.15)', borderTopColor: '#A5B4FC', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+          <p style={{ color: '#A6ACC4', fontSize: '0.9rem', margin: 0 }}>Vérification du lien…</p>
         </div>
         <style>{'@keyframes spin{to{transform:rotate(360deg)}}'}</style>
       </AuthShell>
@@ -57,17 +57,17 @@ export default function ResetPasswordPage() {
     return (
       <AuthShell>
         <div style={{ textAlign: 'center' }}>
-          <div style={{ width: 56, height: 56, margin: '0 auto 16px', borderRadius: '50%', background: '#fef2f2', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.6rem' }}>🔗</div>
-          <h1 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#0f172a', margin: '0 0 8px' }}>Lien invalide ou expiré</h1>
-          <p style={{ color: '#6b7280', fontSize: '0.88rem', margin: '0 0 22px', lineHeight: 1.55 }}>
+          <div style={{ width: 56, height: 56, margin: '0 auto 16px', borderRadius: '50%', background: 'rgba(252,105,105,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.6rem' }}>🔗</div>
+          <h1 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#F2F4FF', margin: '0 0 8px' }}>Lien invalide ou expiré</h1>
+          <p style={{ color: '#A6ACC4', fontSize: '0.88rem', margin: '0 0 22px', lineHeight: 1.55 }}>
             Ce lien de réinitialisation n'est plus valide (durée : 1&nbsp;h).<br />
             Vous pouvez refaire une demande à tout moment.
           </p>
-          <Link to="/forgot-password" style={{ display: 'inline-block', marginBottom: 12, color: '#fff', fontWeight: 700, fontSize: '0.88rem', textDecoration: 'none', background: 'linear-gradient(135deg, #4338ca, #6366f1)', borderRadius: 12, padding: '11px 24px', boxShadow: '0 8px 20px rgba(67,56,202,0.3)' }}>
+          <Link to="/forgot-password" style={{ display: 'inline-block', marginBottom: 12, color: '#fff', fontWeight: 700, fontSize: '0.88rem', textDecoration: 'none', background: 'linear-gradient(120deg, #0A78AB 0%, #4F46E5 52%, #8B33D4 100%)', borderRadius: 12, padding: '11px 24px', boxShadow: '0 8px 20px rgba(79,70,229,0.35)' }}>
             Refaire une demande
           </Link>
           <p style={{ margin: 0 }}>
-            <Link to="/login" style={{ color: '#64748b', fontWeight: 600, fontSize: '0.8rem', textDecoration: 'none' }}>← Retour à la connexion</Link>
+            <Link to="/login" style={{ color: '#A6ACC4', fontWeight: 600, fontSize: '0.8rem', textDecoration: 'none' }}>← Retour à la connexion</Link>
           </p>
         </div>
       </AuthShell>
@@ -77,11 +77,11 @@ export default function ResetPasswordPage() {
   return (
     <AuthShell>
       <div style={{ textAlign: 'center', marginBottom: 24 }}>
-        <h1 style={{ fontSize: '1.3rem', fontWeight: 800, color: '#0f172a', margin: '0 0 6px', letterSpacing: '-0.01em' }}>
+        <h1 style={{ fontSize: '1.3rem', fontWeight: 800, color: '#F2F4FF', margin: '0 0 6px', letterSpacing: '-0.01em' }}>
           Nouveau mot de passe
         </h1>
-        <p style={{ color: '#6b7280', fontSize: '0.87rem', margin: 0, lineHeight: 1.55 }}>
-          {nom ? <>Bonjour, {nom} — c</> : 'C'}hoisissez un nouveau mot de passe pour<br /><strong style={{ color: '#4338ca', fontWeight: 700 }}>{email}</strong>
+        <p style={{ color: '#A6ACC4', fontSize: '0.87rem', margin: 0, lineHeight: 1.55 }}>
+          {nom ? <>Bonjour, {nom} — c</> : 'C'}hoisissez un nouveau mot de passe pour<br /><strong style={{ color: '#A5B4FC', fontWeight: 700 }}>{email}</strong>
         </p>
       </div>
 

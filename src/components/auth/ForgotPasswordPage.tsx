@@ -29,14 +29,14 @@ export default function ForgotPasswordPage() {
     return (
       <AuthShell>
         <div style={{ textAlign: 'center' }}>
-          <div style={{ width: 56, height: 56, margin: '0 auto 16px', borderRadius: '50%', background: '#eef2ff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.6rem' }}>📬</div>
-          <h1 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#0f172a', margin: '0 0 8px' }}>Consultez votre boîte mail</h1>
-          <p style={{ color: '#6b7280', fontSize: '0.88rem', margin: '0 0 22px', lineHeight: 1.55 }}>
-            Si un compte existe pour <strong style={{ color: '#4338ca' }}>{email}</strong>,<br />
+          <div style={{ width: 56, height: 56, margin: '0 auto 16px', borderRadius: '50%', background: 'rgba(99,102,241,0.16)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.6rem' }}>📬</div>
+          <h1 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#F2F4FF', margin: '0 0 8px' }}>Consultez votre boîte mail</h1>
+          <p style={{ color: '#A6ACC4', fontSize: '0.88rem', margin: '0 0 22px', lineHeight: 1.55 }}>
+            Si un compte existe pour <strong style={{ color: '#A5B4FC' }}>{email}</strong>,<br />
             un lien de réinitialisation vient de lui être envoyé.<br />
             Il est valable <strong>1 heure</strong>.
           </p>
-          <Link to="/login" style={{ color: '#4338ca', fontWeight: 700, fontSize: '0.88rem', textDecoration: 'none' }}>← Retour à la connexion</Link>
+          <Link to="/login" style={{ color: '#A5B4FC', fontWeight: 700, fontSize: '0.88rem', textDecoration: 'none' }}>← Retour à la connexion</Link>
         </div>
       </AuthShell>
     );
@@ -45,10 +45,10 @@ export default function ForgotPasswordPage() {
   return (
     <AuthShell>
       <div style={{ textAlign: 'center', marginBottom: 24 }}>
-        <h1 style={{ fontSize: '1.3rem', fontWeight: 800, color: '#0f172a', margin: '0 0 6px', letterSpacing: '-0.01em' }}>
+        <h1 style={{ fontSize: '1.3rem', fontWeight: 800, color: '#F2F4FF', margin: '0 0 6px', letterSpacing: '-0.01em' }}>
           Mot de passe oublié&nbsp;?
         </h1>
-        <p style={{ color: '#6b7280', fontSize: '0.87rem', margin: 0, lineHeight: 1.55 }}>
+        <p style={{ color: '#A6ACC4', fontSize: '0.87rem', margin: 0, lineHeight: 1.55 }}>
           Indiquez votre adresse email — nous vous enverrons<br />un lien pour le réinitialiser.
         </p>
       </div>
@@ -77,7 +77,7 @@ export default function ForgotPasswordPage() {
       </form>
 
       <p style={{ textAlign: 'center', margin: '18px 0 0' }}>
-        <Link to="/login" style={{ color: '#64748b', fontWeight: 600, fontSize: '0.8rem', textDecoration: 'none' }}>← Retour à la connexion</Link>
+        <Link to="/login" style={{ color: '#A6ACC4', fontWeight: 600, fontSize: '0.8rem', textDecoration: 'none' }}>← Retour à la connexion</Link>
       </p>
     </AuthShell>
   );
