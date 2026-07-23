@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import api from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 import HistoryFilterBar, { FilterField, FilterInput } from '../common/HistoryFilterBar';
@@ -166,19 +167,31 @@ export default function FournisseursPage() {
         onReset={() => { setSearch(''); setFoPage(1); }}
         showReset={!!search}
         actions={canWrite && (
-          <button
-            onClick={openCreate}
-            style={{
-              height: 36, display: 'inline-flex', alignItems: 'center',
-              background: 'linear-gradient(135deg, #92400e, #ea580c)',
-              boxShadow: '0 4px 14px rgba(146,64,14,0.3)',
-              borderRadius: 8, border: 'none',
-              color: '#fff', fontWeight: 800, padding: '0 18px',
-              cursor: 'pointer', fontSize: '0.83rem', whiteSpace: 'nowrap',
-            }}
-          >
-            + Nouveau fournisseur
-          </button>
+          <>
+            <Link to="/client/fournisseurs/import"
+              style={{
+                height: 36, display: 'inline-flex', alignItems: 'center', gap: 6,
+                background: '#fff7ed', border: '1px solid #fdba74', borderRadius: 8,
+                color: '#c2410c', fontWeight: 700, padding: '0 14px',
+                fontSize: '0.83rem', whiteSpace: 'nowrap', textDecoration: 'none',
+              }}
+            >
+              📥 Ajout Dynamique
+            </Link>
+            <button
+              onClick={openCreate}
+              style={{
+                height: 36, display: 'inline-flex', alignItems: 'center',
+                background: 'linear-gradient(135deg, #92400e, #ea580c)',
+                boxShadow: '0 4px 14px rgba(146,64,14,0.3)',
+                borderRadius: 8, border: 'none',
+                color: '#fff', fontWeight: 800, padding: '0 18px',
+                cursor: 'pointer', fontSize: '0.83rem', whiteSpace: 'nowrap',
+              }}
+            >
+              + Nouveau fournisseur
+            </button>
+          </>
         )}
       >
         <FilterField label="Recherche" span>
