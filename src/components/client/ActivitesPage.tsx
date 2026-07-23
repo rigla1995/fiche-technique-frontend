@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
+import GuideButton from './GuideButton';
 import { useAuth } from '../../context/AuthContext';
 import HistoryFilterBar, { FilterField, FilterInput } from '../common/HistoryFilterBar';
 import type { Activite, ActiviteIngredient, Labo, AbonnementConfig } from '../../types';
@@ -421,6 +422,7 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                 )}
               </>
             )}
+            <GuideButton section="activites" />
           </div>
         </div>
       )}

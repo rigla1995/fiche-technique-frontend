@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 import { useConfirm } from '../common/ConfirmDialog';
+import HelpButton from '../common/HelpButton';
 import type { Activite, ActiviteTypesSummary, Category, CategorieProduit, Ingredient, Product } from '../../types';
 
 interface IngredientLine {
@@ -383,6 +384,7 @@ export default function ProductForm() {
             <span className={`unit-badge badge-${productType}`} style={{ marginLeft: 10, fontSize: '0.82rem' }}>
               {productType === 'vendable' ? t('client.products.type_vendable') : t('client.products.type_utilisable')}
             </span>
+            {' '}<HelpButton section="produits-vendables" size={26} tip="Voir le guide" />
           </h1>
           {selectedActId && (
             <div style={{ marginTop: 6, display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.82rem', color: '#1e40af' }}>

@@ -1,5 +1,3 @@
-import { useNavigate } from 'react-router-dom';
-
 interface Props {
   /** id de la section du manuel (voir SECTIONS dans GuidePage), ex: 'fiches-techniques' */
   section: string;
@@ -12,17 +10,17 @@ interface Props {
 
 /**
  * Petit bouton « ? » d'aide contextuelle : ouvre le manuel d'utilisation
- * directement à la bonne section (/client/guide#<section>).
+ * directement à la bonne section (/client/guide#<section>) dans un NOUVEL
+ * onglet — l'utilisateur ne perd pas la page où il se trouve.
  */
 export default function HelpButton({ section, tip = 'En savoir plus', size = 18, variant = 'subtle' }: Props) {
-  const navigate = useNavigate();
   const solid = variant === 'solid';
   return (
     <button
       type="button"
       title={tip}
       aria-label={tip}
-      onClick={(e) => { e.stopPropagation(); e.preventDefault(); navigate(`/client/guide#${section}`); }}
+      onClick={(e) => { e.stopPropagation(); e.preventDefault(); window.open(`/client/guide#${section}`, '_blank', 'noopener'); }}
       style={{
         width: size, height: size, minWidth: size, borderRadius: '50%', padding: 0,
         border: solid ? '1px solid rgba(255,255,255,0.45)' : '1px solid #c7d2fe',

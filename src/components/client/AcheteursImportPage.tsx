@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../../api/client';
+import GuideButton from './GuideButton';
 
 // Thème violet de l'Espace Acheteurs
 const C = '#6d28d9';
@@ -64,6 +65,7 @@ export default function AcheteursImportPage() {
         <Link to="/client/acheteurs" style={{ color: '#fff', fontSize: '0.85rem', fontWeight: 700, textDecoration: 'none', background: 'rgba(255,255,255,0.14)', border: '1px solid rgba(255,255,255,0.25)', borderRadius: 10, padding: '9px 16px' }}>
           ← Retour au carnet
         </Link>
+        <GuideButton section="acheteurs-carnet" />
       </div>
 
       {/* Étape 1 — modèle */}

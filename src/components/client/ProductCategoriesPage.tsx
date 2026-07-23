@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import api from '../../api/client';
 import type { CategorieProduit, TypeProduitCategorie } from '../../types';
 import HistoryFilterBar, { FilterField, FilterInput, FilterSelect } from '../common/HistoryFilterBar';
+import GuideButton from './GuideButton';
 import { PRODUCT_THEME } from '../../theme/productTheme';
 
 const COLOR = PRODUCT_THEME.accent;
@@ -110,6 +111,7 @@ export default function ProductCategoriesPage() {
             <div style={{ fontSize: '1.8rem', fontWeight: 900, color: '#818cf8', lineHeight: 1 }}>{categories.length}</div>
             <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.5)', marginTop: 2 }}>catégorie{categories.length !== 1 ? 's' : ''}</div>
           </div>
+          <GuideButton section="categories-produits" />
         </div>
       </div>
 

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import api from '../../api/client';
 import type { Abonnement, AbonnementConfig, Promotion } from '../../types';
+import GuideButton from './GuideButton';
 
 const MODE_INFO: Record<string, { label: string; color: string; bg: string; icon: string; desc: string }> = {
   actif:     { label: 'Actif',         color: '#16a34a', bg: '#dcfce7', icon: '✅', desc: 'Votre compte est pleinement opérationnel.' },
@@ -160,6 +161,7 @@ export default function MonAbonnementPage() {
             <div style={{ fontSize: '0.72rem', color: '#6b7280' }}>{mode.desc}</div>
           </div>
         </div>
+        <GuideButton section="abonnement" />
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 20, marginBottom: 24 }}>
