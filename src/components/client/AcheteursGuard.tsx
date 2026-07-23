@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Outlet, Link } from 'react-router-dom';
 import api from '../../api/client';
+import { useAuth } from '../../context/AuthContext';
 
 // Thème violet de l'Espace Acheteurs
 const C = '#6d28d9';
@@ -9,6 +10,11 @@ const CL = '#f5f3ff';
 const CB = '#c4b5fd';
 
 export default function AcheteursGuard() {
+  const { user } = useAuth();
+  // Un gérant n'accède à l'Espace Acheteurs que si le compte client le lui a
+  // accordé ET qu'au moins un labo lui est affecté (même règle que le backend).
+  const gerantBlocked = user?.role === 'gerant'
+    && !(user.gerantAccesAcheteurs && (user.gerantLaboIds?.length ?? 0) > 0);
   const [status, setStatus] = useState<'loading' | 'active' | 'inactive'>('loading');
   const [hasPending, setHasPending] = useState(false);
   const [requesting, setRequesting] = useState(false);
@@ -16,6 +22,7 @@ export default function AcheteursGuard() {
   const [error, setError] = useState('');
 
   useEffect(() => {
+    if (gerantBlocked) { setStatus('inactive'); return; }
     Promise.all([
       api.get('/api/entreprise'),
       api.get('/api/abonnements/demandes'),
@@ -26,7 +33,29 @@ export default function AcheteursGuard() {
       setStatus(actif ? 'active' : 'inactive');
       setHasPending(pending);
     }).catch(() => setStatus('inactive'));
-  }, []);
+  }, [gerantBlocked]);
+
+  // Panneau dédié gérant : pas de demande d'activation ici, l'accès se règle
+  // depuis la page Gérants du compte client.
+  if (gerantBlocked) {
+    return (
+      <div className="page-content">
+        <div style={{ maxWidth: 520, margin: '48px auto 0', background: 'var(--card-bg)', borderRadius: 16, border: `1.5px solid ${CB}`, padding: 32, textAlign: 'center' }}>
+          <div style={{ width: 64, height: 64, borderRadius: 16, background: CL, border: `2px solid ${CB}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem', margin: '0 auto 20px' }}>
+            🔒
+          </div>
+          <h2 style={{ fontSize: '1.15rem', fontWeight: 700, color: C, marginBottom: 10 }}>
+            Espace Acheteurs non autorisé
+          </h2>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', lineHeight: 1.6, margin: 0 }}>
+            Cet espace n'est pas activé pour votre compte gérant. Demandez au titulaire
+            du compte de vous accorder l'accès à la base acheteurs (un labo affecté est
+            également requis).
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   const handleRequest = async () => {
     setRequesting(true); setError('');

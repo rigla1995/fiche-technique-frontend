@@ -94,9 +94,20 @@ function RequireAcheteur({ children }: { children: React.ReactElement }) {
   return children;
 }
 
+// Destination par défaut d'un gérant : pas de tableau de bord — sa première
+// section de sidebar est le Référentiel.
+const GERANT_HOME = '/client/referentiel/unites';
+
+// Le tableau de bord est réservé au compte client propriétaire.
+function DashboardRoute() {
+  const { user } = useAuth();
+  if (user?.role === 'gerant') return <Navigate to={GERANT_HOME} replace />;
+  return <ClientDashboard />;
+}
+
 function ClientDefaultRedirect() {
   const { user } = useAuth();
-  if (user?.role === 'gerant') return <Navigate to="/client/dashboard" replace />;
+  if (user?.role === 'gerant') return <Navigate to={GERANT_HOME} replace />;
   // Compteurs pas encore connus (session en cache d'avant le login enrichi,
   // /auth/me en cours) : attendre plutôt que de supposer 0 et rediriger à tort.
   if (user?.role === 'client' && user.activitesCount === undefined && user.labosCount === undefined) {
@@ -114,8 +125,8 @@ function RootRedirect() {
   if (user.role === 'super_admin' || user.role === 'boss') return <Navigate to="/admin" replace />;
   // Acheteur : son portail dédié
   if (user.role === 'acheteur') return <Navigate to="/portail" replace />;
-  // Gérant : toujours son tableau de bord
-  if (user.role === 'gerant') return <Navigate to="/client/dashboard" replace />;
+  // Gérant : pas de tableau de bord — direction le Référentiel
+  if (user.role === 'gerant') return <Navigate to={GERANT_HOME} replace />;
   // Onboarding steps
   if ((user.onboardingStep ?? 0) === 1) return <Navigate to="/client/profile" replace />;
   if ((user.onboardingStep ?? 0) === 2) return <Navigate to="/client/activites" replace />;
@@ -174,7 +185,7 @@ export default function App() {
           {/* Client + Gérant routes */}
           <Route element={<Layout requireRole="client" />}>
             <Route path="/client" element={<ClientDefaultRedirect />} />
-            <Route path="/client/dashboard" element={<ClientDashboard />} />
+            <Route path="/client/dashboard" element={<DashboardRoute />} />
             {/* Espace Produit réservé à la formule Activité Premium.
                 Catégories Produits et Articles Valorisés restent accessibles en
                 formule Basique (configuration des articles valorisés vendus). */}

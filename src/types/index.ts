@@ -12,6 +12,9 @@ export interface User {
   gerantActiviteId?: number;
   gerantActiviteType?: 'labo' | 'activite';
   gerantActiviteNom?: string | null;
+  gerantActiviteIds?: number[];
+  gerantLaboIds?: number[];
+  gerantAccesAcheteurs?: boolean;
   activitesCount?: number;
   labosCount?: number;
 }
@@ -160,6 +163,7 @@ export interface Gerant {
   activiteType: 'labo' | 'activite' | null;
   activiteIds?: number[];
   laboIds?: number[];
+  accesAcheteurs?: boolean;
   estGratuit: boolean;
   montantMensuel: number;
   actif: boolean;
