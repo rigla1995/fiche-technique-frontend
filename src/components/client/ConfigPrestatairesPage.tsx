@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import api from '../../api/client';
+import GuideButton from './GuideButton';
 import type { Activite } from '../../types';
 
 const C = '#b45309';
@@ -98,6 +99,7 @@ export default function ConfigPrestatairesPage() {
           <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#fff' }}>{activeCount}</div>
           <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.8)' }}>prestataire{activeCount !== 1 ? 's' : ''} actif{activeCount !== 1 ? 's' : ''}</div>
         </div>
+        <GuideButton section="configuration-vente" />
       </div>
 
       {/* Activité selector */}

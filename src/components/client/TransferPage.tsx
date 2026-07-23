@@ -2,7 +2,6 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useSearchParams, Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
-import HelpButton from '../common/HelpButton';
 import HistoryFilterBar, { FilterField, FilterInput, FilterSelect } from '../common/HistoryFilterBar';
 import TransferConfirmModal, { type TransferActiviteGroup, type TransferLine } from './TransferConfirmModal';
 import ApproPreviewPanel, { type PreviewLine } from './ApproPreviewPanel';
@@ -543,8 +542,7 @@ export default function TransferPage() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
             <div style={{ background: 'rgba(255,255,255,0.2)', borderRadius: 10, padding: '7px 9px', fontSize: '1.2rem' }}>🔄</div>
             <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0 }}>
-              {labo ? labo.nom : t('common.loading')} — {t('client.labo.transfer_title')}
-            <HelpButton section="transferts" variant="solid" size={18} tip="Aide" /></h1>
+              {labo ? labo.nom : t('common.loading')} — {t('client.labo.transfer_title')}</h1>
           </div>
           <span style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.82rem' }}>
             Transférez les articles du labo vers vos activités

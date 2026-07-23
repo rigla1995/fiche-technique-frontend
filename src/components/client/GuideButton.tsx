@@ -1,14 +1,18 @@
-import { Link } from 'react-router-dom';
-
 interface Props {
   section: string;
 }
 
+/**
+ * Bouton « ? » du hero : ouvre le manuel d'utilisation à la bonne section
+ * dans un NOUVEL onglet — l'utilisateur ne perd pas la page où il se trouve.
+ */
 export default function GuideButton({ section }: Props) {
   return (
-    <Link
-      to={`/client/guide#${section}`}
-      title="Voir le guide"
+    <a
+      href={`/client/guide#${section}`}
+      target="_blank"
+      rel="noopener"
+      title="Voir le guide (nouvel onglet)"
       style={{
         display: 'inline-flex',
         alignItems: 'center',
@@ -29,6 +33,6 @@ export default function GuideButton({ section }: Props) {
       onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.20)'; }}
     >
       ?
-    </Link>
+    </a>
   );
 }

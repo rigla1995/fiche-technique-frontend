@@ -2,7 +2,6 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
-import HelpButton from '../common/HelpButton';
 import { useAuth } from '../../context/AuthContext';
 import type { Product, Activite, ActiviteIngredient, CategorieProduit } from '../../types';
 import FicheTechniqueModal from './FicheTechniqueModal';
@@ -433,7 +432,6 @@ export default function ProductList() {
                 {tab === 'utilisable'
                   ? t('client.products.tab_utilisable')
                   : t('client.products.tab_vendable')}
-                <HelpButton section={tab === 'utilisable' ? 'produits-utilisables' : 'produits-vendables'} variant="solid" size={20} tip="Aide sur cette page" />
               </h1>
             </div>
             <p style={{ color: 'rgba(255,255,255,0.55)', margin: 0, fontSize: '0.83rem', letterSpacing: '0.01em' }}>
@@ -449,7 +447,7 @@ export default function ProductList() {
                 produit{byTab.length !== 1 ? 's' : ''}
               </div>
             </div>
-            <GuideButton section="produits" />
+            <GuideButton section={tab === 'utilisable' ? 'produits-utilisables' : 'produits-vendables'} />
           </div>
         </div>
       </div>

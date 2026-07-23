@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import api from '../../api/client';
 import type { Paiement } from '../../types';
 import HistoryFilterBar, { FilterField, FilterInput, FilterSelect } from '../common/HistoryFilterBar';
+import GuideButton from './GuideButton';
 
 // Un mois de paiement n'a que 2 statuts réels : en attente ou payé.
 // remisé/gratuit sont conservés pour l'AFFICHAGE des mois couverts par une promotion.
@@ -99,6 +100,9 @@ export default function HistoriquePaiementPage() {
           <p style={{ color: 'rgba(255,255,255,0.72)', fontSize: '0.85rem', margin: 0, marginTop: 4 }}>
             Vos paiements passés et les prochaines échéances
           </p>
+        </div>
+        <div style={{ marginLeft: 'auto' }}>
+          <GuideButton section="historique-paiements" />
         </div>
       </div>
 
