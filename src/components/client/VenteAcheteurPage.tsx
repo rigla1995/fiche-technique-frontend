@@ -460,6 +460,29 @@ export default function VenteAcheteurPage() {
                   </div>
                 )}
             </div>
+            {/* Lignes de la commande — récap compact, défilement au-delà de ~6 lignes */}
+            {lignesActives.length > 0 && (
+              <div style={{ marginBottom: 8, paddingBottom: 8, borderBottom: '1px dashed #e2e8f0' }}>
+                <div style={{ fontSize: '0.68rem', fontWeight: 800, color: CD, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 5 }}>
+                  🧺 Lignes ({lignesActives.length})
+                </div>
+                <div style={{ maxHeight: 150, overflowY: 'auto', display: 'grid', gap: 3 }}>
+                  {lignesActives.map(({ o, l }) => {
+                    const prixHt = l.prix !== '' ? parseNum(l.prix) : prixDefautHt(o);
+                    const qte = parseNum(l.quantite) || 0;
+                    const total = Number.isFinite(prixHt) ? prixHt * qte : 0;
+                    return (
+                      <div key={keyOf(o)} style={{ display: 'flex', justifyContent: 'space-between', gap: 8, fontSize: '0.76rem', color: '#475569' }}>
+                        <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={`${o.nom} — ${qte} ${o.unite}`}>
+                          {o.nom} <span style={{ color: '#94a3b8', fontWeight: 700 }}>×{qte}</span>
+                        </span>
+                        <strong style={{ whiteSpace: 'nowrap', color: '#1e293b' }}>{fmt(total)}</strong>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: '#475569', marginBottom: 4 }}>
               <span>Total brut HT ({lignesActives.length} ligne{lignesActives.length > 1 ? 's' : ''})</span><strong>{fmt(totaux.brutHt)}</strong>
             </div>
