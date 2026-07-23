@@ -3,9 +3,13 @@ interface PaginationProps {
   page: number;
   perPage?: number;
   onChange: (page: number) => void;
+  /** Couleurs d'accent de l'espace (défaut : indigo historique). */
+  accent?: { border: string; bg: string; text: string };
 }
 
-export default function Pagination({ total, page, perPage = 10, onChange }: PaginationProps) {
+const DEFAULT_ACCENT = { border: '#6366f1', bg: '#eef2ff', text: '#4338ca' };
+
+export default function Pagination({ total, page, perPage = 10, onChange, accent = DEFAULT_ACCENT }: PaginationProps) {
   const totalPages = Math.ceil(total / perPage);
   if (totalPages <= 1) return null;
 
@@ -21,7 +25,7 @@ export default function Pagination({ total, page, perPage = 10, onChange }: Pagi
         <button
           onClick={() => onChange(page - 1)}
           disabled={page === 1}
-          style={btnStyle(page === 1)}
+          style={btnStyle(page === 1, false, accent)}
         >
           ← Préc.
         </button>
@@ -36,7 +40,7 @@ export default function Pagination({ total, page, perPage = 10, onChange }: Pagi
             p === '…' ? (
               <span key={`ellipsis-${i}`} style={{ padding: '5px 4px', color: 'var(--text-muted)', fontSize: '0.8rem' }}>…</span>
             ) : (
-              <button key={p} onClick={() => onChange(p as number)} style={btnStyle(false, p === page)}>
+              <button key={p} onClick={() => onChange(p as number)} style={btnStyle(false, p === page, accent)}>
                 {p}
               </button>
             )
@@ -44,7 +48,7 @@ export default function Pagination({ total, page, perPage = 10, onChange }: Pagi
         <button
           onClick={() => onChange(page + 1)}
           disabled={page === totalPages}
-          style={btnStyle(page === totalPages)}
+          style={btnStyle(page === totalPages, false, accent)}
         >
           Suiv. →
         </button>
@@ -53,12 +57,12 @@ export default function Pagination({ total, page, perPage = 10, onChange }: Pagi
   );
 }
 
-const btnStyle = (disabled: boolean, active = false): React.CSSProperties => ({
+const btnStyle = (disabled: boolean, active = false, accent = DEFAULT_ACCENT): React.CSSProperties => ({
   padding: '5px 10px',
   borderRadius: 6,
-  border: active ? '1.5px solid #6366f1' : '1px solid #e2e8f0',
-  background: active ? '#eef2ff' : disabled ? '#f8fafc' : '#fff',
-  color: active ? '#4338ca' : disabled ? '#cbd5e1' : '#374151',
+  border: active ? `1.5px solid ${accent.border}` : '1px solid #e2e8f0',
+  background: active ? accent.bg : disabled ? '#f8fafc' : '#fff',
+  color: active ? accent.text : disabled ? '#cbd5e1' : '#374151',
   fontSize: '0.8rem',
   fontWeight: active ? 700 : 500,
   cursor: disabled ? 'default' : 'pointer',
