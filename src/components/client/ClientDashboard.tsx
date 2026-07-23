@@ -86,11 +86,11 @@ interface FiltresOptions {
 interface FiltresState {
   activites: string[]; labos: string[]; canaux: string[]; prestataires: string[];
   catProduits: string[]; typesProduit: string[]; catArticles: string[];
-  familles: string[]; fournisseurs: string[]; typesPerte: string[];
+  familles: string[]; fournisseurs: string[]; typesPerte: string[]; sources: string[];
 }
 
-const FILTRE_KEYS: (keyof FiltresState)[] = ['activites', 'labos', 'canaux', 'prestataires', 'catProduits', 'typesProduit', 'catArticles', 'familles', 'fournisseurs', 'typesPerte'];
-const emptyFiltres = (): FiltresState => ({ activites: [], labos: [], canaux: [], prestataires: [], catProduits: [], typesProduit: [], catArticles: [], familles: [], fournisseurs: [], typesPerte: [] });
+const FILTRE_KEYS: (keyof FiltresState)[] = ['activites', 'labos', 'canaux', 'prestataires', 'catProduits', 'typesProduit', 'catArticles', 'familles', 'fournisseurs', 'typesPerte', 'sources'];
+const emptyFiltres = (): FiltresState => ({ activites: [], labos: [], canaux: [], prestataires: [], catProduits: [], typesProduit: [], catArticles: [], familles: [], fournisseurs: [], typesPerte: [], sources: [] });
 
 // Filtres pertinents par onglet (les autres ne s'affichent pas).
 const FILTRES_PAR_TAB: Record<TabKey, (keyof FiltresState)[]> = {
@@ -99,7 +99,7 @@ const FILTRES_PAR_TAB: Record<TabKey, (keyof FiltresState)[]> = {
   achats: ['activites', 'catArticles', 'familles', 'fournisseurs'],
   pertes: ['activites', 'labos', 'catArticles', 'familles', 'typesPerte'],
   labo: ['labos'],
-  acheteurs: ['labos'],
+  acheteurs: ['labos', 'sources'],
 };
 
 const CANAUX_OPTS: MultiSelectOption[] = [
@@ -114,6 +114,11 @@ const TYPES_PRODUIT_OPTS: MultiSelectOption[] = [
 const TYPES_PERTE_OPTS: MultiSelectOption[] = [
   { value: 'avarie', label: 'Avaries' },
   { value: 'dechet', label: 'Déchets' },
+];
+// Type de vente de l'onglet Acheteurs (B2B) : manuelle (saisie vendeur) ou portail.
+const SOURCES_B2B_OPTS: MultiSelectOption[] = [
+  { value: 'client', label: 'Vente manuelle' },
+  { value: 'portail', label: 'Portail acheteur' },
 ];
 
 const STORAGE_KEY = 'dashboardV2State';
@@ -389,6 +394,7 @@ export default function ClientDashboard() {
           <>
             {visibles.includes('activites') && <MultiSelectFilter label="Activités" icon="🏪" options={toOpts(options.activites)} selected={filtres.activites} onChange={setFiltre('activites')} />}
             {visibles.includes('labos') && <MultiSelectFilter label="Labos" icon="🧪" options={toOpts(options.labos)} selected={filtres.labos} onChange={setFiltre('labos')} />}
+            {visibles.includes('sources') && <MultiSelectFilter label="Type de vente" icon="🛒" options={SOURCES_B2B_OPTS} selected={filtres.sources} onChange={setFiltre('sources')} alwaysShow />}
             {visibles.includes('canaux') && <MultiSelectFilter label="Type de vente" icon="🛒" options={CANAUX_OPTS} selected={filtres.canaux} onChange={setFiltre('canaux')} />}
             {visibles.includes('prestataires') && <MultiSelectFilter label="Prestataires" icon="🚚" options={toOpts(options.prestataires)} selected={filtres.prestataires} onChange={setFiltre('prestataires')} />}
             {visibles.includes('catProduits') && <MultiSelectFilter label="Catégories produits" icon="🍽️" options={toCatProduitOpts(options.categories_produit)} selected={filtres.catProduits} onChange={setFiltre('catProduits')} alwaysShow />}

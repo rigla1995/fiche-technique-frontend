@@ -2,12 +2,19 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../../api/client';
 import GuideButton from './GuideButton';
+import HistoryFilterBar, { FilterField, FilterInput, FilterSelect } from '../common/HistoryFilterBar';
+import Pagination from '../common/Pagination';
 
 // Thème violet de l'Espace Acheteurs
 const C = '#6d28d9';
 const CD = '#4c1d95';
 const CL = '#f5f3ff';
 const CB = '#c4b5fd';
+const PAGE_ACCENT = { border: CB, bg: CL, text: CD };
+// Pagination à 2 niveaux (même principe que le catalogue portail) :
+// 5 catégories par page, 10 lignes par catégorie.
+const CATS_PAR_PAGE = 5;
+const LIGNES_PAR_CAT = 10;
 
 interface OffreRow {
   articleType: 'ingredient' | 'produit';
@@ -71,6 +78,9 @@ export default function TarifsAcheteursPage() {
   const [catFilter, setCatFilter] = useState('');
   const [etatFilter, setEtatFilter] = useState<'tous' | 'proposes' | 'non'>('tous');
   const [openCats, setOpenCats] = useState<Record<string, boolean>>({});
+  // Pagination : page de catégories + page de lignes PAR catégorie
+  const [catPage, setCatPage] = useState(1);
+  const [lignePages, setLignePages] = useState<Record<string, number>>({});
   const [edits, setEdits] = useState<Record<string, EditState>>({});
   const [baseline, setBaseline] = useState<Record<string, EditState>>({});
   const [flash, setFlash] = useState('');
@@ -117,6 +127,14 @@ export default function TarifsAcheteursPage() {
     return [...map.entries()];
   }, [filtered]);
   const categoriesDuTab = useMemo(() => [...new Set(rows.map(r => r.categorie))], [rows]);
+
+  // Tout changement de filtre ou d'onglet remet les 2 niveaux de pagination à zéro
+  useEffect(() => { setCatPage(1); setLignePages({}); }, [tab, search, catFilter, etatFilter]);
+  const totalCatPages = Math.max(1, Math.ceil(groupes.length / CATS_PAR_PAGE));
+  const catPageCourante = Math.min(catPage, totalCatPages);
+  const groupesAffiches = groupes.slice((catPageCourante - 1) * CATS_PAR_PAGE, catPageCourante * CATS_PAR_PAGE);
+  const lignePageDe = (cat: string, nb: number) =>
+    Math.min(lignePages[cat] || 1, Math.max(1, Math.ceil(nb / LIGNES_PAR_CAT)));
 
   const dirtyKeys = useMemo(
     () => Object.keys(edits).filter(k => baseline[k] && !sameEdit(edits[k], baseline[k])),
@@ -182,27 +200,27 @@ export default function TarifsAcheteursPage() {
 
   return (
     <div className="page-content">
-      {/* Hero */}
+      {/* Hero — le texte est borné (flex + maxWidth) pour que les compteurs
+          restent sur la même ligne au lieu de passer à la ligne suivante */}
       <div style={{ background: `linear-gradient(135deg, ${CD} 0%, ${C} 55%, #8b5cf6 100%)`, borderRadius: 18, padding: '24px 28px', marginBottom: 20, boxShadow: '0 8px 32px rgba(109,40,217,0.28)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
-        <div>
+        <div style={{ flex: '1 1 300px', minWidth: 240, maxWidth: 640 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
             <div style={{ background: 'rgba(255,255,255,0.15)', borderRadius: 10, padding: '7px 9px', fontSize: '1.2rem' }}>💲</div>
             <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0 }}>Tarifs Acheteurs</h1>
           </div>
           <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.85rem', margin: 0 }}>
-            Prix unitaires HT (+ TVA) des articles et produits proposés à vos acheteurs — le TTC se calcule tout seul.
-            Une promotion active s'affiche à vos acheteurs, prix initial barré.
+            Prix HT (+ TVA) des articles et produits proposés à vos acheteurs — TTC calculé, promo affichée prix barré.
           </p>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
           <div style={{ background: 'rgba(255,255,255,0.14)', border: '1px solid rgba(255,255,255,0.25)', borderRadius: 14, padding: '10px 20px', textAlign: 'center', minWidth: 90 }}>
-            <div style={{ fontSize: '1.4rem', fontWeight: 900, color: '#fff' }}>{nbActifs}</div>
-            <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.75)', fontWeight: 600 }}>proposé{nbActifs !== 1 ? 's' : ''}</div>
+            <div style={{ fontSize: '1.4rem', fontWeight: 900, color: '#fff', whiteSpace: 'nowrap' }}>{nbActifs}</div>
+            <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.75)', fontWeight: 600, whiteSpace: 'nowrap' }}>proposé{nbActifs !== 1 ? 's' : ''}</div>
           </div>
           {nbPromos > 0 && (
             <div style={{ background: 'rgba(251,191,36,0.22)', border: '1px solid rgba(251,191,36,0.55)', borderRadius: 14, padding: '10px 20px', textAlign: 'center', minWidth: 90 }}>
-              <div style={{ fontSize: '1.4rem', fontWeight: 900, color: '#fde68a' }}>{nbPromos}</div>
-              <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.85)', fontWeight: 600 }}>en promo</div>
+              <div style={{ fontSize: '1.4rem', fontWeight: 900, color: '#fde68a', whiteSpace: 'nowrap' }}>{nbPromos}</div>
+              <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.85)', fontWeight: 600, whiteSpace: 'nowrap' }}>en promo</div>
             </div>
           )}
           <GuideButton section="acheteurs-tarifs" />
@@ -212,33 +230,44 @@ export default function TarifsAcheteursPage() {
       {flash && <div style={{ background: '#dcfce7', border: '1px solid #86efac', color: '#166534', borderRadius: 10, padding: '10px 16px', marginBottom: 14, fontSize: '0.85rem', fontWeight: 600 }}>{flash}</div>}
       {error && <div style={{ background: '#fee2e2', border: '1px solid #fca5a5', color: '#991b1b', borderRadius: 10, padding: '10px 16px', marginBottom: 14, fontSize: '0.85rem', fontWeight: 600 }}>{error}</div>}
 
-      {/* Onglets + filtres + save */}
-      <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
+      {/* Onglets Articles / Produits */}
+      <div style={{ display: 'flex', gap: 10, marginBottom: 14, flexWrap: 'wrap', alignItems: 'center' }}>
         {(['articles', 'produits'] as const).map(t => (
           <button key={t} onClick={() => { setTab(t); setCatFilter(''); }}
             style={{ padding: '9px 18px', borderRadius: 10, border: `1.5px solid ${tab === t ? C : '#e2e8f0'}`, background: tab === t ? CL : '#fff', color: tab === t ? CD : '#475569', fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer' }}>
             {t === 'articles' ? `🧂 Articles (${articles.length})` : `🍱 Produits (${produits.length})`}
           </button>
         ))}
-        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="🔍 Rechercher…"
-          style={{ padding: '8px 12px', borderRadius: 10, border: '1px solid #e2e8f0', fontSize: '0.84rem', fontFamily: 'inherit', width: 190 }} />
-        <select value={catFilter} onChange={e => setCatFilter(e.target.value)}
-          style={{ padding: '8px 10px', borderRadius: 10, border: '1px solid #e2e8f0', fontSize: '0.84rem', fontFamily: 'inherit', maxWidth: 200 }}>
-          <option value="">Toutes les catégories</option>
-          {categoriesDuTab.map(c => <option key={c} value={c}>{c}</option>)}
-        </select>
-        <select value={etatFilter} onChange={e => setEtatFilter(e.target.value as typeof etatFilter)}
-          style={{ padding: '8px 10px', borderRadius: 10, border: '1px solid #e2e8f0', fontSize: '0.84rem', fontFamily: 'inherit' }}>
-          <option value="tous">Tous les états</option>
-          <option value="proposes">Proposés</option>
-          <option value="non">Non proposés</option>
-        </select>
-        <button onClick={saveAll} disabled={saving || dirtyKeys.length === 0 || promoInvalides.length > 0}
-          title={promoInvalides.length > 0 ? 'Corrigez les taux de promotion en rouge (0,01 à 100)' : undefined}
-          style={{ marginLeft: 'auto', padding: '10px 22px', borderRadius: 10, border: 'none', background: dirtyKeys.length && !promoInvalides.length ? `linear-gradient(135deg, ${CD}, ${C})` : '#cbd5e1', color: '#fff', fontWeight: 700, fontSize: '0.86rem', cursor: dirtyKeys.length && !promoInvalides.length ? 'pointer' : 'default', boxShadow: dirtyKeys.length && !promoInvalides.length ? '0 4px 14px rgba(109,40,217,0.3)' : 'none' }}>
-          {saving ? 'Enregistrement…' : `💾 Enregistrer${dirtyKeys.length ? ` (${dirtyKeys.length})` : ''}`}
-        </button>
       </div>
+
+      {/* Bloc filtres (composant partagé) + enregistrement */}
+      <HistoryFilterBar accent={C} accentDark={CD}
+        subtitle={`${filtered.length} ligne${filtered.length > 1 ? 's' : ''} · ${groupes.length} catégorie${groupes.length > 1 ? 's' : ''}`}
+        onReset={filtreActif ? () => { setSearch(''); setCatFilter(''); setEtatFilter('tous'); } : undefined}
+        actions={
+          <button onClick={saveAll} disabled={saving || dirtyKeys.length === 0 || promoInvalides.length > 0}
+            title={promoInvalides.length > 0 ? 'Corrigez les taux de promotion en rouge (0,01 à 100)' : undefined}
+            style={{ height: 36, padding: '0 20px', borderRadius: 8, border: 'none', background: dirtyKeys.length && !promoInvalides.length ? `linear-gradient(135deg, ${CD}, ${C})` : '#cbd5e1', color: '#fff', fontWeight: 700, fontSize: '0.84rem', cursor: dirtyKeys.length && !promoInvalides.length ? 'pointer' : 'default', boxShadow: dirtyKeys.length && !promoInvalides.length ? '0 4px 14px rgba(109,40,217,0.3)' : 'none' }}>
+            {saving ? 'Enregistrement…' : `💾 Enregistrer${dirtyKeys.length ? ` (${dirtyKeys.length})` : ''}`}
+          </button>
+        }>
+        <FilterField label="🔍 Recherche">
+          <FilterInput value={search} onChange={e => setSearch(e.target.value)} placeholder={tab === 'articles' ? 'Nom de l\'article…' : 'Nom du produit…'} />
+        </FilterField>
+        <FilterField label="🏷️ Catégorie">
+          <FilterSelect value={catFilter} onChange={e => setCatFilter(e.target.value)}>
+            <option value="">— Toutes —</option>
+            {categoriesDuTab.map(c => <option key={c} value={c}>{c}</option>)}
+          </FilterSelect>
+        </FilterField>
+        <FilterField label="⚡ État">
+          <FilterSelect value={etatFilter} onChange={e => setEtatFilter(e.target.value as typeof etatFilter)}>
+            <option value="tous">Tous les états</option>
+            <option value="proposes">Proposés</option>
+            <option value="non">Non proposés</option>
+          </FilterSelect>
+        </FilterField>
+      </HistoryFilterBar>
 
       {loading ? (
         <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)' }}>Chargement…</div>
@@ -257,13 +286,17 @@ export default function TarifsAcheteursPage() {
       ) : filtered.length === 0 ? (
         <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)' }}>Aucun résultat avec ces filtres.</div>
       ) : (
-        groupes.map(([cat, items]) => {
-          const open = filtreActif || openCats[cat] === true;
+        <>
+        {groupesAffiches.map(([cat, items]) => {
+          // Sections OUVERTES par défaut (le contenu est borné par la pagination) ; repliables.
+          const open = filtreActif || openCats[cat] !== false;
           const nbProposes = items.filter(r => edits[keyOf(r)]?.actif).length;
           const nbDirty = dirtyInCat(items);
+          const lignePage = lignePageDe(cat, items.length);
+          const itemsAffiches = items.slice((lignePage - 1) * LIGNES_PAR_CAT, lignePage * LIGNES_PAR_CAT);
           return (
             <div key={cat} className="card" style={{ padding: 0, overflow: 'hidden', marginBottom: 12 }}>
-              {/* En-tête de section (repliée par défaut) */}
+              {/* En-tête de section (repliable) */}
               <button onClick={() => setOpenCats(prev => ({ ...prev, [cat]: !open }))}
                 style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', background: CL, border: 'none', borderBottom: open ? `2px solid ${CB}` : 'none', cursor: 'pointer', textAlign: 'left' }}>
                 <span style={{ color: CD, fontSize: '0.8rem', transform: open ? 'rotate(90deg)' : 'none', transition: 'transform 0.15s', display: 'inline-block' }}>▶</span>
@@ -288,7 +321,7 @@ export default function TarifsAcheteursPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {items.map(r => {
+                      {itemsAffiches.map(r => {
                         const k = keyOf(r);
                         const e = edits[k];
                         if (!e) return null;
@@ -359,11 +392,21 @@ export default function TarifsAcheteursPage() {
                       })}
                     </tbody>
                   </table>
+                  <Pagination total={items.length} page={lignePage} perPage={LIGNES_PAR_CAT}
+                    onChange={p => setLignePages(prev => ({ ...prev, [cat]: p }))} accent={PAGE_ACCENT} />
                 </div>
               )}
             </div>
           );
-        })
+        })}
+        {/* Pagination des catégories (5 par page) */}
+        {totalCatPages > 1 && (
+          <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+            <Pagination total={groupes.length} page={catPageCourante} perPage={CATS_PAR_PAGE}
+              onChange={setCatPage} accent={PAGE_ACCENT} />
+          </div>
+        )}
+        </>
       )}
     </div>
   );
