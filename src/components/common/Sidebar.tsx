@@ -161,6 +161,10 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
   const showGerants = !aboConfig || (aboConfig.nbGerants ?? 0) > 0;
 
+  // Accès gérant à l'Espace Acheteurs : accordé explicitement par le compte client
+  // (gerantAccesAcheteurs) ET au moins un labo affecté. Les clients passent toujours.
+  const gerantAcheteursOk = !isGerant || (!!user?.gerantAccesAcheteurs && (user?.gerantLaboIds?.length ?? 0) > 0);
+
   const toggleSection = (key: string) => setOpenSections((prev) => {
     const n = new Set(prev);
     n.has(key) ? n.delete(key) : n.add(key);
@@ -387,18 +391,22 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
             </>
           ) : (
             <>
-              {/* Tableau de bord */}
-              <li>
-                {lockLevel0 ? (
-                  <LockedLink label="Tableau de bord" />
-                ) : (
-                  <NavLink to="/client/dashboard" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>
-                    <span className="link-icon">📊</span>
-                    <span className="link-label">Tableau de bord</span>
-                  </NavLink>
-                )}
-              </li>
-              <Divider />
+              {/* Tableau de bord — réservé au compte client (les gérants n'y ont pas accès) */}
+              {!isGerant && (
+                <>
+                  <li>
+                    {lockLevel0 ? (
+                      <LockedLink label="Tableau de bord" />
+                    ) : (
+                      <NavLink to="/client/dashboard" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>
+                        <span className="link-icon">📊</span>
+                        <span className="link-label">Tableau de bord</span>
+                      </NavLink>
+                    )}
+                  </li>
+                  <Divider />
+                </>
+              )}
 
               {/* Mes Activités — gestion (CRUD) réservée au client propriétaire */}
               {isEntreprise && user?.role === 'client' && (
@@ -417,7 +425,8 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
               {/* ══ RÉFÉRENTIEL ══ */}
               {isEntreprise && (
                 <>
-                  <Divider />
+                  {/* Pas de séparateur d'ouverture pour un gérant : c'est sa première section */}
+                  {!isGerant && <Divider />}
                   <CollapsibleHeader label="Référentiel" icon="📚" isOpen={openSections.has('referentiel')} locked={lockLevel0} onToggle={() => toggleSection('referentiel')} />
                   {openSections.has('referentiel') && (
                     <>
@@ -527,8 +536,9 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                     </>
                   )}
 
-                  {/* ══ ESPACE ACHETEURS ══ — module opt-in (le carnet ne dépend pas des articles) */}
-                  {moduleAcheteursActif && (
+                  {/* ══ ESPACE ACHETEURS ══ — module opt-in (le carnet ne dépend pas des articles) ;
+                      gérant : seulement si accès accordé + ≥ 1 labo affecté */}
+                  {moduleAcheteursActif && gerantAcheteursOk && (
                     <>
                       <Divider />
                       <CollapsibleHeader label="Espace Acheteurs" icon="🤝" isOpen={openSections.has('acheteurs')} locked={false} onToggle={() => toggleSection('acheteurs')} />

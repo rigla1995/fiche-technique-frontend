@@ -41,7 +41,8 @@ export default function LoginPage() {
     try {
       const loggedUser = await login(email, password);
       if (loggedUser.role === 'gerant') {
-        navigate('/client/dashboard', { replace: true });
+        // Pas de tableau de bord pour un gérant : atterrissage sur le Référentiel
+        navigate('/client/referentiel/unites', { replace: true });
       } else if (loggedUser.role === 'super_admin' || loggedUser.role === 'boss') {
         navigate('/admin', { replace: true });
       } else if (loggedUser.role === 'acheteur') {
