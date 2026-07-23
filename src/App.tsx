@@ -38,7 +38,6 @@ const StockLaboPage = lazy(() => import('./components/client/StockLaboPage'));
 const TransferPage = lazy(() => import('./components/client/TransferPage'));
 const TransferHistoriquePage = lazy(() => import('./components/client/TransferHistoriquePage'));
 const FournisseursPage = lazy(() => import('./components/client/FournisseursPage'));
-const FournisseursLaboPage = lazy(() => import('./components/client/FournisseursLaboPage'));
 const LaboHistoriqueApproPage = lazy(() => import('./components/client/LaboHistoriqueApproPage'));
 const LaboHistoriquepertesPage = lazy(() => import('./components/client/LaboHistoriquepertesPage'));
 const FacturesApproPage = lazy(() => import('./components/client/FacturesApproPage'));
@@ -221,7 +220,9 @@ export default function App() {
             <Route path="/client/labo/inventaire/historique" element={<HistoriqueInventairePage />} />
             <Route path="/client/inventaire/historique" element={<HistoriqueInventairePage />} />
             <Route path="/client/fournisseurs" element={<FournisseursPage />} />
-            <Route path="/client/fournisseurs-labo" element={<FournisseursLaboPage />} />
+            {/* Ex-page « Fournisseurs Labo » supprimée (2026-07-23) : la page
+                Fournisseurs gère les affectations activités ET labos. */}
+            <Route path="/client/fournisseurs-labo" element={<Navigate to="/client/fournisseurs" replace />} />
             <Route path="/client/abonnement" element={<MonAbonnementPage />} />
             <Route path="/client/historique-paiement" element={<HistoriquePaiementPage />} />
             <Route path="/client/gerants" element={<GerantsPage />} />
