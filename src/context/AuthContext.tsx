@@ -51,9 +51,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       .catch(() => {});
     window.addEventListener('activites-changed', refresh);
     window.addEventListener('labos-changed', refresh);
+    // 'auth-refresh' : émis par l'intercepteur axios quand le backend signale un
+    // droit révoqué (ex. accès acheteurs d'un gérant) — resynchronise le user.
+    window.addEventListener('auth-refresh', refresh);
     return () => {
       window.removeEventListener('activites-changed', refresh);
       window.removeEventListener('labos-changed', refresh);
+      window.removeEventListener('auth-refresh', refresh);
     };
   }, [token]);
 

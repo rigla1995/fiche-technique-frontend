@@ -116,7 +116,9 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const isAdmin = user?.role === 'super_admin' || isBoss;
   const isGerant = user?.role === 'gerant';
   const [openSections, setOpenSections] = useState<Set<string>>(
-    isAdmin ? new Set(['admin-ref']) : new Set()
+    // Gérant : Référentiel déplié d'office — c'est sa page d'atterrissage
+    // (/client/referentiel/unites) et son premier bloc de sidebar.
+    isAdmin ? new Set(['admin-ref']) : isGerant ? new Set(['referentiel']) : new Set()
   );
   const [moduleVenteActif, setModuleVenteActif] = useState(false);
   const [moduleAcheteursActif, setModuleAcheteursActif] = useState(false);

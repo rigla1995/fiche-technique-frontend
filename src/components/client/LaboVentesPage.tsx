@@ -4,6 +4,7 @@ import api from '../../api/client';
 import HelpButton from '../common/HelpButton';
 import HistoryFilterBar, { FilterField, FilterInput, FilterSelect } from '../common/HistoryFilterBar';
 import type { Labo } from '../../types';
+import { useAuth } from '../../context/AuthContext';
 
 const apiMsg = (e: unknown, fallback = 'Erreur') =>
   (e as { response?: { data?: { message?: string } } })?.response?.data?.message ?? fallback;
@@ -43,6 +44,7 @@ interface LaboTransfert {
 export default function LaboVentesPage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [labos, setLabos] = useState<Labo[]>([]);
   const [selectedLaboId, setSelectedLaboId] = useState<number | null>(null);
   const [transferts, setTransferts] = useState<LaboTransfert[]>([]);
@@ -176,9 +178,11 @@ export default function LaboVentesPage() {
             Historique des transferts valorisés avec analyse prix / coût
           </p>
         </div>
-        <Link to="/client/dashboard?tab=ventes" style={{ background: 'rgba(255,255,255,0.18)', color: '#fff', borderRadius: 20, padding: '5px 14px', fontSize: '0.82rem', fontWeight: 600, textDecoration: 'none', border: '1px solid rgba(255,255,255,0.3)' }}>
-          📊 Rapport
-        </Link>
+        {user?.role !== 'gerant' && (
+          <Link to="/client/dashboard?tab=ventes" style={{ background: 'rgba(255,255,255,0.18)', color: '#fff', borderRadius: 20, padding: '5px 14px', fontSize: '0.82rem', fontWeight: 600, textDecoration: 'none', border: '1px solid rgba(255,255,255,0.3)' }}>
+            📊 Rapport
+          </Link>
+        )}
       </div>
 
       {/* Labo selector */}
