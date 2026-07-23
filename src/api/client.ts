@@ -37,6 +37,13 @@ api.interceptors.response.use(
       if (code === 'READ_ONLY' || code === 'SUSPENDED') {
         return Promise.reject(error);
       }
+      // Accès acheteurs révoqué pendant la session du gérant : resynchroniser le
+      // user (/auth/me via AuthContext) pour que la sidebar et AcheteursGuard
+      // reflètent la révocation, sans page d'erreur plein écran.
+      if (code === 'ACHETEURS_GERANT_NON_AUTORISE') {
+        window.dispatchEvent(new Event('auth-refresh'));
+        return Promise.reject(error);
+      }
       window.location.href = '/error/403';
       return Promise.reject(error);
     }

@@ -10,9 +10,10 @@ interface GerantForm {
   email: string;
   activiteIds: number[];
   laboIds: number[];
+  accesAcheteurs: boolean;
 }
 
-const EMPTY_FORM: GerantForm = { nom: '', telephone: '', email: '', activiteIds: [], laboIds: [] };
+const EMPTY_FORM: GerantForm = { nom: '', telephone: '', email: '', activiteIds: [], laboIds: [], accesAcheteurs: false };
 
 export default function GerantsPage() {
   const [gerants, setGerants] = useState<Gerant[]>([]);
@@ -20,13 +21,16 @@ export default function GerantsPage() {
   const [labos, setLabos] = useState<Labo[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState<GerantForm>(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
   const [inviteSent, setInviteSent] = useState<{ nom: string; email: string } | null>(null);
   const [resendingId, setResendingId] = useState<number | null>(null);
   const [error, setError] = useState('');
   const [abonnementConfig, setAbonnementConfig] = useState<AbonnementConfig | null>(null);
-  const { emailExists: gerantEmailExists, emailChecking: gerantEmailChecking } = useEmailCheck(form.email);
+  const [moduleAcheteursActif, setModuleAcheteursActif] = useState(false);
+  // L'email n'est pas éditable : le contrôle d'unicité ne sert qu'à la création.
+  const { emailExists: gerantEmailExists, emailChecking: gerantEmailChecking } = useEmailCheck(editingId ? '' : form.email);
   const { confirm } = useConfirm();
 
   const freeLimit = 3;
@@ -41,37 +45,76 @@ export default function GerantsPage() {
       api.get('/api/abonnements/mon-abonnement').catch(() => null),
       api.get('/api/entreprise/activites'),
       api.get('/api/labo/'),
+      api.get('/api/entreprise').catch(() => null),
     ];
-    Promise.all(calls).then(([gerantRes, aboRes, activiteRes, laboRes]) => {
+    Promise.all(calls).then(([gerantRes, aboRes, activiteRes, laboRes, entRes]) => {
       setGerants((gerantRes as { data: Gerant[] }).data);
       if ((aboRes as { data?: { config?: AbonnementConfig } } | null)?.data?.config) {
         setAbonnementConfig((aboRes as { data: { config: AbonnementConfig } }).data.config);
       }
       if (activiteRes) setActivites((activiteRes as { data: Activite[] }).data || []);
       if (laboRes) setLabos((laboRes as { data: Labo[] }).data || []);
+      setModuleAcheteursActif(!!(entRes as { data?: { module_acheteurs_actif?: boolean } } | null)?.data?.module_acheteurs_actif);
     }).finally(() => setLoading(false));
   }, []);
 
+  const closeForm = () => {
+    setShowForm(false);
+    setEditingId(null);
+    setError('');
+    setForm(EMPTY_FORM);
+  };
+
+  const startEdit = (g: Gerant) => {
+    // Pré-remplissage avec le même repli legacy que l'affichage (mono-affectation ancienne).
+    const actIds = g.activiteIds && g.activiteIds.length ? g.activiteIds : (g.activiteType !== 'labo' && g.activiteId ? [g.activiteId] : []);
+    const labIds = g.laboIds && g.laboIds.length ? g.laboIds : (g.activiteType === 'labo' && g.activiteId ? [g.activiteId] : []);
+    setForm({
+      nom: g.nom,
+      telephone: g.telephone || '',
+      email: g.email,
+      activiteIds: actIds,
+      laboIds: labIds,
+      accesAcheteurs: !!g.accesAcheteurs,
+    });
+    setEditingId(g.id);
+    setShowForm(true);
+    setInviteSent(null);
+    setError('');
+  };
+
   const submitForm = async () => {
-    if (!form.nom || !form.telephone || !form.email) { setError('Nom, téléphone et email requis'); return; }
-    if (gerantEmailExists) { setError('Cet email est déjà utilisé.'); return; }
+    if (!form.nom || !form.telephone || (!editingId && !form.email)) { setError('Nom, téléphone et email requis'); return; }
+    if (!editingId && gerantEmailExists) { setError('Cet email est déjà utilisé.'); return; }
     if (form.activiteIds.length === 0 && form.laboIds.length === 0) { setError('Affectez au moins une activité ou un labo'); return; }
     setSaving(true);
     setError('');
     try {
-      const res = await api.post('/api/abonnements/gerants', {
-        nom: form.nom,
-        telephone: form.telephone,
-        email: form.email,
-        activiteIds: form.activiteIds,
-        laboIds: form.laboIds,
-      });
-      setGerants((g) => [...g, res.data]);
-      setInviteSent({ nom: res.data.nom, email: res.data.email });
-      setShowForm(false);
-      setForm(EMPTY_FORM);
+      if (editingId) {
+        const res = await api.put(`/api/abonnements/gerants/${editingId}`, {
+          nom: form.nom,
+          telephone: form.telephone,
+          activiteIds: form.activiteIds,
+          laboIds: form.laboIds,
+          accesAcheteurs: form.accesAcheteurs,
+        });
+        setGerants((gs) => gs.map((x) => x.id === editingId ? { ...x, ...res.data } : x));
+        closeForm();
+      } else {
+        const res = await api.post('/api/abonnements/gerants', {
+          nom: form.nom,
+          telephone: form.telephone,
+          email: form.email,
+          activiteIds: form.activiteIds,
+          laboIds: form.laboIds,
+          accesAcheteurs: form.accesAcheteurs,
+        });
+        setGerants((g) => [...g, res.data]);
+        setInviteSent({ nom: res.data.nom, email: res.data.email });
+        closeForm();
+      }
     } catch (e: unknown) {
-      setError((e as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Erreur lors de la création');
+      setError((e as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Erreur lors de l\'enregistrement');
     } finally {
       setSaving(false);
     }
@@ -162,7 +205,7 @@ export default function GerantsPage() {
               🔒 Limite atteinte ({maxGerants})
             </div>
           ) : (
-            <button onClick={() => { setShowForm(true); setInviteSent(null); setError(''); }}
+            <button onClick={() => { setShowForm(true); setEditingId(null); setForm(EMPTY_FORM); setInviteSent(null); setError(''); }}
               style={{ padding: '10px 22px', borderRadius: 10, background: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(4px)', color: '#fff', fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer', border: '1px solid rgba(255,255,255,0.25)' } as React.CSSProperties}>
               + Nouveau gérant
             </button>
@@ -193,13 +236,15 @@ export default function GerantsPage() {
       {showForm && (
         <div style={{ background: '#fff', borderRadius: 16, border: '1px solid #e5e7eb', overflow: 'hidden', boxShadow: '0 4px 20px rgba(0,0,0,0.06)', marginBottom: 24 }}>
           <div style={{ background: 'linear-gradient(135deg,#f0f9ff,#e0f2fe)', padding: '14px 20px', borderBottom: '1px solid #bae6fd', display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ fontSize: '1rem' }}>👤</span>
+            <span style={{ fontSize: '1rem' }}>{editingId ? '✏️' : '👤'}</span>
             <span style={{ fontWeight: 800, fontSize: '0.9rem', color: '#0369a1' }}>
-              Nouveau gérant {!canAddFree ? '— payant (80 DT/mois)' : '— inclus dans votre abonnement'}
+              {editingId
+                ? 'Modifier le gérant — accès et affectations'
+                : `Nouveau gérant ${!canAddFree ? '— payant (80 DT/mois)' : '— inclus dans votre abonnement'}`}
             </span>
           </div>
           <div style={{ padding: '20px' }}>
-            {!canAddFree && (
+            {!canAddFree && !editingId && (
               <div style={{ background: '#fef9c3', border: '1px solid #fde68a', borderRadius: 10, padding: '10px 14px', fontSize: '0.82rem', color: '#92400e', marginBottom: 16 }}>
                 ⚠ Vous avez atteint la limite de {freeLimit} gérant(s) gratuit(s). Ce compte sera facturé <strong>80 DT/mois</strong> et nécessite une validation admin.
               </div>
@@ -218,19 +263,30 @@ export default function GerantsPage() {
                 <input
                   type="email"
                   value={form.email}
+                  disabled={!!editingId}
                   onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
                   placeholder="email@exemple.com"
-                  style={{ ...inp, borderColor: gerantEmailExists ? '#fca5a5' : (inp as React.CSSProperties).borderColor, background: gerantEmailExists ? '#fff5f5' : (inp as React.CSSProperties).background }}
+                  style={{ ...inp, borderColor: gerantEmailExists ? '#fca5a5' : (inp as React.CSSProperties).borderColor, background: editingId ? '#f8fafc' : (gerantEmailExists ? '#fff5f5' : (inp as React.CSSProperties).background), color: editingId ? '#94a3b8' : (inp as React.CSSProperties).color }}
                 />
-                {gerantEmailChecking && <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 3 }}>Vérification…</div>}
-                {!gerantEmailChecking && gerantEmailExists && <div style={{ fontSize: 11, color: '#dc2626', marginTop: 3 }}>Cet email est déjà utilisé.</div>}
+                {editingId ? (
+                  <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 3 }}>L'email de connexion n'est pas modifiable.</div>
+                ) : (
+                  <>
+                    {gerantEmailChecking && <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 3 }}>Vérification…</div>}
+                    {!gerantEmailChecking && gerantEmailExists && <div style={{ fontSize: 11, color: '#dc2626', marginTop: 3 }}>Cet email est déjà utilisé.</div>}
+                  </>
+                )}
               </div>
               {(() => {
                 const allActIds = activites.map((a) => a.id);
                 const allLaboIds = labos.map((l) => l.id);
                 const allChecked = form.activiteIds.length === allActIds.length && form.laboIds.length === allLaboIds.length && (allActIds.length + allLaboIds.length) > 0;
                 const toggleAct = (id: number) => setForm((f) => ({ ...f, activiteIds: f.activiteIds.includes(id) ? f.activiteIds.filter((x) => x !== id) : [...f.activiteIds, id] }));
-                const toggleLabo = (id: number) => setForm((f) => ({ ...f, laboIds: f.laboIds.includes(id) ? f.laboIds.filter((x) => x !== id) : [...f.laboIds, id] }));
+                // Retirer le dernier labo révoque l'accès base acheteurs (il exige ≥ 1 labo).
+                const toggleLabo = (id: number) => setForm((f) => {
+                  const laboIds = f.laboIds.includes(id) ? f.laboIds.filter((x) => x !== id) : [...f.laboIds, id];
+                  return { ...f, laboIds, accesAcheteurs: laboIds.length > 0 ? f.accesAcheteurs : false };
+                });
                 const pill = (checked: boolean): React.CSSProperties => ({
                   display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 20, cursor: 'pointer',
                   fontSize: '0.82rem', fontWeight: 600, border: `1.5px solid ${checked ? '#6ee7b7' : '#e2e8f0'}`,
@@ -242,7 +298,7 @@ export default function GerantsPage() {
                       <label style={lbl}>Activités &amp; labos assignés <span style={{ color: '#ef4444' }}>*</span></label>
                       {(allActIds.length + allLaboIds.length) > 0 && (
                         <button type="button"
-                          onClick={() => setForm((f) => allChecked ? { ...f, activiteIds: [], laboIds: [] } : { ...f, activiteIds: allActIds, laboIds: allLaboIds })}
+                          onClick={() => setForm((f) => allChecked ? { ...f, activiteIds: [], laboIds: [], accesAcheteurs: false } : { ...f, activiteIds: allActIds, laboIds: allLaboIds })}
                           style={{ background: 'none', border: 'none', color: '#2563eb', fontWeight: 700, fontSize: '0.78rem', cursor: 'pointer' }}>
                           {allChecked ? 'Tout décocher' : '✓ Tout'}
                         </button>
@@ -272,6 +328,40 @@ export default function GerantsPage() {
                         </div>
                       </>
                     )}
+                    {moduleAcheteursActif && (() => {
+                      const canAcheteurs = form.laboIds.length > 0;
+                      return (
+                        <div style={{
+                          marginTop: 14, padding: '12px 14px', borderRadius: 10,
+                          border: `1.5px solid ${form.accesAcheteurs ? '#c4b5fd' : '#e2e8f0'}`,
+                          background: form.accesAcheteurs ? '#f5f3ff' : '#f8fafc',
+                          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap',
+                        }}>
+                          <div>
+                            <div style={{ fontSize: '0.83rem', fontWeight: 800, color: form.accesAcheteurs ? '#5b21b6' : '#374151' }}>
+                              🛒 Gestion de la base acheteurs
+                            </div>
+                            <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: 2 }}>
+                              {canAcheteurs
+                                ? 'Le gérant accède à l\'Espace Acheteurs (carnet, tarifs, ventes, commandes de ses labos).'
+                                : 'Assignez au moins un labo pour pouvoir accorder cet accès.'}
+                            </div>
+                          </div>
+                          <button type="button"
+                            disabled={!canAcheteurs}
+                            onClick={() => setForm((f) => ({ ...f, accesAcheteurs: !f.accesAcheteurs }))}
+                            style={{
+                              padding: '7px 16px', borderRadius: 20, fontSize: '0.8rem', fontWeight: 700,
+                              cursor: canAcheteurs ? 'pointer' : 'not-allowed',
+                              border: `1.5px solid ${form.accesAcheteurs ? '#8b5cf6' : '#e2e8f0'}`,
+                              background: form.accesAcheteurs ? '#8b5cf6' : '#fff',
+                              color: form.accesAcheteurs ? '#fff' : (canAcheteurs ? '#374151' : '#cbd5e1'),
+                            }}>
+                            {form.accesAcheteurs ? '✓ Accès accordé' : 'Accorder l\'accès'}
+                          </button>
+                        </div>
+                      );
+                    })()}
                   </div>
                 );
               })()}
@@ -280,9 +370,9 @@ export default function GerantsPage() {
             <div style={{ display: 'flex', gap: 10 }}>
               <button onClick={submitForm} disabled={saving}
                 style={{ flex: 2, padding: '10px', borderRadius: 9, border: 'none', background: saving ? '#e5e7eb' : 'linear-gradient(135deg,#1e3a5f,#0369a1)', color: saving ? '#9ca3af' : '#fff', fontSize: '0.88rem', fontWeight: 700, cursor: saving ? 'default' : 'pointer' }}>
-                {saving ? 'Création…' : '✓ Créer et envoyer l\'invitation'}
+                {saving ? 'Enregistrement…' : (editingId ? '✓ Enregistrer les modifications' : '✓ Créer et envoyer l\'invitation')}
               </button>
-              <button onClick={() => { setShowForm(false); setError(''); setForm(EMPTY_FORM); }}
+              <button onClick={closeForm}
                 style={{ flex: 1, padding: '10px', borderRadius: 9, border: '1px solid #e2e8f0', background: '#fff', color: '#374151', fontSize: '0.88rem', fontWeight: 600, cursor: 'pointer' }}>
                 Annuler
               </button>
@@ -304,7 +394,7 @@ export default function GerantsPage() {
               : 'Créez un compte gérant pour donner accès à un collaborateur.'}
           </p>
           {!atGerantLimit && (
-            <button onClick={() => { setShowForm(true); setInviteSent(null); setError(''); }}
+            <button onClick={() => { setShowForm(true); setEditingId(null); setForm(EMPTY_FORM); setInviteSent(null); setError(''); }}
               style={{ padding: '11px 28px', background: 'linear-gradient(135deg,#1e3a5f,#0369a1)', color: '#fff', border: 'none', borderRadius: 10, fontWeight: 700, fontSize: '0.9rem', cursor: 'pointer' }}>
               + Créer un gérant
             </button>
@@ -338,6 +428,9 @@ export default function GerantsPage() {
                     <span style={{ fontSize: '0.7rem', fontWeight: 700, padding: '2px 8px', borderRadius: 20, background: g.estGratuit ? '#eff6ff' : '#fefce8', color: g.estGratuit ? '#1d4ed8' : '#854d0e' }}>
                       {g.estGratuit ? 'Gratuit' : `${g.montantMensuel} DT/mois`}
                     </span>
+                    {g.accesAcheteurs && (
+                      <span style={{ fontSize: '0.7rem', fontWeight: 700, padding: '2px 8px', borderRadius: 20, background: '#f5f3ff', color: '#6d28d9' }}>🛒 Base acheteurs</span>
+                    )}
                   </div>
                   <div style={{ fontSize: '0.8rem', color: '#6b7280' }}>
                     📧 {g.email}{g.telephone ? ` · 📞 ${g.telephone}` : ''}
@@ -354,6 +447,10 @@ export default function GerantsPage() {
                       {resendingId === g.id ? '…' : '✉️ Renvoyer'}
                     </button>
                   )}
+                  <button onClick={() => startEdit(g)}
+                    style={{ padding: '6px 12px', background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: 8, fontSize: '0.78rem', cursor: 'pointer', color: '#0369a1', fontWeight: 700 }}>
+                    ✏️ Modifier
+                  </button>
                   <button onClick={() => toggleActif(g)}
                     style={{ padding: '6px 12px', background: g.actif ? '#fff' : '#f0fdf4', border: `1px solid ${g.actif ? '#e2e8f0' : '#bbf7d0'}`, borderRadius: 8, fontSize: '0.78rem', cursor: 'pointer', color: g.actif ? '#374151' : '#166534', fontWeight: 700 }}>
                     {g.actif ? '⏸ Désactiver' : '▶ Activer'}
