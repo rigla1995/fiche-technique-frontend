@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import api from '../../api/client';
 import HistoryFilterBar, { FilterField, FilterInput } from '../common/HistoryFilterBar';
+import GuideButton from './GuideButton';
 import type { Labo, Fournisseur } from '../../types';
 
 const ACCENT = '#ea580c';
@@ -152,6 +153,7 @@ export default function FournisseursLaboPage() {
           <div style={{ fontSize: '1.4rem', fontWeight: 900, color: '#fff' }}>{labos.length}</div>
           <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.75)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Labos</div>
         </div>
+        <GuideButton section="fournisseurs" />
       </div>
 
       {labos.length > 0 && (

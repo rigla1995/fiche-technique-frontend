@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import api from '../../api/client';
+import GuideButton from './GuideButton';
 import type { SupportDemande } from '../../types';
 import { useNotifications } from '../../context/NotificationContext';
 import { useAuth } from '../../context/AuthContext';
@@ -291,6 +292,7 @@ export default function SupportPage() {
               + Nouvelle demande
             </button>
           )}
+          <GuideButton section="support" />
         </div>
       </div>
 

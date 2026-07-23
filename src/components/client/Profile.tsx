@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 import { useEmailCheck } from '../../hooks/useEmailCheck';
+import GuideButton from './GuideButton';
 
 interface ProfileForm {
   name: string;
@@ -122,6 +123,9 @@ export default function Profile() {
         <div>
           <h1 style={{ margin: 0, fontSize: '1.4rem', fontWeight: 900, color: '#fff' }}>{form.name || t('client.profile.title')}</h1>
           <span style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.7)', marginTop: 4, display: 'block' }}>{form.email}</span>
+        </div>
+        <div style={{ marginLeft: 'auto' }}>
+          <GuideButton section="compte" />
         </div>
       </div>
 

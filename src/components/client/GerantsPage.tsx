@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import api from '../../api/client';
+import GuideButton from './GuideButton';
 import type { Gerant, Activite, Labo, AbonnementConfig } from '../../types';
 import { useEmailCheck } from '../../hooks/useEmailCheck';
 import { useConfirm } from '../common/ConfirmDialog';
@@ -210,6 +211,7 @@ export default function GerantsPage() {
               + Nouveau gérant
             </button>
           )}
+          <GuideButton section="gerants" />
         </div>
       </div>
 

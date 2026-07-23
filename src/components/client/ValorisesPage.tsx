@@ -6,6 +6,7 @@ import FicheTechniqueModal from './FicheTechniqueModal';
 import RecipeTree from './RecipeTree';
 import ProductCard from './ProductCard';
 import HistoryFilterBar, { FilterField, FilterInput, FilterSelect } from '../common/HistoryFilterBar';
+import GuideButton from './GuideButton';
 import { useConfirm } from '../common/ConfirmDialog';
 import { PRODUCT_THEME } from '../../theme/productTheme';
 
@@ -237,6 +238,7 @@ export default function ValorisesPage() {
               <div style={{ fontSize: '1.8rem', fontWeight: 900, color: '#818cf8', lineHeight: 1 }}>{assignedCount}/{articles.length}</div>
               <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.5)', marginTop: 2 }}>articles catégorisés</div>
             </div>
+            <GuideButton section="articles-valorises" />
           </div>
         </div>
       </div>

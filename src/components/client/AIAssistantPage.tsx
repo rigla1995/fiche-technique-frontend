@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import api from '../../api/client';
+import HelpButton from '../common/HelpButton';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -115,7 +116,7 @@ export default function AIAssistantPage() {
           🤖
         </div>
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 16, fontWeight: 700, color: '#0f172a' }}>Assistant IA LabFlow</div>
+          <div style={{ fontSize: 16, fontWeight: 700, color: '#0f172a', display: 'flex', alignItems: 'center', gap: 8 }}>Assistant IA LabFlow <HelpButton section="assistant-ia" size={26} tip="Voir le guide" /></div>
           <div style={{ fontSize: 12, color: '#64748b' }}>Analyse vos données (stock, ventes, pertes…) et répond à vos questions sur le fonctionnement de LabFlow</div>
         </div>
         {messages.length > 0 && (

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import api from '../../api/client';
+import GuideButton from './GuideButton';
 
 interface AbonnementResume {
   modeCompte: string;
@@ -91,6 +92,7 @@ export default function AbonnementGerantPage() {
             <div style={{ fontSize: '0.72rem', color: '#6b7280' }}>{mode.desc}</div>
           </div>
         </div>
+        <GuideButton section="abonnement" />
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 20 }}>
