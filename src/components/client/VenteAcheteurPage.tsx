@@ -426,9 +426,10 @@ export default function VenteAcheteurPage() {
             <div style={{ fontSize: '0.72rem', fontWeight: 800, color: CD, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>
               👁️ Aperçu de la vente
             </div>
-            {(acheteurChoisi || laboChoisi || totaux.remisePct > 0) && (
-              <div style={{ display: 'grid', gap: 3, fontSize: '0.78rem', color: '#475569', marginBottom: 8, paddingBottom: 8, borderBottom: '1px dashed #e2e8f0' }}>
-                {acheteurChoisi && (
+            {/* Date et état ont toujours une valeur : le bloc est rendu sans condition
+                (acheteur/labo/promotion s'y ajoutent dès qu'ils sont renseignés) */}
+            <div style={{ display: 'grid', gap: 3, fontSize: '0.78rem', color: '#475569', marginBottom: 8, paddingBottom: 8, borderBottom: '1px dashed #e2e8f0' }}>
+              {acheteurChoisi && (
                   <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}>
                     <span>👤 Acheteur</span>
                     <strong style={{ color: '#1e293b', textAlign: 'right', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{acheteurChoisi.nom}</strong>
@@ -458,8 +459,7 @@ export default function VenteAcheteurPage() {
                     <span>🏷️ Promotion</span><strong style={{ color: '#b45309' }}>−{totaux.remisePct}%</strong>
                   </div>
                 )}
-              </div>
-            )}
+            </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: '#475569', marginBottom: 4 }}>
               <span>Total brut HT ({lignesActives.length} ligne{lignesActives.length > 1 ? 's' : ''})</span><strong>{fmt(totaux.brutHt)}</strong>
             </div>
