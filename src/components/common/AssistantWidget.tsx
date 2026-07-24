@@ -1,28 +1,17 @@
-import { useState, useEffect } from 'react';
-import api from '../../api/client';
+import { useState } from 'react';
 import AssistantChat from './AssistantChat';
 
 /**
  * Widget flottant de l'assistant IA — bulle 🤖 en bas à droite de TOUTES les
  * interfaces client/gérant : le chat s'ouvre en panneau sans quitter la page.
- * Le panneau reste monté après la première ouverture (la conversation et le
- * défilement survivent aux fermetures et aux changements de page).
- * La bulle n'apparaît que si l'assistant est activé pour le compte.
+ * La bulle est TOUJOURS visible ; si l'assistant n'est pas activé pour le
+ * compte, le panneau l'explique (AssistantChat). Le panneau reste monté après
+ * la première ouverture : la conversation et le défilement survivent aux
+ * fermetures et aux changements de page.
  */
 export default function AssistantWidget() {
-  const [enabled, setEnabled] = useState(false);
   const [open, setOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    let actif = true;
-    api.get('/api/ai-assistant/status')
-      .then(({ data }) => { if (actif) setEnabled(data.enabled === true); })
-      .catch(() => { if (actif) setEnabled(false); });
-    return () => { actif = false; };
-  }, []);
-
-  if (!enabled) return null;
 
   const toggle = () => {
     if (!open) setMounted(true);
@@ -40,7 +29,7 @@ export default function AssistantWidget() {
           boxShadow: '0 24px 64px rgba(30,27,75,0.28)',
           display: open ? 'flex' : 'none', flexDirection: 'column',
         }}>
-          <AssistantChat variant="widget" onClose={() => setOpen(false)} />
+          <AssistantChat onClose={() => setOpen(false)} />
         </div>
       )}
 
