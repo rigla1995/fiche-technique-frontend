@@ -14,7 +14,17 @@ api.interceptors.request.use((config) => {
 });
 
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    // Toute MUTATION réussie (hors chat IA) signale que les données du compte ont
+    // pu changer — le guide de mise en route s'en sert pour recalculer son état
+    // en direct (saisie d'appro sans navigation, création de produit, etc.).
+    const method = (response.config?.method || '').toLowerCase();
+    const url = response.config?.url || '';
+    if (method !== 'get' && !url.includes('/api/ai-assistant/')) {
+      window.dispatchEvent(new CustomEvent('api-mutation', { detail: { url } }));
+    }
+    return response;
+  },
   (error) => {
     const status = error.response?.status;
     if (status === 401) {
