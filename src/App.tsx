@@ -67,7 +67,6 @@ const HistoriquePaiementPage = lazy(() => import('./components/client/Historique
 const GerantsPage = lazy(() => import('./components/client/GerantsPage'));
 const SupportPage = lazy(() => import('./components/client/SupportPage'));
 const GuidePage = lazy(() => import('./components/client/GuidePage'));
-const AIAssistantPage = lazy(() => import('./components/client/AIAssistantPage'));
 const VentesPage = lazy(() => import('./components/client/VentesPage'));
 const LaboVentesPage = lazy(() => import('./components/client/LaboVentesPage'));
 const AbonnementGerantPage = lazy(() => import('./components/client/AbonnementGerantPage'));
@@ -185,6 +184,8 @@ export default function App() {
           {/* Client + Gérant routes */}
           <Route element={<Layout requireRole="client" />}>
             <Route path="/client" element={<ClientDefaultRedirect />} />
+            {/* Ex-page Assistant IA supprimée : l'assistant vit dans la bulle flottante */}
+            <Route path="/client/ai-assistant" element={<Navigate to="/client" replace />} />
             <Route path="/client/dashboard" element={<DashboardRoute />} />
             {/* Espace Produit réservé à la formule Activité Premium.
                 Catégories Produits et Articles Valorisés restent accessibles en
@@ -235,7 +236,6 @@ export default function App() {
             <Route path="/client/guide" element={<GuidePage />} />
             <Route path="/client/gerant-dashboard" element={<Navigate to="/client/dashboard" replace />} />
             <Route path="/client/gerant-abonnement" element={<AbonnementGerantPage />} />
-            <Route path="/client/ai-assistant" element={<AIAssistantPage />} />
             <Route element={<VenteGuard />}>
               <Route path="/client/ventes" element={<VentesPage />} />
               <Route path="/client/ventes/configuration" element={<ConfigurationVentePage />} />
