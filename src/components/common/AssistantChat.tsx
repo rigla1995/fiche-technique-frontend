@@ -264,7 +264,7 @@ export default function AssistantChat({ onClose }: Props) {
               </button>
             </div>
             <div style={{ fontSize: 10, color: '#94a3b8', textAlign: 'center', marginTop: 6 }}>
-              Propulsé par Claude (Anthropic) · Les données analysées sont issues de votre compte LabFlow
+              L'assistant peut se tromper — vérifiez les chiffres importants · Données issues de votre compte LabFlow
             </div>
           </div>
         </>
