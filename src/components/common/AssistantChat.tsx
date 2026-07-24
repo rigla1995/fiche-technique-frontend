@@ -29,13 +29,11 @@ interface Props {
 export default function AssistantChat({ etat, onEtatRefresh, onClose }: Props) {
   const [enabled, setEnabled] = useState<boolean | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
-  const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
   const [clearing, setClearing] = useState(false);
   const [loadingHistory, setLoadingHistory] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLTextAreaElement>(null);
 
   const checkStatus = useCallback(async () => {
     try {
@@ -68,10 +66,10 @@ export default function AssistantChat({ etat, onEtatRefresh, onClose }: Props) {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  const send = async () => {
-    const text = input.trim();
+  // Saisie GUIDÉE : le client choisit parmi les questions proposées (pas de
+  // texte libre pendant la mise en route — décision client 2026-07-24).
+  const send = async (text: string) => {
     if (!text || sending) return;
-    setInput('');
     setError(null);
     const userMsg: Message = { role: 'user', content: text };
     setMessages((prev) => [...prev, userMsg]);
@@ -85,17 +83,8 @@ export default function AssistantChat({ etat, onEtatRefresh, onClose }: Props) {
       const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Erreur de communication avec l\'IA';
       setError(msg);
       setMessages((prev) => prev.slice(0, -1));
-      setInput(text);
     } finally {
       setSending(false);
-      inputRef.current?.focus();
-    }
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      send();
     }
   };
 
@@ -189,8 +178,9 @@ export default function AssistantChat({ etat, onEtatRefresh, onClose }: Props) {
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                       {etat.etapes.find((e) => e.key === etat.aFaire)!.questions.map((q) => (
                         <button key={q}
-                          onClick={() => { setInput(q); inputRef.current?.focus(); }}
-                          style={{ fontSize: 11.5, padding: '6px 11px', borderRadius: 20, border: '1px solid #c7d2fe', background: '#eef2ff', color: '#4338ca', cursor: 'pointer', fontWeight: 600, textAlign: 'left' }}>
+                          onClick={() => send(q)}
+                          disabled={sending}
+                          style={{ fontSize: 11.5, padding: '6px 11px', borderRadius: 20, border: '1px solid #c7d2fe', background: sending ? '#f8fafc' : '#eef2ff', color: sending ? '#94a3b8' : '#4338ca', cursor: sending ? 'default' : 'pointer', fontWeight: 600, textAlign: 'left' }}>
                           {q}
                         </button>
                       ))}
@@ -208,8 +198,8 @@ export default function AssistantChat({ etat, onEtatRefresh, onClose }: Props) {
             )}
             {messages.length === 0 && !sending && etat && !etat.complet && (
               <div style={{ textAlign: 'center', color: '#94a3b8', fontSize: 12.5, lineHeight: 1.6, padding: '4px 12px' }}>
-                👋 Je suis votre guide de mise en route : posez-moi vos questions (ou cliquez sur une
-                suggestion ci-dessus), je vous accompagne étape par étape.
+                👋 Je suis votre guide de mise en route : cliquez sur une question ci-dessus,
+                je vous accompagne étape par étape.
               </div>
             )}
 
@@ -270,48 +260,11 @@ export default function AssistantChat({ etat, onEtatRefresh, onClose }: Props) {
             <div ref={bottomRef} />
           </div>
 
-          {/* Saisie */}
-          <div style={{ flexShrink: 0, borderTop: '1px solid #e2e8f0', background: '#fff', padding: '8px 12px 10px' }}>
-            <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end' }}>
-              <textarea
-                ref={inputRef}
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={handleKeyDown}
-                disabled={sending}
-                placeholder="Posez votre question…"
-                rows={1}
-                style={{
-                  flex: 1, resize: 'none', border: '1px solid #e2e8f0', borderRadius: 12,
-                  padding: '10px 14px', fontSize: 13, outline: 'none',
-                  fontFamily: 'inherit', lineHeight: 1.5,
-                  minHeight: 42, maxHeight: 120, overflowY: 'auto',
-                  background: sending ? '#f8fafc' : '#fff',
-                  color: '#0f172a',
-                }}
-                onInput={(e) => {
-                  const el = e.currentTarget;
-                  el.style.height = 'auto';
-                  el.style.height = Math.min(el.scrollHeight, 120) + 'px';
-                }}
-              />
-              <button
-                onClick={send}
-                disabled={sending || !input.trim()}
-                style={{
-                  width: 42, height: 42, borderRadius: 12, border: 'none', flexShrink: 0,
-                  background: !input.trim() || sending ? '#e2e8f0' : 'linear-gradient(135deg,#6366f1,#8b5cf6)',
-                  color: !input.trim() || sending ? '#94a3b8' : '#fff',
-                  cursor: !input.trim() || sending ? 'not-allowed' : 'pointer',
-                  fontSize: 18, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  transition: 'all 0.15s',
-                }}
-              >
-                ↑
-              </button>
-            </div>
-            <div style={{ fontSize: 10, color: '#94a3b8', textAlign: 'center', marginTop: 6 }}>
-              🚀 Guide de mise en route LabFlow — appuyé sur votre configuration réelle et le manuel officiel
+          {/* Pas de saisie libre : le parcours est guidé par les questions proposées */}
+          <div style={{ flexShrink: 0, borderTop: '1px solid #e2e8f0', background: '#fff', padding: '9px 12px' }}>
+            <div style={{ fontSize: 10.5, color: '#94a3b8', textAlign: 'center', lineHeight: 1.5 }}>
+              🚀 Guide de mise en route LabFlow — choisissez une question ci-dessus,
+              les réponses s'appuient sur votre configuration réelle et le manuel officiel
             </div>
           </div>
         </>

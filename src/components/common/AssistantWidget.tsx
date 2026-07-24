@@ -31,21 +31,30 @@ export default function AssistantWidget() {
     }
   }, []);
 
-  // L'état suit le client EN DIRECT : recalcul à chaque changement de page
-  // (il crée ses unités puis navigue → la carte est déjà à jour), au retour
-  // sur l'onglet, sur les événements de création d'activité/labo, et toutes
-  // les 20 s tant que le panneau est ouvert.
+  // L'état suit le client EN DIRECT : recalcul à chaque changement de page,
+  // au retour sur l'onglet, sur les événements de création d'activité/labo,
+  // toutes les 20 s panneau ouvert, et surtout après CHAQUE mutation API
+  // réussie de l'app (événement 'api-mutation' de src/api/client.ts, débouncé)
+  // — une saisie d'appro sans navigation coche donc son étape immédiatement.
   useEffect(() => { refreshEtat(); }, [refreshEtat, location.pathname]);
   useEffect(() => {
     const onFocus = () => refreshEtat();
+    let debounce: number | undefined;
+    const onMutation = () => {
+      window.clearTimeout(debounce);
+      debounce = window.setTimeout(() => refreshEtat(), 1200);
+    };
     window.addEventListener('focus', onFocus);
     window.addEventListener('activites-changed', onFocus);
     window.addEventListener('labos-changed', onFocus);
+    window.addEventListener('api-mutation', onMutation);
     const timer = window.setInterval(() => { if (openRef.current) refreshEtat(); }, 20000);
     return () => {
       window.removeEventListener('focus', onFocus);
       window.removeEventListener('activites-changed', onFocus);
       window.removeEventListener('labos-changed', onFocus);
+      window.removeEventListener('api-mutation', onMutation);
+      window.clearTimeout(debounce);
       window.clearInterval(timer);
     };
   }, [refreshEtat]);
