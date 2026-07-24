@@ -7,8 +7,54 @@ interface Message {
   content: string;
 }
 
+export interface OnboardingEtape { key: string; titre: string; fait: boolean; detail: string | null }
+export interface OnboardingEtat { complet: boolean; etapes: OnboardingEtape[]; aFaire: string | null }
+
+// Questions suggérées selon la première étape non finalisée de la mise en route
+const QUESTIONS_PAR_ETAPE: Record<string, string[]> = {
+  capacites: [
+    'Comment créer mes activités ?',
+    'Comment créer mon labo ?',
+    'Quelle est la différence entre une activité et un labo ?',
+  ],
+  referentiel: [
+    'Par quoi commencer pour mon référentiel ?',
+    'À quoi servent les familles et les catégories ?',
+    'Comment créer mes unités ?',
+  ],
+  articles: [
+    'Comment ajouter mes articles ?',
+    'Comment importer mes articles en masse ?',
+    'Comment affecter les articles à mes activités et labos ?',
+  ],
+  fournisseurs: [
+    'Comment ajouter mes fournisseurs ?',
+    'Comment importer mes fournisseurs depuis Excel ?',
+    'À quoi servent les affectations d\'un fournisseur ?',
+  ],
+  produits: [
+    'Comment créer un produit et sa fiche technique ?',
+    'C\'est quoi un produit valorisé ?',
+    'Comment est calculé le coût de revient d\'une recette ?',
+  ],
+  saisie: [
+    'Comment saisir mon premier approvisionnement ?',
+    'Comment saisir une vente ?',
+    'Comment mon stock est-il calculé ?',
+  ],
+  acheteurs: [
+    'Comment remplir mon carnet d\'acheteurs ?',
+    'Comment importer mes acheteurs depuis Excel ?',
+    'Comment configurer mes tarifs acheteurs ?',
+  ],
+};
+
 interface Props {
-  /** Fermeture du panneau (bulle AssistantWidget) */
+  /** État de mise en route (pilote la carte de progression et les suggestions) */
+  etat?: OnboardingEtat | null;
+  /** Recalcule l'état après chaque réponse du bot (disparition dynamique) */
+  onEtatRefresh?: () => Promise<OnboardingEtat | null> | void;
+  /** Fermeture du panneau (bouton AssistantWidget) */
   onClose?: () => void;
 }
 
@@ -18,7 +64,7 @@ interface Props {
  * pas activé pour le compte, un message l'explique à la place du chat.
  * La conversation est persistée côté serveur (GET/DELETE /conversation).
  */
-export default function AssistantChat({ onClose }: Props) {
+export default function AssistantChat({ etat, onEtatRefresh, onClose }: Props) {
   const [enabled, setEnabled] = useState<boolean | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
@@ -71,6 +117,8 @@ export default function AssistantChat({ onClose }: Props) {
     try {
       const res = await api.post('/api/ai-assistant/chat', { message: text });
       setMessages((prev) => [...prev, { role: 'assistant', content: res.data.reply }]);
+      // La mise en route a pu avancer entre-temps : recalcul (le bot se retire tout seul)
+      onEtatRefresh?.();
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Erreur de communication avec l\'IA';
       setError(msg);
@@ -109,7 +157,7 @@ export default function AssistantChat({ onClose }: Props) {
           <div style={{ fontSize: 14, fontWeight: 800, lineHeight: 1.2, display: 'flex', alignItems: 'center', gap: 7 }}>
             Assistant IA LabFlow <HelpButton section="assistant-ia" variant="solid" size={20} tip="Voir le guide" />
           </div>
-          <div style={{ fontSize: 10.5, opacity: 0.8, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Vos données + le manuel, à votre service</div>
+          <div style={{ fontSize: 10.5, opacity: 0.8, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Votre guide de mise en route, pas à pas</div>
         </div>
         {enabled === true && messages.length > 0 && (
           <button onClick={clearHistory} disabled={clearing} title="Effacer la conversation"
@@ -141,29 +189,65 @@ export default function AssistantChat({ onClose }: Props) {
         <>
           {/* Messages */}
           <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 12, padding: '12px 12px 8px' }}>
-            {messages.length === 0 && !sending && (
+            {/* 🎉 Mise en route terminée pendant la session : le bot se retire */}
+            {etat?.complet && (
+              <div style={{ background: '#f0fdf4', border: '1px solid #86efac', borderRadius: 12, padding: '14px 16px', textAlign: 'center' }}>
+                <div style={{ fontSize: 26, marginBottom: 6 }}>🎉</div>
+                <div style={{ fontSize: 13.5, fontWeight: 800, color: '#166534', marginBottom: 4 }}>Mise en route terminée !</div>
+                <div style={{ fontSize: 12, color: '#15803d', lineHeight: 1.5 }}>
+                  Votre configuration est complète — ce guide va se retirer. Vous retrouvez toutes les
+                  procédures dans le 📖 Manuel d'utilisation (et les boutons « ? » de chaque page).
+                </div>
+              </div>
+            )}
+
+            {/* Carte de progression de la mise en route + questions de l'étape en cours */}
+            {etat && !etat.complet && etat.etapes.length > 0 && (
+              <div style={{ background: '#fbfaff', border: '1px solid #e0e7ff', borderRadius: 12, padding: '12px 14px' }}>
+                <div style={{ fontSize: 11, fontWeight: 800, color: '#4338ca', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>
+                  🚀 Votre mise en route — {etat.etapes.filter((e) => e.fait).length}/{etat.etapes.length} étapes
+                </div>
+                <div style={{ display: 'grid', gap: 5 }}>
+                  {etat.etapes.map((e) => {
+                    const enCours = e.key === etat.aFaire;
+                    return (
+                      <div key={e.key} style={{ display: 'flex', gap: 8, alignItems: 'flex-start', opacity: e.fait ? 0.65 : 1 }}>
+                        <span style={{ fontSize: 13, lineHeight: '18px', flexShrink: 0 }}>{e.fait ? '✅' : enCours ? '🔄' : '⬜'}</span>
+                        <div style={{ minWidth: 0 }}>
+                          <div style={{ fontSize: 12.5, fontWeight: enCours ? 800 : 600, color: enCours ? '#312e81' : '#334155', lineHeight: 1.35 }}>{e.titre}</div>
+                          {e.detail && <div style={{ fontSize: 10.5, color: '#94a3b8' }}>{e.detail}</div>}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                {etat.aFaire && QUESTIONS_PAR_ETAPE[etat.aFaire] && (
+                  <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px dashed #e0e7ff' }}>
+                    <div style={{ fontSize: 10.5, fontWeight: 700, color: '#6366f1', marginBottom: 6 }}>Questions utiles pour cette étape :</div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                      {QUESTIONS_PAR_ETAPE[etat.aFaire].map((q) => (
+                        <button key={q}
+                          onClick={() => { setInput(q); inputRef.current?.focus(); }}
+                          style={{ fontSize: 11.5, padding: '6px 11px', borderRadius: 20, border: '1px solid #c7d2fe', background: '#eef2ff', color: '#4338ca', cursor: 'pointer', fontWeight: 600, textAlign: 'left' }}>
+                          {q}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {messages.length === 0 && !sending && !etat && (
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1, gap: 12, color: '#94a3b8', textAlign: 'center' }}>
                 <div style={{ fontSize: 32 }}>💬</div>
                 <div style={{ fontSize: 14, fontWeight: 600, color: '#64748b' }}>Commencez la conversation</div>
-                <div style={{ fontSize: 13, color: '#94a3b8', maxWidth: 320, lineHeight: 1.5 }}>
-                  Demandez une analyse de votre stock, des suggestions de réapprovisionnement, ou des conseils pour réduire vos pertes.
-                </div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'center', marginTop: 8 }}>
-                  {[
-                    'Quel est mon stock critique actuellement ?',
-                    'Comment réduire mes pertes ?',
-                    'Comment fonctionnent les transferts labo → activités ?',
-                    'Comment la valeur de mon stock est-elle calculée ?',
-                  ].map((suggestion) => (
-                    <button
-                      key={suggestion}
-                      onClick={() => { setInput(suggestion); inputRef.current?.focus(); }}
-                      style={{ fontSize: 12, padding: '8px 14px', borderRadius: 20, border: '1px solid #e2e8f0', background: '#f8fafc', color: '#374151', cursor: 'pointer', transition: 'all 0.15s' }}
-                    >
-                      {suggestion}
-                    </button>
-                  ))}
-                </div>
+              </div>
+            )}
+            {messages.length === 0 && !sending && etat && !etat.complet && (
+              <div style={{ textAlign: 'center', color: '#94a3b8', fontSize: 12.5, lineHeight: 1.6, padding: '4px 12px' }}>
+                👋 Je suis votre guide de mise en route : posez-moi vos questions (ou cliquez sur une
+                suggestion ci-dessus), je vous accompagne étape par étape.
               </div>
             )}
 

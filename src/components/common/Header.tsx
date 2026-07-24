@@ -104,8 +104,9 @@ export default function Header() {
           </div>
         </div>
 
-        {/* Assistant IA : bouton 🤖 + panneau sous le header (client/gérant) */}
-        {(user?.role === 'client' || user?.role === 'gerant') && <AssistantWidget />}
+        {/* Guide de mise en route 🤖 : rôle client uniquement, visible tant que
+            la configuration souscrite n'est pas terminée (réapparaît après avenant) */}
+        {user?.role === 'client' && <AssistantWidget />}
 
         {/* Notification bell */}
         <div ref={ref} style={{ position: 'relative' }}>
