@@ -3,6 +3,7 @@ import api from '../../api/client';
 import type { Abonnement, DomaineActivite } from '../../types';
 import AddClientModal from './AddClientModal';
 import Pagination from '../common/Pagination';
+import { useConfirm } from '../common/ConfirmDialog';
 
 interface Client {
   id: number;
@@ -20,6 +21,7 @@ interface Client {
 const fmtDT = (n: number) => `${n.toLocaleString('fr-FR')} DT`;
 
 export default function ClientsManagement() {
+  const { alerte } = useConfirm();
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
   const [domaines, setDomaines] = useState<DomaineActivite[]>([]);
@@ -92,9 +94,13 @@ export default function ClientsManagement() {
     } catch (err: unknown) {
       const status = (err as { response?: { status?: number } })?.response?.status;
       // 404 = vraiment aucun contrat ; autres statuts = indisponibilité passagère
-      alert(status === 404
-        ? "Aucun contrat n'existe pour ce client."
-        : 'Le contrat est momentanément indisponible — réessayez dans un instant.');
+      alerte({
+        title: 'Contrat indisponible',
+        message: status === 404
+          ? "Aucun contrat n'existe pour ce client."
+          : 'Le contrat est momentanément indisponible — réessayez dans un instant.',
+        tone: 'danger',
+      });
     } finally {
       setContractLoadingId(null);
     }
@@ -132,8 +138,12 @@ export default function ClientsManagement() {
       setDeleteTarget(null);
       fetchClients();
     } catch (err: unknown) {
-      alert((err as { response?: { data?: { message?: string } } })?.response?.data?.message
-        || 'Erreur lors de la suppression du client');
+      alerte({
+        title: 'Suppression impossible',
+        message: (err as { response?: { data?: { message?: string } } })?.response?.data?.message
+          || 'Erreur lors de la suppression du client',
+        tone: 'danger',
+      });
     } finally {
       setDeleting(false);
     }
@@ -143,8 +153,8 @@ export default function ClientsManagement() {
     setResendingId(id);
     try {
       await api.post(`/auth/invite/resend/${id}`);
-      alert(`Invitation renvoyée à ${email}`);
-    } catch { alert("Erreur lors de l'envoi"); }
+      await alerte({ title: 'Invitation envoyée', message: `Invitation renvoyée à ${email}`, tone: 'primary', icon: '✉️' });
+    } catch { alerte({ title: 'Envoi impossible', message: "Erreur lors de l'envoi", tone: 'danger' }); }
     finally { setResendingId(null); }
   };
 

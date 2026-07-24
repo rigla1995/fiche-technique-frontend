@@ -21,7 +21,7 @@ interface SubProductLine {
 export default function ProductForm() {
   const { t } = useTranslation();
   const { canWrite, user } = useAuth();
-  const { confirm } = useConfirm();
+  const { confirm, alerte } = useConfirm();
   const navigate = useNavigate();
   const { id } = useParams();
   const [searchParams] = useSearchParams();
@@ -247,7 +247,7 @@ export default function ProductForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (productType === 'vendable' && !categorieProduitId) {
-      window.alert('La catégorie de produit est obligatoire pour un produit vendable.');
+      await alerte({ title: 'Champ requis', message: 'La catégorie de produit est obligatoire pour un produit vendable.', tone: 'info' });
       return;
     }
     setSaving(true);

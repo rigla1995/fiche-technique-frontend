@@ -30,7 +30,7 @@ const emptyForm = {
 const MD_HELP = '## Titre · ### Sous-titre · **gras** · *italique* · `code` · [lien](#slug) · - liste · 1. étapes · | tableau | · :::astuce / :::attention / :::regle / :::exemple … ::: · :::formule Libellé … note: … :::';
 
 export default function AdminManuelPage() {
-  const { confirm } = useConfirm();
+  const { confirm, alerte } = useConfirm();
   const [sections, setSections] = useState<ManuelSection[]>([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<ManuelSection | null>(null);
@@ -93,7 +93,7 @@ export default function AdminManuelPage() {
   };
 
   const toggleActif = async (s: ManuelSection) => {
-    await api.put(`/admin/manuel/${s.id}`, { actif: !s.actif }).catch(() => window.alert('La mise à jour a échoué.'));
+    await api.put(`/admin/manuel/${s.id}`, { actif: !s.actif }).catch(() => alerte({ title: 'Action impossible', message: 'La mise à jour a échoué.', tone: 'danger' }));
     load();
   };
 
@@ -106,7 +106,7 @@ export default function AdminManuelPage() {
       icon: '♻️',
     });
     if (!ok) return;
-    await api.post(`/admin/manuel/${s.id}/restore`).catch(() => window.alert('La restauration a échoué.'));
+    await api.post(`/admin/manuel/${s.id}/restore`).catch(() => alerte({ title: 'Action impossible', message: 'La restauration a échoué.', tone: 'danger' }));
     load();
   };
 
@@ -117,7 +117,7 @@ export default function AdminManuelPage() {
       tone: 'danger',
     });
     if (!ok) return;
-    await api.delete(`/admin/manuel/${s.id}`).catch(() => window.alert('La suppression a échoué.'));
+    await api.delete(`/admin/manuel/${s.id}`).catch(() => alerte({ title: 'Suppression impossible', message: 'La suppression a échoué.', tone: 'danger' }));
     load();
   };
 

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import api from '../../api/client';
 import { FilterInput, FilterSegmented } from '../common/HistoryFilterBar';
+import { useConfirm } from '../common/ConfirmDialog';
 
 const STATUT_COLORS: Record<string, string> = {
   payé:       '#16a34a',
@@ -40,6 +41,7 @@ function getAvatar(nom: string, selected: boolean) {
 }
 
 export default function HistoriquePaiementsAdmin() {
+  const { alerte } = useConfirm();
   const [rows, setRows] = useState<PaiementRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedClientId, setSelectedClientId] = useState<number | null>(null);
@@ -65,11 +67,11 @@ export default function HistoriquePaiementsAdmin() {
       link.remove();
       window.URL.revokeObjectURL(url);
     } catch {
-      alert('Facture indisponible pour ce paiement.');
+      alerte({ title: 'Facture indisponible', message: 'Facture indisponible pour ce paiement.', tone: 'danger' });
     } finally {
       setDownloadingId(null);
     }
-  }, []);
+  }, [alerte]);
 
   const load = useCallback(async () => {
     setLoading(true);
