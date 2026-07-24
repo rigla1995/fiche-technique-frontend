@@ -32,7 +32,7 @@ export default function GerantsPage() {
   const [moduleAcheteursActif, setModuleAcheteursActif] = useState(false);
   // L'email n'est pas éditable : le contrôle d'unicité ne sert qu'à la création.
   const { emailExists: gerantEmailExists, emailChecking: gerantEmailChecking } = useEmailCheck(editingId ? '' : form.email);
-  const { confirm } = useConfirm();
+  const { confirm, alerte } = useConfirm();
 
   const freeLimit = 3;
   const freeCount = gerants.filter((g) => g.estGratuit).length;
@@ -142,9 +142,9 @@ export default function GerantsPage() {
     setResendingId(id);
     try {
       await api.post(`/auth/invite/resend/${id}`);
-      alert(`Invitation renvoyée à ${email}`);
+      await alerte({ title: 'Invitation envoyée', message: `Invitation renvoyée à ${email}`, tone: 'primary', icon: '✉️' });
     } catch {
-      alert('Erreur lors de l\'envoi');
+      alerte({ title: 'Envoi impossible', message: 'Erreur lors de l\'envoi', tone: 'danger' });
     } finally {
       setResendingId(null);
     }

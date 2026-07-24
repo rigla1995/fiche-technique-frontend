@@ -533,7 +533,7 @@ function HistoriqueTab() {
 // ── Page ─────────────────────────────────────────────────────────────────────
 
 export default function ConfigurationVentePage() {
-  const { confirm } = useConfirm();
+  const { confirm, alerte } = useConfirm();
   const [searchParams, setSearchParams] = useSearchParams();
   const [activites, setActivites] = useState<Activite[]>([]);
   const [selectedActiviteId, setSelectedActiviteId] = useState<number | null>(null);
@@ -678,7 +678,7 @@ export default function ConfigurationVentePage() {
     try {
       await api.delete(`/api/articles-vendables/historique/${id}`);
       loadHistorique();
-    } catch (e: unknown) { alert(apiMsg(e)); }
+    } catch (e: unknown) { alerte({ title: 'Suppression impossible', message: apiMsg(e), tone: 'danger' }); }
   };
 
   const handleExportHistXls = async () => {
@@ -696,7 +696,7 @@ export default function ConfigurationVentePage() {
       const a = document.createElement('a');
       a.href = url; a.download = 'historique-config-prix.xlsx'; a.click();
       URL.revokeObjectURL(url);
-    } catch (e: unknown) { alert(apiMsg(e)); }
+    } catch (e: unknown) { alerte({ title: 'Export impossible', message: apiMsg(e), tone: 'danger' }); }
     finally { setExportingHistXls(false); }
   };
 

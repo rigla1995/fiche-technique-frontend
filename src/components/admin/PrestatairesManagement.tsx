@@ -23,7 +23,7 @@ export default function PrestatairesManagement() {
   const [error, setError] = useState('');
   const [search, setSearch] = useState('');
   const [filterStatut, setFilterStatut] = useState<'' | 'actif' | 'inactif'>('');
-  const { confirm } = useConfirm();
+  const { confirm, alerte } = useConfirm();
 
   const load = useCallback(() => {
     setLoading(true);
@@ -71,7 +71,7 @@ export default function PrestatairesManagement() {
       await api.delete(`/api/admin/prestataires/${p.id}`);
       load();
     } catch (e: any) {
-      alert(e.response?.data?.message || 'Erreur');
+      alerte({ title: 'Suppression impossible', message: e.response?.data?.message || 'Erreur', tone: 'danger' });
     }
   };
 

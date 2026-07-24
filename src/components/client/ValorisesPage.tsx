@@ -30,7 +30,7 @@ interface ArticleValorisable {
 type StatutFilter = 'all' | 'assigned' | 'unassigned';
 
 export default function ValorisesPage() {
-  const { confirm } = useConfirm();
+  const { confirm, alerte } = useConfirm();
   const [articles, setArticles] = useState<ArticleValorisable[]>([]);
   const [categories, setCategories] = useState<CategorieProduit[]>([]);
   const [composes, setComposes] = useState<Product[]>([]);
@@ -64,7 +64,7 @@ export default function ValorisesPage() {
         ...prod,
         activites: assigned ? (prod.activites || []).filter((a) => a.id !== activiteId) : [...(prod.activites || []), allActivities.find((a) => a.id === activiteId)!].filter(Boolean),
       }));
-    } catch (e: unknown) { alert(apiMsg(e, "Erreur lors de l'assignation à l'activité")); }
+    } catch (e: unknown) { alerte({ title: 'Assignation impossible', message: apiMsg(e, "Erreur lors de l'assignation à l'activité"), tone: 'danger' }); }
     setTogglingActivite(null);
   };
   const toggleLaboAssignment = async (p: Product, laboId: number) => {
@@ -76,7 +76,7 @@ export default function ValorisesPage() {
         ...prod,
         labos: assigned ? (prod.labos || []).filter((l) => l.id !== laboId) : [...(prod.labos || []), allLabos.find((l) => l.id === laboId)!].filter(Boolean),
       }));
-    } catch (e: unknown) { alert(apiMsg(e, "Erreur lors de l'assignation au labo")); }
+    } catch (e: unknown) { alerte({ title: 'Assignation impossible', message: apiMsg(e, "Erreur lors de l'assignation au labo"), tone: 'danger' }); }
     setTogglingLabo(null);
   };
 
@@ -133,7 +133,7 @@ export default function ValorisesPage() {
     try {
       await api.delete(`/api/products/${p.id}`);
       setComposes(prev => prev.filter(x => x.id !== p.id));
-    } catch (e: unknown) { alert(apiMsg(e, 'Erreur lors de la suppression')); }
+    } catch (e: unknown) { alerte({ title: 'Suppression impossible', message: apiMsg(e, 'Erreur lors de la suppression'), tone: 'danger' }); }
     finally { setDeletingId(null); }
   };
 
@@ -145,7 +145,7 @@ export default function ValorisesPage() {
       setArticles(prev => prev.map(a => a.id === article.id
         ? { ...a, categorie_produit_id: catId, categorie_produit_nom: categories.find(c => c.id === catId)?.name ?? null }
         : a));
-    } catch (e: unknown) { alert(apiMsg(e, "Erreur lors de l'enregistrement")); }
+    } catch (e: unknown) { alerte({ title: 'Enregistrement impossible', message: apiMsg(e, "Erreur lors de l'enregistrement"), tone: 'danger' }); }
     finally { setSavingId(null); }
   };
 

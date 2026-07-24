@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import api from '../../api/client';
 import type { Paiement } from '../../types';
 import HistoryFilterBar, { FilterField, FilterInput, FilterSelect } from '../common/HistoryFilterBar';
+import { useConfirm } from '../common/ConfirmDialog';
 import GuideButton from './GuideButton';
 
 // Un mois de paiement n'a que 2 statuts réels : en attente ou payé.
@@ -23,6 +24,7 @@ function resolveStatut(p: Paiement): string {
 }
 
 export default function HistoriquePaiementPage() {
+  const { alerte } = useConfirm();
   const [paiements, setPaiements] = useState<Paiement[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterMois, setFilterMois] = useState('');
@@ -45,7 +47,7 @@ export default function HistoriquePaiementPage() {
       link.remove();
       window.URL.revokeObjectURL(url);
     } catch {
-      alert('Facture indisponible pour ce paiement.');
+      alerte({ title: 'Facture indisponible', message: 'Facture indisponible pour ce paiement.', tone: 'danger' });
     } finally {
       setDownloadingId(null);
     }

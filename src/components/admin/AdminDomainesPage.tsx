@@ -17,7 +17,7 @@ export default function AdminDomainesPage() {
   const [nom, setNom] = useState('');
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState('');
-  const { confirm } = useConfirm();
+  const { confirm, alerte } = useConfirm();
 
   const load = () => {
     setLoading(true);
@@ -54,7 +54,7 @@ export default function AdminDomainesPage() {
       await api.delete(`/api/domaines/${d.id}`);
       setDomaines((prev) => prev.filter((x) => x.id !== d.id));
     } catch (e: unknown) {
-      alert((e as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Suppression impossible.');
+      alerte({ title: 'Suppression impossible', message: (e as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Suppression impossible.', tone: 'danger' });
     }
   };
 

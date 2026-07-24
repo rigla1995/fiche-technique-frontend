@@ -16,8 +16,8 @@ export interface ConfirmOptions {
   details?: string[];       // liste à puces sous le message
   confirmLabel?: string;    // défaut « Confirmer »
   cancelLabel?: string;     // défaut « Annuler »
-  tone?: 'danger' | 'primary'; // danger = rouge (suppressions), primary = violet
-  icon?: string;            // emoji ; défaut 🗑️ (danger) / ❓ (primary)
+  tone?: 'danger' | 'primary' | 'info'; // danger = rouge (suppressions), primary = violet, info = bleu
+  icon?: string;            // emoji ; défaut 🗑️ (danger) / ❓ (primary) / ℹ️ (info)
 }
 
 export interface PromptOptions extends ConfirmOptions {
@@ -27,9 +27,20 @@ export interface PromptOptions extends ConfirmOptions {
   multiline?: boolean;
 }
 
+/** Boîte d'information à un seul bouton (remplace window.alert — natifs INTERDITS). */
+export interface AlerteOptions {
+  title: string;
+  message?: ReactNode;
+  details?: string[];
+  tone?: 'danger' | 'primary' | 'info'; // danger = erreur, info = information, primary = neutre app
+  icon?: string;                        // défaut ⚠️ (danger) / ℹ️ (info) / ✅ (primary)
+  okLabel?: string;                     // défaut « OK »
+}
+
 interface ConfirmContextValue {
   confirm: (opts: ConfirmOptions) => Promise<boolean>;
   prompt: (opts: PromptOptions) => Promise<string | null>;
+  alerte: (opts: AlerteOptions) => Promise<void>;
 }
 
 const ConfirmContext = createContext<ConfirmContextValue | null>(null);
@@ -41,14 +52,16 @@ export function useConfirm(): ConfirmContextValue {
 }
 
 interface Pending {
-  opts: PromptOptions;
+  opts: PromptOptions & { okLabel?: string };
   withInput: boolean;
+  alertOnly?: boolean;
   resolve: (v: boolean | string | null) => void;
 }
 
 const TONES = {
-  danger: { color: '#b91c1c', bg: '#fee2e2', gradient: 'linear-gradient(135deg, #b91c1c, #ef4444)', icon: '🗑️' },
-  primary: { color: '#4c1d95', bg: '#ede9fe', gradient: 'linear-gradient(135deg, #4c1d95, #6d28d9)', icon: '❓' },
+  danger: { color: '#b91c1c', bg: '#fee2e2', gradient: 'linear-gradient(135deg, #b91c1c, #ef4444)', icon: '🗑️', alertIcon: '⚠️' },
+  primary: { color: '#4c1d95', bg: '#ede9fe', gradient: 'linear-gradient(135deg, #4c1d95, #6d28d9)', icon: '❓', alertIcon: '✅' },
+  info: { color: '#1d4ed8', bg: '#dbeafe', gradient: 'linear-gradient(135deg, #1e40af, #3b82f6)', icon: 'ℹ️', alertIcon: 'ℹ️' },
 } as const;
 
 export function ConfirmProvider({ children }: { children: ReactNode }) {
@@ -56,11 +69,11 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
   const [value, setValue] = useState('');
   const pendingRef = useRef<Pending | null>(null);
 
-  const open = useCallback((opts: PromptOptions, withInput: boolean) => {
+  const open = useCallback((opts: PromptOptions, withInput: boolean, alertOnly = false) => {
     // Une seule demande à la fois : une demande concurrente annule la précédente
     pendingRef.current?.resolve(withInput ? null : false);
     return new Promise<boolean | string | null>((resolve) => {
-      const p: Pending = { opts, withInput, resolve };
+      const p: Pending = { opts, withInput, alertOnly, resolve };
       pendingRef.current = p;
       setValue(opts.defaultValue ?? '');
       setPending(p);
@@ -69,6 +82,10 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
 
   const confirm = useCallback((opts: ConfirmOptions) => open(opts, false) as Promise<boolean>, [open]);
   const prompt = useCallback((opts: PromptOptions) => open(opts, true) as Promise<string | null>, [open]);
+  const alerte = useCallback(
+    (opts: AlerteOptions) => (open({ ...opts, tone: opts.tone === 'info' ? 'info' : opts.tone } as PromptOptions, false, true) as Promise<unknown>).then(() => undefined),
+    [open]
+  );
 
   const settle = useCallback((ok: boolean) => {
     const p = pendingRef.current;
@@ -87,10 +104,10 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
     return () => document.removeEventListener('keydown', onKey, true);
   }, [pending, settle]);
 
-  const t = TONES[pending?.opts.tone === 'primary' ? 'primary' : 'danger'];
+  const t = TONES[pending?.opts.tone && pending.opts.tone in TONES ? pending.opts.tone : 'danger'];
 
   return (
-    <ConfirmContext.Provider value={{ confirm, prompt }}>
+    <ConfirmContext.Provider value={{ confirm, prompt, alerte }}>
       {children}
       {pending && (
         <div onMouseDown={(e) => { if (e.target === e.currentTarget) settle(false); }}
@@ -100,7 +117,7 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
             style={{ background: '#fff', borderRadius: 16, width: '100%', maxWidth: 460, padding: '22px 24px', boxShadow: '0 24px 60px rgba(15,23,42,0.35)', animation: 'cdlg-pop 0.16s ease-out' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
               <span style={{ width: 40, height: 40, borderRadius: 12, background: t.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.15rem', flexShrink: 0 }}>
-                {pending.opts.icon || t.icon}
+                {pending.opts.icon || (pending.alertOnly ? t.alertIcon : t.icon)}
               </span>
               <h2 style={{ margin: 0, fontSize: '1.02rem', fontWeight: 800, color: '#0f172a', lineHeight: 1.3 }}>{pending.opts.title}</h2>
             </div>
@@ -136,13 +153,15 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
               </div>
             )}
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
-              <button type="button" onClick={() => settle(false)}
-                style={{ padding: '9px 18px', borderRadius: 10, border: '1px solid #e2e8f0', background: '#fff', color: '#475569', cursor: 'pointer', fontWeight: 600, fontSize: '0.85rem', fontFamily: 'inherit' }}>
-                {pending.opts.cancelLabel || 'Annuler'}
-              </button>
+              {!pending.alertOnly && (
+                <button type="button" onClick={() => settle(false)}
+                  style={{ padding: '9px 18px', borderRadius: 10, border: '1px solid #e2e8f0', background: '#fff', color: '#475569', cursor: 'pointer', fontWeight: 600, fontSize: '0.85rem', fontFamily: 'inherit' }}>
+                  {pending.opts.cancelLabel || 'Annuler'}
+                </button>
+              )}
               <button type="button" autoFocus={!pending.withInput} onClick={() => settle(true)}
                 style={{ padding: '9px 20px', borderRadius: 10, border: 'none', background: t.gradient, color: '#fff', cursor: 'pointer', fontWeight: 700, fontSize: '0.85rem', fontFamily: 'inherit', boxShadow: `0 4px 14px ${t.color}44` }}>
-                {pending.opts.confirmLabel || 'Confirmer'}
+                {pending.alertOnly ? (pending.opts.okLabel || 'OK') : (pending.opts.confirmLabel || 'Confirmer')}
               </button>
             </div>
           </div>

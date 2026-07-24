@@ -332,7 +332,7 @@ function SaisieTable({ subset, page, setPage, label, emptyIcon = '🛍️', empt
 
 export default function VentesPage() {
   const { user } = useAuth();
-  const { confirm } = useConfirm();
+  const { confirm, alerte } = useConfirm();
   const [searchParams, setSearchParams] = useSearchParams();
   const [activites, setActivites] = useState<Activite[]>([]);
   const [selectedActiviteId, setSelectedActiviteId] = useState<number | null>(null);
@@ -502,7 +502,7 @@ export default function VentesPage() {
     });
     if (!ok) return;
     try { await api.delete(`/api/ventes/${id}`); loadData(); }
-    catch (e: unknown) { alert(apiMsg(e)); }
+    catch (e: unknown) { alerte({ title: 'Annulation impossible', message: apiMsg(e), tone: 'danger' }); }
   };
 
   const handleExportXls = async () => {
@@ -521,7 +521,7 @@ export default function VentesPage() {
       const a = document.createElement('a');
       a.href = url; a.download = 'historique-ventes.xlsx'; a.click();
       URL.revokeObjectURL(url);
-    } catch (e: unknown) { alert(apiMsg(e)); }
+    } catch (e: unknown) { alerte({ title: 'Export impossible', message: apiMsg(e), tone: 'danger' }); }
     finally { setExportingXls(false); }
   };
 

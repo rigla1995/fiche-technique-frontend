@@ -3,6 +3,7 @@ import api from '../../api/client';
 import type { Category, Famille } from '../../types';
 import GuideButton from './GuideButton';
 import HistoryFilterBar, { FilterField, FilterInput, FilterSelect } from '../common/HistoryFilterBar';
+import { useConfirm } from '../common/ConfirmDialog';
 
 const COLOR = '#16a34a';
 const GRADIENT = 'linear-gradient(135deg, #14532d 0%, #16a34a 55%, #4ade80 100%)';
@@ -11,6 +12,7 @@ interface CatRow { nom: string; familleId: string; }
 const emptyRow = (): CatRow => ({ nom: '', familleId: '' });
 
 export default function ReferentielCategoriesPage() {
+  const { alerte } = useConfirm();
   const [categories, setCategories] = useState<Category[]>([]);
   const [familles, setFamilles] = useState<Famille[]>([]);
   const [loading, setLoading] = useState(true);
@@ -86,7 +88,7 @@ export default function ReferentielCategoriesPage() {
 
   const handleDelete = async (id: number) => {
     try { await api.delete(`/api/categories/${id}`); setDeleteId(null); load(); }
-    catch (e: unknown) { alert((e as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Impossible de supprimer cette catégorie'); }
+    catch (e: unknown) { alerte({ title: 'Suppression impossible', message: (e as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Impossible de supprimer cette catégorie', tone: 'danger' }); }
   };
 
   const filtered = categories.filter(c => {
