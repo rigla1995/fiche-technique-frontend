@@ -3,6 +3,7 @@ import api from '../../api/client';
 import type { Article, Activite, Category, Famille, Labo, Unit } from '../../types';
 import GuideButton from './GuideButton';
 import HistoryFilterBar, { FilterField, FilterInput, FilterSelect } from '../common/HistoryFilterBar';
+import { useConfirm } from '../common/ConfirmDialog';
 
 const COLOR = '#16a34a';
 const ACCENT_DARK = '#15803d';
@@ -22,6 +23,7 @@ interface ArtRow { nom: string; uniteId: string; categorieId: string; activiteId
 const emptyArtRow = (): ArtRow => ({ nom: '', uniteId: '', categorieId: '', activiteIds: [], laboIds: [] });
 
 export default function ReferentielArticlesPage() {
+  const { alerte } = useConfirm();
   const [articles, setArticles] = useState<Article[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [familles, setFamilles] = useState<Famille[]>([]);
@@ -278,7 +280,7 @@ export default function ReferentielArticlesPage() {
       window.dispatchEvent(new Event('articles-changed'));
       load();
     } catch (e: unknown) {
-      alert((e as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Impossible de supprimer cet article');
+      alerte({ title: 'Suppression impossible', message: (e as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Impossible de supprimer cet article', tone: 'danger' });
     }
   };
 

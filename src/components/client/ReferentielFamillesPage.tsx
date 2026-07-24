@@ -3,6 +3,7 @@ import api from '../../api/client';
 import type { Famille } from '../../types';
 import GuideButton from './GuideButton';
 import HistoryFilterBar, { FilterField, FilterInput } from '../common/HistoryFilterBar';
+import { useConfirm } from '../common/ConfirmDialog';
 
 const COLOR = '#16a34a';
 const GRADIENT = 'linear-gradient(135deg, #14532d 0%, #16a34a 55%, #4ade80 100%)';
@@ -11,6 +12,7 @@ interface FamRow { nom: string; consommable: boolean; vendable: boolean; }
 const emptyRow = (): FamRow => ({ nom: '', consommable: true, vendable: true });
 
 export default function ReferentielFamillesPage() {
+  const { alerte } = useConfirm();
   const [familles, setFamilles] = useState<Famille[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -83,7 +85,7 @@ export default function ReferentielFamillesPage() {
 
   const handleDelete = async (id: number) => {
     try { await api.delete(`/api/familles/${id}`); setDeleteId(null); load(); }
-    catch (e: unknown) { alert((e as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Impossible de supprimer cette famille'); }
+    catch (e: unknown) { alerte({ title: 'Suppression impossible', message: (e as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Impossible de supprimer cette famille', tone: 'danger' }); }
   };
 
   const filtered = search ? familles.filter(f => f.name.toLowerCase().includes(search.toLowerCase())) : familles;

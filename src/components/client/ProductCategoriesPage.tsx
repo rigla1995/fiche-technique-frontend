@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import api from '../../api/client';
 import type { CategorieProduit, TypeProduitCategorie } from '../../types';
 import HistoryFilterBar, { FilterField, FilterInput, FilterSelect } from '../common/HistoryFilterBar';
+import { useConfirm } from '../common/ConfirmDialog';
 import GuideButton from './GuideButton';
 import { PRODUCT_THEME } from '../../theme/productTheme';
 
@@ -24,6 +25,7 @@ interface CatRow { nom: string; }
 const emptyRow = (): CatRow => ({ nom: '' });
 
 export default function ProductCategoriesPage() {
+  const { alerte } = useConfirm();
   const [categories, setCategories] = useState<CategorieProduit[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -85,7 +87,7 @@ export default function ProductCategoriesPage() {
 
   const handleDelete = async (id: number) => {
     try { await api.delete(`/api/categories-produit/${id}`); setDeleteId(null); load(); }
-    catch (e: unknown) { alert(apiMsg(e, 'Impossible de supprimer cette catégorie')); }
+    catch (e: unknown) { alerte({ title: 'Suppression impossible', message: apiMsg(e, 'Impossible de supprimer cette catégorie'), tone: 'danger' }); }
   };
 
   const filtered = categories.filter(c =>

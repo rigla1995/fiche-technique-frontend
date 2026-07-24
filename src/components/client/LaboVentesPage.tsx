@@ -3,6 +3,7 @@ import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import api from '../../api/client';
 import HelpButton from '../common/HelpButton';
 import HistoryFilterBar, { FilterField, FilterInput, FilterSelect } from '../common/HistoryFilterBar';
+import { useConfirm } from '../common/ConfirmDialog';
 import type { Labo } from '../../types';
 import { useAuth } from '../../context/AuthContext';
 
@@ -45,6 +46,7 @@ export default function LaboVentesPage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { alerte } = useConfirm();
   const [labos, setLabos] = useState<Labo[]>([]);
   const [selectedLaboId, setSelectedLaboId] = useState<number | null>(null);
   const [transferts, setTransferts] = useState<LaboTransfert[]>([]);
@@ -150,7 +152,7 @@ export default function LaboVentesPage() {
       const a = document.createElement('a');
       a.href = url; a.download = 'historique-ventes-labo.xlsx'; a.click();
       URL.revokeObjectURL(url);
-    } catch (e: unknown) { alert(apiMsg(e)); }
+    } catch (e: unknown) { alerte({ title: 'Export impossible', message: apiMsg(e), tone: 'danger' }); }
     finally { setExportingXls(false); }
   };
 

@@ -3,11 +3,13 @@ import api from '../../api/client';
 import type { Unit } from '../../types';
 import GuideButton from './GuideButton';
 import HistoryFilterBar, { FilterField, FilterInput } from '../common/HistoryFilterBar';
+import { useConfirm } from '../common/ConfirmDialog';
 
 const COLOR = '#16a34a';
 const GRADIENT = 'linear-gradient(135deg, #14532d 0%, #16a34a 55%, #4ade80 100%)';
 
 export default function ReferentielUnitesPage() {
+  const { alerte } = useConfirm();
   const [units, setUnits] = useState<Unit[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -63,7 +65,7 @@ export default function ReferentielUnitesPage() {
 
   const handleDelete = async (id: number) => {
     try { await api.delete(`/api/unites/${id}`); setDeleteId(null); load(); }
-    catch (e: unknown) { alert((e as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Impossible de supprimer cette unité'); }
+    catch (e: unknown) { alerte({ title: 'Suppression impossible', message: (e as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Impossible de supprimer cette unité', tone: 'danger' }); }
   };
 
   const filtered = search ? units.filter(u => u.name.toLowerCase().includes(search.toLowerCase())) : units;
