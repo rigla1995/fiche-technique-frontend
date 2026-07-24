@@ -315,7 +315,11 @@ select.input { cursor: pointer; }
   border: 1px solid var(--primary-light); cursor: pointer; transition: background 0.12s;
 }
 .count-badge:hover { background: var(--primary-light); }
-.actions-cell { display: flex; gap: 6px; align-items: center; }
+/* Cellule d'actions d'un tableau : PAS de display:flex sur un <td> (la cellule
+   sortirait du layout tableau et casserait l'alignement de la ligne). */
+.actions-cell { text-align: right; white-space: nowrap; }
+.actions-cell > * { display: inline-flex; align-items: center; vertical-align: middle; }
+.actions-cell > * + * { margin-left: 6px; }
 .empty-cell { text-align: center; color: var(--text-muted); padding: 28px; font-size: 0.875rem; }
 
 /* ===== BADGES ===== */
@@ -591,7 +595,7 @@ select.input { cursor: pointer; }
 @media (max-width: 600px) {
   .form-row { grid-template-columns: 1fr; }
   .page-header { flex-direction: column; align-items: flex-start; }
-  .actions-cell { flex-wrap: wrap; }
+  .actions-cell { white-space: normal; }
   .line-row { flex-direction: column; align-items: stretch; }
   .flex-grow { min-width: 0; }
   .portion-input .input { width: 100%; }

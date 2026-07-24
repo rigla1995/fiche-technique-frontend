@@ -166,7 +166,16 @@ export default function ReferentielFamillesPage() {
                   </td>
                   <td className="actions-cell" style={{ justifyContent: 'flex-end' }}>
                     <button className="btn btn-ghost btn-sm" onClick={() => openEdit(f)}>✏️ Modifier</button>
-                    <button className="btn btn-danger btn-sm" disabled={f.hasAppros} title={f.hasAppros ? 'Cette famille ne peut pas être supprimée car des articles liés ont des approvisionnements enregistrés' : undefined} onClick={() => !f.hasAppros && setDeleteId(f.id)} style={f.hasAppros ? { opacity: 0.4, cursor: 'not-allowed' } : undefined}>🗑️</button>
+                    {(() => {
+                      const nbCat = f.nbCategories ?? 0;
+                      const verrou = nbCat > 0;
+                      return (
+                        <button className="btn btn-danger btn-sm" disabled={verrou}
+                          title={verrou ? `Contient ${nbCat} catégorie${nbCat > 1 ? 's' : ''}${(f.nbArticles ?? 0) > 0 ? ` et ${f.nbArticles} article${(f.nbArticles ?? 0) > 1 ? 's' : ''}` : ''} — veuillez les supprimer (ou changer leur famille) avant` : undefined}
+                          onClick={() => !verrou && setDeleteId(f.id)}
+                          style={verrou ? { opacity: 0.4, cursor: 'not-allowed' } : undefined}>🗑️</button>
+                      );
+                    })()}
                   </td>
                 </tr>
               ))}
