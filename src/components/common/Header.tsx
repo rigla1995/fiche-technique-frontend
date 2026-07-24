@@ -3,6 +3,7 @@ import { useNotifications } from '../../context/NotificationContext';
 import { useNavigate } from 'react-router-dom';
 import { useState, useRef, useEffect } from 'react';
 import LabFlowLogo from './LabFlowLogo';
+import AssistantWidget from './AssistantWidget';
 
 export default function Header() {
   const { user, logout } = useAuth();
@@ -102,6 +103,9 @@ export default function Header() {
             </div>
           </div>
         </div>
+
+        {/* Assistant IA : bouton 🤖 + panneau sous le header (client/gérant) */}
+        {(user?.role === 'client' || user?.role === 'gerant') && <AssistantWidget />}
 
         {/* Notification bell */}
         <div ref={ref} style={{ position: 'relative' }}>
