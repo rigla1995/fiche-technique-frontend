@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { useLocation } from 'react-router-dom';
 import api from '../../api/client';
 import AssistantChat from './AssistantChat';
 import type { OnboardingEtat } from './AssistantChat';
@@ -15,6 +16,9 @@ export default function AssistantWidget() {
   const [etat, setEtat] = useState<OnboardingEtat | null>(null);
   const [open, setOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const openRef = useRef(open);
+  openRef.current = open;
+  const location = useLocation();
 
   const refreshEtat = useCallback(async () => {
     try {
@@ -27,7 +31,24 @@ export default function AssistantWidget() {
     }
   }, []);
 
-  useEffect(() => { refreshEtat(); }, [refreshEtat]);
+  // L'état suit le client EN DIRECT : recalcul à chaque changement de page
+  // (il crée ses unités puis navigue → la carte est déjà à jour), au retour
+  // sur l'onglet, sur les événements de création d'activité/labo, et toutes
+  // les 20 s tant que le panneau est ouvert.
+  useEffect(() => { refreshEtat(); }, [refreshEtat, location.pathname]);
+  useEffect(() => {
+    const onFocus = () => refreshEtat();
+    window.addEventListener('focus', onFocus);
+    window.addEventListener('activites-changed', onFocus);
+    window.addEventListener('labos-changed', onFocus);
+    const timer = window.setInterval(() => { if (openRef.current) refreshEtat(); }, 20000);
+    return () => {
+      window.removeEventListener('focus', onFocus);
+      window.removeEventListener('activites-changed', onFocus);
+      window.removeEventListener('labos-changed', onFocus);
+      window.clearInterval(timer);
+    };
+  }, [refreshEtat]);
 
   // Mise en route terminée (ou état inconnu) : pas de bot.
   if (!etat || (etat.complet && !open)) return null;

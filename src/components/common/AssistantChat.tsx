@@ -1,53 +1,15 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import api from '../../api/client';
 import HelpButton from './HelpButton';
+import MarkdownView from './MarkdownView';
 
 interface Message {
   role: 'user' | 'assistant';
   content: string;
 }
 
-export interface OnboardingEtape { key: string; titre: string; fait: boolean; detail: string | null }
+export interface OnboardingEtape { key: string; titre: string; fait: boolean; detail: string | null; questions: string[] }
 export interface OnboardingEtat { complet: boolean; etapes: OnboardingEtape[]; aFaire: string | null }
-
-// Questions suggérées selon la première étape non finalisée de la mise en route
-const QUESTIONS_PAR_ETAPE: Record<string, string[]> = {
-  capacites: [
-    'Comment créer mes activités ?',
-    'Comment créer mon labo ?',
-    'Quelle est la différence entre une activité et un labo ?',
-  ],
-  referentiel: [
-    'Par quoi commencer pour mon référentiel ?',
-    'À quoi servent les familles et les catégories ?',
-    'Comment créer mes unités ?',
-  ],
-  articles: [
-    'Comment ajouter mes articles ?',
-    'Comment importer mes articles en masse ?',
-    'Comment affecter les articles à mes activités et labos ?',
-  ],
-  fournisseurs: [
-    'Comment ajouter mes fournisseurs ?',
-    'Comment importer mes fournisseurs depuis Excel ?',
-    'À quoi servent les affectations d\'un fournisseur ?',
-  ],
-  produits: [
-    'Comment créer un produit et sa fiche technique ?',
-    'C\'est quoi un produit valorisé ?',
-    'Comment est calculé le coût de revient d\'une recette ?',
-  ],
-  saisie: [
-    'Comment saisir mon premier approvisionnement ?',
-    'Comment saisir une vente ?',
-    'Comment mon stock est-il calculé ?',
-  ],
-  acheteurs: [
-    'Comment remplir mon carnet d\'acheteurs ?',
-    'Comment importer mes acheteurs depuis Excel ?',
-    'Comment configurer mes tarifs acheteurs ?',
-  ],
-};
 
 interface Props {
   /** État de mise en route (pilote la carte de progression et les suggestions) */
@@ -221,11 +183,11 @@ export default function AssistantChat({ etat, onEtatRefresh, onClose }: Props) {
                     );
                   })}
                 </div>
-                {etat.aFaire && QUESTIONS_PAR_ETAPE[etat.aFaire] && (
+                {(etat.etapes.find((e) => e.key === etat.aFaire)?.questions?.length ?? 0) > 0 && (
                   <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px dashed #e0e7ff' }}>
                     <div style={{ fontSize: 10.5, fontWeight: 700, color: '#6366f1', marginBottom: 6 }}>Questions utiles pour cette étape :</div>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                      {QUESTIONS_PAR_ETAPE[etat.aFaire].map((q) => (
+                      {etat.etapes.find((e) => e.key === etat.aFaire)!.questions.map((q) => (
                         <button key={q}
                           onClick={() => { setInput(q); inputRef.current?.focus(); }}
                           style={{ fontSize: 11.5, padding: '6px 11px', borderRadius: 20, border: '1px solid #c7d2fe', background: '#eef2ff', color: '#4338ca', cursor: 'pointer', fontWeight: 600, textAlign: 'left' }}>
@@ -270,17 +232,18 @@ export default function AssistantChat({ etat, onEtatRefresh, onClose }: Props) {
                   {msg.role === 'user' ? '👤' : '🤖'}
                 </div>
                 <div style={{
-                  maxWidth: '82%',
-                  padding: '10px 14px',
+                  maxWidth: '86%',
+                  padding: msg.role === 'user' ? '10px 14px' : '12px 14px 4px',
                   borderRadius: msg.role === 'user' ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
                   background: msg.role === 'user' ? 'linear-gradient(135deg,#6366f1,#8b5cf6)' : '#f8fafc',
                   border: msg.role === 'assistant' ? '1px solid #e2e8f0' : 'none',
                   color: msg.role === 'user' ? '#fff' : '#0f172a',
                   fontSize: 13,
                   lineHeight: 1.6,
-                  whiteSpace: 'pre-wrap',
+                  ...(msg.role === 'user' ? { whiteSpace: 'pre-wrap' as const } : { minWidth: 0, overflowWrap: 'anywhere' as const }),
                 }}>
-                  {msg.content}
+                  {/* Réponses du guide rendues en VRAI markdown (gras, listes, espacement) */}
+                  {msg.role === 'assistant' ? <MarkdownView content={msg.content} /> : msg.content}
                 </div>
               </div>
             ))}
@@ -348,7 +311,7 @@ export default function AssistantChat({ etat, onEtatRefresh, onClose }: Props) {
               </button>
             </div>
             <div style={{ fontSize: 10, color: '#94a3b8', textAlign: 'center', marginTop: 6 }}>
-              L'assistant peut se tromper — vérifiez les chiffres importants · Données issues de votre compte LabFlow
+              🚀 Guide de mise en route LabFlow — appuyé sur votre configuration réelle et le manuel officiel
             </div>
           </div>
         </>
