@@ -1,22 +1,39 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import api from '../../api/client';
 import AssistantChat from './AssistantChat';
+import type { OnboardingEtat } from './AssistantChat';
 
 /**
- * Assistant IA — bouton 🤖 de la BARRE DU HAUT (à côté de la cloche de
- * notifications, rendu par Header pour les rôles client/gérant) : présent sur
- * toutes les pages, il n'entre jamais en conflit avec les panneaux flottants
- * de saisie (aperçu d'appro, aperçu de vente…). Le chat s'ouvre en panneau
- * sous le header, à droite, par-dessus la page en cours.
- * Si l'assistant n'est pas activé pour le compte, le panneau l'explique.
- * Le panneau reste monté après la première ouverture : la conversation
- * survit aux fermetures et aux changements de page.
+ * Guide de mise en route — bouton 🤖 de la BARRE DU HAUT (rendu par Header,
+ * rôle client uniquement). Le bot n'existe que tant que la configuration
+ * souscrite n'est pas entièrement mise en place : il disparaît de lui-même
+ * quand tout est fait, et RÉAPPARAÎT automatiquement après un avenant
+ * (nouvelle activité, labo, module…) puisque l'état est recalculé en direct
+ * côté serveur (données réelles vs souscription).
  */
 export default function AssistantWidget() {
+  const [etat, setEtat] = useState<OnboardingEtat | null>(null);
   const [open, setOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
 
+  const refreshEtat = useCallback(async () => {
+    try {
+      const { data } = await api.get('/api/ai-assistant/onboarding');
+      setEtat(data);
+      return data as OnboardingEtat;
+    } catch {
+      setEtat(null);
+      return null;
+    }
+  }, []);
+
+  useEffect(() => { refreshEtat(); }, [refreshEtat]);
+
+  // Mise en route terminée (ou état inconnu) : pas de bot.
+  if (!etat || (etat.complet && !open)) return null;
+
   const toggle = () => {
-    if (!open) setMounted(true);
+    if (!open) { setMounted(true); refreshEtat(); }
     setOpen((v) => !v);
   };
 
@@ -25,7 +42,7 @@ export default function AssistantWidget() {
       {/* Bouton du header — même gabarit que la cloche de notifications */}
       <button
         onClick={toggle}
-        title={open ? 'Fermer l\'assistant' : 'Assistant IA — posez votre question'}
+        title={open ? 'Fermer le guide' : 'Guide de mise en route — posez vos questions'}
         aria-label={open ? 'Fermer l\'assistant IA' : 'Ouvrir l\'assistant IA'}
         style={{
           position: 'relative', background: open ? 'rgba(255,255,255,0.32)' : 'rgba(255,255,255,0.18)',
@@ -38,6 +55,19 @@ export default function AssistantWidget() {
         onMouseLeave={(e) => { e.currentTarget.style.background = open ? 'rgba(255,255,255,0.32)' : 'rgba(255,255,255,0.18)'; }}
       >
         🤖
+        {/* Pastille : nombre d'étapes restantes */}
+        {!etat.complet && (
+          <span style={{
+            position: 'absolute', top: -3, right: -3,
+            background: '#f59e0b', color: '#fff',
+            borderRadius: '50%', minWidth: 18, height: 18,
+            fontSize: '0.6rem', fontWeight: 900,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: '0 3px', boxShadow: '0 0 0 2px #fff',
+          }}>
+            {etat.etapes.filter((e) => !e.fait).length}
+          </span>
+        )}
       </button>
 
       {/* Panneau de chat sous le header (monté à la 1ʳᵉ ouverture, masqué ensuite) */}
@@ -49,7 +79,7 @@ export default function AssistantWidget() {
           boxShadow: '0 24px 64px rgba(30,27,75,0.28)',
           display: open ? 'flex' : 'none', flexDirection: 'column',
         }}>
-          <AssistantChat onClose={() => setOpen(false)} />
+          <AssistantChat etat={etat} onEtatRefresh={refreshEtat} onClose={() => setOpen(false)} />
         </div>
       )}
     </>
