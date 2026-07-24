@@ -3,6 +3,7 @@ import { Outlet, Navigate } from 'react-router-dom';
 import Header from './Header';
 import Sidebar from './Sidebar';
 import ReadOnlyBanner from './ReadOnlyBanner';
+import AssistantWidget from './AssistantWidget';
 import { useAuth } from '../../context/AuthContext';
 import { SelectionProvider } from '../../context/SelectionContext';
 
@@ -44,6 +45,8 @@ export default function Layout({ requireRole }: LayoutProps) {
           <Outlet />
         </main>
       </div>
+      {/* Assistant IA : bulle flottante sur toutes les pages client/gérant */}
+      {(user.role === 'client' || user.role === 'gerant') && <AssistantWidget />}
     </div>
     </SelectionProvider>
   );
