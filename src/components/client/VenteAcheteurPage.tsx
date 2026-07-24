@@ -422,7 +422,8 @@ export default function VenteAcheteurPage() {
           {/* Aperçu de la saisie — purement INFORMATIF (la validation se fait dans le
               bloc de saisie) : récapitule l'acheteur, les dates, l'état, la promotion
               et les totaux au fil de la saisie. */}
-          <div style={{ position: 'fixed', bottom: 18, right: 24, zIndex: 90, background: '#fff', border: `1.5px solid ${CB}`, borderRadius: 14, boxShadow: '0 12px 36px rgba(76,29,149,0.22)', padding: '14px 18px', minWidth: 300, maxWidth: 340 }}>
+          {/* right: 88 — laisse le coin bas-droit à la bulle de l'assistant IA */}
+          <div style={{ position: 'fixed', bottom: 18, right: 88, zIndex: 90, background: '#fff', border: `1.5px solid ${CB}`, borderRadius: 14, boxShadow: '0 12px 36px rgba(76,29,149,0.22)', padding: '14px 18px', minWidth: 300, maxWidth: 340 }}>
             <div style={{ fontSize: '0.72rem', fontWeight: 800, color: CD, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>
               👁️ Aperçu de la vente
             </div>
