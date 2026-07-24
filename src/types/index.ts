@@ -180,6 +180,8 @@ export interface Unit {
   id: number;
   name: string;
   hasAppros?: boolean;
+  /** Nb d'articles utilisant cette unité — > 0 = suppression verrouillée */
+  nbArticles?: number;
 }
 
 export interface Category {
@@ -189,6 +191,8 @@ export interface Category {
   familleName?: string | null;
   clientId?: number | null;
   hasAppros?: boolean;
+  /** Nb d'articles dans cette catégorie — > 0 = suppression verrouillée */
+  nbArticles?: number;
 }
 
 export interface Famille {
@@ -197,6 +201,9 @@ export interface Famille {
   consommable: boolean;
   vendable: boolean;
   hasAppros?: boolean;
+  /** Nb de catégories/articles liés — > 0 = suppression verrouillée */
+  nbCategories?: number;
+  nbArticles?: number;
   clientId: number;
 }
 
