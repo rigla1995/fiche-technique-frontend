@@ -54,7 +54,9 @@ export default function ProductList() {
   const [loadingDetail, setLoadingDetail] = useState(false);
 
   const [allActivities, setAllActivities] = useState<Activite[]>([]);
-  const [allLabos, setAllLabos] = useState<{ id: number; nom: string }[]>([]);
+  const [allLabos, setAllLabos] = useState<{ id: number; nom: string; productionActive?: boolean }[]>([]);
+  // Labos de FABRICATION (wizard origine labo) : un labo sans production (économat, entrepôt…) n'est pas proposé.
+  const productionLabos = allLabos.filter((l) => l.productionActive !== false);
   const [exportingXls, setExportingXls] = useState(false);
   const [exportModalOpen, setExportModalOpen] = useState(false);
   const [exportIncludeOther, setExportIncludeOther] = useState(false);
@@ -104,7 +106,7 @@ export default function ProductList() {
         setAllActivities(scoped);
       });
     api.get('/api/labo')
-      .then(({ data }) => setAllLabos((data as { id: number; nom: string }[]).map((l) => ({ id: l.id, nom: l.nom }))))
+      .then(({ data }) => setAllLabos((data as { id: number; nom: string; productionActive?: boolean }[]).map((l) => ({ id: l.id, nom: l.nom, productionActive: l.productionActive }))))
       .catch(() => setAllLabos([]));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.role, laboId]);
@@ -1185,7 +1187,7 @@ export default function ProductList() {
                         ? allActivities.filter((a) => a.laboId != null && addAffectationIds.includes(Number(a.laboId)))
                         : [];
                       const opts = isLaboMode
-                        ? allLabos.map((l) => ({ id: l.id, nom: l.nom, laboNom: undefined as string | undefined }))
+                        ? productionLabos.map((l) => ({ id: l.id, nom: l.nom, laboNom: undefined as string | undefined }))
                         : allActivities.map((a) => ({ id: a.id, nom: a.nom, laboNom: (a as any).laboNom as string | undefined }));
                       const allIds = opts.map((o) => o.id);
                       const canNext = addAffectationIds.length > 0;
@@ -1199,7 +1201,7 @@ export default function ProductList() {
                                 ['labo', '🔒 Appros limités aux transferts', 'Fabriqué au labo puis transféré ; pas d’appro manuel en activité'],
                               ] as const).map(([key, label, desc]) => {
                                 const active = addOrigine === key;
-                                const disabled = key === 'labo' && allLabos.length === 0;
+                                const disabled = key === 'labo' && productionLabos.length === 0;
                                 return (
                                   <button key={key} type="button" disabled={disabled}
                                     onClick={() => {

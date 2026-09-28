@@ -1,21 +1,25 @@
 import { useState, useRef, useEffect } from 'react';
 
-const OPTIONS = [
+const DEFAULT_OPTIONS = [
   ['manuel', 'Manuel'],
   ['transfert', 'Transfert'],
   ['vente', 'Vente'],
   ['pt', 'PT'],
 ] as const;
 
+export type TypeApproOption = readonly [key: string, label: string];
+
 interface Props {
   selected: Set<string>;
   onToggle: (key: string) => void;
   accent?: string;
   id?: string;   // reçu de FilterField pour l'association label htmlFor → bouton déclencheur
+  options?: ReadonlyArray<TypeApproOption>;   // liste de types spécifique à la page (défaut : activité)
 }
 
 // Champ déroulant multi-sélection (cases à cocher) pour filtrer par type d'appro.
-export default function TypeApproFilter({ selected, onToggle, accent = '#1e40af', id }: Props) {
+export default function TypeApproFilter({ selected, onToggle, accent = '#1e40af', id, options }: Props) {
+  const OPTIONS: ReadonlyArray<TypeApproOption> = options ?? DEFAULT_OPTIONS;
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 

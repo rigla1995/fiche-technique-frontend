@@ -4,6 +4,7 @@ import api from '../../api/client';
 import HelpButton from '../common/HelpButton';
 import HistoryFilterBar, { FilterField, FilterInput, FilterSelect } from '../common/HistoryFilterBar';
 import { useAuth } from '../../context/AuthContext';
+import { perteLabel, perteTypesAvec, usePerteTypes } from '../../utils/perteTypes';
 import type { Activite, HistoriquePerteEntry } from '../../types';
 
 const currentYear = new Date().getFullYear();
@@ -22,13 +23,14 @@ interface ScopedIngredient { id: number; nom: string; unite: string; categorie: 
 
 interface EditPerteModalProps {
   entry: HistoriquePerteEntry;
-  onSave: (id: number, quantite: number, typePerte: 'avarie' | 'dechet') => Promise<void>;
+  onSave: (id: number, quantite: number, typePerte: string) => Promise<void>;
   onClose: () => void;
 }
 
 function EditPerteModal({ entry, onSave, onClose }: EditPerteModalProps) {
+  const perteTypes = perteTypesAvec(usePerteTypes(), entry.typePerte);
   const [qty, setQty] = useState(String(entry.quantite));
-  const [type, setType] = useState<'avarie' | 'dechet'>(entry.typePerte);
+  const [type, setType] = useState<string>(entry.typePerte);
   const [warned, setWarned] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -88,9 +90,8 @@ function EditPerteModal({ entry, onSave, onClose }: EditPerteModalProps) {
           </div>
           <div>
             <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: 4 }}>Type de perte</label>
-            <select className="input" style={{ width: '100%' }} value={type} onChange={(e) => setType(e.target.value as 'avarie' | 'dechet')}>
-              <option value="avarie">Avarie</option>
-              <option value="dechet">Déchet</option>
+            <select className="input" style={{ width: '100%' }} value={type} onChange={(e) => setType(e.target.value)}>
+              {perteTypes.map((t) => <option key={t.code} value={t.code}>{t.label}</option>)}
             </select>
           </div>
           {error && <p style={{ color: 'var(--danger)', fontSize: '0.85rem' }}>{error}</p>}
@@ -157,6 +158,7 @@ function DeletePerteModal({ entry, onConfirm, onClose }: DeletePerteModalProps) 
 
 export default function HistoriquepertesPage() {
   const { user, canWrite } = useAuth();
+  const perteTypes = usePerteTypes();
   const [searchParams] = useSearchParams();
   const type = searchParams.get('type');
   const urlActiviteId = searchParams.get('activiteId') || '';
@@ -294,7 +296,7 @@ export default function HistoriquepertesPage() {
     setExporting(false);
   };
 
-  const handleUpdate = async (id: number, quantite: number, typePerte: 'avarie' | 'dechet') => {
+  const handleUpdate = async (id: number, quantite: number, typePerte: string) => {
     const url = `/api/entreprise/pertes/${id}`;
     await api.put(url, { quantite, typePerte });
     await loadPertes();
@@ -361,8 +363,7 @@ export default function HistoriquepertesPage() {
         <FilterField label="📋 Type">
           <FilterSelect value={fType} onChange={(e) => setFType(e.target.value)}>
             <option value="">— Tous —</option>
-            <option value="avarie">Avarie</option>
-            <option value="dechet">Déchet</option>
+            {perteTypes.map((t) => <option key={t.code} value={t.code}>{t.label}</option>)}
           </FilterSelect>
         </FilterField>
       </HistoryFilterBar>
@@ -442,7 +443,7 @@ export default function HistoriquepertesPage() {
                     <td style={{ fontWeight: 600, color: '#1e40af', whiteSpace: 'nowrap', fontSize: '0.85rem' }}>{fmtDate(entry.datePerte)}</td>
                     <td>
                       <span style={{ display: 'inline-block', padding: '2px 10px', borderRadius: 20, fontSize: '0.75rem', fontWeight: 700, background: isAvarie ? '#fee2e2' : '#ffedd5', color: isAvarie ? '#991b1b' : '#c2410c', border: `1px solid ${isAvarie ? '#fca5a5' : '#fed7aa'}` }}>
-                        {isAvarie ? 'Avarie' : 'Déchet'}
+                        {perteLabel(entry.typePerte)}
                       </span>
                     </td>
                     <td style={{ textAlign: 'right', fontWeight: 700, color: '#1e40af' }}>

@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import api from '../../api/client';
 import HelpButton from '../common/HelpButton';
+import { useAuth } from '../../context/AuthContext';
+import { perteLabel, usePerteTypes } from '../../utils/perteTypes';
 import MultiSelectFilter from '../common/MultiSelectFilter';
 import type { MultiSelectOption } from '../common/MultiSelectFilter';
 import {
@@ -111,10 +113,9 @@ const TYPES_PRODUIT_OPTS: MultiSelectOption[] = [
   { value: 'supplement', label: 'Suppléments' },
   { value: 'valorise', label: 'Valorisés' },
 ];
-const TYPES_PERTE_OPTS: MultiSelectOption[] = [
-  { value: 'avarie', label: 'Avaries' },
-  { value: 'dechet', label: 'Déchets' },
-];
+// Types de perte : ceux du domaine du compte (regles.types_perte) — voir usePerteTypes().
+// Seuil coût matière par défaut (comportement actuel) ; le domaine peut le surcharger.
+const SEUIL_COUT_MATIERE_DEFAUT = 40;
 // Type de vente de l'onglet Acheteurs (B2B) : manuelle (saisie vendeur) ou portail.
 const SOURCES_B2B_OPTS: MultiSelectOption[] = [
   { value: 'client', label: 'Vente manuelle' },
@@ -201,6 +202,19 @@ export default function ClientDashboard() {
       .catch((e) => { if (e?.code !== 'ERR_CANCELED') { setErreur(true); setLoading(false); } });
   }, [tab, from, to, filtres]);
   useEffect(() => { load(); }, [load]);
+
+  // Socle par domaine (lot 1b-2) : types de perte et seuil coût matière du compte.
+  const { user } = useAuth();
+  const perteTypes = usePerteTypes();
+  const typesPerteOpts = useMemo<MultiSelectOption[]>(() => perteTypes.map((t) => ({ value: t.code, label: perteLabel(t.code, true) })), [perteTypes]);
+  // Seuil : celui renvoyé par le dashboard v2 (`seuils.coutMatierePct`), sinon la règle du
+  // domaine du compte, sinon 40 (comportement actuel).
+  const seuilDomaine = Number(user?.domaine?.regles?.seuil_cout_matiere_pct);
+  const seuilCoutMatiere = (d: { seuils?: { coutMatierePct?: unknown } } | null): number => {
+    const s = Number(d?.seuils?.coutMatierePct);
+    if (Number.isFinite(s) && s > 0) return s;
+    return Number.isFinite(seuilDomaine) && seuilDomaine > 0 ? seuilDomaine : SEUIL_COUT_MATIERE_DEFAUT;
+  };
 
   const setFiltre = (k: keyof FiltresState) => (values: string[]) => setFiltres((f) => ({ ...f, [k]: values }));
   const filtresActifs = FILTRE_KEYS.reduce((n, k) => n + (filtres[k].length ? 1 : 0), 0);
@@ -402,7 +416,7 @@ export default function ClientDashboard() {
             {visibles.includes('catArticles') && <MultiSelectFilter label="Catégories articles" icon="🧂" options={toOpts(options.categories_articles)} selected={filtres.catArticles} onChange={setFiltre('catArticles')} />}
             {visibles.includes('familles') && <MultiSelectFilter label="Familles" icon="🗂️" options={toOpts(options.familles)} selected={filtres.familles} onChange={setFiltre('familles')} />}
             {visibles.includes('fournisseurs') && <MultiSelectFilter label="Fournisseurs" icon="📦" options={toOpts(options.fournisseurs)} selected={filtres.fournisseurs} onChange={setFiltre('fournisseurs')} />}
-            {visibles.includes('typesPerte') && <MultiSelectFilter label="Type de perte" icon="🗑️" options={TYPES_PERTE_OPTS} selected={filtres.typesPerte} onChange={setFiltre('typesPerte')} />}
+            {visibles.includes('typesPerte') && <MultiSelectFilter label="Type de perte" icon="🗑️" options={typesPerteOpts} selected={filtres.typesPerte} onChange={setFiltre('typesPerte')} />}
           </>
         )}
         {filtresCaches > 0 && (
@@ -431,8 +445,8 @@ export default function ClientDashboard() {
         <div className="loading-text" style={{ padding: 40 }}>Chargement…</div>
       ) : (
         <>
-          {tab === 'overview' && <OverviewTab data={data} />}
-          {tab === 'ventes' && <VentesTab data={data} />}
+          {tab === 'overview' && <OverviewTab data={data} seuil={seuilCoutMatiere(data)} />}
+          {tab === 'ventes' && <VentesTab data={data} seuil={seuilCoutMatiere(data)} />}
           {tab === 'achats' && <AchatsTab data={data} />}
           {tab === 'pertes' && <PertesTab data={data} />}
           {tab === 'labo' && <LaboTab data={data} moduleAcheteurs={!!options?.modules?.acheteurs} />}
@@ -452,7 +466,7 @@ const twoCols: React.CSSProperties = { display: 'grid', gridTemplateColumns: 're
 // ─────────────────────────────────────────────────────────────────────────────
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-function OverviewTab({ data }: { data: any }) {
+function OverviewTab({ data, seuil }: { data: any; seuil: number }) {
   if (data.vide || !data.kpis) return <EmptyHint text="Aucune donnée dans le périmètre." />;
   const k: Kpis = data.kpis;
   const a = data.alertes ?? {};
@@ -463,7 +477,7 @@ function OverviewTab({ data }: { data: any }) {
         <KpiCard icon="📈" label="Marge brute" value={fmtDT(k.marge_brute)} delta={k.deltas?.marge_brute} accent="#16a34a" sub={k.taux_marge_pct != null ? `${k.taux_marge_pct}% du CA` : undefined} />
         <KpiCard icon="🤝" label="Après commissions" value={fmtDT(k.marge_apres_com)} delta={k.deltas?.marge_apres_com} accent="#d97706" sub={`commissions ${fmtDT(k.commissions)}`} />
         <KpiCard icon="🏁" label="Marge nette estimée" value={fmtDT(k.marge_nette)} delta={k.deltas?.marge_nette} accent={k.marge_nette >= 0 ? '#16a34a' : '#dc2626'} sub={`charges fixes ${fmtDT(k.charges)}`} />
-        <KpiCard icon="🍔" label="Food cost" value={k.food_cost_pct != null ? `${k.food_cost_pct}%` : '—'} delta={k.deltas?.food_cost_pts} inverse accent={k.food_cost_pct != null && k.food_cost_pct > 40 ? '#dc2626' : '#2563eb'} sub={`coût matière ${fmtDT(k.cout_matiere)}`} />
+        <KpiCard icon="🍔" label="Food cost" value={k.food_cost_pct != null ? `${k.food_cost_pct}%` : '—'} delta={k.deltas?.food_cost_pts} inverse accent={k.food_cost_pct != null && k.food_cost_pct > seuil ? '#dc2626' : '#2563eb'} sub={`coût matière ${fmtDT(k.cout_matiere)}`} />
         <KpiCard icon="🗑️" label="Pertes" value={fmtDT(k.pertes)} delta={k.deltas?.pertes} inverse accent="#ef4444" sub={k.pertes_pct_ca != null ? `${fmtNum(k.pertes_pct_ca)}% du CA` : undefined} />
         <KpiCard icon="🏬" label="Valeur du stock" value={fmtDT(k.valeur_stock ?? 0)} accent="#8b5cf6" sub="à l'instant (hors période)" />
         {/* Présent seulement si le module Acheteurs est actif (champ omis sinon) */}
@@ -476,7 +490,7 @@ function OverviewTab({ data }: { data: any }) {
       {(a.stock_bas > 0 || a.food_cost_eleve > 0 || a.jours_inventaire == null || a.jours_inventaire > 30) && (
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
           {a.stock_bas > 0 && <span style={alertPill('#fef3c7', '#92400e')}>⚠️ {a.stock_bas} article{a.stock_bas > 1 ? 's' : ''} sous le seuil — voir Achats & stock</span>}
-          {a.food_cost_eleve > 0 && <span style={alertPill('#fee2e2', '#b91c1c')}>🍔 {a.food_cost_eleve} produit{a.food_cost_eleve > 1 ? 's' : ''} à food cost &gt; 40%</span>}
+          {a.food_cost_eleve > 0 && <span style={alertPill('#fee2e2', '#b91c1c')}>🍔 {a.food_cost_eleve} produit{a.food_cost_eleve > 1 ? 's' : ''} à food cost &gt; {seuil}%</span>}
           {a.jours_inventaire == null
             ? <span style={alertPill('#e0e7ff', '#3730a3')}>📋 Aucun inventaire enregistré</span>
             : a.jours_inventaire > 30 && <span style={alertPill('#e0e7ff', '#3730a3')}>📋 Dernier inventaire il y a {a.jours_inventaire} j</span>}
@@ -490,7 +504,7 @@ function OverviewTab({ data }: { data: any }) {
   );
 }
 
-function VentesTab({ data }: { data: any }) {
+function VentesTab({ data, seuil }: { data: any; seuil: number }) {
   if (data.vide || !data.kpis) return <EmptyHint text="Aucune activité dans le périmètre." />;
   const k: Kpis = data.kpis;
   const canalCols: ColonneDef<any>[] = [
@@ -499,7 +513,7 @@ function VentesTab({ data }: { data: any }) {
     { key: 'marge_brute', label: 'Marge brute', fmt: (v) => fmtDT(Number(v)) },
     { key: 'commissions', label: 'Commissions', fmt: (v) => (Number(v) > 0 ? `− ${fmtDT(Number(v))}` : '—') },
     { key: 'marge_apres_com', label: 'Marge canal', fmt: (v) => <strong style={{ color: Number(v) >= 0 ? '#16a34a' : '#dc2626' }}>{fmtDT(Number(v))}</strong> },
-    { key: 'food_cost_pct', label: 'Food cost', fmt: (v) => <FoodCostBadge pct={v as number | null} /> },
+    { key: 'food_cost_pct', label: 'Food cost', fmt: (v) => <FoodCostBadge pct={v as number | null} seuil={seuil} /> },
   ];
   const prodCols: ColonneDef<any>[] = [
     { key: 'nom', label: 'Produit', align: 'left', fmt: (v) => <strong style={{ color: '#1e293b' }}>{String(v)}</strong> },
@@ -508,7 +522,7 @@ function VentesTab({ data }: { data: any }) {
     { key: 'ca', label: 'CA', fmt: (v) => fmtDT(Number(v)) },
     { key: 'part_ca_pct', label: '% CA', fmt: (v) => `${fmtNum(Number(v))}%` },
     { key: 'marge_brute', label: 'Marge', fmt: (v) => fmtDT(Number(v)) },
-    { key: 'food_cost_pct', label: 'Food cost', fmt: (v) => <FoodCostBadge pct={v as number | null} /> },
+    { key: 'food_cost_pct', label: 'Food cost', fmt: (v) => <FoodCostBadge pct={v as number | null} seuil={seuil} /> },
   ];
   return (
     <>
@@ -619,7 +633,7 @@ function PertesTab({ data }: { data: any }) {
       <div style={{ height: 14 }} />
       <div style={twoCols}>
         <ChartCard title="Par type" height={240}>
-          <DonutChart data={(data.par_type ?? []).map((t: any) => ({ ...t, label: t.type === 'avarie' ? 'Avaries' : 'Déchets' }))} nameKey="label" />
+          <DonutChart data={(data.par_type ?? []).map((t: any) => ({ ...t, label: perteLabel(t.type, true) }))} nameKey="label" />
         </ChartCard>
         <ChartCard title="Par site (activités et labos)" height="auto">
           <HBarList rows={data.par_site ?? []} labelKey="site" color="#8b5cf6" max={10} />
@@ -647,6 +661,14 @@ function LaboTab({ data, moduleAcheteurs = false }: { data: any; moduleAcheteurs
         <KpiCard icon="🛒" label="Achats (période)" value={fmtDT(k.appros)} sub={`${k.nb_appros} appro${k.nb_appros > 1 ? 's' : ''}`} />
         <KpiCard icon="🏭" label="Production PT" value={fmtDT(k.production_pt)} accent="#0d9488" sub={`${k.nb_productions} production${k.nb_productions > 1 ? 's' : ''}`} />
         <KpiCard icon="🔁" label="Transferts émis" value={fmtDT(k.transferts)} accent="#2563eb" sub={`${k.nb_transferts} transfert${k.nb_transferts > 1 ? 's' : ''}`} />
+        {/* Lot 1b : cessions labo→labo et réceptions internes (labo alimenté par un autre labo) —
+            rendus seulement s'il y en a : aucun changement pour un compte à un seul labo. */}
+        {Number(k.nb_cessions_labo) > 0 && (
+          <KpiCard icon="🏭" label="Cessions labo→labo" value={fmtDT(k.cessions_labo)} accent="#7c3aed" sub={`${k.nb_cessions_labo} cession${k.nb_cessions_labo > 1 ? 's' : ''}`} />
+        )}
+        {Number(k.nb_receptions_labo) > 0 && (
+          <KpiCard icon="📥" label="Réceptions internes" value={fmtDT(k.receptions_labo)} accent="#0e7490" sub={`${k.nb_receptions_labo} réception${k.nb_receptions_labo > 1 ? 's' : ''} (hors achats)`} />
+        )}
         <KpiCard icon="🗑️" label="Pertes labo" value={fmtDT(k.pertes)} accent="#ef4444" />
         {k.ventes_labo > 0 && <KpiCard icon="💵" label="Ventes labo" value={fmtDT(k.ventes_labo)} sub={`${k.nb_ventes_labo} vente${k.nb_ventes_labo > 1 ? 's' : ''}`} />}
         {/* Module actif : la carte reste visible même à 0 (le compte suit son option) */}
@@ -668,7 +690,7 @@ function LaboTab({ data, moduleAcheteurs = false }: { data: any; moduleAcheteurs
           <HBarList rows={data.top_transferts ?? []} labelKey="nom" color="#2563eb" max={8} />
         </ChartCard>
         <ChartCard title="Pertes par type" height="auto">
-          <HBarList rows={(data.pertes_par_type ?? []).map((t: any) => ({ ...t, label: t.type === 'avarie' ? 'Avaries' : 'Déchets' }))} labelKey="label" color="#ef4444" max={4} />
+          <HBarList rows={(data.pertes_par_type ?? []).map((t: any) => ({ ...t, label: perteLabel(t.type, true) }))} labelKey="label" color="#ef4444" max={4} />
         </ChartCard>
       </div>
     </>

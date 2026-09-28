@@ -5,13 +5,35 @@ import api from '../../api/client';
 import GuideButton from './GuideButton';
 import { useAuth } from '../../context/AuthContext';
 import HistoryFilterBar, { FilterField, FilterInput } from '../common/HistoryFilterBar';
-import type { Activite, ActiviteIngredient, Labo, AbonnementConfig } from '../../types';
+import type { Activite, ActiviteIngredient, Labo, AbonnementConfig, Composant, UniteOperationnelleFields } from '../../types';
 
-type ActiviteForm = { nom: string; adresse: string };
-const emptyForm = (): ActiviteForm => ({ nom: '', adresse: '' });
+type ActiviteForm = { nom: string; adresse: string; composantId: number | null };
+const emptyForm = (): ActiviteForm => ({ nom: '', adresse: '', composantId: null });
 
-type BizActForm = { nom: string; adresse: string; useLabo: boolean | null };
-const emptyBizAct = (): BizActForm => ({ nom: '', adresse: '', useLabo: null });
+type BizActForm = { nom: string; adresse: string; useLabo: boolean | null; composantId: number | null };
+const emptyBizAct = (): BizActForm => ({ nom: '', adresse: '', useLabo: null, composantId: null });
+
+type LaboForm = { nom: string; refLabo: string; adresse: string; composantId: number | null; laboParentId: number | '' };
+const emptyLaboForm = (): LaboForm => ({ nom: '', refLabo: '', adresse: '', composantId: null, laboParentId: '' });
+
+// Lot 1b — composants du domaine (Restaurant, Bar, Cuisine, Économat…) : menu trié
+// comme le serveur (ordre, id). Le select composant n'est rendu QUE si le domaine a
+// ≥ 2 composants ACTIFS du type technique ; sinon le défaut est envoyé silencieusement
+// (aucun changement visuel pour un compte restauration à 1 composant par type).
+const composantsActifs = (all: Composant[] | undefined | null, type: 'activite' | 'labo'): Composant[] =>
+  (all ?? [])
+    .filter((c) => c.actif !== false && c.typeTechnique === type && typeof c.id === 'number')
+    .slice()
+    .sort((a, b) => (a.ordre ?? 0) - (b.ordre ?? 0) || (a.id ?? 0) - (b.id ?? 0));
+const composantLabel = (c: Composant): string => `${c.icone ? `${c.icone} ` : ''}${c.libelle}`;
+// Répartition informative « 1 Restaurant · 0 Bar » (unités sans composant imputées au 1er, comme le serveur).
+const repartitionComposants = (unites: UniteOperationnelleFields[], comps: Composant[]): string => {
+  const defautId = comps[0]?.id ?? null;
+  return comps.map((c) => {
+    const n = unites.filter((u) => (u.composant?.id ?? defautId) === c.id).length;
+    return `${n} ${n > 1 ? (c.libellePluriel || c.libelle) : c.libelle}`;
+  }).join(' · ');
+};
 
 interface Props {
   onCreated?: () => void;
@@ -62,7 +84,7 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
   // Standalone labo add/edit modal (single step)
   const [showLaboModal, setShowLaboModal] = useState(false);
   const [editingLaboId, setEditingLaboId] = useState<number | null>(null);
-  const [laboFormData, setLaboFormData] = useState({ nom: '', refLabo: '', adresse: '' });
+  const [laboFormData, setLaboFormData] = useState<LaboForm>(emptyLaboForm());
   const [laboSelectedActivities, setLaboSelectedActivities] = useState<number[]>([]);
   const [laboSaving, setLaboSaving] = useState(false);
   const [laboError, setLaboError] = useState('');
@@ -73,6 +95,8 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
   const [bizLaboForm, setBizLaboForm] = useState({ nom: '', refLabo: '', adresse: '' });
   const [bizLaboSkip, setBizLaboSkip] = useState(false);
   const [bizActForms, setBizActForms] = useState<BizActForm[]>([emptyBizAct()]);
+  // Labo déjà créé par le wizard : un « Réessayer » après une erreur ne le recrée jamais.
+  const [bizCreatedLaboId, setBizCreatedLaboId] = useState<number | null>(null);
   const [bizSaving, setBizSaving] = useState(false);
   const [bizError, setBizError] = useState('');
 
@@ -119,11 +143,51 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
   const atLaboLimit = maxLabos !== null && labos.length >= maxLabos;
   const configHasLabo = maxLabos !== null && maxLabos > 0;
 
+  // ── Lot 1b : composants du domaine (profil exposé par /auth/me) ────────────
+  const composantsActivite = composantsActifs(user?.domaine?.composants, 'activite');
+  const composantsLabo = composantsActifs(user?.domaine?.composants, 'labo');
+  const showComposantActivite = composantsActivite.length >= 2;
+  const showComposantLabo = composantsLabo.length >= 2;
+  const defaultComposantActiviteId: number | null = composantsActivite[0]?.id ?? null;
+  const defaultComposantLaboId: number | null = composantsLabo[0]?.id ?? null;
+  const composantById = (id: number | null | undefined, comps: Composant[]): Composant | null =>
+    id == null ? null : (comps.find((c) => c.id === id) ?? null);
+
+  // Source d'un labo (« Alimenté par ») : laboParentId si exposé, sinon via sourceUniteId ↔ uniteId.
+  const laboSourceId = (l: Labo): number | null => {
+    if (typeof l.laboParentId !== 'undefined') return l.laboParentId ?? null;
+    if (l.sourceUniteId == null) return null;
+    return labos.find((x) => x.uniteId != null && x.uniteId === l.sourceUniteId)?.id ?? null;
+  };
+  const laboSourceNom = (l: Labo): string | null => {
+    const sid = laboSourceId(l);
+    return sid == null ? null : (labos.find((x) => x.id === sid)?.nom ?? null);
+  };
+  // Labos alimentés (directement ou en chaîne) par un labo : exclus des sources proposées (anti-cycle côté UI ;
+  // le serveur refuse de toute façon un cycle par 400 CYCLE_INTERDIT).
+  const laboDescendants = (rootId: number): Set<number> => {
+    const out = new Set<number>();
+    const stack = [rootId];
+    while (stack.length) {
+      const cur = stack.pop()!;
+      for (const l of labos) {
+        if (laboSourceId(l) === cur && !out.has(l.id)) { out.add(l.id); stack.push(l.id); }
+      }
+    }
+    return out;
+  };
+  const laboParentOptions = (() => {
+    if (!editingLaboId) return labos;
+    const excluded = laboDescendants(editingLaboId);
+    return labos.filter((l) => l.id !== editingLaboId && !excluded.has(l.id));
+  })();
+  const anyLaboHasSource = labos.some((l) => laboSourceId(l) != null);
+
   // ── Activité modal ───────────────────────────────────────────────────────
   const openAdd = () => {
     setEditingId(null);
     setIsDuplicate(false);
-    setForm(emptyForm());
+    setForm({ ...emptyForm(), composantId: defaultComposantActiviteId });
     setHasLabo(null);
     setSelectedLaboId('');
     setError('');
@@ -133,7 +197,11 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
   const openEdit = (act: Activite) => {
     setEditingId(act.id);
     setIsDuplicate(false);
-    setForm({ nom: act.nom, adresse: act.adresse || '' });
+    setForm({
+      nom: act.nom,
+      adresse: act.adresse || '',
+      composantId: composantById(act.composant?.id, composantsActivite)?.id ?? defaultComposantActiviteId,
+    });
     setHasLabo(act.laboId ? true : false);
     setSelectedLaboId(act.laboId ?? '');
     setError('');
@@ -168,6 +236,10 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
           : undefined;
         const updatePayload: Record<string, unknown> = { nom: form.nom, adresse: form.adresse };
         if (typeof laboIdValue !== 'undefined') updatePayload.laboId = laboIdValue;
+        // composantId seulement s'il CHANGE : setComposant repose les flags vente/production du
+        // composant — un simple re-enregistrement ne doit pas écraser un flag réglé par unité.
+        const currentComposantId = activites.find((a) => a.id === editingId)?.composant?.id ?? null;
+        if (form.composantId != null && form.composantId !== currentComposantId) updatePayload.composantId = form.composantId;
         await api.put(`/api/entreprise/activites/${editingId}`, updatePayload);
         setMsg(t('client.entreprise.activity_updated'));
         setTimeout(() => setMsg(''), 3000);
@@ -178,6 +250,7 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
         const laboId: number | null = hasLabo === true && selectedLaboId ? Number(selectedLaboId) : null;
         const payload: Record<string, unknown> = { nom: form.nom, adresse: form.adresse };
         if (laboId) payload.laboId = laboId;
+        if (form.composantId != null) payload.composantId = form.composantId;
         await api.post('/api/entreprise/activites', payload);
         if (onCreated) onCreated();
         if (isFirst && user?.onboardingStep === 2) await advanceOnboarding(3);
@@ -220,7 +293,7 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
   // ── Labo modal ───────────────────────────────────────────────────────────
   const openAddLabo = () => {
     setEditingLaboId(null);
-    setLaboFormData({ nom: '', refLabo: '', adresse: '' });
+    setLaboFormData({ ...emptyLaboForm(), composantId: defaultComposantLaboId });
     setLaboSelectedActivities([]);
     setLaboError('');
     setShowLaboModal(true);
@@ -228,7 +301,13 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
 
   const openEditLabo = (labo: Labo) => {
     setEditingLaboId(labo.id);
-    setLaboFormData({ nom: labo.nom, refLabo: labo.refLabo || '', adresse: labo.adresse || '' });
+    setLaboFormData({
+      nom: labo.nom,
+      refLabo: labo.refLabo || '',
+      adresse: labo.adresse || '',
+      composantId: composantById(labo.composant?.id, composantsLabo)?.id ?? defaultComposantLaboId,
+      laboParentId: laboSourceId(labo) ?? '',
+    });
     setLaboError('');
     setShowLaboModal(true);
   };
@@ -258,16 +337,31 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
     setLaboSaving(true);
     setLaboError('');
     try {
+      // « Alimenté par » (lot 1b) : laboParentId — null = aucune source (vide le rattachement en édition).
+      const laboParentId = laboFormData.laboParentId === '' ? null : Number(laboFormData.laboParentId);
+      const editingLabo = editingLaboId ? labos.find((l) => l.id === editingLaboId) ?? null : null;
+      const currentComposantId = editingLabo?.composant?.id ?? null;
+      // composantId seulement à la création ou s'il CHANGE (setComposant repose les flags du composant).
+      const composantPart = laboFormData.composantId != null && (!editingLabo || laboFormData.composantId !== currentComposantId)
+        ? { composantId: laboFormData.composantId } : {};
       if (editingLaboId) {
+        // laboParentId (PUT : absent = inchangé) envoyé seulement si le select est rendu ou si la valeur change.
+        const currentParentId = editingLabo ? laboSourceId(editingLabo) ?? null : null;
+        const parentPart = laboParentOptions.length > 0 || laboParentId !== currentParentId ? { laboParentId } : {};
         await api.put(`/api/labo/${editingLaboId}`, {
           nom: laboFormData.nom.trim(),
           adresse: laboFormData.adresse.trim() || undefined,
+          ...parentPart,
+          ...composantPart,
         });
+        window.dispatchEvent(new Event('labos-changed'));
       } else {
         await api.post('/api/labo', {
           nom: laboFormData.nom.trim(),
           refLabo: laboFormData.refLabo.trim(),
           adresse: laboFormData.adresse.trim() || undefined,
+          ...(laboParentId != null ? { laboParentId } : {}),
+          ...composantPart,
           ...(laboSelectedActivities.length > 0 ? { activityIds: laboSelectedActivities } : {}),
         });
         window.dispatchEvent(new Event('labos-changed'));
@@ -285,7 +379,8 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
   const openBizWizard = () => {
     setBizLaboForm({ nom: '', refLabo: '', adresse: '' });
     setBizLaboSkip(false);
-    setBizActForms([emptyBizAct()]);
+    setBizActForms([{ ...emptyBizAct(), composantId: defaultComposantActiviteId }]);
+    setBizCreatedLaboId(null);
     setBizError('');
     setBizStep(configHasLabo ? 1 : 2);
     setShowBizWizard(true);
@@ -304,7 +399,7 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
 
   const bizAddSlot = () => {
     if (maxActivites === null || bizActForms.length < maxActivites) {
-      setBizActForms((p) => [...p, emptyBizAct()]);
+      setBizActForms((p) => [...p, { ...emptyBizAct(), composantId: defaultComposantActiviteId }]);
     }
   };
 
@@ -317,31 +412,51 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
     const validActs = bizActForms.filter((f) => f.nom.trim());
     setBizSaving(true);
     setBizError('');
+    const isFirst = activites.length === 0;
+    let createdCount = 0;
+    // Effets d'une création réussie (même partielle) : rafraîchissements + onboarding.
+    const afterCreated = async () => {
+      if (createdCount === 0) return;
+      if (onCreated) onCreated();
+      if (isFirst && user?.onboardingStep === 2) await advanceOnboarding(3);
+      window.dispatchEvent(new Event('activites-changed'));
+    };
     try {
-      let createdLaboId: number | null = null;
-      if (configHasLabo && !bizLaboSkip && bizLaboForm.nom.trim() && bizLaboForm.refLabo.trim()) {
+      let laboId: number | null = bizCreatedLaboId;
+      if (laboId === null && configHasLabo && !bizLaboSkip && bizLaboForm.nom.trim() && bizLaboForm.refLabo.trim()) {
         const res = await api.post('/api/labo', {
           nom: bizLaboForm.nom.trim(),
           refLabo: bizLaboForm.refLabo.trim(),
           adresse: bizLaboForm.adresse.trim() || undefined,
+          ...(defaultComposantLaboId != null ? { composantId: defaultComposantLaboId } : {}),
         });
-        createdLaboId = res.data?.id ?? null;
+        laboId = res.data?.id ?? null;
+        setBizCreatedLaboId(laboId);
         window.dispatchEvent(new Event('labos-changed'));
       }
-      const isFirst = activites.length === 0;
       for (const act of validActs) {
         const payload: Record<string, unknown> = { nom: act.nom.trim(), adresse: act.adresse.trim() };
-        if (createdLaboId && act.useLabo === true) payload.laboId = createdLaboId;
+        if (laboId && act.useLabo === true) payload.laboId = laboId;
+        const composantId = act.composantId ?? defaultComposantActiviteId;
+        if (composantId != null) payload.composantId = composantId;
         await api.post('/api/entreprise/activites', payload);
+        createdCount += 1;
+        // Slot réussi retiré IMMÉDIATEMENT : un nouveau clic après une erreur ne recrée
+        // jamais une activité déjà créée (plus de doublons).
+        setBizActForms((prev) => prev.filter((f) => f !== act));
       }
-      if (validActs.length > 0 && onCreated) onCreated();
-      if (validActs.length > 0 && isFirst && user?.onboardingStep === 2) await advanceOnboarding(3);
-      if (validActs.length > 0) window.dispatchEvent(new Event('activites-changed'));
+      await afterCreated();
       closeBizWizard();
       await load();
     } catch (err: unknown) {
-      const errMsg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
-      setBizError(errMsg || t('common.error'));
+      const data = (err as { response?: { data?: { code?: string; message?: string } } })?.response?.data;
+      await afterCreated();
+      // 409 LIMITE_ATTEINTE : compteurs rechargés (le bouton se désactive si la limite
+      // est atteinte), slots restants conservés, message serveur en bandeau. La liste est aussi
+      // rechargée dès qu'au moins une activité a été créée (erreur ≠ 409 sur un slot suivant).
+      if (createdCount > 0 || data?.code === 'LIMITE_ATTEINTE') await load();
+      setBizActForms((prev) => (prev.length > 0 ? prev : [{ ...emptyBizAct(), composantId: defaultComposantActiviteId }]));
+      setBizError(data?.message || t('common.error'));
     }
     setBizSaving(false);
   };
@@ -368,7 +483,11 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
     !filterName || l.nom.toLowerCase().includes(filterName.toLowerCase())
   );
 
-  const usedLabos = new Set(activites.filter((a) => a.laboId).map((a) => a.laboId)).size;
+  // Lot 1b : le compteur Labos = labos existants (un Économat qui n'alimente qu'une
+  // Cuisine compte aussi) ; les quotas restent par TYPE technique (nbActivites/nbLabos).
+  const usedLabos = labos.length;
+  const repartitionActivites = showComposantActivite ? repartitionComposants(activites, composantsActivite) : '';
+  const repartitionLabos = showComposantLabo ? repartitionComposants(labos, composantsLabo) : '';
 
   // Show empty-state card only when truly nothing exists
   const showEmptyCard = !loading && activites.length === 0 && labos.length === 0;
@@ -406,6 +525,11 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                   <div style={{ fontSize: '1.4rem', fontWeight: 900, color: atActiviteLimit ? '#dc2626' : activites.length > 0 ? '#16a34a' : '#fff', lineHeight: 1 }}>
                     {activites.length}<span style={{ fontSize: '0.8rem', fontWeight: 600, color: atActiviteLimit || activites.length > 0 ? '#6b7280' : 'rgba(255,255,255,0.6)' }}> / {abonnementConfig.nbActivites}</span>
                   </div>
+                  {repartitionActivites && (
+                    <div style={{ fontSize: '0.66rem', fontWeight: 600, color: atActiviteLimit || activites.length > 0 ? '#6b7280' : 'rgba(255,255,255,0.7)', marginTop: 4, whiteSpace: 'nowrap' }}>
+                      {repartitionActivites}
+                    </div>
+                  )}
                 </div>
                 )}
                 {abonnementConfig.nbLabos > 0 && (
@@ -418,6 +542,11 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                     <div style={{ fontSize: '1.4rem', fontWeight: 900, color: atLaboLimit ? '#dc2626' : usedLabos > 0 ? '#7c3aed' : '#fff', lineHeight: 1 }}>
                       {usedLabos}<span style={{ fontSize: '0.8rem', fontWeight: 600, color: atLaboLimit || usedLabos > 0 ? '#6b7280' : 'rgba(255,255,255,0.6)' }}> / {abonnementConfig.nbLabos}</span>
                     </div>
+                    {repartitionLabos && (
+                      <div style={{ fontSize: '0.66rem', fontWeight: 600, color: atLaboLimit || usedLabos > 0 ? '#6b7280' : 'rgba(255,255,255,0.7)', marginTop: 4, whiteSpace: 'nowrap' }}>
+                        {repartitionLabos}
+                      </div>
+                    )}
                   </div>
                 )}
               </>
@@ -576,7 +705,18 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                   <tbody>
                     {filteredActivites.map((act) => (
                       <tr key={act.id}>
-                        <td style={{ fontWeight: 700 }}>{act.nom}</td>
+                        <td style={{ fontWeight: 700 }}>
+                          {act.nom}
+                          {/* Badge composant (lot 1b) : seulement si le domaine a ≥ 2 composants activité */}
+                          {showComposantActivite && (() => {
+                            const c = composantById(act.composant?.id, composantsActivite) ?? composantsActivite[0];
+                            return c ? (
+                              <span style={{ marginLeft: 8, fontSize: '0.7rem', fontWeight: 700, color: '#1e40af', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 20, padding: '1px 8px', whiteSpace: 'nowrap' }}>
+                                {composantLabel(c)}
+                              </span>
+                            ) : null;
+                          })()}
+                        </td>
                         <td style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{act.adresse || '—'}</td>
                         {activites.some((a) => a.laboId) && (
                           <td>
@@ -659,15 +799,38 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                         <th>Nom</th>
                         <th style={{ width: 120 }}>Réf.</th>
                         <th>Adresse</th>
+                        {/* Colonne « Alimenté par » (lot 1b) : seulement si au moins un labo a une source */}
+                        {anyLaboHasSource && <th style={{ width: 150 }}>Alimenté par</th>}
                         <th style={{ width: 80, textAlign: 'right' }}></th>
                       </tr>
                     </thead>
                     <tbody>
                       {filteredLabos.map((labo) => (
                         <tr key={labo.id}>
-                          <td style={{ fontWeight: 700 }}>{labo.nom}</td>
+                          <td style={{ fontWeight: 700 }}>
+                            {labo.nom}
+                            {showComposantLabo && (() => {
+                              const c = composantById(labo.composant?.id, composantsLabo) ?? composantsLabo[0];
+                              return c ? (
+                                <span style={{ marginLeft: 8, fontSize: '0.7rem', fontWeight: 700, color: '#7c3aed', background: '#f5f3ff', border: '1px solid #c4b5fd', borderRadius: 20, padding: '1px 8px', whiteSpace: 'nowrap' }}>
+                                  {composantLabel(c)}
+                                </span>
+                              ) : null;
+                            })()}
+                          </td>
                           <td style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{labo.refLabo || '—'}</td>
                           <td style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{labo.adresse || '—'}</td>
+                          {anyLaboHasSource && (
+                            <td>
+                              {laboSourceNom(labo) ? (
+                                <span style={{ fontSize: '0.78rem', fontWeight: 600, color: '#7c3aed', background: '#ede9fe', border: '1px solid #c4b5fd', borderRadius: 20, padding: '2px 8px', whiteSpace: 'nowrap' }}>
+                                  ↙ {laboSourceNom(labo)}
+                                </span>
+                              ) : (
+                                <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>—</span>
+                              )}
+                            </td>
+                          )}
                           <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
                             <button className="btn btn-ghost btn-sm" title="Modifier" onClick={() => openEditLabo(labo)}>✏️</button>
                             {(() => {
@@ -739,6 +902,17 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                   )}
                 </div>
 
+                {/* Composant du domaine (lot 1b) — rendu seulement si ≥ 2 composants activité actifs */}
+                {showComposantActivite && (
+                  <div style={fieldWrap}>
+                    <label style={fieldLabel}>Type <span style={{ color: '#ef4444' }}>*</span></label>
+                    <select className="input" style={{ width: '100%' }} value={form.composantId ?? ''}
+                      onChange={(e) => setForm((f) => ({ ...f, composantId: e.target.value === '' ? null : Number(e.target.value) }))}>
+                      {composantsActivite.map((c) => <option key={c.id} value={c.id}>{composantLabel(c)}</option>)}
+                    </select>
+                  </div>
+                )}
+
                 {/* Adresse */}
                 <div style={fieldWrap}>
                   <label style={fieldLabel}>{t('client.entreprise.activity_adresse')}</label>
@@ -751,7 +925,8 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                   />
                 </div>
 
-                {/* Labo config — when labos exist (create or edit) */}
+                {/* « Alimentée par » (lot 1b) = le bloc Configuration laboratoire existant :
+                    mêmes radios Avec/Sans labo, envoie `laboId` (compat) — aucun champ ajouté */}
                 {labos.length > 0 && (
                   <>
                     <div style={dividerStyle} />
@@ -941,6 +1116,17 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                   placeholder="Ex: Labo Central" autoFocus />
               </div>
 
+              {/* Composant du domaine (lot 1b) — rendu seulement si ≥ 2 composants labo actifs */}
+              {showComposantLabo && (
+                <div style={fieldWrap}>
+                  <label style={fieldLabel}>Type <span style={{ color: '#ef4444' }}>*</span></label>
+                  <select className="input" style={{ width: '100%' }} value={laboFormData.composantId ?? ''}
+                    onChange={(e) => setLaboFormData((p) => ({ ...p, composantId: e.target.value === '' ? null : Number(e.target.value) }))}>
+                    {composantsLabo.map((c) => <option key={c.id} value={c.id}>{composantLabel(c)}</option>)}
+                  </select>
+                </div>
+              )}
+
               {/* Ref labo (new only) */}
               {!editingLaboId && (
                 <div style={fieldWrap}>
@@ -961,6 +1147,22 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                   onChange={(e) => setLaboFormData((p) => ({ ...p, adresse: e.target.value }))}
                   placeholder="Adresse (optionnel)" style={{ resize: 'none' }} />
               </div>
+
+              {/* « Alimenté par » (lot 1b) : labo source des transferts reçus — création ET édition,
+                  seulement s'il existe un autre labo ; vide = aucune source. Envoie `laboParentId`. */}
+              {laboParentOptions.length > 0 && (
+                <div style={fieldWrap}>
+                  <label style={fieldLabel}>
+                    Alimenté par
+                    <span style={{ fontWeight: 400, color: '#9ca3af', fontSize: '0.72rem', marginLeft: 5 }}>(labo source des transferts, optionnel)</span>
+                  </label>
+                  <select className="input" style={{ width: '100%' }} value={laboFormData.laboParentId}
+                    onChange={(e) => setLaboFormData((p) => ({ ...p, laboParentId: e.target.value === '' ? '' : Number(e.target.value) }))}>
+                    <option value="">— Aucune source —</option>
+                    {laboParentOptions.map((l) => <option key={l.id} value={l.id}>🏭 {l.nom}{l.refLabo ? ` (${l.refLabo})` : ''}</option>)}
+                  </select>
+                </div>
+              )}
 
               {/* Activités assignment — only when creating and activités exist */}
               {!editingLaboId && activites.length > 0 && (
@@ -1151,6 +1353,16 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                         placeholder="Ex: Point de vente Tunis"
                         autoFocus={idx === 0} />
                     </div>
+                    {/* Composant par slot (lot 1b) — même règle d'affichage (≥ 2 composants activité) */}
+                    {showComposantActivite && (
+                      <div style={fieldWrap}>
+                        <label style={fieldLabel}>Type <span style={{ color: '#ef4444' }}>*</span></label>
+                        <select className="input" style={{ width: '100%' }} value={af.composantId ?? ''}
+                          onChange={(e) => { const v = e.target.value === '' ? null : Number(e.target.value); setBizActForms((p) => p.map((f, i) => i === idx ? { ...f, composantId: v } : f)); }}>
+                          {composantsActivite.map((c) => <option key={c.id} value={c.id}>{composantLabel(c)}</option>)}
+                        </select>
+                      </div>
+                    )}
                     <div style={fieldWrap}>
                       <label style={fieldLabel}>Adresse</label>
                       <input type="text" className="input" value={af.adresse}
@@ -1228,7 +1440,9 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                   {!configHasLabo && (
                     <button type="button" className="btn btn-secondary" onClick={closeBizWizard}>{t('common.cancel')}</button>
                   )}
-                  <button type="button" className="btn btn-primary" onClick={bizSaveAll} disabled={bizSaving}
+                  <button type="button" className="btn btn-primary" onClick={bizSaveAll}
+                    disabled={bizSaving || atActiviteLimit || (bizCreatedLaboId === null && !bizLaboSkip && configHasLabo && atLaboLimit && !!bizLaboForm.nom.trim())}
+                    title={atActiviteLimit ? 'Limite d\'activités de votre abonnement atteinte' : (bizCreatedLaboId === null && !bizLaboSkip && configHasLabo && atLaboLimit && !!bizLaboForm.nom.trim()) ? 'Limite de labos de votre abonnement atteinte' : undefined}
                     style={{ minWidth: 140, fontWeight: 700, background: 'linear-gradient(135deg, #1e3a8a, #3b82f6)', borderColor: '#1e3a8a' }}>
                     {bizSaving ? '…' : '✅ Enregistrer tout'}
                   </button>
@@ -1253,6 +1467,7 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                 <p style={{ margin: '0 0 6px', fontWeight: 700 }}>⚠ Attention — impacts de la suppression :</p>
                 <ul style={{ margin: 0, paddingLeft: 18 }}>
                   <li>Les activités liées à ce labo passeront en <strong>mode gestion séparée</strong>.</li>
+                  <li>Les labos alimentés par ce labo perdront leur source.</li>
                   <li>Aucune activité ne pourra plus recevoir de transferts depuis ce labo.</li>
                 </ul>
               </div>

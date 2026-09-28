@@ -2,80 +2,55 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../../api/client';
 
-interface Summary {
-  hasActivites?: boolean;
-  hasArticles?: boolean;
-  hasSelections?: boolean;
-  hasLaboIngredients?: boolean;
+/** Répartition par composant souscrit de l'étape « capacités » (lot 1b, §3.5). */
+interface EtapeComposant {
+  code: string;
+  libelle: string;
+  attendu: number;
+  crees: number;
 }
 
-interface Step {
-  done: boolean;
+/** Étape telle que renvoyée par GET /api/ai-assistant/onboarding (onboardingEtat.js). */
+interface Etape {
+  key: string;
   titre: string;
-  detail: string;
-  to: string | null;
+  fait: boolean;
+  detail: string | null;
+  route?: string | null;
+  composants?: EtapeComposant[];
+}
+
+interface OnboardingEtat {
+  complet: boolean;
+  etapes: Etape[];
+  aFaire: string | null;
 }
 
 /**
- * Checklist dynamique de mise en route, affichée en tête de la fiche
- * « Suivi de votre mise en route » du manuel. L'état est lu en direct
- * (mêmes sources que le déverrouillage progressif du menu) et les étapes
- * s'adaptent à la configuration du compte : compte dépôt (0 activité au
- * contrat = labo + acheteurs), labo, module Acheteurs.
+ * Checklist de mise en route, affichée en tête de la fiche « Suivi de votre
+ * mise en route » du manuel (fiche réservée au client : clientSeul).
+ * Lot 1b : plus AUCUN calcul local — les étapes (titre, détail, fait, route,
+ * répartition par composant) sont celles de l'endpoint d'onboarding, la même
+ * source que le guide 🤖 de la barre du haut. L'appel est un GET pur : la purge
+ * de la conversation IA est faite par AssistantWidget (POST …/onboarding/purge).
  */
 export default function OnboardingChecklist() {
-  const [summary, setSummary] = useState<Summary | null>(null);
-  const [nbLabos, setNbLabos] = useState(0);
-  const [maxActivites, setMaxActivites] = useState<number | null>(null);
-  const [moduleAcheteurs, setModuleAcheteurs] = useState(false);
-  const [hasOffreActive, setHasOffreActive] = useState(false);
+  const [etat, setEtat] = useState<OnboardingEtat | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    Promise.all([
-      api.get('/api/entreprise/activites/types-summary').then(({ data }) => data as Summary).catch(() => null),
-      api.get('/api/labo').then(({ data }) => (Array.isArray(data) ? data.length : 0)).catch(() => 0),
-      api.get('/api/abonnements/mon-abonnement').then(({ data }) => data?.config?.nbActivites ?? null).catch(() => null),
-      api.get('/api/entreprise').then(({ data }) => !!data?.module_acheteurs_actif).catch(() => false),
-    ]).then(async ([s, n, maxAct, modAch]) => {
-      setSummary(s); setNbLabos(n); setMaxActivites(maxAct); setModuleAcheteurs(modAch);
-      if (modAch) {
-        // Une offre active = l'Espace Acheteurs est prêt à vendre (l'étape est cochée)
-        try {
-          const { data } = await api.get('/api/acheteurs/offres');
-          const all = [...(data?.articles ?? []), ...(data?.produits ?? [])];
-          setHasOffreActive(all.some((o: { actif?: boolean }) => !!o.actif));
-        } catch { /* module gated ou pas encore accessible */ }
-      }
-    }).finally(() => setLoading(false));
+    api.get('/api/ai-assistant/onboarding')
+      .then(({ data }) => setEtat(data && Array.isArray(data.etapes) ? (data as OnboardingEtat) : null))
+      .catch(() => setEtat(null))
+      .finally(() => setLoading(false));
   }, []);
 
-  if (loading || summary === null) return null;
+  if (loading || etat === null || etat.etapes.length === 0) return null;
 
-  const isDepot = maxActivites === 0;
-  const hasStructure = !!summary.hasActivites || nbLabos > 0;
-  const hasArticles = !!summary.hasArticles;
-  const hasAffectations = !!summary.hasSelections || !!summary.hasLaboIngredients;
-
-  const steps: Step[] = [
-    { done: true, titre: 'Compte activé & contrat signé', detail: 'Votre accès LabFlow est ouvert.', to: null },
-    isDepot
-      ? { done: hasStructure, titre: 'Créer votre labo', detail: 'Déclarez votre laboratoire de production — c\'est lui qui porte le stock et les ventes.', to: '/client/activites' }
-      : { done: hasStructure, titre: 'Créer vos activités (et labo)', detail: 'Déclarez vos points de vente, et votre labo central si vous en avez un.', to: '/client/activites' },
-    { done: hasArticles, titre: 'Constituer le référentiel', detail: 'Créez vos unités, familles et catégories, puis vos articles.', to: '/client/referentiel/articles' },
-    isDepot
-      ? { done: hasAffectations, titre: 'Affecter les articles au labo', detail: 'Indiquez quels articles sont gérés par votre labo.', to: '/client/activites' }
-      : { done: hasAffectations, titre: 'Affecter les articles', detail: 'Indiquez quels articles sont utilisés par chaque activité ou labo.', to: '/client/activites' },
-    ...(moduleAcheteurs ? [{
-      done: hasOffreActive,
-      titre: 'Configurer l\'Espace Acheteurs',
-      detail: 'Rendez vos articles commandables, créez votre carnet d\'acheteurs et fixez vos tarifs B2B.',
-      to: '/client/acheteurs/tarifs',
-    }] : []),
-  ];
-  const doneCount = steps.filter((s) => s.done).length;
-  const allDone = doneCount === steps.length;
-  const currentIdx = steps.findIndex((s) => !s.done);
+  const steps = etat.etapes;
+  const doneCount = steps.filter((s) => s.fait).length;
+  const allDone = etat.complet || doneCount === steps.length;
+  const currentIdx = steps.findIndex((s) => !s.fait);
 
   return (
     <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 14, padding: '18px 20px', marginBottom: 24, boxShadow: '0 2px 10px rgba(15,23,42,0.05)' }}>
@@ -94,23 +69,42 @@ export default function OnboardingChecklist() {
       <div style={{ display: 'grid', gap: 8 }}>
         {steps.map((s, i) => {
           const isCurrent = i === currentIdx;
+          const composants = (s.composants ?? []).filter((c) => c && c.attendu > 0);
           return (
-            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '9px 12px', borderRadius: 10, background: isCurrent ? '#eff6ff' : 'transparent', border: `1px solid ${isCurrent ? '#bfdbfe' : 'transparent'}` }}>
+            <div key={s.key || i} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '9px 12px', borderRadius: 10, background: isCurrent ? '#eff6ff' : 'transparent', border: `1px solid ${isCurrent ? '#bfdbfe' : 'transparent'}` }}>
               <div style={{
                 width: 24, height: 24, borderRadius: '50%', flexShrink: 0,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                background: s.done ? '#16a34a' : isCurrent ? '#2563eb' : '#e2e8f0',
-                color: s.done || isCurrent ? '#fff' : '#94a3b8',
+                background: s.fait ? '#16a34a' : isCurrent ? '#2563eb' : '#e2e8f0',
+                color: s.fait || isCurrent ? '#fff' : '#94a3b8',
                 fontSize: '0.72rem', fontWeight: 800,
               }}>
-                {s.done ? '✓' : i + 1}
+                {s.fait ? '✓' : i + 1}
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: '0.84rem', fontWeight: s.done ? 600 : 700, color: s.done ? '#64748b' : '#1e293b', textDecoration: s.done ? 'line-through' : 'none' }}>{s.titre}</div>
-                {!s.done && <div style={{ fontSize: '0.76rem', color: '#64748b', marginTop: 1 }}>{s.detail}</div>}
+                <div style={{ fontSize: '0.84rem', fontWeight: s.fait ? 600 : 700, color: s.fait ? '#64748b' : '#1e293b', textDecoration: s.fait ? 'line-through' : 'none' }}>{s.titre}</div>
+                {!s.fait && s.detail && <div style={{ fontSize: '0.76rem', color: '#64748b', marginTop: 1 }}>{s.detail}</div>}
+                {/* Répartition par composant souscrit (ex. « 1/2 Restaurant · 0/1 Cuisine ») */}
+                {!s.fait && composants.length > 0 && (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 5 }}>
+                    {composants.map((c) => {
+                      const ok = c.crees >= c.attendu;
+                      return (
+                        <span key={c.code} style={{
+                          fontSize: '0.7rem', fontWeight: 700, borderRadius: 20, padding: '2px 9px',
+                          color: ok ? '#15803d' : '#1e40af',
+                          background: ok ? '#f0fdf4' : '#eff6ff',
+                          border: `1px solid ${ok ? '#bbf7d0' : '#bfdbfe'}`,
+                        }}>
+                          {Math.min(c.crees, c.attendu)}/{c.attendu} {c.libelle}
+                        </span>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
-              {isCurrent && s.to && (
-                <Link to={s.to} style={{ flexShrink: 0, background: '#2563eb', color: '#fff', borderRadius: 8, padding: '7px 13px', fontSize: '0.76rem', fontWeight: 700, textDecoration: 'none' }}>
+              {isCurrent && s.route && (
+                <Link to={s.route} style={{ flexShrink: 0, background: '#2563eb', color: '#fff', borderRadius: 8, padding: '7px 13px', fontSize: '0.76rem', fontWeight: 700, textDecoration: 'none' }}>
                   Y aller →
                 </Link>
               )}
@@ -121,9 +115,7 @@ export default function OnboardingChecklist() {
 
       {allDone && (
         <div style={{ marginTop: 12, fontSize: '0.8rem', color: '#15803d', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 10, padding: '10px 14px' }}>
-          {isDepot
-            ? <>Prochaines étapes : saisissez vos <Link to="/client/labo/stock" style={{ color: '#15803d', fontWeight: 700 }}>approvisionnements labo</Link> puis vendez à vos <Link to="/client/acheteurs/vente" style={{ color: '#15803d', fontWeight: 700 }}>acheteurs</Link>.</>
-            : <>Prochaines étapes : saisissez vos <Link to="/client/stock" style={{ color: '#15803d', fontWeight: 700 }}>approvisionnements</Link> puis composez vos <Link to="/client/products" style={{ color: '#15803d', fontWeight: 700 }}>produits et fiches techniques</Link>.</>}
+          Toutes les étapes de votre mise en route sont terminées. Le guide 🤖 réapparaîtra automatiquement si votre configuration évolue (nouvelle activité, labo, module…).
         </div>
       )}
     </div>

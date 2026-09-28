@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../api/client';
 import PortailShell from './PortailShell';
+import { isUnitePiece } from '../../utils/unitesArticles';
 
 // Portail acheteur — catalogue de commande. Tout article proposé est
 // commandable (aucune notion de disponibilité côté acheteur) : le vendeur
@@ -68,11 +69,10 @@ const depuis = (iso: string) => {
 // Quantités proposées en un tap pour un article jamais commandé. Liste blanche :
 // mieux vaut aucun raccourci qu'un non-sens (« 12 g de safran »).
 const UNITES_POIDS = new Set(['kg', 'l', 'litre', 'litres']);
-const UNITES_PIECE = new Set(['unité', 'unite', 'pièce', 'piece', 'pieces', 'pièces']);
 const chipsDe = (unite: string): number[] => {
   const u = (unite || '').trim().toLowerCase();
   if (UNITES_POIDS.has(u)) return [1, 5, 10];
-  if (UNITES_PIECE.has(u)) return [1, 6, 12];
+  if (isUnitePiece(u)) return [1, 6, 12];
   return [];
 };
 

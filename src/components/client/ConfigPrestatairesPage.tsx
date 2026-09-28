@@ -33,7 +33,8 @@ export default function ConfigPrestatairesPage() {
 
   useEffect(() => {
     api.get('/api/entreprise/activites').then(({ data }) => {
-      const acts = data as Activite[];
+      // Règle vente V1 (lot 1b) : seules les activités vendeuses (vente_active) ont des puces ici.
+      const acts = (data as (Activite & { venteActive?: boolean })[]).filter((a) => a.venteActive !== false);
       setActivites(acts);
       const paramId = searchParams.get('activiteId');
       const found = acts.find(a => String(a.id) === paramId);
