@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
 import HelpButton from '../common/HelpButton';
 import HistoryFilterBar, { FilterField, FilterInput, FilterSelect } from '../common/HistoryFilterBar';
+import type { Destination, Transfert } from '../../types';
 
 const currentYear = new Date().getFullYear();
 const yearStart = `${currentYear}-01-01`;
@@ -16,25 +17,29 @@ const fmtDate = (iso: string | null | undefined) => {
   return `${d}/${m}/${y}`;
 };
 
-interface TransferEntry {
-  id: number;
-  quantite: number;
-  dateTransfert: string;
-  note: string | null;
-  ingredientId: number;
-  ingredientNom: string;
-  uniteNom: string;
-  categorieNom: string;
-  activiteId: number;
-  activiteNom: string;
-  prixUnitaire: number | null;
-  tauxTva: number | null;
-  prixUnitaireTva: number | null;
-  createdBy: number | null;
-  createdByNom: string | null;
-}
+type TransferEntry = Transfert;
 
 interface Activite { id: number; nom: string }
+
+// Destination affichée : destNom (lot 1b) avec repli activiteNom (flux historique).
+const destNomOf = (r: Pick<Transfert, 'activiteNom' | 'destNom'>): string => r.destNom ?? r.activiteNom ?? '—';
+const isLaboDest = (r: Pick<Transfert, 'destType' | 'laboDestId'>): boolean => r.destType === 'labo' || (r.destType == null && r.laboDestId != null);
+const destCell = (r: Transfert): string => (isLaboDest(r) ? `🏭 ${destNomOf(r)}` : destNomOf(r));
+// Destinations = GET /api/labo/:id.destinations ; repli sur `activites` (rendu identique à avant le lot 1b).
+const destinationsOf = (labo: { activites?: Activite[]; destinations?: Destination[] } | null): Destination[] => {
+  if (!labo) return [];
+  if (Array.isArray(labo.destinations)) return labo.destinations;
+  return (labo.activites ?? []).map((a) => ({ destKey: `a-${a.id}`, type: 'activite' as const, id: a.id, nom: a.nom }));
+};
+// Filtre serveur : 'a-<id>' → activiteId, 'l-<id>' → laboDestId.
+const applyDestParam = (params: URLSearchParams, destKey: string) => {
+  if (!destKey) return;
+  const id = destKey.slice(2);
+  if (destKey.startsWith('l-')) params.set('laboDestId', id);
+  else params.set('activiteId', id);
+};
+const apiMsg = (e: unknown, fallback: string) =>
+  (e as { response?: { data?: { message?: string } } })?.response?.data?.message ?? fallback;
 
 export default function TransferHistoriquePage() {
   const { t } = useTranslation();
@@ -43,7 +48,7 @@ export default function TransferHistoriquePage() {
   const laboId = searchParams.get('laboId') || '';
 
   const [allLabos, setAllLabos] = useState<{ id: number; nom: string }[]>([]);
-  const [labo, setLabo] = useState<{ nom: string; activites: Activite[] } | null>(null);
+  const [labo, setLabo] = useState<{ nom: string; activites: Activite[]; destinations?: Destination[] } | null>(null);
   const [results, setResults] = useState<TransferEntry[]>([]);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
@@ -54,7 +59,7 @@ export default function TransferHistoriquePage() {
   // Server-side filters
   const [startDate, setStartDate] = useState(yearStart);
   const [endDate, setEndDate] = useState(yearEnd);
-  const [filterActiviteId, setFilterActiviteId] = useState('');
+  const [filterDestKey, setFilterDestKey] = useState('');
 
   // Client-side filters
   const [filterCategorie, setFilterCategorie] = useState('');
@@ -66,12 +71,16 @@ export default function TransferHistoriquePage() {
   const [editTarget, setEditTarget] = useState<TransferEntry | null>(null);
   const [editQty, setEditQty] = useState('');
   const [editPrix, setEditPrix] = useState<number | null>(null);
+  // Référence de prix : PMP HT à la date du transfert (lot 1b) ; repli « dernier appro » (ancienne réponse).
+  const [editPrixSource, setEditPrixSource] = useState<'pmp' | 'dernier'>('dernier');
   const [editPrixLoading, setEditPrixLoading] = useState(false);
   const [editSaving, setEditSaving] = useState(false);
+  const [editError, setEditError] = useState('');
 
   // Delete modal
   const [deleteTarget, setDeleteTarget] = useState<TransferEntry | null>(null);
   const [deleteSaving, setDeleteSaving] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
 
   useEffect(() => {
     api.get('/api/labo').then(({ data }) => setAllLabos(data)).catch(() => {});
@@ -86,7 +95,7 @@ export default function TransferHistoriquePage() {
     const params = new URLSearchParams();
     if (startDate) params.set('startDate', startDate);
     if (endDate) params.set('endDate', endDate);
-    if (filterActiviteId) params.set('activiteId', filterActiviteId);
+    applyDestParam(params, filterDestKey);
     return params;
   };
 
@@ -120,23 +129,27 @@ export default function TransferHistoriquePage() {
       const params = new URLSearchParams();
       if (startDate) params.set('startDate', startDate);
       if (endDate) params.set('endDate', endDate);
-      if (filterActiviteId) params.set('activiteId', filterActiviteId);
+      applyDestParam(params, filterDestKey);
       const { data } = await api.get(`/api/labo/${laboId}/transfers?${params}`);
       setResults(data as TransferEntry[]);
     } catch {
       setResults([]);
     }
     setLoading(false);
-  }, [laboId, startDate, endDate, filterActiviteId]);
+  }, [laboId, startDate, endDate, filterDestKey]);
 
   const openEdit = async (r: TransferEntry) => {
     setEditTarget(r);
     setEditQty(String(r.quantite));
     setEditPrix(null);
+    setEditError('');
+    setEditPrixSource('dernier');
     setEditPrixLoading(true);
     try {
       const { data } = await api.get(`/api/labo/${laboId}/transfers/${r.id}/prix`);
-      setEditPrix(data.prixUnitaire ?? null);
+      const d = data as { pmpHT?: number | null; dernierAchatHT?: number | null; prixUnitaire?: number | null };
+      if (d.pmpHT != null) { setEditPrix(d.pmpHT); setEditPrixSource('pmp'); }
+      else setEditPrix(d.prixUnitaire ?? d.dernierAchatHT ?? null);
     } catch { /* ignore */ }
     setEditPrixLoading(false);
   };
@@ -146,27 +159,37 @@ export default function TransferHistoriquePage() {
     const qty = parseFloat(editQty);
     if (!qty || qty <= 0) return;
     setEditSaving(true);
+    setEditError('');
     try {
       await api.patch(`/api/labo/${laboId}/transfers/${editTarget.id}`, { quantite: qty });
       setResults((prev) => prev.map((r) => r.id === editTarget.id ? { ...r, quantite: qty } : r));
       setEditTarget(null);
-    } catch { /* ignore */ }
+    } catch (e: unknown) {
+      setEditError(apiMsg(e, 'Modification impossible'));
+    }
     setEditSaving(false);
   };
 
   const confirmDelete = async () => {
     if (!deleteTarget) return;
     setDeleteSaving(true);
+    setDeleteError('');
     try {
       await api.delete(`/api/labo/${laboId}/transfers/${deleteTarget.id}`);
       setResults((prev) => prev.filter((r) => r.id !== deleteTarget.id));
       setSelectedIds((prev) => { const n = new Set(prev); n.delete(deleteTarget.id); return n; });
       setDeleteTarget(null);
-    } catch { /* ignore */ }
+    } catch (e: unknown) {
+      setDeleteError(apiMsg(e, 'Suppression impossible'));
+    }
     setDeleteSaving(false);
   };
 
-  const activites: Activite[] = labo?.activites || [];
+  const destinations: Destination[] = destinationsOf(labo);
+  // Libellés inchangés tant que toutes les destinations sont des activités (comptes restauration).
+  const hasLaboDest = destinations.some((d) => d.type === 'labo') || results.some(isLaboDest);
+  const colDestLabel = hasLaboDest ? 'Destination' : t('client.labo.col_activite');
+  const rowDestLabel = (r: Transfert) => (isLaboDest(r) ? 'Labo destinataire' : 'Activité');
 
   // Client-side filtering
   const allCategories = Array.from(new Set(results.map((r) => r.categorieNom))).sort();
@@ -196,7 +219,9 @@ export default function TransferHistoriquePage() {
               <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0, letterSpacing: '-0.02em' }}>
                 Historique Transfert{labo ? ` — ${labo.nom}` : ''}
               <HelpButton section="transferts" variant="solid" size={18} tip="Aide" /></h1>
-              <p style={{ color: 'rgba(255,255,255,0.72)', fontSize: '0.82rem', margin: '4px 0 0' }}>Consultez et exportez l'historique des transferts vers les activités</p>
+              <p style={{ color: 'rgba(255,255,255,0.72)', fontSize: '0.82rem', margin: '4px 0 0' }}>
+                {hasLaboDest ? 'Consultez et exportez l\'historique des transferts vers les activités et labos rattachés' : 'Consultez et exportez l\'historique des transferts vers les activités'}
+              </p>
             </div>
           </div>
         </div>
@@ -223,17 +248,17 @@ export default function TransferHistoriquePage() {
       <HistoryFilterBar
         accent="#7e22ce" accentDark="#6d28d9"
         onSearch={fetchResults} searching={loading}
-        onReset={() => { setStartDate(yearStart); setEndDate(yearEnd); setFilterActiviteId(''); setFilterCategorie(''); setPage(1); }}
-        showReset={!!(startDate !== yearStart || endDate !== yearEnd || filterActiviteId || filterCategorie)}
+        onReset={() => { setStartDate(yearStart); setEndDate(yearEnd); setFilterDestKey(''); setFilterCategorie(''); setPage(1); }}
+        showReset={!!(startDate !== yearStart || endDate !== yearEnd || filterDestKey || filterCategorie)}
         onExportExcel={exportExcel} excelDisabled={exporting || !searched || results.length === 0} excelLabel={`Exporter${selectedIds.size > 0 ? ` (${selectedIds.size})` : ''}`}
       >
         <FilterField label="📅 Du"><FilterInput type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} /></FilterField>
         <FilterField label="📅 Au"><FilterInput type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} /></FilterField>
-        {activites.length > 0 && (
-          <FilterField label={`🏪 ${t('client.labo.filter_activite')}`}>
-            <FilterSelect value={filterActiviteId} onChange={(e) => setFilterActiviteId(e.target.value)}>
-              <option value="">{t('client.labo.all_activites')}</option>
-              {activites.map((a) => <option key={a.id} value={a.id}>{a.nom}</option>)}
+        {destinations.length > 0 && (
+          <FilterField label={hasLaboDest ? '🎯 Destination' : `🏪 ${t('client.labo.filter_activite')}`}>
+            <FilterSelect value={filterDestKey} onChange={(e) => setFilterDestKey(e.target.value)}>
+              <option value="">{hasLaboDest ? 'Toutes les destinations' : t('client.labo.all_activites')}</option>
+              {destinations.map((d) => <option key={d.destKey} value={d.destKey}>{d.type === 'labo' ? `🏭 ${d.nom}` : d.nom}</option>)}
             </FilterSelect>
           </FilterField>
         )}
@@ -284,7 +309,7 @@ export default function TransferHistoriquePage() {
                 <thead>
                   <tr style={{ background: 'linear-gradient(135deg, #3b0764, #7e22ce)' }}>
                     <th style={{ width: 28, padding: '10px 4px', color: '#fff', background: 'transparent', borderBottom: 'none' }} />
-                    {(['Ingrédient', 'Date', t('client.labo.col_activite')] as const).map((label) => (
+                    {(['Ingrédient', 'Date', colDestLabel] as const).map((label) => (
                       <th key={label} style={{ fontWeight: 800, fontSize: '0.75rem', letterSpacing: '0.04em', textTransform: 'uppercase', padding: '10px 10px', color: '#fff', background: 'transparent', borderBottom: 'none' }}>{label}</th>
                     ))}
                     {([t('client.historique_appro.col_qty'), 'Prix U. HT', 'TVA %', 'Prix U. TTC'] as const).map((label) => (
@@ -311,7 +336,7 @@ export default function TransferHistoriquePage() {
                           {fmtDate(r.dateTransfert)}
                         </span>
                       </td>
-                      <td style={{ fontWeight: 600, padding: '8px 10px', fontSize: '0.86rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.activiteNom}</td>
+                      <td style={{ fontWeight: 600, padding: '8px 10px', fontSize: '0.86rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={isLaboDest(r) ? 'Cession interne vers un labo rattaché' : undefined}>{destCell(r)}</td>
                       <td style={{ textAlign: 'right', fontWeight: 800, color: '#10b981', padding: '8px 10px', fontSize: '0.85rem', whiteSpace: 'nowrap' }}>
                         {r.quantite % 1 === 0 ? r.quantite.toFixed(0) : r.quantite}
                       </td>
@@ -387,7 +412,7 @@ export default function TransferHistoriquePage() {
                 <tbody>
                   {[
                     ['Date', fmtDate(editTarget.dateTransfert)],
-                    ['Activité', editTarget.activiteNom],
+                    [rowDestLabel(editTarget), destCell(editTarget)],
                     ['Ingrédient', editTarget.ingredientNom],
                     ['Catégorie', editTarget.categorieNom],
                     ['Ancienne quantité', `${editTarget.quantite % 1 === 0 ? editTarget.quantite.toFixed(0) : editTarget.quantite} ${editTarget.uniteNom}`],
@@ -412,7 +437,7 @@ export default function TransferHistoriquePage() {
               </div>
               <div style={{ background: '#eff6ff', borderRadius: 10, padding: '12px 16px', borderLeft: '4px solid #2563eb' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-                  <span style={{ fontSize: '0.78rem', color: '#1d4ed8', fontWeight: 700 }}>Prix unitaire (dernier appro)</span>
+                  <span style={{ fontSize: '0.78rem', color: '#1d4ed8', fontWeight: 700 }}>{editPrixSource === 'pmp' ? 'Prix de référence (PMP HT à la date du transfert)' : 'Prix unitaire (dernier appro)'}</span>
                   <span style={{ fontWeight: 800, color: '#1d4ed8' }}>
                     {editPrixLoading ? '…' : editPrix !== null ? `${editPrix.toFixed(3)} DT` : '—'}
                   </span>
@@ -426,6 +451,7 @@ export default function TransferHistoriquePage() {
                   </span>
                 </div>
               </div>
+              {editError && <p style={{ color: '#dc2626', fontSize: '0.85rem', fontWeight: 600, margin: '12px 0 0' }}>⚠ {editError}</p>}
             </div>
             <div className="modal-footer">
               <button className="btn btn-ghost" onClick={() => setEditTarget(null)} disabled={editSaving}>{t('common.cancel')}</button>
@@ -454,14 +480,14 @@ export default function TransferHistoriquePage() {
               <div style={{ background: '#fef2f2', borderRadius: 10, padding: '14px 16px', borderLeft: '4px solid #dc2626', marginBottom: 18 }}>
                 <p style={{ fontWeight: 800, color: '#991b1b', fontSize: '0.88rem', margin: '0 0 6px' }}>⚠️ Attention — impact sur les stocks</p>
                 <p style={{ fontSize: '0.85rem', color: '#7f1d1d', margin: 0, lineHeight: 1.5 }}>
-                  Cette suppression va recalculer le <strong>stock du labo</strong> (la quantité sera restituée) et le <strong>stock de l'activité «{deleteTarget.activiteNom}»</strong> (la quantité transférée sera retirée). Cette action est irréversible.
+                  Cette suppression va recalculer le <strong>stock du labo</strong> (la quantité sera restituée) et le <strong>stock {isLaboDest(deleteTarget) ? 'du labo' : "de l'activité"} «{destNomOf(deleteTarget)}»</strong> (la quantité transférée sera retirée). Cette action est irréversible.
                 </p>
               </div>
               <table style={{ width: '100%', fontSize: '0.9rem', borderCollapse: 'collapse' }}>
                 <tbody>
                   {[
                     ['Date', fmtDate(deleteTarget.dateTransfert)],
-                    ['Activité', deleteTarget.activiteNom],
+                    [rowDestLabel(deleteTarget), destCell(deleteTarget)],
                     ['Ingrédient', deleteTarget.ingredientNom],
                     ['Quantité', `${deleteTarget.quantite % 1 === 0 ? deleteTarget.quantite.toFixed(0) : deleteTarget.quantite} ${deleteTarget.uniteNom}`],
                   ].map(([label, value]) => (
@@ -472,6 +498,7 @@ export default function TransferHistoriquePage() {
                   ))}
                 </tbody>
               </table>
+              {deleteError && <p style={{ color: '#dc2626', fontSize: '0.85rem', fontWeight: 600, margin: '12px 0 0' }}>⚠ {deleteError}</p>}
             </div>
             <div className="modal-footer">
               <button className="btn btn-ghost" onClick={() => setDeleteTarget(null)} disabled={deleteSaving}>{t('common.cancel')}</button>
@@ -501,7 +528,7 @@ export default function TransferHistoriquePage() {
                 <tbody>
                   {[
                     ['Date', fmtDate(detailPopup.dateTransfert)],
-                    ['Activité', detailPopup.activiteNom],
+                    [rowDestLabel(detailPopup), destCell(detailPopup)],
                     ['Ingrédient', detailPopup.ingredientNom],
                     ['Catégorie', detailPopup.categorieNom],
                     ['Quantité', `${detailPopup.quantite % 1 === 0 ? detailPopup.quantite.toFixed(0) : detailPopup.quantite} ${detailPopup.uniteNom}`],

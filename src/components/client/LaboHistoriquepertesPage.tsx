@@ -4,6 +4,7 @@ import api from '../../api/client';
 import HelpButton from '../common/HelpButton';
 import HistoryFilterBar, { FilterField, FilterInput, FilterSelect } from '../common/HistoryFilterBar';
 import type { Labo } from '../../types';
+import { perteLabel, usePerteTypes } from '../../utils/perteTypes';
 
 const currentYear = new Date().getFullYear();
 const yearStart = `${currentYear}-01-01`;
@@ -26,7 +27,7 @@ interface LaboPerteEntry {
   categorieNom: string | null;
   quantite: number;
   prixUnitaire: number | null;
-  typePerte: 'avarie' | 'dechet';
+  typePerte: string;
   datePerte: string;
   createdAt: string;
   createdByNom?: string | null;
@@ -36,6 +37,7 @@ interface LaboIngredient { id: number; nom: string; unite: string; categorie: st
 
 
 export default function LaboHistoriquepertesPage() {
+  const perteTypes = usePerteTypes();
   const [searchParams] = useSearchParams();
   const laboId = searchParams.get('laboId') || '';
   const navigate = useNavigate();
@@ -224,8 +226,7 @@ export default function LaboHistoriquepertesPage() {
         <FilterField label="📋 Type">
           <FilterSelect value={fType} onChange={(e) => setFType(e.target.value)}>
             <option value="">— Tous —</option>
-            <option value="avarie">Avarie</option>
-            <option value="dechet">Déchet</option>
+            {perteTypes.map((t) => <option key={t.code} value={t.code}>{t.label}</option>)}
           </FilterSelect>
         </FilterField>
       </HistoryFilterBar>
@@ -271,7 +272,7 @@ export default function LaboHistoriquepertesPage() {
                       <span style={{ fontSize: '0.78rem', fontWeight: 700, padding: '3px 8px', borderRadius: 6,
                         background: e.typePerte === 'avarie' ? '#fee2e2' : '#fef9c3',
                         color: e.typePerte === 'avarie' ? '#991b1b' : '#854d0e' }}>
-                        {e.typePerte === 'avarie' ? 'Avarie' : 'Déchet'}
+                        {perteLabel(e.typePerte)}
                       </span>
                     </td>
                     <td style={{ padding: '10px 14px', fontWeight: 700, color: '#7e22ce' }}>{e.quantite.toFixed(3)}</td>

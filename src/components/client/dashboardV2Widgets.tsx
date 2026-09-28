@@ -272,8 +272,9 @@ export function TypeBadge({ type }: { type: string }) {
   return <span style={{ fontSize: '0.66rem', fontWeight: 800, color: t.color, background: t.bg, borderRadius: 20, padding: '2px 8px' }}>{t.label}</span>;
 }
 
-export function FoodCostBadge({ pct }: { pct: number | null }) {
+/** `seuil` = seuil coût matière du domaine (regles.seuil_cout_matiere_pct, défaut 40) ; vert sous seuil − 10. */
+export function FoodCostBadge({ pct, seuil = 40 }: { pct: number | null; seuil?: number }) {
   if (pct == null) return <span style={{ color: '#94a3b8' }}>—</span>;
-  const color = pct < 30 ? '#16a34a' : pct <= 40 ? '#d97706' : '#dc2626';
+  const color = pct < Math.max(0, seuil - 10) ? '#16a34a' : pct <= seuil ? '#d97706' : '#dc2626';
   return <span style={{ fontWeight: 800, color }}>{pct}%</span>;
 }

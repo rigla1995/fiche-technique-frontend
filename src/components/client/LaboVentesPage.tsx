@@ -33,7 +33,9 @@ interface LaboTransfert {
   article_nom: string;
   article_type: 'produit';
   unite_nom?: string | null;
-  activite_nom: string;
+  activite_nom: string | null;          // NULL pour une cession labo→labo (LEFT JOIN, lot 1b)
+  dest_nom?: string | null;             // destination (activité ou labo rattaché)
+  dest_type?: 'activite' | 'labo' | null;
   categorie_nom: string;
   quantite: number;
   prix_unitaire: number | null;
@@ -41,6 +43,10 @@ interface LaboTransfert {
   prix_moyen_appro: number | null;
   note?: string | null;
 }
+
+// Destination affichée : dest_nom (lot 1b) avec repli activite_nom (ancienne réponse).
+const destNomOf = (t: LaboTransfert): string => t.dest_nom ?? t.activite_nom ?? '—';
+const destIcon = (t: LaboTransfert): string => (t.dest_type === 'labo' ? '🏭' : '🏪');
 
 export default function LaboVentesPage() {
   const [searchParams] = useSearchParams();
@@ -54,7 +60,7 @@ export default function LaboVentesPage() {
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
   const [filterCategorie, setFilterCategorie] = useState('');
-  const [filterActivite, setFilterActivite] = useState('');
+  const [filterDestination, setFilterDestination] = useState('');
   const [filterArticle, setFilterArticle] = useState('');
   const [page, setPage] = useState(1);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -88,8 +94,8 @@ export default function LaboVentesPage() {
     () => [...new Set(transferts.map(t => t.categorie_nom))].sort(),
     [transferts]
   );
-  const activiteOptions = useMemo(
-    () => [...new Set(transferts.map(t => t.activite_nom))].sort(),
+  const destOptions = useMemo(
+    () => [...new Set(transferts.map(destNomOf))].sort(),
     [transferts]
   );
   const articleOptions = useMemo(() => {
@@ -109,10 +115,10 @@ export default function LaboVentesPage() {
   const filtered = useMemo(() => {
     let r = transferts;
     if (filterCategorie) r = r.filter(t => t.categorie_nom === filterCategorie);
-    if (filterActivite) r = r.filter(t => t.activite_nom === filterActivite);
+    if (filterDestination) r = r.filter(t => destNomOf(t) === filterDestination);
     if (filterArticle) r = r.filter(t => t.article_nom === filterArticle);
     return r;
-  }, [transferts, filterCategorie, filterActivite, filterArticle]);
+  }, [transferts, filterCategorie, filterDestination, filterArticle]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const pageData = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
@@ -125,8 +131,8 @@ export default function LaboVentesPage() {
   }, 0);
   const totalEcart = totalTransferts - totalAchat;
 
-  const hasFilters = filterCategorie || filterActivite || filterArticle || from || to;
-  const resetFilters = () => { setFilterCategorie(''); setFilterActivite(''); setFilterArticle(''); setFrom(''); setTo(''); setPage(1); };
+  const hasFilters = filterCategorie || filterDestination || filterArticle || from || to;
+  const resetFilters = () => { setFilterCategorie(''); setFilterDestination(''); setFilterArticle(''); setFrom(''); setTo(''); setPage(1); };
 
   const toggleSelect = (id: string) => {
     setSelectedIds(prev => {
@@ -144,7 +150,8 @@ export default function LaboVentesPage() {
       if (from) params.set('from', from);
       if (to) params.set('to', to);
       if (filterCategorie) params.set('filterCategorie', filterCategorie);
-      if (filterActivite) params.set('filterActivite', filterActivite);
+      // filterDestination (lot 1b : dest_nom) — le serveur accepte aussi l'ancien filterActivite.
+      if (filterDestination) params.set('filterDestination', filterDestination);
       if (filterArticle) params.set('filterArticle', filterArticle);
       if (selectedIds.size > 0) params.set('selectedIds', [...selectedIds].join(','));
       const resp = await api.get(`/api/labo-ventes/export-excel?${params}`, { responseType: 'blob' });
@@ -157,7 +164,7 @@ export default function LaboVentesPage() {
   };
 
 
-  // col widths: checkbox, article, activité, qté, prix transfert, prix appro, écart
+  // col widths: checkbox, article, destination, qté, prix transfert, prix appro, écart
   const colW = [36, '28%', '17%', '8%', '14%', '14%', '13%'] as const;
 
   return (
@@ -231,10 +238,10 @@ export default function LaboVentesPage() {
                 {articleOptions.map(a => <option key={a} value={a}>{a}</option>)}
               </FilterSelect>
             </FilterField>
-            <FilterField label="🏪 Activité">
-              <FilterSelect value={filterActivite} onChange={e => { setFilterActivite(e.target.value); setPage(1); }}>
+            <FilterField label="🎯 Destination">
+              <FilterSelect value={filterDestination} onChange={e => { setFilterDestination(e.target.value); setPage(1); }}>
                 <option value="">Toutes</option>
-                {activiteOptions.map(a => <option key={a} value={a}>{a}</option>)}
+                {destOptions.map(a => <option key={a} value={a}>{a}</option>)}
               </FilterSelect>
             </FilterField>
           </HistoryFilterBar>
@@ -276,7 +283,7 @@ export default function LaboVentesPage() {
                     <tr style={{ background: CL, borderBottom: `2px solid ${CB}` }}>
                       <th style={{ padding: '8px 10px', width: 36 }}></th>
                       <th style={{ padding: '11px 14px', textAlign: 'left', fontSize: '0.74rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Article</th>
-                      <th style={{ padding: '11px 14px', textAlign: 'left', fontSize: '0.74rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Activité</th>
+                      <th style={{ padding: '11px 14px', textAlign: 'left', fontSize: '0.74rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Destination</th>
                       <th style={{ padding: '11px 14px', textAlign: 'right', fontSize: '0.74rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Qté</th>
                       <th style={{ padding: '11px 14px', textAlign: 'right', fontSize: '0.74rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Prix transfert</th>
                       <th style={{ padding: '11px 14px', textAlign: 'right', fontSize: '0.74rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Prix appro</th>
@@ -311,7 +318,9 @@ export default function LaboVentesPage() {
                               {fmtDate(l.date_transfert)}
                             </div>
                           </td>
-                          <td style={{ padding: '11px 14px', fontSize: '0.84rem', color: isSel ? 'rgba(255,255,255,0.9)' : 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{l.activite_nom}</td>
+                          <td style={{ padding: '11px 14px', fontSize: '0.84rem', color: isSel ? 'rgba(255,255,255,0.9)' : 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={l.dest_type === 'labo' ? 'Cession interne vers un labo rattaché' : 'Transfert vers une activité'}>
+                            <span style={{ marginRight: 5 }}>{destIcon(l)}</span>{destNomOf(l)}
+                          </td>
                           <td style={{ padding: '11px 14px', fontSize: '0.88rem', textAlign: 'right', fontWeight: 600, color: isSel ? '#fff' : undefined }}>{l.quantite}</td>
                           {/* Prix transfert = total */}
                           <td style={{ padding: '11px 14px', textAlign: 'right' }}>

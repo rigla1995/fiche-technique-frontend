@@ -5,6 +5,7 @@ import api from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 import { useConfirm } from '../common/ConfirmDialog';
 import HelpButton from '../common/HelpButton';
+import { isUnitePiece } from '../../utils/unitesArticles';
 import type { Activite, ActiviteTypesSummary, Category, CategorieProduit, Ingredient, Product } from '../../types';
 
 interface IngredientLine {
@@ -516,7 +517,7 @@ export default function ProductForm() {
                           <input
                             className="input"
                             type="number" step="0.001" min="0"
-                            placeholder={unit === 'pièces' || unit === 'pieces' ? t('client.products.portion_pieces') : t('client.products.portion_grams')}
+                            placeholder={isUnitePiece(unit) ? t('client.products.portion_pieces') : t('client.products.portion_grams')}
                             value={line.portion}
                             onChange={(e) => updateIngredientLine(idx, 'portion', e.target.value)}
                           />

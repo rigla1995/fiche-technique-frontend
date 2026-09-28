@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import api from '../../api/client';
 import type { DomaineProfil, Composant, LexiqueEntree, ComposantTypeTechnique, TarifsConfig as TarifsConfigData } from '../../types';
 import { useConfirm } from '../common/ConfirmDialog';
+import { PERTE_CODE_RE, normaliseCodesPerte } from '../../utils/perteTypes';
 import { TarifField, TarifSectionHeader } from './TarifsConfig';
 import { TARIF_SECTIONS, tarifCardStyle, DEFAULTS as TARIF_DEFAULTS } from './tarifsDefs';
 import type { TarifKey } from './tarifsDefs';
@@ -204,7 +205,7 @@ function reglesEffectives(s: ReglesState): Record<string, unknown> {
     espace_produit_verrou_basique_sans_labo: s.espace_produit_verrou_basique_sans_labo,
     formules: s.formules,
     seuil_cout_matiere_pct: Number(s.seuil_cout_matiere_pct),
-    types_perte: s.types_perte.split(',').map((x) => x.trim()).filter(Boolean),
+    types_perte: normaliseCodesPerte(s.types_perte),
     supplement_max_composants: Number(s.supplement_max_composants),
     b2b_depuis_activite: s.b2b_depuis_activite,
   };
@@ -337,7 +338,10 @@ export default function AdminDomaineEditPage() {
     const smc = Number(regles.supplement_max_composants);
     if (!Number.isInteger(smc) || smc < 1) return 'Le nombre maximum de composants par supplément doit être un entier ≥ 1.';
     if (regles.formules.length === 0) return 'Au moins une formule doit être proposée.';
-    if ((reglesEffectives(regles).types_perte as string[]).length === 0) return 'Indiquez au moins un type de perte.';
+    const typesPerte = reglesEffectives(regles).types_perte as string[];
+    if (typesPerte.length === 0) return 'Indiquez au moins un type de perte.';
+    const perteInvalide = typesPerte.find((c) => !PERTE_CODE_RE.test(c));
+    if (perteInvalide) return `Type de perte invalide « ${perteInvalide} » : lettres minuscules sans accent, chiffres et _ (2 à 20 caractères), séparés par des virgules.`;
     return null;
   };
 
@@ -717,7 +721,7 @@ export default function AdminDomaineEditPage() {
               <div style={{ width: '100%' }}>
                 <div style={{ fontWeight: 700, color: 'var(--text)' }}>Types de perte</div>
                 <div style={{ fontSize: '0.76rem', color: 'var(--text-muted)', marginTop: 2, marginBottom: 8 }}>Types proposés à la saisie des pertes, séparés par des virgules (défaut : avarie, dechet).</div>
-                <input value={regles.types_perte} onChange={(e) => setRegles((p) => ({ ...p, types_perte: e.target.value }))} placeholder="avarie, dechet" style={{ ...cell, width: '100%' }} />
+                <input value={regles.types_perte} onChange={(e) => setRegles((p) => ({ ...p, types_perte: e.target.value }))} onBlur={() => setRegles((p) => ({ ...p, types_perte: normaliseCodesPerte(p.types_perte).join(', ') }))} placeholder="avarie, dechet" style={{ ...cell, width: '100%' }} />
               </div>
             </div>
 

@@ -36,7 +36,24 @@ interface HistEntry {
   fournisseurNom: string | null;
   createdBy?: number | null;
   createdByNom?: string | null;
+  // Lot 1b — lignes de transfert : sens (sortie = labo_transfers, entrée = réception d'un labo source)
+  // et contrepartie (activité / labo destinataire pour une sortie, labo source pour une entrée).
+  sens?: 'entree' | 'sortie' | null;
+  contrepartieNom?: string | null;
+  activiteNom?: string | null;
 }
+
+// Puces du filtre « Type d'appro » côté labo : les transferts sont distingués émis / reçus.
+const LABO_TYPE_OPTIONS = [
+  ['manuel', 'Manuel'],
+  ['transfert_sortie', 'Transfert émis'],
+  ['transfert_entree', 'Transfert reçu'],
+  ['vente', 'Vente'],
+  ['pt', 'PT'],
+] as const;
+
+const apiMsg = (e: unknown, fallback: string) =>
+  (e as { response?: { data?: { message?: string } } })?.response?.data?.message ?? fallback;
 
 interface LaboFournisseur { id: number; nom: string; telephone: string | null }
 interface LaboIngredient { id: number; nom: string; unite: string; categorie: string; categorieId: number | null; selected?: boolean }
@@ -93,8 +110,9 @@ function EditModal({
         refFacture: data.refFacture,
       });
       onClose();
-    } catch {
-      setError('Erreur lors de la sauvegarde');
+    } catch (e: unknown) {
+      // 409 LIGNE_DE_TRANSFERT : « Modifiez ou supprimez le transfert » (message serveur affiché tel quel).
+      setError(apiMsg(e, 'Erreur lors de la sauvegarde'));
     }
     setSaving(false);
   };
@@ -174,8 +192,8 @@ function DeleteModal({
       await api.delete(`/api/labo/${laboId}/historique/${entry.id}`);
       onDeleted(entry.id);
       onClose();
-    } catch {
-      setError('Erreur lors de la suppression');
+    } catch (e: unknown) {
+      setError(apiMsg(e, 'Erreur lors de la suppression'));
     }
     setDeleting(false);
   };
@@ -340,12 +358,15 @@ export default function LaboHistoriqueApproPage() {
     setResults((prev) => prev.filter((r) => r.id !== id));
   };
 
-  const typeCategory = (t: string | null): string =>
-    t === 'transfert' ? 'transfert'
-    : (t === 'vente' || t === 'annulation_vente') ? 'vente'
-    : (t === 'PT' || t === 'produit_transformé' || t === 'produit_transforme') ? 'pt'
+  // 'transfert' est scindé : sortie (labo_transfers) / entrée (réception, sens = 'entree').
+  const typeCategory = (r: Pick<HistEntry, 'typeAppro' | 'sens'>): string =>
+    r.typeAppro === 'transfert' ? (r.sens === 'entree' ? 'transfert_entree' : 'transfert_sortie')
+    : (r.typeAppro === 'vente' || r.typeAppro === 'annulation_vente') ? 'vente'
+    : (r.typeAppro === 'PT' || r.typeAppro === 'produit_transformé' || r.typeAppro === 'produit_transforme') ? 'pt'
     : 'manuel';
-  const displayedResults = selectedTypes.size === 0 ? results : results.filter((r) => selectedTypes.has(typeCategory(r.typeAppro)));
+  const displayedResults = selectedTypes.size === 0 ? results : results.filter((r) => selectedTypes.has(typeCategory(r)));
+  // Contrepartie d'une ligne de transfert (repli activiteNom pour une ancienne réponse serveur).
+  const contrepartieOf = (r: HistEntry): string | null => r.contrepartieNom ?? r.activiteNom ?? null;
   const toggleType = (key: string) => { setSelectedTypes((prev) => { const n = new Set(prev); if (n.has(key)) n.delete(key); else n.add(key); return n; }); setPage(1); };
 
   const totalPages = Math.max(1, Math.ceil(displayedResults.length / PAGE_SIZE));
@@ -429,7 +450,7 @@ export default function LaboHistoriqueApproPage() {
             </FilterSelect>
           </FilterField>
         )}
-        <FilterField label="⇄ Type d'appro"><TypeApproFilter selected={selectedTypes} onToggle={toggleType} accent="#7e22ce" /></FilterField>
+        <FilterField label="⇄ Type d'appro"><TypeApproFilter selected={selectedTypes} onToggle={toggleType} accent="#7e22ce" options={LABO_TYPE_OPTIONS} /></FilterField>
       </HistoryFilterBar>
 
       {/* Results */}
@@ -513,8 +534,15 @@ export default function LaboHistoriqueApproPage() {
                       {r.typeAppro === 'manuel' && (
                         <span style={{ background: '#dcfce7', color: '#15803d', borderRadius: 6, padding: '2px 6px', fontSize: '0.7rem', fontWeight: 700 }}>Manuel</span>
                       )}
-                      {r.typeAppro === 'transfert' && (
-                        <span style={{ background: '#e0f2fe', color: '#0369a1', borderRadius: 6, padding: '2px 6px', fontSize: '0.7rem', fontWeight: 700 }}>Transf.</span>
+                      {r.typeAppro === 'transfert' && r.sens === 'entree' && (
+                        <span style={{ background: '#ecfeff', color: '#0e7490', borderRadius: 6, padding: '2px 6px', fontSize: '0.7rem', fontWeight: 700, whiteSpace: 'nowrap' }} title="Réception d'un labo source">
+                          ↙ Reçu{contrepartieOf(r) ? ` ← ${contrepartieOf(r)}` : ''}
+                        </span>
+                      )}
+                      {r.typeAppro === 'transfert' && r.sens !== 'entree' && (
+                        <span style={{ background: '#e0f2fe', color: '#0369a1', borderRadius: 6, padding: '2px 6px', fontSize: '0.7rem', fontWeight: 700, whiteSpace: 'nowrap' }} title="Transfert émis depuis ce labo">
+                          {r.sens === 'sortie' ? `↗ Transf.${contrepartieOf(r) ? ` → ${contrepartieOf(r)}` : ''}` : 'Transf.'}
+                        </span>
                       )}
                       {r.typeAppro === 'vente' && (
                         <span style={{ background: '#ede9fe', color: '#6d28d9', borderRadius: 6, padding: '2px 6px', fontSize: '0.7rem', fontWeight: 700 }}>Vente</span>
@@ -547,7 +575,8 @@ export default function LaboHistoriqueApproPage() {
                       })()}
                     </td>
                     <td style={{ fontSize: '0.76rem', padding: '8px 10px' }}>
-                      <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.fournisseurNom ?? '—'}</div>
+                      {/* Ligne de transfert : la contrepartie (destinataire / labo source) tient lieu de fournisseur. */}
+                      <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{(r.typeAppro === 'transfert' ? contrepartieOf(r) : null) ?? r.fournisseurNom ?? '—'}</div>
                       <div style={{ color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.refFacture ?? '—'}</div>
                     </td>
                     <td style={{ fontSize: '0.73rem', color: r.createdByNom ? '#7c3aed' : 'var(--text-muted)', fontWeight: r.createdByNom ? 600 : 400, whiteSpace: 'nowrap', padding: '8px 10px' }}>

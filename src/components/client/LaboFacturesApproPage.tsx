@@ -3,6 +3,7 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import api from '../../api/client';
 import HistoryFilterBar, { FilterField, FilterInput, FilterSelect } from '../common/HistoryFilterBar';
 import GuideButton from './GuideButton';
+import type { Destination } from '../../types';
 
 const currentYear = new Date().getFullYear();
 const yearStart = `${currentYear}-01-01`;
@@ -33,7 +34,26 @@ interface FactureRow {
   montantHT: number;
   montantTva: number;
   montantTTC: number;
+  // Lot 1b : sens d'une facture interne de transfert vue du labo courant
+  // (recue = labo_id = labo courant ET type_source = 'transfert' ET activite_id IS NULL) + contrepartie.
+  sens?: 'emise' | 'recue' | null;
+  contrepartieNom?: string | null;
 }
+
+// Filtre « Destination / Origine » : 'a-<id>' → activiteId, 'l-<id>' → laboDestId, 'sens-emise' | 'sens-recue' → sens.
+const applyDestParam = (params: URLSearchParams, key: string) => {
+  if (!key) return;
+  if (key === 'sens-emise' || key === 'sens-recue') { params.set('sens', key.slice(5)); return; }
+  const id = key.slice(2);
+  if (key.startsWith('l-')) params.set('laboDestId', id);
+  else params.set('activiteId', id);
+};
+// Destinations = GET /api/labo/:id.destinations ; repli sur `activites` (rendu identique à avant le lot 1b).
+const destinationsOf = (labo: { activites?: Activite[]; destinations?: Destination[] } | null): Destination[] => {
+  if (!labo) return [];
+  if (Array.isArray(labo.destinations)) return labo.destinations;
+  return (labo.activites ?? []).map((a) => ({ destKey: `a-${a.id}`, type: 'activite' as const, id: a.id, nom: a.nom }));
+};
 
 interface LigneFact {
   id: number;
@@ -60,9 +80,9 @@ export default function LaboFacturesApproPage() {
 
   const [allLabos, setAllLabos] = useState<Labo[]>([]);
   const [fournisseurs, setFournisseurs] = useState<Fournisseur[]>([]);
-  const [activites, setActivites] = useState<Activite[]>([]);
+  const [destinations, setDestinations] = useState<Destination[]>([]);
   const [selectedFournisseurId, setSelectedFournisseurId] = useState('');
-  const [selectedActiviteId, setSelectedActiviteId] = useState('');
+  const [selectedDestKey, setSelectedDestKey] = useState('');
   const [refFactureFilter, setRefFactureFilter] = useState('');
   const [startDate, setStartDate] = useState(yearStart);
   const [endDate, setEndDate] = useState(yearEnd);
@@ -81,15 +101,15 @@ export default function LaboFacturesApproPage() {
     api.get('/api/labo').then(({ data }) => setAllLabos(data as Labo[])).catch(() => {});
     if (laboId) {
       api.get(`/api/labo/${laboId}/fournisseurs`).then(({ data }) => setFournisseurs(data as Fournisseur[])).catch(() => {});
-      api.get(`/api/labo/${laboId}`).then(({ data }) => setActivites(((data as any).activites ?? []) as Activite[])).catch(() => {});
+      api.get(`/api/labo/${laboId}`).then(({ data }) => setDestinations(destinationsOf(data as { activites?: Activite[]; destinations?: Destination[] }))).catch(() => {});
     }
   }, [laboId]);
 
-  const latestFilters = useRef({ laboId, startDate, endDate, selectedFournisseurId, selectedActiviteId, refFactureFilter });
-  latestFilters.current = { laboId, startDate, endDate, selectedFournisseurId, selectedActiviteId, refFactureFilter };
+  const latestFilters = useRef({ laboId, startDate, endDate, selectedFournisseurId, selectedDestKey, refFactureFilter });
+  latestFilters.current = { laboId, startDate, endDate, selectedFournisseurId, selectedDestKey, refFactureFilter };
 
   const fetchBatch = (offset: number, append: boolean) => {
-    const { laboId: lId, startDate: sd, endDate: ed, selectedFournisseurId: fId, selectedActiviteId: aId, refFactureFilter: ref } = latestFilters.current;
+    const { laboId: lId, startDate: sd, endDate: ed, selectedFournisseurId: fId, selectedDestKey: dKey, refFactureFilter: ref } = latestFilters.current;
     if (!lId) return;
     if (append) setLoadingMore(true); else { setLoading(true); setPage(1); setExpandedIds(new Set()); setLignesMap({}); }
     const params = new URLSearchParams();
@@ -97,17 +117,21 @@ export default function LaboFacturesApproPage() {
     if (sd) params.set('startDate', sd);
     if (ed) params.set('endDate', ed);
     if (fId) params.set('fournisseurId', fId);
-    if (aId) params.set('activiteId', aId);
+    applyDestParam(params, dKey);
     if (ref.trim()) params.set('ref', ref.trim());
     params.set('limit', '50');
     params.set('offset', String(offset));
     api.get(`/api/factures?${params}`)
       .then(({ data }) => {
-        const rows = data as FactureRow[];
+        // Le serveur filtre par `sens` ; sécurité côté client STRICTE (une facture manuelle, sens
+        // null, n'apparaît jamais sous « Transferts émis / reçus »). Pagination sur la page serveur.
+        const wantedSens = dKey === 'sens-emise' ? 'emise' : dKey === 'sens-recue' ? 'recue' : null;
+        const page = data as FactureRow[];
+        const rows = wantedSens ? page.filter((f) => f.sens === wantedSens) : page;
         if (append) setFactures((prev) => [...prev, ...rows]);
         else setFactures(rows);
-        setHasMore(rows.length === 50);
-        setNextOffset(offset + rows.length);
+        setHasMore(page.length === 50);
+        setNextOffset(offset + page.length);
       })
       .catch(() => { if (!append) setFactures([]); })
       .finally(() => { if (append) setLoadingMore(false); else setLoading(false); });
@@ -119,7 +143,7 @@ export default function LaboFacturesApproPage() {
     const timer = setTimeout(() => fetchBatch(0, false), 400);
     return () => clearTimeout(timer);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [laboId, startDate, endDate, selectedFournisseurId, selectedActiviteId, refFactureFilter]);
+  }, [laboId, startDate, endDate, selectedFournisseurId, selectedDestKey, refFactureFilter]);
 
   const toggleExpand = (id: number) => {
     setExpandedIds((prev) => {
@@ -150,6 +174,16 @@ export default function LaboFacturesApproPage() {
 
   const totalPages = Math.max(1, Math.ceil(factures.length / PAGE_SIZE));
   const pagedFactures = factures.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  // Libellés inchangés tant que le labo n'a que des activités et aucune facture reçue (comptes restauration).
+  const hasLaboFlux = destinations.some((d) => d.type === 'labo') || factures.some((f) => f.sens === 'recue');
+  // Émise : la destination (🏪 activité / 🏭 labo) est déjà rendue sur la ligne → pas de suffixe.
+  const badgeTransfert = (f: FactureRow): string => {
+    const x = f.contrepartieNom ?? f.activiteNom;
+    if (f.sens === 'recue') return `↙ Transfert reçu${x ? ` ← ${x}` : ''}`;
+    if (f.sens === 'emise') return '↗ Transfert émis';
+    return '↗ Transfert';
+  };
 
   const expandAll = () => {
     const ids = pagedFactures.map((f) => f.id);
@@ -201,16 +235,18 @@ export default function LaboFacturesApproPage() {
       <HistoryFilterBar
         accent="#7c3aed" accentDark="#6d28d9"
         subtitle={loading ? 'Chargement…' : undefined}
-        onReset={() => { setSelectedFournisseurId(''); setSelectedActiviteId(''); setRefFactureFilter(''); setStartDate(yearStart); setEndDate(yearEnd); }}
-        showReset={!!(selectedFournisseurId || selectedActiviteId || refFactureFilter || startDate !== yearStart || endDate !== yearEnd)}
+        onReset={() => { setSelectedFournisseurId(''); setSelectedDestKey(''); setRefFactureFilter(''); setStartDate(yearStart); setEndDate(yearEnd); }}
+        showReset={!!(selectedFournisseurId || selectedDestKey || refFactureFilter || startDate !== yearStart || endDate !== yearEnd)}
       >
         <FilterField label="📅 Du"><FilterInput type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} /></FilterField>
         <FilterField label="📅 Au"><FilterInput type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} /></FilterField>
-        {activites.length > 0 && (
-          <FilterField label="🏪 Activité">
-            <FilterSelect value={selectedActiviteId} onChange={(e) => setSelectedActiviteId(e.target.value)}>
+        {(destinations.length > 0 || hasLaboFlux) && (
+          <FilterField label={hasLaboFlux ? '🎯 Destination / Origine' : '🏪 Activité'}>
+            <FilterSelect value={selectedDestKey} onChange={(e) => setSelectedDestKey(e.target.value)}>
               <option value="">— Toutes —</option>
-              {activites.map((a) => <option key={a.id} value={a.id}>{a.nom}</option>)}
+              {destinations.map((d) => <option key={d.destKey} value={d.destKey}>{d.type === 'labo' ? `🏭 ${d.nom}` : d.nom}</option>)}
+              {hasLaboFlux && <option value="sens-emise">↗ Transferts émis</option>}
+              {hasLaboFlux && <option value="sens-recue">↙ Transferts reçus (origine : labo source)</option>}
             </FilterSelect>
           </FilterField>
         )}
@@ -263,8 +299,9 @@ export default function LaboFacturesApproPage() {
                       <div style={{ fontSize: '0.72rem', color: '#7c3aed', marginTop: 2 }}>
                         {f.refFacture ? `Réf: ${f.refFacture}` : 'Sans réf.'} · {fmtDate(f.dateFacture)}
                         {f.activiteNom && <> · 🏪 <strong>{f.activiteNom}</strong></>}
-                        <span style={{ marginLeft: 8, background: f.typeSource === 'transfert' ? '#6d28d9' : '#0369a1', color: '#fff', borderRadius: 4, padding: '1px 6px', fontSize: '0.65rem', fontWeight: 700 }}>
-                          {f.typeSource === 'transfert' ? '↗ Transfert' : 'Manuel'}
+                        {!f.activiteNom && f.sens === 'emise' && f.contrepartieNom && <> · 🏭 <strong>{f.contrepartieNom}</strong></>}
+                        <span style={{ marginLeft: 8, background: f.typeSource === 'transfert' ? (f.sens === 'recue' ? '#0e7490' : '#6d28d9') : '#0369a1', color: '#fff', borderRadius: 4, padding: '1px 6px', fontSize: '0.65rem', fontWeight: 700 }}>
+                          {f.typeSource === 'transfert' ? badgeTransfert(f) : 'Manuel'}
                         </span>
                       </div>
                     </div>

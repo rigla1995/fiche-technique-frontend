@@ -19,11 +19,19 @@ export default function AssistantWidget() {
   const openRef = useRef(open);
   openRef.current = open;
   const location = useLocation();
+  // Purge des conversations du guide (web_%) UNE fois par session quand la mise en route est
+  // complète — décision client 24/07 ; le GET n'a plus d'effet de bord (lot 1b §3.5), c'est ce
+  // widget seul qui appelle le POST (le serveur répond { purged: false } pour un gérant).
+  const purgedRef = useRef(false);
 
   const refreshEtat = useCallback(async () => {
     try {
       const { data } = await api.get('/api/ai-assistant/onboarding');
       setEtat(data);
+      if ((data as OnboardingEtat | null)?.complet && !purgedRef.current) {
+        purgedRef.current = true;
+        api.post('/api/ai-assistant/onboarding/purge').catch(() => {});
+      }
       return data as OnboardingEtat;
     } catch {
       setEtat(null);
