@@ -17,6 +17,8 @@ export interface User {
   gerantAccesAcheteurs?: boolean;
   activitesCount?: number;
   labosCount?: number;
+  /** Profil de domaine du compte (client : son abonnement ; gérant : parent ; admin/boss : null). */
+  domaine?: DomaineProfil | null;
 }
 
 export interface Promotion {
@@ -40,6 +42,17 @@ export interface Promotion {
   statutPromo: 'actif' | 'expiré';
 }
 
+/** Détail d'un composant souscrit (abonnement_config_composants joint à domaine_composants). */
+export interface ComposantConfig {
+  composantId?: number;
+  code: string;
+  libelle: string;
+  libellePluriel?: string | null;
+  icone?: string | null;
+  typeTechnique: 'activite' | 'labo' | 'gerant' | 'acheteurs';
+  nb: number;
+}
+
 export interface AbonnementConfig {
   id: number;
   abonnementId: number;
@@ -49,6 +62,11 @@ export interface AbonnementConfig {
   nbAcheteurs?: number;
   formuleActivites?: 'basique' | 'premium' | null;
   montantOnboarding: number;
+  /** Domaine d'activité du compte (lot 1a) — les compteurs ci-dessus sont dérivés des composants. */
+  domaineId?: number | null;
+  domaineSlug?: string | null;
+  domaineNom?: string | null;
+  composants?: ComposantConfig[];
   createdAt: string;
   updatedAt: string;
 }
@@ -134,7 +152,16 @@ export interface Paiement {
 }
 
 export interface TarifsConfig {
-  [cle: string]: { id: number; valeur: number; description: string };
+  [cle: string]: {
+    id: number;
+    /** Valeur résolue (surcharge du domaine si présente, sinon valeur générale). */
+    valeur: number;
+    description: string;
+    /** Valeur de la grille générale (tarifs_config). */
+    valeurGenerale?: number;
+    /** Surcharge du domaine demandé (`?domaineId=`) ; null = héritée de la grille générale. */
+    surcharge?: number | null;
+  };
 }
 
 export interface Demande {
@@ -283,13 +310,55 @@ export interface Client {
   onboardingStep?: number;
   createdAt?: string;
   activatedAt?: string | null;
+  /** Compat : toujours renvoyé par l'API (= [domaineId]). */
   domaineIds?: number[];
+  domaineId?: number | null;
+  domaineNom?: string | null;
 }
 
-export interface DomaineActivite {
-  id: number;
-  nom: string;
+// ── Profil de domaine (lot 1a) ───────────────────────────────────────────────
+export type ComposantTypeTechnique = 'activite' | 'labo' | 'gerant' | 'acheteurs';
+
+/** Composant du menu de configuration d'un domaine (domaine_composants). */
+export interface Composant {
+  id?: number;
+  code: string;
+  libelle: string;
+  libellePluriel?: string | null;
+  icone?: string | null;
+  aide?: string | null;
+  typeTechnique: ComposantTypeTechnique;
+  venteActive: boolean;
+  productionActive: boolean;
+  nbMin: number;
+  nbMax: number | null;
+  ordre: number;
+  actif: boolean;
 }
+
+/** Entrée de lexique : singulier, pluriel, genre, élision, icône. */
+export interface LexiqueEntree {
+  sg: string;
+  pl: string;
+  g: 'm' | 'f';
+  el: boolean;
+  icon?: string;
+}
+
+/** Profil résolu d'un domaine d'activité (composants + lexique + règles). */
+export interface DomaineProfil {
+  id: number;
+  slug: string;
+  nom: string;
+  description?: string | null;
+  nbClients?: number;
+  composants: Composant[];
+  lexique: Record<string, LexiqueEntree>;
+  regles: Record<string, unknown>;
+}
+
+/** Alias conservé pour compatibilité (anciens écrans : `{ id, nom }`). */
+export type DomaineActivite = DomaineProfil;
 
 export interface Entreprise {
   id: number;
