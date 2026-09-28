@@ -4,6 +4,12 @@ import type { Abonnement, Promotion } from '../../types';
 import { MonthPicker } from './MonthPicker';
 import HistoryFilterBar, { FilterField, FilterInput, FilterSegmented } from '../common/HistoryFilterBar';
 import { useConfirm } from '../common/ConfirmDialog';
+import Counter from './Counter';
+import {
+  AIDE_DEFAUT, PALIERS_ACHETEURS, PALIER_LABELS,
+  composantsActifs, deriveCompteurs, libelleComposant, palierAcheteurs, resoudreRegles, validerCompositionClient,
+  type ComposantDef, type DomaineOption, type ReglesComposition,
+} from './composition';
 
 const MODE_LABELS: Record<string, { label: string; color: string }> = {
   actif:     { label: 'Actif',        color: '#16a34a' },
@@ -312,6 +318,15 @@ export default function AbonnementsManagement() {
   const [formuleSaving, setFormuleSaving] = useState(false);
   const [formuleError, setFormuleError] = useState<string | null>(null);
 
+  // édition de la composition par composant (lot 1a) → PUT config { composants }
+  const [compEditOpen, setCompEditOpen] = useState(false);
+  const [compEditLoading, setCompEditLoading] = useState(false);
+  const [compEditDefs, setCompEditDefs] = useState<ComposantDef[]>([]);
+  const [compEditNb, setCompEditNb] = useState<Record<string, number>>({});
+  const [compEditRegles, setCompEditRegles] = useState<ReglesComposition>(resoudreRegles(null));
+  const [compSaving, setCompSaving] = useState(false);
+  const [compError, setCompError] = useState<string | null>(null);
+
   // Assistant IA (intégré à l'application)
   const [aiEnabled, setAiEnabled] = useState(false);
   const [aiSaving, setAiSaving] = useState(false);
@@ -346,6 +361,8 @@ export default function AbonnementsManagement() {
     setModuleVenteError(null);
     setEditingPromo(null);
     setActiveDetailTab('configuration');
+    setCompEditOpen(false);
+    setCompError(null);
     setPromoAppliesTo('mensualite');
     setPromoType('percent_off');
     setPromoMoisDebut('');
@@ -447,13 +464,10 @@ export default function AbonnementsManagement() {
     setFormuleError(null);
     setFormuleSaving(true);
     try {
-      await api.put(`/api/abonnements/client/${selected.clientId}/config`, {
-        nbActivites: cfg.nbActivites,
-        nbLabos: cfg.nbLabos,
-        nbGerants: cfg.nbGerants,
-        montantOnboarding: cfg.montantOnboarding,
-        formuleActivites: autre,
-      });
+      // Mise à jour PARTIELLE : seule la formule change — le détail par composant du compte
+      // est conservé tel quel (un payload legacy nbActivites/nbLabos/… ferait re-projeter la
+      // composition d'un compte multi-composants).
+      await api.put(`/api/abonnements/client/${selected.clientId}/config`, { formuleActivites: autre });
       // Recharge le détail pour récupérer le nouveau breakdown
       const abRes = await api.get(`/api/abonnements/client/${selected.clientId}?withPricing=1`);
       setSelected(abRes.data);
@@ -462,6 +476,100 @@ export default function AbonnementsManagement() {
       setFormuleError((err as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Erreur lors du changement de formule');
     } finally {
       setFormuleSaving(false);
+    }
+  };
+
+  // ── Composition par composant (lot 1a) ──────────────────────────────────
+  // Ouvre l'éditeur : menu de composants du domaine (GET /api/domaines/:id, tous
+  // les composants actifs avec min/max) initialisé avec les quantités souscrites ;
+  // repli sur les composants de la config si le profil est indisponible.
+  const openCompEdit = async () => {
+    if (!selected?.config || compEditLoading) return;
+    const cfg = selected.config;
+    setCompError(null);
+    setCompEditLoading(true);
+    try {
+      const souscrits: ComposantDef[] = (cfg.composants || []).map((c) => ({
+        code: c.code, libelle: c.libelle, libellePluriel: c.libellePluriel, icone: c.icone, typeTechnique: c.typeTechnique,
+      }));
+      let defs: ComposantDef[] = souscrits;
+      let regles = resoudreRegles(null);
+      if (cfg.domaineId != null) {
+        try {
+          const { data } = await api.get(`/api/domaines/${cfg.domaineId}`);
+          const profil = data as DomaineOption;
+          const actifs = composantsActifs(profil);
+          if (actifs.length > 0) {
+            // Menu = composants actifs du domaine ∪ composants SOUSCRITS désactivés depuis
+            // (affichés figés, toujours envoyés dans le payload pour ne pas les perdre).
+            const codesActifs = new Set(actifs.map((c) => c.code));
+            const inactifsSouscrits = souscrits
+              .filter((s) => !codesActifs.has(s.code))
+              .map((s) => ({ ...(profil.composants || []).find((c) => c.code === s.code), ...s, actif: false }));
+            defs = [...actifs, ...inactifsSouscrits];
+          }
+          regles = resoudreRegles(profil.regles);
+        } catch { /* repli : composants de la config */ }
+      }
+      const nb: Record<string, number> = {};
+      for (const d of defs) {
+        const n = cfg.composants?.find((c) => c.code === d.code)?.nb ?? 0;
+        // Quota acheteurs hors palier (ex. 35) → palier facturé (50) : le select ne propose que les paliers
+        nb[d.code] = d.typeTechnique === 'acheteurs' ? palierAcheteurs(n) : n;
+      }
+      setCompEditDefs(defs);
+      setCompEditNb(nb);
+      setCompEditRegles(regles);
+      setCompEditOpen(true);
+    } finally {
+      setCompEditLoading(false);
+    }
+  };
+
+  const setCompNb = (code: string, n: number) => {
+    setCompEditNb((prev) => {
+      const next = { ...prev, [code]: Math.max(0, n) };
+      if (compEditRegles.acheteurs_requiert_labo) {
+        const labos = compEditDefs.filter((c) => c.typeTechnique === 'labo').reduce((s, c) => s + (next[c.code] ?? 0), 0);
+        if (labos === 0) compEditDefs.filter((c) => c.typeTechnique === 'acheteurs').forEach((c) => { next[c.code] = 0; });
+      }
+      return next;
+    });
+  };
+
+  const saveComposition = async () => {
+    if (!selected?.config || compSaving) return;
+    const cfg = selected.config;
+    const erreurs = validerCompositionClient(compEditDefs, compEditNb, compEditRegles);
+    if (erreurs.length > 0) { setCompError(erreurs[0]); return; }
+    const changements = compEditDefs
+      .filter((d) => (cfg.composants?.find((c) => c.code === d.code)?.nb ?? 0) !== (compEditNb[d.code] ?? 0))
+      .map((d) => `${d.icone ? `${d.icone} ` : ''}${d.libelle} : ${cfg.composants?.find((c) => c.code === d.code)?.nb ?? 0} → ${compEditNb[d.code] ?? 0}`);
+    if (changements.length === 0) { setCompEditOpen(false); return; }
+    const k = deriveCompteurs(compEditDefs, compEditNb);
+    const ok = await confirm({
+      title: 'Modifier la composition du compte ?',
+      message: `La mensualité sera recalculée (${k.nbActivites} activité(s) · ${k.nbLabos} labo(s) · ${k.nbGerants} gérant(s)${k.nbAcheteurs > 0 ? ` · acheteurs ≤ ${k.nbAcheteurs}` : ''}) et les paiements en attente mis à jour.`,
+      details: changements,
+      tone: 'primary',
+      icon: '⚙️',
+      confirmLabel: 'Enregistrer',
+    });
+    if (!ok) return;
+    setCompSaving(true);
+    setCompError(null);
+    try {
+      await api.put(`/api/abonnements/client/${selected.clientId}/config`, {
+        composants: compEditDefs.map((d) => ({ code: d.code, nb: compEditNb[d.code] ?? 0 })),
+      });
+      const abRes = await api.get(`/api/abonnements/client/${selected.clientId}?withPricing=1`);
+      setSelected(abRes.data);
+      setCompEditOpen(false);
+      fetchList();
+    } catch (err: unknown) {
+      setCompError((err as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Erreur lors de la mise à jour de la composition');
+    } finally {
+      setCompSaving(false);
     }
   };
 
@@ -1013,6 +1121,104 @@ export default function AbonnementsManagement() {
                         </>
                       )}
                     </div>
+                    {/* Domaine d'activité + composition par composant (lot 1a) */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <span style={{ width: 28, height: 28, background: '#eff6ff', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, flexShrink: 0 }}>🏷️</span>
+                      <div style={{ flex: 1 }}>
+                        <span style={{ fontSize: 11, fontWeight: 700, color: '#1d4ed8', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Domaine</span>
+                        <div style={{ fontSize: 13, color: '#374151', marginTop: 1 }}>{cfg.domaineNom || 'Grille générale (restauration)'}</div>
+                      </div>
+                      {!compEditOpen && (
+                        <button onClick={openCompEdit} disabled={compEditLoading}
+                          style={{ fontSize: 11, padding: '4px 12px', borderRadius: 8, border: '1px solid #bfdbfe', background: '#fff', color: '#1d4ed8', cursor: compEditLoading ? 'default' : 'pointer', fontWeight: 700, opacity: compEditLoading ? 0.7 : 1 }}>
+                          {compEditLoading ? '…' : '✏️ Modifier la composition'}
+                        </button>
+                      )}
+                    </div>
+                    {(cfg.composants || []).length > 0 && (
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, paddingLeft: 38 }}>
+                        {(cfg.composants || []).filter((c) => c.nb > 0).map((c) => (
+                          <span key={c.code} style={{ fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 12, background: '#eff6ff', color: '#1e40af', border: '1px solid #bfdbfe' }}>
+                            {c.icone ? `${c.icone} ` : ''}{c.typeTechnique === 'acheteurs' ? `${c.libelle} ≤ ${c.nb}` : libelleComposant(c, c.nb)}
+                          </span>
+                        ))}
+                        {(cfg.composants || []).every((c) => c.nb === 0) && (
+                          <span style={{ fontSize: 11, color: '#94a3b8', fontStyle: 'italic' }}>Aucun composant souscrit</span>
+                        )}
+                      </div>
+                    )}
+                    {compError && !compEditOpen && (
+                      <div style={{ fontSize: 11, color: '#dc2626', paddingLeft: 38 }}>{compError}</div>
+                    )}
+
+                    {/* Éditeur de composition : Counters par composant + select acheteurs */}
+                    {compEditOpen && (() => {
+                      const k = deriveCompteurs(compEditDefs, compEditNb);
+                      const erreurs = validerCompositionClient(compEditDefs, compEditNb, compEditRegles);
+                      return (
+                        <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 12, padding: 14, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                          <div style={{ fontSize: 11, fontWeight: 700, color: '#0f172a', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                            Composition — {cfg.domaineNom || 'domaine par défaut'}
+                          </div>
+                          {compEditDefs.length === 0 && (
+                            <div style={{ fontSize: 12, color: '#92400e', background: '#fef3c7', border: '1px solid #fcd34d', borderRadius: 8, padding: '8px 12px' }}>
+                              Aucun composant disponible pour ce domaine.
+                            </div>
+                          )}
+                          {compEditDefs.map((c) => {
+                            const nb = compEditNb[c.code] ?? 0;
+                            const inactif = c.actif === false;
+                            const titre = `${c.icone ? `${c.icone} ` : ''}${c.libelle}${inactif ? ' — désactivé' : ''}`;
+                            if (inactif) {
+                              // Composant désactivé par l'admin mais encore souscrit : quantité figée
+                              // (le serveur la tolère tant qu'elle ne monte pas), retirable seulement.
+                              return (
+                                <Counter key={c.code} label={titre} value={nb} disabled
+                                  sub="Composant désactivé dans le profil du domaine : quantité conservée, non modifiable ici (réactivez-le dans Domaines d'activités)"
+                                  onChange={() => { /* figé */ }} min={0} max={nb} />
+                              );
+                            }
+                            if (c.typeTechnique === 'acheteurs') {
+                              const verrou = compEditRegles.acheteurs_requiert_labo && k.nbLabos === 0;
+                              const paliers = PALIERS_ACHETEURS.filter((p) => p === 0 || ((c.nbMax == null || p <= c.nbMax) && p >= (c.nbMin ?? 0)));
+                              return (
+                                <div key={c.code} style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, padding: '12px 16px', opacity: verrou ? 0.6 : 1 }}>
+                                  <div style={{ fontSize: 13, fontWeight: 700, color: '#0f172a' }}>{titre}</div>
+                                  <div style={{ fontSize: 11, color: '#64748b', marginTop: 2, marginBottom: 8 }}>
+                                    {c.aide || 'Carnet d\'acheteurs B2B facturé par palier'}{compEditRegles.acheteurs_requiert_labo ? ' — nécessite au moins un labo' : ''}
+                                  </div>
+                                  <select value={nb} disabled={verrou} onChange={(e) => setCompNb(c.code, parseInt(e.target.value, 10) || 0)}
+                                    style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: '1.5px solid #e2e8f0', fontSize: 13, background: verrou ? '#f8fafc' : '#fff', cursor: verrou ? 'default' : 'pointer' }}>
+                                    {paliers.map((p) => <option key={p} value={p}>{PALIER_LABELS[p]}</option>)}
+                                  </select>
+                                </div>
+                              );
+                            }
+                            return (
+                              <Counter key={c.code} label={titre} sub={c.aide || AIDE_DEFAUT[c.typeTechnique]} value={nb}
+                                onChange={(n) => setCompNb(c.code, n)} min={c.nbMin ?? 0} max={c.nbMax ?? null} />
+                            );
+                          })}
+                          {erreurs.map((msg, i) => (
+                            <div key={i} style={{ fontSize: 12, color: '#92400e', background: '#fef3c7', border: '1px solid #fcd34d', borderRadius: 8, padding: '8px 12px', fontWeight: 600 }}>⚠️ {msg}</div>
+                          ))}
+                          {compError && (
+                            <div style={{ fontSize: 12, color: '#dc2626', background: '#fee2e2', border: '1px solid #fecaca', borderRadius: 8, padding: '8px 12px', fontWeight: 600 }}>{compError}</div>
+                          )}
+                          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 4 }}>
+                            <button type="button" onClick={() => { setCompEditOpen(false); setCompError(null); }} disabled={compSaving}
+                              style={{ fontSize: 12, padding: '7px 16px', borderRadius: 8, border: '1px solid #e2e8f0', background: '#fff', color: '#374151', cursor: 'pointer', fontWeight: 600 }}>
+                              Annuler
+                            </button>
+                            <button type="button" onClick={saveComposition} disabled={compSaving || erreurs.length > 0 || compEditDefs.length === 0}
+                              style={{ fontSize: 12, padding: '7px 16px', borderRadius: 8, border: 'none', background: compSaving || erreurs.length > 0 ? '#c4b5fd' : 'linear-gradient(135deg,#4c1d95,#6d28d9)', color: '#fff', cursor: compSaving || erreurs.length > 0 ? 'default' : 'pointer', fontWeight: 700 }}>
+                              {compSaving ? 'Enregistrement…' : '💾 Enregistrer la composition'}
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })()}
+
                     {items.map((item, i) => (
                       <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                         <span style={{ width: 28, height: 28, background: '#f5f3ff', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, flexShrink: 0 }}>{item.icon}</span>

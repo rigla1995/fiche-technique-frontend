@@ -56,6 +56,7 @@ const AdminKnowledgeBasePage = lazy(() => import('./components/admin/AdminKnowle
 const AdminManuelPage = lazy(() => import('./components/admin/AdminManuelPage'));
 const AdminDashboardPage = lazy(() => import('./components/admin/AdminDashboardPage'));
 const AdminDomainesPage = lazy(() => import('./components/admin/AdminDomainesPage'));
+const AdminDomaineEditPage = lazy(() => import('./components/admin/AdminDomaineEditPage'));
 const AdminSupportPage = lazy(() => import('./components/admin/AdminSupportPage'));
 const AdminDemandesAccesPage = lazy(() => import('./components/admin/AdminDemandesAccesPage'));
 const AdminPartenairesSitePage = lazy(() => import('./components/admin/AdminPartenairesSitePage'));
@@ -165,6 +166,7 @@ export default function App() {
             <Route path="/admin/clients" element={<ClientsManagement />} />
             <Route path="/admin/rapports" element={<AdminRapportsPage />} />
             <Route path="/admin/domaines" element={<AdminDomainesPage />} />
+            <Route path="/admin/domaines/:id" element={<AdminDomaineEditPage />} />
             <Route path="/admin/abonnements" element={<AbonnementsManagement />} />
             <Route path="/admin/abonnements/paiements"  element={<HistoriquePaiementsAdmin />} />
             <Route path="/admin/abonnements/promotions" element={<HistoriquePromotionsAdmin />} />

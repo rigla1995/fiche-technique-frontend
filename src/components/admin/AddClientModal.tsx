@@ -1,8 +1,15 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import api from '../../api/client';
-import type { DomaineActivite, Promotion } from '../../types';
+import type { Promotion } from '../../types';
 import { MonthPicker } from './MonthPicker';
 import { useEmailCheck } from '../../hooks/useEmailCheck';
+import Counter from './Counter';
+import {
+  AIDE_DEFAUT, PALIERS_ACHETEURS, PALIER_LABELS,
+  composantsActifs, composantsPayload, deriveCompteurs, libelleComposant,
+  quantitesInitiales, resoudreRegles, validerCompositionClient,
+  type DomaineOption,
+} from './composition';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -15,6 +22,10 @@ interface PricingPreview {
   acheteurs?: { nb: number; palier: 10 | 20 | 50 | 100 | null; total: number };
   totalMensuel: number;
   onboardingPrice?: number;
+  /** Lot 1a : grille du domaine appliquée + composants résolus par le serveur. */
+  domaine?: { id: number; slug?: string; nom: string } | null;
+  composants?: { code: string; libelle: string; libellePluriel?: string | null; icone?: string | null; typeTechnique: string; nb: number }[];
+  regles?: Record<string, unknown>;
 }
 
 type Formule = 'basique' | 'premium';
@@ -32,6 +43,10 @@ interface PromoForm {
 
 const TUNISIAN_PHONE = /^(\+216[\s-]?)?[2579]\d{7}$/;
 const fmt = (n: number) => `${n.toLocaleString('fr-FR')} DT`;
+// Message d'une erreur API (4xx) — affiché en bandeau inline (jamais alerte() :
+// l'overlay du wizard est au-dessus des dialogues).
+const apiMessage = (err: unknown, fallback: string) =>
+  (err as { response?: { data?: { message?: string } } })?.response?.data?.message || fallback;
 
 // ── Step indicator ────────────────────────────────────────────────────────────
 
@@ -90,9 +105,10 @@ function promoDurStr(p: PromoForm): string {
 
 // ── Pricing card ──────────────────────────────────────────────────────────────
 
-function PricingCard({ preview, promos }: { preview: PricingPreview | null; promos?: PromoForm[] }) {
+function PricingCard({ preview, promos, grille, onboarding }: { preview: PricingPreview | null; promos?: PromoForm[]; grille?: string | null; onboarding?: number }) {
   if (!preview) return null;
-  const ob = preview.onboardingPrice ?? 0;
+  // Onboarding : montant saisi par l'admin (étape 2) s'il diffère du tarif de la grille
+  const ob = onboarding ?? preview.onboardingPrice ?? 0;
 
   const mensPromo = promos?.find((p) => ['mensualite', 'les_deux'].includes(p.appliesTo));
   const obPromo   = promos?.find((p) => ['onboarding', 'les_deux'].includes(p.appliesTo));
@@ -120,7 +136,15 @@ function PricingCard({ preview, promos }: { preview: PricingPreview | null; prom
 
   return (
     <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 12, padding: '16px 18px', marginTop: 14 }}>
-      <div style={{ fontSize: 11, fontWeight: 700, color: '#1d4ed8', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Récapitulatif tarifaire</div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 10, flexWrap: 'wrap' }}>
+        <div style={{ fontSize: 11, fontWeight: 700, color: '#1d4ed8', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Récapitulatif tarifaire</div>
+        {grille && (
+          <span title="Grille tarifaire appliquée (générale + surcharges du domaine)"
+            style={{ fontSize: 10, fontWeight: 700, color: '#1e40af', background: '#dbeafe', border: '1px solid #bfdbfe', borderRadius: 10, padding: '2px 9px' }}>
+            📊 Grille : {grille}
+          </span>
+        )}
+      </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
         {/* Formule d'activités — entête des lignes activités */}
         {preview.formuleActivites && preview.activite.nb > 0 && (
@@ -184,44 +208,6 @@ function PricingCard({ preview, promos }: { preview: PricingPreview | null; prom
   );
 }
 
-// ── Counter input ─────────────────────────────────────────────────────────────
-
-function Counter({ label, sub, value, onChange, min = 0 }: {
-  label: string; sub: string; value: number; onChange: (n: number) => void; min?: number;
-}) {
-  return (
-    <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
-      <div style={{ flex: 1 }}>
-        <div style={{ fontSize: 13, fontWeight: 700, color: '#0f172a' }}>{label}</div>
-        <div style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>{sub}</div>
-      </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-        <button
-          type="button"
-          onClick={() => onChange(Math.max(min, value - 1))}
-          disabled={value <= min}
-          style={{
-            width: 32, height: 32, borderRadius: '50%', border: '1.5px solid #e2e8f0',
-            background: value <= min ? '#f8fafc' : '#f1f5f9',
-            color: value <= min ? '#cbd5e1' : '#334155',
-            fontSize: 18, cursor: value <= min ? 'default' : 'pointer',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, lineHeight: 1,
-          }}>−</button>
-        <span style={{ fontSize: 20, fontWeight: 800, color: '#0f172a', minWidth: 24, textAlign: 'center' }}>{value}</span>
-        <button
-          type="button"
-          onClick={() => onChange(value + 1)}
-          style={{
-            width: 32, height: 32, borderRadius: '50%', border: '1.5px solid #6366f1',
-            background: '#6366f1', color: '#fff',
-            fontSize: 18, cursor: 'pointer',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, lineHeight: 1,
-          }}>+</button>
-      </div>
-    </div>
-  );
-}
-
 // ── Main Modal ────────────────────────────────────────────────────────────────
 
 interface Props {
@@ -244,18 +230,20 @@ export default function AddClientModal({ onClose, onCreated, initialValues }: Pr
   const [email, setEmail] = useState(initialValues?.email ?? '');
   const [tel, setTel] = useState(initialValues?.telephone ?? '');
   const [telTouched, setTelTouched] = useState(false);
-  const [domaines, setDomaines] = useState<DomaineActivite[]>([]);
-  const [selectedDomaines, setSelectedDomaines] = useState<number[]>([]);
 
-  // Step 2
-  const [nbActivites, setNbActivites] = useState(1);
-  const [nbLabos, setNbLabos] = useState(0);
-  const [nbGerants, setNbGerants] = useState(0);
+  // Step 2 — domaine + composition par composant (les compteurs sont dérivés)
+  const [domaines, setDomaines] = useState<DomaineOption[]>([]);
+  const [domainesLoading, setDomainesLoading] = useState(true);
+  const [domainesError, setDomainesError] = useState<string | null>(null);
+  const [domaineId, setDomaineId] = useState<number | null>(null);
+  const [nbParCode, setNbParCode] = useState<Record<string, number>>({});
   const [formuleActivites, setFormuleActivites] = useState<Formule>('premium');
-  const [nbAcheteurs, setNbAcheteurs] = useState(0);
   const [montantOnboarding, setMontantOnboarding] = useState('');
+  // true dès que l'admin a saisi lui-même le montant : la grille ne l'écrase plus
+  const obManuel = useRef(false);
   const [preview, setPreview] = useState<PricingPreview | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewError, setPreviewError] = useState<string | null>(null);
 
   // Step 3 — promo
   const [promos, setPromos] = useState<PromoForm[]>([]);
@@ -265,26 +253,81 @@ export default function AddClientModal({ onClose, onCreated, initialValues }: Pr
   // Step 4
   const [pdfBase64, setPdfBase64] = useState<string | null>(null);
   const [pdfError, setPdfError] = useState(false);
+  const [pdfErrorMsg, setPdfErrorMsg] = useState<string | null>(null);
   const previewSeq = useRef(0);
 
-  useEffect(() => {
-    api.get('/api/domaines?hasIngredients=true').then(({ data }) => setDomaines(data)).catch(() => {});
+  // ── Domaine / composition dérivés ──
+  const domaine = useMemo(() => domaines.find((d) => d.id === domaineId) ?? null, [domaines, domaineId]);
+  const composants = useMemo(() => composantsActifs(domaine), [domaine]);
+  const regles = useMemo(() => resoudreRegles(domaine?.regles), [domaine]);
+  const compteurs = useMemo(() => deriveCompteurs(composants, nbParCode), [composants, nbParCode]);
+  const compositionErrors = useMemo(() => validerCompositionClient(composants, nbParCode, regles), [composants, nbParCode, regles]);
+  const payloadComposants = useMemo(() => composantsPayload(composants, nbParCode), [composants, nbParCode]);
+  const composantsKey = JSON.stringify(payloadComposants);
+  const { nbActivites, nbLabos, nbGerants, nbAcheteurs } = compteurs;
+
+  const selectDomaine = useCallback((d: DomaineOption) => {
+    setDomaineId(d.id);
+    setNbParCode(quantitesInitiales(composantsActifs(d)));
+    obManuel.current = false;
+    const formules = resoudreRegles(d.regles).formules;
+    setFormuleActivites((f) => (formules.includes(f) ? f : formules[0]));
+    setError(null);
   }, []);
+
+  // Quantité d'un composant ; si Σ labo tombe à 0, l'option Acheteurs est remise à 0
+  // (règle acheteurs_requiert_labo — comme l'ancien Counter « Labos »).
+  const setNb = (code: string, n: number) => {
+    setNbParCode((prev) => {
+      const next = { ...prev, [code]: Math.max(0, n) };
+      if (regles.acheteurs_requiert_labo) {
+        const labos = composants.filter((c) => c.typeTechnique === 'labo').reduce((s, c) => s + (next[c.code] ?? 0), 0);
+        if (labos === 0) composants.filter((c) => c.typeTechnique === 'acheteurs').forEach((c) => { next[c.code] = 0; });
+      }
+      return next;
+    });
+  };
+
+  useEffect(() => {
+    api.get('/api/domaines')
+      .then(({ data }) => {
+        const list: DomaineOption[] = Array.isArray(data) ? data : [];
+        setDomaines(list);
+        setDomainesError(null);
+        // Pré-sélection si un seul domaine existe
+        if (list.length === 1) selectDomaine(list[0]);
+      })
+      .catch((err: unknown) => setDomainesError(apiMessage(err, 'Impossible de charger les domaines d\'activité.')))
+      .finally(() => setDomainesLoading(false));
+  }, [selectDomaine]);
 
   // Fetch pricing preview whenever config changes; auto-set onboarding price from response
-  const fetchPreview = useCallback(async (na: number, nl: number, ng: number, nach: number, formule: Formule) => {
+  const fetchPreview = useCallback(async (dId: number, comps: { code: string; nb: number }[], k: { nbActivites: number; nbLabos: number; nbGerants: number; nbAcheteurs: number }, formule: Formule) => {
     setPreviewLoading(true);
     try {
-      const { data } = await api.get('/api/abonnements/pricing-preview', { params: { nbActivites: na, nbLabos: nl, nbGerants: ng, nbAcheteurs: nach, formuleActivites: formule } });
+      const { data } = await api.get('/api/abonnements/pricing-preview', {
+        params: {
+          domaineId: dId,
+          composants: JSON.stringify(comps),
+          // compteurs dérivés (compat anciens paramètres)
+          nbActivites: k.nbActivites, nbLabos: k.nbLabos, nbGerants: k.nbGerants, nbAcheteurs: k.nbAcheteurs,
+          formuleActivites: formule,
+        },
+      });
       setPreview(data);
-      if (data.onboardingPrice != null) setMontantOnboarding(String(data.onboardingPrice));
-    } catch { setPreview(null); }
-    finally { setPreviewLoading(false); }
+      setPreviewError(null);
+      if (data.onboardingPrice != null && !obManuel.current) setMontantOnboarding(String(data.onboardingPrice));
+    } catch (err: unknown) {
+      setPreview(null);
+      setPreviewError(apiMessage(err, 'Tarif indisponible — vérifiez la composition.'));
+    } finally { setPreviewLoading(false); }
   }, []);
 
   useEffect(() => {
-    if (step === 1 || step === 3) fetchPreview(nbActivites, nbLabos, nbGerants, nbAcheteurs, formuleActivites);
-  }, [step, nbActivites, nbLabos, nbGerants, nbAcheteurs, formuleActivites, fetchPreview]);
+    if ((step === 1 || step === 3) && domaineId != null) {
+      fetchPreview(domaineId, JSON.parse(composantsKey), { nbActivites, nbLabos, nbGerants, nbAcheteurs }, formuleActivites);
+    }
+  }, [step, domaineId, composantsKey, nbActivites, nbLabos, nbGerants, nbAcheteurs, formuleActivites, fetchPreview]);
 
   // Step 4 : le contrat téléchargeable = EXACTEMENT le document contractuel
   // généré par le backend (même builder/charte que l'envoi en signature DocuSeal).
@@ -293,8 +336,11 @@ export default function AddClientModal({ onClose, onCreated, initialValues }: Pr
     const seq = ++previewSeq.current;
     setPdfBase64(null);
     setPdfError(false);
+    setPdfErrorMsg(null);
     api.post('/api/abonnements/contrat-preview', {
       nom, email, telephone: tel,
+      domaineId,
+      composants: JSON.parse(composantsKey),
       nbActivites, nbLabos, nbGerants, formuleActivites, nbAcheteurs,
       montantOnboarding: parseFloat(montantOnboarding) || 0,
       // aperçu = promos manuelles + la promo « 1er mois offert » (sauf si l'admin
@@ -306,10 +352,15 @@ export default function AddClientModal({ onClose, onCreated, initialValues }: Pr
         if (data?.pdfBase64) setPdfBase64(data.pdfBase64);
         else setPdfError(true);
       })
-      .catch(() => { if (seq === previewSeq.current) setPdfError(true); });
+      .catch((err: unknown) => {
+        if (seq !== previewSeq.current) return;
+        setPdfError(true);
+        const status = (err as { response?: { status?: number } })?.response?.status;
+        if (status && status >= 400 && status < 500) setPdfErrorMsg(apiMessage(err, 'Le serveur a refusé la configuration.'));
+      });
     // mapPromoForApi est stable (fonction pure du composant) — promos suffit en dépendance
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [step, nom, email, tel, nbActivites, nbLabos, nbGerants, formuleActivites, nbAcheteurs, montantOnboarding, promos]);
+  }, [step, nom, email, tel, domaineId, composantsKey, nbActivites, nbLabos, nbGerants, formuleActivites, nbAcheteurs, montantOnboarding, promos]);
 
   // ── Step validation ──
 
@@ -321,11 +372,11 @@ export default function AddClientModal({ onClose, onCreated, initialValues }: Pr
     !emailExists &&
     !emailChecking &&
     !emailCheckFailed &&
-    telValid &&
-    selectedDomaines.length > 0;
-  // 0 activité = compte dépôt : exige au moins 1 labo ET l'option Acheteurs
-  // (un labo seul n'est pas une composition valide — labo+activités / labo+acheteurs / les trois).
-  const step2Valid = (nbActivites >= 1 || (nbActivites === 0 && nbLabos >= 1 && nbAcheteurs > 0)) && montantOnboarding !== '';
+    telValid;
+  const montantOb = parseFloat(montantOnboarding);
+  const montantObValid = montantOnboarding !== '' && Number.isFinite(montantOb) && montantOb >= 0;
+  // Domaine choisi + composition valide (miroir client des règles ; le serveur reste juge) + onboarding saisi
+  const step2Valid = domaineId != null && compositionErrors.length === 0 && montantObValid;
   const nextDisabled = (step === 0 && !step1Valid) || (step === 1 && !step2Valid);
 
   const next = () => {
@@ -337,12 +388,11 @@ export default function AddClientModal({ onClose, onCreated, initialValues }: Pr
       if (emailCheckFailed) { setError('Impossible de vérifier l\'email — vérifiez votre connexion.'); return; }
       if (emailExists) { setError('Cet email est déjà utilisé.'); return; }
       if (!telValid) { setError('Téléphone invalide — format tunisien requis (ex: 20 123 456 ou +216 20 123 456).'); return; }
-      if (selectedDomaines.length === 0) { setError('Veuillez sélectionner au moins un domaine d\'activité.'); return; }
     }
     if (step === 1 && !step2Valid) {
-      setError(nbActivites === 0
-        ? "Un compte sans activité (dépôt) nécessite au moins 1 labo ET l'option Acheteurs."
-        : 'Configurez au moins 1 activité (chargement du tarif en cours…).');
+      if (domaineId == null) setError('Choisissez le domaine d\'activité du client.');
+      else if (compositionErrors.length > 0) setError(compositionErrors[0]);
+      else setError('Indiquez le montant d\'onboarding (0 accepté).');
       return;
     }
     setStep((s) => s + 1);
@@ -415,9 +465,11 @@ export default function AddClientModal({ onClose, onCreated, initialValues }: Pr
     try {
       const { data } = await api.post('/admin/clients', {
         nom, email, telephone: tel,
-        domaineIds: selectedDomaines,
-        nbActivites, nbLabos, nbGerants,
-        formuleActivites, nbAcheteurs,
+        domaineId,
+        composants: payloadComposants,
+        // compteurs dérivés (compat)
+        nbActivites, nbLabos, nbGerants, nbAcheteurs,
+        formuleActivites,
         montantOnboarding: parseFloat(montantOnboarding) || 0,
         contractPdfBase64: pdfBase64 || null,
         promotions: promos.map(mapPromoForApi),
@@ -431,7 +483,7 @@ export default function AddClientModal({ onClose, onCreated, initialValues }: Pr
       onCreated(createdClientId);
       onClose();
     } catch (err: unknown) {
-      setError((err as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Erreur lors de la création');
+      setError(apiMessage(err, 'Erreur lors de la création'));
     } finally {
       setSaving(false);
     }
@@ -446,6 +498,16 @@ export default function AddClientModal({ onClose, onCreated, initialValues }: Pr
     const start = p.appliesTo !== 'onboarding' && p.moisDebut ? ` · À partir de ${p.moisDebut}` : '';
     return `${applyLbl[p.appliesTo] || p.appliesTo} — ${typeLbl}${dur}${start}`;
   };
+
+  const grilleNom = preview?.domaine?.nom ?? domaine?.nom ?? null;
+  const onboardingGrille = preview?.onboardingPrice ?? null;
+  // Récap composition avec les mots du domaine (« 2 Restaurants · 1 Cuisine »)
+  const recapComposants = composants
+    .filter((c) => (nbParCode[c.code] ?? 0) > 0)
+    .map((c) => c.typeTechnique === 'acheteurs'
+      ? `${c.libelle} ≤ ${nbParCode[c.code]}`
+      : libelleComposant(c, nbParCode[c.code] ?? 0));
+  const formulesDispo = regles.formules;
 
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 2000, background: 'rgba(15,23,42,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
@@ -516,70 +578,29 @@ export default function AddClientModal({ onClose, onCreated, initialValues }: Pr
                   )}
                 </div>
               </div>
-
-              {/* Domaines — restructured */}
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                  <label style={{ ...labelStyle, marginBottom: 0 }}>
-                    Domaine(s) d'activité *
-                  </label>
-                  {selectedDomaines.length > 0 && (
-                    <span style={{ fontSize: 11, fontWeight: 700, color: '#4338ca', background: '#eef2ff', border: '1px solid #c7d2fe', borderRadius: 12, padding: '2px 10px' }}>
-                      {selectedDomaines.length} sélectionné{selectedDomaines.length > 1 ? 's' : ''}
-                    </span>
-                  )}
-                </div>
-                <div style={{ border: '1.5px solid #e2e8f0', borderRadius: 10, padding: 12, background: '#fafbff' }}>
-                  {domaines.length === 0 ? (
-                    <p style={{ fontSize: 12, color: '#94a3b8', margin: 0 }}>Chargement des domaines…</p>
-                  ) : (
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                      {domaines.map((d) => {
-                        const sel = selectedDomaines.includes(d.id);
-                        return (
-                          <button key={d.id} type="button"
-                            onClick={() => setSelectedDomaines((p) => sel ? p.filter((x) => x !== d.id) : [...p, d.id])}
-                            style={{
-                              padding: '7px 16px', borderRadius: 20,
-                              border: `1.5px solid ${sel ? '#6366f1' : '#e2e8f0'}`,
-                              background: sel ? '#eef2ff' : '#fff',
-                              color: sel ? '#4338ca' : '#64748b',
-                              fontSize: 13, fontWeight: sel ? 700 : 500,
-                              cursor: 'pointer', transition: 'all 0.15s',
-                              display: 'flex', alignItems: 'center', gap: 6,
-                            }}>
-                            {sel && <span style={{ fontSize: 10 }}>✓</span>}
-                            {d.nom}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-                <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 5 }}>
-                  Sélectionnez au moins un domaine — détermine les ingrédients accessibles au client
-                </div>
-              </div>
             </div>
           )}
 
           {/* ── STEP 2: Configuration ── */}
           {step === 1 && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              <Counter label="Activités" sub="Unités de production / points de vente — 0 = compte dépôt (labo + acheteurs)" value={nbActivites} onChange={(n) => setNbActivites(n)} min={0} />
 
-              {/* Formule d'activités */}
-              {nbActivites >= 1 && (
-                <div>
-                  <label style={labelStyle}>Formule d'activités</label>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                    {([
-                      { value: 'basique' as Formule, title: 'Activité Basique', desc: 'Stock + Ventes d\'articles, sans Espace Produit' },
-                      { value: 'premium' as Formule, title: 'Activité Premium', desc: 'Stock + Ventes + Espace Produit complet' },
-                    ]).map((f) => {
-                      const sel = formuleActivites === f.value;
+              {/* (1) Domaine d'activité — radio-cards, obligatoire */}
+              <div>
+                <label style={labelStyle}>Domaine d'activité *</label>
+                {domainesLoading ? (
+                  <p style={{ fontSize: 12, color: '#94a3b8', margin: 0 }}>Chargement des domaines…</p>
+                ) : domainesError ? (
+                  <div style={bannerDanger}>{domainesError}</div>
+                ) : domaines.length === 0 ? (
+                  <div style={bannerWarn}>Aucun domaine d'activité configuré — créez-en un dans « Domaines d'activités ».</div>
+                ) : (
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 10 }}>
+                    {domaines.map((d) => {
+                      const sel = d.id === domaineId;
+                      const nbComp = composantsActifs(d).length;
                       return (
-                        <button key={f.value} type="button" onClick={() => setFormuleActivites(f.value)}
+                        <button key={d.id} type="button" onClick={() => { if (!sel) selectDomaine(d); }}
                           style={{
                             textAlign: 'left', padding: '12px 14px', borderRadius: 12, cursor: 'pointer',
                             border: `1.5px solid ${sel ? '#6366f1' : '#e2e8f0'}`,
@@ -594,51 +615,134 @@ export default function AddClientModal({ onClose, onCreated, initialValues }: Pr
                               display: 'flex', alignItems: 'center', justifyContent: 'center',
                               color: '#fff', fontSize: 9, fontWeight: 700,
                             }}>{sel ? '✓' : ''}</span>
-                            <span style={{ fontSize: 13, fontWeight: 700, color: sel ? '#4338ca' : '#0f172a' }}>{f.title}</span>
+                            <span style={{ fontSize: 13, fontWeight: 700, color: sel ? '#4338ca' : '#0f172a' }}>{d.nom}</span>
                           </div>
-                          <div style={{ fontSize: 11, color: sel ? '#6366f1' : '#64748b', marginTop: 4, lineHeight: 1.4 }}>{f.desc}</div>
+                          <div style={{ fontSize: 11, color: sel ? '#6366f1' : '#64748b', marginTop: 4, lineHeight: 1.4 }}>
+                            {d.description || 'Grille tarifaire et menu de composants du domaine'}
+                          </div>
+                          <div style={{ fontSize: 10, color: '#94a3b8', marginTop: 4, fontWeight: 600 }}>
+                            {nbComp} composant{nbComp > 1 ? 's' : ''}
+                          </div>
                         </button>
                       );
                     })}
                   </div>
-                </div>
-              )}
-
-              <Counter label="Labos" sub="Laboratoires de production centralisée" value={nbLabos} onChange={(n) => { setNbLabos(n); if (n === 0) setNbAcheteurs(0); }} />
-              {nbActivites === 0 && nbLabos < 1 && (
-                <div style={{ background: '#fef3c7', border: '1px solid #fcd34d', borderRadius: 8, padding: '8px 12px', fontSize: '0.78rem', color: '#92400e', fontWeight: 600 }}>
-                  ⚠️ Un compte sans activité (dépôt) doit avoir au moins un labo.
-                </div>
-              )}
-              {nbActivites === 0 && nbLabos >= 1 && nbAcheteurs === 0 && (
-                <div style={{ background: '#fef3c7', border: '1px solid #fcd34d', borderRadius: 8, padding: '8px 12px', fontSize: '0.78rem', color: '#92400e', fontWeight: 600 }}>
-                  ⚠️ Un labo sans activité nécessite l'option Acheteurs (compte dépôt = labo + acheteurs) — sélectionnez un palier ci-dessous.
-                </div>
-              )}
-
-              {/* Option Acheteurs */}
-              <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, padding: '14px 16px', opacity: nbLabos === 0 ? 0.6 : 1 }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: '#0f172a' }}>Option Acheteurs</div>
-                <div style={{ fontSize: 11, color: '#64748b', marginTop: 2, marginBottom: 8 }}>Carnet d'acheteurs B2B facturé par palier — nécessite au moins un labo</div>
-                <select
-                  value={nbAcheteurs}
-                  onChange={(e) => setNbAcheteurs(parseInt(e.target.value, 10) || 0)}
-                  disabled={nbLabos === 0}
-                  style={{ ...selectStyle, cursor: nbLabos === 0 ? 'default' : 'pointer', background: nbLabos === 0 ? '#f8fafc' : '#fff' }}
-                >
-                  <option value={0}>Aucun</option>
-                  <option value={10}>Palier 1 à 10 acheteurs</option>
-                  <option value={20}>Palier 11 à 20 acheteurs</option>
-                  <option value={50}>Palier 21 à 50 acheteurs</option>
-                  <option value={100}>Palier 51 à 100 acheteurs</option>
-                </select>
+                )}
               </div>
 
-              <Counter label="Gérants" sub="Comptes gérants supplémentaires" value={nbGerants} onChange={(n) => setNbGerants(n)} />
-              {previewLoading ? (
-                <div style={{ textAlign: 'center', color: '#94a3b8', fontSize: 12, padding: 12 }}>Calcul en cours…</div>
-              ) : (
-                <PricingCard preview={preview} promos={promos} />
+              {/* (2) Configuration — un Counter par composant actif du domaine */}
+              {domaine && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  <label style={{ ...labelStyle, marginBottom: 0 }}>Configuration — {domaine.nom}</label>
+                  {composants.length === 0 && (
+                    <div style={bannerWarn}>Ce domaine n'a aucun composant actif — complétez son profil avant de créer un client.</div>
+                  )}
+                  {composants.map((c) => {
+                    const nb = nbParCode[c.code] ?? 0;
+                    const titre = `${c.icone ? `${c.icone} ` : ''}${c.libelle}`;
+                    if (c.typeTechnique === 'acheteurs') {
+                      const verrou = regles.acheteurs_requiert_labo && nbLabos === 0;
+                      const paliers = PALIERS_ACHETEURS.filter((p) => p === 0 || ((c.nbMax == null || p <= c.nbMax) && p >= (c.nbMin ?? 0)));
+                      return (
+                        <div key={c.code} style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, padding: '14px 16px', opacity: verrou ? 0.6 : 1 }}>
+                          <div style={{ fontSize: 13, fontWeight: 700, color: '#0f172a' }}>{titre}</div>
+                          <div style={{ fontSize: 11, color: '#64748b', marginTop: 2, marginBottom: 8 }}>
+                            {c.aide || AIDE_DEFAUT.acheteurs}{regles.acheteurs_requiert_labo ? ' — nécessite au moins un labo' : ''}
+                          </div>
+                          <select
+                            value={nb}
+                            onChange={(e) => setNb(c.code, parseInt(e.target.value, 10) || 0)}
+                            disabled={verrou}
+                            style={{ ...selectStyle, cursor: verrou ? 'default' : 'pointer', background: verrou ? '#f8fafc' : '#fff' }}
+                          >
+                            {paliers.map((p) => <option key={p} value={p}>{PALIER_LABELS[p]}</option>)}
+                          </select>
+                        </div>
+                      );
+                    }
+                    return (
+                      <Counter key={c.code} label={titre} sub={c.aide || AIDE_DEFAUT[c.typeTechnique]} value={nb}
+                        onChange={(n) => setNb(c.code, n)} min={c.nbMin ?? 0} max={c.nbMax ?? null} />
+                    );
+                  })}
+
+                  {/* Règles de composition (miroir client — le serveur reste juge) */}
+                  {compositionErrors.map((msg, i) => (
+                    <div key={i} style={bannerWarn}>⚠️ {msg}</div>
+                  ))}
+
+                  {/* (3) Formule d'activités — si au moins une activité (composant de vente) */}
+                  {nbActivites >= 1 && formulesDispo.length > 0 && (
+                    <div>
+                      <label style={labelStyle}>Formule d'activités</label>
+                      <div style={{ display: 'grid', gridTemplateColumns: formulesDispo.length > 1 ? '1fr 1fr' : '1fr', gap: 10 }}>
+                        {([
+                          { value: 'basique' as Formule, title: 'Activité Basique', desc: 'Stock + Ventes d\'articles, sans Espace Produit' },
+                          { value: 'premium' as Formule, title: 'Activité Premium', desc: 'Stock + Ventes + Espace Produit complet' },
+                        ]).filter((f) => formulesDispo.includes(f.value)).map((f) => {
+                          const sel = formuleActivites === f.value;
+                          return (
+                            <button key={f.value} type="button" onClick={() => setFormuleActivites(f.value)}
+                              style={{
+                                textAlign: 'left', padding: '12px 14px', borderRadius: 12, cursor: 'pointer',
+                                border: `1.5px solid ${sel ? '#6366f1' : '#e2e8f0'}`,
+                                background: sel ? '#eef2ff' : '#fff',
+                                transition: 'all 0.15s',
+                              }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                <span style={{
+                                  width: 16, height: 16, borderRadius: '50%', flexShrink: 0,
+                                  border: `1.5px solid ${sel ? '#6366f1' : '#cbd5e1'}`,
+                                  background: sel ? '#6366f1' : '#fff',
+                                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                  color: '#fff', fontSize: 9, fontWeight: 700,
+                                }}>{sel ? '✓' : ''}</span>
+                                <span style={{ fontSize: 13, fontWeight: 700, color: sel ? '#4338ca' : '#0f172a' }}>{f.title}</span>
+                              </div>
+                              <div style={{ fontSize: 11, color: sel ? '#6366f1' : '#64748b', marginTop: 4, lineHeight: 1.4 }}>{f.desc}</div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* (4) Montant d'onboarding — éditable, pré-rempli par la grille */}
+                  <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, padding: '14px 16px' }}>
+                    <label style={labelStyle}>Montant d'onboarding (DT, paiement unique)</label>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                      <input
+                        type="number" min="0" step="0.01"
+                        value={montantOnboarding}
+                        onChange={(e) => { obManuel.current = true; setMontantOnboarding(e.target.value); }}
+                        placeholder={onboardingGrille != null ? String(onboardingGrille) : '0'}
+                        style={{ ...inputStyle, width: 160, borderColor: montantOnboarding !== '' && !montantObValid ? '#fca5a5' : inputStyle.borderColor }}
+                      />
+                      {onboardingGrille != null && (
+                        <span style={{ fontSize: 11, color: '#64748b' }}>
+                          Grille : <strong>{fmt(onboardingGrille)}</strong>
+                          {montantOnboarding !== '' && parseFloat(montantOnboarding) !== onboardingGrille && (
+                            <button type="button" onClick={() => { obManuel.current = false; setMontantOnboarding(String(onboardingGrille)); }}
+                              style={{ marginLeft: 8, fontSize: 11, fontWeight: 700, color: '#4338ca', background: '#eef2ff', border: '1px solid #c7d2fe', borderRadius: 6, padding: '2px 8px', cursor: 'pointer' }}>
+                              ↺ Reprendre
+                            </button>
+                          )}
+                        </span>
+                      )}
+                    </div>
+                    {montantOnboarding !== '' && !montantObValid && (
+                      <div style={{ fontSize: 11, color: '#dc2626', marginTop: 4 }}>Montant invalide (nombre ≥ 0).</div>
+                    )}
+                  </div>
+
+                  {/* (5) Récapitulatif tarifaire — grille du domaine */}
+                  {previewError && <div style={bannerDanger}>{previewError}</div>}
+                  {previewLoading ? (
+                    <div style={{ textAlign: 'center', color: '#94a3b8', fontSize: 12, padding: 12 }}>Calcul en cours…</div>
+                  ) : (
+                    <PricingCard preview={preview} promos={promos} grille={grilleNom} onboarding={montantObValid ? montantOb : undefined} />
+                  )}
+                </div>
               )}
             </div>
           )}
@@ -778,10 +882,18 @@ export default function AddClientModal({ onClose, onCreated, initialValues }: Pr
                     <span style={{ color: '#64748b', fontWeight: 600 }}>📱</span>
                     <span style={{ color: '#0f172a' }}>{tel}</span>
                   </div>
+                  <div style={{ display: 'flex', gap: 8, fontSize: 12 }}>
+                    <span style={{ color: '#64748b', fontWeight: 600 }}>🏷️ Domaine</span>
+                    <span style={{ color: '#0f172a', fontWeight: 700 }}>{domaine?.nom ?? '—'}</span>
+                  </div>
+                  <div style={{ display: 'flex', gap: 8, fontSize: 12, gridColumn: '1 / -1' }}>
+                    <span style={{ color: '#64748b', fontWeight: 600 }}>⚙️ Composition</span>
+                    <span style={{ color: '#0f172a', fontWeight: 700 }}>{recapComposants.length > 0 ? recapComposants.join(' · ') : '—'}</span>
+                  </div>
                 </div>
               </div>
 
-              <PricingCard preview={preview} promos={promos} />
+              <PricingCard preview={preview} promos={promos} grille={grilleNom} onboarding={montantObValid ? montantOb : undefined} />
 
               {/* Contrat : téléchargement uniquement (pas d'aperçu embarqué) */}
               <div style={{ marginTop: 14, background: '#f8fafc', border: '1.5px solid #e2e8f0', borderRadius: 12, padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 14 }}>
@@ -792,7 +904,7 @@ export default function AddClientModal({ onClose, onCreated, initialValues }: Pr
                     {pdfBase64
                       ? 'Prêt — téléchargez-le pour le consulter avant l\'envoi. C\'est le document exact qui partira en signature.'
                       : pdfError
-                        ? 'Impossible de générer le contrat — revenez en arrière puis réessayez.'
+                        ? (pdfErrorMsg || 'Impossible de générer le contrat — revenez en arrière puis réessayez.')
                         : 'Génération du contrat…'}
                   </div>
                 </div>
@@ -881,4 +993,12 @@ const inputStyle: React.CSSProperties = {
 
 const selectStyle: React.CSSProperties = {
   ...inputStyle, cursor: 'pointer',
+};
+
+// Bandeaux inline (le wizard n'utilise jamais alerte() : son overlay masquerait le dialogue)
+const bannerWarn: React.CSSProperties = {
+  background: '#fef3c7', border: '1px solid #fcd34d', borderRadius: 8, padding: '8px 12px', fontSize: '0.78rem', color: '#92400e', fontWeight: 600,
+};
+const bannerDanger: React.CSSProperties = {
+  background: '#fee2e2', border: '1px solid #fecaca', borderRadius: 8, padding: '8px 12px', fontSize: '0.78rem', color: '#dc2626', fontWeight: 600,
 };
