@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import api from '../../api/client';
-import type { Abonnement, DomaineActivite } from '../../types';
+import type { Abonnement } from '../../types';
 import AddClientModal from './AddClientModal';
 import Pagination from '../common/Pagination';
 import { useConfirm } from '../common/ConfirmDialog';
+import { composantsActifs, palierAcheteurs, type DomaineOption } from './composition';
 
 interface Client {
   id: number;
@@ -15,22 +16,26 @@ interface Client {
   activatedAt?: string | null;
   /** 'site' = converti depuis une demande d'accès du site vitrine ; 'manuel' = ajout admin. */
   origine?: 'site' | 'manuel';
+  /** Compat (= [domaineId]). */
   domaineIds?: number[];
+  /** Domaine d'activité unique du compte (lot 1a). */
+  domaineId?: number | null;
+  domaineNom?: string | null;
 }
 
 const fmtDT = (n: number) => `${n.toLocaleString('fr-FR')} DT`;
 
 export default function ClientsManagement() {
-  const { alerte } = useConfirm();
+  const { alerte, confirm } = useConfirm();
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
-  const [domaines, setDomaines] = useState<DomaineActivite[]>([]);
+  const [domaines, setDomaines] = useState<DomaineOption[]>([]);
 
   const [showAddModal, setShowAddModal] = useState(false);
 
-  // Modal domaines — liste complète, assignation/désassignation directe par l'admin
+  // Modal « Domaine d'activité » — un seul domaine par compte (grille tarifaire + menu de composants)
   const [editClient, setEditClient] = useState<Client | null>(null);
-  const [editDomaines, setEditDomaines] = useState<number[]>([]);
+  const [editDomaineId, setEditDomaineId] = useState<number | null>(null);
   const [editSaving, setEditSaving] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
 
@@ -107,20 +112,42 @@ export default function ClientsManagement() {
   };
 
   // ── Edit ──────────────────────────────────────────────────────────────────
+  const domaineIdOf = (c: Client): number | null => c.domaineId ?? (c.domaineIds && c.domaineIds.length > 0 ? c.domaineIds[0] : null);
+  const domaineNomOf = (c: Client): string | null => {
+    if (c.domaineNom) return c.domaineNom;
+    const id = domaineIdOf(c);
+    return id != null ? (domaines.find((d) => d.id === id)?.nom ?? `Domaine #${id}`) : null;
+  };
+
   const openEdit = (c: Client) => {
     setEditClient(c);
-    setEditDomaines(c.domaineIds || []);
+    setEditDomaineId(domaineIdOf(c));
     setEditError(null);
   };
   const closeEdit = () => { setEditClient(null); setEditError(null); };
 
   const handleEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!editClient) return;
+    if (!editClient || editSaving) return;
+    if (editDomaineId == null) { setEditError('Choisissez un domaine d\'activité.'); return; }
+    if (editDomaineId === domaineIdOf(editClient)) { closeEdit(); return; }
+    const nouveau = domaines.find((d) => d.id === editDomaineId);
+    const ok = await confirm({
+      title: `Changer le domaine de « ${editClient.name} » ?`,
+      message: `Nouveau domaine : ${nouveau?.nom ?? `#${editDomaineId}`}.`,
+      details: [
+        'La grille tarifaire du nouveau domaine s\'applique dès le prochain paiement (mensualités en attente recalculées).',
+        'Le menu de composants change : les composants actuels sont re-mappés par type (activité, labo, gérant, acheteurs).',
+      ],
+      tone: 'primary',
+      icon: '🏷️',
+      confirmLabel: 'Changer le domaine',
+    });
+    if (!ok) return;
     setEditSaving(true);
     setEditError(null);
     try {
-      await api.put(`/admin/clients/${editClient.id}`, { domaineIds: editDomaines });
+      await api.put(`/admin/clients/${editClient.id}`, { domaineId: editDomaineId });
       closeEdit();
       fetchClients();
     } catch (err: unknown) {
@@ -307,7 +334,7 @@ export default function ClientsManagement() {
           {/* Grille de cards clients */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(310px, 1fr))', gap: 16 }}>
             {paged.map((c) => {
-              const domCount = (c.domaineIds || []).length;
+              const domNom = domaineNomOf(c);
               const av = avatarFor(c.name);
               const active = !!c.activatedAt;
               return (
@@ -350,16 +377,16 @@ export default function ClientsManagement() {
                     </span>
                     <button
                       onClick={() => openEdit(c)}
-                      title="Gérer les domaines d'activité"
+                      title="Changer le domaine d'activité"
                       style={{
                         fontSize: '0.76rem', fontWeight: 600, borderRadius: 8, padding: '3px 9px',
-                        background: domCount > 0 ? '#eff6ff' : '#f8fafc',
-                        color: domCount > 0 ? '#1d4ed8' : '#94a3b8',
-                        border: `1px solid ${domCount > 0 ? '#bfdbfe' : '#e2e8f0'}`,
-                        cursor: 'pointer',
+                        background: domNom ? '#eff6ff' : '#f8fafc',
+                        color: domNom ? '#1d4ed8' : '#94a3b8',
+                        border: `1px solid ${domNom ? '#bfdbfe' : '#e2e8f0'}`,
+                        cursor: 'pointer', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                       }}
                     >
-                      🏷️ {domCount} domaine{domCount > 1 ? 's' : ''}
+                      🏷️ {domNom || 'Sans domaine'}
                     </button>
                     {c.createdAt && (
                       <span style={{ fontSize: '0.72rem', color: '#94a3b8', marginLeft: 'auto' }}>
@@ -454,31 +481,14 @@ export default function ClientsManagement() {
               {infoRow('📧', 'Email', viewClient.email)}
               {infoRow('📱', 'Téléphone', viewClient.phone)}
               {infoRow('📍', 'Adresse', viewClient.adresse)}
-              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '11px 14px', background: '#f8fafc', border: '1px solid #eef1f5', borderRadius: 10 }}>
-                <span style={{ fontSize: '1rem', lineHeight: 1.4 }}>🏷️</span>
-                <div style={{ minWidth: 0, flex: 1 }}>
-                  <div style={{ fontSize: '0.66rem', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Domaines d'activité</div>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 6 }}>
-                    {(viewClient.domaineIds || []).length === 0 ? (
-                      <span style={{ fontSize: '0.82rem', color: '#cbd5e1', fontWeight: 600 }}>Aucun domaine assigné</span>
-                    ) : (viewClient.domaineIds || []).map((id) => {
-                      const d = domaines.find((x) => x.id === id);
-                      return (
-                        <span key={id} style={{ background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe', borderRadius: 16, padding: '2px 11px', fontSize: '0.76rem', fontWeight: 600 }}>
-                          {d ? d.nom : `Domaine #${id}`}
-                        </span>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
+              {infoRow('🏷️', 'Domaine d\'activité', domaineNomOf(viewClient))}
             </div>
             <div style={{ padding: '12px 22px 18px', display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
               <button
                 onClick={() => { const c = viewClient; setViewClient(null); openEdit(c); }}
                 style={{ padding: '9px 18px', borderRadius: 9, border: '1px solid #bfdbfe', background: '#eff6ff', color: '#1d4ed8', fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer' }}
               >
-                🏷️ Gérer les domaines
+                🏷️ Changer le domaine
               </button>
               <button onClick={() => setViewClient(null)} style={{ padding: '9px 18px', borderRadius: 9, border: 'none', background: '#0d9488', color: '#fff', fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer' }}>
                 Fermer
@@ -520,21 +530,44 @@ export default function ClientsManagement() {
                   {/* Config de base */}
                   <div style={{ marginBottom: 14 }}>
                     <div style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>Configuration souscrite</div>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))', gap: 8 }}>
                       {(() => {
-                        // Base acheteurs : palier de facturation couvrant le quota (1-10 / 11-20 / 21-50 / 51-100)
-                        const nAch = cfg.nbAcheteurs ?? 0;
-                        const palierAch = nAch <= 0 ? 0 : nAch <= 10 ? 10 : nAch <= 20 ? 20 : nAch <= 50 ? 50 : 100;
-                        return [
-                          { label: 'Activités', value: String(cfg.nbActivites), icon: '🏪' },
-                          { label: 'Labos', value: String(cfg.nbLabos), icon: '🔬' },
-                          { label: 'Gérants', value: String(cfg.nbGerants), icon: '👤' },
-                          { label: 'Base acheteurs', value: palierAch > 0 ? `≤ ${palierAch}` : '—', icon: '🤝' },
+                        // Tuiles = MENU du domaine (composants actifs, nb souscrit ou 0 — une tuile
+                        // « Labos 0 » reste visible comme avant) ∪ composants souscrits hors menu ;
+                        // repli sur les 4 compteurs techniques sans détail ni menu.
+                        const domNom = cfg.domaineNom || domaineNomOf(configPopup.client) || '—';
+                        const tuiles: { label: string; value: string; icon: string; small?: boolean }[] = [];
+                        const souscrits = cfg.composants || [];
+                        const domaineId = cfg.domaineId ?? domaineIdOf(configPopup.client);
+                        const menu = composantsActifs(domaines.find((d) => d.id === domaineId));
+                        const comps = [
+                          ...menu.map((m) => ({ ...m, nb: souscrits.find((s) => s.code === m.code)?.nb ?? 0 })),
+                          ...souscrits.filter((s) => !menu.some((m) => m.code === s.code)),
                         ];
-                      })().map(({ label, value, icon }) => (
-                        <div key={label} style={{ textAlign: 'center', background: '#f8fafc', border: '1px solid var(--border)', borderRadius: 10, padding: '12px 8px' }}>
+                        if (comps.length > 0) {
+                          for (const c of comps) {
+                            if (c.typeTechnique === 'acheteurs') {
+                              const palierAch = palierAcheteurs(c.nb);
+                              tuiles.push({ label: c.libelle, value: palierAch > 0 ? `≤ ${palierAch}` : '—', icon: c.icone || '🤝' });
+                            } else {
+                              tuiles.push({ label: c.nb > 1 ? (c.libellePluriel || c.libelle) : c.libelle, value: String(c.nb), icon: c.icone || '▫️' });
+                            }
+                          }
+                        } else {
+                          const palierAch = palierAcheteurs(cfg.nbAcheteurs ?? 0);
+                          tuiles.push(
+                            { label: 'Activités', value: String(cfg.nbActivites), icon: '🏪' },
+                            { label: 'Labos', value: String(cfg.nbLabos), icon: '🔬' },
+                            { label: 'Gérants', value: String(cfg.nbGerants), icon: '👤' },
+                            { label: 'Base acheteurs', value: palierAch > 0 ? `≤ ${palierAch}` : '—', icon: '🤝' },
+                          );
+                        }
+                        tuiles.push({ label: 'Domaine', value: domNom, icon: '🏷️', small: true });
+                        return tuiles;
+                      })().map(({ label, value, icon, small }, i) => (
+                        <div key={`${i}-${label}`} style={{ textAlign: 'center', background: '#f8fafc', border: '1px solid var(--border)', borderRadius: 10, padding: '12px 8px', minWidth: 0 }}>
                           <div style={{ fontSize: '1.5rem', marginBottom: 2 }}>{icon}</div>
-                          <div style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--primary)', lineHeight: 1 }}>{value}</div>
+                          <div title={value} style={{ fontSize: small ? '0.82rem' : '1.4rem', fontWeight: 800, color: 'var(--primary)', lineHeight: small ? 1.2 : 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{value}</div>
                           <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginTop: 3 }}>{label}</div>
                         </div>
                       ))}
@@ -639,13 +672,13 @@ export default function ClientsManagement() {
       </div>
     )}
 
-    {/* ── MODAL : Domaines d'activité (assignation/désassignation) ─────── */}
+    {/* ── MODAL : Domaine d'activité (un seul domaine par compte) ─────── */}
     {editClient && (
       <div className="modal-overlay">
         <div className="modal modal-sm" onClick={(e) => e.stopPropagation()} style={{ borderRadius: 16, overflow: 'hidden' }}>
           <div style={{ background: 'linear-gradient(135deg,#1e3a8a 0%,#1d4ed8 55%,#3b82f6 100%)', padding: '18px 22px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
             <div>
-              <div style={{ fontSize: '0.66rem', fontWeight: 700, color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 3 }}>Domaines d'activité</div>
+              <div style={{ fontSize: '0.66rem', fontWeight: 700, color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 3 }}>Domaine d'activité</div>
               <div style={{ fontSize: '1rem', fontWeight: 800, color: '#fff' }}>🏷️ {editClient.name}</div>
             </div>
             <button onClick={closeEdit} style={{ background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: 8, color: '#fff', fontSize: '1rem', cursor: 'pointer', padding: '5px 9px', lineHeight: 1 }}>✕</button>
@@ -653,40 +686,33 @@ export default function ClientsManagement() {
           <form onSubmit={handleEditSubmit}>
             <div style={{ padding: '18px 22px' }}>
               <p style={{ fontSize: '0.8rem', color: '#64748b', margin: '0 0 14px', lineHeight: 1.55 }}>
-                Cochez les domaines à assigner au client — ils déterminent les ingrédients accessibles dans son référentiel.
+                Le domaine détermine la grille tarifaire et le menu de composants du compte.
               </p>
               {domaines.length === 0 ? (
                 <p style={{ fontSize: '0.82rem', color: '#94a3b8' }}>Aucun domaine configuré dans le référentiel.</p>
               ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: '46vh', overflowY: 'auto', paddingRight: 4 }}>
-                  {domaines.map((d) => {
-                    const checked = editDomaines.includes(d.id);
-                    return (
-                      <label
-                        key={d.id}
-                        style={{
-                          display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer',
-                          padding: '10px 14px', borderRadius: 10,
-                          border: `1.5px solid ${checked ? '#3b82f6' : '#e5e7eb'}`,
-                          background: checked ? '#eff6ff' : '#fff',
-                          transition: 'all 0.12s', userSelect: 'none',
-                        }}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={checked}
-                          onChange={() => setEditDomaines((prev) =>
-                            checked ? prev.filter((id) => id !== d.id) : [...prev, d.id]
-                          )}
-                          style={{ accentColor: '#2563eb', width: 16, height: 16, flexShrink: 0 }}
-                        />
-                        <span style={{ flex: 1, fontSize: '0.88rem', fontWeight: checked ? 700 : 500, color: checked ? '#1d4ed8' : '#374151' }}>{d.nom}</span>
-                        {checked && <span style={{ fontSize: '0.68rem', fontWeight: 700, color: '#1d4ed8', background: '#dbeafe', borderRadius: 10, padding: '2px 9px' }}>assigné</span>}
-                      </label>
-                    );
-                  })}
-                </div>
+                <>
+                  <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 700, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>Domaine</label>
+                  <select
+                    value={editDomaineId ?? ''}
+                    onChange={(e) => { setEditDomaineId(e.target.value ? parseInt(e.target.value, 10) : null); setEditError(null); }}
+                    style={{ width: '100%', boxSizing: 'border-box', padding: '10px 12px', borderRadius: 10, border: '1.5px solid #e2e8f0', fontSize: '0.88rem', color: '#0f172a', background: '#fff', cursor: 'pointer' }}
+                  >
+                    <option value="">— Choisir un domaine —</option>
+                    {domaines.map((d) => (
+                      <option key={d.id} value={d.id}>{d.nom}</option>
+                    ))}
+                  </select>
+                  {(() => {
+                    const d = domaines.find((x) => x.id === editDomaineId);
+                    return d?.description ? <div style={{ fontSize: '0.76rem', color: '#64748b', marginTop: 6 }}>{d.description}</div> : null;
+                  })()}
+                </>
               )}
+
+              <div style={{ marginTop: 14, background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 8, padding: '8px 12px', fontSize: '0.76rem', color: '#92400e', lineHeight: 1.5 }}>
+                ⚠️ Changer le domaine change la grille tarifaire et le menu de composants du compte.
+              </div>
 
               {editError && (
                 <div style={{ background: '#fee2e2', color: '#dc2626', border: '1px solid #fecaca', borderRadius: 8, padding: '8px 12px', fontSize: '0.82rem', marginTop: 12 }}>
@@ -697,7 +723,7 @@ export default function ClientsManagement() {
 
             <div style={{ padding: '12px 22px 18px', display: 'flex', alignItems: 'center', gap: 10, borderTop: '1px solid #f1f5f9' }}>
               <span style={{ fontSize: '0.76rem', color: '#64748b', fontWeight: 600 }}>
-                {editDomaines.length} domaine{editDomaines.length > 1 ? 's' : ''} sélectionné{editDomaines.length > 1 ? 's' : ''}
+                Actuel : {domaineNomOf(editClient) || 'aucun'}
               </span>
               <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
                 <button type="button" onClick={closeEdit} style={{ padding: '9px 18px', borderRadius: 9, border: '1px solid #e2e8f0', background: '#fff', color: '#374151', fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer' }}>Annuler</button>

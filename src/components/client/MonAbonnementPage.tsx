@@ -1,7 +1,41 @@
 import { useState, useEffect, useCallback } from 'react';
 import api from '../../api/client';
-import type { Abonnement, AbonnementConfig, Promotion } from '../../types';
+import type { Abonnement, AbonnementConfig, Promotion, DomaineProfil } from '../../types';
+import { useAuth } from '../../context/AuthContext';
 import GuideButton from './GuideButton';
+
+// Lignes de capacité de « Votre configuration » : MENU du domaine (composants actifs) avec la
+// quantité souscrite (0 = « Non inclus », comme les 4 lignes historiques), complété par les
+// composants souscrits hors menu, puis par les types manquants (libellés identité).
+type LigneCapacite = { key: string; label: string; nb: number; icon: string; palier?: boolean };
+const ICONE_TYPE: Record<string, string> = { activite: '📍', labo: '🏭', gerant: '👤', acheteurs: '🤝' };
+const IDENTITE: { type: 'activite' | 'labo' | 'gerant' | 'acheteurs'; label: string; nbKey: keyof AbonnementConfig }[] = [
+  { type: 'activite', label: 'Activité', nbKey: 'nbActivites' },
+  { type: 'labo', label: 'Labo', nbKey: 'nbLabos' },
+  { type: 'gerant', label: 'Gérant', nbKey: 'nbGerants' },
+  { type: 'acheteurs', label: 'Base acheteurs', nbKey: 'nbAcheteurs' },
+];
+function lignesCapacite(config: AbonnementConfig, domaine: DomaineProfil | null | undefined): LigneCapacite[] {
+  const souscrits = config.composants || [];
+  const menu = (domaine?.composants || []).filter((c) => c.actif !== false).slice().sort((a, b) => (a.ordre ?? 0) - (b.ordre ?? 0) || (a.id ?? 0) - (b.id ?? 0));
+  const items: { code: string; libelle: string; libellePluriel?: string | null; icone?: string | null; typeTechnique: string; nb: number }[] = [
+    ...menu.map((m) => ({ ...m, nb: souscrits.find((s) => s.code === m.code)?.nb ?? 0 })),
+    ...souscrits.filter((s) => !menu.some((m) => m.code === s.code)),
+  ];
+  const lignes: LigneCapacite[] = items.map((c) => ({
+    key: c.code,
+    label: c.nb > 1 ? (c.libellePluriel || c.libelle) : c.libelle,
+    nb: c.nb,
+    icon: c.icone || ICONE_TYPE[c.typeTechnique] || '📍',
+    palier: c.typeTechnique === 'acheteurs',
+  }));
+  // Types absents du menu ET du détail (ex. domaine sans composant gérant) : ligne identité
+  for (const t of IDENTITE) {
+    if (items.some((c) => c.typeTechnique === t.type)) continue;
+    lignes.push({ key: t.type, label: t.label, nb: Number(config[t.nbKey] ?? 0) || 0, icon: ICONE_TYPE[t.type], palier: t.type === 'acheteurs' });
+  }
+  return lignes;
+}
 
 const MODE_INFO: Record<string, { label: string; color: string; bg: string; icon: string; desc: string }> = {
   actif:     { label: 'Actif',         color: '#16a34a', bg: '#dcfce7', icon: '✅', desc: 'Votre compte est pleinement opérationnel.' },
@@ -64,6 +98,16 @@ export default function MonAbonnementPage() {
   const [requestedPremium, setRequestedPremium] = useState(false);
   const [requestErrorPremium, setRequestErrorPremium] = useState('');
   const [contratInfo, setContratInfo] = useState<{ available: boolean; date: string | null } | null>(null);
+  // Menu du domaine du compte : /auth/me.domaine (AuthContext) sinon GET /api/domaines (client → son domaine)
+  const { user } = useAuth();
+  const [domaineFetched, setDomaineFetched] = useState<DomaineProfil | null>(null);
+  useEffect(() => {
+    if (user?.domaine) return;
+    api.get('/api/domaines')
+      .then(({ data }) => { if (Array.isArray(data) && data[0]) setDomaineFetched(data[0] as DomaineProfil); })
+      .catch(() => { /* repli : composants souscrits + libellés identité */ });
+  }, [user?.domaine]);
+  const domaineProfil: DomaineProfil | null = user?.domaine ?? domaineFetched;
 
   const fetchAll = useCallback(async () => {
     try {
@@ -174,35 +218,42 @@ export default function MonAbonnementPage() {
               </div>
             </div>
             <div style={{ padding: '16px 20px' }}>
-              {[
-                { label: 'Activité', nb: config.nbActivites ?? 0, icon: '📍' },
-                { label: 'Labo',     nb: config.nbLabos ?? 0,     icon: '🏭' },
-                { label: 'Gérant',   nb: config.nbGerants ?? 0,   icon: '👤' },
-              ].map(({ label, nb, icon }) => (
-                <div key={label} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid #f3f4f6' }}>
+              {/* Domaine d'activité du compte (lot 1a) */}
+              {config.domaineNom && (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid #f3f4f6' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <span style={{ fontSize: '1.1rem' }}>{icon}</span>
-                    <span style={{ fontWeight: 600, fontSize: '0.88rem', color: '#374151' }}>{label}</span>
+                    <span style={{ fontSize: '1.1rem' }}>🏷️</span>
+                    <span style={{ fontWeight: 600, fontSize: '0.88rem', color: '#374151' }}>Domaine d'activité</span>
                   </div>
-                  {nb > 0
-                    ? <span style={{ fontWeight: 800, fontSize: '0.95rem', color: '#4c1d95' }}>{nb}</span>
-                    : <span style={{ fontSize: '0.75rem', color: '#9ca3af', fontStyle: 'italic' }}>Non inclus</span>
-                  }
+                  <span style={{ fontSize: '0.75rem', fontWeight: 800, padding: '3px 10px', borderRadius: 20, background: '#eff6ff', color: '#1d4ed8' }}>
+                    {config.domaineNom}
+                  </span>
                 </div>
-              ))}
-              {/* Base acheteurs (option B2B) — palier du carnet quand l'option est active */}
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid #f3f4f6' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <span style={{ fontSize: '1.1rem' }}>🤝</span>
-                  <span style={{ fontWeight: 600, fontSize: '0.88rem', color: '#374151' }}>Base acheteurs</span>
-                </div>
-                {(config.nbAcheteurs ?? 0) > 0
-                  ? <span style={{ fontSize: '0.75rem', fontWeight: 800, padding: '3px 10px', borderRadius: 20, background: '#f5f3ff', color: '#6d28d9' }}>
-                      jusqu'à {breakdown?.acheteurs?.palier ?? config.nbAcheteurs} acheteurs
-                    </span>
-                  : <span style={{ fontSize: '0.75rem', color: '#9ca3af', fontStyle: 'italic' }}>Non incluse</span>
-                }
-              </div>
+              )}
+              {/* Lignes de capacité : menu du domaine (0 = « Non inclus ») + composants souscrits, repli identité */}
+              {(() => {
+                const lignes = lignesCapacite(config, domaineProfil);
+                return lignes.map(({ key, label, nb, icon, palier }) => (
+                  <div key={key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid #f3f4f6' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <span style={{ fontSize: '1.1rem' }}>{icon}</span>
+                      <span style={{ fontWeight: 600, fontSize: '0.88rem', color: '#374151' }}>{label}</span>
+                    </div>
+                    {palier ? (
+                      // Base acheteurs (option B2B) — palier du carnet quand l'option est active
+                      nb > 0
+                        ? <span style={{ fontSize: '0.75rem', fontWeight: 800, padding: '3px 10px', borderRadius: 20, background: '#f5f3ff', color: '#6d28d9' }}>
+                            jusqu'à {breakdown?.acheteurs?.palier ?? nb} acheteurs
+                          </span>
+                        : <span style={{ fontSize: '0.75rem', color: '#9ca3af', fontStyle: 'italic' }}>Non incluse</span>
+                    ) : (
+                      nb > 0
+                        ? <span style={{ fontWeight: 800, fontSize: '0.95rem', color: '#4c1d95' }}>{nb}</span>
+                        : <span style={{ fontSize: '0.75rem', color: '#9ca3af', fontStyle: 'italic' }}>Non inclus</span>
+                    )}
+                  </div>
+                ));
+              })()}
               {(config.nbActivites ?? 0) >= 1 && formuleInfo && (
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid #f3f4f6' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
