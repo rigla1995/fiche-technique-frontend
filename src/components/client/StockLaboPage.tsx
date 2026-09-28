@@ -3,6 +3,7 @@ import { useSearchParams, Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
+import { usePerteTypes } from '../../utils/perteTypes';
 import PortionsModal from './PortionsModal';
 import InvoiceConfirmModal, { type InvoiceLineItem } from './InvoiceConfirmModal';
 import ApproPreviewPanel, { ProductionAlertPanel, type PreviewLine } from './ApproPreviewPanel';
@@ -90,7 +91,7 @@ interface RowState {
   saving: boolean;
   saved: boolean;
   historyOpen: boolean;
-  history: { dateAppro: string; quantite: number | null; prixUnitaire: number | null; fournisseurNom: string | null; refFacture: string | null; typeAppro?: string | null }[];
+  history: { dateAppro: string; quantite: number | null; prixUnitaire: number | null; fournisseurNom: string | null; refFacture: string | null; typeAppro?: string | null; sens?: 'entree' | 'sortie' | null; contrepartieNom?: string | null }[];
 }
 
 interface AssignIngredient {
@@ -111,7 +112,7 @@ export default function StockLaboPage() {
   const tab = searchParams.get('tab') === 'ingredients' ? 'ingredients' : 'stock';
   const [allLabos, setAllLabos] = useState<{ id: number; nom: string }[]>([]);
 
-  const [labo, setLabo] = useState<{ nom: string; referentTel: string; adresse?: string; activites?: LaboActivite[] } | null>(null);
+  const [labo, setLabo] = useState<{ nom: string; referentTel: string; adresse?: string; activites?: LaboActivite[]; productionActive?: boolean } | null>(null);
   const [stock, setStock] = useState<LaboStockRow[]>([]);
   const [rowState, setRowState] = useState<Record<number, RowState>>({});
   const [seuilMinEdits, setSeuilMinEdits] = useState<Record<number, string>>({});
@@ -122,7 +123,9 @@ export default function StockLaboPage() {
   const [perteErrMsg, setPerteErrMsg] = useState('');
   const [ptConfirm, setPtConfirm] = useState<{ ingredientId: number; nom: string; dateAppro: string; existingQty: number; newQty: number } | null>(null);
   const [perteQty, setPerteQty] = useState('');
-  const [perteType, setPerteType] = useState<'avarie' | 'dechet'>('avarie');
+  const perteTypes = usePerteTypes();
+  const perteTypeDefaut = perteTypes[0]?.code ?? 'avarie';
+  const [perteType, setPerteType] = useState<string>(perteTypeDefaut);
   const [perteDate, setPerteDate] = useState(todayStr());
   const [perteSaving, setPerteSaving] = useState(false);
   const [pertePrix, setPertePrix] = useState<number | null>(null);
@@ -399,7 +402,7 @@ export default function StockLaboPage() {
       });
       setPerteModal(null);
       setPerteQty('');
-      setPerteType('avarie');
+      setPerteType(perteTypeDefaut);
       setPerteDate(todayStr());
       setPertePrix(null);
       setPerteDateMin(null);
@@ -518,10 +521,15 @@ export default function StockLaboPage() {
 
   const activites: LaboActivite[] = assignments?.activites ?? [];
 
+  // ── Règle production V1 (lot 1b) : un labo sans production (production_active = false : économat,
+  //    entrepôt…) n'affiche ni ses PT ni les panneaux de production. Absent (ancien serveur) = actif.
+  const productionActive = labo?.productionActive !== false;
+  const visibleStock = productionActive ? stock : stock.filter((r) => !r.isPT);
+
   // ── Stock tab filters
-  const allStockCats = Array.from(new Set(stock.map((r) => r.categorie))).sort();
-  const stockInCat = sFilterCat ? stock.filter((r) => r.categorie === sFilterCat) : stock;
-  const filteredStock = stock.filter((r) => {
+  const allStockCats = Array.from(new Set(visibleStock.map((r) => r.categorie))).sort();
+  const stockInCat = sFilterCat ? visibleStock.filter((r) => r.categorie === sFilterCat) : visibleStock;
+  const filteredStock = visibleStock.filter((r) => {
     if (sFilterCat && r.categorie !== sFilterCat) return false;
     if (sFilterIngId && String(r.ingredientId) !== sFilterIngId) return false;
     if (sFilterNom && !r.nom.toLowerCase().includes(sFilterNom.toLowerCase())) return false;
@@ -659,12 +667,12 @@ export default function StockLaboPage() {
     <div className="page">
       {/* Même emplacement flottant : panneau d'alerte de production si des quantités
           manquent, sinon l'aperçu de saisie. */}
-      {ptChecks.manquants.length > 0 ? (
+      {productionActive && ptChecks.manquants.length > 0 ? (
         <ProductionAlertPanel productions={ptChecks.productions} manquants={ptChecks.manquants} />
       ) : (
         <ApproPreviewPanel lines={previewLines} />
       )}
-      {ptChecks.manquants.length === 0 && ptChecks.prixIncomplets.length > 0 && (
+      {productionActive && ptChecks.manquants.length === 0 && ptChecks.prixIncomplets.length > 0 && (
         <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 10, padding: '10px 16px', marginBottom: 12, fontSize: '0.8rem', color: '#92400e' }}>
           ℹ️ Prix incomplet pour <strong>{ptChecks.prixIncomplets.join(', ')}</strong> : certains composants n'ont pas encore de prix (PMP) — le coût de production sera partiel, le prix unitaire n'est donc pas affiché.
         </div>
@@ -834,7 +842,7 @@ export default function StockLaboPage() {
 
           {loading ? (
             <p className="text-muted">{t('common.loading')}</p>
-          ) : stock.length === 0 ? (
+          ) : visibleStock.length === 0 ? (
             <div className="empty-state">
               <span className="empty-icon">🏭</span>
               <p style={{ color: 'var(--text-muted)' }}>{t('client.labo.empty_stock')}</p>
@@ -1012,7 +1020,7 @@ export default function StockLaboPage() {
                                             )}
                                             <button
                                               className="perte-btn"
-                                              onClick={() => { setPerteModal({ ingredientId: r.ingredientId, nom: r.nom, quantite: r.quantite ?? null }); setPerteQty(''); setPerteType('avarie'); setPerteErrMsg(''); const d = todayStr(); setPerteDate(d); setPerteDateMin(null); setPerteDateMax(null); fetchPerteDateRange(r.ingredientId).then(() => fetchPertePrix(r.ingredientId, d)); }}
+                                              onClick={() => { setPerteModal({ ingredientId: r.ingredientId, nom: r.nom, quantite: r.quantite ?? null }); setPerteQty(''); setPerteType(perteTypeDefaut); setPerteErrMsg(''); const d = todayStr(); setPerteDate(d); setPerteDateMin(null); setPerteDateMax(null); fetchPerteDateRange(r.ingredientId).then(() => fetchPertePrix(r.ingredientId, d)); }}
                                               title="Enregistrer une perte"
                                               disabled={!canWrite}
                                             >📉 Perte</button>
@@ -1053,7 +1061,8 @@ export default function StockLaboPage() {
                                                     <td style={{ color: 'var(--primary)', fontWeight: 600 }}>{fmtDate(h.dateAppro)}</td>
                                                     <td>
                                                       {h.typeAppro === 'manuel' && <span style={{ background: '#dcfce7', color: '#15803d', borderRadius: 5, padding: '1px 7px', fontSize: '0.7rem', fontWeight: 700 }}>Manuel</span>}
-                                                      {h.typeAppro === 'transfert' && <span style={{ background: '#e0f2fe', color: '#0369a1', borderRadius: 5, padding: '1px 7px', fontSize: '0.7rem', fontWeight: 700 }}>Transfert</span>}
+                                                      {h.typeAppro === 'transfert' && h.sens === 'entree' && <span style={{ background: '#ecfeff', color: '#0e7490', borderRadius: 5, padding: '1px 7px', fontSize: '0.7rem', fontWeight: 700, whiteSpace: 'nowrap' }}>↙ Reçu{h.contrepartieNom ? ` ← ${h.contrepartieNom}` : ''}</span>}
+                                                      {h.typeAppro === 'transfert' && h.sens !== 'entree' && <span style={{ background: '#e0f2fe', color: '#0369a1', borderRadius: 5, padding: '1px 7px', fontSize: '0.7rem', fontWeight: 700, whiteSpace: 'nowrap' }}>{h.sens === 'sortie' ? `↗ Transf.${h.contrepartieNom ? ` → ${h.contrepartieNom}` : ''}` : 'Transfert'}</span>}
                                                       {h.typeAppro === 'PT' && <span style={{ background: '#f3e8ff', color: '#7c3aed', borderRadius: 5, padding: '1px 7px', fontSize: '0.7rem', fontWeight: 700 }}>🔄 PT</span>}
                                                       {h.typeAppro === 'perte' && <span style={{ background: '#fee2e2', color: '#b91c1c', borderRadius: 5, padding: '1px 7px', fontSize: '0.7rem', fontWeight: 700 }}>🗑️ Perte</span>}
                                                       {h.typeAppro === 'vente' && <span style={{ background: '#fef3c7', color: '#b45309', borderRadius: 5, padding: '1px 7px', fontSize: '0.7rem', fontWeight: 700 }}>💰 Vente</span>}
@@ -1063,7 +1072,7 @@ export default function StockLaboPage() {
                                                     <td style={{ textAlign: 'right' }}>{h.prixUnitaire !== null ? h.prixUnitaire.toFixed(3) : '—'}</td>
                                                     <td style={{ textAlign: 'right' }}>{(h as any).tauxTva != null ? `${(h as any).tauxTva}%` : '—'}</td>
                                                     <td style={{ textAlign: 'right' }}>{(h as any).prixUnitaireTva != null ? (h as any).prixUnitaireTva.toFixed(3) : '—'}</td>
-                                                    <td style={{ color: 'var(--text-muted)' }}>{h.fournisseurNom ?? '—'}</td>
+                                                    <td style={{ color: 'var(--text-muted)' }}>{(h.typeAppro === 'transfert' ? h.contrepartieNom : null) ?? h.fournisseurNom ?? '—'}</td>
                                                     <td style={{ color: 'var(--text-muted)' }}>{h.refFacture ?? '—'}</td>
                                                   </tr>
                                                 ))}
@@ -1259,9 +1268,8 @@ export default function StockLaboPage() {
                   )}
                   {!perteQty || parseFloat(perteQty) <= (perteModal?.quantite ?? Infinity) ? <div style={{ marginBottom: 12 }} /> : null}
                   <label style={{ ...LABEL, display: 'block', marginBottom: 6 }}>Type de perte</label>
-                  <select className="input" style={{ width: '100%', fontSize: '0.9rem', marginBottom: 16 }} value={perteType} onChange={(e) => setPerteType(e.target.value as 'avarie' | 'dechet')}>
-                    <option value="avarie">Avarie</option>
-                    <option value="dechet">Déchet</option>
+                  <select className="input" style={{ width: '100%', fontSize: '0.9rem', marginBottom: 16 }} value={perteType} onChange={(e) => setPerteType(e.target.value)}>
+                    {perteTypes.map((t) => <option key={t.code} value={t.code}>{t.label}</option>)}
                   </select>
                   <label style={{ ...LABEL, display: 'block', marginBottom: 6 }}>Date de perte</label>
                   <input className="input" type="date" style={{ width: '100%', fontSize: '0.9rem' }}
@@ -1360,7 +1368,7 @@ export default function StockLaboPage() {
         </div>
       )}
 
-      {portionsModal && (
+      {productionActive && portionsModal && (
         <PortionsModal
           produitNom={portionsModal.nom}
           recipeUrl={`/api/labo/${laboId}/pt/${portionsModal.produitId}/recipe`}

@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
 import HistoryFilterBar, { FilterField, FilterInput, FilterSelect } from '../common/HistoryFilterBar';
 import { useAuth } from '../../context/AuthContext';
+import { usePerteTypes } from '../../utils/perteTypes';
 import PortionsModal from './PortionsModal';
 import InvoiceConfirmModal, { type InvoiceLineItem } from './InvoiceConfirmModal';
 import ApproPreviewPanel, { ProductionAlertPanel, type PreviewLine } from './ApproPreviewPanel';
@@ -66,8 +67,9 @@ interface PerteModalProps {
 }
 
 function PerteModal({ ingredientId, nom, activiteId, stockDisponible, onSaveOverride, onAfterSave, onClose }: PerteModalProps) {
+  const perteTypes = usePerteTypes();
   const [quantite, setQuantite] = useState('');
-  const [typePerte, setTypePerte] = useState<'avarie' | 'dechet'>('avarie');
+  const [typePerte, setTypePerte] = useState<string>(perteTypes[0]?.code ?? 'avarie');
   const [datePerte, setDatePerte] = useState(todayStr());
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -190,9 +192,8 @@ function PerteModal({ ingredientId, nom, activiteId, stockDisponible, onSaveOver
               </div>
               <div>
                 <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: 4 }}>Type de perte</label>
-                <select className="input" style={{ width: '100%' }} value={typePerte} onChange={(e) => setTypePerte(e.target.value as 'avarie' | 'dechet')}>
-                  <option value="avarie">Avarie</option>
-                  <option value="dechet">Déchet</option>
+                <select className="input" style={{ width: '100%' }} value={typePerte} onChange={(e) => setTypePerte(e.target.value)}>
+                  {perteTypes.map((t) => <option key={t.code} value={t.code}>{t.label}</option>)}
                 </select>
               </div>
               <div>

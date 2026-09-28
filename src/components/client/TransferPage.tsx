@@ -3,18 +3,32 @@ import { useSearchParams, Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
 import HistoryFilterBar, { FilterField, FilterInput, FilterSelect } from '../common/HistoryFilterBar';
-import TransferConfirmModal, { type TransferActiviteGroup, type TransferLine } from './TransferConfirmModal';
+import TransferConfirmModal, { type TransferDestGroup, type TransferLine } from './TransferConfirmModal';
 import ApproPreviewPanel, { type PreviewLine } from './ApproPreviewPanel';
 import GuideButton from './GuideButton';
+import type { Destination, Transfert } from '../../types';
+
+// Une ligne de transfert = exactement UNE destination : activité (flux historique) OU labo rattaché (lot 1b).
+type TransferLineBody = { activiteId?: number; laboDestId?: number; ingredientId: number; quantite: number; prixUnitaire: number };
 
 type TransferBatch = {
   ingredientId: number;
   nom: string;
-  transfers: Array<{ activiteId: number; ingredientId: number; quantite: number; prixUnitaire: number }>;
+  transfers: Array<TransferLineBody & { destKey: string }>;
   dateTransfert: string;
   quantite: number | null;
   tauxTva: number | null;
 };
+
+// Clé de destination : 'a-<activiteId>' | 'l-<laboId>' (un labo enfant et une activité peuvent partager un id).
+const destKeyOf = (t: Pick<Transfert, 'activiteId' | 'laboDestId'>): string | null =>
+  t.activiteId != null ? `a-${t.activiteId}` : t.laboDestId != null ? `l-${t.laboDestId}` : null;
+const destNomOf = (t: Pick<Transfert, 'activiteNom' | 'destNom'>): string | null => t.destNom ?? t.activiteNom ?? null;
+// Corps POST d'une ligne : la clé de destination n'est pas envoyée (le serveur attend activiteId OU laboDestId).
+const toBodyLine = (tr: TransferBatch['transfers'][number]): TransferLineBody => ({
+  ...(tr.activiteId != null ? { activiteId: tr.activiteId } : { laboDestId: tr.laboDestId }),
+  ingredientId: tr.ingredientId, quantite: tr.quantite, prixUnitaire: tr.prixUnitaire,
+});
 
 const fmtDate = (iso: string | null | undefined) => {
   if (!iso || iso.length < 10) return iso ?? '—';
@@ -22,18 +36,7 @@ const fmtDate = (iso: string | null | undefined) => {
   return `${d}/${m}/${y}`;
 };
 
-interface TransferRecord {
-  id: number;
-  quantite: number;
-  dateTransfert: string;
-  activiteId: number;
-  activiteNom: string;
-  note: string | null;
-  prixUnitaire: number | null;
-  tauxTva: number | null;
-  prixUnitaireTva: number | null;
-  refFacture: string | null;
-}
+type TransferRecord = Transfert;
 
 const currentYear = new Date().getFullYear();
 const yearStart = `${currentYear}-01-01`;
@@ -66,7 +69,15 @@ interface Activite {
   nom: string;
 }
 
-type TransferQtys = Record<number, Record<number, string>>;
+// qtys[ingredientId][destKey] — la colonne est identifiée par destKey, jamais par un id numérique.
+type TransferQtys = Record<number, Record<string, string>>;
+
+// Destinations = GET /api/labo/:id.destinations ; repli sur `activites` (même rendu qu'avant le lot 1b).
+const destinationsOf = (labo: { activites?: Activite[]; destinations?: Destination[] } | null): Destination[] => {
+  if (!labo) return [];
+  if (Array.isArray(labo.destinations)) return labo.destinations;
+  return (labo.activites ?? []).map((a) => ({ destKey: `a-${a.id}`, type: 'activite' as const, id: a.id, nom: a.nom }));
+};
 
 export default function TransferPage() {
   const { t } = useTranslation();
@@ -75,7 +86,7 @@ export default function TransferPage() {
   const laboId = searchParams.get('laboId') || '';
   const [allLabos, setAllLabos] = useState<{ id: number; nom: string }[]>([]);
 
-  const [labo, setLabo] = useState<{ nom: string; activites: Activite[] } | null>(null);
+  const [labo, setLabo] = useState<{ nom: string; activites: Activite[]; destinations?: Destination[] } | null>(null);
   const [stock, setStock] = useState<LaboStockRow[]>([]);
   const [assignedSet, setAssignedSet] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
@@ -91,14 +102,14 @@ export default function TransferPage() {
   const [bulkSaving, setBulkSaving] = useState(false);
   const [transferConfirm, setTransferConfirm] = useState<{
     ingredientId: number; nom: string; unite: string; date: string;
-    perActivite: Array<{ activiteId: number; activiteNom: string; existing: number; newQty: number }>;
+    perDest: Array<{ destKey: string; destNom: string; destType: Destination['type']; existing: number; newQty: number }>;
   } | null>(null);
-  const [invoiceModal, setInvoiceModal] = useState<{ groups: TransferActiviteGroup[]; batches: TransferBatch[] } | null>(null);
+  const [invoiceModal, setInvoiceModal] = useState<{ groups: TransferDestGroup[]; batches: TransferBatch[] } | null>(null);
 
   const [filterCategorie, setFilterCategorie] = useState('');
   const [filterNom, setFilterNom] = useState('');
   const [filterIngredientId, setFilterIngredientId] = useState<number | ''>('');
-  const [filterActiviteId, setFilterActiviteId] = useState<number | ''>('');
+  const [filterDestKey, setFilterDestKey] = useState('');
   const [openCats, setOpenCats] = useState<Set<string>>(new Set());
   const toggleCat = (cat: string) => setOpenCats((prev) => { const n = new Set(prev); if (n.has(cat)) n.delete(cat); else n.add(cat); return n; });
 
@@ -139,23 +150,31 @@ export default function TransferPage() {
       setStock(stockRes.data);
       initPrixFromStock(stockRes.data as LaboStockRow[]);
       setHasTransfers(Array.isArray(transfersRes.data) && transfersRes.data.length > 0);
+      // assignedSet : `${ingredientId}-${destKey}` — articles/PT affectés à chaque destination.
       const assigned = new Set<string>();
-      for (const ing of (assignRes.data.ingredients || []) as { ingredientId: number; activities: { activiteId: number; assigned: boolean }[] }[]) {
+      type ActAssign = { ingredientId: number; activities: { activiteId: number; assigned: boolean }[] };
+      for (const ing of (assignRes.data.ingredients || []) as ActAssign[]) {
         for (const act of ing.activities) {
-          if (act.assigned) assigned.add(`${ing.ingredientId}-${act.activiteId}`);
+          if (act.assigned) assigned.add(`${ing.ingredientId}-a-${act.activiteId}`);
         }
       }
-      for (const pt of (assignRes.data.produits || []) as { ingredientId: number; activities: { activiteId: number; assigned: boolean }[] }[]) {
+      for (const pt of (assignRes.data.produits || []) as ActAssign[]) {
         for (const act of pt.activities) {
-          if (act.assigned) assigned.add(`${pt.ingredientId}-${act.activiteId}`);
+          if (act.assigned) assigned.add(`${pt.ingredientId}-a-${act.activiteId}`);
         }
+      }
+      // Labos rattachés (lot 1b) : articles = labo_ingredient_selections, PT = labo_pt_selections du labo enfant.
+      type LaboAssign = { laboId: number; ingredients?: { ingredientId: number; assigned: boolean }[]; produits?: { ingredientId: number; assigned: boolean }[] };
+      for (const lb of (assignRes.data.labos || []) as LaboAssign[]) {
+        for (const ing of lb.ingredients ?? []) if (ing.assigned) assigned.add(`${ing.ingredientId}-l-${lb.laboId}`);
+        for (const pt of lb.produits ?? []) if (pt.assigned) assigned.add(`${pt.ingredientId}-l-${lb.laboId}`);
       }
       setAssignedSet(assigned);
       const init: TransferQtys = {};
       for (const r of stockRes.data as LaboStockRow[]) {
         init[r.ingredientId] = {};
-        for (const act of (laboRes.data.activites || []) as Activite[]) {
-          init[r.ingredientId][act.id] = '';
+        for (const d of destinationsOf(laboRes.data)) {
+          init[r.ingredientId][d.destKey] = '';
         }
       }
       setQtys(init);
@@ -207,10 +226,10 @@ export default function TransferPage() {
     setTauxTvaMap(tva);
   };
 
-  const setQty = (ingredientId: number, activiteId: number, value: string) => {
+  const setQty = (ingredientId: number, destKey: string, value: string) => {
     setQtys((prev) => ({
       ...prev,
-      [ingredientId]: { ...prev[ingredientId], [activiteId]: value },
+      [ingredientId]: { ...prev[ingredientId], [destKey]: value },
     }));
   };
 
@@ -230,7 +249,7 @@ export default function TransferPage() {
           note: note || undefined,
           refFacture: refFacture.trim(),
           tauxTva: batch.tauxTva,
-          transfers: batch.transfers,
+          transfers: batch.transfers.map(toBodyLine),
         });
         setQtys((prev) => ({
           ...prev,
@@ -283,10 +302,17 @@ export default function TransferPage() {
     const ingredientBatches: TransferBatch[] = [];
 
     for (const row of stock) {
-      const activiteMap = qtys[row.ingredientId] || {};
-      const transfers = Object.entries(activiteMap)
+      const destMap = qtys[row.ingredientId] || {};
+      const transfers: TransferBatch['transfers'] = Object.entries(destMap)
         .filter(([, v]) => parseFloat(v) > 0)
-        .map(([actId, v]) => ({ activiteId: Number(actId), ingredientId: row.ingredientId, quantite: parseFloat(v), prixUnitaire: 0 }));
+        .map(([destKey, v]) => {
+          const id = Number(destKey.slice(2));
+          return {
+            destKey,
+            ...(destKey.startsWith('l-') ? { laboDestId: id } : { activiteId: id }),
+            ingredientId: row.ingredientId, quantite: parseFloat(v), prixUnitaire: 0,
+          };
+        });
       if (transfers.length === 0) continue;
 
       const prixStr = prixUnitaireMap[row.ingredientId]?.trim();
@@ -326,7 +352,7 @@ export default function TransferPage() {
 
     if (!confirmed) {
       for (const batch of ingredientBatches) {
-        const batchActIds = new Set(batch.transfers.map((t) => t.activiteId));
+        const batchDestKeys = new Set(batch.transfers.map((t) => t.destKey));
         let history = transferHistory[batch.ingredientId];
         if (!historyLoaded.has(batch.ingredientId)) {
           try {
@@ -336,31 +362,31 @@ export default function TransferPage() {
             history = data;
           } catch { history = []; }
         }
-        const sameDateSameAct = (history || []).filter(
-          (h) => h.dateTransfert === batch.dateTransfert && batchActIds.has(h.activiteId)
+        const sameDateSameDest = (history || []).filter(
+          (h) => h.dateTransfert === batch.dateTransfert && batchDestKeys.has(destKeyOf(h) ?? '')
         );
-        if (sameDateSameAct.length > 0) {
+        if (sameDateSameDest.length > 0) {
           const row = stock.find((r) => r.ingredientId === batch.ingredientId);
-          const perActivite = batch.transfers.map((tr) => {
-            const existing = sameDateSameAct
-              .filter((h) => h.activiteId === tr.activiteId)
+          const perDest = batch.transfers.map((tr) => {
+            const existing = sameDateSameDest
+              .filter((h) => destKeyOf(h) === tr.destKey)
               .reduce((s, h) => s + h.quantite, 0);
-            const actNom = activites.find((a) => a.id === tr.activiteId)?.nom ?? String(tr.activiteId);
-            return { activiteId: tr.activiteId, activiteNom: actNom, existing, newQty: tr.quantite };
+            const dest = destinations.find((d) => d.destKey === tr.destKey);
+            return { destKey: tr.destKey, destNom: dest?.nom ?? tr.destKey, destType: dest?.type ?? 'activite', existing, newQty: tr.quantite };
           });
-          setTransferConfirm({ ingredientId: batch.ingredientId, nom: batch.nom, unite: row?.unite ?? '', date: batch.dateTransfert, perActivite });
+          setTransferConfirm({ ingredientId: batch.ingredientId, nom: batch.nom, unite: row?.unite ?? '', date: batch.dateTransfert, perDest });
           return;
         }
       }
     }
 
     // Build invoice preview modal
-    const modalGroups: TransferActiviteGroup[] = [];
-    for (const act of activites) {
+    const modalGroups: TransferDestGroup[] = [];
+    for (const dest of destinations) {
       const lines: TransferLine[] = [];
       for (const batch of ingredientBatches) {
         for (const tr of batch.transfers) {
-          if (tr.activiteId === act.id) {
+          if (tr.destKey === dest.destKey) {
             const row = stock.find((r) => r.ingredientId === batch.ingredientId);
             lines.push({
               ingredientId: batch.ingredientId,
@@ -374,7 +400,7 @@ export default function TransferPage() {
         }
       }
       if (lines.length > 0) {
-        modalGroups.push({ activiteId: act.id, activiteNom: act.nom, lines });
+        modalGroups.push({ destKey: dest.destKey, destNom: dest.nom, destType: dest.type, lines });
       }
     }
     setInvoiceModal({ groups: modalGroups, batches: ingredientBatches });
@@ -396,7 +422,10 @@ export default function TransferPage() {
     setErrorDetail(null);
   };
 
-  const activites: Activite[] = labo?.activites || [];
+  const destinations: Destination[] = destinationsOf(labo);
+  // Libellés : identiques à l'existant tant que toutes les destinations sont des activités.
+  const hasLaboDest = destinations.some((d) => d.type === 'labo');
+  const destLabel = (d: Destination) => (d.type === 'labo' ? `🏭 ${d.nom}` : d.nom);
 
   const bulkCount = stock.filter((r) => {
     const map = qtys[r.ingredientId] || {};
@@ -409,8 +438,8 @@ export default function TransferPage() {
     const catOk = !filterCategorie || r.categorie === filterCategorie;
     const ingOk = !filterIngredientId || r.ingredientId === filterIngredientId;
     const nomOk = !filterNom || r.nom.toLowerCase().includes(filterNom.toLowerCase());
-    const actOk = !filterActiviteId || assignedSet.has(`${r.ingredientId}-${filterActiviteId}`);
-    return catOk && ingOk && nomOk && actOk;
+    const destOk = !filterDestKey || assignedSet.has(`${r.ingredientId}-${filterDestKey}`);
+    return catOk && ingOk && nomOk && destOk;
   });
   const groups: Record<string, LaboStockRow[]> = {};
   for (const r of filtered) {
@@ -477,13 +506,13 @@ export default function TransferPage() {
             {/* Body */}
             <div style={{ padding: '20px 24px' }}>
               <p style={{ fontSize: '0.82rem', color: '#6b7280', marginBottom: 14, marginTop: 0 }}>
-                Un ou plusieurs transferts existent déjà vers ces activités à cette date. Voici le détail par activité :
+                Un ou plusieurs transferts existent déjà vers ces {hasLaboDest ? 'destinations' : 'activités'} à cette date. Voici le détail par {hasLaboDest ? 'destination' : 'activité'} :
               </p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20 }}>
-                {transferConfirm.perActivite.map((a) => (
-                  <div key={a.activiteId} style={{ border: '1.5px solid #e5e7eb', borderRadius: 12, overflow: 'hidden' }}>
+                {transferConfirm.perDest.map((a) => (
+                  <div key={a.destKey} style={{ border: '1.5px solid #e5e7eb', borderRadius: 12, overflow: 'hidden' }}>
                     <div style={{ background: '#f8f7ff', borderBottom: '1px solid #e5e7eb', padding: '8px 14px', display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '0.06em' }}>↗ {a.activiteNom}</span>
+                      <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '0.06em' }}>↗ {a.destType === 'labo' ? '🏭 ' : ''}{a.destNom}</span>
                     </div>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 0 }}>
                       <div style={{ padding: '10px 14px', textAlign: 'center', borderRight: '1px solid #f3f4f6' }}>
@@ -545,7 +574,7 @@ export default function TransferPage() {
               {labo ? labo.nom : t('common.loading')} — {t('client.labo.transfer_title')}</h1>
           </div>
           <span style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.82rem' }}>
-            Transférez les articles du labo vers vos activités
+            {hasLaboDest ? 'Transférez les articles du labo vers vos activités et labos rattachés' : 'Transférez les articles du labo vers vos activités'}
           </span>
         </div>
         <div style={{ display: 'flex', gap: 10 }}>
@@ -617,16 +646,16 @@ export default function TransferPage() {
         </div>
       )}
 
-      {!loading && stock.length > 0 && activites.length > 0 && (
+      {!loading && stock.length > 0 && destinations.length > 0 && (
         <HistoryFilterBar
           accent="#7e22ce" accentDark="#6d28d9"
-          onReset={() => { setFilterCategorie(''); setFilterIngredientId(''); setFilterNom(''); setFilterActiviteId(''); }}
-          showReset={!!(filterCategorie || filterIngredientId !== '' || filterNom || filterActiviteId !== '')}
+          onReset={() => { setFilterCategorie(''); setFilterIngredientId(''); setFilterNom(''); setFilterDestKey(''); }}
+          showReset={!!(filterCategorie || filterIngredientId !== '' || filterNom || filterDestKey)}
         >
-          <FilterField label="🏪 Activité">
-            <FilterSelect value={filterActiviteId} onChange={(e) => setFilterActiviteId(e.target.value === '' ? '' : Number(e.target.value))}>
+          <FilterField label={hasLaboDest ? '🎯 Destination' : '🏪 Activité'}>
+            <FilterSelect value={filterDestKey} onChange={(e) => setFilterDestKey(e.target.value)}>
               <option value="">— Toutes —</option>
-              {activites.map((a) => <option key={a.id} value={a.id}>{a.nom}</option>)}
+              {destinations.map((d) => <option key={d.destKey} value={d.destKey}>{destLabel(d)}</option>)}
             </FilterSelect>
           </FilterField>
           <FilterField label="🏷️ Catégorie">
@@ -648,7 +677,7 @@ export default function TransferPage() {
       )}
 
       {/* Confirmation block — Date, Réf + Transférer / Réinitialiser buttons */}
-      {!loading && stock.length > 0 && activites.length > 0 && (
+      {!loading && stock.length > 0 && destinations.length > 0 && (
         <div style={{ background: 'linear-gradient(135deg, #faf5ff, #f3e8ff)', borderRadius: 14, padding: '18px 20px', border: '1.5px solid #d8b4fe', boxShadow: '0 4px 20px rgba(126,34,206,0.12)', marginBottom: 24 }}>
           <div style={{ marginBottom: 10, paddingBottom: 10, borderBottom: '1px solid #d8b4fe' }}>
             <span style={{ fontSize: '0.68rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#7e22ce' }}>Transfert</span>
@@ -732,10 +761,11 @@ export default function TransferPage() {
             🧂 Aller aux Articles →
           </Link>
         </div>
-      ) : activites.length === 0 ? (
+      ) : destinations.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '48px 24px', color: 'var(--text-muted)' }}>
           <div style={{ fontSize: '2.5rem', marginBottom: 12 }}>🏪</div>
-          <p style={{ fontSize: '0.95rem', fontWeight: 500 }}>{t('client.labo.no_activites')}</p>
+          <p style={{ fontSize: '0.95rem', fontWeight: 500 }}>Aucune destination rattachée</p>
+          <p style={{ fontSize: '0.82rem', margin: 0 }}>Rattachez une activité ou un labo à ce labo (« Alimenté par ») depuis la page Activités.</p>
         </div>
       ) : (
         <>
@@ -761,8 +791,8 @@ export default function TransferPage() {
                           <th style={{ minWidth: 140, fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '10px 14px 4px', color: '#fff', background: 'transparent', borderBottom: 'none', textAlign: 'center' }}>Article</th>
                           <th style={{ textAlign: 'center', minWidth: 100, fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '10px 14px 4px', color: '#fff', background: 'transparent', borderBottom: 'none' }}>{t('client.labo.labo_stock')}</th>
                           <th style={{ textAlign: 'center', minWidth: 110, fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '10px 14px 4px', color: '#fff', background: 'transparent', borderBottom: 'none' }}>Prix unitaire</th>
-                          {activites.map((act) => (
-                            <th key={act.id} style={{ textAlign: 'center', minWidth: 120, fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '10px 14px 4px', color: '#e9d5ff', background: 'transparent', borderBottom: 'none' }}>{act.nom}</th>
+                          {destinations.map((d) => (
+                            <th key={d.destKey} style={{ textAlign: 'center', minWidth: 120, fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '10px 14px 4px', color: '#e9d5ff', background: 'transparent', borderBottom: 'none' }}>{destLabel(d)}</th>
                           ))}
                         </tr>
                         <tr style={{ background: 'linear-gradient(135deg, #3b0764, #7e22ce)', borderBottom: '2px solid rgba(255,255,255,0.35)' }}>
@@ -775,8 +805,8 @@ export default function TransferPage() {
                               {sub}
                             </th>
                           ))}
-                          {activites.map((act) => (
-                            <th key={act.id} style={{ fontWeight: 400, fontSize: '0.62rem', color: 'rgba(255,255,255,0.65)', letterSpacing: '0.04em', padding: '2px 14px 8px', textAlign: 'center', background: 'transparent', borderBottom: 'none' }}>
+                          {destinations.map((d) => (
+                            <th key={d.destKey} style={{ fontWeight: 400, fontSize: '0.62rem', color: 'rgba(255,255,255,0.65)', letterSpacing: '0.04em', padding: '2px 14px 8px', textAlign: 'center', background: 'transparent', borderBottom: 'none' }}>
                               Quantité
                             </th>
                           ))}
@@ -824,15 +854,16 @@ export default function TransferPage() {
                                     placeholder="—"
                                   />
                                 </td>
-                                {activites.map((act) => {
-                                  const isAssigned = assignedSet.has(`${r.ingredientId}-${act.id}`);
+                                {destinations.map((d) => {
+                                  // Cellule active seulement si l'article/PT est affecté à la destination (labo enfant : sélections du labo).
+                                  const isAssigned = assignedSet.has(`${r.ingredientId}-${d.destKey}`);
                                   return (
-                                    <td key={act.id} style={{ textAlign: 'center', padding: '10px 14px', verticalAlign: 'middle' }}>
+                                    <td key={d.destKey} style={{ textAlign: 'center', padding: '10px 14px', verticalAlign: 'middle' }}>
                                       {!stockEmpty && isAssigned ? (
                                         <input type="number" min="0" step="0.001" className="input"
                                           style={{ width: 100, textAlign: 'right', borderColor: qtyExceedsStock ? '#ef4444' : undefined, background: qtyExceedsStock ? '#fef2f2' : undefined }}
-                                          value={qtys[r.ingredientId]?.[act.id] ?? ''}
-                                          onChange={(e) => { setQty(r.ingredientId, act.id, e.target.value); setErrorDetail(null); setErrorMsg(''); }}
+                                          value={qtys[r.ingredientId]?.[d.destKey] ?? ''}
+                                          onChange={(e) => { setQty(r.ingredientId, d.destKey, e.target.value); setErrorDetail(null); setErrorMsg(''); }}
                                           onFocus={(e) => e.target.select()}
                                           placeholder="—" />
                                       ) : (
@@ -844,22 +875,24 @@ export default function TransferPage() {
                               </tr>
                               {isTransferOpen && (
                                 <tr>
-                                  <td colSpan={4 + activites.length} style={{ background: '#faf5ff', padding: '8px 16px', borderTop: '1px solid #e9d5ff' }}>
+                                  <td colSpan={4 + destinations.length} style={{ background: '#faf5ff', padding: '8px 16px', borderTop: '1px solid #e9d5ff' }}>
                                     <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>
                                       ↗ 5 derniers transferts — {r.nom}
                                     </div>
                                     {isTransferLoading ? (
                                       <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Chargement…</span>
-                                    ) : rowTransfers.filter(tr => tr.activiteNom).length === 0 ? (
+                                    ) : rowTransfers.filter(tr => destNomOf(tr)).length === 0 ? (
                                       <div style={{ textAlign: 'center', padding: '16px 0', color: 'var(--text-muted)', fontSize: '0.82rem' }}>
                                         <span style={{ display: 'block', fontSize: '1.4rem', marginBottom: 4 }}>📭</span>
                                         Aucun transfert enregistré
                                       </div>
                                     ) : (() => {
-                                      const realTransfers = rowTransfers.filter(tr => tr.activiteNom);
-                                      const actNames = Array.from(new Set(realTransfers.map((tr) => tr.activiteNom))).sort();
+                                      // Une colonne par destination (activité ou labo enfant) — libellé = destNom (repli activiteNom).
+                                      const realTransfers = rowTransfers.filter(tr => destNomOf(tr));
+                                      const nomOf = (tr: TransferRecord) => (tr.destType === 'labo' ? `🏭 ${destNomOf(tr)}` : (destNomOf(tr) as string));
+                                      const actNames = Array.from(new Set(realTransfers.map(nomOf))).sort();
                                       const actTotals: Record<string, number> = {};
-                                      for (const tr of realTransfers) actTotals[tr.activiteNom] = (actTotals[tr.activiteNom] ?? 0) + tr.quantite;
+                                      for (const tr of realTransfers) actTotals[nomOf(tr)] = (actTotals[nomOf(tr)] ?? 0) + tr.quantite;
                                       return (
                                         <div style={{ overflowX: 'auto' }}>
                                           <table style={{ fontSize: '0.8rem', width: '100%', minWidth: 500 }}>
@@ -882,8 +915,8 @@ export default function TransferPage() {
                                                     </span>
                                                   </td>
                                                   {actNames.map((an) => (
-                                                    <td key={an} style={{ textAlign: 'right', padding: '2px 8px', color: tr.activiteNom === an ? '#7c3aed' : 'var(--text-muted)' }}>
-                                                      {tr.activiteNom === an ? tr.quantite.toFixed(3) : '—'}
+                                                    <td key={an} style={{ textAlign: 'right', padding: '2px 8px', color: nomOf(tr) === an ? '#7c3aed' : 'var(--text-muted)' }}>
+                                                      {nomOf(tr) === an ? tr.quantite.toFixed(3) : '—'}
                                                     </td>
                                                   ))}
                                                   {/* Prix de cession TTC (les PT partent en TVA 0 → TTC = prix saisi ; repli HT si ligne ancienne) */}

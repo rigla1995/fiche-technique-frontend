@@ -1,3 +1,4 @@
+import type { DestType } from '../../types';
 
 export interface TransferLine {
   ingredientId: number;
@@ -8,14 +9,16 @@ export interface TransferLine {
   tauxTva: number | null;
 }
 
-export interface TransferActiviteGroup {
-  activiteId: number;
-  activiteNom: string;
+// Un groupe par destination (activité 🏪 ou labo rattaché 🏭) — clé 'a-<id>' | 'l-<id>'.
+export interface TransferDestGroup {
+  destKey: string;
+  destNom: string;
+  destType: DestType;
   lines: TransferLine[];
 }
 
 interface Props {
-  groups: TransferActiviteGroup[];
+  groups: TransferDestGroup[];
   date: string;
   refFacture: string;
   onConfirm: () => void;
@@ -55,9 +58,9 @@ export default function TransferConfirmModal({ groups, date, refFacture, onConfi
               return s + ht * (1 + (l.tauxTva ?? 0) / 100);
             }, 0);
             return (
-              <div key={group.activiteId} style={{ marginBottom: 20 }}>
+              <div key={group.destKey} style={{ marginBottom: 20 }}>
                 <div style={{ background: 'linear-gradient(90deg, #ede9fe, #faf5ff)', borderRadius: 8, padding: '6px 12px', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{ fontWeight: 800, fontSize: '0.85rem', color: '#4c1d95' }}>🏪 {group.activiteNom}</span>
+                  <span style={{ fontWeight: 800, fontSize: '0.85rem', color: '#4c1d95' }}>{group.destType === 'labo' ? '🏭' : '🏪'} {group.destNom}</span>
                   <span style={{ marginLeft: 'auto', fontSize: '0.78rem', color: '#7c3aed', fontWeight: 700 }}>
                     HT : {groupHT.toFixed(3)} DT
                     {hasTva && <> &nbsp;·&nbsp; TTC : {groupTTC.toFixed(3)} DT</>}

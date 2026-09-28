@@ -138,6 +138,27 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const isHistoriquepertesPage = location.pathname === '/client/stock/historique-pertes';
   const isProductsPage = location.pathname === '/client/products';
   const hasActivites = typesSummary === null ? true : typesSummary.hasActivites;
+  // Lot 1b — règle vente V1 : l'Espace Vente et les Produits Vendables ne s'affichent
+  // que si au moins une activité VEND (flag vente_active de l'unité). Tant que le
+  // backend n'expose pas le flag, repli sur hasActivites (comportement identique).
+  const hasActivitesVente = typesSummary === null ? true : (typesSummary.hasActivitesVente ?? typesSummary.hasActivites);
+  // Un labo qui alimente d'autres unités (activités OU labos rattachés) a des transferts
+  // à faire même sans activité au compte (chaîne Économat → Cuisine).
+  const hasLaboDestinations = labos.some((l) => (l.nbDestinations ?? 0) > 0);
+
+  // Lot 1b — labo COURANT de l'Espace Labo, sans dropdown ni localStorage : le
+  // `?laboId=` de l'URL (puces des pages labo) gagne ; sinon le dernier labo vu
+  // dans une URL ; sinon le premier labo. Le « dernier labo vu » est mémorisé au
+  // rendu (pattern React « information des rendus précédents » : setState gardé,
+  // sans effet ni appel réseau — les deps des GET restent intactes, règle perf
+  // Sidebar ; la règle lint react-hooks/refs interdit de lire un ref pendant le
+  // rendu). Avec un seul labo, strictement identique à avant.
+  const urlLaboId = Number(currentSearch.get('laboId'));
+  const urlLaboKnown = urlLaboId > 0 && labos.some((l) => l.id === urlLaboId);
+  const [lastLaboId, setLastLaboId] = useState<number | null>(null);
+  if (urlLaboKnown && lastLaboId !== urlLaboId) setLastLaboId(urlLaboId);
+  const lastLaboKnown = lastLaboId !== null && labos.some((l) => l.id === lastLaboId);
+  const currentLaboId: number | null = urlLaboKnown ? urlLaboId : lastLaboKnown ? lastLaboId : (labos[0]?.id ?? null);
 
   // Déverrouillage 100% BASÉ SUR LES DONNÉES (indépendant des étapes d'onboarding) :
   // c'est l'existence réelle d'activités/labos/articles qui ouvre les liens.
@@ -488,8 +509,8 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                   )}
 
                   {/* ══ ESPACE LABO ══ — shown when labos exist */}
-                  {labos.length > 0 && (() => {
-                    const firstLaboId = labos[0].id;
+                  {labos.length > 0 && currentLaboId !== null && (() => {
+                    const firstLaboId = currentLaboId;
                     return (
                       <>
                         <Divider />
@@ -500,8 +521,9 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                             <li><Link to={`/client/labo/historique-appro?laboId=${firstLaboId}`} className={`sidebar-link ${location.pathname === '/client/labo/historique-appro' ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📋</span><span className="link-label">Historique Appro</span></Link></li>
                             <li><Link to={`/client/labo/factures?laboId=${firstLaboId}`} className={`sidebar-link ${location.pathname === '/client/labo/factures' ? 'active' : ''}`} onClick={onClose}><span className="link-icon">🧾</span><span className="link-label">Factures</span></Link></li>
                             <li><Link to={`/client/labo/historique-pertes?laboId=${firstLaboId}`} className={`sidebar-link ${location.pathname === '/client/labo/historique-pertes' ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📉</span><span className="link-label">Historique Pertes</span></Link></li>
-                            {/* Transferts = labo → activités : sans activité, rien à transférer */}
-                            {hasActivites && (
+                            {/* Transferts = labo → activités ET labos rattachés (lot 1b) :
+                                sans activité ni destination rattachée, rien à transférer */}
+                            {(hasActivites || hasLaboDestinations) && (
                               <>
                                 <li><Link to={`/client/labo/transfer?laboId=${firstLaboId}`} className={`sidebar-link ${location.pathname === '/client/labo/transfer' ? 'active' : ''}`} onClick={onClose}><span className="link-icon">↗</span><span className="link-label">Transferts</span></Link></li>
                                 <li><Link to={`/client/labo/historique-transferts?laboId=${firstLaboId}`} className={`sidebar-link ${location.pathname === '/client/labo/historique-transferts' ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📋</span><span className="link-label">Historique Transferts</span></Link></li>
@@ -519,8 +541,9 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                       historique des transferts valorisés) : masqué tant qu'aucune
                       activité n'existe (compte dépôt / gérant labo-seul) ;
                       réapparaît dynamiquement dès la première activité créée.
-                      Les ventes du labo aux professionnels = Espace Acheteurs. */}
-                  {!lockEspaceProduits && moduleVenteActif && hasActivites && (
+                      Les ventes du labo aux professionnels = Espace Acheteurs.
+                      Lot 1b : gaté sur hasActivitesVente (≥ 1 activité qui vend). */}
+                  {!lockEspaceProduits && moduleVenteActif && hasActivitesVente && (
                     <>
                       <Divider />
                       <CollapsibleHeader label="Espace Vente" icon="🛒" isOpen={openSections.has('vente')} locked={false} onToggle={() => toggleSection('vente')} />
@@ -530,8 +553,8 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                           {user?.role === 'client' && <li><NavLink to="/client/ventes/charges" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}><span className="link-icon">🏗️</span><span className="link-label">Config Charges</span></NavLink></li>}
                           <li><NavLink to="/client/ventes/configuration" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}><span className="link-icon">💲</span><span className="link-label">Configuration Vente</span></NavLink></li>
                           <li><NavLink to="/client/ventes" end className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}><span className="link-icon">💰</span><span className="link-label">Ventes Activités</span></NavLink></li>
-                          {labos.length > 0 && (
-                            <li><Link to={`/client/labo/ventes?laboId=${labos[0].id}`} className={`sidebar-link ${location.pathname === '/client/labo/ventes' ? 'active' : ''}`} onClick={onClose}><span className="link-icon">🏭</span><span className="link-label">Ventes Labo</span></Link></li>
+                          {labos.length > 0 && currentLaboId !== null && (
+                            <li><Link to={`/client/labo/ventes?laboId=${currentLaboId}`} className={`sidebar-link ${location.pathname === '/client/labo/ventes' ? 'active' : ''}`} onClick={onClose}><span className="link-icon">🏭</span><span className="link-label">Ventes Labo</span></Link></li>
                           )}
                         </>
                       )}
@@ -573,8 +596,9 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                       {!(formuleActivites === 'basique' && labos.length === 0) && (
                         <>
                           {/* Produits Vendables = vendus par les activités : masqué
-                              sans activité (compte dépôt / gérant labo-seul) */}
-                          {hasActivites && (
+                              sans activité qui vend (compte dépôt / gérant labo-seul /
+                              activités Housekeeping, Spa… — lot 1b) */}
+                          {hasActivitesVente && (
                             <li>
                               <Link to="/client/products?tab=vendable" className={`sidebar-link ${isProductsPage && currentProductTab === 'vendable' ? 'active' : ''}`} onClick={onClose}>
                                 <span className="link-icon">🍔</span><span className="link-label">Produits Vendables</span>

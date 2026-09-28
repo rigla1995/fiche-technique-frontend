@@ -371,7 +371,47 @@ export interface Entreprise {
   createdAt?: string;
 }
 
-export interface Activite {
+// ── Unités opérationnelles (lot 1b) ──────────────────────────────────────────
+// 1 unité = 1 activité OU 1 labo (1:1). Le composant du domaine (Restaurant, Bar,
+// Cuisine, Économat…) porte les libellés d'affichage ; les flags vente/production
+// sont propres à l'unité (défaut true). `sourceUniteId` = unité (labo) qui
+// l'alimente (arbre : une seule source), `nbDestinations` = unités qu'elle alimente.
+
+/** Résumé du composant de domaine porté par une unité (sous-ensemble de `Composant`). */
+export interface UniteComposant {
+  id: number;
+  code: string;
+  libelle: string;
+  libellePluriel?: string | null;
+  icone?: string | null;
+}
+
+/** Champs communs exposés par `GET /api/entreprise/activites` et `GET /api/labo` (mapActivite / mapLabo). */
+export interface UniteOperationnelleFields {
+  uniteId?: number | null;
+  composant?: UniteComposant | null;
+  venteActive?: boolean;
+  productionActive?: boolean;
+  sourceUniteId?: number | null;
+  nbDestinations?: number;
+}
+
+/** Ligne de `GET /api/entreprise/unites` (unitesOperationnellesService.listUnites). */
+export interface UniteOperationnelle {
+  id: number;
+  typeTechnique: 'activite' | 'labo';
+  activiteId: number | null;
+  laboId: number | null;
+  nom: string;
+  composant: UniteComposant | null;
+  venteActive: boolean;
+  productionActive: boolean;
+  sourceUniteId: number | null;
+  sourceNom?: string | null;
+  nbDestinations: number;
+}
+
+export interface Activite extends UniteOperationnelleFields {
   id: number;
   entrepriseId: number;
   nom: string;
@@ -387,7 +427,7 @@ export interface Activite {
   createdAt?: string;
 }
 
-export interface Labo {
+export interface Labo extends UniteOperationnelleFields {
   id: number;
   entrepriseId: number;
   nom: string;
@@ -397,6 +437,8 @@ export interface Labo {
   createdAt?: string;
   fournisseurCount?: number;
   ingredientCount?: number;
+  /** Labo source (« Alimenté par ») — colonne labos.labo_parent_id (lot 1b), si exposée. */
+  laboParentId?: number | null;
 }
 
 export interface ActiviteTypesSummary {
@@ -407,6 +449,10 @@ export interface ActiviteTypesSummary {
   hasFournisseurs: boolean;
   hasLaboIngredients: boolean;
   hasArticles: boolean;
+  /** Lot 1b (flags par unité) — absents tant que le backend ne les expose pas : repli sur hasActivites. */
+  hasActivitesVente?: boolean;
+  hasLabosProduction?: boolean;
+  hasLabosEnfants?: boolean;
 }
 
 export interface StockEntry {
@@ -512,7 +558,7 @@ export interface Perte {
   ingredientNom: string;
   uniteNom: string;
   quantite: number;
-  typePerte: 'avarie' | 'dechet';
+  typePerte: string; // code du domaine (regles.types_perte) — défaut 'avarie' | 'dechet'
   datePerte: string;
   createdAt: string;
 }
@@ -544,7 +590,7 @@ export interface HistoriquePerteEntry {
   categorieNom: string | null;
   quantite: number;
   prixUnitaire?: number | null;
-  typePerte: 'avarie' | 'dechet';
+  typePerte: string; // code du domaine (regles.types_perte) — défaut 'avarie' | 'dechet'
   datePerte: string;
   createdAt: string;
   createdBy?: number | null;
@@ -568,4 +614,40 @@ export interface ProduitTransformeHistoryEntry {
   quantite: number | null;
   prixCalcule: number | null;
   createdAt: string;
+}
+
+// ── Transferts entre unités (lot 1b, F2) ─────────────────────────────────────
+// Clé de destination partagée par toutes les pages labo : 'a-<activiteId>' | 'l-<laboId>'.
+export type DestType = 'activite' | 'labo';
+
+export interface Destination {
+  destKey: string;
+  type: DestType;
+  id: number;
+  nom: string;
+}
+
+/** Ligne de labo_transfers telle que renvoyée par GET /api/labo/:id/transfers. */
+export interface Transfert {
+  id: number;
+  quantite: number;
+  dateTransfert: string;
+  note: string | null;
+  refFacture: string | null;
+  prixUnitaire: number | null;
+  tauxTva: number | null;
+  prixUnitaireTva: number | null;
+  ingredientId: number;          // négatif = produit transformé (-produitId)
+  ingredientNom: string;
+  uniteNom: string;
+  categorieNom: string;
+  activiteId: number | null;     // destination activité (flux historique)
+  activiteNom: string | null;
+  laboDestId?: number | null;    // destination labo (lot 1b)
+  destType?: DestType | null;
+  destNom?: string | null;
+  sens?: 'entree' | 'sortie' | null;
+  contrepartieNom?: string | null;
+  createdBy?: number | null;
+  createdByNom?: string | null;
 }
