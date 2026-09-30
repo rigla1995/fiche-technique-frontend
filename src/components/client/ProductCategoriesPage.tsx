@@ -201,7 +201,7 @@ export default function ProductCategoriesPage() {
                   <input
                     className="input" style={{ flex: 1 }}
                     autoFocus={i === 0}
-                    placeholder="Ex: Catégorie A"
+                    placeholder={voc.ex('Ex: Boissons', 'Ex: Catégorie A')}
                     value={row.nom}
                     onChange={e => updateRow(i, e.target.value)}
                     onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); if (i === rows.length - 1) addRow(); } }}
@@ -239,7 +239,7 @@ export default function ProductCategoriesPage() {
               </div>
               <div className="form-group">
                 <label>Nom *</label>
-                <input className="input" autoFocus value={editNom} placeholder="Ex: Catégorie A" onChange={e => setEditNom(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSave()} />
+                <input className="input" autoFocus value={editNom} placeholder={voc.ex('Ex: Boissons', 'Ex: Catégorie A')} onChange={e => setEditNom(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSave()} />
               </div>
               <div className="modal-footer">
                 <button className="btn btn-ghost" onClick={closeEdit}>Annuler</button>

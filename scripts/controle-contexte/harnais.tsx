@@ -41,6 +41,15 @@ function Ecran() {
   return <div id="ecran">{voc.le('labo')} | {t('client.labo.stock_title')}</div>;
 }
 
+// Exemple de saisie (voc.ex) et libellé de fr.json à balise [[ex:…]] : l'exemple d'aujourd'hui tant que le
+// vocabulaire est celui par défaut, l'exemple neutre construit pour les autres domaines. Aucun journal : ce
+// composant ne compte pas dans les décomptes de rendus.
+function Exemple() {
+  const voc = useVocabulaire();
+  const { t } = useTranslation();
+  return <input id="exemple" readOnly placeholder={voc.ex('Ex: Poulet entier', `Ex: ${voc.Nom('article')} A`)} aria-label={t('client.entreprise.activity_nom')} data-defaut={String(voc.estDefaut)} />;
+}
+
 // Même forme que src/components/client/Profile.tsx : un effet dépendant de l'objet `user` recopie le
 // user dans un formulaire. Une saisie en cours ne doit pas être écrasée par un retour sur l'onglet.
 function Profil() {
@@ -91,6 +100,7 @@ const App = (
     <AuthProvider>
       <Pont />
       <Ecran />
+      <Exemple />
       <Profil />
       <Memo />
       <Garde />

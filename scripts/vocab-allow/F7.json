@@ -21,13 +21,6 @@
     "justification": "Spec §3 règle 3, guide E27 : « ce(s) labo(s) » est réécrit avec le nombre réel de labos sélectionnés (selectedLabos.length, ≥ 1 à l'étape 4 de l'assistant) : « ce labo » / « ces labos »."
   },
   {
-    "fichier": "src/components/client/ComposedValoriseModal.tsx",
-    "avant": "Ex. Cookie maison",
-    "apres": "Ex. Produit composé A",
-    "type": "exemple",
-    "justification": "Exemple de saisie neutre et construit avec le terme du domaine (spec §3 règle 6, guide §5 bis, ligne F7) : « Cookie maison » est propre à la restauration ; le champ nomme un produit composé."
-  },
-  {
     "fichier": "src/components/client/FicheTechniqueModal.tsx",
     "avant": "FT-⟦·⟧-⟦·⟧.xlsx",
     "apres": "FT-⟦·⟧-⟦·⟧.xlsx",

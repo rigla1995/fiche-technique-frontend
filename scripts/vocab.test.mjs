@@ -93,6 +93,7 @@ const executer = ([lexique, methode, cle, args]) => {
   assert.ok(voc, `lexique inconnu « ${lexique} »`);
   if (methode === 'rendre') return rendre(voc, args[0]);
   if (methode === 'avec') return voc.avec(args[0])[args[1]](cle, ...args.slice(2));
+  if (methode === 'estDefaut') return voc.estDefaut; // une propriété, pas une méthode
   assert.equal(typeof voc[methode], 'function', `méthode inconnue « ${methode} »`);
   return voc[methode](cle, ...args);
 };
@@ -133,9 +134,13 @@ test('API §2.1 : toutes les méthodes, avec leurs variantes à majuscule', () =
     'det', 'Det',
     // Ajout de l'étape S5 (consolidation) : accord avec plusieurs termes coordonnés.
     'accN',
+    // Exemples de saisie inchangés en restauration : l'exemple d'origine ou l'exemple neutre.
+    'ex',
   ];
-  assert.deepEqual(Object.keys(vocabDefaut).sort(), [...attendues].sort());
+  // … et une propriété : le lexique du compte est-il le lexique par défaut ?
+  assert.deepEqual(Object.keys(vocabDefaut).sort(), [...attendues, 'estDefaut'].sort());
   for (const m of attendues) assert.equal(typeof vocabDefaut[m], 'function', m);
+  assert.equal(typeof vocabDefaut.estDefaut, 'boolean');
 });
 
 // ── 2. Lexique par défaut v2 ─────────────────────────────────────────────────
@@ -423,6 +428,106 @@ test('S5 — clé dérivée article_ingredient : « Ingrédient » par défaut, 
   assert.deepEqual([r2.article_ingredient.sg, r2.article.sg], ['Référence', 'Article']);
 });
 
+// ── 3 ter. Exemples de saisie : inchangés tant que le lexique est celui par défaut ─────────────
+test('estDefaut : vrai si le lexique donne les rendus du lexique par défaut, faux au premier écart de rendu', () => {
+  assert.equal(vocabDefaut.estDefaut, true);
+  assert.equal(creerVocab(LEXIQUE_DEFAUT).estDefaut, true);
+  // domaine sans écart (restauration, café, boulangerie) : ce que le serveur résout et ce que l'écran reçoit
+  assert.equal(creerVocab(resoudreLexique(LEXIQUE_DEFAUT, {})).estDefaut, true);
+  assert.equal(creerVocab(JSON.parse(JSON.stringify(LEXIQUE_DEFAUT))).estDefaut, true);
+  assert.equal(vocabDuLexique(resoudreLexique(LEXIQUE_DEFAUT, {})).estDefaut, true);
+  assert.equal(vocabDuLexique(null).estDefaut, true, 'admin, boss, non connecté');
+  assert.equal(vocabDuLexique(JSON.parse(JSON.stringify(ORIGINE_32))).estDefaut, true, 'serveur d\'avant le lot 2 : complété par le défaut');
+  // les métadonnées de dérivation ne sont pas un rendu
+  const sansMeta = Object.fromEntries(Object.entries(LEXIQUE_DEFAUT).map(([k, { derive_de: _d, mode: _m, gabarit: _g, ...e }]) => [k, e]));
+  assert.equal(creerVocab(sansMeta).estDefaut, true);
+  // autres domaines
+  for (const nom of ['hotellerie', 'ceramique', 'miroir']) assert.equal(VOCS[nom].estDefaut, false, nom);
+  assert.equal(vocabDuLexique(LEXIQUES.hotellerie).estDefaut, false);
+  // un seul écart de rendu suffit : forme, genre, élision, icône, forme courte, apposition
+  const ecarts = {
+    forme: { labo: { sg: 'Atelier', pl: 'Ateliers', g: 'm', el: true } },
+    pluriel: { labo: { pl: 'Labz' } },
+    genre: { labo: { g: 'f' } },
+    'élision': { labo: { el: true } },
+    'icône': { labo: { icon: '🧪' } },
+    'forme courte': { labo: { court: { sg: 'Lab', pl: 'Labs' } } },
+    'apposition perdue (entrée redéclarée à l\'identique)': { labo: { sg: 'Labo', pl: 'Labos', g: 'm', el: false } },
+  };
+  for (const [nom, e] of Object.entries(ecarts)) {
+    const resolu = resoudreLexique(LEXIQUE_DEFAUT, e);
+    assert.equal(creerVocab(resolu).estDefaut, false, nom);
+    assert.equal(vocabDuLexique(resolu).estDefaut, false, `${nom} (lexique reçu)`);
+  }
+  // clé en plus ou en moins, lexique illisible : ce n'est pas le lexique par défaut
+  assert.equal(creerVocab({ ...LEXIQUE_DEFAUT, chantier: { sg: 'Chantier', pl: 'Chantiers', g: 'm', el: false } }).estDefaut, false);
+  const { labo: _labo, ...sansLabo } = LEXIQUE_DEFAUT;
+  assert.equal(creerVocab(sansLabo).estDefaut, false);
+  for (const lexique of [null, undefined, 'x', 42, [], {}]) assert.equal(creerVocab(lexique).estDefaut, false, String(lexique));
+  // propriété en lecture seule (vocabulaire gelé)
+  assert.throws(() => { 'use strict'; vocabDefaut.estDefaut = false; }, TypeError);
+  assert.equal(vocabDefaut.estDefaut, true);
+});
+
+test('ex : l\'exemple d\'origine si estDefaut, sinon l\'exemple neutre — jamais un mélange des deux', () => {
+  // Les 13 exemples de saisie du balayage : inchangés par défaut, neutres et construits ailleurs.
+  const exemples = (voc) => [
+    voc.ex('Ex: Point de vente Tunis', `Ex: ${voc.Nom('activite')} 1`),
+    voc.ex('Ex: Labo Central', `Ex: ${voc.Nom('labo')} 1`),
+    voc.ex('Ex. Cookie maison', `Ex. ${voc.Nom('produit_compose')} A`),
+    voc.ex('Ex. Burger, Pizza Margherita…', `Ex. ${voc.Nom('produit')} A, ${voc.Nom('produit')} B…`),
+    voc.ex('Ex. BRG-001, REF-42…', 'Ex. REF-001, REF-42…'),
+    voc.ex('Ex: Poulet entier', `Ex: ${voc.Nom('article')} A`),
+    voc.ex('Ex: Viandes & Volailles', 'Ex: Catégorie A'),
+  ];
+  assert.deepEqual(exemples(vocabDefaut), [
+    'Ex: Point de vente Tunis', 'Ex: Labo Central', 'Ex. Cookie maison', 'Ex. Burger, Pizza Margherita…',
+    'Ex. BRG-001, REF-42…', 'Ex: Poulet entier', 'Ex: Viandes & Volailles',
+  ]);
+  assert.deepEqual(exemples(VOCS.hotellerie), [
+    'Ex: Service 1', 'Ex: Cuisine centrale 1', 'Ex. Produit composé A', 'Ex. Produit A, Produit B…',
+    'Ex. REF-001, REF-42…', 'Ex: Fourniture A', 'Ex: Catégorie A',
+  ]);
+  assert.deepEqual(exemples(VOCS.ceramique).slice(0, 2), ['Ex: Point de vente 1', 'Ex: Site de production 1']);
+  assert.equal(exemples(VOCS.miroir)[5], 'Ex: Denrée A');
+  // un domaine sans écart (café, boulangerie) garde les exemples d'origine
+  assert.deepEqual(exemples(creerVocab(resoudreLexique(LEXIQUE_DEFAUT, {}))), exemples(vocabDefaut));
+  // le mini-vocabulaire voc.avec hérite du compte
+  const salle = { sg: 'Salle', pl: 'Salles', g: 'f', el: false };
+  assert.equal(vocabDefaut.avec(salle).estDefaut, true);
+  assert.equal(VOCS.hotellerie.avec(salle).estDefaut, false);
+  assert.equal(vocabDefaut.avec(salle).ex('Ex: Salle bleue', 'Ex: Salle 1'), 'Ex: Salle bleue');
+  assert.equal(VOCS.hotellerie.avec(salle).ex('Ex: Salle bleue', 'Ex: Salle 1'), 'Ex: Salle 1');
+  // jamais d'exception : argument absent → chaîne vide
+  assert.equal(vocabDefaut.ex(undefined, 'x'), '');
+  assert.equal(VOCS.miroir.ex('x'), '');
+  assert.equal(VOCS.miroir.ex('x', null), '');
+});
+
+test('balise ex : [[ex:clé:texte par défaut]] = voc.ex(texte, Nom(clé) + « A ») ; un seul argument, non vide', () => {
+  const gabarit = 'Nom [[du:activite]] (ex: [[ex:activite:Restaurant A]])';
+  assert.equal(rendre(vocabDefaut, gabarit), "Nom de l'activité (ex: Restaurant A)");
+  assert.equal(rendre(VOCS.hotellerie, gabarit), 'Nom du service (ex: Service A)');
+  for (const [nom, voc] of Object.entries(VOCS)) {
+    for (const k of LEXIQUE_CLES) {
+      assert.equal(rendre(voc, `[[ex:${k}:Exemple d'origine]]`), voc.ex("Exemple d'origine", `${voc.Nom(k)} A`), `${nom} ${k}`);
+    }
+  }
+  // le texte par défaut est rendu tel quel, une seule passe (une balise n'y entre pas : crochets hors grammaire)
+  assert.equal(rendre(vocabDefaut, '[[ex:labo:Labo Central, 2e étage (rue X) — « dépôt »]]'), 'Labo Central, 2e étage (rue X) — « dépôt »');
+  assert.deepEqual(balisesInvalides('[[ex:labo:Labo Central]] [[ex:article:Poulet entier]]'), []);
+  assert.deepEqual(
+    balisesInvalides('[[ex:labo]] [[ex:labo:]] [[ex:labo:  ]] [[ex:labo:Labo Central:1]] [[ex:labo:a|b]] [[Ex:labo:Labo Central]]').map((b) => b.balise),
+    ['[[ex:labo]]', '[[ex:labo:]]', '[[ex:labo:  ]]', '[[ex:labo:Labo Central:1]]', '[[ex:labo:a|b]]', '[[Ex:labo:Labo Central]]'],
+  );
+  avertissements.length = 0;
+  assert.equal(rendre(vocabDefaut, '[[ex:labo]]'), '[[ex:labo]]');
+  assert.equal(avertissements.length, 1, 'balise invalide : laissée telle quelle et signalée');
+  // rendreTout (fr.json) : le paquet par défaut garde l'exemple d'origine
+  assert.deepEqual(rendreTout({ a: { b: gabarit } }, vocabDefaut), { a: { b: "Nom de l'activité (ex: Restaurant A)" } });
+  assert.deepEqual(rendreTout({ a: { b: gabarit } }, VOCS.miroir), { a: { b: 'Nom du local (ex: Local A)' } });
+});
+
 // ── 4. Lexique reçu du serveur ───────────────────────────────────────────────
 test('lexique reçu : complété clé par clé ; équivalent au défaut → vocabDefaut (même objet)', () => {
   assert.equal(vocabDuLexique(null), vocabDefaut);
@@ -666,10 +771,9 @@ const FR = lireJson('src/i18n/locales/fr.json');
 const FR_PLAT = aplatir(FR);
 // Écarts ADMIS entre la valeur d'origine et la valeur rendue par défaut : clé → [origine, rendu par défaut].
 // Chacun a son entrée dans scripts/vocab-allow (type et justification).
-const ECARTS_ADMIS_FR = {
-  // Exemple neutre et construit (spec §3 règle 6) : « Restaurant A » était propre à la restauration.
-  'client.entreprise.activity_nom': ["Nom de l'activité (ex: Restaurant A)", "Nom de l'activité (ex: Activité A)"],
-};
+// Aucun : l'exemple « Restaurant A » de client.entreprise.activity_nom est rendu tel quel par défaut
+// (balise [[ex:activite:Restaurant A]]), et devient « Service A » en Hôtellerie.
+const ECARTS_ADMIS_FR = {};
 const CLES_AJOUTEES = [
   'nav.stock_activite',
   'client.entreprise.labo',
@@ -783,7 +887,12 @@ test('fr.json : rendu Hôtellerie et miroir sans forme par défaut des termes su
   assert.equal(h['client.labo.empty_stock'], 'Aucun composant sélectionné pour cette cuisine centrale.');
   assert.equal(h['nav.activites'], 'Mes services');
   assert.equal(h['client.entreprise.activity_nom'], 'Nom du service (ex: Service A)', 'exemple construit avec le terme du domaine');
-  assert.doesNotMatch(Object.values(FR_PLAT).join('\n'), /restaurant|burger|pizza/i, 'aucun exemple propre à la restauration dans fr.json');
+  // Un exemple propre à la restauration ne vit que dans une balise [[ex:…]] : rendu par défaut seulement.
+  assert.equal(FR_PLAT['client.entreprise.activity_nom'], 'Nom [[du:activite]] (ex: [[ex:activite:Restaurant A]])');
+  assert.equal(aplatir(rendreTout(FR, vocabDefaut))['client.entreprise.activity_nom'], "Nom de l'activité (ex: Restaurant A)");
+  const horsBalisesEx = Object.values(FR_PLAT).join('\n').replace(/\[\[ex:[^[\]\n]*\]\]/g, '');
+  assert.doesNotMatch(horsBalisesEx, /restaurant|burger|pizza/i, 'aucun exemple propre à la restauration dans fr.json hors balise [[ex:…]]');
+  assert.doesNotMatch(Object.values(h).join('\n'), /restaurant|burger|pizza/i, 'aucun exemple propre à la restauration dans le rendu Hôtellerie');
   for (const [k, v] of Object.entries(h)) {
     assert.doesNotMatch(v, /\[\[|\]\]/, `${k} : balise non rendue`);
     assert.doesNotMatch(v, /(?<![\p{L}])(activités?|labos?|ingrédients?|articles?)(?![\p{L}])/iu, `${k} : « ${v} »`);

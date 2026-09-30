@@ -1,24 +1,10 @@
 [
   {
     "fichier": "src/components/client/ProductForm.tsx",
-    "avant": "Ex. Burger, Pizza Margherita…",
-    "apres": "Ex. Produit A, Produit B…",
-    "type": "exemple",
-    "justification": "Exemple de saisie neutre et construit avec le terme du domaine (spec §3 règle 6, guide §5 bis, ligne F6) : « Burger, Pizza Margherita » est propre à la restauration ; un compte Céramique ou Hôtellerie lira « Ex. Produit A, Produit B… » (ou le terme qui remplace « produit » dans son lexique)."
-  },
-  {
-    "fichier": "src/components/client/ProductForm.tsx",
-    "avant": "Ex. BRG-001, REF-42…",
-    "apres": "Ex. REF-001, REF-42…",
-    "type": "exemple",
-    "justification": "Exemple de référence neutre (guide §5 bis, ligne F6) : « BRG-001 » abrège « burger », propre à la restauration ; « REF-001 » vaut pour tous les secteurs, sans terme du lexique."
-  },
-  {
-    "fichier": "src/components/client/ProductForm.tsx",
     "avant": "Ex. REF-001, REF-42…",
     "apres": "Ex. REF-001, REF-42…",
     "type": "exemple",
-    "justification": "Exemple de saisie neutre gardé en dur (guide §5 bis : « référence neutre, sans voc ») : « REF » n'est pas un terme du lexique ; l'unité reste listée [exemple] parce qu'elle commence par « Ex »."
+    "justification": "Exemple neutre gardé en dur, second argument de voc.ex (guide §5 bis : « référence neutre, sans voc ») : « REF » n'est pas un terme du lexique ; l'unité reste listée [exemple] parce qu'elle commence par « Ex ». Un compte au lexique par défaut lit toujours « Ex. BRG-001, REF-42… » (premier argument, identique à la référence)."
   },
   {
     "fichier": "src/components/client/ProductForm.tsx",
@@ -29,24 +15,10 @@
   },
   {
     "fichier": "src/components/client/ProductList.tsx",
-    "avant": "Ex. Burger Classic, Pizza Margherita…",
-    "apres": "Ex. Produit A, Produit B…",
-    "type": "exemple",
-    "justification": "Exemple de saisie neutre et construit avec le terme du domaine (spec §3 règle 6, guide §5 bis, ligne F6) : « Burger Classic, Pizza Margherita » est propre à la restauration ; placeholder du nom à l'étape 2 de l'assistant de création."
-  },
-  {
-    "fichier": "src/components/client/ProductList.tsx",
-    "avant": "Ex. BRG-001",
-    "apres": "Ex. REF-001",
-    "type": "exemple",
-    "justification": "Exemple de référence neutre (guide §5 bis, ligne F6) : « BRG-001 » abrège « burger », propre à la restauration ; « REF-001 » vaut pour tous les secteurs, sans terme du lexique."
-  },
-  {
-    "fichier": "src/components/client/ProductList.tsx",
     "avant": "Ex. REF-001",
     "apres": "Ex. REF-001",
     "type": "exemple",
-    "justification": "Exemple de saisie neutre gardé en dur (guide §5 bis : « référence neutre, sans voc ») : « REF » n'est pas un terme du lexique ; l'unité reste listée [exemple] parce qu'elle commence par « Ex »."
+    "justification": "Exemple neutre gardé en dur, second argument de voc.ex (guide §5 bis : « référence neutre, sans voc ») : « REF » n'est pas un terme du lexique ; l'unité reste listée [exemple] parce qu'elle commence par « Ex ». Un compte au lexique par défaut lit toujours « Ex. BRG-001 » (premier argument, identique à la référence)."
   },
   {
     "fichier": "src/components/client/ProductList.tsx",

@@ -433,7 +433,7 @@ export default function ProductForm() {
                   className="input"
                   style={{ fontSize: '1rem', fontWeight: 600, maxWidth: 480 }}
                   required
-                  placeholder={`Ex. ${voc.Nom('produit')} A, ${voc.Nom('produit')} B…`}
+                  placeholder={voc.ex('Ex. Burger, Pizza Margherita…', `Ex. ${voc.Nom('produit')} A, ${voc.Nom('produit')} B…`)}
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                 />
@@ -446,7 +446,7 @@ export default function ProductForm() {
                 <input
                   className="input"
                   style={{ maxWidth: 300 }}
-                  placeholder="Ex. REF-001, REF-42…"
+                  placeholder={voc.ex('Ex. BRG-001, REF-42…', 'Ex. REF-001, REF-42…')}
                   value={refProduit}
                   onChange={(e) => setRefProduit(e.target.value)}
                 />

@@ -1064,6 +1064,133 @@ test('mutations survivantes des relectures : SQL hors .query, collage devant, bo
 });
 
 // ═════════════════════════════════════════════════════════════════════════════
+// 4 ter. Exemples de saisie : voc.ex(parDefaut, sinon) et la balise [[ex:clé:texte par défaut]]
+// ═════════════════════════════════════════════════════════════════════════════
+
+const EX_AVANT = jsx('<input placeholder="Ex: Poulet entier" />');
+const EX_APRES = jsx('<input placeholder={voc.ex("Ex: Poulet entier", `Ex: ${voc.Nom("article")} A`)} />');
+
+test('voc.ex — identite : voc.ex(a, b) vaut son premier argument, le texte de la référence', () => {
+  identique(EX_AVANT, EX_APRES);
+  assert.deepEqual(canons(EX_APRES), ['Ex: Poulet entier']);
+  // Second argument en dur (mot hors lexique), entité de la référence décodée, propriété d'objet, gabarit sans trou.
+  identique(jsx('<input placeholder="Ex: Viandes &amp; Volailles" />'), jsx('<input placeholder={voc.ex("Ex: Viandes & Volailles", "Ex: Catégorie A")} />'));
+  identique('const champ = { placeholder: "Ex. BRG-001" };', 'const champ = { placeholder: voc.ex("Ex. BRG-001", "Ex. REF-001") };');
+  identique(EX_AVANT, jsx('<input placeholder={voc.ex(`Ex: Poulet entier`, "Ex: " + voc.Nom("article") + " A")} />'));
+  // Dans une phrase, et sur req.voc (backend).
+  identique('const a = "Saisir un plat, puis valider";', 'const a = `Saisir ${voc.ex("un plat", voc.un("produit"))}, puis valider`;');
+  identique('const m = "Ex: Poulet entier";', 'const m = req.voc.ex("Ex: Poulet entier", `Ex: ${req.voc.Nom("article")} A`);', JS);
+  // Une seule unité : ni le premier ni le second argument ne forment une unité à part.
+  assert.equal(analyser(EX_APRES).unites.length, 1);
+  // L'apostrophe typographique du premier argument est la même apostrophe que celle de la référence.
+  identique(jsx('<input placeholder="Ex: Salade d\'été" />'), jsx('<input placeholder={voc.ex("Ex: Salade d’été", `Ex: ${voc.Nom("article")} A`)} />'));
+});
+
+test('voc.ex — DOIT échouer : premier argument modifié par rapport à la référence, arguments inversés, exemple neutre sans voc.ex', () => {
+  // Un mot, un caractère, la casse : l'écran d'un compte restauration changerait.
+  ecart(EX_AVANT, EX_APRES.replace('Poulet entier"', 'Poulet fermier"'), { moins: 'Ex: Poulet entier', plus: 'Ex: Poulet fermier' });
+  ecart(EX_AVANT, EX_APRES.replace('"Ex: Poulet entier"', '"Ex : Poulet entier"'), { moins: 'Ex: Poulet entier', plus: 'Ex : Poulet entier' });
+  ecart(EX_AVANT, EX_APRES.replace('"Ex: Poulet entier"', '"Ex: poulet entier"'), { moins: 'Ex: Poulet entier', plus: 'Ex: poulet entier' });
+  // Arguments inversés : le compte restauration verrait l'exemple neutre.
+  ecart(EX_AVANT, jsx('<input placeholder={voc.ex(`Ex: Article A`, "Ex: Poulet entier")} />'), { moins: 'Ex: Poulet entier', plus: 'Ex: Article A' });
+  // L'exemple neutre seul (l'état d'avant voc.ex) reste un écart.
+  ecart(EX_AVANT, jsx('<input placeholder={`Ex: ${voc.Nom("article")} A`} />'), { moins: 'Ex: Poulet entier', plus: 'Ex: Article A' });
+  // Le second argument ne rattrape pas un premier argument faux.
+  ecart(EX_AVANT, jsx('<input placeholder={voc.ex("Ex: Article A", "Ex: Poulet entier")} />'), { plus: 'Ex: Article A' });
+});
+
+test('voc.ex — DOIT échouer : formes que l\'outil ne sait pas juger, erreurs du second argument', () => {
+  const avec = (appel) => jsx(`<input placeholder={${appel}} />`);
+  ecart(EX_AVANT, avec('voc.ex("Ex: Poulet entier")'), { erreur: /voc\.ex : deux arguments attendus/ });
+  ecart(EX_AVANT, avec('voc.ex("Ex: Poulet entier", "Ex: A", "Ex: B")'), { erreur: /voc\.ex : deux arguments attendus/ });
+  ecart(EX_AVANT, avec('voc.ex(exemple, "Ex: Catégorie A")'), { erreur: /le texte littéral de la référence/ });
+  ecart(EX_AVANT, avec('voc.ex(`Ex: ${x}`, "Ex: Catégorie A")'), { erreur: /le texte littéral de la référence/ });
+  ecart(EX_AVANT, avec('voc.ex("Ex: Poulet entier", neutre)'), { erreur: /voc\.ex : le 2e argument est un texte/ });
+  ecart(EX_AVANT, avec('voc.avec({ sg: "Salle" }).ex("Ex: Poulet entier", "Ex: Salle 1")'), { erreur: /voc\.ex : à appeler sur voc/ });
+  // Le second argument n'est pas affiché par défaut, mais ses erreurs sont signalées : le texte est identique, le code de sortie non.
+  const cleInconnue = comparer(EX_AVANT, EX_APRES.replace('"article"', '"articles"'));
+  assert.deepEqual([cleInconnue.moins, cleInconnue.plus], [[], []]);
+  assert.ok(cleInconnue.erreurs.some((e) => /clé de lexique inconnue/.test(e.message)), JSON.stringify(cleInconnue.erreurs));
+  assert.equal(cleInconnue.ok, false);
+  ecart(EX_AVANT, EX_APRES.replace('voc.Nom("article")', 'voc.Nom(cle)'), { erreur: /voc\.Nom : clé non littérale/ });
+  ecart(EX_AVANT, EX_APRES.replace('voc.Nom("article")} A', 'voc.Nom("article")}s'), { erreur: /collé à la suite d'un appel voc/ });
+  // Une balise dans un fichier source n'est jamais rendue, pas plus dans voc.ex qu'ailleurs (R8).
+  ecart(EX_AVANT, avec('voc.ex("Ex: Poulet entier", "Ex: [[Nom:article]] A")'), { erreur: /balise \[\[Nom:article\]\] dans un fichier source/ });
+  // Méthode de chaîne appliquée à voc.ex : le texte affiché n'est plus celui que l'outil juge.
+  assert.ok(comparer('const a = "EX: POULET";', 'const a = voc.ex("Ex: Poulet", "Ex: A").toUpperCase();').erreurs.some((e) => e.type === 'methode-chaine'));
+});
+
+test('voc.ex — residuels : le premier argument est exempté, le second est jugé comme n\'importe quel texte', () => {
+  const unite = (source) => analyser(source).unites[0];
+  // Le premier argument porte des termes (« Labo », « vente », « Produits ») : aucun n'est un résiduel.
+  for (const source of [
+    jsx('<input placeholder={voc.ex("Ex: Labo Central", `Ex: ${voc.Nom("labo")} 1`)} />'),
+    jsx('<input placeholder={voc.ex("Ex: Point de vente Tunis", `Ex: ${voc.Nom("activite")} 1`)} />'),
+    jsx('<input placeholder={voc.ex("Ex: Produits laitiers, articles frais", `Ex: ${voc.Nom("article")} A`)} />'),
+  ]) {
+    const u = unite(source);
+    assert.deepEqual([u.termes, u.exemple, u.exclu], [[], false, null], source);
+    assert.doesNotMatch(u.dur, /Labo|vente|Produits/, 'le texte « dur » est celui du second argument');
+  }
+  assert.equal(unite(EX_APRES).dur, 'Ex: ⟦voc⟧ A');
+  assert.deepEqual([unite(EX_APRES).canon, unite(EX_APRES).neutre], ['Ex: Poulet entier', 'Ex: Article A']);
+  // Second argument en dur : un terme du lexique y reste un résiduel ; un mot hors lexique y reste un [exemple] à admettre.
+  const terme = unite(jsx('<input placeholder={voc.ex("Ex: Labo Central", "Ex: Labo 1")} />'));
+  assert.deepEqual([terme.termes, terme.neutre, terme.dur], [['labo'], 'Ex: Labo 1', 'Ex: Labo 1']);
+  const horsLexique = unite(jsx('<input placeholder={voc.ex("Ex: Viandes", "Ex: Catégorie A")} />'));
+  assert.deepEqual([horsLexique.termes, horsLexique.exemple, horsLexique.canon, horsLexique.neutre], [[], true, 'Ex: Viandes', 'Ex: Catégorie A']);
+  // Hors voc.ex, un exemple de restauration en dur reste listé : l'exemption ne vaut que pour le premier argument.
+  assert.equal(unite(EX_AVANT).exemple, true);
+  assert.equal(unite(jsx('<input placeholder={`Ex: Poulet ${voc.nom("article")}`} />')).exemple, true);
+  // Une unité sans voc.ex n'a pas de texte neutre.
+  assert.equal(unite(EX_AVANT).neutre, undefined);
+  // Contexte technique : c'est le second argument qui est jugé (un premier argument en forme d'URL n'exclut rien).
+  const url = unite(jsx('<input placeholder={voc.ex("https://resto.tn/labo", "Ex: site du labo")} />'));
+  assert.deepEqual([url.exclu, url.termes, url.exemple], [null, ['labo'], true]);
+  assert.equal(unite(jsx('<input placeholder={voc.ex("Ex: site du labo", "https://exemple.tn/labo")} />')).exclu, 'chemin ou URL');
+});
+
+test('voc.ex — accords : le second argument est analysé comme n\'importe quel texte ; la ligne miroir le rend', () => {
+  // Déterminant ou accord en dur dans l'exemple neutre : signalé. Dans l'exemple de la référence : jamais.
+  assert.deepEqual(signalements(jsx('<input placeholder={voc.ex("Ex: un plat", `Ex: un ${voc.nom("produit")}`)} />')), ['un/devant nom:produit']);
+  assert.deepEqual(signalements(jsx('<input placeholder={voc.ex("Ex: un plat", `Ex: ${voc.nom("produit")} créé`)} />')), ['créé/apres nom:produit']);
+  assert.deepEqual(signalements(jsx('<input placeholder={voc.ex("Ex: le labo créé", `Ex: ${voc.un("labo")}`)} />')), []);
+  assert.deepEqual(signalements(EX_APRES), []);
+  // Un mot devant voc.ex s'accorde avec le terme qui ouvre le second argument.
+  assert.deepEqual(signalements('const a = `Saisir un ${voc.ex("plat", voc.nom("produit"))}`;'), ['un/devant nom:produit']);
+  // Ligne miroir : « défaut » = l'exemple de la référence, « miroir » = l'exemple neutre rendu avec le lexique miroir.
+  const [u] = analyser(EX_APRES).unites;
+  assert.deepEqual([u.plat, u.miroir, u.voc], ['Ex: Poulet entier', 'Ex: Denrée A', ['ex:', 'Nom:article']]);
+  const [dur] = analyser(jsx('<input placeholder={voc.ex("Ex: Viandes", "Ex: Catégorie A")} />')).unites;
+  assert.deepEqual([dur.plat, dur.miroir, dur.voc], ['Ex: Viandes', 'Ex: Catégorie A', ['ex:']]);
+  assert.equal(analyser(jsx('<input placeholder={voc.ex("Ex: LABO-001", `Ex: ${voc.MAJ("labo", false, "court")}-001`)} />')).unites[0].miroir, 'Ex: ABR-USINE-001');
+});
+
+test('balise [[ex:clé:texte par défaut]] — fr.json et messages du serveur : identité par défaut, exemption, miroir', () => {
+  const [u] = analyserFr('{ "a": "Nom [[du:activite]] (ex: [[ex:activite:Restaurant A]])" }').unites;
+  assert.equal(u.canon, "Nom de l'activité (ex: Restaurant A)");
+  assert.equal(u.dur, 'Nom ⟦voc⟧ (ex: ⟦voc⟧)');
+  assert.deepEqual([u.termes, u.accords, u.erreurs], [[], [], []]);
+  assert.equal(u.miroir, 'Nom du local (ex: Local A)');
+  assert.deepEqual(u.voc, ['du:activite', 'ex:activite']);
+  // Messages du serveur (.js) : même rendu ; le texte par défaut porte un terme sans être un résiduel.
+  assert.deepEqual(canonsJs('const m = "Nom requis (ex: [[ex:labo:Labo Central]])";'), ['Nom requis (ex: Labo Central)']);
+  assert.deepEqual(candidates('const m = "Nom requis (ex: [[ex:labo:Labo Central]])";', 'x.js'), []);
+  // Un déterminant en dur devant la balise s'accorde avec le terme qu'elle rend hors restauration.
+  assert.deepEqual(analyserFr('{ "a": "Créez un [[ex:labo:Labo Central]]" }').unites[0].accords.map((s) => [s.mot, s.methode, s.cle]), [['un', 'ex', 'labo']]);
+  // DOIT échouer : texte par défaut absent, vide ou en double ; clé inconnue ; texte par défaut différent de la référence.
+  for (const balise of ['[[ex:activite]]', '[[ex:activite:]]', '[[ex:activite:Restaurant A:B]]']) {
+    const r = analyserFr(JSON.stringify({ a: `Nom (ex: ${balise})` }));
+    assert.ok(r.erreurs.some((e) => /balise invalide/.test(e.message) && e.message.includes(balise)), balise);
+  }
+  assert.ok(analyserFr('{ "a": "[[ex:restaurant:Restaurant A]]" }').erreurs.some((e) => /clé de lexique inconnue « restaurant »/.test(e.message)));
+  ecart('const m = "Nom (ex: Restaurant A)";', 'const m = "Nom (ex: [[ex:activite:Restaurant B]])";', { moins: 'Nom (ex: Restaurant A)', plus: 'Nom (ex: Restaurant B)' }, JS);
+  identique('const m = "Nom (ex: Restaurant A)";', 'const m = "Nom (ex: [[ex:activite:Restaurant A]])";', JS);
+  // Dans un fichier source du front, la balise n'est pas rendue (R8) : c'est voc.ex qu'il faut écrire.
+  ecart(jsx('<label>Nom (ex: Restaurant A)</label>'), jsx('<label>Nom (ex: [[ex:activite:Restaurant A]])</label>'), { erreur: /balise \[\[ex:activite:Restaurant A\]\] dans un fichier source/ });
+});
+
+// ═════════════════════════════════════════════════════════════════════════════
 // 5. Ligne de commande, de bout en bout, sur un dépôt git jetable
 // ═════════════════════════════════════════════════════════════════════════════
 
@@ -1605,6 +1732,88 @@ test('CLI identite : apostrophe typographique devenue droite — jugée identiqu
   r = outil(d, 'identite');
   assert.equal(r.code, 0, r.sortie);
   assert.match(r.sortie, /src\/A\.tsx : 1 apostrophe\(s\) typographique\(s\) ’ devenue\(s\) droite\(s\) '/);
+});
+
+test('CLI voc.ex : identite sans écart admis, DOIT échouer si le premier argument s\'écarte de la référence', () => {
+  const fr = (o) => `${JSON.stringify(o, null, 2)}\n`;
+  const FR = 'src/i18n/locales/fr.json';
+  const reference = jsx('<div>\n  <label>{t("c.nom")}</label>\n  <input placeholder="Ex: Poulet entier" />\n  <input placeholder="Ex: Viandes &amp; Volailles" />\n</div>');
+  const d = depot({ 'src/A.tsx': reference, [FR]: fr({ c: { nom: "Nom de l'activité (ex: Restaurant A)" } }) });
+  // L'état d'avant voc.ex (exemples neutres) : trois écarts, que seul un écart admis faisait taire.
+  ecrire(d, {
+    'src/A.tsx': jsx('<div>\n  <label>{t("c.nom")}</label>\n  <input placeholder={`Ex: ${voc.Nom("article")} A`} />\n  <input placeholder="Ex: Catégorie A" />\n</div>'),
+    [FR]: fr({ c: { nom: 'Nom [[du:activite]] (ex: [[Nom:activite]] A)' } }),
+  });
+  let r = outil(d, 'identite');
+  assert.equal(r.code, 1);
+  assert.match(r.sortie, /avant : « Ex: Poulet entier ».*\n {2}après : « Ex: Article A »/);
+  assert.match(r.sortie, /fr\.json:3 \(c\.nom\)\n {2}avant : « Nom de l'activité \(ex: Restaurant A\) ».*\n {2}après : « Nom de l'activité \(ex: Activité A\) »/);
+  // Réécrit avec voc.ex et la balise ex : 0 écart, sans aucune entrée allow.
+  const conforme = {
+    'src/A.tsx': jsx('<div>\n  <label>{t("c.nom")}</label>\n  <input placeholder={voc.ex("Ex: Poulet entier", `Ex: ${voc.Nom("article")} A`)} />\n  <input placeholder={voc.ex("Ex: Viandes & Volailles", "Ex: Catégorie A")} />\n</div>'),
+    [FR]: fr({ c: { nom: 'Nom [[du:activite]] (ex: [[ex:activite:Restaurant A]])' } }),
+  };
+  ecrire(d, conforme);
+  r = outil(d, 'identite', '--sans-allow');
+  assert.equal(r.code, 0, r.sortie + r.erreur);
+  assert.match(r.sortie, /identite : 2 fichier\(s\) comparé\(s\).* 0 écart\(s\), 0 erreur\(s\)/);
+  // DOIT échouer : premier argument modifié (source), texte par défaut modifié (fr.json).
+  ecrire(d, { 'src/A.tsx': conforme['src/A.tsx'].replace('"Ex: Poulet entier"', '"Ex: Poulet rôti"') });
+  r = outil(d, 'identite');
+  assert.equal(r.code, 1);
+  assert.match(r.sortie, /^src\/A\.tsx:3\n {2}avant : « Ex: Poulet entier » {2}\(référence l\. 3\)\n {2}après : « Ex: Poulet rôti »$/m);
+  assert.match(r.sortie, /— 1 écart\(s\), 0 erreur\(s\)/);
+  ecrire(d, { ...conforme, [FR]: fr({ c: { nom: 'Nom [[du:activite]] (ex: [[ex:activite:Restaurant B]])' } }) });
+  r = outil(d, 'identite');
+  assert.equal(r.code, 1);
+  assert.match(r.sortie, /fr\.json:3 \(c\.nom\)\n {2}avant : « Nom de l'activité \(ex: Restaurant A\) ».*\n {2}après : « Nom de l'activité \(ex: Restaurant B\) »/);
+  assert.match(r.sortie, /^src\/A\.tsx:2\n {2}avant : « Nom de l'activité \(ex: Restaurant A\) ».*\n {2}après : « Nom de l'activité \(ex: Restaurant B\) »$/m, 'le libellé se voit aussi dans le fichier qui appelle t()');
+  // DOIT échouer : erreur du second argument, à texte par défaut identique.
+  ecrire(d, { ...conforme, 'src/A.tsx': conforme['src/A.tsx'].replace('voc.Nom("article")', 'voc.Nom("articles")') });
+  r = outil(d, 'identite');
+  assert.equal(r.code, 1);
+  assert.match(r.sortie, /^src\/A\.tsx:3 {2}ERREUR voc\.Nom\('articles'\) : clé de lexique inconnue/m);
+  assert.match(r.sortie, /— 0 écart\(s\), 1 erreur\(s\)/);
+});
+
+test('CLI voc.ex : residuels et accords jugent le second argument, affiché et admis par son texte neutre', () => {
+  const d = depot({ 'src/A.tsx': jsx('<div />') });
+  ecrire(d, { 'src/A.tsx': jsx('<div>\n  <input placeholder={voc.ex("Ex: Labo Central", `Ex: ${voc.Nom("labo")} 1`)} />\n  <input placeholder={voc.ex("Ex: Viandes", "Ex: Catégorie A")} />\n  <input placeholder={voc.ex("Ex: Poulet du labo", "Ex: un " + voc.nom("article") + " du labo")} />\n</div>') });
+  let r = outil(d, 'residuels');
+  assert.equal(r.code, 1);
+  assert.doesNotMatch(r.sortie, /Labo Central|Viandes|Poulet/, 'le premier argument n\'est ni listé ni affiché');
+  assert.match(r.sortie, /^src\/A\.tsx:3 {2}\[exemple\] {2}« Ex: Catégorie A »$/m);
+  assert.match(r.sortie, /^src\/A\.tsx:4 {2}\[labo, exemple\] {2}« Ex: un article du labo »$/m);
+  assert.match(r.sortie, /residuels : 1 fichier\(s\), 2 unité\(s\) dans 1 fichier\(s\)/);
+  // Une entrée écrite sur l'exemple de la référence n'admet rien ; écrite sur le texte neutre, elle admet l'unité.
+  const entree = (texte) => ({ fichier: 'src/A.tsx', avant: texte, apres: texte, type: 'exemple', justification: 'Exemple neutre gardé en dur : mot hors lexique.' });
+  ecrire(d, { 'scripts/vocab-allow/F9.json': JSON.stringify([entree('Ex: Viandes')]) });
+  r = outil(d, 'residuels');
+  assert.match(r.sortie, /^src\/A\.tsx:3 {2}\[exemple\] {2}« Ex: Catégorie A »$/m);
+  assert.match(r.sortie, /allow sans objet : F9\.json\[0\]/);
+  ecrire(d, { 'scripts/vocab-allow/F9.json': JSON.stringify([entree('Ex: Catégorie A')]) });
+  r = outil(d, 'residuels');
+  assert.equal(r.code, 1);
+  assert.doesNotMatch(r.sortie, /\[exemple\]/);
+  assert.match(r.sortie, /residuels : 1 fichier\(s\), 1 unité\(s\) dans 1 fichier\(s\)/);
+  assert.match(r.sortie, /écarts admis \(allow\) : 1 entrée\(s\) — exemple 1/);
+  // accords : le déterminant en dur du second argument est signalé, avec le texte neutre ; la ligne miroir rend le second argument.
+  r = outil(d, 'accords', 'src/A.tsx');
+  assert.equal(r.code, 1);
+  assert.match(r.sortie, /^src\/A\.tsx:4 {2}« un » devant voc\.nom\('article'\) {2}« Ex: un article du labo »$/m);
+  assert.match(r.sortie, /accords : 1 fichier\(s\), 1 signalement\(s\)/);
+  assert.match(r.sortie, / {2}l\. 2\n {4}défaut : Ex: Labo Central\n {4}miroir : Ex: Usine 1\n/);
+  assert.match(r.sortie, / {2}l\. 3\n {4}défaut : Ex: Viandes\n {4}miroir : Ex: Catégorie A\n/);
+  // Réécrit proprement : plus rien.
+  ecrire(d, { 'src/A.tsx': jsx('<div>\n  <input placeholder={voc.ex("Ex: Labo Central", `Ex: ${voc.Nom("labo")} 1`)} />\n  <input placeholder={voc.ex("Ex: Viandes", "Ex: Catégorie A")} />\n  <input placeholder={voc.ex("Ex: Poulet du labo", `Ex: ${voc.un("article")} ${voc.du("labo")}`)} />\n</div>') });
+  assert.equal(outil(d, 'residuels').code, 0);
+  assert.equal(outil(d, 'accords', 'src/A.tsx').code, 0);
+  const inv = JSON.parse(outil(d, 'inventaire').sortie);
+  assert.deepEqual(inv.fichiers['src/A.tsx'].unites.map((u) => [u.texte, u.neutre, u.termes]), [
+    ['Ex: Labo Central', 'Ex: Labo 1', []],
+    ['Ex: Viandes', 'Ex: Catégorie A', ['exemple']],
+    ['Ex: Poulet du labo', 'Ex: un article du labo', []],
+  ]);
 });
 
 // ═════════════════════════════════════════════════════════════════════════════

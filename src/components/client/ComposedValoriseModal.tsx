@@ -181,7 +181,7 @@ export default function ComposedValoriseModal({ categories, editProductId, onClo
             <>
               <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
                 <div style={{ flex: 1, minWidth: 200 }}><label style={lbl}>Nom <span style={{ color: '#ef4444' }}>*</span></label>
-                  <input className="input" value={name} onChange={(e) => setName(e.target.value)} placeholder={`Ex. ${voc.Nom('produit_compose')} A`} style={{ width: '100%' }} autoFocus /></div>
+                  <input className="input" value={name} onChange={(e) => setName(e.target.value)} placeholder={voc.ex('Ex. Cookie maison', `Ex. ${voc.Nom('produit_compose')} A`)} style={{ width: '100%' }} autoFocus /></div>
                 <div style={{ width: 140 }}><label style={lbl}>Réf.</label>
                   <input className="input" value={refProduit} onChange={(e) => setRefProduit(e.target.value)} placeholder="REF-001" style={{ width: '100%' }} /></div>
               </div>

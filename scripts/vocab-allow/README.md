@@ -62,6 +62,8 @@ node scripts/vocab-check.mjs identite --proposer-allow src/components/client/Pro
   accompagné d'un déterminant ou d'une préposition (« du labo », « pour le labo »), ne masque rien : il ferait
   taire l'outil pour toutes les unités du fichier qui le contiennent.
   Un exemple de saisie resté en dur (listé `[exemple]`) ne s'admet que par le texte entier de l'unité.
+  Pour un `voc.ex(a, b)`, ce texte est le texte NEUTRE (`b`, tel que `residuels` l'affiche : « Ex: Catégorie A ») ;
+  `a`, l'exemple de la référence, est exempté et une entrée écrite sur lui n'admet rien.
 - **accords** (seulement avec `"mode": "accords"`) : un mot signalé autour d'un appel voc (devant, juste après,
   pronom de reprise) ne se rapporte pas au terme. `apres` est le texte entier de l'unité tel que l'outil
   l'affiche. Une entrée sans ce mode n'éteint jamais un signalement d'accord.
@@ -77,7 +79,7 @@ sont les premières qu'une revue relit.
 | `formule` | nom de formule ou de supplément tarifaire, figé | « Activité Basique », « Supplément Labo » |
 | `locution` | locution figée | « prix de vente », « type de vente » |
 | `verbe` | verbe ou participe issu d'un terme | « Articles les plus transférés » |
-| `exemple` | exemple de saisie, réécrit en exemple neutre et construit | `Ex: Labo Central` → `Ex: ${voc.Nom('labo')} 1` |
+| `exemple` | exemple de saisie neutre gardé en dur (mode `residuels`) : unités de mesure, mot hors lexique dans le second argument de `voc.ex` | « Ex: kg, L, pièce… », « Ex: Catégorie A » |
 | `discriminant` | chaîne technique jamais affichée (clé, valeur d'état, URL, nom d'événement) | `['manuel', 'transfert', 'vente']` |
 | `deplacement` | chaîne déplacée d'un fichier à un autre, texte inchangé | table de libellés sortie dans un helper |
 | `non-repliable` | construction que l'outil ne sait pas replier (pluriel par fonction ou par donnée) | `plur(n, 'labo', 'labos')` |
@@ -93,6 +95,9 @@ par `voc.accN`) ; l'écart admis à cette étape est dans `S5.json`.
 
 - Un écart que l'on peut supprimer en écrivant mieux l'appel voc (pluriel `!== 1` : `voc.nom('article', n !== 1)` ;
   espace perdue entre deux expressions JSX : `{' '}` en fin de ligne).
+- Un exemple de saisie devenu neutre pour un compte restauration (« Ex: Poulet entier » → « Ex: Article A ») :
+  il s'écrit `voc.ex('Ex: Poulet entier', …)`, le texte de l'existant en premier argument — aucun écart en mode
+  `identite`. Les 14 entrées `exemple` de ce mode ont été retirées.
 - Une erreur de l'outil (`ERREUR clé non littérale`, `variable intermédiaire`, `pluriel collé à un appel voc`,
   `balise invalide`, `balise … dans un fichier source`, `méthode ou propriété appliquée à un appel voc`) :
   elle se corrige dans le code, aucune entrée ne l'éteint.

@@ -5,10 +5,10 @@
     "src/vocab/contexte.ts": "2ad693facded9a777945363956d29568000207f6616f6ea6b34cdaf66eabc45b",
     "src/vocab/excel.ts": "470756b63edf046eba7ddbfb58ecce46e7dbf578aa1b8b27b25a4408df584ef1",
     "src/vocab/lexiqueDefaut.ts": "46033e7ce957ca510d5e563418b4b3a6602d515a88c3e34f8b376f9627040d0d",
-    "src/vocab/rendre.ts": "223c560e7e7617f10204144ef043ec404711b6c5e31f0b92cb540eab12539b2e",
-    "src/vocab/vocab.ts": "0f7a5a2012bf8dc7a86376071d5951d8f98cb086e9e727412e8d4da47411b8ed"
+    "src/vocab/rendre.ts": "8e7868bdddc3ab115d2ce966f4cdca80253250568931c326dcac2182eb89aeca",
+    "src/vocab/vocab.ts": "45e2fb2471d82bd60cdcc9f692b90a2af3a7685ab41c973111ffe01fb7e5b89a"
   },
   "lexique": "49c282f92d4011bf466d21d2fb65c6ce2573ff6a8b46598ebe1e6de30e79cf4b",
-  "empreinte": "ce11392aeefce6acb4cb447cdd74b366116b8e7da2982740af98372927e20262",
+  "empreinte": "a5e2262f875d00aa97134e77ec17c83dadd79b50660a87e8f39a7aada75f94a0",
   "gele_le": "2026-09-30"
 }

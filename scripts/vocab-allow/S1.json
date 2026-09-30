@@ -76,12 +76,5 @@
     "apres": "translation",
     "type": "discriminant",
     "justification": "Espace de noms i18next passé à i18n.addResourceBundle dans appliquerVocabulaireI18n (spec §2.3) : identifiant technique."
-  },
-  {
-    "fichier": "src/i18n/locales/fr.json",
-    "avant": "Nom de l'activité (ex: Restaurant A)",
-    "apres": "Nom de l'activité (ex: Activité A)",
-    "type": "exemple",
-    "justification": "Exemple neutre et construit (spec §3 règle 6) : « Restaurant A » était propre à la restauration (« Nom du service (ex: Restaurant A) » en Hôtellerie). La valeur « Nom [[du:activite]] (ex: [[Nom:activite]] A) » rend « Activité A » par défaut, « Service A » en Hôtellerie."
   }
 ]

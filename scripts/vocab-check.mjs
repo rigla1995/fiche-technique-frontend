@@ -17,6 +17,14 @@
 //   inventaire  JSON par fichier (texte, ligne, termes, clés voc) sur la sortie standard.
 //   lexique     backend généré à jour, vecteurs identiques, empreinte de gel du moteur et du lexique.
 //
+// Exemples de saisie — `voc.ex(parDefaut, sinon)` (spec §3 règle 6) : `parDefaut` est le texte LITTÉRAL de la
+// référence, `sinon` l'exemple neutre construit pour les autres domaines.
+//   identite    voc.ex(a, b) vaut `a` (le lexique par défaut rend l'exemple d'origine) : `a` modifié = écart ;
+//   residuels   `a` est exempté (exemple de restauration assumé) ; `b` est jugé comme n'importe quel texte, et
+//               l'unité est affichée et admise par son texte NEUTRE (« Ex: Catégorie A ») ;
+//   accords     `b` est analysé comme n'importe quel texte ; la ligne « miroir » rend `b`.
+// Dans fr.json et les messages du serveur, la balise [[ex:clé:texte par défaut]] suit les mêmes règles.
+//
 // Options : --root <dépôt> (défaut : ce dépôt ; le backend s'analyse avec --root), --ensemble (compare
 // l'union des fichiers donnés : chaînes déplacées), --base <ref>, --sans-allow, --proposer-allow, --json,
 // --geler / --fichier-gel <f> / --back <dossier> (mode lexique). Arguments restants : fichiers à contrôler
@@ -137,6 +145,9 @@ const SIGNATURES = {
   det: 2, Det: 2, // voc.det(k, 'du', n?) : le déterminant seul, suivi de son séparateur (étape S4)
   accN: 3, // voc.accN(['a', 'b'], masc, fem, n?) : accord avec plusieurs termes coordonnés (étape S5)
 };
+// voc.ex(parDefaut, sinon) n'a pas de clé : deux textes (l'exemple de la référence, l'exemple neutre). Lue à part (partieEx).
+const METHODE_EXEMPLE = 'ex';
+const CLE_EXEMPLE = 'ex:'; // marque de l'appel voc.ex dans la liste des clés voc d'une unité (inventaire, ligne miroir)
 // Méthodes dont le 1er argument est une LISTE de clés littérales (au moins deux), et non une clé.
 const CLES_MULTIPLES = new Set(['accN']);
 // Méthodes qui rendent un déterminant SEUL (« du␣ », « l' ») : le texte qui suit n'est pas collé à un terme.
@@ -251,7 +262,8 @@ export function texteJsx(brut) {
 // ═════════════════════════════════════════════════════════════════════════════
 // Partie = texte JSX (string) | { lit } littéral (balises rendues, R8) | { h } trou (R2) | { tag, noeud }
 // élément enfant (R7) | { c: [A, B], r? } condition (R6) ou pluriel conditionnel (r = règle du test, R4) |
-// { voc } appel du moteur (R9) | { t } appel i18n | { err } construction refusée.
+// { voc } appel du moteur (R9) | { ex: { defaut, sinon } } exemple de saisie voc.ex(a, b) | { t } appel i18n |
+// { err } construction refusée.
 
 const estLit = (n) => !!n && (ts.isStringLiteral(n) || ts.isNoSubstitutionTemplateLiteral(n));
 const nu = (n) => {
@@ -403,11 +415,28 @@ const position = (n, cx) => {
 };
 const erreurPartie = (n, cx, message) => ({ err: message, toujours: true, ...position(n, cx) });
 
+// voc.ex(parDefaut, sinon) — exemple de saisie → partie { ex: { defaut, sinon } }.
+//   defaut : le texte LITTÉRAL de la référence (rendu avec le lexique par défaut : le mode identite le compare,
+//            le mode residuels l'exempte) ;
+//   sinon  : l'exemple neutre, replié comme n'importe quel texte (appels voc rendus, accords, ligne miroir).
+function partieEx(n, appel, cx) {
+  if (appel.avec) return erreurPartie(n, cx, 'voc.ex : à appeler sur voc, pas sur voc.avec(…)');
+  const defaut = nu(n.arguments[0]);
+  if (n.arguments.length !== 2 || !estLit(defaut)) {
+    return erreurPartie(n, cx, 'voc.ex : deux arguments attendus — le texte littéral de la référence, puis l\'exemple neutre');
+  }
+  if (!pliable(n.arguments[1], cx)) {
+    return erreurPartie(n, cx, 'voc.ex : le 2e argument est un texte (littéral, ou gabarit à appels voc)');
+  }
+  return { ex: { defaut: litteral(defaut.text, cx), sinon: plier(n.arguments[1], cx), ...position(n, cx) } };
+}
+
 // R9 — appel du moteur → partie { voc } (ou condition de parties voc si la clé est `c ? 'a' : 'b'`, R6).
 function partieVoc(n, cx) {
   const appel = appelVoc(n);
   if (!appel) return null;
   const { methode } = appel;
+  if (methode === METHODE_EXEMPLE) return partieEx(n, appel, cx);
   if (!Object.hasOwn(SIGNATURES, methode)) return erreurPartie(n, cx, `méthode voc inconnue « ${methode} »`);
   let avec = null;
   if (appel.avec) {
@@ -851,6 +880,16 @@ function emettre(p, st, env) {
     return;
   }
   if (p.voc) { emettreVoc(p.voc, st, env); return; }
+  if (p.ex) {
+    // voc.ex(a, b) : avec le lexique par défaut, c'est `a` (mode identite). C'est `b` avec un autre lexique (ligne
+    // miroir), pour juger ce qui reste écrit en dur (mode dur : `a`, exemple de restauration assumé, est exempté)
+    // et pour le texte NEUTRE de l'unité (env.neutre : affichage et écarts admis des modes residuels et accords).
+    if (env.mode !== 'dur' && !env.neutre && env.voc.estDefaut) {
+      serialiserSuite(p.ex.sinon, env); // `b` n'est pas affiché, mais ses erreurs (clé inconnue, collage…) sont signalées
+      emettre(p.ex.defaut, st, env);
+    } else p.ex.sinon.forEach((q) => emettre(q, st, env));
+    return;
+  }
   if (p.t) {
     if (env.mode === 'dur') {
       emettreOpaque('⟦t⟧', st);
@@ -881,7 +920,11 @@ function serialiserSuite(parties, env) {
 const porteDuTexte = (parties) => parties.some((p) => (typeof p === 'string' ? p.trim() !== ''
   : p.lit !== undefined ? p.lit.trim() !== ''
     : p.c ? porteDuTexte(p.c[0]) || porteDuTexte(p.c[1])
-      : !!(p.voc || p.t || p.err)));
+      : !!(p.voc || p.t || p.err || p.ex)));
+
+// L'unité contient-elle un exemple de saisie voc.ex(a, b) ?
+const contientEx = (parties) => parties.some((p) => typeof p === 'object'
+  && (p.ex ? true : p.c ? contientEx(p.c[0]) || contientEx(p.c[1]) : p.t && p.t.defaut ? contientEx(p.t.defaut) : false));
 
 // ═════════════════════════════════════════════════════════════════════════════
 // Mode accords, volet 1 : ce qui s'accorde avec un terme et reste écrit en dur
@@ -1006,6 +1049,10 @@ function chercherAccords(parties, avants, etat, profondeur = 0) {
       const enfant = p.noeud && etat.enfants ? etat.enfants(p.noeud) : null;
       if (enfant) avants = chercherAccords(enfant, avants, etat, profondeur);
       else { avants = ['']; etat.apres = null; }
+    } else if (p.ex) {
+      // voc.ex(a, b) : seul l'exemple neutre `b` s'écrit avec le vocabulaire du compte — lu comme n'importe quel
+      // texte. `a` n'est rendu qu'avec le lexique par défaut : rien ne s'y accorde.
+      avants = chercherAccords(p.ex.sinon, avants, etat, profondeur);
     } else if (p.t && etat.fr && etat.fr.has(p.t.cle)) {
       // t('clé') : la valeur de fr.json est le texte affiché (« {t('x.supprimer_le')} {voc.nom(k)} »).
       avants = chercherAccords([{ lit: etat.fr.get(p.t.cle) }], avants, etat, profondeur);
@@ -1032,6 +1079,7 @@ function clesVoc(parties, enfants, o = [], variables = null, profondeur = 0) {
     if (typeof p === 'string') continue;
     if (p.lit !== undefined) { if (!p.brut) for (const m of p.lit.matchAll(BALISE)) o.push(`${m[1]}:${m[2]}`); }
     else if (p.voc) o.push(`${p.voc.methode}:${p.voc.cle}`);
+    else if (p.ex) { o.push(CLE_EXEMPLE); clesVoc(p.ex.sinon, enfants, o, variables, profondeur); }
     else if (p.c) { clesVoc(p.c[0], enfants, o, variables, profondeur); clesVoc(p.c[1], enfants, o, variables, profondeur); }
     else if (p.t && p.t.defaut) clesVoc(p.t.defaut, enfants, o, variables, profondeur);
     else if (p.tag !== undefined && enfants && p.noeud) { const e = enfants(p.noeud); if (e) clesVoc(e, enfants, o, variables, profondeur); }
@@ -1044,13 +1092,16 @@ const trousNommes = (parties, o = []) => {
     if (typeof p !== 'object') continue;
     if (p.h && p.id) o.push(p.id);
     else if (p.c) { trousNommes(p.c[0], o); trousNommes(p.c[1], o); }
+    else if (p.ex) trousNommes(p.ex.sinon, o);
   }
   return o;
 };
+// Textes écrits en dur d'une suite ; d'un voc.ex(a, b), seul `b` compte (`a` est exempté).
 const fragments = (parties, o = []) => {
   for (const p of parties) {
     if (typeof p === 'string') o.push(p);
     else if (p.lit !== undefined) o.push(p.lit);
+    else if (p.ex) fragments(p.ex.sinon, o);
     else if (p.c) { fragments(p.c[0], o); fragments(p.c[1], o); }
     else if (p.t && p.t.defaut) fragments(p.t.defaut, o);
   }
@@ -1080,7 +1131,8 @@ function exclusion(u) {
     && (identifiant || !PROPRIETES_A_IDENTIFIANT.has(ctx.slice(5)))) return `propriété ${ctx.slice(5)}`;
   // Chemin ou URL : jugé sur le texte canonique ENTIER (« ⟦·⟧ / ⟦·⟧ labo(s) » n'est pas un chemin), sans blanc
   // de tête ni mot après une espace (« / activité / mois » est un texte).
-  if (/^(?:\/[\w⟦]|https?:)/.test(u.canon) && !/\s\p{L}/u.test(u.canon)) return 'chemin ou URL';
+  const canon = u.neutre ?? u.canon; // unité à voc.ex(a, b) : c'est `b` qui est jugé
+  if (/^(?:\/[\w⟦]|https?:)/.test(canon) && !/\s\p{L}/u.test(canon)) return 'chemin ou URL';
   if (/^[a-z0-9_\-./:?=&]+$/.test(t) && /[/\-_.]/.test(t)) return 'identifiant technique';
   if (SQL.test(t)) return 'SQL';
   return null;
@@ -1154,9 +1206,15 @@ export function analyser(texte, nom = 'x.tsx', options = {}) {
     if (opts.complet) {
       u.fragments = fragments(b.parties);
       u.dur = serialiserSuite(b.parties, { voc: vocabDefaut, lexique: LEXIQUE_DEFAUT, mode: 'dur', fr: null, erreurs: null }).s;
+      // Unité à voc.ex(a, b) : son texte NEUTRE (`b`, rendu avec le lexique par défaut) est celui que les modes
+      // residuels et accords affichent et admettent — `canon` (`a`) n'y désigne pas ce qui est jugé.
+      if (contientEx(b.parties)) {
+        u.neutre = serialiserSuite(b.parties, { voc: vocabDefaut, lexique: LEXIQUE_DEFAUT, mode: 'identite', fr: opts.fr, erreurs: null, neutre: true }).s;
+      }
       u.termes = termesDans(u.dur.replace(/⟦<[^⟧]*>⟧|⟦ERREUR:[^⟧|]*/g, ' '));
       u.exclu = exclusion(u);
-      // Exemple de saisie écrit en dur : un mot d'au moins 3 lettres reste dans le placeholder, hors appels voc.
+      // Exemple de saisie écrit en dur : un mot d'au moins 3 lettres reste dans le placeholder, hors appels voc
+      // (et hors premier argument d'un voc.ex, que le texte « dur » ne contient pas).
       u.exemple = (b.attribut === 'placeholder' || b.ctx === 'prop:placeholder') && EXEMPLE.test(u.dur)
         && /[\p{L}]{3,}/u.test(u.dur.replace(EXEMPLE, '').replace(/⟦[^⟧]*⟧/g, ' '));
       // Accords : une phrase JSX est lue avec ses éléments enfants (« Aucun <strong>{voc.nom('labo')}</strong> »).
@@ -1428,11 +1486,14 @@ function appliquerAllowIdentite(moins, plus, entrees, fichiers) {
 
 // residuels : une entrée vaut pour l'unité entière (texte canonique) ou masque un extrait (« prix de vente »).
 // Un exemple de saisie resté en dur (pseudo-terme « exemple ») ne s'admet que par l'unité entière.
+// Unité à voc.ex(a, b) : le texte canonique jugé est le texte NEUTRE (`b`) — une entrée écrite sur `a`
+// (l'exemple de la référence, exempté) n'admet rien.
 function residuAdmis(u, fichier, entrees) {
   let dur = u.dur;
+  const canon = u.neutre ?? u.canon;
   for (const e of entrees) {
     if (!e.modes.includes('residuels') || (e.fichier !== fichier && e.fichier !== FICHIER_GLOBAL) || e.apres === null) continue;
-    if (e.apres === u.canon || e.apres === u.dur) { e.emplois += 1; return []; }
+    if (e.apres === canon || e.apres === u.dur) { e.emplois += 1; return []; }
     if (dur.includes(e.apres) && motPlein(e.apres)) {
       dur = dur.split(e.apres).join('⟦admis⟧');
       e.emplois += 1;
@@ -1671,7 +1732,7 @@ export function modeResiduels({ root, fichiers, entrees }) {
       if ((!u.termes.length && !u.exemple) || u.exclu) continue;
       const termes = residuAdmis(u, a.fichier, entrees);
       if (!termes.length) continue;
-      residuels.push({ fichier: a.fichier, l: u.l, texte: u.canon, termes, ctx: u.ctx });
+      residuels.push({ fichier: a.fichier, l: u.l, texte: u.neutre ?? u.canon, termes, ctx: u.ctx });
       parFichier[a.fichier] = (parFichier[a.fichier] ?? 0) + 1;
     }
   }
@@ -1686,8 +1747,9 @@ export function modeAccords({ root, fichiers, entrees }) {
     for (const u of a.unites) {
       if (u.miroir !== undefined) miroir.push({ fichier: a.fichier, l: u.l, cle: u.cle, defaut: u.plat, miroir: u.miroir, voc: u.vocPlat });
       for (const s of u.accords ?? []) {
-        const texte = u.plat ?? u.canon;
-        const admise = entrees.find((e) => e.modes.includes('accords') && e.fichier === a.fichier && (e.apres === texte || e.apres === u.canon));
+        // Unité à voc.ex(a, b) : le signalement porte sur `b`, c'est son texte neutre qui est affiché et admis.
+        const texte = u.neutre ?? u.plat ?? u.canon;
+        const admise = entrees.find((e) => e.modes.includes('accords') && e.fichier === a.fichier && (e.apres === texte || e.apres === (u.neutre ?? u.canon)));
         if (admise) { admise.emplois += 1; continue; }
         signalements.push({
           fichier: a.fichier, l: s.l, mot: s.mot, position: s.position ?? 'devant', appel: `voc.${s.methode}('${s.cle}')`, texte,
@@ -1731,7 +1793,7 @@ export function modeInventaire({ root, fichiers, base }) {
       const termes = u.exemple ? [...u.termes, TERME_EXEMPLE] : u.termes;
       if (!termes.length && !u.voc.length) continue;
       const candidate = termes.length > 0 && !u.exclu;
-      unites.push({ l: u.l, ...(u.cle ? { cle: u.cle } : {}), texte: u.canon, termes, voc: u.voc, ctx: u.ctx, candidate, ...(u.exclu ? { exclu: u.exclu } : {}) });
+      unites.push({ l: u.l, ...(u.cle ? { cle: u.cle } : {}), texte: u.canon, ...(u.neutre !== undefined ? { neutre: u.neutre } : {}), termes, voc: u.voc, ctx: u.ctx, candidate, ...(u.exclu ? { exclu: u.exclu } : {}) });
       if (termes.length) { r.unitesATerme += 1; if (candidate) { r.candidates += 1; for (const k of termes) r.parCle[k] = (r.parCle[k] ?? 0) + 1; } else r.exclues += 1; }
       if (u.voc.length) { r.unitesVoc += 1; for (const k of u.voc) r.parCleVoc[k] = (r.parCleVoc[k] ?? 0) + 1; }
     }

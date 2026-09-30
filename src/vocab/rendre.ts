@@ -12,7 +12,10 @@
 //   - `acc` : [[acc:clé:masc:fem]] ou [[acc:clé:masc:fem:pl]] (masc et fem peuvent être vides) ;
 //   - `n` : [[n:clé:3]] ;
 //   - `det` / `Det` : [[det:clé:du]], [[det:clé:le:pl]], [[det:clé:le:court]] — le déterminant seul, suivi de
-//     son séparateur (« du␣ », « de l' ») : « [[det:stock:du]]**[[nom:stock]]** ».
+//     son séparateur (« du␣ », « de l' ») : « [[det:stock:du]]**[[nom:stock]]** » ;
+//   - `ex` : [[ex:clé:texte par défaut]] — exemple de saisie : le texte par défaut (l'exemple d'origine) si le
+//     lexique du compte est le lexique par défaut, sinon « Nom(clé) A » ; c'est l'appel
+//     voc.ex('texte par défaut', `${voc.Nom('clé')} A`). Un seul argument, non vide (sans « : », « | » ni crochet).
 // Balise invalide (méthode inconnue, argument non reconnu, en double ou en trop, texte entre
 // [[ ]] hors grammaire) → laissée telle quelle et signalée.
 //
@@ -70,6 +73,12 @@ const rendreBalise = (voc: VocabQuelconque, contenu: string): { texte: string } 
     if (args.length === 2) return appel(args[0], args[1]);
     const n = nombre(args[2]);
     return n === undefined ? { raison: `nombre non reconnu « ${args[2]} »` } : appel(args[0], args[1], n);
+  }
+
+  if (methode === 'ex') {
+    if (args.length !== 1 || !args[0].trim()) return { raison: '« ex » attend le texte par défaut (un seul argument, non vide)' };
+    const v = voc as unknown as Record<string, Methode>;
+    return { texte: String(v.ex(args[0], `${String(v.Nom(cle))} A`)) };
   }
 
   if (methode === 'n') {

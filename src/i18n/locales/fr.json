@@ -89,7 +89,7 @@
       "add_activity": "Ajouter [[un:activite]]",
       "edit_activity": "Modifier [[le:activite]]",
       "duplicate_activity": "Dupliquer",
-      "activity_nom": "Nom [[du:activite]] (ex: [[Nom:activite]] A)",
+      "activity_nom": "Nom [[du:activite]] (ex: [[ex:activite:Restaurant A]])",
       "activity_adresse": "Adresse",
       "activity_name_exists": "[[Un:activite]] [[acc:activite:distinct:distincte]] \"{{name}}\" existe déjà.",
       "manage_ingredients": "[[Pl:ingredient]]",

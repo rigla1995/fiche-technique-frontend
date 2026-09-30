@@ -923,7 +923,7 @@ export default function ProductList() {
                           <label style={{ display: 'block', fontWeight: 700, fontSize: '0.82rem', color: '#3730a3', marginBottom: 6 }}>
                             Nom {voc.du('produit')} <span style={{ color: '#ef4444' }}>*</span>
                           </label>
-                          <input className="input" placeholder={`Ex. ${voc.Nom('produit')} A, ${voc.Nom('produit')} B…`} value={addName}
+                          <input className="input" placeholder={voc.ex('Ex. Burger Classic, Pizza Margherita…', `Ex. ${voc.Nom('produit')} A, ${voc.Nom('produit')} B…`)} value={addName}
                             onChange={(e) => setAddName(e.target.value)} autoFocus
                             style={{ width: '100%', borderColor: '#c7d2fe' }} />
                         </div>
@@ -931,7 +931,7 @@ export default function ProductList() {
                           <label style={{ display: 'block', fontWeight: 700, fontSize: '0.82rem', color: '#3730a3', marginBottom: 6 }}>
                             Réf. {voc.nom('produit')} <span style={{ fontSize: '0.75rem', fontWeight: 400, color: 'var(--text-muted)' }}>(optionnel)</span>
                           </label>
-                          <input className="input" placeholder="Ex. REF-001" value={addRef}
+                          <input className="input" placeholder={voc.ex('Ex. BRG-001', 'Ex. REF-001')} value={addRef}
                             onChange={(e) => setAddRef(e.target.value)}
                             style={{ width: '100%', maxWidth: 280, borderColor: '#c7d2fe' }} />
                         </div>

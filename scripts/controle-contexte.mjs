@@ -8,7 +8,9 @@
 //   - l'objet `voc` ne change pas tant que le lexique ne change pas ;
 //   - retour sur l'onglet : au plus un /auth/me par 5 min, silencieux ; une réponse IDENTIQUE ne remplace
 //     pas l'objet `user` (un formulaire alimenté par un effet [user] — « Mon profil » — garde sa saisie) ;
-//   - changement de lexique, déconnexion, rôles (admin et boss : vocabulaire par défaut).
+//   - changement de lexique, déconnexion, rôles (admin et boss : vocabulaire par défaut) ;
+//   - exemples de saisie (voc.ex, balise [[ex:…]] de fr.json) : ceux d'aujourd'hui tant que le vocabulaire est
+//     celui par défaut (non connecté, restauration, admin, boss), neutres et construits pour un autre domaine.
 //
 // Dépendances : rolldown (livré avec vite, dans node_modules de ce dépôt) et puppeteer, pris dans un dépôt
 // voisin — par défaut ../labflow-site ; sinon LABFLOW_PUPPETEER=<chemin d'un package.json qui résout puppeteer>.
@@ -107,6 +109,14 @@ const etat = (page) => page.evaluate(() => ({
   hors: document.querySelector('#hors')?.textContent,
   nom: document.querySelector('#profil-nom')?.value, tel: document.querySelector('#profil-tel')?.value,
 }));
+// Exemple de saisie (voc.ex) et libellé à balise [[ex:…]] tels que le navigateur les affiche, et voc.estDefaut.
+const exemple = (page) => page.evaluate(() => {
+  const e = document.querySelector('#exemple');
+  return [e?.getAttribute('placeholder'), e?.getAttribute('aria-label'), e?.getAttribute('data-defaut')].join(' | ');
+});
+const EXEMPLE_DEFAUT = "Ex: Poulet entier | Nom de l'activité (ex: Restaurant A) | true";
+const EXEMPLE_HOTELLERIE = 'Ex: Fourniture A | Nom du service (ex: Service A) | false';
+const EXEMPLE_CERAMIQUE = 'Ex: Matière première A | Nom du point de vente (ex: Point de vente A) | false';
 const SIX_MINUTES = 6 * 60 * 1000;
 // Retour sur l'onglet, 6 minutes après le dernier /auth/me (ou tout de suite).
 const retourOnglet = async (page, plusTard = true) => {
@@ -121,6 +131,7 @@ const retourOnglet = async (page, plusTard = true) => {
   let e = await etat(page);
   verifier('A1 non connecté : vocabulaire par défaut', e.ecran === 'le labo | Stock Labo' && e.memo === 'Mes activités' && e.etat === 'login', JSON.stringify(e));
   verifier('A1b hors provider : vocabulaire par défaut', e.hors === "l'activité", e.hors);
+  verifier('A1c non connecté : exemple de saisie et libellé d\'origine (voc.ex, balise ex)', await exemple(page) === EXEMPLE_DEFAUT, await exemple(page));
 
   await page.evaluate(() => {
     window.__mock.me = { id: 7, name: 'Test', email: 'client@test.local', phone: '20111222', role: 'client', onboardingStep: 9, modeCompte: 'actif', domaine: { id: 2, slug: 'hotellerie', nom: 'Hôtellerie', lexique: 'hotellerie', composants: [], regles: {} } };
@@ -130,6 +141,7 @@ const retourOnglet = async (page, plusTard = true) => {
   const logLogin = await page.evaluate(() => window.__log.slice());
   e = await etat(page);
   verifier('A2 après connexion Hôtellerie : écran et t()', e.ecran === 'la cuisine centrale | Stock Cuisine' && e.memo === 'Mes services' && e.protege === 'Espace Cuisine | Mes services', JSON.stringify(e));
+  verifier('A2b après connexion Hôtellerie : exemple de saisie et libellé neutres, construits avec les termes du domaine', await exemple(page) === EXEMPLE_HOTELLERIE, await exemple(page));
   const incoherents = logLogin.filter((l) => (l.c === 'Ecran' || l.c === 'EcranProtege') && l.user && (l.le !== 'la cuisine centrale' || l.t !== 'Stock Cuisine'));
   verifier('A3 aucun rendu avec user connecté ET vocabulaire par défaut', incoherents.length === 0, JSON.stringify(incoherents));
   const mixtes = logLogin.filter((l) => l.c === 'Ecran' && ((l.le === 'la cuisine centrale') !== (l.t === 'Stock Cuisine')));
@@ -205,11 +217,13 @@ const retourOnglet = async (page, plusTard = true) => {
   e = await etat(page);
   verifier('A10 changement de lexique au retour d\'onglet : écran, t() et composant mémoïsé suivent',
     e.ecran === 'le site de production | Stock Site' && e.memo === 'Mes points de vente' && e.protege === 'Espace Site | Mes points de vente', JSON.stringify(e));
+  verifier('A10b changement de lexique : l\'exemple de saisie et le libellé suivent', await exemple(page) === EXEMPLE_CERAMIQUE, await exemple(page));
 
   await page.evaluate(() => { window.__log.length = 0; window.__auth.logout(); });
   await attendre(150);
   e = await etat(page);
   verifier('A11 déconnexion : retour au vocabulaire par défaut (voc et t())', e.ecran === 'le labo | Stock Labo' && e.memo === 'Mes activités' && e.etat === 'login', JSON.stringify(e));
+  verifier('A11c déconnexion : retour à l\'exemple de saisie et au libellé d\'origine', await exemple(page) === EXEMPLE_DEFAUT, await exemple(page));
   const ls = await page.evaluate(() => [localStorage.getItem('token'), localStorage.getItem('user')]);
   verifier('A11b déconnexion : localStorage vidé', ls[0] === null && ls[1] === null, JSON.stringify(ls));
   await page.evaluate(() => { window.__decalage += 6 * 60 * 1000; window.__calls.length = 0; document.dispatchEvent(new Event('visibilitychange')); });
@@ -251,6 +265,8 @@ for (const [role, attendu, note] of [
   await page.evaluate(async () => { await window.__auth.login('a', 'b'); });
   const e = await etat(page);
   verifier(`C ${note}`, e.ecran === attendu, e.ecran);
+  const parDefaut = role === 'super_admin' || role === 'boss';
+  verifier(`C ${role} : exemple de saisie ${parDefaut ? 'd\'origine' : 'neutre (domaine du compte)'}`, await exemple(page) === (parDefaut ? EXEMPLE_DEFAUT : EXEMPLE_HOTELLERIE), await exemple(page));
   await page.close();
 }
 
@@ -262,6 +278,7 @@ for (const [role, attendu, note] of [
   const log = await page.evaluate(() => window.__log.slice());
   verifier('D restauration : voc reste l\'objet vocabDefaut, composant mémoïsé non re-rendu, effet [voc] non relancé',
     log.filter((l) => l.c === 'Ecran').every((l) => l.voc === 1) && !log.some((l) => l.c === 'Memo') && !log.some((l) => l.c === 'effet[voc]'), JSON.stringify(log.map((l) => [l.c, l.voc])));
+  verifier('D1b restauration : exemple de saisie et libellé d\'origine, voc.estDefaut vrai', await exemple(page) === EXEMPLE_DEFAUT, await exemple(page));
   const vis = await retourOnglet(page);
   verifier('D2 restauration, retour d\'onglet (réponse identique) : aucun rendu', vis.calls.length === 1 && vis.log.length === 0, JSON.stringify([vis.calls.length, vis.log.map((l) => l.c)]));
   await page.close();

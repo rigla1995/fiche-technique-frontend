@@ -5,7 +5,9 @@
     "lexique : defaut | hotellerie | ceramique | miroir (les trois derniers : scripts/vocab-lexiques-test.json, résolus par resoudreLexique).",
     "méthode : une méthode de voc → voc[méthode](clé, ...arguments) ; pour accN (étape S5), « clé » est la LISTE des clés coordonnées ;",
     "          'rendre' → rendre(voc, arguments[0]) (clé = null) ;",
-    "          'avec'   → voc.avec(arguments[0])[arguments[1]](clé, ...arguments.slice(2)).",
+    "          'avec'   → voc.avec(arguments[0])[arguments[1]](clé, ...arguments.slice(2)) ;",
+    "          'estDefaut' → la propriété voc.estDefaut (clé = null, arguments = []) ;",
+    "          'ex' → voc.ex(clé, arguments[0]) : « clé » est ici l'exemple par défaut, arguments[0] l'exemple neutre.",
     "Copie conforme attendue dans le backend (test/vocab.test.js) : ne pas modifier l'une sans l'autre."
   ],
   "cas": [
@@ -970,6 +972,44 @@
     ["miroir", "le", "article_ingredient", [], "la provision"],
     ["miroir", "Aucun", "article_ingredient", [], "Aucune provision"],
     ["miroir", "de", "article_ingredient", [true], "de provisions"],
-    ["miroir", "acc", "article_ingredient", ["saisi", "saisie", 2], "saisies"]
+    ["miroir", "acc", "article_ingredient", ["saisi", "saisie", 2], "saisies"],
+
+    ["defaut", "estDefaut", null, [], true],
+    ["hotellerie", "estDefaut", null, [], false],
+    ["ceramique", "estDefaut", null, [], false],
+    ["miroir", "estDefaut", null, [], false],
+
+    ["defaut", "ex", "Ex: Poulet entier", ["Ex: Article A"], "Ex: Poulet entier"],
+    ["defaut", "ex", "Ex. Burger, Pizza Margherita…", ["Ex. Produit A, Produit B…"], "Ex. Burger, Pizza Margherita…"],
+    ["defaut", "ex", "Ex: Viandes & Volailles", ["Ex: Catégorie A"], "Ex: Viandes & Volailles"],
+    ["defaut", "ex", "Ex: Labo Central", ["Ex: Labo 1"], "Ex: Labo Central"],
+    ["defaut", "ex", "", ["Ex: Article A"], ""],
+    ["hotellerie", "ex", "Ex: Poulet entier", ["Ex: Fourniture A"], "Ex: Fourniture A"],
+    ["hotellerie", "ex", "Ex: Labo Central", ["Ex: Cuisine centrale 1"], "Ex: Cuisine centrale 1"],
+    ["hotellerie", "ex", "Ex: Viandes", [""], ""],
+    ["ceramique", "ex", "Ex: Poulet entier", ["Ex: Matière première A"], "Ex: Matière première A"],
+    ["ceramique", "ex", "Ex. BRG-001", ["Ex. REF-001"], "Ex. REF-001"],
+    ["miroir", "ex", "Ex: Poulet entier", ["Ex: Denrée A"], "Ex: Denrée A"],
+    ["miroir", "ex", "Ex: Boissons", ["Ex: Catégorie A"], "Ex: Catégorie A"],
+    ["defaut", "avec", "Ex: Salle bleue", [{ "sg": "Salle", "pl": "Salles", "g": "f", "el": false }, "ex", "Ex: Salle 1"], "Ex: Salle bleue"],
+    ["hotellerie", "avec", "Ex: Salle bleue", [{ "sg": "Salle", "pl": "Salles", "g": "f", "el": false }, "ex", "Ex: Salle 1"], "Ex: Salle 1"],
+
+    ["defaut", "rendre", null, ["Nom [[du:activite]] (ex: [[ex:activite:Restaurant A]])"], "Nom de l'activité (ex: Restaurant A)"],
+    ["hotellerie", "rendre", null, ["Nom [[du:activite]] (ex: [[ex:activite:Restaurant A]])"], "Nom du service (ex: Service A)"],
+    ["ceramique", "rendre", null, ["Nom [[du:activite]] (ex: [[ex:activite:Restaurant A]])"], "Nom du point de vente (ex: Point de vente A)"],
+    ["miroir", "rendre", null, ["Nom [[du:activite]] (ex: [[ex:activite:Restaurant A]])"], "Nom du local (ex: Local A)"],
+    ["defaut", "rendre", null, ["[[ex:labo:Labo Central]] / [[ex:article:Poulet entier, 1,5 kg]]"], "Labo Central / Poulet entier, 1,5 kg"],
+    ["hotellerie", "rendre", null, ["[[ex:labo:Labo Central]] / [[ex:article:Poulet entier, 1,5 kg]]"], "Cuisine centrale A / Fourniture A"],
+    ["ceramique", "rendre", null, ["[[ex:labo:Labo Central]] / [[ex:article:Poulet entier, 1,5 kg]]"], "Site de production A / Matière première A"],
+    ["miroir", "rendre", null, ["[[ex:labo:Labo Central]] / [[ex:article:Poulet entier, 1,5 kg]]"], "Usine A / Denrée A"],
+    ["defaut", "rendre", null, ["[[ex:cle_inconnue:Restaurant A]]"], "Restaurant A"],
+    ["hotellerie", "rendre", null, ["[[ex:cle_inconnue:Restaurant A]]"], "‹cle_inconnue› A"],
+    ["defaut", "rendre", null, ["[[ex:activite]]"], "[[ex:activite]]"],
+    ["defaut", "rendre", null, ["[[ex:activite:]]"], "[[ex:activite:]]"],
+    ["defaut", "rendre", null, ["[[ex:activite: ]]"], "[[ex:activite: ]]"],
+    ["defaut", "rendre", null, ["[[ex:activite:Restaurant A:B]]"], "[[ex:activite:Restaurant A:B]]"],
+    ["hotellerie", "rendre", null, ["[[ex:activite:Restaurant A:B]]"], "[[ex:activite:Restaurant A:B]]"],
+    ["hotellerie", "rendre", null, ["[[ex:activite]] et [[ex:activite:Restaurant A]]"], "[[ex:activite]] et Service A"],
+    ["miroir", "rendre", null, ["[[Ex:activite:Restaurant A]]"], "[[Ex:activite:Restaurant A]]"]
   ]
 }

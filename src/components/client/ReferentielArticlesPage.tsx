@@ -567,7 +567,7 @@ export default function ReferentielArticlesPage() {
                       <input
                         className="input" style={{ flex: 2, borderColor: errNom ? '#ef4444' : undefined }}
                         autoFocus={i === 0}
-                        placeholder={`Ex: ${voc.Nom('article')} A`}
+                        placeholder={voc.ex('Ex: Poulet entier', `Ex: ${voc.Nom('article')} A`)}
                         value={row.nom}
                         onChange={e => updateMultiRow(i, 'nom', e.target.value)}
                         onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); if (i === multiRows.length - 1) addMultiRow(); } }}
@@ -707,7 +707,7 @@ export default function ReferentielArticlesPage() {
                     <label>Nom *</label>
                     <input
                       className="input" autoFocus value={createNom}
-                      placeholder={`Ex: ${voc.Nom('article')} A`}
+                      placeholder={voc.ex('Ex: Poulet entier', `Ex: ${voc.Nom('article')} A`)}
                       onChange={e => setCreateNom(e.target.value)}
                       onKeyDown={e => e.key === 'Enter' && step1Valid && goStep2()}
                     />
@@ -894,7 +894,7 @@ export default function ReferentielArticlesPage() {
               {editError && <div style={{ background: '#fee2e2', color: '#dc2626', border: '1px solid #fecaca', borderRadius: 6, padding: '8px 12px', marginBottom: 12, fontSize: '0.85rem' }}>{editError}</div>}
               <div className="form-group">
                 <label>Nom *</label>
-                <input className="input" autoFocus value={editForm.nom} placeholder={`Ex: ${voc.Nom('article')} A`} onChange={e => setEditForm(p => ({ ...p, nom: e.target.value }))} />
+                <input className="input" autoFocus value={editForm.nom} placeholder={voc.ex('Ex: Poulet entier', `Ex: ${voc.Nom('article')} A`)} onChange={e => setEditForm(p => ({ ...p, nom: e.target.value }))} />
               </div>
               <div className="form-group">
                 <label>Unité *</label>

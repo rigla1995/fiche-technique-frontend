@@ -5,6 +5,9 @@ Le moteur (`src/vocab/`), le lexique et `fr.json` sont **gelés** depuis l'étap
 L'étape S5 les a étendus UNE fois, puis regelés : `voc.accN` (accord avec plusieurs termes coordonnés), la casse
 `'court'` de `voc.MAJ`, `voc.nomS` et `voc.NomS`, et la clé dérivée `article_ingredient` (décisions :
 `scripts/vocab-besoins/S5-decisions.json`).
+Après le balayage, une seconde extension, regelée elle aussi : `voc.estDefaut`, `voc.ex` et la balise
+`[[ex:clé:texte par défaut]]` — les **exemples de saisie** restent ceux d'aujourd'hui pour un compte dont le
+vocabulaire est celui par défaut (règle 6, E26, §5 bis).
 
 ## 0. En bref
 
@@ -44,9 +47,13 @@ Aucune commande git d'écriture, pas de `npm run build`.
    « prix de vente », « type de vente », unités citées en exemple. Les cas communs sont déjà admis (§7).
 5. **Verbes et participes issus d'un terme** (transféré, vendu, inventorié, perdu, fabriqué) : ils restent en dur.
    Leur **accord** avec un terme passe par `voc.acc`.
-6. **Exemples de saisie** : neutres et construits (`Ex: ${voc.Nom('labo')} 1`), écart admis de type `exemple`.
-   Aucun exemple propre à un secteur en dur dans un écran commun — **même quand l'exemple ne porte aucun terme du
-   lexique** (« Ex. Burger, Pizza Margherita… », « Ex: Poulet entier », « BRG-001 ») : liste par lot au §5 bis.
+6. **Exemples de saisie** : `voc.ex(parDefaut, sinon)`. Le premier argument est le texte **exact** de l'existant
+   (« Ex: Labo Central », « Ex: Poulet entier ») : un compte dont le vocabulaire est celui par défaut
+   (restauration, café, boulangerie, admin) lit l'exemple concret d'aujourd'hui, **sans aucun écart admis**. Le
+   second est l'exemple **neutre et construit** (`` `Ex: ${voc.Nom('labo')} 1` ``) que lisent les autres domaines.
+   Aucun exemple propre à un secteur en dur ailleurs que dans ce premier argument — **même quand l'exemple ne
+   porte aucun terme du lexique** (« Ex. Burger, Pizza Margherita… », « Ex: Poulet entier », « BRG-001 ») : liste
+   par lot au §5 bis. Dans `fr.json` : la balise `[[ex:clé:texte par défaut]]`.
 7. **Icônes** : `voc.icon(k)` seulement là où l'emoji affiché est déjà l'icône par défaut de la clé (annexe A).
 8. **Ne pas toucher** : identifiants, routes, clés d'API, valeurs comparées (`=== 'labo'`), commentaires,
    `console.*`, noms de fichiers téléchargés, pages publiques (`auth/*`), espace admin.
@@ -189,6 +196,9 @@ Une méthode à initiale majuscule met la majuscule au **premier mot du résulta
 | `voc.g('labo')` | m | f | m |
 | `voc.icon('labo')` | 🏭 | 🏭 | 🏭 |
 | `voc.avec({ sg: 'Bar', pl: 'Bars', g: 'm', el: false }).mon('_')` | mon bar | mon bar | mon bar |
+| `voc.estDefaut` | true | false | false |
+| `voc.ex('Ex: Poulet entier', 'Ex: ' + voc.Nom('article') + ' A')` | Ex: Poulet entier | Ex: Fourniture A | Ex: Matière première A |
+| `voc.ex('Ex: Viandes & Volailles', 'Ex: Catégorie A')` | Ex: Viandes & Volailles | Ex: Catégorie A | Ex: Catégorie A |
 | `voc.Nom('espace_labo')` | Espace Labo | Espace Cuisine | Espace Site |
 | `voc.Nom('labo_long')` | Laboratoire | Cuisine centrale | Site de production |
 | `voc.Nom('labo_desc', true)` | Laboratoires de production | Cuisines centrales | Sites de production |
@@ -213,11 +223,22 @@ Précisions :
   `acc`. Il n'a pas de balise.
 - `voc.MAJ(k, n?, c?)`, `voc.nomS(k, c?)` et `voc.NomS(k, c?)` (étape S5) : avec `c` = `'court'` / `'Court'` ils
   rendent la forme courte (« CUISINE », « cuisine(s) », « Cuisine(s) ») — pour une référence d'exemple
-  (`Ex: ${voc.MAJ('labo', false, 'court')}-001`) ou un nom composé en libellé (`${voc.NomS('labo', 'Court')} de
-  fabrication`). Sans cet argument, la forme longue, comme avant.
+  (`Ex: ${voc.MAJ('labo', false, 'court')}-001` : identique à « Ex: LABO-001 » par défaut, donc sans `voc.ex`) ou
+  un nom composé en libellé (`${voc.NomS('labo', 'Court')} de fabrication`). Sans cet argument, la forme longue,
+  comme avant.
 - `article_ingredient` (étape S5) : l'article que l'existant nomme « ingrédient » là où il est une ligne de stock
   (saisie d'inventaire, historique des transferts, cumul d'appro). Par défaut « Ingrédient » ; un domaine qui renomme
   « article » y lit son terme. La clé `ingredient` reste celle du composant d'une recette.
+- `voc.estDefaut` (propriété) est vrai quand le lexique du compte donne exactement les rendus du lexique par
+  défaut (formes, genre, élision, icône, forme courte, apposition) : domaine sans écart (restauration, café,
+  boulangerie), admin, boss, non connecté. Un seul écart de rendu, même une icône, le rend faux.
+- `voc.ex(parDefaut, sinon)` rend `parDefaut` si `voc.estDefaut`, sinon `sinon` : c'est la seule écriture d'un
+  **exemple de saisie** (règle 6, E26). `parDefaut` est un texte **littéral**, recopié de l'existant ; `sinon` est
+  un littéral ou un gabarit à appels `voc` (`` `Ex: ${voc.Nom('article')} A` ``). L'outil juge les deux :
+  `identite` compare `parDefaut` à la référence, `residuels` l'exempte et juge `sinon` comme n'importe quel texte,
+  `accords` lit `sinon` et la ligne « miroir » le rend. Balise équivalente pour `fr.json` :
+  `[[ex:clé:texte par défaut]]` = `voc.ex('texte par défaut', voc.Nom('clé') + ' A')` (un seul argument, non
+  vide, sans « : », « | » ni crochet).
 - `voc.det(k, d, n?, c?)` rend le déterminant **seul, suivi de son séparateur** (une espace, ou rien après une
   apostrophe). `d` : `'le'`, `'un'`, `'du'`, `'de'`, `'au'`, `'ce'`, `'aucun'`, `'votre'`, `'mon'`, `'son'`,
   `'nouveau'`. Il sert quand une balise sépare le déterminant du terme (E18, E19) — et seulement là.
@@ -252,6 +273,7 @@ Précisions :
 | « Tous prestataires », « tous labos » | `voc.Tous('prestataire', '')`, `voc.tous('labo', '')` |
 | « le **stock** », « votre **référentiel** » (déterminant, balise, terme) | `{voc.det('stock', 'le')}<strong>{voc.nom('stock')}</strong>`, `{voc.det('referentiel', 'votre')}<strong>{voc.nom('referentiel')}</strong>` |
 | « la/les **activité(s)** » | `{voc.acc('activite', 'le/les', 'la/les')} <strong>{voc.nomS('activite')}</strong>` |
+| exemple de saisie : « Ex: Poulet entier », « Ex: Viandes » | `` voc.ex('Ex: Poulet entier', `Ex: ${voc.Nom('article')} A`) ``, `voc.ex('Ex: Viandes', 'Ex: Catégorie A')` — le texte de l'existant d'abord, l'exemple neutre ensuite |
 | « Aucune activité ou labo trouvé », « activités & labos assignés » (termes coordonnés) | `` `${voc.Aucun('activite')} ou ${voc.nom('labo')} ${voc.accN(['activite', 'labo'], 'trouvé', 'trouvée')}` `` : le participe sort de `voc.accN` (féminin seulement si tous les termes sont féminins) |
 
 ## 4. Les trois réflexes
@@ -679,7 +701,7 @@ Fichier : `src/components/client/StockPage.tsx`
 
 Jamais `voc.Nom('vente').toUpperCase()` : l'outil n'y voit qu'un trou.
 
-### E26 — Exemple de saisie : neutre et construit (écart admis)
+### E26 — Exemple de saisie : `voc.ex`, l'existant par défaut, un exemple neutre ailleurs (aucun écart)
 
 Fichier : `src/components/client/ActivitesPage.tsx`
 
@@ -687,16 +709,31 @@ Occurrences : 2
 
 ```diff
 - placeholder="Ex: Labo Central"
-+ placeholder={`Ex: ${voc.Nom('labo')} 1`}
++ placeholder={voc.ex('Ex: Labo Central', `Ex: ${voc.Nom('labo')} 1`)}
+```
+
+Restauration, café, boulangerie : « Ex: Labo Central », comme aujourd'hui (`identite` : 0 écart, sans entrée
+`allow`). Hôtellerie : « Ex: Cuisine centrale 1 » — « Labo Central » y aurait donné « Cuisine centrale Central ».
+Le premier argument se **recopie** de l'existant : un caractère de différence est un écart (`avant : « Ex: Labo
+Central »` / `après : « Ex: Labo central »`). La ligne « miroir » montre le second argument (« Ex: Usine 1 »).
+
+Quand l'exemple neutre ne porte aucun terme du lexique, il reste en dur dans le second argument, et s'admet par
+une entrée `exemple` du mode `residuels` sur ce texte neutre (§5 bis) :
+
+Fichier : `src/components/client/ReferentielCategoriesPage.tsx`
+
+```diff
+- placeholder="Ex: Viandes"
++ placeholder={voc.ex('Ex: Viandes', 'Ex: Catégorie A')}
 ```
 
 ```json
 {
-  "fichier": "src/components/client/ActivitesPage.tsx",
-  "avant": "Ex: Labo Central",
-  "apres": "Ex: Labo 1",
+  "fichier": "src/components/client/ReferentielCategoriesPage.tsx",
+  "avant": "Ex: Catégorie A",
+  "apres": "Ex: Catégorie A",
   "type": "exemple",
-  "justification": "Exemple de saisie neutre et construit (spec §3 règle 6) : « Labo Central » donnerait « Cuisine centrale Central » en Hôtellerie."
+  "justification": "Exemple neutre gardé en dur, second argument de voc.ex : « catégorie » n'est pas un terme du lexique."
 }
 ```
 
@@ -769,12 +806,14 @@ Fichier : `src/components/client/PortionsModal.tsx`
 ## 5 bis. Exemples de saisie propres à la restauration (règle 6)
 
 Ces placeholders ne portent parfois aucun terme du lexique : `residuels` les liste quand même, sous le pseudo-terme
-`[exemple]`, dès qu'ils commencent par « Ex ». Réécriture attendue : un exemple **neutre et construit** avec le terme
-du domaine, et une entrée `allow` de type `exemple` (mode `identite`, `avant` → `apres`).
+`[exemple]`, dès qu'ils commencent par « Ex ». Réécriture : `voc.ex(<le texte d'aujourd'hui, recopié>, <un exemple
+neutre et construit avec le terme du domaine>)`. **Aucune entrée `allow` en mode `identite`** : un compte au
+vocabulaire par défaut lit l'exemple d'aujourd'hui, au caractère près.
 
-| Lot | Site | Aujourd'hui | À écrire |
+| Lot | Site | Premier argument : aujourd'hui (inchangé par défaut) | Second argument : les autres domaines |
 |---|---|---|---|
-| F2 | ActivitesPage (×2 chacun) | « Ex: Labo Central », « Ex: LABO-001 », « Ex: Point de vente Tunis » | `` `Ex: ${voc.Nom('labo')} 1` ``, `` `Ex: ${voc.MAJ('labo', false, 'court')}-001` `` (forme courte depuis l'étape S5 : « Ex: CUISINE-001 »), `` `Ex: ${voc.Nom('activite')} 1` `` |
+| F2 | ActivitesPage (×2 chacun) | « Ex: Labo Central », « Ex: Point de vente Tunis » | `` `Ex: ${voc.Nom('labo')} 1` ``, `` `Ex: ${voc.Nom('activite')} 1` `` |
+| F2 | ActivitesPage (×2) | « Ex: LABO-001 » | sans `voc.ex` : `` `Ex: ${voc.MAJ('labo', false, 'court')}-001` `` rend déjà « Ex: LABO-001 » par défaut (« Ex: CUISINE-001 » en Hôtellerie) |
 | F6 | ProductForm:434, ProductList:924 | « Ex. Burger, Pizza Margherita… », « Ex. Burger Classic, Pizza Margherita… » | `` `Ex. ${voc.Nom('produit')} A, ${voc.Nom('produit')} B…` `` |
 | F6 | ProductForm:447, ProductList:932 | « Ex. BRG-001, REF-42… », « Ex. BRG-001 » | « Ex. REF-001, REF-42… », « Ex. REF-001 » (référence neutre, sans `voc`) |
 | F7 | ComposedValoriseModal:182 | « Ex. Cookie maison » | `` `Ex. ${voc.Nom('produit_compose')} A` `` |
@@ -782,11 +821,20 @@ du domaine, et une entrée `allow` de type `exemple` (mode `identite`, `avant` �
 | F9 | ReferentielCategoriesPage:208, :246 | « Ex: Viandes », « Ex: Viandes & Volailles » | « Ex: Catégorie A » (mot hors lexique : en dur) |
 | F9 | ReferentielFamillesPage:208, :256 | « Ex: Produits laitiers » | « Ex: Famille A » |
 | F9 | ProductCategoriesPage:200, :238 | « Ex: Boissons » | « Ex: Catégorie A » |
-| F9 | ReferentielUnitesPage:167, :199 | « Ex: kg, L, pièce… » | inchangé : unités de mesure, neutres — entrée `exemple` en mode `residuels` (texte entier) |
+| F9 | ReferentielUnitesPage:167, :199 | « Ex: kg, L, pièce… » | sans `voc.ex`, inchangé : unités de mesure, neutres — entrée `exemple` en mode `residuels` (texte entier) |
+| socle | `fr.json`, `client.entreprise.activity_nom` | « Nom de l'activité (ex: Restaurant A) » | `Nom [[du:activite]] (ex: [[ex:activite:Restaurant A]])` : « Nom du service (ex: Service A) » en Hôtellerie |
 
-Un exemple réécrit sans mot en dur de 3 lettres ou plus (`Ex: ${voc.Nom('labo')} 1`) n'est plus listé. Un exemple
-neutre gardé en dur (« Ex: Catégorie A », « Ex. REF-001 ») reste listé `[exemple]` : admets-le par une entrée
-`exemple` dont `avant` = `apres` = le texte entier.
+Ce que l'outil en fait :
+
+- `identite` : `voc.ex(a, b)` vaut `a`. Le premier argument est un **littéral** (ni variable, ni gabarit à trou) ;
+  les erreurs du second (clé inconnue, pluriel collé) sont signalées même s'il n'est pas affiché par défaut.
+- `residuels` : le premier argument est exempté (« Labo », « vente », « Produits » n'y sont pas des résiduels). Le
+  second est jugé comme n'importe quel texte : sans mot en dur de 3 lettres ou plus (`Ex: ${voc.Nom('labo')} 1`),
+  il n'est pas listé ; neutre mais en dur (« Ex: Catégorie A », « Ex. REF-001 »), il reste listé `[exemple]` —
+  admets-le par une entrée `exemple` dont `avant` = `apres` = **le texte neutre** entier (une entrée écrite sur le
+  texte du premier argument n'admet rien).
+- `accords` : le second argument est lu comme n'importe quel texte ; la ligne « miroir » le rend (« défaut : Ex:
+  Poulet entier » / « miroir : Ex: Denrée A »).
 
 ## 6. Pièges
 
@@ -888,19 +936,17 @@ que le mot qui suit l'appel. Tout ce qui s'accorde passe par `voc.acc`, et la li
     plusieurs unités.
   - Un extrait (mode `residuels`) doit porter le terme avec un **mot plein** : « prix de vente » masque, « du labo »
     ou « pour le labo » ne masquent rien. Sinon, donne le texte entier de l'unité.
-- **Écart venu du socle, à reprendre par F2** : `fr.json` rend maintenant « Nom de l'activité (ex: Activité A) »
-  (exemple neutre, à la place de « Restaurant A »). Le libellé est affiché par `ActivitesPage.tsx` :
-  ajoute à `F2.json` l'entrée `{ "fichier": "src/components/client/ActivitesPage.tsx", "avant": "Nom de l'activité
-  (ex: Restaurant A) ⟦<span>⟧", "apres": "Nom de l'activité (ex: Activité A) ⟦<span>⟧", "type": "exemple", … }`
-  (recopie `avant` / `apres` de la sortie de `--proposer-allow`).
+- **Plus d'écart venu du socle** : `fr.json` rend de nouveau « Nom de l'activité (ex: Restaurant A) » par défaut
+  (balise `[[ex:activite:Restaurant A]]`, « Service A » en Hôtellerie). L'entrée `exemple` que F2 portait pour
+  `ActivitesPage.tsx` a été retirée, comme toutes les entrées `exemple` du mode `identite`.
 
 | Situation | Type | Mode |
 |---|---|---|
 | valeur technique listée par `residuels` (`'labo'` clé d'onglet, `type_appro`, `=== 'PT'` valeur d'API, nom de fichier `FT-….xlsx`) | `discriminant` | residuels |
-| exemple de saisie neutre gardé en dur, listé `[exemple]` (« Ex: kg, L, pièce… », « Ex: Catégorie A ») | `exemple` | residuels |
+| exemple de saisie neutre gardé en dur, listé `[exemple]` (« Ex: kg, L, pièce… » ; « Ex: Catégorie A », second argument de `voc.ex`) | `exemple` | residuels |
 | le mot n'est pas le terme (« votre fournisseur » du portail, « PRESTATAIRE » partie au contrat, menu admin) | `homonyme` | residuels |
 | nom de formule hors `_global` (« Labo » de FormuleGuard, « activité » du supplément tarifaire) | `formule` | residuels |
-| exemple de saisie réécrit (E26) | `exemple` | identite |
+| exemple de saisie réécrit (E26) | aucun : `voc.ex` garde le texte de l'existant par défaut | — |
 | faute d'accord corrigée, double nombre réécrit, « Espace Produits » harmonisé (E27, E30) | `faute-corrigee` | identite |
 | mot de la liste fermée signalé à tort par `accords` : il ne se rapporte pas au terme qui suit (« … pour tous. {voc.Le('labo')} … ») | le type qui convient + `"mode": "accords"` | accords |
 | il manque une clé, une forme ou une méthode | `provisoire` + un besoin (pendant un balayage ; l'étape S5 les a tous repris : il n'en reste aucun) | residuels |

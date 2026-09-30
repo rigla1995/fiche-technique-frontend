@@ -894,7 +894,7 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                     value={form.nom}
                     onChange={(e) => setForm((f) => ({ ...f, nom: e.target.value }))}
                     autoFocus
-                    placeholder={`Ex: ${voc.Nom('activite')} 1`}
+                    placeholder={voc.ex('Ex: Point de vente Tunis', `Ex: ${voc.Nom('activite')} 1`)}
                     style={nameConflict ? { borderColor: '#ef4444' } : undefined}
                   />
                   {nameConflict && (
@@ -1115,7 +1115,7 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                 <label style={fieldLabel}>Nom {voc.du('labo')} <span style={{ color: '#ef4444' }}>*</span></label>
                 <input type="text" className="input" value={laboFormData.nom}
                   onChange={(e) => setLaboFormData((p) => ({ ...p, nom: e.target.value }))}
-                  placeholder={`Ex: ${voc.Nom('labo')} 1`} autoFocus />
+                  placeholder={voc.ex('Ex: Labo Central', `Ex: ${voc.Nom('labo')} 1`)} autoFocus />
               </div>
 
               {/* Composant du domaine (lot 1b) — rendu seulement si ≥ 2 composants labo actifs */}
@@ -1297,7 +1297,7 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                       <label style={fieldLabel}>Nom {voc.du('labo')} <span style={{ color: '#ef4444' }}>*</span></label>
                       <input type="text" className="input" value={bizLaboForm.nom}
                         onChange={(e) => setBizLaboForm((p) => ({ ...p, nom: e.target.value }))}
-                        placeholder={`Ex: ${voc.Nom('labo')} 1`} autoFocus />
+                        placeholder={voc.ex('Ex: Labo Central', `Ex: ${voc.Nom('labo')} 1`)} autoFocus />
                     </div>
                     <div style={fieldWrap}>
                       <label style={fieldLabel}>Référence <span style={{ color: '#ef4444' }}>*</span>
@@ -1352,7 +1352,7 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                       <label style={fieldLabel}>Nom <span style={{ color: '#ef4444' }}>*</span></label>
                       <input type="text" className="input" value={af.nom}
                         onChange={(e) => setBizActForms((p) => p.map((f, i) => i === idx ? { ...f, nom: e.target.value } : f))}
-                        placeholder={`Ex: ${voc.Nom('activite')} 1`}
+                        placeholder={voc.ex('Ex: Point de vente Tunis', `Ex: ${voc.Nom('activite')} 1`)}
                         autoFocus={idx === 0} />
                     </div>
                     {/* Composant par slot (lot 1b) — même règle d'affichage (≥ 2 composants activité) */}

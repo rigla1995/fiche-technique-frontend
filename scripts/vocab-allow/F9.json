@@ -1,59 +1,24 @@
 [
   {
-    "fichier": "src/components/client/ReferentielArticlesPage.tsx",
-    "avant": "Ex: Poulet entier",
-    "apres": "Ex: Article A",
-    "type": "exemple",
-    "justification": "Exemple de saisie neutre et construit avec le terme du domaine (spec §3 règle 6, guide §5 bis, ligne F9) : « Poulet entier » est propre à la restauration ; un compte Hôtellerie lira « Ex: Fourniture A ». Trois placeholders identiques du champ Nom : ajout multiple, assistant de création, modale de modification."
-  },
-  {
-    "fichier": "src/components/client/ReferentielCategoriesPage.tsx",
-    "avant": "Ex: Viandes",
-    "apres": "Ex: Catégorie A",
-    "type": "exemple",
-    "justification": "Exemple de saisie neutre (spec §3 règle 6, guide §5 bis, ligne F9) : « Viandes » est propre à la restauration ; « catégorie » est hors lexique, l'exemple reste donc en dur (« Ex: Catégorie A »). Placeholder du champ Nom de la modale de création."
-  },
-  {
-    "fichier": "src/components/client/ReferentielCategoriesPage.tsx",
-    "avant": "Ex: Viandes & Volailles",
-    "apres": "Ex: Catégorie A",
-    "type": "exemple",
-    "justification": "Exemple de saisie neutre (spec §3 règle 6, guide §5 bis, ligne F9) : « Viandes & Volailles » est propre à la restauration ; même exemple neutre que dans la modale de création. Placeholder du champ Nom de la modale de modification."
-  },
-  {
     "fichier": "src/components/client/ReferentielCategoriesPage.tsx",
     "avant": "Ex: Catégorie A",
     "apres": "Ex: Catégorie A",
     "type": "exemple",
-    "justification": "Exemple de saisie neutre gardé en dur (guide §5 bis : « mot hors lexique : en dur ») : « catégorie » n'est pas un terme du lexique ; l'unité reste listée [exemple] parce qu'elle commence par « Ex ». Deux placeholders (création, modification)."
-  },
-  {
-    "fichier": "src/components/client/ReferentielFamillesPage.tsx",
-    "avant": "Ex: Produits laitiers",
-    "apres": "Ex: Famille A",
-    "type": "exemple",
-    "justification": "Exemple de saisie neutre (spec §3 règle 6, guide §5 bis, ligne F9) : « Produits laitiers » est propre à la restauration ; « famille » est hors lexique, l'exemple reste donc en dur (« Ex: Famille A »). Deux placeholders identiques du champ Nom (création, modification)."
+    "justification": "Exemple neutre gardé en dur, second argument de voc.ex (guide §5 bis : « mot hors lexique : en dur ») : « catégorie » n'est pas un terme du lexique ; l'unité reste listée [exemple] parce qu'elle commence par « Ex ». Deux placeholders (création, modification) ; un compte au lexique par défaut y lit toujours « Ex: Viandes » et « Ex: Viandes & Volailles » (premier argument, identique à la référence)."
   },
   {
     "fichier": "src/components/client/ReferentielFamillesPage.tsx",
     "avant": "Ex: Famille A",
     "apres": "Ex: Famille A",
     "type": "exemple",
-    "justification": "Exemple de saisie neutre gardé en dur (guide §5 bis) : « famille » n'est pas un terme du lexique ; l'unité reste listée [exemple] parce qu'elle commence par « Ex ». Deux placeholders (création, modification)."
-  },
-  {
-    "fichier": "src/components/client/ProductCategoriesPage.tsx",
-    "avant": "Ex: Boissons",
-    "apres": "Ex: Catégorie A",
-    "type": "exemple",
-    "justification": "Exemple de saisie neutre (spec §3 règle 6, guide §5 bis, ligne F9) : « Boissons » est propre à la restauration ; « catégorie » est hors lexique, l'exemple reste donc en dur (« Ex: Catégorie A »). Deux placeholders identiques du champ Nom (création, modification)."
+    "justification": "Exemple neutre gardé en dur, second argument de voc.ex (guide §5 bis) : « famille » n'est pas un terme du lexique ; l'unité reste listée [exemple] parce qu'elle commence par « Ex ». Deux placeholders (création, modification) ; un compte au lexique par défaut y lit toujours « Ex: Produits laitiers » (premier argument, identique à la référence)."
   },
   {
     "fichier": "src/components/client/ProductCategoriesPage.tsx",
     "avant": "Ex: Catégorie A",
     "apres": "Ex: Catégorie A",
     "type": "exemple",
-    "justification": "Exemple de saisie neutre gardé en dur (guide §5 bis : « mot hors lexique : en dur ») : « catégorie » n'est pas un terme du lexique ; l'unité reste listée [exemple] parce qu'elle commence par « Ex ». Deux placeholders (création, modification)."
+    "justification": "Exemple neutre gardé en dur, second argument de voc.ex (guide §5 bis : « mot hors lexique : en dur ») : « catégorie » n'est pas un terme du lexique ; l'unité reste listée [exemple] parce qu'elle commence par « Ex ». Deux placeholders (création, modification) ; un compte au lexique par défaut y lit toujours « Ex: Boissons » (premier argument, identique à la référence)."
   },
   {
     "fichier": "src/components/client/ReferentielUnitesPage.tsx",

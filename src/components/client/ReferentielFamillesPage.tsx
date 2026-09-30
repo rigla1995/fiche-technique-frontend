@@ -207,7 +207,7 @@ export default function ReferentielFamillesPage() {
                   <input
                     className="input" style={{ flex: 1 }}
                     autoFocus={i === 0}
-                    placeholder="Ex: Famille A"
+                    placeholder={voc.ex('Ex: Produits laitiers', 'Ex: Famille A')}
                     value={row.nom}
                     onChange={e => updateRow(i, 'nom', e.target.value)}
                     onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); if (i === rows.length - 1) addRow(); } }}
@@ -255,7 +255,7 @@ export default function ReferentielFamillesPage() {
               {editError && <div style={{ background: '#fee2e2', color: '#dc2626', border: '1px solid #fecaca', borderRadius: 6, padding: '8px 12px', marginBottom: 12, fontSize: '0.85rem' }}>{editError}</div>}
               <div className="form-group">
                 <label>Nom *</label>
-                <input className="input" autoFocus value={editNom} placeholder="Ex: Famille A" onChange={e => setEditNom(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSave()} />
+                <input className="input" autoFocus value={editNom} placeholder={voc.ex('Ex: Produits laitiers', 'Ex: Famille A')} onChange={e => setEditNom(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSave()} />
               </div>
               <div className="form-group">
                 <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', userSelect: 'none' }}>

@@ -124,6 +124,11 @@ const controles = [
   [moteur.vocabDefaut.le('activite') === "l'activité" && moteur.vocabDefaut.n('labo', 3) === '3 labos', 'moteur : rendus par défaut'],
   [moteur.rendre(moteur.vocabDefaut, 'Espace [[Pl:activite]]') === 'Espace Activités', 'balises'],
   [JSON.stringify(moteur.resoudreLexique(lexique.LEXIQUE_DEFAUT, {})) === JSON.stringify(lexique.LEXIQUE_DEFAUT), 'résolution sans écart = défaut'],
+  // Exemples de saisie : l'exemple d'origine tant que le lexique est celui par défaut (domaine sans écart compris).
+  [moteur.vocabDefaut.estDefaut === true && moteur.vocabDefaut.ex('a', 'b') === 'a'
+    && moteur.creerVocab(moteur.resoudreLexique(lexique.LEXIQUE_DEFAUT, {})).estDefaut === true
+    && moteur.creerVocab(moteur.resoudreLexique(lexique.LEXIQUE_DEFAUT, { labo: { sg: 'Atelier' } })).ex('a', 'b') === 'b'
+    && moteur.rendre(moteur.vocabDefaut, '[[ex:activite:Restaurant A]]') === 'Restaurant A', 'exemples de saisie : estDefaut, ex, balise ex'],
 ];
 const rates = controles.filter(([ok]) => !ok).map(([, nom]) => nom);
 if (rates.length) {

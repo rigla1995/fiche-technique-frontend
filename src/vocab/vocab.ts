@@ -12,6 +12,8 @@
 //   n : nombre (pluriel si n >= 2) ou booléen (true = pluriel) ou absent (singulier) ;
 //   c : casse du nom — 'nom' (défaut, minuscules) | 'Nom' (forme stockée) | 'Titre' ;
 //       'court' | 'Court' : même chose sur la forme courte (« d'appro », « l'Appro »).
+// Exemples de saisie : `voc.ex(parDefaut, sinon)` rend l'exemple d'origine tant que le lexique du compte est
+// le lexique par défaut (`voc.estDefaut`), et l'exemple neutre construit pour les autres domaines.
 // Apostrophe droite. Clé inconnue → « ‹clé› » + console.warn, jamais d'exception.
 
 import { LEXIQUE_DEFAUT } from './lexiqueDefaut.ts';
@@ -111,6 +113,17 @@ export interface VocabDe<K extends string> {
   g(k: K): Genre;
   /** Icône de l'entrée ('' si absente). */
   icon(k: K): string;
+  /**
+   * Vrai quand le lexique du compte donne exactement les rendus du lexique par défaut (formes, genre, élision,
+   * icône, forme courte, apposition) : restauration, café, boulangerie, admin, non connecté.
+   */
+  readonly estDefaut: boolean;
+  /**
+   * Exemple de saisie : `parDefaut` (l'exemple d'origine, propre à la restauration) si `estDefaut`, sinon
+   * `sinon` (l'exemple neutre, construit avec le vocabulaire du compte) — par exemple
+   * voc.ex('Ex: Poulet entier', `Ex: ${voc.Nom('article')} A`). Balise : [[ex:clé:texte par défaut]].
+   */
+  ex(parDefaut: string, sinon: string): string;
   /** Mini-vocabulaire à une entrée, de clé '_' : `voc.avec({ sg, pl, g, el }).mon('_')`. */
   avec(entree: EntreeLexique): VocabDe<'_'>;
 }
@@ -291,7 +304,9 @@ const plurielTypographique = (sg: string, pl: string): string => {
 
 // ── Le moteur ────────────────────────────────────────────────────────────────
 
-function construire<K extends string>(lexique: unknown): VocabDe<K> {
+// `estDefaut` : le lexique est-il celui par défaut ? Décidé par l'appelant (creerVocab) ; un mini-vocabulaire
+// (voc.avec) hérite de celui du vocabulaire qui le crée.
+function construire<K extends string>(lexique: unknown, estDefaut: boolean = false): VocabDe<K> {
   const source = objet(lexique);
   const table = new Map<string, EntreeNorm>();
   for (const k of Object.keys(source)) {
@@ -403,14 +418,26 @@ function construire<K extends string>(lexique: unknown): VocabDe<K> {
     },
     g: (k) => entree(k).g,
     icon: (k) => entree(k).icon,
-    avec: (e) => construire<'_'>({ _: e }),
+    estDefaut,
+    ex: (parDefaut, sinon) => String((estDefaut ? parDefaut : sinon) ?? ''),
+    avec: (e) => construire<'_'>({ _: e }, estDefaut),
   };
   return Object.freeze(voc);
 }
 
-/** Vocabulaire d'un lexique RÉSOLU (toutes les clés présentes ; entrées incomplètes tolérées). */
+// Deux lexiques donnent-ils les mêmes rendus ? (formes, genre, élision, icône, forme courte, apposition)
+const memesRendus = (a: Record<string, unknown>, b: Lexique): boolean => {
+  const ka = Object.keys(a);
+  if (ka.length !== Object.keys(b).length) return false;
+  return ka.every((k) => JSON.stringify(normaliser(a[k])) === JSON.stringify(normaliser(b[k])));
+};
+
+/**
+ * Vocabulaire d'un lexique RÉSOLU (toutes les clés présentes ; entrées incomplètes tolérées).
+ * `voc.estDefaut` est vrai si ce lexique donne les mêmes rendus que le lexique par défaut.
+ */
 export function creerVocab(lexique: Lexique | Record<string, unknown> | null | undefined): Vocab {
-  return construire<CleLexique>(lexique);
+  return construire<CleLexique>(lexique, memesRendus(objet(lexique), LEXIQUE_DEFAUT));
 }
 
 /** Vocabulaire du lexique par défaut (restauration) : admin, boss, non connecté. */
@@ -584,13 +611,6 @@ export function completerLexique(defaut: Lexique, recu: unknown): Record<string,
   }
   return out;
 }
-
-// Deux lexiques donnent-ils les mêmes rendus ? (formes, genre, élision, icône, forme courte, apposition)
-const memesRendus = (a: Record<string, EntreeLexique>, b: Lexique): boolean => {
-  const ka = Object.keys(a);
-  if (ka.length !== Object.keys(b).length) return false;
-  return ka.every((k) => JSON.stringify(normaliser(a[k])) === JSON.stringify(normaliser(b[k])));
-};
 
 /**
  * Vocabulaire du lexique reçu du serveur (`user.domaine.lexique`), complété par le défaut.
