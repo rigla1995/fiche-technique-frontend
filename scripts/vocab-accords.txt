@@ -2,7 +2,7 @@
 # Chaque unité qui contient un appel voc ou une balise, rendue avec le lexique par défaut puis avec le
 # lexique MIROIR (scripts/vocab-lexiques-test.json : genre et élision inversés, autres mots).
 # À relire en revue : un accord faux dans une ligne « miroir » est un accord resté écrit en dur.
-# 1177 unité(s), 60 fichier(s).
+# 1192 unité(s), 60 fichier(s).
 
 src/components/client/AbonnementGerantPage.tsx
   l. 67
@@ -374,6 +374,9 @@ src/components/client/ClientDashboard.tsx
   l. 116
     défaut : Suppléments
     miroir : Options
+  l. 117
+    défaut : Valorisés
+    miroir : Valorisées
   l. 124
     défaut : Vente manuelle
     miroir : Encaissement manuel
@@ -437,6 +440,9 @@ src/components/client/ClientDashboard.tsx
   l. 487
     défaut : Marge nette estimée
     miroir : Écart net estimé
+  l. 488
+    défaut : 🍔
+    miroir : 🍔
   l. 488
     défaut : Food cost
     miroir : Incidence matière
@@ -510,6 +516,9 @@ src/components/client/ClientDashboard.tsx
     défaut : Marge nette estimée
     miroir : Écart net estimé
   l. 543
+    défaut : 🍔
+    miroir : 🍔
+  l. 543
     défaut : Food cost
     miroir : Incidence matière
   l. 546
@@ -526,7 +535,7 @@ src/components/client/ClientDashboard.tsx
     miroir : · écart ⟦·⟧
   l. 559
     défaut : ⟦?Produits|⟦?Suppléments|Valorisés⟧⟧
-    miroir : ⟦?Inventions|⟦?Options|Valorisés⟧⟧
+    miroir : ⟦?Inventions|⟦?Options|Valorisées⟧⟧
   l. 563
     défaut : 🏆 Meilleures marges
     miroir : 🏆 Meilleurs écarts
@@ -796,7 +805,7 @@ src/components/client/ComposedValoriseModal.tsx
     miroir : Aucun local rattaché à ⟦cette|ces@>1⟧ ⟦usine|usines@>1⟧.
   l. 184
     défaut : Ex. Cookie maison
-    miroir : Ex. Invention composée A
+    miroir : Ex. Invention valorisée A
   l. 192
     défaut : Aucune catégorie « valorisé ». Créez-en dans Catégories Produits.
     miroir : Aucune catégorie « valorisé ». Créez-en dans Catégories Abr-Inventions.
@@ -1633,6 +1642,9 @@ src/components/client/LaboHistoriqueApproPage.tsx
   l. 552
     défaut : Transfert émis depuis ce labo
     miroir : Expédition émise depuis cette usine
+  l. 552
+    défaut : ⟦?↗ Transf.⟦? → ⟦·⟧|⟧|Transf.⟧
+    miroir : ⟦?↗ Expéd.⟦? → ⟦·⟧|⟧|Expéd.⟧
   l. 557
     défaut : Vente
     miroir : Abr-Encaissement
@@ -1762,6 +1774,24 @@ src/components/client/MonAbonnementPage.tsx
   l. 341
     défaut : 🤝 Option Acheteurs (palier jusqu'à ⟦·⟧)
     miroir : 🤝 Option Abr-Clientes (palier jusqu'à ⟦·⟧)
+  l. 439
+    défaut : Supplément Activité
+    miroir : Supplément Local
+  l. 439
+    défaut : activité
+    miroir : local
+  l. 440
+    défaut : Supplément Labo
+    miroir : Supplément Usine
+  l. 440
+    défaut : labo
+    miroir : usine
+  l. 441
+    défaut : Supplément Gérant
+    miroir : Supplément Animatrice
+  l. 441
+    défaut : gérant
+    miroir : animatrice
 
 src/components/client/OnboardingChecklist.tsx
   l. 119
@@ -1960,6 +1990,9 @@ src/components/client/ProductList.tsx
   l. 547
     défaut : Aucun produit pour cette activité.
     miroir : Aucune invention pour ce local.
+  l. 551
+    défaut : ⟦?🍔|🧪⟧
+    miroir : ⟦?🍔|🧪⟧
   l. 560
     défaut : ⟦?➕|⟦?🍽️|🧪⟧⟧
     miroir : ⟦?➕|⟦?🍽️|🧪⟧⟧
@@ -2131,6 +2164,9 @@ src/components/client/ProductList.tsx
   l. 1290
     défaut : Aucune activité rattachée à ⟦ce|ces@>1⟧ ⟦labo|labos@>1⟧.
     miroir : Aucun local rattaché à ⟦cette|ces@>1⟧ ⟦usine|usines@>1⟧.
+  l. 1334
+    défaut : ⟦?Vendable|Utilisable⟧⟦? · Suppl.|⟧
+    miroir : ⟦?Vendable|Utilisable⟧⟦? · Opt.|⟧
   l. 1342
     défaut : ⟦article|articles@≠1⟧
     miroir : ⟦denrée|denrées@≠1⟧
@@ -2309,10 +2345,10 @@ src/components/client/ReferentielCategoriesPage.tsx
 src/components/client/ReferentielFamillesPage.tsx
   l. 104
     défaut : ⟦?Groupez vos catégories par famille : Viandes, Épicerie, Boissons…|Familles pour organiser vos catégories et articles⟧
-    miroir : ⟦?Groupez vos catégories par famille : Viandes, Épicerie, Boissons…|Familles pour organiser vos catégories et denrées⟧
+    miroir : ⟦?Groupez vos catégories par famille.|Familles pour organiser vos catégories et denrées⟧
   l. 135
     défaut : Les familles regroupent vos catégories d'articles : Viandes, Épicerie, Boissons…
-    miroir : Les familles regroupent vos catégories de denrées : Viandes, Épicerie, Boissons…
+    miroir : Les familles regroupent vos catégories de denrées.
   l. 176
     défaut : ⟦?Contient ⟦·⟧ ⟦catégorie|catégories@>1⟧⟦? et ⟦·⟧ ⟦article|articles@>1⟧|⟧ — veuillez les supprimer (ou changer leur famille) avant|⟦·⟧⟧
     miroir : ⟦?Contient ⟦·⟧ ⟦catégorie|catégories@>1⟧⟦? et ⟦·⟧ ⟦denrée|denrées@>1⟧|⟧ — veuillez les supprimer (ou changer leur famille) avant|⟦·⟧⟧
@@ -2477,7 +2513,7 @@ src/components/client/StockLaboPage.tsx
     miroir : ↙ Reçue⟦? ← ⟦·⟧|⟧
   l. 1068
     défaut : ⟦?↗ Transf.⟦? → ⟦·⟧|⟧|Transfert⟧
-    miroir : ⟦?↗ Transf.⟦? → ⟦·⟧|⟧|Abr-Expédition⟧
+    miroir : ⟦?↗ Expéd.⟦? → ⟦·⟧|⟧|Abr-Expédition⟧
   l. 1069
     défaut : 🔄 PT
     miroir : 🔄 EI
@@ -2599,7 +2635,7 @@ src/components/client/StockPage.tsx
     miroir : Enseigne
   l. 356
     défaut : Géré automatiquement par le labo — non modifiable.
-    miroir : Géré automatiquement par l'usine — non modifiable.
+    miroir : Gérée automatiquement par l'usine — non modifiable.
   l. 387
     défaut : ⟦·⟧⟦| ingrédient(s)@≠1⟧
     miroir : ⟦·⟧⟦| provision(s)@≠1⟧
@@ -2635,7 +2671,7 @@ src/components/client/StockPage.tsx
     miroir : Hist.Abr-Rentrée · Unité
   l. 1105
     défaut : ↑Appro · ⇄Trf · ↘Pertes · PT
-    miroir : ↑Abr-Rentrée · ⇄Trf · ↘Abr-Abandons · EI
+    miroir : ↑Abr-Rentrée · ⇄Abr-Expéd. · ↘Abr-Abandons · EI
   l. 1148
     défaut : Produit fabriqué au labo — reçu uniquement par transfert depuis le labo, pas d'appro manuel ici.
     miroir : Invention fabriquée à l'usine — reçue uniquement par expédition depuis l'usine, pas d'abr-rentrée manuelle ici.
@@ -2708,13 +2744,13 @@ src/components/client/StockPage.tsx
   l. 1557
     défaut : Impossible de charger les activités. Veuillez recharger la page.
     miroir : Impossible de charger les locaux. Veuillez recharger la page.
-  l. 1586
+  l. 1588
     défaut : 📦
     miroir : 📦
-  l. 1591
+  l. 1593
     défaut : Gérez les stocks et approvisionnements de vos activités
     miroir : Gérez les armoires et rentrées de vos locaux
-  l. 1606
+  l. 1608
     défaut : Stock Activités
     miroir : Armoire Abr-Locaux
 
@@ -3149,7 +3185,7 @@ src/components/client/VenteGuard.tsx
     miroir : Aucun de vos locaux ne vend
   l. 81
     défaut : Le module Vente est actif, mais aucune de vos activités n'est configurée comme activité vendeuse (Housekeeping, Spa, économat…). L'Espace Vente s'ouvrira dès qu'une activité vendeuse existera dans votre compte.
-    miroir : Le module Abr-Encaissement est actif, mais aucun de vos locaux n'est configuré comme local vendeur (Housekeeping, Spa, économat…). La Zone Encaissement s'ouvrira dès qu'un local vendeur existera dans votre compte.
+    miroir : Le module Abr-Encaissement est actif, mais aucun de vos locaux n'est configuré comme local vendeur. La Zone Encaissement s'ouvrira dès qu'un local vendeur existera dans votre compte.
   l. 86
     défaut : Consultez vos unités dans <Link>Activités</Link>.
     miroir : Consultez vos unités dans <Link>Locaux</Link>.
@@ -3289,6 +3325,9 @@ src/components/client/dashboardV2Widgets.tsx
   l. 270
     défaut : Supplément
     miroir : Option
+  l. 271
+    défaut : Valorisé
+    miroir : Valorisée
 
 src/components/common/AssistantChat.tsx
   l. 135
@@ -3418,9 +3457,15 @@ src/components/common/Sidebar.tsx
   l. 587
     défaut : Espace Produits
     miroir : Espace Inventions
+  l. 587
+    défaut : 🍔
+    miroir : 🍔
   l. 592
     défaut : Catégories Produits
     miroir : Catégories Abr-Inventions
+  l. 606
+    défaut : 🍔
+    miroir : 🍔
   l. 606
     défaut : Produits Vendables
     miroir : Inventions Vendues
@@ -3561,7 +3606,7 @@ src/i18n/locales/fr.json
     miroir : Un local distinct "{{name}}" existe déjà.
   client.entreprise.manage_ingredients (l. 95)
     défaut : Ingrédients
-    miroir : Matières
+    miroir : Provisions
   client.entreprise.activity_created (l. 96)
     défaut : Activité créée.
     miroir : Local créé.
@@ -3579,16 +3624,16 @@ src/i18n/locales/fr.json
     miroir : Créez au moins un local dans « Mes locaux » pour gérer l'armoire entreprise.
   client.stock.ingredient (l. 108)
     défaut : Ingrédient
-    miroir : Matière
+    miroir : Provision
   client.stock.date_appro (l. 110)
     défaut : Date d'appro
     miroir : Date d'abr-rentrée
   client.stock.empty_stock (l. 111)
     défaut : Aucun ingrédient sélectionné.
-    miroir : Aucune matière sélectionnée.
+    miroir : Aucune provision sélectionnée.
   client.stock.search_ingredient (l. 112)
     défaut : Rechercher un ingrédient...
-    miroir : Rechercher une matière...
+    miroir : Rechercher une provision...
   client.stock.no_history (l. 114)
     défaut : Aucun approvisionnement enregistré.
     miroir : Aucune rentrée enregistrée.
@@ -3597,7 +3642,7 @@ src/i18n/locales/fr.json
     miroir : Historique Rentrée
   client.historique_appro.all_ingredients (l. 119)
     défaut : Tous les ingrédients
-    miroir : Toutes les matières
+    miroir : Toutes les provisions
   client.historique_appro.no_results (l. 120)
     défaut : Aucun approvisionnement trouvé pour ces critères.
     miroir : Aucune rentrée trouvée pour ces critères.
@@ -3621,7 +3666,7 @@ src/i18n/locales/fr.json
     miroir : Armoire Actuelle
   client.labo.empty_stock (l. 131)
     défaut : Aucun ingrédient sélectionné pour ce labo.
-    miroir : Aucune matière sélectionnée pour cette usine.
+    miroir : Aucune provision sélectionnée pour cette usine.
   client.labo.filter_activite (l. 132)
     défaut : Activité
     miroir : Local
@@ -3633,32 +3678,32 @@ src/i18n/locales/fr.json
     miroir : Local
 
 src/utils/contractPdf.ts
-  l. 157
+  l. 161
     défaut : +⟦·⟧ ⟦activité|activités@>1⟧
     miroir : +⟦·⟧ ⟦local|locaux@>1⟧
-  l. 158
+  l. 162
     défaut : +⟦·⟧ ⟦labo|labos@>1⟧
     miroir : +⟦·⟧ ⟦usine|usines@>1⟧
-  l. 159
+  l. 163
     défaut : +⟦·⟧ ⟦gérant|gérants@>1⟧
     miroir : +⟦·⟧ ⟦animatrice|animatrices@>1⟧
-  l. 160
-    défaut : Option Acheteurs → palier ⟦·⟧
-    miroir : Option Abr-Clientes → palier ⟦·⟧
-  l. 199
+  l. 164
+    défaut : Option Acheteurs : palier ⟦·⟧
+    miroir : Option Abr-Clientes : palier ⟦·⟧
+  l. 203
     défaut : ⟦Activité|Activités@>1⟧⟦·⟧
     miroir : ⟦Local|Locaux@>1⟧⟦·⟧
-  l. 201
+  l. 205
     défaut : Labo(s)
     miroir : Usine(s)
-  l. 202
+  l. 206
     défaut : Gérant(s) sup.
     miroir : Animatrice(s) sup.
-  l. 205
+  l. 209
     défaut : Option Acheteurs
     miroir : Option Abr-Clientes
 
 src/utils/manuelPdf.ts
-  l. 81
+  l. 84
     défaut : Ce manuel présente LabFlow, son vocabulaire, chacun de ses écrans et le détail des calculs utilisés (coûts de revient, valeur de stock, prix moyens pondérés…). La version en ligne, accessible depuis le menu « Manuel d'utilisation », reste la référence la plus à jour.
     miroir : Ce manuel présente LabFlow, son vocabulaire, chacun de ses écrans et le détail des calculs utilisés (coûts de revient, valeur d'armoire, prix moyens pondérés…). La version en ligne, accessible depuis le menu « Manuel d'utilisation », reste la référence la plus à jour.

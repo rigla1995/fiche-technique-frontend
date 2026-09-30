@@ -84,6 +84,8 @@
     "article_ingredient": { "sg": "Provision",              "pl": "Provisions",               "g": "f", "el": false },
     "cat_pt_utilisable":  { "sg": "Inventions Internes Utiles",     "pl": "Inventions Internes Utiles",     "g": "f", "el": true },
     "cat_pt_valorise":    { "sg": "Inventions Composées Valorisées", "pl": "Inventions Composées Valorisées", "g": "f", "el": true },
-    "cat_pt_vendable":    { "sg": "Inventions Internes Vendues",    "pl": "Inventions Internes Vendues",    "g": "f", "el": true }
+    "cat_pt_vendable":    { "sg": "Inventions Internes Vendues",    "pl": "Inventions Internes Vendues",    "g": "f", "el": true },
+    "transfert_abr":      { "sg": "Expéd.",                 "pl": "Expéd.",                   "g": "f", "el": true },
+    "supplement_abr":     { "sg": "Opt.",                   "pl": "Opt.",                     "g": "f", "el": true }
   }
 }

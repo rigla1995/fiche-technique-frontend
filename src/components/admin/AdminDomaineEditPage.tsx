@@ -57,7 +57,7 @@ const LEXIQUE_LABELS: Record<string, string> = {
   espace_labo: 'Espace Labo (menu)',
   espace_vente: 'Espace Vente (menu)',
   espace_acheteurs: 'Espace Acheteurs (menu)',
-  espace_produits: 'Espace Produit (menu)',
+  espace_produits: 'Espace Produit (écran de verrou ; le menu « Espace Produits » suit la clé « produit »)',
   referentiel: 'Référentiel',
   produit: 'Produit (terme générique)',
   produit_compose: 'Produit composé',
@@ -68,6 +68,8 @@ const LEXIQUE_LABELS: Record<string, string> = {
   cat_pt_utilisable: 'Catégorie « PT utilisables » (titre)',
   cat_pt_valorise: 'Catégorie « produits composés valorisés » (titre)',
   cat_pt_vendable: 'Catégorie « PT vendables » (titre)',
+  transfert_abr: 'Transfert, abréviation (badges « ↗ Transf. » ; forme courte « Trf » des colonnes étroites)',
+  supplement_abr: 'Supplément, abréviation (badge « Suppl. »)',
 };
 /** Ordre d'affichage : chaque clé simple, suivie des clés dérivées dont elle est le parent. */
 const ORDRE_CLES: string[] = LEXIQUE_CLES
@@ -772,6 +774,10 @@ export default function AdminDomaineEditPage() {
                   const modifie = !!ecarts[cle];
                   // Clé dérivée sans singulier propre : elle suit son parent, genre et élision compris
                   const suitParent = !!parent && !row.sg.trim();
+                  // Domaine par défaut : le serveur refuse tout écart (400 LEXIQUE_DOMAINE_DEFAUT) ; les champs ne
+                  // se modifient pas, pour qu'une saisie ici ne bloque pas l'enregistrement des autres onglets.
+                  // Seule la réinitialisation d'une ligne (écart déjà en base) reste possible.
+                  const verrou = profil?.slug === SLUG_DOMAINE_DEFAUT;
                   const set = (patch: Partial<LexiqueRow>) => setLexique((prev) => ({ ...prev, [cle]: { ...prev[cle], ...patch } }));
                   return (
                     <tr key={cle} style={{ borderBottom: '1px solid var(--border)', background: modifie ? '#fffbeb55' : undefined }}>
@@ -780,18 +786,18 @@ export default function AdminDomaineEditPage() {
                         <code style={{ fontSize: '0.7rem', color: '#94a3b8' }}>{cle}</code>
                         {parent && <div style={{ fontSize: '0.7rem', color: '#94a3b8', marginTop: 1 }}>suit “{parent}” si vide</div>}
                       </td>
-                      <td style={td}><input value={row.sg} maxLength={LEXIQUE_MAX.forme} placeholder={h.sg || '—'} onChange={(e) => set({ sg: e.target.value })} style={{ ...cell, width: 190, borderColor: row.sg ? ACCENT : undefined }} /></td>
-                      <td style={td}><input value={row.pl} maxLength={LEXIQUE_MAX.forme} placeholder={h.pl || '—'} onChange={(e) => set({ pl: e.target.value })} style={{ ...cell, width: 190, borderColor: row.pl ? ACCENT : undefined }} /></td>
-                      <td style={td}><input value={row.courtSg} maxLength={LEXIQUE_MAX.courte} placeholder={courtHerite?.sg || '—'} onChange={(e) => set({ courtSg: e.target.value })} style={{ ...cell, width: 110, borderColor: row.courtSg ? ACCENT : undefined }} /></td>
-                      <td style={td}><input value={row.courtPl} maxLength={LEXIQUE_MAX.courte} placeholder={courtHerite?.pl || courtHerite?.sg || '—'} onChange={(e) => set({ courtPl: e.target.value })} style={{ ...cell, width: 110, borderColor: row.courtPl ? ACCENT : undefined }} /></td>
+                      <td style={td}><input value={row.sg} disabled={verrou} maxLength={LEXIQUE_MAX.forme} placeholder={h.sg || '—'} onChange={(e) => set({ sg: e.target.value })} style={{ ...cell, width: 190, borderColor: row.sg ? ACCENT : undefined }} /></td>
+                      <td style={td}><input value={row.pl} disabled={verrou} maxLength={LEXIQUE_MAX.forme} placeholder={h.pl || '—'} onChange={(e) => set({ pl: e.target.value })} style={{ ...cell, width: 190, borderColor: row.pl ? ACCENT : undefined }} /></td>
+                      <td style={td}><input value={row.courtSg} disabled={verrou} maxLength={LEXIQUE_MAX.courte} placeholder={courtHerite?.sg || '—'} onChange={(e) => set({ courtSg: e.target.value })} style={{ ...cell, width: 110, borderColor: row.courtSg ? ACCENT : undefined }} /></td>
+                      <td style={td}><input value={row.courtPl} disabled={verrou} maxLength={LEXIQUE_MAX.courte} placeholder={courtHerite?.pl || courtHerite?.sg || '—'} onChange={(e) => set({ courtPl: e.target.value })} style={{ ...cell, width: 110, borderColor: row.courtPl ? ACCENT : undefined }} /></td>
                       <td style={td}>
-                        <select value={row.g ?? gHerite} disabled={suitParent} title={suitParent ? `Suit « ${parent} » tant que le singulier est vide` : undefined} onChange={(e) => set({ g: e.target.value === 'f' ? 'f' : 'm' })} style={{ ...cell, width: 110, cursor: suitParent ? 'not-allowed' : 'pointer', opacity: suitParent ? 0.6 : 1, borderColor: row.g != null && row.g !== gHerite ? ACCENT : undefined }}>
+                        <select value={row.g ?? gHerite} disabled={suitParent || verrou} title={suitParent ? `Suit « ${parent} » tant que le singulier est vide` : undefined} onChange={(e) => set({ g: e.target.value === 'f' ? 'f' : 'm' })} style={{ ...cell, width: 110, cursor: suitParent ? 'not-allowed' : 'pointer', opacity: suitParent ? 0.6 : 1, borderColor: row.g != null && row.g !== gHerite ? ACCENT : undefined }}>
                           <option value="m">masculin</option>
                           <option value="f">féminin</option>
                         </select>
                       </td>
-                      <td style={{ ...td, textAlign: 'center' }}><input type="checkbox" checked={row.el ?? elHerite} disabled={suitParent} title={suitParent ? `Suit « ${parent} » tant que le singulier est vide` : undefined} onChange={(e) => set({ el: e.target.checked })} /></td>
-                      <td style={td}><input value={row.icon} maxLength={LEXIQUE_MAX.icone} placeholder={h.icon || '—'} onChange={(e) => set({ icon: e.target.value })} style={{ ...cell, width: 60, textAlign: 'center', borderColor: row.icon ? ACCENT : undefined }} /></td>
+                      <td style={{ ...td, textAlign: 'center' }}><input type="checkbox" checked={row.el ?? elHerite} disabled={suitParent || verrou} title={suitParent ? `Suit « ${parent} » tant que le singulier est vide` : undefined} onChange={(e) => set({ el: e.target.checked })} /></td>
+                      <td style={td}><input value={row.icon} disabled={verrou} maxLength={LEXIQUE_MAX.icone} placeholder={h.icon || '—'} onChange={(e) => set({ icon: e.target.value })} style={{ ...cell, width: 60, textAlign: 'center', borderColor: row.icon ? ACCENT : undefined }} /></td>
                       <td style={{ ...td, textAlign: 'right' }}>
                         <button onClick={() => set({ sg: '', pl: '', courtSg: '', courtPl: '', icon: '', g: null, el: null, courtEl: undefined, appo: undefined })} disabled={!modifie} title={parent ? `Réinitialiser (suit « ${parent} »)` : 'Réinitialiser (valeurs par défaut)'} style={{ ...iconBtn, opacity: modifie ? 1 : 0.35, cursor: modifie ? 'pointer' : 'default' }}>↺</button>
                       </td>

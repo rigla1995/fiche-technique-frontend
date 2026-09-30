@@ -8,6 +8,9 @@ L'étape S5 les a étendus UNE fois, puis regelés : `voc.accN` (accord avec plu
 Après le balayage, une seconde extension, regelée elle aussi : `voc.estDefaut`, `voc.ex` et la balise
 `[[ex:clé:texte par défaut]]` — les **exemples de saisie** restent ceux d'aujourd'hui pour un compte dont le
 vocabulaire est celui par défaut (règle 6, E26, §5 bis).
+Après les revues (corrections du 30/09), une troisième, regelée : les clés dérivées `transfert_abr`
+(« Transf. », forme courte « Trf ») et `supplement_abr` (« Suppl. ») pour les abréviations de badge et de colonne,
+l'icône 🍔 de la clé `produit`, et `voc.estDefaut` qui ignore une clé EN PLUS du lexique par défaut (43 clés).
 
 ## 0. En bref
 
@@ -66,11 +69,11 @@ Aucune commande git d'écriture, pas de `npm run build`.
 | Cas | Décision |
 |---|---|
 | « sous-produit(s) » | Reste en dur (admis dans `_global.json`). |
-| Adjectifs de type isolés : « Vendable », « Utilisable », « Valorisé(s) », « Composé(s) », « P. Vendable » | Restent en dur. L'outil ne les voit pas : rien à déclarer. |
+| Adjectifs de type isolés : « Vendable », « Utilisable », « Valorisé(s) », « Composé(s) », « P. Vendable » | Restent en dur. L'outil ne les voit pas : rien à déclarer. Après les revues : « Valorisé(s) » seul (filtre de type, badge) est accordé en genre par `voc.acc('produit_valorise', 'Valorisés', 'Valorisées')` — identité par défaut. |
 | « Suppléments vendables », « Articles valorisés », « produit valorisé composé » | Le NOM passe par `voc`, l'adjectif reste en dur, accordé par `voc.acc` s'il varie en genre : `${voc.Pl('article')} ${voc.acc('article', 'valorisés', 'valorisées')}`. |
-| Abréviations « Transf. », « Trf », « Fourn. », « inv. », « Suppl. » | Restent en dur. Rien à déclarer. |
+| Abréviations « Transf. », « Trf », « Fourn. », « inv. », « Suppl. » | Après les revues : « Transf. » = `voc.Nom('transfert_abr')`, « Trf » = `voc.Court('transfert_abr')`, « Suppl. » = `voc.Nom('supplement_abr')` (clés dérivées par copie : un domaine qui renomme le parent y lit son terme). « Fourn. » et « inv. » restent en dur (aucun brouillon ne renomme fournisseur ni inventaire) ; le mode `residuels` signale désormais toute forme « Transf. », « Trf », « Suppl. » écrite en dur. |
 | Sigle « PU » (produit utilisable) | `voc.Court('produit_utilisable')`. « PU TTC » et « PU HT » (prix unitaire) sont admis dans `_global.json`. |
-| « Espace Produits » (Sidebar, ProductForm) | `` `Espace ${voc.Pl('produit')}` `` : identité, AUCUN écart (décision de l'orchestrateur : le libellé de la barre latérale ne change pas pour un compte restauration). Là où l'existant écrit « Espace Produit » : `voc.Nom('espace_produits')`. |
+| « Espace Produits » (Sidebar, ProductForm) | `` `Espace ${voc.Pl('produit')}` `` : identité, AUCUN écart (décision de l'orchestrateur : le libellé de la barre latérale ne change pas pour un compte restauration). Là où l'existant écrit « Espace Produit » : `voc.Nom('espace_produits')`. Conséquence, dite dans l'onglet Lexique de l'admin : un domaine qui surcharge `espace_produits` sans surcharger `produit` voit deux noms (le menu suit la clé `produit`). |
 | « Espace Labos » (ActivitesPage) | `` `Espace ${voc.Court('labo', true)}` `` : pas d'écart. |
 | « Appro » accordé au féminin (« Appro enregistrée », « Appro existante », « cette appro ») | Accord par le moteur (masculin) : écart admis `faute-corrigee` (E30). |
 | « Option Acheteurs », « Module Acheteurs », « Module Vente », « Base acheteurs », « Portail Acheteur », « Carnet d'Acheteurs » | Ce ne sont PAS des noms figés : composés avec `Court` / `court` / `compl` / `de`. |
@@ -79,6 +82,9 @@ Aucune commande git d'écriture, pas de `npm run build`.
 | Filtre de catégories PT écrit en dur (`<option>Produits Transformés Utilisables</option>`) | `voc.Nom('cat_pt_utilisable')`, `cat_pt_vendable`, `cat_pt_valorise` (E29). Une valeur venue de l'API : `libelleCategoriePt(voc, valeur)` de `src/vocab/categoriesPt.ts`. |
 | Nom d'onglet d'un export Excel | `nomOnglet(...)` de `src/vocab/excel.ts` (E17). |
 | Branche ou menu de l'espace ADMIN dans un fichier partagé (Sidebar) | Reste en dur (invariant I4) : écart admis `homonyme`, justification « espace admin ». |
+| « Supplément Activité / Labo / Gérant » (bandeau de promotion de Mon abonnement) | Après les revues : le mot « Supplément » (tarifaire) reste en dur, le nom de l'unité passe par voc — `` `Supplément ${voc.Nom('labo')}` `` — comme les lignes de capacité de la même page ; identité par défaut, écart admis `formule` sur l'unité entière (F12). Les noms de formule « Activité Basique / Premium » et la base « Labo » restent figés. |
+| Icône 🍔 (menu Espace Produits, Produits Vendables, food cost du tableau de bord) | `voc.icon('produit')` : le burger est l'icône par défaut de la clé `produit`, un domaine hors restauration la remplace dans l'admin. Les assiettes 🍽️ (onglet et tuiles des produits vendables, filtre de catégories) restent en dur : elles ne sont l'icône d'aucune clé du produit vendable (🛒). |
+| Casse de titre d'un libellé en forme longue (« Carnet d'Acheteurs ») | `voc.de('acheteur', true, 'Titre')` : identique par défaut, « Carnet de Clients Professionnels » en Hôtellerie. Le moteur n'a pas de casse Titre sur la FORME COURTE (« Stock Activités », « Tarifs Acheteurs ») : le client saisit une forme courte déjà capitalisée. |
 | Portail acheteur : « votre fournisseur » | C'est le vendeur vu par l'acheteur, pas la clé `fournisseur` : `homonyme`. |
 
 ## 2. Préparer un fichier
@@ -204,6 +210,8 @@ Une méthode à initiale majuscule met la majuscule au **premier mot du résulta
 | `voc.Nom('labo_desc', true)` | Laboratoires de production | Cuisines centrales | Sites de production |
 | `voc.Nom('activite_desc')` | Point de vente | Service | Point de vente |
 | `voc.Nom('article_ingredient')` | Ingrédient | Fourniture | Matière première |
+| `voc.Nom('transfert_abr')` · `voc.Court('transfert_abr')` | Transf. · Trf | Livraison interne · Livraison interne | Livraison interne · Livraison interne |
+| `voc.Nom('supplement_abr')` | Suppl. | Suppl. | Option |
 | `voc.Nom('cat_pt_utilisable')` | Produits Transformés Utilisables | Consommables | Semi-finis |
 
 Précisions :
@@ -231,7 +239,9 @@ Précisions :
   « article » y lit son terme. La clé `ingredient` reste celle du composant d'une recette.
 - `voc.estDefaut` (propriété) est vrai quand le lexique du compte donne exactement les rendus du lexique par
   défaut (formes, genre, élision, icône, forme courte, apposition) : domaine sans écart (restauration, café,
-  boulangerie), admin, boss, non connecté. Un seul écart de rendu, même une icône, le rend faux.
+  boulangerie), admin, boss, non connecté. Un seul écart de rendu, même une icône, le rend faux. Une clé EN PLUS
+  du lexique par défaut (clé d'une version plus récente, clé propre à un domaine) ne compte pas : aucun texte ne la
+  rend (corrections après revues).
 - `voc.ex(parDefaut, sinon)` rend `parDefaut` si `voc.estDefaut`, sinon `sinon` : c'est la seule écriture d'un
   **exemple de saisie** (règle 6, E26). `parDefaut` est un texte **littéral**, recopié de l'existant ; `sinon` est
   un littéral ou un gabarit à appels `voc` (`` `Ex: ${voc.Nom('article')} A` ``). L'outil juge les deux :
@@ -1023,7 +1033,7 @@ F12 : `contractPdf.ts` et `manuelPdf.ts` ne sont pas des composants, `voc` y ent
 d'appel sont dans le lot : `AdminSupportPage.tsx` (l'admin fournit le lexique du CLIENT de la demande :
 `AvenantPdfParams.lexique`, spec §2.3 — rien d'autre ne change dans ce fichier admin) et `GuidePage.tsx`.
 
-## Annexe A — Les clés du lexique (41)
+## Annexe A — Les clés du lexique (43)
 
 | Clé | Singulier / pluriel | Genre | Élision | Courte | Apposition | Icône |
 |---|---|---|---|---|---|---|
@@ -1059,7 +1069,7 @@ d'appel sont dans le lot : `AdminSupportPage.tsx` (l'admin fournit le lexique du
 | `espace_acheteurs` | Espace Acheteurs / Espaces Acheteurs | m | oui | | | 🤝 |
 | `espace_produits` | Espace Produit / Espaces Produit | m | oui | | | 💎 |
 | `referentiel` | Référentiel / Référentiels | m | | | | 📚 |
-| `produit` | Produit / Produits | m | | | | |
+| `produit` | Produit / Produits | m | | | | 🍔 |
 | `produit_compose` | Produit composé / Produits composés | m | | | | |
 | `labo_long` | Laboratoire / Laboratoires | m | | | | 🏭 |
 | `labo_desc` | Laboratoire de production / Laboratoires de production | m | | | | 🏭 |
@@ -1068,6 +1078,8 @@ d'appel sont dans le lot : `AdminSupportPage.tsx` (l'admin fournit le lexique du
 | `cat_pt_utilisable` | Produits Transformés Utilisables | m | | | | 🧂 |
 | `cat_pt_valorise` | Produits Composés Valorisés | m | | | | 💎 |
 | `cat_pt_vendable` | Produits Transformés Vendables | m | | | | 🛒 |
+| `transfert_abr` | Transf. / Transf. (dérivée de `transfert`, copie) | m | | Trf | | 🚚 |
+| `supplement_abr` | Suppl. / Suppl. (dérivée de `supplement`, copie) | m | | | | ➕ |
 
 Hors lexique, donc en dur : catégorie, famille, unité, commande, facture, prix, tarif, quantité, coût, seuil, charge,
 historique, compte, abonnement, formule, client, composant, production, site, collaborateur, B2B.

@@ -160,11 +160,16 @@ test('lexique par défaut v2 : les 32 clés d\'origine rendent exactement sg / p
 });
 
 test('lexique par défaut v2 : clés ajoutées (§1.3), formes courtes, appositions, gel', () => {
-  assert.equal(LEXIQUE_CLES.length, 41);
+  assert.equal(LEXIQUE_CLES.length, 43);
   assert.deepEqual(LEXIQUE_CLES.slice(32), [
     'produit', 'produit_compose', 'labo_long', 'labo_desc', 'activite_desc', 'article_ingredient',
     'cat_pt_utilisable', 'cat_pt_valorise', 'cat_pt_vendable',
+    // Corrections après revues : abréviations de badge et de colonne.
+    'transfert_abr', 'supplement_abr',
   ]);
+  // Corrections après revues : le burger de la barre latérale et du tableau de bord est l'icône de « produit ».
+  assert.equal(LEXIQUE_DEFAUT.produit.icon, '🍔');
+  assert.deepEqual({ ...LEXIQUE_DEFAUT.transfert_abr.court }, { sg: 'Trf', pl: 'Trf' });
   assert.deepEqual([LEXIQUE_DEFAUT.produit.sg, LEXIQUE_DEFAUT.produit.pl, LEXIQUE_DEFAUT.produit.g], ['Produit', 'Produits', 'm']);
   assert.deepEqual([LEXIQUE_DEFAUT.produit_compose.sg, LEXIQUE_DEFAUT.produit_compose.pl, LEXIQUE_DEFAUT.produit_compose.g], ['Produit composé', 'Produits composés', 'm']);
   assert.deepEqual({ ...LEXIQUE_DEFAUT.pt.court }, { sg: 'PT', pl: 'PT' });
@@ -173,7 +178,7 @@ test('lexique par défaut v2 : clés ajoutées (§1.3), formes courtes, appositi
   // Étape S4 : le sigle « PU » (4 écrans) est la forme courte de produit_utilisable, comme « PT » celle de pt.
   assert.deepEqual({ ...LEXIQUE_DEFAUT.produit_utilisable.court }, { sg: 'PU', pl: 'PU' });
   const avecCourt = LEXIQUE_CLES.filter((k) => LEXIQUE_DEFAUT[k].court);
-  assert.deepEqual(avecCourt, ['produit_utilisable', 'fiche_technique', 'appro', 'pt']);
+  assert.deepEqual(avecCourt, ['produit_utilisable', 'fiche_technique', 'appro', 'pt', 'transfert_abr']);
   const appo = LEXIQUE_CLES.filter((k) => LEXIQUE_DEFAUT[k].appo);
   assert.deepEqual(appo, ['activite', 'labo', 'acheteur', 'gerant']);
   assert.ok(Object.isFrozen(LEXIQUE_DEFAUT) && Object.isFrozen(LEXIQUE_CLES));
@@ -199,6 +204,9 @@ const DERIVEES = {
   cat_pt_utilisable: ['produit_utilisable', 'pluriel_titre', 'Produits Transformés Utilisables'],
   cat_pt_valorise:   ['produit_valorise', 'pluriel_titre', 'Produits Composés Valorisés'],
   cat_pt_vendable:   ['produit_vendable', 'pluriel_titre', 'Produits Transformés Vendables'],
+  // Corrections après revues : abréviations que l'existant écrivait en dur (« ↗ Transf. », « ⇄Trf », « · Suppl. »).
+  transfert_abr:     ['transfert', 'copie', 'Transf.'],
+  supplement_abr:    ['supplement', 'copie', 'Suppl.'],
 };
 
 test('clés dérivées : table du §1.3 (parent, mode, défaut)', () => {
@@ -428,6 +436,25 @@ test('S5 — clé dérivée article_ingredient : « Ingrédient » par défaut, 
   assert.deepEqual([r2.article_ingredient.sg, r2.article.sg], ['Référence', 'Article']);
 });
 
+test('corrections après revues — abréviations transfert_abr / supplement_abr : identité par défaut, le terme du domaine sinon', () => {
+  // par défaut : exactement les abréviations que les écrans écrivaient en dur
+  assert.equal(`↗ ${vocabDefaut.Nom('transfert_abr')}`, '↗ Transf.');
+  assert.equal(`⇄${vocabDefaut.Court('transfert_abr')}`, '⇄Trf');
+  assert.equal(` · ${vocabDefaut.Nom('supplement_abr')}`, ' · Suppl.');
+  // domaine qui renomme le parent : copie de l'entrée ENTIÈRE du parent (l'abréviation de la restauration disparaît)
+  const h = LEXIQUES.hotellerie;
+  assert.deepEqual([h.transfert_abr.sg, h.transfert_abr.pl, h.transfert_abr.g, h.transfert_abr.court], ['Livraison interne', 'Livraisons internes', 'f', undefined]);
+  assert.equal(VOCS.hotellerie.Court('transfert_abr'), 'Livraison interne');
+  assert.equal(VOCS.hotellerie.Nom('supplement_abr'), 'Suppl.', 'Hôtellerie ne renomme pas « supplément »');
+  assert.equal(VOCS.ceramique.Nom('supplement_abr'), 'Option');
+  // la forme courte du parent est copiée avec lui : c'est elle que lisent les colonnes étroites
+  const r = resoudreLexique(LEXIQUE_DEFAUT, { transfert: { sg: 'Livraison interne', pl: 'Livraisons internes', g: 'f', el: false, court: { sg: 'Livr.', pl: 'Livr.' } } });
+  assert.deepEqual([creerVocab(r).Nom('transfert_abr'), creerVocab(r).Court('transfert_abr')], ['Livraison interne', 'Livr.']);
+  // l'abréviation se surcharge à part
+  const r2 = resoudreLexique(LEXIQUE_DEFAUT, { transfert_abr: { sg: 'Livr.', pl: 'Livr.', g: 'f', el: false } });
+  assert.deepEqual([creerVocab(r2).Nom('transfert_abr'), creerVocab(r2).Court('transfert_abr'), creerVocab(r2).Nom('transfert')], ['Livr.', 'Livr.', 'Transfert']);
+});
+
 // ── 3 ter. Exemples de saisie : inchangés tant que le lexique est celui par défaut ─────────────
 test('estDefaut : vrai si le lexique donne les rendus du lexique par défaut, faux au premier écart de rendu', () => {
   assert.equal(vocabDefaut.estDefaut, true);
@@ -459,8 +486,22 @@ test('estDefaut : vrai si le lexique donne les rendus du lexique par défaut, fa
     assert.equal(creerVocab(resolu).estDefaut, false, nom);
     assert.equal(vocabDuLexique(resolu).estDefaut, false, `${nom} (lexique reçu)`);
   }
-  // clé en plus ou en moins, lexique illisible : ce n'est pas le lexique par défaut
-  assert.equal(creerVocab({ ...LEXIQUE_DEFAUT, chantier: { sg: 'Chantier', pl: 'Chantiers', g: 'm', el: false } }).estDefaut, false);
+  // Corrections après revues — clé EN PLUS (inconnue du lexique par défaut : clé ajoutée par un serveur plus
+  // récent pendant qu'un écran reste ouvert, clé propre à un domaine) : aucun texte ne la rend, ce n'est pas
+  // un écart. Sans cela, la première clé ajoutée au lexique rendait neutres les exemples de saisie de tous
+  // les comptes restauration encore ouverts.
+  const plus = { ...LEXIQUE_DEFAUT, cle_du_lot_2b: { sg: 'Chantier', pl: 'Chantiers', g: 'm', el: false } };
+  assert.equal(creerVocab(plus).estDefaut, true);
+  assert.equal(creerVocab(plus).ex('Ex: Poulet entier', 'Ex: Article A'), 'Ex: Poulet entier');
+  const recuPlus = vocabDuLexique(JSON.parse(JSON.stringify(plus))); // ce que l'écran reçoit
+  assert.equal(recuPlus.estDefaut, true);
+  assert.equal(recuPlus.ex('Ex: Poulet entier', 'Ex: Article A'), 'Ex: Poulet entier');
+  assert.equal(rendre(recuPlus, 'Nom [[du:activite]] (ex: [[ex:activite:Restaurant A]])'), "Nom de l'activité (ex: Restaurant A)");
+  assert.equal(recuPlus.le('cle_du_lot_2b', 2), 'les chantiers', 'la clé en plus reste lisible, comme côté serveur');
+  assert.notEqual(recuPlus, vocabDefaut);
+  // … mais une clé en plus dans un lexique qui s'écarte du défaut ne le rend pas « par défaut »
+  assert.equal(creerVocab({ ...LEXIQUES.hotellerie, cle_du_lot_2b: { sg: 'Chantier' } }).estDefaut, false);
+  // clé en moins, lexique illisible : ce n'est pas le lexique par défaut
   const { labo: _labo, ...sansLabo } = LEXIQUE_DEFAUT;
   assert.equal(creerVocab(sansLabo).estDefaut, false);
   for (const lexique of [null, undefined, 'x', 42, [], {}]) assert.equal(creerVocab(lexique).estDefaut, false, String(lexique));
@@ -474,7 +515,7 @@ test('ex : l\'exemple d\'origine si estDefaut, sinon l\'exemple neutre — jamai
   const exemples = (voc) => [
     voc.ex('Ex: Point de vente Tunis', `Ex: ${voc.Nom('activite')} 1`),
     voc.ex('Ex: Labo Central', `Ex: ${voc.Nom('labo')} 1`),
-    voc.ex('Ex. Cookie maison', `Ex. ${voc.Nom('produit_compose')} A`),
+    voc.ex('Ex. Cookie maison', `Ex. ${voc.Nom('produit_valorise')} A`),
     voc.ex('Ex. Burger, Pizza Margherita…', `Ex. ${voc.Nom('produit')} A, ${voc.Nom('produit')} B…`),
     voc.ex('Ex. BRG-001, REF-42…', 'Ex. REF-001, REF-42…'),
     voc.ex('Ex: Poulet entier', `Ex: ${voc.Nom('article')} A`),
@@ -485,7 +526,7 @@ test('ex : l\'exemple d\'origine si estDefaut, sinon l\'exemple neutre — jamai
     'Ex. BRG-001, REF-42…', 'Ex: Poulet entier', 'Ex: Viandes & Volailles',
   ]);
   assert.deepEqual(exemples(VOCS.hotellerie), [
-    'Ex: Service 1', 'Ex: Cuisine centrale 1', 'Ex. Produit composé A', 'Ex. Produit A, Produit B…',
+    'Ex: Service 1', 'Ex: Cuisine centrale 1', 'Ex. Prestation catalogue A', 'Ex. Produit A, Produit B…',
     'Ex. REF-001, REF-42…', 'Ex: Fourniture A', 'Ex: Catégorie A',
   ]);
   assert.deepEqual(exemples(VOCS.ceramique).slice(0, 2), ['Ex: Point de vente 1', 'Ex: Site de production 1']);
@@ -884,7 +925,13 @@ test('fr.json : rendu Hôtellerie et miroir sans forme par défaut des termes su
   assert.equal(h['client.labo.stock_title'], 'Stock Cuisine');
   assert.equal(h['client.entreprise.add_activity'], 'Ajouter un service');
   assert.equal(h['client.entreprise.activity_created'], 'Service créé.');
-  assert.equal(h['client.labo.empty_stock'], 'Aucun composant sélectionné pour cette cuisine centrale.');
+  // Corrections après revues : une ligne de stock est l'ARTICLE du compte (« Fourniture »), pas le composant
+  // d'une recette (« Composant ») — clé article_ingredient.
+  assert.equal(h['client.labo.empty_stock'], 'Aucune fourniture sélectionnée pour cette cuisine centrale.');
+  assert.equal(h['client.stock.search_ingredient'], 'Rechercher une fourniture...');
+  assert.equal(h['client.historique_appro.all_ingredients'], 'Toutes les fournitures');
+  assert.equal(h['client.stock.ingredient'], 'Fourniture');
+  assert.equal(h['client.entreprise.manage_ingredients'], 'Fournitures');
   assert.equal(h['nav.activites'], 'Mes services');
   assert.equal(h['client.entreprise.activity_nom'], 'Nom du service (ex: Service A)', 'exemple construit avec le terme du domaine');
   // Un exemple propre à la restauration ne vit que dans une balise [[ex:…]] : rendu par défaut seulement.
@@ -899,6 +946,21 @@ test('fr.json : rendu Hôtellerie et miroir sans forme par défaut des termes su
   }
   const m = aplatir(rendreTout(FR, VOCS.miroir));
   assert.equal(m['client.entreprise.activity_created'], 'Local créé.');
-  assert.equal(m['client.stock.empty_stock'], 'Aucune matière sélectionnée.');
+  assert.equal(m['client.stock.empty_stock'], 'Aucune provision sélectionnée.');
   assert.equal(m['client.products.add_vendable'], 'Nouvelle invention vendue');
+});
+
+test("fr.json : la clé « ingredient » (composant d'une recette) ne sert qu'aux écrans de produits ; le stock emploie article_ingredient", () => {
+  // Écrans de stock, d'historique d'appro et de sélection des articles d'une unité : l'objet est l'ARTICLE du compte.
+  // Avec la clé « ingredient », un compte Hôtellerie lisait « Rechercher un composant... » à côté du filtre « Fourniture ».
+  const RECETTE = /^client\.(?:products|fiche_technique)\./;
+  const fautives = Object.entries(FR_PLAT)
+    .filter(([k, v]) => /\[\[[A-Za-z]+:ingredient[:\]]/.test(v) && !RECETTE.test(k))
+    .map(([k]) => k);
+  assert.deepEqual(fautives, []);
+  const stock = ['client.entreprise.manage_ingredients', 'client.stock.ingredient', 'client.stock.empty_stock',
+    'client.stock.search_ingredient', 'client.historique_appro.all_ingredients', 'client.labo.empty_stock'];
+  for (const k of stock) assert.match(FR_PLAT[k], /:article_ingredient[:\]]/, k);
+  // la clé « ingredient » reste employée là où l'objet est le composant d'une recette
+  assert.ok(Object.keys(FR_PLAT).some((k) => RECETTE.test(k) && /:ingredient[:\]]/.test(FR_PLAT[k])));
 });

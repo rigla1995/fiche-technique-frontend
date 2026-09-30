@@ -268,7 +268,7 @@ export function SortableTable<T extends Record<string, unknown>>({ rows, colonne
 export const typeLabels = (voc: Vocab): Record<string, { label: string; color: string; bg: string }> => ({
   produit: { label: voc.Nom('produit'), color: '#2563eb', bg: '#eff6ff' },
   supplement: { label: voc.Nom('supplement'), color: '#b45309', bg: '#fef3c7' },
-  valorise: { label: 'Valorisé', color: '#7c3aed', bg: '#f3e8ff' },
+  valorise: { label: voc.acc('produit_valorise', 'Valorisé', 'Valorisée'), color: '#7c3aed', bg: '#f3e8ff' },
 });
 
 export function TypeBadge({ type }: { type: string }) {

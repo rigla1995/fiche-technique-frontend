@@ -284,6 +284,56 @@ for (const [role, attendu, note] of [
   await page.close();
 }
 
+// ── E. Formes RÉELLES du serveur : /auth/login rend moins de champs que /auth/me, dans un autre ordre
+// (authController.js : login = id, name, email, role, onboardingStep, compteurs, domaine ; me ajoute phone,
+// entrepriseName, modeCompte, prolongationJours). Le premier retour sur l'onglet après une connexion ne doit
+// pas remplacer le user : une saisie en cours dans « Mon profil » serait écrasée.
+{
+  const page = await ouvrir();
+  await page.evaluate(() => {
+    const domaine = { id: 1, slug: 'restauration', nom: 'Restauration', lexique: 'defaut', composants: [], regles: {} };
+    window.__mock.login = { id: 7, name: 'Nom en base', email: 'resto@test.local', role: 'client', onboardingStep: 0, activitesCount: 2, labosCount: 1, domaine };
+    window.__mock.me = { id: 7, name: 'Nom en base', email: 'resto@test.local', phone: '20111222', role: 'client', onboardingStep: 0, entrepriseName: 'Ma société', modeCompte: 'actif', prolongationJours: 0, activitesCount: 2, labosCount: 1, domaine };
+  });
+  await page.evaluate(async () => { await window.__auth.login('a', 'b'); });
+  await page.type('#profil-nom', ' modifié');
+  let vis = await retourOnglet(page);
+  let e = await etat(page);
+  verifier('E1 login puis 1er retour sur l\'onglet (/auth/me a plus de champs que /auth/login) : 1 appel, user non remplacé',
+    vis.calls.length === 1 && !vis.log.some((l) => l.c === 'effet[user]') && !vis.log.some((l) => l.c === 'Ecran'), JSON.stringify([vis.calls.length, vis.log.map((l) => l.c)]));
+  verifier('E1b la saisie en cours dans « Mon profil » est conservée', e.nom === 'Nom en base modifié', JSON.stringify([e.nom, e.tel]));
+  vis = await retourOnglet(page);
+  e = await etat(page);
+  verifier('E2 second retour sur l\'onglet : toujours rien de posé, saisie conservée', vis.calls.length === 1 && vis.log.length === 0 && e.nom === 'Nom en base modifié', JSON.stringify([vis.calls.length, vis.log.map((l) => l.c), e.nom]));
+
+  // Un champ que le user en place porte déjà change côté serveur : le user entier de /auth/me est posé.
+  await page.evaluate(() => { window.__mock.me.name = 'Nouveau nom'; });
+  vis = await retourOnglet(page);
+  e = await etat(page);
+  verifier('E3 un champ déjà porté change (nom) : user remplacé par celui de /auth/me, champs en plus compris',
+    vis.log.filter((l) => l.c === 'effet[user]').length === 1 && e.nom === 'Nouveau nom' && e.tel === '20111222', JSON.stringify([vis.log.map((l) => l.c), e.nom, e.tel]));
+
+  // Le user est remplacé pour une AUTRE raison (un compteur change) pendant une saisie : le champ saisi reste.
+  await page.type('#profil-nom', ' en cours');
+  await page.evaluate(() => { window.__mock.me.activitesCount = 3; });
+  vis = await retourOnglet(page);
+  e = await etat(page);
+  verifier('E5 user remplacé pour une autre raison (compteur) pendant une saisie : le champ saisi est conservé',
+    vis.log.filter((l) => l.c === 'effet[user]').length === 1 && e.nom === 'Nouveau nom en cours' && e.tel === '20111222', JSON.stringify([vis.log.map((l) => l.c), e.nom, e.tel]));
+
+  // Même compte, reconnecté (user à la forme du login) : un changement de lexique arrive au retour d'onglet.
+  await page.evaluate(() => { window.__auth.logout(); });
+  await attendre(100);
+  await page.evaluate(() => { window.__mock.login.name = 'Nouveau nom'; });
+  await page.evaluate(async () => { await window.__auth.login('a', 'b'); });
+  await page.evaluate(() => { window.__mock.me.domaine = { ...window.__mock.me.domaine, lexique: 'hotellerie' }; });
+  await retourOnglet(page);
+  e = await etat(page);
+  verifier('E4 user à la forme du login : un changement de lexique arrive au retour sur l\'onglet', e.ecran === 'la cuisine centrale | Stock Cuisine', e.ecran);
+  verifier('E aucune erreur console', page.__erreurs.length === 0, page.__erreurs.join(' | '));
+  await page.close();
+}
+
 await browser.close();
 const echecs = resultats.filter(([, ok]) => !ok);
 console.log(`\ncontrole-contexte : ${resultats.length - echecs.length}/${resultats.length} vérifications passées${STRICT ? ' (StrictMode)' : ''}`);

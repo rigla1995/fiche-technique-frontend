@@ -115,7 +115,8 @@ export interface VocabDe<K extends string> {
   icon(k: K): string;
   /**
    * Vrai quand le lexique du compte donne exactement les rendus du lexique par défaut (formes, genre, élision,
-   * icône, forme courte, apposition) : restauration, café, boulangerie, admin, non connecté.
+   * icône, forme courte, apposition) : restauration, café, boulangerie, admin, non connecté. Une clé en plus
+   * (inconnue du lexique par défaut) ne change aucun rendu : elle ne compte pas.
    */
   readonly estDefaut: boolean;
   /**
@@ -425,12 +426,12 @@ function construire<K extends string>(lexique: unknown, estDefaut: boolean = fal
   return Object.freeze(voc);
 }
 
-// Deux lexiques donnent-ils les mêmes rendus ? (formes, genre, élision, icône, forme courte, apposition)
-const memesRendus = (a: Record<string, unknown>, b: Lexique): boolean => {
-  const ka = Object.keys(a);
-  if (ka.length !== Object.keys(b).length) return false;
-  return ka.every((k) => JSON.stringify(normaliser(a[k])) === JSON.stringify(normaliser(b[k])));
-};
+// Le lexique `a` donne-t-il, pour CHAQUE clé du lexique `b` (le défaut), le même rendu ? (formes, genre,
+// élision, icône, forme courte, apposition). Une clé en plus dans `a` ne compte pas : aucun texte de cette
+// version ne la rend (clé ajoutée par un serveur plus récent pendant qu'un écran reste ouvert, clé propre à un
+// domaine). Une clé en moins, ou une entrée illisible, est un écart.
+const memesRendus = (a: Record<string, unknown>, b: Lexique): boolean =>
+  Object.keys(b).every((k) => JSON.stringify(normaliser(a[k])) === JSON.stringify(normaliser(b[k])));
 
 /**
  * Vocabulaire d'un lexique RÉSOLU (toutes les clés présentes ; entrées incomplètes tolérées).
@@ -615,9 +616,12 @@ export function completerLexique(defaut: Lexique, recu: unknown): Record<string,
 /**
  * Vocabulaire du lexique reçu du serveur (`user.domaine.lexique`), complété par le défaut.
  * Absent, ou équivalent au défaut → `vocabDefaut` lui-même (même objet : rien ne se re-rend).
+ * Équivalent au défaut AVEC une clé en plus : un vocabulaire à part (la clé en plus y reste lisible, comme
+ * côté serveur), dont `estDefaut` est vrai.
  */
 export function vocabDuLexique(recu: unknown): Vocab {
   if (!recu || typeof recu !== 'object') return vocabDefaut;
   const complet = completerLexique(LEXIQUE_DEFAUT, recu);
-  return memesRendus(complet, LEXIQUE_DEFAUT) ? vocabDefaut : creerVocab(complet);
+  const sansCleEnPlus = Object.keys(complet).length === Object.keys(LEXIQUE_DEFAUT).length;
+  return sansCleEnPlus && memesRendus(complet, LEXIQUE_DEFAUT) ? vocabDefaut : creerVocab(complet);
 }

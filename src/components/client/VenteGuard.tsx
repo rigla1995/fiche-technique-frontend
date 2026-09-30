@@ -79,8 +79,8 @@ export default function VenteGuard() {
             {voc.acc('activite', 'Aucun', 'Aucune')} de {voc.votre('activite', true)} ne vend
           </h2>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', lineHeight: 1.6, marginBottom: 0 }}>
-            Le module {voc.Court('vente')} est actif, mais {voc.acc('activite', 'aucun', 'aucune')} de {voc.votre('activite', true)} n'est {voc.acc('activite', 'configuré', 'configurée')} comme {voc.nom('activite')} {voc.acc('activite', 'vendeur', 'vendeuse')}{' '}
-            (Housekeeping, Spa, économat…). {voc.Le('espace_vente', false, 'Nom')} s'ouvrira dès qu'{voc.un('activite')} {voc.acc('activite', 'vendeur', 'vendeuse')} existera
+            Le module {voc.Court('vente')} est actif, mais {voc.acc('activite', 'aucun', 'aucune')} de {voc.votre('activite', true)} n'est {voc.acc('activite', 'configuré', 'configurée')} comme {voc.nom('activite')} {voc.acc('activite', 'vendeur', 'vendeuse')}{voc.ex(' (Housekeeping, Spa, économat…)', '')}.{' '}
+            {voc.Le('espace_vente', false, 'Nom')} s'ouvrira dès qu'{voc.un('activite')} {voc.acc('activite', 'vendeur', 'vendeuse')} existera
             dans votre compte.
           </p>
           <div style={{ marginTop: 20, fontSize: '0.8rem', color: 'var(--text-muted)' }}>

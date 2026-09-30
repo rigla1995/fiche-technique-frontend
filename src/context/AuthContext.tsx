@@ -28,6 +28,20 @@ const DELAI_RAFRAICHISSEMENT_VISIBILITE_MS = 5 * 60 * 1000;
 const lexiqueDuCompte = (u: User | null) =>
   !u || u.role === 'super_admin' || u.role === 'boss' ? null : u.domaine?.lexique ?? null;
 
+// Le user reçu de /auth/me rend-il, pour CHAQUE champ que le user en place porte déjà, la même valeur ?
+// /auth/login et /auth/me ne rendent pas le même objet : le login a moins de champs (ni phone, ni
+// entrepriseName, ni modeCompte, ni prolongationJours) et un autre ordre. Comparer les deux JSON entiers
+// remplaçait le user au premier retour sur l'onglet après CHAQUE connexion, et une saisie en cours dans
+// « Mon profil » était écrasée. Un champ que le user en place ne porte pas ne compte donc pas (champ absent
+// du login, champ ajouté par un serveur plus récent pendant qu'un onglet reste ouvert) : il arrive avec le
+// prochain user posé (rechargement, 'activites-changed', ou vrai changement d'un champ déjà porté).
+const memeUserEnPlace = (enPlace: User | null, recu: User | null): boolean => {
+  if (!enPlace || !recu) return enPlace === recu;
+  const a = enPlace as unknown as Record<string, unknown>;
+  const b = recu as unknown as Record<string, unknown>;
+  return Object.keys(a).every((k) => JSON.stringify(a[k]) === JSON.stringify(b[k]));
+};
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
@@ -42,12 +56,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Point d'entrée UNIQUE de tout changement de user : pose le vocabulaire (et le paquet
   // i18n rendu avec lui) de façon synchrone, PUIS le user — les deux dans le même rendu.
-  // `siChange` (retour sur l'onglet) : quand /auth/me rend exactement le user déjà en place,
-  // rien n'est posé et la fonction rend false — la référence de `user` survit, comme celle de
-  // `voc`. Sans cela, un effet dépendant de [user] (le formulaire « Mon profil ») serait relancé
-  // à chaque retour sur l'onglet et écraserait une saisie en cours.
+  // `siChange` (retour sur l'onglet) : quand /auth/me rend, pour chaque champ du user déjà en
+  // place, la même valeur (memeUserEnPlace), rien n'est posé et la fonction rend false — la
+  // référence de `user` survit, comme celle de `voc`. Sans cela, un effet dépendant de [user]
+  // serait relancé à chaque retour sur l'onglet et écraserait une saisie en cours.
   const appliquerUser = useCallback((data: User | null, siChange = false): boolean => {
-    if (siChange && JSON.stringify(data) === JSON.stringify(userRef.current)) return false;
+    if (siChange && memeUserEnPlace(userRef.current, data)) return false;
     const lexique = lexiqueDuCompte(data);
     const signature = lexique ? JSON.stringify(lexique) : '';
     if (signature !== signatureLexiqueRef.current) {

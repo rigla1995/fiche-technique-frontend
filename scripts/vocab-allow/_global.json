@@ -15,27 +15,6 @@
   },
   {
     "fichier": "*",
-    "avant": "Supplément Activité",
-    "apres": "Supplément Activité",
-    "type": "formule",
-    "justification": "Supplément TARIFAIRE de l'abonnement (ligne de prix), homonyme de la clé « supplement » (extra vendu avec un produit) : nom figé (spec §3 règle 4). Admis comme unité entière."
-  },
-  {
-    "fichier": "*",
-    "avant": "Supplément Labo",
-    "apres": "Supplément Labo",
-    "type": "formule",
-    "justification": "Supplément TARIFAIRE de l'abonnement (ligne de prix), homonyme de la clé « supplement » (extra vendu avec un produit) : nom figé (spec §3 règle 4). Admis comme unité entière."
-  },
-  {
-    "fichier": "*",
-    "avant": "Supplément Gérant",
-    "apres": "Supplément Gérant",
-    "type": "formule",
-    "justification": "Supplément TARIFAIRE de l'abonnement (ligne de prix), homonyme de la clé « supplement » (extra vendu avec un produit) : nom figé (spec §3 règle 4). Admis comme unité entière."
-  },
-  {
-    "fichier": "*",
     "avant": "Domaine d'activité",
     "apres": "Domaine d'activité",
     "type": "homonyme",

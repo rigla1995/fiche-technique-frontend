@@ -548,7 +548,7 @@ export default function ProductList() {
               </div>
             ) : (
               <div className="empty-state">
-                <span className="empty-icon">{isVendable ? '🍔' : '🧪'}</span>
+                <span className="empty-icon">{isVendable ? voc.icon('produit') : '🧪'}</span>
                 <p>{t('common.no_result')}</p>
               </div>
             )
@@ -1332,7 +1332,7 @@ export default function ProductList() {
                                 {addRef && <div style={{ fontSize: '0.75rem', color: '#6366f1', marginTop: 1 }}>Réf : {addRef}</div>}
                               </div>
                               <div style={{ marginLeft: 'auto', background: '#6366f1', color: '#fff', borderRadius: 20, padding: '3px 10px', fontSize: '0.72rem', fontWeight: 700 }}>
-                                {isVendable ? 'Vendable' : 'Utilisable'}{addIsSupplement ? ' · Suppl.' : ''}
+                                {isVendable ? 'Vendable' : 'Utilisable'}{addIsSupplement ? ` · ${voc.Nom('supplement_abr')}` : ''}
                               </div>
                             </div>
                             {/* Stats row */}

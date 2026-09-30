@@ -571,7 +571,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                       <CollapsibleHeader label={voc.Nom('espace_acheteurs')} icon={voc.icon('espace_acheteurs')} isOpen={openSections.has('acheteurs')} locked={false} onToggle={() => toggleSection('acheteurs')} />
                       {openSections.has('acheteurs') && (
                         <>
-                          <li><NavLink to="/client/acheteurs" end className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}><span className="link-icon">{voc.icon('acheteur')}</span><span className="link-label">Carnet {voc.de('acheteur', true, 'Nom')}</span></NavLink></li>
+                          <li><NavLink to="/client/acheteurs" end className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}><span className="link-icon">{voc.icon('acheteur')}</span><span className="link-label">Carnet {voc.de('acheteur', true, 'Titre')}</span></NavLink></li>
                           <li><NavLink to="/client/acheteurs/import" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📥</span><span className="link-label">Ajout Dynamique</span></NavLink></li>
                           <li><NavLink to="/client/acheteurs/tarifs" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}><span className="link-icon">💲</span><span className="link-label">Tarifs {voc.Court('acheteur', true)}</span></NavLink></li>
                           <li><NavLink to="/client/acheteurs/vente" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}><span className="link-icon">🧾</span><span className="link-label">{voc.Nouveau('vente', false, 'Nom')}</span></NavLink></li>
@@ -584,7 +584,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                   <Divider />
 
                   {/* ══ ESPACE PRODUITS ══ — unlocks at level 2 */}
-                  <CollapsibleHeader label={`Espace ${voc.Pl('produit')}`} icon="🍔" isOpen={openSections.has('produits')} locked={lockEspaceProduits} onToggle={() => toggleSection('produits')} />
+                  <CollapsibleHeader label={`Espace ${voc.Pl('produit')}`} icon={voc.icon('produit')} isOpen={openSections.has('produits')} locked={lockEspaceProduits} onToggle={() => toggleSection('produits')} />
                   {openSections.has('produits') && (
                     <>
                       <li>
@@ -603,7 +603,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                           {hasActivitesVente && (
                             <li>
                               <Link to="/client/products?tab=vendable" className={`sidebar-link ${isProductsPage && currentProductTab === 'vendable' ? 'active' : ''}`} onClick={onClose}>
-                                <span className="link-icon">🍔</span><span className="link-label">{voc.Titre('produit_vendable', true)}</span>
+                                <span className="link-icon">{voc.icon('produit')}</span><span className="link-label">{voc.Titre('produit_vendable', true)}</span>
                               </Link>
                             </li>
                           )}

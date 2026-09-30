@@ -88,7 +88,9 @@ export const LEXIQUE_DEFAUT = geler({
   referentiel:        { sg: 'Référentiel',         pl: 'Référentiels',          g: 'm', el: false, icon: '📚' },
 
   // ── Clés simples ajoutées au lot 2 ───────────────────────────────────────────
-  produit:            { sg: 'Produit',             pl: 'Produits',              g: 'm', el: false },
+  // Icône (corrections après revues) : le burger que la barre latérale, la liste des produits et le tableau de
+  // bord écrivaient en dur — identité par défaut, et un domaine hors restauration la remplace par la sienne.
+  produit:            { sg: 'Produit',             pl: 'Produits',              g: 'm', el: false, icon: '🍔' },
   produit_compose:    { sg: 'Produit composé',     pl: 'Produits composés',     g: 'm', el: false },
 
   // ── Clés dérivées ajoutées au lot 2 ──────────────────────────────────────────
@@ -101,6 +103,11 @@ export const LEXIQUE_DEFAUT = geler({
   cat_pt_utilisable:  { sg: 'Produits Transformés Utilisables', pl: 'Produits Transformés Utilisables', g: 'm', el: false, icon: '🧂', derive_de: 'produit_utilisable', mode: 'pluriel_titre' },
   cat_pt_valorise:    { sg: 'Produits Composés Valorisés',      pl: 'Produits Composés Valorisés',      g: 'm', el: false, icon: '💎', derive_de: 'produit_valorise',   mode: 'pluriel_titre' },
   cat_pt_vendable:    { sg: 'Produits Transformés Vendables',   pl: 'Produits Transformés Vendables',   g: 'm', el: false, icon: '🛒', derive_de: 'produit_vendable',   mode: 'pluriel_titre' },
+  // Corrections après revues : les abréviations que l'existant écrivait en dur dans les badges et les colonnes.
+  // Par défaut « Transf. » (forme courte « Trf ») et « Suppl. » (identité) ; un domaine qui renomme « transfert »
+  // ou « supplément » y lit son propre terme (copie de l'entrée du parent, forme courte comprise).
+  transfert_abr:      { sg: 'Transf.',                   pl: 'Transf.',                    g: 'm', el: false, icon: '🚚', court: { sg: 'Trf', pl: 'Trf' }, derive_de: 'transfert', mode: 'copie' },
+  supplement_abr:     { sg: 'Suppl.',                    pl: 'Suppl.',                     g: 'm', el: false, icon: '➕', derive_de: 'supplement', mode: 'copie' },
 });
 
 /** Clé du lexique par défaut (les appels `voc.…('clé')` sont vérifiés à la compilation). */

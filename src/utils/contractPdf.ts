@@ -1,4 +1,5 @@
 import jsPDF from 'jspdf';
+import { pdfTexte } from './pdfTexte';
 import { vocabDuLexique } from '../vocab/vocab';
 import type { Lexique } from '../vocab/vocab';
 
@@ -49,6 +50,9 @@ const fmt = (n: number) => {
 };
 const todayFr = () => new Date().toLocaleDateString('fr-FR');
 
+// Tout texte passe par pdfTexte() avant d'être écrit : la police standard du PDF n'écrit que le
+// Latin-1 et Windows-1252, et un seul caractère hors de ce jeu rend la ligne entière illisible.
+
 function makeDoc() {
   const doc = new jsPDF({ unit: 'mm', format: 'a4' });
   const PW = 210;
@@ -71,7 +75,7 @@ function makeDoc() {
   };
 
   const txt = (text: string, x: number, y: number, opts?: { align?: 'left' | 'center' | 'right' }) =>
-    doc.text(text, x, y, opts);
+    doc.text(pdfTexte(text), x, y, opts);
 
   const rect = (x: number, y: number, w: number, h: number, hexFill: string) => {
     doc.setFillColor(...hex2rgb(hexFill));
@@ -157,7 +161,7 @@ export function generateAvenantPdf(params: AvenantPdfParams): string {
   if (nbActivitesAdded > 0) addedParts.push(`+${voc.n('activite', nbActivitesAdded)}`);
   if (nbLabosAdded > 0)     addedParts.push(`+${voc.n('labo', nbLabosAdded)}`);
   if (nbGerantsAdded > 0)   addedParts.push(`+${voc.n('gerant', nbGerantsAdded)}`);
-  if (acheteursCible && acheteursCible > 0) addedParts.push(`Option ${voc.Court('acheteur', true)} → palier ${acheteursCible}`);
+  if (acheteursCible && acheteursCible > 0) addedParts.push(`Option ${voc.Court('acheteur', true)} : palier ${acheteursCible}`);
 
   // Green highlight for added capacity. Les termes d'un autre domaine sont plus longs (« +1 responsable de
   // service ») : les postes passent à la ligne quand ils dépassent le cadre, qui grandit d'autant. Avec le
@@ -169,7 +173,7 @@ export function generateAvenantPdf(params: AvenantPdfParams): string {
   for (const part of addedParts) {
     const dernier = capaLines.length - 1;
     const essai = dernier >= 0 ? `${capaLines[dernier]}${CAPA_SEP}${part}` : part;
-    if (dernier >= 0 && doc.getTextWidth(essai) <= CW - 8) capaLines[dernier] = essai;
+    if (dernier >= 0 && doc.getTextWidth(pdfTexte(essai)) <= CW - 8) capaLines[dernier] = essai;
     else capaLines.push(part);
   }
   if (capaLines.length === 0) capaLines.push('');

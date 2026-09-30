@@ -102,7 +102,7 @@ export default function ReferentielFamillesPage() {
             <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0 }}>Familles</h1>
           </div>
           <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.85rem', margin: 0 }}>
-            {familles.length === 0 ? 'Groupez vos catégories par famille : Viandes, Épicerie, Boissons…' : `Familles pour organiser vos catégories et ${voc.pl('article')}`}
+            {familles.length === 0 ? voc.ex('Groupez vos catégories par famille : Viandes, Épicerie, Boissons…', 'Groupez vos catégories par famille.') : `Familles pour organiser vos catégories et ${voc.pl('article')}`}
           </p>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -132,7 +132,7 @@ export default function ReferentielFamillesPage() {
         <div style={{ background: 'linear-gradient(135deg,#f0fdf4,#dcfce7)', border: '2px dashed #86efac', borderRadius: 18, padding: '48px 32px', textAlign: 'center' }}>
           <div style={{ fontSize: '2.8rem', marginBottom: 14 }}>🗂️</div>
           <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#14532d', margin: '0 0 8px' }}>Aucune famille définie</h3>
-          <p style={{ color: '#166534', fontSize: '0.88rem', margin: '0 0 24px', maxWidth: 380, marginInline: 'auto' }}>Les familles regroupent vos catégories {voc.de('article', true)} : Viandes, Épicerie, Boissons…</p>
+          <p style={{ color: '#166534', fontSize: '0.88rem', margin: '0 0 24px', maxWidth: 380, marginInline: 'auto' }}>Les familles regroupent vos catégories {voc.de('article', true)}{voc.ex(' : Viandes, Épicerie, Boissons…', '.')}</p>
           <button onClick={openCreate} style={{ background: 'linear-gradient(135deg,#15803d,#16a34a)', color: '#fff', border: 'none', borderRadius: 10, padding: '11px 28px', fontWeight: 700, fontSize: '0.92rem', cursor: 'pointer' }}>+ Créer la première famille</button>
         </div>
       ) : filtered.length === 0 ? (

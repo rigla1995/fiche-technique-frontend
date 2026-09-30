@@ -353,7 +353,7 @@ function FournisseurInfoModal({ ingredientNom, fournisseurNom, refFacture, onClo
             <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 4 }}>Réf. Facture</label>
             <p style={{ margin: 0, color: refFacture ? 'var(--text)' : 'var(--text-muted)', fontStyle: refFacture ? 'normal' : 'italic' }}>{refFacture ?? '—'}</p>
           </div>
-          <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: 0, fontStyle: 'italic' }}>Géré automatiquement par {voc.le('labo')} — non modifiable.</p>
+          <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: 0, fontStyle: 'italic' }}>{voc.acc('fournisseur', 'Géré', 'Gérée')} automatiquement par {voc.le('labo')} — non modifiable.</p>
         </div>
         <div className="modal-footer">
           <button className="btn btn-primary" onClick={onClose}>Fermer</button>
@@ -1102,7 +1102,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                     <tr style={{ borderBottom: '2px solid #2563eb' }}>
                       {[
                         { sub: `Hist.${voc.Court('appro')} · Unité` },
-                        { sub: `↑${voc.Court('appro')} · ⇄Trf · ↘${voc.Court('perte', true)} · ${voc.Court('pt')}` },
+                        { sub: `↑${voc.Court('appro')} · ⇄${voc.Court('transfert_abr')} · ↘${voc.Court('perte', true)} · ${voc.Court('pt')}` },
                         { sub: 'HT · TTC' },
                         { sub: 'Nouvelle' },
                         { sub: 'Unité' },
@@ -1556,6 +1556,8 @@ export default function StockPage() {
     }).catch(() => {
       setActivitesError(`Impossible de charger ${voc.le('activite', true)}. Veuillez recharger la page.`);
     }).finally(() => setActivitesLoading(false));
+  // voc hors dépendances : un changement de lexique ne doit pas recharger les activités.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const saveEntrepriseStock = async (activiteId: number, ingredientId: number, quantite: string, prixUnitaire: string, dateAppro: string, fournisseurId?: number | null, refFacture?: string | null, tauxTva?: number | null, timbreFiscal?: boolean) => {

@@ -1,5 +1,6 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { pdfTexte } from './pdfTexte';
 import { parseBlocks } from '../components/common/MarkdownView';
 import type { Block, CalloutKind } from '../components/common/MarkdownView';
 import type { ManuelSection } from '../components/client/GuidePage';
@@ -8,7 +9,9 @@ import type { Vocab } from '../vocab/vocab';
 /**
  * Export PDF du manuel d'utilisation : couverture, sommaire paginé, contenu
  * rendu depuis le markdown des sections (même parseur que l'affichage écran).
- * Les polices PDF standard ne rendent pas les emojis : ils sont retirés.
+ * Les polices PDF standard ne rendent pas les emojis : ils sont retirés. Elles n'écrivent pas non
+ * plus les flèches, le signe moins typographique, les coches… : pdfTexte() les remplace (un seul de ces
+ * signes rendait la ligne entière illisible).
  */
 
 const PW = 210;
@@ -28,7 +31,7 @@ const hex2rgb = (hex: string): [number, number, number] => [
 ];
 
 const stripEmoji = (s: string) =>
-  s.replace(/[\p{Extended_Pictographic}️‍⃣]/gu, '').replace(/\s{2,}/g, ' ').trim();
+  pdfTexte(s.replace(/[\p{Extended_Pictographic}️‍⃣]/gu, '')).replace(/\s{2,}/g, ' ').trim();
 
 // Inline markdown → texte brut pour le PDF (**gras**, *ital*, `code`, [lien](#x))
 const plain = (s: string) =>

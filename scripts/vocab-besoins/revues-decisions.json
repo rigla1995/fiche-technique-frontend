@@ -1,0 +1,37 @@
+{
+  "_lisezmoi": [
+    "Corrections du lot 2a après le parcours navigateur et les trois relectures contradictoires (30/09/2026).",
+    "Ce fichier est un OBJET (pas un tableau) : l'outil ne le compte pas comme des besoins ouverts. Il n'y a pas d'entrée allow « provisoire ».",
+    "decision : moteur / lexique = extension appliquée et regelée ; ecriture = corrigé dans les écrans ; client = mot d'un brouillon de lexique ou écart de texte à valider par le client (C:/Users/CHAHDONj/labflow-reprise/lot-2/brouillons-lexique-a-corriger.md) ; ouvert = besoin du moteur non couvert, consigné."
+  ],
+  "extension": {
+    "lexique": [
+      "transfert_abr (dérivée de transfert, copie) : « Transf. » / « Transf. », forme courte « Trf » — badges « ↗ Transf. » (LaboHistoriqueApproPage, StockLaboPage) et colonne « ⇄Trf » (StockPage).",
+      "supplement_abr (dérivée de supplement, copie) : « Suppl. » — badge « · Suppl. » de l'assistant de création (ProductList).",
+      "produit.icon = 🍔 : menu « Espace Produits » et « Produits Vendables » (Sidebar), liste vide des produits vendables (ProductList), food cost du tableau de bord (ClientDashboard) — voc.icon('produit')."
+    ],
+    "moteur": [
+      "voc.estDefaut ignore une clé EN PLUS du lexique par défaut (memesRendus ne compare que les clés du défaut) ; vocabDuLexique rend alors un vocabulaire à part, estDefaut vrai, la clé en plus lisible."
+    ]
+  },
+  "ecriture": [
+    "fr.json : six libellés des écrans de stock passent de la clé ingredient à article_ingredient (identité par défaut).",
+    "Sidebar « Carnet d'Acheteurs » : casse 'Titre' sur la forme longue (identité par défaut).",
+    "MonAbonnementPage : « Supplément ${voc.Nom('labo')} » (identité par défaut) ; StockPage « Géré/Gérée automatiquement » par voc.acc('fournisseur') ; adjectif « Valorisé(s) » seul accordé par voc.acc('produit_valorise').",
+    "Exemples propres à un secteur passés par voc.ex : « Viandes, Épicerie, Boissons… » (ReferentielFamillesPage), « (Housekeeping, Spa, économat…) » (VenteGuard) ; « Ex. Cookie maison » → « Ex. ${voc.Nom('produit_valorise')} A »."
+  ],
+  "client": [
+    "« pas d'appro manuel en activité » (ProductList ×2) : « dans l'activité » demande un écart admis en restauration.",
+    "FormuleGuard « produits vendables, utilisables et composés » : les trois termes du compte demandent un écart admis en restauration.",
+    "« Valorisés » / « P. Valorisé » / « Ventes Valorisées » : le terme complet demande un écart admis en restauration.",
+    "« de livraison » derrière prestataire (ConfigPrestatairesPage, VenteGuard) ; « Réceptions site / internes », « Par site (…) » (ClientDashboard) ; « vos matières premières et ingrédients » (ReferentielArticlesPage) : mots des brouillons, ou écarts de texte à valider.",
+    "Icônes 🍽️ (ProductList, ProductCategoriesPage, ClientDashboard) : l'icône d'aucune clé du produit vendable (🛒) — laissées en dur."
+  ],
+  "ouvert": [
+    {
+      "besoin": "casse",
+      "demande": "casse Titre sur la FORME COURTE (voc.Court(k) en capitales de titre) : « Stock Activités », « Tarifs Acheteurs », « Ventes Activités », « Nouvelle Vente Acheteur » (Sidebar 480, 557, 576, 578 ; VenteAcheteurPage 202)",
+      "raison": "avec une forme courte en plusieurs mots (« Client professionnel »), ces libellés rendent « Tarifs Clients professionnels » à côté de « Prestations Vendues » (voc.Titre sur la forme longue). Contournement : le client saisit une forme courte déjà capitalisée."
+    }
+  ]
+}

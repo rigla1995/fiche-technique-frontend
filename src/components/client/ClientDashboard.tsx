@@ -114,7 +114,7 @@ const canauxOpts = (voc: Vocab): MultiSelectOption[] => [
 const typesProduitOpts = (voc: Vocab): MultiSelectOption[] => [
   { value: 'produit', label: voc.Pl('produit') },
   { value: 'supplement', label: voc.Pl('supplement') },
-  { value: 'valorise', label: 'Valorisés' },
+  { value: 'valorise', label: voc.acc('produit_valorise', 'Valorisés', 'Valorisées') },
 ];
 // Types de perte : ceux du domaine du compte (regles.types_perte) — voir usePerteTypes().
 // Seuil coût matière par défaut (comportement actuel) ; le domaine peut le surcharger.
@@ -485,7 +485,7 @@ function OverviewTab({ data, seuil }: { data: any; seuil: number }) {
         <KpiCard icon={voc.icon('marge')} label={`${voc.Nom('marge')} ${voc.acc('marge', 'brut', 'brute')}`} value={fmtDT(k.marge_brute)} delta={k.deltas?.marge_brute} accent="#16a34a" sub={k.taux_marge_pct != null ? `${k.taux_marge_pct}% du CA` : undefined} />
         <KpiCard icon="🤝" label="Après commissions" value={fmtDT(k.marge_apres_com)} delta={k.deltas?.marge_apres_com} accent="#d97706" sub={`commissions ${fmtDT(k.commissions)}`} />
         <KpiCard icon="🏁" label={`${voc.Nom('marge')} ${voc.acc('marge', 'net', 'nette')} ${voc.acc('marge', 'estimé', 'estimée')}`} value={fmtDT(k.marge_nette)} delta={k.deltas?.marge_nette} accent={k.marge_nette >= 0 ? '#16a34a' : '#dc2626'} sub={`charges fixes ${fmtDT(k.charges)}`} />
-        <KpiCard icon="🍔" label={voc.Nom('food_cost')} value={k.food_cost_pct != null ? `${k.food_cost_pct}%` : '—'} delta={k.deltas?.food_cost_pts} inverse accent={k.food_cost_pct != null && k.food_cost_pct > seuil ? '#dc2626' : '#2563eb'} sub={`${voc.nom('cout_matiere')} ${fmtDT(k.cout_matiere)}`} />
+        <KpiCard icon={voc.icon('produit')} label={voc.Nom('food_cost')} value={k.food_cost_pct != null ? `${k.food_cost_pct}%` : '—'} delta={k.deltas?.food_cost_pts} inverse accent={k.food_cost_pct != null && k.food_cost_pct > seuil ? '#dc2626' : '#2563eb'} sub={`${voc.nom('cout_matiere')} ${fmtDT(k.cout_matiere)}`} />
         <KpiCard icon={voc.icon('perte')} label={voc.Pl('perte')} value={fmtDT(k.pertes)} delta={k.deltas?.pertes} inverse accent="#ef4444" sub={k.pertes_pct_ca != null ? `${fmtNum(k.pertes_pct_ca)}% du CA` : undefined} />
         <KpiCard icon="🏬" label={`Valeur ${voc.du('stock')}`} value={fmtDT(k.valeur_stock ?? 0)} accent="#8b5cf6" sub="à l'instant (hors période)" />
         {/* Présent seulement si le module Acheteurs est actif (champ omis sinon) */}
@@ -498,7 +498,7 @@ function OverviewTab({ data, seuil }: { data: any; seuil: number }) {
       {(a.stock_bas > 0 || a.food_cost_eleve > 0 || a.jours_inventaire == null || a.jours_inventaire > 30) && (
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
           {a.stock_bas > 0 && <span style={alertPill('#fef3c7', '#92400e')}>⚠️ {voc.n('article', a.stock_bas)} sous le seuil — voir Achats & {voc.nom('stock')}</span>}
-          {a.food_cost_eleve > 0 && <span style={alertPill('#fee2e2', '#b91c1c')}>🍔 {voc.n('produit', a.food_cost_eleve)} à {voc.nom('food_cost')} &gt; {seuil}%</span>}
+          {a.food_cost_eleve > 0 && <span style={alertPill('#fee2e2', '#b91c1c')}>{voc.icon('produit')} {voc.n('produit', a.food_cost_eleve)} à {voc.nom('food_cost')} &gt; {seuil}%</span>}
           {a.jours_inventaire == null
             ? <span style={alertPill('#e0e7ff', '#3730a3')}>📋 {voc.Aucun('inventaire')} {voc.acc('inventaire', 'enregistré', 'enregistrée')}</span>
             : a.jours_inventaire > 30 && <span style={alertPill('#e0e7ff', '#3730a3')}>📋 {voc.acc('inventaire', 'Dernier', 'Dernière')} {voc.nom('inventaire')} il y a {a.jours_inventaire} j</span>}
@@ -540,7 +540,7 @@ function VentesTab({ data, seuil }: { data: any; seuil: number }) {
         <KpiCard icon={voc.icon('marge')} label={`${voc.Nom('marge')} ${voc.acc('marge', 'brut', 'brute')}`} value={fmtDT(k.marge_brute)} delta={k.deltas?.marge_brute} accent="#16a34a" sub={k.taux_marge_pct != null ? `${k.taux_marge_pct}% du CA` : undefined} />
         <KpiCard icon="🤝" label="Après commissions" value={fmtDT(k.marge_apres_com)} delta={k.deltas?.marge_apres_com} accent="#d97706" sub={`commissions ${fmtDT(k.commissions)}`} />
         <KpiCard icon="🏁" label={`${voc.Nom('marge')} ${voc.acc('marge', 'net', 'nette')} ${voc.acc('marge', 'estimé', 'estimée')}`} value={fmtDT(k.marge_nette)} delta={k.deltas?.marge_nette} accent={k.marge_nette >= 0 ? '#16a34a' : '#dc2626'} sub={k.taux_marge_nette_pct != null ? `${k.taux_marge_nette_pct}% du CA` : undefined} />
-        <KpiCard icon="🍔" label={voc.Nom('food_cost')} value={k.food_cost_pct != null ? `${k.food_cost_pct}%` : '—'} delta={k.deltas?.food_cost_pts} inverse />
+        <KpiCard icon={voc.icon('produit')} label={voc.Nom('food_cost')} value={k.food_cost_pct != null ? `${k.food_cost_pct}%` : '—'} delta={k.deltas?.food_cost_pts} inverse />
       </div>
       <div style={twoCols}>
         <ChartCard title={`Du CA ${voc.au('marge')} ${voc.acc('marge', 'net', 'nette')} (cascade)`} height={280}>
@@ -556,7 +556,7 @@ function VentesTab({ data, seuil }: { data: any; seuil: number }) {
             suffix={(r) => `· ${voc.nom('marge')} ${fmtDT(Number((r as any).marge_brute))}`} />
         </ChartCard>
         <ChartCard title="Répartition du CA par type" height={260}>
-          <DonutChart data={(data.par_type ?? []).map((t: any) => ({ ...t, typeLabel: t.type === 'produit' ? voc.Pl('produit') : t.type === 'supplement' ? voc.Pl('supplement') : 'Valorisés' }))} nameKey="typeLabel" valueKey="ca" />
+          <DonutChart data={(data.par_type ?? []).map((t: any) => ({ ...t, typeLabel: t.type === 'produit' ? voc.Pl('produit') : t.type === 'supplement' ? voc.Pl('supplement') : voc.acc('produit_valorise', 'Valorisés', 'Valorisées') }))} nameKey="typeLabel" valueKey="ca" />
         </ChartCard>
       </div>
       <div style={twoCols}>

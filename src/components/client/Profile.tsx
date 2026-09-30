@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
@@ -40,9 +40,19 @@ export default function Profile() {
 
   const { emailExists: profileEmailExists, emailChecking: profileEmailChecking } = useEmailCheck(form.email, user?.id);;
 
+  // Chaque champ du formulaire suit SA valeur dans le user, pas l'objet `user` : seuls les champs dont la
+  // valeur serveur a changé sont réécrits. Un user remplacé pour une autre raison (compteurs, étape de mise
+  // en route, téléphone arrivé avec /auth/me au retour sur l'onglet) ne touche pas un champ en cours de saisie.
+  const valeursUser = useRef<{ name?: string; email?: string; phone?: string }>({});
   useEffect(() => {
     if (user) {
-      setForm(f => ({ ...f, name: user.name || '', email: user.email || '', phone: user.phone || '' }));
+      const avant = valeursUser.current;
+      const patch: Partial<ProfileForm> = {};
+      if (user.name !== avant.name) patch.name = user.name || '';
+      if (user.email !== avant.email) patch.email = user.email || '';
+      if (user.phone !== avant.phone) patch.phone = user.phone || '';
+      valeursUser.current = { name: user.name, email: user.email, phone: user.phone };
+      if (Object.keys(patch).length > 0) setForm(f => ({ ...f, ...patch }));
     }
     setLoading(false);
   }, [user]);

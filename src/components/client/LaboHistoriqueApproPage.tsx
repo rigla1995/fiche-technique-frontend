@@ -550,7 +550,7 @@ export default function LaboHistoriqueApproPage() {
                       )}
                       {r.typeAppro === 'transfert' && r.sens !== 'entree' && (
                         <span style={{ background: '#e0f2fe', color: '#0369a1', borderRadius: 6, padding: '2px 6px', fontSize: '0.7rem', fontWeight: 700, whiteSpace: 'nowrap' }} title={`${voc.Nom('transfert')} ${voc.acc('transfert', 'émis', 'émise')} depuis ${voc.ce('labo')}`}>
-                          {r.sens === 'sortie' ? `↗ Transf.${contrepartieOf(r) ? ` → ${contrepartieOf(r)}` : ''}` : 'Transf.'}
+                          {r.sens === 'sortie' ? `↗ ${voc.Nom('transfert_abr')}${contrepartieOf(r) ? ` → ${contrepartieOf(r)}` : ''}` : voc.Nom('transfert_abr')}
                         </span>
                       )}
                       {r.typeAppro === 'vente' && (

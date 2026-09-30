@@ -1,7 +1,7 @@
 // Harnais du contrôle du contexte (scripts/controle-contexte.mjs) : le VRAI AuthContext, le vrai
 // useVocabulaire et le vrai i18n du dépôt, montés dans un navigateur sans backend (API bouchonnée par
 // ./api-bouchon.ts). Hors de `src` : jamais compilé par `tsc -b` ni embarqué dans le build.
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { useTranslation } from 'react-i18next';
 import { AuthProvider, useAuth } from '@front/context/AuthContext';
@@ -50,13 +50,21 @@ function Exemple() {
   return <input id="exemple" readOnly placeholder={voc.ex('Ex: Poulet entier', `Ex: ${voc.Nom('article')} A`)} aria-label={t('client.entreprise.activity_nom')} data-defaut={String(voc.estDefaut)} />;
 }
 
-// Même forme que src/components/client/Profile.tsx : un effet dépendant de l'objet `user` recopie le
-// user dans un formulaire. Une saisie en cours ne doit pas être écrasée par un retour sur l'onglet.
+// Même forme que src/components/client/Profile.tsx : un effet [user] ne réécrit que les champs dont la valeur
+// serveur a changé. Une saisie en cours ne doit être écrasée ni par un retour sur l'onglet, ni par un user
+// remplacé pour une autre raison (compteurs, téléphone arrivé avec /auth/me).
 function Profil() {
   const { user } = useAuth();
   const [form, setForm] = useState({ name: '', phone: '' });
+  const valeursUser = useRef<{ name?: string; phone?: string }>({});
   useEffect(() => {
-    if (user) setForm((f) => ({ ...f, name: user.name || '', phone: user.phone || '' }));
+    if (!user) return;
+    const avant = valeursUser.current;
+    const patch: Partial<{ name: string; phone: string }> = {};
+    if (user.name !== avant.name) patch.name = user.name || '';
+    if (user.phone !== avant.phone) patch.phone = user.phone || '';
+    valeursUser.current = { name: user.name, phone: user.phone };
+    if (Object.keys(patch).length > 0) setForm((f) => ({ ...f, ...patch }));
   }, [user]);
   if (!user) return null;
   return (

@@ -17,7 +17,11 @@ export interface User {
   gerantAccesAcheteurs?: boolean;
   activitesCount?: number;
   labosCount?: number;
-  /** Profil de domaine du compte (client : son abonnement ; gérant : parent ; admin/boss : null). */
+  /**
+   * Profil de domaine du compte (client : son abonnement ; gérant : parent ; admin/boss : null).
+   * Acheteur (lot 2, spec §2.4) : domaine du client VENDEUR réduit à { id, slug, nom, lexique } — ni
+   * `composants` ni `regles` (toute lecture de ces deux champs passe par `?.`).
+   */
   domaine?: DomaineProfil | null;
 }
 

@@ -436,11 +436,11 @@ export default function MonAbonnementPage() {
 
       {/* Supplement promo banners (activité / labo / gérant) */}
       {([
-        { promo: activeSupplActivitePromo, title: 'Supplément Activité',  noun: 'activité' },
-        { promo: activeSupplLaboPromo,     title: 'Supplément Labo',       noun: 'labo' },
-        { promo: activeSupplGerantPromo,   title: 'Supplément Gérant',     noun: 'gérant' },
-      ] as { promo: typeof activeSupplActivitePromo; title: string; noun: string }[]).filter(x => x.promo).map(({ promo, title, noun }) => (
-        <div key={noun} style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 14, padding: '14px 20px', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 14, boxShadow: '0 2px 8px rgba(217,119,6,0.1)' }}>
+        { promo: activeSupplActivitePromo, title: `Supplément ${voc.Nom('activite')}`, noun: voc.nom('activite') },
+        { promo: activeSupplLaboPromo,     title: `Supplément ${voc.Nom('labo')}`,     noun: voc.nom('labo') },
+        { promo: activeSupplGerantPromo,   title: `Supplément ${voc.Nom('gerant')}`,   noun: voc.nom('gerant') },
+      ] as { promo: typeof activeSupplActivitePromo; title: string; noun: string }[]).filter(x => x.promo).map(({ promo, title, noun }, i) => (
+        <div key={i} style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 14, padding: '14px 20px', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 14, boxShadow: '0 2px 8px rgba(217,119,6,0.1)' }}>
           <div style={{ width: 42, height: 42, borderRadius: 12, background: '#fef3c7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.3rem', flexShrink: 0 }}>🏷️</div>
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#92400e' }}>Promotion — {title}</div>

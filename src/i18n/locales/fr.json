@@ -92,7 +92,7 @@
       "activity_nom": "Nom [[du:activite]] (ex: [[ex:activite:Restaurant A]])",
       "activity_adresse": "Adresse",
       "activity_name_exists": "[[Un:activite]] [[acc:activite:distinct:distincte]] \"{{name}}\" existe déjà.",
-      "manage_ingredients": "[[Pl:ingredient]]",
+      "manage_ingredients": "[[Pl:article_ingredient]]",
       "activity_created": "[[Nom:activite]] [[acc:activite:créé:créée]].",
       "activity_updated": "[[Nom:activite]] [[acc:activite:mis:mise]] à jour.",
       "labo": "[[Nom:labo]]",
@@ -105,18 +105,18 @@
     },
     "stock": {
       "no_activities": "Créez au moins [[un:activite]] dans « [[Mon:activite:pl]] » pour gérer [[le:stock]] entreprise.",
-      "ingredient": "[[Nom:ingredient]]",
+      "ingredient": "[[Nom:article_ingredient]]",
       "quantity": "Quantité",
       "date_appro": "Date [[de:appro:court]]",
-      "empty_stock": "[[Aucun:ingredient]] [[acc:ingredient:sélectionné:sélectionnée]].",
-      "search_ingredient": "Rechercher [[un:ingredient]]...",
+      "empty_stock": "[[Aucun:article_ingredient]] [[acc:article_ingredient:sélectionné:sélectionnée]].",
+      "search_ingredient": "Rechercher [[un:article_ingredient]]...",
       "see_all_history": "Voir tout l'historique",
       "no_history": "[[Aucun:appro]] [[acc:appro:enregistré:enregistrée]]."
     },
     "historique_appro": {
       "title": "Historique [[Nom:appro]]",
       "all_categories": "Toutes les catégories",
-      "all_ingredients": "[[Tous:ingredient]]",
+      "all_ingredients": "[[Tous:article_ingredient]]",
       "no_results": "[[Aucun:appro]] [[acc:appro:trouvé:trouvée]] pour ces critères.",
       "col_qty": "Quantité"
     },
@@ -128,7 +128,7 @@
       "transfer_success": "[[Nom:transfert]] [[acc:transfert:effectué:effectuée]] avec succès.",
       "transfers_history": "Historique [[Court:transfert:pl]]",
       "labo_stock": "[[Nom:stock]] [[acc:stock:Actuel:Actuelle]]",
-      "empty_stock": "[[Aucun:ingredient]] [[acc:ingredient:sélectionné:sélectionnée]] pour [[ce:labo]].",
+      "empty_stock": "[[Aucun:article_ingredient]] [[acc:article_ingredient:sélectionné:sélectionnée]] pour [[ce:labo]].",
       "filter_activite": "[[Nom:activite]]",
       "all_activites": "[[Tous:activite]]",
       "col_activite": "[[Nom:activite]]"
