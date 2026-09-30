@@ -3,6 +3,7 @@ import { useLocation } from 'react-router-dom';
 import api from '../../api/client';
 import MarkdownView from '../common/MarkdownView';
 import OnboardingChecklist from './OnboardingChecklist';
+import { useVocabulaire } from '../../hooks/useVocabulaire';
 // jsPDF (~113 Ko gzip) ne se charge qu'au clic « Export PDF » (import dynamique).
 
 /**
@@ -23,6 +24,7 @@ export interface ManuelSection {
 
 export default function GuidePage() {
   const location = useLocation();
+  const voc = useVocabulaire();
   const [sections, setSections] = useState<ManuelSection[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -88,7 +90,7 @@ export default function GuidePage() {
           </div>
         </div>
         <button
-          onClick={async () => { const { buildManuelPdf } = await import('../../utils/manuelPdf'); buildManuelPdf(sections); }}
+          onClick={async () => { const { buildManuelPdf } = await import('../../utils/manuelPdf'); buildManuelPdf(sections, voc); }}
           disabled={loading || sections.length === 0}
           style={{
             background: 'rgba(255,255,255,0.16)', color: '#fff', border: '1px solid rgba(255,255,255,0.45)',

@@ -1,4 +1,5 @@
 import type { DestType } from '../../types';
+import { useVocabulaire } from '../../hooks/useVocabulaire';
 
 export interface TransferLine {
   ingredientId: number;
@@ -26,6 +27,7 @@ interface Props {
 }
 
 export default function TransferConfirmModal({ groups, date, refFacture, onConfirm, onCancel }: Props) {
+  const voc = useVocabulaire();
   const [y, m, d] = date.split('-');
   const dateLabel = `${d}/${m}/${y}`;
 
@@ -42,7 +44,7 @@ export default function TransferConfirmModal({ groups, date, refFacture, onConfi
       <div className="modal" style={{ maxWidth: 680, width: '96%' }} onClick={(e) => e.stopPropagation()}>
         <div className="modal-header" style={{ background: 'linear-gradient(135deg, #3b0764, #7e22cecc)', borderBottom: 'none', padding: '16px 20px' }}>
           <div>
-            <h2 style={{ color: '#fff', margin: 0, fontSize: '1rem', fontWeight: 800 }}>Confirmation de transfert</h2>
+            <h2 style={{ color: '#fff', margin: 0, fontSize: '1rem', fontWeight: 800 }}>Confirmation {voc.de('transfert')}</h2>
             <div style={{ color: 'rgba(255,255,255,0.85)', fontSize: '0.78rem', marginTop: 2 }}>
               Réf: {refFacture} &nbsp;·&nbsp; {dateLabel}
             </div>
@@ -60,7 +62,7 @@ export default function TransferConfirmModal({ groups, date, refFacture, onConfi
             return (
               <div key={group.destKey} style={{ marginBottom: 20 }}>
                 <div style={{ background: 'linear-gradient(90deg, #ede9fe, #faf5ff)', borderRadius: 8, padding: '6px 12px', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{ fontWeight: 800, fontSize: '0.85rem', color: '#4c1d95' }}>{group.destType === 'labo' ? '🏭' : '🏪'} {group.destNom}</span>
+                  <span style={{ fontWeight: 800, fontSize: '0.85rem', color: '#4c1d95' }}>{voc.icon(group.destType === 'labo' ? 'labo' : 'activite')} {group.destNom}</span>
                   <span style={{ marginLeft: 'auto', fontSize: '0.78rem', color: '#7c3aed', fontWeight: 700 }}>
                     HT : {groupHT.toFixed(3)} DT
                     {hasTva && <> &nbsp;·&nbsp; TTC : {groupTTC.toFixed(3)} DT</>}
@@ -69,10 +71,10 @@ export default function TransferConfirmModal({ groups, date, refFacture, onConfi
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
                   <thead>
                     <tr style={{ background: '#f5f3ff', borderBottom: '2px solid #c4b5fd' }}>
-                      {(['Article', 'Qté', hasTva ? 'Prix HT/u' : 'Prix/u', hasTva ? 'TVA %' : null, hasTva ? 'Prix TTC/u' : null, 'Total HT', hasTva ? 'Total TTC' : null] as (string | null)[])
+                      {([voc.Nom('article'), 'Qté', hasTva ? 'Prix HT/u' : 'Prix/u', hasTva ? 'TVA %' : null, hasTva ? 'Prix TTC/u' : null, 'Total HT', hasTva ? 'Total TTC' : null] as (string | null)[])
                         .filter(Boolean)
                         .map((h) => (
-                          <th key={h!} style={{ padding: '6px 10px', fontWeight: 700, textAlign: h === 'Article' ? 'left' : 'right', color: '#6d28d9', textTransform: 'uppercase', fontSize: '0.65rem', letterSpacing: '0.05em' }}>
+                          <th key={h!} style={{ padding: '6px 10px', fontWeight: 700, textAlign: h === voc.Nom('article') ? 'left' : 'right', color: '#6d28d9', textTransform: 'uppercase', fontSize: '0.65rem', letterSpacing: '0.05em' }}>
                             {h}
                           </th>
                         ))}
@@ -115,7 +117,7 @@ export default function TransferConfirmModal({ groups, date, refFacture, onConfi
             <button className="btn btn-ghost btn-sm" onClick={onCancel}>Annuler</button>
             <button onClick={onConfirm}
               style={{ background: 'linear-gradient(135deg, #3b0764, #7e22ce)', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 20px', fontWeight: 700, cursor: 'pointer', fontSize: '0.88rem' }}>
-              Confirmer le transfert
+              Confirmer {voc.le('transfert')}
             </button>
           </div>
         </div>

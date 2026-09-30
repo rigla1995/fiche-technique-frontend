@@ -1,0 +1,66 @@
+[
+  {
+    "fichier": "src/components/client/ClientDashboard.tsx",
+    "avant": "labo",
+    "apres": "labo",
+    "type": "discriminant",
+    "justification": "Clé technique de l'onglet « labo » (type TabKey) dans la liste TAB_PRIORITE : elle n'est que comparée (keys.has, t.key === tab) et envoyée à l'API (?tab=labo), jamais affichée. Le libellé de l'onglet passe par voc.Court('labo') et le sous-titre par voc.nom('labo')."
+  },
+  {
+    "fichier": "src/components/client/ClientDashboard.tsx",
+    "avant": "acheteurs",
+    "apres": "acheteurs",
+    "type": "discriminant",
+    "justification": "Clé technique de l'onglet « acheteurs » (type TabKey) dans la liste TAB_PRIORITE : comparée et envoyée à l'API (?tab=acheteurs), jamais affichée ; le libellé de l'onglet passe par voc.Pl('acheteur')."
+  },
+  {
+    "fichier": "src/components/client/ClientDashboard.tsx",
+    "avant": "ventes",
+    "apres": "ventes",
+    "type": "discriminant",
+    "justification": "Clé technique de l'onglet « ventes » (type TabKey) dans la liste TAB_PRIORITE : comparée et envoyée à l'API (?tab=ventes), jamais affichée ; le libellé de l'onglet passe par voc.Pl('vente')."
+  },
+  {
+    "fichier": "src/components/client/ClientDashboard.tsx",
+    "avant": "pertes",
+    "apres": "pertes",
+    "type": "discriminant",
+    "justification": "Clé technique de l'onglet « pertes » (type TabKey) dans la liste TAB_PRIORITE : comparée et envoyée à l'API (?tab=pertes), jamais affichée ; le libellé de l'onglet passe par voc.Pl('perte')."
+  },
+  {
+    "fichier": "src/components/client/ClientDashboard.tsx",
+    "avant": "labos",
+    "apres": "labos",
+    "type": "discriminant",
+    "justification": "Nom du filtre « labos » (clé de FiltresState) : listes FILTRE_KEYS et FILTRES_PAR_TAB et argument de setFiltre('labos') — clé d'état, paramètre d'URL et de requête API, jamais affichée. Le libellé du filtre passe par voc.Pl('labo')."
+  },
+  {
+    "fichier": "src/components/client/ClientDashboard.tsx",
+    "avant": "prestataires",
+    "apres": "prestataires",
+    "type": "discriminant",
+    "justification": "Nom du filtre « prestataires » (clé de FiltresState) : listes FILTRE_KEYS et FILTRES_PAR_TAB et argument de setFiltre('prestataires') — clé d'état, paramètre d'URL et de requête API, jamais affichée. Le libellé du filtre passe par voc.Pl('prestataire')."
+  },
+  {
+    "fichier": "src/components/client/ClientDashboard.tsx",
+    "avant": "fournisseurs",
+    "apres": "fournisseurs",
+    "type": "discriminant",
+    "justification": "Nom du filtre « fournisseurs » (clé de FiltresState) : listes FILTRE_KEYS et FILTRES_PAR_TAB et argument de setFiltre('fournisseurs') — clé d'état, paramètre d'URL et de requête API, jamais affichée. Le libellé du filtre passe par voc.Pl('fournisseur')."
+  },
+  {
+    "fichier": "src/components/client/ClientDashboard.tsx",
+    "avant": "Pilotage complet : ⟦?⟦·⟧|votre activité⟧ — tout en TTC.",
+    "apres": "Pilotage complet : ⟦?⟦·⟧|votre activité⟧ — tout en TTC.",
+    "type": "homonyme",
+    "justification": "« votre activité » est ici l'activité au sens courant (votre affaire), pas le terme du lexique : ce repli du sous-titre ne s'affiche que si AUCUN onglet n'est visible, donc pour un compte sans activité ni labo ni module acheteurs. voc.votre('activite') écrirait « Pilotage complet : votre service » (Hôtellerie) ou « votre point de vente » (Céramique) à un compte qui n'en a aucun. Les autres éléments du sous-titre passent par voc."
+  },
+  {
+    "fichier": "src/components/client/ClientDashboard.tsx",
+    "avant": "Le module Acheteurs n'est pas actif sur ce compte.",
+    "apres": "Le module Acheteurs n'est pas actif sur ce compte.",
+    "type": "non-repliable",
+    "mode": "accords",
+    "justification": "Signalement à tort : « actif » s'accorde avec « module » (« Le module … n'est pas actif »), pas avec le terme rendu par voc.Court('acheteur', true) ; l'outil ne sait pas rattacher l'adjectif à son antécédent. Rendu Hôtellerie juste : « Le module Clients professionnels n'est pas actif sur ce compte. »"
+  }
+]

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import api from '../../api/client';
 import GuideButton from './GuideButton';
+import { useVocabulaire } from '../../hooks/useVocabulaire';
 
 interface AbonnementResume {
   modeCompte: string;
@@ -26,6 +27,7 @@ function formatDate(iso: string | null) {
 }
 
 export default function AbonnementGerantPage() {
+  const voc = useVocabulaire();
   const [data, setData] = useState<AbonnementResume | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -62,9 +64,9 @@ export default function AbonnementGerantPage() {
 
   const mode = MODE_INFO[data.modeCompte] ?? { label: data.modeCompte, icon: '❓', bg: '#f9fafb', color: '#6b7280', desc: '' };
   const quotas = [
-    { label: 'Activités', nb: data.nbActivites, icon: '📍' },
-    { label: 'Labos',     nb: data.nbLabos,     icon: '🏭' },
-    { label: 'Gérants',   nb: data.nbGerants,   icon: '👤' },
+    { label: voc.Pl('activite'), nb: data.nbActivites, icon: '📍' },
+    { label: voc.Pl('labo'),     nb: data.nbLabos,     icon: voc.icon('labo') },
+    { label: voc.Pl('gerant'),   nb: data.nbGerants,   icon: voc.icon('gerant') },
   ].filter(q => q.nb !== null);
 
   return (

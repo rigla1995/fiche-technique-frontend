@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useVocabulaire } from '../../hooks/useVocabulaire';
 
 export interface InvoiceLineItem {
   ingredientId: number;
@@ -23,6 +24,7 @@ const TIMBRE = 1;
 
 export default function InvoiceConfirmModal({ lines, date, fournisseurNom, refFacture, theme, onConfirm, onCancel }: Props) {
   const [timbreFiscal, setTimbreFiscal] = useState(true);
+  const voc = useVocabulaire();
 
   const [y, m, d] = date.split('-');
   const dateLabel = `${d}/${m}/${y}`;
@@ -43,7 +45,7 @@ export default function InvoiceConfirmModal({ lines, date, fournisseurNom, refFa
       <div className="modal" style={{ maxWidth: 620, width: '96%' }} onClick={(e) => e.stopPropagation()}>
         <div className="modal-header" style={{ background: `linear-gradient(135deg, ${accent}, ${accent}cc)`, borderBottom: 'none', padding: '16px 20px' }}>
           <div>
-            <h2 style={{ color: '#fff', margin: 0, fontSize: '1rem', fontWeight: 800 }}>Confirmation d'approvisionnement</h2>
+            <h2 style={{ color: '#fff', margin: 0, fontSize: '1rem', fontWeight: 800 }}>Confirmation {voc.de('appro')}</h2>
             <div style={{ color: 'rgba(255,255,255,0.85)', fontSize: '0.78rem', marginTop: 2 }}>
               {refFacture ? `Réf: ${refFacture}` : 'Sans référence facture'} &nbsp;·&nbsp; {dateLabel}
               {fournisseurNom && <> &nbsp;·&nbsp; {fournisseurNom}</>}
@@ -56,10 +58,10 @@ export default function InvoiceConfirmModal({ lines, date, fournisseurNom, refFa
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
             <thead>
               <tr style={{ background: accentBg, borderBottom: `2px solid ${accentBorder}` }}>
-                {(['Article', 'Qté', 'Unité', 'Prix HT/u', hasTva ? 'TVA %' : null, hasTva ? 'Prix TTC/u' : null, 'Total HT', hasTva ? 'Total TTC' : null] as (string | null)[])
+                {([voc.Nom('article'), 'Qté', 'Unité', 'Prix HT/u', hasTva ? 'TVA %' : null, hasTva ? 'Prix TTC/u' : null, 'Total HT', hasTva ? 'Total TTC' : null] as (string | null)[])
                   .filter(Boolean)
                   .map((h) => (
-                    <th key={h!} style={{ padding: '7px 10px', fontWeight: 700, textAlign: h === 'Article' ? 'left' : 'right', color: accent, textTransform: 'uppercase', fontSize: '0.68rem', letterSpacing: '0.05em' }}>
+                    <th key={h!} style={{ padding: '7px 10px', fontWeight: 700, textAlign: h === voc.Nom('article') ? 'left' : 'right', color: accent, textTransform: 'uppercase', fontSize: '0.68rem', letterSpacing: '0.05em' }}>
                       {h}
                     </th>
                   ))}
@@ -118,7 +120,7 @@ export default function InvoiceConfirmModal({ lines, date, fournisseurNom, refFa
                 onClick={() => onConfirm(timbreFiscal)}
                 style={{ background: `linear-gradient(135deg, ${accent}, ${accent}cc)`, color: '#fff', border: 'none', borderRadius: 8, padding: '8px 20px', fontWeight: 700, cursor: 'pointer', fontSize: '0.88rem' }}
               >
-                Confirmer l'appro
+                Confirmer {voc.le('appro', false, 'court')}
               </button>
             </div>
           </div>

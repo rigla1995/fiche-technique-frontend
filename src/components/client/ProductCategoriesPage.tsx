@@ -1,22 +1,22 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import api from '../../api/client';
 import type { CategorieProduit, TypeProduitCategorie } from '../../types';
 import HistoryFilterBar, { FilterField, FilterInput, FilterSelect } from '../common/HistoryFilterBar';
 import { useConfirm } from '../common/ConfirmDialog';
 import GuideButton from './GuideButton';
 import { PRODUCT_THEME } from '../../theme/productTheme';
+import { useVocabulaire } from '../../hooks/useVocabulaire';
+import type { Vocab } from '../../vocab/vocab';
 
 const COLOR = PRODUCT_THEME.accent;
 const HERO = PRODUCT_THEME.heroGradient;
 const BTN = PRODUCT_THEME.btnGradient;
 
-const TYPE_OPTIONS: { value: TypeProduitCategorie; label: string; icon: string }[] = [
-  { value: 'vendable', label: 'Produit vendable', icon: '🍽️' },
-  { value: 'supplement', label: 'Supplément vendable', icon: '➕' },
-  { value: 'valorise', label: 'Article valorisé', icon: '💎' },
+const typeOptions = (voc: Vocab): { value: TypeProduitCategorie; label: string; icon: string }[] => [
+  { value: 'vendable', label: voc.Nom('produit_vendable'), icon: '🍽️' },
+  { value: 'supplement', label: `${voc.Nom('supplement')} vendable`, icon: voc.icon('supplement') },
+  { value: 'valorise', label: `${voc.Nom('article')} ${voc.acc('article', 'valorisé', 'valorisée')}`, icon: voc.icon('produit_valorise') },
 ];
-const typeLabel = (t?: TypeProduitCategorie) => TYPE_OPTIONS.find(o => o.value === t)?.label ?? '—';
-const typeIcon = (t?: TypeProduitCategorie) => TYPE_OPTIONS.find(o => o.value === t)?.icon ?? '🏷️';
 
 const apiMsg = (e: unknown, fallback = 'Erreur') =>
   (e as { response?: { data?: { message?: string } } })?.response?.data?.message ?? fallback;
@@ -26,6 +26,10 @@ const emptyRow = (): CatRow => ({ nom: '' });
 
 export default function ProductCategoriesPage() {
   const { alerte } = useConfirm();
+  const voc = useVocabulaire();
+  const TYPE_OPTIONS = useMemo(() => typeOptions(voc), [voc]);
+  const typeLabel = (t?: TypeProduitCategorie) => TYPE_OPTIONS.find(o => o.value === t)?.label ?? '—';
+  const typeIcon = (t?: TypeProduitCategorie) => TYPE_OPTIONS.find(o => o.value === t)?.icon ?? '🏷️';
   const [categories, setCategories] = useState<CategorieProduit[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -103,10 +107,10 @@ export default function ProductCategoriesPage() {
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
               <div style={{ background: 'rgba(99,102,241,0.18)', border: '1px solid rgba(99,102,241,0.3)', borderRadius: 10, padding: '7px 9px', fontSize: '1.2rem', lineHeight: 1 }}>🏷️</div>
-              <h1 style={{ fontSize: '1.45rem', fontWeight: 800, color: '#fff', margin: 0, letterSpacing: '-0.01em' }}>Catégories de produit</h1>
+              <h1 style={{ fontSize: '1.45rem', fontWeight: 800, color: '#fff', margin: 0, letterSpacing: '-0.01em' }}>Catégories {voc.de('produit')}</h1>
             </div>
             <p style={{ color: 'rgba(255,255,255,0.55)', fontSize: '0.83rem', margin: 0, letterSpacing: '0.01em' }}>
-              Classez vos produits vendables, suppléments et articles valorisés par catégorie
+              Classez {voc.votre('produit_vendable', true)}, {voc.pl('supplement')} et {voc.pl('article')} {voc.acc('article', 'valorisés', 'valorisées')} par catégorie
             </p>
           </div>
           <div style={{ background: 'rgba(99,102,241,0.12)', border: '1px solid rgba(99,102,241,0.22)', borderRadius: 14, padding: '10px 20px', textAlign: 'center', minWidth: 80 }}>
@@ -140,8 +144,8 @@ export default function ProductCategoriesPage() {
       ) : categories.length === 0 ? (
         <div style={{ background: 'linear-gradient(135deg,#f0fdf4,#dcfce7)', border: '2px dashed #c7d2fe', borderRadius: 18, padding: '48px 32px', textAlign: 'center' }}>
           <div style={{ fontSize: '2.8rem', marginBottom: 14 }}>🏷️</div>
-          <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#14532d', margin: '0 0 8px' }}>Aucune catégorie de produit</h3>
-          <p style={{ color: '#166534', fontSize: '0.88rem', margin: '0 0 20px', maxWidth: 440, marginInline: 'auto' }}>Les catégories servent à classer vos produits vendables et suppléments (obligatoire à la création) ainsi que vos articles valorisés.</p>
+          <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#14532d', margin: '0 0 8px' }}>Aucune catégorie {voc.de('produit')}</h3>
+          <p style={{ color: '#166534', fontSize: '0.88rem', margin: '0 0 20px', maxWidth: 440, marginInline: 'auto' }}>Les catégories servent à classer {voc.votre('produit_vendable', true)} et {voc.pl('supplement')} (obligatoire à la création) ainsi que {voc.votre('article', true)} {voc.acc('article', 'valorisés', 'valorisées')}.</p>
           <button onClick={openCreate} style={{ background: BTN, color: '#fff', border: 'none', borderRadius: 10, padding: '11px 28px', fontWeight: 700, fontSize: '0.92rem', cursor: 'pointer' }}>+ Créer la première catégorie</button>
         </div>
       ) : filtered.length === 0 ? (
@@ -153,7 +157,7 @@ export default function ProductCategoriesPage() {
               <tr>
                 <th>Nom</th>
                 <th>Type</th>
-                <th>Produits</th>
+                <th>{voc.Pl('produit')}</th>
                 <th style={{ textAlign: 'right' }}>Actions</th>
               </tr>
             </thead>
@@ -162,7 +166,7 @@ export default function ProductCategoriesPage() {
                 <tr key={c.id}>
                   <td style={{ fontWeight: 600, color: '#0f172a' }}>{c.name}</td>
                   <td><span style={{ fontSize: '0.74rem', fontWeight: 700, background: '#e0e7ff', color: '#3730a3', border: '1px solid #c7d2fe', borderRadius: 20, padding: '2px 9px', whiteSpace: 'nowrap' }}>{typeIcon(c.typeProduit)} {typeLabel(c.typeProduit)}</span></td>
-                  <td><span style={{ fontSize: '0.82rem', color: COLOR, fontWeight: 600 }}>{c.produitsCount ?? 0} produit{(c.produitsCount ?? 0) !== 1 ? 's' : ''}</span></td>
+                  <td><span style={{ fontSize: '0.82rem', color: COLOR, fontWeight: 600 }}>{c.produitsCount ?? 0} {voc.nom('produit', (c.produitsCount ?? 0) !== 1)}</span></td>
                   <td className="actions-cell" style={{ justifyContent: 'flex-end' }}>
                     <button className="btn btn-ghost btn-sm" onClick={() => openEdit(c)}>✏️ Modifier</button>
                     <button className="btn btn-danger btn-sm" onClick={() => setDeleteId(c.id)}>🗑️</button>
@@ -197,7 +201,7 @@ export default function ProductCategoriesPage() {
                   <input
                     className="input" style={{ flex: 1 }}
                     autoFocus={i === 0}
-                    placeholder="Ex: Boissons"
+                    placeholder={voc.ex('Ex: Boissons', 'Ex: Catégorie A')}
                     value={row.nom}
                     onChange={e => updateRow(i, e.target.value)}
                     onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); if (i === rows.length - 1) addRow(); } }}
@@ -235,7 +239,7 @@ export default function ProductCategoriesPage() {
               </div>
               <div className="form-group">
                 <label>Nom *</label>
-                <input className="input" autoFocus value={editNom} placeholder="Ex: Boissons" onChange={e => setEditNom(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSave()} />
+                <input className="input" autoFocus value={editNom} placeholder={voc.ex('Ex: Boissons', 'Ex: Catégorie A')} onChange={e => setEditNom(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSave()} />
               </div>
               <div className="modal-footer">
                 <button className="btn btn-ghost" onClick={closeEdit}>Annuler</button>
@@ -255,7 +259,7 @@ export default function ProductCategoriesPage() {
             <div className="modal-body" style={{ padding: '28px 24px' }}>
               <div style={{ fontSize: 36, marginBottom: 12 }}>⚠️</div>
               <h3 style={{ margin: '0 0 10px' }}>Supprimer cette catégorie ?</h3>
-              <p style={{ color: 'var(--text-muted)', margin: '0 0 20px', fontSize: '0.9rem' }}>Les produits et articles valorisés liés perdront leur catégorie.</p>
+              <p style={{ color: 'var(--text-muted)', margin: '0 0 20px', fontSize: '0.9rem' }}>{voc.Le('produit', true)} et {voc.pl('article')} {voc.acc('article', 'valorisés', 'valorisées')} {voc.accN(['produit', 'article'], 'liés', 'liées')} perdront leur catégorie.</p>
               <div className="modal-footer">
                 <button className="btn btn-ghost" onClick={() => setDeleteId(null)}>Annuler</button>
                 <button className="btn btn-danger" onClick={() => handleDelete(deleteId!)}>Supprimer</button>

@@ -6,6 +6,9 @@ import HistoryFilterBar, { FilterField, FilterInput, FilterSelect } from '../com
 import { useConfirm } from '../common/ConfirmDialog';
 import type { Labo } from '../../types';
 import { useAuth } from '../../context/AuthContext';
+import { useVocabulaire } from '../../hooks/useVocabulaire';
+import { libelleCategoriePt } from '../../vocab/categoriesPt';
+import type { Vocab } from '../../vocab/vocab';
 
 const apiMsg = (e: unknown, fallback = 'Erreur') =>
   (e as { response?: { data?: { message?: string } } })?.response?.data?.message ?? fallback;
@@ -46,13 +49,14 @@ interface LaboTransfert {
 
 // Destination affichée : dest_nom (lot 1b) avec repli activite_nom (ancienne réponse).
 const destNomOf = (t: LaboTransfert): string => t.dest_nom ?? t.activite_nom ?? '—';
-const destIcon = (t: LaboTransfert): string => (t.dest_type === 'labo' ? '🏭' : '🏪');
+const destIcon = (voc: Vocab, t: LaboTransfert): string => voc.icon(t.dest_type === 'labo' ? 'labo' : 'activite');
 
 export default function LaboVentesPage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { user } = useAuth();
   const { alerte } = useConfirm();
+  const voc = useVocabulaire();
   const [labos, setLabos] = useState<Labo[]>([]);
   const [selectedLaboId, setSelectedLaboId] = useState<number | null>(null);
   const [transferts, setTransferts] = useState<LaboTransfert[]>([]);
@@ -178,13 +182,13 @@ export default function LaboVentesPage() {
       }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
-            <div style={{ background: 'rgba(255,255,255,0.2)', borderRadius: 10, padding: '7px 9px', fontSize: '1.2rem' }}>🏭</div>
+            <div style={{ background: 'rgba(255,255,255,0.2)', borderRadius: 10, padding: '7px 9px', fontSize: '1.2rem' }}>{voc.icon('labo')}</div>
             <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0 }}>
-              Ventes Labo{selectedLabo ? ` — ${selectedLabo.nom}` : ''}
+              {voc.Pl('vente')} {voc.Court('labo')}{selectedLabo ? ` — ${selectedLabo.nom}` : ''}
             <HelpButton section="ventes-labo" variant="solid" size={18} tip="Aide" /></h1>
           </div>
           <p style={{ color: 'rgba(255,255,255,0.82)', margin: 0, fontSize: '0.85rem' }}>
-            Historique des transferts valorisés avec analyse prix / coût
+            Historique {voc.du('transfert', true)} {voc.acc('transfert', 'valorisés', 'valorisées')} avec analyse prix / coût
           </p>
         </div>
         {user?.role !== 'gerant' && (
@@ -206,14 +210,14 @@ export default function LaboVentesPage() {
                 color: selectedLaboId === l.id ? '#fff' : CD,
                 fontWeight: selectedLaboId === l.id ? 700 : 400,
               }}>
-              🏭 {l.nom}
+              {voc.icon('labo')} {l.nom}
             </button>
           ))}
         </div>
       )}
 
       {!selectedLaboId ? (
-        <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '60px 0' }}>Aucun labo disponible</div>
+        <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '60px 0' }}>{voc.Aucun('labo')} disponible</div>
       ) : (
         <>
           {/* Barre de filtres (composant partagé) — dates côté serveur (« Filtrer dates »), selects en direct */}
@@ -229,12 +233,12 @@ export default function LaboVentesPage() {
             <FilterField label="🏷️ Catégorie">
               <FilterSelect value={filterCategorie} onChange={e => handleCategorieChange(e.target.value)}>
                 <option value="">Toutes</option>
-                {categorieOptions.map(c => <option key={c} value={c}>{c}</option>)}
+                {categorieOptions.map(c => <option key={c} value={c}>{libelleCategoriePt(voc, c)}</option>)}
               </FilterSelect>
             </FilterField>
-            <FilterField label="📦 Article">
+            <FilterField label={`${voc.icon('article')} ${voc.Nom('article')}`}>
               <FilterSelect value={filterArticle} onChange={e => { setFilterArticle(e.target.value); setPage(1); }}>
-                <option value="">Tous</option>
+                <option value="">{voc.acc('article', 'Tous', 'Toutes')}</option>
                 {articleOptions.map(a => <option key={a} value={a}>{a}</option>)}
               </FilterSelect>
             </FilterField>
@@ -254,7 +258,7 @@ export default function LaboVentesPage() {
                 <div style={{ fontSize: '1.25rem', fontWeight: 800, color: CD }}>{fmtMoney(totalAchat)}</div>
               </div>
               <div style={{ flex: 1, minWidth: 160, background: '#fff', borderRadius: 12, border: `1.5px solid ${CB}`, padding: '14px 20px' }}>
-                <div style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Valeur totale transferts</div>
+                <div style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Valeur totale {voc.court('transfert', true)}</div>
                 <div style={{ fontSize: '1.25rem', fontWeight: 800, color: C }}>{fmtMoney(totalTransferts)}</div>
               </div>
               <div style={{ flex: 1, minWidth: 160, background: '#fff', borderRadius: 12, border: `1.5px solid ${CB}`, padding: '14px 20px' }}>
@@ -270,7 +274,7 @@ export default function LaboVentesPage() {
           {filtered.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--text-muted)', background: '#fff', borderRadius: 14, border: `1.5px solid ${CB}` }}>
               <div style={{ fontSize: '2.5rem', marginBottom: 12 }}>📤</div>
-              Aucun transfert valorisé trouvé
+              {voc.Aucun('transfert')} {voc.acc('transfert', 'valorisé', 'valorisée')} {voc.acc('transfert', 'trouvé', 'trouvée')}
             </div>
           ) : (
             <>
@@ -282,11 +286,11 @@ export default function LaboVentesPage() {
                   <thead>
                     <tr style={{ background: CL, borderBottom: `2px solid ${CB}` }}>
                       <th style={{ padding: '8px 10px', width: 36 }}></th>
-                      <th style={{ padding: '11px 14px', textAlign: 'left', fontSize: '0.74rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Article</th>
+                      <th style={{ padding: '11px 14px', textAlign: 'left', fontSize: '0.74rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.04em' }}>{voc.Nom('article')}</th>
                       <th style={{ padding: '11px 14px', textAlign: 'left', fontSize: '0.74rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Destination</th>
                       <th style={{ padding: '11px 14px', textAlign: 'right', fontSize: '0.74rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Qté</th>
-                      <th style={{ padding: '11px 14px', textAlign: 'right', fontSize: '0.74rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Prix transfert</th>
-                      <th style={{ padding: '11px 14px', textAlign: 'right', fontSize: '0.74rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Prix appro</th>
+                      <th style={{ padding: '11px 14px', textAlign: 'right', fontSize: '0.74rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Prix {voc.court('transfert')}</th>
+                      <th style={{ padding: '11px 14px', textAlign: 'right', fontSize: '0.74rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Prix {voc.court('appro')}</th>
                       <th style={{ padding: '11px 14px', textAlign: 'right', fontSize: '0.74rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Écart</th>
                     </tr>
                   </thead>
@@ -318,8 +322,8 @@ export default function LaboVentesPage() {
                               {fmtDate(l.date_transfert)}
                             </div>
                           </td>
-                          <td style={{ padding: '11px 14px', fontSize: '0.84rem', color: isSel ? 'rgba(255,255,255,0.9)' : 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={l.dest_type === 'labo' ? 'Cession interne vers un labo rattaché' : 'Transfert vers une activité'}>
-                            <span style={{ marginRight: 5 }}>{destIcon(l)}</span>{destNomOf(l)}
+                          <td style={{ padding: '11px 14px', fontSize: '0.84rem', color: isSel ? 'rgba(255,255,255,0.9)' : 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={l.dest_type === 'labo' ? `Cession interne vers ${voc.un('labo')} ${voc.acc('labo', 'rattaché', 'rattachée')}` : `${voc.Nom('transfert')} vers ${voc.un('activite')}`}>
+                            <span style={{ marginRight: 5 }}>{destIcon(voc, l)}</span>{destNomOf(l)}
                           </td>
                           <td style={{ padding: '11px 14px', fontSize: '0.88rem', textAlign: 'right', fontWeight: 600, color: isSel ? '#fff' : undefined }}>{l.quantite}</td>
                           {/* Prix transfert = total */}

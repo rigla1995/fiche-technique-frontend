@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { NavLink, Link, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../context/AuthContext';
+import { useVocabulaire } from '../../hooks/useVocabulaire';
 import api from '../../api/client';
 import type { ActiviteTypesSummary, Labo, AbonnementConfig } from '../../types';
 
@@ -107,6 +108,7 @@ function SubNavLink({ to, icon, label, isActive, onClick }: {
 
 export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const { t } = useTranslation();
+  const voc = useVocabulaire();
   const { user } = useAuth();
   const navigate = useNavigate();
   const [typesSummary, setTypesSummary] = useState<ActiviteTypesSummary | null>(null);
@@ -279,12 +281,12 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   ) : (isEntreprise && lockLevel0) ? (
     <div style={{ background: '#fef9c3', borderRadius: 8, padding: '10px 12px', margin: '8px 12px', fontSize: '0.78rem', color: '#854d0e', lineHeight: 1.5 }}>
       {aboConfig && aboConfig.nbActivites === 0
-        ? '🏭 Créez votre labo pour débloquer le référentiel et vos ventes aux acheteurs.'
-        : '🏢 Créez vos activités ou votre labo pour débloquer le référentiel et le tableau de bord.'}
+        ? `${voc.icon('labo')} Créez ${voc.votre('labo')} pour débloquer ${voc.le('referentiel')} et ${voc.votre('vente', true)} ${voc.au('acheteur', true)}.`
+        : `🏢 Créez ${voc.votre('activite', true)} ou ${voc.votre('labo')} pour débloquer ${voc.le('referentiel')} et le tableau de bord.`}
     </div>
   ) : (isEntreprise && lockLevel1) ? (
     <div style={{ background: '#f0fdf4', borderRadius: 8, padding: '10px 12px', margin: '8px 12px', fontSize: '0.78rem', color: '#166534', lineHeight: 1.5 }}>
-      📚 Créez vos articles dans le référentiel et assignez-les pour débloquer les espaces.
+      {voc.icon('referentiel')} Créez {voc.votre('article', true)} dans {voc.le('referentiel')} et assignez-les pour débloquer les espaces.
     </div>
   ) : null;
 
@@ -450,13 +452,13 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                 <>
                   {/* Pas de séparateur d'ouverture pour un gérant : c'est sa première section */}
                   {!isGerant && <Divider />}
-                  <CollapsibleHeader label="Référentiel" icon="📚" isOpen={openSections.has('referentiel')} locked={lockLevel0} onToggle={() => toggleSection('referentiel')} />
+                  <CollapsibleHeader label={voc.Nom('referentiel')} icon={voc.icon('referentiel')} isOpen={openSections.has('referentiel')} locked={lockLevel0} onToggle={() => toggleSection('referentiel')} />
                   {openSections.has('referentiel') && (
                     <>
                       <SubNavLink to="/client/referentiel/unites" icon="📏" label="Unités" isActive={location.pathname === '/client/referentiel/unites'} onClick={onClose} />
                       <SubNavLink to="/client/referentiel/familles" icon="🗂️" label="Familles" isActive={location.pathname === '/client/referentiel/familles'} onClick={onClose} />
                       <SubNavLink to="/client/referentiel/categories" icon="🏷️" label="Catégories" isActive={location.pathname === '/client/referentiel/categories'} onClick={onClose} />
-                      <SubNavLink to="/client/referentiel/articles" icon="🧂" label="Articles" isActive={location.pathname === '/client/referentiel/articles'} onClick={onClose} />
+                      <SubNavLink to="/client/referentiel/articles" icon="🧂" label={voc.Pl('article')} isActive={location.pathname === '/client/referentiel/articles'} onClick={onClose} />
                       <SubNavLink to="/client/referentiel/import" icon="📥" label="Ajout Dynamique" isActive={location.pathname === '/client/referentiel/import'} onClick={onClose} />
                     </>
                   )}
@@ -470,17 +472,17 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                   {(hasActivites || typesSummary === null) && (
                   <>
                   <Divider />
-                  <CollapsibleHeader label="Espace Activités" icon="📍" isOpen={openSections.has('activites')} locked={lockEspaceActivites} onToggle={() => toggleSection('activites')} />
+                  <CollapsibleHeader label={voc.Nom('espace_activites')} icon="📍" isOpen={openSections.has('activites')} locked={lockEspaceActivites} onToggle={() => toggleSection('activites')} />
                   {openSections.has('activites') && (
                     <>
                       <li>
                         <NavLink to="/client/stock?section=activite" className={({ isActive }) => `sidebar-link ${isActive && currentSection === 'activite' ? 'active' : ''}`} onClick={onClose}>
-                          <span className="link-icon">📦</span><span className="link-label">Stock Activités</span>
+                          <span className="link-icon">{voc.icon('stock')}</span><span className="link-label">{voc.Nom('stock')} {voc.Court('activite', true)}</span>
                         </NavLink>
                       </li>
                       <li>
                         <Link to="/client/stock/historique?entType=activite" className={`sidebar-link ${isHistoriquePage ? 'active' : ''}`} onClick={onClose}>
-                          <span className="link-icon">📋</span><span className="link-label">Historique Appro</span>
+                          <span className="link-icon">📋</span><span className="link-label">Historique {voc.Court('appro')}</span>
                         </Link>
                       </li>
                       <li>
@@ -490,17 +492,17 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                       </li>
                       <li>
                         <Link to="/client/stock/historique-pertes?entType=activite" className={`sidebar-link ${isHistoriquepertesPage ? 'active' : ''}`} onClick={onClose}>
-                          <span className="link-icon">📉</span><span className="link-label">Historique Pertes</span>
+                          <span className="link-icon">📉</span><span className="link-label">Historique {voc.Court('perte', true)}</span>
                         </Link>
                       </li>
                       <li>
                         <Link to="/client/inventaire?section=activite" className={`sidebar-link ${location.pathname === '/client/inventaire' && currentSearch.get('section') === 'activite' ? 'active' : ''}`} onClick={onClose}>
-                          <span className="link-icon">🔢</span><span className="link-label">Inventaire</span>
+                          <span className="link-icon">🔢</span><span className="link-label">{voc.Nom('inventaire')}</span>
                         </Link>
                       </li>
                       <li>
                         <Link to="/client/inventaire/historique?section=activite" className={`sidebar-link ${location.pathname === '/client/inventaire/historique' && currentSearch.get('section') === 'activite' ? 'active' : ''}`} onClick={onClose}>
-                          <span className="link-icon">📊</span><span className="link-label">Historique Inventaire</span>
+                          <span className="link-icon">📊</span><span className="link-label">Historique {voc.Court('inventaire')}</span>
                         </Link>
                       </li>
                     </>
@@ -514,23 +516,23 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                     return (
                       <>
                         <Divider />
-                        <CollapsibleHeader label="Espace Labo" icon="🏭" isOpen={openSections.has('labo')} locked={lockEspaceLabo} onToggle={() => toggleSection('labo')} />
+                        <CollapsibleHeader label={voc.Nom('espace_labo')} icon={voc.icon('espace_labo')} isOpen={openSections.has('labo')} locked={lockEspaceLabo} onToggle={() => toggleSection('labo')} />
                         {openSections.has('labo') && (
                           <>
-                            <li><Link to={`/client/labo/stock?laboId=${firstLaboId}`} className={`sidebar-link ${location.pathname === '/client/labo/stock' ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📦</span><span className="link-label">Stock Labo</span></Link></li>
-                            <li><Link to={`/client/labo/historique-appro?laboId=${firstLaboId}`} className={`sidebar-link ${location.pathname === '/client/labo/historique-appro' ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📋</span><span className="link-label">Historique Appro</span></Link></li>
+                            <li><Link to={`/client/labo/stock?laboId=${firstLaboId}`} className={`sidebar-link ${location.pathname === '/client/labo/stock' ? 'active' : ''}`} onClick={onClose}><span className="link-icon">{voc.icon('stock')}</span><span className="link-label">{voc.Nom('stock')} {voc.Court('labo')}</span></Link></li>
+                            <li><Link to={`/client/labo/historique-appro?laboId=${firstLaboId}`} className={`sidebar-link ${location.pathname === '/client/labo/historique-appro' ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📋</span><span className="link-label">Historique {voc.Court('appro')}</span></Link></li>
                             <li><Link to={`/client/labo/factures?laboId=${firstLaboId}`} className={`sidebar-link ${location.pathname === '/client/labo/factures' ? 'active' : ''}`} onClick={onClose}><span className="link-icon">🧾</span><span className="link-label">Factures</span></Link></li>
-                            <li><Link to={`/client/labo/historique-pertes?laboId=${firstLaboId}`} className={`sidebar-link ${location.pathname === '/client/labo/historique-pertes' ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📉</span><span className="link-label">Historique Pertes</span></Link></li>
+                            <li><Link to={`/client/labo/historique-pertes?laboId=${firstLaboId}`} className={`sidebar-link ${location.pathname === '/client/labo/historique-pertes' ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📉</span><span className="link-label">Historique {voc.Court('perte', true)}</span></Link></li>
                             {/* Transferts = labo → activités ET labos rattachés (lot 1b) :
                                 sans activité ni destination rattachée, rien à transférer */}
                             {(hasActivites || hasLaboDestinations) && (
                               <>
-                                <li><Link to={`/client/labo/transfer?laboId=${firstLaboId}`} className={`sidebar-link ${location.pathname === '/client/labo/transfer' ? 'active' : ''}`} onClick={onClose}><span className="link-icon">↗</span><span className="link-label">Transferts</span></Link></li>
-                                <li><Link to={`/client/labo/historique-transferts?laboId=${firstLaboId}`} className={`sidebar-link ${location.pathname === '/client/labo/historique-transferts' ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📋</span><span className="link-label">Historique Transferts</span></Link></li>
+                                <li><Link to={`/client/labo/transfer?laboId=${firstLaboId}`} className={`sidebar-link ${location.pathname === '/client/labo/transfer' ? 'active' : ''}`} onClick={onClose}><span className="link-icon">↗</span><span className="link-label">{voc.Pl('transfert')}</span></Link></li>
+                                <li><Link to={`/client/labo/historique-transferts?laboId=${firstLaboId}`} className={`sidebar-link ${location.pathname === '/client/labo/historique-transferts' ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📋</span><span className="link-label">Historique {voc.Court('transfert', true)}</span></Link></li>
                               </>
                             )}
-                            <li><Link to={`/client/labo/inventaire?laboId=${firstLaboId}`} className={`sidebar-link ${location.pathname === '/client/labo/inventaire' ? 'active' : ''}`} onClick={onClose}><span className="link-icon">🔢</span><span className="link-label">Inventaire</span></Link></li>
-                            <li><Link to={`/client/labo/inventaire/historique?laboId=${firstLaboId}`} className={`sidebar-link ${location.pathname === '/client/labo/inventaire/historique' ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📊</span><span className="link-label">Historique Inventaire</span></Link></li>
+                            <li><Link to={`/client/labo/inventaire?laboId=${firstLaboId}`} className={`sidebar-link ${location.pathname === '/client/labo/inventaire' ? 'active' : ''}`} onClick={onClose}><span className="link-icon">🔢</span><span className="link-label">{voc.Nom('inventaire')}</span></Link></li>
+                            <li><Link to={`/client/labo/inventaire/historique?laboId=${firstLaboId}`} className={`sidebar-link ${location.pathname === '/client/labo/inventaire/historique' ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📊</span><span className="link-label">Historique {voc.Court('inventaire')}</span></Link></li>
                           </>
                         )}
                       </>
@@ -546,15 +548,15 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                   {!lockEspaceProduits && moduleVenteActif && hasActivitesVente && (
                     <>
                       <Divider />
-                      <CollapsibleHeader label="Espace Vente" icon="🛒" isOpen={openSections.has('vente')} locked={false} onToggle={() => toggleSection('vente')} />
+                      <CollapsibleHeader label={voc.Nom('espace_vente')} icon="🛒" isOpen={openSections.has('vente')} locked={false} onToggle={() => toggleSection('vente')} />
                       {openSections.has('vente') && (
                         <>
-                          <li><NavLink to="/client/ventes/prestataires" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}><span className="link-icon">🛵</span><span className="link-label">Config Prestataires</span></NavLink></li>
+                          <li><NavLink to="/client/ventes/prestataires" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}><span className="link-icon">{voc.icon('prestataire')}</span><span className="link-label">Config {voc.Court('prestataire', true)}</span></NavLink></li>
                           {user?.role === 'client' && <li><NavLink to="/client/ventes/charges" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}><span className="link-icon">🏗️</span><span className="link-label">Config Charges</span></NavLink></li>}
-                          <li><NavLink to="/client/ventes/configuration" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}><span className="link-icon">💲</span><span className="link-label">Configuration Vente</span></NavLink></li>
-                          <li><NavLink to="/client/ventes" end className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}><span className="link-icon">💰</span><span className="link-label">Ventes Activités</span></NavLink></li>
+                          <li><NavLink to="/client/ventes/configuration" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}><span className="link-icon">💲</span><span className="link-label">Configuration {voc.Court('vente')}</span></NavLink></li>
+                          <li><NavLink to="/client/ventes" end className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}><span className="link-icon">💰</span><span className="link-label">{voc.Pl('vente')} {voc.Court('activite', true)}</span></NavLink></li>
                           {labos.length > 0 && currentLaboId !== null && (
-                            <li><Link to={`/client/labo/ventes?laboId=${currentLaboId}`} className={`sidebar-link ${location.pathname === '/client/labo/ventes' ? 'active' : ''}`} onClick={onClose}><span className="link-icon">🏭</span><span className="link-label">Ventes Labo</span></Link></li>
+                            <li><Link to={`/client/labo/ventes?laboId=${currentLaboId}`} className={`sidebar-link ${location.pathname === '/client/labo/ventes' ? 'active' : ''}`} onClick={onClose}><span className="link-icon">{voc.icon('labo')}</span><span className="link-label">{voc.Pl('vente')} {voc.Court('labo')}</span></Link></li>
                           )}
                         </>
                       )}
@@ -566,14 +568,14 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                   {moduleAcheteursActif && gerantAcheteursOk && (
                     <>
                       <Divider />
-                      <CollapsibleHeader label="Espace Acheteurs" icon="🤝" isOpen={openSections.has('acheteurs')} locked={false} onToggle={() => toggleSection('acheteurs')} />
+                      <CollapsibleHeader label={voc.Nom('espace_acheteurs')} icon={voc.icon('espace_acheteurs')} isOpen={openSections.has('acheteurs')} locked={false} onToggle={() => toggleSection('acheteurs')} />
                       {openSections.has('acheteurs') && (
                         <>
-                          <li><NavLink to="/client/acheteurs" end className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}><span className="link-icon">🤝</span><span className="link-label">Carnet d'Acheteurs</span></NavLink></li>
+                          <li><NavLink to="/client/acheteurs" end className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}><span className="link-icon">{voc.icon('acheteur')}</span><span className="link-label">Carnet {voc.de('acheteur', true, 'Titre')}</span></NavLink></li>
                           <li><NavLink to="/client/acheteurs/import" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📥</span><span className="link-label">Ajout Dynamique</span></NavLink></li>
-                          <li><NavLink to="/client/acheteurs/tarifs" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}><span className="link-icon">💲</span><span className="link-label">Tarifs Acheteurs</span></NavLink></li>
-                          <li><NavLink to="/client/acheteurs/vente" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}><span className="link-icon">🧾</span><span className="link-label">Nouvelle Vente</span></NavLink></li>
-                          <li><NavLink to="/client/acheteurs/commandes" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📦</span><span className="link-label">Ventes Acheteurs</span></NavLink></li>
+                          <li><NavLink to="/client/acheteurs/tarifs" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}><span className="link-icon">💲</span><span className="link-label">Tarifs {voc.Court('acheteur', true)}</span></NavLink></li>
+                          <li><NavLink to="/client/acheteurs/vente" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}><span className="link-icon">🧾</span><span className="link-label">{voc.Nouveau('vente', false, 'Nom')}</span></NavLink></li>
+                          <li><NavLink to="/client/acheteurs/commandes" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📦</span><span className="link-label">{voc.Pl('vente')} {voc.Court('acheteur', true)}</span></NavLink></li>
                         </>
                       )}
                     </>
@@ -582,12 +584,12 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                   <Divider />
 
                   {/* ══ ESPACE PRODUITS ══ — unlocks at level 2 */}
-                  <CollapsibleHeader label="Espace Produits" icon="🍔" isOpen={openSections.has('produits')} locked={lockEspaceProduits} onToggle={() => toggleSection('produits')} />
+                  <CollapsibleHeader label={`Espace ${voc.Pl('produit')}`} icon={voc.icon('produit')} isOpen={openSections.has('produits')} locked={lockEspaceProduits} onToggle={() => toggleSection('produits')} />
                   {openSections.has('produits') && (
                     <>
                       <li>
                         <Link to="/client/products/categories" className={`sidebar-link ${location.pathname === '/client/products/categories' ? 'active' : ''}`} onClick={onClose}>
-                          <span className="link-icon">🏷️</span><span className="link-label">Catégories Produits</span>
+                          <span className="link-icon">🏷️</span><span className="link-label">Catégories {voc.Court('produit', true)}</span>
                         </Link>
                       </li>
                       {/* Formule basique SANS labo : seuls Catégories Produits et Produits Valorisés
@@ -601,20 +603,20 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                           {hasActivitesVente && (
                             <li>
                               <Link to="/client/products?tab=vendable" className={`sidebar-link ${isProductsPage && currentProductTab === 'vendable' ? 'active' : ''}`} onClick={onClose}>
-                                <span className="link-icon">🍔</span><span className="link-label">Produits Vendables</span>
+                                <span className="link-icon">{voc.icon('produit')}</span><span className="link-label">{voc.Titre('produit_vendable', true)}</span>
                               </Link>
                             </li>
                           )}
                           <li>
                             <Link to="/client/products?tab=utilisable" className={`sidebar-link ${isProductsPage && currentProductTab === 'utilisable' ? 'active' : ''}`} onClick={onClose}>
-                              <span className="link-icon">🧪</span><span className="link-label">Produits Utilisables</span>
+                              <span className="link-icon">🧪</span><span className="link-label">{voc.Titre('produit_utilisable', true)}</span>
                             </Link>
                           </li>
                         </>
                       )}
                       <li>
                         <Link to="/client/products/valorises" className={`sidebar-link ${location.pathname === '/client/products/valorises' ? 'active' : ''}`} onClick={onClose}>
-                          <span className="link-icon">💎</span><span className="link-label">Produits Valorisés</span>
+                          <span className="link-icon">{voc.icon('produit_valorise')}</span><span className="link-label">{voc.Titre('produit_valorise', true)}</span>
                         </Link>
                       </li>
                     </>
@@ -625,8 +627,8 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                   {/* ══ FOURNISSEURS ══ — déverrouillé au niveau 1 (≥1 activité/labo) */}
                   <li>
                     {(lockLevel0)
-                      ? <LockedLink label="Fournisseurs" reason="Créez une activité ou un labo pour débloquer" />
-                      : <NavLink to="/client/fournisseurs" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}><span className="link-icon">🚚</span><span className="link-label">Fournisseurs</span></NavLink>
+                      ? <LockedLink label={voc.Pl('fournisseur')} reason={`Créez ${voc.un('activite')} ou ${voc.un('labo')} pour débloquer`} />
+                      : <NavLink to="/client/fournisseurs" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}><span className="link-icon">🚚</span><span className="link-label">{voc.Pl('fournisseur')}</span></NavLink>
                     }
                   </li>
 
@@ -638,10 +640,10 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                         {!lockLevel0 ? (
                           <NavLink to="/client/gerants" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>
                             <span className="link-icon">👥</span>
-                            <span className="link-label">Gérants</span>
+                            <span className="link-label">{voc.Pl('gerant')}</span>
                           </NavLink>
                         ) : (
-                          <LockedLink label="Gérants" reason="Créez une activité ou un labo pour débloquer" />
+                          <LockedLink label={voc.Pl('gerant')} reason={`Créez ${voc.un('activite')} ou ${voc.un('labo')} pour débloquer`} />
                         )}
                       </li>
                     </>

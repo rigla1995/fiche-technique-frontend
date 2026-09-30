@@ -4,6 +4,7 @@ import { pdfTexte } from './pdfTexte';
 import { parseBlocks } from '../components/common/MarkdownView';
 import type { Block, CalloutKind } from '../components/common/MarkdownView';
 import type { ManuelSection } from '../components/client/GuidePage';
+import type { Vocab } from '../vocab/vocab';
 
 /**
  * Export PDF du manuel d'utilisation : couverture, sommaire paginé, contenu
@@ -49,7 +50,7 @@ const CALLOUT_PDF: Record<CalloutKind, { bg: string; color: string; label: strin
   exemple: { bg: '#fefce8', color: '#854d0e', label: 'EXEMPLE' },
 };
 
-export function buildManuelPdf(sections: ManuelSection[]): void {
+export function buildManuelPdf(sections: ManuelSection[], voc: Vocab): void {
   const doc = new jsPDF({ unit: 'mm', format: 'a4' });
   let y = 0;
 
@@ -81,7 +82,7 @@ export function buildManuelPdf(sections: ManuelSection[]): void {
   setFont(10, 'normal', '#475569');
   const intro = doc.splitTextToSize(
     'Ce manuel présente LabFlow, son vocabulaire, chacun de ses écrans et le détail des calculs '
-    + 'utilisés (coûts de revient, valeur de stock, prix moyens pondérés…). La version en ligne, '
+    + `utilisés (coûts de revient, valeur ${voc.de('stock')}, prix moyens pondérés…). La version en ligne, `
     + 'accessible depuis le menu « Manuel d\'utilisation », reste la référence la plus à jour.',
     CW
   );

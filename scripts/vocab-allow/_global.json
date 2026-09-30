@@ -1,0 +1,100 @@
+[
+  {
+    "fichier": "*",
+    "avant": "Activité Basique",
+    "apres": "Activité Basique",
+    "type": "formule",
+    "justification": "Nom commercial de formule (tarification Basique / Premium / Labo), pas le terme « activité » du domaine : il reste le même pour tous les secteurs (spec §3 règle 4)."
+  },
+  {
+    "fichier": "*",
+    "avant": "Activité Premium",
+    "apres": "Activité Premium",
+    "type": "formule",
+    "justification": "Nom commercial de formule (tarification Basique / Premium / Labo), pas le terme « activité » du domaine : il reste le même pour tous les secteurs (spec §3 règle 4)."
+  },
+  {
+    "fichier": "*",
+    "avant": "Domaine d'activité",
+    "apres": "Domaine d'activité",
+    "type": "homonyme",
+    "justification": "« Activité » au sens de métier ou de secteur (le domaine d'activité du compte), pas l'unité « activité » du lexique (spec §3 règle 4)."
+  },
+  {
+    "fichier": "*",
+    "avant": "Domaines d'activités",
+    "apres": "Domaines d'activités",
+    "type": "homonyme",
+    "justification": "« Activités » au sens de métiers ou de secteurs (menu de l'espace admin dans la barre latérale, qui garde le vocabulaire LabFlow — invariant I4), pas l'unité « activité » du lexique."
+  },
+  {
+    "fichier": "*",
+    "avant": "prix de vente",
+    "apres": "prix de vente",
+    "type": "locution",
+    "justification": "Locution figée de gestion (spec §3 règle 4) : « vente » n'y désigne pas l'objet « une vente » que le domaine peut renommer."
+  },
+  {
+    "fichier": "*",
+    "avant": "Prix vente",
+    "apres": "Prix vente",
+    "type": "locution",
+    "justification": "Forme abrégée d'en-tête de colonne de la locution figée « prix de vente » (spec §3 règle 4) : elle doit rester cohérente avec elle."
+  },
+  {
+    "fichier": "*",
+    "avant": "Type de vente",
+    "apres": "Type de vente",
+    "type": "locution",
+    "justification": "Locution figée (spec §3 règle 4) : libellé du filtre « directe / via prestataire / manuelle / portail », pas l'objet « une vente »."
+  },
+  {
+    "fichier": "*",
+    "avant": "Type vente",
+    "apres": "Type vente",
+    "type": "locution",
+    "justification": "Forme abrégée (filtre et colonne) de la locution figée « type de vente » (spec §3 règle 4) : elle doit rester cohérente avec elle."
+  },
+  {
+    "fichier": "*",
+    "avant": "types vente",
+    "apres": "types vente",
+    "type": "locution",
+    "justification": "Forme abrégée au pluriel (« Tous types vente ») de la locution figée « type de vente » (spec §3 règle 4)."
+  },
+  {
+    "fichier": "*",
+    "avant": "canal de vente",
+    "apres": "canal de vente",
+    "type": "locution",
+    "justification": "Locution figée de gestion, de la même famille que « prix de vente » et « type de vente » (spec §3 règle 4) : le canal (direct, prestataire) n'est pas l'objet « une vente »."
+  },
+  {
+    "fichier": "*",
+    "avant": "PU TTC",
+    "apres": "PU TTC",
+    "type": "homonyme",
+    "justification": "« PU » = prix unitaire (en-tête de colonne), pas le sigle de « produit utilisable » (forme courte de la clé produit_utilisable depuis l'étape S4)."
+  },
+  {
+    "fichier": "*",
+    "avant": "PU HT",
+    "apres": "PU HT",
+    "type": "homonyme",
+    "justification": "« PU » = prix unitaire (en-tête de colonne), pas le sigle de « produit utilisable » (forme courte de la clé produit_utilisable depuis l'étape S4)."
+  },
+  {
+    "fichier": "*",
+    "avant": "sous-produit",
+    "apres": "sous-produit",
+    "type": "locution",
+    "justification": "Mot composé figé (3 occurrences, sous le seuil d'une clé) : décision de l'étape S4, il reste en dur. L'outil ne replie pas « sous-${voc.nom('produit', n)} » et l'accord « du sous-… » serait faux pour un terme féminin ; si un domaine renomme « produit », ce mot ne suit pas — limite connue, confirmée à l'étape S5 (4 textes, aucun brouillon ne renomme « produit »)."
+  },
+  {
+    "fichier": "*",
+    "avant": "pièce, portion",
+    "apres": "pièce, portion",
+    "type": "exemple",
+    "justification": "Unités de mesure citées en exemple (« kg, L, g, pièce, portion… ») : « portion » y est une unité, pas le terme du lexique (spec §3 règle 4, unités citées en exemple)."
+  }
+]

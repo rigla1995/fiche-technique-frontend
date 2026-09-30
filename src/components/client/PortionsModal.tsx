@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import api from '../../api/client';
+import { useVocabulaire } from '../../hooks/useVocabulaire';
 
 const todayStr = () => new Date().toISOString().split('T')[0];
 const currentYear = new Date().getFullYear();
@@ -45,6 +46,7 @@ const THEMES = {
 
 export default function PortionsModal({ produitNom, recipeUrl, stockMap, onSave, onClose, onSaved, theme = 'labo' }: Props) {
   const T = THEMES[theme];
+  const voc = useVocabulaire();
   const [recipe, setRecipe] = useState<RecipeIngredient[]>([]);
   const [loading, setLoading] = useState(true);
   const [portions, setPortions] = useState<Record<number, string>>({});
@@ -144,7 +146,7 @@ export default function PortionsModal({ produitNom, recipeUrl, stockMap, onSave,
     } catch (e: unknown) {
       const d = (e as { response?: { data?: { message?: string; disponible?: number; demande?: number } } })?.response?.data;
       if (d?.disponible !== undefined) {
-        setErrorDetail({ msg: d.message ?? 'Stock insuffisant', disponible: d.disponible, demande: d.demande });
+        setErrorDetail({ msg: d.message ?? `${voc.Nom('stock')} ${voc.acc('stock', 'insuffisant', 'insuffisante')}`, disponible: d.disponible, demande: d.demande });
       } else {
         setError(d?.message ?? 'Erreur serveur');
       }
@@ -158,22 +160,22 @@ export default function PortionsModal({ produitNom, recipeUrl, stockMap, onSave,
     <div className="modal-overlay">
       <div className="modal" style={{ maxWidth: 700, width: '95vw' }} onClick={(e) => e.stopPropagation()}>
         <div className="modal-header" style={{ background: `linear-gradient(135deg, ${T.gradientStart}, ${T.gradientEnd})`, borderBottom: 'none' }}>
-          <h2 style={{ color: '#fff', margin: 0, fontSize: '1rem' }}>⚙️ Portions personnalisées — {produitNom}</h2>
+          <h2 style={{ color: '#fff', margin: 0, fontSize: '1rem' }}>⚙️ {voc.Pl('portion')} {voc.acc('portion', 'personnalisés', 'personnalisées')} — {produitNom}</h2>
           <button className="modal-close" onClick={onClose} style={{ color: '#fff' }}>×</button>
         </div>
         <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           {done ? (
-            <p style={{ color: 'var(--success)', fontWeight: 700, textAlign: 'center' }}>✓ Appro enregistrée</p>
+            <p style={{ color: 'var(--success)', fontWeight: 700, textAlign: 'center' }}>✓ {voc.Court('appro')} {voc.acc('appro', 'enregistré', 'enregistrée')}</p>
           ) : loading ? (
-            <p className="text-muted" style={{ textAlign: 'center', padding: '20px 0' }}>Chargement de la recette…</p>
+            <p className="text-muted" style={{ textAlign: 'center', padding: '20px 0' }}>Chargement {voc.du('recette')}…</p>
           ) : recipe.length === 0 ? (
-            <p className="text-muted" style={{ textAlign: 'center', padding: '20px 0' }}>Ce produit n'a pas d'ingrédients dans la recette.</p>
+            <p className="text-muted" style={{ textAlign: 'center', padding: '20px 0' }}>{voc.Ce('produit')} n'a pas {voc.de('ingredient', true)} dans {voc.le('recette')}.</p>
           ) : (
             <>
               {/* Header inputs */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                 <div>
-                  <label style={{ ...LABEL, display: 'block', marginBottom: 4 }}>Quantité PT appro</label>
+                  <label style={{ ...LABEL, display: 'block', marginBottom: 4 }}>Quantité {voc.Court('pt')} {voc.court('appro')}</label>
                   <input type="number" min="0.001" step="0.001"
                     max={maxQty != null ? maxQty : undefined}
                     className="input" style={{ width: '100%', border: qtyExceedsMax ? '1.5px solid #dc2626' : undefined, background: qtyExceedsMax ? '#fef2f2' : undefined }}
@@ -185,7 +187,7 @@ export default function PortionsModal({ produitNom, recipeUrl, stockMap, onSave,
                   )}
                 </div>
                 <div>
-                  <label style={{ ...LABEL, display: 'block', marginBottom: 4 }}>Date d'appro</label>
+                  <label style={{ ...LABEL, display: 'block', marginBottom: 4 }}>Date {voc.de('appro', false, 'court')}</label>
                   <input type="date" className="input" style={{ width: '100%' }}
                     min={yearStart} max={todayStr()} value={dateAppro} onChange={(e) => setDateAppro(e.target.value)} />
                 </div>
@@ -194,12 +196,12 @@ export default function PortionsModal({ produitNom, recipeUrl, stockMap, onSave,
               {/* Prix indicator */}
               <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
                 <div style={{ background: T.bg, border: `1px solid ${T.border}`, borderRadius: 8, padding: '8px 14px', display: 'flex', gap: 8, alignItems: 'center' }}>
-                  <span style={{ fontSize: '0.78rem', color: T.primaryDeep, fontWeight: 700 }}>Prix unitaire PT</span>
+                  <span style={{ fontSize: '0.78rem', color: T.primaryDeep, fontWeight: 700 }}>Prix unitaire {voc.Court('pt')}</span>
                   <span style={{ fontWeight: 900, color: T.primary }}>{prixCalcule.toFixed(3)} DT</span>
                 </div>
                 {coutTotal != null && coutTotal > 0 && (
                   <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 8, padding: '8px 14px', display: 'flex', gap: 8, alignItems: 'center' }}>
-                    <span style={{ fontSize: '0.78rem', color: '#166534', fontWeight: 700 }}>Coût total appro</span>
+                    <span style={{ fontSize: '0.78rem', color: '#166534', fontWeight: 700 }}>Coût total {voc.court('appro')}</span>
                     <span style={{ fontWeight: 900, color: '#15803d' }}>{coutTotal.toFixed(3)} DT</span>
                   </div>
                 )}
@@ -223,10 +225,10 @@ export default function PortionsModal({ produitNom, recipeUrl, stockMap, onSave,
                     </select>
                   </div>
                   <div>
-                    <label style={{ ...LABEL, display: 'block', marginBottom: 3 }}>Article</label>
+                    <label style={{ ...LABEL, display: 'block', marginBottom: 3 }}>{voc.Nom('article')}</label>
                     <select className="input" style={{ width: '100%', fontSize: '0.85rem' }} value={fIngredient}
                       onChange={(e) => setFIngredient(e.target.value)} disabled={ingredientsForCat.length === 0}>
-                      <option value="">— Tous —</option>
+                      <option value="">— {voc.acc('article', 'Tous', 'Toutes')} —</option>
                       {ingredientsForCat.map((r) => <option key={r.ingredientId} value={String(r.ingredientId)}>{r.nom}</option>)}
                     </select>
                   </div>
@@ -243,15 +245,15 @@ export default function PortionsModal({ produitNom, recipeUrl, stockMap, onSave,
                 <table className="table" style={{ minWidth: 500 }}>
                   <thead>
                     <tr>
-                      <th style={{ background: T.primary, color: '#fff' }}>Article</th>
-                      <th style={{ background: T.primary, color: '#fff', textAlign: 'right' }}>Portion standard</th>
-                      <th style={{ background: T.primary, color: '#fff', textAlign: 'right' }}>Portion custom</th>
+                      <th style={{ background: T.primary, color: '#fff' }}>{voc.Nom('article')}</th>
+                      <th style={{ background: T.primary, color: '#fff', textAlign: 'right' }}>{voc.Nom('portion')} standard</th>
+                      <th style={{ background: T.primary, color: '#fff', textAlign: 'right' }}>{voc.Nom('portion')} custom</th>
                       <th style={{ background: T.primary, color: '#fff', textAlign: 'right' }}>Prix unit.</th>
                     </tr>
                   </thead>
                   <tbody>
                     {visibleRecipe.length === 0 ? (
-                      <tr><td colSpan={4} style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '16px 0' }}>Aucun article pour ces filtres</td></tr>
+                      <tr><td colSpan={4} style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '16px 0' }}>{voc.Aucun('article')} pour ces filtres</td></tr>
                     ) : visibleRecipe.map((r, i) => {
                       const customVal = portions[r.ingredientId] ?? String(r.portionStandard);
                       const isModified = parseFloat(customVal) !== r.portionStandard && customVal !== '';
@@ -321,7 +323,7 @@ export default function PortionsModal({ produitNom, recipeUrl, stockMap, onSave,
               style={{ background: `linear-gradient(135deg, ${T.gradientStart}, ${T.gradientEnd})`, color: '#fff', border: 'none', borderRadius: 8, fontWeight: 700 }}
               onClick={handleSave} disabled={saving || !qty || parseFloat(qty) <= 0 || qtyExceedsMax}
             >
-              {saving ? '…' : 'Enregistrer l\'appro'}
+              {saving ? '…' : `Enregistrer ${voc.le('appro', false, 'court')}`}
             </button>
           </div>
         )}

@@ -17,7 +17,11 @@ export interface User {
   gerantAccesAcheteurs?: boolean;
   activitesCount?: number;
   labosCount?: number;
-  /** Profil de domaine du compte (client : son abonnement ; gérant : parent ; admin/boss : null). */
+  /**
+   * Profil de domaine du compte (client : son abonnement ; gérant : parent ; admin/boss : null).
+   * Acheteur (lot 2, spec §2.4) : domaine du client VENDEUR réduit à { id, slug, nom, lexique } — ni
+   * `composants` ni `regles` (toute lecture de ces deux champs passe par `?.`).
+   */
   domaine?: DomaineProfil | null;
 }
 
@@ -336,13 +340,29 @@ export interface Composant {
   actif: boolean;
 }
 
-/** Entrée de lexique : singulier, pluriel, genre, élision, icône. */
+/** Forme courte ou sigle d'un terme (« PT », « Appro ») ; `el` absent → élision de l'entrée. */
+export interface LexiqueFormeCourte {
+  sg: string;
+  pl: string;
+  el?: boolean;
+}
+
+/**
+ * Entrée de lexique (v2, lot 2) : singulier, pluriel, genre, élision, icône, forme courte,
+ * apposition. `derive_de` / `mode` / `gabarit` décrivent une clé dérivée : ils viennent du
+ * lexique par défaut (src/vocab/lexiqueDefaut.ts) et ne sont pas surchargeables par un domaine.
+ */
 export interface LexiqueEntree {
   sg: string;
   pl: string;
   g: 'm' | 'f';
   el: boolean;
   icon?: string;
+  court?: LexiqueFormeCourte;
+  appo?: boolean;
+  derive_de?: string;
+  mode?: 'copie' | 'pluriel_titre' | 'gabarit';
+  gabarit?: string;
 }
 
 /** Profil résolu d'un domaine d'activité (composants + lexique + règles). */

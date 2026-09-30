@@ -1,0 +1,9 @@
+[
+  {
+    "fichier": "src/components/client/FormuleGuard.tsx",
+    "avant": "Votre compte est en formule ⟦<strong>⟧ (stock et ventes d'articles valorisés) et sans labo. L'Espace Produit — produits vendables, utilisables, composés et production — est disponible avec la formule ⟦<strong>⟧, ou automatiquement inclus avec la base ⟦<strong>⟧ (nécessaire à la production). Les pages Catégories Produits et Articles Valorisés restent accessibles depuis le menu.",
+    "apres": "Votre compte est en formule ⟦<strong>⟧ (stock et ventes d'articles valorisés) et sans labo. L'Espace Produit — produits vendables, utilisables, composés et production — est disponible avec la formule ⟦<strong>⟧, ou automatiquement inclus avec la base ⟦<strong>⟧ (nécessaire à la production). Les pages Catégories Produits et Produits Valorisés restent accessibles depuis le menu.",
+    "type": "faute-corrigee",
+    "justification": "Le texte cite une page du menu sous un nom qu'elle ne porte pas : la barre latérale et le titre de la page disent « Produits Valorisés » (voc.Titre('produit_valorise', true)), pas « Articles Valorisés ». Écrit avec la clé du menu, il suit aussi le domaine (« Prestations Catalogue » en Hôtellerie, au lieu de « Fournitures Valorisées » qui ne désigne aucun menu). Décision de l'étape S5 (besoin F12)."
+  }
+]

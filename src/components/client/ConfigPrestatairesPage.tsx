@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import api from '../../api/client';
 import GuideButton from './GuideButton';
 import type { Activite } from '../../types';
+import { useVocabulaire } from '../../hooks/useVocabulaire';
 
 const C = '#b45309';
 const CD = '#78350f';
@@ -24,6 +25,7 @@ interface PrestataireGlobal {
 }
 
 export default function ConfigPrestatairesPage() {
+  const voc = useVocabulaire();
   const [searchParams, setSearchParams] = useSearchParams();
   const [activites, setActivites] = useState<Activite[]>([]);
   const [selectedActiviteId, setSelectedActiviteId] = useState<number | null>(null);
@@ -87,18 +89,18 @@ export default function ConfigPrestatairesPage() {
       }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
-            <div style={{ background: 'rgba(255,255,255,0.2)', borderRadius: 10, padding: '7px 9px', fontSize: '1.2rem' }}>🛵</div>
+            <div style={{ background: 'rgba(255,255,255,0.2)', borderRadius: 10, padding: '7px 9px', fontSize: '1.2rem' }}>{voc.icon('prestataire')}</div>
             <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0 }}>
-              Config Prestataires
+              Config {voc.Court('prestataire', true)}
             </h1>
           </div>
           <p style={{ color: 'rgba(255,255,255,0.82)', margin: 0, fontSize: '0.85rem' }}>
-            Activez les prestataires de livraison pour cette activité
+            Activez {voc.le('prestataire', true)} de livraison pour {voc.ce('activite')}
           </p>
         </div>
         <div style={{ background: 'rgba(255,255,255,0.18)', borderRadius: 12, padding: '10px 18px', textAlign: 'center' }}>
           <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#fff' }}>{activeCount}</div>
-          <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.8)' }}>prestataire{activeCount !== 1 ? 's' : ''} actif{activeCount !== 1 ? 's' : ''}</div>
+          <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.8)' }}>{voc.nom('prestataire', activeCount !== 1)} {voc.acc('prestataire', 'actif', 'active', activeCount !== 1)}</div>
         </div>
         <GuideButton section="configuration-vente" />
       </div>
@@ -118,22 +120,22 @@ export default function ConfigPrestatairesPage() {
               {a.nom}
             </button>
           ))}
-          <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', alignSelf: 'center', marginLeft: 4 }}>← sélectionner l'activité</span>
+          <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', alignSelf: 'center', marginLeft: 4 }}>← sélectionner {voc.le('activite')}</span>
         </div>
       )}
 
       {!selectedActiviteId ? (
-        <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '60px 0' }}>Aucune activité disponible</div>
+        <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '60px 0' }}>{voc.Aucun('activite')} disponible</div>
       ) : allPrestataires.filter(p => p.actif).length === 0 ? (
         <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--text-muted)' }}>
-          <div style={{ fontSize: '3rem', marginBottom: 12 }}>🛵</div>
-          <div>Aucun prestataire disponible — contactez l'administrateur</div>
+          <div style={{ fontSize: '3rem', marginBottom: 12 }}>{voc.icon('prestataire')}</div>
+          <div>{voc.Aucun('prestataire')} disponible — contactez l'administrateur</div>
         </div>
       ) : (
         <div style={{ background: '#fff', borderRadius: 16, border: `1.5px solid ${CB}`, overflow: 'hidden', boxShadow: '0 4px 20px rgba(180,83,9,0.08)' }}>
           <div style={{ background: `linear-gradient(135deg, ${CD}18 0%, ${C}12 100%)`, borderBottom: `1.5px solid ${CB}`, padding: '16px 24px' }}>
             <div style={{ fontSize: '0.72rem', fontWeight: 700, color: C, textTransform: 'uppercase', letterSpacing: '0.07em' }}>
-              Prestataires disponibles — activez ceux que vous utilisez
+              {voc.Pl('prestataire')} disponibles — activez {voc.acc('prestataire', 'ceux', 'celles')} que vous utilisez
             </div>
           </div>
           <div style={{ padding: '16px 24px', display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -150,12 +152,12 @@ export default function ConfigPrestatairesPage() {
                   transition: 'all 0.15s',
                 }}>
                   <div style={{ width: 42, height: 42, borderRadius: 10, background: isActive ? C + '22' : '#f3f4f6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', flexShrink: 0 }}>
-                    🛵
+                    {voc.icon('prestataire')}
                   </div>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontWeight: 800, fontSize: '0.95rem', color: isActive ? CD : '#374151' }}>{p.nom}</div>
                     <div style={{ fontSize: '0.75rem', color: isActive ? C : '#9ca3af', marginTop: 2 }}>
-                      {isActive ? '✓ Actif pour cette activité — apparaît dans la config vente' : 'Inactif pour cette activité'}
+                      {isActive ? `✓ ${voc.acc('prestataire', 'Actif', 'Active')} pour ${voc.ce('activite')} — apparaît dans la config ${voc.nom('vente')}` : `${voc.acc('prestataire', 'Inactif', 'Inactive')} pour ${voc.ce('activite')}`}
                     </div>
                   </div>
                   {/* Toggle */}
@@ -168,7 +170,7 @@ export default function ConfigPrestatairesPage() {
                       position: 'relative', transition: 'background 0.2s', flexShrink: 0,
                       opacity: isLoading ? 0.6 : 1,
                     }}
-                    title={isActive ? 'Désactiver ce prestataire' : 'Activer ce prestataire'}
+                    title={isActive ? `Désactiver ${voc.ce('prestataire')}` : `Activer ${voc.ce('prestataire')}`}
                   >
                     <span style={{
                       position: 'absolute', top: 3,

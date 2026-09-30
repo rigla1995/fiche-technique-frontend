@@ -1,0 +1,73 @@
+[
+  {
+    "fichier": "src/components/client/ComposedValoriseModal.tsx",
+    "avant": "Aucune activité rattachée à ce(s) labo(s).",
+    "apres": "Aucune activité rattachée à ⟦ce|ces@>1⟧ ⟦labo|labos@>1⟧.",
+    "type": "faute-corrigee",
+    "justification": "Spec §3 règle 3, guide E27 : « ce(s) labo(s) » est réécrit avec le nombre réel de labos sélectionnés (selectedLabos.length, toujours ≥ 1 quand la phrase s'affiche) : « ce labo » / « ces labos »."
+  },
+  {
+    "fichier": "src/components/client/ComposedValoriseModal.tsx",
+    "avant": "Produits utilisables du/des labo(s) ⟦<span>⟧",
+    "apres": "Produits utilisables ⟦du|des@>1⟧ ⟦labo|labos@>1⟧ ⟦<span>⟧",
+    "type": "faute-corrigee",
+    "justification": "Spec §3 règle 3 : le double nombre « du/des labo(s) » est réécrit avec le nombre réel de labos sélectionnés (selectedLabos.length, ≥ 1 à l'étape 4 de l'assistant) : « du labo » / « des labos »."
+  },
+  {
+    "fichier": "src/components/client/ComposedValoriseModal.tsx",
+    "avant": "Aucun produit utilisable disponible pour ce(s) labo(s).",
+    "apres": "Aucun produit utilisable disponible pour ⟦ce|ces@>1⟧ ⟦labo|labos@>1⟧.",
+    "type": "faute-corrigee",
+    "justification": "Spec §3 règle 3, guide E27 : « ce(s) labo(s) » est réécrit avec le nombre réel de labos sélectionnés (selectedLabos.length, ≥ 1 à l'étape 4 de l'assistant) : « ce labo » / « ces labos »."
+  },
+  {
+    "fichier": "src/components/client/FicheTechniqueModal.tsx",
+    "avant": "FT-⟦·⟧-⟦·⟧.xlsx",
+    "apres": "FT-⟦·⟧-⟦·⟧.xlsx",
+    "type": "discriminant",
+    "justification": "Nom du fichier Excel téléchargé (FT Stock, un fichier par base de prix) : jamais affiché à l'écran, et la règle 8 de la spec §3 interdit de toucher aux noms de fichiers téléchargés."
+  },
+  {
+    "fichier": "src/components/client/FicheTechniqueModal.tsx",
+    "avant": "FT-⟦·⟧⟦?-⟦·⟧|⟧.xlsx",
+    "apres": "FT-⟦·⟧⟦?-⟦·⟧|⟧.xlsx",
+    "type": "discriminant",
+    "justification": "Nom du fichier Excel téléchargé (FT Manuel) : jamais affiché à l'écran, et la règle 8 de la spec §3 interdit de toucher aux noms de fichiers téléchargés."
+  },
+  {
+    "fichier": "src/components/client/FicheTechniqueModal.tsx",
+    "avant": "stock",
+    "apres": "stock",
+    "type": "discriminant",
+    "justification": "Valeur technique de l'état mode ('stock' | 'manual') passée à setMode('stock') puis comparée (mode === 'stock') et envoyée à l'API (?mode=stock) : jamais affichée ; le libellé du mode sort de voc.Court('stock')."
+  },
+  {
+    "fichier": "src/components/client/FicheTechniqueModal.tsx",
+    "avant": "✏️ FT Manuel",
+    "apres": "✏️ FT Manuel",
+    "type": "locution",
+    "mode": "accords",
+    "justification": "« Manuel » ne s'accorde pas avec le terme rendu par voc.Court('fiche_technique') : c'est le nom du mode de tarification (prix saisis à la main), pendant de « FT Stock » où « Stock » n'est pas un adjectif non plus. L'existant écrit « FT Manuel » alors que « fiche technique » est féminin : l'accorder afficherait « FT Manuelle » à un compte restauration."
+  },
+  {
+    "fichier": "src/components/client/ConfigurationVentePage.tsx",
+    "avant": "⟦·⟧/⟦·⟧ ⟦article|articles@>1⟧",
+    "apres": "⟦·⟧/⟦·⟧ ⟦article|articles@>1⟧",
+    "type": "homonyme",
+    "justification": "Compteur du tableau commun aux trois onglets (produits vendables, suppléments, ventes valorisées) : « article » y désigne une ligne du catalogue de vente (l'« article vendable » du code : ArticleVendable, article_type 'produit' | 'ingredient'), pas la clé « article » du lexique (la matière du référentiel). Par voc, un compte Hôtellerie lirait « 3/5 fournitures » sous une liste de prestations vendues."
+  },
+  {
+    "fichier": "src/components/client/ConfigurationVentePage.tsx",
+    "avant": "produits",
+    "apres": "produits",
+    "type": "discriminant",
+    "justification": "Clé technique de l'onglet (type Tab = 'produits' | 'supplements' | 'valorises' | 'historique') : valeur initiale de useState<Tab>('produits') et prop tab=\"produits\" de TabBtn, comparées à activeTab ; jamais affichée (le libellé de l'onglet sort de voc)."
+  },
+  {
+    "fichier": "src/components/client/ConfigurationVentePage.tsx",
+    "avant": "⟦?ingredient|produit⟧",
+    "apres": "⟦?ingredient|produit⟧",
+    "type": "discriminant",
+    "justification": "Valeur d'API du champ article_type envoyée à POST /api/articles-vendables ('ingredient' ou 'produit') : identifiant technique, jamais affiché."
+  }
+]

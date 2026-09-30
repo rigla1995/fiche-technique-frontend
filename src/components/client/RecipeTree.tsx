@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import api from '../../api/client';
 import { PRODUCT_THEME } from '../../theme/productTheme';
+import { useVocabulaire } from '../../hooks/useVocabulaire';
 
 // Recette décomposée récursivement (réponse de GET /api/products/:id/cout = mapCout).
 interface RecipeIngredient { name: string; portion: number; unit: string; unitPrice: number; cost: number; }
@@ -58,6 +59,7 @@ function TreeNode({ node, depth }: { node: RecipeNode; depth: number }) {
 // Arborescence de la recette d'un produit (articles + sous-produits décomposés).
 // Autonome : charge /cout elle-même. laboId optionnel (composé valorisé → coûts labo).
 export default function RecipeTree({ productId, laboId }: { productId: number; laboId?: number }) {
+  const voc = useVocabulaire();
   const [node, setNode] = useState<RecipeNode | null>(null);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState('');
@@ -67,9 +69,11 @@ export default function RecipeTree({ productId, laboId }: { productId: number; l
     const qs = laboId ? `?laboId=${laboId}` : '';
     api.get(`/api/products/${productId}/cout${qs}`)
       .then(({ data }) => { if (active) setNode(data as RecipeNode); })
-      .catch((e) => { if (active) setErr(e?.response?.data?.message || 'Recette indisponible.'); })
+      .catch((e) => { if (active) setErr(e?.response?.data?.message || `${voc.Nom('recette')} indisponible.`); })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
+  // voc hors dépendances : un changement de lexique ne doit pas recharger la recette.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [productId, laboId]);
 
   if (loading) return <div className="loading-text">Chargement…</div>;

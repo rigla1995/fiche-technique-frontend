@@ -3,6 +3,8 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import api from '../../api/client';
 import HelpButton from '../common/HelpButton';
 import HistoryFilterBar, { FilterField, FilterInput, FilterSelect } from '../common/HistoryFilterBar';
+import { useVocabulaire } from '../../hooks/useVocabulaire';
+import { libelleCategoriePt } from '../../vocab/categoriesPt';
 import type { Labo } from '../../types';
 import { perteLabel, usePerteTypes } from '../../utils/perteTypes';
 
@@ -38,6 +40,7 @@ interface LaboIngredient { id: number; nom: string; unite: string; categorie: st
 
 export default function LaboHistoriquepertesPage() {
   const perteTypes = usePerteTypes();
+  const voc = useVocabulaire();
   const [searchParams] = useSearchParams();
   const laboId = searchParams.get('laboId') || '';
   const navigate = useNavigate();
@@ -147,7 +150,7 @@ export default function LaboHistoriquepertesPage() {
   const totalPages = Math.max(1, Math.ceil(entries.length / PAGE_SIZE));
   const paged = entries.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
-  const laboLabel = labo?.nom || `Labo #${laboId}`;
+  const laboLabel = labo?.nom || `${voc.Nom('labo')} #${laboId}`;
   const canExport = searched && entries.length > 0;
 
   return (
@@ -161,9 +164,9 @@ export default function LaboHistoriquepertesPage() {
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
             <div style={{ background: 'rgba(255,255,255,0.2)', borderRadius: 10, padding: '7px 9px', fontSize: '1.2rem' }}>📉</div>
-            <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0 }}>Historique Pertes — {laboLabel} <HelpButton section="pertes" variant="solid" size={18} tip="Aide" /></h1>
+            <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0 }}>Historique {voc.Court('perte', true)} — {laboLabel} <HelpButton section="pertes" variant="solid" size={18} tip="Aide" /></h1>
           </div>
-          <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.85rem', margin: 0 }}>Labo — avaries et déchets enregistrés</p>
+          <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.85rem', margin: 0 }}>{voc.Nom('labo')} — avaries et déchets enregistrés</p>
         </div>
         {entries.length > 0 && (
           <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
@@ -194,7 +197,7 @@ export default function LaboHistoriquepertesPage() {
               🏭 {l.nom}
             </button>
           ))}
-          <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', alignSelf: 'center', marginLeft: 4 }}>← sélectionner le labo</span>
+          <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', alignSelf: 'center', marginLeft: 4 }}>← sélectionner {voc.le('labo')}</span>
         </div>
       )}
 
@@ -212,14 +215,14 @@ export default function LaboHistoriquepertesPage() {
           <FilterSelect value={fCategorie} onChange={(e) => { setFCategorie(e.target.value); setFIngredient(''); }}>
             <option value="">— Toutes —</option>
             {categories.map((c) => <option key={c.id} value={c.id}>{c.nom}</option>)}
-            <option value="pt-utilisable">Produits Transformés Utilisables</option>
-            <option value="pt-vendable">Produits Transformés Vendables</option>
-            <option value="pt-valorise">Produits Composés Valorisés</option>
+            <option value="pt-utilisable">{voc.Nom('cat_pt_utilisable')}</option>
+            <option value="pt-vendable">{voc.Nom('cat_pt_vendable')}</option>
+            <option value="pt-valorise">{voc.Nom('cat_pt_valorise')}</option>
           </FilterSelect>
         </FilterField>
-        <FilterField label="🧂 Article">
+        <FilterField label={`🧂 ${voc.Nom('article')}`}>
           <FilterSelect value={fIngredient} disabled={!fCategorie} onChange={(e) => setFIngredient(e.target.value)}>
-            <option value="">— Tous —</option>
+            <option value="">— {voc.acc('article', 'Tous', 'Toutes')} —</option>
             {ingredientsInCat.map((i) => <option key={i.id} value={i.id}>{i.nom}</option>)}
           </FilterSelect>
         </FilterField>
@@ -236,7 +239,7 @@ export default function LaboHistoriquepertesPage() {
       ) : entries.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '48px 24px', color: 'var(--text-muted)' }}>
           <div style={{ fontSize: '3rem', marginBottom: 12 }}>📉</div>
-          <p>Aucune perte enregistrée pour cette période.</p>
+          <p>{voc.Aucun('perte')} {voc.acc('perte', 'enregistré', 'enregistrée')} pour cette période.</p>
         </div>
       ) : (
         <>
@@ -250,7 +253,7 @@ export default function LaboHistoriquepertesPage() {
               <thead>
                 <tr style={{ background: 'linear-gradient(135deg, #3b0764, #7e22ce)' }}>
                   <th style={{ width: 40, textAlign: 'center', padding: '12px 14px', color: '#fff', background: 'transparent', borderBottom: 'none' }} />
-                  {['Article', 'Date', 'Type', 'Quantité', ...(hasCout ? ['Coût'] : []), 'Créé par'].map((h) => (
+                  {[voc.Nom('article'), 'Date', 'Type', 'Quantité', ...(hasCout ? ['Coût'] : []), 'Créé par'].map((h) => (
                     <th key={h} style={{ fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '12px 14px', color: '#fff', background: 'transparent', borderBottom: 'none' }}>{h}</th>
                   ))}
                 </tr>
@@ -265,7 +268,7 @@ export default function LaboHistoriquepertesPage() {
                     </td>
                     <td style={{ padding: '10px 14px' }}>
                       <div style={{ fontWeight: 700, fontSize: '0.86rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.ingredientNom}</div>
-                      <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.uniteNom}{e.categorieNom ? ` · ${e.categorieNom}` : ''}</div>
+                      <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.uniteNom}{e.categorieNom ? ` · ${libelleCategoriePt(voc, e.categorieNom)}` : ''}</div>
                     </td>
                     <td style={{ padding: '10px 14px', fontSize: '0.85rem' }}>{fmtDate(e.datePerte)}</td>
                     <td style={{ padding: '10px 14px' }}>

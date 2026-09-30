@@ -6,6 +6,8 @@ import HelpButton from '../common/HelpButton';
 import TypeApproFilter from '../common/TypeApproFilter';
 import HistoryFilterBar, { FilterField, FilterInput, FilterSelect } from '../common/HistoryFilterBar';
 import { useAuth } from '../../context/AuthContext';
+import { useVocabulaire } from '../../hooks/useVocabulaire';
+import { libelleCategoriePt } from '../../vocab/categoriesPt';
 import type { Activite, HistoriqueApproEntry } from '../../types';
 
 const currentYear = new Date().getFullYear();
@@ -31,6 +33,7 @@ interface EditModalProps {
   onClose: () => void;
 }
 function EditModal({ entry, fournisseurs, onSave, onClose }: EditModalProps) {
+  const voc = useVocabulaire();
   const [qty, setQty] = useState(entry.quantite !== null ? String(entry.quantite) : '');
   const [prix, setPrix] = useState(entry.prixUnitaire !== null ? String(entry.prixUnitaire) : '');
   const [fId, setFId] = useState(entry.fournisseurId ? String(entry.fournisseurId) : '');
@@ -67,7 +70,7 @@ function EditModal({ entry, fournisseurs, onSave, onClose }: EditModalProps) {
         <div className="modal-body">
           <div style={{ marginBottom: 16 }}>
             <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 4 }}>
-              Date d'appro
+              Date {voc.de('appro', false, 'court')}
             </label>
             <input
               className="input"
@@ -95,7 +98,7 @@ function EditModal({ entry, fournisseurs, onSave, onClose }: EditModalProps) {
           </div>
           <div style={{ marginBottom: 12 }}>
             <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 4 }}>
-              Fournisseur
+              {voc.Nom('fournisseur')}
             </label>
             {entry.typeAppro === 'transfert' ? (
               <input
@@ -106,11 +109,11 @@ function EditModal({ entry, fournisseurs, onSave, onClose }: EditModalProps) {
               />
             ) : nonLaboFournisseurs.length > 0 ? (
               <select className="input" style={{ width: '100%' }} value={fId} onChange={(e) => setFId(e.target.value)}>
-                <option value="">— Aucun —</option>
+                <option value="">— {voc.acc('fournisseur', 'Aucun', 'Aucune')} —</option>
                 {nonLaboFournisseurs.map((f) => <option key={f.id} value={f.id}>{f.nom}</option>)}
               </select>
             ) : (
-              <input className="input" style={{ width: '100%', color: 'var(--text-muted)' }} value="— Aucun fournisseur disponible —" disabled />
+              <input className="input" style={{ width: '100%', color: 'var(--text-muted)' }} value={`— ${voc.Aucun('fournisseur')} disponible —`} disabled />
             )}
           </div>
           <div style={{ marginBottom: 16 }}>
@@ -122,7 +125,7 @@ function EditModal({ entry, fournisseurs, onSave, onClose }: EditModalProps) {
           </div>
           {entry.typeAppro === 'transfert' && (
             <div style={{ background: '#fef3c7', border: '1px solid #fde68a', borderRadius: 8, padding: '8px 12px', marginBottom: 12, fontSize: '0.82rem', color: '#92400e' }}>
-              ⚠️ Type Transfert — la modification de la quantité ajustera le stock du labo.
+              ⚠️ Type {voc.Court('transfert')} — la modification de la quantité ajustera {voc.le('stock')} {voc.du('labo')}.
             </div>
           )}
           {error && <p style={{ color: 'var(--danger)', fontSize: '0.85rem', marginBottom: 8 }}>{error}</p>}
@@ -149,6 +152,7 @@ interface DeleteModalProps {
   onClose: () => void;
 }
 function DeleteModal({ entry, onConfirm, onClose }: DeleteModalProps) {
+  const voc = useVocabulaire();
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState('');
 
@@ -168,13 +172,13 @@ function DeleteModal({ entry, onConfirm, onClose }: DeleteModalProps) {
     <div className="modal-overlay">
       <div className="modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header" style={{ background: '#fee2e2', borderBottom: '1px solid #fecaca' }}>
-          <h2 style={{ color: '#991b1b' }}>Supprimer l'appro</h2>
+          <h2 style={{ color: '#991b1b' }}>Supprimer {voc.le('appro', false, 'court')}</h2>
           <button className="modal-close" onClick={onClose}>✕</button>
         </div>
         <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           <div style={{ background: '#f8faff', borderRadius: 8, padding: '12px 14px', border: '1px solid #e2e8f0' }}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px 12px', fontSize: '0.83rem' }}>
-              <span style={{ color: 'var(--text-muted)', fontWeight: 600 }}>Article</span>
+              <span style={{ color: 'var(--text-muted)', fontWeight: 600 }}>{voc.Nom('article')}</span>
               <span style={{ fontWeight: 700 }}>{entry.ingredientNom}</span>
               <span style={{ color: 'var(--text-muted)', fontWeight: 600 }}>Date</span>
               <span style={{ fontWeight: 700 }}>{fmtDate(entry.dateAppro)}</span>
@@ -183,11 +187,11 @@ function DeleteModal({ entry, onConfirm, onClose }: DeleteModalProps) {
             </div>
           </div>
           <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 8, padding: '8px 12px', fontSize: '0.82rem', color: '#1e40af', fontWeight: 600 }}>
-            📊 Impact stock : le stock de cet article sera recalculé après suppression.
+            📊 Impact {voc.nom('stock')} : {voc.le('stock')} de {voc.ce('article')} sera {voc.acc('stock', 'recalculé', 'recalculée')} après suppression.
           </div>
           {entry.typeAppro === 'transfert' && (
             <div style={{ background: '#fef3c7', border: '1px solid #fde68a', borderRadius: 8, padding: '8px 12px', fontSize: '0.82rem', color: '#92400e' }}>
-              ⚠️ Type Transfert — la quantité sera restituée dans le stock du labo source.
+              ⚠️ Type {voc.Court('transfert')} — la quantité sera restituée dans {voc.le('stock')} {voc.du('labo')} source.
             </div>
           )}
           <div style={{ background: '#fff7ed', border: '1px solid #fbd38d', borderRadius: 8, padding: '8px 12px', fontSize: '0.82rem', color: '#92400e', fontWeight: 600 }}>
@@ -210,6 +214,7 @@ function DeleteModal({ entry, onConfirm, onClose }: DeleteModalProps) {
 // ── Main page ─────────────────────────────────────────────────────────────────
 export default function HistoriqueApproPage() {
   const { t } = useTranslation();
+  const voc = useVocabulaire();
   const { user, canWrite } = useAuth();
   const [searchParams] = useSearchParams();
 
@@ -413,7 +418,7 @@ export default function HistoriqueApproPage() {
   };
 
   const pageTitle = t('client.historique_appro.title');
-  const contextSubtitle = 'Consultation et export de l\'historique des approvisionnements';
+  const contextSubtitle = `Consultation et export de l'historique ${voc.du('appro', true)}`;
 
   const prixColor = (prix: number | null) => {
     if (prix === null) return 'var(--text-muted)';
@@ -446,9 +451,9 @@ export default function HistoriqueApproPage() {
             <button key={a.id}
               onClick={() => setSelectedActiviteId(String(a.id))}
               style={{ padding: '4px 14px', borderRadius: 20, cursor: 'pointer', fontSize: '0.82rem', border: selectedActiviteId === String(a.id) ? '1.5px solid #1e40af' : '1.5px solid var(--border)', background: selectedActiviteId === String(a.id) ? '#1e40af' : 'var(--bg)', color: selectedActiviteId === String(a.id) ? '#fff' : 'var(--text)', fontWeight: selectedActiviteId === String(a.id) ? 700 : 400 }}
-            >🏪 {a.nom}</button>
+            >{voc.icon('activite')} {a.nom}</button>
           ))}
-          <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', alignSelf: 'center', marginLeft: 4 }}>← sélectionner l'activité</span>
+          <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', alignSelf: 'center', marginLeft: 4 }}>← sélectionner {voc.le('activite')}</span>
         </div>
       )}
 
@@ -466,26 +471,26 @@ export default function HistoriqueApproPage() {
           <FilterSelect value={selectedCategoryId} onChange={(e) => { setSelectedCategoryId(e.target.value); setSelectedIngredientId(''); }}>
             <option value="">{t('client.historique_appro.all_categories')}</option>
             {categories.map((c) => <option key={c.id} value={c.id}>{c.nom}</option>)}
-            <option value="pt-utilisable">Produits Transformés Utilisables</option>
-            <option value="pt-vendable">Produits Transformés Vendables</option>
-            <option value="pt-valorise">Produits Composés Valorisés</option>
+            <option value="pt-utilisable">{voc.Nom('cat_pt_utilisable')}</option>
+            <option value="pt-vendable">{voc.Nom('cat_pt_vendable')}</option>
+            <option value="pt-valorise">{voc.Nom('cat_pt_valorise')}</option>
           </FilterSelect>
         </FilterField>
-        <FilterField label="🧂 Article">
+        <FilterField label={`🧂 ${voc.Nom('article')}`}>
           <FilterSelect value={selectedIngredientId} disabled={!selectedCategoryId} onChange={(e) => setSelectedIngredientId(e.target.value)}>
             <option value="">{t('client.historique_appro.all_ingredients')}</option>
             {selectedCategoryId.startsWith('pt') ? ptProducts.map((p) => <option key={p.id} value={p.id}>{p.nom}</option>) : ingredientsInCat.map((i) => <option key={i.id} value={i.id}>{i.nom}</option>)}
           </FilterSelect>
         </FilterField>
         {fournisseurs.length > 0 && (
-          <FilterField label="🚚 Fournisseur">
+          <FilterField label={`🚚 ${voc.Nom('fournisseur')}`}>
             <FilterSelect value={selectedFournisseurId} onChange={(e) => setSelectedFournisseurId(e.target.value)}>
-              <option value="">— Tous —</option>
+              <option value="">— {voc.acc('fournisseur', 'Tous', 'Toutes')} —</option>
               {fournisseurs.map((f) => <option key={f.id} value={f.id}>{f.nom}</option>)}
             </FilterSelect>
           </FilterField>
         )}
-        <FilterField label="⇄ Type d'appro"><TypeApproFilter selected={selectedTypes} onToggle={toggleType} accent="#1e40af" /></FilterField>
+        <FilterField label={`⇄ Type ${voc.de('appro', false, 'court')}`}><TypeApproFilter selected={selectedTypes} onToggle={toggleType} accent="#1e40af" /></FilterField>
       </HistoryFilterBar>
 
       {/* ── Results ────────────────────────────────────────────────────── */}
@@ -515,7 +520,7 @@ export default function HistoriqueApproPage() {
               <thead>
                 <tr style={{ background: 'linear-gradient(135deg, #1e3a8a, #1e40af)' }}>
                   <th style={{ width: 28, padding: '10px 4px', color: '#fff', background: 'transparent', borderBottom: 'none' }} />
-                  {(['Article', 'Date'] as const).map((label) => (
+                  {[voc.Nom('article'), 'Date'].map((label) => (
                     <th key={label} style={{ fontWeight: 800, fontSize: '0.75rem', letterSpacing: '0.04em', textTransform: 'uppercase', padding: '10px 10px 2px', color: '#fff', background: 'transparent', borderBottom: 'none' }}>{label}</th>
                   ))}
                   {(['Quantité', 'Prix', 'TVA', 'Prix'] as const).map((label, i) => (
@@ -547,18 +552,18 @@ export default function HistoriqueApproPage() {
                     </td>
                     <td style={{ padding: '8px 10px' }}>
                       <div style={{ fontWeight: 700, fontSize: '0.86rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.ingredientNom}</div>
-                      <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.uniteNom} · {r.categorieNom}</div>
+                      <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.uniteNom} · {libelleCategoriePt(voc, r.categorieNom)}</div>
                     </td>
                     <td style={{ padding: '8px 10px' }}>
                       <span style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 6, padding: '2px 8px', fontWeight: 700, fontSize: '0.8rem', color: '#1e40af', display: 'inline-block', whiteSpace: 'nowrap' }}>
                         {fmtDate(r.dateAppro)}
                       </span>
                       <span className={`badge-appro ${r.typeAppro === 'PT' ? 'pt' : (r.typeAppro ?? 'manuel')}`} style={{ fontSize: '0.65rem', display: 'block', marginTop: 3 }}>
-                        {r.typeAppro === 'transfert' ? 'Transfert'
-                          : r.typeAppro === 'vente' ? '💰 Vente'
-                          : r.typeAppro === 'annulation_vente' ? '↩️ Annul. vente'
-                          : r.typeAppro === 'PT' ? '🔄 PT'
-                          : 'Manuel'}
+                        {r.typeAppro === 'transfert' ? voc.Court('transfert')
+                          : r.typeAppro === 'vente' ? `💰 ${voc.Court('vente')}`
+                          : r.typeAppro === 'annulation_vente' ? `↩️ Annul. ${voc.court('vente')}`
+                          : r.typeAppro === 'PT' ? `🔄 ${voc.Court('pt')}`
+                          : voc.acc('appro', 'Manuel', 'Manuelle')}
                       </span>
                     </td>
                     <td style={{ textAlign: 'right', fontWeight: 800, color: '#0f766e', padding: '8px 10px', fontSize: '0.85rem' }}>

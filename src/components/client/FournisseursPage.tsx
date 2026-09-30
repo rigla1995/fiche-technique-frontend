@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
+import { useVocabulaire } from '../../hooks/useVocabulaire';
 import HistoryFilterBar, { FilterField, FilterInput } from '../common/HistoryFilterBar';
 import GuideButton from './GuideButton';
 import type { Fournisseur, FournisseurApproActivite, Activite, Labo } from '../../types';
@@ -28,6 +29,7 @@ const thStyle: React.CSSProperties = {
 
 export default function FournisseursPage() {
   const { canWrite } = useAuth();
+  const voc = useVocabulaire();
 
   const [fournisseurs, setFournisseurs] = useState<Fournisseur[]>([]);
   const [activites, setActivites] = useState<Activite[]>([]);
@@ -116,7 +118,7 @@ export default function FournisseursPage() {
   };
 
   const activiteLabel = (id: number) => activites.find((a) => a.id === id)?.nom ?? `#${id}`;
-  const laboLabel = (id: number) => labos.find((l) => l.id === id)?.nom ?? `Labo #${id}`;
+  const laboLabel = (id: number) => labos.find((l) => l.id === id)?.nom ?? `${voc.Court('labo')} #${id}`;
 
   const nonLaboFournisseurs = fournisseurs.filter((f) => !f.isLabo);
   const laboFournisseurs = fournisseurs.filter((f) => f.isLabo);
@@ -143,17 +145,17 @@ export default function FournisseursPage() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
             <div style={{ background: 'rgba(255,255,255,0.2)', borderRadius: 10, padding: '7px 9px', fontSize: '1.2rem' }}>🏪</div>
             <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0 }}>
-              Fournisseurs
+              {voc.Pl('fournisseur')}
             </h1>
           </div>
           <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.85rem', margin: 0 }}>
-            Gérez vos fournisseurs et leurs associations
+            Gérez {voc.votre('fournisseur', true)} et leurs associations
           </p>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
           <div style={{ background: 'rgba(255,255,255,0.15)', borderRadius: 12, padding: '10px 18px', textAlign: 'center' }}>
             <div style={{ fontSize: '1.4rem', fontWeight: 900, color: '#fff' }}>{fournisseurs.length}</div>
-            <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.75)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Fournisseurs</div>
+            <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.75)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{voc.Pl('fournisseur')}</div>
           </div>
           <GuideButton section="fournisseurs" />
         </div>
@@ -163,7 +165,7 @@ export default function FournisseursPage() {
       <HistoryFilterBar
         accent="#ea580c"
         accentDark="#c2410c"
-        subtitle={`${filteredFournisseurs.length} fournisseur${filteredFournisseurs.length > 1 ? 's' : ''}${search ? ` (filtré${filteredFournisseurs.length > 1 ? 's' : ''})` : ''}`}
+        subtitle={`${voc.n('fournisseur', filteredFournisseurs.length)}${search ? ` (${voc.acc('fournisseur', 'filtré', 'filtrée', filteredFournisseurs.length)})` : ''}`}
         onReset={() => { setSearch(''); setFoPage(1); }}
         showReset={!!search}
         actions={canWrite && (
@@ -189,7 +191,7 @@ export default function FournisseursPage() {
                 cursor: 'pointer', fontSize: '0.83rem', whiteSpace: 'nowrap',
               }}
             >
-              + Nouveau fournisseur
+              + {voc.Nouveau('fournisseur')}
             </button>
           </>
         )}
@@ -207,7 +209,7 @@ export default function FournisseursPage() {
       ) : fournisseurs.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '48px 24px', color: 'var(--text-muted)' }}>
           <div style={{ fontSize: '3rem', marginBottom: 12 }}>🚚</div>
-          <p style={{ fontSize: '0.95rem' }}>Aucun fournisseur enregistré. Créez-en un pour pouvoir l'associer aux approvisionnements.</p>
+          <p style={{ fontSize: '0.95rem' }}>{voc.Aucun('fournisseur')} {voc.acc('fournisseur', 'enregistré', 'enregistrée')}. Créez-en {voc.acc('fournisseur', 'un', 'une')} pour pouvoir l'associer {voc.au('appro', true)}.</p>
         </div>
       ) : (
         <>
@@ -215,7 +217,7 @@ export default function FournisseursPage() {
           {laboFournisseurs.length > 0 && (
             <div style={{ marginBottom: 24 }}>
               <h2 style={{ fontSize: '0.78rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--text-muted)', marginBottom: 10 }}>
-                🏭 Fournisseurs Labo (auto-gérés)
+                {voc.icon('labo')} {voc.Pl('fournisseur')} {voc.Court('labo')} (auto-{voc.acc('fournisseur', 'gérés', 'gérées')})
               </h2>
               <div style={{ borderRadius: 12, overflow: 'hidden', border: '1px solid var(--border)', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
                 <table className="table" style={{ margin: 0 }}>
@@ -223,13 +225,13 @@ export default function FournisseursPage() {
                     <tr style={{ background: 'linear-gradient(135deg, #7c2d12, #ea580c)' }}>
                       <th style={thStyle}>Nom</th>
                       <th style={thStyle}>Téléphone</th>
-                      <th style={thStyle}>Activités liées</th>
+                      <th style={thStyle}>{voc.Pl('activite')} {voc.acc('activite', 'liés', 'liées')}</th>
                     </tr>
                   </thead>
                   <tbody>
                     {laboFournisseurs.map((f, idx) => (
                       <tr key={f.id} style={{ background: idx % 2 === 0 ? 'var(--surface)' : 'rgba(234,88,12,0.03)', borderLeft: '4px solid #ea580c' }}>
-                        <td style={{ fontWeight: 700, padding: '10px 14px' }}>🏭 {f.nom}</td>
+                        <td style={{ fontWeight: 700, padding: '10px 14px' }}>{voc.icon('labo')} {f.nom}</td>
                         <td style={{ color: 'var(--text-muted)', padding: '10px 14px' }}>{f.telephone ?? '—'}</td>
                         <td style={{ padding: '10px 14px' }}>
                           <div className="fournisseur-card-acts">
@@ -254,9 +256,9 @@ export default function FournisseursPage() {
                   <th style={thStyle}>Nom</th>
                   <th style={thStyle}>Téléphone</th>
                   <th style={thStyle}>Adresse</th>
-                  <th style={thStyle}>Activités liées</th>
-                  <th style={thStyle}>Labos liés</th>
-                  <th style={{ ...thStyle, textAlign: 'center' }}>Appros</th>
+                  <th style={thStyle}>{voc.Pl('activite')} {voc.acc('activite', 'liés', 'liées')}</th>
+                  <th style={thStyle}>{voc.Court('labo', true)} {voc.acc('labo', 'liés', 'liées')}</th>
+                  <th style={{ ...thStyle, textAlign: 'center' }}>{voc.Court('appro', true)}</th>
                   <th style={thStyle}></th>
                 </tr>
               </thead>
@@ -286,7 +288,7 @@ export default function FournisseursPage() {
                       <div className="fournisseur-card-acts">
                         {(f.laboIds ?? []).length === 0
                           ? <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>—</span>
-                          : (f.laboIds ?? []).map((id) => <span key={id} className="act-chip" style={{ background: '#ede9fe', color: '#7c3aed', borderColor: '#c4b5fd' }}>🏭 {laboLabel(id)}</span>)}
+                          : (f.laboIds ?? []).map((id) => <span key={id} className="act-chip" style={{ background: '#ede9fe', color: '#7c3aed', borderColor: '#c4b5fd' }}>{voc.icon('labo')} {laboLabel(id)}</span>)}
                       </div>
                     </td>
                     <td style={{ textAlign: 'center', padding: '10px 14px', verticalAlign: 'middle' }}>
@@ -346,7 +348,7 @@ export default function FournisseursPage() {
                   <tr>
                     <td colSpan={7} style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '32px 24px' }}>
                       <div style={{ fontSize: '2rem', marginBottom: 8 }}>🔍</div>
-                      <div>{search ? 'Aucun résultat.' : 'Aucun fournisseur. Cliquez sur "+ Nouveau fournisseur".'}</div>
+                      <div>{search ? 'Aucun résultat.' : `${voc.Aucun('fournisseur')}. Cliquez sur "+ ${voc.Nouveau('fournisseur')}".`}</div>
                     </td>
                   </tr>
                 )}
@@ -354,7 +356,7 @@ export default function FournisseursPage() {
             </table>
             {foTotalPages > 1 && (
               <div style={{ padding: '8px 14px', fontSize: '0.78rem', color: 'var(--text-muted)', borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <span>{filteredFournisseurs.length} fournisseur{filteredFournisseurs.length > 1 ? 's' : ''}{search ? ` (filtré${filteredFournisseurs.length > 1 ? 's' : ''})` : ''}</span>
+                <span>{voc.n('fournisseur', filteredFournisseurs.length)}{search ? ` (${voc.acc('fournisseur', 'filtré', 'filtrée', filteredFournisseurs.length)})` : ''}</span>
                 <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                   <button className="btn btn-ghost btn-sm" disabled={foPage === 1} onClick={() => setFoPage((p) => Math.max(1, p - 1))} style={{ padding: '3px 10px', fontWeight: 700 }}>‹</button>
                   <span style={{ fontWeight: 600, color: 'var(--text)' }}>{foPage} / {foTotalPages}</span>
@@ -375,7 +377,7 @@ export default function FournisseursPage() {
             </div>
             <div className="modal-body">
               <p style={{ margin: 0, fontSize: '0.95rem' }}>
-                Voulez-vous vraiment supprimer le fournisseur <strong>"{deleteConfirm.nom}"</strong> ?
+                Voulez-vous vraiment supprimer {voc.le('fournisseur')} <strong>"{deleteConfirm.nom}"</strong> ?
               </p>
               <p style={{ margin: '10px 0 0', fontSize: '0.83rem', color: 'var(--text-muted)' }}>
                 Cette action est irréversible.
@@ -399,7 +401,7 @@ export default function FournisseursPage() {
           <div className="modal" style={{ maxWidth: 520 }} onClick={(e) => e.stopPropagation()}>
             <div className="modal-header" style={{ background: 'linear-gradient(135deg, #7c2d12, #ea580c)', borderRadius: '12px 12px 0 0', padding: '18px 22px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <h2 style={{ color: '#fff', margin: 0, fontSize: '1.05rem', fontWeight: 800 }}>
-                {modal.mode === 'create' ? 'Nouveau fournisseur' : 'Modifier le fournisseur'}
+                {modal.mode === 'create' ? voc.Nouveau('fournisseur') : `Modifier ${voc.le('fournisseur')}`}
               </h2>
               <button
                 onClick={() => setModal(null)}
@@ -409,7 +411,7 @@ export default function FournisseursPage() {
             <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               <div>
                 <label style={labelStyle}>Nom *</label>
-                <input className="input" style={{ width: '100%' }} placeholder="Nom du fournisseur" value={form.nom} onChange={(e) => setForm((p) => ({ ...p, nom: e.target.value }))} />
+                <input className="input" style={{ width: '100%' }} placeholder={`Nom ${voc.du('fournisseur')}`} value={form.nom} onChange={(e) => setForm((p) => ({ ...p, nom: e.target.value }))} />
               </div>
               <div>
                 <label style={labelStyle}>Téléphone</label>
@@ -420,10 +422,10 @@ export default function FournisseursPage() {
                 <input className="input" style={{ width: '100%' }} placeholder="Adresse (optionnel)" value={form.adresse} onChange={(e) => setForm((p) => ({ ...p, adresse: e.target.value }))} />
               </div>
               <div>
-                <label style={labelStyle}>Activités liées</label>
+                <label style={labelStyle}>{voc.Pl('activite')} {voc.acc('activite', 'liés', 'liées')}</label>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, maxHeight: 140, overflowY: 'auto', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 10px' }}>
                   {activites.length === 0
-                    ? <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>Aucune activité</span>
+                    ? <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>{voc.Aucun('activite')}</span>
                     : activites.map((a) => (
                       <label key={a.id} style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: '0.85rem' }}>
                         <input type="checkbox" checked={form.activiteIds.includes(a.id)} onChange={() => toggleActivite(a.id)} />
@@ -434,12 +436,12 @@ export default function FournisseursPage() {
               </div>
               {labos.length > 0 && (
                 <div>
-                  <label style={labelStyle}>Labos liés</label>
+                  <label style={labelStyle}>{voc.Court('labo', true)} {voc.acc('labo', 'liés', 'liées')}</label>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, border: '1px solid var(--border)', borderRadius: 8, padding: '8px 10px' }}>
                     {labos.map((l) => (
                       <label key={l.id} style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: '0.85rem' }}>
                         <input type="checkbox" checked={form.laboIds.includes(l.id)} onChange={() => toggleLabo(l.id)} />
-                        🏭 {l.nom} {l.refLabo ? <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>({l.refLabo})</span> : null}
+                        {voc.icon('labo')} {l.nom} {l.refLabo ? <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>({l.refLabo})</span> : null}
                       </label>
                     ))}
                   </div>

@@ -1,0 +1,30 @@
+[
+  {
+    "fichier": "src/components/client/HistoriqueInventairePage.tsx",
+    "avant": "⟦?⟦·⟧|Inventaire.xlsx⟧",
+    "apres": "⟦?⟦·⟧|Inventaire.xlsx⟧",
+    "type": "discriminant",
+    "justification": "Nom de repli du fichier Excel téléchargé (employé seulement si l'en-tête content-disposition du serveur est absent) : jamais affiché à l'écran, et la règle 8 de la spec §3 interdit de toucher aux noms de fichiers téléchargés."
+  },
+  {
+    "fichier": "src/components/client/VentesPage.tsx",
+    "avant": "Article",
+    "apres": "Article",
+    "type": "homonyme",
+    "justification": "En-tête de la première colonne des deux tableaux de la page (saisie commune aux trois onglets produits / suppléments / ventes valorisées, et historique) : « Article » y désigne la ligne du catalogue de vente (l'« article vendable » du code : ArticleVendable, article_type 'produit' | 'ingredient', VenteLigne.article_nom), pas la clé « article » du lexique (la matière du référentiel). Par voc, un compte Hôtellerie lirait « Fourniture » et un compte Céramique « Matière première » au-dessus d'une liste de prestations ou de produits finis vendus. Même décision que le compteur « n/N articles » de ConfigurationVentePage (F7.json)."
+  },
+  {
+    "fichier": "src/components/client/VentesPage.tsx",
+    "avant": "Aucun article vendable configuré",
+    "apres": "Aucun article vendable configuré",
+    "type": "homonyme",
+    "justification": "Valeur par défaut du paramètre emptyMsg de SaisieTable (jamais affichée aujourd'hui : les trois appels passent leur propre message, qui sort de voc) : « article vendable » y est la ligne du catalogue de vente commune aux trois onglets (ArticleVendable dans le code), pas la clé « article » du lexique. Par voc, le repli dirait « Aucune fourniture vendable configurée » pour une liste de prestations."
+  },
+  {
+    "fichier": "src/components/client/VentesPage.tsx",
+    "avant": "Le stock des articles vendus sera réintégré.",
+    "apres": "Le stock des articles vendus sera réintégré.",
+    "type": "homonyme",
+    "justification": "Message de confirmation de l'annulation d'une vente : « articles vendus » désigne les lignes de la vente (produits, suppléments ou articles valorisés : VenteLigne.article_nom), pas la clé « article » du lexique ; « des fournitures vendues » serait faux pour une vente de prestations. Le reste de la phrase sort de voc : « Le stock » (voc.Le('stock')) et l'accord « réintégré » (voc.acc('stock', …))."
+  }
+]

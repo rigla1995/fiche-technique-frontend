@@ -4,6 +4,8 @@ import api from '../../api/client';
 import HistoryFilterBar, { FilterField, FilterInput, FilterSelect } from '../common/HistoryFilterBar';
 import type { Activite } from '../../types';
 import GuideButton from './GuideButton';
+import { useVocabulaire } from '../../hooks/useVocabulaire';
+import { libelleCategoriePt } from '../../vocab/categoriesPt';
 
 const currentYear = new Date().getFullYear();
 const yearStart = `${currentYear}-01-01`;
@@ -53,6 +55,7 @@ interface LigneFact {
 }
 
 export default function FacturesApproPage() {
+  const voc = useVocabulaire();
   const [searchParams] = useSearchParams();
   const initActiviteId = searchParams.get('activiteId') || '';
   const laboId = searchParams.get('laboId') || '';
@@ -192,9 +195,9 @@ export default function FacturesApproPage() {
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
             <div style={{ background: 'rgba(255,255,255,0.2)', borderRadius: 10, padding: '7px 9px', fontSize: '1.2rem' }}>🧾</div>
-            <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0 }}>Factures Appro — Activités</h1>
+            <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0 }}>Factures {voc.Court('appro')} — {voc.Court('activite', true)}</h1>
           </div>
-          <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.85rem', margin: 0 }}>Consultation des approvisionnements sous forme de factures</p>
+          <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.85rem', margin: 0 }}>Consultation {voc.du('appro', true)} sous forme de factures</p>
         </div>
         <GuideButton section="factures" />
       </div>
@@ -206,7 +209,7 @@ export default function FacturesApproPage() {
             <button key={a.id}
               onClick={() => setSelectedActiviteId(String(a.id))}
               style={{ padding: '4px 14px', borderRadius: 20, cursor: 'pointer', fontSize: '0.82rem', border: selectedActiviteId === String(a.id) ? '1.5px solid #1e40af' : '1.5px solid var(--border)', background: selectedActiviteId === String(a.id) ? '#1e40af' : 'var(--bg)', color: selectedActiviteId === String(a.id) ? '#fff' : 'var(--text)', fontWeight: selectedActiviteId === String(a.id) ? 700 : 400 }}
-            >🏪 {a.nom}</button>
+            >{voc.icon('activite')} {a.nom}</button>
           ))}
         </div>
       )}
@@ -221,9 +224,9 @@ export default function FacturesApproPage() {
         <FilterField label="📅 Du"><FilterInput type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} /></FilterField>
         <FilterField label="📅 Au"><FilterInput type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} /></FilterField>
         {nonLaboFournisseurs.length > 0 && (
-          <FilterField label="🚚 Fournisseur">
+          <FilterField label={`🚚 ${voc.Nom('fournisseur')}`}>
             <FilterSelect value={selectedFournisseurId} onChange={(e) => setSelectedFournisseurId(e.target.value)}>
-              <option value="">— Tous —</option>
+              <option value="">— {voc.acc('fournisseur', 'Tous', 'Toutes')} —</option>
               {nonLaboFournisseurs.map((f) => <option key={f.id} value={f.id}>{f.nom}</option>)}
             </FilterSelect>
           </FilterField>
@@ -264,12 +267,12 @@ export default function FacturesApproPage() {
                     <span style={{ fontSize: '1.1rem' }}>🧾</span>
                     <div>
                       <div style={{ fontWeight: 800, fontSize: '0.9rem', color: '#1e3a8a' }}>
-                        {f.fournisseurNom ?? 'Sans fournisseur'}
+                        {f.fournisseurNom ?? `Sans ${voc.nom('fournisseur')}`}
                       </div>
                       <div style={{ fontSize: '0.72rem', color: '#3b82f6', marginTop: 2 }}>
                         {f.refFacture ? `Réf: ${f.refFacture}` : 'Sans réf.'} · {fmtDate(f.dateFacture)}
                         <span style={{ marginLeft: 8, background: '#0369a1', color: '#fff', borderRadius: 4, padding: '1px 6px', fontSize: '0.65rem', fontWeight: 700 }}>
-                          {f.typeSource === 'transfert' ? '↗ Transfert' : 'Manuel'}
+                          {f.typeSource === 'transfert' ? `↗ ${voc.Court('transfert')}` : voc.acc('appro', 'Manuel', 'Manuelle')}
                         </span>
                       </div>
                     </div>
@@ -304,10 +307,10 @@ export default function FacturesApproPage() {
                       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
                         <thead>
                           <tr style={{ background: '#eff6ff', borderBottom: '2px solid #bfdbfe' }}>
-                            {(['Article', 'Catégorie', 'Qté', 'Prix HT/u', hasTva ? 'TVA %' : null, hasTva ? 'Prix TTC/u' : null, 'Total HT', hasTva ? 'Total TTC' : null] as (string | null)[])
+                            {([voc.Nom('article'), 'Catégorie', 'Qté', 'Prix HT/u', hasTva ? 'TVA %' : null, hasTva ? 'Prix TTC/u' : null, 'Total HT', hasTva ? 'Total TTC' : null] as (string | null)[])
                               .filter(Boolean)
                               .map((h) => (
-                                <th key={h!} style={{ padding: '8px 12px', fontWeight: 700, textAlign: h === 'Article' || h === 'Catégorie' ? 'left' : 'right', color: '#1e40af', textTransform: 'uppercase', fontSize: '0.65rem', letterSpacing: '0.05em' }}>
+                                <th key={h!} style={{ padding: '8px 12px', fontWeight: 700, textAlign: h === voc.Nom('article') || h === 'Catégorie' ? 'left' : 'right', color: '#1e40af', textTransform: 'uppercase', fontSize: '0.65rem', letterSpacing: '0.05em' }}>
                                   {h}
                                 </th>
                               ))}
@@ -323,7 +326,7 @@ export default function FacturesApproPage() {
                                   <div style={{ fontWeight: 600 }}>{l.ingredientNom}</div>
                                   <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{l.uniteNom}</div>
                                 </td>
-                                <td style={{ padding: '8px 12px', color: 'var(--text-muted)', fontSize: '0.78rem' }}>{l.categorieNom}</td>
+                                <td style={{ padding: '8px 12px', color: 'var(--text-muted)', fontSize: '0.78rem' }}>{libelleCategoriePt(voc, l.categorieNom)}</td>
                                 <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 700, color: '#0f766e' }}>{l.quantite ?? '—'}</td>
                                 <td style={{ padding: '8px 12px', textAlign: 'right' }}>{l.prixUnitaire != null ? `${l.prixUnitaire.toFixed(3)}` : '—'}</td>
                                 {hasTva && <td style={{ padding: '8px 12px', textAlign: 'right', color: '#0369a1' }}>{l.tauxTva != null ? `${l.tauxTva}%` : '—'}</td>}
@@ -337,7 +340,7 @@ export default function FacturesApproPage() {
                         <tfoot>
                           <tr style={{ background: '#eff6ff', borderTop: '2px solid #bfdbfe' }}>
                             <td colSpan={hasTva ? 6 : 4} style={{ padding: '8px 12px', fontWeight: 800, fontSize: '0.72rem', color: '#1e40af', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                              Sous-total — {lignes.length} article{lignes.length > 1 ? 's' : ''}
+                              Sous-total — {voc.n('article', lignes.length)}
                             </td>
                             <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 900, color: '#1e40af', fontSize: '0.88rem' }}>{f.montantHT.toFixed(3)} DT</td>
                             {hasTva && <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 900, color: '#059669', fontSize: '0.88rem' }}>{f.montantTTC.toFixed(3)} DT</td>}

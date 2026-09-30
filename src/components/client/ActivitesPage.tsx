@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
 import GuideButton from './GuideButton';
 import { useAuth } from '../../context/AuthContext';
+import { useVocabulaire } from '../../hooks/useVocabulaire';
 import HistoryFilterBar, { FilterField, FilterInput } from '../common/HistoryFilterBar';
 import type { Activite, ActiviteIngredient, Labo, AbonnementConfig, Composant, UniteOperationnelleFields } from '../../types';
 
@@ -53,6 +54,7 @@ const dividerStyle: React.CSSProperties = {
 
 export default function ActivitesPage({ onCreated, minimal }: Props) {
   const { t } = useTranslation();
+  const voc = useVocabulaire();
   const { user, advanceOnboarding } = useAuth();
   const navigate = useNavigate();
 
@@ -224,8 +226,8 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
     if (!form.nom.trim()) { setError(t('validation.name_required')); return; }
     // Validate labo config if labos exist
     if (labos.length > 0) {
-      if (hasLabo === null) { setError('Veuillez choisir une option pour le labo'); return; }
-      if (hasLabo === true && !selectedLaboId) { setError('Veuillez sélectionner un labo'); return; }
+      if (hasLabo === null) { setError(`Veuillez choisir une option pour ${voc.le('labo')}`); return; }
+      if (hasLabo === true && !selectedLaboId) { setError(`Veuillez sélectionner ${voc.un('labo')}`); return; }
     }
     setSaving(true);
     setError('');
@@ -332,7 +334,7 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
   };
 
   const saveLabo = async () => {
-    if (!laboFormData.nom.trim()) { setLaboError('Nom du labo requis'); return; }
+    if (!laboFormData.nom.trim()) { setLaboError(`Nom ${voc.du('labo')} requis`); return; }
     if (!editingLaboId && !laboFormData.refLabo.trim()) { setLaboError('Référence requise'); return; }
     setLaboSaving(true);
     setLaboError('');
@@ -390,7 +392,7 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
 
   const bizNextStep = () => {
     if (!bizLaboSkip) {
-      if (!bizLaboForm.nom.trim()) { setBizError('Nom du labo requis'); return; }
+      if (!bizLaboForm.nom.trim()) { setBizError(`Nom ${voc.du('labo')} requis`); return; }
       if (!bizLaboForm.refLabo.trim()) { setBizError('Référence requise'); return; }
     }
     setBizError('');
@@ -509,7 +511,7 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
               <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0 }}>{t('nav.activites')}</h1>
             </div>
             <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.85rem', margin: 0 }}>
-              Gérez vos points de vente et laboratoires de production
+              Gérez {voc.votre('activite_desc', true)} et {voc.pl('labo_desc')}
             </p>
           </div>
           <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
@@ -521,7 +523,7 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                   borderRadius: 12, padding: '10px 20px', textAlign: 'center', minWidth: 90,
                   border: `1px solid ${atActiviteLimit ? '#fecaca' : activites.length > 0 ? '#bbf7d0' : 'rgba(255,255,255,0.2)'}`,
                 }}>
-                  <div style={{ fontSize: '0.66rem', fontWeight: 700, color: atActiviteLimit || activites.length > 0 ? '#6b7280' : 'rgba(255,255,255,0.7)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 2 }}>Activités</div>
+                  <div style={{ fontSize: '0.66rem', fontWeight: 700, color: atActiviteLimit || activites.length > 0 ? '#6b7280' : 'rgba(255,255,255,0.7)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 2 }}>{voc.Pl('activite')}</div>
                   <div style={{ fontSize: '1.4rem', fontWeight: 900, color: atActiviteLimit ? '#dc2626' : activites.length > 0 ? '#16a34a' : '#fff', lineHeight: 1 }}>
                     {activites.length}<span style={{ fontSize: '0.8rem', fontWeight: 600, color: atActiviteLimit || activites.length > 0 ? '#6b7280' : 'rgba(255,255,255,0.6)' }}> / {abonnementConfig.nbActivites}</span>
                   </div>
@@ -538,7 +540,7 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                     borderRadius: 12, padding: '10px 20px', textAlign: 'center', minWidth: 80,
                     border: `1px solid ${atLaboLimit ? '#fecaca' : usedLabos > 0 ? '#c4b5fd' : 'rgba(255,255,255,0.2)'}`,
                   }}>
-                    <div style={{ fontSize: '0.66rem', fontWeight: 700, color: atLaboLimit || usedLabos > 0 ? '#6b7280' : 'rgba(255,255,255,0.7)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 2 }}>Labos</div>
+                    <div style={{ fontSize: '0.66rem', fontWeight: 700, color: atLaboLimit || usedLabos > 0 ? '#6b7280' : 'rgba(255,255,255,0.7)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 2 }}>{voc.Pl('labo')}</div>
                     <div style={{ fontSize: '1.4rem', fontWeight: 900, color: atLaboLimit ? '#dc2626' : usedLabos > 0 ? '#7c3aed' : '#fff', lineHeight: 1 }}>
                       {usedLabos}<span style={{ fontSize: '0.8rem', fontWeight: 600, color: atLaboLimit || usedLabos > 0 ? '#6b7280' : 'rgba(255,255,255,0.6)' }}> / {abonnementConfig.nbLabos}</span>
                     </div>
@@ -583,16 +585,16 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
             const canAddActivite = !atActiviteLimit;
             return (
               <>
-                <div style={{ fontSize: 52, marginBottom: 18 }}>{isDepot ? '🏭' : '🚀'}</div>
+                <div style={{ fontSize: 52, marginBottom: 18 }}>{isDepot ? voc.icon('labo') : '🚀'}</div>
                 <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#111827', marginBottom: 10 }}>
-                  {isDepot ? 'Démarrez votre labo' : 'Démarrez votre activité'}
+                  Démarrez {voc.votre(isDepot ? 'labo' : 'activite')}
                 </h2>
                 <p style={{ fontSize: '0.88rem', color: '#6b7280', marginBottom: 32, lineHeight: 1.7, maxWidth: 420, margin: '0 auto 32px' }}>
                   {isDepot
-                    ? `Votre abonnement inclut ${maxLabos} labo(s)${moduleAcheteursActif ? " et l'Espace Acheteurs (ventes B2B)" : ''}. Créez votre labo pour débloquer le référentiel, le stock${moduleAcheteursActif ? ' et les ventes aux acheteurs' : ''}.`
+                    ? `Votre abonnement inclut ${maxLabos} ${voc.nomS('labo')}${moduleAcheteursActif ? ` et ${voc.le('espace_acheteurs', false, 'Nom')} (${voc.pl('vente')} B2B)` : ''}. Créez ${voc.votre('labo')} pour débloquer ${voc.le('referentiel')}, ${voc.le('stock')}${moduleAcheteursActif ? ` et ${voc.le('vente', true)} ${voc.au('acheteur', true)}` : ''}.`
                     : configHasLabo
-                      ? `Votre abonnement inclut jusqu'à ${maxActivites} activité(s) et ${maxLabos} labo(s). Configurez votre business en quelques étapes.`
-                      : `Votre abonnement inclut jusqu'à ${maxActivites} activité(s). Créez votre première activité pour commencer.`
+                      ? `Votre abonnement inclut jusqu'à ${maxActivites} ${voc.nomS('activite')} et ${maxLabos} ${voc.nomS('labo')}. Configurez votre business en quelques étapes.`
+                      : `Votre abonnement inclut jusqu'à ${maxActivites} ${voc.nomS('activite')}. Créez ${voc.acc('activite', 'votre premier', 'votre première')} ${voc.nom('activite')} pour commencer.`
                   }
                 </p>
                 <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center' }}>
@@ -606,7 +608,7 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                       }}
                       onClick={openAddLabo}
                     >
-                      🏭 Créer mon labo
+                      {voc.icon('labo')} Créer {voc.mon('labo')}
                     </button>
                   ) : canAddActivite && configHasLabo ? (
                     <button
@@ -622,7 +624,7 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                     </button>
                   ) : canAddActivite ? (
                     <button className="btn btn-primary" style={{ padding: '11px 26px', fontWeight: 700 }} onClick={() => openAdd()}>
-                      + Ajouter mon activité
+                      + Ajouter {voc.mon('activite')}
                     </button>
                   ) : canAddLabo ? (
                     <button
@@ -633,7 +635,7 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                       }}
                       onClick={openAddLabo}
                     >
-                      🏭 Créer mon labo
+                      {voc.icon('labo')} Créer {voc.mon('labo')}
                     </button>
                   ) : (
                     <div style={{ fontSize: 13, color: '#6b7280', background: '#f3f4f6', border: '1px solid #e5e7eb', borderRadius: 8, padding: '8px 16px' }}>
@@ -654,7 +656,7 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
             onReset={() => setFilterName('')} showReset={!!filterName}
           >
             <FilterField label="🔍 Nom">
-              <FilterInput type="text" placeholder="Filtrer activités et labos…" value={filterName} onChange={(e) => setFilterName(e.target.value)} />
+              <FilterInput type="text" placeholder={`Filtrer ${voc.pl('activite')} et ${voc.pl('labo')}…`} value={filterName} onChange={(e) => setFilterName(e.target.value)} />
             </FilterField>
           </HistoryFilterBar>
 
@@ -665,26 +667,26 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                 <span style={{ fontSize: '1.1rem' }}>🏢</span>
                 <span style={{ fontSize: '0.9rem', fontWeight: 800, color: '#1e40af' }}>{t('nav.activites')}</span>
                 <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#2563eb', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 20, padding: '2px 10px' }}>
-                  {activites.length}{maxActivites !== null ? ` / ${maxActivites}` : ''} activité(s)
+                  {activites.length}{maxActivites !== null ? ` / ${maxActivites}` : ''} {voc.nomS('activite')}
                 </span>
               </div>
               {!atActiviteLimit ? (
                 <button className="btn btn-primary btn-sm" onClick={() => openAdd()}>
-                  + Nouvelle activité
+                  + {voc.Nouveau('activite')}
                 </button>
               ) : (
-                <button className="btn btn-sm" title="Demander l'ajout d'activités" onClick={() => navigate('/client/support?type=supplement')}
+                <button className="btn btn-sm" title={`Demander l'ajout ${voc.de('activite', true)}`} onClick={() => navigate('/client/support?type=supplement')}
                   style={{ background: '#1e40af', color: '#fff', border: 'none', borderRadius: 8, fontSize: '0.8rem', padding: '6px 14px', cursor: 'pointer', fontWeight: 700 }}>
-                  ⚡ Ajouter activités
+                  ⚡ Ajouter {voc.pl('activite')}
                 </button>
               )}
             </div>
 
             {activites.length === 0 ? (
               <div style={{ background: '#f9fafb', border: '1px dashed #d1d5db', borderRadius: 12, padding: '24px', textAlign: 'center' }}>
-                <p style={{ color: '#6b7280', fontSize: '0.88rem', margin: '0 0 12px' }}>Aucune activité créée.</p>
+                <p style={{ color: '#6b7280', fontSize: '0.88rem', margin: '0 0 12px' }}>{voc.Aucun('activite')} {voc.acc('activite', 'créé', 'créée')}.</p>
                 {!atActiviteLimit && (
-                  <button className="btn btn-primary btn-sm" onClick={() => openAdd()}>+ Ajouter une activité</button>
+                  <button className="btn btn-primary btn-sm" onClick={() => openAdd()}>+ Ajouter {voc.un('activite')}</button>
                 )}
               </div>
             ) : filteredActivites.length === 0 ? (
@@ -697,7 +699,7 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                       <th>{t('common.name')}</th>
                       <th>{t('client.entreprise.activity_adresse')}</th>
                       {activites.some((a) => a.laboId) && (
-                        <th style={{ width: 130 }}>{t('client.entreprise.labo', 'Labo')}</th>
+                        <th style={{ width: 130 }}>{t('client.entreprise.labo')}</th>
                       )}
                       <th style={{ width: 140, textAlign: 'right' }}></th>
                     </tr>
@@ -725,7 +727,7 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                                 style={{ fontSize: '0.78rem', fontWeight: 600, color: '#7c3aed', background: '#ede9fe', border: '1px solid #c4b5fd', borderRadius: 20, padding: '2px 8px', cursor: 'pointer' }}
                                 onClick={() => setLaboPopup({ nom: act.laboNom!, tel: act.laboTel ?? null, adresse: act.laboAdresse ?? null })}
                               >
-                                🏭 {act.laboNom}
+                                {voc.icon('labo')} {act.laboNom}
                               </button>
                             ) : (
                               <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>—</span>
@@ -738,9 +740,9 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                             const locked = (act.ingredientCount ?? 0) > 0;
                             return (
                               <button className="btn btn-danger-ghost btn-sm"
-                                title={locked ? 'Suppression impossible : des articles sont affectés à cette activité.' : t('common.delete')}
+                                title={locked ? `Suppression impossible : ${voc.un('article', true)} sont ${voc.acc('article', 'affectés', 'affectées')} à ${voc.ce('activite')}.` : t('common.delete')}
                                 onClick={() => locked
-                                  ? flashLock("Suppression impossible : des articles sont affectés à cette activité. Retirez d'abord ces articles pour pouvoir la supprimer.")
+                                  ? flashLock(`Suppression impossible : ${voc.un('article', true)} sont ${voc.acc('article', 'affectés', 'affectées')} à ${voc.ce('activite')}. Retirez d'abord ${voc.ce('article', true)} pour pouvoir ${voc.acc('activite', 'le', 'la')} supprimer.`)
                                   : setDeleteTarget({ kind: 'activite', act })}>🗑</button>
                             );
                           })()}
@@ -758,10 +760,10 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
             <div style={{ marginBottom: 32 }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14, padding: '10px 16px', background: 'linear-gradient(135deg,#faf5ff,#ede9fe)', borderRadius: 12, border: '1px solid #a78bfa' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <span style={{ fontSize: '1.1rem' }}>🏭</span>
-                  <span style={{ fontSize: '0.9rem', fontWeight: 800, color: '#7e22ce' }}>Espace Labos</span>
+                  <span style={{ fontSize: '1.1rem' }}>{voc.icon('labo')}</span>
+                  <span style={{ fontSize: '0.9rem', fontWeight: 800, color: '#7e22ce' }}>Espace {voc.Court('labo', true)}</span>
                   <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#7c3aed', background: '#faf5ff', border: '1px solid #a78bfa', borderRadius: 20, padding: '2px 10px' }}>
-                    {labos.length} / {maxLabos} labo(s)
+                    {labos.length} / {maxLabos} {voc.nomS('labo')}
                   </span>
                 </div>
                 {!atLaboLimit ? (
@@ -770,22 +772,22 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                     style={{ background: '#7e22ce', color: '#fff', border: 'none', borderRadius: 8, fontSize: '0.8rem', padding: '6px 14px', cursor: 'pointer', fontWeight: 700 }}
                     onClick={openAddLabo}
                   >
-                    + Nouveau labo
+                    + {voc.Nouveau('labo')}
                   </button>
                 ) : (
-                  <button className="btn btn-sm" title="Demander l'ajout de labos" onClick={() => navigate('/client/support?type=supplement')}
+                  <button className="btn btn-sm" title={`Demander l'ajout ${voc.de('labo', true)}`} onClick={() => navigate('/client/support?type=supplement')}
                     style={{ background: '#7e22ce', color: '#fff', border: 'none', borderRadius: 8, fontSize: '0.8rem', padding: '6px 14px', cursor: 'pointer', fontWeight: 700 }}>
-                    ⚡ Ajouter labos
+                    ⚡ Ajouter {voc.pl('labo')}
                   </button>
                 )}
               </div>
 
               {labos.length === 0 ? (
                 <p className="text-muted" style={{ fontSize: '0.85rem' }}>
-                  Aucun labo créé.{' '}
+                  {voc.Aucun('labo')} {voc.acc('labo', 'créé', 'créée')}.{' '}
                   {!atLaboLimit && (
                     <button style={{ background: 'none', border: 'none', color: 'var(--primary)', cursor: 'pointer', fontSize: '0.85rem', padding: 0, textDecoration: 'underline' }} onClick={openAddLabo}>
-                      Créer le premier labo
+                      Créer {voc.acc('labo', 'le premier', 'la première')} {voc.nom('labo')}
                     </button>
                   )}
                 </p>
@@ -800,7 +802,7 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                         <th style={{ width: 120 }}>Réf.</th>
                         <th>Adresse</th>
                         {/* Colonne « Alimenté par » (lot 1b) : seulement si au moins un labo a une source */}
-                        {anyLaboHasSource && <th style={{ width: 150 }}>Alimenté par</th>}
+                        {anyLaboHasSource && <th style={{ width: 150 }}>{voc.acc('labo', 'Alimenté', 'Alimentée')} par</th>}
                         <th style={{ width: 80, textAlign: 'right' }}></th>
                       </tr>
                     </thead>
@@ -837,9 +839,9 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                               const locked = (labo.ingredientCount ?? 0) > 0;
                               return (
                                 <button className="btn btn-danger-ghost btn-sm"
-                                  title={locked ? 'Suppression impossible : des articles sont affectés à ce labo.' : 'Supprimer'}
+                                  title={locked ? `Suppression impossible : ${voc.un('article', true)} sont ${voc.acc('article', 'affectés', 'affectées')} à ${voc.ce('labo')}.` : 'Supprimer'}
                                   onClick={() => locked
-                                    ? flashLock("Suppression impossible : des articles sont affectés à ce labo. Retirez d'abord ces articles pour pouvoir le supprimer.")
+                                    ? flashLock(`Suppression impossible : ${voc.un('article', true)} sont ${voc.acc('article', 'affectés', 'affectées')} à ${voc.ce('labo')}. Retirez d'abord ${voc.ce('article', true)} pour pouvoir ${voc.acc('labo', 'le', 'la')} supprimer.`)
                                     : setDeleteLaboTarget(labo)}>🗑</button>
                               );
                             })()}
@@ -867,7 +869,7 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
             }}>
               <div>
                 <div style={{ fontSize: '0.7rem', fontWeight: 700, color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>
-                  {editingId ? 'Modification' : isDuplicate ? 'Duplication' : 'Nouvelle'}
+                  {editingId ? 'Modification' : isDuplicate ? 'Duplication' : voc.acc('activite', 'Nouveau', 'Nouvelle')}
                 </div>
                 <h2 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: '#fff' }}>
                   {editingId ? t('client.entreprise.edit_activity') : isDuplicate ? t('client.entreprise.duplicate_activity') : t('client.entreprise.add_activity')}
@@ -892,7 +894,7 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                     value={form.nom}
                     onChange={(e) => setForm((f) => ({ ...f, nom: e.target.value }))}
                     autoFocus
-                    placeholder="Ex: Point de vente Tunis"
+                    placeholder={voc.ex('Ex: Point de vente Tunis', `Ex: ${voc.Nom('activite')} 1`)}
                     style={nameConflict ? { borderColor: '#ef4444' } : undefined}
                   />
                   {nameConflict && (
@@ -932,7 +934,7 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                     <div style={dividerStyle} />
                     <div>
                       <div style={sectionTitle('#6d28d9')}>
-                        <span>🏭</span> Configuration laboratoire
+                        <span>{voc.icon('labo')}</span> Configuration {voc.court('labo_long')}
                       </div>
                       <div style={{ display: 'flex', gap: 10 }}>
                         <label style={{
@@ -947,8 +949,8 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                             style={{ accentColor: '#7c3aed', flexShrink: 0 }}
                           />
                           <div>
-                            <div style={{ fontWeight: 700, fontSize: '0.88rem', color: '#1f2937' }}>🏭 Avec labo</div>
-                            <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: 1 }}>Approvisionnement via labo</div>
+                            <div style={{ fontWeight: 700, fontSize: '0.88rem', color: '#1f2937' }}>{voc.icon('labo')} Avec {voc.nom('labo')}</div>
+                            <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: 1 }}>{voc.Nom('appro')} via {voc.nom('labo')}</div>
                           </div>
                         </label>
                         <label style={{
@@ -963,20 +965,20 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                             style={{ accentColor: '#7c3aed', flexShrink: 0 }}
                           />
                           <div>
-                            <div style={{ fontWeight: 700, fontSize: '0.88rem', color: '#1f2937' }}>📋 Sans labo</div>
-                            <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: 1 }}>Gestion par activité</div>
+                            <div style={{ fontWeight: 700, fontSize: '0.88rem', color: '#1f2937' }}>📋 Sans {voc.nom('labo')}</div>
+                            <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: 1 }}>Gestion par {voc.nom('activite')}</div>
                           </div>
                         </label>
                       </div>
                       {hasLabo === true && (
                         <div style={{ marginTop: 10 }}>
                           <label style={{ fontSize: '0.72rem', fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 5 }}>
-                            Sélectionner un labo *
+                            Sélectionner {voc.un('labo')} *
                           </label>
                           <select className="input" style={{ width: '100%' }} value={selectedLaboId}
                             onChange={(e) => setSelectedLaboId(e.target.value === '' ? '' : Number(e.target.value))}>
                             <option value="">— Choisir —</option>
-                            {labos.map((l) => <option key={l.id} value={l.id}>🏭 {l.nom}{l.refLabo ? ` (${l.refLabo})` : ''}</option>)}
+                            {labos.map((l) => <option key={l.id} value={l.id}>{voc.icon('labo')} {l.nom}{l.refLabo ? ` (${l.refLabo})` : ''}</option>)}
                           </select>
                         </div>
                       )}
@@ -999,7 +1001,7 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                   disabled={saving || nameConflict || !form.nom.trim()}
                   style={{ minWidth: 120, fontWeight: 700 }}
                 >
-                  {saving ? t('common.loading') : editingId ? '💾 Enregistrer' : '+ Créer l\'activité'}
+                  {saving ? t('common.loading') : editingId ? '💾 Enregistrer' : `+ Créer ${voc.le('activite')}`}
                 </button>
               </div>
             </form>
@@ -1065,7 +1067,7 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
         <div className="modal-overlay">
           <div className="modal" style={{ maxWidth: 360 }} onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h2 style={{ margin: 0 }}>🏭 {laboPopup.nom}</h2>
+              <h2 style={{ margin: 0 }}>{voc.icon('labo')} {laboPopup.nom}</h2>
               <button className="btn btn-ghost btn-sm" onClick={() => setLaboPopup(null)}>✕</button>
             </div>
             <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -1092,10 +1094,10 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
             }}>
               <div>
                 <div style={{ fontSize: '0.7rem', fontWeight: 700, color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>
-                  {editingLaboId ? 'Modification' : 'Nouveau'}
+                  {editingLaboId ? 'Modification' : voc.acc('labo', 'Nouveau', 'Nouvelle')}
                 </div>
                 <h2 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: '#fff' }}>
-                  🏭 {editingLaboId ? 'Modifier le labo' : 'Nouveau labo'}
+                  {voc.icon('labo')} {editingLaboId ? `Modifier ${voc.le('labo')}` : voc.Nouveau('labo')}
                 </h2>
               </div>
               <button
@@ -1110,10 +1112,10 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
 
               {/* Nom */}
               <div style={fieldWrap}>
-                <label style={fieldLabel}>Nom du labo <span style={{ color: '#ef4444' }}>*</span></label>
+                <label style={fieldLabel}>Nom {voc.du('labo')} <span style={{ color: '#ef4444' }}>*</span></label>
                 <input type="text" className="input" value={laboFormData.nom}
                   onChange={(e) => setLaboFormData((p) => ({ ...p, nom: e.target.value }))}
-                  placeholder="Ex: Labo Central" autoFocus />
+                  placeholder={voc.ex('Ex: Labo Central', `Ex: ${voc.Nom('labo')} 1`)} autoFocus />
               </div>
 
               {/* Composant du domaine (lot 1b) — rendu seulement si ≥ 2 composants labo actifs */}
@@ -1136,7 +1138,7 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                   </label>
                   <input type="text" className="input" value={laboFormData.refLabo}
                     onChange={(e) => setLaboFormData((p) => ({ ...p, refLabo: e.target.value }))}
-                    placeholder="Ex: LABO-001" />
+                    placeholder={`Ex: ${voc.MAJ('labo', false, 'court')}-001`} />
                 </div>
               )}
 
@@ -1153,13 +1155,13 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
               {laboParentOptions.length > 0 && (
                 <div style={fieldWrap}>
                   <label style={fieldLabel}>
-                    Alimenté par
-                    <span style={{ fontWeight: 400, color: '#9ca3af', fontSize: '0.72rem', marginLeft: 5 }}>(labo source des transferts, optionnel)</span>
+                    {voc.acc('labo', 'Alimenté', 'Alimentée')} par
+                    <span style={{ fontWeight: 400, color: '#9ca3af', fontSize: '0.72rem', marginLeft: 5 }}>({voc.nom('labo')} source {voc.du('transfert', true)}, optionnel)</span>
                   </label>
                   <select className="input" style={{ width: '100%' }} value={laboFormData.laboParentId}
                     onChange={(e) => setLaboFormData((p) => ({ ...p, laboParentId: e.target.value === '' ? '' : Number(e.target.value) }))}>
                     <option value="">— Aucune source —</option>
-                    {laboParentOptions.map((l) => <option key={l.id} value={l.id}>🏭 {l.nom}{l.refLabo ? ` (${l.refLabo})` : ''}</option>)}
+                    {laboParentOptions.map((l) => <option key={l.id} value={l.id}>{voc.icon('labo')} {l.nom}{l.refLabo ? ` (${l.refLabo})` : ''}</option>)}
                   </select>
                 </div>
               )}
@@ -1170,13 +1172,13 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                   <div style={dividerStyle} />
                   <div>
                     <div style={sectionTitle('#1d4ed8')}>
-                      <span>🏢</span> Assigner des activités
+                      <span>🏢</span> Assigner {voc.un('activite', true)}
                       <span style={{ fontWeight: 400, color: '#6b7280', textTransform: 'none', fontSize: '0.7rem', marginLeft: 4 }}>(optionnel)</span>
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                       {activites.filter((a) => !a.laboId).length === 0 ? (
                         <p style={{ color: '#9ca3af', fontSize: '0.82rem', fontStyle: 'italic', margin: 0 }}>
-                          Toutes les activités ont déjà un labo assigné.
+                          {voc.Tous('activite')} ont déjà {voc.un('labo')} {voc.acc('labo', 'assigné', 'assignée')}.
                         </p>
                       ) : (
                         activites.filter((a) => !a.laboId).map((act) => (
@@ -1214,7 +1216,7 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
             <div className="modal-footer" style={{ padding: '14px 24px', borderTop: '1px solid #f1f5f9' }}>
               <button type="button" className="btn btn-secondary" onClick={closeLaboModal}>{t('common.cancel')}</button>
               <button type="button" className="btn btn-primary" onClick={saveLabo} disabled={laboSaving} style={{ minWidth: 120, fontWeight: 700, background: '#7c3aed', borderColor: '#7c3aed' }}>
-                {laboSaving ? t('common.loading') : editingLaboId ? '💾 Enregistrer' : '+ Créer le labo'}
+                {laboSaving ? t('common.loading') : editingLaboId ? '💾 Enregistrer' : `+ Créer ${voc.le('labo')}`}
               </button>
             </div>
           </div>
@@ -1250,8 +1252,8 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
               {configHasLabo && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 0 }}>
                   {[
-                    { step: 1, label: 'Laboratoire', icon: '🏭' },
-                    { step: 2, label: 'Activités', icon: '🏢' },
+                    { step: 1, label: voc.Nom('labo_long'), icon: voc.icon('labo') },
+                    { step: 2, label: voc.Pl('activite'), icon: '🏢' },
                   ].map(({ step, label, icon }, idx) => (
                     <div key={step} style={{ display: 'flex', alignItems: 'center' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -1281,7 +1283,7 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
             {bizStep === 1 && configHasLabo && (
               <div className="modal-body" style={{ padding: '22px 28px', display: 'flex', flexDirection: 'column', gap: 16 }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <div style={sectionTitle('#7c3aed')}><span>🏭</span> Créez votre laboratoire</div>
+                  <div style={sectionTitle('#7c3aed')}><span>{voc.icon('labo')}</span> Créez {voc.votre('labo_long')}</div>
                   <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.78rem', color: '#6b7280', cursor: 'pointer' }}>
                     <input type="checkbox" checked={bizLaboSkip} onChange={(e) => { setBizLaboSkip(e.target.checked); setBizError(''); }}
                       style={{ accentColor: '#7c3aed' }} />
@@ -1292,10 +1294,10 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                 {!bizLaboSkip && (
                   <>
                     <div style={fieldWrap}>
-                      <label style={fieldLabel}>Nom du labo <span style={{ color: '#ef4444' }}>*</span></label>
+                      <label style={fieldLabel}>Nom {voc.du('labo')} <span style={{ color: '#ef4444' }}>*</span></label>
                       <input type="text" className="input" value={bizLaboForm.nom}
                         onChange={(e) => setBizLaboForm((p) => ({ ...p, nom: e.target.value }))}
-                        placeholder="Ex: Labo Central" autoFocus />
+                        placeholder={voc.ex('Ex: Labo Central', `Ex: ${voc.Nom('labo')} 1`)} autoFocus />
                     </div>
                     <div style={fieldWrap}>
                       <label style={fieldLabel}>Référence <span style={{ color: '#ef4444' }}>*</span>
@@ -1303,7 +1305,7 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                       </label>
                       <input type="text" className="input" value={bizLaboForm.refLabo}
                         onChange={(e) => setBizLaboForm((p) => ({ ...p, refLabo: e.target.value }))}
-                        placeholder="Ex: LABO-001" />
+                        placeholder={`Ex: ${voc.MAJ('labo', false, 'court')}-001`} />
                     </div>
                     <div style={fieldWrap}>
                       <label style={fieldLabel}>Adresse</label>
@@ -1315,7 +1317,7 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                 )}
                 {bizLaboSkip && (
                   <div style={{ background: '#f8fafc', border: '1px dashed #d1d5db', borderRadius: 10, padding: '16px', textAlign: 'center', color: '#9ca3af', fontSize: '0.85rem' }}>
-                    Étape ignorée — vous pourrez créer un labo plus tard
+                    Étape ignorée — vous pourrez créer {voc.un('labo')} plus tard
                   </div>
                 )}
               </div>
@@ -1325,7 +1327,7 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
             {bizStep === 2 && (
               <div className="modal-body" style={{ padding: '22px 28px', display: 'flex', flexDirection: 'column', gap: 14, maxHeight: '55vh', overflowY: 'auto' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <div style={sectionTitle('#1e40af')}><span>🏢</span> Créez vos activités</div>
+                  <div style={sectionTitle('#1e40af')}><span>🏢</span> Créez {voc.votre('activite', true)}</div>
                   {maxActivites !== null && (
                     <span style={{ fontSize: '0.72rem', color: '#6b7280', background: '#f3f4f6', border: '1px solid #e5e7eb', borderRadius: 20, padding: '2px 10px' }}>
                       {bizActForms.filter(f => f.nom.trim()).length} / {maxActivites}
@@ -1337,7 +1339,7 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                   <div key={idx} style={{ background: '#f8fafc', border: '1px solid #e5e7eb', borderRadius: 12, padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2 }}>
                       <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#1e40af', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
-                        Activité {idx + 1}
+                        {voc.Nom('activite')} {idx + 1}
                       </span>
                       {bizActForms.length > 1 && (
                         <button type="button" onClick={() => bizRemoveSlot(idx)}
@@ -1350,7 +1352,7 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                       <label style={fieldLabel}>Nom <span style={{ color: '#ef4444' }}>*</span></label>
                       <input type="text" className="input" value={af.nom}
                         onChange={(e) => setBizActForms((p) => p.map((f, i) => i === idx ? { ...f, nom: e.target.value } : f))}
-                        placeholder="Ex: Point de vente Tunis"
+                        placeholder={voc.ex('Ex: Point de vente Tunis', `Ex: ${voc.Nom('activite')} 1`)}
                         autoFocus={idx === 0} />
                     </div>
                     {/* Composant par slot (lot 1b) — même règle d'affichage (≥ 2 composants activité) */}
@@ -1373,7 +1375,7 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                     {!bizLaboSkip && bizLaboForm.nom.trim() && (
                       <div>
                         <div style={{ fontSize: '0.68rem', fontWeight: 800, color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 6 }}>
-                          🏭 Laboratoire
+                          {voc.icon('labo')} {voc.Nom('labo_long')}
                         </div>
                         <div style={{ display: 'flex', gap: 8 }}>
                           <label style={{
@@ -1386,7 +1388,7 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                               onChange={() => setBizActForms((p) => p.map((f, i) => i === idx ? { ...f, useLabo: true } : f))}
                               style={{ accentColor: '#7c3aed', flexShrink: 0 }} />
                             <div>
-                              <div style={{ fontWeight: 700, fontSize: '0.82rem', color: '#1f2937' }}>🏭 Avec labo</div>
+                              <div style={{ fontWeight: 700, fontSize: '0.82rem', color: '#1f2937' }}>{voc.icon('labo')} Avec {voc.nom('labo')}</div>
                               <div style={{ fontSize: '0.72rem', color: '#9ca3af' }}>{bizLaboForm.nom}</div>
                             </div>
                           </label>
@@ -1399,7 +1401,7 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                             <input type="radio" checked={af.useLabo === false}
                               onChange={() => setBizActForms((p) => p.map((f, i) => i === idx ? { ...f, useLabo: false } : f))}
                               style={{ accentColor: '#7c3aed', flexShrink: 0 }} />
-                            <div style={{ fontWeight: 700, fontSize: '0.82rem', color: '#1f2937' }}>📋 Sans labo</div>
+                            <div style={{ fontWeight: 700, fontSize: '0.82rem', color: '#1f2937' }}>📋 Sans {voc.nom('labo')}</div>
                           </label>
                         </div>
                       </div>
@@ -1410,7 +1412,7 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                 {(maxActivites === null || bizActForms.length < maxActivites) && (
                   <button type="button" onClick={bizAddSlot}
                     style={{ background: 'none', border: '1px dashed #1e40af', color: '#1e40af', borderRadius: 10, padding: '10px', fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer', width: '100%' }}>
-                    + Ajouter une activité
+                    + Ajouter {voc.un('activite')}
                   </button>
                 )}
               </div>
@@ -1427,7 +1429,7 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                 <>
                   <button type="button" className="btn btn-secondary" onClick={closeBizWizard}>{t('common.cancel')}</button>
                   <button type="button" className="btn btn-primary" onClick={bizNextStep} style={{ minWidth: 130, fontWeight: 700, background: '#7c3aed', borderColor: '#7c3aed' }}>
-                    Activités →
+                    {voc.Pl('activite')} →
                   </button>
                 </>
               ) : (
@@ -1442,7 +1444,7 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                   )}
                   <button type="button" className="btn btn-primary" onClick={bizSaveAll}
                     disabled={bizSaving || atActiviteLimit || (bizCreatedLaboId === null && !bizLaboSkip && configHasLabo && atLaboLimit && !!bizLaboForm.nom.trim())}
-                    title={atActiviteLimit ? 'Limite d\'activités de votre abonnement atteinte' : (bizCreatedLaboId === null && !bizLaboSkip && configHasLabo && atLaboLimit && !!bizLaboForm.nom.trim()) ? 'Limite de labos de votre abonnement atteinte' : undefined}
+                    title={atActiviteLimit ? `Limite ${voc.de('activite', true)} de votre abonnement atteinte` : (bizCreatedLaboId === null && !bizLaboSkip && configHasLabo && atLaboLimit && !!bizLaboForm.nom.trim()) ? `Limite ${voc.de('labo', true)} de votre abonnement atteinte` : undefined}
                     style={{ minWidth: 140, fontWeight: 700, background: 'linear-gradient(135deg, #1e3a8a, #3b82f6)', borderColor: '#1e3a8a' }}>
                     {bizSaving ? '…' : '✅ Enregistrer tout'}
                   </button>
@@ -1458,21 +1460,21 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
         <div className="modal-overlay">
           <div className="modal" style={{ maxWidth: 480 }} onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h2 style={{ color: '#dc2626', margin: 0 }}>⚠️ Supprimer le labo</h2>
+              <h2 style={{ color: '#dc2626', margin: 0 }}>⚠️ Supprimer {voc.le('labo')}</h2>
               <button className="btn btn-ghost btn-sm" onClick={() => setDeleteLaboTarget(null)}>✕</button>
             </div>
             <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              <p style={{ margin: 0, fontWeight: 700, fontSize: '1rem' }}>🏭 {deleteLaboTarget.nom}</p>
+              <p style={{ margin: 0, fontWeight: 700, fontSize: '1rem' }}>{voc.icon('labo')} {deleteLaboTarget.nom}</p>
               <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 10, padding: '12px 14px', fontSize: '0.85rem', color: '#991b1b', lineHeight: 1.6 }}>
                 <p style={{ margin: '0 0 6px', fontWeight: 700 }}>⚠ Attention — impacts de la suppression :</p>
                 <ul style={{ margin: 0, paddingLeft: 18 }}>
-                  <li>Les activités liées à ce labo passeront en <strong>mode gestion séparée</strong>.</li>
-                  <li>Les labos alimentés par ce labo perdront leur source.</li>
-                  <li>Aucune activité ne pourra plus recevoir de transferts depuis ce labo.</li>
+                  <li>{voc.Le('activite', true)} {voc.acc('activite', 'liés', 'liées')} à {voc.ce('labo')} passeront en <strong>mode gestion séparée</strong>.</li>
+                  <li>{voc.Le('labo', true)} {voc.acc('labo', 'alimentés', 'alimentées')} par {voc.ce('labo')} perdront leur source.</li>
+                  <li>{voc.Aucun('activite')} ne pourra plus recevoir {voc.de('transfert', true)} depuis {voc.ce('labo')}.</li>
                 </ul>
               </div>
               <p style={{ margin: 0, color: '#dc2626', fontSize: '0.85rem', fontWeight: 600 }}>
-                {t('client.entreprise.irreversible', 'Cette action est irréversible.')}
+                {t('client.entreprise.irreversible')}
               </p>
               {deleteLaboError && (
                 <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, padding: '8px 12px', color: '#dc2626', fontSize: '0.82rem', fontWeight: 500 }}>
@@ -1495,14 +1497,14 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
         <div className="modal-overlay">
           <div className="modal" style={{ maxWidth: 480 }}>
             <div className="modal-header">
-              <h2 style={{ color: '#dc2626', margin: 0 }}>⚠️ {t('client.entreprise.confirm_delete_title', 'Confirmer la suppression')}</h2>
+              <h2 style={{ color: '#dc2626', margin: 0 }}>⚠️ {t('client.entreprise.confirm_delete_title')}</h2>
             </div>
             <div className="modal-body">
               <p>
-                {t('client.entreprise.delete_activity_warning', 'Supprimer l\'activité')} <strong>{deleteTarget.act.nom}</strong> ?
+                {t('client.entreprise.delete_activity_warning')} <strong>{deleteTarget.act.nom}</strong> ?
               </p>
               <p style={{ marginTop: 16, color: '#dc2626', fontSize: '0.85rem', fontWeight: 600 }}>
-                {t('client.entreprise.irreversible', 'Cette action est irréversible.')}
+                {t('client.entreprise.irreversible')}
               </p>
             </div>
             <div className="modal-footer" style={{ gap: 10 }}>

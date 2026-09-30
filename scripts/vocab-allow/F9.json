@@ -1,0 +1,37 @@
+[
+  {
+    "fichier": "src/components/client/ReferentielCategoriesPage.tsx",
+    "avant": "Ex: Catégorie A",
+    "apres": "Ex: Catégorie A",
+    "type": "exemple",
+    "justification": "Exemple neutre gardé en dur, second argument de voc.ex (guide §5 bis : « mot hors lexique : en dur ») : « catégorie » n'est pas un terme du lexique ; l'unité reste listée [exemple] parce qu'elle commence par « Ex ». Deux placeholders (création, modification) ; un compte au lexique par défaut y lit toujours « Ex: Viandes » et « Ex: Viandes & Volailles » (premier argument, identique à la référence)."
+  },
+  {
+    "fichier": "src/components/client/ReferentielFamillesPage.tsx",
+    "avant": "Ex: Famille A",
+    "apres": "Ex: Famille A",
+    "type": "exemple",
+    "justification": "Exemple neutre gardé en dur, second argument de voc.ex (guide §5 bis) : « famille » n'est pas un terme du lexique ; l'unité reste listée [exemple] parce qu'elle commence par « Ex ». Deux placeholders (création, modification) ; un compte au lexique par défaut y lit toujours « Ex: Produits laitiers » (premier argument, identique à la référence)."
+  },
+  {
+    "fichier": "src/components/client/ProductCategoriesPage.tsx",
+    "avant": "Ex: Catégorie A",
+    "apres": "Ex: Catégorie A",
+    "type": "exemple",
+    "justification": "Exemple neutre gardé en dur, second argument de voc.ex (guide §5 bis : « mot hors lexique : en dur ») : « catégorie » n'est pas un terme du lexique ; l'unité reste listée [exemple] parce qu'elle commence par « Ex ». Deux placeholders (création, modification) ; un compte au lexique par défaut y lit toujours « Ex: Boissons » (premier argument, identique à la référence)."
+  },
+  {
+    "fichier": "src/components/client/ReferentielUnitesPage.tsx",
+    "avant": "Ex: kg, L, pièce…",
+    "apres": "Ex: kg, L, pièce…",
+    "type": "exemple",
+    "justification": "Exemple de saisie inchangé (guide §5 bis, ligne F9) : kg, L et pièce sont des unités de mesure, neutres pour tous les secteurs ; aucun terme du lexique. Placeholder du champ Nom de la modale de création."
+  },
+  {
+    "fichier": "src/components/client/ReferentielUnitesPage.tsx",
+    "avant": "Ex: kg, L, pièce, portion…",
+    "apres": "Ex: kg, L, pièce, portion…",
+    "type": "exemple",
+    "justification": "Exemple de saisie inchangé (guide §5 bis, ligne F9 ; spec §3 règle 4 : unités citées en exemple) : « portion » est ici une unité de mesure citée dans une liste d'unités, pas le terme « portion » du lexique. Placeholder du champ Nom de la modale de modification."
+  }
+]

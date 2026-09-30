@@ -7,6 +7,8 @@ import TransferConfirmModal, { type TransferDestGroup, type TransferLine } from 
 import ApproPreviewPanel, { type PreviewLine } from './ApproPreviewPanel';
 import GuideButton from './GuideButton';
 import type { Destination, Transfert } from '../../types';
+import { useVocabulaire } from '../../hooks/useVocabulaire';
+import { libelleCategoriePt } from '../../vocab/categoriesPt';
 
 // Une ligne de transfert = exactement UNE destination : activité (flux historique) OU labo rattaché (lot 1b).
 type TransferLineBody = { activiteId?: number; laboDestId?: number; ingredientId: number; quantite: number; prixUnitaire: number };
@@ -81,6 +83,7 @@ const destinationsOf = (labo: { activites?: Activite[]; destinations?: Destinati
 
 export default function TransferPage() {
   const { t } = useTranslation();
+  const voc = useVocabulaire();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const laboId = searchParams.get('laboId') || '';
@@ -425,7 +428,7 @@ export default function TransferPage() {
   const destinations: Destination[] = destinationsOf(labo);
   // Libellés : identiques à l'existant tant que toutes les destinations sont des activités.
   const hasLaboDest = destinations.some((d) => d.type === 'labo');
-  const destLabel = (d: Destination) => (d.type === 'labo' ? `🏭 ${d.nom}` : d.nom);
+  const destLabel = (d: Destination) => (d.type === 'labo' ? `${voc.icon('labo')} ${d.nom}` : d.nom);
 
   const bulkCount = stock.filter((r) => {
     const map = qtys[r.ingredientId] || {};
@@ -480,7 +483,7 @@ export default function TransferPage() {
     }];
   });
 
-  if (!laboId) return <div className="page"><p className="text-muted">Labo introuvable.</p></div>;
+  if (!laboId) return <div className="page"><p className="text-muted">{voc.Nom('labo')} introuvable.</p></div>;
 
   return (
     <div className="page">
@@ -495,7 +498,7 @@ export default function TransferPage() {
             <div style={{ background: 'linear-gradient(135deg, #f59e0b, #d97706)', padding: '18px 24px', display: 'flex', alignItems: 'center', gap: 12 }}>
               <div style={{ background: 'rgba(255,255,255,0.25)', borderRadius: 12, width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.4rem', flexShrink: 0 }}>⚠️</div>
               <div>
-                <div style={{ fontWeight: 800, fontSize: '1rem', color: '#fff' }}>Transfert déjà existant pour cette date</div>
+                <div style={{ fontWeight: 800, fontSize: '1rem', color: '#fff' }}>{voc.Nom('transfert')} déjà {voc.acc('transfert', 'existant', 'existante')} pour cette date</div>
                 <div style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.9)', marginTop: 2 }}>
                   <span style={{ fontWeight: 700 }}>{transferConfirm.nom}</span>
                   <span style={{ margin: '0 6px', opacity: 0.7 }}>·</span>
@@ -506,13 +509,13 @@ export default function TransferPage() {
             {/* Body */}
             <div style={{ padding: '20px 24px' }}>
               <p style={{ fontSize: '0.82rem', color: '#6b7280', marginBottom: 14, marginTop: 0 }}>
-                Un ou plusieurs transferts existent déjà vers ces {hasLaboDest ? 'destinations' : 'activités'} à cette date. Voici le détail par {hasLaboDest ? 'destination' : 'activité'} :
+                {voc.acc('transfert', 'Un', 'Une')} ou plusieurs {voc.pl('transfert')} existent déjà vers {hasLaboDest ? 'ces destinations' : voc.ce('activite', true)} à cette date. Voici le détail par {hasLaboDest ? 'destination' : voc.nom('activite')} :
               </p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20 }}>
                 {transferConfirm.perDest.map((a) => (
                   <div key={a.destKey} style={{ border: '1.5px solid #e5e7eb', borderRadius: 12, overflow: 'hidden' }}>
                     <div style={{ background: '#f8f7ff', borderBottom: '1px solid #e5e7eb', padding: '8px 14px', display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '0.06em' }}>↗ {a.destType === 'labo' ? '🏭 ' : ''}{a.destNom}</span>
+                      <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '0.06em' }}>↗ {a.destType === 'labo' ? `${voc.icon('labo')} ` : ''}{a.destNom}</span>
                     </div>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 0 }}>
                       <div style={{ padding: '10px 14px', textAlign: 'center', borderRight: '1px solid #f3f4f6' }}>
@@ -522,7 +525,7 @@ export default function TransferPage() {
                         </div>
                       </div>
                       <div style={{ padding: '10px 14px', textAlign: 'center', background: '#f0fdf4', borderRight: '1px solid #f3f4f6' }}>
-                        <div style={{ fontSize: '0.65rem', fontWeight: 700, color: '#065f46', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 3 }}>Nouveau transfert</div>
+                        <div style={{ fontSize: '0.65rem', fontWeight: 700, color: '#065f46', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 3 }}>{voc.Nouveau('transfert')}</div>
                         <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#059669' }}>
                           +{parseFloat(a.newQty.toFixed(3))} <span style={{ fontSize: '0.65rem', fontWeight: 500, color: '#6b7280' }}>{transferConfirm.unite}</span>
                         </div>
@@ -541,7 +544,7 @@ export default function TransferPage() {
                 <button className="btn btn-ghost" style={{ fontWeight: 600 }} onClick={() => setTransferConfirm(null)}>Annuler</button>
                 <button style={{ background: 'linear-gradient(135deg, #f59e0b, #d97706)', color: '#fff', border: 'none', borderRadius: 10, padding: '9px 20px', fontWeight: 700, cursor: 'pointer', fontSize: '0.92rem' }}
                   onClick={() => { setTransferConfirm(null); void handleBulkTransfer(true); }}>
-                  ✓ Confirmer le transfert
+                  ✓ Confirmer {voc.le('transfert')}
                 </button>
               </div>
             </div>
@@ -574,7 +577,7 @@ export default function TransferPage() {
               {labo ? labo.nom : t('common.loading')} — {t('client.labo.transfer_title')}</h1>
           </div>
           <span style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.82rem' }}>
-            {hasLaboDest ? 'Transférez les articles du labo vers vos activités et labos rattachés' : 'Transférez les articles du labo vers vos activités'}
+            {hasLaboDest ? `Transférez ${voc.le('article', true)} ${voc.du('labo')} vers ${voc.votre('activite', true)} et ${voc.pl('labo')} ${voc.accN(['activite', 'labo'], 'rattachés', 'rattachées')}` : `Transférez ${voc.le('article', true)} ${voc.du('labo')} vers ${voc.votre('activite', true)}`}
           </span>
         </div>
         <div style={{ display: 'flex', gap: 10 }}>
@@ -611,10 +614,10 @@ export default function TransferPage() {
                 fontWeight: laboId === String(l.id) ? 700 : 400,
               }}
             >
-              🏭 {l.nom}
+              {voc.icon('labo')} {l.nom}
             </button>
           ))}
-          <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', alignSelf: 'center', marginLeft: 4 }}>← sélectionner le labo</span>
+          <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', alignSelf: 'center', marginLeft: 4 }}>← sélectionner {voc.le('labo')}</span>
         </div>
       )}
 
@@ -652,21 +655,21 @@ export default function TransferPage() {
           onReset={() => { setFilterCategorie(''); setFilterIngredientId(''); setFilterNom(''); setFilterDestKey(''); }}
           showReset={!!(filterCategorie || filterIngredientId !== '' || filterNom || filterDestKey)}
         >
-          <FilterField label={hasLaboDest ? '🎯 Destination' : '🏪 Activité'}>
+          <FilterField label={hasLaboDest ? '🎯 Destination' : `${voc.icon('activite')} ${voc.Nom('activite')}`}>
             <FilterSelect value={filterDestKey} onChange={(e) => setFilterDestKey(e.target.value)}>
-              <option value="">— Toutes —</option>
+              <option value="">— {hasLaboDest ? 'Toutes' : voc.acc('activite', 'Tous', 'Toutes')} —</option>
               {destinations.map((d) => <option key={d.destKey} value={d.destKey}>{destLabel(d)}</option>)}
             </FilterSelect>
           </FilterField>
           <FilterField label="🏷️ Catégorie">
             <FilterSelect value={filterCategorie} onChange={(e) => { setFilterCategorie(e.target.value); setFilterIngredientId(''); }}>
               <option value="">{t('client.catalogue_franchise.all_categories')}</option>
-              {allCategories.map((c) => <option key={c} value={c}>{c}</option>)}
+              {allCategories.map((c) => <option key={c} value={c}>{libelleCategoriePt(voc, c)}</option>)}
             </FilterSelect>
           </FilterField>
-          <FilterField label="🧂 Article">
+          <FilterField label={`🧂 ${voc.Nom('article')}`}>
             <FilterSelect value={filterIngredientId} disabled={!filterCategorie} onChange={(e) => setFilterIngredientId(e.target.value === '' ? '' : Number(e.target.value))}>
-              <option value="">— Tous —</option>
+              <option value="">— {voc.acc('article', 'Tous', 'Toutes')} —</option>
               {ingredientsInCategory.map((r) => <option key={r.ingredientId} value={r.ingredientId}>{r.nom}</option>)}
             </FilterSelect>
           </FilterField>
@@ -680,12 +683,12 @@ export default function TransferPage() {
       {!loading && stock.length > 0 && destinations.length > 0 && (
         <div style={{ background: 'linear-gradient(135deg, #faf5ff, #f3e8ff)', borderRadius: 14, padding: '18px 20px', border: '1.5px solid #d8b4fe', boxShadow: '0 4px 20px rgba(126,34,206,0.12)', marginBottom: 24 }}>
           <div style={{ marginBottom: 10, paddingBottom: 10, borderBottom: '1px solid #d8b4fe' }}>
-            <span style={{ fontSize: '0.68rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#7e22ce' }}>Transfert</span>
+            <span style={{ fontSize: '0.68rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#7e22ce' }}>{voc.Nom('transfert')}</span>
           </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'flex-end' }}>
             <div>
               <label style={{ fontSize: '0.62rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#7e22ce', display: 'block', marginBottom: 3 }}>
-                Date Transfert <span style={{ color: '#ef4444' }}>*</span>
+                Date {voc.Court('transfert')} <span style={{ color: '#ef4444' }}>*</span>
               </label>
               <input type="date" className="input"
                 style={{ padding: '6px 10px', borderRadius: 7, fontSize: '0.82rem', border: '1.5px solid #7e22ce', background: '#fff', fontWeight: 600 }}
@@ -741,14 +744,14 @@ export default function TransferPage() {
           border: '1.5px solid #d8b4fe', borderRadius: 18, padding: '48px 32px',
           textAlign: 'center', boxShadow: '0 4px 24px rgba(126,34,206,0.08)',
         }}>
-          <div style={{ fontSize: '3rem', marginBottom: 16 }}>🏭</div>
+          <div style={{ fontSize: '3rem', marginBottom: 16 }}>{voc.icon('labo')}</div>
           <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#7e22ce', marginBottom: 8 }}>
-            Aucun article disponible pour le transfert
+            {voc.Aucun('article')} disponible pour {voc.le('transfert')}
           </div>
           <div style={{ fontSize: '0.9rem', color: 'var(--text-muted)', maxWidth: 460, margin: '0 auto 20px', lineHeight: 1.6 }}>
-            Les activités assignées à ce labo ne sont pas encore configurées.
-            Pour pouvoir effectuer des transferts, assignez des articles aux activités
-            liées à ce labo depuis votre <strong>référentiel</strong> (fiche de l'article).
+            {voc.Le('activite', true)} {voc.acc('activite', 'assignés', 'assignées')} à {voc.ce('labo')} ne sont pas encore {voc.acc('activite', 'configurés', 'configurées')}.
+            Pour pouvoir effectuer {voc.un('transfert', true)}, assignez {voc.un('article', true)} {voc.au('activite', true)}{' '}
+            {voc.acc('activite', 'liés', 'liées')} à {voc.ce('labo')} depuis {voc.det('referentiel', 'votre')}<strong>{voc.nom('referentiel')}</strong> (fiche {voc.du('article')}).
           </div>
           <Link to="/client/referentiel/articles"
             style={{
@@ -758,14 +761,14 @@ export default function TransferPage() {
               fontWeight: 700, fontSize: '0.9rem', textDecoration: 'none',
               boxShadow: '0 4px 16px rgba(126,34,206,0.35)',
             }}>
-            🧂 Aller aux Articles →
+            🧂 Aller {voc.au('article', true, 'Nom')} →
           </Link>
         </div>
       ) : destinations.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '48px 24px', color: 'var(--text-muted)' }}>
-          <div style={{ fontSize: '2.5rem', marginBottom: 12 }}>🏪</div>
+          <div style={{ fontSize: '2.5rem', marginBottom: 12 }}>{voc.icon('activite')}</div>
           <p style={{ fontSize: '0.95rem', fontWeight: 500 }}>Aucune destination rattachée</p>
-          <p style={{ fontSize: '0.82rem', margin: 0 }}>Rattachez une activité ou un labo à ce labo (« Alimenté par ») depuis la page Activités.</p>
+          <p style={{ fontSize: '0.82rem', margin: 0 }}>Rattachez {voc.un('activite')} ou {voc.un('labo')} à {voc.ce('labo')} (« {voc.acc('labo', 'Alimenté', 'Alimentée')} par ») depuis la page {voc.Pl('activite')}.</p>
         </div>
       ) : (
         <>
@@ -779,7 +782,7 @@ export default function TransferPage() {
             return (
               <div key={cat} style={{ marginBottom: 8 }}>
                 <button onClick={() => toggleCat(cat)} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0', width: '100%', textAlign: 'left', borderBottom: '2px solid var(--border)', marginBottom: isOpen ? 10 : 0 }}>
-                  <span style={{ fontSize: '0.82rem', fontWeight: 800, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>🏷️ {cat}</span>
+                  <span style={{ fontSize: '0.82rem', fontWeight: 800, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>🏷️ {libelleCategoriePt(voc, cat)}</span>
                   <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 400 }}>({rows.length})</span>
                   <span style={{ marginLeft: 'auto', fontSize: '0.8rem', color: 'var(--text-muted)' }}>{isOpen ? '▼' : '▶'}</span>
                 </button>
@@ -788,7 +791,7 @@ export default function TransferPage() {
                     <table className="table">
                       <thead>
                         <tr style={{ background: 'linear-gradient(135deg, #3b0764, #7e22ce)', borderBottom: '1px solid rgba(255,255,255,0.2)' }}>
-                          <th style={{ minWidth: 140, fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '10px 14px 4px', color: '#fff', background: 'transparent', borderBottom: 'none', textAlign: 'center' }}>Article</th>
+                          <th style={{ minWidth: 140, fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '10px 14px 4px', color: '#fff', background: 'transparent', borderBottom: 'none', textAlign: 'center' }}>{voc.Nom('article')}</th>
                           <th style={{ textAlign: 'center', minWidth: 100, fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '10px 14px 4px', color: '#fff', background: 'transparent', borderBottom: 'none' }}>{t('client.labo.labo_stock')}</th>
                           <th style={{ textAlign: 'center', minWidth: 110, fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '10px 14px 4px', color: '#fff', background: 'transparent', borderBottom: 'none' }}>Prix unitaire</th>
                           {destinations.map((d) => (
@@ -797,7 +800,7 @@ export default function TransferPage() {
                         </tr>
                         <tr style={{ background: 'linear-gradient(135deg, #3b0764, #7e22ce)', borderBottom: '2px solid rgba(255,255,255,0.35)' }}>
                           {[
-                            { sub: 'Hist.Transfert · Unité' },
+                            { sub: `Hist.${voc.Court('transfert')} · Unité` },
                             { sub: 'Disponible' },
                             { sub: 'TTC' },
                           ].map(({ sub }, i) => (
@@ -877,19 +880,19 @@ export default function TransferPage() {
                                 <tr>
                                   <td colSpan={4 + destinations.length} style={{ background: '#faf5ff', padding: '8px 16px', borderTop: '1px solid #e9d5ff' }}>
                                     <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>
-                                      ↗ 5 derniers transferts — {r.nom}
+                                      ↗ 5 {voc.acc('transfert', 'derniers', 'dernières')} {voc.pl('transfert')} — {r.nom}
                                     </div>
                                     {isTransferLoading ? (
                                       <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Chargement…</span>
                                     ) : rowTransfers.filter(tr => destNomOf(tr)).length === 0 ? (
                                       <div style={{ textAlign: 'center', padding: '16px 0', color: 'var(--text-muted)', fontSize: '0.82rem' }}>
                                         <span style={{ display: 'block', fontSize: '1.4rem', marginBottom: 4 }}>📭</span>
-                                        Aucun transfert enregistré
+                                        {voc.Aucun('transfert')} {voc.acc('transfert', 'enregistré', 'enregistrée')}
                                       </div>
                                     ) : (() => {
                                       // Une colonne par destination (activité ou labo enfant) — libellé = destNom (repli activiteNom).
                                       const realTransfers = rowTransfers.filter(tr => destNomOf(tr));
-                                      const nomOf = (tr: TransferRecord) => (tr.destType === 'labo' ? `🏭 ${destNomOf(tr)}` : (destNomOf(tr) as string));
+                                      const nomOf = (tr: TransferRecord) => (tr.destType === 'labo' ? `${voc.icon('labo')} ${destNomOf(tr)}` : (destNomOf(tr) as string));
                                       const actNames = Array.from(new Set(realTransfers.map(nomOf))).sort();
                                       const actTotals: Record<string, number> = {};
                                       for (const tr of realTransfers) actTotals[nomOf(tr)] = (actTotals[nomOf(tr)] ?? 0) + tr.quantite;
