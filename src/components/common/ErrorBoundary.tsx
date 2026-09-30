@@ -1,4 +1,5 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react';
+import { estErreurDeChunk, rechargerUneFois } from '../../utils/chunkReload';
 
 interface Props {
   children: ReactNode;
@@ -6,6 +7,10 @@ interface Props {
 
 interface State {
   hasError: boolean;
+  /** L'erreur vient du chargement d'un fichier de page (déploiement pendant que l'onglet était ouvert). */
+  chunk: boolean;
+  /** Rechargement automatique en cours → écran « Mise à jour » au lieu de l'écran d'erreur. */
+  miseAJour: boolean;
 }
 
 /**
@@ -14,24 +19,46 @@ interface State {
  * crash in any page degrades gracefully rather than taking the whole app down.
  */
 class ErrorBoundary extends Component<Props, State> {
-  state: State = { hasError: false };
+  state: State = { hasError: false, chunk: false, miseAJour: false };
 
-  static getDerivedStateFromError(): State {
-    return { hasError: true };
+  static getDerivedStateFromError(error: unknown): State {
+    const chunk = estErreurDeChunk(error);
+    return { hasError: true, chunk, miseAJour: chunk };
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
     // Keep a trace; hook an error tracker (Sentry) here when one is configured.
     console.error('[ErrorBoundary]', error, info.componentStack);
+    // Après un déploiement, un onglet resté ouvert demande un ancien fichier de page qui
+    // n'existe plus : on recharge UNE fois pour prendre la nouvelle version. Si on vient
+    // déjà de recharger (garde anti-boucle), on retombe sur l'écran d'erreur classique.
+    if (estErreurDeChunk(error) && !rechargerUneFois()) this.setState({ miseAJour: false });
   }
 
   private handleReload = () => {
-    this.setState({ hasError: false });
+    // Fichier de page introuvable : recharger la page COURANTE suffit (nouvelle version).
+    if (this.state.chunk) { window.location.reload(); return; }
+    this.setState({ hasError: false, chunk: false, miseAJour: false });
     window.location.href = '/';
   };
 
   render() {
     if (!this.state.hasError) return this.props.children;
+
+    if (this.state.miseAJour) {
+      return (
+        <div
+          role="status"
+          style={{
+            minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            background: '#f8fafc', color: '#64748b', fontSize: 15,
+            fontFamily: 'system-ui, -apple-system, sans-serif',
+          }}
+        >
+          Mise à jour de LabFlow…
+        </div>
+      );
+    }
 
     return (
       <div
