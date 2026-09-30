@@ -1,11 +1,13 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
+import { useVocabulaire } from '../../hooks/useVocabulaire';
+import type { Vocab } from '../../vocab/vocab';
 
-const DEFAULT_OPTIONS = [
-  ['manuel', 'Manuel'],
-  ['transfert', 'Transfert'],
-  ['vente', 'Vente'],
-  ['pt', 'PT'],
-] as const;
+const defaultOptions = (voc: Vocab): ReadonlyArray<TypeApproOption> => [
+  ['manuel', voc.acc('appro', 'Manuel', 'Manuelle')],
+  ['transfert', voc.Court('transfert')],
+  ['vente', voc.Court('vente')],
+  ['pt', voc.Court('pt')],
+];
 
 export type TypeApproOption = readonly [key: string, label: string];
 
@@ -19,7 +21,8 @@ interface Props {
 
 // Champ déroulant multi-sélection (cases à cocher) pour filtrer par type d'appro.
 export default function TypeApproFilter({ selected, onToggle, accent = '#1e40af', id, options }: Props) {
-  const OPTIONS: ReadonlyArray<TypeApproOption> = options ?? DEFAULT_OPTIONS;
+  const voc = useVocabulaire();
+  const OPTIONS: ReadonlyArray<TypeApproOption> = useMemo(() => options ?? defaultOptions(voc), [options, voc]);
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 

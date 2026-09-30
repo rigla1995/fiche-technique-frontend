@@ -3,6 +3,8 @@ import {
   ResponsiveContainer, ComposedChart, Line, Bar, BarChart, XAxis, YAxis,
   Tooltip, CartesianGrid, PieChart, Pie, Cell, Legend,
 } from 'recharts';
+import { useVocabulaire } from '../../hooks/useVocabulaire';
+import type { Vocab } from '../../vocab/vocab';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Widgets du Tableau de bord v2 — KPIs à deltas, cascade de marge, graphiques,
@@ -89,6 +91,7 @@ export const fmtBucket = (bucket: string, grain: string) => {
 
 // ── Évolution CA / marges ────────────────────────────────────────────────────
 export function EvolutionChart({ data, grain }: { data: { bucket: string; ca: number; marge: number; marge_apres_com: number }[]; grain: string }) {
+  const voc = useVocabulaire();
   if (!data.length) return <EmptyHint />;
   const rows = data.map((d) => ({ ...d, label: fmtBucket(d.bucket, grain) }));
   return (
@@ -100,7 +103,7 @@ export function EvolutionChart({ data, grain }: { data: { bucket: string; ca: nu
         <Tooltip formatter={(v) => fmtDT(Number(v))} />
         <Legend wrapperStyle={{ fontSize: 12 }} />
         <Bar dataKey="ca" name="CA" fill="#2563eb" radius={[5, 5, 0, 0]} fillOpacity={0.85} />
-        <Line dataKey="marge" name="Marge brute" stroke="#16a34a" strokeWidth={2.5} dot={false} />
+        <Line dataKey="marge" name={`${voc.Nom('marge')} ${voc.acc('marge', 'brut', 'brute')}`} stroke="#16a34a" strokeWidth={2.5} dot={false} />
         <Line dataKey="marge_apres_com" name="Après commissions" stroke="#f59e0b" strokeWidth={2} dot={false} strokeDasharray="6 3" />
       </ComposedChart>
     </ResponsiveContainer>
@@ -109,18 +112,19 @@ export function EvolutionChart({ data, grain }: { data: { bucket: string; ca: nu
 
 // ── Cascade de la marge (CA → coût → commissions → charges → nette) ─────────
 export function WaterfallChart({ data }: { data?: { ca: number; cout_matiere: number; commissions: number; charges: number; marge_nette: number } }) {
+  const voc = useVocabulaire();
   if (!data || !data.ca) return <EmptyHint />;
   let running = data.ca;
   const steps = [{ name: 'CA', base: 0, val: data.ca, color: '#2563eb' }];
   for (const [name, montant, color] of [
-    ['Coût matière', data.cout_matiere, '#ef4444'],
+    [voc.Nom('cout_matiere'), data.cout_matiere, '#ef4444'],
     ['Commissions', data.commissions, '#f59e0b'],
     ['Charges fixes', data.charges, '#8b5cf6'],
   ] as [string, number, string][]) {
     steps.push({ name, base: running - montant, val: montant, color });
     running -= montant;
   }
-  steps.push({ name: 'Marge nette', base: Math.min(0, running), val: Math.abs(running), color: running >= 0 ? '#16a34a' : '#b91c1c' });
+  steps.push({ name: `${voc.Nom('marge')} ${voc.acc('marge', 'net', 'nette')}`, base: Math.min(0, running), val: Math.abs(running), color: running >= 0 ? '#16a34a' : '#b91c1c' });
   return (
     <ResponsiveContainer width="100%" height="100%">
       <BarChart data={steps} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
@@ -261,14 +265,16 @@ export function SortableTable<T extends Record<string, unknown>>({ rows, colonne
 }
 
 // ── Badges partagés ──────────────────────────────────────────────────────────
-export const TYPE_LABELS: Record<string, { label: string; color: string; bg: string }> = {
-  produit: { label: 'Produit', color: '#2563eb', bg: '#eff6ff' },
-  supplement: { label: 'Supplément', color: '#b45309', bg: '#fef3c7' },
-  valorise: { label: 'Valorisé', color: '#7c3aed', bg: '#f3e8ff' },
-};
+export const typeLabels = (voc: Vocab): Record<string, { label: string; color: string; bg: string }> => ({
+  produit: { label: voc.Nom('produit'), color: '#2563eb', bg: '#eff6ff' },
+  supplement: { label: voc.Nom('supplement'), color: '#b45309', bg: '#fef3c7' },
+  valorise: { label: voc.acc('produit_valorise', 'Valorisé', 'Valorisée'), color: '#7c3aed', bg: '#f3e8ff' },
+});
 
 export function TypeBadge({ type }: { type: string }) {
-  const t = TYPE_LABELS[type] ?? { label: type, color: '#64748b', bg: '#f1f5f9' };
+  const voc = useVocabulaire();
+  const labels = useMemo(() => typeLabels(voc), [voc]);
+  const t = labels[type] ?? { label: type, color: '#64748b', bg: '#f1f5f9' };
   return <span style={{ fontSize: '0.66rem', fontWeight: 800, color: t.color, background: t.bg, borderRadius: 20, padding: '2px 8px' }}>{t.label}</span>;
 }
 

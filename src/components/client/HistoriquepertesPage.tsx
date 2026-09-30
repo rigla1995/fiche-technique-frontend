@@ -4,6 +4,8 @@ import api from '../../api/client';
 import HelpButton from '../common/HelpButton';
 import HistoryFilterBar, { FilterField, FilterInput, FilterSelect } from '../common/HistoryFilterBar';
 import { useAuth } from '../../context/AuthContext';
+import { useVocabulaire } from '../../hooks/useVocabulaire';
+import { libelleCategoriePt } from '../../vocab/categoriesPt';
 import { perteLabel, perteTypesAvec, usePerteTypes } from '../../utils/perteTypes';
 import type { Activite, HistoriquePerteEntry } from '../../types';
 
@@ -28,6 +30,7 @@ interface EditPerteModalProps {
 }
 
 function EditPerteModal({ entry, onSave, onClose }: EditPerteModalProps) {
+  const voc = useVocabulaire();
   const perteTypes = perteTypesAvec(usePerteTypes(), entry.typePerte);
   const [qty, setQty] = useState(String(entry.quantite));
   const [type, setType] = useState<string>(entry.typePerte);
@@ -55,7 +58,7 @@ function EditPerteModal({ entry, onSave, onClose }: EditPerteModalProps) {
     <div className="modal-overlay">
       <div className="modal" style={{ maxWidth: 400 }} onClick={(e) => e.stopPropagation()}>
         <div className="modal-header" style={{ background: 'linear-gradient(135deg, #991b1b, #dc2626)', borderBottom: 'none' }}>
-          <h2 style={{ color: '#fff', margin: 0, fontSize: '1rem' }}>✏️ Modifier la perte</h2>
+          <h2 style={{ color: '#fff', margin: 0, fontSize: '1rem' }}>✏️ Modifier {voc.le('perte')}</h2>
           <button className="modal-close" onClick={onClose} style={{ color: '#fff' }}>×</button>
         </div>
         <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -64,7 +67,7 @@ function EditPerteModal({ entry, onSave, onClose }: EditPerteModalProps) {
           {/* Readonly info row */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
             <div>
-              <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: 4 }}>Date de perte</label>
+              <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: 4 }}>Date {voc.de('perte')}</label>
               <input type="date" className="input" style={{ width: '100%', background: 'var(--surface-alt, #f9fafb)', color: 'var(--text-muted)' }}
                 value={entry.datePerte} disabled />
             </div>
@@ -77,7 +80,7 @@ function EditPerteModal({ entry, onSave, onClose }: EditPerteModalProps) {
 
           {warned && (
             <div style={{ background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: 8, padding: '10px 14px', fontSize: '0.85rem', color: '#c2410c' }}>
-              ⚠️ <strong>Attention :</strong> modifier la quantité impacte le calcul du stock actuel. Confirmer ?
+              ⚠️ <strong>Attention :</strong> modifier la quantité impacte le calcul {voc.du('stock')} {voc.acc('stock', 'actuel', 'actuelle')}. Confirmer ?
             </div>
           )}
 
@@ -89,7 +92,7 @@ function EditPerteModal({ entry, onSave, onClose }: EditPerteModalProps) {
             />
           </div>
           <div>
-            <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: 4 }}>Type de perte</label>
+            <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: 4 }}>Type {voc.de('perte')}</label>
             <select className="input" style={{ width: '100%' }} value={type} onChange={(e) => setType(e.target.value)}>
               {perteTypes.map((t) => <option key={t.code} value={t.code}>{t.label}</option>)}
             </select>
@@ -119,6 +122,7 @@ interface DeletePerteModalProps {
 }
 
 function DeletePerteModal({ entry, onConfirm, onClose }: DeletePerteModalProps) {
+  const voc = useVocabulaire();
   const [saving, setSaving] = useState(false);
 
   const handleDelete = async () => {
@@ -131,13 +135,13 @@ function DeletePerteModal({ entry, onConfirm, onClose }: DeletePerteModalProps) 
     <div className="modal-overlay">
       <div className="modal" style={{ maxWidth: 400 }} onClick={(e) => e.stopPropagation()}>
         <div className="modal-header" style={{ background: 'linear-gradient(135deg, #7f1d1d, #b91c1c)', borderBottom: 'none' }}>
-          <h2 style={{ color: '#fff', margin: 0, fontSize: '1rem' }}>🗑️ Supprimer la perte</h2>
+          <h2 style={{ color: '#fff', margin: 0, fontSize: '1rem' }}>🗑️ Supprimer {voc.le('perte')}</h2>
           <button className="modal-close" onClick={onClose} style={{ color: '#fff' }}>×</button>
         </div>
         <div className="modal-body">
           <p style={{ fontWeight: 600, marginBottom: 10 }}>{entry.ingredientNom} — {fmtDate(entry.datePerte)}</p>
           <div style={{ background: '#fff1f2', border: '1px solid #fecdd3', borderRadius: 8, padding: '10px 14px', fontSize: '0.85rem', color: '#9f1239' }}>
-            ⚠️ <strong>Attention :</strong> supprimer cette perte recalculera le stock actuel. Cette action est <strong>irréversible</strong>.
+            ⚠️ <strong>Attention :</strong> supprimer {voc.ce('perte')} recalculera {voc.le('stock')} {voc.acc('stock', 'actuel', 'actuelle')}. Cette action est <strong>irréversible</strong>.
           </div>
         </div>
         <div className="modal-footer">
@@ -158,6 +162,7 @@ function DeletePerteModal({ entry, onConfirm, onClose }: DeletePerteModalProps) 
 
 export default function HistoriquepertesPage() {
   const { user, canWrite } = useAuth();
+  const voc = useVocabulaire();
   const perteTypes = usePerteTypes();
   const [searchParams] = useSearchParams();
   const type = searchParams.get('type');
@@ -308,7 +313,7 @@ export default function HistoriquepertesPage() {
     await loadPertes();
   };
 
-  const pageTitle = 'Historique Pertes';
+  const pageTitle = `Historique ${voc.Court('perte', true)}`;
 
   return (
     <div className="page-content">
@@ -324,7 +329,7 @@ export default function HistoriquepertesPage() {
             <div style={{ background: 'rgba(255,255,255,0.2)', borderRadius: 10, padding: '7px 9px', fontSize: '1.2rem' }}>📉</div>
             <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0 }}>{pageTitle} <HelpButton section="pertes" variant="solid" size={18} tip="Aide" /></h1>
           </div>
-          <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.85rem', margin: 0 }}>Historique complet des pertes et avaries</p>
+          <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.85rem', margin: 0 }}>Historique complet {voc.du('perte', true)} et avaries</p>
         </div>
       </div>
 
@@ -334,7 +339,7 @@ export default function HistoriquepertesPage() {
           {activites.map((a) => (
             <button key={a.id} onClick={() => setFActiviteId(String(a.id))} style={{ padding: '4px 14px', borderRadius: 20, cursor: 'pointer', fontSize: '0.82rem', border: fActiviteId === String(a.id) ? '1.5px solid #1e40af' : '1.5px solid var(--border)', background: fActiviteId === String(a.id) ? '#1e40af' : 'var(--bg)', color: fActiviteId === String(a.id) ? '#fff' : 'var(--text)', fontWeight: fActiviteId === String(a.id) ? 700 : 400 }}>🏪 {a.nom}</button>
           ))}
-          <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', alignSelf: 'center', marginLeft: 4 }}>← sélectionner l'activité</span>
+          <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', alignSelf: 'center', marginLeft: 4 }}>← sélectionner {voc.le('activite')}</span>
         </div>
       )}
 
@@ -354,9 +359,9 @@ export default function HistoriquepertesPage() {
             {categories.map((c) => <option key={c.id} value={String(c.id)}>{c.nom}</option>)}
           </FilterSelect>
         </FilterField>
-        <FilterField label="🧂 Article">
+        <FilterField label={`🧂 ${voc.Nom('article')}`}>
           <FilterSelect value={fIngredient} disabled={!fCategorie} onChange={(e) => setFIngredient(e.target.value)}>
-            <option value="">— Tous —</option>
+            <option value="">— {voc.acc('article', 'Tous', 'Toutes')} —</option>
             {ingredientsInCat.map((i) => <option key={i.id} value={String(i.id)}>{i.nom}</option>)}
           </FilterSelect>
         </FilterField>
@@ -404,7 +409,7 @@ export default function HistoriquepertesPage() {
       ) : entries.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '48px 0', color: 'var(--text-muted)' }}>
           <div style={{ fontSize: '2.5rem', marginBottom: 10 }}>📉</div>
-          <p>Aucune perte enregistrée pour ces critères.</p>
+          <p>{voc.Aucun('perte')} {voc.acc('perte', 'enregistré', 'enregistrée')} pour ces critères.</p>
         </div>
       ) : (
         <div className="table-responsive th-blue" style={{ borderRadius: 12, overflow: 'hidden', boxShadow: '0 2px 16px rgba(0,0,0,0.07)' }}>
@@ -412,8 +417,8 @@ export default function HistoriquepertesPage() {
             <thead>
               <tr style={{ background: 'linear-gradient(135deg, #1e3a8a, #1e40af)' }}>
                 <th style={{ width: 32, textAlign: 'center' }} />
-                <th>Activité</th>
-                <th>Article</th>
+                <th>{voc.Nom('activite')}</th>
+                <th>{voc.Nom('article')}</th>
                 <th>Date</th>
                 <th>Type</th>
                 <th style={{ textAlign: 'right' }}>Quantité</th>
@@ -438,7 +443,7 @@ export default function HistoriquepertesPage() {
                     <td style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{entry.activiteNom ?? '—'}</td>
                     <td>
                       <div style={{ fontWeight: 700, fontSize: '0.86rem' }}>{entry.ingredientNom}</div>
-                      <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{entry.uniteNom} · {entry.categorieNom ?? '—'}</div>
+                      <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{entry.uniteNom} · {entry.categorieNom != null ? libelleCategoriePt(voc, entry.categorieNom) : '—'}</div>
                     </td>
                     <td style={{ fontWeight: 600, color: '#1e40af', whiteSpace: 'nowrap', fontSize: '0.85rem' }}>{fmtDate(entry.datePerte)}</td>
                     <td>

@@ -1,0 +1,17 @@
+[
+  {
+    "fichier": "src/components/client/ActivitesPage.tsx",
+    "avant": "labo",
+    "apres": "labo",
+    "type": "discriminant",
+    "justification": "Valeur technique du type de composant ('activite' | 'labo') passée à composantsActifs(user?.domaine?.composants, 'labo') et comparée à c.typeTechnique : identifiant venu de l'API, jamais affiché."
+  },
+  {
+    "fichier": "src/components/client/ActivitesPage.tsx",
+    "avant": "Nom du labo requis",
+    "apres": "Nom du labo requis",
+    "type": "non-repliable",
+    "mode": "accords",
+    "justification": "Signalement à tort : « requis » s'accorde avec « Nom » (« Nom … requis »), pas avec le terme rendu par voc.du('labo') ; l'outil ne sait pas rattacher le participe à son antécédent. Rendu Hôtellerie juste : « Nom de la cuisine centrale requis ». Deux messages identiques (setLaboError, setBizError)."
+  }
+]

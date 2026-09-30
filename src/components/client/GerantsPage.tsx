@@ -4,6 +4,7 @@ import GuideButton from './GuideButton';
 import type { Gerant, Activite, Labo, AbonnementConfig } from '../../types';
 import { useEmailCheck } from '../../hooks/useEmailCheck';
 import { useConfirm } from '../common/ConfirmDialog';
+import { useVocabulaire } from '../../hooks/useVocabulaire';
 
 interface GerantForm {
   nom: string;
@@ -17,6 +18,7 @@ interface GerantForm {
 const EMPTY_FORM: GerantForm = { nom: '', telephone: '', email: '', activiteIds: [], laboIds: [], accesAcheteurs: false };
 
 export default function GerantsPage() {
+  const voc = useVocabulaire();
   const [gerants, setGerants] = useState<Gerant[]>([]);
   const [activites, setActivites] = useState<Activite[]>([]);
   const [labos, setLabos] = useState<Labo[]>([]);
@@ -87,7 +89,7 @@ export default function GerantsPage() {
   const submitForm = async () => {
     if (!form.nom || !form.telephone || (!editingId && !form.email)) { setError('Nom, téléphone et email requis'); return; }
     if (!editingId && gerantEmailExists) { setError('Cet email est déjà utilisé.'); return; }
-    if (form.activiteIds.length === 0 && form.laboIds.length === 0) { setError('Affectez au moins une activité ou un labo'); return; }
+    if (form.activiteIds.length === 0 && form.laboIds.length === 0) { setError(`Affectez au moins ${voc.un('activite')} ou ${voc.un('labo')}`); return; }
     setSaving(true);
     setError('');
     try {
@@ -128,7 +130,7 @@ export default function GerantsPage() {
 
   const deleteGerant = async (g: Gerant) => {
     const ok = await confirm({
-      title: `Supprimer le gérant « ${g.nom} » ?`,
+      title: `Supprimer ${voc.le('gerant')} « ${g.nom} » ?`,
       message: 'Son compte et son accès à ses espaces seront supprimés.',
       tone: 'danger',
       confirmLabel: 'Supprimer',
@@ -154,8 +156,8 @@ export default function GerantsPage() {
     const actIds = g.activiteIds && g.activiteIds.length ? g.activiteIds : (g.activiteType !== 'labo' && g.activiteId ? [g.activiteId] : []);
     const laboIds = g.laboIds && g.laboIds.length ? g.laboIds : (g.activiteType === 'labo' && g.activiteId ? [g.activiteId] : []);
     const names = [
-      ...actIds.map((id) => activites.find((x) => x.id === id)?.nom ?? `Activité #${id}`),
-      ...laboIds.map((id) => `Labo : ${labos.find((x) => x.id === id)?.nom ?? id}`),
+      ...actIds.map((id) => activites.find((x) => x.id === id)?.nom ?? `${voc.Nom('activite')} #${id}`),
+      ...laboIds.map((id) => `${voc.Nom('labo')} : ${labos.find((x) => x.id === id)?.nom ?? id}`),
     ];
     return names.length ? names.join(' · ') : '—';
   };
@@ -176,10 +178,10 @@ export default function GerantsPage() {
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
             <div style={{ background: 'rgba(255,255,255,0.15)', borderRadius: 10, padding: '7px 9px', fontSize: '1.2rem' }}>👥</div>
-            <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0 }}>Comptes gérants</h1>
+            <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0 }}>Comptes {voc.court('gerant', true)}</h1>
           </div>
           <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.85rem', margin: 0 }}>
-            Gérez les accès de vos collaborateurs à leurs espaces activités
+            Gérez les accès de vos collaborateurs à leurs {voc.pl('espace_activites')}
           </p>
         </div>
         <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
@@ -189,7 +191,7 @@ export default function GerantsPage() {
               borderRadius: 12, padding: '10px 20px', textAlign: 'center', minWidth: 90,
               border: `1px solid ${atGerantLimit ? '#fecaca' : '#bbf7d0'}`,
             }}>
-              <div style={{ fontSize: '0.68rem', fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 2 }}>Gérants</div>
+              <div style={{ fontSize: '0.68rem', fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 2 }}>{voc.Pl('gerant')}</div>
               <div style={{ fontSize: '1.4rem', fontWeight: 900, color: atGerantLimit ? '#dc2626' : '#16a34a', lineHeight: 1 }}>
                 {gerants.length}<span style={{ fontSize: '0.82rem', fontWeight: 600, color: '#6b7280' }}> / {maxGerants}</span>
               </div>
@@ -197,7 +199,7 @@ export default function GerantsPage() {
           )}
           {activeCount > 0 && (
             <div style={{ background: '#eff6ff', borderRadius: 12, padding: '10px 20px', textAlign: 'center', minWidth: 80, border: '1px solid #bfdbfe' }}>
-              <div style={{ fontSize: '0.68rem', fontWeight: 700, color: '#1e40af', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 2 }}>Actifs</div>
+              <div style={{ fontSize: '0.68rem', fontWeight: 700, color: '#1e40af', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 2 }}>{voc.acc('gerant', 'Actifs', 'Actives')}</div>
               <div style={{ fontSize: '1.4rem', fontWeight: 900, color: '#1e40af', lineHeight: 1 }}>{activeCount}</div>
             </div>
           )}
@@ -208,7 +210,7 @@ export default function GerantsPage() {
           ) : (
             <button onClick={() => { setShowForm(true); setEditingId(null); setForm(EMPTY_FORM); setInviteSent(null); setError(''); }}
               style={{ padding: '10px 22px', borderRadius: 10, background: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(4px)', color: '#fff', fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer', border: '1px solid rgba(255,255,255,0.25)' } as React.CSSProperties}>
-              + Nouveau gérant
+              + {voc.Nouveau('gerant')}
             </button>
           )}
           <GuideButton section="gerants" />
@@ -241,14 +243,14 @@ export default function GerantsPage() {
             <span style={{ fontSize: '1rem' }}>{editingId ? '✏️' : '👤'}</span>
             <span style={{ fontWeight: 800, fontSize: '0.9rem', color: '#0369a1' }}>
               {editingId
-                ? 'Modifier le gérant — accès et affectations'
-                : `Nouveau gérant ${!canAddFree ? '— payant (80 DT/mois)' : '— inclus dans votre abonnement'}`}
+                ? `Modifier ${voc.le('gerant')} — accès et affectations`
+                : `${voc.Nouveau('gerant')} ${!canAddFree ? `— ${voc.acc('gerant', 'payant', 'payante')} (80 DT/mois)` : `— ${voc.acc('gerant', 'inclus', 'incluse')} dans votre abonnement`}`}
             </span>
           </div>
           <div style={{ padding: '20px' }}>
             {!canAddFree && !editingId && (
               <div style={{ background: '#fef9c3', border: '1px solid #fde68a', borderRadius: 10, padding: '10px 14px', fontSize: '0.82rem', color: '#92400e', marginBottom: 16 }}>
-                ⚠ Vous avez atteint la limite de {freeLimit} gérant(s) gratuit(s). Ce compte sera facturé <strong>80 DT/mois</strong> et nécessite une validation admin.
+                ⚠ Vous avez atteint la limite de {freeLimit} {voc.nomS('gerant')} {voc.acc('gerant', 'gratuit(s)', 'gratuite(s)')}. Ce compte sera facturé <strong>80 DT/mois</strong> et nécessite une validation admin.
               </div>
             )}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 14 }}>
@@ -297,7 +299,7 @@ export default function GerantsPage() {
                 return (
                   <div style={{ gridColumn: '1 / -1' }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                      <label style={lbl}>Activités &amp; labos assignés <span style={{ color: '#ef4444' }}>*</span></label>
+                      <label style={lbl}>{voc.Pl('activite')} &amp; {voc.pl('labo')} {voc.accN(['activite', 'labo'], 'assignés', 'assignées')} <span style={{ color: '#ef4444' }}>*</span></label>
                       {(allActIds.length + allLaboIds.length) > 0 && (
                         <button type="button"
                           onClick={() => setForm((f) => allChecked ? { ...f, activiteIds: [], laboIds: [], accesAcheteurs: false } : { ...f, activiteIds: allActIds, laboIds: allLaboIds })}
@@ -308,7 +310,7 @@ export default function GerantsPage() {
                     </div>
                     {activites.length > 0 && (
                       <>
-                        <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '4px 0' }}>📍 Activités</div>
+                        <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '4px 0' }}>📍 {voc.Pl('activite')}</div>
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7, marginBottom: 10 }}>
                           {activites.map((a) => (
                             <span key={a.id} style={pill(form.activiteIds.includes(a.id))} onClick={() => toggleAct(a.id)}>
@@ -320,7 +322,7 @@ export default function GerantsPage() {
                     )}
                     {labos.length > 0 && (
                       <>
-                        <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '4px 0' }}>🏭 Labos</div>
+                        <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '4px 0' }}>{voc.icon('labo')} {voc.Pl('labo')}</div>
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
                           {labos.map((l) => (
                             <span key={l.id} style={pill(form.laboIds.includes(l.id))} onClick={() => toggleLabo(l.id)}>
@@ -341,12 +343,12 @@ export default function GerantsPage() {
                         }}>
                           <div>
                             <div style={{ fontSize: '0.83rem', fontWeight: 800, color: form.accesAcheteurs ? '#5b21b6' : '#374151' }}>
-                              🛒 Gestion de la base acheteurs
+                              🛒 Gestion de la base {voc.court('acheteur', true)}
                             </div>
                             <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: 2 }}>
                               {canAcheteurs
-                                ? 'Le gérant accède à l\'Espace Acheteurs (carnet, tarifs, ventes, commandes de ses labos).'
-                                : 'Assignez au moins un labo pour pouvoir accorder cet accès.'}
+                                ? `${voc.Le('gerant')} accède ${voc.au('espace_acheteurs', false, 'Nom')} (carnet, tarifs, ${voc.pl('vente')}, commandes de ${voc.son('labo', true)}).`
+                                : `Assignez au moins ${voc.un('labo')} pour pouvoir accorder cet accès.`}
                             </div>
                           </div>
                           <button type="button"
@@ -389,16 +391,16 @@ export default function GerantsPage() {
       ) : gerants.length === 0 ? (
         <div style={{ textAlign: 'center', padding: 56, background: '#f8fafc', borderRadius: 18, border: '1.5px dashed #e2e8f0' }}>
           <div style={{ fontSize: '3rem', marginBottom: 14 }}>👥</div>
-          <div style={{ fontSize: '1rem', fontWeight: 800, color: '#111827', marginBottom: 8 }}>Aucun compte gérant</div>
+          <div style={{ fontSize: '1rem', fontWeight: 800, color: '#111827', marginBottom: 8 }}>Aucun compte {voc.court('gerant')}</div>
           <p style={{ fontSize: '0.86rem', color: '#6b7280', lineHeight: 1.7, marginBottom: 24, maxWidth: 400, margin: '0 auto 24px' }}>
             {maxGerants !== null
-              ? `Votre abonnement inclut ${maxGerants} compte(s) gérant. Créez un premier compte pour donner accès à un collaborateur.`
-              : 'Créez un compte gérant pour donner accès à un collaborateur.'}
+              ? `Votre abonnement inclut ${maxGerants} compte(s) ${voc.nom('gerant')}. Créez un premier compte pour donner accès à un collaborateur.`
+              : `Créez un compte ${voc.nom('gerant')} pour donner accès à un collaborateur.`}
           </p>
           {!atGerantLimit && (
             <button onClick={() => { setShowForm(true); setEditingId(null); setForm(EMPTY_FORM); setInviteSent(null); setError(''); }}
               style={{ padding: '11px 28px', background: 'linear-gradient(135deg,#1e3a5f,#0369a1)', color: '#fff', border: 'none', borderRadius: 10, fontWeight: 700, fontSize: '0.9rem', cursor: 'pointer' }}>
-              + Créer un gérant
+              + Créer {voc.un('gerant')}
             </button>
           )}
         </div>
@@ -422,7 +424,7 @@ export default function GerantsPage() {
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 4 }}>
                     <span style={{ fontWeight: 800, fontSize: '0.9rem', color: '#0f172a' }}>{g.nom}</span>
                     <span style={{ fontSize: '0.7rem', fontWeight: 700, padding: '2px 8px', borderRadius: 20, background: g.actif ? '#dcfce7' : '#fee2e2', color: g.actif ? '#166534' : '#991b1b' }}>
-                      {g.actif ? '● Actif' : '○ Inactif'}
+                      {g.actif ? `● ${voc.acc('gerant', 'Actif', 'Active')}` : `○ ${voc.acc('gerant', 'Inactif', 'Inactive')}`}
                     </span>
                     {!g.activatedAt && (
                       <span style={{ fontSize: '0.7rem', fontWeight: 700, padding: '2px 8px', borderRadius: 20, background: '#fef3c7', color: '#92400e' }}>⏳ Invitation en attente</span>
@@ -431,7 +433,7 @@ export default function GerantsPage() {
                       {g.estGratuit ? 'Gratuit' : `${g.montantMensuel} DT/mois`}
                     </span>
                     {g.accesAcheteurs && (
-                      <span style={{ fontSize: '0.7rem', fontWeight: 700, padding: '2px 8px', borderRadius: 20, background: '#f5f3ff', color: '#6d28d9' }}>🛒 Base acheteurs</span>
+                      <span style={{ fontSize: '0.7rem', fontWeight: 700, padding: '2px 8px', borderRadius: 20, background: '#f5f3ff', color: '#6d28d9' }}>🛒 Base {voc.court('acheteur', true)}</span>
                     )}
                   </div>
                   <div style={{ fontSize: '0.8rem', color: '#6b7280' }}>

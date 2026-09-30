@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import api from '../../api/client';
-import type { SupportDemande } from '../../types';
+import type { SupportDemande, Client, DomaineProfil } from '../../types';
 import { useNotifications } from '../../context/NotificationContext';
 // jsPDF (~113 Ko gzip) ne se charge qu'à l'ouverture d'une demande supplément (import dynamique).
 import { FilterSegmented, FilterInput } from '../common/HistoryFilterBar';
@@ -58,6 +58,10 @@ function DetailsPopup({
   const [pricing, setPricing] = useState<SupplPricing | null>(null);
   // Avenant PDF (generated client-side from pricing)
   const [avenantPdfBase64, setAvenantPdfBase64] = useState<string | null>(null);
+  // Lexique du domaine du CLIENT de la demande (lot 2, spec §2.3) : l'avenant est rédigé dans le vocabulaire
+  // du client, pas dans celui de l'admin. undefined = en cours ; null = client sans domaine, ou profil
+  // indisponible → vocabulaire par défaut.
+  const [lexiqueClient, setLexiqueClient] = useState<DomaineProfil['lexique'] | null | undefined>(undefined);
   // Notes admin
   const [notesAdmin, setNotesAdmin] = useState(demande.notesAdmin || '');
   const [saving, setSaving] = useState(false);
@@ -67,12 +71,20 @@ function DetailsPopup({
     if (demande.type === 'supplement') {
       api.get(`/api/abonnements/client/${demande.clientId}/supplement-pricing`)
         .then(({ data }) => setPricing(data)).catch(() => {});
+      // Le client porte son domaine (GET /admin/clients/:id → domaineId) ; le profil du domaine porte le lexique résolu.
+      api.get(`/admin/clients/${demande.clientId}`)
+        .then(({ data }) => {
+          const domaineId = (data as Client).domaineId;
+          return domaineId != null ? api.get(`/api/domaines/${domaineId}`) : null;
+        })
+        .then((res) => setLexiqueClient((res?.data as DomaineProfil | undefined)?.lexique ?? null))
+        .catch(() => setLexiqueClient(null));
     }
   }, [demande.clientId, demande.type]);
 
-  // Generate avenant PDF client-side once pricing is loaded
+  // Generate avenant PDF client-side once pricing and the client's lexique are loaded
   useEffect(() => {
-    if (!pricing) return;
+    if (!pricing || lexiqueClient === undefined) return;
     const nbAAdded = demande.nbActivitesSupp || 0;
     const nbLAdded = demande.nbLabosSupp     || 0;
     const nbGAdded = demande.nbGerantsSupp   || 0;
@@ -111,13 +123,14 @@ function DetailsPopup({
       formuleActivites: pricing.formuleActivites ?? undefined,
       nbAcheteurs: cible > 0 ? cible : pricing.nbAcheteurs,
       acheteursCost: acheteursApres,
+      lexique: lexiqueClient,
       appName: 'LabFlow',
       dateAvenant: new Date().toISOString(),
       });
       setAvenantPdfBase64(base64);
     });
     return () => { cancelled = true; };
-  }, [pricing, demande]);
+  }, [pricing, demande, lexiqueClient]);
 
   const handleAction = async (statut: 'validée' | 'refusée') => {
     setSaving(true);

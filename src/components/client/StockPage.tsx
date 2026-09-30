@@ -4,6 +4,8 @@ import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
 import HistoryFilterBar, { FilterField, FilterInput, FilterSelect } from '../common/HistoryFilterBar';
 import { useAuth } from '../../context/AuthContext';
+import { useVocabulaire } from '../../hooks/useVocabulaire';
+import { libelleCategoriePt } from '../../vocab/categoriesPt';
 import { usePerteTypes } from '../../utils/perteTypes';
 import PortionsModal from './PortionsModal';
 import InvoiceConfirmModal, { type InvoiceLineItem } from './InvoiceConfirmModal';
@@ -68,6 +70,7 @@ interface PerteModalProps {
 
 function PerteModal({ ingredientId, nom, activiteId, stockDisponible, onSaveOverride, onAfterSave, onClose }: PerteModalProps) {
   const perteTypes = usePerteTypes();
+  const voc = useVocabulaire();
   const [quantite, setQuantite] = useState('');
   const [typePerte, setTypePerte] = useState<string>(perteTypes[0]?.code ?? 'avarie');
   const [datePerte, setDatePerte] = useState(todayStr());
@@ -139,7 +142,7 @@ function PerteModal({ ingredientId, nom, activiteId, stockDisponible, onSaveOver
     } catch (e: unknown) {
       const d = (e as { response?: { data?: { message?: string; disponible?: number; demande?: number } } })?.response?.data;
       if (d?.disponible !== undefined) {
-        setError(`Stock insuffisant — disponible : ${d.disponible} | demandé : ${d.demande}`);
+        setError(`${voc.Nom('stock')} ${voc.acc('stock', 'insuffisant', 'insuffisante')} — disponible : ${d.disponible} | demandé : ${d.demande}`);
       } else {
         setError(d?.message ?? 'Erreur serveur');
       }
@@ -151,7 +154,7 @@ function PerteModal({ ingredientId, nom, activiteId, stockDisponible, onSaveOver
     <div className="modal-overlay">
       <div className="modal" style={{ maxWidth: 380 }} onClick={(e) => e.stopPropagation()}>
         <div className="modal-header" style={{ background: 'linear-gradient(135deg, #dc2626, #b91c1c)', borderBottom: 'none' }}>
-          <h2 style={{ color: '#fff', margin: 0 }}>📉 Enregistrer une perte</h2>
+          <h2 style={{ color: '#fff', margin: 0 }}>📉 Enregistrer {voc.un('perte')}</h2>
           <button className="modal-close" onClick={onClose} style={{ color: '#fff' }}>×</button>
         </div>
         <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -159,21 +162,21 @@ function PerteModal({ ingredientId, nom, activiteId, stockDisponible, onSaveOver
           {loadingRange ? (
             <p style={{ color: 'var(--text-muted)', textAlign: 'center' }}>…</p>
           ) : done ? (
-            <p style={{ color: 'var(--success)', fontWeight: 700, textAlign: 'center' }}>✓ Perte enregistrée</p>
+            <p style={{ color: 'var(--success)', fontWeight: 700, textAlign: 'center' }}>✓ {voc.Nom('perte')} {voc.acc('perte', 'enregistré', 'enregistrée')}</p>
           ) : (ingredientId >= 0 && !dateMin) ? (
             <div style={{ background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: 8, padding: '14px 16px', textAlign: 'center' }}>
               <p style={{ margin: 0, color: '#92400e', fontWeight: 600, fontSize: '0.9rem' }}>
-                Aucun approvisionnement enregistré pour cet article.
+                {voc.Aucun('appro')} {voc.acc('appro', 'enregistré', 'enregistrée')} pour {voc.ce('article')}.
               </p>
               <p style={{ margin: '6px 0 0', color: '#b45309', fontSize: '0.8rem' }}>
-                Enregistrez d'abord un appro avant de déclarer une perte.
+                Enregistrez d'abord {voc.un('appro', false, 'court')} avant de déclarer {voc.un('perte')}.
               </p>
             </div>
           ) : (
             <>
               {stockDisponible !== null && stockDisponible !== undefined && (
                 <div style={{ background: '#f0fdf4', border: '1px solid #86efac', borderRadius: 6, padding: '6px 12px', display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ fontSize: '0.8rem', color: '#14532d', fontWeight: 600 }}>Stock disponible</span>
+                  <span style={{ fontSize: '0.8rem', color: '#14532d', fontWeight: 600 }}>{voc.Nom('stock')} disponible</span>
                   <span style={{ fontWeight: 700, color: stockDisponible <= 0 ? '#dc2626' : stockDisponible < 5 ? '#d97706' : '#15803d' }}>
                     {stockDisponible.toFixed(3)}
                   </span>
@@ -186,29 +189,29 @@ function PerteModal({ ingredientId, nom, activiteId, stockDisponible, onSaveOver
                   value={quantite} onChange={(e) => { setQuantite(e.target.value); setError(''); }} onFocus={(e) => e.target.select()} placeholder="—" />
                 {stockDisponible !== null && stockDisponible !== undefined && quantite && parseFloat(quantite) > stockDisponible && (
                   <p style={{ color: '#dc2626', fontSize: '0.78rem', margin: '4px 0 0', fontWeight: 600 }}>
-                    ⚠ Dépasse le stock disponible ({stockDisponible.toFixed(3)})
+                    ⚠ Dépasse {voc.le('stock')} disponible ({stockDisponible.toFixed(3)})
                   </p>
                 )}
               </div>
               <div>
-                <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: 4 }}>Type de perte</label>
+                <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: 4 }}>Type {voc.de('perte')}</label>
                 <select className="input" style={{ width: '100%' }} value={typePerte} onChange={(e) => setTypePerte(e.target.value)}>
                   {perteTypes.map((t) => <option key={t.code} value={t.code}>{t.label}</option>)}
                 </select>
               </div>
               <div>
-                <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: 4 }}>Date de la perte</label>
+                <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: 4 }}>Date {voc.du('perte')}</label>
                 <input type="date" className="input" style={{ width: '100%' }}
                   min={dateMin || undefined} max={todayStr()} value={datePerte} onChange={(e) => setDatePerte(e.target.value)} />
                 {dateMin && (
                   <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: 3 }}>
-                    Premier appro : {dateMin.split('-').reverse().join('/')}
+                    {voc.acc('appro', 'Premier', 'Première')} {voc.court('appro')} : {dateMin.split('-').reverse().join('/')}
                   </p>
                 )}
               </div>
               {ingredientId >= 0 && (
                 <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 6, padding: '8px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontSize: '0.8rem', color: '#7f1d1d', fontWeight: 600 }}>Prix unitaire appro</span>
+                  <span style={{ fontSize: '0.8rem', color: '#7f1d1d', fontWeight: 600 }}>Prix unitaire {voc.court('appro')}</span>
                   <span style={{ fontWeight: 700, color: '#991b1b', fontSize: '0.95rem' }}>
                     {loadingPrix ? '…' : prixUnitaire != null ? `${prixUnitaire.toFixed(3)} DT` : '—'}
                   </span>
@@ -234,7 +237,7 @@ function PerteModal({ ingredientId, nom, activiteId, stockDisponible, onSaveOver
                 onClick={submit}
                 disabled={saving || (stockDisponible !== null && stockDisponible !== undefined && !!quantite && parseFloat(quantite) > stockDisponible)}
               >
-                {saving ? '…' : 'Enregistrer la perte'}
+                {saving ? '…' : `Enregistrer ${voc.le('perte')}`}
               </button>
             )}
           </div>
@@ -256,6 +259,7 @@ interface FournisseurAffectationModalProps {
 }
 
 function FournisseurAffectationModal({ ingredientNom, fournisseurs, initialFournisseurId, initialRefFacture, onValidate, onClose }: FournisseurAffectationModalProps) {
+  const voc = useVocabulaire();
   const [fournisseurId, setFournisseurId] = useState(initialFournisseurId);
   const [refFacture, setRefFacture] = useState(initialRefFacture);
 
@@ -271,23 +275,23 @@ function FournisseurAffectationModal({ ingredientNom, fournisseurs, initialFourn
       <div className="modal" style={{ maxWidth: 420 }} onClick={(e) => e.stopPropagation()}>
         <div className="modal-header" style={{ background: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)', borderBottom: '1px solid #bfdbfe' }}>
           <div>
-            <h2 style={{ color: '#1e40af', margin: 0 }}>🚚 Affectation Fournisseur</h2>
+            <h2 style={{ color: '#1e40af', margin: 0 }}>🚚 Affectation {voc.Court('fournisseur')}</h2>
             <p style={{ margin: '4px 0 0', fontSize: '0.82rem', color: '#3b82f6' }}>{ingredientNom}</p>
           </div>
           <button className="modal-close" onClick={onClose}>×</button>
         </div>
         <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 18, padding: '20px 24px' }}>
           <div>
-            <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 6 }}>Fournisseur</label>
+            <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 6 }}>{voc.Nom('fournisseur')}</label>
             <select
               className="input" style={{ width: '100%', fontSize: '0.9rem' }}
               value={fournisseurId}
               onChange={(e) => setFournisseurId(e.target.value)}
             >
-              <option value="">— Aucun fournisseur —</option>
+              <option value="">— {voc.Aucun('fournisseur')} —</option>
               {fournisseurs.map((f) => (
                 <option key={f.id} value={f.id}>
-                  {f.isLabo ? '🏭 ' : '🚚 '}{f.nom}
+                  {f.isLabo ? `${voc.icon('labo')} ` : '🚚 '}{f.nom}
                 </option>
               ))}
             </select>
@@ -330,26 +334,27 @@ interface FournisseurInfoModalProps {
 }
 
 function FournisseurInfoModal({ ingredientNom, fournisseurNom, refFacture, onClose }: FournisseurInfoModalProps) {
+  const voc = useVocabulaire();
   return (
     <div className="modal-overlay">
       <div className="modal" style={{ maxWidth: 380 }} onClick={(e) => e.stopPropagation()}>
         <div className="modal-header" style={{ background: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)', borderBottom: '1px solid #bfdbfe' }}>
           <div>
-            <h2 style={{ color: '#1e40af', margin: 0 }}>🏭 Fournisseur Labo</h2>
+            <h2 style={{ color: '#1e40af', margin: 0 }}>{voc.icon('labo')} {voc.Nom('fournisseur')} {voc.Court('labo')}</h2>
             <p style={{ margin: '4px 0 0', fontSize: '0.82rem', color: '#3b82f6' }}>{ingredientNom}</p>
           </div>
           <button className="modal-close" onClick={onClose}>×</button>
         </div>
         <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 14, padding: '20px 24px' }}>
           <div>
-            <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 4 }}>Fournisseur</label>
+            <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 4 }}>{voc.Nom('fournisseur')}</label>
             <p style={{ fontWeight: 600, margin: 0 }}>{fournisseurNom}</p>
           </div>
           <div>
             <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 4 }}>Réf. Facture</label>
             <p style={{ margin: 0, color: refFacture ? 'var(--text)' : 'var(--text-muted)', fontStyle: refFacture ? 'normal' : 'italic' }}>{refFacture ?? '—'}</p>
           </div>
-          <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: 0, fontStyle: 'italic' }}>Géré automatiquement par le labo — non modifiable.</p>
+          <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: 0, fontStyle: 'italic' }}>{voc.acc('fournisseur', 'Géré', 'Gérée')} automatiquement par {voc.le('labo')} — non modifiable.</p>
         </div>
         <div className="modal-footer">
           <button className="btn btn-primary" onClick={onClose}>Fermer</button>
@@ -375,26 +380,27 @@ interface ApproConflictModalProps {
 }
 
 function ApproConflictModal({ date, conflicts, newQuantite, onConfirm, onCancel }: ApproConflictModalProps) {
+  const voc = useVocabulaire();
   const [y, m, d] = date.split('-');
   const dateLabel = `${d}/${m}/${y}`;
   const existingTotal = conflicts.reduce((sum, c) => sum + c.entries.reduce((s, e) => s + (e.quantite ?? 0), 0), 0);
   const newQty = newQuantite ?? 0;
-  const nom = conflicts.length === 1 ? conflicts[0].ingredientNom : `${conflicts.length} ingrédient(s)`;
+  const nom = conflicts.length === 1 ? conflicts[0].ingredientNom : `${conflicts.length} ${voc.nomS('article_ingredient')}`;
   return (
     <div className="modal-overlay">
       <div className="modal" style={{ maxWidth: 480 }} onClick={(e) => e.stopPropagation()}>
         <div className="modal-header" style={{ background: '#fffbeb', borderBottom: '1px solid #fde68a' }}>
-          <h2 style={{ color: '#92400e', margin: 0, fontSize: '1rem' }}>⚠️ Appro existante — {nom}</h2>
+          <h2 style={{ color: '#92400e', margin: 0, fontSize: '1rem' }}>⚠️ {voc.Court('appro')} {voc.acc('appro', 'existant', 'existante')} — {nom}</h2>
           <button className="modal-close" onClick={onCancel}>×</button>
         </div>
         <div className="modal-body">
           <p style={{ marginBottom: 12 }}>
-            Tu as déjà un appro à cette date (<strong>{dateLabel}</strong>) avec la quantité{' '}
+            Tu as déjà {voc.un('appro', false, 'court')} à cette date (<strong>{dateLabel}</strong>) avec la quantité{' '}
             <strong>{existingTotal.toFixed(3)}</strong>.
           </p>
           <p style={{ marginBottom: 20 }}>
             Es-tu sûr d'ajouter <strong>{newQty.toFixed(3)}</strong> ?{' '}
-            Car ça te fait un total d'appro de{' '}
+            Car ça te fait un total {voc.de('appro', false, 'court')} de{' '}
             <strong style={{ color: '#d97706', fontSize: '1.05rem' }}>
               {existingTotal.toFixed(3)} + {newQty.toFixed(3)} = {(existingTotal + newQty).toFixed(3)}
             </strong>
@@ -457,6 +463,7 @@ interface PtRecipeInfo {
 
 function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fournisseurFilter, refFactureFilter, activiteId, fournisseurs = [], onSave, onSavePT: _onSavePT, onSaveSeuilMin, onSavePerte, onRefresh }: StockMatrixProps) {
   const { t } = useTranslation();
+  const voc = useVocabulaire();
   const { canWrite } = useAuth();
   const navigate = useNavigate();
   const [rows, setRows] = useState<Record<number, StockRowState>>(() => buildInitialRowState(entries));
@@ -1021,18 +1028,18 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
         border: '1.5px solid #1e40af', boxShadow: '0 2px 10px rgba(30,64,175,0.10)',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, paddingBottom: 10, borderBottom: '1px solid #bfdbfe' }}>
-          <span style={{ fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#1e40af' }}>Approvisionnement</span>
+          <span style={{ fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#1e40af' }}>{voc.Nom('appro')}</span>
           {readyCount > 0 && (
             <span style={{ background: '#1e40af', color: '#fff', borderRadius: 20, padding: '1px 9px', fontSize: '0.72rem', fontWeight: 700 }}>{readyCount}</span>
           )}
         </div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'flex-end' }}>
           <div>
-            <label style={{ fontSize: '0.62rem', fontWeight: 700, color: '#1e40af', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 3 }}>Date d'appro <span style={{ color: '#ef4444' }}>*</span></label>
+            <label style={{ fontSize: '0.62rem', fontWeight: 700, color: '#1e40af', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 3 }}>Date {voc.de('appro', false, 'court')} <span style={{ color: '#ef4444' }}>*</span></label>
             <input type="date" className="input" style={{ padding: '6px 10px', borderRadius: 7, fontSize: '0.82rem', border: '1.5px solid #1e40af', background: '#fff', fontWeight: 600, maxWidth: 150 }} min={yearStart} max={todayStr()} value={bulkDate} onChange={(e) => setBulkDate(e.target.value)} />
           </div>
           <div>
-            <label style={{ fontSize: '0.62rem', fontWeight: 700, color: '#1e40af', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 3 }}>Fournisseur</label>
+            <label style={{ fontSize: '0.62rem', fontWeight: 700, color: '#1e40af', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 3 }}>{voc.Nom('fournisseur')}</label>
             {hasFournisseurs ? (
               <select className="input" style={{ padding: '6px 10px', borderRadius: 7, fontSize: '0.82rem', border: '1.5px solid #1e40af', background: hasPTQuantity ? '#f1f5f9' : '#fff', fontWeight: 600, maxWidth: 200, opacity: hasPTQuantity ? 0.5 : 1 }} value={bulkFournisseurId} onChange={(e) => setBulkFournisseurId(e.target.value)} disabled={hasPTQuantity}>
                 <option value="">— Sélectionner —</option>
@@ -1040,7 +1047,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
               </select>
             ) : (
               <select className="input" style={{ padding: '6px 10px', borderRadius: 7, fontSize: '0.82rem', maxWidth: 240, color: '#9a3412', fontStyle: 'italic', border: '2px solid #f97316', background: '#fff7ed' }} disabled>
-                <option>⚠ Aucun fournisseur</option>
+                <option>⚠ {voc.Aucun('fournisseur')}</option>
               </select>
             )}
           </div>
@@ -1070,7 +1077,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
         return (
           <div key={cat} style={{ marginBottom: 8 }}>
             <button onClick={() => toggleCat(cat)} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', width: '100%', textAlign: 'left', borderLeft: '4px solid #2563eb', borderBottom: '1px solid var(--border)', marginBottom: isOpen ? 10 : 0, borderRadius: isOpen ? '4px 4px 0 0' : 4 }}>
-              <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#2563eb', textTransform: 'uppercase', letterSpacing: '0.06em' }}>🏷️ {cat}</span>
+              <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#2563eb', textTransform: 'uppercase', letterSpacing: '0.06em' }}>🏷️ {libelleCategoriePt(voc, cat)}</span>
               <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 400 }}>({items.length})</span>
               <span style={{ marginLeft: 'auto', fontSize: '0.8rem', color: 'var(--text-muted)' }}>{isOpen ? '▼' : '▶'}</span>
             </button>
@@ -1080,8 +1087,8 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                   <thead style={{ background: '#eff6ff', color: '#1e3a5f' }}>
                     <tr style={{ borderBottom: '1px solid #bfdbfe' }}>
                       {[
-                        { label: 'Article', minWidth: 180 },
-                        { label: 'Stock Actuel', minWidth: 110 },
+                        { label: voc.Nom('article'), minWidth: 180 },
+                        { label: `${voc.Nom('stock')} ${voc.acc('stock', 'Actuel', 'Actuelle')}`, minWidth: 110 },
                         { label: 'Coût Total', minWidth: 100 },
                         { label: 'Quantité', minWidth: 90 },
                         { label: 'Prix', minWidth: 100 },
@@ -1095,8 +1102,8 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                     </tr>
                     <tr style={{ borderBottom: '2px solid #2563eb' }}>
                       {[
-                        { sub: 'Hist.Appro · Unité' },
-                        { sub: '↑Appro · ⇄Trf · ↘Pertes · PT' },
+                        { sub: `Hist.${voc.Court('appro')} · Unité` },
+                        { sub: `↑${voc.Court('appro')} · ⇄${voc.Court('transfert_abr')} · ↘${voc.Court('perte', true)} · ${voc.Court('pt')}` },
                         { sub: 'HT · TTC' },
                         { sub: 'Nouvelle' },
                         { sub: 'Unité' },
@@ -1139,9 +1146,9 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                               </div>
                               {isLaboPT && (
                                 <div style={{ marginTop: 4 }}>
-                                  <span title="Produit fabriqué au labo — reçu uniquement par transfert depuis le labo, pas d'appro manuel ici."
+                                  <span title={`${voc.Nom('produit')} ${voc.acc('produit', 'fabriqué', 'fabriquée')} ${voc.au('labo')} — ${voc.acc('produit', 'reçu', 'reçue')} uniquement par ${voc.nom('transfert')} depuis ${voc.le('labo')}, pas ${voc.de('appro', false, 'court')} ${voc.acc('appro', 'manuel', 'manuelle')} ici.`}
                                     style={{ fontSize: '0.66rem', background: '#ecfeff', color: '#0e7490', border: '1px solid #a5f3fc', borderRadius: 4, padding: '1px 7px', fontWeight: 700, whiteSpace: 'nowrap' }}>
-                                    ⇄ Transfert uniquement
+                                    ⇄ {voc.Court('transfert')} uniquement
                                   </span>
                                 </div>
                               )}
@@ -1151,12 +1158,12 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                             </td>
                             <td style={{ textAlign: 'center', padding: '10px 14px', verticalAlign: 'middle' }}>
                               <span className={cls} style={{ fontSize: '1rem', fontWeight: 800 }}>{totalDisplay}</span>
-                              <div style={{ fontSize: '0.67rem', color: '#16a34a', fontWeight: 600, marginTop: 2 }}>↑ appro {parseFloat((entry.approDepuisInv ?? 0).toFixed(3))}</div>
+                              <div style={{ fontSize: '0.67rem', color: '#16a34a', fontWeight: 600, marginTop: 2 }}>↑ {voc.court('appro')} {parseFloat((entry.approDepuisInv ?? 0).toFixed(3))}</div>
                               <div style={{ fontSize: '0.67rem', color: '#0891b2', fontWeight: 600, marginTop: 1 }}>⇄ transf {parseFloat((entry.transfertsDepuisAppro ?? 0).toFixed(3))}</div>
-                              <div style={{ fontSize: '0.67rem', color: '#dc2626', fontWeight: 500, marginTop: 1 }}>↘ pertes {parseFloat((entry.pertesDepuisInv ?? 0).toFixed(3))}</div>
-                              {!entry.isPT && <div style={{ fontSize: '0.67rem', color: '#7c3aed', fontWeight: 500, marginTop: 1 }}>PT {parseFloat((entry.ptUsageDepuisInv ?? 0).toFixed(3))}</div>}
+                              <div style={{ fontSize: '0.67rem', color: '#dc2626', fontWeight: 500, marginTop: 1 }}>↘ {voc.court('perte', true)} {parseFloat((entry.pertesDepuisInv ?? 0).toFixed(3))}</div>
+                              {!entry.isPT && <div style={{ fontSize: '0.67rem', color: '#7c3aed', fontWeight: 500, marginTop: 1 }}>{voc.Court('pt')} {parseFloat((entry.ptUsageDepuisInv ?? 0).toFixed(3))}</div>}
                               {entry.venteDepuisInv != null && entry.venteDepuisInv > 0 && (
-                                <div style={{ fontSize: '0.67rem', color: '#b45309', fontWeight: 600, marginTop: 1 }}>💰 VENTE −{parseFloat(entry.venteDepuisInv.toFixed(3))}</div>
+                                <div style={{ fontSize: '0.67rem', color: '#b45309', fontWeight: 600, marginTop: 1 }}>💰 {voc.MAJ('vente')} −{parseFloat(entry.venteDepuisInv.toFixed(3))}</div>
                               )}
                             </td>
                             <td style={{ textAlign: 'center', padding: '10px 14px', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
@@ -1182,7 +1189,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                                 style={{ width: 80, textAlign: 'right', padding: '5px 8px', borderRadius: 7, fontSize: '0.85rem', ...warnStyle }}
                                 className="input"
                                 disabled={!canWrite || isLaboPT || (entry.isPT ? hasIngredientQuantity : hasPTQuantity)}
-                                title={isLaboPT ? "Reçu uniquement par transfert depuis le labo — pas d'appro manuel ici." : (entry.isPT && entry.prixPartiel ? '⚠️ Prix incomplet pour certains articles — calcul partiel' : undefined)}
+                                title={isLaboPT ? `${voc.acc('produit', 'Reçu', 'Reçue')} uniquement par ${voc.nom('transfert')} depuis ${voc.le('labo')} — pas ${voc.de('appro', false, 'court')} ${voc.acc('appro', 'manuel', 'manuelle')} ici.` : (entry.isPT && entry.prixPartiel ? `⚠️ Prix incomplet pour ${voc.acc('article', 'certains', 'certaines')} ${voc.pl('article')} — calcul partiel` : undefined)}
                                 onFocus={(e) => { e.target.select(); if (entry.isPT && entry.produitId) fetchPtRecipe(entry.produitId); }}
                               />
                               {entry.isPT && entry.produitId && !isLaboPT && (() => {
@@ -1203,9 +1210,9 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                                 entry.prixPartiel ? (
                                   // PMP incomplet sur au moins un composant : afficher un prix serait
                                   // trompeur (coût partiel) — on masque et on explique.
-                                  <span title="Prix indisponible : certains composants de la recette n'ont pas encore de prix (PMP)." style={{ fontSize: '0.82rem', color: '#d97706', fontWeight: 800, cursor: 'help' }}>—&nbsp;⚠️</span>
+                                  <span title={`Prix indisponible : certains composants ${voc.du('recette')} n'ont pas encore de prix (PMP).`} style={{ fontSize: '0.82rem', color: '#d97706', fontWeight: 800, cursor: 'help' }}>—&nbsp;⚠️</span>
                                 ) : (
-                                <span title={isLaboPT ? 'PMP des transferts reçus du labo' : 'Calculé automatiquement depuis les prix des articles'}>
+                                <span title={isLaboPT ? `PMP ${voc.du('transfert', true)} ${voc.acc('transfert', 'reçus', 'reçues')} ${voc.du('labo')}` : `Calculé automatiquement depuis les prix ${voc.du('article', true)}`}>
                                   {entry.prixCalcule != null && entry.prixCalcule > 0 ? (
                                     <span style={{ fontSize: '0.88rem', color: '#7c3aed', fontWeight: 600 }}>{entry.prixCalcule.toFixed(3)}</span>
                                   ) : entry.prixUnitaire != null && entry.prixUnitaire > 0 ? (
@@ -1251,14 +1258,14 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                                     </button>
                                   )}
                                   {canWrite && activiteId && (
-                                    <button className="perte-btn" style={{ whiteSpace: 'nowrap' }} onClick={() => setPertesModal({ ingredientId: entry.ingredientId, nom: entry.nom, stockDisponible: entry.quantite ?? null })} title="Enregistrer une perte">📉 Perte</button>
+                                    <button className="perte-btn" style={{ whiteSpace: 'nowrap' }} onClick={() => setPertesModal({ ingredientId: entry.ingredientId, nom: entry.nom, stockDisponible: entry.quantite ?? null })} title={`Enregistrer ${voc.un('perte')}`}>📉 {voc.Court('perte')}</button>
                                   )}
                                 </div>
                                 {/* PortionsModal = modale d'APPRO PT (exige une quantité). Inutile/contradictoire
                                     sur un PT labo (reçu par transfert, pas d'appro manuel) → masqué comme l'input. */}
                                 {entry.isPT && entry.produitId && canWrite && !isLaboPT && (
                                   <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', justifyContent: 'center' }}>
-                                    <button className="btn btn-ghost btn-sm" title="Portions personnalisées" style={{ fontSize: '0.78rem', padding: '3px 8px' }} onClick={() => setPortionsModal({ produitId: entry.produitId!, nom: entry.nom })}>⚙️ Personnaliser</button>
+                                    <button className="btn btn-ghost btn-sm" title={`${voc.Pl('portion')} ${voc.acc('portion', 'personnalisés', 'personnalisées')}`} style={{ fontSize: '0.78rem', padding: '3px 8px' }} onClick={() => setPortionsModal({ produitId: entry.produitId!, nom: entry.nom })}>⚙️ Personnaliser</button>
                                   </div>
                                 )}
                               </div>
@@ -1282,7 +1289,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                                           <th style={{ textAlign: 'right', color: 'var(--text-muted)', fontWeight: 600, paddingBottom: 4 }}>Prix HT</th>
                                           <th style={{ textAlign: 'right', color: 'var(--text-muted)', fontWeight: 600, paddingBottom: 4 }}>TVA%</th>
                                           <th style={{ textAlign: 'right', color: 'var(--text-muted)', fontWeight: 600, paddingBottom: 4 }}>Prix TTC</th>
-                                          <th style={{ color: 'var(--text-muted)', fontWeight: 600, paddingBottom: 4 }}>Fournisseur</th>
+                                          <th style={{ color: 'var(--text-muted)', fontWeight: 600, paddingBottom: 4 }}>{voc.Nom('fournisseur')}</th>
                                           <th style={{ color: 'var(--text-muted)', fontWeight: 600, paddingBottom: 4 }}>Réf. Facture</th>
                                         </tr>
                                       </thead>
@@ -1292,12 +1299,12 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                                             <td style={{ color: 'var(--primary)', fontWeight: 600 }}>{fmtDate(h.dateAppro)}</td>
                                             <td>
                                               <span className={`badge-appro ${h.typeAppro === 'PT' ? 'pt' : (h.typeAppro ?? 'manuel')}`}>
-                                                {h.typeAppro === 'transfert' ? 'Transfert'
-                                                  : h.typeAppro === 'vente' ? '💰 Vente'
-                                                  : h.typeAppro === 'annulation_vente' ? '↩️ Annul. vente'
-                                                  : h.typeAppro === 'PT' ? '🔄 PT'
-                                                  : h.typeAppro === 'perte' ? '🗑️ Perte'
-                                                  : 'Manuel'}
+                                                {h.typeAppro === 'transfert' ? voc.Court('transfert')
+                                                  : h.typeAppro === 'vente' ? `💰 ${voc.Court('vente')}`
+                                                  : h.typeAppro === 'annulation_vente' ? `↩️ Annul. ${voc.court('vente')}`
+                                                  : h.typeAppro === 'PT' ? `🔄 ${voc.Court('pt')}`
+                                                  : h.typeAppro === 'perte' ? `${voc.icon('perte')} ${voc.Court('perte')}`
+                                                  : voc.acc('appro', 'Manuel', 'Manuelle')}
                                               </span>
                                             </td>
                                             <td style={{ textAlign: 'right' }}>{h.quantite ?? '—'}</td>
@@ -1352,6 +1359,7 @@ interface ActivityStockSectionProps {
 
 function ActivityStockSection({ label: _label, activities, initialActiviteId, onSave, onActiviteChange }: ActivityStockSectionProps) {
   const { t } = useTranslation();
+  const voc = useVocabulaire();
   const { canWrite: _canWrite } = useAuth();
   void _canWrite;
 
@@ -1382,9 +1390,11 @@ function ActivityStockSection({ label: _label, activities, initialActiviteId, on
       setEntries(stockRes.data);
       setFournisseurs(foRes.data as Fournisseur[]);
     } catch {
-      setLoadError('Impossible de charger le stock. Veuillez réessayer.');
+      setLoadError(`Impossible de charger ${voc.le('stock')}. Veuillez réessayer.`);
     }
     setLoading(false);
+  // voc hors dépendances : un changement de lexique ne doit pas recharger le stock.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -1434,10 +1444,10 @@ function ActivityStockSection({ label: _label, activities, initialActiviteId, on
                 fontWeight: selectedId === a.id ? 700 : 400,
               }}
             >
-              🏪 {a.nom}
+              {voc.icon('activite')} {a.nom}
             </button>
           ))}
-          <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', alignSelf: 'center', marginLeft: 4 }}>← sélectionner l'activité</span>
+          <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', alignSelf: 'center', marginLeft: 4 }}>← sélectionner {voc.le('activite')}</span>
         </div>
       )}
 
@@ -1450,12 +1460,12 @@ function ActivityStockSection({ label: _label, activities, initialActiviteId, on
         <FilterField label="🏷️ Catégorie">
           <FilterSelect value={categoryFilter} onChange={(e) => { setCategoryFilter(e.target.value); setIngredientFilter(''); }}>
             <option value="">{t('client.catalogue_franchise.all_categories')}</option>
-            {allCategories.map((c) => <option key={c} value={c}>{c}</option>)}
+            {allCategories.map((c) => <option key={c} value={c}>{libelleCategoriePt(voc, c)}</option>)}
           </FilterSelect>
         </FilterField>
-        <FilterField label="🧂 Article">
+        <FilterField label={`🧂 ${voc.Nom('article')}`}>
           <FilterSelect value={ingredientFilter} disabled={!categoryFilter} onChange={(e) => setIngredientFilter(e.target.value === '' ? '' : Number(e.target.value))}>
-            <option value="">— Tous —</option>
+            <option value="">— {voc.acc('article', 'Tous', 'Toutes')} —</option>
             {entries.filter((e) => e.categorie === categoryFilter).map((e) => (
               <option key={e.ingredientId} value={e.ingredientId}>{e.nom}</option>
             ))}
@@ -1464,17 +1474,17 @@ function ActivityStockSection({ label: _label, activities, initialActiviteId, on
         <FilterField label="🔍 Nom">
           <FilterInput type="text" placeholder={t('client.stock.search_ingredient')} value={nameFilter} onChange={(e) => setNameFilter(e.target.value)} />
         </FilterField>
-        <FilterField label="🚚 Fournisseur">
+        <FilterField label={`🚚 ${voc.Nom('fournisseur')}`}>
           {fournisseurs.length > 0 ? (
             <FilterSelect value={fournisseurFilter} onChange={(e) => setFournisseurFilter(e.target.value)}>
-              <option value="">— Tous —</option>
+              <option value="">— {voc.acc('fournisseur', 'Tous', 'Toutes')} —</option>
               {fournisseurs.map((f) => (
-                <option key={f.id} value={f.id}>{f.isLabo ? '🏭 ' : '🚚 '}{f.nom}</option>
+                <option key={f.id} value={f.id}>{f.isLabo ? `${voc.icon('labo')} ` : '🚚 '}{f.nom}</option>
               ))}
             </FilterSelect>
           ) : (
             <FilterSelect disabled style={{ border: '1.5px solid #f97316', background: '#fff7ed', color: '#9a3412', fontStyle: 'italic' }}>
-              <option>⚠ Aucun fournisseur</option>
+              <option>⚠ {voc.Aucun('fournisseur')}</option>
             </FilterSelect>
           )}
         </FilterField>
@@ -1520,6 +1530,7 @@ function ActivityStockSection({ label: _label, activities, initialActiviteId, on
 
 export default function StockPage() {
   const { t } = useTranslation();
+  const voc = useVocabulaire();
   const [searchParams] = useSearchParams();
   const urlActiviteId = searchParams.get('activiteId') ? Number(searchParams.get('activiteId')) : undefined;
 
@@ -1544,8 +1555,10 @@ export default function StockPage() {
       const initAct = initId ? acts.find((a) => a.id === initId) : acts[0];
       if (initAct) setSelectedActiviteNom(initAct.nom);
     }).catch(() => {
-      setActivitesError('Impossible de charger les activités. Veuillez recharger la page.');
+      setActivitesError(`Impossible de charger ${voc.le('activite', true)}. Veuillez recharger la page.`);
     }).finally(() => setActivitesLoading(false));
+  // voc hors dépendances : un changement de lexique ne doit pas recharger les activités.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const saveEntrepriseStock = async (activiteId: number, ingredientId: number, quantite: string, prixUnitaire: string, dateAppro: string, fournisseurId?: number | null, refFacture?: string | null, tauxTva?: number | null, timbreFiscal?: boolean) => {
@@ -1560,7 +1573,7 @@ export default function StockPage() {
     });
   };
 
-  const pageTitle = t('nav.stock_activite', 'Stock Activités');
+  const pageTitle = t('nav.stock_activite');
 
   return (
     <div className="page-content">
@@ -1573,12 +1586,12 @@ export default function StockPage() {
       }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
-            <div style={{ background: 'rgba(255,255,255,0.2)', borderRadius: 10, padding: '7px 9px', fontSize: '1.2rem' }}>📦</div>
+            <div style={{ background: 'rgba(255,255,255,0.2)', borderRadius: 10, padding: '7px 9px', fontSize: '1.2rem' }}>{voc.icon('stock')}</div>
             <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0 }}>
               {pageTitle}{selectedActiviteNom ? ` — ${selectedActiviteNom}` : ''}</h1>
           </div>
           <span style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.82rem' }}>
-            Gérez les stocks et approvisionnements de vos activités
+            Gérez {voc.le('stock', true)} et {voc.pl('appro')} de {voc.votre('activite', true)}
           </span>
         </div>
         <GuideButton section="stock-activites" />
@@ -1592,7 +1605,7 @@ export default function StockPage() {
         <>
           {typesSummary?.hasActivites && allActivities.length > 0 ? (
             <ActivityStockSection
-              label="Stock Activités"
+              label={`${voc.Nom('stock')} ${voc.Court('activite', true)}`}
               activities={allActivities}
               initialActiviteId={urlActiviteId}
               onSave={saveEntrepriseStock}

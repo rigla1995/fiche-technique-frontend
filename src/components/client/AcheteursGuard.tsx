@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Outlet, Link } from 'react-router-dom';
 import api from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
+import { useVocabulaire } from '../../hooks/useVocabulaire';
 
 // Thème violet de l'Espace Acheteurs
 const C = '#6d28d9';
@@ -11,6 +12,7 @@ const CB = '#c4b5fd';
 
 export default function AcheteursGuard() {
   const { user } = useAuth();
+  const voc = useVocabulaire();
   // Un gérant n'accède à l'Espace Acheteurs que si le compte client le lui a
   // accordé ET qu'au moins un labo lui est affecté (même règle que le backend).
   const gerantBlocked = user?.role === 'gerant'
@@ -45,12 +47,12 @@ export default function AcheteursGuard() {
             🔒
           </div>
           <h2 style={{ fontSize: '1.15rem', fontWeight: 700, color: C, marginBottom: 10 }}>
-            Espace Acheteurs non autorisé
+            {voc.Nom('espace_acheteurs')} non {voc.acc('espace_acheteurs', 'autorisé', 'autorisée')}
           </h2>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', lineHeight: 1.6, margin: 0 }}>
-            Cet espace n'est pas activé pour votre compte gérant. Demandez au titulaire
-            du compte de vous accorder l'accès à la base acheteurs (un labo affecté est
-            également requis).
+            Cet espace n'est pas activé pour votre compte {voc.nom('gerant')}. Demandez au titulaire
+            du compte de vous accorder l'accès à la base {voc.compl('acheteur', true)} ({voc.un('labo')} {voc.acc('labo', 'affecté', 'affectée')} est
+            également {voc.acc('labo', 'requis', 'requise')}).
           </p>
         </div>
       </div>
@@ -84,10 +86,10 @@ export default function AcheteursGuard() {
         borderRadius: 18, padding: '32px 32px', marginBottom: 28,
         boxShadow: '0 8px 32px rgba(109,40,217,0.28)', textAlign: 'center',
       }}>
-        <div style={{ fontSize: '3rem', marginBottom: 12 }}>🤝</div>
-        <h1 style={{ fontSize: '1.6rem', fontWeight: 900, color: '#fff', margin: '0 0 8px' }}>Module Acheteurs</h1>
+        <div style={{ fontSize: '3rem', marginBottom: 12 }}>{voc.icon('acheteur')}</div>
+        <h1 style={{ fontSize: '1.6rem', fontWeight: 900, color: '#fff', margin: '0 0 8px' }}>Module {voc.Court('acheteur', true)}</h1>
         <p style={{ color: 'rgba(255,255,255,0.82)', margin: 0, fontSize: '0.92rem' }}>
-          Gérez votre carnet d'acheteurs B2B et vendez les articles et produits composés de votre stock labo.
+          Gérez votre carnet {voc.de('acheteur', true)} B2B et vendez {voc.le('article', true)} et {voc.pl('produit_compose')} de {voc.votre('stock')} {voc.compl('labo')}.
         </p>
       </div>
 
@@ -96,10 +98,10 @@ export default function AcheteursGuard() {
           🔒
         </div>
         <h2 style={{ fontSize: '1.15rem', fontWeight: 700, color: C, marginBottom: 10 }}>
-          Module Acheteurs non activé
+          Module {voc.Court('acheteur', true)} non activé
         </h2>
         <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', lineHeight: 1.6, marginBottom: 24 }}>
-          Ce module est disponible en option. Envoyez une demande d'activation à l'administrateur et votre espace acheteurs sera activé sous 24h.
+          Ce module est disponible en option. Envoyez une demande d'activation à l'administrateur et {voc.votre('espace_acheteurs')} sera {voc.acc('espace_acheteurs', 'activé', 'activée')} sous 24h.
         </p>
 
         {(hasPending || requested) ? (

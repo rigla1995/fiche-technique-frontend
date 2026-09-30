@@ -1,10 +1,13 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import api from '../../api/client';
 import HelpButton from '../common/HelpButton';
 import TypeApproFilter from '../common/TypeApproFilter';
 import HistoryFilterBar, { FilterField, FilterInput, FilterSelect } from '../common/HistoryFilterBar';
 import { useAuth } from '../../context/AuthContext';
+import { useVocabulaire } from '../../hooks/useVocabulaire';
+import { libelleCategoriePt } from '../../vocab/categoriesPt';
+import type { Vocab } from '../../vocab/vocab';
 import type { Labo } from '../../types';
 
 const currentYear = new Date().getFullYear();
@@ -44,13 +47,13 @@ interface HistEntry {
 }
 
 // Puces du filtre « Type d'appro » côté labo : les transferts sont distingués émis / reçus.
-const LABO_TYPE_OPTIONS = [
-  ['manuel', 'Manuel'],
-  ['transfert_sortie', 'Transfert émis'],
-  ['transfert_entree', 'Transfert reçu'],
-  ['vente', 'Vente'],
-  ['pt', 'PT'],
-] as const;
+const laboTypeOptions = (voc: Vocab): ReadonlyArray<readonly [string, string]> => [
+  ['manuel', voc.acc('appro', 'Manuel', 'Manuelle')],
+  ['transfert_sortie', `${voc.Court('transfert')} ${voc.acc('transfert', 'émis', 'émise')}`],
+  ['transfert_entree', `${voc.Court('transfert')} ${voc.acc('transfert', 'reçu', 'reçue')}`],
+  ['vente', voc.Court('vente')],
+  ['pt', voc.Court('pt')],
+];
 
 const apiMsg = (e: unknown, fallback: string) =>
   (e as { response?: { data?: { message?: string } } })?.response?.data?.message ?? fallback;
@@ -64,12 +67,15 @@ const labelStyle: React.CSSProperties = {
 };
 
 
-const warningBanner = (
-  <div style={{ background: '#fef3c7', border: '1px solid #fde68a', borderRadius: 8, padding: '8px 12px', marginBottom: 12, fontSize: '0.82rem', color: '#92400e', display: 'flex', gap: 8, alignItems: 'flex-start' }}>
-    <span>⚠️</span>
-    <span>Cette action modifiera les valeurs du <strong>stock labo</strong>. Assurez-vous que les données sont correctes avant de confirmer.</span>
-  </div>
-);
+function WarningBanner() {
+  const voc = useVocabulaire();
+  return (
+    <div style={{ background: '#fef3c7', border: '1px solid #fde68a', borderRadius: 8, padding: '8px 12px', marginBottom: 12, fontSize: '0.82rem', color: '#92400e', display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+      <span>⚠️</span>
+      <span>Cette action modifiera les valeurs {voc.det('stock', 'du')}<strong>{voc.nom('stock')} {voc.compl('labo')}</strong>. Assurez-vous que les données sont correctes avant de confirmer.</span>
+    </div>
+  );
+}
 
 // ── Edit modal ─────────────────────────────────────────────────────────────────
 function EditModal({
@@ -85,6 +91,7 @@ function EditModal({
   onSaved: (updated: Partial<HistEntry>) => void;
   onClose: () => void;
 }) {
+  const voc = useVocabulaire();
   const [qty, setQty] = useState(entry.quantite !== null ? String(entry.quantite) : '');
   const [prix, setPrix] = useState(entry.prixUnitaire !== null ? String(entry.prixUnitaire) : '');
   const [fId, setFId] = useState(entry.fournisseurId ? String(entry.fournisseurId) : '');
@@ -125,7 +132,7 @@ function EditModal({
           <button className="modal-close" onClick={onClose} style={{ color: '#fff' }}>✕</button>
         </div>
         <div className="modal-body">
-          {warningBanner}
+          <WarningBanner />
           <div style={{ marginBottom: 10, fontSize: '0.82rem', color: 'var(--text-muted)' }}>
             Date : <strong>{fmtDate(entry.dateAppro)}</strong> — {entry.uniteNom}
           </div>
@@ -142,9 +149,9 @@ function EditModal({
             </div>
           </div>
           <div style={{ marginBottom: 12 }}>
-            <label style={labelStyle}>Fournisseur</label>
+            <label style={labelStyle}>{voc.Nom('fournisseur')}</label>
             <select className="input" style={{ width: '100%' }} value={fId} onChange={(e) => setFId(e.target.value)}>
-              <option value="">— Aucun —</option>
+              <option value="">— {voc.acc('fournisseur', 'Aucun', 'Aucune')} —</option>
               {fournisseurs.map((f) => <option key={f.id} value={f.id}>{f.nom}</option>)}
             </select>
           </div>
@@ -182,6 +189,7 @@ function DeleteModal({
   onDeleted: (id: number) => void;
   onClose: () => void;
 }) {
+  const voc = useVocabulaire();
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState('');
 
@@ -202,17 +210,17 @@ function DeleteModal({
     <div className="modal-overlay">
       <div className="modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header" style={{ background: '#fee2e2', borderBottom: '1px solid #fecaca' }}>
-          <h2 style={{ color: '#991b1b' }}>Supprimer l'appro</h2>
+          <h2 style={{ color: '#991b1b' }}>Supprimer {voc.le('appro', false, 'court')}</h2>
           <button className="modal-close" onClick={onClose}>✕</button>
         </div>
         <div className="modal-body">
-          {warningBanner}
+          <WarningBanner />
           <p style={{ marginBottom: 12 }}>
-            Supprimer l'appro du <strong>{fmtDate(entry.dateAppro)}</strong> pour <strong>{entry.ingredientNom}</strong>{' '}
+            Supprimer {voc.le('appro', false, 'court')} du <strong>{fmtDate(entry.dateAppro)}</strong> pour <strong>{entry.ingredientNom}</strong>{' '}
             ({entry.quantite} {entry.uniteNom}) ?
           </p>
           <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginBottom: 16 }}>
-            Cette entrée sera définitivement supprimée et le stock labo sera recalculé en conséquence.
+            Cette entrée sera définitivement supprimée et {voc.le('stock')} {voc.compl('labo')} sera {voc.acc('stock', 'recalculé', 'recalculée')} en conséquence.
           </p>
           {error && <p style={{ color: 'var(--danger)', fontSize: '0.85rem', marginBottom: 8 }}>{error}</p>}
           <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
@@ -231,6 +239,8 @@ function DeleteModal({
 // ── Main page ──────────────────────────────────────────────────────────────────
 export default function LaboHistoriqueApproPage() {
   const { canWrite, user } = useAuth();
+  const voc = useVocabulaire();
+  const typeOptions = useMemo(() => laboTypeOptions(voc), [voc]);
   const isGerant = user?.role === 'gerant';
   const [searchParams] = useSearchParams();
   const laboId = searchParams.get('laboId');
@@ -376,7 +386,7 @@ export default function LaboHistoriqueApproPage() {
   const totalTTC = displayedResults.reduce((s, r) => s + (r.quantite ?? 0) * (r.prixUnitaireTva ?? r.prixUnitaire ?? 0), 0);
   const unitQtyMap: Record<string, number> = {};
   for (const r of results) { unitQtyMap[r.uniteNom] = (unitQtyMap[r.uniteNom] || 0) + (r.quantite ?? 0); }
-  if (!laboId) return <div className="page"><p className="text-muted">Labo non spécifié.</p></div>;
+  if (!laboId) return <div className="page"><p className="text-muted">{voc.Nom('labo')} non {voc.acc('labo', 'spécifié', 'spécifiée')}.</p></div>;
 
   return (
     <div className="page">
@@ -391,11 +401,11 @@ export default function LaboHistoriqueApproPage() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
             <div style={{ background: 'rgba(255,255,255,0.2)', borderRadius: 10, padding: '7px 9px', fontSize: '1.2rem' }}>📋</div>
             <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0 }}>
-              Historique Approvisionnement — {labo?.nom ?? '…'}
+              Historique {voc.Nom('appro')} — {labo?.nom ?? '…'}
             <HelpButton section="historique" variant="solid" size={18} tip="Aide" /></h1>
           </div>
           <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.85rem', margin: 0 }}>
-            Labo — consultation et export des approvisionnements
+            {voc.Nom('labo')} — consultation et export {voc.du('appro', true)}
           </p>
         </div>
       </div>
@@ -410,10 +420,10 @@ export default function LaboHistoriqueApproPage() {
                 background: laboId === String(l.id) ? '#7e22ce' : 'var(--bg)',
                 color: laboId === String(l.id) ? '#fff' : 'var(--text)',
                 fontWeight: laboId === String(l.id) ? 700 : 400 }}>
-              🏭 {l.nom}
+              {voc.icon('labo')} {l.nom}
             </button>
           ))}
-          <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', alignSelf: 'center', marginLeft: 4 }}>← sélectionner le labo</span>
+          <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', alignSelf: 'center', marginLeft: 4 }}>← sélectionner {voc.le('labo')}</span>
         </div>
       )}
 
@@ -431,40 +441,40 @@ export default function LaboHistoriqueApproPage() {
           <FilterSelect value={filterCategorieId} onChange={(e) => { setFilterCategorieId(e.target.value); setFilterIngredientId(''); }}>
             <option value="">— Toutes —</option>
             {categories.map((c) => <option key={c.id} value={c.id}>{c.nom}</option>)}
-            <option value="pt-utilisable">Produits Transformés Utilisables</option>
-            <option value="pt-vendable">Produits Transformés Vendables</option>
-            <option value="pt-valorise">Produits Composés Valorisés</option>
+            <option value="pt-utilisable">{voc.Nom('cat_pt_utilisable')}</option>
+            <option value="pt-vendable">{voc.Nom('cat_pt_vendable')}</option>
+            <option value="pt-valorise">{voc.Nom('cat_pt_valorise')}</option>
           </FilterSelect>
         </FilterField>
-        <FilterField label="🧂 Article">
+        <FilterField label={`🧂 ${voc.Nom('article')}`}>
           <FilterSelect value={filterIngredientId} disabled={!filterCategorieId} onChange={(e) => setFilterIngredientId(e.target.value)}>
-            <option value="">— Tous —</option>
+            <option value="">— {voc.acc('article', 'Tous', 'Toutes')} —</option>
             {(filterCategorieId.startsWith('pt') ? ptProducts : ingredientsInCat).map((i) => <option key={i.id} value={i.id}>{i.nom}</option>)}
           </FilterSelect>
         </FilterField>
         {fournisseurs.length > 0 && (
-          <FilterField label="🚚 Fournisseur">
+          <FilterField label={`🚚 ${voc.Nom('fournisseur')}`}>
             <FilterSelect value={filterFournisseurId} onChange={(e) => setFilterFournisseurId(e.target.value)}>
-              <option value="">— Tous —</option>
+              <option value="">— {voc.acc('fournisseur', 'Tous', 'Toutes')} —</option>
               {fournisseurs.map((f) => <option key={f.id} value={f.id}>{f.nom}</option>)}
             </FilterSelect>
           </FilterField>
         )}
-        <FilterField label="⇄ Type d'appro"><TypeApproFilter selected={selectedTypes} onToggle={toggleType} accent="#7e22ce" options={LABO_TYPE_OPTIONS} /></FilterField>
+        <FilterField label={`⇄ Type ${voc.de('appro', false, 'court')}`}><TypeApproFilter selected={selectedTypes} onToggle={toggleType} accent="#7e22ce" options={typeOptions} /></FilterField>
       </HistoryFilterBar>
 
       {/* Results */}
       {!searched ? (
         <div style={{ textAlign: 'center', padding: '48px 24px' }}>
           <div style={{ fontSize: '2rem', marginBottom: 10 }}>🔍</div>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem' }}>Cliquez sur Rechercher pour afficher les approvisionnements.</p>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem' }}>Cliquez sur Rechercher pour afficher {voc.le('appro', true)}.</p>
         </div>
       ) : loading ? (
         <p className="text-muted">Chargement…</p>
       ) : results.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '48px 24px' }}>
           <div style={{ fontSize: '2.5rem', marginBottom: 12 }}>📦</div>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem' }}>Aucun approvisionnement trouvé pour cette période.</p>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem' }}>{voc.Aucun('appro')} {voc.acc('appro', 'trouvé', 'trouvée')} pour cette période.</p>
         </div>
       ) : (
         <>
@@ -485,7 +495,7 @@ export default function LaboHistoriqueApproPage() {
               <thead>
                 <tr style={{ background: 'linear-gradient(135deg, #3b0764, #7e22ce)' }}>
                   <th style={{ width: 28, padding: '10px 4px', color: '#fff', background: 'transparent', borderBottom: 'none' }} />
-                  {(['Article', 'Date', 'Type'] as const).map((label) => (
+                  {([voc.Nom('article'), 'Date', 'Type'] as const).map((label) => (
                     <th key={label} style={{ fontWeight: 800, fontSize: '0.75rem', letterSpacing: '0.04em', textTransform: 'uppercase', padding: '10px 10px 2px', color: '#fff', background: 'transparent', borderBottom: 'none' }}>{label}</th>
                   ))}
                   {(['Quantité', 'Prix', 'TVA', 'Prix'] as const).map((label, i) => (
@@ -523,7 +533,7 @@ export default function LaboHistoriqueApproPage() {
                     </td>
                     <td style={{ padding: '8px 10px' }}>
                       <div style={{ fontWeight: 700, fontSize: '0.86rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.ingredientNom}</div>
-                      <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.uniteNom} · {r.categorieNom}</div>
+                      <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.uniteNom} · {libelleCategoriePt(voc, r.categorieNom)}</div>
                     </td>
                     <td style={{ padding: '8px 10px' }}>
                       <span style={{ background: '#faf5ff', border: '1px solid #d8b4fe', borderRadius: 6, padding: '2px 8px', fontWeight: 700, fontSize: '0.8rem', color: '#7e22ce', display: 'inline-block', whiteSpace: 'nowrap' }}>
@@ -532,23 +542,23 @@ export default function LaboHistoriqueApproPage() {
                     </td>
                     <td style={{ padding: '8px 10px' }}>
                       {r.typeAppro === 'manuel' && (
-                        <span style={{ background: '#dcfce7', color: '#15803d', borderRadius: 6, padding: '2px 6px', fontSize: '0.7rem', fontWeight: 700 }}>Manuel</span>
+                        <span style={{ background: '#dcfce7', color: '#15803d', borderRadius: 6, padding: '2px 6px', fontSize: '0.7rem', fontWeight: 700 }}>{voc.acc('appro', 'Manuel', 'Manuelle')}</span>
                       )}
                       {r.typeAppro === 'transfert' && r.sens === 'entree' && (
-                        <span style={{ background: '#ecfeff', color: '#0e7490', borderRadius: 6, padding: '2px 6px', fontSize: '0.7rem', fontWeight: 700, whiteSpace: 'nowrap' }} title="Réception d'un labo source">
-                          ↙ Reçu{contrepartieOf(r) ? ` ← ${contrepartieOf(r)}` : ''}
+                        <span style={{ background: '#ecfeff', color: '#0e7490', borderRadius: 6, padding: '2px 6px', fontSize: '0.7rem', fontWeight: 700, whiteSpace: 'nowrap' }} title={`Réception d'${voc.un('labo')} source`}>
+                          ↙ {voc.acc('transfert', 'Reçu', 'Reçue')}{contrepartieOf(r) ? ` ← ${contrepartieOf(r)}` : ''}
                         </span>
                       )}
                       {r.typeAppro === 'transfert' && r.sens !== 'entree' && (
-                        <span style={{ background: '#e0f2fe', color: '#0369a1', borderRadius: 6, padding: '2px 6px', fontSize: '0.7rem', fontWeight: 700, whiteSpace: 'nowrap' }} title="Transfert émis depuis ce labo">
-                          {r.sens === 'sortie' ? `↗ Transf.${contrepartieOf(r) ? ` → ${contrepartieOf(r)}` : ''}` : 'Transf.'}
+                        <span style={{ background: '#e0f2fe', color: '#0369a1', borderRadius: 6, padding: '2px 6px', fontSize: '0.7rem', fontWeight: 700, whiteSpace: 'nowrap' }} title={`${voc.Nom('transfert')} ${voc.acc('transfert', 'émis', 'émise')} depuis ${voc.ce('labo')}`}>
+                          {r.sens === 'sortie' ? `↗ ${voc.Nom('transfert_abr')}${contrepartieOf(r) ? ` → ${contrepartieOf(r)}` : ''}` : voc.Nom('transfert_abr')}
                         </span>
                       )}
                       {r.typeAppro === 'vente' && (
-                        <span style={{ background: '#ede9fe', color: '#6d28d9', borderRadius: 6, padding: '2px 6px', fontSize: '0.7rem', fontWeight: 700 }}>Vente</span>
+                        <span style={{ background: '#ede9fe', color: '#6d28d9', borderRadius: 6, padding: '2px 6px', fontSize: '0.7rem', fontWeight: 700 }}>{voc.Court('vente')}</span>
                       )}
                       {r.typeAppro && r.typeAppro !== 'manuel' && r.typeAppro !== 'transfert' && r.typeAppro !== 'vente' && (
-                        <span style={{ background: '#f3e8ff', color: '#7c3aed', borderRadius: 6, padding: '2px 6px', fontSize: '0.7rem', fontWeight: 700 }}>PT</span>
+                        <span style={{ background: '#f3e8ff', color: '#7c3aed', borderRadius: 6, padding: '2px 6px', fontSize: '0.7rem', fontWeight: 700 }}>{voc.Court('pt')}</span>
                       )}
                       {!r.typeAppro && <span style={{ color: 'var(--text-muted)' }}>—</span>}
                     </td>

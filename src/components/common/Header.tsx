@@ -1,4 +1,5 @@
 import { useAuth } from '../../context/AuthContext';
+import { useVocabulaire } from '../../hooks/useVocabulaire';
 import { useNotifications } from '../../context/NotificationContext';
 import { useNavigate } from 'react-router-dom';
 import { useState, useRef, useEffect } from 'react';
@@ -7,6 +8,7 @@ import AssistantWidget from './AssistantWidget';
 
 export default function Header() {
   const { user, logout } = useAuth();
+  const voc = useVocabulaire();
   const navigate = useNavigate();
   const { notifications, unreadCount, markSeen } = useNotifications();
   const [open, setOpen] = useState(false);
@@ -98,7 +100,7 @@ export default function Header() {
                 : user?.role === 'super_admin'
                 ? 'Administrateur'
                 : user?.role === 'gerant'
-                ? (user.gerantActiviteNom || 'Gérant')
+                ? (user.gerantActiviteNom || voc.Nom('gerant'))
                 : 'Client'}
             </div>
           </div>
@@ -203,7 +205,7 @@ export default function Header() {
                           : 'linear-gradient(135deg,#fee2e2,#fecaca)',
                       }}>
                         {n.eventType === 'new_inventaire' ? '📦'
-                          : n.eventType === 'nouvelle_commande_acheteur' ? '🤝'
+                          : n.eventType === 'nouvelle_commande_acheteur' ? voc.icon('acheteur')
                           : n.eventType === 'new_demande' ? '📥'
                           : n.eventType === 'demande_acces_recue' ? '🌐'
                           : n.eventType === 'avenant_signe' ? '✅'
@@ -212,9 +214,9 @@ export default function Header() {
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#0f172a', lineHeight: 1.35 }}>
                           {n.eventType === 'new_inventaire'
-                            ? 'Inventaire ajouté par un gérant'
+                            ? `${voc.Nom('inventaire')} ${voc.acc('inventaire', 'ajouté', 'ajoutée')} par ${voc.un('gerant')}`
                             : n.eventType === 'nouvelle_commande_acheteur'
-                            ? `Nouvelle commande acheteur${n.notesAdmin ? ` — ${n.notesAdmin}` : ''}`
+                            ? `Nouvelle commande ${voc.compl('acheteur')}${n.notesAdmin ? ` — ${n.notesAdmin}` : ''}`
                             : n.eventType === 'new_demande'
                             ? `Nouvelle demande — ${typeLabel(n.type)}`
                             : n.eventType === 'demande_acces_recue'

@@ -1,5 +1,7 @@
 import jsPDF from 'jspdf';
 import { pdfTexte } from './pdfTexte';
+import { vocabDuLexique } from '../vocab/vocab';
+import type { Lexique } from '../vocab/vocab';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -30,6 +32,12 @@ export interface AvenantPdfParams {
   nbAcheteurs?: number;
   /** Option Acheteurs : coût mensuel du palier (0 ou absent → pas de ligne). */
   acheteursCost?: number;
+  /**
+   * Lexique RÉSOLU du domaine du CLIENT de l'avenant (GET /api/domaines/:id → `lexique`) : le document
+   * est rédigé dans le vocabulaire du client, pas dans celui de l'admin qui le génère (lot 2, spec §2.3).
+   * Absent ou null → vocabulaire par défaut.
+   */
+  lexique?: Lexique | null;
 }
 
 // ── Shared helpers ────────────────────────────────────────────────────────────
@@ -104,7 +112,9 @@ export function generateAvenantPdf(params: AvenantPdfParams): string {
     dateAvenant,
     activiteCost, laboCost, gerantCost,
     formuleActivites, nbAcheteurs, acheteursCost,
+    lexique,
   } = params;
+  const voc = vocabDuLexique(lexique);
 
   const { doc, PW, PH, ML, CW, RX, setFont, txt, rect, hrule, sectionHeader } = makeDoc();
   const dateFr = dateAvenant
@@ -148,17 +158,32 @@ export function generateAvenantPdf(params: AvenantPdfParams): string {
   y = sectionHeader('MODIFICATION APPORTÉE', y);
 
   const addedParts: string[] = [];
-  if (nbActivitesAdded > 0) addedParts.push(`+${nbActivitesAdded} activité${nbActivitesAdded > 1 ? 's' : ''}`);
-  if (nbLabosAdded > 0)     addedParts.push(`+${nbLabosAdded} labo${nbLabosAdded > 1 ? 's' : ''}`);
-  if (nbGerantsAdded > 0)   addedParts.push(`+${nbGerantsAdded} gérant${nbGerantsAdded > 1 ? 's' : ''}`);
-  if (acheteursCible && acheteursCible > 0) addedParts.push(`Option Acheteurs : palier ${acheteursCible}`);
+  if (nbActivitesAdded > 0) addedParts.push(`+${voc.n('activite', nbActivitesAdded)}`);
+  if (nbLabosAdded > 0)     addedParts.push(`+${voc.n('labo', nbLabosAdded)}`);
+  if (nbGerantsAdded > 0)   addedParts.push(`+${voc.n('gerant', nbGerantsAdded)}`);
+  if (acheteursCible && acheteursCible > 0) addedParts.push(`Option ${voc.Court('acheteur', true)} : palier ${acheteursCible}`);
 
-  // Green highlight for added capacity
-  rect(ML, y, CW, 16, '#f0fdf4');
-  hrule(y, '#bbf7d0'); hrule(y + 16, '#bbf7d0');
+  // Green highlight for added capacity. Les termes d'un autre domaine sont plus longs (« +1 responsable de
+  // service ») : les postes passent à la ligne quand ils dépassent le cadre, qui grandit d'autant. Avec le
+  // vocabulaire par défaut tout tient sur une ligne, comme avant.
+  const CAPA_SEP = '   ·   ';
+  const capaLines: string[] = [];
+  const policeCapa = () => setFont(12, 'bold', '#14532d');
+  policeCapa(); // la largeur se mesure dans la police de la ligne
+  for (const part of addedParts) {
+    const dernier = capaLines.length - 1;
+    const essai = dernier >= 0 ? `${capaLines[dernier]}${CAPA_SEP}${part}` : part;
+    if (dernier >= 0 && doc.getTextWidth(pdfTexte(essai)) <= CW - 8) capaLines[dernier] = essai;
+    else capaLines.push(part);
+  }
+  if (capaLines.length === 0) capaLines.push('');
+  const capaH = 16 + (capaLines.length - 1) * 6;
+  rect(ML, y, CW, capaH, '#f0fdf4');
+  hrule(y, '#bbf7d0'); hrule(y + capaH, '#bbf7d0');
   setFont(7, 'bold', '#15803d');   txt('CAPACITÉ AJOUTÉE', ML + 4, y + 6);
-  setFont(12, 'bold', '#14532d'); txt(addedParts.join('   ·   '), ML + 4, y + 13);
-  y += 22;
+  policeCapa();
+  for (let i = 0; i < capaLines.length; i++) txt(capaLines[i], ML + 4, y + 13 + i * 6);
+  y += capaH + 6;
 
   // ── NOUVELLE CONFIGURATION ─────────────────────────────────────────────────
   y = sectionHeader('NOUVELLE CONFIGURATION', y);
@@ -175,13 +200,13 @@ export function generateAvenantPdf(params: AvenantPdfParams): string {
     ? ` (${formuleActivites === 'basique' ? 'Basique' : 'Premium'})`
     : '';
   const newRows: { label: string; qty: string; price: string }[] = [
-    { label: `${nbActivites > 1 ? 'Activités' : 'Activité'}${formuleSuffix}`, qty: String(nbActivites), price: posteTarif(activiteCost) },
+    { label: `${voc.Nom('activite', nbActivites)}${formuleSuffix}`, qty: String(nbActivites), price: posteTarif(activiteCost) },
   ];
-  if (nbLabos > 0)   newRows.push({ label: 'Labo(s)', qty: String(nbLabos), price: posteTarif(laboCost) });
-  if (nbGerants > 0) newRows.push({ label: 'Gérant(s) sup.', qty: String(nbGerants), price: posteTarif(gerantCost) });
+  if (nbLabos > 0)   newRows.push({ label: voc.NomS('labo'), qty: String(nbLabos), price: posteTarif(laboCost) });
+  if (nbGerants > 0) newRows.push({ label: `${voc.NomS('gerant')} sup.`, qty: String(nbGerants), price: posteTarif(gerantCost) });
   // Option Acheteurs : sans cette ligne, les postes ne sommeraient pas au nouveau mensuel affiché.
   if (acheteursCost != null && acheteursCost > 0) {
-    newRows.push({ label: 'Option Acheteurs', qty: nbAcheteurs != null ? String(nbAcheteurs) : '—', price: posteTarif(acheteursCost) });
+    newRows.push({ label: `Option ${voc.Court('acheteur', true)}`, qty: nbAcheteurs != null ? String(nbAcheteurs) : '—', price: posteTarif(acheteursCost) });
   }
 
   for (let i = 0; i < newRows.length; i++) {

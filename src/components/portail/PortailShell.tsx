@@ -1,6 +1,7 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import LabFlowLogo from '../common/LabFlowLogo';
+import { useVocabulaire } from '../../hooks/useVocabulaire';
 
 // En-tête + navigation du portail acheteur (plein écran, hors Layout client).
 const C = '#6d28d9';
@@ -9,6 +10,7 @@ const CD = '#4c1d95';
 export default function PortailShell({ children }: { children: React.ReactNode }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const voc = useVocabulaire();
 
   const tab = (to: string, label: string, end = false) => (
     <NavLink to={to} end={end}
@@ -28,7 +30,7 @@ export default function PortailShell({ children }: { children: React.ReactNode }
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <LabFlowLogo height={30} />
           <span style={{ background: 'rgba(255,255,255,0.16)', border: '1px solid rgba(255,255,255,0.25)', color: '#fff', fontSize: '0.68rem', fontWeight: 700, padding: '3px 10px', borderRadius: 20 }}>
-            Portail Acheteur
+            Portail {voc.Court('acheteur')}
           </span>
         </div>
         <nav style={{ display: 'flex', gap: 6 }}>

@@ -2,6 +2,7 @@ import { useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../../api/client';
 import GuideButton from './GuideButton';
+import { useVocabulaire } from '../../hooks/useVocabulaire';
 
 // Thème ambre/orange des pages Fournisseurs
 const C = '#ea580c';
@@ -13,6 +14,7 @@ interface ImportDetail { row: number; nom: string; status: 'ok' | 'warning' | 'e
 interface ImportResult { processed: number; stats: { crees: number; activites: number; labos: number }; errors: number; details: ImportDetail[] }
 
 export default function FournisseursImportPage() {
+  const voc = useVocabulaire();
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const [result, setResult] = useState<ImportResult | null>(null);
@@ -54,14 +56,14 @@ export default function FournisseursImportPage() {
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
             <div style={{ background: 'rgba(255,255,255,0.15)', borderRadius: 10, padding: '7px 9px', fontSize: '1.2rem' }}>📥</div>
-            <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0 }}>Ajout Dynamique — Fournisseurs</h1>
+            <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0 }}>Ajout Dynamique — {voc.Pl('fournisseur')}</h1>
           </div>
           <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.85rem', margin: 0 }}>
-            Importez vos fournisseurs en masse depuis un fichier Excel
+            Importez {voc.votre('fournisseur', true)} en masse depuis un fichier Excel
           </p>
         </div>
         <Link to="/client/fournisseurs" style={{ color: '#fff', fontSize: '0.85rem', fontWeight: 700, textDecoration: 'none', background: 'rgba(255,255,255,0.14)', border: '1px solid rgba(255,255,255,0.25)', borderRadius: 10, padding: '9px 16px' }}>
-          ← Retour aux fournisseurs
+          ← Retour {voc.au('fournisseur', true)}
         </Link>
         <GuideButton section="fournisseurs" />
       </div>
@@ -70,9 +72,9 @@ export default function FournisseursImportPage() {
       <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start', background: CL, border: `1.5px solid ${CB}`, borderRadius: 14, padding: '14px 18px', marginBottom: 20 }}>
         <span style={{ fontSize: '1.3rem', lineHeight: 1 }}>🔗</span>
         <div style={{ fontSize: '0.86rem', color: CD, lineHeight: 1.6 }}>
-          Les fournisseurs importés seront <strong>assignés à l'ensemble de vos activités et labos</strong> :
-          ils apparaîtront partout dans les listes d'approvisionnement. Une fois l'import terminé, vous pourrez
-          <strong> ajuster les affectations fournisseur par fournisseur</strong> (✏️ sur la page Fournisseurs).
+          {voc.Le('fournisseur', true)} {voc.acc('fournisseur', 'importés', 'importées')} seront <strong>{voc.acc('fournisseur', 'assignés', 'assignées')} à l'ensemble de {voc.votre('activite', true)} et {voc.pl('labo')}</strong> :{' '}
+          {voc.acc('fournisseur', 'ils', 'elles')} apparaîtront partout dans les listes {voc.de('appro')}. Une fois l'import terminé, vous pourrez
+          <strong> ajuster les affectations {voc.nom('fournisseur')} par {voc.nom('fournisseur')}</strong> (✏️ sur la page {voc.Pl('fournisseur')}).
         </div>
       </div>
 
@@ -134,8 +136,8 @@ export default function FournisseursImportPage() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
             <span style={{ fontSize: '1.4rem' }}>{result.errors > 0 ? '⚠️' : '✅'}</span>
             <div style={{ fontWeight: 800, fontSize: '1rem' }}>
-              {result.processed} fournisseur{result.processed > 1 ? 's' : ''} importé{result.processed > 1 ? 's' : ''}
-              {result.processed > 0 ? ` · assigné${result.processed > 1 ? 's' : ''} à ${result.stats.activites} activité${result.stats.activites > 1 ? 's' : ''} et ${result.stats.labos} labo${result.stats.labos > 1 ? 's' : ''}` : ''}
+              {voc.n('fournisseur', result.processed)} {voc.acc('fournisseur', 'importé', 'importée', result.processed)}
+              {result.processed > 0 ? ` · ${voc.acc('fournisseur', 'assigné', 'assignée', result.processed)} à ${voc.n('activite', result.stats.activites)} et ${voc.n('labo', result.stats.labos)}` : ''}
               {result.errors > 0 ? ` · ${result.errors} ligne${result.errors > 1 ? 's' : ''} en erreur` : ''}
             </div>
           </div>
@@ -166,7 +168,7 @@ export default function FournisseursImportPage() {
             </div>
           )}
           <div style={{ marginTop: 16 }}>
-            <Link to="/client/fournisseurs" style={{ color: C, fontWeight: 700, fontSize: '0.86rem' }}>→ Voir les fournisseurs et ajuster les affectations</Link>
+            <Link to="/client/fournisseurs" style={{ color: C, fontWeight: 700, fontSize: '0.86rem' }}>→ Voir {voc.le('fournisseur', true)} et ajuster les affectations</Link>
           </div>
         </div>
       )}

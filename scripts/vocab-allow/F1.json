@@ -1,0 +1,37 @@
+[
+  {
+    "fichier": "src/components/common/Sidebar.tsx",
+    "avant": "Prestataires",
+    "apres": "Prestataires",
+    "type": "homonyme",
+    "justification": "Espace admin : menu « Prestataires » de la branche isAdmin de la barre latérale (route /admin/prestataires, catalogue LabFlow des prestataires). L'espace admin garde le vocabulaire LabFlow (invariant I4) ; le menu client « Config Prestataires » du même fichier passe, lui, par voc."
+  },
+  {
+    "fichier": "src/components/common/Sidebar.tsx",
+    "avant": "labo",
+    "apres": "labo",
+    "type": "discriminant",
+    "justification": "Clé technique de la section repliable « Espace Labo » passée à toggleSection('labo') (la même que openSections.has('labo')) : identifiant d'état, jamais affiché."
+  },
+  {
+    "fichier": "src/components/common/Sidebar.tsx",
+    "avant": "vente",
+    "apres": "vente",
+    "type": "discriminant",
+    "justification": "Clé technique de la section repliable « Espace Vente » passée à toggleSection('vente') (la même que openSections.has('vente')) : identifiant d'état, jamais affiché."
+  },
+  {
+    "fichier": "src/components/common/Sidebar.tsx",
+    "avant": "acheteurs",
+    "apres": "acheteurs",
+    "type": "discriminant",
+    "justification": "Clé technique de la section repliable « Espace Acheteurs » passée à toggleSection('acheteurs') (la même que openSections.has('acheteurs')) : identifiant d'état, jamais affiché."
+  },
+  {
+    "fichier": "src/components/common/Sidebar.tsx",
+    "avant": "produits",
+    "apres": "produits",
+    "type": "discriminant",
+    "justification": "Clé technique de la section repliable « Espace Produits » passée à toggleSection('produits') (la même que openSections.has('produits')) : identifiant d'état, jamais affiché."
+  }
+]

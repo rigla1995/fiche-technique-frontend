@@ -1,0 +1,66 @@
+[
+  {
+    "fichier": "src/components/client/ProductForm.tsx",
+    "avant": "Ex. REF-001, REF-42…",
+    "apres": "Ex. REF-001, REF-42…",
+    "type": "exemple",
+    "justification": "Exemple neutre gardé en dur, second argument de voc.ex (guide §5 bis : « référence neutre, sans voc ») : « REF » n'est pas un terme du lexique ; l'unité reste listée [exemple] parce qu'elle commence par « Ex ». Un compte au lexique par défaut lit toujours « Ex. BRG-001, REF-42… » (premier argument, identique à la référence)."
+  },
+  {
+    "fichier": "src/components/client/ProductForm.tsx",
+    "avant": "portion",
+    "apres": "portion",
+    "type": "discriminant",
+    "justification": "Nom du champ technique de la ligne de saisie, passé à updateIngredientLine(idx, 'portion', …) et updateSubProductLine(idx, 'portion', …) : clé de l'objet IngredientLine / SubProductLine, jamais affichée (les libellés de ces champs sortent de t(), déjà balisés)."
+  },
+  {
+    "fichier": "src/components/client/ProductList.tsx",
+    "avant": "Ex. REF-001",
+    "apres": "Ex. REF-001",
+    "type": "exemple",
+    "justification": "Exemple neutre gardé en dur, second argument de voc.ex (guide §5 bis : « référence neutre, sans voc ») : « REF » n'est pas un terme du lexique ; l'unité reste listée [exemple] parce qu'elle commence par « Ex ». Un compte au lexique par défaut lit toujours « Ex. BRG-001 » (premier argument, identique à la référence)."
+  },
+  {
+    "fichier": "src/components/client/ProductList.tsx",
+    "avant": "Aucun ⟦?labo|activité⟧ disponible.",
+    "apres": "⟦?Aucun labo|Aucune activité⟧ disponible.",
+    "type": "faute-corrigee",
+    "justification": "« Aucun activité disponible. » était une faute d'accord de l'existant (le déterminant restait au masculin quand la condition rendait « activité ») ; voc.Aucun(isLaboMode ? 'labo' : 'activite') rend « Aucune activité disponible. »."
+  },
+  {
+    "fichier": "src/components/client/ProductList.tsx",
+    "avant": "Aucune activité rattachée à ce(s) labo(s).",
+    "apres": "Aucune activité rattachée à ⟦ce|ces@>1⟧ ⟦labo|labos@>1⟧.",
+    "type": "faute-corrigee",
+    "justification": "Spec §3 règle 3, guide E27 : « ce(s) labo(s) » est réécrit avec le nombre réel de labos cochés à l'étape 1 (addAffectationIds.length, toujours ≥ 1 à cet endroit) : « ce labo » / « ces labos »."
+  },
+  {
+    "fichier": "src/components/client/ProductList.tsx",
+    "avant": null,
+    "apres": "supplement",
+    "type": "discriminant",
+    "occurrences": 1,
+    "justification": "Littéral de comparaison, jamais affiché : dans « Inclure aussi les <strong>…</strong> », le déterminant est séparé du terme par la balise, donc rendu par voc.det (guide E18/E19) ; la clé dépend du même test (vendableSubTab === 'supplement') que le contenu de la balise, et ce test écrit une seconde fois ajoute une unité « supplement » au décompte de l'outil. Le texte affiché est identique (« Inclure aussi les »)."
+  },
+  {
+    "fichier": "src/components/client/ProductList.tsx",
+    "avant": "produit",
+    "apres": "produit",
+    "type": "discriminant",
+    "justification": "Clé technique du sous-onglet des vendables ('produit' | 'supplement') : valeur initiale de l'état vendableSubTab et premier élément du couple [clé, libellé] de la table des sous-onglets ; seul le libellé est affiché, et il sort de voc. Deux unités."
+  },
+  {
+    "fichier": "src/components/client/ProductList.tsx",
+    "avant": "⟦?labo|activite⟧",
+    "apres": "⟦?labo|activite⟧",
+    "type": "discriminant",
+    "justification": "Valeur technique de l'origine du produit ('labo' | 'activite'), calculée dans openEditModal à partir de p.origine (valeur d'API) puis passée à setAddOrigine et envoyée au backend : jamais affichée."
+  },
+  {
+    "fichier": "src/components/client/ProductList.tsx",
+    "avant": "labo",
+    "apres": "labo",
+    "type": "discriminant",
+    "justification": "Clé technique du mode d'approvisionnement ('activite' | 'labo'), premier élément du triplet [clé, libellé, description] du sélecteur de l'étape 1, passée à setAddOrigine : seuls le libellé et la description sont affichés, et ils sortent de voc."
+  }
+]

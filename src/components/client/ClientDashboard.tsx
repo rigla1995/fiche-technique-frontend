@@ -3,6 +3,10 @@ import { useSearchParams } from 'react-router-dom';
 import api from '../../api/client';
 import HelpButton from '../common/HelpButton';
 import { useAuth } from '../../context/AuthContext';
+import { useVocabulaire } from '../../hooks/useVocabulaire';
+import type { Vocab } from '../../vocab/vocab';
+import { nomOnglet } from '../../vocab/excel';
+import { libelleCategoriePt } from '../../vocab/categoriesPt';
 import { perteLabel, usePerteTypes } from '../../utils/perteTypes';
 import MultiSelectFilter from '../common/MultiSelectFilter';
 import type { MultiSelectOption } from '../common/MultiSelectFilter';
@@ -19,21 +23,21 @@ import type { ColonneDef, Kpis } from './dashboardV2Widgets';
 
 type TabKey = 'overview' | 'ventes' | 'achats' | 'pertes' | 'labo' | 'acheteurs';
 
-const TABS: { key: TabKey; icon: string; label: string }[] = [
+const tabs = (voc: Vocab): { key: TabKey; icon: string; label: string }[] => [
   { key: 'overview', icon: '📊', label: "Vue d'ensemble" },
-  { key: 'ventes', icon: '💰', label: 'Ventes & marges' },
-  { key: 'achats', icon: '📦', label: 'Achats & stock' },
-  { key: 'pertes', icon: '🗑️', label: 'Pertes' },
-  { key: 'labo', icon: '🧪', label: 'Labo' },
-  { key: 'acheteurs', icon: '🤝', label: 'Acheteurs (B2B)' },
+  { key: 'ventes', icon: '💰', label: `${voc.Pl('vente')} & ${voc.pl('marge')}` },
+  { key: 'achats', icon: '📦', label: `Achats & ${voc.nom('stock')}` },
+  { key: 'pertes', icon: voc.icon('perte'), label: voc.Pl('perte') },
+  { key: 'labo', icon: '🧪', label: voc.Court('labo') },
+  { key: 'acheteurs', icon: voc.icon('acheteur'), label: `${voc.Pl('acheteur')} (B2B)` },
 ];
 
 // Onglets visibles selon la CONFIG RÉELLE du compte (activités/labos existants,
 // modules actifs) — le tableau de bord suit l'abonnement et s'adapte à chaque
 // ajout de capacité. Tant que les options ne sont pas chargées, on garde le
 // comportement historique (tout sauf labo/acheteurs) pour éviter le flash.
-const computeTabsVisibles = (options: FiltresOptions | null) => {
-  if (!options) return TABS.filter((t) => t.key !== 'labo' && t.key !== 'acheteurs');
+const computeTabsVisibles = (options: FiltresOptions | null, voc: Vocab) => {
+  if (!options) return tabs(voc).filter((t) => t.key !== 'labo' && t.key !== 'acheteurs');
   const hasAct = options.activites.length > 0;
   const hasLabo = options.labos.length > 0;
   // `modules` absent (backend pas encore à jour pendant un déploiement) :
@@ -42,7 +46,7 @@ const computeTabsVisibles = (options: FiltresOptions | null) => {
   // pas l'onglet et répondrait 400).
   const vente = options.modules?.vente ?? true;
   const acheteurs = options.modules?.acheteurs ?? false;
-  return TABS.filter((t) => {
+  return tabs(voc).filter((t) => {
     switch (t.key) {
       case 'overview': return hasAct && vente;   // vue centrée ventes/marges
       case 'ventes': return hasAct && vente;
@@ -104,27 +108,28 @@ const FILTRES_PAR_TAB: Record<TabKey, (keyof FiltresState)[]> = {
   acheteurs: ['labos', 'sources'],
 };
 
-const CANAUX_OPTS: MultiSelectOption[] = [
-  { value: 'directe', label: 'Vente directe' },
-  { value: 'prestataire', label: 'Via prestataire' },
+const canauxOpts = (voc: Vocab): MultiSelectOption[] => [
+  { value: 'directe', label: `${voc.Nom('vente')} ${voc.acc('vente', 'direct', 'directe')}` },
+  { value: 'prestataire', label: `Via ${voc.nom('prestataire')}` },
 ];
-const TYPES_PRODUIT_OPTS: MultiSelectOption[] = [
-  { value: 'produit', label: 'Produits' },
-  { value: 'supplement', label: 'Suppléments' },
-  { value: 'valorise', label: 'Valorisés' },
+const typesProduitOpts = (voc: Vocab): MultiSelectOption[] => [
+  { value: 'produit', label: voc.Pl('produit') },
+  { value: 'supplement', label: voc.Pl('supplement') },
+  { value: 'valorise', label: voc.acc('produit_valorise', 'Valorisés', 'Valorisées') },
 ];
 // Types de perte : ceux du domaine du compte (regles.types_perte) — voir usePerteTypes().
 // Seuil coût matière par défaut (comportement actuel) ; le domaine peut le surcharger.
 const SEUIL_COUT_MATIERE_DEFAUT = 40;
 // Type de vente de l'onglet Acheteurs (B2B) : manuelle (saisie vendeur) ou portail.
-const SOURCES_B2B_OPTS: MultiSelectOption[] = [
-  { value: 'client', label: 'Vente manuelle' },
-  { value: 'portail', label: 'Portail acheteur' },
+const sourcesB2bOpts = (voc: Vocab): MultiSelectOption[] => [
+  { value: 'client', label: `${voc.Nom('vente')} ${voc.acc('vente', 'manuel', 'manuelle')}` },
+  { value: 'portail', label: `Portail ${voc.court('acheteur')}` },
 ];
 
 const STORAGE_KEY = 'dashboardV2State';
 
 export default function ClientDashboard() {
+  const voc = useVocabulaire();
   const [searchParams, setSearchParams] = useSearchParams();
   const [options, setOptions] = useState<FiltresOptions | null>(null);
 
@@ -142,7 +147,7 @@ export default function ClientDashboard() {
     const range = isIsoDate(urlFrom) && isIsoDate(urlTo) ? { from: urlFrom, to: urlTo } : def;
     const filtres = emptyFiltres();
     for (const k of FILTRE_KEYS) filtres[k] = String(get(k) || '').split(',').filter(Boolean);
-    const tab = (TABS.some((t) => t.key === get('tab')) ? get('tab') : 'overview') as TabKey;
+    const tab = (TAB_PRIORITE.includes(get('tab')) ? get('tab') : 'overview') as TabKey;
     return { tab, ...range, filtres };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -221,13 +226,16 @@ export default function ClientDashboard() {
   const visibles = FILTRES_PAR_TAB[tab];
   // Filtres posés sur un autre onglet, invisibles ici (ils n'affectent pas ces données).
   const filtresCaches = FILTRE_KEYS.reduce((n, k) => n + (filtres[k].length && !visibles.includes(k) ? 1 : 0), 0);
-  const tabsVisibles = computeTabsVisibles(options);
+  const tabsVisibles = useMemo(() => computeTabsVisibles(options, voc), [options, voc]);
+  const canaux = useMemo(() => canauxOpts(voc), [voc]);
+  const typesProduit = useMemo(() => typesProduitOpts(voc), [voc]);
+  const sourcesB2b = useMemo(() => sourcesB2bOpts(voc), [voc]);
 
   // Onglet courant devenu invisible (config chargée, capacité retirée, vieux lien
   // ?tab= ou localStorage) → bascule vers l'onglet d'atterrissage de la config.
   useEffect(() => {
     if (!options) return;
-    const vis = computeTabsVisibles(options);
+    const vis = computeTabsVisibles(options, voc);
     if (!vis.some((t) => t.key === tab)) setTab(pickDefaultTab(vis));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [options]);
@@ -238,7 +246,7 @@ export default function ClientDashboard() {
   // Catégories produits : le type préfixe le nom (« P. Vendable / Burger » vs
   // « P. Valorisé / Burger ») — deux catégories homonymes restent différenciables.
   const TYPE_PRODUIT_PREFIX: Record<string, string> = {
-    vendable: 'P. Vendable', supplement: 'Supplément', valorise: 'P. Valorisé',
+    vendable: 'P. Vendable', supplement: voc.Nom('supplement'), valorise: 'P. Valorisé',
   };
   const toCatProduitOpts = (rows: FiltresOptions['categories_produit']): MultiSelectOption[] =>
     rows.map((r) => ({
@@ -257,7 +265,7 @@ export default function ClientDashboard() {
       const ExcelJS = (await import('exceljs')).default;
       const { brandHeader, headerRow, dataRowStyle, brandFooter, finalize, BRAND, FMT_DT } =
         await import('../../services/excelBrand');
-      const tabDef = TABS.find((t) => t.key === tab)!;
+      const tabDef = tabs(voc).find((t) => t.key === tab)!;
 
       // Auto-détection des sections (inchangée) : KPIs scalaires, puis chaque
       // liste (tableau d'objets) renvoyée par l'onglet courant.
@@ -277,7 +285,7 @@ export default function ClientDashboard() {
 
       const colCount = Math.max(2, ...listes.map(([, rows]) => Object.keys(rows[0]).length));
       const wb = new ExcelJS.Workbook();
-      const ws = wb.addWorksheet(tabDef.label);
+      const ws = wb.addWorksheet(nomOnglet(tabDef.label));
       let r = await brandHeader(wb, ws, {
         titre: `Tableau de bord — ${tabDef.label}`,
         sousTitre: 'Montants en TTC · filtres du tableau de bord appliqués',
@@ -361,11 +369,11 @@ export default function ClientDashboard() {
                 // Sous-titre fidèle à la config : on n'annonce que ce que le compte couvre.
                 const keys = new Set(tabsVisibles.map((t) => t.key));
                 const parts: string[] = [];
-                if (keys.has('ventes') || keys.has('overview')) parts.push('ventes, marges');
-                if (keys.has('achats')) parts.push('achats, stocks');
-                if (keys.has('pertes')) parts.push('pertes');
-                if (keys.has('labo')) parts.push('labo');
-                if (keys.has('acheteurs')) parts.push('ventes B2B');
+                if (keys.has('ventes') || keys.has('overview')) parts.push(`${voc.pl('vente')}, ${voc.pl('marge')}`);
+                if (keys.has('achats')) parts.push(`achats, ${voc.pl('stock')}`);
+                if (keys.has('pertes')) parts.push(voc.pl('perte'));
+                if (keys.has('labo')) parts.push(voc.nom('labo'));
+                if (keys.has('acheteurs')) parts.push(`${voc.pl('vente')} B2B`);
                 return `Pilotage complet : ${parts.join(', ') || 'votre activité'} — tout en TTC.`;
               })()}
             </p>
@@ -406,17 +414,17 @@ export default function ClientDashboard() {
         <div style={{ width: 1, alignSelf: 'stretch', background: '#e2e8f0', margin: '0 4px' }} />
         {options && (
           <>
-            {visibles.includes('activites') && <MultiSelectFilter label="Activités" icon="🏪" options={toOpts(options.activites)} selected={filtres.activites} onChange={setFiltre('activites')} />}
-            {visibles.includes('labos') && <MultiSelectFilter label="Labos" icon="🧪" options={toOpts(options.labos)} selected={filtres.labos} onChange={setFiltre('labos')} />}
-            {visibles.includes('sources') && <MultiSelectFilter label="Type de vente" icon="🛒" options={SOURCES_B2B_OPTS} selected={filtres.sources} onChange={setFiltre('sources')} alwaysShow />}
-            {visibles.includes('canaux') && <MultiSelectFilter label="Type de vente" icon="🛒" options={CANAUX_OPTS} selected={filtres.canaux} onChange={setFiltre('canaux')} />}
-            {visibles.includes('prestataires') && <MultiSelectFilter label="Prestataires" icon="🚚" options={toOpts(options.prestataires)} selected={filtres.prestataires} onChange={setFiltre('prestataires')} />}
-            {visibles.includes('catProduits') && <MultiSelectFilter label="Catégories produits" icon="🍽️" options={toCatProduitOpts(options.categories_produit)} selected={filtres.catProduits} onChange={setFiltre('catProduits')} alwaysShow />}
-            {visibles.includes('typesProduit') && <MultiSelectFilter label="Types" icon="🏷️" options={TYPES_PRODUIT_OPTS} selected={filtres.typesProduit} onChange={setFiltre('typesProduit')} />}
-            {visibles.includes('catArticles') && <MultiSelectFilter label="Catégories articles" icon="🧂" options={toOpts(options.categories_articles)} selected={filtres.catArticles} onChange={setFiltre('catArticles')} />}
+            {visibles.includes('activites') && <MultiSelectFilter label={voc.Pl('activite')} icon={voc.icon('activite')} options={toOpts(options.activites)} selected={filtres.activites} onChange={setFiltre('activites')} />}
+            {visibles.includes('labos') && <MultiSelectFilter label={voc.Pl('labo')} icon="🧪" options={toOpts(options.labos)} selected={filtres.labos} onChange={setFiltre('labos')} />}
+            {visibles.includes('sources') && <MultiSelectFilter label="Type de vente" icon="🛒" options={sourcesB2b} selected={filtres.sources} onChange={setFiltre('sources')} alwaysShow />}
+            {visibles.includes('canaux') && <MultiSelectFilter label="Type de vente" icon="🛒" options={canaux} selected={filtres.canaux} onChange={setFiltre('canaux')} />}
+            {visibles.includes('prestataires') && <MultiSelectFilter label={voc.Pl('prestataire')} icon="🚚" options={toOpts(options.prestataires)} selected={filtres.prestataires} onChange={setFiltre('prestataires')} />}
+            {visibles.includes('catProduits') && <MultiSelectFilter label={`Catégories ${voc.court('produit', true)}`} icon="🍽️" options={toCatProduitOpts(options.categories_produit)} selected={filtres.catProduits} onChange={setFiltre('catProduits')} alwaysShow />}
+            {visibles.includes('typesProduit') && <MultiSelectFilter label="Types" icon="🏷️" options={typesProduit} selected={filtres.typesProduit} onChange={setFiltre('typesProduit')} />}
+            {visibles.includes('catArticles') && <MultiSelectFilter label={`Catégories ${voc.court('article', true)}`} icon="🧂" options={toOpts(options.categories_articles)} selected={filtres.catArticles} onChange={setFiltre('catArticles')} />}
             {visibles.includes('familles') && <MultiSelectFilter label="Familles" icon="🗂️" options={toOpts(options.familles)} selected={filtres.familles} onChange={setFiltre('familles')} />}
-            {visibles.includes('fournisseurs') && <MultiSelectFilter label="Fournisseurs" icon="📦" options={toOpts(options.fournisseurs)} selected={filtres.fournisseurs} onChange={setFiltre('fournisseurs')} />}
-            {visibles.includes('typesPerte') && <MultiSelectFilter label="Type de perte" icon="🗑️" options={typesPerteOpts} selected={filtres.typesPerte} onChange={setFiltre('typesPerte')} />}
+            {visibles.includes('fournisseurs') && <MultiSelectFilter label={voc.Pl('fournisseur')} icon="📦" options={toOpts(options.fournisseurs)} selected={filtres.fournisseurs} onChange={setFiltre('fournisseurs')} />}
+            {visibles.includes('typesPerte') && <MultiSelectFilter label={`Type ${voc.de('perte')}`} icon={voc.icon('perte')} options={typesPerteOpts} selected={filtres.typesPerte} onChange={setFiltre('typesPerte')} />}
           </>
         )}
         {filtresCaches > 0 && (
@@ -467,37 +475,38 @@ const twoCols: React.CSSProperties = { display: 'grid', gridTemplateColumns: 're
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 function OverviewTab({ data, seuil }: { data: any; seuil: number }) {
+  const voc = useVocabulaire();
   if (data.vide || !data.kpis) return <EmptyHint text="Aucune donnée dans le périmètre." />;
   const k: Kpis = data.kpis;
   const a = data.alertes ?? {};
   return (
     <>
       <div style={kpiGrid}>
-        <KpiCard icon="💵" label="Chiffre d'affaires" value={fmtDT(k.ca)} delta={k.deltas?.ca} sub={`${k.nb_ventes} vente${k.nb_ventes > 1 ? 's' : ''} · panier ${fmtDT(k.panier_moyen, 2)}`} />
-        <KpiCard icon="📈" label="Marge brute" value={fmtDT(k.marge_brute)} delta={k.deltas?.marge_brute} accent="#16a34a" sub={k.taux_marge_pct != null ? `${k.taux_marge_pct}% du CA` : undefined} />
+        <KpiCard icon="💵" label="Chiffre d'affaires" value={fmtDT(k.ca)} delta={k.deltas?.ca} sub={`${voc.n('vente', k.nb_ventes)} · panier ${fmtDT(k.panier_moyen, 2)}`} />
+        <KpiCard icon={voc.icon('marge')} label={`${voc.Nom('marge')} ${voc.acc('marge', 'brut', 'brute')}`} value={fmtDT(k.marge_brute)} delta={k.deltas?.marge_brute} accent="#16a34a" sub={k.taux_marge_pct != null ? `${k.taux_marge_pct}% du CA` : undefined} />
         <KpiCard icon="🤝" label="Après commissions" value={fmtDT(k.marge_apres_com)} delta={k.deltas?.marge_apres_com} accent="#d97706" sub={`commissions ${fmtDT(k.commissions)}`} />
-        <KpiCard icon="🏁" label="Marge nette estimée" value={fmtDT(k.marge_nette)} delta={k.deltas?.marge_nette} accent={k.marge_nette >= 0 ? '#16a34a' : '#dc2626'} sub={`charges fixes ${fmtDT(k.charges)}`} />
-        <KpiCard icon="🍔" label="Food cost" value={k.food_cost_pct != null ? `${k.food_cost_pct}%` : '—'} delta={k.deltas?.food_cost_pts} inverse accent={k.food_cost_pct != null && k.food_cost_pct > seuil ? '#dc2626' : '#2563eb'} sub={`coût matière ${fmtDT(k.cout_matiere)}`} />
-        <KpiCard icon="🗑️" label="Pertes" value={fmtDT(k.pertes)} delta={k.deltas?.pertes} inverse accent="#ef4444" sub={k.pertes_pct_ca != null ? `${fmtNum(k.pertes_pct_ca)}% du CA` : undefined} />
-        <KpiCard icon="🏬" label="Valeur du stock" value={fmtDT(k.valeur_stock ?? 0)} accent="#8b5cf6" sub="à l'instant (hors période)" />
+        <KpiCard icon="🏁" label={`${voc.Nom('marge')} ${voc.acc('marge', 'net', 'nette')} ${voc.acc('marge', 'estimé', 'estimée')}`} value={fmtDT(k.marge_nette)} delta={k.deltas?.marge_nette} accent={k.marge_nette >= 0 ? '#16a34a' : '#dc2626'} sub={`charges fixes ${fmtDT(k.charges)}`} />
+        <KpiCard icon={voc.icon('produit')} label={voc.Nom('food_cost')} value={k.food_cost_pct != null ? `${k.food_cost_pct}%` : '—'} delta={k.deltas?.food_cost_pts} inverse accent={k.food_cost_pct != null && k.food_cost_pct > seuil ? '#dc2626' : '#2563eb'} sub={`${voc.nom('cout_matiere')} ${fmtDT(k.cout_matiere)}`} />
+        <KpiCard icon={voc.icon('perte')} label={voc.Pl('perte')} value={fmtDT(k.pertes)} delta={k.deltas?.pertes} inverse accent="#ef4444" sub={k.pertes_pct_ca != null ? `${fmtNum(k.pertes_pct_ca)}% du CA` : undefined} />
+        <KpiCard icon="🏬" label={`Valeur ${voc.du('stock')}`} value={fmtDT(k.valeur_stock ?? 0)} accent="#8b5cf6" sub="à l'instant (hors période)" />
         {/* Présent seulement si le module Acheteurs est actif (champ omis sinon) */}
         {(k as any).ventes_acheteurs != null && (
-          <KpiCard icon="🤝" label="Ventes acheteurs (B2B)" value={fmtDT((k as any).ventes_acheteurs)} accent="#6d28d9"
-            sub={`${(k as any).nb_ventes_acheteurs ?? 0} facture${((k as any).nb_ventes_acheteurs ?? 0) > 1 ? 's' : ''} — hors CA activités`} />
+          <KpiCard icon={voc.icon('acheteur')} label={`${voc.Pl('vente')} ${voc.court('acheteur', true)} (B2B)`} value={fmtDT((k as any).ventes_acheteurs)} accent="#6d28d9"
+            sub={`${(k as any).nb_ventes_acheteurs ?? 0} facture${((k as any).nb_ventes_acheteurs ?? 0) > 1 ? 's' : ''} — hors CA ${voc.compl('activite', true)}`} />
         )}
       </div>
 
       {(a.stock_bas > 0 || a.food_cost_eleve > 0 || a.jours_inventaire == null || a.jours_inventaire > 30) && (
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
-          {a.stock_bas > 0 && <span style={alertPill('#fef3c7', '#92400e')}>⚠️ {a.stock_bas} article{a.stock_bas > 1 ? 's' : ''} sous le seuil — voir Achats & stock</span>}
-          {a.food_cost_eleve > 0 && <span style={alertPill('#fee2e2', '#b91c1c')}>🍔 {a.food_cost_eleve} produit{a.food_cost_eleve > 1 ? 's' : ''} à food cost &gt; {seuil}%</span>}
+          {a.stock_bas > 0 && <span style={alertPill('#fef3c7', '#92400e')}>⚠️ {voc.n('article', a.stock_bas)} sous le seuil — voir Achats & {voc.nom('stock')}</span>}
+          {a.food_cost_eleve > 0 && <span style={alertPill('#fee2e2', '#b91c1c')}>{voc.icon('produit')} {voc.n('produit', a.food_cost_eleve)} à {voc.nom('food_cost')} &gt; {seuil}%</span>}
           {a.jours_inventaire == null
-            ? <span style={alertPill('#e0e7ff', '#3730a3')}>📋 Aucun inventaire enregistré</span>
-            : a.jours_inventaire > 30 && <span style={alertPill('#e0e7ff', '#3730a3')}>📋 Dernier inventaire il y a {a.jours_inventaire} j</span>}
+            ? <span style={alertPill('#e0e7ff', '#3730a3')}>📋 {voc.Aucun('inventaire')} {voc.acc('inventaire', 'enregistré', 'enregistrée')}</span>
+            : a.jours_inventaire > 30 && <span style={alertPill('#e0e7ff', '#3730a3')}>📋 {voc.acc('inventaire', 'Dernier', 'Dernière')} {voc.nom('inventaire')} il y a {a.jours_inventaire} j</span>}
         </div>
       )}
 
-      <ChartCard title={`Évolution du CA et des marges (par ${data.grain === 'day' ? 'jour' : data.grain === 'week' ? 'semaine' : 'mois'})`} height={300}>
+      <ChartCard title={`Évolution du CA et ${voc.du('marge', true)} (par ${data.grain === 'day' ? 'jour' : data.grain === 'week' ? 'semaine' : 'mois'})`} height={300}>
         <EvolutionChart data={data.evolution ?? []} grain={data.grain} />
       </ChartCard>
     </>
@@ -505,60 +514,61 @@ function OverviewTab({ data, seuil }: { data: any; seuil: number }) {
 }
 
 function VentesTab({ data, seuil }: { data: any; seuil: number }) {
-  if (data.vide || !data.kpis) return <EmptyHint text="Aucune activité dans le périmètre." />;
+  const voc = useVocabulaire();
+  if (data.vide || !data.kpis) return <EmptyHint text={`${voc.Aucun('activite')} dans le périmètre.`} />;
   const k: Kpis = data.kpis;
   const canalCols: ColonneDef<any>[] = [
     { key: 'canal', label: 'Canal', align: 'left', fmt: (v) => <strong>{String(v)}</strong> },
     { key: 'ca', label: 'CA', fmt: (v) => fmtDT(Number(v)) },
-    { key: 'marge_brute', label: 'Marge brute', fmt: (v) => fmtDT(Number(v)) },
+    { key: 'marge_brute', label: `${voc.Nom('marge')} ${voc.acc('marge', 'brut', 'brute')}`, fmt: (v) => fmtDT(Number(v)) },
     { key: 'commissions', label: 'Commissions', fmt: (v) => (Number(v) > 0 ? `− ${fmtDT(Number(v))}` : '—') },
-    { key: 'marge_apres_com', label: 'Marge canal', fmt: (v) => <strong style={{ color: Number(v) >= 0 ? '#16a34a' : '#dc2626' }}>{fmtDT(Number(v))}</strong> },
-    { key: 'food_cost_pct', label: 'Food cost', fmt: (v) => <FoodCostBadge pct={v as number | null} seuil={seuil} /> },
+    { key: 'marge_apres_com', label: `${voc.Nom('marge')} canal`, fmt: (v) => <strong style={{ color: Number(v) >= 0 ? '#16a34a' : '#dc2626' }}>{fmtDT(Number(v))}</strong> },
+    { key: 'food_cost_pct', label: voc.Nom('food_cost'), fmt: (v) => <FoodCostBadge pct={v as number | null} seuil={seuil} /> },
   ];
   const prodCols: ColonneDef<any>[] = [
-    { key: 'nom', label: 'Produit', align: 'left', fmt: (v) => <strong style={{ color: '#1e293b' }}>{String(v)}</strong> },
+    { key: 'nom', label: voc.Nom('produit'), align: 'left', fmt: (v) => <strong style={{ color: '#1e293b' }}>{String(v)}</strong> },
     { key: 'type', label: 'Type', align: 'left', fmt: (v) => <TypeBadge type={String(v)} /> },
     { key: 'qte', label: 'Qté', fmt: (v) => fmtNum(Number(v)) },
     { key: 'ca', label: 'CA', fmt: (v) => fmtDT(Number(v)) },
     { key: 'part_ca_pct', label: '% CA', fmt: (v) => `${fmtNum(Number(v))}%` },
-    { key: 'marge_brute', label: 'Marge', fmt: (v) => fmtDT(Number(v)) },
-    { key: 'food_cost_pct', label: 'Food cost', fmt: (v) => <FoodCostBadge pct={v as number | null} seuil={seuil} /> },
+    { key: 'marge_brute', label: voc.Nom('marge'), fmt: (v) => fmtDT(Number(v)) },
+    { key: 'food_cost_pct', label: voc.Nom('food_cost'), fmt: (v) => <FoodCostBadge pct={v as number | null} seuil={seuil} /> },
   ];
   return (
     <>
       <div style={kpiGrid}>
-        <KpiCard icon="💵" label="CA" value={fmtDT(k.ca)} delta={k.deltas?.ca} sub={`${k.nb_ventes} ventes · panier ${fmtDT(k.panier_moyen, 2)}`} />
-        <KpiCard icon="📈" label="Marge brute" value={fmtDT(k.marge_brute)} delta={k.deltas?.marge_brute} accent="#16a34a" sub={k.taux_marge_pct != null ? `${k.taux_marge_pct}% du CA` : undefined} />
+        <KpiCard icon="💵" label="CA" value={fmtDT(k.ca)} delta={k.deltas?.ca} sub={`${k.nb_ventes} ${voc.pl('vente')} · panier ${fmtDT(k.panier_moyen, 2)}`} />
+        <KpiCard icon={voc.icon('marge')} label={`${voc.Nom('marge')} ${voc.acc('marge', 'brut', 'brute')}`} value={fmtDT(k.marge_brute)} delta={k.deltas?.marge_brute} accent="#16a34a" sub={k.taux_marge_pct != null ? `${k.taux_marge_pct}% du CA` : undefined} />
         <KpiCard icon="🤝" label="Après commissions" value={fmtDT(k.marge_apres_com)} delta={k.deltas?.marge_apres_com} accent="#d97706" sub={`commissions ${fmtDT(k.commissions)}`} />
-        <KpiCard icon="🏁" label="Marge nette estimée" value={fmtDT(k.marge_nette)} delta={k.deltas?.marge_nette} accent={k.marge_nette >= 0 ? '#16a34a' : '#dc2626'} sub={k.taux_marge_nette_pct != null ? `${k.taux_marge_nette_pct}% du CA` : undefined} />
-        <KpiCard icon="🍔" label="Food cost" value={k.food_cost_pct != null ? `${k.food_cost_pct}%` : '—'} delta={k.deltas?.food_cost_pts} inverse />
+        <KpiCard icon="🏁" label={`${voc.Nom('marge')} ${voc.acc('marge', 'net', 'nette')} ${voc.acc('marge', 'estimé', 'estimée')}`} value={fmtDT(k.marge_nette)} delta={k.deltas?.marge_nette} accent={k.marge_nette >= 0 ? '#16a34a' : '#dc2626'} sub={k.taux_marge_nette_pct != null ? `${k.taux_marge_nette_pct}% du CA` : undefined} />
+        <KpiCard icon={voc.icon('produit')} label={voc.Nom('food_cost')} value={k.food_cost_pct != null ? `${k.food_cost_pct}%` : '—'} delta={k.deltas?.food_cost_pts} inverse />
       </div>
       <div style={twoCols}>
-        <ChartCard title="Du CA à la marge nette (cascade)" height={280}>
+        <ChartCard title={`Du CA ${voc.au('marge')} ${voc.acc('marge', 'net', 'nette')} (cascade)`} height={280}>
           <WaterfallChart data={data.waterfall} />
         </ChartCard>
-        <ChartCard title="Marges par canal de vente" height="auto">
+        <ChartCard title={`${voc.Pl('marge')} par canal de vente`} height="auto">
           <SortableTable rows={data.par_canal ?? []} colonnes={canalCols} defaultSort="ca" maxHeight={280} />
         </ChartCard>
       </div>
       <div style={twoCols}>
-        <ChartCard title="CA & marge par catégorie de produits" height="auto">
+        <ChartCard title={`CA & ${voc.nom('marge')} par catégorie ${voc.de('produit', true)}`} height="auto">
           <HBarList rows={data.par_categorie ?? []} labelKey="categorie" valueKey="ca" color="#2563eb"
-            suffix={(r) => `· marge ${fmtDT(Number((r as any).marge_brute))}`} />
+            suffix={(r) => `· ${voc.nom('marge')} ${fmtDT(Number((r as any).marge_brute))}`} />
         </ChartCard>
         <ChartCard title="Répartition du CA par type" height={260}>
-          <DonutChart data={(data.par_type ?? []).map((t: any) => ({ ...t, typeLabel: t.type === 'produit' ? 'Produits' : t.type === 'supplement' ? 'Suppléments' : 'Valorisés' }))} nameKey="typeLabel" valueKey="ca" />
+          <DonutChart data={(data.par_type ?? []).map((t: any) => ({ ...t, typeLabel: t.type === 'produit' ? voc.Pl('produit') : t.type === 'supplement' ? voc.Pl('supplement') : voc.acc('produit_valorise', 'Valorisés', 'Valorisées') }))} nameKey="typeLabel" valueKey="ca" />
         </ChartCard>
       </div>
       <div style={twoCols}>
-        <ChartCard title="🏆 Meilleures marges" height="auto">
+        <ChartCard title={`🏆 ${voc.acc('marge', 'Meilleurs', 'Meilleures')} ${voc.pl('marge')}`} height="auto">
           <HBarList rows={data.top_marge ?? []} labelKey="nom" valueKey="marge_brute" color="#16a34a" max={8} />
         </ChartCard>
-        <ChartCard title="⚠️ Marges les plus faibles" height="auto">
+        <ChartCard title={`⚠️ ${voc.Pl('marge')} les plus faibles`} height="auto">
           <HBarList rows={data.flop_marge ?? []} labelKey="nom" valueKey="marge_brute" color="#ef4444" max={8} />
         </ChartCard>
       </div>
-      <ChartCard title={`Détail par produit (${(data.produits ?? []).length})`} height="auto">
+      <ChartCard title={`Détail par ${voc.nom('produit')} (${(data.produits ?? []).length})`} height="auto">
         <SortableTable rows={data.produits ?? []} colonnes={prodCols} defaultSort="ca" />
       </ChartCard>
     </>
@@ -566,21 +576,22 @@ function VentesTab({ data, seuil }: { data: any; seuil: number }) {
 }
 
 function AchatsTab({ data }: { data: any }) {
-  if (data.vide) return <EmptyHint text="Aucune activité dans le périmètre." />;
+  const voc = useVocabulaire();
+  if (data.vide) return <EmptyHint text={`${voc.Aucun('activite')} dans le périmètre.`} />;
   const k = data.kpis ?? {};
   const alerteCols: ColonneDef<any>[] = [
-    { key: 'article', label: 'Article', align: 'left', fmt: (v) => <strong>{String(v)}</strong> },
-    { key: 'categorie', label: 'Catégorie', align: 'left' },
-    { key: 'quantite', label: 'Stock', fmt: (v) => <strong style={{ color: Number(v) <= 0 ? '#dc2626' : '#d97706' }}>{fmtNum(Number(v))}</strong> },
+    { key: 'article', label: voc.Nom('article'), align: 'left', fmt: (v) => <strong>{String(v)}</strong> },
+    { key: 'categorie', label: 'Catégorie', align: 'left', fmt: (v) => libelleCategoriePt(voc, String(v)) },
+    { key: 'quantite', label: voc.Nom('stock'), fmt: (v) => <strong style={{ color: Number(v) <= 0 ? '#dc2626' : '#d97706' }}>{fmtNum(Number(v))}</strong> },
     { key: 'seuil', label: 'Seuil', fmt: (v) => fmtNum(Number(v)) },
   ];
   return (
     <>
       <div style={kpiGrid}>
-        <KpiCard icon="🛒" label="Achats (période)" value={fmtDT(k.achats)} sub={`${k.nb_appros} approvisionnement${k.nb_appros > 1 ? 's' : ''}`} />
-        <KpiCard icon="🔁" label="Réceptions labo" value={fmtDT(k.receptions_transferts)} accent="#0d9488" sub={`${k.nb_transferts} transfert${k.nb_transferts > 1 ? 's' : ''}`} />
-        <KpiCard icon="🏬" label="Valeur du stock" value={fmtDT(k.valeur_stock)} accent="#8b5cf6" sub="à l'instant" />
-        <KpiCard icon="⚠️" label="Articles sous seuil" value={String(k.stock_bas ?? 0)} accent={k.stock_bas > 0 ? '#dc2626' : '#16a34a'} />
+        <KpiCard icon="🛒" label="Achats (période)" value={fmtDT(k.achats)} sub={voc.n('appro', k.nb_appros)} />
+        <KpiCard icon="🔁" label={`Réceptions ${voc.court('labo')}`} value={fmtDT(k.receptions_transferts)} accent="#0d9488" sub={voc.n('transfert', k.nb_transferts)} />
+        <KpiCard icon="🏬" label={`Valeur ${voc.du('stock')}`} value={fmtDT(k.valeur_stock)} accent="#8b5cf6" sub="à l'instant" />
+        <KpiCard icon="⚠️" label={`${voc.Pl('article')} sous seuil`} value={String(k.stock_bas ?? 0)} accent={k.stock_bas > 0 ? '#dc2626' : '#16a34a'} />
       </div>
       <ChartCard title="Évolution des achats" height={240}>
         <TimeBarChart data={data.evolution_achats ?? []} grain={data.grain} />
@@ -588,21 +599,21 @@ function AchatsTab({ data }: { data: any }) {
       <div style={{ height: 14 }} />
       <div style={twoCols}>
         <ChartCard title="Achats par catégorie" height="auto">
-          <HBarList rows={data.achats_par_categorie ?? []} labelKey="categorie" color="#2563eb" max={12} />
+          <HBarList rows={(data.achats_par_categorie ?? []).map((r: any) => ({ ...r, categorie: libelleCategoriePt(voc, String(r.categorie)) }))} labelKey="categorie" color="#2563eb" max={12} />
         </ChartCard>
-        <ChartCard title="Achats par fournisseur" height="auto">
+        <ChartCard title={`Achats par ${voc.nom('fournisseur')}`} height="auto">
           <HBarList rows={data.achats_par_fournisseur ?? []} labelKey="fournisseur" color="#0d9488" max={12} />
         </ChartCard>
       </div>
       <div style={twoCols}>
-        <ChartCard title="Valeur du stock par catégorie" height={280}>
-          <DonutChart data={data.stock_par_categorie ?? []} nameKey="categorie" />
+        <ChartCard title={`Valeur ${voc.du('stock')} par catégorie`} height={280}>
+          <DonutChart data={(data.stock_par_categorie ?? []).map((r: any) => ({ ...r, categorie: libelleCategoriePt(voc, String(r.categorie)) }))} nameKey="categorie" />
         </ChartCard>
         <ChartCard title={`Alertes de seuil (${(data.alertes_stock ?? []).length})`} height="auto">
           <SortableTable rows={data.alertes_stock ?? []} colonnes={alerteCols} defaultSort="quantite" maxHeight={280} />
         </ChartCard>
       </div>
-      <ChartCard title="Derniers inventaires" height="auto">
+      <ChartCard title={`${voc.acc('inventaire', 'Derniers', 'Dernières')} ${voc.pl('inventaire')}`} height="auto">
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
           {(data.inventaires ?? []).map((inv: any, i: number) => (
             <div key={i} style={{ border: '1px solid #e2e8f0', borderRadius: 10, padding: '10px 14px', fontSize: '0.8rem' }}>
@@ -619,15 +630,16 @@ function AchatsTab({ data }: { data: any }) {
 }
 
 function PertesTab({ data }: { data: any }) {
+  const voc = useVocabulaire();
   if (data.vide) return <EmptyHint text="Aucune donnée dans le périmètre." />;
   const k = data.kpis ?? {};
   return (
     <>
       <div style={kpiGrid}>
-        <KpiCard icon="🗑️" label="Pertes (activités + labos)" value={fmtDT(k.total)} accent="#ef4444" />
-        <KpiCard icon="📉" label="Poids vs CA" value={k.pct_ca != null ? `${fmtNum(k.pct_ca)}%` : '—'} accent={k.pct_ca != null && k.pct_ca > 5 ? '#dc2626' : '#2563eb'} sub="pertes / chiffre d'affaires" />
+        <KpiCard icon={voc.icon('perte')} label={`${voc.Pl('perte')} (${voc.court('activite', true)} + ${voc.court('labo', true)})`} value={fmtDT(k.total)} accent="#ef4444" />
+        <KpiCard icon="📉" label="Poids vs CA" value={k.pct_ca != null ? `${fmtNum(k.pct_ca)}%` : '—'} accent={k.pct_ca != null && k.pct_ca > 5 ? '#dc2626' : '#2563eb'} sub={`${voc.pl('perte')} / chiffre d'affaires`} />
       </div>
-      <ChartCard title="Évolution des pertes" height={240}>
+      <ChartCard title={`Évolution ${voc.du('perte', true)}`} height={240}>
         <TimeBarChart data={data.evolution ?? []} grain={data.grain} color="#ef4444" />
       </ChartCard>
       <div style={{ height: 14 }} />
@@ -635,15 +647,15 @@ function PertesTab({ data }: { data: any }) {
         <ChartCard title="Par type" height={240}>
           <DonutChart data={(data.par_type ?? []).map((t: any) => ({ ...t, label: perteLabel(t.type, true) }))} nameKey="label" />
         </ChartCard>
-        <ChartCard title="Par site (activités et labos)" height="auto">
+        <ChartCard title={`Par site (${voc.pl('activite')} et ${voc.pl('labo')})`} height="auto">
           <HBarList rows={data.par_site ?? []} labelKey="site" color="#8b5cf6" max={10} />
         </ChartCard>
       </div>
       <div style={twoCols}>
         <ChartCard title="Par catégorie" height="auto">
-          <HBarList rows={data.par_categorie ?? []} labelKey="categorie" color="#f59e0b" max={10} />
+          <HBarList rows={(data.par_categorie ?? []).map((r: any) => ({ ...r, categorie: libelleCategoriePt(voc, String(r.categorie)) }))} labelKey="categorie" color="#f59e0b" max={10} />
         </ChartCard>
-        <ChartCard title="Articles les plus perdus" height="auto">
+        <ChartCard title={`${voc.Pl('article')} les plus ${voc.acc('article', 'perdus', 'perdues')}`} height="auto">
           <HBarList rows={data.top_articles ?? []} labelKey="article" color="#ef4444" max={10} />
         </ChartCard>
       </div>
@@ -652,44 +664,45 @@ function PertesTab({ data }: { data: any }) {
 }
 
 function LaboTab({ data, moduleAcheteurs = false }: { data: any; moduleAcheteurs?: boolean }) {
-  if (data.vide) return <EmptyHint text="Aucun labo dans le périmètre." />;
+  const voc = useVocabulaire();
+  if (data.vide) return <EmptyHint text={`${voc.Aucun('labo')} dans le périmètre.`} />;
   const k = data.kpis ?? {};
   return (
     <>
       <div style={kpiGrid}>
-        <KpiCard icon="🏬" label="Valeur du stock labo" value={fmtDT(k.valeur_stock)} accent="#8b5cf6" sub="à l'instant" />
-        <KpiCard icon="🛒" label="Achats (période)" value={fmtDT(k.appros)} sub={`${k.nb_appros} appro${k.nb_appros > 1 ? 's' : ''}`} />
-        <KpiCard icon="🏭" label="Production PT" value={fmtDT(k.production_pt)} accent="#0d9488" sub={`${k.nb_productions} production${k.nb_productions > 1 ? 's' : ''}`} />
-        <KpiCard icon="🔁" label="Transferts émis" value={fmtDT(k.transferts)} accent="#2563eb" sub={`${k.nb_transferts} transfert${k.nb_transferts > 1 ? 's' : ''}`} />
+        <KpiCard icon="🏬" label={`Valeur ${voc.du('stock')} ${voc.court('labo')}`} value={fmtDT(k.valeur_stock)} accent="#8b5cf6" sub="à l'instant" />
+        <KpiCard icon="🛒" label="Achats (période)" value={fmtDT(k.appros)} sub={`${k.nb_appros} ${voc.court('appro', k.nb_appros)}`} />
+        <KpiCard icon="🏭" label={`Production ${voc.Court('pt')}`} value={fmtDT(k.production_pt)} accent="#0d9488" sub={`${k.nb_productions} production${k.nb_productions > 1 ? 's' : ''}`} />
+        <KpiCard icon="🔁" label={`${voc.Pl('transfert')} ${voc.acc('transfert', 'émis', 'émises')}`} value={fmtDT(k.transferts)} accent="#2563eb" sub={voc.n('transfert', k.nb_transferts)} />
         {/* Lot 1b : cessions labo→labo et réceptions internes (labo alimenté par un autre labo) —
             rendus seulement s'il y en a : aucun changement pour un compte à un seul labo. */}
         {Number(k.nb_cessions_labo) > 0 && (
-          <KpiCard icon="🏭" label="Cessions labo→labo" value={fmtDT(k.cessions_labo)} accent="#7c3aed" sub={`${k.nb_cessions_labo} cession${k.nb_cessions_labo > 1 ? 's' : ''}`} />
+          <KpiCard icon={voc.icon('labo')} label={`Cessions ${voc.court('labo')}→${voc.court('labo')}`} value={fmtDT(k.cessions_labo)} accent="#7c3aed" sub={`${k.nb_cessions_labo} cession${k.nb_cessions_labo > 1 ? 's' : ''}`} />
         )}
         {Number(k.nb_receptions_labo) > 0 && (
           <KpiCard icon="📥" label="Réceptions internes" value={fmtDT(k.receptions_labo)} accent="#0e7490" sub={`${k.nb_receptions_labo} réception${k.nb_receptions_labo > 1 ? 's' : ''} (hors achats)`} />
         )}
-        <KpiCard icon="🗑️" label="Pertes labo" value={fmtDT(k.pertes)} accent="#ef4444" />
-        {k.ventes_labo > 0 && <KpiCard icon="💵" label="Ventes labo" value={fmtDT(k.ventes_labo)} sub={`${k.nb_ventes_labo} vente${k.nb_ventes_labo > 1 ? 's' : ''}`} />}
+        <KpiCard icon={voc.icon('perte')} label={`${voc.Pl('perte')} ${voc.court('labo')}`} value={fmtDT(k.pertes)} accent="#ef4444" />
+        {k.ventes_labo > 0 && <KpiCard icon={voc.icon('vente')} label={`${voc.Pl('vente')} ${voc.court('labo')}`} value={fmtDT(k.ventes_labo)} sub={voc.n('vente', k.nb_ventes_labo)} />}
         {/* Module actif : la carte reste visible même à 0 (le compte suit son option) */}
         {(moduleAcheteurs || k.ventes_acheteurs > 0 || k.nb_ventes_acheteurs > 0) && (
-          <KpiCard icon="🤝" label="Ventes acheteurs" value={fmtDT(k.ventes_acheteurs)} accent="#6d28d9"
+          <KpiCard icon={voc.icon('acheteur')} label={`${voc.Pl('vente')} ${voc.court('acheteur', true)}`} value={fmtDT(k.ventes_acheteurs)} accent="#6d28d9"
             sub={`${k.nb_ventes_acheteurs} facture${k.nb_ventes_acheteurs > 1 ? 's' : ''} (TTC)`} />
         )}
       </div>
       <div style={twoCols}>
-        <ChartCard title="Production par produit (valeur)" height="auto">
+        <ChartCard title={`Production par ${voc.nom('produit')} (valeur)`} height="auto">
           <HBarList rows={data.production_par_produit ?? []} labelKey="nom" color="#0d9488" max={8} />
         </ChartCard>
-        <ChartCard title="Transferts par activité destinataire" height={260}>
+        <ChartCard title={`${voc.Pl('transfert')} par ${voc.nom('activite')} destinataire`} height={260}>
           <DonutChart data={data.transferts_par_activite ?? []} nameKey="activite" />
         </ChartCard>
       </div>
       <div style={twoCols}>
-        <ChartCard title="Articles les plus transférés" height="auto">
+        <ChartCard title={`${voc.Pl('article')} les plus ${voc.acc('article', 'transférés', 'transférées')}`} height="auto">
           <HBarList rows={data.top_transferts ?? []} labelKey="nom" color="#2563eb" max={8} />
         </ChartCard>
-        <ChartCard title="Pertes par type" height="auto">
+        <ChartCard title={`${voc.Pl('perte')} par type`} height="auto">
           <HBarList rows={(data.pertes_par_type ?? []).map((t: any) => ({ ...t, label: perteLabel(t.type, true) }))} labelKey="label" color="#ef4444" max={4} />
         </ChartCard>
       </div>
@@ -700,33 +713,34 @@ function LaboTab({ data, moduleAcheteurs = false }: { data: any; moduleAcheteurs
 // Onglet Acheteurs (B2B) — CA facturé, fiscalité, commandes et carnet.
 // Conventions module : flux = commandes expédiées/livrées, montants TTC facturés.
 function AcheteursTab({ data }: { data: any }) {
-  if (data.vide) return <EmptyHint text="Le module Acheteurs n'est pas actif sur ce compte." />;
+  const voc = useVocabulaire();
+  if (data.vide) return <EmptyHint text={`Le module ${voc.Court('acheteur', true)} n'est pas actif sur ce compte.`} />;
   const k = data.kpis ?? {};
   const STATUT_LABELS: Record<string, string> = {
     en_attente: 'En attente', expediee: 'Expédiées', livree: 'Livrées', annulee: 'Annulées',
   };
   const achCols: ColonneDef<any>[] = [
-    { key: 'acheteur', label: 'Acheteur', align: 'left', fmt: (v) => <strong>{String(v)}</strong> },
+    { key: 'acheteur', label: voc.Nom('acheteur'), align: 'left', fmt: (v) => <strong>{String(v)}</strong> },
     { key: 'nb', label: 'Factures', fmt: (v) => fmtNum(Number(v)) },
     { key: 'valeur', label: 'CA TTC', fmt: (v) => <strong>{fmtDT(Number(v))}</strong> },
   ];
   return (
     <>
       <div style={kpiGrid}>
-        <KpiCard icon="💵" label="CA acheteurs (TTC)" value={fmtDT(k.ca)} delta={k.deltas?.ca} accent="#6d28d9"
+        <KpiCard icon="💵" label={`CA ${voc.court('acheteur', true)} (TTC)`} value={fmtDT(k.ca)} delta={k.deltas?.ca} accent="#6d28d9"
           sub={`${k.nb_factures} facture${k.nb_factures > 1 ? 's' : ''}`} />
         <KpiCard icon="🧾" label="Total HT" value={fmtDT(k.total_ht)} sub={`TVA ${fmtDT(k.total_tva)}${k.total_timbre > 0 ? ` · timbre ${fmtDT(k.total_timbre)}` : ''}`} />
         <KpiCard icon="⏳" label="Commandes en attente" value={String(k.commandes_en_attente ?? 0)}
-          accent={k.commandes_en_attente > 0 ? '#d97706' : '#16a34a'} sub="à traiter (tous labos)" />
-        <KpiCard icon="🤝" label="Acheteurs servis" value={String(k.acheteurs_factures ?? 0)} accent="#2563eb"
-          sub={`carnet : ${k.carnet_actifs ?? 0} actif${(k.carnet_actifs ?? 0) > 1 ? 's' : ''} / ${k.carnet_total ?? 0}`} />
+          accent={k.commandes_en_attente > 0 ? '#d97706' : '#16a34a'} sub={`à traiter (${voc.tous('labo', '')})`} />
+        <KpiCard icon={voc.icon('acheteur')} label={`${voc.Pl('acheteur')} ${voc.acc('acheteur', 'servis', 'servies')}`} value={String(k.acheteurs_factures ?? 0)} accent="#2563eb"
+          sub={`carnet : ${k.carnet_actifs ?? 0} ${voc.acc('acheteur', 'actif', 'active', k.carnet_actifs ?? 0)} / ${k.carnet_total ?? 0}`} />
       </div>
-      <ChartCard title={`Évolution du CA acheteurs (par ${data.grain === 'day' ? 'jour' : data.grain === 'week' ? 'semaine' : 'mois'})`} height={240}>
+      <ChartCard title={`Évolution du CA ${voc.compl('acheteur', true)} (par ${data.grain === 'day' ? 'jour' : data.grain === 'week' ? 'semaine' : 'mois'})`} height={240}>
         <TimeBarChart data={data.evolution ?? []} grain={data.grain} color="#6d28d9" />
       </ChartCard>
       <div style={{ height: 14 }} />
       <div style={twoCols}>
-        <ChartCard title="🏆 Meilleurs acheteurs (CA TTC)" height="auto">
+        <ChartCard title={`🏆 ${voc.acc('acheteur', 'Meilleurs', 'Meilleures')} ${voc.pl('acheteur')} (CA TTC)`} height="auto">
           <SortableTable rows={data.top_acheteurs ?? []} colonnes={achCols} defaultSort="valeur" maxHeight={300} />
         </ChartCard>
         <ChartCard title="Commandes de la période par état" height={260}>
@@ -735,7 +749,7 @@ function AcheteursTab({ data }: { data: any }) {
             formatter={(v) => `${fmtNum(v)} commande${v > 1 ? 's' : ''}`} />
         </ChartCard>
       </div>
-      <ChartCard title="Articles les plus vendus aux acheteurs (TTC)" height="auto">
+      <ChartCard title={`${voc.Pl('article')} les plus ${voc.acc('article', 'vendus', 'vendues')} ${voc.au('acheteur', true)} (TTC)`} height="auto">
         <HBarList rows={data.top_articles ?? []} labelKey="nom" valueKey="valeur" color="#6d28d9" max={10} />
       </ChartCard>
     </>

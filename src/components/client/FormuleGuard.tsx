@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Outlet, Link } from 'react-router-dom';
 import api from '../../api/client';
+import { useVocabulaire } from '../../hooks/useVocabulaire';
 
 // Thème émeraude — cohérent avec l'Espace Produit.
 const C = '#16a34a';
@@ -14,6 +15,7 @@ const CB = '#86efac';
 // Les formules 'premium', les comptes avec labo et les comptes sans activité
 // (formule null) passent.
 export default function FormuleGuard() {
+  const voc = useVocabulaire();
   const [status, setStatus] = useState<'loading' | 'allowed' | 'locked'>('loading');
   const [hasPending, setHasPending] = useState(false);
   const [requesting, setRequesting] = useState(false);
@@ -64,10 +66,10 @@ export default function FormuleGuard() {
         borderRadius: 18, padding: '32px 32px', marginBottom: 28,
         boxShadow: '0 8px 32px rgba(22,163,74,0.28)', textAlign: 'center',
       }}>
-        <div style={{ fontSize: '3rem', marginBottom: 12 }}>💎</div>
-        <h1 style={{ fontSize: '1.6rem', fontWeight: 900, color: '#fff', margin: '0 0 8px' }}>Espace Produit</h1>
+        <div style={{ fontSize: '3rem', marginBottom: 12 }}>{voc.icon('espace_produits')}</div>
+        <h1 style={{ fontSize: '1.6rem', fontWeight: 900, color: '#fff', margin: '0 0 8px' }}>{voc.Nom('espace_produits')}</h1>
         <p style={{ color: 'rgba(255,255,255,0.82)', margin: 0, fontSize: '0.92rem' }}>
-          Créez vos produits vendables, utilisables et composés, et pilotez votre production.
+          Créez {voc.votre('produit', true)} vendables, utilisables et {voc.acc('produit', 'composés', 'composées')}, et pilotez votre production.
         </p>
       </div>
 
@@ -79,11 +81,11 @@ export default function FormuleGuard() {
           Formule Activité Premium requise
         </h2>
         <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', lineHeight: 1.6, marginBottom: 24 }}>
-          Votre compte est en formule <strong>Activité Basique</strong> (stock et ventes d'articles valorisés)
-          et sans labo. L'Espace Produit — produits vendables, utilisables, composés et production — est
-          disponible avec la formule <strong>Activité Premium</strong>, ou automatiquement inclus avec la
-          base <strong>Labo</strong> (nécessaire à la production). Les pages Catégories Produits et Articles
-          Valorisés restent accessibles depuis le menu.
+          Votre compte est en formule <strong>Activité Basique</strong> ({voc.nom('stock')} et {voc.pl('vente')} {voc.de('article', true)} {voc.acc('article', 'valorisés', 'valorisées')})
+          et sans {voc.nom('labo')}. {voc.Le('espace_produits', false, 'Nom')} — {voc.pl('produit')} vendables, utilisables, {voc.acc('produit', 'composés', 'composées')} et production — est
+          disponible avec la formule <strong>Activité Premium</strong>, ou automatiquement {voc.acc('espace_produits', 'inclus', 'incluse')} avec la
+          base <strong>Labo</strong> (nécessaire à la production). Les pages Catégories {voc.Court('produit', true)} et{' '}
+          {voc.Titre('produit_valorise', true)} restent accessibles depuis le menu.
         </p>
 
         {(hasPending || requested) ? (

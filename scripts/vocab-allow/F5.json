@@ -1,0 +1,16 @@
+[
+  {
+    "fichier": "src/components/common/TypeApproFilter.tsx",
+    "avant": "transfert",
+    "apres": "transfert",
+    "type": "discriminant",
+    "justification": "Clé technique de l'option du filtre « Type d'appro » (1er élément du couple [clé, libellé] de defaultOptions) : elle n'est que comparée (selected.has(key), onToggle(key), key React) et jamais affichée ; le libellé affiché à côté, lui, passe par voc.Court('transfert')."
+  },
+  {
+    "fichier": "src/components/common/TypeApproFilter.tsx",
+    "avant": "vente",
+    "apres": "vente",
+    "type": "discriminant",
+    "justification": "Clé technique de l'option du filtre « Type d'appro » (1er élément du couple [clé, libellé] de defaultOptions) : elle n'est que comparée (selected.has(key), onToggle(key), key React) et jamais affichée ; le libellé affiché à côté, lui, passe par voc.Court('vente')."
+  }
+]

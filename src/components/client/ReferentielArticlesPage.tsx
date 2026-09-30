@@ -4,6 +4,7 @@ import type { Article, Activite, Category, Famille, Labo, Unit } from '../../typ
 import GuideButton from './GuideButton';
 import HistoryFilterBar, { FilterField, FilterInput, FilterSelect } from '../common/HistoryFilterBar';
 import { useConfirm } from '../common/ConfirmDialog';
+import { useVocabulaire } from '../../hooks/useVocabulaire';
 
 const COLOR = '#16a34a';
 const ACCENT_DARK = '#15803d';
@@ -24,6 +25,7 @@ const emptyArtRow = (): ArtRow => ({ nom: '', uniteId: '', categorieId: '', acti
 
 export default function ReferentielArticlesPage() {
   const { alerte } = useConfirm();
+  const voc = useVocabulaire();
   const [articles, setArticles] = useState<Article[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [familles, setFamilles] = useState<Famille[]>([]);
@@ -142,7 +144,7 @@ export default function ReferentielArticlesPage() {
   };
 
   const handleCreate = async () => {
-    if (selectedCount === 0) { setCreateError('Sélectionnez au moins une activité ou un labo'); return; }
+    if (selectedCount === 0) { setCreateError(`Sélectionnez au moins ${voc.un('activite')} ou ${voc.un('labo')}`); return; }
     setCreating(true);
     setCreateError('');
     try {
@@ -192,7 +194,7 @@ export default function ReferentielArticlesPage() {
 
   const handleMultiCreate = async () => {
     const valid = multiRows.filter(r => r.nom.trim() && r.uniteId);
-    if (!valid.length) { setMultiError('Au moins un article avec nom et unité requis'); return; }
+    if (!valid.length) { setMultiError(`Au moins ${voc.un('article')} avec nom et unité ${voc.acc('article', 'requis', 'requise')}`); return; }
     setMultiCreating(true); setMultiError('');
     try {
       const created = await Promise.all(valid.map(r =>
@@ -280,7 +282,7 @@ export default function ReferentielArticlesPage() {
       window.dispatchEvent(new Event('articles-changed'));
       load();
     } catch (e: unknown) {
-      alerte({ title: 'Suppression impossible', message: (e as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Impossible de supprimer cet article', tone: 'danger' });
+      alerte({ title: 'Suppression impossible', message: (e as { response?: { data?: { message?: string } } })?.response?.data?.message || `Impossible de supprimer ${voc.ce('article')}`, tone: 'danger' });
     }
   };
 
@@ -336,12 +338,12 @@ export default function ReferentielArticlesPage() {
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
             <div style={{ background: 'rgba(255,255,255,0.15)', borderRadius: 10, padding: '7px 9px', fontSize: '1.2rem' }}>🧂</div>
-            <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0 }}>Articles</h1>
+            <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0 }}>{voc.Pl('article')}</h1>
           </div>
           <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.85rem', margin: 0 }}>
             {articles.length === 0
-              ? 'Matières premières et ingrédients utilisés dans votre production'
-              : 'Articles de votre référentiel — stock, fiches techniques et approvisionnements'}
+              ? `Matières premières et ${voc.pl('ingredient')} ${voc.acc('ingredient', 'utilisés', 'utilisées')} dans votre production`
+              : `${voc.Pl('article')} de ${voc.votre('referentiel')} — ${voc.nom('stock')}, ${voc.pl('fiche_technique')} et ${voc.pl('appro')}`}
           </p>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -351,7 +353,7 @@ export default function ReferentielArticlesPage() {
           }}>
             <div style={{ fontSize: '1.8rem', fontWeight: 900, color: '#fff', lineHeight: 1 }}>{articles.length}</div>
             <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.75)', marginTop: 2 }}>
-              article{articles.length !== 1 ? 's' : ''}
+              {voc.nom('article', articles.length !== 1)}
             </div>
           </div>
           <GuideButton section="referentiel-articles" />
@@ -362,7 +364,7 @@ export default function ReferentielArticlesPage() {
       <HistoryFilterBar
         accent={COLOR}
         accentDark={ACCENT_DARK}
-        subtitle={loading ? undefined : `${filtered.length} article${filtered.length !== 1 ? 's' : ''}${(search || filterCat || filterFamille) ? ` sur ${articles.length}` : ''}`}
+        subtitle={loading ? undefined : `${filtered.length} ${voc.nom('article', filtered.length !== 1)}${(search || filterCat || filterFamille) ? ` sur ${articles.length}` : ''}`}
         onReset={() => { setSearch(''); setFilterCat(''); setFilterFamille(''); }}
         showReset={!!(search || filterCat || filterFamille)}
         actions={
@@ -371,7 +373,7 @@ export default function ReferentielArticlesPage() {
               + Ajout multiple
             </button>
             <button className="btn" onClick={openCreate} style={{ background: 'linear-gradient(135deg,#15803d,#16a34a)', color: '#fff' }}>
-              + Nouvel article
+              + {voc.Nouveau('article')}
             </button>
           </>
         }
@@ -379,7 +381,7 @@ export default function ReferentielArticlesPage() {
         <FilterField label="🔍 Recherche">
           <FilterInput
             value={search} onChange={e => setSearch(e.target.value)}
-            placeholder="Filtrer les articles…"
+            placeholder={`Filtrer ${voc.le('article', true)}…`}
           />
         </FilterField>
         {familles.length > 0 && (
@@ -406,12 +408,12 @@ export default function ReferentielArticlesPage() {
       ) : articles.length === 0 ? (
         <div style={{ background: 'linear-gradient(135deg,#f0fdf4,#dcfce7)', border: '2px dashed #86efac', borderRadius: 18, padding: '48px 32px', textAlign: 'center' }}>
           <div style={{ fontSize: '2.8rem', marginBottom: 14 }}>🧂</div>
-          <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#14532d', margin: '0 0 8px' }}>Aucun article défini</h3>
+          <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#14532d', margin: '0 0 8px' }}>{voc.Aucun('article')} {voc.acc('article', 'défini', 'définie')}</h3>
           <p style={{ color: '#166534', fontSize: '0.88rem', margin: '0 0 24px', maxWidth: 420, marginInline: 'auto' }}>
-            Les articles sont vos matières premières et ingrédients. Créez-en pour commencer à gérer votre stock, vos approvisionnements et vos fiches techniques.
+            {voc.Le('article', true)} sont vos matières premières et {voc.pl('ingredient')}. Créez-en pour commencer à gérer {voc.votre('stock')}, {voc.votre('appro', true)} et {voc.votre('fiche_technique', true)}.
           </p>
           <button onClick={openCreate} style={{ background: 'linear-gradient(135deg,#15803d,#16a34a)', color: '#fff', border: 'none', borderRadius: 10, padding: '11px 28px', fontWeight: 700, fontSize: '0.92rem', cursor: 'pointer' }}>
-            + Créer le premier article
+            + Créer {voc.acc('article', 'le premier', 'la première')} {voc.nom('article')}
           </button>
         </div>
       ) : filtered.length === 0 ? (
@@ -471,7 +473,7 @@ export default function ReferentielArticlesPage() {
                           marginLeft: 8, background: '#f1f5f9', color: '#64748b',
                           borderRadius: 10, padding: '1px 8px', fontSize: '0.72rem', fontWeight: 600,
                         }}>
-                          {cg.items.length} article{cg.items.length !== 1 ? 's' : ''}
+                          {cg.items.length} {voc.nom('article', cg.items.length !== 1)}
                         </span>
                       </button>
 
@@ -500,7 +502,7 @@ export default function ReferentielArticlesPage() {
                               </span>
                               {moduleAcheteursActif && (
                                 <button onClick={() => toggleCommandable(a)}
-                                  title={a.commandable ? 'Commandable — proposable aux acheteurs (cliquer pour retirer)' : 'Cliquer pour proposer cet article aux acheteurs'}
+                                  title={a.commandable ? `Commandable — proposable ${voc.au('acheteur', true)} (cliquer pour retirer)` : `Cliquer pour proposer ${voc.ce('article')} ${voc.au('acheteur', true)}`}
                                   style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', cursor: 'pointer', padding: '2px 6px', borderRadius: 8, flexShrink: 0 }}>
                                   <div style={{ width: 36, height: 20, borderRadius: 10, position: 'relative', flexShrink: 0, background: a.commandable ? CMD : '#cbd5e1', transition: 'background 0.2s' }}>
                                     <div style={{ position: 'absolute', top: 2, left: a.commandable ? 18 : 2, width: 16, height: 16, borderRadius: '50%', background: '#fff', boxShadow: '0 1px 4px rgba(0,0,0,0.18)', transition: 'left 0.2s' }} />
@@ -510,7 +512,7 @@ export default function ReferentielArticlesPage() {
                               )}
                               <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
                                 <button className="btn btn-ghost btn-sm" onClick={() => openEdit(a)}>✏️ Modifier</button>
-                                <button className="btn btn-danger btn-sm" disabled={a.hasAppros} title={a.hasAppros ? 'Cet article ne peut pas être supprimé car il a des approvisionnements enregistrés' : undefined} onClick={() => !a.hasAppros && setDeleteId(a.id)} style={a.hasAppros ? { opacity: 0.4, cursor: 'not-allowed' } : undefined}>🗑️</button>
+                                <button className="btn btn-danger btn-sm" disabled={a.hasAppros} title={a.hasAppros ? `${voc.Ce('article')} ne peut pas être ${voc.acc('article', 'supprimé', 'supprimée')} car ${voc.acc('article', 'il', 'elle')} a ${voc.un('appro', true)} ${voc.acc('appro', 'enregistrés', 'enregistrées')}` : undefined} onClick={() => !a.hasAppros && setDeleteId(a.id)} style={a.hasAppros ? { opacity: 0.4, cursor: 'not-allowed' } : undefined}>🗑️</button>
                               </div>
                             </div>
                           ))}
@@ -539,7 +541,7 @@ export default function ReferentielArticlesPage() {
         <div className="modal-overlay">
           <div className="modal" style={{ maxWidth: 860 }} onClick={e => e.stopPropagation()}>
             <div className="modal-header" style={{ background: GRADIENT }}>
-              <h2 style={{ color: '#fff', margin: 0 }}>Ajout multiple d'articles</h2>
+              <h2 style={{ color: '#fff', margin: 0 }}>Ajout multiple {voc.de('article', true)}</h2>
               <button className="modal-close" onClick={closeMultiCreate}>×</button>
             </div>
             <div className="modal-body">
@@ -565,7 +567,7 @@ export default function ReferentielArticlesPage() {
                       <input
                         className="input" style={{ flex: 2, borderColor: errNom ? '#ef4444' : undefined }}
                         autoFocus={i === 0}
-                        placeholder="Ex: Poulet entier"
+                        placeholder={voc.ex('Ex: Poulet entier', `Ex: ${voc.Nom('article')} A`)}
                         value={row.nom}
                         onChange={e => updateMultiRow(i, 'nom', e.target.value)}
                         onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); if (i === multiRows.length - 1) addMultiRow(); } }}
@@ -590,7 +592,7 @@ export default function ReferentielArticlesPage() {
                         }}
                       >
                         {assignCount > 0
-                          ? `📍${row.activiteIds.length} 🏭${row.laboIds.length}`
+                          ? `📍${row.activiteIds.length} ${voc.icon('labo')}${row.laboIds.length}`
                           : '+ Affecter'}
                         <span style={{ fontSize: '0.6rem', color: assignCount > 0 ? '#15803d' : '#cbd5e1' }}>{isAssignOpen ? '▲' : '▼'}</span>
                       </button>
@@ -599,7 +601,7 @@ export default function ReferentielArticlesPage() {
                     {isAssignOpen && (
                       <div style={{ marginBottom: 8, padding: '10px 12px', borderRadius: 8, border: '1.5px solid #dcfce7', background: '#f0fdf4' }}>
                         {activites.length === 0 && labos.length === 0 ? (
-                          <div style={{ fontSize: '0.82rem', color: '#166534' }}>Aucune activité ni labo configuré.</div>
+                          <div style={{ fontSize: '0.82rem', color: '#166534' }}>{voc.Aucun('activite')} ni {voc.nom('labo')} {voc.accN(['activite', 'labo'], 'configuré', 'configurée')}.</div>
                         ) : (
                           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                             {activites.map(act => {
@@ -624,7 +626,7 @@ export default function ReferentielArticlesPage() {
                                   background: sel ? '#14532d' : '#fff', color: sel ? '#fff' : '#166534',
                                   transition: 'all 0.12s',
                                 }}>
-                                  🏭 {labo.nom}
+                                  {voc.icon('labo')} {labo.nom}
                                 </button>
                               );
                             })}
@@ -639,7 +641,7 @@ export default function ReferentielArticlesPage() {
               <div className="modal-footer" style={{ marginTop: 16 }}>
                 <button className="btn btn-ghost" onClick={closeMultiCreate}>Annuler</button>
                 <button className="btn" disabled={multiCreating || !multiIsValid} onClick={handleMultiCreate} style={{ background: 'linear-gradient(135deg,#15803d,#16a34a)', color: '#fff', opacity: multiIsValid ? 1 : 0.5 }}>
-                  {multiCreating ? 'Création…' : `Créer ${multiRows.length > 1 ? `(${multiRows.length} articles)` : 'l\'article'}`}
+                  {multiCreating ? 'Création…' : `Créer ${multiRows.length > 1 ? `(${multiRows.length} ${voc.pl('article')})` : voc.le('article')}`}
                 </button>
               </div>
             </div>
@@ -655,7 +657,7 @@ export default function ReferentielArticlesPage() {
             {/* Header with step indicator */}
             <div className="modal-header" style={{ background: GRADIENT, flexDirection: 'column', alignItems: 'flex-start', gap: 12 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
-                <h2 style={{ color: '#fff', margin: 0 }}>Nouvel article</h2>
+                <h2 style={{ color: '#fff', margin: 0 }}>{voc.Nouveau('article')}</h2>
                 <button className="modal-close" onClick={closeCreate} style={{ color: '#fff' }}>×</button>
               </div>
               {/* Step indicator */}
@@ -699,13 +701,13 @@ export default function ReferentielArticlesPage() {
               {createStep === 1 ? (
                 <>
                   <div style={{ marginBottom: 14, color: '#64748b', fontSize: '0.82rem' }}>
-                    Renseignez les informations de base de l'article.
+                    Renseignez les informations de base {voc.du('article')}.
                   </div>
                   <div className="form-group">
                     <label>Nom *</label>
                     <input
                       className="input" autoFocus value={createNom}
-                      placeholder="Ex: Poulet entier"
+                      placeholder={voc.ex('Ex: Poulet entier', `Ex: ${voc.Nom('article')} A`)}
                       onChange={e => setCreateNom(e.target.value)}
                       onKeyDown={e => e.key === 'Enter' && step1Valid && goStep2()}
                     />
@@ -721,7 +723,7 @@ export default function ReferentielArticlesPage() {
                     <label>Catégorie *</label>
                     {categories.length === 0 ? (
                       <div style={{ padding: '10px 12px', borderRadius: 8, background: '#fefce8', border: '1px solid #fde68a', fontSize: '0.84rem', color: '#92400e' }}>
-                        💡 Créez d'abord des catégories dans le référentiel pour pouvoir les sélectionner.
+                        💡 Créez d'abord des catégories dans {voc.le('referentiel')} pour pouvoir les sélectionner.
                       </div>
                     ) : (
                       <select className="input" value={createCategorieId} onChange={e => setCreateCategorieId(e.target.value)}>
@@ -745,12 +747,12 @@ export default function ReferentielArticlesPage() {
               ) : (
                 <>
                   <div style={{ marginBottom: 12, color: '#64748b', fontSize: '0.82rem' }}>
-                    Affectez cet article à au moins une activité ou un labo.
+                    Affectez {voc.ce('article')} à au moins {voc.un('activite')} ou {voc.un('labo')}.
                   </div>
 
                   {allCount === 0 ? (
                     <div style={{ padding: '16px', borderRadius: 8, background: '#f0fdf4', border: '1px solid #86efac', fontSize: '0.85rem', color: '#166534', textAlign: 'center' }}>
-                      Aucune activité ou labo trouvé. Créez-en depuis « Mes Activités ».
+                      {voc.Aucun('activite')} ou {voc.nom('labo')} {voc.accN(['activite', 'labo'], 'trouvé', 'trouvée')}. Créez-en depuis « {voc.Mon('activite', true, 'Nom')} ».
                     </div>
                   ) : (
                     <>
@@ -802,7 +804,7 @@ export default function ReferentielArticlesPage() {
                               </div>
                               <div style={{ flex: 1 }}>
                                 <div style={{ fontWeight: 600, fontSize: '0.88rem', color: '#0f172a' }}>{act.nom}</div>
-                                <div style={{ fontSize: '0.75rem', color: '#64748b' }}>Activité</div>
+                                <div style={{ fontSize: '0.75rem', color: '#64748b' }}>{voc.Nom('activite')}</div>
                               </div>
                               <div style={{
                                 width: 18, height: 18, borderRadius: 4, flexShrink: 0,
@@ -834,11 +836,11 @@ export default function ReferentielArticlesPage() {
                                 background: selected ? '#dcfce7' : '#f1f5f9',
                                 display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16,
                               }}>
-                                🏭
+                                {voc.icon('labo')}
                               </div>
                               <div style={{ flex: 1 }}>
                                 <div style={{ fontWeight: 600, fontSize: '0.88rem', color: '#0f172a' }}>{labo.nom}</div>
-                                <div style={{ fontSize: '0.75rem', color: '#64748b' }}>Laboratoire</div>
+                                <div style={{ fontSize: '0.75rem', color: '#64748b' }}>{voc.Nom('labo_long')}</div>
                               </div>
                               <div style={{
                                 width: 18, height: 18, borderRadius: 4, flexShrink: 0,
@@ -870,7 +872,7 @@ export default function ReferentielArticlesPage() {
                       onClick={handleCreate}
                       style={{ background: 'linear-gradient(135deg,#15803d,#16a34a)', color: '#fff' }}
                     >
-                      {creating ? 'Création…' : 'Créer l\'article'}
+                      {creating ? 'Création…' : `Créer ${voc.le('article')}`}
                     </button>
                   </div>
                 </>
@@ -885,14 +887,14 @@ export default function ReferentielArticlesPage() {
         <div className="modal-overlay">
           <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 440 }}>
             <div className="modal-header" style={{ background: GRADIENT }}>
-              <h2 style={{ color: '#fff', margin: 0 }}>Modifier l'article</h2>
+              <h2 style={{ color: '#fff', margin: 0 }}>Modifier {voc.le('article')}</h2>
               <button className="modal-close" onClick={closeEdit}>×</button>
             </div>
             <div className="modal-body">
               {editError && <div style={{ background: '#fee2e2', color: '#dc2626', border: '1px solid #fecaca', borderRadius: 6, padding: '8px 12px', marginBottom: 12, fontSize: '0.85rem' }}>{editError}</div>}
               <div className="form-group">
                 <label>Nom *</label>
-                <input className="input" autoFocus value={editForm.nom} placeholder="Ex: Poulet entier" onChange={e => setEditForm(p => ({ ...p, nom: e.target.value }))} />
+                <input className="input" autoFocus value={editForm.nom} placeholder={voc.ex('Ex: Poulet entier', `Ex: ${voc.Nom('article')} A`)} onChange={e => setEditForm(p => ({ ...p, nom: e.target.value }))} />
               </div>
               <div className="form-group">
                 <label>Unité *</label>
@@ -920,7 +922,7 @@ export default function ReferentielArticlesPage() {
                   <div style={{ color: 'var(--text-muted)', fontSize: '0.82rem', padding: '8px 0' }}>Chargement…</div>
                 ) : assignLoaded && editActivites.length === 0 && editLabos.length === 0 ? (
                   <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', padding: '8px 12px', background: '#f8fafc', borderRadius: 8 }}>
-                    Aucune activité ni labo configuré.
+                    {voc.Aucun('activite')} ni {voc.nom('labo')} {voc.accN(['activite', 'labo'], 'configuré', 'configurée')}.
                   </div>
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 220, overflowY: 'auto' }}>
@@ -939,7 +941,7 @@ export default function ReferentielArticlesPage() {
                         >
                           <span style={{ fontSize: '0.95rem' }}>📍</span>
                           <span style={{ flex: 1, fontWeight: 600, fontSize: '0.84rem', color: '#0f172a' }}>{act.nom}</span>
-                          <span style={{ fontSize: '0.7rem', color: '#64748b' }}>Activité</span>
+                          <span style={{ fontSize: '0.7rem', color: '#64748b' }}>{voc.Nom('activite')}</span>
                           <div style={{
                             width: 16, height: 16, borderRadius: 4, flexShrink: 0,
                             border: act.assigned ? 'none' : '1.5px solid #cbd5e1',
@@ -963,9 +965,9 @@ export default function ReferentielArticlesPage() {
                             transition: 'all 0.15s', opacity: labo.toggling ? 0.6 : 1,
                           }}
                         >
-                          <span style={{ fontSize: '0.95rem' }}>🏭</span>
+                          <span style={{ fontSize: '0.95rem' }}>{voc.icon('labo')}</span>
                           <span style={{ flex: 1, fontWeight: 600, fontSize: '0.84rem', color: '#0f172a' }}>{labo.nom}</span>
-                          <span style={{ fontSize: '0.7rem', color: '#64748b' }}>Laboratoire</span>
+                          <span style={{ fontSize: '0.7rem', color: '#64748b' }}>{voc.Nom('labo_long')}</span>
                           <div style={{
                             width: 16, height: 16, borderRadius: 4, flexShrink: 0,
                             border: labo.assigned ? 'none' : '1.5px solid #cbd5e1',
@@ -997,8 +999,8 @@ export default function ReferentielArticlesPage() {
           <div className="modal modal-sm" onClick={e => e.stopPropagation()} style={{ textAlign: 'center' }}>
             <div className="modal-body" style={{ padding: '28px 24px' }}>
               <div style={{ fontSize: 36, marginBottom: 12 }}>⚠️</div>
-              <h3 style={{ margin: '0 0 10px' }}>Supprimer cet article ?</h3>
-              <p style={{ color: 'var(--text-muted)', margin: '0 0 20px', fontSize: '0.9rem' }}>Les stocks et historiques liés seront conservés.</p>
+              <h3 style={{ margin: '0 0 10px' }}>Supprimer {voc.ce('article')} ?</h3>
+              <p style={{ color: 'var(--text-muted)', margin: '0 0 20px', fontSize: '0.9rem' }}>{voc.Le('stock', true)} et historiques liés seront conservés.</p>
               <div className="modal-footer">
                 <button className="btn btn-ghost" onClick={() => setDeleteId(null)}>Annuler</button>
                 <button className="btn btn-danger" onClick={() => handleDelete(deleteId!)}>Supprimer</button>

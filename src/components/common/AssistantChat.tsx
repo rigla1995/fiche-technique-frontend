@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import api from '../../api/client';
+import { useVocabulaire } from '../../hooks/useVocabulaire';
 import HelpButton from './HelpButton';
 import MarkdownView from './MarkdownView';
 
@@ -27,6 +28,7 @@ interface Props {
  * La conversation est persistée côté serveur (GET/DELETE /conversation).
  */
 export default function AssistantChat({ etat, onEtatRefresh, onClose }: Props) {
+  const voc = useVocabulaire();
   const [enabled, setEnabled] = useState<boolean | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [sending, setSending] = useState(false);
@@ -132,7 +134,7 @@ export default function AssistantChat({ etat, onEtatRefresh, onClose }: Props) {
           <div style={{ fontSize: 16, fontWeight: 700, color: '#0f172a' }}>Assistant IA non activé</div>
           <div style={{ fontSize: 13, color: '#64748b', maxWidth: 300, lineHeight: 1.6 }}>
             L'assistant IA n'est pas encore activé pour votre compte : il pourra analyser vos données
-            (stock, ventes, pertes…) et répondre à vos questions sur LabFlow.
+            ({voc.nom('stock')}, {voc.pl('vente')}, {voc.pl('perte')}…) et répondre à vos questions sur LabFlow.
             Contactez votre administrateur pour l'activer.
           </div>
         </div>

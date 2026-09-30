@@ -4,6 +4,8 @@ import api from '../../api/client';
 import HelpButton from '../common/HelpButton';
 import HistoryFilterBar, { FilterField, FilterInput, FilterSelect } from '../common/HistoryFilterBar';
 import { useAuth } from '../../context/AuthContext';
+import { useVocabulaire } from '../../hooks/useVocabulaire';
+import { libelleCategoriePt } from '../../vocab/categoriesPt';
 import { useNotifications } from '../../context/NotificationContext';
 
 const PAGE_SIZE = 10;
@@ -40,6 +42,7 @@ const labelStyle: React.CSSProperties = {
 
 export default function HistoriqueInventairePage() {
   const { user, canWrite } = useAuth();
+  const voc = useVocabulaire();
   const { clearByEventType } = useNotifications();
   const navigate = useNavigate();
   const isGerant = user?.role === 'gerant';
@@ -104,9 +107,11 @@ export default function HistoriqueInventairePage() {
     api.get(url).then(({ data }) => {
       setIngOptions(data.map((r: { ingredientId: number; nom: string; categorie: string }) => ({ ingredientId: r.ingredientId, nom: r.nom, categorie: r.categorie })));
       if (laboId) {
-        api.get(`/api/labo/${laboId}`).then(({ data: l }) => setContextNom(l?.nom || 'Labo')).catch(() => {});
+        api.get(`/api/labo/${laboId}`).then(({ data: l }) => setContextNom(l?.nom || voc.Nom('labo'))).catch(() => {});
       }
     }).catch(() => {});
+  // voc hors dépendances : un changement de lexique ne doit pas recharger les options du filtre.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [laboId, effectiveActiviteId]);
 
   const categories = [...new Set(ingOptions.map((i) => i.categorie))];
@@ -194,7 +199,7 @@ export default function HistoriqueInventairePage() {
   const contextTitle = laboId
     ? contextNom
     : section
-    ? contextNom || 'Activités'
+    ? contextNom || voc.Pl('activite')
     : contextNom || '';
 
   const showActiviteSelector = !!section && !activiteId && activites.length >= 1;
@@ -215,10 +220,10 @@ export default function HistoriqueInventairePage() {
             <div style={{ background: 'rgba(255,255,255,0.2)', borderRadius: 10, padding: '7px 9px', fontSize: '1.2rem', lineHeight: 1 }}>📊</div>
             <div>
               <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0, letterSpacing: '-0.02em' }}>
-                Historique Inventaire{contextTitle ? ` — ${contextTitle}` : ''}
+                Historique {voc.Court('inventaire')}{contextTitle ? ` — ${contextTitle}` : ''}
               <HelpButton section="inventaire" variant="solid" size={18} tip="Aide" /></h1>
               <p style={{ color: 'rgba(255,255,255,0.72)', fontSize: '0.82rem', margin: '4px 0 0' }}>
-                Consultez et exportez l'historique des inventaires enregistrés
+                Consultez et exportez l'historique {voc.du('inventaire', true)} {voc.acc('inventaire', 'enregistrés', 'enregistrées')}
               </p>
             </div>
           </div>
@@ -227,7 +232,7 @@ export default function HistoriqueInventairePage() {
           {isLaboMode && laboId ? (
             <Link to={`/client/labo/inventaire?laboId=${laboId}`}
               style={{ background: 'rgba(255,255,255,0.18)', backdropFilter: 'blur(8px)', border: '1.5px solid rgba(255,255,255,0.4)', borderRadius: 10, padding: '8px 18px', color: '#fff', fontWeight: 700, fontSize: '0.85rem', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-              🔢 Inventaire
+              🔢 {voc.Nom('inventaire')}
             </Link>
           ) : null}
           {applied && histRows.length > 0 && (
@@ -248,7 +253,7 @@ export default function HistoriqueInventairePage() {
               🏭 {l.nom}
             </button>
           ))}
-          <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', alignSelf: 'center', marginLeft: 4 }}>← sélectionner le labo</span>
+          <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', alignSelf: 'center', marginLeft: 4 }}>← sélectionner {voc.le('labo')}</span>
         </div>
       )}
 
@@ -261,7 +266,7 @@ export default function HistoriqueInventairePage() {
               🏪 {a.nom}
             </button>
           ))}
-          <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', alignSelf: 'center', marginLeft: 4 }}>← sélectionner l'activité</span>
+          <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', alignSelf: 'center', marginLeft: 4 }}>← sélectionner {voc.le('activite')}</span>
         </div>
       )}
 
@@ -288,12 +293,12 @@ export default function HistoriqueInventairePage() {
             <FilterField label="🏷️ Catégorie">
               <FilterSelect value={filterCategorie} onChange={(e) => setFilterCategorie(e.target.value)}>
                 <option value="">Toutes</option>
-                {categories.map((c) => <option key={c} value={c}>{c}</option>)}
+                {categories.map((c) => <option key={c} value={c}>{libelleCategoriePt(voc, c)}</option>)}
               </FilterSelect>
             </FilterField>
-            <FilterField label="🧂 Article">
+            <FilterField label={`🧂 ${voc.Nom('article')}`}>
               <FilterSelect value={filterIngredientId} onChange={(e) => setFilterIngredientId(e.target.value)}>
-                <option value="">Tous</option>
+                <option value="">{voc.acc('article', 'Tous', 'Toutes')}</option>
                 {filteredIngOptions.map((i) => <option key={i.ingredientId} value={i.ingredientId}>{i.nom}</option>)}
               </FilterSelect>
             </FilterField>
@@ -315,7 +320,7 @@ export default function HistoriqueInventairePage() {
           {!loading && applied && histRows.length === 0 && (
             <div style={{ textAlign: 'center', padding: '60px 0', background: 'var(--surface)', borderRadius: 14, border: '1px dashed var(--border)' }}>
               <div style={{ fontSize: '2.5rem', marginBottom: 10 }}>📭</div>
-              <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', fontWeight: 500 }}>Aucun inventaire trouvé pour ces critères.</p>
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', fontWeight: 500 }}>{voc.Aucun('inventaire')} {voc.acc('inventaire', 'trouvé', 'trouvée')} pour ces critères.</p>
             </div>
           )}
 
@@ -328,7 +333,7 @@ export default function HistoriqueInventairePage() {
                 <thead>
                   <tr style={{ background: `linear-gradient(135deg, ${themeDark}, ${themeColor})` }}>
                     <th style={{ padding: '12px 14px', textAlign: 'center', width: 40, color: '#fff', background: 'transparent', borderBottom: 'none' }} />
-                    {['Article', 'Date', 'Qté réelle', 'Note', 'Par'].map((h) => (
+                    {[voc.Nom('article'), 'Date', 'Qté réelle', 'Note', 'Par'].map((h) => (
                       <th key={h} style={{ padding: '12px 14px', textAlign: h === 'Qté réelle' ? 'right' : 'left', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', color: '#fff', background: 'transparent', borderBottom: 'none' }}>{h}</th>
                     ))}
                     <th style={{ padding: '12px 14px', textAlign: 'center', fontWeight: 800, fontSize: '0.78rem', textTransform: 'uppercase', color: '#fff', background: 'transparent', borderBottom: 'none' }}>Action</th>
@@ -349,10 +354,10 @@ export default function HistoriqueInventairePage() {
                         </td>
                         <td style={{ padding: '10px 14px' }}>
                           <div style={{ fontWeight: 700, fontSize: '0.86rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            {r.isPT && <span style={{ background: '#ede9fe', border: '1px solid #a78bfa', borderRadius: 5, padding: '1px 6px', fontSize: '0.68rem', fontWeight: 800, color: '#7c3aed', marginRight: 6 }}>PT</span>}
+                            {r.isPT && <span style={{ background: '#ede9fe', border: '1px solid #a78bfa', borderRadius: 5, padding: '1px 6px', fontSize: '0.68rem', fontWeight: 800, color: '#7c3aed', marginRight: 6 }}>{voc.Court('pt')}</span>}
                             {r.ingredientNom}
                           </div>
-                          <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.unite} · {r.categorie}</div>
+                          <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.unite} · {libelleCategoriePt(voc, r.categorie)}</div>
                         </td>
                         <td style={{ padding: '10px 14px' }}>
                           <span style={{ background: themeLight, border: `1px solid ${themeBorder}`, borderRadius: 7, padding: '3px 10px', fontWeight: 700, fontSize: '0.82rem', color: themeColor, whiteSpace: 'nowrap' }}>
@@ -415,7 +420,7 @@ export default function HistoriqueInventairePage() {
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <div style={{ background: '#fff', borderRadius: 18, padding: 0, maxWidth: 430, width: '90%', overflow: 'hidden', boxShadow: '0 20px 60px rgba(0,0,0,0.35)' }}>
             <div style={{ background: `linear-gradient(135deg, ${themeDark}, ${themeColor})`, padding: '20px 26px' }}>
-              <h3 style={{ fontSize: '1.05rem', fontWeight: 900, color: '#fff', margin: 0, marginBottom: 4 }}>✏️ Modifier l'inventaire</h3>
+              <h3 style={{ fontSize: '1.05rem', fontWeight: 900, color: '#fff', margin: 0, marginBottom: 4 }}>✏️ Modifier {voc.le('inventaire')}</h3>
               <p style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.78)', margin: 0 }}>
                 {editEntry.ingredientNom} · {fmtDate(editEntry.dateInventaire)}
               </p>

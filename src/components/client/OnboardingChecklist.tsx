@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../../api/client';
+import { useVocabulaire } from '../../hooks/useVocabulaire';
 
 /** Répartition par composant souscrit de l'étape « capacités » (lot 1b, §3.5). */
 interface EtapeComposant {
@@ -35,6 +36,7 @@ interface OnboardingEtat {
  * de la conversation IA est faite par AssistantWidget (POST …/onboarding/purge).
  */
 export default function OnboardingChecklist() {
+  const voc = useVocabulaire();
   const [etat, setEtat] = useState<OnboardingEtat | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -115,7 +117,7 @@ export default function OnboardingChecklist() {
 
       {allDone && (
         <div style={{ marginTop: 12, fontSize: '0.8rem', color: '#15803d', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 10, padding: '10px 14px' }}>
-          Toutes les étapes de votre mise en route sont terminées. Le guide 🤖 réapparaîtra automatiquement si votre configuration évolue (nouvelle activité, labo, module…).
+          Toutes les étapes de votre mise en route sont terminées. Le guide 🤖 réapparaîtra automatiquement si votre configuration évolue ({voc.nouveau('activite')}, {voc.nom('labo')}, module…).
         </div>
       )}
     </div>

@@ -5,6 +5,7 @@ import GuideButton from './GuideButton';
 import { useConfirm } from '../common/ConfirmDialog';
 import HistoryFilterBar, { FilterField, FilterInput, FilterSelect } from '../common/HistoryFilterBar';
 import Pagination from '../common/Pagination';
+import { useVocabulaire } from '../../hooks/useVocabulaire';
 
 // Thème violet de l'Espace Acheteurs
 const C = '#6d28d9';
@@ -54,6 +55,7 @@ const initialesDe = (nom: string) =>
 
 export default function AcheteursPage() {
   const { confirm } = useConfirm();
+  const voc = useVocabulaire();
   const [acheteurs, setAcheteurs] = useState<Acheteur[]>([]);
   const [quota, setQuota] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -163,7 +165,7 @@ export default function AcheteursPage() {
     const ok = await confirm({
       title: `Supprimer « ${a.nom} » de votre carnet ?`,
       details: [
-        'Ses commandes expédiées ou livrées et leurs factures sont CONSERVÉES dans l\'historique (le stock ne bouge pas).',
+        `Ses commandes expédiées ou livrées et leurs factures sont CONSERVÉES dans l'historique (${voc.le('stock')} ne bouge pas).`,
         'Ses commandes encore en attente seront annulées.',
         ...(a.compte !== 'aucun' ? ['Son compte de connexion au portail sera supprimé.'] : []),
       ],
@@ -203,16 +205,16 @@ export default function AcheteursPage() {
         <div style={{ flex: '1 1 300px', minWidth: 240 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
             <div style={{ background: 'rgba(255,255,255,0.15)', borderRadius: 10, padding: '7px 9px', fontSize: '1.2rem' }}>🤝</div>
-            <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0 }}>Carnet d'Acheteurs</h1>
+            <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0 }}>Carnet {voc.de('acheteur', true, 'Nom')}</h1>
           </div>
           <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.85rem', margin: 0 }}>
-            Vos clients B2B — ajoutez-les, invitez-les et préparez vos ventes depuis le stock labo
+            Vos clients B2B — ajoutez-les, invitez-les et préparez {voc.votre('vente', true)} depuis {voc.le('stock')} {voc.compl('labo')}
           </p>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
           <div style={{ background: 'rgba(255,255,255,0.14)', border: '1px solid rgba(255,255,255,0.25)', borderRadius: 14, padding: '10px 20px', textAlign: 'center', minWidth: 90 }}>
             <div style={{ fontSize: '1.4rem', fontWeight: 900, color: '#fff', whiteSpace: 'nowrap' }}>{acheteurs.length}<span style={{ fontSize: '0.85rem', fontWeight: 600, opacity: 0.7 }}> / {quota}</span></div>
-            <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.75)', fontWeight: 600 }}>acheteurs</div>
+            <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.75)', fontWeight: 600 }}>{voc.pl('acheteur')}</div>
           </div>
           <GuideButton section="acheteurs-carnet" />
         </div>
@@ -233,7 +235,7 @@ export default function AcheteursPage() {
 
       {/* Bloc filtres (composant partagé) + actions de création */}
       <HistoryFilterBar accent={C} accentDark={CD}
-        subtitle={`${filtered.length} acheteur${filtered.length > 1 ? 's' : ''} affiché${filtered.length > 1 ? 's' : ''}`}
+        subtitle={`${voc.n('acheteur', filtered.length)} ${voc.acc('acheteur', 'affiché', 'affichée', filtered.length)}`}
         onReset={filtresActifs ? () => { setSearch(''); setCompteFilter(''); setActifFilter(''); } : undefined}
         actions={
           <>
@@ -243,7 +245,7 @@ export default function AcheteursPage() {
             <button onClick={openAdd} disabled={quotaAtteint}
               title={quotaAtteint ? 'Quota atteint — demandez une augmentation de capacité' : undefined}
               style={{ height: 36, display: 'inline-flex', alignItems: 'center', gap: 6, padding: '0 16px', borderRadius: 8, border: 'none', background: quotaAtteint ? '#cbd5e1' : `linear-gradient(135deg, ${CD}, ${C})`, color: '#fff', fontWeight: 700, fontSize: '0.82rem', cursor: quotaAtteint ? 'not-allowed' : 'pointer', boxShadow: quotaAtteint ? 'none' : '0 4px 14px rgba(109,40,217,0.3)' }}>
-              ➕ Ajouter un acheteur
+              ➕ Ajouter {voc.un('acheteur')}
             </button>
           </>
         }>
@@ -277,7 +279,7 @@ export default function AcheteursPage() {
             {acheteurs.length === 0 ? 'Votre carnet est vide' : 'Aucun résultat'}
           </div>
           <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-            {acheteurs.length === 0 ? 'Ajoutez vos premiers acheteurs manuellement ou importez-les depuis Excel.' : 'Modifiez votre recherche ou vos filtres.'}
+            {acheteurs.length === 0 ? `Ajoutez ${voc.acc('acheteur', 'vos premiers', 'vos premières')} ${voc.pl('acheteur')} manuellement ou importez-les depuis Excel.` : 'Modifiez votre recherche ou vos filtres.'}
           </div>
         </div>
       ) : (
@@ -333,7 +335,7 @@ export default function AcheteursPage() {
 
                   {/* Pied : état + actions */}
                   <div style={{ borderTop: '1px solid #f1f5f9', background: '#fbfaff', padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <button onClick={() => toggleActif(a)} disabled={busy} title={a.actif ? 'Désactiver cet acheteur' : 'Activer cet acheteur'}
+                    <button onClick={() => toggleActif(a)} disabled={busy} title={a.actif ? `Désactiver ${voc.ce('acheteur')}` : `Activer ${voc.ce('acheteur')}`}
                       style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'inline-flex', alignItems: 'center', gap: 7 }}>
                       <div style={{ width: 36, height: 20, borderRadius: 10, position: 'relative', background: a.actif ? '#059669' : '#cbd5e1', transition: 'background 0.2s', flexShrink: 0 }}>
                         <div style={{ position: 'absolute', top: 2, left: a.actif ? 18 : 2, width: 16, height: 16, borderRadius: '50%', background: '#fff', boxShadow: '0 1px 4px rgba(0,0,0,0.18)', transition: 'left 0.2s' }} />
@@ -368,7 +370,7 @@ export default function AcheteursPage() {
           <div style={{ background: '#fff', borderRadius: 16, width: '100%', maxWidth: 560, maxHeight: '88vh', overflowY: 'auto', padding: 24 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
               <h2 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: CD }}>
-                {editing ? `✏️ ${editing.nom}` : '➕ Ajouter un acheteur'}
+                {editing ? `✏️ ${editing.nom}` : `➕ Ajouter ${voc.un('acheteur')}`}
               </h2>
               <button onClick={() => setModalOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.1rem' }}>✕</button>
             </div>
@@ -386,7 +388,7 @@ export default function AcheteursPage() {
               {!editing && (
                 <label style={{ gridColumn: '1 / -1', display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.82rem', fontWeight: 600, color: form.creerCompte ? C : '#64748b', cursor: 'pointer', background: form.creerCompte ? CL : '#f8fafc', border: `1.5px solid ${form.creerCompte ? CB : '#e2e8f0'}`, borderRadius: 10, padding: '10px 12px' }}>
                   <input type="checkbox" checked={form.creerCompte} onChange={e => set('creerCompte')(e.target.checked)} style={{ accentColor: C }} />
-                  Créer le compte portail — une invitation est envoyée par email, l'acheteur pourra commander en ligne
+                  Créer le compte portail — une invitation est envoyée par email, {voc.le('acheteur')} pourra commander en ligne
                 </label>
               )}
             </div>

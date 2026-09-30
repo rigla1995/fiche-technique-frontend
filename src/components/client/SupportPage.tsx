@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import api from '../../api/client';
 import GuideButton from './GuideButton';
@@ -6,11 +6,13 @@ import type { SupportDemande } from '../../types';
 import { useNotifications } from '../../context/NotificationContext';
 import { useAuth } from '../../context/AuthContext';
 import { useConfirm } from '../common/ConfirmDialog';
+import { useVocabulaire } from '../../hooks/useVocabulaire';
+import type { Vocab } from '../../vocab/vocab';
 
-const TYPE_LABELS: Record<string, { label: string; icon: string; desc: string }> = {
-  supplement: { label: 'Ajout de capacité', icon: '➕', desc: 'Demander l\'ajout d\'activités, labos, gérants ou de l\'option Acheteurs' },
+const typeLabels = (voc: Vocab): Record<string, { label: string; icon: string; desc: string }> => ({
+  supplement: { label: 'Ajout de capacité', icon: '➕', desc: `Demander l'ajout ${voc.de('activite', true)}, ${voc.pl('labo')}, ${voc.pl('gerant')} ou de l'option ${voc.Court('acheteur', true)}` },
   aide:       { label: 'Besoin d\'aide',     icon: '💬', desc: 'Nous décrire votre besoin ou signaler un problème' },
-};
+});
 
 const STATUT: Record<string, { label: string; bg: string; text: string; border: string }> = {
   en_attente: { label: 'En attente', bg: '#fef3c7', text: '#92400e', border: '#f59e0b' },
@@ -65,6 +67,8 @@ export default function SupportPage() {
   const isGerant = user?.role === 'gerant';
   const { clearAllFromDB } = useNotifications();
   const { confirm } = useConfirm();
+  const voc = useVocabulaire();
+  const TYPE_LABELS = useMemo(() => typeLabels(voc), [voc]);
   const [searchParams] = useSearchParams();
   const [demandes, setDemandes] = useState<SupportDemande[]>([]);
   const [loading, setLoading] = useState(true);
@@ -169,7 +173,7 @@ export default function SupportPage() {
       if (formType === 'supplement') {
         if (nbActivites + nbLabos + nbGerants + acheteursCible === 0) { setError('Indiquez au moins un supplément'); setSaving(false); return; }
         if (acheteursCible > 0 && acheteursNeedsLabo) {
-          setError("L'option Acheteurs nécessite au moins un labo — ajoutez-en un à votre demande.");
+          setError(`L'option ${voc.Court('acheteur', true)} nécessite au moins ${voc.un('labo')} — ${voc.acc('labo', 'ajoutez-en un', 'ajoutez-en une')} à votre demande.`);
           setSaving(false);
           return;
         }
@@ -340,7 +344,7 @@ export default function SupportPage() {
                     <div style={{ fontSize: '0.78rem', color: '#92400e', marginTop: 2 }}>
                       {hasPendingPremium
                         ? 'Demande déjà envoyée — en attente de validation.'
-                        : 'Débloquez l\'Espace Produit complet : produits composés, fiches techniques, production.'}
+                        : `Débloquez ${voc.le('espace_produits', false, 'Nom')} ${voc.acc('espace_produits', 'complet', 'complète')} : ${voc.pl('produit_compose')}, ${voc.pl('fiche_technique')}, production.`}
                     </div>
                   </div>
                   <span style={{ marginLeft: 'auto', color: '#b45309', fontSize: '0.85rem', fontWeight: 700 }}>
@@ -370,16 +374,16 @@ export default function SupportPage() {
                     <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 10, padding: '12px 16px', fontSize: '0.82rem', color: '#1e40af', marginBottom: 4 }}>
                       Configuration actuelle :{' '}
                       <strong>
-                        {supplPricing.nbActivites} activité{supplPricing.nbActivites !== 1 ? 's' : ''}
-                        {supplPricing.nbLabos > 0 ? ` · ${supplPricing.nbLabos} labo${supplPricing.nbLabos !== 1 ? 's' : ''}` : ''}
-                        {supplPricing.nbGerants > 0 ? ` · ${supplPricing.nbGerants} gérant${supplPricing.nbGerants !== 1 ? 's' : ''}` : ''}
+                        {supplPricing.nbActivites} {voc.nom('activite', supplPricing.nbActivites !== 1)}
+                        {supplPricing.nbLabos > 0 ? ` · ${supplPricing.nbLabos} ${voc.nom('labo', supplPricing.nbLabos !== 1)}` : ''}
+                        {supplPricing.nbGerants > 0 ? ` · ${supplPricing.nbGerants} ${voc.nom('gerant', supplPricing.nbGerants !== 1)}` : ''}
                       </strong>
                     </div>
                   )}
                   {([
-                    { promo: supplPricing?.activitePromo, label: 'activités supplémentaires' },
-                    { promo: supplPricing?.laboPromo,     label: 'labos supplémentaires' },
-                    { promo: supplPricing?.gerantPromo,   label: 'gérants supplémentaires' },
+                    { promo: supplPricing?.activitePromo, label: `${voc.pl('activite')} supplémentaires` },
+                    { promo: supplPricing?.laboPromo,     label: `${voc.pl('labo')} supplémentaires` },
+                    { promo: supplPricing?.gerantPromo,   label: `${voc.pl('gerant')} supplémentaires` },
                   ] as { promo: PromoInfo | null | undefined; label: string }[]).filter(x => x.promo).map(({ promo, label }) => (
                     <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 14px', background: '#fef3c7', border: '1px solid #fde68a', borderRadius: 10, fontSize: '0.8rem', color: '#92400e', fontWeight: 600 }}>
                       <span style={{ fontSize: '1rem' }}>🏷️</span>
@@ -387,9 +391,9 @@ export default function SupportPage() {
                     </div>
                   ))}
                   {[
-                    { label: 'Activités supplémentaires', value: nbActivites, set: setNbActivites, prix: supplPricing?.prixActiviteSup, promo: supplPricing?.activitePromo, hasPromo: !!supplPricing?.activitePromo },
-                    { label: 'Labos supplémentaires',     value: nbLabos,     set: setNbLabos,     prix: supplPricing?.prixLaboSup,     promo: supplPricing?.laboPromo,     hasPromo: !!supplPricing?.laboPromo },
-                    { label: 'Gérants supplémentaires',   value: nbGerants,   set: setNbGerants,   prix: supplPricing?.prixGerantSup,   promo: supplPricing?.gerantPromo,   hasPromo: !!supplPricing?.gerantPromo },
+                    { label: `${voc.Pl('activite')} supplémentaires`, value: nbActivites, set: setNbActivites, prix: supplPricing?.prixActiviteSup, promo: supplPricing?.activitePromo, hasPromo: !!supplPricing?.activitePromo },
+                    { label: `${voc.Pl('labo')} supplémentaires`,     value: nbLabos,     set: setNbLabos,     prix: supplPricing?.prixLaboSup,     promo: supplPricing?.laboPromo,     hasPromo: !!supplPricing?.laboPromo },
+                    { label: `${voc.Pl('gerant')} supplémentaires`,   value: nbGerants,   set: setNbGerants,   prix: supplPricing?.prixGerantSup,   promo: supplPricing?.gerantPromo,   hasPromo: !!supplPricing?.gerantPromo },
                   ].map(({ label, value, set, prix, promo, hasPromo }) => {
                     const prixApresPromo = promo && prix != null
                       ? promo.type === 'free_months' ? 0
@@ -433,21 +437,21 @@ export default function SupportPage() {
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                         <div style={{ flex: 1, minWidth: 180 }}>
                           <div style={{ fontSize: '0.85rem', fontWeight: 600, color: '#374151' }}>
-                            🤝 Option Acheteurs
+                            {voc.icon('acheteur')} Option {voc.Court('acheteur', true)}
                             {(supplPricing.nbAcheteurs ?? 0) > 0 && (
                               <span style={{ marginLeft: 8, fontSize: '0.68rem', fontWeight: 700, padding: '1px 8px', borderRadius: 8, background: '#ede9fe', color: '#6d28d9' }}>
-                                palier actuel : jusqu'à {supplPricing.palierAcheteurs} acheteurs
+                                palier actuel : jusqu'à {supplPricing.palierAcheteurs} {voc.pl('acheteur')}
                               </span>
                             )}
                           </div>
                           <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: 2 }}>
                             {(supplPricing.nbAcheteurs ?? 0) > 0
                               ? 'Passez à un palier supérieur — le nouveau palier remplace l\'actuel.'
-                              : 'Activez le carnet d\'acheteurs B2B (ventes depuis votre labo, portail de commande).'}
+                              : `Activez le carnet ${voc.de('acheteur', true)} B2B (${voc.pl('vente')} depuis ${voc.votre('labo')}, portail de commande).`}
                           </div>
                           {acheteursNeedsLabo && (
                             <div style={{ fontSize: '0.72rem', color: '#b45309', marginTop: 4, fontWeight: 600 }}>
-                              ⚠️ Nécessite au moins un labo — ajoutez-en un à cette demande pour activer l'option.
+                              ⚠️ Nécessite au moins {voc.un('labo')} — {voc.acc('labo', 'ajoutez-en un', 'ajoutez-en une')} à cette demande pour activer l'option.
                             </div>
                           )}
                         </div>
@@ -459,7 +463,7 @@ export default function SupportPage() {
                           <option value={0}>{(supplPricing.nbAcheteurs ?? 0) > 0 ? 'Palier inchangé' : 'Non merci'}</option>
                           {paliersDispo.map(({ palier, prix }) => (
                             <option key={palier} value={palier}>
-                              Jusqu'à {palier} acheteurs — {prix.toFixed(0)} DT/mois
+                              Jusqu'à {palier} {voc.pl('acheteur')} — {prix.toFixed(0)} DT/mois
                             </option>
                           ))}
                         </select>
@@ -476,7 +480,7 @@ export default function SupportPage() {
                       <div>
                         <div style={{ fontSize: '0.78rem', color: '#6d28d9', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Nouveau total estimé</div>
                         <div style={{ fontSize: '0.78rem', color: '#7c3aed', marginTop: 2 }}>+{supplDelta.toFixed(0)} DT/mois de plus</div>
-                        <div style={{ fontSize: '0.7rem', color: '#8b5cf6', marginTop: 3 }}>Base : mensualité actuelle (option Acheteurs incluse le cas échéant)</div>
+                        <div style={{ fontSize: '0.7rem', color: '#8b5cf6', marginTop: 3 }}>Base : mensualité actuelle (option {voc.Court('acheteur', true)} incluse le cas échéant)</div>
                       </div>
                       <div style={{ textAlign: 'right' }}>
                         {supplHasMensPromo && (
@@ -595,10 +599,10 @@ export default function SupportPage() {
                   {d.type === 'supplement' && (
                     <span>
                       {[
-                        d.nbActivitesSupp && `+${d.nbActivitesSupp} activité${(d.nbActivitesSupp || 0) > 1 ? 's' : ''}`,
-                        d.nbLabosSupp && `+${d.nbLabosSupp} labo${(d.nbLabosSupp || 0) > 1 ? 's' : ''}`,
-                        d.nbGerantsSupp && `+${d.nbGerantsSupp} gérant${(d.nbGerantsSupp || 0) > 1 ? 's' : ''}`,
-                        d.nbAcheteursCible && `Option Acheteurs → palier jusqu'à ${d.nbAcheteursCible}`,
+                        d.nbActivitesSupp && `+${voc.n('activite', d.nbActivitesSupp)}`,
+                        d.nbLabosSupp && `+${voc.n('labo', d.nbLabosSupp)}`,
+                        d.nbGerantsSupp && `+${voc.n('gerant', d.nbGerantsSupp)}`,
+                        d.nbAcheteursCible && `Option ${voc.Court('acheteur', true)} → palier jusqu'à ${d.nbAcheteursCible}`,
                       ].filter(Boolean).join(' · ')}
                     </span>
                   )}

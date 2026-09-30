@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
+import { useVocabulaire } from '../../hooks/useVocabulaire';
 import type { Product, Activite, ActiviteIngredient, CategorieProduit } from '../../types';
 import FicheTechniqueModal from './FicheTechniqueModal';
 import RecipeTree from './RecipeTree';
@@ -30,6 +31,7 @@ const ExcelIcon = () => (
 
 export default function ProductList() {
   const { t } = useTranslation();
+  const voc = useVocabulaire();
   const { canWrite, user } = useAuth();
   const canWriteProducts = canWrite && user?.role !== 'gerant';
 
@@ -376,7 +378,7 @@ export default function ProductList() {
       <button
         className="btn btn-ghost btn-sm"
         style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: 2, padding: '5px 8px', borderRadius: 7, fontSize: '0.6rem', fontWeight: 600, color: '#374151', minWidth: 54, ...disabledStyle }}
-        title="Générer la Fiche Technique"
+        title={`Générer ${voc.le('fiche_technique', false, 'Titre')}`}
         disabled={!canWriteProducts}
         onClick={() => {
           setFtPopup({ productId: p.id, productName: p.name, hasIngredients: !!(p.ingredientsCount && p.ingredientsCount > 0), fallbackActId: getProductResolvedActId(p) });
@@ -438,15 +440,15 @@ export default function ProductList() {
             </div>
             <p style={{ color: 'rgba(255,255,255,0.55)', margin: 0, fontSize: '0.83rem', letterSpacing: '0.01em' }}>
               {tab === 'utilisable'
-                ? 'Produits semi-finis utilisés dans la composition de vos recettes'
-                : 'Produits finis destinés à la vente, définis par leurs fiches techniques'}
+                ? `${voc.Pl('produit')} ${voc.acc('produit', 'semi-finis', 'semi-finies')} ${voc.acc('produit', 'utilisés', 'utilisées')} dans la composition de ${voc.votre('recette', true)}`
+                : `${voc.Pl('produit')} ${voc.acc('produit', 'finis', 'finies')} ${voc.acc('produit', 'destinés', 'destinées')} ${voc.au('vente')}, ${voc.acc('produit', 'définis', 'définies')} par leurs ${voc.pl('fiche_technique')}`}
             </p>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
             <div style={{ background: 'rgba(99,102,241,0.12)', border: '1px solid rgba(99,102,241,0.22)', borderRadius: 14, padding: '10px 20px', textAlign: 'center', minWidth: 80 }}>
               <div style={{ fontSize: '1.8rem', fontWeight: 900, color: '#818cf8', lineHeight: 1 }}>{byTab.length}</div>
               <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.5)', marginTop: 2 }}>
-                produit{byTab.length !== 1 ? 's' : ''}
+                {voc.nom('produit', byTab.length !== 1)}
               </div>
             </div>
             <GuideButton section={tab === 'utilisable' ? 'produits-utilisables' : 'produits-vendables'} />
@@ -460,8 +462,8 @@ export default function ProductList() {
           {isVendable && (
             <div style={{ display: 'flex', gap: 4, borderBottom: '2px solid #e2e8f0', marginBottom: 20 }}>
               {([
-                ['produit', '🍽️ Produits vendables'],
-                ['supplement', '➕ Suppléments vendables'],
+                ['produit', `🍽️ ${voc.Pl('produit_vendable')}`],
+                ['supplement', `${voc.icon('supplement')} ${voc.Pl('supplement')} vendables`],
               ] as const).map(([key, label]) => (
                 <button key={key} onClick={() => { setVendableSubTab(key); setPage(1); }}
                   style={{
@@ -496,15 +498,15 @@ export default function ProductList() {
               {canWriteProducts && (
                 <button onClick={() => openAddModal(isVendable && vendableSubTab === 'supplement')}
                   style={{ height: 36, padding: '0 20px', borderRadius: 8, cursor: 'pointer', fontSize: '0.85rem', border: 'none', background: 'linear-gradient(135deg, #6366f1, #818cf8)', color: '#fff', fontWeight: 700, whiteSpace: 'nowrap' }}>
-                  + {isVendable ? (vendableSubTab === 'supplement' ? 'Supplément vendable' : 'Produit vendable') : 'Produit utilisable'}
+                  + {isVendable ? (vendableSubTab === 'supplement' ? `${voc.Nom('supplement')} vendable` : voc.Nom('produit_vendable')) : voc.Nom('produit_utilisable')}
                 </button>
               )}
             </>}
           >
             {byTab.length > 0 && allActivities.length > 0 && (
-              <FilterField label="📍 Activité">
+              <FilterField label={`📍 ${voc.Nom('activite')}`}>
                 <FilterSelect value={filterActiviteId ?? ''} onChange={(e) => { setFilterActiviteId(e.target.value ? Number(e.target.value) : null); setPage(1); }}>
-                  <option value="">Toutes les activités</option>
+                  <option value="">{voc.Tous('activite')}</option>
                   {allActivities.map((a) => <option key={a.id} value={a.id}>{a.nom}</option>)}
                 </FilterSelect>
               </FilterField>
@@ -533,20 +535,20 @@ export default function ProductList() {
                   {isVendable ? '🍽️' : '🧪'}
                 </div>
                 <h2 style={{ margin: '0 0 8px', fontSize: '1.15rem', fontWeight: 700, color: 'var(--text)' }}>
-                  {isVendable ? 'Aucun produit vendable' : 'Aucun produit utilisable'}
+                  {voc.Aucun(isVendable ? 'produit_vendable' : 'produit_utilisable')}
                 </h2>
                 <p style={{ margin: '0 0 4px', fontSize: '0.88rem', color: 'var(--text-muted)', maxWidth: 340 }}>
-                  Commencez par créer votre premier produit.
+                  Commencez par créer {voc.acc('produit', 'votre premier', 'votre première')} {voc.nom('produit')}.
                 </p>
               </div>
             ) : byActivite.length === 0 && filterActiviteId ? (
               <div className="empty-state">
                 <span className="empty-icon">📍</span>
-                <p>Aucun produit pour cette activité.</p>
+                <p>{voc.Aucun('produit')} pour {voc.ce('activite')}.</p>
               </div>
             ) : (
               <div className="empty-state">
-                <span className="empty-icon">{isVendable ? '🍔' : '🧪'}</span>
+                <span className="empty-icon">{isVendable ? voc.icon('produit') : '🧪'}</span>
                 <p>{t('common.no_result')}</p>
               </div>
             )
@@ -555,21 +557,21 @@ export default function ProductList() {
               {(() => {
                 const renderProductCard = (p: Product) => {
                   const isSup = !!p.isSupplement;
-                  const icon = isSup ? '➕' : (isVendable ? '🍽️' : '🧪');
+                  const icon = isSup ? voc.icon('supplement') : (isVendable ? '🍽️' : '🧪');
                   const iconGradient = isSup ? 'linear-gradient(135deg, #d97706 0%, #b45309 100%)' : 'linear-gradient(135deg, #6366f1 0%, #4338ca 100%)';
                   const nbArt = p.ingredientsCount ?? 0;
                   const nbSub = p.subProductsCount ?? 0;
                   const summaryParts: string[] = [];
-                  if (nbArt) summaryParts.push(`${nbArt} article${nbArt > 1 ? 's' : ''}`);
-                  if (nbSub) summaryParts.push(isVendable ? `${nbSub} PU` : `${nbSub} sous-produit${nbSub > 1 ? 's' : ''}`);
+                  if (nbArt) summaryParts.push(voc.n('article', nbArt));
+                  if (nbSub) summaryParts.push(isVendable ? `${nbSub} ${voc.court('produit_utilisable', nbSub)}` : `${nbSub} sous-produit${nbSub > 1 ? 's' : ''}`);
                   const badges = (
                     <>
                       {isVendable && p.categorieProduitName && (
                         <span style={{ fontSize: '0.62rem', fontWeight: 700, letterSpacing: '0.04em', background: '#e0e7ff', color: '#3730a3', border: '1px solid #c7d2fe', borderRadius: 20, padding: '2px 8px' }}>🏷️ {p.categorieProduitName}</span>
                       )}
                       {(p.origine ?? 'activite') === 'labo' && (
-                        <span title="Fabriqué au labo — reçu uniquement par transfert (pas d'appro manuel en activité)."
-                          style={{ fontSize: '0.62rem', fontWeight: 700, letterSpacing: '0.04em', background: '#ecfeff', color: '#0e7490', border: '1px solid #a5f3fc', borderRadius: 20, padding: '2px 8px', whiteSpace: 'nowrap' }}>⇄ Transfert uniquement</span>
+                        <span title={`${voc.acc('produit_utilisable', 'Fabriqué', 'Fabriquée')} ${voc.au('labo')} — ${voc.acc('produit_utilisable', 'reçu', 'reçue')} uniquement par ${voc.nom('transfert')} (pas ${voc.de('appro', false, 'court')} ${voc.acc('appro', 'manuel', 'manuelle')} en ${voc.nom('activite')}).`}
+                          style={{ fontSize: '0.62rem', fontWeight: 700, letterSpacing: '0.04em', background: '#ecfeff', color: '#0e7490', border: '1px solid #a5f3fc', borderRadius: 20, padding: '2px 8px', whiteSpace: 'nowrap' }}>⇄ {voc.Nom('transfert')} uniquement</span>
                       )}
                     </>
                   );
@@ -631,7 +633,7 @@ export default function ProductList() {
                 </div>
                 <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                   <div style={{ background: '#f0fdf4', border: '1px solid #c7d2fe', borderRadius: 8, padding: '12px 14px', fontSize: '0.88rem', color: '#064e3b' }}>
-                    <strong>{bySubTab.length}</strong> {vendableSubTab === 'supplement' ? 'supplément(s) vendable(s)' : tab === 'vendable' ? 'produit(s) vendable(s)' : 'produit(s) utilisable(s)'} seront exportés avec les filtres actuels.
+                    <strong>{bySubTab.length}</strong> {vendableSubTab === 'supplement' ? `${voc.nomS('supplement')} vendable(s) seront ${voc.acc('supplement', 'exportés', 'exportées')}` : tab === 'vendable' ? `${voc.nomS('produit_vendable')} seront ${voc.acc('produit_vendable', 'exportés', 'exportées')}` : `${voc.nomS('produit_utilisable')} seront ${voc.acc('produit_utilisable', 'exportés', 'exportées')}`} avec les filtres actuels.
                   </div>
                   {tab === 'vendable' && (
                     <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer', background: '#f8fafc', border: '1.5px solid #e2e8f0', borderRadius: 8, padding: '12px 14px' }}>
@@ -642,7 +644,7 @@ export default function ProductList() {
                         style={{ width: 16, height: 16, marginTop: 1, flexShrink: 0, accentColor: '#1D6F42' }}
                       />
                       <span style={{ fontSize: '0.88rem', color: 'var(--text)', lineHeight: 1.4 }}>
-                        Inclure aussi les <strong>{vendableSubTab === 'supplement' ? 'produits vendables' : 'suppléments vendables'}</strong> dans une feuille séparée du même fichier
+                        Inclure aussi {voc.det(vendableSubTab === 'supplement' ? 'produit_vendable' : 'supplement', 'le', true)}<strong>{vendableSubTab === 'supplement' ? voc.pl('produit_vendable') : `${voc.pl('supplement')} vendables`}</strong> dans une feuille séparée du même fichier
                       </span>
                     </label>
                   )}
@@ -677,7 +679,7 @@ export default function ProductList() {
               <div className="modal" onClick={(e) => e.stopPropagation()}>
                 <div className="modal-header" style={{ background: 'linear-gradient(135deg, #1e1b4b, #4338ca)', borderBottom: 'none' }}>
                   <h2 style={{ color: '#fff', margin: 0 }}>
-                    {popup.type === 'parentProducts' ? 'Utilisé dans' : 'Recette'} — {popup.productName}
+                    {popup.type === 'parentProducts' ? `${voc.acc('pt', 'Utilisé', 'Utilisée')} dans` : voc.Nom('recette')} — {popup.productName}
                   </h2>
                   <button className="modal-close" onClick={closePopup}>×</button>
                 </div>
@@ -691,8 +693,8 @@ export default function ProductList() {
                       <table className="table">
                         <thead style={{ background: 'linear-gradient(135deg, #1e1b4b, #4338ca)' }}>
                           <tr>
-                            <th style={{ color: '#fff', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase' }}>Produit</th>
-                            <th style={{ textAlign: 'right', color: '#fff', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase' }}>Portion</th>
+                            <th style={{ color: '#fff', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase' }}>{voc.Nom('produit')}</th>
+                            <th style={{ textAlign: 'right', color: '#fff', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase' }}>{voc.Nom('portion')}</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -707,7 +709,7 @@ export default function ProductList() {
                     ) : (
                       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '32px 0' }}>
                         <span style={{ fontSize: '2rem', marginBottom: 8 }}>🍽️</span>
-                        <p style={{ color: 'var(--text-muted)', textAlign: 'center', margin: 0 }}>Aucun produit n'utilise ce produit transformé.</p>
+                        <p style={{ color: 'var(--text-muted)', textAlign: 'center', margin: 0 }}>{voc.Aucun('produit')} n'utilise {voc.ce('pt')}.</p>
                       </div>
                     )
                   )}
@@ -728,16 +730,16 @@ export default function ProductList() {
                 <div className="modal" style={{ maxWidth: 460 }} onClick={(e) => e.stopPropagation()}>
                   <div className="modal-header" style={{ background: hasPtHistory ? 'linear-gradient(135deg, #7c2d12, #dc2626)' : 'linear-gradient(135deg, #b91c1c, #dc2626)', borderRadius: '12px 12px 0 0', padding: '18px 22px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <h2 style={{ color: '#fff', margin: 0, fontSize: '1rem', fontWeight: 800 }}>
-                      {hasPtHistory ? '⚠️ Suppression avec cascade' : '🗑️ Supprimer le produit'}
+                      {hasPtHistory ? '⚠️ Suppression avec cascade' : `🗑️ Supprimer ${voc.le('produit')}`}
                     </h2>
                     <button onClick={() => { setDeleteModal(null); setDeleteError(null); }} style={{ background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: 8, color: '#fff', fontWeight: 900, fontSize: '1.1rem', cursor: 'pointer', padding: '2px 9px', lineHeight: 1 }}>×</button>
                   </div>
                   <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                     <div style={{ background: '#f8faff', borderRadius: 8, padding: '12px 14px', border: '1px solid #e2e8f0' }}>
-                      <div style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Produit</div>
+                      <div style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>{voc.Nom('produit')}</div>
                       <div style={{ fontWeight: 700, fontSize: '0.95rem' }}>{product.name}</div>
                       <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: 2 }}>
-                        {product.type === 'vendable' ? '🛒 Vendable' : '🧪 Utilisable'}
+                        {product.type === 'vendable' ? `${voc.icon('produit_vendable')} Vendable` : '🧪 Utilisable'}
                       </div>
                     </div>
                     {isUtilisable && (
@@ -745,16 +747,16 @@ export default function ProductList() {
                         {hasPtHistory ? (
                           <>
                             <div style={{ fontWeight: 800, color: '#b91c1c', fontSize: '0.88rem', marginBottom: 6 }}>
-                              ⚠️ Cette suppression entraîne des effets en cascade pour l'activité sélectionnée :
+                              ⚠️ Cette suppression entraîne des effets en cascade pour {voc.le('activite')} {voc.acc('activite', 'sélectionné', 'sélectionnée')} :
                             </div>
                             <ul style={{ margin: 0, paddingLeft: 18, fontSize: '0.83rem', color: '#7f1d1d', lineHeight: 1.7 }}>
-                              <li><strong>{historyCount}</strong> appro{(historyCount ?? 0) > 1 ? 's' : ''} supprimé{(historyCount ?? 0) > 1 ? 's' : ''}</li>
-                              <li>Stock PT, inventaires et pertes de cette activité supprimés</li>
+                              <li><strong>{historyCount}</strong> {voc.court('appro', (historyCount ?? 0) > 1)} {voc.acc('appro', 'supprimé', 'supprimée', (historyCount ?? 0) > 1)}</li>
+                              <li>{voc.Nom('stock')} {voc.Court('pt')}, {voc.pl('inventaire')} et {voc.pl('perte')} de {voc.ce('activite')} {voc.accN(['stock', 'inventaire', 'perte'], 'supprimés', 'supprimées')}</li>
                             </ul>
                           </>
                         ) : (
                           <div style={{ fontSize: '0.83rem', color: '#3730a3' }}>
-                            Aucun historique PT — les données de stock seront nettoyées proprement.
+                            Aucun historique {voc.Court('pt')} — les données {voc.de('stock')} seront nettoyées proprement.
                           </div>
                         )}
                       </div>
@@ -870,7 +872,7 @@ export default function ProductList() {
                 api.get(`/api/products${reloadQs ? `?${reloadQs}` : ''}`).then(({ data }) => setProducts(data as Product[]));
               } catch (err: unknown) {
                 const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
-                setAddSaveError(msg || (editingId ? 'Erreur lors de la modification du produit.' : 'Erreur lors de la création du produit.'));
+                setAddSaveError(msg || (editingId ? `Erreur lors de la modification ${voc.du('produit')}.` : `Erreur lors de la création ${voc.du('produit')}.`));
               }
               setAddSaving(false);
             };
@@ -878,8 +880,8 @@ export default function ProductList() {
             const STEPS = [
               { n: 1, d: 1, label: 'Affectation' },
               { n: 2, d: 2, label: 'Identité' },
-              { n: 3, d: 3, label: 'Articles' },
-              { n: 4, d: 4, label: 'Produits Utilisables' },
+              { n: 3, d: 3, label: voc.Pl('article') },
+              { n: 4, d: 4, label: voc.Titre('produit_utilisable', true) },
               { n: 5, d: 5, label: 'Récap' },
             ];
 
@@ -890,9 +892,9 @@ export default function ProductList() {
                   <div style={{ background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 100%)', padding: '18px 22px 14px', borderRadius: '12px 12px 0 0', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
                     <div style={{ flex: 1 }}>
                       <div style={{ color: '#fff', fontWeight: 800, fontSize: '1rem', marginBottom: addModal !== 6 ? 12 : 0 }}>
-                        {addModal === 6 ? (editingId ? '✅ Produit modifié' : '✅ Produit créé')
-                          : editingId ? (isVendable ? (addIsSupplement ? 'Modifier le supplément vendable' : 'Modifier le produit vendable') : 'Modifier le produit utilisable')
-                          : isVendable ? (addIsSupplement ? 'Nouveau supplément vendable' : 'Nouveau produit vendable') : 'Nouveau produit utilisable'}
+                        {addModal === 6 ? (editingId ? `✅ ${voc.Nom('produit')} ${voc.acc('produit', 'modifié', 'modifiée')}` : `✅ ${voc.Nom('produit')} ${voc.acc('produit', 'créé', 'créée')}`)
+                          : editingId ? (isVendable ? (addIsSupplement ? `Modifier ${voc.le('supplement')} vendable` : `Modifier ${voc.le('produit_vendable')}`) : `Modifier ${voc.le('produit_utilisable')}`)
+                          : isVendable ? (addIsSupplement ? `${voc.Nouveau('supplement')} vendable` : voc.Nouveau('produit_vendable')) : voc.Nouveau('produit_utilisable')}
                       </div>
                       {addModal !== 6 && (
                         <div style={{ display: 'flex', gap: 10, width: '100%' }}>
@@ -919,24 +921,24 @@ export default function ProductList() {
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                         <div>
                           <label style={{ display: 'block', fontWeight: 700, fontSize: '0.82rem', color: '#3730a3', marginBottom: 6 }}>
-                            Nom du produit <span style={{ color: '#ef4444' }}>*</span>
+                            Nom {voc.du('produit')} <span style={{ color: '#ef4444' }}>*</span>
                           </label>
-                          <input className="input" placeholder="Ex. Burger Classic, Pizza Margherita…" value={addName}
+                          <input className="input" placeholder={voc.ex('Ex. Burger Classic, Pizza Margherita…', `Ex. ${voc.Nom('produit')} A, ${voc.Nom('produit')} B…`)} value={addName}
                             onChange={(e) => setAddName(e.target.value)} autoFocus
                             style={{ width: '100%', borderColor: '#c7d2fe' }} />
                         </div>
                         <div>
                           <label style={{ display: 'block', fontWeight: 700, fontSize: '0.82rem', color: '#3730a3', marginBottom: 6 }}>
-                            Réf. produit <span style={{ fontSize: '0.75rem', fontWeight: 400, color: 'var(--text-muted)' }}>(optionnel)</span>
+                            Réf. {voc.nom('produit')} <span style={{ fontSize: '0.75rem', fontWeight: 400, color: 'var(--text-muted)' }}>(optionnel)</span>
                           </label>
-                          <input className="input" placeholder="Ex. BRG-001" value={addRef}
+                          <input className="input" placeholder={voc.ex('Ex. BRG-001', 'Ex. REF-001')} value={addRef}
                             onChange={(e) => setAddRef(e.target.value)}
                             style={{ width: '100%', maxWidth: 280, borderColor: '#c7d2fe' }} />
                         </div>
                         {isVendable && (
                           <div>
                             <label style={{ display: 'block', fontWeight: 700, fontSize: '0.82rem', color: '#3730a3', marginBottom: 6 }}>
-                              Catégorie de produit <span style={{ color: '#ef4444' }}>*</span>
+                              Catégorie {voc.de('produit')} <span style={{ color: '#ef4444' }}>*</span>
                             </label>
                             <select className="input" value={addCategorieId} onChange={(e) => setAddCategorieId(e.target.value)} style={{ width: '100%', maxWidth: 320, borderColor: addCategorieId ? '#c7d2fe' : '#fca5a5' }}>
                               <option value="">— Sélectionner une catégorie —</option>
@@ -949,7 +951,7 @@ export default function ProductList() {
                         )}
                         {isVendable && addIsSupplement && (
                           <div style={{ background: '#fffbeb', borderRadius: 10, padding: '10px 16px', border: '1.5px solid #fcd34d', fontSize: '0.82rem', color: '#92400e', fontWeight: 600 }}>
-                            ➕ Ce produit sera créé comme supplément vendable
+                            {voc.icon('supplement')} {voc.Ce('produit')} sera {voc.acc('produit', 'créé', 'créée')} comme {voc.nom('supplement')} vendable
                           </div>
                         )}
                         {/* Vendable géré en STOCK (option, défaut décoché) — logique appros libres */}
@@ -958,16 +960,16 @@ export default function ProductList() {
                             <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', fontWeight: 700, fontSize: '0.85rem', color: '#0f766e' }}>
                               <input type="checkbox" checked={addStockActif} onChange={(e) => setAddStockActif(e.target.checked)}
                                 style={{ accentColor: '#0d9488', width: 16, height: 16 }} />
-                              📦 Gérer ce produit en stock (appros libres)
+                              {voc.icon('stock')} Gérer {voc.ce('produit')} en {voc.nom('stock')} ({voc.court('appro', true)} libres)
                             </label>
                             <div style={{ fontSize: '0.75rem', color: '#115e59', marginTop: 6 }}>
-                              Le produit sera suivi dans le stock des activités choisies à l'étape 1 — catégorie
-                              « Produits Transformés Vendables » : appros manuels, transferts, pertes, seuil et inventaire.
+                              {voc.Le('produit')} sera {voc.acc('produit', 'suivi', 'suivie')} dans {voc.le('stock')} {voc.du('activite', true)} {voc.acc('activite', 'choisis', 'choisies')} à l'étape 1 — catégorie
+                              « {voc.Nom('cat_pt_vendable')} » : {voc.court('appro', true)} {voc.acc('appro', 'manuels', 'manuelles')}, {voc.pl('transfert')}, {voc.pl('perte')}, seuil et {voc.nom('inventaire')}.
                             </div>
                             {addStockActif && allLabos.length > 0 && (
                               <div style={{ marginTop: 10 }}>
                                 <div style={{ fontSize: '0.76rem', fontWeight: 700, color: '#0f766e', marginBottom: 6 }}>
-                                  Labos où ce produit sera aussi géré (appro manuel au labo) :
+                                  {voc.Pl('labo')} où {voc.ce('produit')} sera aussi {voc.acc('produit', 'géré', 'gérée')} ({voc.court('appro')} {voc.acc('appro', 'manuel', 'manuelle')} {voc.au('labo')}) :
                                 </div>
                                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                                   {allLabos.map((l) => {
@@ -976,7 +978,7 @@ export default function ProductList() {
                                       <button type="button" key={l.id}
                                         onClick={() => setAddCheckedLabos(prev => on ? prev.filter(id => id !== l.id) : [...prev, l.id])}
                                         style={{ padding: '5px 12px', borderRadius: 20, border: `1.5px solid ${on ? '#0d9488' : '#e2e8f0'}`, background: on ? '#f0fdfa' : '#fff', color: on ? '#0f766e' : '#94a3b8', fontWeight: on ? 700 : 500, fontSize: '0.78rem', cursor: 'pointer' }}>
-                                        {on ? '✓ ' : ''}🏭 {l.nom}
+                                        {on ? '✓ ' : ''}{voc.icon('labo')} {l.nom}
                                       </button>
                                     );
                                   })}
@@ -1024,7 +1026,7 @@ export default function ProductList() {
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                           {addIsSupplement && (
                             <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, padding: '8px 12px', fontSize: '0.82rem', color: '#475569', fontWeight: 600 }}>
-                              Mode supplément — sélectionnez un seul article
+                              Mode {voc.nom('supplement')} — sélectionnez {voc.acc('article', 'un seul', 'une seule')} {voc.nom('article')}
                             </div>
                           )}
                           {/* Search */}
@@ -1057,7 +1059,7 @@ export default function ProductList() {
                             }}
                           >
                             {articlesFiltered.length === 0 && (
-                              <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '24px 0', fontSize: '0.85rem' }}>Aucun article trouvé</div>
+                              <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '24px 0', fontSize: '0.85rem' }}>{voc.Aucun('article')} {voc.acc('article', 'trouvé', 'trouvée')}</div>
                             )}
                             {articlesFiltered.slice(0, addIngVisible).map((ing) => {
                               const sid = String(ing.id);
@@ -1076,7 +1078,7 @@ export default function ProductList() {
                                   )}
                                   {sel && (
                                     <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }} onClick={e => e.stopPropagation()}>
-                                      <input type="number" step="0.001" min="0" placeholder="portion"
+                                      <input type="number" step="0.001" min="0" placeholder={voc.nom('portion')}
                                         value={line?.portion || ''}
                                         onChange={(e) => updatePortion(sid, e.target.value)}
                                         style={{ width: 72, padding: '3px 6px', borderRadius: 6, border: `1.5px solid ${portionValid ? '#c7d2fe' : '#ef4444'}`, fontSize: '0.82rem', textAlign: 'right' }} />
@@ -1088,13 +1090,13 @@ export default function ProductList() {
                             })}
                             {articlesFiltered.length > addIngVisible && (
                               <div style={{ textAlign: 'center', padding: '8px 0', fontSize: '0.73rem', color: '#94a3b8' }}>
-                                ↓ {articlesFiltered.length - addIngVisible} article{articlesFiltered.length - addIngVisible > 1 ? 's' : ''} de plus — faites défiler
+                                ↓ {voc.n('article', articlesFiltered.length - addIngVisible)} de plus — faites défiler
                               </div>
                             )}
                           </div>
                           {addIngLines.some(l => l.ingredientId) && (
                             <div style={{ fontSize: '0.78rem', color: '#6366f1', fontWeight: 600 }}>
-                              {addIngLines.filter(l => l.ingredientId && parseFloat(l.portion) > 0).length} article{addIngLines.filter(l => l.ingredientId && parseFloat(l.portion) > 0).length !== 1 ? 's' : ''} valide{addIngLines.filter(l => l.ingredientId && parseFloat(l.portion) > 0).length !== 1 ? 's' : ''} (portion &gt; 0)
+                              {addIngLines.filter(l => l.ingredientId && parseFloat(l.portion) > 0).length} {voc.nom('article', addIngLines.filter(l => l.ingredientId && parseFloat(l.portion) > 0).length !== 1)} valide{addIngLines.filter(l => l.ingredientId && parseFloat(l.portion) > 0).length !== 1 ? 's' : ''} ({voc.nom('portion')} &gt; 0)
                             </div>
                           )}
 
@@ -1115,16 +1117,16 @@ export default function ProductList() {
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                           <div style={{ fontSize: '0.82rem', color: '#64748b' }}>
                             {addIsSupplement
-                              ? 'Mode supplément — sélectionnez exactement 1 produit utilisable (OU utilisez l\'étape Articles).'
-                              : 'Ajoutez des produits utilisables comme sous-composants. Au minimum 2 articles/produits utilisables requis au total.'}
+                              ? `Mode ${voc.nom('supplement')} — sélectionnez exactement 1 ${voc.nom('produit_utilisable')} (OU utilisez l'étape ${voc.Pl('article')}).`
+                              : `Ajoutez ${voc.un('produit_utilisable', true)} comme sous-composants. Au minimum 2 ${voc.pl('article')}/${voc.pl('produit_utilisable')} ${voc.accN(['article', 'produit_utilisable'], 'requis', 'requises')} au total.`}
                           </div>
                           {utilisableForWizard.length === 0 ? (
                             <div style={{ padding: 16, borderRadius: 8, background: '#faf5ff', border: '1px solid #ede9fe', fontSize: '0.85rem', color: '#5b21b6', textAlign: 'center' }}>
-                              Aucun produit utilisable disponible.
+                              {voc.Aucun('produit_utilisable')} disponible.
                             </div>
                           ) : (
                             <>
-                              <input className="input" placeholder="🔍 Rechercher un produit transformé…" value={addSubSearch}
+                              <input className="input" placeholder={`🔍 Rechercher ${voc.un('pt')}…`} value={addSubSearch}
                                 onChange={(e) => setAddSubSearch(e.target.value)}
                                 style={{ fontSize: '0.82rem' }} />
                               <div style={{ maxHeight: 240, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 2, border: '1px solid #ede9fe', borderRadius: 10, padding: '6px', background: '#faf5ff' }}>
@@ -1144,7 +1146,7 @@ export default function ProductList() {
                                         <span style={{ flex: 1, fontSize: '0.84rem', fontWeight: sel ? 600 : 400, color: sel ? '#5b21b6' : '#374151' }}>{u.name}</span>
                                         {sel && (
                                           <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }} onClick={e => e.stopPropagation()}>
-                                            <input type="number" step="0.001" min="0" placeholder="portion"
+                                            <input type="number" step="0.001" min="0" placeholder={voc.nom('portion')}
                                               value={line?.portion || ''}
                                               onChange={(e) => updateSubPortion(sid, e.target.value)}
                                               style={{ width: 72, padding: '3px 6px', borderRadius: 6, border: `1.5px solid ${portionValid ? '#c4b5fd' : '#ef4444'}`, fontSize: '0.82rem', textAlign: 'right' }} />
@@ -1157,7 +1159,7 @@ export default function ProductList() {
                               </div>
                               {addSubLines.some(l => l.ingredientId && parseFloat(l.portion) > 0) && (
                                 <div style={{ fontSize: '0.78rem', color: '#7c3aed', fontWeight: 600 }}>
-                                  {addSubLines.filter(l => l.ingredientId && parseFloat(l.portion) > 0).length} produit(s) utilisable(s) sélectionné(s)
+                                  {addSubLines.filter(l => l.ingredientId && parseFloat(l.portion) > 0).length} {voc.nomS('produit_utilisable')} {voc.acc('produit_utilisable', 'sélectionné(s)', 'sélectionnée(s)')}
                                 </div>
                               )}
                             </>
@@ -1170,7 +1172,7 @@ export default function ProductList() {
                                 <button className="btn btn-ghost" onClick={() => setAddModal(3)}>← Retour</button>
                                 <button disabled={!canNext} onClick={() => setAddModal(5)}
                                   style={{ background: canNext ? 'linear-gradient(135deg, #4338ca, #6366f1)' : '#e5e7eb', border: 'none', borderRadius: 10, color: canNext ? '#fff' : '#9ca3af', fontWeight: 700, padding: '9px 22px', cursor: canNext ? 'pointer' : 'not-allowed' }}
-                                  title={!canNext ? (addIsSupplement ? 'Sélectionnez exactement 1 article ou produit utilisable' : 'Au minimum 2 articles/produits utilisables requis') : undefined}>
+                                  title={!canNext ? (addIsSupplement ? `Sélectionnez exactement 1 ${voc.nom('article')} ou ${voc.nom('produit_utilisable')}` : `Au minimum 2 ${voc.pl('article')}/${voc.pl('produit_utilisable')} ${voc.accN(['article', 'produit_utilisable'], 'requis', 'requises')}`) : undefined}>
                                   Suivant →
                                 </button>
                               </div>
@@ -1197,8 +1199,8 @@ export default function ProductList() {
                           {!isVendable && (
                             <div style={{ display: 'flex', gap: 8 }}>
                               {([
-                                ['activite', '🆓 Appros libres', 'Géré dans l’activité, appros manuels possibles'],
-                                ['labo', '🔒 Appros limités aux transferts', 'Fabriqué au labo puis transféré ; pas d’appro manuel en activité'],
+                                ['activite', `🆓 ${voc.Court('appro', true)} libres`, `${voc.acc('produit_utilisable', 'Géré', 'Gérée')} dans ${voc.le('activite')}, ${voc.court('appro', true)} ${voc.acc('appro', 'manuels', 'manuelles')} possibles`],
+                                ['labo', `🔒 ${voc.Court('appro', true)} ${voc.acc('appro', 'limités', 'limitées')} ${voc.au('transfert', true)}`, `${voc.acc('produit_utilisable', 'Fabriqué', 'Fabriquée')} ${voc.au('labo')} puis ${voc.acc('produit_utilisable', 'transféré', 'transférée')} ; pas ${voc.de('appro', false, 'court')} ${voc.acc('appro', 'manuel', 'manuelle')} en ${voc.nom('activite')}`],
                               ] as const).map(([key, label, desc]) => {
                                 const active = addOrigine === key;
                                 const disabled = key === 'labo' && productionLabos.length === 0;
@@ -1225,14 +1227,14 @@ export default function ProductList() {
                           )}
                           <div style={{ fontSize: '0.82rem', color: '#64748b' }}>
                             {isVendable
-                              ? <>Sélectionnez la/les <strong>activité(s)</strong> qui vendront ce produit (recette consommée sur place).</>
+                              ? <>Sélectionnez {voc.acc('activite', 'le/les', 'la/les')} <strong>{voc.nomS('activite')}</strong> qui vendront {voc.ce('produit')} ({voc.nom('recette')} {voc.acc('recette', 'consommé', 'consommée')} sur place).</>
                               : isLaboMode
-                                ? <>Sélectionnez le/les <strong>labo(s)</strong> de fabrication — les articles proposés seront ceux du périmètre.</>
-                                : <>Sélectionnez la/les <strong>activité(s)</strong> où ce produit utilisable sera géré.</>}
+                                ? <>Sélectionnez {voc.acc('labo', 'le/les', 'la/les')} <strong>{voc.nomS('labo', 'court')}</strong> de fabrication — {voc.le('article', true)} {voc.acc('article', 'proposés', 'proposées')} seront {voc.acc('article', 'ceux', 'celles')} du périmètre.</>
+                                : <>Sélectionnez {voc.acc('activite', 'le/les', 'la/les')} <strong>{voc.nomS('activite')}</strong> où {voc.ce('produit_utilisable')} sera {voc.acc('produit_utilisable', 'géré', 'gérée')}.</>}
                           </div>
                           {opts.length === 0 ? (
                             <div style={{ padding: 16, background: '#f8fafc', borderRadius: 8, fontSize: '0.85rem', color: '#64748b', textAlign: 'center' }}>
-                              Aucun {isLaboMode ? 'labo' : 'activité'} disponible.
+                              {voc.Aucun(isLaboMode ? 'labo' : 'activite')} disponible.
                             </div>
                           ) : (
                             <>
@@ -1250,8 +1252,8 @@ export default function ProductList() {
                                       style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', borderRadius: 9, cursor: 'pointer', background: checked ? '#f0fdf4' : '#f8fafc', border: `1.5px solid ${checked ? '#c7d2fe' : '#e2e8f0'}` }}>
                                       <input type="checkbox" checked={checked} readOnly style={{ accentColor: '#6366f1', width: 16, height: 16, flexShrink: 0 }} />
                                       <div style={{ flex: 1 }}>
-                                        <div style={{ fontWeight: 600, fontSize: '0.88rem', color: checked ? '#3730a3' : '#374151' }}>{isLaboMode ? '🏭 ' : ''}{o.nom}</div>
-                                        {!isLaboMode && o.laboNom && <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: 1 }}>🏭 Labo : {o.laboNom}</div>}
+                                        <div style={{ fontWeight: 600, fontSize: '0.88rem', color: checked ? '#3730a3' : '#374151' }}>{isLaboMode ? `${voc.icon('labo')} ` : ''}{o.nom}</div>
+                                        {!isLaboMode && o.laboNom && <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: 1 }}>{voc.icon('labo')} {voc.Court('labo')} : {o.laboNom}</div>}
                                       </div>
                                       {checked && <span style={{ color: '#6366f1', fontSize: '0.9rem' }}>✓</span>}
                                     </div>
@@ -1262,7 +1264,7 @@ export default function ProductList() {
                               {!isVendable && !isLaboMode && allLabos.length > 0 && (
                                 <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: 10 }}>
                                   <div style={{ fontSize: '0.76rem', fontWeight: 700, color: '#3730a3', marginBottom: 6 }}>
-                                    Labos où ce produit sera aussi géré (appro manuel au labo) — décochez pour exclure :
+                                    {voc.Pl('labo')} où {voc.ce('produit')} sera aussi {voc.acc('produit', 'géré', 'gérée')} ({voc.court('appro')} {voc.acc('appro', 'manuel', 'manuelle')} {voc.au('labo')}) — décochez pour exclure :
                                   </div>
                                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                                     {allLabos.map((l) => {
@@ -1271,7 +1273,7 @@ export default function ProductList() {
                                         <button type="button" key={l.id}
                                           onClick={() => setAddCheckedLabos(prev => on ? prev.filter(id => id !== l.id) : [...prev, l.id])}
                                           style={{ padding: '5px 12px', borderRadius: 20, border: `1.5px solid ${on ? '#6366f1' : '#e2e8f0'}`, background: on ? '#f0fdf4' : '#fff', color: on ? '#3730a3' : '#94a3b8', fontWeight: on ? 700 : 500, fontSize: '0.78rem', cursor: 'pointer' }}>
-                                          {on ? '✓ ' : ''}🏭 {l.nom}
+                                          {on ? '✓ ' : ''}{voc.icon('labo')} {l.nom}
                                         </button>
                                       );
                                     })}
@@ -1282,10 +1284,10 @@ export default function ProductList() {
                               {isLaboMode && addAffectationIds.length > 0 && (
                                 <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: 10 }}>
                                   <div style={{ fontSize: '0.76rem', fontWeight: 700, color: '#3730a3', marginBottom: 6 }}>
-                                    Activités liées qui recevront le produit (transfert) — décochez pour exclure :
+                                    {voc.Pl('activite')} {voc.acc('activite', 'liés', 'liées')} qui recevront {voc.le('produit')} ({voc.nom('transfert')}) — décochez pour exclure :
                                   </div>
                                   {linkedActivites.length === 0 ? (
-                                    <div style={{ fontSize: '0.78rem', color: '#94a3b8' }}>Aucune activité rattachée à ce(s) labo(s).</div>
+                                    <div style={{ fontSize: '0.78rem', color: '#94a3b8' }}>{voc.Aucun('activite')} {voc.acc('activite', 'rattaché', 'rattachée')} à {voc.ce('labo', addAffectationIds.length)}.</div>
                                   ) : (
                                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                                       {linkedActivites.map((a) => {
@@ -1330,14 +1332,14 @@ export default function ProductList() {
                                 {addRef && <div style={{ fontSize: '0.75rem', color: '#6366f1', marginTop: 1 }}>Réf : {addRef}</div>}
                               </div>
                               <div style={{ marginLeft: 'auto', background: '#6366f1', color: '#fff', borderRadius: 20, padding: '3px 10px', fontSize: '0.72rem', fontWeight: 700 }}>
-                                {isVendable ? 'Vendable' : 'Utilisable'}{addIsSupplement ? ' · Suppl.' : ''}
+                                {isVendable ? 'Vendable' : 'Utilisable'}{addIsSupplement ? ` · ${voc.Nom('supplement_abr')}` : ''}
                               </div>
                             </div>
                             {/* Stats row */}
                             <div style={{ display: 'flex', gap: 10 }}>
                               <div style={{ flex: 1, background: 'rgba(255,255,255,0.6)', borderRadius: 8, padding: '8px 10px', textAlign: 'center' }}>
                                 <div style={{ fontSize: '1.2rem', fontWeight: 900, color: '#3730a3' }}>{ingCount}</div>
-                                <div style={{ fontSize: '0.7rem', color: '#6366f1' }}>article{ingCount !== 1 ? 's' : ''}</div>
+                                <div style={{ fontSize: '0.7rem', color: '#6366f1' }}>{voc.nom('article', ingCount !== 1)}</div>
                               </div>
                               {subCount > 0 && (
                                 <div style={{ flex: 1, background: 'rgba(255,255,255,0.6)', borderRadius: 8, padding: '8px 10px', textAlign: 'center' }}>
@@ -1349,7 +1351,7 @@ export default function ProductList() {
                           </div>
                           {/* Articles list preview */}
                           <div>
-                            <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#64748b', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Articles sélectionnés</div>
+                            <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#64748b', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{voc.Pl('article')} {voc.acc('article', 'sélectionnés', 'sélectionnées')}</div>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 4, maxHeight: 110, overflowY: 'auto' }}>
                               {addIngLines.filter(l => l.ingredientId && parseFloat(l.portion) > 0).map(l => {
                                 const ing = addIngredients.find(i => String(i.id) === l.ingredientId);
@@ -1365,7 +1367,7 @@ export default function ProductList() {
                           {/* Sub-products list preview */}
                           {subCount > 0 && (
                             <div>
-                              <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#7c3aed', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.06em' }}>🔄 Produits transformés</div>
+                              <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#7c3aed', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.06em' }}>🔄 {voc.Pl('pt')}</div>
                               <div style={{ display: 'flex', flexDirection: 'column', gap: 4, maxHeight: 110, overflowY: 'auto' }}>
                                 {addSubLines.filter(l => l.ingredientId && parseFloat(l.portion) > 0).map(l => {
                                   const sp = utilisableForWizard.find(u => String(u.id) === l.ingredientId);
@@ -1382,7 +1384,7 @@ export default function ProductList() {
                           {addAffectationIds.length > 0 && (
                             <div>
                               <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#64748b', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                                {addOrigine === 'labo' ? '🏭 Labo(s) de fabrication' : (isVendable ? '📍 Activités' : '📍 Stocks activés')}
+                                {addOrigine === 'labo' ? `${voc.icon('labo')} ${voc.NomS('labo', 'Court')} de fabrication` : (isVendable ? `📍 ${voc.Pl('activite')}` : `📍 ${voc.Pl('stock')} ${voc.acc('stock', 'activés', 'activées')}`)}
                               </div>
                               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                                 {addAffectationIds.map(id => {
@@ -1390,18 +1392,18 @@ export default function ProductList() {
                                     ? allLabos.find(l => l.id === id)?.nom
                                     : allActivities.find(a => a.id === id)?.nom;
                                   return nom ? (
-                                    <span key={id} style={{ background: '#f0fdf4', border: '1px solid #c7d2fe', borderRadius: 20, padding: '3px 10px', fontSize: '0.78rem', color: '#3730a3', fontWeight: 600 }}>{addOrigine === 'labo' ? '🏭 ' : ''}{nom}</span>
+                                    <span key={id} style={{ background: '#f0fdf4', border: '1px solid #c7d2fe', borderRadius: 20, padding: '3px 10px', fontSize: '0.78rem', color: '#3730a3', fontWeight: 600 }}>{addOrigine === 'labo' ? `${voc.icon('labo')} ` : ''}{nom}</span>
                                   ) : null;
                                 })}
                               </div>
                               {addOrigine === 'labo' && (
                                 <>
                                   <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#64748b', margin: '10px 0 6px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                                    🔄 Activités qui recevront le produit (transfert)
+                                    🔄 {voc.Pl('activite')} qui recevront {voc.le('produit')} ({voc.nom('transfert')})
                                   </div>
                                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                                     {addCheckedActivites.length === 0
-                                      ? <span style={{ fontSize: '0.78rem', color: '#b45309' }}>Aucune — le produit restera au labo (non distribué)</span>
+                                      ? <span style={{ fontSize: '0.78rem', color: '#b45309' }}>{voc.acc('activite', 'Aucun', 'Aucune')} — {voc.le('produit')} restera {voc.au('labo')} (non {voc.acc('produit', 'distribué', 'distribuée')})</span>
                                       : addCheckedActivites.map(id => {
                                           const nom = allActivities.find(a => a.id === id)?.nom;
                                           return nom ? (
@@ -1423,7 +1425,7 @@ export default function ProductList() {
                             <button disabled={addSaving}
                               onClick={handleSave}
                               style={{ background: 'linear-gradient(135deg, #4338ca, #6366f1)', border: 'none', borderRadius: 10, color: '#fff', fontWeight: 700, padding: '10px 28px', cursor: addSaving ? 'not-allowed' : 'pointer', opacity: addSaving ? 0.7 : 1, fontSize: '0.9rem' }}>
-                              {addSaving ? 'Création…' : 'Créer le produit ✓'}
+                              {addSaving ? 'Création…' : `Créer ${voc.le('produit')} ✓`}
                             </button>
                           </div>
                         </div>
@@ -1435,10 +1437,10 @@ export default function ProductList() {
                       <div style={{ textAlign: 'center', padding: '16px 0 8px' }}>
                         <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'linear-gradient(135deg, #22c55e, #16a34a)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.6rem', margin: '0 auto 14px' }}>✓</div>
                         <div style={{ fontWeight: 700, fontSize: '1rem', color: '#166534', marginBottom: 6 }}>
-                          {editingId ? 'Produit modifié avec succès' : 'Produit créé avec succès'}
+                          {editingId ? `${voc.Nom('produit')} ${voc.acc('produit', 'modifié', 'modifiée')} avec succès` : `${voc.Nom('produit')} ${voc.acc('produit', 'créé', 'créée')} avec succès`}
                         </div>
                         <div style={{ fontSize: '0.88rem', color: 'var(--text-muted)', marginBottom: 22 }}>
-                          <strong>{addSavedName}</strong> {editingId ? 'a été mis à jour.' : 'a été ajouté à votre liste.'}
+                          <strong>{addSavedName}</strong> {editingId ? `a été ${voc.acc('produit', 'mis', 'mise')} à jour.` : `a été ${voc.acc('produit', 'ajouté', 'ajoutée')} à votre liste.`}
                         </div>
                         <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
                           <button className="btn btn-ghost" onClick={() => setAddModal(null)}>Fermer</button>
