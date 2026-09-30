@@ -1,4 +1,5 @@
 import jsPDF from 'jspdf';
+import { pdfTexte } from './pdfTexte';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -41,18 +42,8 @@ const fmt = (n: number) => {
 };
 const todayFr = () => new Date().toLocaleDateString('fr-FR');
 
-// La police standard de jsPDF (Helvetica, codage WinAnsi) n'écrit que le Latin-1 et les signes
-// typographiques de Windows-1252 (— … € ’ œ). UN SEUL caractère hors de ce jeu (« → », espace fine
-// insécable…) fait basculer TOUTE la chaîne en codage sur deux octets, que les lecteurs PDF
-// affichent en charabia. Tout texte passe donc par pdfTexte() avant d'être écrit : équivalents
-// lisibles pour les signes courants, « ? » pour le reste (une ligne reste lisible quoi qu'il arrive).
-const HORS_POLICE = /[^\t\n\r\x20-\xFF\u20AC\u201A\u0192\u201E\u2026\u2020\u2021\u02C6\u2030\u0160\u2039\u0152\u017D\u2018\u2019\u201C\u201D\u2022\u2013\u2014\u02DC\u2122\u0161\u203A\u0153\u017E\u0178]/gu;
-const EQUIVALENTS: Record<string, string> = {
-  '→': '>', '←': '<', '↔': '<>', '⇄': '<>', '−': '-', '≤': '<=', '≥': '>=', '≈': '~', '✓': 'v', '✕': 'x',
-  '\u202F': ' ', '\u2009': ' ', '\u2007': ' ', '\u200B': '',
-};
-export const pdfTexte = (texte: string): string =>
-  texte.replace(HORS_POLICE, (c) => EQUIVALENTS[c] ?? '?');
+// Tout texte passe par pdfTexte() avant d'être écrit : la police standard du PDF n'écrit que le
+// Latin-1 et Windows-1252, et un seul caractère hors de ce jeu rend la ligne entière illisible.
 
 function makeDoc() {
   const doc = new jsPDF({ unit: 'mm', format: 'a4' });
